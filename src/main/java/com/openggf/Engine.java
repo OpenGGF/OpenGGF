@@ -790,6 +790,7 @@ public class Engine {
 	 */
 	public void initializeGame() {
 		GameModule rootModule;
+		GameDataSource dataSource;
 		try {
 			Rom rom = romManager.getRom();
 			var detectedModule = romDetectionService.detectAndCreateModule(rom);
@@ -798,6 +799,7 @@ public class Engine {
 				return;
 			}
 			rootModule = detectedModule.orElseThrow();
+			dataSource = StockGameDataSources.pinned(rom, rootModule);
 		} catch (IOException e) {
 			showStartupRomError("Failed to load ROM during game initialization: " + e.getMessage());
 			return;
@@ -809,7 +811,8 @@ public class Engine {
 		if (!preparePresentationForLaunch(module)) {
 			return;
 		}
-		GameplayModeContext gameplayMode = SessionManager.openGameplaySession(rootModule, module, null);
+		GameplayModeContext gameplayMode = SessionManager.openGameplaySession(
+				rootModule, module, dataSource, null);
 		initializeGameplayRuntime(gameplayMode, true);
 		boolean generationRan = maybeGenerateDonatedDataSelectImagesBeforeStartupMode(module);
 		if (generationRan) {
@@ -819,7 +822,8 @@ public class Engine {
 			// Reset GPU state (pattern atlas + palette textures) and rebuild
 			// the gameplay mode so everything starts from a clean slate.
 			graphicsManager.resetPatternAndPaletteState();
-			gameplayMode = SessionManager.openGameplaySession(rootModule, module, null);
+			gameplayMode = SessionManager.openGameplaySession(
+					rootModule, module, dataSource, null);
 			initializeGameplayRuntime(gameplayMode, false);
 		} else {
 			graphicsManager.runPendingRenderThreadTasks();
@@ -1365,6 +1369,7 @@ public class Engine {
 			List<String> availableCharacters,
 			ModuleResolutionService.PreparedLaunch preparedLaunch) {
 		GameModule rootModule = SessionManager.getCurrentWorldSession().rootGameModule();
+		GameDataSource dataSource = SessionManager.getCurrentWorldSession().getDataSource();
 		String gameId = rootModule.getGameId().code();
 		com.openggf.game.save.SaveSessionContext sanitized =
 				GameplayTeamAvailability.sanitizeForLaunch(
@@ -1377,7 +1382,8 @@ public class Engine {
 		if (resolvedModule == null) {
 			return null;
 		}
-		return SessionManager.openGameplaySession(rootModule, resolvedModule, sanitized);
+		return SessionManager.openGameplaySession(
+				rootModule, resolvedModule, dataSource, sanitized);
 	}
 
 	/**
@@ -1405,6 +1411,7 @@ public class Engine {
 		resetForGameplayFromMasterTitle();
 
 		GameModule rootModule;
+		GameDataSource dataSource;
 		try {
 			Rom rom = romManager.getRom();
 			var detectedModule = romDetectionService.detectAndCreateModule(rom);
@@ -1413,6 +1420,7 @@ public class Engine {
 				return;
 			}
 			rootModule = detectedModule.orElseThrow();
+			dataSource = StockGameDataSources.pinned(rom, rootModule);
 		} catch (IOException e) {
 			showStartupRomError("Failed to load ROM for time attack launch: " + e.getMessage());
 			return;
@@ -1428,7 +1436,7 @@ public class Engine {
 			return;
 		}
 		GameplayModeContext gameplay = SessionManager.openGameplaySession(
-				rootModule, module, saveContext);
+				rootModule, module, dataSource, saveContext);
 		initializeGameplayRuntime(gameplay, false);
 		loadLevelFromDataSelect(request.zone(), request.act());
 		gameLoop.setGameMode(GameMode.LEVEL);

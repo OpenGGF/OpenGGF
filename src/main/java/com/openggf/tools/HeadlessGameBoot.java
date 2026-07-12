@@ -262,18 +262,37 @@ public final class HeadlessGameBoot implements AutoCloseable {
     public static GameplayModeContext openResolvedSessionForBoot(
             EngineContext services, GameModule rootModule,
             ModuleResolutionService.LaunchPolicy policy) {
+        java.util.Objects.requireNonNull(services, "services");
+        try {
+            if (!services.roms().isRomAvailable()) {
+                throw new IllegalStateException("Headless stock boot requires an active ROM data source");
+            }
+            return openResolvedSessionForBoot(services, rootModule, policy,
+                    com.openggf.game.StockGameDataSources.pinned(
+                            services.roms().getRom(), rootModule));
+        } catch (java.io.IOException sourceFailure) {
+            throw new IllegalStateException("Failed to pin headless ROM data source", sourceFailure);
+        }
+    }
+
+    /** No-graphics boot with an explicit source, used by metadata-only integration tests. */
+    public static GameplayModeContext openResolvedSessionForBoot(
+            EngineContext services, GameModule rootModule,
+            ModuleResolutionService.LaunchPolicy policy,
+            com.openggf.game.GameDataSource dataSource) {
         if (policy == ModuleResolutionService.LaunchPolicy.DETERMINISTIC) {
             disableExternalContentForDeterminism();
         }
         java.util.Objects.requireNonNull(services, "services");
         java.util.Objects.requireNonNull(rootModule, "rootModule");
         java.util.Objects.requireNonNull(policy, "policy");
+        java.util.Objects.requireNonNull(dataSource, "dataSource");
         ModuleResolutionService moduleResolutionService = services.moduleResolutionService();
         GameModule module = moduleResolutionService.resolveForLaunch(rootModule,
                 GameplayLaunchRequest.fromConfig(
                         services.configuration(), rootModule.getGameId().code()),
                 policy);
-        return SessionManager.openGameplaySession(rootModule, module, null);
+        return SessionManager.openGameplaySession(rootModule, module, dataSource, null);
     }
 
     static void disableExternalContentForDeterminism() {

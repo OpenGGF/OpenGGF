@@ -19,6 +19,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestPatchResolutionAtBoot {
 
@@ -107,7 +109,10 @@ class TestPatchResolutionAtBoot {
         EngineServices.configure(injected);
         GameModule root = new Sonic2GameModule();
 
-        HeadlessGameBoot.openResolvedSessionForBoot(injected, root);
+        com.openggf.game.GameDataSource metadataSource = mock(com.openggf.game.GameDataSource.class);
+        when(metadataSource.rom()).thenReturn(java.util.Optional.empty());
+        HeadlessGameBoot.openResolvedSessionForBoot(injected, root,
+                ModuleResolutionService.LaunchPolicy.DETERMINISTIC, metadataSource);
 
         assertSame(root, SessionManager.getCurrentWorldSession().rootGameModule());
         assertEquals(List.of("one", "two"), ((PatchTrail) SessionManager.requireCurrentGameModule())
@@ -115,7 +120,8 @@ class TestPatchResolutionAtBoot {
         assertEquals(0, scans.get(), "headless boot must not scan mod plans");
 
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-        HeadlessGameBoot.openResolvedSessionForBoot(injected, root);
+        HeadlessGameBoot.openResolvedSessionForBoot(injected, root,
+                ModuleResolutionService.LaunchPolicy.DETERMINISTIC, metadataSource);
         assertSame(root, SessionManager.requireCurrentGameModule());
     }
 

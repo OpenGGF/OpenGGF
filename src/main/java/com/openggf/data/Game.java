@@ -39,7 +39,8 @@ public abstract class Game {
      * @param cameraY  The current camera Y position.
      * @return An array containing [bgScrollX, bgScrollY].
      */
-    public abstract Rom getRom();
-
     public abstract int[] getBackgroundScroll(int levelIdx, int cameraX, int cameraY);
+
+    /** Returns the backing ROM, or {@code null} for standalone asset-backed games. */
+    public abstract Rom getRom();
 }

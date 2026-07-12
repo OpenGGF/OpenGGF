@@ -30,7 +30,10 @@ public interface GameModule {
                 new IllegalStateException("Game module requires a ROM data source")));
     }
 
-    /** Creates touch-response data from the session capability; stock modules require a ROM. */
+    /**
+     * Creates touch-response data from the session capability. The default is stock-only and
+     * requires a ROM; standalone modules must override this method and decode bounded assets.
+     */
     default TouchResponseTable createTouchResponseTable(GameDataSource source) throws java.io.IOException {
         return createTouchResponseTable(RomByteReader.fromRom(source.rom().orElseThrow(() ->
                 new IllegalStateException("Game module requires a ROM data source"))));

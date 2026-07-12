@@ -6,6 +6,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
+import com.openggf.game.StockGameDataSources;
 import com.openggf.ghost.GhostFrameCodec;
 import com.openggf.game.ghost.GhostFrameSampler;
 import com.openggf.game.session.EngineContext;
@@ -65,7 +66,7 @@ public final class AttemptReplayHarness {
 
             SessionManager.clear();
             GameplayModeContext mode = SessionManager.openGameplaySession(
-                    rootModule, module, null);
+                    rootModule, module, StockGameDataSources.pinned(rom, rootModule), null);
             GameplaySessionFactory.attachManagers(mode, services);
             services.graphics().initHeadless();
             TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay();

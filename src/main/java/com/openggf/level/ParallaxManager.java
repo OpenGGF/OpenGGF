@@ -3,7 +3,6 @@ package com.openggf.level;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.data.Rom;
-import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameModule;
 import com.openggf.game.ScrollHandlerProvider;
@@ -360,17 +359,9 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
      */
     public boolean advanceCameraDrivenScroll(int zoneId, int actId, Camera cam, int frameCounter) {
         if (!providerLoaded) {
-            try {
-                Rom rom = GameServices.rom().getRom();
-                if (rom != null) {
-                    load(rom);
-                }
-            } catch (IOException e) {
-                if (RomManager.isConfiguredRomMissing(e)) {
-                    LOGGER.fine(() -> "Skipped lazy scroll-provider load: " + e.getMessage());
-                } else {
-                    LOGGER.warning("Failed to lazy-load scroll provider: " + e.getMessage());
-                }
+            Rom rom = GameServices.worldSession().getDataSource().rom().orElse(null);
+            if (rom != null) {
+                load(rom);
             }
         }
         if (scrollProvider == null || cam == null) {

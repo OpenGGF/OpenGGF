@@ -37737,3 +37737,16 @@ launch-label, owner-qualified data-select, and packaged sample-character changes
   character identity, physics, art, and trace execution remain unchanged.
 - No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
   engine state was changed.
+
+### 2026-07-12 -- Phase 3 B1 GameDataSource parity sweep
+
+Measured on `next` at `df0508e73` with the reviewed, uncommitted Phase 3 B1
+session-owned data-source routing and stock-ROM pinning changes:
+
+- Command:
+  `mvn "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test -Dmse=off`
+- S1 GHZ1, S2 EHZ1, and S3K AIZ all passed (3/3).
+- Stock sessions pin the exact opened ROM behind one durable `GameDataSource`;
+  the five shared consumers therefore receive the same ROM values as before.
+- No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
+  engine state was changed.
