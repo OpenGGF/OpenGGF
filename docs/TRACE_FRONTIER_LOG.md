@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f27416 / 596 errors (1 error under
+f3318 / 4234 errors to f27695 / 892 errors (11 errors under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -749,12 +749,12 @@ The full HCZ replay was used for the milestone decision so the rejected
 earlier-contact candidate at f14033 could not be hidden by frontier filtering.
 
 Milestone 47 restores `Check_CameraInRange` ownership for the HCZ2 cutscene
-Knuckles controller. The ROM aborts the object's state-machine dispatch when
-the camera leaves `word_62150`, independently of the wider slotted-object
-despawn window. The engine had made the controller permanently persistent and
-continued routine 2 outside that rectangle, repeatedly pinning
-`Camera_min_X_pos` to the live camera. When the route backed left of `$3900`,
-that stale execution suppressed the native spindash
+Knuckles controller. The ROM aborts initialization until the camera enters
+`word_62150`; on success, `Check_CameraInRange` copies its JSR return address
+into the object's operation pointer, so later state-machine routines continue
+outside the rectangle. The engine had initialized the controller before its
+activation rectangle and repeatedly pinned `Camera_min_X_pos` while the route
+was still left of `$3900`, suppressing the native spindash
 `H_scroll_frame_offset=$2000` camera jerk (`sonic3k.asm:128908-128972,
 180428-180459,38364-38429`).
 
@@ -763,6 +763,22 @@ under `frontierOnly`). The full HCZ replay confirms the reduced report. The
 granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
 complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
 level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 48 preserves trigger-collapse tension-bridge riders through the
+native countdown. When `Level_trigger_array[subtype & $F]` becomes nonzero,
+`loc_387B6` branches directly into fragment creation, and each subsequent
+`loc_3890C` dispatch returns without calling the ordinary sloped-solid helper.
+The engine now suppresses its split solid checkpoint from the live trigger
+byte onward, retains both riders during the `$0E` countdown, then mirrors
+`loc_38918/loc_3892C` by clearing every riding player's standing state and
+setting them airborne at expiry (`sonic3k.asm:75592-75605,75743-75795`).
+
+Together with the corrected initialization-only interpretation of milestone
+47, this closes f27416-f27694 and advances HCZ to f27695 / 892 full-run errors
+(11 under `frontierOnly`). Focused tension-bridge checks pass 7/7. The granular
+nine-route S3K matrix remains exact: both AIZ routes green; CNZ complete f1846
+/ 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030
+/ 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 Milestone 28 restores the two ROM-owned HCZ2 surface handlers around the first
 large water loop. `sub_714E -> sub_717C` now samples the live foreground layout

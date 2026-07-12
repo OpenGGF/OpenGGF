@@ -140,7 +140,6 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
     private boolean collapseActive;
     private boolean collapsed;
     private int collapseTimer;
-    private PlayableEntity playerAtCollapse; // player standing when collapse starts
 
     public TensionBridgeObjectInstance(ObjectSpawn spawn) {
         super(spawn, "TensionBridge");
@@ -276,6 +275,17 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isSolidFor(PlayableEntity player) {
         return !collapsed && !collapseActive;
+    }
+
+    @Override
+    public boolean suppressSlopeSampleThisFrame(PlayableEntity player) {
+        // loc_387B6 branches directly into loc_389C8 when the trigger fires,
+        // and every loc_3890C countdown dispatch returns without calling
+        // sub_38A88. The bridge therefore performs neither a slope re-seat nor
+        // SolidObject's airborne-rider unseat until the countdown expires and
+        // loc_38918 explicitly clears both players' standing state.
+        return collapseActive || (resolveVariant() == Variant.TRIGGER_COLLAPSE
+                && Sonic3kLevelTriggerManager.testAny(triggerIndex));
     }
 
     // --- Update ---
@@ -481,16 +491,13 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
         collapseActive = true;
         collapseTimer = COLLAPSE_TIMER_INIT;
 
-        // Remember player for delayed release
+        // Remember the placement for delayed release/despawn.
         ObjectManager objectManager = null;
         try {
             objectManager = services().objectManager();
         } catch (Exception ignored) { }
 
         if (objectManager != null) {
-            if (objectManager.isAnyPlayerRiding(this)) {
-                playerAtCollapse = player;
-            }
             ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
         }
 
@@ -518,11 +525,26 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
     }
 
     private void releasePlayerAtCollapse() {
-        if (playerAtCollapse != null) {
-            playerAtCollapse.setOnObject(false);
-            playerAtCollapse.setPushing(false);
-            playerAtCollapse.setAir(true);
-            playerAtCollapse = null;
+        ObjectManager objectManager = services().objectManager();
+        List<PlayableEntity> participants = new java.util.ArrayList<>();
+        PlayableEntity mainPlayer = services().camera().getFocusedSprite();
+        if (mainPlayer != null) {
+            participants.add(mainPlayer);
+        }
+        participants.addAll(services().sidekicks());
+
+        // loc_38918/loc_3892C independently clear the P1 and P2 standing bits
+        // and set Status_InAir. Query the live riding table here so both native
+        // players (and any configured extra sidekicks using the same bridge)
+        // receive that release instead of remembering only the update argument.
+        for (PlayableEntity participant : participants) {
+            if (!objectManager.isRidingObject(participant, this)) {
+                continue;
+            }
+            participant.setOnObject(false);
+            participant.setPushing(false);
+            participant.setAir(true);
+            objectManager.clearRidingObject(participant);
         }
     }
 

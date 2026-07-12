@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.objects.ObjectManager;
@@ -12,10 +13,38 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class TestTensionBridgeBendTiming {
+
+    @Test
+    void triggeredCollapseCountdownSkipsSolidPassUntilRelease() throws Exception {
+        Sonic3kLevelTriggerManager.reset();
+        TensionBridgeObjectInstance bridge = new TensionBridgeObjectInstance(new ObjectSpawn(
+                0x1000, 0x0788, Sonic3kObjectIds.TENSION_BRIDGE, 0x88, 0, false, 0x0788));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+
+        setField(bridge, "collapseActive", true);
+
+        assertTrue(bridge.suppressSlopeSampleThisFrame(player),
+                "loc_3890C returns without sub_38A88 throughout the trigger-collapse countdown");
+        assertTrue(bridge.defersAirborneRiderUnseatThisFrame(player),
+                "the skipped solid pass must retain Status_OnObj until loc_38918 releases the rider");
+
+        setField(bridge, "collapseActive", false);
+        assertFalse(bridge.suppressSlopeSampleThisFrame(player));
+
+        try {
+            Sonic3kLevelTriggerManager.setAll(8);
+            assertTrue(bridge.defersAirborneRiderUnseatThisFrame(player),
+                    "the live trigger byte must suppress an earlier-slot solid checkpoint before bridge update");
+        } finally {
+            Sonic3kLevelTriggerManager.reset();
+        }
+    }
 
     @Test
     void bendUsesPriorContactSegmentBeforePublishingCurrentSegment() throws Exception {
