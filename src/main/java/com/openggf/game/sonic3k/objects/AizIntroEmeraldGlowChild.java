@@ -1,7 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.PlayableEntity;
 import com.openggf.camera.Camera;
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -26,8 +27,11 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
 
     private static final Logger LOG = Logger.getLogger(AizIntroEmeraldGlowChild.class.getName());
     private final AizIntroPlaneChild parent;
+    @RewindTransient(reason = "immutable derivative of captured ObjectSpawn.subtype/recreated by recreate")
     private final int variant;
+    @RewindTransient(reason = "immutable derivative of captured ObjectSpawn.subtype/recreated by recreate")
     private final int xOffset;
+    @RewindTransient(reason = "immutable derivative of captured ObjectSpawn.subtype/recreated by recreate")
     private final int yOffset;
 
     private static final int[][] ANIM_SEQUENCES = {
