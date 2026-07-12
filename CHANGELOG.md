@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **CNZ spiral tubes and triangle bumpers now support every configured sidekick.** Spiral tubes preserve native P1-then-P2 route timing before independent PlayerRefId-backed extension state, while triangle bumpers apply their local launch response to all engine participants; tube death, unload, roster-change, and rewind cleanup remain identity-owned. Wire-cage compatibility remains a separate follow-up.
 - **LBZ cup elevators now carry every configured sidekick safely.** Player-identity state extends the native P1-then-P2 cup path across entry, shared motion, jump/fling exits, death, unload, roster changes, and rewind without transferring forced control between riders.
 - **Sonic 1 GHZ/MZ/SYZ/SLZ compatibility now covers wide debris and arbitrary sidekicks.** Breakable-wall and smash-block fragments use the active viewport for render-lifetime culling, SYZ bumpers preserve every same-frame player contact, and SLZ seesaws retain and launch main-plus-sidekick riders in native roster order with PlayerRefId-backed rewind state.
 - **LBZ tube elevators now carry every configured sidekick safely.** Player-identity state extends the native P1-then-P2 transport path across entry, motion, exit, death, unload, roster changes, closed-destination suppression, and rewind without transferring forced control between sidekicks.

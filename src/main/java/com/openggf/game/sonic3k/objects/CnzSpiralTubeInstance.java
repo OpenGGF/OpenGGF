@@ -1,17 +1,21 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Object 0x4C - CNZ Spiral Tube ({@code Obj_CNZSpiralTube}).
@@ -50,6 +54,9 @@ public final class CnzSpiralTubeInstance extends AbstractObjectInstance implemen
 
     private final PlayerState p1State = new PlayerState();
     private final PlayerState p2State = new PlayerState();
+    private PlayableEntity p1Owner;
+    private PlayableEntity p2Owner;
+    private final Map<PlayableEntity, PlayerState> extensionStates = new IdentityHashMap<>();
 
     private int expectedTravelFramesForTest;
     private CnzTubePathTables.RoutePoint expectedExitPointForTest = new CnzTubePathTables.RoutePoint(0, 0);
@@ -70,28 +77,55 @@ public final class CnzSpiralTubeInstance extends AbstractObjectInstance implemen
         if (mainPlayer == null && playerEntity instanceof AbstractPlayableSprite sprite) {
             mainPlayer = sprite;
         }
+        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
+        AbstractPlayableSprite sidekick = nativeP2 instanceof AbstractPlayableSprite sprite && sprite != mainPlayer
+                ? sprite : null;
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+
+        p1Owner = bindNativeState(p1State, p1Owner, mainPlayer);
+        p2Owner = bindNativeState(p2State, p2Owner, sidekick);
         if (mainPlayer != null) {
             processPlayer(mainPlayer, p1State);
         }
-
-        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
-        if (nativeP2 instanceof AbstractPlayableSprite sidekick && sidekick != mainPlayer) {
+        if (sidekick != null) {
             processPlayer(sidekick, p2State);
+        }
+        for (PlayableEntity participant : participants) {
+            if (participant == p1Owner || participant == p2Owner) {
+                continue;
+            }
+            if (participant instanceof AbstractPlayableSprite sprite) {
+                processPlayer(sprite, extensionStates.computeIfAbsent(
+                        participant, ignored -> new PlayerState()));
+            }
+        }
+        for (Map.Entry<PlayableEntity, PlayerState> entry : extensionStates.entrySet()) {
+            if (entry.getValue().isActive() && !containsIdentity(participants, entry.getKey())
+                    && entry.getKey() instanceof AbstractPlayableSprite sprite) {
+                processPlayer(sprite, entry.getValue());
+            }
         }
     }
 
     @Override
     public boolean isPersistent() {
-        return p1State.isActive() || p2State.isActive();
+        return p1State.isActive() || p2State.isActive()
+                || extensionStates.values().stream().anyMatch(PlayerState::isActive);
     }
 
     /**
      * Mirrors {@code sub_330EE}'s per-player state-block dispatch. The ROM uses
      * exactly two blocks ({@code $30(a0)} for Player 1, {@code $3A(a0)} for
-     * Player 2); the engine preserves that pattern instead of collapsing the
-     * controller into one shared traversal state.
+     * Player 2); the engine preserves those blocks as the native processing
+     * prefix, then allocates identity-owned blocks for additional configured
+     * sidekicks instead of collapsing the controller into shared state.
      */
     private void processPlayer(AbstractPlayableSprite player, PlayerState state) {
+        if (state.isActive() && (player.getDead() || player.isHurt() || player.isDebugMode())) {
+            releaseForCleanup(player, state);
+            return;
+        }
         switch (state.phase) {
             case PHASE_DETECT -> detectCapture(player, state);
             case PHASE_SWAY -> updateSwayPhase(player, state);
@@ -250,6 +284,63 @@ public final class CnzSpiralTubeInstance extends AbstractObjectInstance implemen
         state.reset();
     }
 
+    private void releaseForCleanup(AbstractPlayableSprite player, PlayerState state) {
+        ObjectControlState.none().applyTo(player);
+        player.setControlLocked(false);
+        player.setObjectMappingFrameControl(false);
+        player.setOnObject(false);
+        player.setLatchedSolidObjectId(0);
+        state.reset();
+    }
+
+    @Override
+    public void onUnload() {
+        releaseOwnedPlayer(p1Owner, p1State);
+        releaseOwnedPlayer(p2Owner, p2State);
+        for (Map.Entry<PlayableEntity, PlayerState> entry : extensionStates.entrySet()) {
+            releaseOwnedPlayer(entry.getKey(), entry.getValue());
+        }
+    }
+
+    private void releaseOwnedPlayer(PlayableEntity owner, PlayerState state) {
+        if (state.isActive() && owner instanceof AbstractPlayableSprite sprite) {
+            releaseForCleanup(sprite, state);
+        }
+    }
+
+    private PlayableEntity bindNativeState(
+            PlayerState nativeState,
+            PlayableEntity previousOwner,
+            AbstractPlayableSprite currentPlayer) {
+        if (previousOwner == currentPlayer) {
+            return previousOwner;
+        }
+        if (previousOwner == null && currentPlayer != null && nativeState.isActive()) {
+            return currentPlayer;
+        }
+        if (previousOwner != null && nativeState.isActive()) {
+            extensionStates.computeIfAbsent(previousOwner, ignored -> new PlayerState())
+                    .copyFrom(nativeState);
+        }
+        nativeState.reset();
+        if (currentPlayer != null) {
+            PlayerState restored = extensionStates.remove(currentPlayer);
+            if (restored != null) {
+                nativeState.copyFrom(restored);
+            }
+        }
+        return currentPlayer;
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> players, PlayableEntity target) {
+        for (PlayableEntity player : players) {
+            if (player == target) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void applyVelocityPlan(AbstractPlayableSprite player, PlayerState state, VelocityPlan plan) {
         player.setXSpeed(plan.xVel());
         player.setYSpeed(plan.yVel());
@@ -358,13 +449,22 @@ public final class CnzSpiralTubeInstance extends AbstractObjectInstance implemen
         // Verified controller-only object: the S&K route family has no mappings or art owner.
     }
 
-    private static final class PlayerState {
+    private static final class PlayerState implements RewindStateful<PlayerState.Snapshot> {
         private int phase;
         private int phaseAngle;
         private int timer;
         private int nextPointIndex;
         private int remainingBytes;
         private CnzTubePathTables.SpiralPath activePath;
+
+        private void copyFrom(PlayerState other) {
+            phase = other.phase;
+            phaseAngle = other.phaseAngle;
+            timer = other.timer;
+            nextPointIndex = other.nextPointIndex;
+            remainingBytes = other.remainingBytes;
+            activePath = other.activePath;
+        }
 
         private void reset() {
             phase = PHASE_DETECT;
@@ -377,6 +477,30 @@ public final class CnzSpiralTubeInstance extends AbstractObjectInstance implemen
 
         private boolean isActive() {
             return phase != PHASE_DETECT;
+        }
+
+        @Override
+        public Snapshot captureRewindStateValue() {
+            return new Snapshot(phase, phaseAngle, timer, nextPointIndex, remainingBytes, activePath);
+        }
+
+        @Override
+        public void restoreRewindStateValue(Snapshot state) {
+            phase = state.phase();
+            phaseAngle = state.phaseAngle();
+            timer = state.timer();
+            nextPointIndex = state.nextPointIndex();
+            remainingBytes = state.remainingBytes();
+            activePath = state.activePath();
+        }
+
+        private record Snapshot(
+                int phase,
+                int phaseAngle,
+                int timer,
+                int nextPointIndex,
+                int remainingBytes,
+                CnzTubePathTables.SpiralPath activePath) {
         }
     }
 
