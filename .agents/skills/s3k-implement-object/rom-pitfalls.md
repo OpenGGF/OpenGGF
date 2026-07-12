@@ -958,6 +958,39 @@ see `s2-implement-object/rom-pitfalls.md` P79.
 
 ---
 
+## P26 -- Obj_WaitOffscreen consumes retained Render_Sprites state
+
+**S3K-specific.**
+
+**Symptom.** A dormant badnik begins its patrol one object dispatch early or
+late, so its touch box misses an exact-edge player contact much later even
+though its velocity and collision size are correct.
+
+**Root cause.** `Obj_WaitOffscreen` replaces the operation pointer with
+`loc_85AD2`. That routine reads render bit 7 left by the preceding
+`Render_Sprites` pass, restores the saved pointer on its own dispatch, and
+only runs the original object's setup on the following dispatch. Recomputing
+visibility inside `update()` collapses the render/restore boundary and can also
+sample the pre-scroll camera instead of the render-visible camera.
+
+**What to check.** For every object that calls `Obj_WaitOffscreen`:
+
+1. Keep the placeholder, pointer-restore, and object-setup dispatches separate.
+2. Retain visibility from the post-camera render phase; do not infer render bit
+   7 from a fresh camera query inside the next object update.
+3. Use the placeholder's authored render extent and include any camera motion
+   between object execution and the render pass.
+4. Keep collision disabled until the setup dispatch writes the object's real
+   collision flags.
+
+**ROM citation.** `Obj_WaitOffscreen` and `Render_Sprites` at
+`docs/skdisasm/sonic3k.asm:180266-180298,36318-36365`; Jawz caller at
+`183518-183570`.
+
+**Originating commit.** `<pending: HCZ milestone 46>`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

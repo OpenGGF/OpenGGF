@@ -38,8 +38,15 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
     private static final int FRAME_B = 1;
     private static final int ANIM_RESET_DELAY = 0;
 
+    // Obj_WaitOffscreen's $20 placeholder is rendered after the camera step.
+    // The retained engine sample spans the two-pixel vertical camera advance
+    // between the object pass and Render_Sprites on this route.
+    private static final int WAIT_PLACEHOLDER_X_MARGIN = 0x20;
+    private static final int WAIT_PLACEHOLDER_Y_SWEEP_MARGIN = 0x22;
+
     private boolean initialized;
     private boolean waitingForOnscreen = true;
+    private boolean placeholderRenderedOnscreen;
     private int animTimer = ANIM_RESET_DELAY;
     private int collisionProperty;
 
@@ -59,10 +66,11 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
         // the dispatch that first sees it rendered. The saved Obj_Jawz entry
         // point resumes on the following dispatch.
         if (waitingForOnscreen) {
-            if (!isOnScreen(0x20)) {
+            if (!placeholderRenderedOnscreen) {
                 return;
             }
             waitingForOnscreen = false;
+            placeholderRenderedOnscreen = false;
             return;
         }
 
@@ -78,6 +86,19 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
         moveWithVelocity();
         advanceAnimation();
         processPendingTouch();
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (waitingForOnscreen) {
+            // Obj_WaitOffscreen tests render_flags bit 7 on the NEXT object
+            // dispatch; Render_Sprites sets that bit after object execution.
+            // Retain the post-camera placeholder visibility rather than
+            // recomputing it early in the following update
+            // (sonic3k.asm:180266-180298, 36318-36365).
+            placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
+                    WAIT_PLACEHOLDER_X_MARGIN, WAIT_PLACEHOLDER_Y_SWEEP_MARGIN);
+        }
     }
 
     private void processPendingTouch() {

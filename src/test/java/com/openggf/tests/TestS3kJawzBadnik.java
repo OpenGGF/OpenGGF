@@ -27,13 +27,17 @@ public class TestS3kJawzBadnik {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         player.setCentreX((short) 80);
 
-        jawz.update(0, player); // Obj_WaitOffscreen restores the saved entry point
+        jawz.update(0, player); // Obj_WaitOffscreen placeholder dispatch
         assertEquals(160, jawz.getX(), "Jawz should not move on the initialization frame");
 
-        jawz.update(1, player); // Obj_Jawz initializes velocity
+        jawz.refreshPostCameraRenderState(); // Render_Sprites sets render_flags bit 7
+        jawz.update(1, player); // Obj_WaitOffscreen restores the saved entry point
         assertEquals(160, jawz.getX(), "Jawz initialization should not move the object");
 
-        jawz.update(2, player);
+        jawz.update(2, player); // Obj_Jawz initializes velocity
+        assertEquals(160, jawz.getX(), "Jawz velocity initialization should not move the object");
+
+        jawz.update(3, player);
         assertEquals(158, jawz.getX(), "Jawz should move toward the player on the next frame");
         assertEquals(1, readMappingFrame(jawz), "Jawz should advance to the second animation frame after moving");
     }
@@ -48,10 +52,39 @@ public class TestS3kJawzBadnik {
         player.setCentreX((short) 240);
 
         jawz.update(0, player);
+        jawz.refreshPostCameraRenderState();
         jawz.update(1, player);
         jawz.update(2, player);
+        jawz.update(3, player);
 
         assertEquals(162, jawz.getX(), "Jawz should move right when the player is on the right");
+    }
+
+    @Test
+    public void jawzResumesSetupWhenAnOffscreenPlaceholderBecomesVisible() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 319, 223, 0);
+
+        JawzBadnikInstance jawz = new JawzBadnikInstance(
+                new ObjectSpawn(0x400, 100, Sonic3kObjectIds.JAWZ, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) 0x500);
+
+        jawz.update(0, player);
+        assertEquals(0x400, jawz.getX(), "The offscreen placeholder must remain stationary");
+
+        AbstractObjectInstance.updateCameraBounds(0x380, 0, 0x4BF, 223, 0);
+        jawz.refreshPostCameraRenderState();
+        jawz.update(1, player);
+        assertEquals(0x400, jawz.getX(),
+                "Restoring the saved Obj_Jawz entry consumes its own dispatch");
+
+        jawz.update(2, player);
+        assertEquals(0x400, jawz.getX(),
+                "The restored Obj_Jawz entry initializes velocity without moving");
+
+        jawz.update(3, player);
+        assertEquals(0x402, jawz.getX(),
+                "The resumed Jawz routine must execute MoveSprite2 on the following dispatch");
     }
 
     @Test

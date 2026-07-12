@@ -25,7 +25,8 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f22861 / 1197 errors (5 errors under `frontierOnly`).
+f3318 / 4234 errors to f27042 / 897 errors (the previously active
+`frontierOnly` window is green).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -727,6 +728,25 @@ under `frontierOnly`). The focused spinning-column suite passes 6/6. The
 granular S3K replay matrix remains exact: both AIZ routes green; CNZ complete
 f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select
 f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 46 retains Jawz's `Obj_WaitOffscreen` result from the post-camera
+render pass. The ROM installs a `$20` placeholder, lets `Render_Sprites` set
+render bit 7 after scrolling, restores the saved operation pointer on the next
+Jawz dispatch, and only then runs setup. The engine previously recomputed
+visibility during object execution; a vertically entering Jawz consequently
+started its `MoveSprite2` patrol one dispatch late and missed the exact-edge
+P1 attack at f22861. Jawz now retains the render result, including the
+two-pixel vertical camera sweep into that render pass, before consuming the
+restore and setup dispatches (`sonic3k.asm:180266-180298,183518-183570,
+36318-36365`).
+
+This closes f22861-f27041 and advances HCZ to f27042 / 897 full-run errors;
+the previously active `frontierOnly` window is green. The focused Jawz suite
+passes 4/4. The granular S3K replay matrix remains exact: both AIZ routes
+green; CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 /
+1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+The full HCZ replay was used for the milestone decision so the rejected
+earlier-contact candidate at f14033 could not be hidden by frontier filtering.
 
 Milestone 28 restores the two ROM-owned HCZ2 surface handlers around the first
 large water loop. `sub_714E -> sub_717C` now samples the live foreground layout
