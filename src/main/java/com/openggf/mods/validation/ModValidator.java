@@ -102,7 +102,14 @@ public final class ModValidator {
 
         for (ClassInfo info : classes.values()) {
             validateStatics(info, findings);
-            if (isAssignable(info.name, OBJECT_BASE, classes)) validateObject(info, classes, findings);
+            boolean objectInstance = isAssignable(info.name, OBJECT_INSTANCE, classes);
+            boolean supportedObjectBase = isAssignable(info.name, OBJECT_BASE, classes);
+            if (objectInstance && !supportedObjectBase && (info.access & Opcodes.ACC_ABSTRACT) == 0) {
+                findings.add(error("OBJECT_BASE_CONTRACT", info.name, "",
+                        "Concrete mod objects must extend AbstractObjectInstance or a supported subclass"));
+            } else if (supportedObjectBase) {
+                validateObject(info, classes, findings);
+            }
             for (String reference : info.engineReferences) {
                 if (!isTrustedApi(reference) && (!classes.containsKey(reference)
                         || reference.startsWith("com/openggf/"))) {
@@ -227,6 +234,7 @@ public final class ModValidator {
 
             @Override public MethodVisitor visitMethod(int access, String name, String descriptor,
                                                        String signature, String[] exceptions) {
+                if (name.equals("<clinit>")) info.classInitializer = true;
                 info.referenceMethodDescriptor(descriptor);
                 info.referenceSignature(signature);
                 if (exceptions != null) for (String value : exceptions) info.reference(value);
@@ -299,6 +307,10 @@ public final class ModValidator {
     }
 
     private static void validateStatics(ClassInfo info, List<ModValidationFinding> findings) {
+        if (info.classInitializer) {
+            findings.add(error("STATIC_STATE_UNSUPPORTED", info.name, "<clinit>",
+                    "Author classes may not declare a class initializer"));
+        }
         for (FieldInfo field : info.fields) {
             if ((field.access & Opcodes.ACC_STATIC) == 0) continue;
             boolean finalField = (field.access & Opcodes.ACC_FINAL) != 0;
@@ -467,7 +479,7 @@ public final class ModValidator {
 
     private static final class ClassInfo {
         String name; String superName; int access; boolean publicNoArgConstructor;
-        boolean constructorServices; boolean validRecreateMethod;
+        boolean constructorServices; boolean validRecreateMethod; boolean classInitializer;
         final List<String> interfaces = new ArrayList<>();
         final List<FieldInfo> fields = new ArrayList<>();
         final Set<String> engineReferences = new HashSet<>();

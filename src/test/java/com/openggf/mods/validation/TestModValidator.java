@@ -36,7 +36,6 @@ class TestModValidator {
 
     @Test
     void acceptsStructurallySafeEntrypointAndObjectWithoutLoadingClasses() throws Exception {
-        System.clearProperty("openggf.mod.validator.executed");
         Map<String, byte[]> classes = new LinkedHashMap<>();
         classes.put(ENTRY, entrypoint(true, true));
         classes.put(OBJECT, objectClass(true, writer -> {
@@ -52,8 +51,26 @@ class TestModValidator {
         ModValidationReport report = new ModValidator(Set.of()).validate(jar, "example.Entry");
 
         assertTrue(report.eligible(), report.findings().toString());
-        assertNull(System.getProperty("openggf.mod.validator.executed"),
-                "validation must not define or initialize author classes");
+    }
+
+    @Test
+    void rejectsFieldlessClassInitializerWithoutExecutingIt() throws Exception {
+        System.clearProperty("openggf.mod.validator.executed");
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, ENTRY, null, "java/lang/Object",
+                new String[] {GGF_MOD});
+        constructor(writer, Opcodes.ACC_PUBLIC, false, ENTRY);
+        MethodVisitor clinit = writer.visitMethod(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null);
+        clinit.visitCode(); clinit.visitLdcInsn("openggf.mod.validator.executed"); clinit.visitLdcInsn("true");
+        clinit.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/System", "setProperty",
+                "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", false);
+        clinit.visitInsn(Opcodes.POP); clinit.visitInsn(Opcodes.RETURN); clinit.visitMaxs(2, 0); clinit.visitEnd();
+        writer.visitEnd();
+
+        ModValidationReport report = new ModValidator().validate(jar(Map.of(ENTRY, writer.toByteArray())),
+                "example.Entry");
+        assertCode(report, "STATIC_STATE_UNSUPPORTED", ModValidationFinding.Severity.ERROR);
+        assertNull(System.getProperty("openggf.mod.validator.executed"));
     }
 
     @Test
@@ -76,6 +93,16 @@ class TestModValidator {
                 ENTRY, entrypoint(true, true), OBJECT,
                 objectClass(true, ignored -> {}, false, false))), "example.Entry");
         assertCode(fakeRecreate, "OBJECT_RECREATE_PATH_MISSING", ModValidationFinding.Severity.ERROR);
+
+        ClassWriter unsupported = new ClassWriter(0);
+        unsupported.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "example/Unsupported", null,
+                "java/lang/Object", new String[] {OBJECT_INSTANCE});
+        constructor(unsupported, Opcodes.ACC_PUBLIC, false, "example/Unsupported");
+        unsupported.visitEnd();
+        ModValidationReport wrongBase = new ModValidator().validate(jar(Map.of(
+                ENTRY, entrypoint(true, true), "example/Unsupported", unsupported.toByteArray())),
+                "example.Entry");
+        assertCode(wrongBase, "OBJECT_BASE_CONTRACT", ModValidationFinding.Severity.ERROR);
     }
 
     @Test
@@ -109,7 +136,7 @@ class TestModValidator {
         ModValidationReport report = new ModValidator(Set.of()).validate(
                 jar(Map.of(ENTRY, entrypoint(true, true), OBJECT, object)), "example.Entry");
 
-        assertEquals(5, report.findings().stream()
+        assertEquals(6, report.findings().stream()
                 .filter(f -> f.code().equals("STATIC_STATE_UNSUPPORTED")).count());
     }
 
@@ -245,13 +272,6 @@ class TestModValidator {
         writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, ENTRY, null, "java/lang/Object",
                 implementsContract ? new String[] {GGF_MOD} : null);
         fields.accept(writer);
-        MethodVisitor clinit = writer.visitMethod(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null);
-        clinit.visitCode();
-        clinit.visitLdcInsn("openggf.mod.validator.executed");
-        clinit.visitLdcInsn("true");
-        clinit.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/System", "setProperty",
-                "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", false);
-        clinit.visitInsn(Opcodes.POP); clinit.visitInsn(Opcodes.RETURN); clinit.visitMaxs(2, 0); clinit.visitEnd();
         constructor(writer, publicNoArg ? Opcodes.ACC_PUBLIC : Opcodes.ACC_PRIVATE, false);
         writer.visitEnd();
         return writer.toByteArray();

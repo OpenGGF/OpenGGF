@@ -80,6 +80,29 @@ public final class ModCatalogValidator {
                 ? ModTrackRegistry.EMPTY : new ModTrackRegistry(tracks));
     }
 
+    /** Validates one descriptor against an already-retained immutable packed snapshot. */
+    public PackedValidation validatePacked(ModDescriptor descriptor, PackedModAssetRoot assets) {
+        Objects.requireNonNull(descriptor, "descriptor");
+        Objects.requireNonNull(assets, "assets");
+        List<ModFinding> findings = new ArrayList<>(descriptor.findings());
+        ModAudioManifest audio;
+        try {
+            audio = validateDescriptorContents(descriptor, findings, assets);
+        } catch (ModManifestException error) {
+            findings.add(error("AUDIO_MANIFEST_INVALID", safeMessage(error), AUDIO_MANIFEST_PATH));
+            audio = null;
+        } catch (IOException | SecurityException error) {
+            findings.add(error("MOD_JAR_CHANGED", safeMessage(error),
+                    descriptor.jarPath().getFileName().toString()));
+            audio = null;
+        }
+        ModDescriptor validated = copy(descriptor, findings);
+        List<ModAudioTrack> tracks = !validated.hasErrors() && audio != null ? audio.tracks() : List.of();
+        ValidationResult eligible = new ValidationResult(List.of(validated), tracks.isEmpty()
+                ? ModTrackRegistry.EMPTY : new ModTrackRegistry(tracks));
+        return new PackedValidation(eligible, audio == null ? List.of() : audio.tracks());
+    }
+
     private ValidationResult globalFailure(List<ModCatalogEntry> entries, ModFinding failure) {
         for (int index = 0; index < entries.size(); index++) {
             if (entries.get(index) instanceof ModDescriptor descriptor) {
@@ -96,40 +119,7 @@ public final class ModCatalogValidator {
                                                 long expectedBytes) {
         try (PackedModAssetRoot assets = ModAssetRoot.jar(
                 root, descriptor.jarPath(), limits, expectedBytes)) {
-            if (!assets.immutableSha256().equals(descriptor.sha256())) {
-                findings.add(error("MOD_JAR_CHANGED", "Packed mod digest changed after discovery", null));
-                return null;
-            }
-            List<String> names = assets.validatedEntryNames();
-            if (!names.contains(AUDIO_MANIFEST_PATH)) {
-                if (!descriptor.manifest().audioOverrides().isEmpty()) {
-                    findings.add(error("AUDIO_MANIFEST_MISSING",
-                            "audioOverrides require audio/audio-manifest.yaml", AUDIO_MANIFEST_PATH));
-                }
-                return null;
-            }
-            byte[] bytes = assets.readBounded(AUDIO_MANIFEST_PATH, limits.maxMetadataBytes());
-            ModAudioManifest audio = new ModAudioManifestParser(
-                    descriptor.manifest().id(), limits).parse(bytes);
-            Set<String> inventory = new HashSet<>(names);
-            for (ModAudioTrack track : audio.tracks()) {
-                if (!inventory.contains(track.assetPath())) {
-                    findings.add(error("AUDIO_ASSET_MISSING",
-                            "Missing audio asset: " + track.assetPath(), track.assetPath()));
-                }
-            }
-            for (ModAudioSfx sfx : audio.sfx()) {
-                if (!inventory.contains(sfx.assetPath())) {
-                    findings.add(error("AUDIO_ASSET_MISSING",
-                            "Missing audio asset: " + sfx.assetPath(), sfx.assetPath()));
-                }
-            }
-            if (!audio.sfx().isEmpty()) {
-                findings.add(error("SFX_UNSUPPORTED_PHASE1",
-                        "Streamed SFX are parsed but unsupported in Phase 1", AUDIO_MANIFEST_PATH));
-            }
-            validateOverrides(descriptor, audio, findings);
-            return audio;
+            return validateDescriptorContents(descriptor, findings, assets);
         } catch (ModManifestException error) {
             findings.add(error("AUDIO_MANIFEST_INVALID", safeMessage(error), AUDIO_MANIFEST_PATH));
             return null;
@@ -137,6 +127,46 @@ public final class ModCatalogValidator {
             findings.add(error("MOD_JAR_CHANGED", safeMessage(error), descriptor.jarPath().getFileName().toString()));
             return null;
         }
+    }
+
+    private ModAudioManifest validateDescriptorContents(ModDescriptor descriptor,
+                                                         List<ModFinding> findings,
+                                                         PackedModAssetRoot assets)
+            throws IOException, ModManifestException {
+        if (!assets.immutableSha256().equals(descriptor.sha256())) {
+            findings.add(error("MOD_JAR_CHANGED", "Packed mod digest changed after discovery", null));
+            return null;
+        }
+        List<String> names = assets.validatedEntryNames();
+        if (!names.contains(AUDIO_MANIFEST_PATH)) {
+            if (!descriptor.manifest().audioOverrides().isEmpty()) {
+                findings.add(error("AUDIO_MANIFEST_MISSING",
+                        "audioOverrides require audio/audio-manifest.yaml", AUDIO_MANIFEST_PATH));
+            }
+            return null;
+        }
+        byte[] bytes = assets.readBounded(AUDIO_MANIFEST_PATH, limits.maxMetadataBytes());
+        ModAudioManifest audio = new ModAudioManifestParser(
+                descriptor.manifest().id(), limits).parse(bytes);
+        Set<String> inventory = new HashSet<>(names);
+        for (ModAudioTrack track : audio.tracks()) {
+            if (!inventory.contains(track.assetPath())) {
+                findings.add(error("AUDIO_ASSET_MISSING",
+                        "Missing audio asset: " + track.assetPath(), track.assetPath()));
+            }
+        }
+        for (ModAudioSfx sfx : audio.sfx()) {
+            if (!inventory.contains(sfx.assetPath())) {
+                findings.add(error("AUDIO_ASSET_MISSING",
+                        "Missing audio asset: " + sfx.assetPath(), sfx.assetPath()));
+            }
+        }
+        if (!audio.sfx().isEmpty()) {
+            findings.add(error("SFX_UNSUPPORTED_PHASE1",
+                    "Streamed SFX are parsed but unsupported in Phase 1", AUDIO_MANIFEST_PATH));
+        }
+        validateOverrides(descriptor, audio, findings);
+        return audio;
     }
 
     private Preflight preflight(List<ModCatalogEntry> entries) {
@@ -264,6 +294,14 @@ public final class ModCatalogValidator {
         public ValidationResult {
             entries = List.copyOf(Objects.requireNonNull(entries, "entries"));
             Objects.requireNonNull(registry, "registry");
+        }
+    }
+
+    /** CLI-facing packed result: parsed declarations remain available even when eligibility has errors. */
+    public record PackedValidation(ValidationResult eligibility, List<ModAudioTrack> declaredTracks) {
+        public PackedValidation {
+            Objects.requireNonNull(eligibility, "eligibility");
+            declaredTracks = List.copyOf(Objects.requireNonNull(declaredTracks, "declaredTracks"));
         }
     }
 }

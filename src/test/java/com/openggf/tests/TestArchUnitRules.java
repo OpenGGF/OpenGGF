@@ -235,7 +235,11 @@ class TestArchUnitRules {
             "tools -> game",
             "tools -> ghost",
             "tools -> graphics",
+            // Mod-support Phase 2 Task 16 keeps the SDK validator thin by reusing
+            // the engine's bounded asset-root and canonical mod validation contracts.
+            "tools -> io",
             "tools -> level",
+            "tools -> mods",
             "tools -> net",
             "tools -> sprites",
             "tools -> trace",

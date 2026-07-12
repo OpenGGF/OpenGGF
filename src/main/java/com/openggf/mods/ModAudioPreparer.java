@@ -150,10 +150,8 @@ public final class ModAudioPreparer {
                     long start = 0;
                     long end = 0;
                     if (track.loop()) {
+                        ModAudioAssetValidation.validateLoop(track, cached.sourceFrames());
                         long sourceEnd = track.loopEndFrame().orElse(cached.sourceFrames());
-                        if (track.loopStartFrame() >= sourceEnd || sourceEnd > cached.sourceFrames()) {
-                            throw new IOException("Loop metadata exceeds decoded source frames");
-                        }
                         start = resampler.convertFrame(track.loopStartFrame(), cached.sourceRate(), outputRate);
                         end = sourceEnd == cached.sourceFrames() ? cached.pcm().frameCount()
                                 : resampler.convertFrame(sourceEnd, cached.sourceRate(), outputRate);
