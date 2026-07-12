@@ -52,7 +52,10 @@ public class TestNoServicesInObjectConstructors {
             "S3kSignpostSparkleChild",
             "S3kResultsScreenObjectInstance",
             "Sonic3kSSEntryFlashObjectInstance",
-            "AizTreeRevealControlObjectInstance"
+            "AizTreeRevealControlObjectInstance",
+            // Constructor only initializes scalar camera-boundary state; the raw
+            // spawn preserves AllocateObjectAfterCurrent slot ordering.
+            "AizAct2CameraResizeController"
     );
 
     private static final Set<String> LEGACY_CONSTRUCTOR_RAW_CHILD_REGISTRATION = Set.of(
@@ -783,4 +786,3 @@ public class TestNoServicesInObjectConstructors {
         }
     }
 }
-

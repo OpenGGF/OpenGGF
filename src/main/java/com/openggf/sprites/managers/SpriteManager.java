@@ -15,6 +15,7 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.rules.GameRules;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.camera.Camera;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
@@ -360,6 +361,33 @@ public class SpriteManager {
 	 */
 	public int getFrameCounter() {
 		return frameCounter;
+	}
+
+	/** Returns the active session/configured main playable participant. */
+	public AbstractPlayableSprite getMainPlayable() {
+		String mainCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
+		Sprite namedMain = sprites.get(mainCode);
+		if (namedMain instanceof AbstractPlayableSprite playable && !playable.isCpuControlled()) {
+			return playable;
+		}
+
+		// Compatibility for synthetic tests/tools whose sole playable uses a
+		// non-character code. A second human makes the fallback intentionally
+		// unresolved rather than dependent on HashMap iteration order.
+		AbstractPlayableSprite main = null;
+		for (Sprite sprite : sprites.values()) {
+			if (!(sprite instanceof AbstractPlayableSprite playable) || playable.isCpuControlled()) {
+				continue;
+			}
+			if (main != null && main != playable) {
+				throw new IllegalStateException(
+						"Cannot resolve main playable: configured/session participant '"
+								+ mainCode + "' is absent and multiple non-CPU fallback candidates exist ('"
+								+ main.getCode() + "', '" + playable.getCode() + "')");
+			}
+			main = playable;
+		}
+		return main;
 	}
 
 	/**
@@ -1397,6 +1425,21 @@ public class SpriteManager {
 		SidekickCpuController cpuController = playable.getCpuController();
 		if (cpuController != null) {
 			cpuController.finishCarryAfterCarrierMovement();
+		}
+		if (cpuController == null
+				|| (cpuController.getState() != SidekickCpuController.State.CARRYING
+				&& cpuController.getState() != SidekickCpuController.State.CARRY_INIT)) {
+			SpriteManager sprites = playable.currentSpriteManagerOrNull();
+			AbstractPlayableSprite main = sprites != null ? sprites.getMainPlayable() : null;
+			int mainCarryInput = 0;
+			if (main != null) {
+				if (main.isUpPressed()) mainCarryInput |= AbstractPlayableSprite.INPUT_UP;
+				if (main.isDownPressed()) mainCarryInput |= AbstractPlayableSprite.INPUT_DOWN;
+				if (main.isLeftPressed()) mainCarryInput |= AbstractPlayableSprite.INPUT_LEFT;
+				if (main.isRightPressed()) mainCarryInput |= AbstractPlayableSprite.INPUT_RIGHT;
+				if (main.isJumpJustPressed()) mainCarryInput |= AbstractPlayableSprite.INPUT_JUMP;
+			}
+			playable.getTailsCarryController().updateAfterTailsCollision(mainCarryInput);
 		}
 		playable.recordFollowerHistoryForTick();
 		// ROM Obj01_Control runs Sonic_Display before Sonic_Animate and

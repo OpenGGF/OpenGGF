@@ -5,6 +5,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.physics.Direction;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
@@ -686,6 +687,184 @@ class TestSidekickCpuControllerCarry {
         assertTrue(sawJumpPulse, "MGZ rescue carry should pulse A/B/C on its eight-frame cadence");
         assertTrue(tails.getYSpeed() < 0,
                 "MGZ rescue carry must run Tails_Move_FlySwim lift; otherwise Tails starts below screen and never reaches Sonic");
+    }
+
+    @Test
+    void readyFlightStateConsumesJumpPressBeforeApplyingEightGravity() {
+        AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
+        AbstractPlayableSprite tails = pair[1];
+        fixture.camera().setY((short) 0);
+        tails.setCentreY((short) 0x0400);
+
+        controller.update(6);  // INIT -> CARRY_INIT
+        controller.update(7);  // CARRY_INIT -> CARRYING
+        controller.update(8);  // ROM-visible eight-frame A/B/C pulse
+        tails.setDoubleJumpFlag(1);
+        tails.setYSpeed((short) 0);
+
+        controller.applyFlyingCarryVerticalVelocity();
+
+        assertTrue(controller.getInputJumpPress(), "Precondition: frame 8 injects a flap press");
+        assertEquals(2, tails.getDoubleJumpFlag(),
+                "Ready state 1 consumes the flap press by advancing to lift state 2");
+        assertEquals((short) 0x0008, tails.getYSpeed(),
+                "The transition frame still executes state-1 +0x08 flight gravity");
+    }
+
+    @Test
+    void activeFlapAdvancesStateAndAppliesLiftWithoutFlightGravity() {
+        AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
+        AbstractPlayableSprite tails = pair[1];
+        controller.update(1);
+        controller.update(2);
+        tails.setDoubleJumpFlag(2);
+        tails.setYSpeed((short) 0);
+
+        controller.applyFlyingCarryVerticalVelocity();
+
+        assertEquals(3, tails.getDoubleJumpFlag());
+        assertEquals((short) -0x20, tails.getYSpeed(),
+                "Flap state applies -0x20 directly; it must not also add state-1 +0x08 gravity");
+    }
+
+    @Test
+    void oddRomVisibleFrameDecrementsCarryFlightTimer() {
+        AbstractPlayableSprite[] pair = prepareCarry();
+        AbstractPlayableSprite tails = pair[1];
+        controller.update(1);
+        controller.update(2);
+        tails.setDoubleJumpFlag(1);
+        tails.setDoubleJumpProperty((byte) 0x10);
+
+        controller.update(3);
+        controller.applyFlyingCarryVerticalVelocity();
+
+        assertEquals(0x0F, tails.getDoubleJumpProperty() & 0xFF,
+                "Tails_Move_FlySwim decrements flight time on odd ROM-visible frames");
+    }
+
+    @Test
+    void airborneCarryMovementAppliesVerticalFlightLogicOncePerPhysicsTick() {
+        AbstractPlayableSprite[] pair = prepareCarry();
+        AbstractPlayableSprite tails = pair[1];
+        controller.update(1);
+        controller.update(2);
+        tails.setDoubleJumpFlag(1);
+        tails.setDoubleJumpProperty((byte) 0x10);
+        tails.setYSpeed((short) 0);
+
+        tails.getMovementManager().handleMovement(
+                false, false, false, false, false, false, false, false);
+
+        assertEquals((short) 0x0008, tails.getYSpeed(),
+                "The carry-aware ObjectMoveAndFall phase runs +0x08 exactly once, not once per call site");
+        assertEquals(0x10, tails.getDoubleJumpProperty() & 0xFF,
+                "The even ROM-visible frame leaves the flight timer unchanged during the same physics tick");
+    }
+
+    @Test
+    void cpuRewindRoundTripPreservesOnlyMgzControlSequencingScalars() {
+        AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
+        AbstractPlayableSprite tails = pair[1];
+        fixture.camera().setY((short) 0);
+        tails.setCentreY((short) 0x0400);
+        controller.update(1);
+        controller.update(2);
+
+        SidekickCpuRewindExtra carrying = withMgzControlScalars(
+                controller.captureRewindState(),
+                true, 0x46,
+                true, (short) 0x0057, (short) 0x0068);
+        controller.restoreRewindState(carrying);
+
+        assertTrue(carrying.mgzCarryIntroAscend());
+        assertEquals(0x46, carrying.mgzCarryFlapTimer());
+        assertTrue(carrying.mgzReleasedChaseLatched());
+        assertEquals((short) 0x0057, carrying.mgzReleasedChaseXAccel());
+        assertEquals((short) 0x0068, carrying.mgzReleasedChaseYAccel());
+
+        SidekickCpuRewindExtra mutated = withMgzControlScalars(
+                carrying,
+                false, 0x23,
+                false, (short) 0x0034, (short) 0x0045);
+        controller.restoreRewindState(mutated);
+        assertEquals(mutated, controller.captureRewindState(),
+                "Precondition: every targeted carry scalar was mutated away from its saved sentinel");
+
+        controller.restoreRewindState(carrying);
+
+        SidekickCpuRewindExtra restored = controller.captureRewindState();
+        assertTrue(restored.mgzCarryIntroAscend());
+        assertEquals(0x46, restored.mgzCarryFlapTimer());
+        assertTrue(restored.mgzReleasedChaseLatched());
+        assertEquals((short) 0x0057, restored.mgzReleasedChaseXAccel());
+        assertEquals((short) 0x0068, restored.mgzReleasedChaseYAccel());
+        assertEquals(carrying, restored,
+                "CPU rewind restores its MGZ intro/flap/chase sequencing scalars");
+    }
+
+    private static SidekickCpuRewindExtra withMgzControlScalars(
+            SidekickCpuRewindExtra source,
+            boolean mgzCarryIntroAscend,
+            int mgzCarryFlapTimer,
+            boolean mgzReleasedChaseLatched,
+            short mgzReleasedChaseXAccel,
+            short mgzReleasedChaseYAccel) {
+        return new SidekickCpuRewindExtra(
+                source.state(),
+                source.deadFallingRomCpuRoutine(),
+                source.despawnCounter(),
+                source.frameCounter(),
+                source.controlCounter(),
+                source.controller2Held(),
+                source.controller2Logical(),
+                source.inputUp(),
+                source.inputDown(),
+                source.inputLeft(),
+                source.inputRight(),
+                source.inputJump(),
+                source.inputJumpPress(),
+                source.jumpingFlag(),
+                source.minXBound(),
+                source.maxXBound(),
+                source.minYBound(),
+                source.maxYBound(),
+                source.lastInteractObjectId(),
+                source.normalDespawnLastRenderFlagOffscreen(),
+                source.normalDespawnFreshRenderEntryDelayConsumed(),
+                source.diagnosticS3kInteractWord(),
+                source.normalFrameCount(),
+                source.approachFrameCount(),
+                source.sidekickCount(),
+                source.normalPushingGraceFrames(),
+                source.suppressNextAirbornePushFollowSteering(),
+                source.releasedUnderwaterPushConsumed(),
+                source.objectOrderGracePushBypassThisFrame(),
+                source.pendingGroundedFollowNudge(),
+                source.pendingGroundedFollowNudgeFrame(),
+                source.aizIntroDormantMarkerPrimed(),
+                source.suppressNextLevelEventNormalMovement(),
+                source.catchUpUsesRomVisibleLevelFrameCounter(),
+                source.levelEventDormantMarkerReleasePending(),
+                source.skipPhysicsThisFrame(),
+                source.deadOnObjectReenteredVisibleWindow(),
+                source.deferredDespawnDeadFallContinuingThisFrame(),
+                source.bootstrapPreludePlacementApplied(),
+                source.cpuFrameCounterFromStoredLevelFrame(),
+                source.nextCpuFrameCounterOverride(),
+                source.catchUpFrameCounterOverride(),
+                source.lastNormalAutoJumpPressFrameCounter(),
+                source.controller2SignedLocked(),
+                source.nativeEndingPosePending(),
+                source.latestNormalStepDiagnostics(),
+                mgzCarryIntroAscend,
+                mgzCarryFlapTimer,
+                mgzReleasedChaseLatched,
+                mgzReleasedChaseXAccel,
+                mgzReleasedChaseYAccel,
+                source.flightTimer(),
+                source.catchUpTargetX(),
+                source.catchUpTargetY());
     }
 
     @Test

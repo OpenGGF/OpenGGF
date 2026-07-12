@@ -37,12 +37,12 @@ public record GameRules(
                     false,
                     false,
                     true,
-                    false,
-                    true
+                    false
             ),
             new PlayerCapabilityRules(
                     false,
                     null,
+                    false,
                     false,
                     false,
                     false,
@@ -126,7 +126,8 @@ public record GameRules(
                     1024,
                     false,
                     false,
-                    false
+                    false,
+                    true
             ),
             new PowerUpRules(
                     0,
@@ -169,12 +170,12 @@ public record GameRules(
                     false,
                     false,
                     false,
-                    true,
-                    false
+                    true
             ),
             new PlayerCapabilityRules(
                     true,
                     new short[]{0x0800, 0x0880, 0x0900, 0x0980, 0x0A00, 0x0A80, 0x0B00, 0x0B80, 0x0C00},
+                    false,
                     false,
                     false,
                     false,
@@ -258,7 +259,8 @@ public record GameRules(
                     1024,
                     false,
                     false,
-                    true
+                    true,
+                    false
             ),
             new PowerUpRules(
                     1,
@@ -301,12 +303,12 @@ public record GameRules(
                     true,
                     true,
                     false,
-                    false,
-                    true
+                    false
             ),
             new PlayerCapabilityRules(
                     true,
                     new short[]{0x0800, 0x0880, 0x0900, 0x0980, 0x0A00, 0x0A80, 0x0B00, 0x0B80, 0x0C00},
+                    true,
                     true,
                     true,
                     true,
@@ -388,6 +390,7 @@ public record GameRules(
                     1,
                     32,
                     1024,
+                    true,
                     true,
                     true,
                     true

@@ -313,11 +313,6 @@ public record PerObjectRewindSnapshot(
             boolean controller2SignedLocked,
             boolean nativeEndingPosePending,
             com.openggf.sprites.playable.SidekickCpuController.NormalStepDiagnostics latestNormalStepDiagnostics,
-            short carryLatchX,
-            short carryLatchY,
-            boolean flyingCarryingFlag,
-            boolean carryParentagePending,
-            int releaseCooldown,
             boolean mgzCarryIntroAscend,
             int mgzCarryFlapTimer,
             boolean mgzReleasedChaseLatched,
@@ -429,10 +424,7 @@ public record PerObjectRewindSnapshot(
             int animationFrameIndex,
             int animationTick,
             boolean debugMode,
-            com.openggf.sprites.managers.PlayableSpriteMovement.RewindState movementState,
-            com.openggf.sprites.managers.SpindashDustController.RewindState spindashDustState,
-            com.openggf.sprites.managers.PlayableSpriteAnimation.RewindState animationState,
-            com.openggf.sprites.playable.DrowningController.RewindState drowningState,
+            com.openggf.sprites.playable.PlayableSpriteController.RewindState controllerState,
             SidekickCpuRewindExtra sidekickCpuExtra,
             // Sidekick follow-history circular buffers (read by SidekickCpuController
             // each frame to position the follower; the leader writes new entries every

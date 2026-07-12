@@ -141,6 +141,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
 
     // Child tracking for cleanup on unload.
     private final List<MCZRotPformsObjectInstance> children = new ArrayList<>();
+    private MCZRotPformsObjectInstance owner;
     private boolean childrenSpawned;
 
     // ROM parity: Obj6A_Init (s2.asm:53686-53751) sets up phase params via
@@ -153,15 +154,20 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     private boolean spawnFrameSkipPending;
 
     public MCZRotPformsObjectInstance(ObjectSpawn spawn, String name) {
+        this(spawn, name, spawn.x(), spawn.y());
+    }
+
+    private MCZRotPformsObjectInstance(
+            ObjectSpawn spawn, String name, int unloadAnchorX, int unloadAnchorY) {
         super(spawn, name);
 
         this.xFlip = (spawn.renderFlags() & 0x01) != 0;
         this.yFlip = (spawn.renderFlags() & 0x02) != 0;
 
-        this.baseX = spawn.x();
-        this.baseY = spawn.y();
-        this.x = baseX;
-        this.y = baseY;
+        this.baseX = unloadAnchorX;
+        this.baseY = unloadAnchorY;
+        this.x = spawn.x();
+        this.y = spawn.y();
         this.xFixed = x << 8;
         this.yFixed = y << 8;
 
@@ -292,11 +298,11 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         ensureInitialized();
-        // ROM parity (s2.asm:54125-54167): the MCZ subtype-0x18 #$18 check
+        // ROM parity: the MCZ subtype-0x18 #$18 check
         // (cmpi.b #$18,subtype / bne.w loc_27BD0) gates ONLY the child-spawn
-        // block (54127-54146). After allocating its two children the parent
+        // block (s2.asm:54184-54204). After allocating its two children the parent
         // falls through (bra.s loc_27BC4 -> loc_27BD0 -> loc_27CA2) and runs
-        // routine 4 (loc_27C66, s2.asm:54226-54248) every frame as a full
+        // routine 4 (loc_27C66, s2.asm:54283-54305) every frame as a full
         // moving/solid/rendering platform via JmpTo13_SolidObject. It is NOT
         // an invisible non-solid spawner, so the parent collides like any
         // other Obj6A platform.
@@ -316,11 +322,11 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
         }
 
         // MCZ subtype 0x18 parent: Obj6A_Init allocates its two child platforms
-        // (s2.asm:54127-54146) and then falls through to run as a normal
-        // moving/solid platform on routine 4. So spawn the children once, then
-        // continue into the same move/collide path the children use -- the
-        // parent is NOT an invisible non-moving spawner (s2.asm:54147-54167,
-        // 54226-54248).
+        // (s2.asm:54184-54204), falls through the shared init tail
+        // (s2.asm:54204,54217-54224), and then runs as a normal moving/solid
+        // platform on routine 4 (s2.asm:54283-54305). So spawn the children
+        // once, then continue into the same move/collide path the children use --
+        // the parent is NOT an invisible non-moving spawner.
         if (isParent) {
             ensureChildrenSpawned();
         }
@@ -446,8 +452,10 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * MCZ subtype 0x18 (s2.asm:53711-53729): spawn two child platforms at
-     * (+/-64, +64) with subtypes 6 and C. The pairing depends on x_flip.
+     * MCZ subtype 0x18 (s2.asm:54184-54204): spawn two child platforms at
+     * (+/-64, +64) with subtypes 6 and C. Obj6A_InitSubObject first copies the
+     * parent's x_pos/y_pos into each child's objoff_32/30 unload anchor, then
+     * the caller shifts only live x_pos/y_pos (s2.asm:54207-54213).
      */
     private void ensureChildrenSpawned() {
         if (!childrenSpawned && spawnChildren()) {
@@ -471,8 +479,8 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
                 spawn.respawnTracked(),
                 spawn.rawYWord());
         MCZRotPformsObjectInstance child1 = spawnChild(
-                () -> new MCZRotPformsObjectInstance(child1Spawn, "MCZRotPforms"));
-        children.add(child1);
+                () -> new MCZRotPformsObjectInstance(child1Spawn, "MCZRotPforms", baseX, baseY));
+        attachChild(child1);
 
         int child2Subtype = xFlip ? 0x06 : 0x0C;
         ObjectSpawn child2Spawn = new ObjectSpawn(
@@ -484,17 +492,47 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
                 spawn.respawnTracked(),
                 spawn.rawYWord());
         MCZRotPformsObjectInstance child2 = spawnChild(
-                () -> new MCZRotPformsObjectInstance(child2Spawn, "MCZRotPforms"));
-        children.add(child2);
+                () -> new MCZRotPformsObjectInstance(child2Spawn, "MCZRotPforms", baseX, baseY));
+        attachChild(child2);
         return true;
+    }
+
+    private void attachChild(MCZRotPformsObjectInstance child) {
+        child.owner = this;
+        children.add(child);
     }
 
     @Override
     public void onUnload() {
-        for (MCZRotPformsObjectInstance child : children) {
+        MCZRotPformsObjectInstance previousOwner = owner;
+        owner = null;
+        if (previousOwner != null) {
+            previousOwner.children.remove(this);
+        }
+
+        // Obj6A's two AllocateObjectAfterCurrent children are independent SST
+        // entries (docs/s2disasm/s2.asm:54184-54204). They execute separately,
+        // even though their MarkObjGone2 tails all read the shared parent anchor
+        // copied into objoff_32 (s2.asm:54207-54213,54278-54280,54303-54305).
+        List<MCZRotPformsObjectInstance> ownedChildren = new ArrayList<>(children);
+        for (MCZRotPformsObjectInstance child : ownedChildren) {
+            if (child.owner == this) {
+                child.owner = null;
+            }
             child.setDestroyed(true);
         }
         children.clear();
+    }
+
+    @Override
+    protected void afterRewindRestoreSettled() {
+        // children is the authoritative captured graph edge. Rebuild the deferred
+        // inverse after all Obj6A instances have been recreated/restored so a later
+        // child MarkObjGone2 delete detaches from the restored parent, never a stale
+        // pre-seek instance (Obj6A delete tails, s2.asm:54278-54280,54303-54305).
+        for (MCZRotPformsObjectInstance child : children) {
+            child.owner = this;
+        }
     }
 
     @Override

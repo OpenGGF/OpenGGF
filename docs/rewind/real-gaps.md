@@ -1,15 +1,15 @@
 # Rewind Round-Trip Probe
 
-Generated: 2026-07-06
+Generated: 2026-07-12
 
 ## Summary
 
 | Metric | Value |
 |--------|-------|
-| Total classes discovered | 836 |
-| Probed: | 725 |
-| Skipped/Unprobed: | 111 |
-| Probe coverage | 86.7% |
+| Total classes discovered | 838 |
+| Probed: | 728 |
+| Skipped/Unprobed: | 110 |
+| Probe coverage | 86.9% |
 | REAL gaps found | 0 |
 
 ## Real Gaps (fields that differ after capture → restore)
@@ -129,7 +129,6 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 | PachinkoFlipperObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | S3kResultsScreenObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | Sonic3kPointsObjectInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInst... |
-| Sonic3kSSEntryFlashObjectInstance | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | TensionBridgeObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | TunnelExhaustControlObjectInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.TunnelExhaustControlObj... |
 | ShieldObjectInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.level.objects.ShieldObjectInstance (tried ze... |

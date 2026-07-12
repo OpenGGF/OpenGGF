@@ -718,8 +718,10 @@ public class Sonic2SpecialStageRenderer {
 
     /**
      * Renders all player sprites with their shadows.
-     * Players are sorted by priority (higher priority = drawn later = on top).
-     * Shadows are rendered first (behind players).
+     * Players are sorted by priority, but a LOWER priority(a0) value wins ROM's
+     * Sprite_Table ordering and ends up in front, so bodies are drawn from the
+     * highest priority bucket down to the lowest. Shadows are rendered first
+     * (behind players).
      */
     public void renderPlayers() {
         int playerCount = preparePlayerRenderOrder();
@@ -727,32 +729,40 @@ public class Sonic2SpecialStageRenderer {
             return;
         }
 
-        // Render shadows first using shadow batch (VDP shadow/highlight mode)
-        // Shadows must render before players so they appear behind them
+        // ROM's DisplaySprite queues priority(a0) into an ascending Object_Display_Lists
+        // index (s2.asm:30358-30363), and BuildSprites drains those lists low-index first
+        // (s2.asm:30523-30636), so a lower priority(a0) value always reaches Sprite_Table
+        // first. Same-tile-priority VDP sprites earlier in Sprite_Table occlude later ones
+        // (SpriteManager.java's MainCharacter/Sidekick slot-0/1 note), so the LOWEST
+        // priority(a0) value ends up in front. This painter's-algorithm renderer must
+        // therefore submit the highest priority bucket first and the lowest last, for
+        // both the shadow and body passes so they share one order.
+        int minPriority = playerRenderOrderAt(0).getPriority();
+        int maxPriority = playerRenderOrderAt(playerCount - 1).getPriority() + 1;
+
+        // Render shadows first using shadow batch (VDP shadow/highlight mode).
+        // Shadows must render before players so they appear behind them.
         if (shadowFlatPatternBase > 0 || shadowDiagPatternBase > 0 || shadowSidePatternBase > 0) {
             graphicsManager.beginShadowBatch();
-            for (int i = 0; i < playerCount; i++) {
-                Sonic2SpecialStagePlayer player = playerRenderOrderAt(i);
-                // Don't render shadow when invulnerability flash is active
-                if (isInvulnerabilityFlashHidden(player)) {
-                    continue;
+            for (int priority = maxPriority; priority >= minPriority; priority--) {
+                for (int i = 0; i < playerCount; i++) {
+                    Sonic2SpecialStagePlayer player = playerRenderOrderAt(i);
+                    if (player.getPriority() == priority && !isInvulnerabilityFlashHidden(player)) {
+                        renderPlayerShadow(player);
+                    }
                 }
-                renderPlayerShadow(player);
             }
             graphicsManager.flushShadowBatch();
         }
 
-        // Render players on top of shadows using normal pattern batch
+        // Render players on top of shadows using normal pattern batch.
+        // Obj88 occupies a later ROM object slot than either player body, so submit it
+        // one bucket before (i.e. numerically above) the body when they'd otherwise tie.
         graphicsManager.beginPatternBatch();
-        int minPriority = playerRenderOrderAt(0).getPriority() - 1;
-        int maxPriority = playerRenderOrderAt(playerCount - 1).getPriority();
-        for (int priority = minPriority; priority <= maxPriority; priority++) {
-            // Later submissions draw on top in this renderer. Obj88 occupies a
-            // later ROM object slot than either player body, so submit it first
-            // when they share a priority bucket and retain stable body ordering.
+        for (int priority = maxPriority; priority >= minPriority; priority--) {
             for (int i = 0; i < playerCount; i++) {
                 Sonic2SpecialStagePlayer player = playerRenderOrderAt(i);
-                if (player.getPriority() - 1 == priority && !isInvulnerabilityFlashHidden(player)
+                if (player.getPriority() + 1 == priority && !isInvulnerabilityFlashHidden(player)
                         && player.shouldRenderTailsTails()) {
                     renderTailsTails(player);
                 }
@@ -1884,12 +1894,38 @@ public class Sonic2SpecialStageRenderer {
         int right = middle;
         for (int out = start; out < end; out++) {
             if (right >= end || (left < middle
-                    && source[left].getPriority() <= source[right].getPriority())) {
+                    && playerOrdersBeforeOrTiesWith(source[left], source[right]))) {
                 destination[out] = source[left++];
             } else {
                 destination[out] = source[right++];
             }
         }
+    }
+
+    /**
+     * Sonic's Obj09 is always MainCharacter and Tails' Obj09 instance is always
+     * Sidekick, the first and second objects respectively (s2.constants.asm:1101-1103),
+     * so Sonic's sprite always reaches {@code Sprite_Table} first each frame
+     * (s2.asm:30523-30594). Same-priority VDP sprites earlier in the table occlude
+     * later ones, so when both players' depth-derived priority ties
+     * (s2.asm:69505-69544), the sidekick must sort first here (rendered first,
+     * ends up underneath) and the main character last (rendered last, stays on
+     * top), matching ROM instead of the incidental original-order stability used
+     * for every other tie.
+     */
+    private static boolean playerOrdersBeforeOrTiesWith(
+            Sonic2SpecialStagePlayer left, Sonic2SpecialStagePlayer right) {
+        int leftPriority = left.getPriority();
+        int rightPriority = right.getPriority();
+        if (leftPriority != rightPriority) {
+            return leftPriority < rightPriority;
+        }
+        boolean leftIsSidekick = !left.isMainCharacter();
+        boolean rightIsSidekick = !right.isMainCharacter();
+        if (leftIsSidekick != rightIsSidekick) {
+            return leftIsSidekick;
+        }
+        return true;
     }
 
     private static Sonic2SpecialStageObject[] stableSortObjects(

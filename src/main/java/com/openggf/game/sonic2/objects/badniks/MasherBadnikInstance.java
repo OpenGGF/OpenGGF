@@ -5,6 +5,7 @@ import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RomObjectSnapshot;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
@@ -102,7 +103,16 @@ public class MasherBadnikInstance extends AbstractBadnikInstance implements Rewi
 
     @Override
     public PerObjectRewindSnapshot captureRewindState() {
-        PerObjectRewindSnapshot base = super.captureRewindState();
+        return captureCompleteRewindState(RewindCaptureContext.none());
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        return captureCompleteRewindState(context);
+    }
+
+    private PerObjectRewindSnapshot captureCompleteRewindState(RewindCaptureContext context) {
+        PerObjectRewindSnapshot base = super.captureRewindState(context);
         return base.withBadnikSubclassExtra(new PerObjectRewindSnapshot.MasherRewindExtra(
                 motionState.x,
                 motionState.y,
@@ -115,7 +125,17 @@ public class MasherBadnikInstance extends AbstractBadnikInstance implements Rewi
 
     @Override
     public void restoreRewindState(PerObjectRewindSnapshot snapshot) {
-        super.restoreRewindState(snapshot);
+        restoreCompleteRewindState(snapshot, RewindCaptureContext.none());
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+        restoreCompleteRewindState(snapshot, context);
+    }
+
+    private void restoreCompleteRewindState(PerObjectRewindSnapshot snapshot,
+            RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
         if (snapshot.badnikSubclassExtra() instanceof PerObjectRewindSnapshot.MasherRewindExtra extra) {
             motionState.x = extra.motionX();
             motionState.y = extra.motionY();
@@ -124,6 +144,10 @@ public class MasherBadnikInstance extends AbstractBadnikInstance implements Rewi
             motionState.xVel = extra.motionXVel();
             motionState.yVel = extra.motionYVel();
             initialYPos = extra.initialYPos();
+            currentX = motionState.x;
+            currentY = motionState.y;
+            xVelocity = motionState.xVel;
+            yVelocity = motionState.yVel;
         }
     }
 

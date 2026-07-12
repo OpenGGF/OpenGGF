@@ -38755,3 +38755,73 @@ Verification:
   exited 0 with expected-red reports preserved: CNZ2 f9977 / 10
   (`tails_x_speed` expected `-0200`, actual `0x023A`) and MTZ3 f13477 / 4
   (`x_speed` expected `-03FB`, actual `0x03FB`).
+
+### 2026-07-12 -- S2 MCZ Obj6A rewind reference-closure repair
+
+The runtime reference-closure sweep on `bugfix/ai-rewind-reference-closure`
+at `a4b624b92` found two regressions in traces that were green in the pre-guard
+baseline:
+
+- MCZ1 stopped at trace index/ROM frame 944 after the engine dropped the left
+  child while the live parent was at X `$098F` and camera X reached `$0A05`.
+- MCZ2 stopped at trace index/ROM frame 4964 after the same false child drop
+  while the parent was at X `$0E60` and camera X reached `$0F07`.
+
+The closure guard exposed an engine lifetime bug, not an independently owned
+ROM child lifetime. Obj6A allocates separate child SST entries and shifts their
+live positions, but `Obj6A_InitSubObject` copies the parent's unshifted
+`x_pos/y_pos` into every child's `objoff_32/30` first. All three movement tails
+therefore test the same parent X anchor in `MarkObjGone2`
+(`docs/s2disasm/s2.asm:54184-54213,54278-54280,54303-54305`). The engine had
+incorrectly derived child anchors from shifted Java spawns, allowing one child
+to leave the live identity set early. Children now keep shifted live
+positions/spawns while inheriting the parent unload anchor.
+
+Parameterized manager-driven coverage seeds the previous S2 post-camera latch,
+passes the current pre-camera X to `ObjectManager.update`, and reproduces both
+former route windows (parent/camera `$098F/$0A05` and `$0E60/$0F07`) without
+manual deletion. It proves all three entries remain eligible together, closure
+capture succeeds, and a farther camera naturally culls the assembly together.
+Supplemental graph coverage retains the captured parent list, deferred inverse
+owner detach/relink, rewind restoration, and late pre-seek callback check.
+
+Verification for final commit `0b7c59be9`:
+
+- `mvn "-Dtest=com.openggf.game.sonic2.objects.TestS2MczRotPformsGraphRewind,com.openggf.level.objects.TestObjectManagerRewindReferenceClosure" surefire:test`
+  exited 0; all focused graph and manager reference-closure checks passed.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dsurefire.argLine=-Xmx2g" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`
+  exited 0; MCZ1 returned to its baseline PASS with no closure failure.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dsurefire.argLine=-Xmx2g" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`
+  exited 0; MCZ2 returned to its baseline PASS with no closure failure.
+
+### 2026-07-12 -- Final post-MCZ exclusive reference-closure sweep
+
+At guarded HEAD `c882f3d7f`, the final sweep used the same empirically reliable
+class-scoped process as the preserved baseline: compile once with
+`mvn -Dmse=off -DskipTests test-compile`, then run the 29 commands from
+`target/rewind-closure-baseline/commands.txt` independently and in order, with
+one fresh Surefire JVM per class (`forkCount=1`, `-Xmx2g`). This is the exclusive
+comparison run; no other Maven process shared the worktree.
+
+The result exactly matched the baseline method oracle: 29 classes / 61 methods,
+41 passed, 19 retained their known assertion failures, one retained the known
+CNZ behavioral error, and there were zero skips, zero infrastructure errors,
+zero reference-closure failures, and zero method-status changes. This does not
+claim the 20 pre-existing behavioral reds are green. The schema-v2 sweep wrapper
+is `target/rewind-closure-guarded/manifest.json` (SHA-256
+`4E3D92E4FE5CF144B1B352FC99E2715DD308B8B3D69E4FAF3A6C0AC197E177F9`), with
+the sorted oracle at `target/rewind-closure-guarded/method-status.json`.
+
+Representative serial timing used clean baseline (`a3ad53f4a`) and guarded
+(`c882f3d7f`) worktrees, one warm-up and five measured samples per target:
+
+- S2 WFZ, 16,427 frames: baseline samples 24.904, 31.735, 28.980, 26.610,
+  30.326 s (median 28.980 s); guarded samples 26.024, 29.948, 29.117, 27.938,
+  33.382 s (median 29.117 s), delta +0.136 s / +0.47%.
+- S3K AIZ complete-run, 26,228 frames: baseline samples 45.038, 41.328,
+  38.197, 37.886, 38.023 s (median 38.197 s); guarded samples 41.575, 34.936,
+  35.753, 36.213, 31.234 s (median 35.753 s), delta -2.444 s / -6.40%.
+
+The performance threshold (guarded median both more than one second and more
+than 10% slower) was false for both targets. Timing evidence is preserved in
+`target/rewind-closure-timing.json` and `target/rewind-closure-timing/`.

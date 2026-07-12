@@ -34,7 +34,9 @@ class TestArchitecturalSourceGuard {
     // touch-response, or solid-contact logic owned by extracted collaborators.
     // Rewind child reconstruction adds a narrowly scoped lifecycle hook at the
     // existing restore orchestration boundary; it does not move collaborator logic back here.
-    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2880;
+    // 2026-07-12: ratchet inherited develop growth to 2910, plus a four-line public
+    // delegate into ObjectRewindReferenceClosureValidator. Traversal stays extracted.
+    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2914;
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
             "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
             // 2026-07-02: 3065 -> 3115 after S2 trace fixes + the GameRules typed-rule

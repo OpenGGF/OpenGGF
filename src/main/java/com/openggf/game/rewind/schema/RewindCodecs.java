@@ -157,41 +157,7 @@ public final class RewindCodecs {
 
     public static boolean requiresIdentityTable(Field field) {
         Objects.requireNonNull(field, "field");
-        Class<?> type = field.getType();
-        if (requiresIdentityTable(type)) {
-            return true;
-        }
-        Type genericType = field.getGenericType();
-        if (!(genericType instanceof ParameterizedType parameterizedType)) {
-            return false;
-        }
-        Type[] args = parameterizedType.getActualTypeArguments();
-        if (Collection.class.isAssignableFrom(type)) {
-            return args.length == 1
-                    && args[0] instanceof Class<?> elementType
-                    && requiresIdentityTable(elementType);
-        }
-        if (Map.class.isAssignableFrom(type)) {
-            return args.length == 2
-                    && args[0] instanceof Class<?> keyType
-                    && args[1] instanceof Class<?> valueType
-                    && (requiresIdentityTable(keyType) || requiresIdentityTable(valueType));
-        }
-        return false;
-    }
-
-    private static boolean requiresIdentityTable(Class<?> type) {
-        if (isPlayerReferenceType(type) || isObjectReferenceType(type)) {
-            return true;
-        }
-        if (type.isArray()) {
-            return requiresIdentityTable(type.getComponentType());
-        }
-        if (isSupportedPlainStateHolder(type)) {
-            return plainStateFields(type).stream()
-                    .anyMatch(RewindCodecs::requiresIdentityTable);
-        }
-        return false;
+        return codecFor(field).map(RewindCodec::requiresIdentityTable).orElse(false);
     }
 
     public static boolean supportsInPlaceStateHolder(Class<?> type) {
@@ -378,6 +344,20 @@ public final class RewindCodecs {
 
     private static boolean isIdentityReferenceType(Class<?> type) {
         return isPlayerReferenceType(type) || isObjectReferenceType(type);
+    }
+
+    private static boolean collectionValueRequiresIdentityTable(Class<?> type) {
+        if (isIdentityReferenceType(type)) {
+            return true;
+        }
+        if (RewindStateful.class.isAssignableFrom(type)) {
+            return false;
+        }
+        if ((type.isArray() && supportedArrayComponent(type.getComponentType()))
+                || isSupportedConstructiblePlainStateHolder(type)) {
+            return codecFor(type).map(RewindCodec::requiresIdentityTable).orElse(false);
+        }
+        return false;
     }
 
     private static boolean isSupportedConstructiblePlainStateHolder(Class<?> type) {
@@ -635,6 +615,11 @@ public final class RewindCodecs {
         public boolean requiresExistingTargetValue() {
             return true;
         }
+
+        @Override
+        public boolean requiresIdentityTable() {
+            return codecFor(componentType).map(RewindCodec::requiresIdentityTable).orElse(false);
+        }
     }
 
     private static final class PaletteColorCodec implements RewindCodec {
@@ -732,6 +717,11 @@ public final class RewindCodecs {
 
             set(field, target, resolvePlayerRef(new PlayerRefId(scalarData.readInt()), context, declaredType));
         }
+
+        @Override
+        public boolean requiresIdentityTable() {
+            return true;
+        }
     }
 
     private static final class ObjectReferenceCodec implements RewindCodec {
@@ -778,6 +768,11 @@ public final class RewindCodecs {
                 RewindCaptureContext context) {
 
             set(field, target, readObjectRef(scalarData, context, declaredType));
+        }
+
+        @Override
+        public boolean requiresIdentityTable() {
+            return true;
         }
     }
 
@@ -854,6 +849,11 @@ public final class RewindCodecs {
         @Override
         public boolean requiresExistingTargetValue() {
             return true;
+        }
+
+        @Override
+        public boolean requiresIdentityTable() {
+            return collectionValueRequiresIdentityTable(elementType);
         }
     }
 
@@ -935,6 +935,12 @@ public final class RewindCodecs {
         @Override
         public boolean requiresExistingTargetValue() {
             return true;
+        }
+
+        @Override
+        public boolean requiresIdentityTable() {
+            return collectionValueRequiresIdentityTable(keyType)
+                    || collectionValueRequiresIdentityTable(valueType);
         }
     }
 
@@ -1291,6 +1297,14 @@ public final class RewindCodecs {
         @Override
         public boolean requiresExistingTargetValue() {
             return true;
+        }
+
+        @Override
+        public boolean requiresIdentityTable() {
+            return fields.stream()
+                    .map(RewindCodecs::codecFor)
+                    .flatMap(Optional::stream)
+                    .anyMatch(RewindCodec::requiresIdentityTable);
         }
     }
 

@@ -25,12 +25,20 @@ import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestAizFireCurtainRendererRom {
+    private static final Sonic3kLoadBootstrap FIRE_TRANSITION_BOOTSTRAP =
+            new Sonic3kLoadBootstrap(Sonic3kLoadBootstrap.Mode.SKIP_INTRO, null);
     private static SharedLevel sharedLevel;
+
+    private static Sonic3kAIZEvents newFireTransitionEvents() {
+        AtomicInteger vblankCounter = new AtomicInteger();
+        return new Sonic3kAIZEvents(FIRE_TRANSITION_BOOTSTRAP, vblankCounter::getAndIncrement);
+    }
 
     @BeforeAll
     public static void loadLevel() throws Exception {
@@ -53,7 +61,7 @@ public class TestAizFireCurtainRendererRom {
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
 
-        Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        Sonic3kAIZEvents events = newFireTransitionEvents();
         events.init(0);
         events.setEventsFg5(true);
 
@@ -96,7 +104,7 @@ public class TestAizFireCurtainRendererRom {
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
 
-        Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        Sonic3kAIZEvents events = newFireTransitionEvents();
         events.init(0);
         events.setEventsFg5(true);
 
@@ -156,7 +164,7 @@ public class TestAizFireCurtainRendererRom {
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
 
-        Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        Sonic3kAIZEvents events = newFireTransitionEvents();
         events.init(0);
         events.setEventsFg5(true);
 
@@ -216,7 +224,7 @@ public class TestAizFireCurtainRendererRom {
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
 
-        Sonic3kAIZEvents act1Events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        Sonic3kAIZEvents act1Events = newFireTransitionEvents();
         act1Events.init(0);
         act1Events.setEventsFg5(true);
 
@@ -293,5 +301,3 @@ public class TestAizFireCurtainRendererRom {
         }
     }
 }
-
-

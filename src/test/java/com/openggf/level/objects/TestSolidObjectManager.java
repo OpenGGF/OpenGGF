@@ -1252,7 +1252,7 @@ public class TestSolidObjectManager {
         sidekick.setCentreX((short) floor.getX());
         sidekick.setCentreY((short) (exactBoundaryY + 3));
 
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 21; i++) {
             manager.processImmediateInlineSolidCheckpoint(floor, sonic, List.of(sidekick));
             assertFalse(sonic.isOnObject(),
                     "AIZ transition floor exact-boundary checks reject during the fire-refresh window");

@@ -13,6 +13,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.timer.TimerManager;
+import com.openggf.sprites.managers.SpriteManager;
 
 final class PlayableSpriteRuntimeServices {
         private PlayableSpriteRuntimeServices() {
@@ -38,4 +39,9 @@ final class PlayableSpriteRuntimeServices {
         static GameRng rng() { return GameServices.rng(); }
         static GameRng rngOrNull() { return GameServices.rngOrNull(); }
         static WaterSystem water() { return GameServices.water(); }
+        static SpriteManager spritesOrNull() { return GameServices.spritesOrNull(); }
+        static int gameplayFrameCounter() {
+                SpriteManager sprites = spritesOrNull();
+                return sprites != null ? sprites.getFrameCounter() : 0;
+        }
 }
