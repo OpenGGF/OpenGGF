@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.features;
 
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
@@ -24,7 +25,7 @@ class TestHCZWaterSkimHandler {
     }
 
     @Test
-    void updateUsesNativeP1P2QueryAndIgnoresExtraSidekicks() {
+    void updateProcessesNativePlayersThenExtraSidekicks() {
         AbstractPlayableSprite main = skimmingCandidate();
         AbstractPlayableSprite nativeP2 = skimmingCandidate();
         AbstractPlayableSprite extraSidekick = skimmingCandidate();
@@ -36,13 +37,14 @@ class TestHCZWaterSkimHandler {
 
         assertTrue(HCZWaterSkimHandler.isSkimActiveP1());
         assertTrue(HCZWaterSkimHandler.isSkimActiveP2());
+        assertTrue(HCZWaterSkimHandler.isSkimActive(2));
         verify(main).setWaterSkimActive(true);
         verify(nativeP2).setWaterSkimActive(true);
-        verify(extraSidekick, never()).setWaterSkimActive(anyBoolean());
+        verify(extraSidekick).setWaterSkimActive(true);
     }
 
     @Test
-    void updateClearsNativeP2SkimWhenFirstSidekickIsDeadWithoutPromotingExtraSidekick() {
+    void updateClearsDeadNativeP2WithoutClearingExtraSidekick() {
         AbstractPlayableSprite main = skimmingCandidate();
         AbstractPlayableSprite nativeP2 = skimmingCandidate();
         AbstractPlayableSprite extraSidekick = skimmingCandidate();
@@ -58,11 +60,11 @@ class TestHCZWaterSkimHandler {
         HCZWaterSkimHandler.update(deadNativeP2Query, 0x200, 2);
 
         assertFalse(HCZWaterSkimHandler.isSkimActiveP2());
-        verify(extraSidekick, never()).setWaterSkimActive(anyBoolean());
+        assertTrue(HCZWaterSkimHandler.isSkimActive(2));
     }
 
     @Test
-    void updateLeavesNativeP2SkimStateUntouchedWhenNoSidekickCandidateExists() {
+    void omittedNativeP2KeepsIdentityStateWithoutLeavingNativeSlotActive() {
         AbstractPlayableSprite main = skimmingCandidate();
         AbstractPlayableSprite nativeP2 = skimmingCandidate();
         ObjectPlayerQuery activeQuery = new ObjectPlayerQuery(
@@ -75,7 +77,68 @@ class TestHCZWaterSkimHandler {
 
         HCZWaterSkimHandler.update(missingNativeP2Query, 0x200, 2);
 
+        assertFalse(HCZWaterSkimHandler.isSkimActiveP2());
+
+        HCZWaterSkimHandler.update(activeQuery, 0x200, 3);
         assertTrue(HCZWaterSkimHandler.isSkimActiveP2());
+    }
+
+    @Test
+    void sidekickReorderKeepsSkimStateWithPlayerIdentity() {
+        AbstractPlayableSprite main = skimmingCandidate();
+        AbstractPlayableSprite first = skimmingCandidate();
+        AbstractPlayableSprite second = skimmingCandidate();
+        ObjectPlayerQuery initial = new ObjectPlayerQuery(() -> main, () -> List.of(first, second));
+        HCZWaterSkimHandler.update(initial, 0x200, 1);
+        when(second.getXSpeed()).thenReturn((short) 0x6FF);
+
+        ObjectPlayerQuery reordered = new ObjectPlayerQuery(() -> main, () -> List.of(second, first));
+        HCZWaterSkimHandler.update(reordered, 0x200, 2);
+
+        assertFalse(HCZWaterSkimHandler.isSkimActive(1));
+        assertTrue(HCZWaterSkimHandler.isSkimActive(2));
+    }
+
+    @Test
+    void rewindSnapshotRestoresThirdPlayerSkimStateByPlayerRefSlot() {
+        AbstractPlayableSprite main = skimmingCandidate();
+        AbstractPlayableSprite nativeP2 = skimmingCandidate();
+        AbstractPlayableSprite third = skimmingCandidate();
+        ObjectPlayerQuery query = new ObjectPlayerQuery(() -> main, () -> List.of(nativeP2, third));
+        HCZWaterSkimHandler.update(query, 0x200, 1);
+        HCZWaterSkimHandler.Snapshot snapshot = HCZWaterSkimHandler.snapshot();
+
+        HCZWaterSkimHandler.reset();
+        HCZWaterSkimHandler.restore(snapshot);
+        assertTrue(HCZWaterSkimHandler.snapshot().extensionStates().stream()
+                .anyMatch(state -> state.playerRef().equals(PlayerRefId.sidekick(1))));
+        HCZWaterSkimHandler.update(query, 0x200, 2);
+
+        assertTrue(HCZWaterSkimHandler.isSkimActive(2));
+        assertFalse(snapshot.extensionStates().isEmpty());
+    }
+
+    @Test
+    void restoredThirdPlayerStateSurvivesOmissionAndDoesNotRenderGhostSplash() {
+        AbstractPlayableSprite main = skimmingCandidate();
+        AbstractPlayableSprite nativeP2 = skimmingCandidate();
+        AbstractPlayableSprite third = skimmingCandidate();
+        ObjectPlayerQuery fullRoster = new ObjectPlayerQuery(
+                () -> main, () -> List.of(nativeP2, third));
+        HCZWaterSkimHandler.update(fullRoster, 0x200, 1);
+        assertTrue(HCZWaterSkimHandler.activeExtensionSplashPlayers().contains(third));
+        HCZWaterSkimHandler.Snapshot snapshot = HCZWaterSkimHandler.snapshot();
+
+        HCZWaterSkimHandler.reset();
+        HCZWaterSkimHandler.restore(snapshot);
+        HCZWaterSkimHandler.update(new ObjectPlayerQuery(
+                () -> main, () -> List.of(nativeP2)), 0x200, 2);
+
+        assertFalse(HCZWaterSkimHandler.activeExtensionSplashPlayers().contains(third));
+        assertTrue(HCZWaterSkimHandler.snapshot().extensionStates().stream()
+                .anyMatch(state -> state.playerRef().equals(PlayerRefId.sidekick(1))));
+        HCZWaterSkimHandler.update(fullRoster, 0x200, 3);
+        assertTrue(HCZWaterSkimHandler.isSkimActive(2));
     }
 
     @Test

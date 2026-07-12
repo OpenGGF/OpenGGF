@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
+import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.sonic3k.S3kSpriteDataLoader;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -24,7 +25,11 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.IdentityHashMap;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -80,6 +85,11 @@ public final class HCZWaterSkimHandler {
     private static int splashAnimFrameP2;
     private static int splashAnimTimerP1;
     private static int splashAnimTimerP2;
+    /** Engine extension state; native P1/P2 fields above retain their ROM ownership. */
+    private static final Map<PlayableEntity, ExtensionSkimState> extensionStates = new IdentityHashMap<>();
+    private static final Map<PlayerRefId, ExtensionSkimSnapshot> pendingExtensionStates = new HashMap<>();
+    private static List<PlayableEntity> lastParticipants = List.of();
+    private static final NativeP2Binding nativeP2Binding = new NativeP2Binding();
 
     // ===== Frame counter (for SFX timing) =====
     private static int frameCounter;
@@ -122,29 +132,59 @@ public final class HCZWaterSkimHandler {
 
     static void update(ObjectPlayerQuery query, int waterLevel, int frameCounter) {
         AbstractPlayableSprite player = asPlayableSprite(query.mainPlayerOrNull());
-        if (player == null || player.getDead() || player.isDebugMode()) {
+        if (player == null) {
+            return;
+        }
+        if (player.getDead() || player.isDebugMode()) {
             if (skimActiveP1) {
                 skimActiveP1 = false;
                 splashAnimFrameP1 = SPLASH_EXIT_FRAME;
+                player.setWaterSkimActive(false);
             }
-            return;
         }
 
         if (waterLevel == 0) {
             return;
         }
 
-        skimActiveP1 = processSkimPhysics(player, skimActiveP1, waterLevel, frameCounter, true);
+        List<PlayableEntity> participants = query.playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        hydratePendingExtensionStates(participants);
+
+        if (!player.getDead() && !player.isDebugMode()) {
+            skimActiveP1 = processSkimPhysics(player, skimActiveP1, waterLevel, frameCounter, 0, null);
+        }
 
         AbstractPlayableSprite p2 = nativeP2From(query);
+        bindNativeP2(p2);
         if (p2 != null) {
-            if (!p2.getDead()) {
-                skimActiveP2 = processSkimPhysics(p2, skimActiveP2, waterLevel, frameCounter, false);
+            if (!p2.getDead() && !p2.isDebugMode()) {
+                skimActiveP2 = processSkimPhysics(p2, skimActiveP2, waterLevel, frameCounter, 1, null);
             } else if (skimActiveP2) {
                 skimActiveP2 = false;
                 splashAnimFrameP2 = SPLASH_EXIT_FRAME;
+                p2.setWaterSkimActive(false);
             }
         }
+
+        lastParticipants = List.copyOf(participants);
+        for (int index = 2; index < participants.size(); index++) {
+            PlayableEntity participant = participants.get(index);
+            AbstractPlayableSprite extension = asPlayableSprite(participant);
+            if (extension == null) continue;
+            ExtensionSkimState state = extensionStates.computeIfAbsent(
+                    participant, ignored -> new ExtensionSkimState());
+            if (!extension.getDead() && !extension.isDebugMode()) {
+                state.active = processSkimPhysics(
+                        extension, state.active, waterLevel, frameCounter, index, state);
+            } else if (state.active) {
+                state.active = false;
+                state.splashFrame = SPLASH_EXIT_FRAME;
+                extension.setWaterSkimActive(false);
+            }
+        }
+        extensionStates.entrySet().removeIf(entry -> !entry.getValue().hasState()
+                && !containsIdentity(participants, entry.getKey()));
     }
 
     /**
@@ -160,7 +200,8 @@ public final class HCZWaterSkimHandler {
                                                boolean wasActive,
                                                int waterLevel,
                                                int frameCounter,
-                                               boolean isP1) {
+                                               int playerIndex,
+                                               ExtensionSkimState extensionState) {
         if (!wasActive) {
             // === Activation check (sonic3k.asm:75393-75421) ===
             // Condition 1: y_vel must be zero
@@ -191,7 +232,10 @@ public final class HCZWaterSkimHandler {
             }
 
             // Start splash animation
-            if (isP1) {
+            if (extensionState != null) {
+                extensionState.splashFrame = 0;
+                extensionState.splashTimer = SPLASH_ANIM_DELAY;
+            } else if (playerIndex == 0) {
                 splashAnimFrameP1 = 0;
                 splashAnimTimerP1 = SPLASH_ANIM_DELAY;
             } else {
@@ -209,7 +253,7 @@ public final class HCZWaterSkimHandler {
         // Check jump exit (A/B/C pressed)
         // ROM: andi.w #button_A_mask|button_B_mask|button_C_mask,d0
         if (player.isJumpPressed()) {
-            return exitWithJump(player, isP1);
+            return exitWithJump(player, playerIndex, extensionState);
         }
 
         // Calculate pin position BEFORE checking/applying it
@@ -222,14 +266,14 @@ public final class HCZWaterSkimHandler {
         // i.e. terrain raised the player above the water surface (e.g. running into a curve).
         // Using unsigned comparison to match ROM's bhi (branch if higher, unsigned).
         if (Integer.compareUnsigned(pinnedY, player.getCentreY()) > 0) {
-            return exitBySpeedLoss(player, isP1);
+            return exitBySpeedLoss(player, playerIndex, extensionState);
         }
 
         // Check speed threshold — exit if too slow
         // ROM: cmpi.w #$700,d1 / blo.s loc_38646 (sonic3k.asm:75440-75441)
         int absXSpeed = Math.abs(player.getXSpeed());
         if (absXSpeed < SPEED_THRESHOLD) {
-            return exitBySpeedLoss(player, isP1);
+            return exitBySpeedLoss(player, playerIndex, extensionState);
         }
 
         // NOW pin player Y to water surface (only if still skimming)
@@ -250,7 +294,7 @@ public final class HCZWaterSkimHandler {
             // ROM: move.w x_vel(a1),d0 / beq.s loc_38646 (sonic3k.asm:75452)
             // If friction reduced x_vel to zero, exit skim immediately
             if (player.getXSpeed() == 0) {
-                return exitBySpeedLoss(player, isP1);
+                return exitBySpeedLoss(player, playerIndex, extensionState);
             }
         }
 
@@ -261,11 +305,7 @@ public final class HCZWaterSkimHandler {
         }
 
         // Advance splash animation
-        if (isP1) {
-            advanceSplashAnim(true);
-        } else {
-            advanceSplashAnim(false);
-        }
+        advanceSplashAnim(playerIndex, extensionState);
 
         return true;
     }
@@ -290,7 +330,8 @@ public final class HCZWaterSkimHandler {
      * Exit skim by jumping (A/B/C pressed).
      * ROM: loc_38652 (sonic3k.asm:75481-75491).
      */
-    private static boolean exitWithJump(AbstractPlayableSprite player, boolean isP1) {
+    private static boolean exitWithJump(AbstractPlayableSprite player, int playerIndex,
+                                        ExtensionSkimState extensionState) {
         player.setYSpeed(JUMP_EXIT_Y_VEL);
         player.setAir(true);
         player.setJumping(true);
@@ -299,7 +340,9 @@ public final class HCZWaterSkimHandler {
         player.setAnimationId(Sonic3kAnimationIds.ROLL);
         player.setRolling(true);
 
-        if (isP1) {
+        if (extensionState != null) {
+            extensionState.splashFrame = SPLASH_EXIT_FRAME;
+        } else if (playerIndex == 0) {
             splashAnimFrameP1 = SPLASH_EXIT_FRAME;
         } else {
             splashAnimFrameP2 = SPLASH_EXIT_FRAME;
@@ -313,8 +356,11 @@ public final class HCZWaterSkimHandler {
      * Exit skim by speed dropping below threshold.
      * ROM: loc_38646 (sonic3k.asm:75473-75476).
      */
-    private static boolean exitBySpeedLoss(AbstractPlayableSprite player, boolean isP1) {
-        if (isP1) {
+    private static boolean exitBySpeedLoss(AbstractPlayableSprite player, int playerIndex,
+                                           ExtensionSkimState extensionState) {
+        if (extensionState != null) {
+            extensionState.splashFrame = SPLASH_EXIT_FRAME;
+        } else if (playerIndex == 0) {
             splashAnimFrameP1 = SPLASH_EXIT_FRAME;
         } else {
             splashAnimFrameP2 = SPLASH_EXIT_FRAME;
@@ -334,8 +380,14 @@ public final class HCZWaterSkimHandler {
      * Advance the splash animation timer and frame.
      * ROM: loc_384DA (sonic3k.asm:75328-75334) — 3 frames per step, cycles 0-4.
      */
-    private static void advanceSplashAnim(boolean isP1) {
-        if (isP1) {
+    private static void advanceSplashAnim(int playerIndex, ExtensionSkimState extensionState) {
+        if (extensionState != null) {
+            extensionState.splashTimer--;
+            if (extensionState.splashTimer < 0) {
+                extensionState.splashTimer = SPLASH_ANIM_DELAY - 1;
+                extensionState.splashFrame = (extensionState.splashFrame + 1) % SPLASH_ANIM_FRAMES;
+            }
+        } else if (playerIndex == 0) {
             splashAnimTimerP1--;
             if (splashAnimTimerP1 < 0) {
                 splashAnimTimerP1 = SPLASH_ANIM_DELAY - 1;
@@ -393,6 +445,16 @@ public final class HCZWaterSkimHandler {
                         p2.getCentreX(), waterLevel, hFlip, false);
             }
         }
+
+        for (PlayableEntity participant : activeExtensionSplashPlayers()) {
+            ExtensionSkimState state = extensionStates.get(participant);
+            AbstractPlayableSprite extension = asPlayableSprite(participant);
+            if (extension != null && state.active && state.splashFrame < SPLASH_EXIT_FRAME) {
+                boolean hFlip = extension.getDirection() == Direction.LEFT;
+                splashRenderer.drawFrameIndex(state.splashFrame,
+                        extension.getCentreX(), waterLevel, hFlip, false);
+            }
+        }
     }
 
     /** Returns true if P1 is currently skimming across water. */
@@ -405,6 +467,15 @@ public final class HCZWaterSkimHandler {
         return skimActiveP2;
     }
 
+    /** Returns the skim state for the main player (0) or any configured sidekick. */
+    public static boolean isSkimActive(int playerIndex) {
+        if (playerIndex == 0) return skimActiveP1;
+        if (playerIndex == 1) return skimActiveP2;
+        if (playerIndex < 0 || playerIndex >= lastParticipants.size()) return false;
+        ExtensionSkimState state = extensionStates.get(lastParticipants.get(playerIndex));
+        return state != null && state.active;
+    }
+
     public static void reset() {
         skimActiveP1 = false;
         skimActiveP2 = false;
@@ -412,6 +483,10 @@ public final class HCZWaterSkimHandler {
         splashAnimFrameP2 = 0;
         splashAnimTimerP1 = 0;
         splashAnimTimerP2 = 0;
+        extensionStates.clear();
+        pendingExtensionStates.clear();
+        lastParticipants = List.of();
+        nativeP2Binding.reset(false);
         splashRenderer = null;
         artLoaded = false;
         actId = 0;
@@ -428,15 +503,37 @@ public final class HCZWaterSkimHandler {
             boolean skimActiveP1, boolean skimActiveP2,
             int splashAnimFrameP1, int splashAnimFrameP2,
             int splashAnimTimerP1, int splashAnimTimerP2,
-            int frameCounter) {
+            int frameCounter,
+            List<ExtensionSkimSnapshot> extensionStates) {
+        public Snapshot(boolean skimActiveP1, boolean skimActiveP2,
+                        int splashAnimFrameP1, int splashAnimFrameP2,
+                        int splashAnimTimerP1, int splashAnimTimerP2,
+                        int frameCounter) {
+            this(skimActiveP1, skimActiveP2,
+                    splashAnimFrameP1, splashAnimFrameP2,
+                    splashAnimTimerP1, splashAnimTimerP2,
+                    frameCounter, List.of());
+        }
     }
+
+    public record ExtensionSkimSnapshot(
+            PlayerRefId playerRef, boolean active, int splashFrame, int splashTimer) {}
 
     /** Captures the current per-player skim state for rewind snapshots. */
     public static Snapshot snapshot() {
+        List<ExtensionSkimSnapshot> extensions = new ArrayList<>(pendingExtensionStates.values());
+        for (int index = 2; index < lastParticipants.size(); index++) {
+            ExtensionSkimState state = extensionStates.get(lastParticipants.get(index));
+            if (state != null && state.hasState()) {
+                PlayerRefId playerRef = PlayerRefId.sidekick(index - 1);
+                extensions.removeIf(snapshot -> snapshot.playerRef().equals(playerRef));
+                extensions.add(state.snapshot(playerRef));
+            }
+        }
         return new Snapshot(skimActiveP1, skimActiveP2,
                 splashAnimFrameP1, splashAnimFrameP2,
                 splashAnimTimerP1, splashAnimTimerP2,
-                frameCounter);
+                frameCounter, List.copyOf(extensions));
     }
 
     /** Restores per-player skim state from a previously captured snapshot. */
@@ -448,6 +545,12 @@ public final class HCZWaterSkimHandler {
         splashAnimTimerP1 = snapshot.splashAnimTimerP1();
         splashAnimTimerP2 = snapshot.splashAnimTimerP2();
         frameCounter = snapshot.frameCounter();
+        extensionStates.clear();
+        pendingExtensionStates.clear();
+        for (ExtensionSkimSnapshot state : snapshot.extensionStates()) {
+            pendingExtensionStates.put(state.playerRef(), state);
+        }
+        nativeP2Binding.reset(true);
     }
 
     // ===== Art loading =====
@@ -525,5 +628,95 @@ public final class HCZWaterSkimHandler {
 
     private static AbstractPlayableSprite asPlayableSprite(PlayableEntity player) {
         return player instanceof AbstractPlayableSprite sprite ? sprite : null;
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> players, PlayableEntity target) {
+        for (PlayableEntity player : players) {
+            if (player == target) return true;
+        }
+        return false;
+    }
+
+    private static void bindNativeP2(AbstractPlayableSprite current) {
+        if (nativeP2Binding.pending) {
+            nativeP2Binding.owner = current;
+            nativeP2Binding.pending = false;
+            return;
+        }
+        if (nativeP2Binding.owner == current) return;
+        if (nativeP2Binding.owner != null && (skimActiveP2 || splashAnimFrameP2 != 0 || splashAnimTimerP2 != 0)) {
+            ExtensionSkimState migrated = extensionStates.computeIfAbsent(
+                    nativeP2Binding.owner, ignored -> new ExtensionSkimState());
+            migrated.active = skimActiveP2;
+            migrated.splashFrame = splashAnimFrameP2;
+            migrated.splashTimer = splashAnimTimerP2;
+        }
+        skimActiveP2 = false;
+        splashAnimFrameP2 = 0;
+        splashAnimTimerP2 = 0;
+        if (current != null) {
+            ExtensionSkimState restored = extensionStates.remove(current);
+            if (restored != null) {
+                skimActiveP2 = restored.active;
+                splashAnimFrameP2 = restored.splashFrame;
+                splashAnimTimerP2 = restored.splashTimer;
+            }
+        }
+        nativeP2Binding.owner = current;
+    }
+
+    private static void hydratePendingExtensionStates(List<PlayableEntity> participants) {
+        if (pendingExtensionStates.isEmpty()) return;
+        var iterator = pendingExtensionStates.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<PlayerRefId, ExtensionSkimSnapshot> entry = iterator.next();
+            int playerIndex = entry.getKey().encoded() - 1;
+            if (playerIndex >= 2 && playerIndex < participants.size()) {
+                extensionStates.put(participants.get(playerIndex), ExtensionSkimState.from(entry.getValue()));
+                iterator.remove();
+            }
+        }
+    }
+
+    static List<PlayableEntity> activeExtensionSplashPlayers() {
+        List<PlayableEntity> active = new ArrayList<>();
+        for (Map.Entry<PlayableEntity, ExtensionSkimState> entry : extensionStates.entrySet()) {
+            if (entry.getValue().active && containsIdentity(lastParticipants, entry.getKey())) {
+                active.add(entry.getKey());
+            }
+        }
+        return active;
+    }
+
+    private static final class ExtensionSkimState {
+        private boolean active;
+        private int splashFrame;
+        private int splashTimer;
+
+        private boolean hasState() {
+            return active || splashFrame != 0 || splashTimer != 0;
+        }
+
+        private ExtensionSkimSnapshot snapshot(PlayerRefId playerRef) {
+            return new ExtensionSkimSnapshot(playerRef, active, splashFrame, splashTimer);
+        }
+
+        private static ExtensionSkimState from(ExtensionSkimSnapshot snapshot) {
+            ExtensionSkimState state = new ExtensionSkimState();
+            state.active = snapshot.active();
+            state.splashFrame = snapshot.splashFrame();
+            state.splashTimer = snapshot.splashTimer();
+            return state;
+        }
+    }
+
+    private static final class NativeP2Binding {
+        private PlayableEntity owner;
+        private boolean pending;
+
+        private void reset(boolean pending) {
+            owner = null;
+            this.pending = pending;
+        }
     }
 }
