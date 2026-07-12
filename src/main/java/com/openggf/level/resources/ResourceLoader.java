@@ -40,9 +40,34 @@ public class ResourceLoader {
     private static final boolean KOS_DEBUG_LOG = false;
 
     private final Rom rom;
+    private final boolean strictModAssetsOnly;
 
     public ResourceLoader(Rom rom) {
         this.rom = rom;
+        this.strictModAssetsOnly = false;
+    }
+
+    private ResourceLoader() {
+        this.rom = null;
+        this.strictModAssetsOnly = true;
+    }
+
+    /**
+     * Creates a loader which accepts bounded mod assets only.
+     *
+     * <p>This is deliberately distinct from a nullable-ROM convention: any ROM
+     * operation is rejected before a composed load reads its first asset.</p>
+     */
+    public static ResourceLoader forModAssetsOnly() {
+        return new ResourceLoader();
+    }
+
+    /** Rejects unsupported sources without reading or allocating any resource data. */
+    public void preflightSources(List<LoadOp> ops) throws IOException {
+        if (ops == null) {
+            throw new IllegalArgumentException("Load operations are required");
+        }
+        requireSupportedSources(ops);
     }
 
     /**
@@ -62,6 +87,7 @@ public class ResourceLoader {
         if (ops == null || ops.isEmpty()) {
             throw new IllegalArgumentException("At least one LoadOp is required");
         }
+        requireSupportedSources(ops);
 
         long outputCap = modOutputCap(ops);
         byte[][] cachedModData = null;
@@ -161,6 +187,8 @@ public class ResourceLoader {
             return asset.root().readBounded(
                     asset.entryPath(), asset.root().limits().maxAssetBytes());
         }
+
+        requireRomAvailable();
 
         int romAddr = op.romAddr();
         return switch (op.compressionType()) {
@@ -303,6 +331,24 @@ public class ResourceLoader {
      * @throws IOException if reading fails
      */
     public byte[] loadUncompressed(int romAddr, int size) throws IOException {
+        requireRomAvailable();
         return rom.readBytes(romAddr, size);
+    }
+
+    private void requireSupportedSources(List<LoadOp> ops) throws IOException {
+        if (!strictModAssetsOnly) {
+            return;
+        }
+        for (LoadOp op : ops) {
+            if (op.source() instanceof LoadSource.RomAddress) {
+                throw new IOException("ROM-backed LoadOp is not allowed by a mod-assets-only loader");
+            }
+        }
+    }
+
+    private void requireRomAvailable() throws IOException {
+        if (rom == null) {
+            throw new IOException("ROM-backed LoadOp is not allowed by a mod-assets-only loader");
+        }
     }
 }

@@ -9,6 +9,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.*;
 import com.openggf.level.resources.LevelResourcePlan;
 import com.openggf.level.resources.LoadOp;
+import com.openggf.level.resources.ModLevelInputLimits;
 import com.openggf.level.resources.ResourceLoader;
 import com.openggf.tools.KosinskiReader;
 import com.openggf.level.objects.ObjectSpawn;
@@ -21,8 +22,10 @@ import com.openggf.tools.NemesisReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 public class Sonic2Level extends AbstractLevel {
@@ -63,6 +66,298 @@ public class Sonic2Level extends AbstractLevel {
         this.rings = List.copyOf(ringSpawns);
         this.ringSpriteSheet = ringSpriteSheet;
         loadBoundaries(rom, levelBoundariesAddr);
+    }
+
+    /** Starts strict construction of a Sonic 2-shaped level from mod-owned data. */
+    public static InMemoryBuilder inMemoryBuilder(int zoneIndex, LevelResourcePlan resourcePlan) {
+        return new InMemoryBuilder(zoneIndex, resourcePlan);
+    }
+
+    private Sonic2Level(InMemoryBuilder source) throws IOException {
+        super(source.zoneIndex);
+        source.requireComplete();
+
+        ResourceLoader loader = ResourceLoader.forModAssetsOnly();
+        RawModResources raw = readAndValidateModResources(source, loader);
+        decodePatterns(raw.patterns(), false, false);
+        decodeChunks(raw.chunks(), source.primaryCollisionIndices, source.secondaryCollisionIndices);
+        decodeBlocks(raw.blocks());
+        decodePaletteLines(source.paletteLines, false, false);
+        decodeSolidProfiles(source.solidHeights, source.solidWidths, source.solidAngles);
+        decodeLayerMaps(source.mapWidth, source.mapHeight, source.foregroundMap, source.backgroundMap);
+        this.objects = source.objectSpawns;
+        this.rings = source.ringSpawns;
+        this.ringSpriteSheet = source.ringSpriteSheet;
+        setBoundaries(source.minX, source.maxX, source.minY, source.maxY);
+        publishGraphicsCaches();
+    }
+
+    private record RawModResources(byte[] patterns, byte[] chunks, byte[] blocks) {
+    }
+
+    private static RawModResources readAndValidateModResources(
+            InMemoryBuilder source, ResourceLoader loader) throws IOException {
+        ArrayList<LoadOp> allOps = new ArrayList<>();
+        allOps.addAll(source.resourcePlan.getPatternOps());
+        allOps.addAll(source.resourcePlan.getChunkOps());
+        allOps.addAll(source.resourcePlan.getBlockOps());
+        if (source.resourcePlan.getPrimaryCollision() != null) {
+            allOps.add(source.resourcePlan.getPrimaryCollision());
+        }
+        if (source.resourcePlan.getSecondaryCollision() != null) {
+            allOps.add(source.resourcePlan.getSecondaryCollision());
+        }
+        loader.preflightSources(allOps);
+
+        byte[] patternBytes = loader.loadWithOverlays(source.resourcePlan.getPatternOps(), 0);
+        byte[] chunkBytes = loader.loadWithOverlays(source.resourcePlan.getChunkOps(), 0);
+        byte[] blockBytes = loader.loadWithOverlays(source.resourcePlan.getBlockOps(), 0);
+        int patternCount = exactRecordCount(patternBytes, Pattern.PATTERN_SIZE_IN_ROM,
+                2048, "pattern");
+        int chunkCount = exactRecordCount(chunkBytes, Chunk.CHUNK_SIZE_IN_ROM,
+                1024, "chunk");
+        int blockCount = exactRecordCount(blockBytes, LevelConstants.BLOCK_SIZE_IN_ROM,
+                256, "block");
+        validateRawReferences(source, chunkBytes, blockBytes,
+                patternCount, chunkCount, blockCount);
+        return new RawModResources(patternBytes, chunkBytes, blockBytes);
+    }
+
+    private static int exactRecordCount(byte[] data, int recordSize, int maximum, String label) {
+        if (data.length == 0 || data.length % recordSize != 0) {
+            throw new IllegalArgumentException("v1 " + label + " data must contain exact "
+                    + recordSize + "-byte records");
+        }
+        int count = data.length / recordSize;
+        if (count > maximum) {
+            throw new IllegalArgumentException("v1 " + label + " count exceeds " + maximum);
+        }
+        return count;
+    }
+
+    private static void validateRawReferences(InMemoryBuilder source,
+                                              byte[] chunkBytes,
+                                              byte[] blockBytes,
+                                              int patternCount,
+                                              int chunkCount,
+                                              int blockCount) {
+        for (int offset = 0; offset < chunkBytes.length; offset += 2) {
+            int descriptor = unsigned16(chunkBytes, offset);
+            int referencedPattern = descriptor & 0x7FF;
+            if (referencedPattern >= patternCount) {
+                throw new IllegalArgumentException("Chunk descriptor references missing pattern "
+                        + referencedPattern);
+            }
+        }
+        for (int offset = 0; offset < blockBytes.length; offset += 2) {
+            int descriptor = unsigned16(blockBytes, offset);
+            int referencedChunk = descriptor & 0x3FF;
+            if (referencedChunk >= chunkCount) {
+                int blockIndex = offset / LevelConstants.BLOCK_SIZE_IN_ROM;
+                throw new IllegalArgumentException("Block " + blockIndex
+                        + " references missing chunk " + referencedChunk);
+            }
+        }
+        int solidCount = source.solidAngles.length;
+        validateRawCollisionReferences(source.primaryCollisionIndices, chunkCount, solidCount, "primary");
+        validateRawCollisionReferences(source.secondaryCollisionIndices, chunkCount, solidCount, "secondary");
+        validateRawMapReferences(source.foregroundMap, blockCount, "foreground");
+        validateRawMapReferences(source.backgroundMap, blockCount, "background");
+    }
+
+    private static void validateRawCollisionReferences(int[] values, int chunkCount,
+                                                       int solidCount, String path) {
+        if (values.length != chunkCount) {
+            throw new IllegalArgumentException(path + " collision count must exactly match chunk count "
+                    + chunkCount);
+        }
+        for (int value : values) {
+            if (value >= solidCount) {
+                throw new IllegalArgumentException(path + " collision index " + value
+                        + " exceeds solid profile count " + solidCount);
+            }
+        }
+    }
+
+    private static void validateRawMapReferences(byte[] values, int blockCount, String layer) {
+        for (byte value : values) {
+            int blockIndex = Byte.toUnsignedInt(value);
+            if (blockIndex >= blockCount) {
+                throw new IllegalArgumentException(layer + " map references missing block " + blockIndex);
+            }
+        }
+    }
+
+    private static int unsigned16(byte[] data, int offset) {
+        return (Byte.toUnsignedInt(data[offset]) << 8) | Byte.toUnsignedInt(data[offset + 1]);
+    }
+
+    /**
+     * Builder for the exact uncompressed v1 level payload shapes used by mod zones.
+     * Every array is copied when supplied so authoring buffers cannot mutate a live level.
+     */
+    public static final class InMemoryBuilder {
+        private final int zoneIndex;
+        private final LevelResourcePlan resourcePlan;
+        private int mapWidth;
+        private int mapHeight;
+        private byte[] foregroundMap;
+        private byte[] backgroundMap;
+        private byte[][] paletteLines;
+        private byte[] solidHeights;
+        private byte[] solidWidths;
+        private byte[] solidAngles;
+        private int[] primaryCollisionIndices;
+        private int[] secondaryCollisionIndices;
+        private int minX;
+        private int maxX;
+        private int minY;
+        private int maxY;
+        private boolean boundariesSet;
+        private List<ObjectSpawn> objectSpawns;
+        private List<RingSpawn> ringSpawns;
+        private RingSpriteSheet ringSpriteSheet;
+
+        private InMemoryBuilder(int zoneIndex, LevelResourcePlan resourcePlan) {
+            if (zoneIndex < 0) {
+                throw new IllegalArgumentException("Zone index must not be negative");
+            }
+            this.zoneIndex = zoneIndex;
+            this.resourcePlan = Objects.requireNonNull(resourcePlan, "resourcePlan");
+        }
+
+        public InMemoryBuilder layout(int width, int height, byte[] foreground, byte[] background) {
+            int cells = checkedMapCells(width, height);
+            requireExactLength(foreground, cells, "Foreground map");
+            if (background != null) {
+                requireExactLength(background, cells, "Background map");
+            }
+            this.mapWidth = width;
+            this.mapHeight = height;
+            this.foregroundMap = foreground.clone();
+            this.backgroundMap = background == null ? new byte[cells] : background.clone();
+            return this;
+        }
+
+        public InMemoryBuilder paletteLines(byte[][] lines) {
+            Objects.requireNonNull(lines, "lines");
+            if (lines.length != PALETTE_COUNT) {
+                throw new IllegalArgumentException("Exactly four palette lines are required");
+            }
+            byte[][] copy = new byte[PALETTE_COUNT][];
+            for (int i = 0; i < copy.length; i++) {
+                requireExactLength(lines[i], Palette.PALETTE_SIZE_IN_ROM, "Palette line " + i);
+                copy[i] = lines[i].clone();
+            }
+            this.paletteLines = copy;
+            return this;
+        }
+
+        public InMemoryBuilder solidProfiles(byte[] heights, byte[] widths, byte[] angles) {
+            Objects.requireNonNull(heights, "heights");
+            Objects.requireNonNull(widths, "widths");
+            Objects.requireNonNull(angles, "angles");
+            if (heights.length == 0 || heights.length % SolidTile.TILE_SIZE_IN_ROM != 0) {
+                throw new IllegalArgumentException("Solid heights require one exact 16-byte record per profile");
+            }
+            if (widths.length != heights.length) {
+                throw new IllegalArgumentException("Solid width and height profile counts must match");
+            }
+            int count = heights.length / SolidTile.TILE_SIZE_IN_ROM;
+            if (count > 256 || angles.length != count) {
+                throw new IllegalArgumentException("Solid angles must match the 1..256 profile count");
+            }
+            this.solidHeights = heights.clone();
+            this.solidWidths = widths.clone();
+            this.solidAngles = angles.clone();
+            return this;
+        }
+
+        public InMemoryBuilder collisionIndices(int[] primary, int[] secondary) {
+            validateUnsigned16(primary, "Primary collision indices");
+            validateUnsigned16(secondary, "Secondary collision indices");
+            this.primaryCollisionIndices = primary.clone();
+            this.secondaryCollisionIndices = secondary.clone();
+            return this;
+        }
+
+        public InMemoryBuilder boundaries(int minX, int maxX, int minY, int maxY) {
+            if (minX < 0 || maxX > 0xFFFF || minX > maxX) {
+                throw new IllegalArgumentException("Horizontal boundaries must be ordered unsigned 16-bit values");
+            }
+            if (minY < Short.MIN_VALUE || maxY > Short.MAX_VALUE || minY > maxY) {
+                throw new IllegalArgumentException("Vertical boundaries must be ordered signed 16-bit values");
+            }
+            this.minX = minX;
+            this.maxX = maxX;
+            this.minY = minY;
+            this.maxY = maxY;
+            this.boundariesSet = true;
+            return this;
+        }
+
+        public InMemoryBuilder spawns(List<ObjectSpawn> objects, List<RingSpawn> rings,
+                                      RingSpriteSheet ringSheet) {
+            Objects.requireNonNull(objects, "objects");
+            Objects.requireNonNull(rings, "rings");
+            ModLevelInputLimits limits = ModLevelInputLimits.production();
+            if (objects.size() > limits.maxLevelObjects()) {
+                throw new IllegalArgumentException("Object count exceeds production mod limit "
+                        + limits.maxLevelObjects());
+            }
+            if (rings.size() > limits.maxLevelRings()) {
+                throw new IllegalArgumentException("Ring count exceeds production mod limit "
+                        + limits.maxLevelRings());
+            }
+            this.objectSpawns = List.copyOf(objects);
+            this.ringSpawns = List.copyOf(rings);
+            this.ringSpriteSheet = Objects.requireNonNull(ringSheet, "ringSheet");
+            return this;
+        }
+
+        public Sonic2Level build() throws IOException {
+            return new Sonic2Level(this);
+        }
+
+        private void requireComplete() {
+            if (foregroundMap == null || paletteLines == null || solidHeights == null
+                    || primaryCollisionIndices == null || !boundariesSet
+                    || objectSpawns == null) {
+                throw new IllegalStateException("In-memory level builder is incomplete");
+            }
+        }
+
+        private static int checkedMapCells(int width, int height) {
+            ModLevelInputLimits limits = ModLevelInputLimits.production();
+            if (width <= 0 || width > limits.maxMapWidth()) {
+                throw new IllegalArgumentException("Map width must be in 1.." + limits.maxMapWidth());
+            }
+            if (height <= 0 || height > limits.maxMapHeight()) {
+                throw new IllegalArgumentException("Map height must be in 1.." + limits.maxMapHeight());
+            }
+            long cells = (long) width * height;
+            if (cells > limits.maxMapCells()) {
+                throw new IllegalArgumentException("Map cell count exceeds production mod limit "
+                        + limits.maxMapCells());
+            }
+            return (int) cells;
+        }
+
+        private static void requireExactLength(byte[] data, int expected, String label) {
+            Objects.requireNonNull(data, label);
+            if (data.length != expected) {
+                throw new IllegalArgumentException(label + " must contain exactly " + expected + " bytes");
+            }
+        }
+
+        private static void validateUnsigned16(int[] values, String label) {
+            Objects.requireNonNull(values, label);
+            for (int value : values) {
+                if (value < 0 || value > 0xFFFF) {
+                    throw new IllegalArgumentException(label + " contain a value outside unsigned 16-bit range");
+                }
+            }
+        }
     }
 
     /**
@@ -116,44 +411,32 @@ public class Sonic2Level extends AbstractLevel {
 
     private void loadPalettes(Rom rom, int characterPaletteAddr, int levelPalettesAddr, int levelPalettesSize)
             throws IOException {
+        byte[][] lines = new byte[PALETTE_COUNT][Palette.PALETTE_SIZE_IN_ROM];
+        lines[0] = rom.readBytes(characterPaletteAddr, Palette.PALETTE_SIZE_IN_ROM);
+        byte[] levelBytes = rom.readBytes(levelPalettesAddr, levelPalettesSize);
+        int loadedPalettes = Math.min(PALETTE_COUNT - 1,
+                levelBytes.length / Palette.PALETTE_SIZE_IN_ROM);
+        for (int i = 0; i < loadedPalettes; i++) {
+            lines[i + 1] = Arrays.copyOfRange(levelBytes,
+                    i * Palette.PALETTE_SIZE_IN_ROM, (i + 1) * Palette.PALETTE_SIZE_IN_ROM);
+        }
+        decodePaletteLines(lines, true, true);
+    }
+
+    private void decodePaletteLines(byte[][] lines, boolean applyCrossGamePalette,
+                                    boolean cacheImmediately) {
         palettes = new Palette[PALETTE_COUNT];
-        GraphicsManager graphicsMan = GameServices.graphics();
-
-        // Load character palette
-        byte[] buffer = rom.readBytes(characterPaletteAddr, Palette.PALETTE_SIZE_IN_ROM);
-        palettes[0] = new Palette();
-        palettes[0].fromSegaFormat(buffer);
-
-        // Load level palettes
-        // levelPalettesSize is the total size of bytes to read from the ROM.
-        // We will read all of them, then slice them into palette-sized chunks.
-        buffer = rom.readBytes(levelPalettesAddr, levelPalettesSize);
-
-        // Calculate how many full palettes we have available in the data
-        int loadedPalettes = levelPalettesSize / Palette.PALETTE_SIZE_IN_ROM;
-
-        // Mega Drive has 4 palettes total. Palette 0 is character palette (already
-        // loaded).
-        // Palettes 1, 2, 3 are level palettes.
-        for (int i = 0; i < PALETTE_COUNT - 1; i++) {
-            palettes[i + 1] = new Palette();
-            if (i < loadedPalettes) {
-                // Use Arrays.copyOfRange to simulate pointer arithmetic and pass sub-arrays
-                int start = i * Palette.PALETTE_SIZE_IN_ROM;
-                int end = (i + 1) * Palette.PALETTE_SIZE_IN_ROM;
-                // Ensure we don't go out of bounds if size is weird
-                if (end <= buffer.length) {
-                    byte[] subArray = Arrays.copyOfRange(buffer, start, end);
-                    palettes[i + 1].fromSegaFormat(subArray);
-                }
-            }
+        GraphicsManager graphicsMan = cacheImmediately ? GameServices.graphics() : null;
+        for (int i = 0; i < PALETTE_COUNT; i++) {
+            palettes[i] = new Palette();
+            palettes[i].fromSegaFormat(lines[i]);
         }
 
         // "Knuckles in Sonic 2" lock-on: replace palette line 0 with the
         // S2-compatible Knuckles palette from the S3K ROM (0x060BEA).
         // Only indices 2-5 differ (Knuckles' reds vs Sonic's blues);
         // indices 0-1 and 6-15 are identical to S2's Pal_SonicTails.
-        if (com.openggf.game.CrossGameFeatureProvider.isActive()) {
+        if (applyCrossGamePalette && com.openggf.game.CrossGameFeatureProvider.isActive()) {
             String mainChar = ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
             Palette hostPal = GameServices.crossGameFeatures()
                     .loadHostCompatiblePalette(mainChar);
@@ -162,7 +445,7 @@ public class Sonic2Level extends AbstractLevel {
             }
         }
 
-        if (graphicsMan.isGlInitialized()) {
+        if (graphicsMan != null && graphicsMan.isGlInitialized()) {
             for (int i = 0; i < palettes.length; i++) {
                 graphicsMan.cachePaletteTexture(palettes[i], i);
             }
@@ -171,8 +454,6 @@ public class Sonic2Level extends AbstractLevel {
     }
 
     private void loadPatterns(Rom rom, int patternsAddr) throws IOException {
-        final int PATTERN_BUFFER_SIZE = 0xFFFF; // 64KB
-        GraphicsManager graphicsMan = GameServices.graphics();
         byte[] result;
         synchronized (rom) {
             FileChannel channel = rom.getFileChannel();
@@ -180,25 +461,7 @@ public class Sonic2Level extends AbstractLevel {
             result = KosinskiReader.decompress(channel, KOS_DEBUG_LOG);
         }
 
-        patternCount = result.length / Pattern.PATTERN_SIZE_IN_ROM;
-        if (result.length % Pattern.PATTERN_SIZE_IN_ROM != 0) {
-            throw new IOException("Inconsistent pattern data");
-        }
-
-        patterns = new Pattern[patternCount];
-        for (int i = 0; i < patternCount; i++) {
-            patterns[i] = new Pattern();
-            // Pass a sub-array (slice) using Arrays.copyOfRange
-            byte[] subArray = Arrays.copyOfRange(result, i * Pattern.PATTERN_SIZE_IN_ROM,
-                    (i + 1) * Pattern.PATTERN_SIZE_IN_ROM);
-            patterns[i].fromSegaFormat(subArray);
-
-            if (graphicsMan.isGlInitialized()) {
-                graphicsMan.cachePatternTexture(patterns[i], i);
-            }
-
-        }
-
+        decodePatterns(result, false, true);
         LOG.fine("Pattern count: " + patternCount + " (" + result.length + " bytes)");
     }
 
@@ -223,27 +486,9 @@ public class Sonic2Level extends AbstractLevel {
         }
         chunkBuffer = applyAnimatedPatternMappings(rom, chunkBuffer);
 
-        chunkCount = chunkBuffer.length / Chunk.CHUNK_SIZE_IN_ROM;
-        if (chunkBuffer.length % Chunk.CHUNK_SIZE_IN_ROM != 0) {
-            throw new IOException("Inconsistent chunk data");
-        }
-
-        chunks = new Chunk[chunkCount];
-        for (int i = 0; i < chunkCount; i++) {
-            chunks[i] = new Chunk();
-            // Pass a sub-array (slice) using Arrays.copyOfRange
-            byte[] subArray = Arrays.copyOfRange(chunkBuffer, i * Chunk.CHUNK_SIZE_IN_ROM,
-                    (i + 1) * Chunk.CHUNK_SIZE_IN_ROM);
-            int solidTileIndex = 0;
-            if (i < solidTileRefBuffer.length) {
-                solidTileIndex = Byte.toUnsignedInt(solidTileRefBuffer[i]);
-            }
-            int altSolidTileIndex = 0;
-            if (i < solidTileAltRefBuffer.length) {
-                altSolidTileIndex = Byte.toUnsignedInt(solidTileAltRefBuffer[i]);
-            }
-            chunks[i].fromSegaFormat(subArray, solidTileIndex, altSolidTileIndex);
-        }
+        int decodedChunkCount = chunkBuffer.length / Chunk.CHUNK_SIZE_IN_ROM;
+        decodeChunks(chunkBuffer, unsignedBytes(solidTileRefBuffer, decodedChunkCount),
+                unsignedBytes(solidTileAltRefBuffer, decodedChunkCount));
 
         LOG.fine("Chunk count: " + chunkCount + " (" + chunkBuffer.length + " bytes)");
     }
@@ -294,27 +539,31 @@ public class Sonic2Level extends AbstractLevel {
      * @throws IOException
      */
     private void loadSolidTiles(Rom rom, int tileHeightsAddr, int tileWidthsAddr, int anglesAddr) throws IOException {
-
-        solidTileCount = (Sonic2Constants.SOLID_TILE_MAP_SIZE + 1) / SolidTile.TILE_SIZE_IN_ROM;
-        LOG.fine("how many solid tiles fit?:" + solidTileCount);
-
         byte[] solidTileHeightsBuffer = rom.readBytes(tileHeightsAddr, Sonic2Constants.SOLID_TILE_MAP_SIZE);
         byte[] solidTileWidthsBuffer = rom.readBytes(tileWidthsAddr, Sonic2Constants.SOLID_TILE_MAP_SIZE);
+        int count = solidTileHeightsBuffer.length / SolidTile.TILE_SIZE_IN_ROM;
+        byte[] angles = new byte[count];
+        for (int i = 0; i < count; i++) {
+            angles[i] = rom.readByte(anglesAddr + i);
+        }
+        decodeSolidProfiles(solidTileHeightsBuffer, solidTileWidthsBuffer, angles);
+    }
 
-        if (solidTileHeightsBuffer.length % Sonic2Constants.SOLID_TILE_MAP_SIZE != 0) {
+    private void decodeSolidProfiles(byte[] heights, byte[] widths, byte[] angles) throws IOException {
+        if (heights.length == 0 || heights.length % SolidTile.TILE_SIZE_IN_ROM != 0
+                || widths.length != heights.length
+                || angles.length != heights.length / SolidTile.TILE_SIZE_IN_ROM) {
             throw new IOException("Inconsistent SolidTile data");
         }
-
+        solidTileCount = angles.length;
+        LOG.fine("how many solid tiles fit?:" + solidTileCount);
         solidTiles = new SolidTile[solidTileCount];
         for (int i = 0; i < solidTileCount; i++) {
-            byte tileAngle = rom.readByte(anglesAddr + i);
-            byte[] totallyLegitimateHeightArraySir = Arrays.copyOfRange(solidTileHeightsBuffer,
+            byte[] heightProfile = Arrays.copyOfRange(heights,
                     i * SolidTile.TILE_SIZE_IN_ROM, (i + 1) * SolidTile.TILE_SIZE_IN_ROM);
-            byte[] totallyLegitimateWidthArraySir = Arrays.copyOfRange(solidTileWidthsBuffer,
+            byte[] widthProfile = Arrays.copyOfRange(widths,
                     i * SolidTile.TILE_SIZE_IN_ROM, (i + 1) * SolidTile.TILE_SIZE_IN_ROM);
-
-            solidTiles[i] = new SolidTile(i, totallyLegitimateHeightArraySir, totallyLegitimateWidthArraySir,
-                    tileAngle);
+            solidTiles[i] = new SolidTile(i, heightProfile, widthProfile, angles[i]);
         }
 
         LOG.fine("SolidTiles loaded");
@@ -322,8 +571,6 @@ public class Sonic2Level extends AbstractLevel {
     }
 
     private void loadBlocks(Rom rom, int blocksAddr) throws IOException {
-        final int BLOCK_BUFFER_SIZE = 0xFFFF; // 64KB
-
         byte[] blockBuffer;
         synchronized (rom) {
             FileChannel channel = rom.getFileChannel();
@@ -331,30 +578,7 @@ public class Sonic2Level extends AbstractLevel {
             blockBuffer = KosinskiReader.decompress(channel, KOS_DEBUG_LOG);
         }
 
-        blockCount = blockBuffer.length / LevelConstants.BLOCK_SIZE_IN_ROM;
-        if (blockBuffer.length % LevelConstants.BLOCK_SIZE_IN_ROM != 0) {
-            throw new IOException("Inconsistent block data");
-        }
-
-        blocks = new Block[blockCount];
-        for (int i = 0; i < blockCount; i++) {
-            blocks[i] = new Block();
-            // Pass a sub-array (slice) using Arrays.copyOfRange
-            byte[] subArray = Arrays.copyOfRange(blockBuffer, i * LevelConstants.BLOCK_SIZE_IN_ROM,
-                    (i + 1) * LevelConstants.BLOCK_SIZE_IN_ROM);
-
-            blocks[i].fromSegaFormat(subArray);
-
-        }
-
-        // Sanitize Block 0: In Sonic 2, Block 0 is universally defined as "Empty".
-        // If the ROM data for Block 0 contains garbage (or valid but unwanted tiles),
-        // it corrupts "empty" space in the level. Forcing it to a clean empty block
-        // fixes this.
-        if (blockCount > 0) {
-            blocks[0] = new Block();
-        }
-
+        decodeBlocks(blockBuffer);
         LOG.fine("Block count: " + blockCount + " (" + blockBuffer.length + " bytes)");
 
     }
@@ -373,7 +597,7 @@ public class Sonic2Level extends AbstractLevel {
             throw new IOException("Inconsistent map data");
         }
 
-        map = new Map(MAP_LAYERS, MAP_WIDTH, MAP_HEIGHT, buffer);
+        decodeInterleavedMap(MAP_WIDTH, MAP_HEIGHT, buffer);
 
         LOG.fine("Map loaded successfully. Byte count: " + buffer.length);
     }
@@ -385,10 +609,32 @@ public class Sonic2Level extends AbstractLevel {
         // 4-5: minY (signed)
         // 6-7: maxY (signed)
 
-        this.minX = rom.read16BitAddr(levelBoundariesAddr);
-        this.maxX = rom.read16BitAddr(levelBoundariesAddr + 2);
-        this.minY = (short) rom.read16BitAddr(levelBoundariesAddr + 4);
-        this.maxY = (short) rom.read16BitAddr(levelBoundariesAddr + 6);
+        setBoundaries(rom.read16BitAddr(levelBoundariesAddr),
+                rom.read16BitAddr(levelBoundariesAddr + 2),
+                (short) rom.read16BitAddr(levelBoundariesAddr + 4),
+                (short) rom.read16BitAddr(levelBoundariesAddr + 6));
+    }
+
+    private void decodeLayerMaps(int width, int height, byte[] foreground, byte[] background) {
+        byte[] interleaved = new byte[Math.multiplyExact(Math.multiplyExact(width, height), MAP_LAYERS)];
+        for (int y = 0; y < height; y++) {
+            int sourceRow = y * width;
+            int destinationRow = y * width * MAP_LAYERS;
+            System.arraycopy(foreground, sourceRow, interleaved, destinationRow, width);
+            System.arraycopy(background, sourceRow, interleaved, destinationRow + width, width);
+        }
+        decodeInterleavedMap(width, height, interleaved);
+    }
+
+    private void decodeInterleavedMap(int width, int height, byte[] interleaved) {
+        map = new Map(MAP_LAYERS, width, height, interleaved);
+    }
+
+    private void setBoundaries(int minX, int maxX, int minY, int maxY) {
+        this.minX = minX;
+        this.maxX = maxX;
+        this.minY = minY;
+        this.maxY = maxY;
     }
 
     // ===== Resource Plan-based loading methods =====
@@ -404,43 +650,14 @@ public class Sonic2Level extends AbstractLevel {
      * sky blue placeholder patterns to avoid garbled rendering.
      */
     private void loadPatternsWithPlan(Rom rom, LevelResourcePlan plan) throws IOException {
-        GraphicsManager graphicsMan = GameServices.graphics();
-        ResourceLoader loader = new ResourceLoader(rom);
+        loadPatternsWithPlan(new ResourceLoader(rom), plan, true);
+    }
 
+    private void loadPatternsWithPlan(ResourceLoader loader, LevelResourcePlan plan,
+                                      boolean stockHtzExtensions) throws IOException {
         // Use a large initial buffer - will be trimmed to actual size
         byte[] result = loader.loadWithOverlays(plan.getPatternOps(), 0x10000);
-
-        int loadedPatternCount = result.length / Pattern.PATTERN_SIZE_IN_ROM;
-        if (result.length % Pattern.PATTERN_SIZE_IN_ROM != 0) {
-            throw new IOException("Inconsistent pattern data after overlay composition");
-        }
-
-        // For HTZ, extend pattern array to include dynamic art tile indices
-        // The background map references tiles at $0500-$0520 (1280-1312) for mountains/clouds
-        int requiredPatterns = loadedPatternCount;
-        if (zoneIndex == Sonic2Constants.ZONE_HTZ) {
-            requiredPatterns = Math.max(requiredPatterns, Sonic2Constants.HTZ_DYNAMIC_TILES_END);
-        }
-
-        patternCount = requiredPatterns;
-        patterns = new Pattern[patternCount];
-
-        // Load patterns from ROM data
-        for (int i = 0; i < loadedPatternCount; i++) {
-            patterns[i] = new Pattern();
-            byte[] subArray = Arrays.copyOfRange(result, i * Pattern.PATTERN_SIZE_IN_ROM,
-                    (i + 1) * Pattern.PATTERN_SIZE_IN_ROM);
-            patterns[i].fromSegaFormat(subArray);
-
-            if (graphicsMan.isGlInitialized()) {
-                graphicsMan.cachePatternTexture(patterns[i], i);
-            }
-        }
-
-        // Fill any extended patterns (for HTZ dynamic art region) with sky blue
-        if (patternCount > loadedPatternCount) {
-            fillHtzDynamicArtPatterns(graphicsMan, loadedPatternCount);
-        }
+        decodePatterns(result, stockHtzExtensions && zoneIndex == Sonic2Constants.ZONE_HTZ, true);
 
         if (plan.hasPatternOverlays()) {
             LOG.info("Pattern count: " + patternCount + " (" + result.length + " bytes) [with overlays]");
@@ -607,21 +824,8 @@ public class Sonic2Level extends AbstractLevel {
             solidTileAltRefBuffer = new byte[0];
         }
 
-        chunks = new Chunk[chunkCount];
-        for (int i = 0; i < chunkCount; i++) {
-            chunks[i] = new Chunk();
-            byte[] subArray = Arrays.copyOfRange(chunkBuffer, i * Chunk.CHUNK_SIZE_IN_ROM,
-                    (i + 1) * Chunk.CHUNK_SIZE_IN_ROM);
-            int solidTileIndex = 0;
-            if (i < solidTileRefBuffer.length) {
-                solidTileIndex = Byte.toUnsignedInt(solidTileRefBuffer[i]);
-            }
-            int altSolidTileIndex = 0;
-            if (i < solidTileAltRefBuffer.length) {
-                altSolidTileIndex = Byte.toUnsignedInt(solidTileAltRefBuffer[i]);
-            }
-            chunks[i].fromSegaFormat(subArray, solidTileIndex, altSolidTileIndex);
-        }
+        decodeChunks(chunkBuffer, unsignedBytes(solidTileRefBuffer, chunkCount),
+                unsignedBytes(solidTileAltRefBuffer, chunkCount));
 
         LOG.fine("Chunk count: " + chunkCount + " (" + chunkBuffer.length + " bytes)");
     }
@@ -633,27 +837,16 @@ public class Sonic2Level extends AbstractLevel {
      * This method supports overlays for future zones that may need them.
      */
     private void loadBlocksWithPlan(Rom rom, LevelResourcePlan plan) throws IOException {
-        ResourceLoader loader = new ResourceLoader(rom);
+        loadBlocksWithPlan(new ResourceLoader(rom), plan);
+    }
+
+    private void loadBlocksWithPlan(ResourceLoader loader, LevelResourcePlan plan) throws IOException {
 
         // Load and compose block data with overlays, aligned to block size
         byte[] blockBuffer = loader.loadWithOverlaysAligned(
                 plan.getBlockOps(), 0x10000, LevelConstants.BLOCK_SIZE_IN_ROM);
 
-        blockCount = blockBuffer.length / LevelConstants.BLOCK_SIZE_IN_ROM;
-        // Alignment is guaranteed by loadWithOverlaysAligned
-
-        blocks = new Block[blockCount];
-        for (int i = 0; i < blockCount; i++) {
-            blocks[i] = new Block();
-            byte[] subArray = Arrays.copyOfRange(blockBuffer, i * LevelConstants.BLOCK_SIZE_IN_ROM,
-                    (i + 1) * LevelConstants.BLOCK_SIZE_IN_ROM);
-            blocks[i].fromSegaFormat(subArray);
-        }
-
-        // Sanitize Block 0: In Sonic 2, Block 0 is universally defined as "Empty".
-        if (blockCount > 0) {
-            blocks[0] = new Block();
-        }
+        decodeBlocks(blockBuffer);
 
         if (plan.hasBlockOverlays()) {
             LOG.info("Block count: " + blockCount + " (" + blockBuffer.length + " bytes) [with overlays]");
@@ -661,4 +854,85 @@ public class Sonic2Level extends AbstractLevel {
             LOG.fine("Block count: " + blockCount + " (" + blockBuffer.length + " bytes)");
         }
     }
+
+    private void decodeChunks(byte[] chunkBuffer, int[] primaryCollision,
+                              int[] secondaryCollision) throws IOException {
+        if (chunkBuffer.length % Chunk.CHUNK_SIZE_IN_ROM != 0) {
+            throw new IOException("Inconsistent chunk data");
+        }
+        chunkCount = chunkBuffer.length / Chunk.CHUNK_SIZE_IN_ROM;
+        if (primaryCollision.length != chunkCount || secondaryCollision.length != chunkCount) {
+            throw new IllegalArgumentException("Collision index counts must exactly match chunk count " + chunkCount);
+        }
+        chunks = new Chunk[chunkCount];
+        for (int i = 0; i < chunkCount; i++) {
+            chunks[i] = new Chunk();
+            byte[] data = Arrays.copyOfRange(chunkBuffer, i * Chunk.CHUNK_SIZE_IN_ROM,
+                    (i + 1) * Chunk.CHUNK_SIZE_IN_ROM);
+            chunks[i].fromSegaFormat(data, primaryCollision[i], secondaryCollision[i]);
+        }
+    }
+
+    private void decodePatterns(byte[] data, boolean extendHtzDynamicArt,
+                                boolean cacheImmediately) throws IOException {
+        if (data.length % Pattern.PATTERN_SIZE_IN_ROM != 0) {
+            throw new IOException("Inconsistent pattern data");
+        }
+        int loadedCount = data.length / Pattern.PATTERN_SIZE_IN_ROM;
+        patternCount = extendHtzDynamicArt
+                ? Math.max(loadedCount, Sonic2Constants.HTZ_DYNAMIC_TILES_END)
+                : loadedCount;
+        patterns = new Pattern[patternCount];
+        GraphicsManager graphicsMan = cacheImmediately || extendHtzDynamicArt
+                ? GameServices.graphics() : null;
+        for (int i = 0; i < loadedCount; i++) {
+            patterns[i] = new Pattern();
+            patterns[i].fromSegaFormat(Arrays.copyOfRange(data,
+                    i * Pattern.PATTERN_SIZE_IN_ROM, (i + 1) * Pattern.PATTERN_SIZE_IN_ROM));
+            if (graphicsMan != null && cacheImmediately && graphicsMan.isGlInitialized()) {
+                graphicsMan.cachePatternTexture(patterns[i], i);
+            }
+        }
+        if (extendHtzDynamicArt && patternCount > loadedCount) {
+            fillHtzDynamicArtPatterns(graphicsMan, loadedCount);
+        }
+    }
+
+    private void publishGraphicsCaches() {
+        GraphicsManager graphics = GameServices.graphics();
+        if (!graphics.isGlInitialized()) {
+            return;
+        }
+        for (int i = 0; i < patternCount; i++) {
+            graphics.cachePatternTexture(patterns[i], i);
+        }
+        for (int i = 0; i < palettes.length; i++) {
+            graphics.cachePaletteTexture(palettes[i], i);
+        }
+    }
+
+    private void decodeBlocks(byte[] data) throws IOException {
+        if (data.length % LevelConstants.BLOCK_SIZE_IN_ROM != 0) {
+            throw new IOException("Inconsistent block data");
+        }
+        blockCount = data.length / LevelConstants.BLOCK_SIZE_IN_ROM;
+        blocks = new Block[blockCount];
+        for (int i = 0; i < blockCount; i++) {
+            blocks[i] = new Block();
+            blocks[i].fromSegaFormat(Arrays.copyOfRange(data,
+                    i * LevelConstants.BLOCK_SIZE_IN_ROM, (i + 1) * LevelConstants.BLOCK_SIZE_IN_ROM));
+        }
+        if (blockCount > 0) {
+            blocks[0] = new Block();
+        }
+    }
+
+    private static int[] unsignedBytes(byte[] data, int count) {
+        int[] decoded = new int[count];
+        for (int i = 0; i < Math.min(data.length, count); i++) {
+            decoded[i] = Byte.toUnsignedInt(data[i]);
+        }
+        return decoded;
+    }
+
 }
