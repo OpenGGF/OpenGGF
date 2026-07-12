@@ -47,7 +47,9 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAiz2BossEndSequenceObjects {
@@ -723,6 +725,11 @@ class TestAiz2BossEndSequenceObjects {
         capsule.setServices(new QueryOnlyServices(camera, newMain, List.of(newP2, newExtension))
                 .withGameState(new GameStateManager()));
         CompactFieldCapturer.restore(capsule, snapshot, rewindContext(newMain, newP2, newExtension));
+        Object restoredNativeP2Owner = getObjectField(capsule, "nativeP2EndingPoseOwner");
+        assertSame(newP2, restoredNativeP2Owner,
+                "captured capsule owner must relink through PlayerRefId.sidekick(0)");
+        assertNotSame(oldP2, restoredNativeP2Owner,
+                "stale pre-rewind native P2 instance must be absent after compact restore");
         ObjectControlState.nativeBit7FullControl().applyTo(newExtension);
         newExtension.setControlLocked(true);
         newExtension.setDead(true);
@@ -1240,6 +1247,12 @@ class TestAiz2BossEndSequenceObjects {
         Field field = findField(target.getClass(), fieldName);
         field.setAccessible(true);
         return field.getInt(target);
+    }
+
+    private static Object getObjectField(Object target, String fieldName) throws Exception {
+        Field field = findField(target.getClass(), fieldName);
+        field.setAccessible(true);
+        return field.get(target);
     }
 
     private static RewindCaptureContext rewindContext(

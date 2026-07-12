@@ -25,6 +25,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -201,6 +203,14 @@ class TestAizHollowTreeObjectInstance {
         AbstractPlayableSprite newExtension = newPlayer();
         tree.setServices(new MutablePlayerServices(newMain, List.of(newP2, newExtension)));
         CompactFieldCapturer.restore(tree, snapshot, rewindContext(newMain, newP2, newExtension));
+        Object restoredMainOwner = readField(tree, "mainOwner");
+        Object restoredNativeP2Owner = readField(tree, "nativeP2Owner");
+        assertSame(newMain, restoredMainOwner,
+                "captured main owner must relink through PlayerRefId.mainPlayer");
+        assertSame(newP2, restoredNativeP2Owner,
+                "captured native P2 owner must relink through PlayerRefId.sidekick(0)");
+        assertNotSame(oldMain, restoredMainOwner, "stale captured main instance must be absent");
+        assertNotSame(oldP2, restoredNativeP2Owner, "stale captured P2 instance must be absent");
         ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(newExtension);
         newExtension.setOnObject(true);
         newExtension.setLatchedSolidObject(Sonic3kObjectIds.AIZ_HOLLOW_TREE, tree);
@@ -342,5 +352,15 @@ class TestAizHollowTreeObjectInstance {
         Field field = revealControl.getClass().getDeclaredField("timer2EWord");
         field.setAccessible(true);
         field.setInt(revealControl, value);
+    }
+
+    private static Object readField(Object target, String fieldName) {
+        try {
+            Field field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            return field.get(target);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
     }
 }

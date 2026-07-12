@@ -10,6 +10,8 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.sonic2.objects.TornadoObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance;
+import com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance;
+import com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.CnzCylinderInstance;
 import com.openggf.game.sonic3k.objects.IczFreezerObjectInstance;
@@ -252,6 +254,21 @@ class TestRewindPolicyRegistry {
                 RewindPolicyRegistry.policyForAudit(sideDrillCapturedPlayer).orElse(null));
         assertEquals(RewindFieldPolicy.CAPTURED,
                 RewindPolicyRegistry.policyForAudit(iczFrozenBlockCapturedPlayer).orElse(null));
+    }
+
+    @Test
+    void defaultObjectPolicyCapturesAizCompatibilityOwnerReferences() throws NoSuchFieldException {
+        Field capsuleNativeP2 = Aiz2EndEggCapsuleInstance.class
+                .getDeclaredField("nativeP2EndingPoseOwner");
+        Field treeMain = AizHollowTreeObjectInstance.class.getDeclaredField("mainOwner");
+        Field treeNativeP2 = AizHollowTreeObjectInstance.class.getDeclaredField("nativeP2Owner");
+
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(capsuleNativeP2).orElse(null));
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(treeMain).orElse(null));
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(treeNativeP2).orElse(null));
     }
 
     private static void assertPolicy(RewindClassSchema schema, String fieldName, RewindFieldPolicy policy) {

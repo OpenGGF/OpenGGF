@@ -199,6 +199,12 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance", "extraPlayerPastTrigger"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractS3kFloatingEndEggCapsuleInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractS3kUprightEggCapsuleInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
+            // Compatibility owner references are live player identities. Compact capture
+            // serializes them as PlayerRefId values so recreated player instances replace,
+            // rather than coexist with, stale pre-rewind references.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance", "nativeP2EndingPoseOwner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance", "mainOwner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance", "nativeP2Owner"), RewindFieldPolicy.CAPTURED),
             // AIZ collapsing log bridge: once collapsing it stops being a solid surface (onSolidContact no longer
             // fires), so an empty standingPlayers cannot self-heal and the collapse/final loops never knock the
             // stranded rider off; ejectedPlayers guards a knocked-off rider from re-standing/double-ejecting.
