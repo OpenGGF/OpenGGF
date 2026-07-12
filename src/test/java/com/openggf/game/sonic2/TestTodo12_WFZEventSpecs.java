@@ -7,6 +7,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.events.Sonic2WFZEvents;
+import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -302,6 +303,27 @@ public class TestTodo12_WFZEventSpecs {
         assertEquals(2, events.getPlcRequestCountForTest(), "S4 no-op should not request additional PLCs");
     }
 
+    @Test
+    public void testWFZControlLockCoversWholeEngineTeam() {
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        TestablePlayableSprite extra = new TestablePlayableSprite("knuckles", (short) 0, (short) 0);
+        nativeP2.setCpuControlled(true);
+        extra.setCpuControlled(true);
+        GameServices.sprites().addSprite(main);
+        GameServices.sprites().addSprite(nativeP2);
+        GameServices.sprites().addSprite(extra);
+        cam.setFocusedSprite(main);
+        cam.setY((short) 0x500);
+        events.setWfzSubRoutine(2);
+
+        events.updatePrePhysicsControlLock();
+
+        assertTrue(main.isControlLocked());
+        assertTrue(nativeP2.isControlLocked());
+        assertTrue(extra.isControlLocked());
+    }
+
     /**
      * Verify the WFZ dual-dispatch architecture.
      * ROM reference: LevEvents_WFZ (s2.asm:20560-20567)
@@ -346,5 +368,3 @@ public class TestTodo12_WFZEventSpecs {
         assertTrue(events.getBgYOffset() > 0, "BG Y offset should be positive once speed reaches 0x100 (integer part > 0)");
     }
 }
-
-
