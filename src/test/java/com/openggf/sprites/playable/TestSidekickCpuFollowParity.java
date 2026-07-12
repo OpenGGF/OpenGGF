@@ -80,6 +80,22 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void rawControllerHeldBitsExcludeCpuGeneratedDirections() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setCpuController(controller);
+
+        controller.setController2Input(AbstractPlayableSprite.INPUT_DOWN, 0);
+        tails.setDirectionalInputPressed(true, false, false, false);
+
+        assertTrue(tails.isRawControllerInputHeld(AbstractPlayableSprite.INPUT_DOWN));
+        assertFalse(tails.isRawControllerInputHeld(AbstractPlayableSprite.INPUT_UP),
+                "CPU follow UP must remain in Ctrl_2_logical and not leak into raw Ctrl_2");
+    }
+
+    @Test
     void s3kFreshSpawnInitFrameResetsKinematicsWithoutRunningNormalCpu() {
         TestableSprite sonic = new TestableSprite("sonic");
         sonic.setGameRulesForTest(GameRules.SONIC_3K);

@@ -3263,6 +3263,25 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
+         * Returns held bits from the raw controller word ({@code Ctrl_1} or
+         * {@code Ctrl_2}), before CPU follow input is written to the logical
+         * controller word. Object routines that load the raw word must use this
+         * instead of the movement-facing directional getters.
+         */
+        public boolean isRawControllerInputHeld(int inputMask) {
+                if (isCpuControlled() && cpuController != null) {
+                        return cpuController.isRawController2InputHeld(inputMask);
+                }
+                int held = 0;
+                if (isUpPressed()) held |= INPUT_UP;
+                if (isDownPressed()) held |= INPUT_DOWN;
+                if (isLeftPressed()) held |= INPUT_LEFT;
+                if (isRightPressed()) held |= INPUT_RIGHT;
+                if (isJumpPressed()) held |= INPUT_JUMP;
+                return (held & inputMask) != 0;
+        }
+
+        /**
          * Returns the ROM-visible logical jump press bit published for this
          * playable's current update. Unlike {@link #isJumpPressed()}, this does
          * not read the live held/forced latch; objects that receive

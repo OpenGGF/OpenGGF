@@ -297,10 +297,10 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
         } else {
             // Player captured — ROM: allow up/down movement, clamp to extent
             int hangX = x + PLAYER_HANG_OFFSET;
-            if (player.isUpPressed()) {
+            if (player.isRawControllerInputHeld(AbstractPlayableSprite.INPUT_UP)) {
                 player.setY((short) (player.getY() - 1));
             }
-            if (player.isDownPressed()) {
+            if (player.isRawControllerInputHeld(AbstractPlayableSprite.INPUT_DOWN)) {
                 player.setY((short) (player.getY() + 1));
             }
             NativePositionOps.writeXPosPreserveSubpixel(player, hangX);
@@ -309,7 +309,8 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
             player.setYSpeed((short) 0);
 
             // ROM: andi.w #button_A|B|C,d1 / beq locret — ABC to release
-            if (player.isJumpPressed()) {
+            if (player.isRawControllerInputHeld(AbstractPlayableSprite.INPUT_JUMP)
+                    || player.isRawControllerJumpJustPressed()) {
                 releasePlayer(player, pi);
                 // ROM: btst #6,subtype / bne locret — if non-destructive, don't break
                 if (!nonDestructiveRelease) {
@@ -346,10 +347,10 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
             NativePositionOps.writeYPosPreserveSubpixel(player, y - PLAYER_HANG_OFFSET);
         } else {
             int hangY = y - PLAYER_HANG_OFFSET;
-            if (player.isLeftPressed()) {
+            if (player.isRawControllerInputHeld(AbstractPlayableSprite.INPUT_LEFT)) {
                 NativePositionOps.addXPosPreserveSubpixel(player, -1);
             }
-            if (player.isRightPressed()) {
+            if (player.isRawControllerInputHeld(AbstractPlayableSprite.INPUT_RIGHT)) {
                 NativePositionOps.addXPosPreserveSubpixel(player, 1);
             }
             NativePositionOps.writeYPosPreserveSubpixel(player, hangY);
@@ -357,7 +358,8 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
 
-            if (player.isJumpPressed()) {
+            if (player.isRawControllerInputHeld(AbstractPlayableSprite.INPUT_JUMP)
+                    || player.isRawControllerJumpJustPressed()) {
                 releasePlayer(player, pi);
                 if (!nonDestructiveRelease) {
                     triggerBreak = true;

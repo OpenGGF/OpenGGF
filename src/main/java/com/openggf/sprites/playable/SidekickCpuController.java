@@ -552,6 +552,11 @@ public class SidekickCpuController {
         return (controller2Logical & AbstractPlayableSprite.INPUT_JUMP) != 0;
     }
 
+    /** Returns held bits from the raw Player-2 controller word, excluding CPU-generated input. */
+    public boolean isRawController2InputHeld(int inputMask) {
+        return (controller2Held & inputMask) != 0;
+    }
+
     public void setController2SignedLocked(boolean locked) {
         controller2SignedLocked = locked;
     }

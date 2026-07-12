@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f27807 / 681 errors (1 error under
+f3318 / 4234 errors to f28658 / 679 errors (1 error under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -520,6 +520,20 @@ under `frontierOnly`), reducing the full report by 197 groups. The focused
 column and consecutive follower-history guards pass. The isolated replay matrix
 keeps both AIZ routes green and preserves every non-HCZ frontier/count exactly:
 CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 50 separates raw controller holds from CPU-generated logical
+directions for HCZ breakable bars. The vertical/horizontal captured routines
+load `(Ctrl_1).w` / `(Ctrl_2).w`; CPU Tails' delayed follow directions exist in
+`Ctrl_2_logical` and must not move the captured player. The shared playable
+input API now exposes raw held bits, backed by the CPU controller's manual P2
+word, and Obj36 uses those bits for bar movement and release
+(`sonic3k.asm:42770-42836,42924-42990`).
+
+This closes f27807-f28657 and advances HCZ to f28658 / 679 full-run errors (1
+under `frontierOnly`). The focused HCZ breakable-bar suite passes 10/10. The
+granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
 level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 Milestone 31 restores TurboSpiker's detached-shell direction. The shell child

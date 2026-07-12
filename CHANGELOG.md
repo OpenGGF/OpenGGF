@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **HCZ breakable bars now read raw controller holds while carrying players:** Obj36 no longer treats CPU Tails' generated `Ctrl_2_logical` directions as manual P2 input, so captured movement and release follow the native `(Ctrl_2).w` word (`docs/skdisasm/sonic3k.asm:42770-42836,42924-42990`).
 - **HCZ large fans now retain their shared KosM queue warm state:** the first Obj39 activation preserves the longer still-busy module workload, while later activations consume the already-primed queue one object dispatch sooner; the cross-activation state is rewind-captured (`docs/skdisasm/sonic3k.asm:65583-65636`).
 - **HCZ2 trigger-collapse tension bridges now retain both riders through the native countdown:** the live trigger byte suppresses the split solid pass while `loc_3890C` returns without the ordinary slope helper; countdown expiry then clears every riding player's standing state and sets them airborne (`docs/skdisasm/sonic3k.asm:75592-75605,75743-75795`).
 - **HCZ2 cutscene Knuckles now observes its native initialization rectangle:** `Check_CameraInRange` defers setup until the camera enters `word_62150`, then self-patches the operation pointer past the check; the controller no longer initializes early enough to pin the left boundary and suppress the spindash history-camera jerk (`docs/skdisasm/sonic3k.asm:128908-128972,180428-180459,38364-38429`).
