@@ -30,6 +30,7 @@ class TestObjectManagerRewindReferenceClosure {
 
     @BeforeEach
     void setUp() {
+        TestEnvironment.resetAll();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         TestEnvironment.activeGameplayMode();
         RewindSchemaRegistry.clearForTest();

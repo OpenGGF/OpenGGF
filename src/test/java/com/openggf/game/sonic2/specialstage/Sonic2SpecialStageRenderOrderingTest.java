@@ -389,6 +389,10 @@ class Sonic2SpecialStageRenderOrderingTest {
 
         @Override public int getPriority() { return testPriority; }
         @Override public boolean isSpawned() { return eligible; }
+        // Keep the allocation probe on this fixture's plain getters. A sibling
+        // test inline-mocks the production player class, leaving its concrete
+        // methods Mockito-instrumented for the remainder of a reused test JVM.
+        @Override boolean isMainCharacter() { return true; }
         @Override public RoutineState getRoutine() {
             return eligible ? RoutineState.NORMAL : RoutineState.INIT;
         }

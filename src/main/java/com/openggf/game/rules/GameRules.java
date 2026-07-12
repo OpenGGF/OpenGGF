@@ -37,8 +37,7 @@ public record GameRules(
                     false,
                     false,
                     true,
-                    false,
-                    true
+                    false
             ),
             new PlayerCapabilityRules(
                     false,
@@ -127,7 +126,8 @@ public record GameRules(
                     1024,
                     false,
                     false,
-                    false
+                    false,
+                    true
             ),
             new PowerUpRules(
                     0,
@@ -170,8 +170,7 @@ public record GameRules(
                     false,
                     false,
                     false,
-                    true,
-                    false
+                    true
             ),
             new PlayerCapabilityRules(
                     true,
@@ -260,7 +259,8 @@ public record GameRules(
                     1024,
                     false,
                     false,
-                    true
+                    true,
+                    false
             ),
             new PowerUpRules(
                     1,
@@ -303,8 +303,7 @@ public record GameRules(
                     true,
                     true,
                     false,
-                    false,
-                    true
+                    false
             ),
             new PlayerCapabilityRules(
                     true,
@@ -391,6 +390,7 @@ public record GameRules(
                     1,
                     32,
                     1024,
+                    true,
                     true,
                     true,
                     true

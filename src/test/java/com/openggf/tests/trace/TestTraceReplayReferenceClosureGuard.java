@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -160,9 +161,9 @@ class TestTraceReplayReferenceClosureGuard {
 
     @Test
     void missingCurrentManagerIsSafe() {
-        TraceReplayFrameClosureDriver.validateCurrentObjectManager(
+        assertDoesNotThrow(() -> TraceReplayFrameClosureDriver.validateCurrentObjectManager(
                 () -> null, "s2", "EHZ", 0, 1, FRAME,
-                TraceExecutionPhase.FULL_LEVEL_FRAME);
+                TraceExecutionPhase.FULL_LEVEL_FRAME));
     }
 
     @Test

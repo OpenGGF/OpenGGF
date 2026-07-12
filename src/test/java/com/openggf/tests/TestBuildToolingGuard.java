@@ -73,6 +73,9 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean buttonPressed;",
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean eggCapsuleReleased;",
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean cutsceneOverrideObjectsActive;",
+            // These cross-act latches are explicitly captured by Aiz2BossEndSequenceStaticAdapter.
+            "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean buttonBeforeBridgeDispatch;",
+            "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile int tailsControlReleaseDelay = -1;",
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile CutsceneKnucklesAiz2Instance activeKnuckles;",
             "src/main/java/com/openggf/game/sonic3k/objects/AizCollapsingLogBridgeObjectInstance.java - private static volatile boolean drawBridgeBurnActive;",
             "src/main/java/com/openggf/game/sonic3k/objects/AizHollowTreeObjectInstance.java - private static int eventsFg4;",

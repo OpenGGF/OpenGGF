@@ -278,6 +278,12 @@ class TestAizEndBossInstance {
 
         boss.onPlayerAttack(null, null);
 
+        for (int frame = 0; frame < 0x38; frame++) {
+            boss.update(frame, null);
+            assertTrue(!readBoolean(boss, "eggCapsuleSignal"),
+                    "The ship/explosion handoff remains in Wait_Draw before the independent Obj_Wait begins");
+        }
+
         for (int frame = 0; frame < 0x7F; frame++) {
             boss.update(frame, null);
             assertTrue(!readBoolean(boss, "eggCapsuleSignal"),
@@ -399,4 +405,3 @@ class TestAizEndBossInstance {
         @Override public int getZoneIndex() { return 0; }
     }
 }
-

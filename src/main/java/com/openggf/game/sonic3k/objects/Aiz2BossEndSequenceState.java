@@ -13,6 +13,7 @@ public final class Aiz2BossEndSequenceState {
     private static volatile boolean buttonPressed;
     private static volatile boolean eggCapsuleReleased;
     private static volatile boolean cutsceneOverrideObjectsActive;
+    /** Cross-act latches captured and restored by Aiz2BossEndSequenceStaticAdapter. */
     private static volatile boolean buttonBeforeBridgeDispatch;
     private static volatile int tailsControlReleaseDelay = -1;
     private static volatile CutsceneKnucklesAiz2Instance activeKnuckles;

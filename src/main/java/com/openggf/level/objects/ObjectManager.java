@@ -4108,25 +4108,8 @@ public class ObjectManager {
      * identity context.
      */
     public void validateRewindReferenceClosure() {
-        com.openggf.game.rewind.schema.RewindCaptureContext context = rewindCaptureContext();
-        for (ObjectInstance instance : activeObjects.values()) {
-            validateCompactOwner(instance, context);
-        }
-        for (ObjectInstance instance : dynamicObjects) {
-            if (!auxiliaryDynamicObjects.contains(instance)) {
-                validateCompactOwner(instance, context);
-            }
-        }
-    }
-
-    private static void validateCompactOwner(ObjectInstance instance,
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        if (instance instanceof AbstractObjectInstance object
-                && com.openggf.game.rewind.GenericRewindEligibility
-                        .usesCompactDefaultSubclassCapture(object.getClass())) {
-            com.openggf.game.rewind.schema.CompactFieldCapturer
-                    .validateDefaultObjectSubclassReferenceClosure(object, context);
-        }
+        ObjectRewindReferenceClosureValidator.validate(
+                activeObjects.values(), dynamicObjects, auxiliaryDynamicObjects, rewindCaptureContext());
     }
 
     private com.openggf.game.rewind.schema.RewindCaptureContext rewindCaptureContext() {

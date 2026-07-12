@@ -237,6 +237,7 @@ class TestS3kSelfContainedTransientRewind {
 
         setIntFieldInHierarchy(capsule, "postOpenTimer", 0);
         capsule.update(0, player);
+        capsule.update(1, player);
         assertEquals(1, countLive(objectManager, aiz2ResultsScreenClass),
                 "AIZ2 capsule must spawn its specialized results-screen child");
 

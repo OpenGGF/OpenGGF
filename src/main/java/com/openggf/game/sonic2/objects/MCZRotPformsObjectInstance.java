@@ -6,7 +6,6 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
@@ -142,7 +141,6 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
 
     // Child tracking for cleanup on unload.
     private final List<MCZRotPformsObjectInstance> children = new ArrayList<>();
-    @RewindDeferred(reason = "inverse Obj6A owner link is rebuilt from the captured parent children list")
     private MCZRotPformsObjectInstance owner;
     private boolean childrenSpawned;
 

@@ -134,6 +134,11 @@ class TestAiz2BossEndSequenceObjects {
 
         bridge.update(54, player);
 
+        assertTrue(bridge.isSolidFor(player),
+                "The earlier button slot starts collapse before the bridge slot consumes its first countdown entry");
+
+        bridge.update(55, player);
+
         assertFalse(bridge.isSolidFor(player));
         assertTrue(player.getAir());
         assertEquals(Sonic3kAnimationIds.HURT_FALL.id(), player.getForcedAnimationId());
@@ -452,6 +457,11 @@ class TestAiz2BossEndSequenceObjects {
         capsule.update(1, sonic);
 
         assertTrue(getBooleanField(capsule, "opened"));
+        assertFalse(tailsCpu.isController2SignedLocked(),
+                "sub_865DE publishes the signed Player 2 lock for the following capsule entry");
+
+        capsule.update(2, sonic);
+
         assertTrue(tailsCpu.isController2SignedLocked(),
                 "sub_865DE installs Ctrl_2_locked=$FF when the parent changes to routine $0A "
                         + "(sonic3k.asm:181556-181570,181604-181647)");
@@ -561,6 +571,11 @@ class TestAiz2BossEndSequenceObjects {
 
         capsule.update(0, sonic);
 
+        assertFalse(getBooleanField(capsule, "resultsStarted"),
+                "The first AIZ sub_868F8 owner entry observes eligibility before starting results");
+
+        capsule.update(1, sonic);
+
         assertTrue(getBooleanField(capsule, "resultsStarted"));
         assertTrue(sonic.isObjectControlled(),
                 "sub_868F8 calls Set_PlayerEndingPose for Player_1 when results start "
@@ -596,16 +611,8 @@ class TestAiz2BossEndSequenceObjects {
 
         assertFalse(Aiz2BossEndSequenceState.isEggCapsuleReleased(),
                 "Obj_LevelResults has not cleared _unkFAA8 / set End_of_level_flag yet");
-        assertTrue(tailsCpu.isController2SignedLocked(),
-                "The collapsed engine owner applies Set_PlayerEndingPose before the next "
-                        + "Tails_Control sample observes Ctrl_2_locked clear.");
-        assertTrue(tails.isObjectControlled());
-
-        capsule.update(1, sonic);
-
         assertFalse(tailsCpu.isController2SignedLocked(),
-                "Obj_EggCapsule routine $0C calls Check_TailsEndPose while results are still active "
-                        + "(sonic3k.asm:181670-181672,181919-181939).");
+                "The capsule owner runs Check_TailsEndPose on its first active-results entry.");
         assertTrue(tails.isObjectControlled());
     }
 
@@ -648,14 +655,8 @@ class TestAiz2BossEndSequenceObjects {
         tails.setDead(false);
         capsule.update(2, sonic);
 
-        assertTrue(tailsCpu.isController2SignedLocked(),
-                "Set_PlayerEndingPose is applied before the next sidekick control sample "
-                        + "can observe the Ctrl_2_locked clear.");
-        assertTrue(tails.isObjectControlled());
-
-        capsule.update(3, sonic);
-
-        assertFalse(tailsCpu.isController2SignedLocked());
+        assertFalse(tailsCpu.isController2SignedLocked(),
+                "Check_TailsEndPose clears the signed lock as soon as Player 2 becomes eligible.");
         assertTrue(tails.isObjectControlled());
     }
 
@@ -835,7 +836,9 @@ class TestAiz2BossEndSequenceObjects {
             controller.update(i + 2, player);
         }
 
-        assertEquals(0x49D8, camera.getMaxXTarget() & 0xFFFF);
+        assertEquals(camera.getMaxX() & 0xFFFF, camera.getMaxXTarget() & 0xFFFF);
+        assertEquals(0x4888, camera.getMaxXTarget() & 0xFFFF,
+                "Child6_IncLevX advances Camera_Max_X_pos fractionally instead of jumping to its final target");
         assertTrue(player.isControlLocked());
         assertFalse(player.isObjectControlled());
         assertTrue(player.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT));
@@ -864,7 +867,7 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
-    void controllerLocksAllEngineSidekicksFromPlayerQueryDuringCutsceneWalk() {
+    void controllerLocksAllEngineSidekicksFromPlayerQueryDuringCutsceneWalk() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
         camera.setMaxX((short) 0x4880);
@@ -877,6 +880,7 @@ class TestAiz2BossEndSequenceObjects {
 
         Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
         controller.setServices(new QueryOnlyServices(camera, player, List.of(firstSidekick, extraSidekick)));
+        setField(controller, "postResultsControlRestoreDelay", 0);
         Aiz2BossEndSequenceState.releaseEggCapsule();
 
         controller.update(1, player);
@@ -886,7 +890,7 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
-    void controllerKeepsSidekickInEndingPoseObjectControlDuringPostResultsHold() {
+    void controllerLeavesSidekickEndingPoseOwnershipWithCapsuleDuringPostResultsHold() {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
         camera.setMaxX((short) 0x4880);
@@ -904,14 +908,11 @@ class TestAiz2BossEndSequenceObjects {
 
         controller.update(1, player);
 
-        assertTrue(tails.isObjectControlled(),
-                "AIZ Obj_EggCapsule loc_866CC/Check_TailsEndPose keeps Player_2 "
-                        + "under object_control=$81 while _unkFAA8 remains set "
-                        + "(sonic3k.asm:181670-181672,181919-181939).");
-        assertFalse(tails.isObjectControlAllowsCpu());
-        assertEquals(0, tails.getXSpeed());
-        assertEquals(0, tails.getYSpeed());
-        assertEquals(0, tails.getGSpeed());
+        assertFalse(tails.isObjectControlled(),
+                "The capsule owner, not the later post-boss controller slot, owns Check_TailsEndPose");
+        assertEquals(0x0120, tails.getXSpeed() & 0xFFFF);
+        assertEquals(0xFFE0, tails.getYSpeed() & 0xFFFF);
+        assertEquals(0x0100, tails.getGSpeed() & 0xFFFF);
     }
 
     @Test
