@@ -89,6 +89,26 @@ public final class ModFaultBoundary {
         callCharacter(key, () -> { Objects.requireNonNull(callback, "callback").run(); return null; });
     }
 
+    public <T> T callCharacterIo(com.openggf.game.CharacterKey key, IoSupplier<T> callback)
+            throws java.io.IOException {
+        Objects.requireNonNull(callback, "callback");
+        try {
+            return callCharacter(key, () -> {
+                try { return callback.get(); }
+                catch (java.io.IOException failure) { throw new IoCallbackFailure(failure); }
+            });
+        } catch (IoCallbackFailure failure) {
+            throw (java.io.IOException) failure.getCause();
+        }
+    }
+
+    @FunctionalInterface
+    public interface IoSupplier<T> { T get() throws java.io.IOException; }
+
+    private static final class IoCallbackFailure extends RuntimeException {
+        private IoCallbackFailure(java.io.IOException cause) { super(cause); }
+    }
+
     /** Owner-derived boundary for a standalone module/game/provider callback. */
     public <T> T callStandalone(String ownerModId, Supplier<T> callback) {
         return call(com.openggf.game.ModKeySyntax.requireManifestId(ownerModId), callback);

@@ -37696,3 +37696,18 @@ active-team archetype resolution changes:
   8941 on `camera_y` (expected `0x02C1`, actual `0x02B9`).
 - No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
   engine state was changed.
+
+### 2026-07-12 -- Phase 3 A4 registry-first playable-art parity sweep
+
+Measured on `next` at `ad2f022c2` with the reviewed, uncommitted Phase 3 A4
+GGFP v2 materialization, playable-art registry, and allocation-preflight changes:
+
+- Command:
+  `mvn "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test -Dmse=off`
+- S1 GHZ1, S2 EHZ1, and S3K AIZ all passed (3/3).
+- The first candidate refactor exposed provider/publication ordering as part of
+  the stock bootstrap contract (S2 f153 and S3K f1722). Keeping the established
+  built-in initialization order while reserving atomic two-pass preflight for
+  mod-containing teams restored exact stock parity.
+- No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
+  engine state was changed.

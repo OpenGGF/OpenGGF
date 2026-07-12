@@ -113,6 +113,17 @@ class TestPlayableSheetV2 {
         assertThrows(IllegalArgumentException.class, () -> PlayableSheetWriter.write(overflow));
     }
 
+    @Test void rejectsHostileHugeBankSizeFromTinyContainerBeforeRuntimeAllocation() throws Exception {
+        byte[] hostile = PlayableSheetWriter.write(minimal()).clone();
+        int metaPayload = indexOf(hostile, "META".getBytes()) + 8;
+        java.nio.ByteBuffer.wrap(hostile, metaPayload + 4, 4).putInt(Integer.MAX_VALUE);
+
+        java.io.IOException rejected = assertThrows(java.io.IOException.class,
+                () -> PlayableSheetReader.read(hostile));
+
+        assertTrue(rejected.getMessage().contains("bank size exceeds limit"), rejected.getMessage());
+    }
+
     @Test void appendagesRoundTripAndUnknownOptionalSectionsAreSkipped() throws Exception {
         var base = minimal();
         var withAppendage = new PlayableSheetReader.PlayableSheet(base.baseSheetV1(), base.meta(),

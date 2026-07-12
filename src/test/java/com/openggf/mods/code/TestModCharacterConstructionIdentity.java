@@ -137,6 +137,31 @@ class TestModCharacterConstructionIdentity {
     }
 
     @Test
+    void throwingCharacterArtSupplierUsesExpectedOwnerFaultBoundary() {
+        Fixture fixture = fixture(FieldBackedKeySprite::new, code -> {
+            throw new java.io.IOException("art failure");
+        });
+
+        ModFaultBoundary.CallbackAborted aborted = assertThrows(ModFaultBoundary.CallbackAborted.class,
+                () -> fixture.definition().artSupplier().load(EXPECTED.persisted()));
+
+        assertEquals("owner-a", aborted.owner());
+        assertEquals(Set.of("owner-a"), fixture.disabled());
+    }
+
+    @Test
+    void nullCharacterArtAndPaletteResultsUseExpectedOwnerFaultBoundary() {
+        Fixture nullArt = fixture(FieldBackedKeySprite::new, code -> null);
+        assertThrows(ModFaultBoundary.CallbackAborted.class,
+                () -> nullArt.definition().artSupplier().load(EXPECTED.persisted()));
+
+        Fixture nullPalette = fixture(FieldBackedKeySprite::new, code -> SpriteArtSet.EMPTY,
+                code -> null);
+        assertThrows(ModFaultBoundary.CallbackAborted.class,
+                () -> nullPalette.definition().paletteSupplier().load(EXPECTED.persisted()));
+    }
+
+    @Test
     void constructionScopeRestoresAfterNestedAndExceptionalFactories() {
         assertThrows(IllegalStateException.class, () -> CharacterConstructionScope.call(EXPECTED,
                 () -> { throw new IllegalStateException("factory"); }));
@@ -157,6 +182,17 @@ class TestModCharacterConstructionIdentity {
     }
 
     private static Fixture fixture(Supplier<? extends AbstractPlayableSprite> spriteFactory) {
+        return fixture(spriteFactory, code -> SpriteArtSet.EMPTY);
+    }
+
+    private static Fixture fixture(Supplier<? extends AbstractPlayableSprite> spriteFactory,
+                                   CharacterDefinition.ArtSupplier artSupplier) {
+        return fixture(spriteFactory, artSupplier, null);
+    }
+
+    private static Fixture fixture(Supplier<? extends AbstractPlayableSprite> spriteFactory,
+                                   CharacterDefinition.ArtSupplier artSupplier,
+                                   CharacterDefinition.PaletteSupplier paletteSupplier) {
         RecordingPhysicsProvider provider = new RecordingPhysicsProvider();
         GameModule base = mock(GameModule.class);
         when(base.getIdentifier()).thenReturn("identity-host");
@@ -166,7 +202,7 @@ class TestModCharacterConstructionIdentity {
         CharacterDefinition contributed = new CharacterDefinition(EXPECTED, "Runner",
                 (code, x, y) -> spriteFactory.get(), SonicRespawnStrategy::new,
                 PlayerCharacter.SONIC_ALONE, SecondaryAbility.NONE, false,
-                code -> SpriteArtSet.EMPTY);
+                artSupplier, paletteSupplier);
         Set<String> disabled = new java.util.LinkedHashSet<>();
         ModFaultBoundary boundary = new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
                 owners -> new ModStateSaveResult.Saved(), disabled::addAll);

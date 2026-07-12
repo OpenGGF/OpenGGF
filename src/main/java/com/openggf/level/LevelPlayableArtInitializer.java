@@ -8,6 +8,7 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.SpindashDustArtProvider;
 import com.openggf.game.CrossGameFeatureProvider;
+import com.openggf.game.CharacterDefinition;
 import com.openggf.game.GameId;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
@@ -45,8 +46,8 @@ final class LevelPlayableArtInitializer {
     private final CrossGameFeatureProvider crossGameFeatures;
 
     private int sidekickPatternBankCursor;
-    private int dustBankCount;
-    private int tailsTailBankCount;
+    private int legacyDustBankCount;
+    private int legacyTailsTailBankCount;
 
     LevelPlayableArtInitializer(LevelManager levelManager,
                                 SpriteManager spriteManager,
@@ -61,9 +62,121 @@ final class LevelPlayableArtInitializer {
     }
 
     void initialize() {
+        if (hasOnlyBuiltinPlayables()) {
+            initializeBuiltinTeamLegacy();
+            return;
+        }
+        CrossGameFeatureProvider crossGame = crossGameFeatures;
+        PlayerSpriteArtProvider artProvider;
+        Game game = levelManager.game;
+        if (CrossGameFeatureProvider.isActive()) {
+            artProvider = crossGame;
+        } else if (game instanceof PlayerSpriteArtProvider p) {
+            artProvider = p;
+        } else artProvider = null;
+
+        Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
+        if (!(player instanceof AbstractPlayableSprite playable)) {
+            return;
+        }
+        try {
+            SpriteArtSet mainArt = loadPlayableArt(playable, artProvider);
+            Palette mainPalette = loadCharacterPalette(playable,
+                    playable.characterKey().persisted(), artProvider);
+            List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
+            List<SpriteArtSet> sidekickArts = new ArrayList<>(sidekicks.size());
+            List<Palette> sidekickPalettes = new ArrayList<>(sidekicks.size());
+            List<String> sidekickNames = new ArrayList<>(sidekicks.size());
+            for (AbstractPlayableSprite sidekick : sidekicks) {
+                String name = spriteManager.getSidekickCharacterName(sidekick);
+                if (name == null || name.isBlank()) {
+                    name = sidekick.characterKey().persisted();
+                }
+                sidekickNames.add(name);
+                sidekickArts.add(loadPlayableArt(sidekick, artProvider));
+                sidekickPalettes.add(loadCharacterPalette(sidekick, name, artProvider));
+            }
+            if (!validArt(mainArt) || sidekickArts.stream().anyMatch(art -> !validArt(art))) {
+                return;
+            }
+            int cursor = 0;
+            Integer mainShiftedBase = null;
+            if (!playable.characterKey().isBuiltin()) {
+                mainShiftedBase = LevelManager.SIDEKICK_PATTERN_BASE;
+                cursor = checkedBankEnd(cursor, mainArt.bankSize());
+            }
+            List<Integer> sidekickBases = new ArrayList<>(sidekickArts.size());
+            for (SpriteArtSet sidekickArt : sidekickArts) {
+                sidekickBases.add(LevelManager.SIDEKICK_PATTERN_BASE + cursor);
+                cursor = checkedBankEnd(cursor, sidekickArt.bankSize());
+            }
+            List<AbstractPlayableSprite> allPlayables = new ArrayList<>(sidekicks.size() + 1);
+            allPlayables.add(playable);
+            allPlayables.addAll(sidekicks);
+            List<SpriteArtSet> allPlayableArt = new ArrayList<>(sidekickArts.size() + 1);
+            allPlayableArt.add(mainArt);
+            allPlayableArt.addAll(sidekickArts);
+            List<PreparedAuxiliaryArt> auxiliaries = new ArrayList<>(allPlayables.size());
+            int dustCount = 0;
+            int tailCount = 0;
+            for (int i = 0; i < allPlayables.size(); i++) {
+                SpriteArtSet dust = loadSpindashDustArt(allPlayables.get(i));
+                Integer dustBase = null;
+                if (validArt(dust) && dustCount++ > 0) {
+                    dustBase = LevelManager.SIDEKICK_PATTERN_BASE + cursor;
+                    cursor = checkedBankEnd(cursor, dust.bankSize());
+                }
+                PreparedTailArt tail = loadTailsTailArt(allPlayables.get(i), allPlayableArt.get(i));
+                Integer tailBase = null;
+                if (tail != null && validArt(tail.art()) && tailCount++ > 0) {
+                    tailBase = LevelManager.SIDEKICK_PATTERN_BASE + cursor;
+                    cursor = checkedBankEnd(cursor, tail.art().bankSize());
+                }
+                auxiliaries.add(new PreparedAuxiliaryArt(dust, dustBase, tail, tailBase));
+            }
+
+            RenderContext.clearSidekickContexts();
+            sidekickPatternBankCursor = cursor;
+
+            SpriteArtSet publishedMainArt = mainShiftedBase == null
+                    ? mainArt : shiftToBank(mainArt, mainShiftedBase);
+            RenderContext mainCharacterContext = createCharacterPaletteContext(
+                    playable, publishedMainArt, mainPalette);
+            initializeMainPlayable(playable, publishedMainArt, crossGame, mainCharacterContext,
+                    auxiliaries.getFirst());
+            String mainName = resolveMainCharacterCode();
+            for (int i = 0; i < sidekicks.size(); i++) {
+                initializeSidekick(sidekicks.get(i), sidekickNames.get(i), mainName,
+                        sidekickArts.get(i), crossGame,
+                        sidekickBases.get(i),
+                        sidekickPalettes.get(i), mainPalette, mainCharacterContext,
+                        auxiliaries.get(i + 1));
+            }
+        } catch (IOException e) {
+            LOGGER.log(SEVERE, "Failed to materialize playable sprite art before publication.", e);
+            return;
+        }
+        RenderContext.uploadDonorPalettes(graphicsManager);
+    }
+
+    private boolean hasOnlyBuiltinPlayables() {
+        Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
+        if (player instanceof AbstractPlayableSprite playable
+                && !playable.characterKey().isBuiltin()) {
+            return false;
+        }
+        return spriteManager.getSidekicks().stream()
+                .allMatch(sidekick -> sidekick.characterKey().isBuiltin());
+    }
+
+    /**
+     * Preserves the established built-in initialization sequence exactly. Art providers may
+     * retain decode state, and playable setup order is observable by trace replay bootstrap.
+     */
+    private void initializeBuiltinTeamLegacy() {
         RenderContext.clearSidekickContexts();
-        dustBankCount = 0;
-        tailsTailBankCount = 0;
+        legacyDustBankCount = 0;
+        legacyTailsTailBankCount = 0;
         sidekickPatternBankCursor = 0;
 
         CrossGameFeatureProvider crossGame = crossGameFeatures;
@@ -81,15 +194,16 @@ final class LevelPlayableArtInitializer {
         if (!(player instanceof AbstractPlayableSprite playable)) {
             return;
         }
-        initializeMainPlayable(playable, artProvider, crossGame);
-        initializeSidekicks(artProvider, crossGame);
+        initializeMainPlayableLegacy(playable, artProvider, crossGame);
+        initializeSidekicksLegacy(artProvider, crossGame);
         RenderContext.uploadDonorPalettes(graphicsManager);
     }
 
     int reserveSidekickPatternBank(int bankSize) {
-        int safeSize = Math.max(0, bankSize);
+        if (bankSize < 0) throw new IllegalArgumentException("bank size must be nonnegative");
         int base = LevelManager.SIDEKICK_PATTERN_BASE + sidekickPatternBankCursor;
-        sidekickPatternBankCursor += safeSize;
+        int end = checkedBankEnd(sidekickPatternBankCursor, bankSize);
+        sidekickPatternBankCursor = end;
         return base;
     }
 
@@ -97,19 +211,22 @@ final class LevelPlayableArtInitializer {
         List<Integer> offsets = new ArrayList<>(bankSizes.size());
         int running = 0;
         for (int size : bankSizes) {
+            if (size < 0) throw new IllegalArgumentException("bank size must be nonnegative");
             offsets.add(running);
-            running += size;
+            running = Math.addExact(running, size);
+            if (running > com.openggf.graphics.PatternAtlasRange.SIDEKICK_BANKS.size()) {
+                throw new IllegalArgumentException("sidekick pattern banks exceed reserved range");
+            }
         }
         return offsets;
     }
 
-    private void initializeMainPlayable(AbstractPlayableSprite playable,
-                                        PlayerSpriteArtProvider artProvider,
-                                        CrossGameFeatureProvider crossGame) {
+    private void initializeMainPlayableLegacy(AbstractPlayableSprite playable,
+                                               PlayerSpriteArtProvider artProvider,
+                                               CrossGameFeatureProvider crossGame) {
         try {
             SpriteArtSet artSet = artProvider.loadPlayerSpriteArt(playable.getCode());
-            if (artSet == null || artSet.bankSize() <= 0 || artSet.mappingFrames().isEmpty()
-                    || artSet.dplcFrames().isEmpty()) {
+            if (!validArt(artSet)) {
                 playable.setSpriteRenderer(null);
                 return;
             }
@@ -119,15 +236,16 @@ final class LevelPlayableArtInitializer {
             }
             renderer.ensureCached(graphicsManager);
             applyPlayableArt(playable, renderer, artSet);
-            initSpindashDust(playable);
-            initTailsTails(playable, artSet);
+            initSpindashDustLegacy(playable);
+            initTailsTailsLegacy(playable, artSet);
             initSuperState(playable);
         } catch (IOException e) {
             LOGGER.log(SEVERE, "Failed to load player sprite art.", e);
         }
     }
 
-    private void initializeSidekicks(PlayerSpriteArtProvider artProvider, CrossGameFeatureProvider crossGame) {
+    private void initializeSidekicksLegacy(PlayerSpriteArtProvider artProvider,
+                                           CrossGameFeatureProvider crossGame) {
         List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
         String mainCharName = resolveMainCharacterCode();
         List<String> sidekickCharNames = new ArrayList<>(sidekicks.size());
@@ -152,10 +270,7 @@ final class LevelPlayableArtInitializer {
                             return null;
                         }
                     });
-            boolean valid = sourceArt != null && sourceArt.bankSize() > 0
-                    && !sourceArt.mappingFrames().isEmpty()
-                    && !sourceArt.dplcFrames().isEmpty();
-            sidekickSourceArts.add(valid ? sourceArt : null);
+            sidekickSourceArts.add(validArt(sourceArt) ? sourceArt : null);
         }
 
         for (int i = 0; i < sidekicks.size(); i++) {
@@ -167,31 +282,23 @@ final class LevelPlayableArtInitializer {
                         + " (" + sidekickCharName + "): art unavailable or empty.");
                 continue;
             }
-            initializeSidekick(sidekick, sidekickCharName, mainCharName, sourceArt, artProvider, crossGame, i);
+            initializeSidekickLegacy(sidekick, sidekickCharName, mainCharName,
+                    sourceArt, artProvider, crossGame, i);
         }
     }
 
-    private void initializeSidekick(AbstractPlayableSprite sidekick,
-                                   String sidekickCharName,
-                                   String mainCharName,
-                                   SpriteArtSet sourceArt,
-                                   PlayerSpriteArtProvider artProvider,
-                                   CrossGameFeatureProvider crossGame,
-                                   int index) {
+    private void initializeSidekickLegacy(AbstractPlayableSprite sidekick,
+                                           String sidekickCharName,
+                                           String mainCharName,
+                                           SpriteArtSet sourceArt,
+                                           PlayerSpriteArtProvider artProvider,
+                                           CrossGameFeatureProvider crossGame,
+                                           int index) {
         try {
             int shiftedBase = reserveSidekickPatternBank(sourceArt.bankSize());
-            SpriteArtSet sidekickArt = new SpriteArtSet(
-                    sourceArt.artTiles(),
-                    sourceArt.mappingFrames(),
-                    sourceArt.dplcFrames(),
-                    sourceArt.paletteIndex(),
-                    shiftedBase,
-                    sourceArt.frameDelay(),
-                    sourceArt.bankSize(),
-                    sourceArt.animationProfile(),
-                    sourceArt.animationSet());
+            SpriteArtSet sidekickArt = shiftToBank(sourceArt, shiftedBase);
             PlayerSpriteRenderer sidekickRenderer = new PlayerSpriteRenderer(sidekickArt);
-            RenderContext sidekickPaletteCtx = createSidekickPaletteContext(
+            RenderContext sidekickPaletteCtx = createSidekickPaletteContextLegacy(
                     artProvider, sidekickCharName, mainCharName);
             if (sidekickPaletteCtx != null) {
                 sidekickRenderer.setRenderContext(sidekickPaletteCtx);
@@ -200,8 +307,8 @@ final class LevelPlayableArtInitializer {
             }
             sidekickRenderer.ensureCached(graphicsManager);
             applyPlayableArt(sidekick, sidekickRenderer, sidekickArt);
-            initSpindashDust(sidekick);
-            initTailsTails(sidekick, sidekickArt);
+            initSpindashDustLegacy(sidekick);
+            initTailsTailsLegacy(sidekick, sidekickArt);
             if (sidekickPaletteCtx != null) {
                 propagateSidekickPaletteContext(sidekick, sidekickPaletteCtx);
             }
@@ -211,20 +318,7 @@ final class LevelPlayableArtInitializer {
         }
     }
 
-    private static void applyPlayableArt(AbstractPlayableSprite playable,
-                                         PlayerSpriteRenderer renderer,
-                                         SpriteArtSet artSet) {
-        playable.setSpriteRenderer(renderer);
-        playable.setMappingFrame(0);
-        playable.setAnimationFrameCount(artSet.mappingFrames().size());
-        playable.setAnimationProfile(artSet.animationProfile());
-        playable.setAnimationSet(artSet.animationSet());
-        playable.setAnimationId(0);
-        playable.setAnimationFrameIndex(0);
-        playable.setAnimationTick(0);
-    }
-
-    private RenderContext createSidekickPaletteContext(
+    private RenderContext createSidekickPaletteContextLegacy(
             PlayerSpriteArtProvider artProvider,
             String sidekickCharName, String mainCharName) {
         if (sidekickCharName.equalsIgnoreCase(mainCharName)) {
@@ -248,6 +342,146 @@ final class LevelPlayableArtInitializer {
         return ctx;
     }
 
+    private void initializeMainPlayable(AbstractPlayableSprite playable, SpriteArtSet artSet,
+                                        CrossGameFeatureProvider crossGame,
+                                        RenderContext characterContext,
+                                        PreparedAuxiliaryArt auxiliary) throws IOException {
+            PlayerSpriteRenderer renderer = new PlayerSpriteRenderer(artSet, graphicsManager);
+            if (characterContext != null) {
+                renderer.setRenderContext(characterContext);
+            } else if (CrossGameFeatureProvider.isActive()) {
+                renderer.setRenderContext(crossGame.getDonorRenderContext());
+            }
+            renderer.ensureCached(graphicsManager);
+            applyPlayableArt(playable, renderer, artSet);
+            initSpindashDust(playable, auxiliary);
+            initTailsTails(playable, auxiliary);
+            initSuperState(playable);
+    }
+
+    private void initializeSidekick(AbstractPlayableSprite sidekick,
+                                   String sidekickCharName,
+                                   String mainCharName,
+                                   SpriteArtSet sourceArt,
+                                   CrossGameFeatureProvider crossGame,
+                                   int shiftedBase,
+                                   Palette sidekickPalette, Palette mainPalette,
+                                   RenderContext mainCharacterContext,
+                                   PreparedAuxiliaryArt auxiliary) throws IOException {
+            SpriteArtSet sidekickArt = shiftToBank(sourceArt, shiftedBase);
+            PlayerSpriteRenderer sidekickRenderer = new PlayerSpriteRenderer(sidekickArt, graphicsManager);
+            RenderContext sidekickPaletteCtx = createSidekickPaletteContext(
+                    sidekickCharName, mainCharName, sidekickPalette, mainPalette,
+                    mainCharacterContext, sourceArt.paletteIndex());
+            if (sidekickPaletteCtx != null) {
+                sidekickRenderer.setRenderContext(sidekickPaletteCtx);
+            } else if (CrossGameFeatureProvider.isActive()) {
+                sidekickRenderer.setRenderContext(crossGame.getDonorRenderContext());
+            }
+            sidekickRenderer.ensureCached(graphicsManager);
+            applyPlayableArt(sidekick, sidekickRenderer, sidekickArt);
+            initSpindashDust(sidekick, auxiliary);
+            initTailsTails(sidekick, auxiliary);
+            if (sidekickPaletteCtx != null) {
+                propagateSidekickPaletteContext(sidekick, sidekickPaletteCtx);
+            }
+            initSuperState(sidekick);
+    }
+
+    static SpriteArtSet shiftToBank(SpriteArtSet sourceArt, int shiftedBase) {
+        return new SpriteArtSet(
+                    sourceArt.artTiles(),
+                    sourceArt.mappingFrames(),
+                    sourceArt.dplcFrames(),
+                    sourceArt.paletteIndex(),
+                    shiftedBase,
+                    sourceArt.frameDelay(),
+                    sourceArt.bankSize(),
+                    sourceArt.animationProfile(),
+                    sourceArt.animationSet());
+    }
+
+    private static void applyPlayableArt(AbstractPlayableSprite playable,
+                                         PlayerSpriteRenderer renderer,
+                                         SpriteArtSet artSet) {
+        playable.setSpriteRenderer(renderer);
+        playable.setMappingFrame(0);
+        playable.setAnimationFrameCount(artSet.mappingFrames().size());
+        playable.setAnimationProfile(artSet.animationProfile());
+        playable.setAnimationSet(artSet.animationSet());
+        playable.setAnimationId(0);
+        playable.setAnimationFrameIndex(0);
+        playable.setAnimationTick(0);
+    }
+
+    private RenderContext createSidekickPaletteContext(
+            String sidekickCharName, String mainCharName,
+            Palette sidekickPalette, Palette mainPalette,
+            RenderContext mainCharacterContext, int paletteIndex) {
+        boolean sameName = sidekickCharName.equalsIgnoreCase(mainCharName);
+        boolean samePalette = mainPalette != null && sidekickPalette != null
+                && sidekickPalette.dataEquals(mainPalette);
+        if (mainCharacterContext != null && (sameName || samePalette)) {
+            Palette populated = mainCharacterContext.getPalette(paletteIndex);
+            if (populated != null && sidekickPalette != null
+                    && populated.dataEquals(sidekickPalette)) {
+                return mainCharacterContext;
+            }
+        }
+        if (sameName && mainCharacterContext == null) return null;
+        if (sidekickPalette == null) {
+            return null;
+        }
+        if (samePalette && mainCharacterContext == null) return null;
+        GameModule activeModule = levelManager.gameModule;
+        if (activeModule == null && GameServices.hasRuntime()) {
+            activeModule = GameServices.module();
+        }
+        GameId gameId = activeModule != null ? activeModule.getGameId() : null;
+        RenderContext ctx = RenderContext.createSidekickContext(gameId);
+        ctx.setPalette(paletteIndex, sidekickPalette);
+        return ctx;
+    }
+
+    private SpriteArtSet loadPlayableArt(AbstractPlayableSprite playable,
+                                         PlayerSpriteArtProvider fallback) throws IOException {
+        CharacterDefinition definition = activeRegistry().find(playable.characterKey()).orElse(null);
+        if (definition != null && !definition.key().isBuiltin()) {
+            return definition.artSupplier().load(playable.characterKey().persisted());
+        }
+        return fallback == null ? null : fallback.loadPlayerSpriteArt(playable.getCode());
+    }
+
+    private Palette loadCharacterPalette(AbstractPlayableSprite playable, String code,
+                                         PlayerSpriteArtProvider fallback) throws IOException {
+        CharacterDefinition definition = activeRegistry().find(playable.characterKey()).orElse(null);
+        if (definition != null && !definition.key().isBuiltin() && definition.paletteSupplier() != null) {
+            return definition.paletteSupplier().load(playable.characterKey().persisted());
+        }
+        return fallback == null ? null : fallback.loadCharacterPalette(code);
+    }
+
+    private RenderContext createCharacterPaletteContext(AbstractPlayableSprite playable,
+                                                         SpriteArtSet artSet,
+                                                         Palette palette) {
+        if (palette == null || playable.characterKey().isBuiltin()) return null;
+        GameModule module = levelManager.activeGameModule();
+        RenderContext context = RenderContext.createSidekickContext(
+                module == null ? null : module.getGameId());
+        context.setPalette(artSet.paletteIndex(), palette);
+        return context;
+    }
+
+    private com.openggf.game.PlayableCharacterRegistry activeRegistry() {
+        return levelManager.playableCharacterRegistry();
+    }
+
+    private static boolean validArt(SpriteArtSet art) {
+        return art != null && art.bankSize() > 0 && !art.mappingFrames().isEmpty()
+                && !art.dplcFrames().isEmpty()
+                && art.paletteIndex() >= 0 && art.paletteIndex() < 4;
+    }
+
     private static void propagateSidekickPaletteContext(AbstractPlayableSprite sidekick, RenderContext ctx) {
         if (sidekick.getSpindashDustController() != null
                 && sidekick.getSpindashDustController().getRenderer() != null) {
@@ -259,7 +493,7 @@ final class LevelPlayableArtInitializer {
         }
     }
 
-    private void initSpindashDust(AbstractPlayableSprite playable) {
+    private void initSpindashDustLegacy(AbstractPlayableSprite playable) {
         CrossGameFeatureProvider crossGame = crossGameFeatures;
         SpindashDustArtProvider dustProv;
         Game game = levelManager.game;
@@ -276,25 +510,14 @@ final class LevelPlayableArtInitializer {
                     ? playable.getCode().substring(0, playable.getCode().length() - 3)
                     : playable.getCode();
             SpriteArtSet dustArt = dustProv.loadSpindashDustArt(characterCode);
-            if (dustArt == null || dustArt.bankSize() <= 0 || dustArt.mappingFrames().isEmpty()
-                    || dustArt.dplcFrames().isEmpty()) {
+            if (!validArt(dustArt)) {
                 playable.setSpindashDustController(null);
                 return;
             }
-            if (dustBankCount > 0) {
-                int shiftedBase = reserveSidekickPatternBank(dustArt.bankSize());
-                dustArt = new SpriteArtSet(
-                        dustArt.artTiles(),
-                        dustArt.mappingFrames(),
-                        dustArt.dplcFrames(),
-                        dustArt.paletteIndex(),
-                        shiftedBase,
-                        dustArt.frameDelay(),
-                        dustArt.bankSize(),
-                        dustArt.animationProfile(),
-                        dustArt.animationSet());
+            if (legacyDustBankCount > 0) {
+                dustArt = shiftToBank(dustArt, reserveSidekickPatternBank(dustArt.bankSize()));
             }
-            dustBankCount++;
+            legacyDustBankCount++;
             PlayerSpriteRenderer dustRenderer = new PlayerSpriteRenderer(dustArt);
             if (CrossGameFeatureProvider.isActive()) {
                 dustRenderer.setRenderContext(crossGame.getDonorRenderContext());
@@ -308,24 +531,7 @@ final class LevelPlayableArtInitializer {
         }
     }
 
-    private int fixedDustSlotFor(AbstractPlayableSprite playable) {
-        if (playable == null) {
-            return -1;
-        }
-        PowerUpRules rules = powerUpRulesFor(levelManager.activeGameModule());
-        if (rules == null || !rules.waterSplashUsesFixedDustObject()) {
-            return -1;
-        }
-        if (!playable.isCpuControlled()) {
-            return rules.fixedDustSlotIndex(false);
-        }
-        List<AbstractPlayableSprite> sidekicks = spriteManager != null ? spriteManager.getSidekicks() : List.of();
-        return !sidekicks.isEmpty() && sidekicks.get(0) == playable
-                ? rules.fixedDustSlotIndex(true)
-                : -1;
-    }
-
-    private void initTailsTails(AbstractPlayableSprite playable, SpriteArtSet artSet) {
+    private void initTailsTailsLegacy(AbstractPlayableSprite playable, SpriteArtSet artSet) {
         if (!(playable instanceof Tails)) {
             playable.setTailsTailsController(null);
             return;
@@ -353,6 +559,97 @@ final class LevelPlayableArtInitializer {
             }
         } else {
             tailsArt = new SpriteArtSet(
+                    artSet.artTiles(), artSet.mappingFrames(), artSet.dplcFrames(),
+                    artSet.paletteIndex(), gameModule.getTailsTailVramBase(), artSet.frameDelay(),
+                    artSet.bankSize(), null, null);
+        }
+        if (legacyTailsTailBankCount > 0) {
+            tailsArt = shiftToBank(tailsArt, reserveSidekickPatternBank(tailsArt.bankSize()));
+        }
+        legacyTailsTailBankCount++;
+        PlayerSpriteRenderer tailsRenderer = new PlayerSpriteRenderer(tailsArt);
+        if (CrossGameFeatureProvider.isActive()) {
+            tailsRenderer.setRenderContext(crossGame.getDonorRenderContext());
+        }
+        tailsRenderer.ensureCached(graphicsManager);
+        playable.setTailsTailsController(new TailsTailsController(playable, tailsRenderer, isS3k));
+    }
+
+    private SpriteArtSet loadSpindashDustArt(AbstractPlayableSprite playable) throws IOException {
+        CrossGameFeatureProvider crossGame = crossGameFeatures;
+        SpindashDustArtProvider dustProv;
+        Game game = levelManager.game;
+        if (CrossGameFeatureProvider.isActive()) {
+            dustProv = crossGame;
+        } else if (game instanceof SpindashDustArtProvider d) {
+            dustProv = d;
+        } else {
+            return null;
+        }
+        String characterCode = playable.getCode().endsWith("_p2")
+                ? playable.getCode().substring(0, playable.getCode().length() - 3)
+                : playable.getCode();
+        return dustProv.loadSpindashDustArt(characterCode);
+    }
+
+    private void initSpindashDust(AbstractPlayableSprite playable,
+                                  PreparedAuxiliaryArt auxiliary) {
+            SpriteArtSet dustArt = auxiliary.dustArt();
+            if (!validArt(dustArt)) {
+                playable.setSpindashDustController(null);
+                return;
+            }
+            if (auxiliary.dustShiftedBase() != null)
+                dustArt = shiftToBank(dustArt, auxiliary.dustShiftedBase());
+            PlayerSpriteRenderer dustRenderer = new PlayerSpriteRenderer(dustArt, graphicsManager);
+            if (CrossGameFeatureProvider.isActive()) {
+                dustRenderer.setRenderContext(crossGameFeatures.getDonorRenderContext());
+            }
+            dustRenderer.ensureCached(graphicsManager);
+            playable.setSpindashDustController(new SpindashDustController(
+                    playable, dustRenderer, fixedDustSlotFor(playable)));
+    }
+
+    private int fixedDustSlotFor(AbstractPlayableSprite playable) {
+        if (playable == null) {
+            return -1;
+        }
+        PowerUpRules rules = powerUpRulesFor(levelManager.activeGameModule());
+        if (rules == null || !rules.waterSplashUsesFixedDustObject()) {
+            return -1;
+        }
+        if (!playable.isCpuControlled()) {
+            return rules.fixedDustSlotIndex(false);
+        }
+        List<AbstractPlayableSprite> sidekicks = spriteManager != null ? spriteManager.getSidekicks() : List.of();
+        return !sidekicks.isEmpty() && sidekicks.get(0) == playable
+                ? rules.fixedDustSlotIndex(true)
+                : -1;
+    }
+
+    private PreparedTailArt loadTailsTailArt(AbstractPlayableSprite playable,
+                                             SpriteArtSet artSet) throws IOException {
+        if (!(playable instanceof Tails)) {
+            return null;
+        }
+        CrossGameFeatureProvider crossGame = crossGameFeatures;
+        GameModule gameModule = levelManager.activeGameModule();
+        if (gameModule == null) return null;
+        boolean isS3k = CrossGameFeatureProvider.isActive()
+                ? crossGame.hasSeparateTailsTailArt()
+                : gameModule.hasSeparateTailsTailArt();
+        SpriteArtSet tailsArt;
+        if (isS3k) {
+            if (CrossGameFeatureProvider.isActive()) {
+                tailsArt = crossGame.loadTailsTailArt();
+            } else {
+                tailsArt = gameModule.loadTailsTailArt();
+            }
+            if (tailsArt == null || tailsArt.isEmpty()) {
+                return null;
+            }
+        } else {
+            tailsArt = new SpriteArtSet(
                     artSet.artTiles(),
                     artSet.mappingFrames(),
                     artSet.dplcFrames(),
@@ -364,28 +661,38 @@ final class LevelPlayableArtInitializer {
                     null
             );
         }
-        if (tailsTailBankCount > 0) {
-            int shiftedBase = reserveSidekickPatternBank(tailsArt.bankSize());
-            tailsArt = new SpriteArtSet(
-                    tailsArt.artTiles(),
-                    tailsArt.mappingFrames(),
-                    tailsArt.dplcFrames(),
-                    tailsArt.paletteIndex(),
-                    shiftedBase,
-                    tailsArt.frameDelay(),
-                    tailsArt.bankSize(),
-                    tailsArt.animationProfile(),
-                    tailsArt.animationSet()
-            );
+        return new PreparedTailArt(tailsArt, isS3k);
+    }
+
+    private void initTailsTails(AbstractPlayableSprite playable,
+                                PreparedAuxiliaryArt auxiliary) {
+        PreparedTailArt prepared = auxiliary.tailArt();
+        if (prepared == null || !validArt(prepared.art())) {
+            playable.setTailsTailsController(null);
+            return;
         }
-        tailsTailBankCount++;
-        PlayerSpriteRenderer tailsRenderer = new PlayerSpriteRenderer(tailsArt);
+        SpriteArtSet tailsArt = prepared.art();
+        if (auxiliary.tailShiftedBase() != null)
+            tailsArt = shiftToBank(tailsArt, auxiliary.tailShiftedBase());
+        PlayerSpriteRenderer tailsRenderer = new PlayerSpriteRenderer(tailsArt, graphicsManager);
         if (CrossGameFeatureProvider.isActive()) {
-            tailsRenderer.setRenderContext(crossGame.getDonorRenderContext());
+            tailsRenderer.setRenderContext(crossGameFeatures.getDonorRenderContext());
         }
         tailsRenderer.ensureCached(graphicsManager);
-        playable.setTailsTailsController(new TailsTailsController(playable, tailsRenderer, isS3k));
+        playable.setTailsTailsController(new TailsTailsController(playable, tailsRenderer, prepared.separate()));
     }
+
+    private static int checkedBankEnd(int cursor, int bankSize) {
+        if (bankSize < 0) throw new IllegalArgumentException("bank size must be nonnegative");
+        int end = Math.addExact(cursor, bankSize);
+        if (end > com.openggf.graphics.PatternAtlasRange.SIDEKICK_BANKS.size())
+            throw new IllegalArgumentException("sidekick pattern banks exceed reserved range");
+        return end;
+    }
+
+    private record PreparedTailArt(SpriteArtSet art, boolean separate) { }
+    private record PreparedAuxiliaryArt(SpriteArtSet dustArt, Integer dustShiftedBase,
+                                        PreparedTailArt tailArt, Integer tailShiftedBase) { }
 
     private void initSuperState(AbstractPlayableSprite playable) {
         GameModule gameModule = levelManager.gameModule;

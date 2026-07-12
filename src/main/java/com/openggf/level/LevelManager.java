@@ -126,6 +126,10 @@ public class LevelManager {
         return GameServices.currentOrBootstrapGameModule();
     }
 
+    PlayableCharacterRegistry playableCharacterRegistry() {
+        return worldSession.getPlayableCharacterRegistry();
+    }
+
     /** Collision model metadata only; frame scheduling may still use inline checkpoints. */
     private boolean isUnifiedCollisionModel() {
         GameRules rules = activeGameModule().getRules();

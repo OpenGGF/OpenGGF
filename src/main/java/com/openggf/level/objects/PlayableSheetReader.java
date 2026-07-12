@@ -52,7 +52,7 @@ public final class PlayableSheetReader {
             }
             byte[] ggfs = parseBase(basePayload, limits);
             BakedSheetReader.BakedSheet base = BakedSheetReader.read(ggfs, limits);
-            Meta meta = parseMeta(metaPayload);
+            Meta meta = parseMeta(metaPayload, limits);
             List<Frame> frames = parseFrames(framePayload, base.frames().size(), base.patterns().length,
                     meta.bankSize(), limits);
             Map<String, Animation> animations = parseAnimations(animPayload, frames.size(), limits);
@@ -73,7 +73,7 @@ public final class PlayableSheetReader {
         }
     }
 
-    private static Meta parseMeta(byte[] payload) throws IOException {
+    private static Meta parseMeta(byte[] payload, ModInputLimits limits) throws IOException {
         if (payload.length != 12) throw invalid("META length");
         try (DataInputStream in = input(payload)) {
             long basePattern = Integer.toUnsignedLong(in.readInt());
@@ -82,6 +82,9 @@ public final class PlayableSheetReader {
             if (basePattern > Integer.MAX_VALUE || bank == 0 || bank > Integer.MAX_VALUE
                     || basePattern + bank > Integer.MAX_VALUE || palette > 3
                     || flags != 0 || reserved != 0) throw invalid("invalid META");
+            long bankLimit = Math.min(limits.maxSheetPatterns(),
+                    com.openggf.graphics.PatternAtlasRange.SIDEKICK_BANKS.size());
+            if (bank > bankLimit) throw invalid("bank size exceeds limit");
             return new Meta((int) basePattern, (int) bank, palette);
         }
     }

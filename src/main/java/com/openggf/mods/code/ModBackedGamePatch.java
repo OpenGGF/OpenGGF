@@ -104,7 +104,14 @@ public final class ModBackedGamePatch implements GamePatch {
                                         definition.respawnStrategyFactory().create(controller),
                                         "Mod respawn factory returned null for " + key.persisted())),
                         definition.behavesLike(), definition.secondaryAbility(),
-                        definition.supportsSuperForm(), definition.artSupplier());
+                        definition.supportsSuperForm(),
+                        code -> faultBoundary.callCharacterIo(key,
+                                () -> Objects.requireNonNull(definition.artSupplier().load(code),
+                                        "Mod character art supplier returned null for " + key.persisted())),
+                        definition.paletteSupplier() == null ? null
+                                : code -> faultBoundary.callCharacterIo(key,
+                                () -> Objects.requireNonNull(definition.paletteSupplier().load(code),
+                                        "Mod character palette supplier returned null for " + key.persisted())));
             }
 
             @Override

@@ -37,6 +37,20 @@ class TestSidekickArtBankAllocation {
         assertEquals(0, offsets.get(0));
         assertEquals(64, offsets.get(1));
     }
-}
 
+    @Test
+    void preflightRejectsOverflowBeforeReturningAnyAllocation() {
+        int capacity = com.openggf.graphics.PatternAtlasRange.SIDEKICK_BANKS.size();
+        assertThrows(IllegalArgumentException.class,
+                () -> LevelManager.computeSidekickBankOffsets(List.of(capacity, 1)));
+    }
+
+    @Test
+    void preflightRejectsNegativeAndIntegerOverflowSizes() {
+        assertThrows(IllegalArgumentException.class,
+                () -> LevelManager.computeSidekickBankOffsets(List.of(-1)));
+        assertThrows(IllegalArgumentException.class,
+                () -> LevelManager.computeSidekickBankOffsets(List.of(Integer.MAX_VALUE, 1)));
+    }
+}
 
