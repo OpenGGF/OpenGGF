@@ -96,8 +96,9 @@ public final class TraceReplaySessionBootstrap {
     }
 
     /**
-     * Prepare configuration state that must be set before the level is
-     * loaded. Call before the caller loads the level.
+     * Prepare configuration state that must be set before replay gameplay is
+     * initialized. Non-level sessions pass {@code null} for {@code trace} and
+     * skip the level-only S3K intro rule.
      *
      * <p>Isolates trace playback from any gameplay-altering settings
      * the user may have configured for their own game (team,
@@ -126,7 +127,9 @@ public final class TraceReplaySessionBootstrap {
         config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
         config.resolveDisplayAspect();
 
-        if (TraceReplayBootstrap.requiresFreshLevelLoadForTraceReplay(trace)
+        // Non-level sessions pass no TraceData and skip the level-only S3K rule.
+        if (trace != null
+                && TraceReplayBootstrap.requiresFreshLevelLoadForTraceReplay(trace)
                 && "s3k".equals(meta.game())) {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
         }
