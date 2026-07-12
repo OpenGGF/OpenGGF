@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.events;
 
 import com.openggf.game.AbstractLevelEventManager;
+import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic1.Sonic1LoopManager;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
@@ -227,18 +228,31 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         if (sbz3TransitionRequested) {
             return true; // Already requested; suppress death until fade completes
         }
+        AbstractPlayableSprite progressionOwner = camera().getFocusedSprite();
+        if (player == null || player != progressionOwner) {
+            return false;
+        }
         if (currentZone == Sonic1ZoneConstants.ZONE_SBZ && currentAct == 1) {
             int playerX = player.getCentreX() & 0xFFFF;
             if (playerX >= 0x2000) {
                 // Transition to SBZ3 (our engine: zone SBZ, act 2)
                 sbz3TransitionRequested = true;
-                player.setControlLocked(true);
+                lockPlayersForSbz3Transition(progressionOwner);
                 levelManager().requestZoneAndAct(
                         Sonic1ZoneConstants.ZONE_SBZ, 2);
                 return true;
             }
         }
         return false;
+    }
+
+    private void lockPlayersForSbz3Transition(AbstractPlayableSprite progressionOwner) {
+        progressionOwner.setControlLocked(true);
+        for (AbstractPlayableSprite sidekick : GameServices.sprites().getRegisteredSidekicks()) {
+            if (sidekick != progressionOwner) {
+                sidekick.setControlLocked(true);
+            }
+        }
     }
 
     public Sonic1LoopManager getLoopManager() {
