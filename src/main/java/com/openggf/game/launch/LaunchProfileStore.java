@@ -18,10 +18,13 @@ public class LaunchProfileStore {
 
     private final SonicConfigurationService configService;
     private final Map<MasterTitleScreen.GameEntry, List<String>> patchMainCharacters;
+    private final Map<MasterTitleScreen.GameEntry, com.openggf.game.PlayableCharacterRegistry>
+            patchCharacterRegistries;
 
     public LaunchProfileStore(SonicConfigurationService configService) {
         this.configService = Objects.requireNonNull(configService, "configService");
         this.patchMainCharacters = emptyAvailability();
+        this.patchCharacterRegistries = emptyRegistries();
     }
 
     public LaunchProfileStore(SonicConfigurationService configService,
@@ -29,12 +32,39 @@ public class LaunchProfileStore {
         this.configService = Objects.requireNonNull(configService, "configService");
         Objects.requireNonNull(resolutionService, "resolutionService");
         Objects.requireNonNull(resolutionContext, "resolutionContext");
-        this.patchMainCharacters = snapshotAvailability(resolutionService, resolutionContext);
+        AvailabilitySnapshot snapshot = snapshotAvailability(resolutionService, resolutionContext);
+        this.patchMainCharacters = snapshot.characters();
+        this.patchCharacterRegistries = snapshot.registries();
     }
 
-    private static Map<MasterTitleScreen.GameEntry, List<String>> snapshotAvailability(
+    public LaunchProfileStore(SonicConfigurationService configService,
+            ModuleResolutionService resolutionService,
+            ModuleResolutionService.PreparedLaunch preparedLaunch) {
+        this.configService = Objects.requireNonNull(configService, "configService");
+        Objects.requireNonNull(resolutionService, "resolutionService");
+        Objects.requireNonNull(preparedLaunch, "preparedLaunch");
+        List<String> gameIds = java.util.Arrays.stream(MasterTitleScreen.GameEntry.values())
+                .map(LaunchProfile::gameId).toList();
+        Map<String, ModuleResolutionService.MainCharacterAvailability> snapshot =
+                resolutionService.snapshotMainCharacterAvailability(preparedLaunch, gameIds);
+        EnumMap<MasterTitleScreen.GameEntry, List<String>> characters =
+                new EnumMap<>(MasterTitleScreen.GameEntry.class);
+        EnumMap<MasterTitleScreen.GameEntry, com.openggf.game.PlayableCharacterRegistry> registries =
+                new EnumMap<>(MasterTitleScreen.GameEntry.class);
+        for (MasterTitleScreen.GameEntry entry : MasterTitleScreen.GameEntry.values()) {
+            ModuleResolutionService.MainCharacterAvailability available = snapshot.get(
+                    LaunchProfile.gameId(entry));
+            characters.put(entry, available == null ? List.of() : available.characters());
+            registries.put(entry, available == null
+                    ? com.openggf.game.PlayableCharacterRegistry.empty() : available.registry());
+        }
+        this.patchMainCharacters = Map.copyOf(characters);
+        this.patchCharacterRegistries = Map.copyOf(registries);
+    }
+
+    private static AvailabilitySnapshot snapshotAvailability(
             ModuleResolutionService resolutionService, ResolutionContext resolutionContext) {
-        Map<MasterTitleScreen.GameEntry, List<String>> snapshot;
+        AvailabilitySnapshot snapshot;
         int failuresBefore;
         do {
             failuresBefore = resolutionContext.failedOwners().size();
@@ -43,16 +73,21 @@ public class LaunchProfileStore {
         return snapshot;
     }
 
-    private static Map<MasterTitleScreen.GameEntry, List<String>> queryAvailability(
+    private static AvailabilitySnapshot queryAvailability(
             ModuleResolutionService resolutionService, ResolutionContext resolutionContext) {
         EnumMap<MasterTitleScreen.GameEntry, List<String>> availability =
+                new EnumMap<>(MasterTitleScreen.GameEntry.class);
+        EnumMap<MasterTitleScreen.GameEntry, com.openggf.game.PlayableCharacterRegistry> registries =
                 new EnumMap<>(MasterTitleScreen.GameEntry.class);
         for (MasterTitleScreen.GameEntry entry : MasterTitleScreen.GameEntry.values()) {
             availability.put(entry, List.copyOf(resolutionService.availableMainCharacters(
                     resolutionContext, LaunchProfile.gameId(entry))));
+            registries.put(entry, resolutionService.availableMainCharacterRegistry(
+                    resolutionContext, LaunchProfile.gameId(entry)));
         }
-        return Map.copyOf(availability);
+        return new AvailabilitySnapshot(Map.copyOf(availability), Map.copyOf(registries));
     }
+
 
     public LaunchProfile load(MasterTitleScreen.GameEntry entry) {
         Keys keys = keysFor(entry);
@@ -114,6 +149,13 @@ public class LaunchProfileStore {
                 .isCharacterPairStandard(entry, patchMainCharacters(entry));
     }
 
+    public String displayValue(LaunchProfile profile, LaunchProfile.Row row,
+                               MasterTitleScreen.GameEntry entry) {
+        return Objects.requireNonNull(profile, "profile").displayValue(row, entry,
+                patchCharacterRegistries.getOrDefault(entry,
+                        com.openggf.game.PlayableCharacterRegistry.empty()));
+    }
+
     private List<String> patchMainCharacters(MasterTitleScreen.GameEntry entry) {
         Objects.requireNonNull(entry, "entry");
         return patchMainCharacters.getOrDefault(entry, List.of());
@@ -126,6 +168,21 @@ public class LaunchProfileStore {
             availability.put(entry, List.of());
         }
         return Map.copyOf(availability);
+    }
+
+    private static Map<MasterTitleScreen.GameEntry, com.openggf.game.PlayableCharacterRegistry>
+    emptyRegistries() {
+        EnumMap<MasterTitleScreen.GameEntry, com.openggf.game.PlayableCharacterRegistry> registries =
+                new EnumMap<>(MasterTitleScreen.GameEntry.class);
+        for (MasterTitleScreen.GameEntry entry : MasterTitleScreen.GameEntry.values()) {
+            registries.put(entry, com.openggf.game.PlayableCharacterRegistry.empty());
+        }
+        return Map.copyOf(registries);
+    }
+
+    private record AvailabilitySnapshot(
+            Map<MasterTitleScreen.GameEntry, List<String>> characters,
+            Map<MasterTitleScreen.GameEntry, com.openggf.game.PlayableCharacterRegistry> registries) {
     }
 
     private static Keys keysFor(MasterTitleScreen.GameEntry entry) {

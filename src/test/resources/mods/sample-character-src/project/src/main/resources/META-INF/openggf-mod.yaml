@@ -1,0 +1,13 @@
+formatVersion: 1
+id: phase3-character
+name: Phase 3 Character Sample
+version: 1.0.0
+authors: [OpenGGF]
+description: Owner-tagged playable character acceptance sample.
+engineApiRange: ">=1.1.0 <2.0.0"
+type: patch
+baseGame: s2
+entrypoint: example.phase3character.Phase3CharacterMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

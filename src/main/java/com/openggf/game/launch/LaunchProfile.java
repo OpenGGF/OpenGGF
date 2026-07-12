@@ -165,13 +165,19 @@ public record LaunchProfile(
     }
 
     public String displayValue(Row row, MasterTitleScreen.GameEntry entry) {
+        return displayValue(row, entry, com.openggf.game.PlayableCharacterRegistry.empty());
+    }
+
+    String displayValue(Row row, MasterTitleScreen.GameEntry entry,
+                        com.openggf.game.PlayableCharacterRegistry registry) {
+        Objects.requireNonNull(registry, "registry");
         return switch (row) {
             case REWIND -> onOff(rewind);
             case CROSS_GAME -> gameLabel(crossGameSource);
             case DEBUG_TOOLS -> onOff(debugTools);
             case WIDESCREEN -> aspectLabel(aspect);
-            case MAIN_CHARACTER -> characterLabel(mainCharacter);
-            case SIDEKICK -> characterLabel(sidekick);
+            case MAIN_CHARACTER -> characterLabel(mainCharacter, registry);
+            case SIDEKICK -> characterLabel(sidekick, registry);
         };
     }
 
@@ -352,13 +358,24 @@ public record LaunchProfile(
         };
     }
 
-    private static String characterLabel(String value) {
+    private static String characterLabel(String value,
+            com.openggf.game.PlayableCharacterRegistry registry) {
         return switch (value) {
             case SONIC -> "Sonic";
             case TAILS -> "Tails";
             case KNUCKLES -> "Knuckles";
             case NONE -> "None";
-            default -> value;
+            default -> {
+                try {
+                    com.openggf.game.CharacterKey key =
+                            com.openggf.game.CharacterKey.parsePersisted(value);
+                    yield registry.find(key)
+                            .map(com.openggf.game.CharacterDefinition::displayName)
+                            .orElse(value);
+                } catch (IllegalArgumentException invalidKey) {
+                    yield value;
+                }
+            }
         };
     }
 }

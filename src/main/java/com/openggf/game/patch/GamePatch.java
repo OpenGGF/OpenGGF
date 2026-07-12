@@ -3,6 +3,7 @@ package com.openggf.game.patch;
 import com.openggf.game.GameModule;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -30,6 +31,12 @@ public interface GamePatch {
      * and contains no leading or trailing whitespace.
      */
     List<String> providedMainCharacters();
+
+    /** Registry metadata for provided characters; availability remains owned by the code list. */
+    default Map<com.openggf.game.CharacterKey, com.openggf.game.CharacterDefinition>
+    providedCharacterDefinitions() {
+        return Map.of();
+    }
 
     /** Decorates the module produced by all earlier eligible patches. */
     GameModule apply(GameModule base, PatchContext context);

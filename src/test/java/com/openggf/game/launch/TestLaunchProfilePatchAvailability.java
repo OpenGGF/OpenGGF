@@ -3,6 +3,9 @@ package com.openggf.game.launch;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameModule;
+import com.openggf.game.CharacterDefinition;
+import com.openggf.game.CharacterKey;
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.patch.GamePatch;
 import com.openggf.game.patch.GameplayLaunchRequest;
 import com.openggf.game.patch.LogicalRom;
@@ -74,6 +77,105 @@ class TestLaunchProfilePatchAvailability {
                 store.load(SONIC_2), LaunchProfile.Row.MAIN_CHARACTER, SONIC_2);
 
         assertEquals("knuckles", cycled.mainCharacter());
+    }
+
+    @Test
+    void namespacedCharactersWithSameLocalNameUseTheirRegistryDisplayNames() {
+        SonicConfigurationService config = configWithS2Main("owner-a:modchar");
+        ModuleResolutionService service = new ModuleResolutionService(
+                List.of(), PatchEnablement.ALL_ENABLED,
+                new LogicalRomResolver(() -> null), config);
+        CharacterKey ownerA = CharacterKey.mod("owner-a", "modchar");
+        CharacterKey ownerB = CharacterKey.mod("owner-b", "modchar");
+        ResolutionContext context = service.newContext(List.of(
+                new RegisteredPatch(new PatchOwner.Mod("owner-a"), "owner-a:character",
+                        characterPatch("s2", ownerA, "Alpha Runner"), 0),
+                new RegisteredPatch(new PatchOwner.Mod("owner-b"), "owner-b:character",
+                        characterPatch("s2", ownerB, "Beta Runner"), 1)), Map.of());
+        LaunchProfileStore store = new LaunchProfileStore(config, service, context);
+
+        LaunchProfile alpha = store.load(SONIC_2);
+        assertEquals("Alpha Runner", store.displayValue(
+                alpha, LaunchProfile.Row.MAIN_CHARACTER, SONIC_2));
+        LaunchProfile beta = store.withPrevious(
+                new LaunchProfile(false, "off", false, "global", "sonic", "none"),
+                LaunchProfile.Row.MAIN_CHARACTER, SONIC_2);
+        assertEquals("owner-b:modchar", beta.mainCharacter());
+        assertEquals("Beta Runner", store.displayValue(
+                beta, LaunchProfile.Row.MAIN_CHARACTER, SONIC_2));
+    }
+
+    @Test
+    void preparedLaunchSnapshotsLabelsAndDeterministicPolicySkipsModPlan() {
+        SonicConfigurationService config = configWithS2Main("owner-a:modchar");
+        CharacterKey key = CharacterKey.mod("owner-a", "modchar");
+        java.util.concurrent.atomic.AtomicInteger scans = new java.util.concurrent.atomic.AtomicInteger();
+        ModuleResolutionService service = new ModuleResolutionService(List.of(),
+                PatchEnablement.ALL_ENABLED, new LogicalRomResolver(() -> null), config,
+                ignored -> {
+                    scans.incrementAndGet();
+                    return new ModuleResolutionService.PatchPlan(List.of(
+                            new RegisteredPatch(new PatchOwner.Mod("owner-a"), "owner-a:character",
+                                    characterPatch("s2", key, "Prepared Runner"), 0)), Map.of());
+                });
+
+        LaunchProfileStore standard = new LaunchProfileStore(config, service,
+                service.prepareLaunch(ModuleResolutionService.LaunchPolicy.STANDARD));
+        assertEquals("Prepared Runner", standard.displayValue(
+                standard.load(SONIC_2), LaunchProfile.Row.MAIN_CHARACTER, SONIC_2));
+        assertEquals(1, scans.get(), "prepared availability must use one frozen plan");
+
+        LaunchProfileStore deterministic = new LaunchProfileStore(config, service,
+                service.prepareLaunch(ModuleResolutionService.LaunchPolicy.DETERMINISTIC));
+        assertEquals("sonic", deterministic.load(SONIC_2).mainCharacter());
+        assertEquals(1, scans.get(), "deterministic launch must not scan mod storage");
+    }
+
+    @Test
+    void crossOwnerCharacterMetadataFailsTheSpoofingOwner() {
+        SonicConfigurationService config = configWithS2Main("owner-b:modchar");
+        CharacterKey ownerB = CharacterKey.mod("owner-b", "modchar");
+        PatchOwner ownerA = new PatchOwner.Mod("owner-a");
+        ModuleResolutionService service = new ModuleResolutionService(
+                List.of(), PatchEnablement.ALL_ENABLED,
+                new LogicalRomResolver(() -> null), config);
+        ResolutionContext context = service.newContext(List.of(
+                new RegisteredPatch(ownerA, "owner-a:spoof",
+                        characterPatch("s2", ownerB, "Spoofed"), 0)), Map.of());
+
+        LaunchProfileStore store = new LaunchProfileStore(config, service, context);
+
+        assertEquals("sonic", store.load(SONIC_2).mainCharacter());
+        assertEquals(Set.of(ownerA), context.failedOwners());
+    }
+
+    @Test
+    void crossOwnerCodeOnlySpoofFailsOwnerAndDependentButKeepsGenuineContribution() {
+        SonicConfigurationService config = configWithS2Main("owner-b:modchar");
+        PatchOwner ownerA = new PatchOwner.Mod("owner-a");
+        PatchOwner dependent = new PatchOwner.Mod("dependent");
+        PatchOwner ownerB = new PatchOwner.Mod("owner-b");
+        CharacterKey ownerBKey = CharacterKey.mod("owner-b", "modchar");
+        ModuleResolutionService service = new ModuleResolutionService(
+                List.of(), PatchEnablement.ALL_ENABLED,
+                new LogicalRomResolver(() -> null), config);
+        ResolutionContext context = service.newContext(List.of(
+                new RegisteredPatch(ownerA, "owner-a:spoof",
+                        characterPatch("s2", "owner-b:modchar"), 0),
+                new RegisteredPatch(dependent, "dependent:character",
+                        characterPatch("s2", "amy"), 1),
+                new RegisteredPatch(ownerB, "owner-b:character",
+                        characterPatch("s2", ownerBKey, "Beta Runner"), 2)),
+                Map.of(dependent, Set.of(ownerA)));
+
+        LaunchProfileStore store = new LaunchProfileStore(config, service, context);
+
+        LaunchProfile loaded = store.load(SONIC_2);
+        assertEquals("owner-b:modchar", loaded.mainCharacter());
+        assertEquals("Beta Runner", store.displayValue(
+                loaded, LaunchProfile.Row.MAIN_CHARACTER, SONIC_2));
+        assertEquals(Set.of(ownerA, dependent), context.failedOwners());
+        assertFalse(context.failedOwners().contains(ownerB));
     }
 
     @Test
@@ -217,6 +319,25 @@ class TestLaunchProfilePatchAvailability {
             @Override public boolean activatesFor(GameplayLaunchRequest request) { return true; }
             @Override public Set<LogicalRom> romPrerequisites() { return Set.of(); }
             @Override public List<String> providedMainCharacters() { return provided; }
+            @Override public GameModule apply(GameModule base, PatchContext context) { return base; }
+        };
+    }
+
+    private static GamePatch characterPatch(String gameId, CharacterKey key, String displayName) {
+        CharacterDefinition definition = new CharacterDefinition(key, displayName,
+                (code, x, y) -> null, null, PlayerCharacter.SONIC_ALONE,
+                com.openggf.sprites.playable.SecondaryAbility.NONE, false,
+                code -> com.openggf.sprites.art.SpriteArtSet.EMPTY);
+        return new GamePatch() {
+            @Override public String id() { return key.persisted(); }
+            @Override public String displayName() { return displayName; }
+            @Override public String baseGameId() { return gameId; }
+            @Override public boolean activatesFor(GameplayLaunchRequest request) { return true; }
+            @Override public Set<LogicalRom> romPrerequisites() { return Set.of(); }
+            @Override public List<String> providedMainCharacters() { return List.of(key.persisted()); }
+            @Override public Map<CharacterKey, CharacterDefinition> providedCharacterDefinitions() {
+                return Map.of(key, definition);
+            }
             @Override public GameModule apply(GameModule base, PatchContext context) { return base; }
         };
     }

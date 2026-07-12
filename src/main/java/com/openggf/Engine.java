@@ -1244,7 +1244,15 @@ public class Engine {
 	}
 
 	private MasterTitleScreen createMasterTitleScreen() {
-		MasterTitleScreen screen = new MasterTitleScreen(configService);
+		ModuleResolutionService.LaunchPolicy policy =
+				configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
+						? ModuleResolutionService.LaunchPolicy.DETERMINISTIC
+						: ModuleResolutionService.LaunchPolicy.STANDARD;
+		ModuleResolutionService.PreparedLaunch preparedLaunch =
+				moduleResolutionService.prepareLaunch(policy);
+		MasterTitleScreen screen = new MasterTitleScreen(configService,
+				new com.openggf.game.launch.LaunchProfileStore(
+						configService, moduleResolutionService, preparedLaunch));
 		if (ModSubsystem.current().policy().mayScanAtBoot()) {
 			screen.setModManagerScreenFactory(font -> ModSubsystem.current().createManager(font));
 		}

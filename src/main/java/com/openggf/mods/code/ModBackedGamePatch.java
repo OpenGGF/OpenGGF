@@ -62,6 +62,10 @@ public final class ModBackedGamePatch implements GamePatch {
         return plan.characters().keySet().stream()
                 .map(com.openggf.game.CharacterKey::persisted).toList();
     }
+    @Override public java.util.Map<com.openggf.game.CharacterKey,
+            com.openggf.game.CharacterDefinition> providedCharacterDefinitions() {
+        return plan.characters();
+    }
     @Override public GameModule apply(GameModule base, PatchContext context) {
         List<ModObjectKeyRegistry.Registration> registrations = plan.objectFactories().entrySet().stream()
                 .map(entry -> new ModObjectKeyRegistry.Registration(

@@ -37724,3 +37724,16 @@ owner-bound ability hook and registry-authoritative super-form gate:
   characters retain the default-false path into the existing ability dispatch.
 - No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
   engine state was changed.
+
+### 2026-07-12 -- Phase 3 A6 character-surfacing parity sweep
+
+Measured on `next` at `65bffb6e7` with the reviewed, uncommitted Phase 3 A6
+launch-label, owner-qualified data-select, and packaged sample-character changes:
+
+- Command:
+  `mvn "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test -Dmse=off`
+- S1 GHZ1, S2 EHZ1, and S3K AIZ all passed (3/3).
+- Mod character labels and registries are frozen at prepared-launch time; stock
+  character identity, physics, art, and trace execution remain unchanged.
+- No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
+  engine state was changed.

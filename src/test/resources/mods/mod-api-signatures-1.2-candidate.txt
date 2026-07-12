@@ -321,6 +321,7 @@ CF-ANNOTATION TYPE com.openggf.game.patch.LogicalRomResolver$CombinedRomBytesSou
 CF-ANNOTATION TYPE com.openggf.game.patch.LogicalRomResolver$CombinedRomBytesSource visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.game.patch.ModuleResolutionService visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.patch.ModuleResolutionService$LaunchPolicy visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.patch.ModuleResolutionService$PatchPlan visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.patch.ModuleResolutionService$PatchPlanSource visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.patch.ModuleResolutionService$PatchPlanSource visible @java.lang.FunctionalInterface
@@ -1056,6 +1057,7 @@ CONSTRUCTOR com.openggf.game.ghost.GhostRecording public  <init>(com.openggf.gam
 CONSTRUCTOR com.openggf.game.ghost.GhostRenderRegistry public  <init>()
 CONSTRUCTOR com.openggf.game.launch.LaunchProfile public  <init>(boolean,java.lang.String,boolean,java.lang.String,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.game.launch.LaunchProfileStore public  <init>(com.openggf.configuration.SonicConfigurationService)
+CONSTRUCTOR com.openggf.game.launch.LaunchProfileStore public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.game.patch.ModuleResolutionService,com.openggf.game.patch.ModuleResolutionService$PreparedLaunch)
 CONSTRUCTOR com.openggf.game.launch.LaunchProfileStore public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.game.patch.ModuleResolutionService,com.openggf.game.patch.ResolutionContext)
 CONSTRUCTOR com.openggf.game.mutation.LayoutMutationContext public  <init>(com.openggf.game.mutation.LevelMutationSurface,java.util.function.Consumer<com.openggf.game.mutation.MutationEffects>)
 CONSTRUCTOR com.openggf.game.mutation.LayoutMutationContext public  <init>(java.util.function.Consumer<com.openggf.game.mutation.MutationEffects>)
@@ -1066,6 +1068,7 @@ CONSTRUCTOR com.openggf.game.patch.GameplayLaunchRequest public  <init>(java.lan
 CONSTRUCTOR com.openggf.game.patch.LogicalRomResolver public  <init>(com.openggf.game.patch.LogicalRomResolver$CombinedRomBytesSource)
 CONSTRUCTOR com.openggf.game.patch.ModuleResolutionService public  <init>(java.util.List<com.openggf.game.patch.RegisteredPatch>,com.openggf.game.patch.PatchEnablement,com.openggf.game.patch.LogicalRomResolver,com.openggf.configuration.SonicConfigurationService)
 CONSTRUCTOR com.openggf.game.patch.ModuleResolutionService public  <init>(java.util.List<com.openggf.game.patch.RegisteredPatch>,com.openggf.game.patch.PatchEnablement,com.openggf.game.patch.LogicalRomResolver,com.openggf.configuration.SonicConfigurationService,com.openggf.game.patch.ModuleResolutionService$PatchPlanSource)
+CONSTRUCTOR com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability public  <init>(java.util.List<java.lang.String>,com.openggf.game.PlayableCharacterRegistry)
 CONSTRUCTOR com.openggf.game.patch.ModuleResolutionService$PatchPlan public  <init>(java.util.List<com.openggf.game.patch.RegisteredPatch>,java.util.Map<com.openggf.game.patch.PatchOwner,? extends java.util.Set<com.openggf.game.patch.PatchOwner>>)
 CONSTRUCTOR com.openggf.game.patch.PatchContext public  <init>(com.openggf.game.patch.PatchContext$LogicalRomSource,com.openggf.configuration.SonicConfigurationService)
 CONSTRUCTOR com.openggf.game.patch.PatchOwner$BuiltIn public  <init>(java.lang.String)
@@ -5692,6 +5695,7 @@ METHOD com.openggf.game.launch.LaunchProfileStore public  com.openggf.game.launc
 METHOD com.openggf.game.launch.LaunchProfileStore public  com.openggf.game.launch.LaunchProfile sanitize(com.openggf.game.launch.LaunchProfile,com.openggf.game.MasterTitleScreen$GameEntry)
 METHOD com.openggf.game.launch.LaunchProfileStore public  com.openggf.game.launch.LaunchProfile withNext(com.openggf.game.launch.LaunchProfile,com.openggf.game.launch.LaunchProfile$Row,com.openggf.game.MasterTitleScreen$GameEntry)
 METHOD com.openggf.game.launch.LaunchProfileStore public  com.openggf.game.launch.LaunchProfile withPrevious(com.openggf.game.launch.LaunchProfile,com.openggf.game.launch.LaunchProfile$Row,com.openggf.game.MasterTitleScreen$GameEntry)
+METHOD com.openggf.game.launch.LaunchProfileStore public  java.lang.String displayValue(com.openggf.game.launch.LaunchProfile,com.openggf.game.launch.LaunchProfile$Row,com.openggf.game.MasterTitleScreen$GameEntry)
 METHOD com.openggf.game.launch.LaunchProfileStore public  void save(com.openggf.game.MasterTitleScreen$GameEntry,com.openggf.game.launch.LaunchProfile)
 METHOD com.openggf.game.mutation.LayoutMutationContext public  com.openggf.game.mutation.LevelMutationSurface surface()
 METHOD com.openggf.game.mutation.LayoutMutationIntent public,abstract  com.openggf.game.mutation.MutationEffects apply(com.openggf.game.mutation.LayoutMutationContext)
@@ -5760,6 +5764,7 @@ METHOD com.openggf.game.palette.PaletteWrite public  int startColor()
 METHOD com.openggf.game.palette.PaletteWrite public  java.lang.String ownerId()
 METHOD com.openggf.game.palette.PaletteWrite public,static  com.openggf.game.palette.PaletteWrite normal(java.lang.String,int,int,int,byte[])
 METHOD com.openggf.game.palette.PaletteWrite public,static  com.openggf.game.palette.PaletteWrite underwater(java.lang.String,int,int,int,byte[])
+METHOD com.openggf.game.patch.GamePatch public  java.util.Map<com.openggf.game.CharacterKey,com.openggf.game.CharacterDefinition> providedCharacterDefinitions()
 METHOD com.openggf.game.patch.GamePatch public,abstract  boolean activatesFor(com.openggf.game.patch.GameplayLaunchRequest)
 METHOD com.openggf.game.patch.GamePatch public,abstract  com.openggf.game.GameModule apply(com.openggf.game.GameModule,com.openggf.game.patch.PatchContext)
 METHOD com.openggf.game.patch.GamePatch public,abstract  java.lang.String baseGameId()
@@ -5783,6 +5788,8 @@ METHOD com.openggf.game.patch.LogicalRomResolver public,static  com.openggf.game
 METHOD com.openggf.game.patch.LogicalRomResolver$CombinedRomBytesSource public,abstract  byte[] get()
 METHOD com.openggf.game.patch.ModuleResolutionService public  com.openggf.game.GameModule resolveForLaunch(com.openggf.game.GameModule,com.openggf.game.patch.GameplayLaunchRequest,com.openggf.game.patch.ModuleResolutionService$LaunchPolicy)
 METHOD com.openggf.game.patch.ModuleResolutionService public  com.openggf.game.GameModule resolveForLaunch(com.openggf.game.patch.ModuleResolutionService$PreparedLaunch,com.openggf.game.GameModule,com.openggf.game.patch.GameplayLaunchRequest)
+METHOD com.openggf.game.patch.ModuleResolutionService public  com.openggf.game.PlayableCharacterRegistry availableMainCharacterRegistry(com.openggf.game.patch.ModuleResolutionService$PreparedLaunch,java.lang.String)
+METHOD com.openggf.game.patch.ModuleResolutionService public  com.openggf.game.PlayableCharacterRegistry availableMainCharacterRegistry(com.openggf.game.patch.ResolutionContext,java.lang.String)
 METHOD com.openggf.game.patch.ModuleResolutionService public  com.openggf.game.patch.ModuleResolutionService$PreparedLaunch prepareLaunch(com.openggf.game.patch.ModuleResolutionService$LaunchPolicy)
 METHOD com.openggf.game.patch.ModuleResolutionService public  com.openggf.game.patch.ResolutionContext newContext(java.util.List<com.openggf.game.patch.RegisteredPatch>,java.util.Map<com.openggf.game.patch.PatchOwner,? extends java.util.Set<com.openggf.game.patch.PatchOwner>>)
 METHOD com.openggf.game.patch.ModuleResolutionService public  com.openggf.game.patch.ResolutionResult resolve(com.openggf.game.patch.ResolutionContext,com.openggf.game.GameModule,com.openggf.game.patch.GameplayLaunchRequest)
@@ -5790,10 +5797,16 @@ METHOD com.openggf.game.patch.ModuleResolutionService public  com.openggf.game.p
 METHOD com.openggf.game.patch.ModuleResolutionService public  java.util.List<java.lang.String> availableMainCharacters(com.openggf.game.patch.ModuleResolutionService$PreparedLaunch,java.lang.String)
 METHOD com.openggf.game.patch.ModuleResolutionService public  java.util.List<java.lang.String> availableMainCharacters(com.openggf.game.patch.ResolutionContext,java.lang.String)
 METHOD com.openggf.game.patch.ModuleResolutionService public  java.util.List<java.lang.String> availableMainCharactersForLaunch(java.lang.String,com.openggf.game.patch.ModuleResolutionService$LaunchPolicy)
+METHOD com.openggf.game.patch.ModuleResolutionService public  java.util.Map<java.lang.String,com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability> snapshotMainCharacterAvailability(com.openggf.game.patch.ModuleResolutionService$PreparedLaunch,java.util.List<java.lang.String>)
 METHOD com.openggf.game.patch.ModuleResolutionService public,static  com.openggf.game.patch.ModuleResolutionService forTests(com.openggf.game.patch.PatchEnablement)
 METHOD com.openggf.game.patch.ModuleResolutionService public,synchronized  void installModPlanSource(com.openggf.game.patch.PatchEnablement,com.openggf.game.patch.ModuleResolutionService$PatchPlanSource)
 METHOD com.openggf.game.patch.ModuleResolutionService$LaunchPolicy public,static  com.openggf.game.patch.ModuleResolutionService$LaunchPolicy valueOf(java.lang.String)
 METHOD com.openggf.game.patch.ModuleResolutionService$LaunchPolicy public,static  com.openggf.game.patch.ModuleResolutionService$LaunchPolicy[] values()
+METHOD com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability public  com.openggf.game.PlayableCharacterRegistry registry()
+METHOD com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability public  java.util.List<java.lang.String> characters()
+METHOD com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability public,final  int hashCode()
+METHOD com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability public,final  java.lang.String toString()
 METHOD com.openggf.game.patch.ModuleResolutionService$PatchPlan public  java.util.List<com.openggf.game.patch.RegisteredPatch> registrations()
 METHOD com.openggf.game.patch.ModuleResolutionService$PatchPlan public  java.util.Map<com.openggf.game.patch.PatchOwner,? extends java.util.Set<com.openggf.game.patch.PatchOwner>> ownerDependencies()
 METHOD com.openggf.game.patch.ModuleResolutionService$PatchPlan public,final  boolean equals(java.lang.Object)
@@ -12243,6 +12256,7 @@ NESTED com.openggf.game.ghost.GhostRenderRegistry com.openggf.game.ghost.GhostRe
 NESTED com.openggf.game.launch.LaunchProfile com.openggf.game.launch.LaunchProfile$Row
 NESTED com.openggf.game.patch.LogicalRomResolver com.openggf.game.patch.LogicalRomResolver$CombinedRomBytesSource
 NESTED com.openggf.game.patch.ModuleResolutionService com.openggf.game.patch.ModuleResolutionService$LaunchPolicy
+NESTED com.openggf.game.patch.ModuleResolutionService com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability
 NESTED com.openggf.game.patch.ModuleResolutionService com.openggf.game.patch.ModuleResolutionService$PatchPlan
 NESTED com.openggf.game.patch.ModuleResolutionService com.openggf.game.patch.ModuleResolutionService$PatchPlanSource
 NESTED com.openggf.game.patch.ModuleResolutionService com.openggf.game.patch.ModuleResolutionService$PreparedLaunch
@@ -13192,6 +13206,8 @@ RECORD-COMPONENT com.openggf.game.mutation.MutationEffects ringResyncRequired bo
 RECORD-COMPONENT com.openggf.game.patch.GameplayLaunchRequest gameId java.lang.String
 RECORD-COMPONENT com.openggf.game.patch.GameplayLaunchRequest mainCharacter java.lang.String
 RECORD-COMPONENT com.openggf.game.patch.GameplayLaunchRequest sidekicks java.util.List<java.lang.String>
+RECORD-COMPONENT com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability characters java.util.List<java.lang.String>
+RECORD-COMPONENT com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability registry com.openggf.game.PlayableCharacterRegistry
 RECORD-COMPONENT com.openggf.game.patch.ModuleResolutionService$PatchPlan ownerDependencies java.util.Map<com.openggf.game.patch.PatchOwner,? extends java.util.Set<com.openggf.game.patch.PatchOwner>>
 RECORD-COMPONENT com.openggf.game.patch.ModuleResolutionService$PatchPlan registrations java.util.List<com.openggf.game.patch.RegisteredPatch>
 RECORD-COMPONENT com.openggf.game.patch.PatchOwner$BuiltIn id java.lang.String
@@ -15807,6 +15823,7 @@ TYPE record public,static,final com.openggf.game.ZoneKey$Mod SUPER java.lang.Rec
 TYPE record public,static,final com.openggf.game.ZoneKey$Stock SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.ZoneProgressionPlan$Successor SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.ZoneProgressionPlan$ZoneMetadata SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.ModuleResolutionService$PatchPlan SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.PatchOwner$BuiltIn SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.PatchOwner$Mod SUPER java.lang.Record
@@ -16306,6 +16323,7 @@ TYPE-ANNOTATION com.openggf.game.patch.LogicalRomResolver$CombinedRomBytesSource
 TYPE-ANNOTATION com.openggf.game.patch.LogicalRomResolver$CombinedRomBytesSource @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.game.patch.ModuleResolutionService @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.patch.ModuleResolutionService$LaunchPolicy @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.patch.ModuleResolutionService$PatchPlan @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.patch.ModuleResolutionService$PatchPlanSource @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.patch.ModuleResolutionService$PatchPlanSource @java.lang.FunctionalInterface
