@@ -105,6 +105,31 @@ class TestAizGiantRideVineObjectInstance {
     }
 
     @Test
+    void ordinaryVineStillSpriteUsesIncomingNativeViewportRenderFlag() throws Exception {
+        AizRideVineObjectInstance vine = new AizRideVineObjectInstance(
+                new ObjectSpawn(327, 100, 0x06, 0x00, 0, false, 0));
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0);
+        when(camera.getY()).thenReturn((short) 0);
+        when(camera.getWidth()).thenReturn((short) 512);
+        when(camera.getHeight()).thenReturn((short) 224);
+        StubObjectServices services = new StubObjectServices() {
+            @Override
+            public Camera camera() {
+                return camera;
+            }
+        }.withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
+        vine.setServices(services);
+        setEnumField(vine, "state", "STILL_SPRITE");
+
+        vine.update(0, null);
+
+        assertEquals(335, vine.getX(),
+                "the incoming Render_Sprites flag was set at x=327 because the 8px half-width still "
+                        + "overlapped the native 320px viewport before MoveSprite; widescreen width must not alter it");
+    }
+
+    @Test
     void unloadReleasesParentSlotWhenExecutionUsesHandleSlot() {
         ObjectManager[] holder = new ObjectManager[1];
         StubObjectServices services = new StubObjectServices() {
@@ -225,6 +250,13 @@ class TestAizGiantRideVineObjectInstance {
         Field modeField = handle.getClass().getDeclaredField("mode");
         modeField.setAccessible(true);
         return modeField.getInt(handle);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void setEnumField(Object target, String fieldName, String constant) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, Enum.valueOf((Class<? extends Enum>) field.getType(), constant));
     }
 
     private static void setHandleGrabFlag(AizGiantRideVineObjectInstance vine,

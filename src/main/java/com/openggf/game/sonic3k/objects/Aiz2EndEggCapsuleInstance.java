@@ -8,8 +8,15 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Floating upside-down egg prison used by the AIZ2 post-boss cutscene.
@@ -20,9 +27,15 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
 
     private boolean tailsEndingPoseApplied;
     private boolean tailsEndingPoseObjectControlLocked;
+    private boolean tailsOpenControllerLockApplied;
     private int tailsOpenControllerLockDelay;
     private int resultsActiveWaitEntries;
     private boolean resultsStartEligibilityObserved;
+    private boolean endingPoseControlsReleased;
+    private AbstractPlayableSprite nativeP2EndingPoseOwner;
+    private boolean nativeP2EndingPoseUsesExtensionState;
+    private final Map<AbstractPlayableSprite, ExtensionEndingPoseState> extensionEndingPoseStates =
+            new IdentityHashMap<>();
 
     public Aiz2EndEggCapsuleInstance(int initialX, int initialY) {
         super(initialX, initialY, "AIZ2EndEggCapsule");
@@ -54,8 +67,9 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
 
     @Override
     protected void onBeforeCapsuleUpdate() {
+        maintainEndingPoseParticipants();
         if (Aiz2BossEndSequenceState.tickTailsControlRelease()) {
-            releaseTailsControlNow();
+            releaseTailsControlNow(true);
         }
         if (tailsOpenControllerLockDelay <= 0) {
             return;
@@ -67,6 +81,7 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
         if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
                 && sidekick.getCpuController() != null) {
             sidekick.getCpuController().setController2SignedLocked(true);
+            tailsOpenControllerLockApplied = true;
         }
     }
 
@@ -114,7 +129,7 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     }
 
     private void advanceTailsEndingPoseCheck(boolean force) {
-        if (tailsEndingPoseApplied) {
+        if (endingPoseControlsReleased) {
             return;
         }
         if (!force && resultsActiveWaitEntries < RESULTS_OWNER_TAILS_ENDING_POSE_ENTRY) {
@@ -125,13 +140,11 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
         // (sonic3k.asm:181919-181939). Obj_EggCapsule routine $0C calls this
         // while Obj_LevelResults/_unkFAA8 is still active, before End_of_level_flag
         // is set on results exit (sonic3k.asm:181670-181672,62693-62705).
-        if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
-                && sidekick.getCpuController() != null) {
-            if (sidekick.isPreventTailsRespawn()
-                    || sidekick.getAir()
-                    || sidekick.getDead()) {
-                return;
-            }
+        if (!tailsEndingPoseApplied
+                && nativeP2EndingPoseOwner != null
+                && nativeP2EndingPoseOwner.getCpuController() != null
+                && isEndingPoseEligible(nativeP2EndingPoseOwner)) {
+            AbstractPlayableSprite sidekick = nativeP2EndingPoseOwner;
             tailsEndingPoseApplied = true;
             tailsEndingPoseObjectControlLocked = true;
             boolean wasAir = sidekick.getAir();
@@ -142,18 +155,147 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
             sidekick.setAir(wasAir);
             sidekick.setOnObject(wasOnObject);
         }
+        for (PlayableEntity candidate : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+            if (!(candidate instanceof AbstractPlayableSprite extension)
+                    || extension == services().playerQuery().mainPlayerOrNull()
+                    || extension == nativeP2EndingPoseOwner) {
+                continue;
+            }
+            ExtensionEndingPoseState state = extensionEndingPoseStates.computeIfAbsent(
+                    extension, ignored -> new ExtensionEndingPoseState());
+            if (!state.applied && isEndingPoseEligible(extension)) {
+                boolean wasAir = extension.getAir();
+                boolean wasOnObject = extension.isOnObject();
+                lockForResults(extension);
+                extension.setAir(wasAir);
+                extension.setOnObject(wasOnObject);
+                state.applied = true;
+            }
+        }
     }
 
-    private void releaseTailsControlNow() {
-        if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick) {
-            if (sidekick.getCpuController() != null) {
+    private void releaseTailsControlNow(boolean restoreNativeP2) {
+        endingPoseControlsReleased = true;
+        if (nativeP2EndingPoseOwner != null) {
+            AbstractPlayableSprite sidekick = nativeP2EndingPoseOwner;
+            if (sidekick.getCpuController() != null
+                    && (restoreNativeP2 || tailsOpenControllerLockApplied || tailsEndingPoseApplied)) {
                 sidekick.getCpuController().setController2SignedLocked(false);
                 sidekick.getCpuController().mirrorRawController2LogicalForEndingPose();
             }
-            ObjectControlState.none().applyTo(sidekick);
-            sidekick.setControlLocked(false);
+            if (restoreNativeP2 || tailsEndingPoseObjectControlLocked) {
+                ObjectControlState.none().applyTo(sidekick);
+                sidekick.setControlLocked(false);
+            }
         }
+        tailsOpenControllerLockApplied = false;
         tailsEndingPoseObjectControlLocked = false;
+        for (Map.Entry<AbstractPlayableSprite, ExtensionEndingPoseState> entry
+                : extensionEndingPoseStates.entrySet()) {
+            releaseExtensionEndingPose(entry.getKey(), entry.getValue());
+        }
+    }
+
+    @Override
+    public void onUnload() {
+        releaseTailsControlNow(false);
+        extensionEndingPoseStates.clear();
+    }
+
+    private void maintainEndingPoseParticipants() {
+        AbstractPlayableSprite currentNativeP2 = services().playerQuery().nativeP2OrNull()
+                instanceof AbstractPlayableSprite sidekick ? sidekick : null;
+        bindNativeP2EndingPose(currentNativeP2);
+        if (nativeP2EndingPoseUsesExtensionState
+                && nativeP2EndingPoseOwner != null
+                && nativeP2EndingPoseOwner.getDead()) {
+            ObjectControlState.none().applyTo(nativeP2EndingPoseOwner);
+            nativeP2EndingPoseOwner.setControlLocked(false);
+            tailsEndingPoseApplied = false;
+            tailsEndingPoseObjectControlLocked = false;
+        }
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        for (Map.Entry<AbstractPlayableSprite, ExtensionEndingPoseState> entry
+                : new ArrayList<>(extensionEndingPoseStates.entrySet())) {
+            if (!containsIdentity(participants, entry.getKey())) {
+                releaseExtensionEndingPose(entry.getKey(), entry.getValue());
+                extensionEndingPoseStates.remove(entry.getKey());
+            } else if (entry.getKey().getDead()) {
+                releaseExtensionEndingPose(entry.getKey(), entry.getValue());
+            }
+        }
+    }
+
+    private void bindNativeP2EndingPose(AbstractPlayableSprite current) {
+        if (nativeP2EndingPoseOwner == current) {
+            return;
+        }
+        if (nativeP2EndingPoseOwner != null
+                && tailsOpenControllerLockApplied
+                && nativeP2EndingPoseOwner.getCpuController() != null) {
+            nativeP2EndingPoseOwner.getCpuController().setController2SignedLocked(false);
+            tailsOpenControllerLockApplied = false;
+        }
+        if (nativeP2EndingPoseOwner != null && tailsEndingPoseApplied) {
+            ExtensionEndingPoseState previous = extensionEndingPoseStates.computeIfAbsent(
+                    nativeP2EndingPoseOwner, ignored -> new ExtensionEndingPoseState());
+            previous.applied = tailsEndingPoseObjectControlLocked;
+        }
+        tailsEndingPoseApplied = false;
+        tailsEndingPoseObjectControlLocked = false;
+        nativeP2EndingPoseUsesExtensionState = false;
+        if (current != null) {
+            ExtensionEndingPoseState restored = extensionEndingPoseStates.remove(current);
+            if (restored != null) {
+                tailsEndingPoseApplied = restored.applied;
+                tailsEndingPoseObjectControlLocked = restored.applied;
+                nativeP2EndingPoseUsesExtensionState = true;
+            }
+        }
+        nativeP2EndingPoseOwner = current;
+    }
+
+    private static boolean isEndingPoseEligible(AbstractPlayableSprite player) {
+        return !player.isPreventTailsRespawn() && !player.getAir() && !player.getDead();
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity target) {
+        for (PlayableEntity participant : participants) {
+            if (participant == target) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void releaseExtensionEndingPose(
+            AbstractPlayableSprite extension, ExtensionEndingPoseState state) {
+        if (!state.applied) {
+            return;
+        }
+        ObjectControlState.none().applyTo(extension);
+        extension.setControlLocked(false);
+        state.applied = false;
+    }
+
+    private static final class ExtensionEndingPoseState
+            implements RewindStateful<ExtensionEndingPoseState.Snapshot> {
+        private boolean applied;
+
+        @Override
+        public Snapshot captureRewindStateValue() {
+            return new Snapshot(applied);
+        }
+
+        @Override
+        public void restoreRewindStateValue(Snapshot snapshot) {
+            applied = snapshot.applied();
+        }
+
+        private record Snapshot(boolean applied) {
+        }
     }
 
     private static final class HighPriorityAnimal extends EggPrisonAnimalInstance {
