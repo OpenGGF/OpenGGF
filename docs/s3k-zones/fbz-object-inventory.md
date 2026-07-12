@@ -234,16 +234,16 @@ changing native ordering.
 | `$34` StarPost | concrete | checkpoint | shared art | main/native pair per shared contract | placement | `TestFbzSharedPlacedObjects` | concrete; FBZ restore pending |
 | `$3D` RetractingSpring | concrete | traversal | shared spring art/map | native pair | placement | `TestFbzSharedObjectSubtypes` | concrete; exact movement/hold/SFX/rewind cycle covered |
 | `$6A/$6B` InvisibleHurtBlock | concrete | hazard | none | native pair | placement | `TestFbzSharedPlacedObjects` | concrete; subtype validation pending |
-| `$6F` WireCage | placeholder | carrier | player mappings/DPLC selected by `RawAni_3A220`; no standalone FBZ map | native pair/all riders | placement | `TestFbzWireCages` | pending |
-| `$70` StationaryWireCage | placeholder | solid/trap | inline multi-sprite frames from player mappings; no standalone FBZ map | native pair | placement | `TestFbzWireCages` | pending |
-| `$71` FloatingPlatform | placeholder | traversal | `Map_FBZFloatingPlatform` | native pair | placement | `TestFbzRailAndChainPlatforms` | pending |
-| `$72` ChainLink | placeholder | grab/carrier | `Map_FBZChainLink` | native pair; one owner per ROM contact | placement | `TestFbzRailAndChainPlatforms` | pending |
+| `$6F` WireCage | concrete | carrier | player mappings/DPLC selected by `RawAni_3A220`; no standalone FBZ map | native pair/all riders | placement | `TestFbzWireCages` | concrete; counted subtypes and extended participants covered |
+| `$70` StationaryWireCage | concrete | solid/trap | inline multi-sprite frames from player mappings; no standalone FBZ map | native pair | placement | `TestFbzWireCages` | concrete; counted subtypes and per-player 16:16 track state covered |
+| `$71` FloatingPlatform | concrete | traversal | `Map_FBZFloatingPlatform` | native pair | placement | `TestFbzRailAndChainPlatforms` | concrete; all counted movement modes covered |
+| `$72` ChainLink | concrete | grab/carrier | `Map_FBZChainLink` | native pair; one owner per ROM contact | placement | `TestFbzRailAndChainPlatforms` | concrete; vertical/horizontal decode and isolated participant state covered |
 | `$73` MagneticSpikeBall | placeholder | polarity hazard | `Map_FBZMagneticSpikeBall` | native pair touch | placement | `TestFbzMagneticObjects` | pending |
 | `$74` MagneticPlatform | placeholder | polarity traversal | `Map_FBZMagneticPlatform` | native pair riders | placement + companion FNFO | `TestFbzMagneticObjects` | pending |
-| `$75` SnakePlatform | placeholder | traversal | `Map_FBZSnakePlatform` | native pair riders | placement + 3 segments FNFO | `TestFbzSnakeAndRotatingPlatforms` | pending |
-| `$76` BentPipe | placeholder | forced transport | `Map_FBZBentPipe` | native pair, individually controlled | placement | `TestFbzPlayerTransportObjects` | pending |
-| `$77` RotatingPlatform | placeholder | traversal | `Map_FBZRotatingPlatform` | native pair riders | placement + 1-6 group FNFO | `TestFbzSnakeAndRotatingPlatforms` | pending |
-| `$78` DEZPlayerLauncher | placeholder | forced launch | `Map_FBZDEZPlayerLauncher` | native pair | placement | `TestFbzPlayerTransportObjects` | pending |
+| `$75` SnakePlatform | concrete | traversal | `Map_FBZSnakePlatform` | native pair riders | placement + 3 segments FNFO | `TestFbzSnakeAndRotatingPlatforms` | concrete; eight routes/four-slot delay train covered |
+| `$76` BentPipe | concrete | static full-solid | `Map_FBZBentPipe` | all solid participants | placement | `TestFbzPlayerTransportObjects` | concrete; three exact solid shapes covered |
+| `$77` RotatingPlatform | concrete | traversal | `Map_FBZRotatingPlatform` | native pair riders | placement + 1-6 group FNFO | `TestFbzSnakeAndRotatingPlatforms` | concrete; used 6/2 member tables and special first form covered |
+| `$78` DEZPlayerLauncher | concrete | forced launch | `Map_FBZDEZPlayerLauncher` | native pair extended to engine sidekicks | placement | `TestFbzPlayerTransportObjects` | concrete; 12-tick acceleration/return covered |
 | `$79` DisappearingPlatform | placeholder | timed traversal | `Map_FBZDisappearingPlatform` / `Ani_FBZDisappearingPlatform` | native pair riders | placement | `TestFbzDisappearingPlatformAndScrewDoor` | pending |
 | `$7A` ScrewDoor | placeholder | gate | `Map_FBZScrewDoor` / `Ani_FBZScrewDoor` | native pair solids | placement | `TestFbzDisappearingPlatformAndScrewDoor` | pending |
 | `$7B` SpinningPole | placeholder | grab/transport | `Map_FBZSpinningPole` | native pair; exclusive grab owner | placement | `TestFbzPolePropellerPistonAndBlocks` | pending |

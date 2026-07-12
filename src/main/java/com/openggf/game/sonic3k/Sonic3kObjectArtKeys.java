@@ -357,6 +357,13 @@ public final class Sonic3kObjectArtKeys {
     public static final String STILL_FBZ_HANGER = "still_fbz_hanger";     // base 0x379
     public static final String STILL_FBZ_EXTRA = "still_fbz_extra";       // base 0x443
     public static final String STILL_FBZ_RAIL = "still_fbz_rail";         // base 0x339
+    public static final String FBZ_FLOATING_PLATFORM = "fbz_floating_platform";
+    public static final String FBZ_CHAIN_LINK = "fbz_chain_link";
+    public static final String FBZ_SNAKE_PLATFORM = "fbz_snake_platform";
+    public static final String FBZ_BENT_PIPE = "fbz_bent_pipe";
+    public static final String FBZ_ROTATING_PLATFORM = "fbz_rotating_platform";
+    public static final String FBZ_ROTATING_PLATFORM_SPECIAL = "fbz_rotating_platform_special";
+    public static final String FBZ_DEZ_PLAYER_LAUNCHER = "fbz_dez_player_launcher";
     public static final String STILL_SOZ_001 = "still_soz_001";           // base 0x001
     public static final String STILL_SOZ_CORK = "still_soz_cork";         // base 0x3AF
     public static final String STILL_DEZ_BEAM = "still_dez_beam";         // base 0x3FF

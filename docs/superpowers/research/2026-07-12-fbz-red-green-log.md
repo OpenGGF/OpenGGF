@@ -479,3 +479,73 @@ recorded as `unknown/not previously run` rather than inferred.
   restore can apply captured ring count and threshold flags in order. The test
   proves 99->100 awards life/music, spill clears both values, and the later
   99->100 correctly awards them again.
+- Task 7 carrier/transport RED: four focused test owners failed compilation
+  exactly because the eight locked-on FBZ factories/classes for S3KL IDs
+  `$6F-$72,$75-$78` did not exist. Preflight reconciled 121 counted placements:
+  `$6F` 13, `$70` 9, `$71` 22, `$72` 20, `$75` 8, `$76` 32, `$77` 6, and
+  `$78` 11. The used subtype matrices, `AllocateObjectAfterCurrent` order,
+  player-DPLC tables, S&K-side mapping addresses, fixed-point/trig constants,
+  solid dimensions, control bits, SFX edges, cull/respawn paths, and eight
+  snake routes were decoded from `sonic3k.asm` before production.
+- Task 7 initial GREEN: the focused four-class suite passed 10/10 and the
+  executable completeness gate passed 2/2. The FBZ placeholder count ratcheted
+  only for these rows, from 533 to 412. Level-art mappings use S&K offsets
+  `$3A742/$3AD8A/$3B6CE/$3B73C/$3B91A/$3BA8A`; wire cages intentionally keep
+  player mappings/DPLC. Multi-sidekick participation is explicitly the native
+  pair behavior extended to engine sidekicks with isolated primitive arrays.
+  No trace was run.
+- Task 7 hardening GREEN: the focused suite grew to 17 tests. Three eligible
+  players acquire `$6F/$70/$72` independently, retain their complete 16-bit
+  playable subpixel fractions through `NativePositionOps`, and release control
+  without disturbing other owners. Actual mocked object-manager calls prove
+  `$75` allocates exactly three after-current children in `$19/$31/$49` order;
+  `$77` allocates five children for subtype `$00` in the remaining-radius order
+  and one normal child for `$0C` after its special magnetic parent. `$78` emits
+  one `FloorLauncher` edge for its 12-tick phase. All eight families pass the
+  generic rewind field sweep. The hardened focused subsets passed 7/7 and 8/8.
+  No trace was run.
+- Task 7 bounded regression: all Task 7, inventory, completeness, Task 5/6 FBZ
+  event/runtime/shared-object, PLC, renderer-corruption, static-rewind, and art
+  assertions passed. The first rewind guard exposed only constructor-derived
+  final configuration in the new classes; these fields are now explicitly
+  transient and recreated from `ObjectSpawn`. Its rerun contains only the three
+  inherited `AizIntroEmeraldGlowChild` gaps. Constructor guard contains only
+  the two inherited `AizMinibossInstance` camera-controller spawns; the broader
+  physics guard also reports unrelated pre-existing AIZ/S1 budget drift. No
+  Task 7 guard finding remains, `git diff --check` is clean, and no trace ran.
+- Task 7 ROM-parity correction RED/GREEN: five new behavior assertions first
+  failed exactly on stationary-cage capture, global-oscillator platform motion,
+  horizontal hand-over-hand movement, snake coarse culling, and subtype `$0C`
+  rotating-platform touch response. The corrected implementations now follow
+  the locked-on per-player `$70` state blocks and player mapping tables; all
+  `$71` movement handlers including the exact mode-4 recurrence; `$72` capture,
+  step frames/deltas, midpoint Grab edge, endpoint cleanup, and same-frame next
+  cycle; `$75` route bounds/waypoints, sentinel teleport/wait/restart, and
+  allocation-failure delay retention; and `$77` signed-radius trig plus the
+  special first member's `$86` hurt response alongside solidity.
+- Exact sequence hardening covers `$71` nibble-1 accumulator/velocity/direction/Y
+  for every one of its 10 active ticks, `$72` command ticks 1/9/17/25 including
+  the next cycle's same-tick first step, and `$75` route-0's 124 movement ticks,
+  60-count wait, restart-tick movement, and fail/succeed/succeed child delays
+  `$19/$19/$31`. The final bounded run executed 142 tests: all 140 in-scope
+  Task 7/FBZ/event/runtime/PLC/art/static-rewind assertions passed; only the
+  inherited AIZ rewind and constructor-guard categories failed. No trace ran.
+- Final Task 7 self-review added two last exact edges: continuous `$72`
+  horizontal input performs the next hand cycle's first `$04` displacement on
+  the prior cycle's completion tick, and `$75` timers are per-instance
+  countdowns rather than global-frame comparisons. Both strict tests failed on
+  the old behavior and passed after correction; the parent timer `$01` now
+  falls through to movement on its first update, while late-spawned children
+  retain their own `$19/$31/$49` delays.
+- External Task 7 spec-review correction replaced the remaining compressed
+  behavior. Exact priority buckets/touch flags, `$6F` dual player machines,
+  `$70` branch-specific capture/loop/cleanup, `$71` radius-64 mode 3 and `$8C`,
+  `$72` input/release/DPLC state, `$75` initial solid gate, `$77` failed-slot
+  retry, `$78` per-contact facing, `$76` full mapping subtype/coarse cull, and
+  filtered rotating-special frame 0 now have direct behavior assertions.
+  Carrier state moved from fixed 16-entry order arrays to a scalable,
+  identity-keyed rewindable primitive table; a 20-duplicate-Sonic test proves
+  independent ownership/release. Focused coverage passed 32/32. The bounded
+  run passed all 124 in-scope Task 7/inventory/shared/PLC/art/static-rewind
+  assertions; the only failures were inherited AIZ guard findings after marking
+  Bent Pipe's constructor-derived size index rewind-transient. No trace ran.

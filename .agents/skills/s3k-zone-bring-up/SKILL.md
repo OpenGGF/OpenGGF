@@ -74,6 +74,12 @@ Before accepting retained-plane work:
 
 Treat `Target_palette` and live `Normal_palette` as distinct surfaces. A target write is incomplete until the engine's fade lifecycle actually consumes it or safely materializes the same colors while the screen is opaque. Test the first visible frame and target/normal rewind ownership; registry metadata without a production consumer is not implementation.
 
+### Carrier and Dynamic-Family Gate
+
+For carriers, grabs, chains, and forced movement, keep participant state keyed by playable identity and scalable to the configured sidekick count. Never index mutable state by current list order or a fixed native-slot-sized array. Preserve native P1/P2 branch order through `ObjectPlayerParticipationPolicy`, and use allocation-free `ObjectPlayerQuery` iteration in per-frame multi-object hot paths.
+
+For parent/child families, encode every child role, phase, radius, delay, and special flag in captured recreation metadata. A shared parent `ObjectSpawn` is not sufficient. Verify the real `ObjectManager` graph with capture -> remove/diverge -> restore: exact child count/config, settled parent relink despite recreation order, no duplicate respawn, and child lifetime following the restored parent. Constructor-only rewind probes do not pass this gate.
+
 ## Slice-First Completion Rule
 
 A zone bring-up is successful when it advances a playable route, not when a checklist row changes state. For current work, prioritize AIZ -> HCZ continuity first, then feed CNZ, MGZ, and ICZ into the same standard.

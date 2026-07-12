@@ -1271,6 +1271,34 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                 });
+        factories.put(Sonic3kObjectIds.FBZ_WIRE_CAGE,
+                (spawn, registry) -> isFbzS3kl() ? new FbzWireCageObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_WIRE_CAGE_STATIONARY,
+                (spawn, registry) -> isFbzS3kl() ? new FbzWireCageStationaryObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_FLOATING_PLATFORM,
+                (spawn, registry) -> isFbzS3kl() ? new FbzFloatingPlatformObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_CHAIN_LINK,
+                (spawn, registry) -> isFbzS3kl() ? new FbzChainLinkObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_SNAKE_PLATFORM,
+                (spawn, registry) -> isFbzS3kl() ? new FbzSnakePlatformObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_BENT_PIPE,
+                (spawn, registry) -> isFbzS3kl() ? new FbzBentPipeObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_ROTATING_PLATFORM,
+                (spawn, registry) -> isFbzS3kl() ? new FbzRotatingPlatformObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER,
+                (spawn, registry) -> isFbzS3kl() ? new FbzDezPlayerLauncherObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+    }
+
+    private boolean isFbzS3kl() {
+        return getCurrentZoneSet() == S3kZoneSet.S3KL && currentRomZoneId() == Sonic3kZoneIds.ZONE_FBZ;
     }
 
     private S3kZoneSet getCurrentZoneSet() {

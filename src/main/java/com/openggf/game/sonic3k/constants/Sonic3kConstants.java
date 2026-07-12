@@ -210,6 +210,12 @@ public class Sonic3kConstants {
     public static final int MAP_LBZ_PIPE_PLUG_ADDR = 0x226854;
     public static final int MAP_TUNNEL_EXHAUST_ADDR = 0x029C8A; // Map_TunnelExhaust (2 frames, S&K-side)
     public static final int MAP_FBZ_CORK_FLOOR_ADDR = 0x2A920;    // Map_FBZCorkFloor (2 frames, 2/4 pieces, in sonic3k.asm)
+    public static final int MAP_FBZ_FLOATING_PLATFORM_ADDR = 0x03A742;
+    public static final int MAP_FBZ_CHAIN_LINK_ADDR = 0x03AD8A;
+    public static final int MAP_FBZ_SNAKE_PLATFORM_ADDR = 0x03B6CE;
+    public static final int MAP_FBZ_BENT_PIPE_ADDR = 0x03B73C;
+    public static final int MAP_FBZ_ROTATING_PLATFORM_ADDR = 0x03B91A;
+    public static final int MAP_FBZ_DEZ_PLAYER_LAUNCHER_ADDR = 0x03BA8A;
 
     // ===== Breakable Wall mappings (Obj_BreakableWall, ID 0x0D) =====
     // Each zone has its own mapping table: even frames = intact, odd frames = broken fragments.

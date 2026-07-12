@@ -1291,6 +1291,30 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.MAP_STILL_SPRITES_ADDR, 0x339, 1,
                 null, new int[]{44, 45}));
 
+        // Obj_FBZFloatingPlatform through Obj_FBZDEZPlayerLauncher consume
+        // the native ArtNem_FBZMisc level buffer installed by PLC $1A-$1D.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_FLOATING_PLATFORM,
+                Sonic3kConstants.MAP_FBZ_FLOATING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0x0A, 1, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_CHAIN_LINK,
+                Sonic3kConstants.MAP_FBZ_CHAIN_LINK_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_SNAKE_PLATFORM,
+                Sonic3kConstants.MAP_FBZ_SNAKE_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0xF2, 1, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_BENT_PIPE,
+                Sonic3kConstants.MAP_FBZ_BENT_PIPE_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0xF2, 1, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_ROTATING_PLATFORM,
+                Sonic3kConstants.MAP_FBZ_ROTATING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0xF2, 1, null, new int[]{0}));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_ROTATING_PLATFORM_SPECIAL,
+                Sonic3kConstants.MAP_FBZ_ROTATING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0xCA, 1, null, new int[]{1}));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_DEZ_PLAYER_LAUNCHER,
+                Sonic3kConstants.MAP_FBZ_DEZ_PLAYER_LAUNCHER_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0x3C, 1, null, new int[]{0}));
+
         // Override shared spikes to FBZ tile address
         levelArt.removeIf(e -> e.key().equals(Sonic3kObjectArtKeys.SPIKES));
         levelArt.add(new LevelArtEntry(

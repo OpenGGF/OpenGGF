@@ -31,10 +31,12 @@ Use only the skill and resources it explicitly requires. Do not infer additional
 | R15 | Palette visibility lifecycle | Target-palette state must have a production fade consumer or safe opaque-screen materialization, with first-visible-frame and rewind tests; dead metadata is rejected. |
 | R16 | Retained lifecycle/scoping | Retained state is act/mode scoped and survives real ensure/window/upload/render preparation after live writes and rewind restore. |
 | R17 | Real runtime validation | A ROM-backed tall-cache capture -> mutate -> restore -> reconcile -> next-render test is required; synthetic helper-only coverage is insufficient. |
+| R18 | Scalable carrier state | Carrier/grab state is keyed by playable identity, not fixed arrays or mutable player-list order, and hot-path participation remains allocation-free. |
+| R19 | Dynamic-family rewind graph | Child role/config has stable recreation metadata and a real ObjectManager graph test proves exact relink, no duplication, and lifetime restoration. |
 
 ## Verdict
 
-- **GREEN:** R1-R17 all PASS.
+- **GREEN:** R1-R19 all PASS.
 - **RED:** Any assertion fails or is only optional/implied.
 
 Record the exact prompt, raw agent output, per-assertion PASS/FAIL result, and overall verdict in both baseline and forward-test artifacts.

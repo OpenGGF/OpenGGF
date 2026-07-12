@@ -71,6 +71,17 @@ class TestObjectPlayerQuery {
     }
 
     @Test
+    void allocationFreeVisitorPreservesIdentityOrderAndScalesPastSixteen() {
+        FakePlayer main=player("main",0,0);FakePlayer[] unique=new FakePlayer[20];for(int i=0;i<unique.length;i++)unique[i]=player("s"+i,i+1,0);
+        java.util.ArrayList<PlayableEntity> raw=new java.util.ArrayList<>();raw.add(unique[0]);raw.add(main);raw.add(unique[0]);raw.addAll(List.of(unique));raw.add(null);
+        ObjectPlayerQuery query=new ObjectPlayerQuery(()->main,()->raw);java.util.ArrayList<PlayableEntity> visited=new java.util.ArrayList<>();
+        ObjectPlayerQuery.PlayerVisitor<java.util.List<PlayableEntity>> visitor=java.util.List::add;
+        query.visitPlayers(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS,visited,visitor);
+        assertEquals(21,visited.size());assertSame(main,visited.getFirst());for(int i=0;i<20;i++)assertSame(unique[i],visited.get(i+1));
+        assertSame(visitor,visitor,"caller can retain one visitor instance across hot-path iterations");
+    }
+
+    @Test
     void nearestEnginePlayerKeepsStableOrderOnDistanceTie() {
         FakePlayer main = player("main", 90, 100);
         FakePlayer firstSidekick = player("tails", 110, 100);

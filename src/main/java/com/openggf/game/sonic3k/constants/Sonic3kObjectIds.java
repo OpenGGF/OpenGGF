@@ -9,6 +9,14 @@ package com.openggf.game.sonic3k.constants;
  * aware so the same numeric slot can still resolve to DEZ names on the SKL side.
  */
 public final class Sonic3kObjectIds {
+    public static final int FBZ_WIRE_CAGE = 0x6F;
+    public static final int FBZ_WIRE_CAGE_STATIONARY = 0x70;
+    public static final int FBZ_FLOATING_PLATFORM = 0x71;
+    public static final int FBZ_CHAIN_LINK = 0x72;
+    public static final int FBZ_SNAKE_PLATFORM = 0x75;
+    public static final int FBZ_BENT_PIPE = 0x76;
+    public static final int FBZ_ROTATING_PLATFORM = 0x77;
+    public static final int FBZ_DEZ_PLAYER_LAUNCHER = 0x78;
     public static final int RING = 0x00;
     public static final int MONITOR = 0x01;
     public static final int PATH_SWAP = 0x02;
