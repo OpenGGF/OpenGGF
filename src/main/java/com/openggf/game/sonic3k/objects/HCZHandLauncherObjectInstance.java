@@ -425,6 +425,15 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesPlatformObjectLandingSnap() {
+        // Obj_HCZHandLauncher calls SolidObjectTop, whose fresh-contact path
+        // reaches loc_1E45A/sub_1E410 and keeps its relative
+        // playerY-distY+3 result. It does not run PlatformObject_ChkYRange's
+        // absolute surface snap (sonic3k.asm:65818-65827, 41982-42068).
+        return false;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity player) {
         return solidActive && (!player.isObjectControlled()
                 || (player instanceof AbstractPlayableSprite sprite

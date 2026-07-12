@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f21618 / 1203 errors (1 error under `frontierOnly`).
+f3318 / 4234 errors to f21672 / 1202 errors (2 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -671,6 +671,20 @@ under `frontierOnly`). The focused spinning-column suite passes 6/6. The
 granular S3K replay matrix remains exact: both AIZ routes green; CNZ complete
 f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select
 f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 42 preserves the fresh-landing result produced by the hand launcher's
+native `SolidObjectTop` helper. Obj3A reaches `sub_1E410`, which writes
+`playerY-distY+3`; it does not run `PlatformObject_ChkYRange`'s later absolute
+surface snap. The engine had correctly placed an airborne Tails at `$00D8`,
+restored his `$0F` standing radius, and then overwritten the position to
+`$00D7` through that unrelated PlatformObject override
+(`sonic3k.asm:41982-42068,65798-65827`).
+
+This closes f21618-f21671 and advances HCZ to f21672 / 1202 full-run errors (2
+under `frontierOnly`). The focused hand-launcher suite passes 7/7. The granular
+S3K replay matrix remains exact: both AIZ routes green; CNZ complete f1846 / 5,
+CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
+ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 Milestone 28 restores the two ROM-owned HCZ2 surface handlers around the first
 large water loop. `sub_714E -> sub_717C` now samples the live foreground layout

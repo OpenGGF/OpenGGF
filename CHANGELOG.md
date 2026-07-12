@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **HCZ hand launchers now retain `SolidObjectTop`'s relative fresh-landing snap:** Obj3A no longer applies the separate `PlatformObject_ChkYRange` absolute surface override after `sub_1E410`, preserving the native landing Y when Tails restores his standing radius in the same frame (`docs/skdisasm/sonic3k.asm:41982-42068,65798-65827`).
 - **HCZ spinning columns now preserve exact-right-edge side contact:** Obj68's `SolidObjectFull` path keeps `relX == d1*2` in the zero-distance collision window, restoring the native one-frame `Status_Push` contact (`docs/skdisasm/sonic3k.asm:41394-41403,68148-68157`).
 - **HCZ spinning columns now use their post-movement X as the continued-ride reference:** Obj68 passes its updated `x_pos` through `d4`, producing zero horizontal platform carry and preserving the rider position established by the capture routine (`docs/skdisasm/sonic3k.asm:68132-68157,41016-41042,41642-41679`).
 - **S3K tension bridges now reject exact-boundary first contacts:** their flat `sub_1E410` entry accepts only negative overlap from `-$10` through `-1`, keeping an exact-zero airborne contact detached until it enters the native landing band (`docs/skdisasm/sonic3k.asm:75871-75946,41982-42068`).
