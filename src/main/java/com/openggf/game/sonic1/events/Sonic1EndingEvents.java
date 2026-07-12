@@ -1,11 +1,14 @@
 package com.openggf.game.sonic1.events;
 
-import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
+import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.sonic1.objects.Sonic1EndingSonicObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.GameServices;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Sonic 1 ending sequence bootstrap events.
@@ -63,10 +66,12 @@ class Sonic1EndingEvents extends Sonic1ZoneEvents {
 
     private void applyBootstrap(AbstractPlayableSprite player) {
         // ROM GM_Ending init: face left, lock controls, force LEFT input, inertia = -$800.
-        player.setDirection(Direction.LEFT);
-        player.setControlLocked(true);
-        player.setForcedInputMask(AbstractPlayableSprite.INPUT_LEFT);
-        player.setGSpeed((short) -0x800);
+        for (AbstractPlayableSprite participant : participants(player)) {
+            participant.setDirection(Direction.LEFT);
+            participant.setControlLocked(true);
+            participant.setForcedInputMask(AbstractPlayableSprite.INPUT_LEFT);
+            participant.setGSpeed((short) -0x800);
+        }
     }
 
     private void updateRunLeft(AbstractPlayableSprite player) {
@@ -77,8 +82,10 @@ class Sonic1EndingEvents extends Sonic1ZoneEvents {
 
         // ROM End_MoveSonic state 0 -> 2
         eventRoutine = END_MOVE_RUN_RIGHT;
-        player.setControlLocked(true);
-        player.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
+        for (AbstractPlayableSprite participant : participants(player)) {
+            participant.setControlLocked(true);
+            participant.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
+        }
     }
 
     private void updateRunRight(AbstractPlayableSprite player) {
@@ -90,12 +97,14 @@ class Sonic1EndingEvents extends Sonic1ZoneEvents {
         // ROM End_MoveSonic state 2 -> 4:
         // stop movement and lock controls before handoff to ending object.
         eventRoutine = END_MOVE_STOP;
-        player.clearForcedInputMask();
-        player.setGSpeed((short) 0);
-        player.setXSpeed((short) 0);
-        player.setControlLocked(true);
-        player.setAnimationId(Sonic1AnimationIds.WAIT);
-        player.setAnimationFrameIndex(0);
+        for (AbstractPlayableSprite participant : participants(player)) {
+            participant.clearForcedInputMask();
+            participant.setGSpeed((short) 0);
+            participant.setXSpeed((short) 0);
+            participant.setControlLocked(true);
+            participant.setAnimationId(participant.resolveAnimationId(CanonicalAnimation.WAIT));
+            participant.setAnimationFrameIndex(0);
+        }
     }
 
     /**
@@ -104,11 +113,16 @@ class Sonic1EndingEvents extends Sonic1ZoneEvents {
      * hide the player and spawn a separate EndingSonic object at the same position.
      */
     private void updateStop(AbstractPlayableSprite player) {
-        player.setCentreX((short) 0x00A0);
-        player.setGSpeed((short) 0);
-        player.setXSpeed((short) 0);
-        player.clearForcedInputMask();
-        player.setControlLocked(true);
+        for (AbstractPlayableSprite participant : participants(player)) {
+            if (participant == player) {
+                participant.setCentreX((short) 0x00A0);
+            }
+            participant.setGSpeed((short) 0);
+            participant.setXSpeed((short) 0);
+            participant.clearForcedInputMask();
+            participant.setControlLocked(true);
+            participant.setHidden(true);
+        }
 
         eventRoutine = END_MOVE_DONE;
 
@@ -116,8 +130,6 @@ class Sonic1EndingEvents extends Sonic1ZoneEvents {
         // Hide the player sprite and spawn the ending Sonic object.
         if (!endingSonicSpawned) {
             endingSonicSpawned = true;
-            player.setHidden(true);
-
             int sonicX = player.getCentreX() & 0xFFFF;
             int sonicY = player.getCentreY() & 0xFFFF;
             Sonic1EndingSonicObjectInstance endSonic =
@@ -127,5 +139,14 @@ class Sonic1EndingEvents extends Sonic1ZoneEvents {
                 om.addDynamicObject(endSonic);
             }
         }
+    }
+
+    private static List<AbstractPlayableSprite> participants(AbstractPlayableSprite main) {
+        ArrayList<AbstractPlayableSprite> players = new ArrayList<>();
+        players.add(main);
+        for (AbstractPlayableSprite sidekick : GameServices.sprites().getRegisteredSidekicks()) {
+            if (sidekick != main) players.add(sidekick);
+        }
+        return players;
     }
 }

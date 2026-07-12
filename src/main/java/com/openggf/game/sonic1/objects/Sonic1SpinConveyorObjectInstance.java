@@ -597,8 +597,16 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
      */
     private void detachRidingPlayer(AbstractPlayableSprite player) {
         ObjectManager objectManager = services().objectManager();
-        if (objectManager != null && objectManager.isAnyPlayerRiding(this)) {
+        if (objectManager == null) {
+            return;
+        }
+        if (player != null && objectManager.getRidingObject(player) == this) {
             objectManager.clearRidingObject(player);
+        }
+        for (PlayableEntity sidekick : services().sidekicks()) {
+            if (sidekick != player && objectManager.getRidingObject(sidekick) == this) {
+                objectManager.clearRidingObject(sidekick);
+            }
         }
     }
 

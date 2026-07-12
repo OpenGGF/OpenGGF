@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.game.sonic1.objects.TestPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -94,6 +95,35 @@ public class TestSonic1SBZEvents {
     }
 
     // ======== SBZ Act 1 (DLE_SBZ1) ========
+
+    @Test
+    public void sbz3ToFinalZoneLocksMainThenEverySidekick() {
+        TestPlayableSprite main = new TestPlayableSprite();
+        main.setCentreY((short) 0x0017);
+        TestPlayableSprite p2 = new TestPlayableSprite();
+        TestPlayableSprite p3 = new TestPlayableSprite();
+        TestPlayableSprite p4 = new TestPlayableSprite();
+        main.setCode("main");
+        p2.setCode("p2");
+        p3.setCode("p3");
+        p4.setCode("p4");
+        p2.setCpuControlled(true);
+        p3.setCpuControlled(true);
+        p4.setCpuControlled(true);
+        GameServices.sprites().addSprite(main);
+        GameServices.sprites().addSprite(p2);
+        GameServices.sprites().addSprite(p3);
+        GameServices.sprites().addSprite(p4);
+        cam.setFocusedSprite(main);
+        cam.setX((short) 0x0D00);
+
+        events.update(2);
+
+        assertTrue(main.isControlLocked());
+        assertTrue(p2.isControlLocked());
+        assertTrue(p3.isControlLocked());
+        assertTrue(p4.isControlLocked());
+    }
 
     /**
      * SBZ1 default: when camera X < 0x1880, maxYTarget = 0x720.
@@ -317,5 +347,3 @@ public class TestSonic1SBZEvents {
         assertEquals((short) 0x2600, cam.getMinX(), "Should lock minX to camera X");
     }
 }
-
-

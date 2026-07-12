@@ -2,9 +2,18 @@ package com.openggf.game.sonic1.objects;
 
 import org.junit.jupiter.api.Test;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TestObjectServices;
+import java.util.List;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.CompactFieldCapturer;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import java.lang.reflect.Field;
+import java.util.Map;
 
 public class TestSonic1RunningDiscObjectInstance {
 
@@ -71,11 +80,75 @@ public class TestSonic1RunningDiscObjectInstance {
         assertTrue(player.isStickToConvex());
     }
 
+    @Test
+    public void mainAndThreeSidekicksAttachAndDetachIndependently() {
+        Sonic1RunningDiscObjectInstance disc = createDisc(0x10, 0x200, 0x200);
+        TestPlayableSprite main = groundedAt(0x200, 0x200);
+        TestPlayableSprite p2 = groundedAt(0x200, 0x200);
+        TestPlayableSprite p3 = groundedAt(0x200, 0x200);
+        TestPlayableSprite p4 = groundedAt(0x200, 0x200);
+        disc.setServices(new TestObjectServices().withSidekicks(List.of(p2, p3, p4)));
+
+        disc.update(1, main);
+
+        for (TestPlayableSprite player : List.of(main, p2, p3, p4)) {
+            assertTrue(player.isStickToConvex());
+            assertEquals(0x400, player.getGSpeed());
+        }
+
+        p3.setCentreX((short) 0x300);
+        p3.setCentreY((short) 0x300);
+        disc.update(2, main);
+
+        assertFalse(p3.isStickToConvex());
+        assertTrue(main.isStickToConvex());
+        assertTrue(p2.isStickToConvex());
+        assertTrue(p4.isStickToConvex());
+    }
+
+    @Test
+    public void attachedExtensionRelinksThroughNonEmptyPlayerRefState() throws Exception {
+        Sonic1RunningDiscObjectInstance disc = createDisc(0x10, 0x200, 0x200);
+        TestPlayableSprite oldMain = groundedAt(0x200, 0x200);
+        TestPlayableSprite oldP2 = groundedAt(0x200, 0x200);
+        disc.setServices(new TestObjectServices().withSidekicks(List.of(oldP2)));
+        disc.update(1, oldMain);
+
+        RewindIdentityTable capturedIds = new RewindIdentityTable();
+        capturedIds.registerPlayer(oldMain, PlayerRefId.mainPlayer());
+        capturedIds.registerPlayer(oldP2, PlayerRefId.sidekick(0));
+        var blob = CompactFieldCapturer.capture(
+                disc, RewindCaptureContext.withIdentityTable(capturedIds));
+
+        TestPlayableSprite newMain = groundedAt(0x200, 0x200);
+        TestPlayableSprite newP2 = groundedAt(0x200, 0x200);
+        RewindIdentityTable restoredIds = new RewindIdentityTable();
+        restoredIds.registerPlayer(newMain, PlayerRefId.mainPlayer());
+        restoredIds.registerPlayer(newP2, PlayerRefId.sidekick(0));
+        disc.setServices(new TestObjectServices().withSidekicks(List.of(newP2)));
+        CompactFieldCapturer.restore(
+                disc, blob, RewindCaptureContext.withIdentityTable(restoredIds));
+        Field nativeOwner = Sonic1RunningDiscObjectInstance.class.getDeclaredField("nativeOwner");
+        nativeOwner.setAccessible(true);
+        assertSame(newMain, nativeOwner.get(disc));
+        Field extensions = Sonic1RunningDiscObjectInstance.class.getDeclaredField("extensionStates");
+        extensions.setAccessible(true);
+        assertTrue(((Map<?, ?>) extensions.get(disc)).containsKey(newP2));
+    }
+
+    private static TestPlayableSprite groundedAt(int x, int y) {
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) x);
+        player.setCentreY((short) y);
+        player.setAir(false);
+        return player;
+    }
+
     private static Sonic1RunningDiscObjectInstance createDisc(int subtype, int x, int y) {
-        return new Sonic1RunningDiscObjectInstance(
+        Sonic1RunningDiscObjectInstance disc = new Sonic1RunningDiscObjectInstance(
                 new ObjectSpawn(x, y, 0x67, subtype, 0, false, 0));
+        disc.setServices(new TestObjectServices());
+        return disc;
     }
 
 }
-
-
