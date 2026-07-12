@@ -1,6 +1,9 @@
 package com.openggf.game.sonic1.objects;
 
 import org.junit.jupiter.api.Test;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -18,6 +21,7 @@ import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSonic1PoleThatBreaksObjectInstance {
@@ -61,6 +65,82 @@ public class TestSonic1PoleThatBreaksObjectInstance {
         assertEquals(0, player.getYSpeed());
         assertEquals(Sonic1AnimationIds.HANG.id(), player.getAnimationId());
         assertEquals(Direction.RIGHT, player.getDirection());
+    }
+
+    @Test
+    public void thirdSidekickOwnsGrabClimbAndReleaseWhileMainAndOtherSidekicksRemainFree() throws Exception {
+        Sonic1PoleThatBreaksObjectInstance pole = createPole(200, 320, 0);
+        TestPlayableSprite main = playerAtPole(false);
+        TestPlayableSprite firstSidekick = playerAtPole(true);
+        TestPlayableSprite secondSidekick = playerAtPole(true);
+        TestPlayableSprite thirdSidekick = playerAtPole(true);
+
+        pole.onTouchResponse(thirdSidekick, TOUCH_RESULT, 1);
+        pole.update(1, main);
+
+        assertTrue(thirdSidekick.isObjectControlled());
+        assertSame(thirdSidekick, getPrivateObject(pole, "controlledPlayer"));
+        assertFalse(main.isObjectControlled());
+        assertFalse(firstSidekick.isObjectControlled());
+        assertFalse(secondSidekick.isObjectControlled());
+
+        thirdSidekick.setDirectionalInputPressed(true, false, false, false);
+        pole.update(2, main);
+        assertEquals(319, thirdSidekick.getCentreY(),
+                "the stored owner, not the update-loop main player, must climb");
+        assertEquals(320, main.getCentreY());
+
+        thirdSidekick.setJumpInputPressed(true);
+        pole.update(3, main);
+        assertFalse(thirdSidekick.isObjectControlled());
+        assertFalse(main.isObjectControlled());
+        assertEquals(0, pole.getCollisionFlags());
+    }
+
+    @Test
+    public void thirdSidekickOwnershipRoundTripsByPlayerRefId() throws Exception {
+        Sonic1PoleThatBreaksObjectInstance pole = createPole(200, 320, 0);
+        TestPlayableSprite main = playerAtPole(false);
+        TestPlayableSprite first = playerAtPole(true);
+        TestPlayableSprite second = playerAtPole(true);
+        TestPlayableSprite third = playerAtPole(true);
+        RewindIdentityTable identities = new RewindIdentityTable();
+        identities.registerPlayer(main, PlayerRefId.mainPlayer());
+        identities.registerPlayer(first, PlayerRefId.sidekick(0));
+        identities.registerPlayer(second, PlayerRefId.sidekick(1));
+        identities.registerPlayer(third, PlayerRefId.sidekick(2));
+        RewindCaptureContext context = RewindCaptureContext.withIdentityTable(identities);
+
+        pole.onTouchResponse(third, TOUCH_RESULT, 1);
+        pole.update(1, main);
+        var snapshot = pole.captureRewindState(context);
+
+        third.setJumpInputPressed(true);
+        pole.update(2, main);
+        assertFalse(third.isObjectControlled());
+
+        pole.restoreRewindState(snapshot, context);
+
+        assertSame(third, getPrivateObject(pole, "controlledPlayer"));
+        assertTrue((Boolean) getPrivateObject(pole, "poleGrabbed"));
+    }
+
+    @Test
+    public void grabbedPoleStaysLoadedAndReleasesDeadSidekickOwner() {
+        Sonic1PoleThatBreaksObjectInstance pole = createPole(200, 320, 0);
+        TestPlayableSprite main = playerAtPole(false);
+        TestPlayableSprite thirdSidekick = playerAtPole(true);
+
+        pole.onTouchResponse(thirdSidekick, TOUCH_RESULT, 1);
+        pole.update(1, main);
+        assertTrue(pole.isPersistent(), "an off-screen unload must not strand a controlled sidekick");
+
+        thirdSidekick.setDead(true);
+        pole.update(2, main);
+
+        assertFalse(thirdSidekick.isObjectControlled());
+        assertFalse(pole.isPersistent());
+        assertEquals(0, pole.getCollisionFlags());
     }
 
     @Test
@@ -241,11 +321,24 @@ public class TestSonic1PoleThatBreaksObjectInstance {
         return pole;
     }
 
+    private static TestPlayableSprite playerAtPole(boolean cpuControlled) {
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCpuControlled(cpuControlled);
+        player.setCentreX((short) 240);
+        player.setCentreY((short) 320);
+        return player;
+    }
+
     private static int getPrivateInt(Object target, String fieldName) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getInt(target);
     }
 
-}
+    private static Object getPrivateObject(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.get(target);
+    }
 
+}
