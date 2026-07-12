@@ -23,7 +23,7 @@ TraceReplay fleet has one pre-existing OOZ level-select mismatch at f447; an
 isolated replay at branch commit `92a4703f1` reproduced that exact mismatch,
 so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
-therefore closed as the first-red stage. HCZ is active on branch
+therefore closed as the first-red stage. HCZ is closed on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
 f3318 / 4234 errors to GREEN through the HCZ-to-MGZ boundary after milestone
 70.
@@ -861,15 +861,19 @@ camera-before-object phase are bridged at those owning object boundaries; no
 trace data is hydrated and no route/frame exception is used.
 
 The complete HCZ replay now passes both with and without `trace.frontierOnly`,
-closing the prior f31121 / 48 full-run report. Focused results-camera,
-end-boss, water-column policy, and HCZ boss-graph rewind checks pass. The fresh
-nine-route S3K matrix keeps both AIZ routes green and reproduces every other
-established frontier/count exactly: CNZ complete f1846 / 5 and level-select
-f291 / 7; MGZ complete f1072 / 1 and level-select f1030 / 1; ICZ f3174 / 1;
-MHZ f2920 / 1; LBZ f2270 / 5. The broader HCZ batch's Mockito cases require
-`-Dnet.bytebuddy.experimental=true` under the workspace's Java 26 runtime;
-the rewind coverage guard separately reports the pre-existing AIZ intro glow
-final-scalar gaps introduced before this HCZ milestone.
+closing the prior f31121 / 48 full-run report. The whole HCZ trace class,
+including its Poindexter slot oracle, and every HCZ-named unit, integration,
+event, rewind, and rendering test pass; Mockito cases use
+`-Dnet.bytebuddy.experimental=true` under the workspace's Java 26 runtime.
+The fresh nine-route S3K matrix keeps both AIZ routes green and reproduces
+every other established frontier/count exactly: CNZ complete f1846 / 5 and
+level-select f291 / 7; MGZ complete f1072 / 1 and level-select f1030 / 1; ICZ
+f3174 / 1; MHZ f2920 / 1; LBZ f2270 / 5. The inventory-driven cross-game
+replay sweep keeps all 29 S1 and 19 of 20 S2 classes green; S2 OOZ alone
+reproduces its pre-HCZ f447 `tails_status_byte` mismatch, previously confirmed
+at commit `92a4703f1`. The rewind coverage guard separately reports the
+pre-existing AIZ intro glow final-scalar gaps introduced before this HCZ
+milestone.
 
 Milestone 31 restores TurboSpiker's detached-shell direction. The shell child
 inherits the parent's post-retreat render bit, but `loc_87D72` interprets that
