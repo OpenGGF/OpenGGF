@@ -891,7 +891,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.statusTertiary = 0;
                 defineSpeeds(); // Reset speeds to default
                 instaShieldRegistered = false; // Force re-registration with new ObjectManager on level load
-                resolvePhysicsProfile();
+                resolvePhysicsProfile(GameServices.bootstrapGameModule());
                 // ROM: Obj01_Init unconditionally sets y_radius=$13, x_radius=9.
                 // Since we reuse the sprite rather than recreating it, we must
                 // explicitly restore standing dimensions and sensor offsets here.
@@ -3607,7 +3607,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // Must define speeds before creating Manager (it will read speeds upon
                 // instantiation).
                 defineSpeeds();
-                resolvePhysicsProfile();
+                resolvePhysicsProfile(GameServices.bootstrapGameModule());
 
                 applyStandingRadii(false);
 
@@ -3635,10 +3635,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Overwrites the protected speed fields set by defineSpeeds() with values from the profile.
          * Falls back gracefully if no provider is available (defineSpeeds() values remain).
          */
-        private void resolvePhysicsProfile() {
-                resolvePhysicsProfile(bootstrapSafeGameModule());
-        }
-
         private void resolvePhysicsProfile(GameModule module) {
                 runtimeBoundStateModule = module;
                 try {
@@ -3691,10 +3687,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 ensurePersistentInstaShieldObject();
                 bubbleAnimId = module != null ? module.resolveAnimationId(CanonicalAnimation.BUBBLE) : -1;
-        }
-
-        private GameModule bootstrapSafeGameModule() {
-                return GameServices.bootstrapGameModule();
         }
 
         private void ensurePersistentInstaShieldObject() {
@@ -3756,7 +3748,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         /**
          * Returns the resolved per-character physics profile, or {@code null} if
          * none has been bound yet (early bootstrap before
-         * {@link #resolvePhysicsProfile()}).
+         * {@link #resolvePhysicsProfile(GameModule)}).
          */
         public PhysicsProfile getPhysicsProfile() {
                 return physicsProfile;
