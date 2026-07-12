@@ -1,5 +1,8 @@
 package com.openggf.game.zone;
 
+import com.openggf.physics.BackgroundPlaneCollisionProvider;
+
+
 public interface ZoneRuntimeState {
     String gameId();
     int zoneIndex();
@@ -15,6 +18,14 @@ public interface ZoneRuntimeState {
      */
     default boolean requiresFullWidthBgTilemap() {
         return false;
+    }
+
+    /**
+     * Optional explicit semantic collision mode for zones whose event state
+     * owns plane reversal. Empty retains the legacy game-state/scroll adapter.
+     */
+    default BackgroundPlaneCollisionProvider.State backgroundPlaneCollisionStateOrNull() {
+        return null;
     }
 
     /**

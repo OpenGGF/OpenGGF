@@ -7,9 +7,6 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.RingRules;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.ChunkDesc;
-import com.openggf.level.LevelManager;
-import com.openggf.level.SolidTile;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
@@ -59,8 +56,6 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private static final int RING_RENDER_HALF_WIDTH = 8;
     /** BuildSprites assumed-height path uses a 32 px Y band when render_flags bit 4 is clear. */
     private static final int BUILDSPRITES_ASSUMED_Y_MARGIN = 32;
-    /** ROM RingCheckFloorDist top-solidity bit (s2.asm Obj37 floor probe). */
-    private static final int SOLIDITY_TOP = 0x0C;
 
     private int xSubpixel;
     private int ySubpixel;
@@ -413,8 +408,15 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * top-solidity sensor. Negative distance means penetration. Relocated from RingManager.java:1313.
      */
     protected int ringCheckFloorDist(int x, int y) {
+        ObjectServices objectServices = servicesOrNull();
+        if (objectServices == null || objectServices.levelManager() == null) {
+            return 0;
+        }
         com.openggf.physics.TerrainCheckResult result =
-                com.openggf.physics.ObjectTerrainUtils.checkFloorDist(x, y);
+                com.openggf.physics.ObjectTerrainUtils.checkFloorDist(
+                        objectServices.levelManager(),
+                        objectServices.backgroundPlaneCollisionProvider(),
+                        objectServices.useSecondaryTerrainCollisionPath(), x, y);
         if (!result.foundSurface()) {
             return 0;
         }
@@ -426,59 +428,16 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * ({@code -$10} → check the tile below when fully solid). Relocated from RingManager.java:1342.
      */
     protected int ringCheckCeilingDist(int x, int y) {
-        LevelManager levelManager = levelManagerOrNull();
-        if (levelManager == null) {
+        ObjectServices objectServices = servicesOrNull();
+        if (objectServices == null || objectServices.levelManager() == null) {
             return 0;
         }
-        ChunkDesc chunkDesc = levelManager.getChunkDescAt((byte) 0, x, y);
-        SolidTile tile = solidTile(levelManager, chunkDesc);
-        int metric = heightMetric(tile, chunkDesc, x);
-        if (metric == 0) {
-            return 0;
-        }
-        if (metric == 16) {
-            // ROM: sub.w a3,d2 with a3=-$10 → check the tile below.
-            int nextY = y + 16;
-            ChunkDesc nextDesc = levelManager.getChunkDescAt((byte) 0, x, nextY);
-            int nextMetric = heightMetric(solidTile(levelManager, nextDesc), nextDesc, x);
-            if (nextMetric > 0 && nextMetric < 16) {
-                return distance(nextMetric, y, nextY);
-            }
-            return distance(metric, y, y);
-        }
-        return distance(metric, y, y);
-    }
-
-    private LevelManager levelManagerOrNull() {
-        ObjectServices services = servicesOrNull();
-        return services != null ? services.levelManager() : null;
-    }
-
-    private static SolidTile solidTile(LevelManager levelManager, ChunkDesc chunkDesc) {
-        if (chunkDesc == null || !chunkDesc.isSolidityBitSet(SOLIDITY_TOP)) {
-            return null;
-        }
-        return levelManager.getSolidTileForChunkDesc(chunkDesc, SOLIDITY_TOP);
-    }
-
-    private static int heightMetric(SolidTile tile, ChunkDesc desc, int x) {
-        if (tile == null) {
-            return 0;
-        }
-        int index = x & 0x0F;
-        if (desc != null && desc.getHFlip()) {
-            index = 15 - index;
-        }
-        byte metric = tile.getHeightAt((byte) index);
-        if (metric != 0 && metric != 16 && desc != null && desc.getVFlip()) {
-            metric = (byte) (16 - metric);
-        }
-        return metric & 0xFF;
-    }
-
-    private static int distance(int metric, int y, int checkY) {
-        int tileY = checkY & ~0x0F;
-        return (tileY + 16 - metric) - y;
+        com.openggf.physics.TerrainCheckResult result =
+                com.openggf.physics.ObjectTerrainUtils.checkReverseGravityRingDist(
+                        objectServices.levelManager(),
+                        objectServices.backgroundPlaneCollisionProvider(),
+                        objectServices.useSecondaryTerrainCollisionPath(), x, y);
+        return result.foundSurface() ? result.distance() : 0;
     }
 
     // ── Type marker + collision ───────────────────────────────────────────────

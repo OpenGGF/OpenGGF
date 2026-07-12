@@ -185,14 +185,22 @@ class TestLostRingObjectInstance {
                 false,
                 true);
         ring.setVblaForTest(0);
+        LevelManager ownedLevel = org.mockito.Mockito.mock(LevelManager.class);
+        ring.setServices(new StubObjectServices() {
+            @Override public LevelManager levelManager() { return ownedLevel; }
+        });
 
         try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
-            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x4514, 0x07F6))
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(ownedLevel,
+                            com.openggf.physics.BackgroundPlaneCollisionProvider.FOREGROUND_ONLY,
+                            false, 0x4514, 0x07F6))
                     .thenReturn(new TerrainCheckResult(-23, (byte) 0, 0x1F));
 
             ring.stepPhysicsForTest(0x18, true);
 
-            terrain.verify(() -> ObjectTerrainUtils.checkFloorDist(0x4514, 0x07F6));
+            terrain.verify(() -> ObjectTerrainUtils.checkFloorDist(ownedLevel,
+                    com.openggf.physics.BackgroundPlaneCollisionProvider.FOREGROUND_ONLY,
+                    false, 0x4514, 0x07F6));
         }
 
         assertEquals(0x4514, ring.getX());

@@ -26,6 +26,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.physics.CollisionSystem;
+import com.openggf.physics.BackgroundPlaneCollisionProvider;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
@@ -136,6 +137,11 @@ public final class GameServices {
         return mode != null ? mode.getTerrainCollisionManager() : null;
     }
 
+    public static BackgroundPlaneCollisionProvider backgroundPlaneCollisionOrNull() {
+        GameplayModeContext mode = gameplayModeOrNull();
+        return mode != null ? mode.getBackgroundPlaneCollisionProvider() : null;
+    }
+
     public static WaterSystem waterOrNull() {
         GameplayModeContext mode = gameplayModeOrNull();
         return mode != null ? mode.getWaterSystem() : null;
@@ -215,6 +221,10 @@ public final class GameServices {
 
     public static TerrainCollisionManager terrainCollision() {
         return requireGameplayMode("terrainCollision").getTerrainCollisionManager();
+    }
+
+    public static BackgroundPlaneCollisionProvider backgroundPlaneCollision() {
+        return requireGameplayMode("backgroundPlaneCollision").getBackgroundPlaneCollisionProvider();
     }
 
     public static ParallaxManager parallax() {

@@ -41,6 +41,8 @@ import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.rings.RingManager;
 import com.openggf.physics.CollisionSystem;
+import com.openggf.physics.BackgroundPlaneCollisionProvider;
+import com.openggf.physics.DefaultBackgroundPlaneCollisionProvider;
 import com.openggf.physics.GroundSensor;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
@@ -75,6 +77,7 @@ public final class GameplayModeContext implements ModeContext {
     private CollisionSystem collisionSystem;
     private SpriteManager spriteManager;
     private LevelManager levelManager;
+    private BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider;
 
     private ZoneRuntimeRegistry zoneRuntimeRegistry;
     private PaletteOwnershipRegistry paletteOwnershipRegistry;
@@ -124,6 +127,7 @@ public final class GameplayModeContext implements ModeContext {
                 && collisionSystem != null
                 && spriteManager != null
                 && levelManager != null
+                && backgroundPlaneCollisionProvider != null
                 && zoneRuntimeRegistry != null
                 && paletteOwnershipRegistry != null
                 && animatedTileChannelGraph != null
@@ -230,6 +234,7 @@ public final class GameplayModeContext implements ModeContext {
         this.collisionSystem = Objects.requireNonNull(collisionSystem, "collisionSystem");
         this.spriteManager = Objects.requireNonNull(spriteManager, "spriteManager");
         this.levelManager = Objects.requireNonNull(levelManager, "levelManager");
+        maybeCreateBackgroundPlaneCollisionProvider();
 
         if (rewindRegistry != null) {
             rewindRegistry.deregister("parallax");
@@ -305,6 +310,8 @@ public final class GameplayModeContext implements ModeContext {
         this.advancedRenderModeController = Objects.requireNonNull(advancedRenderModeController, "advancedRenderModeController");
         this.zoneLayoutMutationPipeline = Objects.requireNonNull(zoneLayoutMutationPipeline, "zoneLayoutMutationPipeline");
 
+        maybeCreateBackgroundPlaneCollisionProvider();
+
         if (rewindRegistry != null) {
             rewindRegistry.deregister("zone-runtime");
             rewindRegistry.deregister("palette-ownership");
@@ -318,6 +325,30 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.register(specialRenderEffectRegistry);
             rewindRegistry.register(advancedRenderModeController);
             rewindRegistry.register(zoneLayoutMutationPipeline);
+        }
+    }
+
+    public void attachBackgroundPlaneCollisionProvider(
+            BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider) {
+        this.backgroundPlaneCollisionProvider = Objects.requireNonNull(
+                backgroundPlaneCollisionProvider, "backgroundPlaneCollisionProvider");
+    }
+
+    public BackgroundPlaneCollisionProvider createDefaultBackgroundPlaneCollisionProvider() {
+        return new DefaultBackgroundPlaneCollisionProvider(
+                Objects.requireNonNull(gameStateManager, "gameStateManager"),
+                Objects.requireNonNull(camera, "camera"),
+                Objects.requireNonNull(parallaxManager, "parallaxManager"),
+                Objects.requireNonNull(zoneRuntimeRegistry, "zoneRuntimeRegistry"),
+                () -> levelManager);
+    }
+
+    private void maybeCreateBackgroundPlaneCollisionProvider() {
+        if (backgroundPlaneCollisionProvider == null
+                && gameStateManager != null && camera != null
+                && parallaxManager != null && levelManager != null
+                && zoneRuntimeRegistry != null) {
+            backgroundPlaneCollisionProvider = createDefaultBackgroundPlaneCollisionProvider();
         }
     }
 
@@ -367,6 +398,10 @@ public final class GameplayModeContext implements ModeContext {
 
     public LevelManager getLevelManager() {
         return levelManager;
+    }
+
+    public BackgroundPlaneCollisionProvider getBackgroundPlaneCollisionProvider() {
+        return backgroundPlaneCollisionProvider;
     }
 
     public ObjectManager getObjectManager() {
@@ -720,6 +755,7 @@ public final class GameplayModeContext implements ModeContext {
         animatedTileChannelGraph = null;
         paletteOwnershipRegistry = null;
         zoneRuntimeRegistry = null;
+        backgroundPlaneCollisionProvider = null;
         levelManager = null;
         spriteManager = null;
         collisionSystem = null;

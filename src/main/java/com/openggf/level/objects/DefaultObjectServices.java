@@ -39,6 +39,7 @@ import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.rings.RingManager;
 import com.openggf.physics.CollisionSystem;
+import com.openggf.physics.BackgroundPlaneCollisionProvider;
 import com.openggf.sprites.managers.SpriteManager;
 import java.io.IOException;
 import java.util.Objects;
@@ -54,6 +55,7 @@ public class DefaultObjectServices implements ObjectServices {
         java.util.logging.Logger.getLogger(DefaultObjectServices.class.getName());
 
     private final LevelManager levelManager;
+    private final BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider;
     private final Camera camera;
     private final GameStateManager gameState;
     private final SpriteManager spriteManager;
@@ -89,6 +91,7 @@ public class DefaultObjectServices implements ObjectServices {
                 gameplayMode.getPaletteOwnershipRegistry(),
                 gameplayMode.getZoneLayoutMutationPipeline(),
                 gameplayMode.getSolidExecutionRegistry(),
+                gameplayMode.getBackgroundPlaneCollisionProvider(),
                 engineServices,
                 gameplayMode.getActiveBonusStageProvider());
     }
@@ -107,6 +110,7 @@ public class DefaultObjectServices implements ObjectServices {
                                  PaletteOwnershipRegistry paletteOwnershipRegistry,
                                  ZoneLayoutMutationPipeline zoneLayoutMutationPipeline,
                                  SolidExecutionRegistry solidExecutionRegistry,
+                                 BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider,
                                  EngineContext engineServices,
                                  BonusStageProvider bonusStageProvider) {
         this.levelManager = Objects.requireNonNull(levelManager, "levelManager");
@@ -123,6 +127,8 @@ public class DefaultObjectServices implements ObjectServices {
         this.paletteOwnershipRegistry = paletteOwnershipRegistry;
         this.zoneLayoutMutationPipeline = Objects.requireNonNull(zoneLayoutMutationPipeline, "zoneLayoutMutationPipeline");
         this.solidExecutionRegistry = Objects.requireNonNull(solidExecutionRegistry, "solidExecutionRegistry");
+        this.backgroundPlaneCollisionProvider = Objects.requireNonNull(
+                backgroundPlaneCollisionProvider, "backgroundPlaneCollisionProvider");
         this.engineServices = Objects.requireNonNull(engineServices, "engineServices");
         this.bonusStageProvider = Objects.requireNonNull(bonusStageProvider, "bonusStageProvider");
     }
@@ -156,6 +162,17 @@ public class DefaultObjectServices implements ObjectServices {
     @Override
     public LevelManager levelManager() {
         return lm();
+    }
+
+    @Override
+    public BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider() {
+        return backgroundPlaneCollisionProvider;
+    }
+
+    @Override
+    public boolean useSecondaryTerrainCollisionPath() {
+        var focused = camera.getFocusedSprite();
+        return focused != null && (focused.getTopSolidBit() & 0xFF) != 0x0C;
     }
 
     @Override

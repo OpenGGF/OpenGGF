@@ -75,5 +75,7 @@ public final class GameplaySessionFactory {
         gameplayMode.attachSharedRegistries(zoneRuntimeRegistry, paletteOwnershipRegistry,
                 animatedTileChannelGraph, specialRenderEffectRegistry,
                 advancedRenderModeController, zoneLayoutMutationPipeline);
+        gameplayMode.attachBackgroundPlaneCollisionProvider(
+                gameplayMode.createDefaultBackgroundPlaneCollisionProvider());
     }
 }

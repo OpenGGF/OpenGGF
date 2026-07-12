@@ -3,9 +3,7 @@ package com.openggf.physics;
 import com.openggf.game.GameServices;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.LevelManager;
-import com.openggf.level.ParallaxManager;
 import com.openggf.level.SolidTile;
-import com.openggf.level.scroll.ZoneScrollHandler;
 import com.openggf.sprites.SensorConfiguration;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -90,9 +88,13 @@ public class GroundSensor extends Sensor {
         // When the flag is set, scan FG first, then BG (layer 1) with coordinates adjusted
         // by Camera_X_diff/Camera_Y_diff. Keep the result with the greater distance
         // (more lenient collision = less penetration).
-        if (isBackgroundCollisionEnabled()) {
+        BackgroundPlaneCollisionProvider provider = GameServices.backgroundPlaneCollisionOrNull();
+        BackgroundPlaneCollisionProvider.State collisionState = provider != null
+                ? provider.state(levelManager) : BackgroundPlaneCollisionProvider.State.INACTIVE;
+        if (collisionState.active()) {
             SensorResult bgResult = scanBackgroundCollision(
-                    levelManager, originalX, originalY, solidityBit, globalDirection, config.vertical());
+                    levelManager, originalX, originalY, solidityBit, globalDirection, config.vertical(),
+                    provider, collisionState);
             // ROM: FindFloor/FindWall keep the BG result unless the FG distance is
             // strictly smaller. When FG wins, the angle register is restored from
             // Primary_Angle_save; when BG wins, both distance and angle come from
@@ -120,10 +122,25 @@ public class GroundSensor extends Sensor {
         LevelManager levelManager = getLevelManager();
         short originalX = (short) (sprite.getCentreX() + worldOffsetX + dx);
         short originalY = (short) (sprite.getCentreY() + worldOffsetY + dy);
+        SensorResult foreground;
         if (globalDirection == Direction.UP || globalDirection == Direction.DOWN) {
-            return scanVertical(levelManager, originalX, originalY, solidityBit, globalDirection, false);
+            foreground = scanVertical(levelManager, originalX, originalY, solidityBit, globalDirection, false);
+        } else {
+            foreground = scanHorizontal(levelManager, originalX, originalY, solidityBit, globalDirection);
         }
-        return scanHorizontal(levelManager, originalX, originalY, solidityBit, globalDirection);
+        BackgroundPlaneCollisionProvider provider = GameServices.backgroundPlaneCollisionOrNull();
+        BackgroundPlaneCollisionProvider.State collisionState = provider != null
+                ? provider.state(levelManager) : BackgroundPlaneCollisionProvider.State.INACTIVE;
+        if (!collisionState.active()) {
+            return foreground;
+        }
+        SensorResult background = scanBackgroundCollision(levelManager, originalX, originalY,
+                solidityBit, globalDirection,
+                globalDirection == Direction.UP || globalDirection == Direction.DOWN,
+                provider, collisionState);
+        return background != null && (foreground == null || background.distance() <= foreground.distance())
+                ? background
+                : foreground;
     }
 
     // ========================================
@@ -134,11 +151,6 @@ public class GroundSensor extends Sensor {
      * Check whether Background_collision_flag is active.
      * ROM: tst.b (Background_collision_flag).w at the top of FindFloor/FindWall.
      */
-    private static boolean isBackgroundCollisionEnabled() {
-        var gs = GameServices.gameStateOrNull();
-        return gs != null && gs.isBackgroundCollisionFlag();
-    }
-
     /**
      * Scan against the background (layer 1) collision data.
      * ROM: FindFloor/FindWall with {@code lea (Find_Tile_BG).l,a5} and coordinate
@@ -155,52 +167,20 @@ public class GroundSensor extends Sensor {
                                                   int solidityBit,
                                                   Direction globalDirection,
                                                   boolean vertical) {
-        if (lm == null) return null;
+        BackgroundPlaneCollisionProvider provider = GameServices.backgroundPlaneCollisionOrNull();
+        if (provider == null) return null;
+        return scanBackgroundCollision(lm, fgX, fgY, solidityBit, globalDirection, vertical,
+                provider, provider.state(lm));
+    }
 
-        // Compute Camera_X_diff / Camera_Y_diff
-        // ROM: Camera_X_diff = Camera_X_pos_copy - Camera_X_pos_BG_copy
-        int cameraX = 0;
-        int cameraY = 0;
-        var camera = GameServices.cameraOrNull();
-        if (camera != null) {
-            cameraX = camera.getX();
-            cameraY = camera.getY();
-        }
-
-        int bgCameraX = cameraX; // default: same as FG
-        int bgCameraY = cameraY;
-        ParallaxManager pm = GameServices.parallaxOrNull();
-        if (pm != null) {
-            boolean useLiveHandlerState = false;
-            ZoneScrollHandler handler = pm.getHandler(lm.getFeatureZoneId());
-            if (handler != null) {
-                int handlerBgX = handler.getBgCameraX();
-                short handlerBgY = handler.getVscrollFactorBG();
-                if (handlerBgX != Integer.MIN_VALUE
-                        || handlerBgY != 0
-                        || GameServices.gameState().isBackgroundCollisionFlag()) {
-                    if (handlerBgX != Integer.MIN_VALUE) {
-                        bgCameraX = handlerBgX;
-                    }
-                    bgCameraY = handlerBgY;
-                    useLiveHandlerState = true;
-                }
-            }
-            if (!useLiveHandlerState) {
-                int cachedBgX = pm.getBgCameraX();
-                if (cachedBgX != Integer.MIN_VALUE) {
-                    bgCameraX = cachedBgX;
-                }
-                bgCameraY = pm.getVscrollFactorBG();
-            }
-        }
-
-        int cameraDiffX = cameraX - bgCameraX;
-        int cameraDiffY = cameraY - bgCameraY;
-
-        // Convert FG probe coordinates to BG space
-        short bgX = (short) (fgX - cameraDiffX);
-        short bgY = (short) (fgY - cameraDiffY);
+    private SensorResult scanBackgroundCollision(LevelManager lm, short fgX, short fgY,
+                                                  int solidityBit, Direction globalDirection,
+                                                  boolean vertical,
+                                                  BackgroundPlaneCollisionProvider provider,
+                                                  BackgroundPlaneCollisionProvider.State state) {
+        if (lm == null || !state.active()) return null;
+        short bgX = (short) provider.backgroundX(state, fgX, globalDirection);
+        short bgY = (short) provider.backgroundY(state, fgY);
 
         // Perform the scan using the BG-adjusted coordinates. Do not bail out
         // early on an empty first tile: the ROM still runs the extension pass

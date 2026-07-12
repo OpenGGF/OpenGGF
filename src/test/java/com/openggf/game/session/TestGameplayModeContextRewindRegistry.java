@@ -188,6 +188,21 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
+    void backgroundCollisionProviderIsAttachOrderIndependent() {
+        GameplayModeContext registriesFirst = buildAttachedContext();
+        attachSharedRegistries(registriesFirst);
+        attachLevelManagers(registriesFirst);
+        assertNotNull(registriesFirst.getBackgroundPlaneCollisionProvider());
+        assertTrue(registriesFirst.isGameplayRuntimeReady());
+
+        GameplayModeContext levelsFirst = buildAttachedContext();
+        attachLevelManagers(levelsFirst);
+        attachSharedRegistries(levelsFirst);
+        assertNotNull(levelsFirst.getBackgroundPlaneCollisionProvider());
+        assertTrue(levelsFirst.isGameplayRuntimeReady());
+    }
+
+    @Test
     void sharedRuntimeRegistriesAreRewindRegisteredAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         attachSharedRegistries(ctx);

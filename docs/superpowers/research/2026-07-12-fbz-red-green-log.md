@@ -70,3 +70,79 @@ recorded as `unknown/not previously run` rather than inferred.
 - GREEN evidence: fresh selected-class Surefire XML reports 4 tests, 0
   failures, 0 errors, 0 skipped (MSE aggregate
   `passed=60 failed=0 errors=0 skipped=0`).
+
+## Task 2 — canonical background-plane collision provider
+
+- Requirement: FBZ background-plane collision must be one gameplay-owned semantic
+  authority and cover ordinary sensors, explicit-world/`CalcRoomInFront` scans,
+  and scattered-ring floor/ceiling checks while retaining legacy HCZ/MGZ/CNZ
+  state translation.
+- RED command: `mvn "-Dtest=TestBackgroundPlaneCollisionProvider,TestFbzBackgroundPlaneCollision,TestFbzCalcRoomInFrontBackgroundCollision,TestFbzRingBackgroundCollision" test "-Ds3k.rom.path=s3k.gen" -Dmse=off`
+- RED result (2026-07-12): expected test-compilation failure because
+  `BackgroundPlaneCollisionProvider`, `DefaultBackgroundPlaneCollisionProvider`,
+  the provider `State`/`Probe` semantics, and
+  `ZoneRuntimeState.backgroundPlaneCollisionState()` did not exist. This proves
+  the focused tests require the new contract rather than passing against the
+  legacy `GroundSensor#doScan`-only implementation. Test-fixture interface
+  conformance was corrected before production work (nested
+  `ScrollHandlerProvider.ZoneConstants` and `getMaxScrollOffset`).
+- GREEN command: `mvn "-Dtest=TestBackgroundPlaneCollisionProvider,TestFbzBackgroundPlaneCollision,TestFbzCalcRoomInFrontBackgroundCollision,TestFbzRingBackgroundCollision,TestS3kHcz2RaisedFloorWallCollisionHeadless,TestS3kCnzMinibossArenaHeadless,TestS3kMgz2BgRiseHeadless,TestS3kCnzBossScrollHandler" test "-Ds3k.rom.path=s3k.gen"`
+- GREEN result (2026-07-12): exit 0. Fresh selected-class Surefire XML
+  reports 47 tests, 0 failures, 0 errors: provider semantics (3), explicit
+  floor/wall/ceiling (1), real `CalcRoomInFront` layer-1 selection (1), ring
+  signed selection plus floor/reverse-gravity behavior (2), HCZ2 (1), CNZ
+  miniboss (22), MGZ2 background rise (12), and CNZ boss scroll (5).
+- Affected-guard command covered `TestGroundSensor`,
+  `TestGroundSensorServiceResolution`, `TestObjectTerrainUtils`, both scoped
+  object-service guards, `TestGameServicesNullableAccessors`, and
+  `TestGameplayModeContextRewindRegistry`. All Task-2-affected classes passed
+  after retaining private helper compatibility entry points, making provider
+  construction automatic for manually assembled gameplay contexts, and
+  resolving camera differences against the actual probe level. The aggregate
+  also reported one unrelated pre-existing failure in
+  `com.openggf.tests.TestNoServicesInObjectConstructors` for two
+  `AizMinibossInstance` inline `AizAct2CameraResizeController` allocations;
+  Task 2 does not touch those files or constructors.
+- No trace capture or replay was executed.
+
+### Task 2 specification-review correction
+
+- Review RED: LEFT-wall background translation incorrectly used the generic
+  `x - Camera_X_diff` transform. Native `FindWall` complements the low nibble
+  before and after subtraction, which differs for signed/non-16-aligned camera
+  differences. Coverage also stopped short of ordinary `GroundSensor#doScan`,
+  the two production scattered-ring owners, lifecycle reset, and object-owned
+  `LevelManager` resolution.
+- Correction RED command: `mvn "-Dtest=TestBackgroundPlaneCollisionProvider,TestFbzBackgroundPlaneCollision,TestFbzRingBackgroundCollision" test "-Ds3k.rom.path=s3k.gen" -Dmse=off`
+- Correction RED result (2026-07-12): expected test-compilation failure because
+  the provider had no direction-aware probe API and `ObjectTerrainUtils` had no
+  owned-`LevelManager` wall overload. This was observed before correction code.
+- Correction GREEN result (2026-07-12): focused correction suite reports 11
+  tests, 0 failures, 0 errors. The combined exact Task 2 suite plus affected
+  production-path tests/guards reports 136 tests, 0 failures, 0 errors. Coverage
+  now executes ordinary `GroundSensor#doScan`, actual `CalcRoomInFront`, signed
+  non-16-aligned LEFT/RIGHT transforms through `GroundSensor` and
+  `ObjectTerrainUtils`, private `RingManager.LostRingPool` probes,
+  `LostRingObjectInstance` with its injected `LevelManager`, and gameplay
+  context recreation after explicit state. No trace capture or replay ran.
+
+### Task 2 quality-review correction
+
+- Review RED: provider creation depended on manager attach order; object-owned
+  probes still reached global level/provider/participant state; and the hot path
+  allocated `Optional<Probe>` records while resolving provider state twice per
+  sensor scan.
+- Correction: centralized attach-order-independent provider creation from both
+  level-manager and shared-registry attachment. Added an injected provider and
+  explicit secondary-collision participant semantic to `ObjectServices` and
+  `DefaultObjectServices`; `LostRingObjectInstance` now passes those with its
+  injected `LevelManager`, while `RingManager.LostRingPool` retains its provider.
+  Legacy global `ObjectTerrainUtils` entry points remain clearly separated from
+  owned overloads. Replaced probe objects with primitive orientation-aware
+  translation from one resolved `State`, and cached unchanged default-provider
+  state identity/values.
+- Quality GREEN command: combined exact Task 2 suite, both attach orders,
+  object-service guards, ring/object-terrain tests, and sensor regressions.
+- Quality GREEN result (2026-07-12): 144 tests, 0 failures, 0 errors, 0 skipped.
+  Focused coverage proves one state lookup per ordinary sensor scan and stable
+  cached state until semantic camera inputs change. No trace capture/replay ran.
