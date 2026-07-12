@@ -1,5 +1,6 @@
 package com.openggf.trace.replay;
 
+import com.openggf.SpritePriorityLayerHook;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -15,8 +16,13 @@ public final class TraceGhostHook {
 
     /** Renders the ghost sprites for one priority bucket/layer. */
     @FunctionalInterface
-    public interface GhostLayerRenderer {
+    public interface GhostLayerRenderer extends SpritePriorityLayerHook {
         void renderGhostsForLayer(int bucket, boolean highPriority);
+
+        @Override
+        default void beforePriorityLayer(int bucket, boolean highPriority) {
+            renderGhostsForLayer(bucket, highPriority);
+        }
     }
 
     private static final AtomicReference<GhostLayerRenderer> ACTIVE = new AtomicReference<>();

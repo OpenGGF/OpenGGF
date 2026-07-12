@@ -57,8 +57,8 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/BuzzerBadnikInstance.java#restoreRewindState", 2),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/CoconutsBadnikInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/CoconutsBadnikInstance.java#restoreRewindState", 1),
-            Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/MasherBadnikInstance.java#captureRewindState", 1),
-            Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/MasherBadnikInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/MasherBadnikInstance.java#captureRewindState", 2),
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/MasherBadnikInstance.java#restoreRewindState", 2),
             // Obj08 skid dust has transient animation/delete/DPLC-preload state
             // that is not reconstructible from placement data alone.
             Map.entry("src/main/java/com/openggf/level/objects/SkidDustObjectInstance.java#captureRewindState", 1),

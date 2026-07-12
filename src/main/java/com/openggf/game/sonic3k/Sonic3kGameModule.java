@@ -431,6 +431,9 @@ public class Sonic3kGameModule implements GameModule {
         public boolean hasInstaShield() { return true; }
 
         @Override
+        public boolean hasTailsFlight() { return true; }
+
+        @Override
         public boolean hasElementalShields() { return true; }
 
         @Override

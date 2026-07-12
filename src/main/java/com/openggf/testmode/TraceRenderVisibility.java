@@ -17,6 +17,8 @@ import com.openggf.configuration.SonicConfigurationService;
  */
 public final class TraceRenderVisibility {
 
+    private static final TraceRenderVisibility[] FLYWEIGHTS = createFlyweights();
+
     private final boolean showGhosts;
     private final boolean showGameHud;
     private final boolean showDebugHud;
@@ -28,10 +30,17 @@ public final class TraceRenderVisibility {
     }
 
     public static TraceRenderVisibility fromConfig(SonicConfigurationService config) {
-        return new TraceRenderVisibility(
+        return of(
                 config.getBoolean(SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS),
                 config.getBoolean(SonicConfiguration.TRACE_SHOW_GAME_HUD),
                 config.getBoolean(SonicConfiguration.TRACE_SHOW_DEBUG_HUD));
+    }
+
+    public static TraceRenderVisibility of(boolean showGhosts, boolean showGameHud, boolean showDebugHud) {
+        int bits = showGhosts ? 1 : 0;
+        if (showGameHud) bits |= 2;
+        if (showDebugHud) bits |= 4;
+        return FLYWEIGHTS[bits];
     }
 
     /**
@@ -39,7 +48,16 @@ public final class TraceRenderVisibility {
      * as a non-null placeholder before a real per-frame value is resolved.
      */
     public static TraceRenderVisibility defaults() {
-        return new TraceRenderVisibility(true, true, false);
+        return FLYWEIGHTS[3];
+    }
+
+    private static TraceRenderVisibility[] createFlyweights() {
+        TraceRenderVisibility[] values = new TraceRenderVisibility[8];
+        for (int bits = 0; bits < values.length; bits++) {
+            values[bits] = new TraceRenderVisibility(
+                    (bits & 1) != 0, (bits & 2) != 0, (bits & 4) != 0);
+        }
+        return values;
     }
 
     public boolean showGhosts() { return showGhosts; }

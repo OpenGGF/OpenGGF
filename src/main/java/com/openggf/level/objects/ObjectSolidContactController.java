@@ -314,6 +314,11 @@ final class ObjectSolidContactController {
                 .add(key);
     }
 
+    boolean hasPushingLatch(PlayableEntity player) {
+        Set<Object> set = objectPushingBitSet.get(player);
+        return set != null && !set.isEmpty();
+    }
+
     private boolean clearObjectPushingBit(PlayableEntity player, ObjectInstance instance) {
         if (player == null) {
             return false;

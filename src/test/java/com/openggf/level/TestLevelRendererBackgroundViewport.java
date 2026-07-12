@@ -1,6 +1,7 @@
 package com.openggf.level;
 
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.TilemapGpuRenderer;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -17,6 +18,25 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestLevelRendererBackgroundViewport {
+
+    @Test
+    void staleBackgroundTileGenerationAlsoSuppressesItsPairedComposite() {
+        LevelRenderer renderer = new LevelRenderer(null);
+        TilemapGpuRenderer tilemap = new TilemapGpuRenderer();
+        tilemap.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, new byte[32], 8, 1);
+        int generation = tilemap.getBackgroundContentGeneration();
+        renderer.setBackgroundCompositeStateForTesting(40, generation, 40, generation, generation);
+        assertTrue(renderer.isBackgroundCompositeCurrentForTesting(tilemap));
+
+        tilemap.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, new byte[32], 8, 1);
+        assertFalse(renderer.isBackgroundCompositeCurrentForTesting(tilemap),
+                "a newer tile registration must suppress the retained composite");
+
+        int current = tilemap.getBackgroundContentGeneration();
+        renderer.setBackgroundCompositeStateForTesting(41, current, 40, current, current);
+        assertFalse(renderer.isBackgroundCompositeCurrentForTesting(tilemap),
+                "a composite cannot reuse a completed FBO from another frame");
+    }
 
     @Test
     void deferredFrameSnapshotsRetainViewportAndScrollAndReuseBoundedBackings() {

@@ -8,6 +8,7 @@ public record PlayerCapabilityRules(
         short[] spindashSpeedTable,
         boolean elementalShieldsEnabled,
         boolean instaShieldEnabled,
+        boolean tailsFlightEnabled,
         boolean jumpRepressClearsRollJumpBeforeAbility,
         boolean lightningShieldEnabled,
         short[] superSpindashSpeedTable) {
@@ -38,6 +39,7 @@ public record PlayerCapabilityRules(
         return spindashEnabled == other.spindashEnabled
                 && elementalShieldsEnabled == other.elementalShieldsEnabled
                 && instaShieldEnabled == other.instaShieldEnabled
+                && tailsFlightEnabled == other.tailsFlightEnabled
                 && jumpRepressClearsRollJumpBeforeAbility == other.jumpRepressClearsRollJumpBeforeAbility
                 && lightningShieldEnabled == other.lightningShieldEnabled
                 && Arrays.equals(spindashSpeedTable, other.spindashSpeedTable)
@@ -50,6 +52,7 @@ public record PlayerCapabilityRules(
         result = 31 * result + Arrays.hashCode(spindashSpeedTable);
         result = 31 * result + Boolean.hashCode(elementalShieldsEnabled);
         result = 31 * result + Boolean.hashCode(instaShieldEnabled);
+        result = 31 * result + Boolean.hashCode(tailsFlightEnabled);
         result = 31 * result + Boolean.hashCode(jumpRepressClearsRollJumpBeforeAbility);
         result = 31 * result + Boolean.hashCode(lightningShieldEnabled);
         result = 31 * result + Arrays.hashCode(superSpindashSpeedTable);
@@ -63,6 +66,7 @@ public record PlayerCapabilityRules(
                 + ", spindashSpeedTable=" + Arrays.toString(spindashSpeedTable)
                 + ", elementalShieldsEnabled=" + elementalShieldsEnabled
                 + ", instaShieldEnabled=" + instaShieldEnabled
+                + ", tailsFlightEnabled=" + tailsFlightEnabled
                 + ", jumpRepressClearsRollJumpBeforeAbility=" + jumpRepressClearsRollJumpBeforeAbility
                 + ", lightningShieldEnabled=" + lightningShieldEnabled
                 + ", superSpindashSpeedTable=" + Arrays.toString(superSpindashSpeedTable)

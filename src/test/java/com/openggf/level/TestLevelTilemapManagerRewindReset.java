@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -184,6 +185,31 @@ public class TestLevelTilemapManagerRewindReset {
     }
 
     @Test
+    public void nativeWorldWrapRetainsPlaneRingInsteadOfReseedingFlatEntrance() throws Exception {
+        ZoneFeatureProvider zfp = new StubZoneFeatures(false, false, true);
+        LevelTilemapManager manager = new LevelTilemapManager(geometry, graphicsManager, null);
+        manager.setForegroundRingCamera(800, 320);
+        manager.ensureForegroundTilemapData(blockLookup, zfp, 0, null, false);
+
+        // Advance far enough that the leading edge has replaced the ring cell at
+        // local X=$100 with the next lap's world-$500 forest column.
+        for (int x = 804; x <= 1276; x += 4) {
+            manager.setForegroundRingCamera(x, 320);
+            manager.ensureForegroundTilemapData(blockLookup, zfp, 0, null, false);
+        }
+        byte[] beforeWrapColumn = copyChunkColumn(manager, 0x100);
+
+        // Native Camera_X_pos step: $4FC + 4 - $200 = $300. The explicit
+        // Level_repeat_offset must preserve Plane A rather than seed world $300.
+        manager.setForegroundRingCamera(768, 320, 0x200);
+        manager.ensureForegroundTilemapData(blockLookup, zfp, 0, null, false);
+
+        assertEquals(768, getInt(manager, "foregroundRingLastLeftCol"));
+        assertArrayEquals(beforeWrapColumn, copyChunkColumn(manager, 0x100),
+                "a native one-plane world wrap must retain non-entering ring cells");
+    }
+
+    @Test
     public void forwardCameraScrollKeepsVisibleColumnsCorrect() throws Exception {
         // Baseline: the existing forward leading-edge behavior must be preserved.
         ZoneFeatureProvider zfp = new StubZoneFeatures(false, false, true);
@@ -292,6 +318,28 @@ public class TestLevelTilemapManagerRewindReset {
 
     private static boolean getBoolean(Object target, String name) throws Exception {
         return (Boolean) getField(target, name);
+    }
+
+    private static int getInt(Object target, String name) throws Exception {
+        return (Integer) getField(target, name);
+    }
+
+    private static byte[] copyChunkColumn(LevelTilemapManager manager, int localPixelX) {
+        byte[] data = manager.getForegroundTilemapData();
+        int widthTiles = manager.getForegroundTilemapWidthTiles();
+        int heightTiles = manager.getForegroundTilemapHeightTiles();
+        int firstTileX = localPixelX / 8;
+        int tileCount = LevelConstants.CHUNK_WIDTH / 8;
+        byte[] result = new byte[heightTiles * tileCount * 4];
+        int out = 0;
+        for (int row = 0; row < heightTiles; row++) {
+            for (int tileX = firstTileX; tileX < firstTileX + tileCount; tileX++) {
+                int offset = (row * widthTiles + tileX) * 4;
+                System.arraycopy(data, offset, result, out, 4);
+                out += 4;
+            }
+        }
+        return result;
     }
 
     // ── Stubs ───────────────────────────────────────────────────────────────

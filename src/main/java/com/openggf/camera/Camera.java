@@ -613,6 +613,16 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	/**
+	 * Applies or releases a ROM {@code Scroll_lock} without touching
+	 * {@code H_scroll_frame_offset}. Unlike a full scripted freeze, Scroll_lock
+	 * merely skips {@code MoveCameraX}/{@code MoveCameraY}; any pending
+	 * position-history delay remains parked until scrolling resumes.
+	 */
+	public void setScrollLocked(boolean locked) {
+		this.frozen = locked;
+	}
+
+	/**
 	 * @return true if camera is fully frozen (both X and Y)
 	 */
 	public boolean getFrozen() {

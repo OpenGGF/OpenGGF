@@ -1,6 +1,7 @@
 package com.openggf.game.rewind;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeAll;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -12,11 +13,13 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * Guards implementation comments against naming deleted dynamic-codec helpers.
  */
 class TestStaleRewindCodecHelperCleanup {
+    private static List<SourceFile> sourceCorpus;
     private static final String DELETED_HELPER_NAME = "exact" + "SpawnCodec";
     private static final String DELETED_SHARED_CODEC_CACHE =
             "SHARED_REWIND_DYNAMIC_OBJECT_" + "CODECS";
@@ -79,6 +82,7 @@ class TestStaleRewindCodecHelperCleanup {
 
     @Test
     void sourcesDoNotReferenceDeletedSpawnCodecHelper() throws IOException {
+        assertSame(sourceCorpus(), sourceCorpus(), "source corpus must be built once per test class");
         assertNoSourceReferences(DELETED_HELPER_NAME,
                 "Deleted spawn-specific codec helper is still referenced in ");
     }
@@ -148,27 +152,43 @@ class TestStaleRewindCodecHelperCleanup {
 
     private static void assertNoSourceReferences(
             String needle, String requiredFileName, String messagePrefix) throws IOException {
-        List<Path> staleReferences = new ArrayList<>();
-        for (Path root : List.of(Path.of("src/main/java"), Path.of("src/test/java"))) {
-            try (Stream<Path> paths = Files.walk(root)) {
-                paths.filter(path -> path.toString().endsWith(".java"))
-                        .filter(path -> requiredFileName == null
-                                || path.getFileName().toString().equals(requiredFileName))
-                        .filter(path -> contains(path, needle))
-                        .forEach(staleReferences::add);
-            }
-        }
-
-        staleReferences.sort(Comparator.comparing(Path::toString));
+        List<Path> staleReferences = sourceCorpus().stream()
+                .filter(source -> requiredFileName == null
+                        || source.path().getFileName().toString().equals(requiredFileName))
+                .filter(source -> source.content().contains(needle))
+                .map(SourceFile::path)
+                .sorted(Comparator.comparing(Path::toString))
+                .toList();
         assertTrue(staleReferences.isEmpty(),
                 messagePrefix + staleReferences);
     }
 
-    private static boolean contains(Path path, String needle) {
-        try {
-            return Files.readString(path, StandardCharsets.UTF_8).contains(needle);
-        } catch (IOException e) {
-            throw new AssertionError("Failed to scan " + path, e);
+    @BeforeAll
+    static void loadSourceCorpusOnce() throws IOException {
+        sourceCorpus = loadSourceCorpus();
+        assertTrue(!sourceCorpus.isEmpty(), "source corpus must not be empty");
+    }
+
+    private static List<SourceFile> loadSourceCorpus() throws IOException {
+        List<SourceFile> corpus = new ArrayList<>();
+        for (Path root : List.of(Path.of("src/main/java"), Path.of("src/test/java"))) {
+            try (Stream<Path> paths = Files.walk(root)) {
+                for (Path path : paths.filter(candidate -> candidate.toString().endsWith(".java")).toList()) {
+                    try {
+                        corpus.add(new SourceFile(path, Files.readString(path, StandardCharsets.UTF_8)));
+                    } catch (IOException e) {
+                        throw new AssertionError("Failed to scan " + path, e);
+                    }
+                }
+            }
         }
+        return List.copyOf(corpus);
+    }
+
+    private static List<SourceFile> sourceCorpus() {
+        return sourceCorpus;
+    }
+
+    private record SourceFile(Path path, String content) {
     }
 }

@@ -1196,6 +1196,39 @@ public class TestTraceBinder {
     }
 
     @Test
+    void testSidekickCpuCtrl2UsesDecisionSampleWhenLaterObjectClearsLiveLatch() {
+        TraceFrame frame = TraceFrame.of(25039, 0x0000,
+            (short) 0x4AA0, (short) 0x01FD,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0);
+        TraceEvent.CpuState snapshotCpu = new TraceEvent.CpuState(
+                25039, "tails", 0x02, 0, 0, 0x06,
+                (short) 0x49AA, (short) 0x01FD, 0,
+                0, 0x18, 0x00, 0, 0x0058,
+                0x00, 0x00, (short) 0x0000, (short) 0x0000,
+                0x1800, 0x18, 0x00, 0x00, 0x0000);
+        TraceEvent.TailsCpuNormalStep normalStep = new TraceEvent.TailsCpuNormalStep(
+                25039, "tails", 0x08, 0x00, 0x0024, 0x0024,
+                0x00, 0x0000, 0x00, 0x0000, 0x0000, 0x0000, 0x0000,
+                "not_seen", 0x1800, 0x18,
+                0x0024, 0x0024, 0x08, 0x0030, 0x0030, 0x08);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x02, 0x06, 0x49AA, 0x01FD,
+                0x00, 0x00, 0x18, 0x00, -1, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x4AA0, (short) 0x01FD,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails", null, snapshotCpu, actualCpu, normalStep);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_held").severity());
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_pressed").severity());
+        assertFalse(result.hasError());
+    }
+
+    @Test
     void testSidekickCpuCtrl2IgnoresLatchedPanicInputWhileCoasting() {
         TraceCharacterState expectedTails = traceSidekickWithGroundSpeed((short) 0x09AB);
         TraceFrame frame = frameWithSidekick(936, expectedTails);

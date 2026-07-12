@@ -2,6 +2,7 @@ package com.openggf.tests;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
+import com.openggf.game.OscillationManager;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.render.SpecialRenderEffect;
 import com.openggf.game.render.SpecialRenderEffectContext;
@@ -108,6 +109,9 @@ public class TestLevelManager {
         levelCounter.setAccessible(true);
         levelCounter.setInt(levelManager, 0x153F);
         spriteManager.setFrameCounter(0x153F);
+        OscillationManager.reset();
+        OscillationManager.update(0x153E);
+        int[] oscillationBeforeReload = OscillationManager.valuesForTest();
 
         Method advance = LevelManager.class.getDeclaredMethod("advanceFrameCounterAcrossSeamlessReload");
         advance.setAccessible(true);
@@ -117,6 +121,9 @@ public class TestLevelManager {
                 "S3K Tails CPU reads the stored Level_frame_counter cadence after seamless reloads");
         assertEquals(0x1540, spriteManager.getFrameCounter(),
                 "SpriteManager's gameplay counter should stay aligned across skipped reload frames");
+        assertFalse(java.util.Arrays.equals(
+                        oscillationBeforeReload, OscillationManager.valuesForTest()),
+                "The native post-ScreenEvents OscillateNumDo tick must survive the skipped reload frame");
     }
 
     @Nested
@@ -367,5 +374,4 @@ public class TestLevelManager {
         }
     }
 }
-
 

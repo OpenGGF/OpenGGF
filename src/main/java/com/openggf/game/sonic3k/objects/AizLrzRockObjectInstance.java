@@ -16,8 +16,10 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -25,6 +27,8 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -34,7 +38,8 @@ import java.util.logging.Logger;
  * Object 0x05 - AIZ/LRZ/EMZ Rock (Sonic 3 & Knuckles).
  */
 public class AizLrzRockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider,
+        SpawnRewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(AizLrzRockObjectInstance.class.getName());
 
@@ -158,6 +163,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        contactPushingActive = false;
         SolidCheckpointBatch batch = checkpointAll();
         for (PlayableEntity participant : playerQuery(playerEntity).playersFor(PLAYER_PARTICIPATION)) {
             if (breaking) {
@@ -165,12 +171,15 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
             }
             if (participant instanceof AbstractPlayableSprite participantSprite) {
                 PlayerSolidContactResult result = batch.perPlayer().get(participant);
-                applyCheckpointContact(participantSprite, result);
+                applyCheckpointContact(participantSprite, result, batch);
+                if (!breaking && (behaviorBits & BIT_PUSHABLE) != 0) {
+                    handlePush(participantSprite, result);
+                }
                 if (!breaking
                         && (behaviorBits & BIT_BREAK_SIDE) != 0
                         && isSideBreakCandidate(result)
                         && canSideBreak(participantSprite, result.pushingNow())) {
-                    breakFromSide(participantSprite);
+                    breakFromSide(participantSprite, batch);
                     return;
                 }
             }
@@ -185,7 +194,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
                 player.setYSpeed((short) -0x300);
                 player.setAir(true);
                 player.setOnObject(false);
-                breakRock(player);
+                breakRock(player, batch);
             }
             playerStandingOnRock = false;
             playerPushingSide = false;
@@ -198,15 +207,11 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
                 player.setYSpeed((short) -0x300);
                 player.setAir(true);
                 player.setOnObject(false);
-                breakRock(player);
+                breakRock(player, batch);
                 playerStandingOnRock = false;
                 playerPushingSide = false;
                 return;
             }
-        }
-
-        if ((behaviorBits & BIT_PUSHABLE) != 0) {
-            handlePush(player);
         }
 
         playerStandingOnRock = false;
@@ -215,8 +220,19 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         updateDynamicSpawn(currentX, currentY);
     }
 
-    private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult result) {
-        if (player == null || result == null || breaking || result.kind() == ContactKind.NONE) {
+    private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult result,
+                                        SolidCheckpointBatch batch) {
+        if (player == null || result == null || breaking) {
+            return;
+        }
+        if (!result.pushingNow() && result.pushingLastFrame()) {
+            // SolidObject_TestClearPush clears Status_Push when this rock's
+            // per-player pushing bit was set at entry but SolidObjectFull no
+            // longer reports a side push (sonic3k.asm:41503-41532). Manual
+            // checkpoint batching retains that previous bit in the result.
+            player.setPushing(false);
+        }
+        if (result.kind() == ContactKind.NONE) {
             return;
         }
 
@@ -241,7 +257,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         if (!knucklesOnlyStanding
                 && (behaviorBits & BIT_BREAK_BOTTOM) != 0
                 && result.kind() == ContactKind.BOTTOM) {
-            breakRock(player);
+            breakRock(player, batch);
             player.setYSpeed((short) savedPreContactYSpeed);
         }
     }
@@ -274,7 +290,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         return pushingNow;
     }
 
-    private void breakFromSide(AbstractPlayableSprite player) {
+    private void breakFromSide(AbstractPlayableSprite player, SolidCheckpointBatch batch) {
         if (savedPreContactRolling) {
             enterRollingLaunch(player);
         }
@@ -287,7 +303,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         }
         player.setGSpeed(player.getXSpeed());
         player.setPushing(false);
-        breakRock(player);
+        breakRock(player, batch);
         playerStandingOnRock = false;
         playerPushingSide = false;
     }
@@ -344,6 +360,13 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int romObjectCodePointerHighWord() {
+        // The intact AIZ/LRZ rock routines live in ROM bank $0001. S3K
+        // sub_13EFC copies word 0 of the stood-on SST into Tails_CPU_interact.
+        return 0x0001;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (breaking || variant == ZoneVariant.UNKNOWN || variant.artKey == null) {
             return;
@@ -363,8 +386,9 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void breakRock(AbstractPlayableSprite player) {
+    private void breakRock(AbstractPlayableSprite player, SolidCheckpointBatch batch) {
         breaking = true;
+        releaseStandingParticipants(batch);
 
         if (isOnScreen()) {
             try {
@@ -378,6 +402,27 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         setDestroyed(true);
     }
 
+    private void releaseStandingParticipants(SolidCheckpointBatch batch) {
+        if (batch == null) {
+            return;
+        }
+        for (var entry : batch.perPlayer().entrySet()) {
+            if (!(entry.getKey() instanceof AbstractPlayableSprite participant)
+                    || entry.getValue() == null
+                    || !entry.getValue().standingNow()) {
+                continue;
+            }
+            // sub_1FF1E clears both native standing bits before the side-break
+            // debris conversion, regardless of which player broke the rock.
+            participant.setAir(true);
+            participant.setOnObject(false);
+            var objectManager = services().objectManager();
+            if (objectManager != null) {
+                objectManager.clearRidingObject(participant);
+            }
+        }
+    }
+
     private void spawnDebrisFragments(AbstractPlayableSprite player) {
         if (variant.artKey == null) {
             return;
@@ -389,25 +434,50 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         int fragmentCount = positions.length;
         int debrisStartFrame = variant.debrisBaseFrame;
 
-        for (int i = 0; i < fragmentCount; i++) {
-            int xPos = currentX + positions[i][0];
-            int yPos = currentY + positions[i][1];
-            int xVel = velocities[i][0];
-            int yVel = velocities[i][1];
-            int debrisFrame = debrisStartFrame + (i % 4);
+        int firstFragment = 0;
+        var objectManager = services().objectManager();
+        if (fragmentCount > 0 && objectManager != null && getSlotIndex() >= 0) {
+            RockDebrisChild debris = createDebrisFragment(
+                    positions, velocities, debrisStartFrame, 0);
+            int transferredSlot = ObjectLifetimeOps.detachSlotForTransfer(this);
+            ObjectLifetimeOps.addReplacementAtTransferredSlot(
+                    objectManager, debris, transferredSlot);
+            firstFragment = 1;
+        }
 
-            ObjectSpawn debrisSpawn = new ObjectSpawn(xPos, yPos, 0, 0, 0, false, 0);
-            RockDebrisChild debris = new RockDebrisChild(
-                    debrisSpawn, xVel, yVel, debrisFrame, variant.artKey);
+        for (int i = firstFragment; i < fragmentCount; i++) {
+            RockDebrisChild debris = createDebrisFragment(
+                    positions, velocities, debrisStartFrame, i);
             spawnDynamicObject(debris);
         }
     }
 
-    private void handlePush(AbstractPlayableSprite player) {
-        boolean wasPushing = contactPushingActive;
-        contactPushingActive = false;
+    private RockDebrisChild createDebrisFragment(int[][] positions, int[][] velocities,
+                                                  int debrisStartFrame, int index) {
+        int xPos = currentX + positions[index][0];
+        int yPos = currentY + positions[index][1];
+        int xVel = velocities[index][0];
+        int yVel = velocities[index][1];
+        int debrisFrame = debrisStartFrame + (index % 4);
 
-        if (!wasPushing || player == null) {
+        ObjectSpawn debrisSpawn = new ObjectSpawn(xPos, yPos, 0, 0, 0, false, 0);
+        return new RockDebrisChild(
+                debrisSpawn, xVel, yVel, debrisFrame, variant.artKey);
+    }
+
+    private void handlePush(AbstractPlayableSprite player, PlayerSolidContactResult result) {
+        // ROM sub_200A2/sub_200CC moves the concrete player whose pushing bit is
+        // set only when that player's saved pre-helper status also had
+        // Status_Push (sonic3k.asm:44446-44478). The checkpoint preserves both
+        // phases per player; using the old aggregate latch could let P2's first
+        // contact move P1 one frame early.
+        int preContactAnimation = result != null ? result.preContact().animationId() : -1;
+        boolean savedStatusKeepsPush = preContactAnimation == Sonic3kAnimationIds.PUSH.id()
+                || (preContactAnimation == Sonic3kAnimationIds.SPINDASH.id()
+                        && player.getAnimationFrameIndex() > 1);
+        if (player == null || result == null
+                || !result.pushingNow() || !result.pushingLastFrame()
+                || !savedStatusKeepsPush) {
             return;
         }
 
@@ -427,7 +497,17 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         }
         pushDistanceRemaining--;
         currentX--;
-        player.setCentreX((short) (playerX - 1));
+        // subq.w #1,x_pos(a1) changes only the ROM integer word and keeps
+        // x_sub untouched (sonic3k.asm:44472-44473).
+        player.setCentreXPreserveSubpixel((short) (playerX - 1));
+        int halfHeight = SIZE_TABLE[Math.clamp(sizeIndex, 0, SIZE_TABLE.length - 1)][1];
+        TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, halfHeight);
+        if (floor.foundSurface()) {
+            // sub_200CC follows each horizontal push with ObjCheckFloorDist and
+            // adds d1 even when the adjacent floor is below the rock
+            // (sonic3k.asm:44474-44475).
+            currentY += floor.distance();
+        }
     }
 
     private boolean isKnuckles() {

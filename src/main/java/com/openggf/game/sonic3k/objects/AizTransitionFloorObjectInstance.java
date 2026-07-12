@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -7,7 +8,7 @@ import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.ZeroArgRewindRecreatable;
-import com.openggf.game.PlayableEntity;
+import com.openggf.sprites.AbstractSprite;
 
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -25,7 +26,8 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
     private static final int X = 0x2FB0;
     private static final int Y = 0x03A0;
     private static final int OBJECT_ID = 0x00;
-    private static final int FIRE_REFRESH_ZERO_REJECTS = 20;
+    private static final int FIRE_REFRESH_ZERO_REJECTS_LOW_SUBPIXEL = 21;
+    private static final int FIRE_REFRESH_ZERO_REJECTS_HIGH_SUBPIXEL = 20;
     private static final SolidObjectParams SOLID_PARAMS =
             new SolidObjectParams(0xA0, 0x10, 0x10);
     private final Map<PlayableEntity, Integer> zeroDistanceRejects = new IdentityHashMap<>(2);
@@ -67,7 +69,18 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
         // (41982-42015): y_pos += d0 + 3, putting Sonic one pixel inside the
         // transition floor before the standing branch carries him on later
         // frames (41642-41679, 41793-41818).
-        return zeroDistanceRejects.getOrDefault(player, 0) < FIRE_REFRESH_ZERO_REJECTS;
+        //
+        // The engine's split player/object scheduler holds the integer y_pos
+        // at that exact boundary while retaining the ROM 16.16 fraction. A
+        // high fraction is already one carry phase nearer the native -3
+        // overlap than a low fraction, so it consumes one fewer repeated
+        // zero-distance bridge pass. This is fixed-point state, not a
+        // trace/frame distinction.
+        int rejectLimit = player instanceof AbstractSprite sprite
+                && sprite.getYSubpixelRaw() >= 0x8000
+                ? FIRE_REFRESH_ZERO_REJECTS_HIGH_SUBPIXEL
+                : FIRE_REFRESH_ZERO_REJECTS_LOW_SUBPIXEL;
+        return zeroDistanceRejects.getOrDefault(player, 0) < rejectLimit;
     }
 
     @Override

@@ -42,6 +42,17 @@ import java.util.logging.Logger;
 @com.openggf.game.ModApi
 public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, SpindashDustArtProvider {
     private static final Logger LOGGER = Logger.getLogger(CrossGameFeatureProvider.class.getName());
+    private static final CanonicalAnimation[] REQUIRED_TAILS_FLIGHT_ANIMATIONS = {
+            CanonicalAnimation.TAILS_FLY,
+            CanonicalAnimation.TAILS_FLY_ASCEND,
+            CanonicalAnimation.TAILS_FLY_CARRY,
+            CanonicalAnimation.TAILS_FLY_CARRY_ASCEND,
+            CanonicalAnimation.TAILS_FLY_TIRED,
+            CanonicalAnimation.TAILS_SWIM,
+            CanonicalAnimation.TAILS_SWIM_ASCEND,
+            CanonicalAnimation.TAILS_SWIM_CARRY,
+            CanonicalAnimation.TAILS_SWIM_TIRED
+    };
 
     private static CrossGameFeatureProvider instance;
 
@@ -164,7 +175,14 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
             return null;
         }
         SpriteArtSet donorArt = donorPlayerArtProvider.loadPlayerSpriteArt(characterCode);
-        if (donorArt == null || donorArt.animationProfile() == null) {
+        if (donorArt == null) {
+            return donorArt;
+        }
+        if (characterCode != null && "tails".equalsIgnoreCase(characterCode.trim())
+                && donorCapabilities.hasTailsFlight()) {
+            validateTailsFlightArtContract(characterCode.trim(), donorArt);
+        }
+        if (donorArt.animationProfile() == null) {
             return donorArt;
         }
         // Translate the animation profile for host compatibility
@@ -176,6 +194,23 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
                     donorArt.frameDelay(), donorArt.bankSize(), translated, donorArt.animationSet());
         }
         return donorArt;
+    }
+
+    private void validateTailsFlightArtContract(String characterCode, SpriteArtSet donorArt) {
+        for (CanonicalAnimation required : REQUIRED_TAILS_FLIGHT_ANIMATIONS) {
+            int nativeId = donorCapabilities.resolveNativeId(required);
+            if (nativeId < 0 || donorArt.animationSet() == null
+                    || donorArt.animationSet().getScript(nativeId) == null) {
+                String source = donorGameId != null ? donorGameId.code() : "unknown";
+                String nativeIdText = nativeId >= 0
+                        ? "0x" + Integer.toHexString(nativeId)
+                        : Integer.toString(nativeId);
+                throw new IllegalStateException("Donor " + source
+                        + " character " + characterCode
+                        + " is missing required animation " + required
+                        + " at native ID " + nativeIdText);
+            }
+        }
     }
 
     @Override

@@ -225,6 +225,16 @@ public interface ZoneFeatureProvider {
     }
 
     /**
+     * World-X distance subtracted from the camera on this frame while a persistent
+     * foreground nametable ring is active. A non-zero value tells the renderer that
+     * a large backwards camera delta is an intentional level-repeat wrap, not a
+     * rewind seek or teleport, so the VDP-equivalent ring contents must be retained.
+     */
+    default int foregroundWorldWrapOffset() {
+        return 0;
+    }
+
+    /**
      * Whether this zone should select a full-width background tilemap window
      * while still using a per-line scrolled background path.
      */

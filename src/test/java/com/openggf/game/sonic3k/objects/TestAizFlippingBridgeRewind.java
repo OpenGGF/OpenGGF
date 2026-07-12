@@ -109,6 +109,21 @@ class TestAizFlippingBridgeRewind {
                 "AizFlippingBridgeObjectInstance must not keep an explicit S3K dynamic codec");
     }
 
+    @Test
+    void flippingBridgeReservesItsNativeMultispriteChildSlot() {
+        Harness harness = Harness.create();
+        ObjectManager objectManager = harness.objectManager();
+        AizFlippingBridgeObjectInstance bridge = objectManager.createDynamicObject(
+                () -> new AizFlippingBridgeObjectInstance(FLIPPED_SHALLOW_SPAWN));
+
+        bridge.update(0, null);
+
+        assertEquals(2, objectManager.getAllocatedSlotCount(),
+                "parent plus loc_2AA78 must both occupy the native SST");
+        assertFalse(objectManager.reserveDynamicSlot(bridge.getSlotIndex() + 1),
+                "AllocateObjectAfterCurrent must reserve the first free slot after the bridge");
+    }
+
     private record Harness(ObjectManager objectManager) {
         static Harness create() {
             ObjectManager[] holder = new ObjectManager[1];

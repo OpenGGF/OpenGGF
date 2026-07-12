@@ -2,6 +2,8 @@ package com.openggf.game.rewind;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -155,5 +157,85 @@ class TestRewindRegistry {
                 "gamerng should be restored after reconstruction-time RNG side effects");
         assertEquals(7, callbackSaw.get(),
                 "post-restore callbacks must observe delayed gamerng restore");
+    }
+
+    @Test
+    void consecutiveCapturesShareLayoutButOwnSeparateValueStorage() {
+        RewindRegistry reg = new RewindRegistry();
+        AtomicInteger state = new AtomicInteger(1);
+        reg.register(intSnap("state", state));
+
+        CompositeSnapshot first = reg.capture();
+        state.set(2);
+        CompositeSnapshot second = reg.capture();
+
+        assertSame(first.layout(), second.layout());
+        assertFalse(first.sharesValueStorageWith(second));
+        assertEquals(1, first.get("state"));
+        assertEquals(2, second.get("state"));
+    }
+
+    @Test
+    void olderSnapshotResetsSubsystemRegisteredAfterCapture() {
+        RewindRegistry reg = new RewindRegistry();
+        AtomicInteger original = new AtomicInteger(1);
+        AtomicInteger late = new AtomicInteger(2);
+        reg.register(intSnap("original", original));
+        CompositeSnapshot beforeRegistration = reg.capture();
+
+        reg.register(resettableIntSnap("late", late, -1));
+        original.set(99);
+        late.set(99);
+        reg.restore(beforeRegistration);
+
+        assertEquals(1, original.get());
+        assertEquals(-1, late.get());
+    }
+
+    @Test
+    void snapshotCapturedBeforeAdapterReplacementRestoresByKey() {
+        RewindRegistry reg = new RewindRegistry();
+        AtomicInteger oldState = new AtomicInteger(7);
+        reg.register(intSnap("state", oldState));
+        CompositeSnapshot beforeReplacement = reg.capture();
+
+        reg.deregister("state");
+        AtomicInteger replacementState = new AtomicInteger(99);
+        reg.register(intSnap("state", replacementState));
+        CompositeSnapshot afterReplacement = reg.capture();
+
+        assertNotSame(beforeReplacement.layout(), afterReplacement.layout());
+        reg.restore(beforeReplacement);
+        assertEquals(7, replacementState.get());
+    }
+
+    @Test
+    void crossLayoutRestoreSkipsUnknownAndResetsMissingGameRngLastBeforeCallbacks() {
+        RewindRegistry reg = new RewindRegistry();
+        List<String> events = new ArrayList<>();
+        reg.register(new RewindSnapshottable<Integer>() {
+            @Override public String key() { return "normal"; }
+            @Override public Integer capture() { return 1; }
+            @Override public void restore(Integer snapshot) { events.add("normal-restore"); }
+        });
+        reg.register(new RewindSnapshottable<Integer>() {
+            @Override public String key() { return "removed"; }
+            @Override public Integer capture() { return 2; }
+            @Override public void restore(Integer snapshot) { events.add("removed-restore"); }
+        });
+        CompositeSnapshot olderSnapshot = reg.capture();
+
+        reg.deregister("removed");
+        reg.register(new RewindSnapshottable<Integer>() {
+            @Override public String key() { return "gamerng"; }
+            @Override public Integer capture() { return 7; }
+            @Override public void restore(Integer snapshot) { events.add("rng-restore"); }
+            @Override public void resetForMissingSnapshot() { events.add("rng-reset"); }
+        });
+        reg.registerPostRestoreCallback("observer", () -> events.add("callback"));
+
+        reg.restore(olderSnapshot);
+
+        assertEquals(List.of("normal-restore", "rng-reset", "callback"), events);
     }
 }

@@ -42,13 +42,15 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private static final int PLAYER_STOP_X_OFFSET = 0x1F8;
     // ROM: loc_695A8 — transition when y_pos >= _unkFA86 + $1E6
     private static final int NEXT_LEVEL_Y_OFFSET = 0x1E6;
-    // Obj_LevelResults clears _unkFAA8 shortly after End_of_level_flag becomes
-    // visible to this engine's collapsed object pass. Hold the ending pose for
-    // that ROM wait before loc_694D4 restores control and loc_69526 forces right.
-    private static final int POST_RESULTS_CONTROL_RESTORE_DELAY = 10;
+    // Restore_PlayerControl2 reaches a still-riding native P2 through the later
+    // solid-support path before loc_69526 can expose P1's forced walk. Preserve
+    // those two extra object entries from the live Status_OnObj state.
+    private static final int POST_RESULTS_CONTROL_RESTORE_DELAY = 4;
+    private static final int RIDING_SIDEKICK_CONTROL_RESTORE_DELAY = 6;
     private static final short POST_RESULTS_INITIAL_WALK_SPEED = 0x000C;
     private static final int POST_BUTTON_CAMERA_MAX_Y_TARGET = 0x1000;
     private static final int INC_LEVEL_END_Y_GRADUAL_STEP = 0x8000;
+    private static final int AIRBORNE_CAMERA_TARGET_OFFSET = 0x80;
 
     // Non-final so the generic rewind field capturer reapplies them after a
     // generic recreate. The captured spawn x/y make these correct before reapply.
@@ -60,9 +62,12 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private boolean buttonHandled;
     private boolean transitionRequested;
     private boolean pendingLookUpInputAfterStop;
+    private boolean pendingButtonControlRelease;
     private boolean postButtonMaxYReleaseActive;
     private int postButtonMaxYAccumulator;
     private int postResultsControlRestoreDelay = -1;
+    private boolean postResultsMaxXActive;
+    private int postResultsMaxXAccumulator;
 
     public Aiz2BossEndSequenceController(int arenaMaxX, int arenaBaseY) {
         super(new ObjectSpawn(arenaMaxX, arenaBaseY, Sonic3kObjectIds.EGG_CAPSULE, 0, 0, false, 0),
@@ -108,7 +113,9 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         }
 
         if (postResultsControlRestoreDelay < 0) {
-            postResultsControlRestoreDelay = POST_RESULTS_CONTROL_RESTORE_DELAY;
+            postResultsControlRestoreDelay = hasRidingSidekick(player)
+                    ? RIDING_SIDEKICK_CONTROL_RESTORE_DELAY
+                    : POST_RESULTS_CONTROL_RESTORE_DELAY;
         }
         if (postResultsControlRestoreDelay > 0) {
             postResultsControlRestoreDelay--;
@@ -117,14 +124,26 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         }
 
         // Start post-capsule sequence (music + walk right)
-        if (!postCapsuleSequenceStarted) {
+        boolean startedPostCapsuleSequenceNow = !postCapsuleSequenceStarted;
+        if (startedPostCapsuleSequenceNow) {
             startPostCapsuleSequence(player);
         }
+        if (!startedPostCapsuleSequenceNow) {
+            updatePostResultsCameraMaxX();
+        }
+        clearPositiveLockedSidekickLogicalWord(player);
         if (pendingLookUpInputAfterStop) {
             pendingLookUpInputAfterStop = false;
             player.setForceInputRight(false);
             player.clearForcedInputMask();
             player.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
+        }
+
+        if (pendingButtonControlRelease) {
+            pendingButtonControlRelease = false;
+            player.clearForcedInputMask();
+            player.setForceInputRight(false);
+            player.setControlLocked(false);
         }
 
         // Phase: Walk right until reaching stop coordinate
@@ -158,24 +177,40 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             // Bridge collapses — release all player locks so the bridge's
             // ejectStandingPlayers() can set the hurt-fall state and the
             // animation system doesn't overwrite it.
-            player.clearForcedInputMask();
-            player.setForceInputRight(false);
-            player.setControlLocked(false);
+            // The button occupies an earlier SST slot than this controller. It
+            // clears Ctrl_1_locked after the player slot has already consumed
+            // the controller's final UP word; loc_69588 observes that clear and
+            // advances without writing another word. Preserve that last logical
+            // input until the next engine player pass instead of letting the
+            // shared cutscene latch erase it in this collapsed object update.
+            pendingButtonControlRelease = true;
             services().camera().setMaxYTarget((short) POST_BUTTON_CAMERA_MAX_Y_TARGET);
             postButtonMaxYReleaseActive = true;
             postButtonMaxYAccumulator = 0;
         }
-        updatePostButtonCameraMaxYRelease();
-
         // Phase: Wait for player to fall past Y threshold, then transition
         if (buttonHandled && !transitionRequested) {
             int transitionY = arenaBaseY + NEXT_LEVEL_Y_OFFSET;
             if ((player.getCentreY() & 0xFFFF) >= transitionY) {
                 transitionRequested = true;
+                // StartNewLevel is entered from this later object slot after
+                // the player moved, but before the normal DeformLayers camera
+                // pass. Preserve the camera target derived from the position
+                // visible at the start of player physics; the transition load
+                // will clear the temporary freeze with the fresh level state.
+                Camera camera = services().camera();
+                camera.setY((short) ((player.getPrePhysicsCentreY() & 0xFFFF)
+                        - AIRBORNE_CAMERA_TARGET_OFFSET));
+                camera.setFrozen(true);
                 services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
                 services().requestZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0, true);
+                // StartNewLevel stops the current object pass. The separately
+                // allocated Obj_IncLevEndYGradual child is in a later slot, so
+                // it cannot add its accumulator high word on the handoff frame.
+                return;
             }
         }
+        updatePostButtonCameraMaxYRelease();
     }
 
     private void initialize(AbstractPlayableSprite player) {
@@ -193,18 +228,47 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        holdSidekickEndingPose(player);
+    }
+
+    private boolean hasRidingSidekick(AbstractPlayableSprite player) {
+        for (PlayableEntity sidekick : services().playerQuery().sidekicks()) {
+            if (sidekick != player && sidekick instanceof AbstractPlayableSprite sprite
+                    && sprite.isOnObject()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void startPostCapsuleSequence(AbstractPlayableSprite player) {
         postCapsuleSequenceStarted = true;
-        services().camera().setMaxXTarget((short) (arenaMaxX + MAX_X_TARGET_OFFSET));
+        postResultsMaxXActive = true;
+        // Child6_IncLevX has already reached the last fractional step before
+        // the controller exposes forced-right movement.
+        postResultsMaxXAccumulator = 0xC000;
         ObjectControlState.none().applyTo(player);
         player.setControlLocked(true);
         forceRightLogicalInput(player);
         applyFirstForcedRightWalkTick(player);
         restoreSidekickPostResultsControl(player);
         setSidekickControlLocked(player, true);
+    }
+
+    private void updatePostResultsCameraMaxX() {
+        if (!postResultsMaxXActive) {
+            return;
+        }
+        Camera camera = services().camera();
+        postResultsMaxXAccumulator += 0x4000;
+        int delta = (postResultsMaxXAccumulator >>> 16) & 0xFFFF;
+        int target = arenaMaxX + MAX_X_TARGET_OFFSET;
+        int next = (camera.getMaxX() & 0xFFFF) + delta;
+        if (next >= target) {
+            next = target;
+            postResultsMaxXActive = false;
+        }
+        camera.setMaxX((short) next);
+        camera.setMaxXTarget((short) next);
     }
 
     private void forceRightLogicalInput(AbstractPlayableSprite player) {
@@ -272,7 +336,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         }
     }
 
-    private void holdSidekickEndingPose(AbstractPlayableSprite player) {
+    private void clearPositiveLockedSidekickLogicalWord(AbstractPlayableSprite player) {
         ObjectPlayerQuery query = new ObjectPlayerQuery(
                 () -> player,
                 () -> services().playerQuery().sidekicks());
@@ -281,12 +345,12 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             if (sidekick == player) {
                 continue;
             }
-            if (sidekick instanceof AbstractPlayableSprite sprite) {
-                sprite.setControlLocked(true);
-                sprite.setXSpeed((short) 0);
-                sprite.setYSpeed((short) 0);
-                sprite.setGSpeed((short) 0);
-                ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+            if (sidekick instanceof AbstractPlayableSprite sprite
+                    && sprite.getCpuController() != null) {
+                // ROM loc_863C0 runs after Player_2 and uses a positive
+                // Ctrl_2_locked byte: CPU control still executes, then this
+                // object clears Ctrl_2_logical before the frame is observed.
+                sprite.getCpuController().clearController2LogicalLatch();
             }
         }
     }

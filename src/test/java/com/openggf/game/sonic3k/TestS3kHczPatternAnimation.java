@@ -55,6 +55,7 @@ public class TestS3kHczPatternAnimation {
                 .withZoneAndAct(1, 0)
                 .build();
         assertGraphChannelsInstalled("s3k.hcz.script.0", "s3k.hcz1.waterline");
+        assertGraphRegistrationOrder("s3k.hcz1.waterline");
         assertHcz1GraphDestinationMetadata();
         assertAnimatedTileChanges(0x30C, 12);
         assertHcz1CustomPathChangesDestinationTiles();
@@ -66,6 +67,7 @@ public class TestS3kHczPatternAnimation {
                 .withZoneAndAct(1, 1)
                 .build();
         assertGraphChannelsInstalled("s3k.hcz.script.0", "s3k.hcz2.strips");
+        assertGraphRegistrationOrder("s3k.hcz2.strips");
         assertHcz2GraphDestinationMetadata();
         assertAnimatedTileChanges(0x25E, 20);
         assertHcz2CustomPathChangesDestinationTiles();
@@ -127,6 +129,17 @@ public class TestS3kHczPatternAnimation {
             assertTrue(channelIds.contains(expectedChannelId),
                     "Expected HCZ graph channel " + expectedChannelId + " but found " + channelIds);
         }
+    }
+
+    private void assertGraphRegistrationOrder(String customChannelId) {
+        List<String> expected = new java.util.ArrayList<>();
+        for (int i = 0; i < loadScripts().size(); i++) {
+            expected.add("s3k.hcz.script." + i);
+        }
+        expected.add(customChannelId);
+        assertEquals(expected, GameServices.animatedTileChannelGraph().channels().stream()
+                        .map(AnimatedTileChannel::channelId).toList(),
+                "HCZ graph must retain script-first registration order");
     }
 
     private void assertHcz1GraphDestinationMetadata() {
@@ -338,5 +351,4 @@ public class TestS3kHczPatternAnimation {
         return data;
     }
 }
-
 

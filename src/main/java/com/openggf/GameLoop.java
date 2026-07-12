@@ -67,7 +67,6 @@ import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
-import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.SessionManager;
 import com.openggf.integration.presence.PresenceFormatter;
 import com.openggf.integration.presence.PresenceManager;
@@ -176,7 +175,8 @@ public class GameLoop {
     private Supplier<LegalDisclaimerScreen> legalDisclaimerSupplier;
     private Runnable legalDisclaimerExitHandler;
     private Consumer<com.openggf.game.dataselect.DataSelectAction> dataSelectActionHandler;
-    private Supplier<CharacterAvailability> characterAvailabilitySupplier;
+    private GameplayTeamBootstrapContext gameplayTeamBootstrapContext =
+            GameplayTeamBootstrapContext.registryOnly();
     private final UserRecordingSessionLauncher userRecordingSessionLauncher;
     private final UserRecordingRuntimeControls userRecordingControls;
     private final TimeAttackRuntime timeAttackRuntime;
@@ -525,10 +525,8 @@ public class GameLoop {
         this.masterTitleScreenSupplier = masterTitleScreenSupplier;
     }
 
-    void setCharacterAvailabilitySupplier(
-            Supplier<CharacterAvailability> characterAvailabilitySupplier) {
-        this.characterAvailabilitySupplier = Objects.requireNonNull(
-                characterAvailabilitySupplier, "characterAvailabilitySupplier");
+    void setCharacterAvailabilitySupplier(Supplier<CharacterAvailability> supplier) {
+        gameplayTeamBootstrapContext = new GameplayTeamBootstrapContext(supplier);
     }
 
     public void setUserRecordingPlaybackStarter(UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter) {
@@ -3445,26 +3443,9 @@ public class GameLoop {
             audioManager.setRom(rom);
             resetModuleScopedProviders();
 
-            GameplayModeContext freshGameplayMode = SessionManager.openGameplaySession(
-                    rootModule, module, null);
-            GameplaySessionFactory.attachManagers(freshGameplayMode, engineServices);
-            setGameplayMode(freshGameplayMode);
-
-            var team = ActiveGameplayTeamResolver.resolvePlayerCharacter(configService);
-            PlayableCharacterRegistry pinnedCharacters = freshGameplayMode.getWorldSession()
-                    .getPlayableCharacterRegistry();
-            CharacterAvailability characterAvailability = characterAvailabilitySupplier == null
-                    ? CharacterAvailability.fromRegistry(pinnedCharacters)
-                    : Objects.requireNonNull(characterAvailabilitySupplier.get(),
-                            "characterAvailability");
-            var bootstrappedTeam = com.openggf.game.session.GameplayTeamBootstrap.registerActiveTeam(
-                    module, pinnedCharacters, characterAvailability, spriteManager, configService,
-                    com.openggf.game.session.GameplayTeamBootstrap.DEFAULT_MAIN_X,
-                    com.openggf.game.session.GameplayTeamBootstrap.DEFAULT_MAIN_Y,
-                    ModCharacterFallbackFindings.sink(ModSubsystem.current().runtimeFindings()));
-            camera.setFocusedSprite(bootstrappedTeam.mainSprite());
-            camera.updatePosition(true);
-            levelManager.loadZoneAndAct(context.zone(), context.act());
+            GameplayModeContext freshGameplayMode = gameplayTeamBootstrapContext.openAndLoad(
+                    rootModule, module, engineServices, configService, context.zone(), context.act(),
+                    this::setGameplayMode);
 
             GameMode oldMode = changeGameModeForBoundary(GameMode.LEVEL);
             if (gameModeChangeListener != null) {
@@ -3472,7 +3453,7 @@ public class GameLoop {
             }
             LOGGER.info("Restarted recording launch context: " + context.gameId()
                     + " zone " + context.zone() + " act " + context.act()
-                    + " team " + team);
+                    + " team " + context.mainCharacter());
         } catch (IOException e) {
             throw new RuntimeException("Failed to restart from recording launch context", e);
         }

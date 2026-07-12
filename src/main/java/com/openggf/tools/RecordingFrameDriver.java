@@ -239,6 +239,10 @@ public final class RecordingFrameDriver {
 
         previousDriverSnapshot = RecordedInputSnapshots.fromBk2(frameInput, previousBk2Input(currentBk2Index));
         currentBk2Index++;
+        var levelEvents = GameServices.module().getLevelEventProvider();
+        if (levelEvents != null) {
+            levelEvents.advanceVblankOnlyState();
+        }
         levelManager.getObjectManager().advanceVblaCounter();
         return mask;
     }

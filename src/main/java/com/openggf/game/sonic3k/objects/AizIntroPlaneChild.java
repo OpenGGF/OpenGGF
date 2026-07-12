@@ -53,10 +53,6 @@ public class AizIntroPlaneChild extends AbstractObjectInstance implements Rewind
     private AizIntroEmeraldGlowChild glowChild1;
     private AizIntroEmeraldGlowChild glowChild2;
 
-    // Booster flame children
-    private AizIntroBoosterChild booster1;
-    private AizIntroBoosterChild booster2;
-
     public AizIntroPlaneChild(ObjectSpawn spawn, AizPlaneIntroInstance parent) {
         super(spawn, "AIZIntroPlane");
         this.parent = parent;
@@ -64,8 +60,6 @@ public class AizIntroPlaneChild extends AbstractObjectInstance implements Rewind
         this.currentY = spawn.y();
         this.ySub = 0;
 
-        // Spawn booster flame children
-        spawnBoosters();
     }
 
     @Override
@@ -125,37 +119,6 @@ public class AizIntroPlaneChild extends AbstractObjectInstance implements Rewind
             currentY = parent.getY() + PARENT_Y_OFFSET;
         }
 
-        // Update booster flame children
-        if (booster1 != null) {
-            booster1.update(frameCounter, player);
-        }
-        if (booster2 != null) {
-            booster2.update(frameCounter, player);
-        }
-
-        // Update emerald glow children
-        if (glowChild1 != null) {
-            glowChild1.update(frameCounter, player);
-        }
-        if (glowChild2 != null) {
-            glowChild2.update(frameCounter, player);
-        }
-    }
-
-    /**
-     * Spawns the two booster flame sub-children.
-     * ROM: loc_45C00 booster at (+0x38,+4), loc_45C3E booster at (+0x18,+0x18).
-     */
-    private void spawnBoosters() {
-        // Booster 1: animation sequence from byte_45E6B (timer=0, frames: 1,2,3,4,3,2)
-        // ROM Animate_RawNoSST skips data[1] on first iter, then AnimateRaw_Restart
-        // sets mapping_frame = data[1] = 1 on subsequent loops.
-        booster1 = new AizIntroBoosterChild(this, 0x38, 4,
-                new int[]{1, 2, 3, 4, 3, 2});
-
-        // Booster 2: animation sequence {5, 6} (byte_45E73)
-        booster2 = new AizIntroBoosterChild(this, 0x18, 0x18,
-                new int[]{5, 6});
     }
 
     /**
@@ -205,17 +168,7 @@ public class AizIntroPlaneChild extends AbstractObjectInstance implements Rewind
         }
         renderer.drawFrameIndex(mappingFrame, renderX, renderY, false, false);
 
-        // Render booster flames
-        if (booster1 != null) {
-            booster1.appendRenderCommands(commands, camera, services());
-        }
-        if (booster2 != null) {
-            booster2.appendRenderCommands(commands, camera, services());
-        }
-
-        // Emerald glow children are NOT rendered here — their positions
-        // overlap Tails' face on the plane sprite and their partially-
-        // transparent pixels bleed through.  The ROM's glow effect uses
-        // VDP link chain ordering that suppresses this; for now, omit them.
+        // The two animated pieces render from their own SST objects after this
+        // parent, matching CreateChild1_Normal allocation/render order.
     }
 }

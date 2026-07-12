@@ -15,9 +15,11 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.rules.GameRules;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.camera.Camera;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.SpritePriorityLayerHook;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -289,21 +291,8 @@ public class SpriteManager {
 	}
 
 	private boolean renderBucketInputsChanged() {
-		// Early-out for the common membership-change case; the per-index
-		// identity comparison below would also catch it.
-		if (sprites.size() != bucketSnapshotCount) {
-			return true;
-		}
-		int position = 0;
-		for (Sprite sprite : getAllSprites()) {
-			if (position >= bucketSnapshotCount
-					|| bucketSnapshotSprites[position] != sprite
-					|| bucketSnapshotKeys[position] != renderBucketKey(sprite)) {
-				return true;
-			}
-			position++;
-		}
-		return position != bucketSnapshotCount;
+		return SpriteRenderBucketInputGate.inputsChanged(
+				sprites, bucketSnapshotSprites, bucketSnapshotKeys, bucketSnapshotCount);
 	}
 
 	private void captureRenderBucketSnapshot() {
@@ -316,7 +305,7 @@ public class SpriteManager {
 		int position = 0;
 		for (Sprite sprite : getAllSprites()) {
 			bucketSnapshotSprites[position] = sprite;
-			bucketSnapshotKeys[position] = renderBucketKey(sprite);
+			bucketSnapshotKeys[position] = SpriteRenderBucketInputGate.inputKey(sprite);
 			position++;
 		}
 		// Release stale references beyond the live range so removed sprites
@@ -325,20 +314,6 @@ public class SpriteManager {
 			bucketSnapshotSprites[i] = null;
 		}
 		bucketSnapshotCount = position;
-	}
-
-	// Packed-key layout: bit 0 = highPriority, bit 1 = cpuControlled, bits 2+
-	// = bucket index. The bucket index is the top field, so it cannot bleed
-	// into another field; -1 is reserved as the non-playable sentinel (a real
-	// key is always non-negative because the bucket index is clamped >= 0).
-	private static int renderBucketKey(Sprite sprite) {
-		if (!(sprite instanceof AbstractPlayableSprite playable)) {
-			return -1;
-		}
-		int bucket = RenderPriority.clamp(playable.getPriorityBucket()) - RenderPriority.MIN;
-		return (bucket << 2)
-				| (playable.isHighPriority() ? 1 : 0)
-				| (playable.isCpuControlled() ? 2 : 0);
 	}
 
 	public Collection<Sprite> getAllSprites() {
@@ -387,6 +362,33 @@ public class SpriteManager {
 	 */
 	public int getFrameCounter() {
 		return frameCounter;
+	}
+
+	/** Returns the active session/configured main playable participant. */
+	public AbstractPlayableSprite getMainPlayable() {
+		String mainCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
+		Sprite namedMain = sprites.get(mainCode);
+		if (namedMain instanceof AbstractPlayableSprite playable && !playable.isCpuControlled()) {
+			return playable;
+		}
+
+		// Compatibility for synthetic tests/tools whose sole playable uses a
+		// non-character code. A second human makes the fallback intentionally
+		// unresolved rather than dependent on HashMap iteration order.
+		AbstractPlayableSprite main = null;
+		for (Sprite sprite : sprites.values()) {
+			if (!(sprite instanceof AbstractPlayableSprite playable) || playable.isCpuControlled()) {
+				continue;
+			}
+			if (main != null && main != playable) {
+				throw new IllegalStateException(
+						"Cannot resolve main playable: configured/session participant '"
+								+ mainCode + "' is absent and multiple non-CPU fallback candidates exist ('"
+								+ main.getCode() + "', '" + playable.getCode() + "')");
+			}
+			main = playable;
+		}
+		return main;
 	}
 
 	/**
@@ -1039,6 +1041,12 @@ public class SpriteManager {
 		void beforeDraw(Sprite sprite, boolean highPriority);
 	}
 
+	/** Resolves live suppression/priority inputs and prepares all buckets for one render pass. */
+	public void prepareRenderBucketsForPass() {
+		refreshRenderBucketsIfChanged();
+		bucketSprites(resolveCpuSidekickSuppressed());
+	}
+
 	/**
 	 * Draw all sprites in a single unified bucket with per-instance priority.
 	 * Priority is now handled per-instance in the shader, so no batch flushing
@@ -1048,61 +1056,47 @@ public class SpriteManager {
 	 * @param gfx    The graphics manager to use for priority state
 	 */
 	public void drawUnifiedBucketWithPriority(int bucket, GraphicsManager gfx) {
-		drawUnifiedBucketWithPriority(bucket, gfx, null, null);
+		prepareRenderBucketsForPass();
+		drawPreparedUnifiedBucketWithPriority(bucket, gfx, null);
 	}
 
 	/**
-	 * Draw all sprites in a single unified bucket with hooks immediately before each
-	 * tile-priority group. The hooks are used by render-only overlays that need the
-	 * same bucket/priority placement as playable sprites while staying behind them.
+	 * Draws one bucket from the most recent {@link #prepareRenderBucketsForPass()} snapshot.
+	 * Callers must prepare once immediately before their bucket loop and must not mutate
+	 * sprite membership or priority until that loop completes.
 	 */
-	public void drawUnifiedBucketWithPriority(int bucket, GraphicsManager gfx,
-											 Runnable beforeLowPriority,
-											 Runnable beforeHighPriority) {
+	public void drawPreparedUnifiedBucketWithPriority(int bucket, GraphicsManager gfx,
+			SpritePriorityLayerHook hook) {
 		boolean wrapEnabled = enableVerticalWrapIfNeeded();
 		try {
-			bucketSprites();
 			int idx = RenderPriority.clamp(bucket) - RenderPriority.MIN;
-
-			// The BatchedPatternRenderer uses a single global priority uniform —
-			// flush and restart the batch at each LOW→HIGH transition so each group
-			// gets its own batch with the correct priority.
 			if (!lowPriorityBuckets[idx].isEmpty()) {
 				gfx.flushPatternBatch();
 				gfx.setCurrentSpriteHighPriority(false);
 				gfx.beginPatternBatch();
-				if (beforeLowPriority != null) {
-					beforeLowPriority.run();
+				if (hook != null) {
+					hook.beforePriorityLayer(bucket, false);
 					gfx.setCurrentSpriteHighPriority(false);
 					gfx.beginPatternBatch();
 				}
-				for (Sprite sprite : lowPriorityBuckets[idx]) {
-					sprite.draw();
-				}
+				for (Sprite sprite : lowPriorityBuckets[idx]) sprite.draw();
 			}
-
 			if (!highPriorityBuckets[idx].isEmpty()) {
 				gfx.flushPatternBatch();
 				gfx.setCurrentSpriteHighPriority(true);
 				gfx.beginPatternBatch();
-				if (beforeHighPriority != null) {
-					beforeHighPriority.run();
+				if (hook != null) {
+					hook.beforePriorityLayer(bucket, true);
 					gfx.setCurrentSpriteHighPriority(true);
 					gfx.beginPatternBatch();
 				}
-				for (Sprite sprite : highPriorityBuckets[idx]) {
-					sprite.draw();
-				}
+				for (Sprite sprite : highPriorityBuckets[idx]) sprite.draw();
 			}
-
-			// Handle non-playable sprites at bucket MIN
 			if (bucket == RenderPriority.MIN && !nonPlayableSprites.isEmpty()) {
 				gfx.flushPatternBatch();
 				gfx.setCurrentSpriteHighPriority(false);
 				gfx.beginPatternBatch();
-				for (Sprite sprite : nonPlayableSprites) {
-					sprite.draw();
-				}
+				for (Sprite sprite : nonPlayableSprites) sprite.draw();
 			}
 		} finally {
 			if (wrapEnabled) disableVerticalWrap();
@@ -1142,7 +1136,10 @@ public class SpriteManager {
 	}
 
 	private void bucketSprites() {
-		boolean currentSuppressed = isCpuSidekickSuppressed();
+		bucketSprites(resolveCpuSidekickSuppressed());
+	}
+
+	private void bucketSprites(boolean currentSuppressed) {
 		if (currentSuppressed != lastSidekickSuppressed) {
 			bucketsDirty = true;
 			lastSidekickSuppressed = currentSuppressed;
@@ -1171,7 +1168,7 @@ public class SpriteManager {
 			}
 		}
 		for (Sprite sprite : sprites) {
-			if (isSuppressedSidekickSprite(sprite)) {
+			if (isSuppressedSidekickSprite(sprite, currentSuppressed)) {
 				continue;
 			}
 			if (sprite instanceof AbstractPlayableSprite playable) {
@@ -1225,7 +1222,7 @@ public class SpriteManager {
 		this.playbackInputSuppressed = suppressed;
 	}
 
-	private boolean isCpuSidekickSuppressed() {
+	protected boolean resolveCpuSidekickSuppressed() {
 		LevelManager lm = GameServices.levelOrNull();
 		GameModule module = null;
 		var session = com.openggf.game.session.SessionManager.getCurrentWorldSession();
@@ -1244,8 +1241,16 @@ public class SpriteManager {
 		return false;
 	}
 
+	private boolean isCpuSidekickSuppressed() {
+		return resolveCpuSidekickSuppressed();
+	}
+
 	private boolean isSuppressedSidekickSprite(Sprite sprite) {
-		return isCpuSidekickSuppressed()
+		return isSuppressedSidekickSprite(sprite, resolveCpuSidekickSuppressed());
+	}
+
+	private boolean isSuppressedSidekickSprite(Sprite sprite, boolean suppressed) {
+		return suppressed
 				&& sprite instanceof AbstractPlayableSprite playable
 				&& playable.isCpuControlled();
 	}
@@ -1422,6 +1427,21 @@ public class SpriteManager {
 		SidekickCpuController cpuController = playable.getCpuController();
 		if (cpuController != null) {
 			cpuController.finishCarryAfterCarrierMovement();
+		}
+		if (cpuController == null
+				|| (cpuController.getState() != SidekickCpuController.State.CARRYING
+				&& cpuController.getState() != SidekickCpuController.State.CARRY_INIT)) {
+			SpriteManager sprites = playable.currentSpriteManagerOrNull();
+			AbstractPlayableSprite main = sprites != null ? sprites.getMainPlayable() : null;
+			int mainCarryInput = 0;
+			if (main != null) {
+				if (main.isUpPressed()) mainCarryInput |= AbstractPlayableSprite.INPUT_UP;
+				if (main.isDownPressed()) mainCarryInput |= AbstractPlayableSprite.INPUT_DOWN;
+				if (main.isLeftPressed()) mainCarryInput |= AbstractPlayableSprite.INPUT_LEFT;
+				if (main.isRightPressed()) mainCarryInput |= AbstractPlayableSprite.INPUT_RIGHT;
+				if (main.isJumpJustPressed()) mainCarryInput |= AbstractPlayableSprite.INPUT_JUMP;
+			}
+			playable.getTailsCarryController().updateAfterTailsCollision(mainCarryInput);
 		}
 		playable.recordFollowerHistoryForTick();
 		// ROM Obj01_Control runs Sonic_Display before Sonic_Animate and

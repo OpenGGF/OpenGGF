@@ -97,8 +97,6 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     private int defeatHandoffTimer = -1;
     private boolean levelEndUnlockStarted;
     private boolean levelEndSizeChangeStarted;
-    private int levelEndMaxXAccumulator;
-    private int levelEndMaxYAccumulator;
 
     /** Stagger explosion controller for boss defeat (ROM: Child6_CreateBossExplosion subtype 0). */
     private S3kBossExplosionController defeatExplosionController;
@@ -141,8 +139,6 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         defeatHandoffTimer = -1;
         levelEndUnlockStarted = false;
         levelEndSizeChangeStarted = false;
-        levelEndMaxXAccumulator = 0;
-        levelEndMaxYAccumulator = 0;
         defeatExplosionController = null;
     }
 
@@ -168,8 +164,17 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
                 base.shieldReactionFlags(),
                 base.enablesPostSpecialTouchAirborneSideVelocityPreservation(),
                 base.attackBouncePolicy(),
-                TouchActorContextPolicy.MAIN_ONLY,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
                 base.stopAfterFirstOverlapPolicy());
+    }
+
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        // Draw_And_Touch_Sprite publishes this parent after its movement
+        // routine. Collision_response_list keeps the object-RAM pointer, so
+        // the following player slot observes that live post-motion position
+        // (sonic3k.asm:137222-137229,137262-137271,20656-20710).
+        return true;
     }
 
     @Override
@@ -376,8 +381,6 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     private void updateLevelEndCameraUnlock(int triggerX) {
         var camera = services().camera();
         var level = services().currentLevel();
-        int storedMax = level != null ? level.getMaxX() : triggerX;
-
         if (!levelEndSizeChangeStarted) {
             levelEndSizeChangeStarted = true;
             // ROM Change_Act2Sizes copies Act 2 size words into the stored
@@ -385,66 +388,20 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
             // gradual level-size objects (sonic3k.asm:180575-180609). Keep
             // X/Y under the ROM gradual objects below; use the engine's target
             // max-Y path for the copied Camera_target_max_Y_pos word. This
-            // proxy starts from the first frame where the ROM-created children
-            // are already eligible to run, so seed their 16.16 accumulators by
-            // one creation/update tick.
-            levelEndMaxXAccumulator = 0x4000;
-            levelEndMaxYAccumulator = 0x8000;
             if (level != null) {
                 camera.setMinY((short) level.getMinY());
                 camera.setMaxYTarget((short) level.getMaxY());
             }
+            spawnDynamicObject(new AizAct2CameraResizeController(
+                    AizAct2CameraResizeController.MAX_X));
+            spawnDynamicObject(new AizAct2CameraResizeController(
+                    AizAct2CameraResizeController.MAX_Y));
+            // Obj_EndSignControlDoStart calls Change_Act2Sizes and then
+            // Delete_Current_Sprite. The two workers above continue from
+            // their own slots (sonic3k.asm:180415-180419,180575-180609).
+            setDestroyed(true);
         }
-
-        // ROM Obj_IncLevEndXGradual (sonic3k.asm:178154-178169) widens
-        // Camera_max_X_pos with a 16.16 accumulator, adding $4000 per frame.
-        // The first three updates add zero integer pixels, so the arena remains
-        // locked on the first End_of_level_flag frame.
         camera.setMinX((short) triggerX);
-        levelEndMaxXAccumulator += 0x4000;
-        int delta = levelEndMaxXAccumulator >>> 16;
-        int nextMax = (camera.getMaxX() & 0xFFFF) + delta;
-        if ((camera.getMaxX() & 0xFFFF) > storedMax) {
-            // ROM loc_84A6A stores Camera_stored_max_X_pos, then deletes the
-            // gradual level-end object (docs/skdisasm/sonic3k.asm:178165-178169).
-            // If a later AIZ event has already widened the camera farther
-            // (Obj_AIZ2BossSmall writes $6000 at sonic3k.asm:105602), this
-            // stale controller must not clamp it back to the old stored max.
-            setDestroyed(true);
-            return;
-        }
-        if (nextMax >= storedMax) {
-            camera.setMaxX((short) storedMax);
-            setDestroyed(true);
-        } else {
-            camera.setMaxX((short) nextMax);
-        }
-
-        int storedMaxY = level != null ? level.getMaxY() : (camera.getMaxYTarget() & 0xFFFF);
-        levelEndMaxYAccumulator += 0x8000;
-        int yDelta = levelEndMaxYAccumulator >>> 16;
-        var player = camera.getFocusedSprite();
-        boolean playerAirborne = player != null && player.getAir();
-        if (player != null && !playerAirborne) {
-            // ROM DeformBgLayer runs MoveCameraY before Do_ResizeEvents, so
-            // each grounded frame's +2 max-Y resize is a carry into the next
-            // camera frame. The engine's generic camera step eases max-Y before
-            // the camera move; carry this AIZ results proxy by that ROM
-            // post-camera resize tick once the title-exit jump has landed
-            // (sonic3k.asm:38313-38316,38761-38789,178210-178225).
-            yDelta += 2;
-        }
-        int nextMaxY = (camera.getMaxY() & 0xFFFF) + yDelta;
-        if (nextMaxY >= storedMaxY) {
-            camera.setMaxY((short) storedMaxY);
-        } else {
-            // ROM Obj_IncLevEndYGradual adds $8000 to its 16.16 accumulator and
-            // writes Camera_max_Y_pos until Camera_stored_max_Y_pos is reached
-            // (sonic3k.asm:178210-178225). Preserve the target word copied by
-            // Change_Act2Sizes after updating the current bound.
-            camera.setMaxY((short) nextMaxY);
-            camera.setMaxYTarget((short) storedMaxY);
-        }
     }
 
     private void lockArenaCamera(int triggerX) {
@@ -719,7 +676,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     }
 
     private void spawnBossComponent(java.util.function.Supplier<? extends AbstractBossChild> factory) {
-        AbstractBossChild child = spawnFreeChild(factory);
+        AbstractBossChild child = spawnChild(factory);
         childComponents.add(child);
     }
 
@@ -727,7 +684,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         for (int i = 0; i < BREATH_FLAME_X_OFFSETS.length; i++) {
             int flameIndex = i;
             // CreateChild1_Normal sets subtype = d2 (increments by 2): 0, 2, 4, 6
-            spawnFreeChild(() -> new AizMinibossFlameChild(
+            spawnChild(() -> new AizMinibossFlameChild(
                     this,
                     BREATH_FLAME_X_OFFSETS[flameIndex],
                     BREATH_FLAME_Y_OFFSETS[flameIndex],

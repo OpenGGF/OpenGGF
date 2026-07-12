@@ -74,7 +74,9 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         this.reverseVertical = (spawn.renderFlags() & 0x02) != 0;
         this.cutsceneOverride = cutsceneOverride;
         this.angle = reverseVertical ? 0x40 : -0x40;
-        this.settledAngle = reverseVertical ? 0x80 : 0;
+        // $38 starts at +/-$40 and $34 advances toward either $00 or $80.
+        // Which endpoint is reached depends on both status direction bits.
+        this.settledAngle = reverseVertical ^ xFlip ? 0x80 : 0;
         this.angleStep = xFlip ? -2 : 2;
         this.currentX = pivotX;
         this.currentY = pivotY + (reverseVertical ? DROP_DISTANCE : -DROP_DISTANCE);
@@ -82,8 +84,30 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     }
 
     public static AizDrawBridgeObjectInstance createCutsceneOverride() {
-        return new AizDrawBridgeObjectInstance(
-                new ObjectSpawn(0x4B48, 0x0218, 0x32, 0, 2, false, 0), true);
+        AizDrawBridgeObjectInstance bridge = new AizDrawBridgeObjectInstance(
+                new ObjectSpawn(0x4B48, 0x0218, 0x32, 0, 1, false, 0), true);
+        // This replacement stands in for the layout object that has already
+        // consumed _unkFAA3 and completed its rotation before loc_694AA creates
+        // the capsule. Preserve that live ROM routine state instead of replaying
+        // the drop from object init.
+        bridge.dropStarted = true;
+        bridge.settled = true;
+        bridge.settledAngleReached = true;
+        bridge.angle = bridge.settledAngle;
+        bridge.currentX = bridge.pivotX - DROP_DISTANCE;
+        bridge.currentY = bridge.pivotY;
+        bridge.updateBridgePieces();
+        return bridge;
+    }
+
+    public void beginCollapseFromEarlierButtonSlot() {
+        if (!settled || collapseStarted) {
+            return;
+        }
+        collapseStarted = true;
+        collapseTimer = COLLAPSE_DELAY;
+        spawnFallingSegments();
+        services().playSfx(Sonic3kSfx.BRIDGE_COLLAPSE.id);
     }
 
     @Override
@@ -129,6 +153,26 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         // SolidObjectFull2_1P falls through to SolidObject_cont without the
         // SolidObject_OnScreenTest used by SolidObjectFull_1P.
         return true;
+    }
+
+    @Override
+    public boolean suppressesObjectEdgeBalance() {
+        // Obj_AIZDrawBridge keeps status bit 7 set (ori.b #$80,status).
+        // Sonic_Move tests that bit before reading width_pixels and skips the
+        // object-edge balance/facing branch while the player rides it.
+        return true;
+    }
+
+    @Override
+    public boolean allowsObjectControlledSolidContacts() {
+        return cutsceneOverride;
+    }
+
+    @Override
+    public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) {
+        // Set_PlayerEndingPose runs after the bridge's ROM solid pass and does
+        // not clear the standing bits it just observed.
+        return !cutsceneOverride;
     }
 
     @Override
@@ -182,11 +226,20 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
             collapseTimer = COLLAPSE_DELAY;
             spawnFallingSegments();
             services().playSfx(Sonic3kSfx.BRIDGE_COLLAPSE.id);
+            // loc_2B2E8 initializes $34, creates the falling pieces through
+            // loc_2B498, and returns. loc_2B452 first decrements on the next
+            // object entry (sonic3k.asm:59614-59623,59764-59791).
+            return;
         }
 
         if (collapseStarted) {
             if (collapseTimer > 0) {
                 collapseTimer--;
+                // ROM keeps the standing bits alongside the newly-set air/roll
+                // state until the delayed parent deletion ejects both players.
+                for (PlayableEntity standingPlayer : standingPlayers) {
+                    standingPlayer.setOnObject(true);
+                }
             } else {
                 ejectStandingPlayers();
                 ObjectLifetimeOps.deleteNoRespawn(this);
@@ -202,8 +255,6 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
             pieceX[i] = pivotX + (int) Math.round(stepX * i);
             pieceY[i] = pivotY + (int) Math.round(stepY * i);
         }
-        currentX = (pieceX[0] + pieceX[SEGMENT_COUNT - 1]) / 2;
-        currentY = (pieceY[0] + pieceY[SEGMENT_COUNT - 1]) / 2;
     }
 
     private void spawnFallingSegments() {

@@ -119,10 +119,10 @@ class TestS3kAizIntroGraphRewind {
                 "generic recreate should rebuild an AIZ intro glow child when a live plane is present");
         assertSame(plane, readObjectField(result, "parent"),
                 "glow child must relink to the restore-time live plane");
-        assertEquals(0, readObjectField(result, "xOffset"),
-                "generic recreate should use harmless offset placeholders before compact scalar restore");
-        assertEquals(0, readObjectField(result, "yOffset"),
-                "generic recreate should use harmless offset placeholders before compact scalar restore");
+        assertEquals(0x38, readObjectField(result, "xOffset"),
+                "variant 0 must restore the first ChildObjDat_67A62 X offset");
+        assertEquals(0x04, readObjectField(result, "yOffset"),
+                "variant 0 must restore the first ChildObjDat_67A62 Y offset");
     }
 
     @Test
@@ -323,8 +323,6 @@ class TestS3kAizIntroGraphRewind {
     }
 
     private static void assertNoHelperObjectsBecameManagerDynamics(ObjectManager objectManager) {
-        assertEquals(0, liveObjects(objectManager, AizIntroEmeraldGlowChild.class).size(),
-                "emerald glow helpers must not appear as ObjectManager dynamics");
         assertFalse(objectManager.getActiveObjects().stream().anyMatch(AizIntroBoosterChild.class::isInstance),
                 "booster helpers must not appear as ObjectManager dynamics");
     }

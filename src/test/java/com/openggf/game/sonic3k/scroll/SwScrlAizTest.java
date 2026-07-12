@@ -398,6 +398,21 @@ public class SwScrlAizTest {
     }
 
     @Test
+    public void directAiz2StartupUsesAct2DeformWhileLevelStartIsPending() {
+        camera.setLevelStarted(false);
+        int[] buffer = new int[VISIBLE_LINES];
+        int cameraX = 0x2000;
+        int cameraY = 0x80;
+
+        handler.update(buffer, cameraX, cameraY, 0, 1);
+
+        assertEquals(asrWord(cameraY, 1), handler.getVscrollFactorBG(),
+                "AIZ2_BackgroundInit must use the Act 2 half-speed BG Y during title-card startup");
+        assertNotEquals(unpackBG(buffer[0]), unpackBG(buffer[100]),
+                "direct AIZ2 entry must build the scattered Act 2 parallax bands, not AIZ1 intro scroll");
+    }
+
+    @Test
     public void aiz2DiffersFromAiz1AtSamePosition() {
         camera.setLevelStarted(true);
         int cameraX = 0x2000;
@@ -570,5 +585,4 @@ public class SwScrlAizTest {
         AizPlaneIntroInstance.resetIntroPhaseState();
     }
 }
-
 
