@@ -8,28 +8,35 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 import java.util.logging.Logger;
 
 /**
- * Emerald glow child for the AIZ1 intro plane.
+ * Animated propeller/booster child for the AIZ1 intro plane.
  * ROM: loc_67824 / loc_67862 (sonic3k.asm)
  *
- * Two instances are spawned by the plane child to provide a glowing
- * visual effect on the plane's emeralds. Each follows the parent plane
- * with a fixed (x, y) offset and self-destructs when the parent is destroyed.
+ * Two instances are spawned after the plane child by CreateChild1_Normal.
+ * Each owns a real SST slot, follows the plane at its child-data offset, and
+ * self-destructs when the parent is destroyed. The legacy class name predates
+ * the SST-slot implementation; these objects use Map_AIZIntroPlane and
+ * ArtTile_AIZIntroPlane, not the separately loaded Chaos Emerald art.
  */
 public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(AizIntroEmeraldGlowChild.class.getName());
     private final AizIntroPlaneChild parent;
-    private int xOffset;
-    private int yOffset;
+    private final int variant;
+    private final int xOffset;
+    private final int yOffset;
 
-    private static final int[] GLOW_FRAMES = {0, 5, 6};
-    private static final int ANIM_FRAME_DURATION = 3;
+    private static final int[][] ANIM_SEQUENCES = {
+            {1, 2, 3, 4, 3, 2},
+            {5, 6}
+    };
+    private static final int[] X_OFFSETS = {0x38, 0x18};
+    private static final int[] Y_OFFSETS = {0x04, 0x18};
+    private static final int ANIM_FRAME_DURATION = 1;
     private int animTimer;
     private int animIndex;
 
@@ -39,18 +46,20 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
      * @param xOffset horizontal offset from parent position
      * @param yOffset vertical offset from parent position
      */
-    public AizIntroEmeraldGlowChild(ObjectSpawn spawn, AizIntroPlaneChild parent,
-                                     int xOffset, int yOffset) {
+    public AizIntroEmeraldGlowChild(
+            ObjectSpawn spawn, AizIntroPlaneChild parent, int variant) {
         super(spawn, "AIZEmeraldGlow");
         this.parent = parent;
-        this.xOffset = xOffset;
-        this.yOffset = yOffset;
+        this.variant = Math.clamp(variant, 0, 1);
+        this.xOffset = X_OFFSETS[this.variant];
+        this.yOffset = Y_OFFSETS[this.variant];
     }
 
     @Override
     public AizIntroEmeraldGlowChild recreateForRewind(RewindRecreateContext ctx) {
         AizIntroPlaneChild livePlane = AizIntroRewindLinks.liveIntroPlane(ctx);
-        return livePlane == null ? null : new AizIntroEmeraldGlowChild(ctx.spawn(), livePlane, 0, 0);
+        return livePlane == null ? null
+                : new AizIntroEmeraldGlowChild(ctx.spawn(), livePlane, ctx.spawn().subtype() & 1);
     }
 
     @Override
@@ -70,12 +79,15 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (parent.isDestroyed()) {
+            setDestroyed(true);
+            return;
+        }
         animTimer++;
         if (animTimer >= ANIM_FRAME_DURATION) {
             animTimer = 0;
             animIndex++;
-            if (animIndex >= GLOW_FRAMES.length) {
+            if (animIndex >= ANIM_SEQUENCES[variant].length) {
                 animIndex = 0;
             }
         }
@@ -83,7 +95,7 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        PatternSpriteRenderer renderer = AizIntroArtLoader.getEmeraldRenderer(services());
+        PatternSpriteRenderer renderer = planePieceRenderer();
         if (renderer == null || !renderer.isReady()) return;
         // Screen-space coordinates use the ROM +128 sprite-table bias.
         int renderX = getX();
@@ -95,6 +107,11 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
         } catch (Exception e) {
             LOG.fine(() -> "AizIntroEmeraldGlowChild.appendRenderCommands: " + e.getMessage());
         }
-        renderer.drawFrameIndex(GLOW_FRAMES[animIndex], renderX, renderY, false, false);
+        renderer.drawFrameIndex(
+                ANIM_SEQUENCES[variant][animIndex], renderX, renderY, false, false);
+    }
+
+    PatternSpriteRenderer planePieceRenderer() {
+        return AizIntroArtLoader.getPlaneRenderer(services());
     }
 }

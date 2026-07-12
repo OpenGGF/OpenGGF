@@ -51,7 +51,9 @@ class TestSonic3kMgz2EndBossEvents {
         GameServices.configuration().resetToDefaults();
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         TestEnvironment.activeGameplayMode();
-        GameServices.camera().setFocusedSprite(new TestablePlayableSprite("sonic", (short) 0x3A10, (short) 0x0680));
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x3A10, (short) 0x0680);
+        GameServices.sprites().addSprite(main);
+        GameServices.camera().setFocusedSprite(main);
     }
 
     @AfterEach

@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.GameRng;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -30,6 +31,24 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 class TestS3kSignpostInstance {
+
+    @Test
+    void sparkleYOffsetConsumesRomRandomWord() {
+        GameRng rng = new GameRng(GameRng.Flavour.S3K, 0x00001234L);
+
+        assertEquals(6, S3kSignpostInstance.romSparkleYOffset(rng));
+        assertEquals(0xEA56EA54L, rng.getSeed(),
+                "Obj_SignpostSparkle calls Random_Number once before masking d0 with $1F "
+                        + "(docs/skdisasm/sonic3k.asm:176294-176300)");
+    }
+
+    @Test
+    void sparkleCadenceUsesGlobalVIntPhaseRatherThanAllocationAge() {
+        assertFalse(S3kSignpostInstance.isRomSparkleFrame(11023));
+        assertTrue(S3kSignpostInstance.isRomSparkleFrame(11024));
+        assertFalse(S3kSignpostInstance.isRomSparkleFrame(11025));
+        assertTrue(S3kSignpostInstance.isRomSparkleFrame(11028));
+    }
 
     @Test
     void bumpFromBelowRequiresRomAnimationTwoAndUpwardVelocity() {

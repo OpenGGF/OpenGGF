@@ -170,6 +170,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        onBeforeCapsuleUpdate();
         if (!opened) {
             if (routeInitPending) {
                 // ROM Obj_EggCapsule first executes loc_8657A for route-8
@@ -226,6 +227,10 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
             updateSwingAndMove();
             checkpointAll();
         }
+    }
+
+    protected void onBeforeCapsuleUpdate() {
+        // Route-specific pre-dispatch state.
     }
 
     private void initializeRoute8FromCamera() {

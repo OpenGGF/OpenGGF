@@ -241,6 +241,53 @@ class TestTraceExecutionModel {
     }
 
     @Test
+    void s3kVblankSplitUsesFollowingCameraButCurrentRingCount() throws Exception {
+        TraceData trace = TraceData.load(
+                Path.of("src/test/resources/traces/s3k/aiz_completerun"));
+        int currentIndex = -1;
+        for (int i = 1; i + 1 < trace.frameCount(); i++) {
+            TraceFrame candidate = trace.getFrame(i);
+            TraceFrame candidateNext = trace.getFrame(i + 1);
+            if (TraceReplayBootstrap.phaseForReplay(
+                            trace, trace.getFrame(i - 1), candidate)
+                            == TraceExecutionPhase.FULL_LEVEL_FRAME
+                    && TraceReplayBootstrap.phaseForReplay(trace, candidate, candidateNext)
+                            == TraceExecutionPhase.VBLANK_ONLY
+                    && candidate.stateEquals(candidateNext)
+                    && candidate.gameplayFrameCounter()
+                            == candidateNext.gameplayFrameCounter()
+                    && candidate.cameraX() != candidateNext.cameraX()) {
+                currentIndex = i;
+                break;
+            }
+        }
+
+        assertNotEquals(-1, currentIndex, "fixture must contain an S3K camera split row");
+        TraceFrame previous = trace.getFrame(currentIndex - 1);
+        TraceFrame current = trace.getFrame(currentIndex);
+        TraceFrame next = trace.getFrame(currentIndex + 1);
+        TraceExecutionPhase phase =
+                TraceReplayBootstrap.phaseForReplay(trace, previous, current);
+
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME, phase);
+        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+                TraceReplayBootstrap.phaseForReplay(trace, current, next));
+        assertEquals(current.gameplayFrameCounter(), next.gameplayFrameCounter());
+        assertEquals(current.x(), next.x());
+        assertEquals(current.y(), next.y());
+        assertNotEquals(current.cameraX(), next.cameraX());
+
+        TraceFrame comparison = TraceReplayBootstrap.s3kFrameForGameplayComparison(
+                trace, currentIndex, previous, current, phase);
+
+        assertEquals(current.x(), comparison.x());
+        assertEquals(current.y(), comparison.y());
+        assertEquals(next.cameraX(), comparison.cameraX());
+        assertEquals(next.cameraY(), comparison.cameraY());
+        assertEquals(current.rings(), comparison.rings());
+    }
+
+    @Test
     void firstFrameDefaultsToFullLevelFrame() {
         TraceFrame current = TraceFrame.executionTestFrame(0, 0x0120, 0x3456, 0);
 

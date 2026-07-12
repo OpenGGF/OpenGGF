@@ -1,5 +1,6 @@
 package com.openggf.sprites.playable;
 
+import com.openggf.game.CharacterKey;
 import com.openggf.graphics.GLCommand;
 import com.openggf.physics.Direction;
 import com.openggf.physics.GroundSensor;
@@ -8,6 +9,11 @@ import com.openggf.physics.Sensor;
 import static org.lwjgl.opengl.GL11.GL_TRIANGLE_FAN;
 
 public class Knuckles extends AbstractPlayableSprite {
+
+	@Override
+	public CharacterKey characterKey() {
+		return CharacterKey.KNUCKLES;
+	}
 
 	public Knuckles(String code, short x, short y) {
 		super(code, x, y);

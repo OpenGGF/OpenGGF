@@ -86,7 +86,7 @@ class TestS3kResultsScreenObjectInstance {
     }
 
     @Test
-    void aizActOneMinibossTitleHandoffPreservesRingCount() throws Exception {
+    void aizActOneMinibossTitleHandoffDefersLevelGamestateResetToTitleCard() throws Exception {
         ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x00, Sonic3kMusic.AIZ2.id);
         S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
                 services,

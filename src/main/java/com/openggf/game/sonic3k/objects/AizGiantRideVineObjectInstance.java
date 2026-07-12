@@ -7,6 +7,7 @@ import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -105,11 +106,6 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean isPersistent() {
-        return AizVineHandleLogic.anyGrabbed(handle);
-    }
-
-    @Override
     public int getReservedChildSlotCount() {
         return romChildSlotCount();
     }
@@ -151,6 +147,17 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
     @Override
     public void onUnload() {
         clearGrabbedPlayers();
+        // Obj_AIZGiantRideVine loc_22442 always applies the root's coarse-X
+        // cull, even while either handle grab byte ($32/$33) is set, then
+        // loc_2245C deletes every child before Delete_Current_Sprite removes
+        // the root (docs/skdisasm/sonic3k.asm:46802-46831). This Java object
+        // executes from its reserved handle slot for SST-order parity, so the
+        // manager's execution-slot cleanup cannot identify the distinct parent
+        // slot as the current slot. Release that root ownership explicitly.
+        ObjectServices svc = tryServices();
+        if (svc != null) {
+            ObjectLifetimeOps.releaseParentSlotKeepingChildren(svc.objectManager(), this);
+        }
     }
 
     @Override
@@ -298,10 +305,12 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
     }
 
     private void clearGrabbedPlayers() {
-        AbstractPlayableSprite player = resolveMainPlayer();
-        AbstractPlayableSprite sidekick = firstTrackedSidekick();
-        clearControlFor(player, handle.p1.grabFlag != 0);
-        clearControlFor(sidekick, handle.p2.grabFlag != 0);
+        if (handle.p1.grabFlag != 0) {
+            clearControlFor(resolveMainPlayer(), true);
+        }
+        if (handle.p2.grabFlag != 0) {
+            clearControlFor(firstTrackedSidekick(), true);
+        }
         handle.p1.grabFlag = 0;
         handle.p2.grabFlag = 0;
     }

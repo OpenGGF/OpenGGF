@@ -144,6 +144,9 @@ public final class RewindController {
             return;   // end of trace
         }
         commitDeferredAudioRestore();
+        // Forward resume abandons the cached future branch. Reusing those
+        // snapshots on a later backward step would restore stale state.
+        segmentCache.invalidate();
         beginAudioFrame(currentFrame + 1);
         Bk2FrameInput in = inputs.read(currentFrame + 1);
         engineStepper.step(in);
@@ -319,21 +322,7 @@ public final class RewindController {
         if (currentFrame <= earliestAvailableFrame()) return false;
         int originalFrame = currentFrame;
         int target = currentFrame - 1;
-        // Search for the latest keyframe at or before target directly. The
-        // historical (target / keyframeInterval) * keyframeInterval floor
-        // assumed keyframes only land on interval multiples, but
-        // resetBufferAtCurrentFrame (called from LevelManager at level
-        // boundaries) puts a keyframe at the *current* frame regardless of
-        // interval alignment. After a level-boundary reset at e.g.
-        // frame 199, the earliest keyframe is 199 and the next interval
-        // multiple is 240; stepping back through (199..240) would floor
-        // the search key below 199 and fail with NoSuchElementException
-        // even though a valid floor entry exists.
-        final var floor = keyframes.latestAtOrBefore(target).orElseThrow();
-        final int keyframeSnapshot = floor.frame();
-        final var restoreSnapshot = floor.snapshot();
-        // Use int[] wrapper to allow mutation within lambdas
-        final int[] pos = { currentFrame };
+        CompositeSnapshot snap = segmentCache.cachedSnapshotAtOrNull(target);
         if (profiler != null) profiler.beginSection("rewind.step");
         try (AudioReplayScope ignored = beginAudioReplay(
                 originalFrame, target, AudioReplayReason.STEP_BACKWARD)) {
@@ -345,35 +334,65 @@ public final class RewindController {
             // about to happen (steady-state stepBackward() stays O(1)); it is
             // used to undo that mutation if `target` turns out to be a
             // poisoned frame we must refuse to land on.
-            boolean expansionNeeded = !segmentCache.containsFrame(target, keyframeSnapshot);
-            CompositeSnapshot preExpansionSnapshot = expansionNeeded ? registry.capture() : null;
-            CompositeSnapshot snap = segmentCache.snapshotAt(
-                    target,
-                    restoreSnapshot,
-                    keyframeSnapshot,
-                    () -> {
-                        registry.restore(restoreSnapshot);
-                        // registry.restore closed rewind.restore in its finally; re-open
-                        // rewind.step so primeStepperAtFrame credits to it instead of
-                        // falling into the unattributed gap before rewind.tick opens.
-                        if (profiler != null) profiler.beginSection("rewind.step");
-                        pos[0] = keyframeSnapshot;
-                        primeStepperAtFrame(pos[0]);
-                    },
-                    () -> {
-                        if (profiler != null) profiler.beginSection("rewind.tick");
-                        try {
-                            Bk2FrameInput in = inputs.read(pos[0] + 1);
-                            engineStepper.step(in);
-                            pos[0]++;
-                            // On happy path, registry.capture() opens rewind.capture which
-                            // implicitly ends rewind.tick (recording its delta) before
-                            // the finally fires. The finally then no-ops.
-                            return registry.capture();
-                        } finally {
-                            if (profiler != null) profiler.endSection("rewind.tick");
+            CompositeSnapshot preExpansionSnapshot = null;
+            if (snap == null) {
+                // Search for the latest keyframe at or before target directly. The
+                // historical interval floor is invalid after an unaligned boundary reset.
+                final var floor = keyframes.latestAtOrBefore(target).orElseThrow();
+                final int keyframeSnapshot = floor.frame();
+                final var restoreSnapshot = floor.snapshot();
+                final int[] pos = { currentFrame };
+                preExpansionSnapshot = registry.capture();
+                try {
+                    snap = segmentCache.snapshotAt(
+                            target,
+                            restoreSnapshot,
+                            keyframeSnapshot,
+                            () -> {
+                                registry.restore(restoreSnapshot);
+                                // registry.restore closed rewind.restore in its finally; re-open
+                                // rewind.step so primeStepperAtFrame credits to it instead of
+                                // falling into the unattributed gap before rewind.tick opens.
+                                if (profiler != null) profiler.beginSection("rewind.step");
+                                pos[0] = keyframeSnapshot;
+                                primeStepperAtFrame(pos[0]);
+                            },
+                            () -> {
+                                if (profiler != null) profiler.beginSection("rewind.tick");
+                                try {
+                                    Bk2FrameInput in = inputs.read(pos[0] + 1);
+                                    engineStepper.step(in);
+                                    pos[0]++;
+                                    // On happy path, registry.capture() opens rewind.capture which
+                                    // implicitly ends rewind.tick (recording its delta) before
+                                    // the finally fires. The finally then no-ops.
+                                    return registry.capture();
+                                } finally {
+                                    if (profiler != null) profiler.endSection("rewind.tick");
+                                }
+                            });
+                } catch (RuntimeException | Error expansionFailure) {
+                    currentFrame = originalFrame;
+                    try {
+                        registry.restore(preExpansionSnapshot);
+                    } catch (RuntimeException | Error rollbackFailure) {
+                        if (rollbackFailure != expansionFailure) {
+                            expansionFailure.addSuppressed(rollbackFailure);
                         }
-                    });
+                    }
+                    // registry.restore closes rewind.restore in its finally, even
+                    // when rollback fails. Re-open the parent before re-priming.
+                    if (profiler != null) profiler.beginSection("rewind.step");
+                    try {
+                        primeStepperAtFrame(originalFrame);
+                    } catch (RuntimeException | Error primeFailure) {
+                        if (primeFailure != expansionFailure) {
+                            expansionFailure.addSuppressed(primeFailure);
+                        }
+                    }
+                    throw expansionFailure;
+                }
+            }
             if (isPoisonedFadeSnapshot(snap)) {
                 // Committing here would leave a still-in-flight, callback-
                 // bearing fade resting as the live state -- FadeManager.restore()

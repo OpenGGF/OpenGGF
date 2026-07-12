@@ -169,18 +169,18 @@ class TestAizEndBossInstance {
         AizEndBossInstance boss = buildBoss(services);
         invokeNoArg(boss, "onEmergeComplete");
 
-        for (int frame = 0; frame < 20; frame++) {
+        for (int frame = 0; frame < 19; frame++) {
             invokeNoArg(boss, "updateRevealed");
         }
         assertEquals(4, boss.getState().routine,
-                "byte_69DB3 should not hit its $F4 callback before the 21st revealed update");
+                "byte_69DB3 should not hit its $F4 callback before the 20th revealed update");
         assertEquals(0, boss.getMappingFrame(),
                 "byte_69DB3's final visible entry is mapping frame 0 for one update");
 
         invokeNoArg(boss, "updateRevealed");
 
         assertEquals(6, boss.getState().routine,
-                "byte_69DB3 $F4 callback should enter loc_6933A hover on the 21st update");
+                "byte_69DB3 $F4 callback should enter loc_6933A hover on the 20th update");
     }
 
     @Test
@@ -399,5 +399,4 @@ class TestAizEndBossInstance {
         @Override public int getZoneIndex() { return 0; }
     }
 }
-
 

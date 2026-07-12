@@ -7,6 +7,7 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 
 import java.io.IOException;
+import com.openggf.level.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static com.openggf.game.sonic2.specialstage.Sonic2SpecialStageConstants.*;
@@ -109,6 +110,15 @@ public class Sonic2SpecialStageDataLoaderTest {
     }
 
     @Test
+    public void testLoadSpecialTailsTextArt() throws IOException {
+        Pattern[] patterns = loader.getTailsTextArtPatterns();
+
+        assertEquals(5, patterns.length,
+                "ArtNem_SpecialTailsText should decompress to exactly five patterns");
+        assertSame(patterns, loader.getTailsTextArtPatterns(), "Tails text art should be cached");
+    }
+
+    @Test
     public void testParseSegmentByte() {
         int[] parsed = Sonic2SpecialStageDataLoader.parseSegmentByte(0x03);
         assertEquals(3, parsed[0], "Segment type should be 3");
@@ -151,5 +161,4 @@ public class Sonic2SpecialStageDataLoaderTest {
         assertTrue(firstOffset < data.length, "First offset should point within data");
     }
 }
-
 

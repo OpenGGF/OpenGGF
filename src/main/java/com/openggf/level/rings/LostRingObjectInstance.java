@@ -189,7 +189,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         // Per-game floor-check cadence: S1 every 4 frames (#3), S2/S3K every 8 (#7). The ROM uses
         // v_vbla_byte (not the gameplay frame counter) for this gate (RingManager.java:1242-1248).
         int floorCheckMask = resolveFloorCheckMask();
-        int vblaCounter = resolveVblaCounter();
+        int vblaCounter = resolveVblaCounter() + resolveFloorCheckCounterPhase();
         if (((vblaCounter + phaseOffset) & floorCheckMask) != 0) {
             return;
         }
@@ -336,6 +336,19 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      */
     protected boolean hasRomRenderFlagForFloorProbe() {
         return romRenderFlagForFloorProbe;
+    }
+
+    /**
+     * Maps the engine's object-loop VBlank clock to the byte observed by the
+     * native Obj37 cadence gate. S3K's gameplay bootstrap exposes that byte
+     * four counts ahead of the gameplay-scoped object counter; S1/S2 are
+     * already phase-aligned.
+     */
+    protected int resolveFloorCheckCounterPhase() {
+        RingRules rules = resolveRingRules();
+        return rules != null
+                ? rules.ringFloorCheckCounterPhase()
+                : GameRules.SONIC_2.ring().ringFloorCheckCounterPhase();
     }
 
     private void refreshRomRenderFlagForFloorProbe() {

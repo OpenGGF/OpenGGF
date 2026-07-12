@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Guards against calling {@code services()} before {@code ObjectServices}
@@ -68,6 +69,9 @@ public class TestNoServicesInObjectConstructors {
      */
     @Test
     public void spawnDynamicObject_shouldNotConstructInlineUnlessConstructorIsSafe() throws IOException {
+        assertEquals(Object.class,
+                com.openggf.level.objects.TestNoServicesInObjectConstructors.class.getSuperclass(),
+                "legacy FQN must remain loadable without inheriting and re-running this suite");
         Path srcMain = Path.of("src/main/java");
         if (!Files.isDirectory(srcMain)) {
             return;
@@ -779,5 +783,4 @@ public class TestNoServicesInObjectConstructors {
         }
     }
 }
-
 

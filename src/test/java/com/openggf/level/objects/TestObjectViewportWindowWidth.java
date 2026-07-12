@@ -248,4 +248,13 @@ class TestObjectViewportWindowWidth {
         assertEquals(848, ObjectManager.outOfRangeLimit(528),
                 "ULTRA_21_9 viewport width 528 must yield 848 (128 + 528 + 192)");
     }
+
+    @Test
+    void s3kTwoAxisPlacementKeepsNativeObjPosLoadAheadAtWidescreen() {
+        ObjectPlacementController placement = new ObjectPlacementController(List.of(), () -> 528);
+        placement.setTwoAxisCursorPlacement(true);
+
+        assertEquals(0x280, placement.getLoadAhead(),
+                "S3K's X cursor must keep the ROM $280 allocation edge at widescreen");
+    }
 }

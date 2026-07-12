@@ -176,11 +176,19 @@ public final class TraceReplayBootstrap {
             return 0;
         }
         if (isS3kCompleteRunSegment(trace)) {
-            // Per-zone complete-run segments arm after the ROM has already
-            // completed the setup LevelLoop OscillateNumDo pass. The first
-            // replay-driven object pass therefore needs to see that prior
-            // oscillator phase before it advances natively.
-            return Math.max(1, trace.metadata().preTraceOscillationFrames());
+            TraceFrame firstFrame = trace.getFrame(0);
+            boolean firstRowIsVblankOnly =
+                    isS3kCompleteRunInitialHandoffRow(trace, null, firstFrame)
+                            || isS3kCompleteRunVisibleVelocityHoldRow(trace, null, firstFrame);
+            // A structural handoff/hold row is not driven through LevelLoop,
+            // so reproduce the ROM's already-completed setup OscillateNumDo
+            // pass before the first native object update. When frame 0 is a
+            // real FULL_LEVEL_FRAME (as in the AIZ complete run), that step
+            // advances OscillateNumDo itself; pre-advancing as well shifts
+            // every oscillating object one frame ahead.
+            return firstRowIsVblankOnly
+                    ? Math.max(1, trace.metadata().preTraceOscillationFrames())
+                    : trace.metadata().preTraceOscillationFrames();
         }
         if (usesSidekickTitleCardSeedFrame(trace)) {
             // The S3K Sonic+Tails seed row is not driven through a full engine
@@ -761,6 +769,38 @@ public final class TraceReplayBootstrap {
         }
 
         return current.withVisualDiagnosticsFrom(next);
+    }
+
+    /**
+     * Returns the S3K frame values that should be compared after a replay step.
+     *
+     * <p>S3K can expose the same full-frame/VBlank-only split as S1/S2. Camera
+     * diagnostics belong to the following VBlank row in that case, while ring
+     * counts remain strict to the current gameplay row so a collection-timing
+     * mismatch cannot be hidden by expected-value normalization.
+     */
+    public static TraceFrame s3kFrameForGameplayComparison(TraceData trace,
+                                                            int currentIndex,
+                                                            TraceFrame previous,
+                                                            TraceFrame current,
+                                                            TraceExecutionPhase currentPhase) {
+        if (trace == null || current == null
+                || currentPhase != TraceExecutionPhase.FULL_LEVEL_FRAME
+                || currentIndex + 1 >= trace.frameCount()) {
+            return current;
+        }
+
+        TraceFrame next = trace.getFrame(currentIndex + 1);
+        TraceExecutionPhase nextPhase = phaseForReplay(trace, current, next);
+        if (nextPhase != TraceExecutionPhase.VBLANK_ONLY
+                || !current.stateEquals(next)
+                || current.gameplayFrameCounter() != next.gameplayFrameCounter()
+                || current.cameraX() < 0 || current.cameraY() < 0
+                || next.cameraX() < 0 || next.cameraY() < 0) {
+            return current;
+        }
+
+        return current.withCameraDiagnosticsFrom(next);
     }
 
     /**

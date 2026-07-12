@@ -2,6 +2,7 @@ package com.openggf.game.session;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.CharacterKey;
 import com.openggf.game.PlayerCharacter;
 
 import java.util.List;
@@ -50,12 +51,42 @@ public final class ActiveGameplayTeamResolver {
         if ("tails".equalsIgnoreCase(mainCode)) {
             return PlayerCharacter.TAILS_ALONE;
         }
+        if (!"sonic".equalsIgnoreCase(mainCode)) {
+            PlayerCharacter modArchetype = resolveModArchetype(mainCode);
+            if (modArchetype != null) {
+                List<String> sidekicks = resolveSidekicks(configService);
+                if (modArchetype == PlayerCharacter.SONIC_ALONE && !sidekicks.isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "SONIC_ALONE mod main cannot be configured with sidekicks: " + mainCode);
+                }
+                return modArchetype;
+            }
+        }
         // Sonic — check sidekick to distinguish SONIC_ALONE vs SONIC_AND_TAILS
         List<String> sidekicks = resolveSidekicks(configService);
         if (sidekicks.isEmpty()) {
             return PlayerCharacter.SONIC_ALONE;
         }
         return PlayerCharacter.SONIC_AND_TAILS;
+    }
+
+    private static PlayerCharacter resolveModArchetype(String mainCode) {
+        CharacterKey key;
+        try {
+            key = CharacterKey.parsePersisted(mainCode);
+        } catch (IllegalArgumentException invalidKey) {
+            return null;
+        }
+        if (key.isBuiltin()) {
+            return null;
+        }
+        WorldSession worldSession = SessionManager.getCurrentWorldSession();
+        if (worldSession == null) {
+            return null;
+        }
+        return worldSession.getPlayableCharacterRegistry().find(key)
+                .map(definition -> definition.behavesLike())
+                .orElse(null);
     }
 
     /**

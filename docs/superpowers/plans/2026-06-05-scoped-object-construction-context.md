@@ -45,10 +45,10 @@
 
 - [ ] Extend `TestObjectServicesMigrationGuard` or add a small source scanner that allows raw ThreadLocal access only inside `ObjectConstructionContext`.
 - [ ] The scanner should fail on new uses of `CONSTRUCTION_CONTEXT.set(`, `CONSTRUCTION_CONTEXT.remove(`, `PRE_ALLOCATED_SLOT.set(`, or `PRE_ALLOCATED_SLOT.remove(` outside the scoped helper.
-- [ ] Run `mvn "-Dtest=com.openggf.level.objects.TestObjectServicesMigrationGuard,com.openggf.level.objects.TestNoServicesInObjectConstructors" test`.
+- [ ] Run `mvn "-Dtest=com.openggf.level.objects.TestObjectServicesMigrationGuard,com.openggf.tests.TestNoServicesInObjectConstructors" test`.
 
 ### Task 5: Verify and commit
 
-- [ ] Run `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestObjectConstructionContextScope,com.openggf.level.objects.TestObjectServicesMigrationGuard,com.openggf.level.objects.TestNoServicesInObjectConstructors" test`.
+- [ ] Run `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestObjectConstructionContextScope,com.openggf.level.objects.TestObjectServicesMigrationGuard,com.openggf.tests.TestNoServicesInObjectConstructors" test`.
 - [ ] Run `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestArchUnitRules,com.openggf.tests.TestArchitecturalSourceGuard" test`.
 - [ ] Commit with `fix: scope object construction context`.

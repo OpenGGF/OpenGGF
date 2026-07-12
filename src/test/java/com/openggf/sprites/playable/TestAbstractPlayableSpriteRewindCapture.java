@@ -3,6 +3,7 @@ package com.openggf.sprites.playable;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.GameServices;
 import com.openggf.game.InstaShieldHandle;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PowerUpObject;
@@ -15,11 +16,13 @@ import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.managers.PlayableSpriteMovement;
+import com.openggf.sprites.managers.PlayableSpriteAnimation;
 import com.openggf.sprites.managers.SpindashDustController;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
+import java.lang.reflect.RecordComponent;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -690,6 +693,155 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertSame(spawner.lastShield, sonic.getShieldObject());
         assertEquals(ShieldType.FIRE, spawner.lastShieldType);
         assertFalse(spawner.lastShield.isDestroyed());
+    }
+
+    @Test
+    void runtimeCodeSurvivesRewindWhileStableCharacterIdentityIsUnchanged() {
+        Sonic sidekick = new Sonic("sonic_p4", (short) 100, (short) 200);
+
+        PerObjectRewindSnapshot snapshot = sidekick.captureRewindState();
+        sidekick.restoreRewindState(snapshot);
+
+        assertEquals("sonic_p4", sidekick.getCode());
+        assertSame(com.openggf.game.CharacterKey.SONIC, sidekick.characterKey());
+    }
+
+    @Test
+    void playerExtraSolelyOwnsExactCarryContextAndExistingFlightState() {
+        Tails tails = new Tails("tails_p2", (short) 0x180, (short) 0x240);
+        tails.setCpuControlled(true);
+        tails.setCpuController(new SidekickCpuController(tails,
+                new Sonic("sonic", (short) 0x100, (short) 0x200)));
+
+        TailsCarryController.CarryContext[] contexts = {
+                TailsCarryController.CarryContext.MANUAL,
+                TailsCarryController.CarryContext.CNZ,
+                TailsCarryController.CarryContext.MGZ_BOSS
+        };
+        for (int i = 0; i < contexts.length; i++) {
+            short latchX = (short) (0x1100 + i);
+            short latchY = (short) (-0x2200 - i);
+            int cooldown = 0x12 + i;
+            TailsCarryController.Snapshot expectedCarry = new TailsCarryController.Snapshot(
+                    latchX, latchY, true, true, cooldown, contexts[i]);
+            tails.getTailsCarryController().restore(expectedCarry);
+            tails.setDoubleJumpFlag(2 + i);
+            tails.setDoubleJumpProperty((byte) (i == 1 ? 0 : 0x31 + i));
+            tails.setInWater(i == 2);
+
+            PerObjectRewindSnapshot snapshot = tails.captureRewindState();
+            PlayerRewindExtra extra = snapshot.playerExtra();
+            assertEquals(expectedCarry, extra.controllerState().tailsCarryState());
+
+            tails.getTailsCarryController().clearState();
+            tails.setDoubleJumpFlag(0);
+            tails.setDoubleJumpProperty((byte) 0x7F);
+            tails.setInWater(false);
+            tails.restoreRewindState(snapshot);
+
+            assertEquals(expectedCarry, tails.getTailsCarryController().capture());
+            assertEquals(2 + i, tails.getDoubleJumpFlag(),
+                    "flight active/flap state remains owned by the existing player field");
+            assertEquals(i == 1 ? 0 : 0x31 + i, tails.getDoubleJumpProperty() & 0xFF,
+                    "flight exhaustion/timer remains owned by the existing player field");
+            assertEquals(i == 2, tails.isInWater(),
+                    "swimming remains owned by the existing player field");
+        }
+
+        assertNoRawParticipantReference(PlayerRewindExtra.class);
+    }
+
+    @Test
+    void aggregateControllerStateRoundTripsWithoutRawPlayerReferences() {
+        Sonic sonic = new Sonic("sonic", (short) 0x180, (short) 0x240);
+        PlayableSpriteMovement.RewindState movement = new PlayableSpriteMovement.RewindState(
+                true, false, true, true,
+                true, false, true, false, true, true, true, false,
+                true, true, 7, 8, 9, true,
+                true, 3, Direction.LEFT, 0x22, 0x33);
+        PlayableSpriteAnimation.RewindState animation =
+                new PlayableSpriteAnimation.RewindState(0x12, 0x34);
+        DrowningController.RewindState drowning = new DrowningController.RewindState(
+                17, 23, true, 5, 4, 3, 2, 1);
+        TailsCarryController.Snapshot carry = new TailsCarryController.Snapshot(
+                (short) 0x1234, (short) -0x2345, true, true, 19,
+                TailsCarryController.CarryContext.CNZ);
+        sonic.setSpindashDustController(new SpindashDustController(sonic, null));
+        SpindashDustController.RewindState spindash =
+                new SpindashDustController.RewindState(2, 3, 4, true);
+        PlayableSpriteController.RewindState expected = new PlayableSpriteController.RewindState(
+                movement, spindash, animation, drowning, carry);
+        sonic.controller.restoreRewindState(expected);
+
+        PerObjectRewindSnapshot snapshot = sonic.captureRewindState();
+        assertEquals(expected, snapshot.playerExtra().controllerState());
+
+        sonic.controller.restoreRewindState(null);
+        sonic.restoreRewindState(snapshot);
+
+        assertEquals(expected, sonic.captureRewindState().playerExtra().controllerState());
+        assertNoRawParticipantReference(PlayableSpriteController.RewindState.class);
+    }
+
+    @Test
+    void carryRestorePreservesPendingStateUntilMainParticipantReturns() {
+        Tails tails = new Tails("tails_p2", (short) 0x180, (short) 0x240);
+        tails.setCpuControlled(true);
+        tails.setCpuController(new SidekickCpuController(tails, null));
+        TailsCarryController.Snapshot expected = new TailsCarryController.Snapshot(
+                (short) 0x1357, (short) -0x2468, true, true, 0x21,
+                TailsCarryController.CarryContext.CNZ);
+        tails.getTailsCarryController().restore(expected);
+        PerObjectRewindSnapshot snapshot = tails.captureRewindState();
+
+        GameServices.sprites().clearAllSprites();
+        GameServices.sprites().addSprite(tails, "tails");
+        tails.getTailsCarryController().clearState();
+        tails.restoreRewindState(snapshot);
+        tails.getTailsCarryController().updateAfterTailsCollision(0);
+        assertEquals(expected, tails.getTailsCarryController().capture(),
+                "missing main participant must not erase a just-restored pending carry");
+
+        Sonic restoredMain = new Sonic("sonic", (short) 0x100, (short) 0x200);
+        restoredMain.setObjectControlled(true);
+        restoredMain.setAir(true);
+        restoredMain.setXSpeed(expected.latchX());
+        restoredMain.setYSpeed(expected.latchY());
+        GameServices.sprites().addSprite(restoredMain, "sonic");
+        tails.getTailsCarryController().updateAfterTailsCollision(0);
+
+        TailsCarryController.Snapshot resolved = tails.getTailsCarryController().capture();
+        assertTrue(resolved.carrying());
+        assertFalse(resolved.parentagePending(),
+                "the registry participant is lazily resolved on a later update");
+        assertEquals(TailsCarryController.CarryContext.CNZ, resolved.context());
+    }
+
+    @Test
+    void jumpReleaseCooldownRoundTripsThroughPlayerExtra() {
+        Tails tails = new Tails("tails_p2", (short) 0, (short) 0);
+        TailsCarryController.Snapshot released = new TailsCarryController.Snapshot(
+                (short) 0x321, (short) -0x123, false, false, 0x12,
+                TailsCarryController.CarryContext.NONE);
+        tails.getTailsCarryController().restore(released);
+
+        PerObjectRewindSnapshot snapshot = tails.captureRewindState();
+        tails.getTailsCarryController().clearState();
+        tails.restoreRewindState(snapshot);
+
+        assertEquals(released, tails.getTailsCarryController().capture());
+    }
+
+    private static void assertNoRawParticipantReference(Class<?> recordType) {
+        assertTrue(recordType.isRecord());
+        for (RecordComponent component : recordType.getRecordComponents()) {
+            assertFalse(AbstractPlayableSprite.class.isAssignableFrom(component.getType()),
+                    "rewind records must resolve participants through the sprite registry: "
+                            + component.getName());
+            if (component.getType().isRecord()) {
+                assertNoRawParticipantReference(component.getType());
+            }
+        }
     }
 
     private static void setBooleanField(Object target, String name, boolean value) throws Exception {

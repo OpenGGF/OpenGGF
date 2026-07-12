@@ -43,7 +43,7 @@ class TestAizMinibossCameraUnlock {
         assertTrue(miniboss.isDestroyed(),
                 "stale AIZ miniboss level-end unlock must delete instead of clamping a later camera owner");
         assertEquals(0x6000, camera.getMaxX() & 0xFFFF,
-                "the later AIZ battleship $6000 camera unlock must remain authoritative");
+                "the miniboss handoff must not clamp a later AIZ camera owner");
     }
 
     private static Level levelWithMaxX(int maxX) {

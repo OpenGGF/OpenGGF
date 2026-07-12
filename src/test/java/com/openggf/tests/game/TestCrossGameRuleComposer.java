@@ -9,6 +9,8 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rules.CrossGameRuleComposer;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
+import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.RecordComponent;
@@ -29,13 +31,14 @@ class TestCrossGameRuleComposer {
             "spindashSpeedTable",
             "elementalShieldsEnabled",
             "instaShieldEnabled",
+            "tailsFlightEnabled",
             "lightningShieldEnabled");
 
     @Test
     void donorCapabilitiesAffectOnlyDonorOwnedPlayerCapabilities() throws Exception {
         GameRules host = GameRules.SONIC_1;
         GameRules donor = GameRules.SONIC_3K;
-        DonorCapabilities capabilities = new StubDonorCapabilities(true, true, true);
+        DonorCapabilities capabilities = new StubDonorCapabilities(true, true, true, true);
 
         GameRules hybrid = CrossGameRuleComposer.compose(host, donor, capabilities);
 
@@ -45,6 +48,7 @@ class TestCrossGameRuleComposer {
                 hybrid.playerCapability().spindashSpeedTable());
         assertTrue(hybrid.playerCapability().elementalShieldsEnabled());
         assertTrue(hybrid.playerCapability().instaShieldEnabled());
+        assertTrue(hybrid.playerCapability().tailsFlightEnabled());
         assertTrue(hybrid.playerCapability().lightningShieldEnabled());
         assertHostOwnedTopLevelRulesAreKept(host, hybrid);
         assertHostOwnedPlayerCapabilityComponentsAreKept(host.playerCapability(), hybrid.playerCapability());
@@ -54,7 +58,7 @@ class TestCrossGameRuleComposer {
     void spindashTableIsNullWhenDonorDoesNotDonateSpindash() {
         GameRules host = GameRules.SONIC_2;
         GameRules donor = GameRules.SONIC_3K;
-        DonorCapabilities capabilities = new StubDonorCapabilities(false, true, false);
+        DonorCapabilities capabilities = new StubDonorCapabilities(false, true, false, false);
 
         GameRules hybrid = CrossGameRuleComposer.compose(host, donor, capabilities);
 
@@ -62,7 +66,28 @@ class TestCrossGameRuleComposer {
         assertEquals(null, hybrid.playerCapability().spindashSpeedTable());
         assertTrue(hybrid.playerCapability().elementalShieldsEnabled());
         assertEquals(false, hybrid.playerCapability().instaShieldEnabled());
+        assertEquals(false, hybrid.playerCapability().tailsFlightEnabled());
         assertTrue(hybrid.playerCapability().lightningShieldEnabled());
+    }
+
+    @Test
+    void sonic2DonorDisablesTailsFlightInSonic3kHost() {
+        GameRules hybrid = CrossGameRuleComposer.compose(
+                GameRules.SONIC_3K,
+                GameRules.SONIC_2,
+                new Sonic2GameModule().getDonorCapabilities());
+
+        assertEquals(false, hybrid.playerCapability().tailsFlightEnabled());
+    }
+
+    @Test
+    void sonic3kDonorEnablesTailsFlightInSonic2Host() {
+        GameRules hybrid = CrossGameRuleComposer.compose(
+                GameRules.SONIC_2,
+                GameRules.SONIC_3K,
+                new Sonic3kGameModule().getDonorCapabilities());
+
+        assertTrue(hybrid.playerCapability().tailsFlightEnabled());
     }
 
     @Test
@@ -76,7 +101,7 @@ class TestCrossGameRuleComposer {
     @Test
     void nullRulesAreRejected() {
         GameRules rules = GameRules.SONIC_2;
-        DonorCapabilities capabilities = new StubDonorCapabilities(true, true, true);
+        DonorCapabilities capabilities = new StubDonorCapabilities(true, true, true, true);
 
         IllegalArgumentException nullHost = assertThrows(IllegalArgumentException.class,
                 () -> CrossGameRuleComposer.compose(null, rules, capabilities));
@@ -120,7 +145,8 @@ class TestCrossGameRuleComposer {
     private record StubDonorCapabilities(
             boolean hasSpindash,
             boolean hasElementalShields,
-            boolean hasInstaShield) implements DonorCapabilities {
+            boolean hasInstaShield,
+            boolean hasTailsFlight) implements DonorCapabilities {
 
         @Override
         public Set<PlayerCharacter> getPlayableCharacters() {

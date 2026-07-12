@@ -28,6 +28,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
@@ -213,7 +214,13 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         }
 
         if (rollingBreakPlayer != null) {
+            int launchY = rollingBreakPlayer.getCentreY();
             rollingBreakPlayer.setRolling(true);
+            // ROM sub_2A58E writes y_radius/x_radius/status directly and does
+            // not alter y_pos (sonic3k.asm:58542-58554). SolidObjectFull may
+            // have just restored standing dimensions, so the engine's visual
+            // height swap can otherwise move centre Y by five pixels.
+            NativePositionOps.writeYPosPreserveSubpixel(rollingBreakPlayer, launchY);
             if (mode != Mode.ICZ_PLANE_SWITCH) {
                 rollingBreakPlayer.setYSpeed((short) ROLL_BREAK_LAUNCH_YVEL);
             }

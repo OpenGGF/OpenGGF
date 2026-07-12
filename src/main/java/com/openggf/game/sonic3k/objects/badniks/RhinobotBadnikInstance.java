@@ -31,6 +31,7 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
 
     private static final int DETECT_X = 0x60;             // sub_870A4 d2 horizontal compare
     private static final int DETECT_Y = 0x20;             // sub_870A4 d3 vertical compare
+    private static final int WAIT_OFFSCREEN_MARGIN = 0x20; // Obj_WaitOffscreen width_pixels
 
     private static final int FRAME_SLOW = 0;
     private static final int FRAME_RUN = 1;
@@ -80,7 +81,11 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
         if (isDestroyed()) {
             return;
         }
-        if (!isOnScreenX()) {
+        // Obj_WaitOffscreen publishes a $20-wide placeholder before restoring
+        // the real routine, so render visibility begins at the placeholder's
+        // bounds rather than only when x_pos enters the viewport
+        // (sonic3k.asm:180266-180298).
+        if (!isOnScreenX(WAIT_OFFSCREEN_MARGIN)) {
             return;
         }
 
@@ -148,11 +153,14 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
         xVelocity = accelStep;
     }
 
-    private boolean shouldStartCharge(AbstractPlayableSprite player) {
-        if (player == null) {
+    private boolean shouldStartCharge(AbstractPlayableSprite updatePlayer) {
+        PlayableEntity target = closestNativePlayerByHorizontalDistance(updatePlayer);
+        if (!(target instanceof AbstractPlayableSprite player)) {
             return false;
         }
-        // Find_SonicTails leaves horizontal distance in d2 and vertical distance in d3.
+        // Find_SonicTails selects the native player with the smallest absolute
+        // X distance before leaving that player's horizontal distance in d2 and
+        // vertical distance in d3 (sonic3k.asm:178243-178277,182535-182553).
         int dx = player.getCentreX() - currentX;
         int dy = Math.abs(player.getCentreY() - currentY);
         if (Math.abs(dx) > DETECT_X || dy > DETECT_Y) {

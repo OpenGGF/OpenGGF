@@ -142,6 +142,15 @@ public final class S3kBadnikProjectileInstance
     }
 
     @Override
+    public boolean usesCurrentTouchResponseState() {
+        // loc_86D5E runs the child motion callback before
+        // Sprite_CheckDeleteTouchXY adds the pointer to the collision-response
+        // list. The next player slot therefore observes that post-movement
+        // position, as with Obj37 bouncing rings.
+        return true;
+    }
+
+    @Override
     public TouchResponseProfile getTouchResponseProfile() {
         return TOUCH_RESPONSE_PROFILE;
     }

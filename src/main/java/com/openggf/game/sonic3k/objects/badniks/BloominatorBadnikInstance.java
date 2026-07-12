@@ -16,6 +16,9 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 public final class BloominatorBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x23; // ObjDat_Bloominator flags $23
     private static final int PRIORITY_BUCKET = 4;         // ObjDat_Bloominator priority $200
+    private static final int WAIT_OFFSCREEN_MARGIN = 0x20;
+    private static final int RENDER_HALF_WIDTH = 0x0C;
+    private static final int RENDER_HALF_HEIGHT = 0x18;
 
     private static final int INITIAL_WAIT_FRAMES = 0x1F;  // loc_86D8A
     private static final int REPEAT_WAIT_FRAMES = 2 * 60; // loc_86DFC
@@ -44,6 +47,8 @@ public final class BloominatorBadnikInstance extends AbstractS3kBadnikInstance i
     private int attackStep;
     private int attackStepTimer;
     private int shotToggleCounter;
+    private boolean waitingForOnscreen = true;
+    private boolean initialized;
 
     public BloominatorBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Bloominator",
@@ -57,6 +62,20 @@ public final class BloominatorBadnikInstance extends AbstractS3kBadnikInstance i
         if (isDestroyed()) {
             return;
         }
+        // Obj_WaitOffscreen replaces the operation pointer until its temporary
+        // $20-by-$20 placeholder has been rendered. Restoring the saved pointer
+        // and running loc_86D8A each consume their own object dispatch.
+        if (waitingForOnscreen) {
+            if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
+                return;
+            }
+            waitingForOnscreen = false;
+            return;
+        }
+        if (!initialized) {
+            initialized = true;
+            return;
+        }
 
         switch (state) {
             case IDLE_WAIT -> updateIdleWait();
@@ -65,8 +84,8 @@ public final class BloominatorBadnikInstance extends AbstractS3kBadnikInstance i
     }
 
     private void updateIdleWait() {
-        // loc_86DA2: wait timer only while object is visible/active.
-        if (!isOnScreenX()) {
+        // loc_86DA2 consumes render_flags bit 7 from the preceding render pass.
+        if (!isWithinSolidContactBounds()) {
             return;
         }
         stateTimer--;
@@ -76,18 +95,28 @@ public final class BloominatorBadnikInstance extends AbstractS3kBadnikInstance i
 
         state = State.ATTACK;
         attackStep = 0;
-        attackStepTimer = ATTACK_DELAYS[0];
-        mappingFrame = ATTACK_FRAMES[0];
+        attackStepTimer = 0;
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        return waitingForOnscreen || !initialized ? 0 : super.getCollisionFlags();
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return RENDER_HALF_WIDTH;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return RENDER_HALF_HEIGHT;
     }
 
     private void updateAttack() {
         if (attackStepTimer > 0) {
             attackStepTimer--;
             return;
-        }
-
-        if (attackStep == FIRST_FIRE_STEP || attackStep == SECOND_FIRE_STEP) {
-            fireProjectile();
         }
 
         attackStep++;
@@ -100,6 +129,12 @@ public final class BloominatorBadnikInstance extends AbstractS3kBadnikInstance i
 
         mappingFrame = ATTACK_FRAMES[attackStep];
         attackStepTimer = ATTACK_DELAYS[attackStep];
+        // Animate_RawMultiDelay returns the newly loaded script offset in d0;
+        // Obj_Bloominator fires when offsets 6/$E (steps 3/7) are loaded,
+        // rather than after those frames' delays expire.
+        if (attackStep == FIRST_FIRE_STEP || attackStep == SECOND_FIRE_STEP) {
+            fireProjectile();
+        }
     }
 
     private void fireProjectile() {

@@ -93,6 +93,11 @@ public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance
             AizIntroArtLoader.loadAllIntroArt(services());
             AizIntroArtLoader.applyKnucklesPalette(services());
             services().playMusic(Sonic3kMusic.KNUCKLES.id);
+            Aiz2BossEndSequenceState.setActiveKnuckles(this);
+            // Obj_CutsceneKnuckles installs the AIZ2 routine, then loc_61FC2
+            // initializes the wait/children and returns. Routine $02 first
+            // decrements Obj_Wait on the following object entry.
+            return;
         }
         Aiz2BossEndSequenceState.setActiveKnuckles(this);
 

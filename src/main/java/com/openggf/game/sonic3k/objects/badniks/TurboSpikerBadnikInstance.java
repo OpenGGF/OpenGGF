@@ -175,6 +175,12 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
         initialized = true;
     }
 
+    private void detachShell(TurboSpikerShellChild shell) {
+        if (shellChild == shell) {
+            shellChild = null;
+        }
+    }
+
     private void updateHiddenWait(AbstractPlayableSprite mainPlayer) {
         TargetSelection target = findNearestTarget(mainPlayer);
         if (target.player() == null || target.distance() >= DETECT_RANGE) {
@@ -444,6 +450,11 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
 
         boolean isAttached() {
             return attached;
+        }
+
+        @Override
+        public void onUnload() {
+            parent.detachShell(this);
         }
 
         @Override

@@ -79,6 +79,7 @@ class TestSonic3kSpikeObjectInstance {
     void spikesSolidGateUsesRenderSpritesExclusiveBottomEdge() {
         Sonic3kSpikeObjectInstance spikes = new Sonic3kSpikeObjectInstance(
                 new ObjectSpawn(0x1170, 0x08B0, Sonic3kObjectIds.SPIKES, 0x30, 0, false, 0));
+        spikes.snapshotPreUpdatePosition();
 
         AbstractObjectInstance.updateCameraBounds(0x10CE, 0x07C1, 0x10CE + 320, 0x07C1 + 224, 0);
         assertTrue(spikes.isWithinSolidContactBounds(),
@@ -89,5 +90,29 @@ class TestSonic3kSpikeObjectInstance {
                 "CNZ f21147: Render_Sprites rejects y_pos + height_pixels == camera_y + 224 + 2*height "
                         + "with bhs, so SolidObjectFull must see render_flags bit 7 clear next frame "
                         + "(sonic3k.asm:36358-36365, 41016-41018, 49011-49039).");
+    }
+
+    @Test
+    void movingSpikesUsePreviousRenderPositionForSolidGate() {
+        TestableSpike spikes = new TestableSpike(
+                new ObjectSpawn(0x1170, 0x08B0, Sonic3kObjectIds.SPIKES, 0x31, 0, false, 0));
+        AbstractObjectInstance.updateCameraBounds(0x10CE, 0x07C0,
+                0x10CE + 320, 0x07C0 + 224, 0);
+        spikes.snapshotPreUpdatePosition();
+        spikes.setCurrentYForTest(0x08AF);
+
+        assertFalse(spikes.isWithinSolidContactBounds(),
+                "loc_1DF88 reads the previous Render_Sprites flag, so movement into the viewport "
+                        + "cannot make SolidObjectFull active until the next object dispatch");
+    }
+
+    private static final class TestableSpike extends Sonic3kSpikeObjectInstance {
+        private TestableSpike(ObjectSpawn spawn) {
+            super(spawn);
+        }
+
+        private void setCurrentYForTest(int y) {
+            currentY = y;
+        }
     }
 }
