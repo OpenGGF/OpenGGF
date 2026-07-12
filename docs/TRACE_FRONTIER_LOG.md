@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f21672 / 1202 errors (2 errors under `frontierOnly`).
+f3318 / 4234 errors to f21937 / 1200 errors (1 error under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -685,6 +685,21 @@ under `frontierOnly`). The focused hand-launcher suite passes 7/7. The granular
 S3K replay matrix remains exact: both AIZ routes green; CNZ complete f1846 / 5,
 CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
 ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 43 restores Jawz's native deferred attack ownership. Obj93 publishes
+`collision_flags=$D7`, so `Touch_Special` adds one to `collision_property` for
+P1 and two for P2; the later Jawz slot maps values 2/3 to P2 before running
+`Check_PlayerAttack` and `EnemyDefeated`. The generic engine badnik path had
+published an enemy-category `$17` byte and destroyed Jawz immediately in P1's
+touch callback, assigning Sonic the `-$100` bounce when both native players
+overlapped. The explicit property state now selects Tails exactly as the ROM
+does (`sonic3k.asm:21162-21194,179747-179865,183518-183570`).
+
+This closes f21672-f21936 and advances HCZ to f21937 / 1200 full-run errors (1
+under `frontierOnly`). The focused Jawz suite passes 3/3. The granular S3K
+replay matrix remains exact: both AIZ routes green; CNZ complete f1846 / 5, CNZ
+level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ
+f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 Milestone 28 restores the two ROM-owned HCZ2 surface handlers around the first
 large water loop. `sub_714E -> sub_717C` now samples the live foreground layout

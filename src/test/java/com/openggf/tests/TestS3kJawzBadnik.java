@@ -4,11 +4,17 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.badniks.JawzBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchResponseResult;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestS3kJawzBadnik {
 
@@ -46,6 +52,33 @@ public class TestS3kJawzBadnik {
         jawz.update(2, player);
 
         assertEquals(162, jawz.getX(), "Jawz should move right when the player is on the right");
+    }
+
+    @Test
+    public void jawzUsesNativeSpecialPropertyTouchAccumulation() {
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 160, (short) 100);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 160, (short) 100);
+        JawzBadnikInstance jawz = new JawzBadnikInstance(
+                new ObjectSpawn(160, 100, Sonic3kObjectIds.JAWZ, 0, 0, false, 0));
+        jawz.setServices(new TestObjectServices() {
+            @Override
+            public ObjectPlayerQuery playerQuery() {
+                return new ObjectPlayerQuery(() -> sonic, () -> java.util.List.of(tails));
+            }
+        });
+        TouchResponseResult result = new TouchResponseResult(
+                0x17, 8, 8, TouchCategory.SPECIAL, 0);
+
+        jawz.onTouchResponse(sonic, result, 1);
+        assertEquals(1, jawz.getCollisionProperty());
+        jawz.onTouchResponse(tails, result, 1);
+
+        assertEquals(3, jawz.getCollisionProperty(),
+                "Touch_Special adds one for P1 and two for P2, selecting P2 when both overlap");
+        assertEquals(0xD7, jawz.getCollisionFlags());
+        assertEquals(TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY,
+                jawz.getTouchResponseProfile().categoryDecodeMode());
+        assertTrue(jawz.requiresContinuousTouchCallbacks());
     }
 
     private static int readMappingFrame(JawzBadnikInstance jawz) {
