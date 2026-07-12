@@ -85,6 +85,13 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
 
     // S3KL-only implementations (zones 0-6: AIZ through LBZ)
     private static final Set<Integer> S3KL_IMPLEMENTED_IDS;
+    // FBZ completion gate: only factories proven concrete for FBZ's S3KL mappings.
+    // Keep this zone-specific so SKL factories for remapped ids (notably A8/A9)
+    // cannot make the FBZ audit report a false positive.
+    private static final Set<Integer> FBZ_IMPLEMENTED_IDS = Set.of(
+            0x01, 0x02, 0x07, 0x08, 0x0F, 0x26, 0x28, 0x2A,
+            0x2F, 0x33, 0x34, 0x6A, 0x6B, 0x80, 0x85
+    );
     // LBZ-only implementations from S3KL ids that map to different zone objects elsewhere.
     private static final Set<Integer> LBZ_IMPLEMENTED_IDS;
     // SKL-only implementations (zones 7-13: MHZ through DDZ)
@@ -392,7 +399,11 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
         if (zoneSetForLevel(level) == S3kZoneSet.SKL) {
             return SKL_IMPLEMENTED_IDS;
         }
-        return za[0] == Sonic3kZoneIds.ZONE_LBZ ? LBZ_IMPLEMENTED_IDS : S3KL_IMPLEMENTED_IDS;
+        return switch (za[0]) {
+            case Sonic3kZoneIds.ZONE_FBZ -> FBZ_IMPLEMENTED_IDS;
+            case Sonic3kZoneIds.ZONE_LBZ -> LBZ_IMPLEMENTED_IDS;
+            default -> S3KL_IMPLEMENTED_IDS;
+        };
     }
     @Override public Map<String, List<ObjectDiscoveryTool.DynamicBoss>> getDynamicBosses() { return DYNAMIC_BOSSES; }
 

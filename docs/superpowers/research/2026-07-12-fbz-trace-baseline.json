@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-07-12",
+  "comparison_order": ["firstErrorFrame", "errorCount", "warningCount"],
+  "provenance": "docs/TRACE_FRONTIER_LOG.md persisted evidence only; no trace was captured or replayed for Task 1",
+  "known_red": [
+    {"test_class":"com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay","firstErrorFrame":1095,"errorCount":4319,"warningCount":null,"provenance":"docs/TRACE_FRONTIER_LOG.md campaign S3K guard, current lines 37268-37272, repeated at 37387-37389; warning count not persisted"},
+    {"test_class":"com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay","firstErrorFrame":1489,"errorCount":3503,"warningCount":null,"provenance":"docs/TRACE_FRONTIER_LOG.md 2026-07-02 MHZ sibling frontier check, lines 6406-6412; warning count not persisted"},
+    {"test_class":"com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay","firstErrorFrame":866,"errorCount":10761,"warningCount":null,"provenance":"docs/TRACE_FRONTIER_LOG.md 2026-07-02 MHZ sibling frontier check, lines 6406-6412; warning count not persisted"},
+    {"test_class":"com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay","firstErrorFrame":1846,"errorCount":7143,"warningCount":null,"provenance":"docs/TRACE_FRONTIER_LOG.md 2026-07-02 MHZ sibling frontier check, lines 6406-6412; warning count not persisted"},
+    {"test_class":"com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay","firstErrorFrame":3139,"errorCount":3207,"warningCount":null,"provenance":"docs/TRACE_FRONTIER_LOG.md 2026-07-02 MHZ sibling frontier check, lines 6406-6412; warning count not persisted"},
+    {"test_class":"com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay","firstErrorFrame":2270,"errorCount":5881,"warningCount":null,"provenance":"docs/TRACE_FRONTIER_LOG.md 2026-07-02 MHZ sibling frontier check, lines 6406-6412; warning count not persisted"},
+    {"test_class":"com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay","firstErrorFrame":2986,"errorCount":2413,"warningCount":null,"provenance":"docs/TRACE_FRONTIER_LOG.md 2026-07-02 MHZ complete-run entry, lines 6313-6321; warning count not persisted"}
+  ],
+  "green_test_classes": [],
+  "fbz_complete_run": {
+    "status": "not captured; prohibited before Task 20",
+    "source_movie": "src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2",
+    "planned_bk2_frame_offset": 237913,
+    "planned_trace_frame_count": 44282,
+    "planned_next_zone_frame": 282195
+  }
+}

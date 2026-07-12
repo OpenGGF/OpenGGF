@@ -612,8 +612,11 @@ if ([string]::IsNullOrWhiteSpace($knownRed)) { throw 'known_red test manifest is
 mvn "-Dtest=$knownRed" test "-Ds3k.rom.path=s3k.gen"
 mvn "-Dtest=com.openggf.tests.trace.TestTraceBaselineRegression" test "-Ds3k.rom.path=s3k.gen" "-Dtrace.baseline.path=docs/superpowers/research/2026-07-12-fbz-trace-baseline.json"
 $greenFleet = ((Get-Content 'docs/superpowers/research/2026-07-12-fbz-trace-baseline.json' -Raw | ConvertFrom-Json).green_test_classes) -join ','
-if ([string]::IsNullOrWhiteSpace($greenFleet)) { throw 'green_test_classes is empty' }
-mvn "-Dtest=$greenFleet" test "-Ds3k.rom.path=s3k.gen"
+if ([string]::IsNullOrWhiteSpace($greenFleet)) {
+  Write-Host 'No persisted zero-error S3K complete-run regression classes were available at the Task 1 freeze; green fleet is a documented no-op.'
+} else {
+  mvn "-Dtest=$greenFleet" test "-Ds3k.rom.path=s3k.gen"
+}
 $mustGreen = @(
   'com.openggf.tests.TestS3kAiz1SkipHeadless',
   'com.openggf.tests.TestSonic3kLevelLoading',
