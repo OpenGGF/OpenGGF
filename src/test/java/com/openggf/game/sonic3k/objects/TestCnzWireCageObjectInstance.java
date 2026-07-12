@@ -3,11 +3,17 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.CompactFieldCapturer;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.rewind.schema.RewindObjectStateBlob;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
@@ -567,7 +573,7 @@ class TestCnzWireCageObjectInstance {
     }
 
     @Test
-    void extraEngineSidekickDoesNotShareNativeP2CageLatchState() {
+    void extraEngineSidekicksLatchWithIndependentCageState() {
         CnzWireCageObjectInstance cage = new CnzWireCageObjectInstance(new ObjectSpawn(
                 0x1300, 0x07C0, Sonic3kObjectIds.CNZ_WIRE_CAGE, 0x1E, 0, false, 0));
         AbstractPlayableSprite leader = HeadlessTestFixture.builder()
@@ -576,7 +582,9 @@ class TestCnzWireCageObjectInstance {
                 .sprite();
         Tails nativeP2 = new Tails("tails", (short) 0, (short) 0);
         Tails extraSidekick = new Tails("tails-extra", (short) 0, (short) 0);
-        cage.setServices(new TestObjectServices().withSidekicks(List.of(nativeP2, extraSidekick)));
+        Tails thirdSidekick = new Tails("tails-third", (short) 0, (short) 0);
+        cage.setServices(new TestObjectServices().withSidekicks(
+                List.of(nativeP2, extraSidekick, thirdSidekick)));
 
         leader.setCentreX((short) 0x1200);
         leader.setCentreY((short) 0x07C0);
@@ -590,13 +598,135 @@ class TestCnzWireCageObjectInstance {
         extraSidekick.setCentreY((short) 0x07C0);
         extraSidekick.setAir(false);
         extraSidekick.setGSpeed((short) 0x0800);
+        thirdSidekick.setCentreX((short) 0x1300);
+        thirdSidekick.setCentreY((short) 0x07C0);
+        thirdSidekick.setAir(false);
+        thirdSidekick.setGSpeed((short) 0x0800);
 
         cage.update(0, leader);
 
-        assertFalse(extraSidekick.isOnObject(),
-                "Additional engine sidekicks must not consume or share the native P2 cage standing bit");
-        assertFalse(extraSidekick.isObjectControlled());
-        assertNotEquals(Sonic3kObjectIds.CNZ_WIRE_CAGE, extraSidekick.getLatchedSolidObjectId());
+        for (Tails extension : List.of(extraSidekick, thirdSidekick)) {
+            assertTrue(extension.isOnObject(),
+                    "Each extension sidekick must own an independent cage rider state");
+            assertTrue(extension.isObjectControlled());
+            assertEquals(Sonic3kObjectIds.CNZ_WIRE_CAGE, extension.getLatchedSolidObjectId());
+        }
+    }
+
+    @Test
+    void replacingExtensionRosterReleasesOldIdentityWithoutTransferringLatch() {
+        CnzWireCageObjectInstance cage = new CnzWireCageObjectInstance(new ObjectSpawn(
+                0x1300, 0x07C0, Sonic3kObjectIds.CNZ_WIRE_CAGE, 0x1E, 0, false, 0));
+        AbstractPlayableSprite leader = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build()
+                .sprite();
+        Tails nativeP2 = new Tails("tails", (short) 0, (short) 0);
+        Tails originalExtension = new Tails("original-extra", (short) 0, (short) 0);
+        Tails replacement = new Tails("replacement-extra", (short) 0, (short) 0);
+        TestObjectServices services = new TestObjectServices()
+                .withSidekicks(List.of(nativeP2, originalExtension));
+        cage.setServices(services);
+
+        prepareOutsideCage(leader);
+        prepareOutsideCage(nativeP2);
+        prepareInsideCage(originalExtension);
+        cage.update(0, leader);
+        assertTrue(originalExtension.isObjectControlled());
+
+        prepareOutsideCage(replacement);
+        services.withSidekicks(List.of(nativeP2, replacement));
+        cage.update(1, leader);
+
+        assertFalse(originalExtension.isObjectControlled(),
+                "an omitted captured identity must be released rather than leak cage control");
+        assertFalse(originalExtension.isOnObject());
+        assertFalse(replacement.isObjectControlled(),
+                "a replacement in the same roster slot must not inherit the old rider state");
+    }
+
+    @Test
+    void sidekickReorderKeepsEachLiveCageLatchWithItsIdentity() {
+        CnzWireCageObjectInstance cage = new CnzWireCageObjectInstance(new ObjectSpawn(
+                0x1300, 0x07C0, Sonic3kObjectIds.CNZ_WIRE_CAGE, 0x1E, 0, false, 0));
+        AbstractPlayableSprite leader = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build()
+                .sprite();
+        Tails first = new Tails("first", (short) 0, (short) 0);
+        Tails second = new Tails("second", (short) 0, (short) 0);
+        Tails third = new Tails("third", (short) 0, (short) 0);
+        TestObjectServices services = new TestObjectServices().withSidekicks(List.of(first, second, third));
+        cage.setServices(services);
+        prepareOutsideCage(leader);
+        prepareInsideCage(first);
+        prepareInsideCage(second);
+        prepareInsideCage(third);
+        cage.update(0, leader);
+
+        services.withSidekicks(List.of(third, first, second));
+        cage.update(1, leader);
+
+        for (Tails rider : List.of(first, second, third)) {
+            assertTrue(rider.isObjectControlled());
+            assertTrue(rider.isOnObject());
+        }
+    }
+
+    @Test
+    void nonEmptyExtensionRiderStateRewindsThroughPlayerRefs() {
+        AbstractPlayableSprite oldMain = new Tails("old-main", (short) 0, (short) 0);
+        Tails oldP2 = new Tails("old-p2", (short) 0, (short) 0);
+        Tails oldExtension = new Tails("old-extension", (short) 0, (short) 0);
+        CnzWireCageObjectInstance cage = new CnzWireCageObjectInstance(new ObjectSpawn(
+                0x1300, 0x07C0, Sonic3kObjectIds.CNZ_WIRE_CAGE, 0x1E, 0, false, 0));
+        cage.setServices(new QueryOnlyPlayerServices(oldMain, List.of(oldP2, oldExtension)));
+        prepareOutsideCage(oldMain);
+        prepareOutsideCage(oldP2);
+        prepareInsideCage(oldExtension);
+        cage.update(0, oldMain);
+        RewindObjectStateBlob snapshot = CompactFieldCapturer.capture(
+                cage, rewindContext(oldMain, oldP2, oldExtension));
+
+        AbstractPlayableSprite newMain = new Tails("new-main", (short) 0, (short) 0);
+        Tails newP2 = new Tails("new-p2", (short) 0, (short) 0);
+        Tails newExtension = new Tails("new-extension", (short) 0, (short) 0);
+        cage.setServices(new QueryOnlyPlayerServices(newMain, List.of(newP2, newExtension)));
+        CompactFieldCapturer.restore(cage, snapshot, rewindContext(newMain, newP2, newExtension));
+        newExtension.setOnObject(true);
+        newExtension.setLatchedSolidObject(Sonic3kObjectIds.CNZ_WIRE_CAGE, cage);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(newExtension);
+        newExtension.setDead(true);
+        cage.update(1, newMain);
+
+        assertFalse(newExtension.isObjectControlled(),
+                "captured extension map key must restore to the replacement PlayerRef identity");
+        assertFalse(newExtension.isOnObject());
+    }
+
+    private static void prepareInsideCage(AbstractPlayableSprite player) {
+        player.setCentreX((short) 0x1300);
+        player.setCentreY((short) 0x07C0);
+        player.setAir(false);
+        player.setGSpeed((short) 0x0800);
+    }
+
+    private static void prepareOutsideCage(AbstractPlayableSprite player) {
+        player.setCentreX((short) 0x1200);
+        player.setCentreY((short) 0x07C0);
+        player.setAir(false);
+        player.setGSpeed((short) 0x0800);
+    }
+
+    private static RewindCaptureContext rewindContext(
+            AbstractPlayableSprite main,
+            AbstractPlayableSprite nativeP2,
+            AbstractPlayableSprite extension) {
+        RewindIdentityTable table = new RewindIdentityTable();
+        table.registerPlayer(main, PlayerRefId.mainPlayer());
+        table.registerPlayer(nativeP2, PlayerRefId.sidekick(0));
+        table.registerPlayer(extension, PlayerRefId.sidekick(1));
+        return RewindCaptureContext.withIdentityTable(table);
     }
 
     @Test
