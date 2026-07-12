@@ -1,6 +1,5 @@
 package com.openggf.game.sonic1.objects;
 
-import com.openggf.audio.AudioManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
@@ -8,6 +7,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -198,10 +198,36 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance imple
             return;
         }
 
+        if (controlledPlayer != null && controlledPlayer.getDead()) {
+            cancelTransport();
+            return;
+        }
+
         switch (routine) {
-            case WAIT -> updateWait(player);
-            case RISE -> updateRise(player);
-            case TRAVEL -> updateTravel(player);
+            case WAIT -> updateWaitingPlayers(player);
+            case RISE -> updateRise(controlledPlayer != null ? controlledPlayer : player);
+            case TRAVEL -> updateTravel(controlledPlayer != null ? controlledPlayer : player);
+        }
+    }
+
+    private void updateWaitingPlayers(AbstractPlayableSprite mainPlayer) {
+        // S1 natively checks only v_player. Keep that path first and extend the
+        // same single-owner teleporter behavior to configured engine sidekicks.
+        updateWait(mainPlayer);
+        if (routine != Routine.WAIT) {
+            return;
+        }
+        for (PlayableEntity participant : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+            if (participant == mainPlayer) {
+                continue;
+            }
+            if (participant instanceof AbstractPlayableSprite sidekick) {
+                updateWait(sidekick);
+                if (routine != Routine.WAIT) {
+                    return;
+                }
+            }
         }
     }
 
@@ -450,6 +476,19 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance imple
         player.setYSpeed((short) RELEASE_Y_VELOCITY);
     }
 
+    private void cancelTransport() {
+        if (controlledPlayer != null) {
+            ObjectControlState.none().applyTo(controlledPlayer);
+            controlledPlayer.setControlLocked(false);
+            controlledPlayer.setForcedAnimationId(-1);
+        }
+        routine = Routine.WAIT;
+        waypointIndex = 0;
+        targetX = signExtend16(waypointData[0]);
+        targetY = signExtend16(waypointData[1]);
+        controlledPlayer = null;
+    }
+
     /**
      * Calculates travel velocity from the player's current position to the current
      * target waypoint. Determines which axis has the greater distance and uses that
@@ -602,13 +641,7 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance imple
         // we should not leave the player locked. However, isPersistent()
         // prevents this during active transport. This is a safety net.
         if (routine != Routine.WAIT) {
-            if (controlledPlayer != null) {
-                ObjectControlState.none().applyTo(controlledPlayer);
-                controlledPlayer.setControlLocked(false);
-                controlledPlayer.setForcedAnimationId(-1);
-            }
-            routine = Routine.WAIT;
-            controlledPlayer = null;
+            cancelTransport();
         }
     }
 

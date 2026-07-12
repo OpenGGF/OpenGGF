@@ -118,6 +118,7 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1GrassFireObjectInstance", "slopeData"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance", "reflectionChild"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance", "childInstance"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance", "controlledPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance", "fireChildren"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance", "walkerFire"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1LavaGeyserObjectInstance", "makerParent"), RewindFieldPolicy.CAPTURED),

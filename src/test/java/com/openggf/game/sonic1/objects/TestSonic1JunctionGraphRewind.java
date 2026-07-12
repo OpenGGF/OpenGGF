@@ -10,6 +10,7 @@ import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
@@ -112,6 +113,28 @@ class TestSonic1JunctionGraphRewind {
     }
 
     @Test
+    void capturedExtensionSidekickOwnershipRestoresByStablePlayerIdentity() {
+        TestPlayableSprite main = new TestPlayableSprite();
+        TestPlayableSprite extraSidekick = new TestPlayableSprite();
+        Harness harness = Harness.create(main, List.of(extraSidekick));
+        ObjectManager objectManager = harness.objectManager();
+        Sonic1JunctionObjectInstance beforeParent = objectManager.createDynamicObject(
+                () -> new Sonic1JunctionObjectInstance(CAPTURED_SPAWN));
+        writeObject(beforeParent, "controlledPlayer", extraSidekick);
+        ObjectRefId parentId = objectId(objectManager, beforeParent);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+        objectManager.removeDynamicObject(beforeParent);
+
+        rewindRegistry.restore(snapshot);
+
+        Sonic1JunctionObjectInstance restoredParent = assertInstanceOf(
+                Sonic1JunctionObjectInstance.class, objectWithId(objectManager, parentId));
+        assertSame(extraSidekick, readObject(restoredParent, "controlledPlayer"),
+                "junction owner must restore through PlayerRefId, not list position or camera focus");
+    }
+
+    @Test
     void junctionChildBackrefStillRequiresRewindIdentity() {
         Harness harness = Harness.create();
         ObjectManager objectManager = harness.objectManager();
@@ -140,12 +163,22 @@ class TestSonic1JunctionGraphRewind {
 
     private record Harness(ObjectManager objectManager) {
         static Harness create() {
+            return create(null, List.of());
+        }
+
+        static Harness create(TestPlayableSprite main, List<TestPlayableSprite> sidekicks) {
             ObjectManager[] holder = new ObjectManager[1];
-            Camera camera = mockCamera();
+            Camera camera = mockCamera(main);
             Sonic1SwitchManager switches = new Sonic1SwitchManager();
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
+                @Override public List<com.openggf.game.PlayableEntity> sidekicks() {
+                    return List.copyOf(sidekicks);
+                }
+                @Override public ObjectPlayerQuery playerQuery() {
+                    return new ObjectPlayerQuery(() -> main, () -> sidekicks);
+                }
                 @Override public <T> T gameService(Class<T> type) {
                     if (type == Sonic1SwitchManager.class) {
                         return type.cast(switches);
@@ -261,13 +294,14 @@ class TestSonic1JunctionGraphRewind {
         throw new NoSuchFieldException(fieldName);
     }
 
-    private static Camera mockCamera() {
+    private static Camera mockCamera(TestPlayableSprite main) {
         return new Camera() {
             @Override public short getX() { return 0; }
             @Override public short getY() { return 0; }
             @Override public short getWidth() { return 320; }
             @Override public short getHeight() { return 224; }
             @Override public boolean isVerticalWrapEnabled() { return false; }
+            @Override public TestPlayableSprite getFocusedSprite() { return main; }
         };
     }
 }
