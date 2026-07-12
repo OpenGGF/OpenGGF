@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f28970 / 319 errors (7 errors under
+f3318 / 4234 errors to f29086 / 303 errors (1 error under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -604,6 +604,20 @@ velocity step and two-pixel lift (`sonic3k.asm:141084-141106,
 141226-141239,142090-142110`).
 
 This closes f28893-f28969 and advances HCZ to f28970 / 319 full-run errors (7
+under `frontierOnly`). The focused water-column control tests pass 2/2. The
+granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 56 makes the HCZ turbine publish its refreshed child coordinate to
+the touch-response list. `loc_6B1A8` runs the turbine routine, calls
+`Refresh_ChildPosition`, and only then reaches
+`Child_DrawTouch_Sprite2_FlickerMove`; the next player pass therefore observes
+that current coordinate rather than the generic pre-update snapshot. A rejected
+shared previous-list change regressed HCZ at f22243, so the engine opts in only
+this ROM-owned child path (`sonic3k.asm:141019-141033,178139-178153`).
+
+This closes f28970-f29085 and advances HCZ to f29086 / 303 full-run errors (1
 under `frontierOnly`). The focused water-column control tests pass 2/2. The
 granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
 complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ

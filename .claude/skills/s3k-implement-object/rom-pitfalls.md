@@ -1059,6 +1059,30 @@ view by one word (`docs/skdisasm/sonic3k.asm:141757-141881,141925-141930`).
 
 ---
 
+## P29 -- Touch-list coordinates follow the add-to-list call site
+
+**Symptom.** A moving hazard hurts one frame early or late at an exact vertical
+or horizontal edge even though its final rendered position matches ROM.
+
+**Root cause.** Collision-response membership and coordinate timing are
+separate facts. A routine can move or refresh a child immediately before
+`Add_SpriteToCollisionResponseList`; that entry must expose the refreshed live
+coordinate, while objects that add before movement retain their earlier sample.
+
+**What to check.** Read the entire operation tail and locate movement/child
+refresh relative to the exact list-add helper. Opt the specific object into
+current touch state only when the ROM adds after movement; do not globally
+change previous-list snapshot semantics.
+
+**ROM citation.** HCZ turbine `loc_6B1A8` dispatches its routine, calls
+`Refresh_ChildPosition`, then tail-calls
+`Child_DrawTouch_Sprite2_FlickerMove`, which adds the refreshed child
+(`docs/skdisasm/sonic3k.asm:141019-141033,178139-178153`).
+
+**Originating commit.** `<pending: HCZ milestone 56>`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

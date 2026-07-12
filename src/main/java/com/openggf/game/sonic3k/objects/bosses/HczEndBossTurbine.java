@@ -318,6 +318,14 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
         return 0;
     }
 
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        // loc_6B1A8 refreshes this child's position immediately before
+        // Child_DrawTouch_Sprite2_FlickerMove adds its pointer to the response
+        // list, so the next player pass observes that refreshed coordinate.
+        return true;
+    }
+
     // =========================================================================
     // Public accessors
     // =========================================================================
