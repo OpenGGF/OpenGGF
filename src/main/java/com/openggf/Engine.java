@@ -1847,11 +1847,7 @@ public class Engine {
 			GameModule module,
 			com.openggf.game.dataselect.DataSelectAction action,
 			SaveManager saveManager) {
-		String gameCode = switch (module.getGameId()) {
-			case S1 -> "s1";
-			case S2 -> "s2";
-			case S3K -> "s3k";
-		};
+		String gameCode = module.getGameCode();
 		Map<String, Object> payload = loadDataSelectPayload(module, action, saveManager);
 		SelectedTeam team = payload == null ? action.team() : teamFromPayload(payload, action.team());
 		com.openggf.game.save.SaveSessionContext context =
@@ -1876,11 +1872,7 @@ public class Engine {
 		return switch (action.type()) {
 			case LOAD_SLOT, CLEAR_RESTART -> {
 				try {
-					String gameCode = switch (module.getGameId()) {
-						case S1 -> "s1";
-						case S2 -> "s2";
-						case S3K -> "s3k";
-					};
+					String gameCode = module.getGameCode();
 					SaveSlotSummary summary = saveManager.readSlotSummary(gameCode, action.slot());
 					yield summary.isLoadable() ? summary.payload() : null;
 				} catch (IOException e) {

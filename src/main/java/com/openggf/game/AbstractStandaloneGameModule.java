@@ -18,6 +18,9 @@ import com.openggf.level.objects.TouchResponseTable;
  */
 @ModApi
 public abstract class AbstractStandaloneGameModule implements GameModule {
+    @Override public final GameId getGameId() { return GameId.STANDALONE; }
+    @Override public final String getGameCode() { return getIdentifier(); }
+
     @Override public PlayableCharacterRegistry getPlayableCharacterRegistry() {
         return PlayableCharacterRegistry.empty();
     }

@@ -8,7 +8,8 @@ package com.openggf.game;
 public enum GameId {
     S1("s1"),
     S2("s2"),
-    S3K("s3k");
+    S3K("s3k"),
+    STANDALONE("standalone");
 
     private final String code;
 

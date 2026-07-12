@@ -11,6 +11,7 @@ public class TestGameId {
         assertEquals(GameId.S1, GameId.fromCode("s1"));
         assertEquals(GameId.S2, GameId.fromCode("s2"));
         assertEquals(GameId.S3K, GameId.fromCode("s3k"));
+        assertEquals(GameId.STANDALONE, GameId.fromCode("standalone"));
     }
 
     @Test
@@ -29,7 +30,7 @@ public class TestGameId {
         assertEquals("s1", GameId.S1.code());
         assertEquals("s2", GameId.S2.code());
         assertEquals("s3k", GameId.S3K.code());
+        assertEquals("standalone", GameId.STANDALONE.code());
     }
 }
-
 

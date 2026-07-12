@@ -37750,3 +37750,16 @@ session-owned data-source routing and stock-ROM pinning changes:
   the five shared consumers therefore receive the same ROM values as before.
 - No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
   engine state was changed.
+
+### 2026-07-12 -- Phase 3 B2 standalone-identity parity sweep
+
+Measured on `next` at `6d605b211` with the reviewed, uncommitted Phase 3 B2
+standalone `GameId` and module-owned game-code routing changes:
+
+- Command:
+  `mvn "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test -Dmse=off`
+- S1 GHZ1, S2 EHZ1, and S3K AIZ all passed (3/3).
+- Built-in modules derive the same `s1`/`s2`/`s3k` codes from their existing
+  `GameId`; the new standalone identity has no stock runtime branch effect.
+- No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
+  engine state was changed.

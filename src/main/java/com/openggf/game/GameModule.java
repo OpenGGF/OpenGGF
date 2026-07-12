@@ -572,6 +572,9 @@ public interface GameModule {
     /** Returns the GameId for this module. */
     GameId getGameId();
 
+    /** Stable save/launch namespace; standalone modules override with their mod id. */
+    default String getGameCode() { return getGameId().code(); }
+
     /**
      * Initial {@code anim_frame_duration} loaded by the badnik-death explosion
      * (Obj27 / ExplosionItem) on its first/setup frame, expressed in the ROM's

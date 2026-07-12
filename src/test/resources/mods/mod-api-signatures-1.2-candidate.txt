@@ -2132,6 +2132,7 @@ FIELD com.openggf.game.EndingPhase public,static,final com.openggf.game.EndingPh
 FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId S1
 FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId S2
 FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId S3K
+FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId STANDALONE
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode BONUS_STAGE
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode CREDITS_DEMO
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode CREDITS_TEXT
@@ -4507,7 +4508,9 @@ METHOD com.openggf.game.AbstractStandaloneGameModule public,abstract  com.opengg
 METHOD com.openggf.game.AbstractStandaloneGameModule public,abstract  com.openggf.level.objects.ObjectRegistry createObjectRegistry()
 METHOD com.openggf.game.AbstractStandaloneGameModule public,abstract  com.openggf.level.objects.TouchResponseTable createTouchResponseTable(com.openggf.game.GameDataSource) THROWS java.io.IOException
 METHOD com.openggf.game.AbstractStandaloneGameModule public,final  com.openggf.data.Game createGame(com.openggf.data.Rom)
+METHOD com.openggf.game.AbstractStandaloneGameModule public,final  com.openggf.game.GameId getGameId()
 METHOD com.openggf.game.AbstractStandaloneGameModule public,final  com.openggf.level.objects.TouchResponseTable createTouchResponseTable(com.openggf.data.RomByteReader)
+METHOD com.openggf.game.AbstractStandaloneGameModule public,final  java.lang.String getGameCode()
 METHOD com.openggf.game.AnimationId public,abstract  int id()
 METHOD com.openggf.game.AnimationId public,static <E extends java.lang.Enum<E>&com.openggf.game.AnimationId> int fromCanonical(E[],java.util.function.Function<E,com.openggf.game.CanonicalAnimation>,com.openggf.game.CanonicalAnimation)
 METHOD com.openggf.game.BonusStageProvider public  boolean hasCompletedExitFadeToBlack()
@@ -4800,6 +4803,7 @@ METHOD com.openggf.game.GameModule public  int getSpecialStageCycleCount()
 METHOD com.openggf.game.GameModule public  int getTailsTailVramBase()
 METHOD com.openggf.game.GameModule public  int resolveAnimationId(com.openggf.game.CanonicalAnimation)
 METHOD com.openggf.game.GameModule public  int[] getBackgroundScrollOverride(int,int,int)
+METHOD com.openggf.game.GameModule public  java.lang.String getGameCode()
 METHOD com.openggf.game.GameModule public  java.util.Optional<com.openggf.game.startup.DonatedDataSelectWarmupTask> getDonatedDataSelectWarmupTask()
 METHOD com.openggf.game.GameModule public  java.util.function.Function<com.openggf.game.PlayableEntity,com.openggf.level.objects.AbstractObjectInstance> getInvincibilityStarsFactory()
 METHOD com.openggf.game.GameModule public  void applyPlaneSwitching(com.openggf.sprites.playable.AbstractPlayableSprite)
