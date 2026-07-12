@@ -1288,7 +1288,7 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<MutableFieldCoverageCandidate> BATCH182_MUTABLE_FIELDS =
             List.of(new MutableFieldCoverageCandidate(
                     "com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance$LauncherArmChild",
-                    "baseX", "baseY", "facingLeft", "nativeP1"));
+                    "baseX", "baseY", "facingLeft"));
 
     private static final List<MutableFieldCoverageCandidate> BATCH183_MUTABLE_FIELDS =
             List.of(new MutableFieldCoverageCandidate(

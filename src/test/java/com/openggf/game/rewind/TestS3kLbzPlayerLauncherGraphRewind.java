@@ -1,22 +1,31 @@
 package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.CompactFieldCapturer;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.rewind.schema.RewindObjectStateBlob;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.sprites.playable.Sonic;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.util.Map;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -51,7 +60,7 @@ class TestS3kLbzPlayerLauncherGraphRewind {
         LbzPlayerLauncherInstance sourceLauncher = objectManager.createDynamicObject(
                 () -> new LbzPlayerLauncherInstance(LAUNCHER_SPAWN));
         ObjectInstance sourceArm = objectManager.createDynamicObject(
-                () -> constructArm(sourceLauncher, true));
+                () -> constructArm(sourceLauncher, null));
         setIntField(sourceArm, "routine", 2);
         setIntField(sourceArm, "angle", 0xA0);
         ObjectRefId launcherId = objectId(objectManager, sourceLauncher);
@@ -61,7 +70,7 @@ class TestS3kLbzPlayerLauncherGraphRewind {
 
         objectManager.removeDynamicObject(sourceArm);
         ObjectInstance divergentArm = objectManager.createDynamicObject(
-                () -> constructArm(sourceLauncher, false));
+                () -> constructArm(sourceLauncher, null));
         assertEquals(1, liveArms(objectManager).size(),
                 "diverge step should leave one unrelated launcher arm before restore");
 
@@ -94,6 +103,74 @@ class TestS3kLbzPlayerLauncherGraphRewind {
                 "LBZ player launcher arm must not keep an explicit S3K dynamic codec");
     }
 
+    @Test
+    void launcherArmPlayerIdentityRoundTripsThroughCompactSchema() throws Exception {
+        LbzPlayerLauncherInstance parent = new LbzPlayerLauncherInstance(LAUNCHER_SPAWN);
+        Sonic capturedPlayer = new Sonic("captured_sidekick", (short) 0, (short) 0);
+        AbstractObjectInstance sourceArm = (AbstractObjectInstance) constructArm(parent, capturedPlayer);
+
+        ObjectRefId parentId = ObjectRefId.layout(5, 1, 0);
+        RewindIdentityTable captureTable = new RewindIdentityTable();
+        captureTable.registerObject(parent, parentId);
+        captureTable.registerPlayer(capturedPlayer, PlayerRefId.sidekick(1));
+        RewindObjectStateBlob blob = CompactFieldCapturer.captureDefaultObjectSubclassScalars(
+                sourceArm, RewindCaptureContext.withIdentityTable(captureTable));
+
+        Sonic restoredPlayer = new Sonic("restored_sidekick", (short) 0, (short) 0);
+        AbstractObjectInstance restoredArm = (AbstractObjectInstance) constructArm(parent, null);
+        RewindIdentityTable restoreTable = new RewindIdentityTable();
+        restoreTable.registerObject(parent, parentId);
+        restoreTable.registerPlayer(restoredPlayer, PlayerRefId.sidekick(1));
+        CompactFieldCapturer.restoreDefaultObjectSubclassScalars(
+                restoredArm, blob, RewindCaptureContext.withIdentityTable(restoreTable));
+
+        assertSame(restoredPlayer, readObjectField(restoredArm, "player"),
+                "launcher arm ownership must restore by PlayerRefId, not stale Java identity");
+    }
+
+    @Test
+    void launcherCounterMapRoundTripsWithReplacementPlayerIdentity() throws Exception {
+        LbzPlayerLauncherInstance source = new LbzPlayerLauncherInstance(LAUNCHER_SPAWN);
+        Sonic capturedPlayer = new Sonic("captured_counter_owner", (short) 0, (short) 0);
+        counterMap(source).put(capturedPlayer, 3);
+        RewindIdentityTable captureTable = new RewindIdentityTable();
+        captureTable.registerPlayer(capturedPlayer, PlayerRefId.sidekick(1));
+        RewindObjectStateBlob blob = CompactFieldCapturer.captureDefaultObjectSubclassScalars(
+                source, RewindCaptureContext.withIdentityTable(captureTable));
+
+        LbzPlayerLauncherInstance restored = new LbzPlayerLauncherInstance(LAUNCHER_SPAWN);
+        Sonic restoredPlayer = new Sonic("restored_counter_owner", (short) 0, (short) 0);
+        RewindIdentityTable restoreTable = new RewindIdentityTable();
+        restoreTable.registerPlayer(restoredPlayer, PlayerRefId.sidekick(1));
+        CompactFieldCapturer.restoreDefaultObjectSubclassScalars(
+                restored, blob, RewindCaptureContext.withIdentityTable(restoreTable));
+
+        assertEquals(3, counterMap(restored).get(restoredPlayer));
+        assertFalse(counterMap(restored).containsKey(capturedPlayer),
+                "rewind must resolve map keys to the restored player instance");
+    }
+
+    @Test
+    void launcherArmResetsItsCapturedOwnerRatherThanFrameUpdatePlayer() throws Exception {
+        LbzPlayerLauncherInstance parent = new LbzPlayerLauncherInstance(LAUNCHER_SPAWN);
+        Sonic owner = new Sonic("arm_owner", (short) 0, (short) 0);
+        Sonic bystander = new Sonic("frame_update_player", (short) 0, (short) 0);
+        counterMap(parent).put(owner, 4);
+        counterMap(parent).put(bystander, 3);
+        setIntField(parent, "p1Counter", 3);
+        setObjectField(parent, "p1CounterOwner", bystander);
+        ObjectInstance arm = constructArm(parent, owner);
+
+        for (int frame = 0; frame < 5; frame++) {
+            arm.update(frame, bystander);
+        }
+
+        assertEquals(0, counterMap(parent).get(owner));
+        assertEquals(3, counterMap(parent).get(bystander));
+        assertEquals(3, readIntField(parent, "p1Counter"),
+                "another player's arm must not reset the native P1 mirror counter");
+    }
+
     private record Harness(ObjectManager objectManager) {
         static Harness create() {
             ObjectManager[] holder = new ObjectManager[1];
@@ -123,13 +200,13 @@ class TestS3kLbzPlayerLauncherGraphRewind {
         return rewindRegistry;
     }
 
-    private static ObjectInstance constructArm(LbzPlayerLauncherInstance parent, boolean nativeP1) {
+    private static ObjectInstance constructArm(LbzPlayerLauncherInstance parent, PlayableEntity player) {
         try {
             Class<?> armType = Class.forName(ARM_CLASS);
             Constructor<?> ctor = armType.getDeclaredConstructor(
-                    ObjectSpawn.class, LbzPlayerLauncherInstance.class, boolean.class);
+                    ObjectSpawn.class, LbzPlayerLauncherInstance.class, PlayableEntity.class);
             ctor.setAccessible(true);
-            return (ObjectInstance) ctor.newInstance(ARM_SPAWN, parent, nativeP1);
+            return (ObjectInstance) ctor.newInstance(ARM_SPAWN, parent, player);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("failed to construct LBZ player launcher arm", e);
         }
@@ -185,6 +262,16 @@ class TestS3kLbzPlayerLauncherGraphRewind {
     private static void setIntField(Object target, String name, int value) throws Exception {
         Field field = field(target, name);
         field.setInt(target, value);
+    }
+
+    private static void setObjectField(Object target, String name, Object value) throws Exception {
+        Field field = field(target, name);
+        field.set(target, value);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<PlayableEntity, Integer> counterMap(Object target) throws Exception {
+        return (Map<PlayableEntity, Integer>) readObjectField(target, "countersByPlayer");
     }
 
     private static Field field(Object target, String name) throws NoSuchFieldException {
