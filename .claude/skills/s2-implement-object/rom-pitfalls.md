@@ -3446,7 +3446,7 @@ their live positions (`docs/s2disasm/s2.asm:54184-54204`), while
 `objoff_32/30` first (`s2.asm:54207-54213`). Both movement routines feed
 `objoff_32` to `MarkObjGone2` (`s2.asm:54278-54280,54303-54305`).
 
-**Originating commit.** `fix(rewind): detach unloaded MCZ rotating platform`.
+**Originating commit.** `0b7c59be9` (`fix(rewind): detach unloaded MCZ rotating platform`).
 
 ---
 
