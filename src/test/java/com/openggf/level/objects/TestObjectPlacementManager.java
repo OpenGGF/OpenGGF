@@ -265,5 +265,25 @@ public class TestObjectPlacementManager {
         assertEquals(0x0600, manager.getLastCameraChunk(),
                 "Post-camera gap creation must not advance the primary placement cursor");
     }
-}
 
+    @Test
+    public void s2LoadWindowUsesViewportWidthWithoutChangingNativeBoundary() {
+        int cameraX = 0x1000;
+        ObjectSpawn beyondNativeEdge =
+                new ObjectSpawn(0x1300, 0, 0x65, 0, 0, false, 0);
+
+        ObjectPlacementController nativeManager =
+                new ObjectPlacementController(List.of(beyondNativeEdge), () -> 320);
+        nativeManager.setWindowingStrategy(S2ObjectWindowing.INSTANCE);
+        nativeManager.reset(cameraX);
+        assertFalse(nativeManager.getActiveSpawns().contains(beyondNativeEdge),
+                "native S2 edge must remain camera coarse + $280");
+
+        ObjectPlacementController wideManager =
+                new ObjectPlacementController(List.of(beyondNativeEdge), () -> 800);
+        wideManager.setWindowingStrategy(S2ObjectWindowing.INSTANCE);
+        wideManager.reset(cameraX);
+        assertTrue(wideManager.getActiveSpawns().contains(beyondNativeEdge),
+                "SUPER_32_9 must load a spawn visible beyond the native S2 cursor edge");
+    }
+}

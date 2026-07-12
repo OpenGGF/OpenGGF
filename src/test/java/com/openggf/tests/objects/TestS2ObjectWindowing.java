@@ -25,6 +25,8 @@ class TestS2ObjectWindowing {
     void forwardLoadEdgeIsCoarsePlus280_trimEdgeIsCoarseMinus80() {
         int cam = 0x1500; // already chunk-aligned
         assertEquals(0x1500 + 0x280, S2ObjectWindowing.forwardLoadEdge(cam));
+        assertEquals(0x1500 + 0x280, S2ObjectWindowing.forwardLoadEdge(cam, 320),
+                "width-aware native path must remain ROM-exact");
         assertEquals(0x1500 - 0x80,  S2ObjectWindowing.leftTrimEdge(cam));
         // NOT camRounded - 0x300:
         assertNotEquals(0x1500 - 0x300, S2ObjectWindowing.leftTrimEdge(cam));
@@ -47,6 +49,21 @@ class TestS2ObjectWindowing {
         assertFalse(S2ObjectWindowing.markObjGone(base + 0x280, cam));
         // object at base + $300 (next $80 bucket) → > $280 → delete
         assertTrue(S2ObjectWindowing.markObjGone(base + 0x300, cam));
+        assertTrue(S2ObjectWindowing.markObjGone(base + 0x300, cam, 320),
+                "width-aware native path must retain the first deleting bucket");
+    }
+
+    @Test
+    void superWidescreenEdgesScaleFromViewportWithoutGrowingNativeWindow() {
+        int cam = 0x1500;
+        int base = S2ObjectWindowing.unloadCoarse(cam);
+
+        assertEquals(0x1500 + 0x3A0, S2ObjectWindowing.forwardLoadEdge(cam, 800),
+                "800px viewport plus one $80 preload column gives a $3A0 forward edge");
+        assertFalse(S2ObjectWindowing.markObjGone(base + 0x300, cam, 800),
+                "an object just beyond the native compare remains inside an 800px viewport");
+        assertTrue(S2ObjectWindowing.markObjGone(base + 0x480, cam, 800),
+                "the next $80 bucket beyond viewport plus native margins unloads");
     }
 
     // ---- Task 1.4b: directional load cursor consumes S2ObjectWindowing final boundaries ----

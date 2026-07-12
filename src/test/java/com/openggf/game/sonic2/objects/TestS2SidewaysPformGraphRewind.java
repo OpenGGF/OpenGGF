@@ -121,10 +121,36 @@ class TestS2SidewaysPformGraphRewind {
                 "Sideways platforms must not use an explicit S2 dynamic codec");
     }
 
+    @Test
+    void sidewaysPlatformEndpointLifetimeUsesActiveViewportWidth() {
+        int cameraX = 0x1500;
+        int endpointX = S2ObjectWindowing.unloadCoarse(cameraX) + 0x300;
+
+        Harness nativeHarness = Harness.create(List.of(), cameraX, 320);
+        SidewaysPformObjectInstance nativePlatform = nativeHarness.objectManager().createDynamicObject(
+                () -> new SidewaysPformObjectInstance(PARENT_SPAWN, "SidewaysPform"));
+        setIntField(nativePlatform, "minX", endpointX);
+        setIntField(nativePlatform, "maxX", endpointX);
+        assertTrue(nativePlatform.isCustomOutOfRange(cameraX),
+                "native Obj7A endpoint lifetime must retain the ROM $280 compare");
+
+        Harness wideHarness = Harness.create(List.of(), cameraX, 800);
+        SidewaysPformObjectInstance widePlatform = wideHarness.objectManager().createDynamicObject(
+                () -> new SidewaysPformObjectInstance(PARENT_SPAWN, "SidewaysPform"));
+        setIntField(widePlatform, "minX", endpointX);
+        setIntField(widePlatform, "maxX", endpointX);
+        assertFalse(widePlatform.isCustomOutOfRange(cameraX),
+                "Obj7A endpoints visible at SUPER_32_9 must not use the native unload compare");
+    }
+
     private record Harness(ObjectManager objectManager) {
         static Harness create(List<ObjectSpawn> spawns) {
+            return create(spawns, 0, 320);
+        }
+
+        static Harness create(List<ObjectSpawn> spawns, int cameraX, int viewportWidth) {
             ObjectManager[] holder = new ObjectManager[1];
-            Camera camera = mockCamera();
+            Camera camera = mockCamera(cameraX, viewportWidth);
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
@@ -263,10 +289,14 @@ class TestS2SidewaysPformGraphRewind {
     }
 
     private static Camera mockCamera() {
+        return mockCamera(0, 320);
+    }
+
+    private static Camera mockCamera(int cameraX, int viewportWidth) {
         return new Camera() {
-            @Override public short getX() { return 0; }
+            @Override public short getX() { return (short) cameraX; }
             @Override public short getY() { return 0; }
-            @Override public short getWidth() { return 320; }
+            @Override public short getWidth() { return (short) viewportWidth; }
             @Override public short getHeight() { return 224; }
             @Override public boolean isVerticalWrapEnabled() { return false; }
         };

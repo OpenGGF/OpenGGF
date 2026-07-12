@@ -2828,6 +2828,9 @@ public class ObjectManager {
     private boolean isObjectOutOfRange(ObjectInstance instance, ObjectSpawn spawn, int cameraX) {
         int referenceX = outOfRangeReferenceX(instance, spawn);
         if (windowingStrategy.overridesUnloadWindow()) {
+            if (windowingStrategy instanceof ViewportAwareObjectWindowingStrategy viewportAware) {
+                return viewportAware.isOutsideUnloadWindow(referenceX, cameraX, camera.getWidth());
+            }
             return windowingStrategy.isOutsideUnloadWindow(referenceX, cameraX);
         }
         return isOutOfRangeS1(referenceX, cameraX);

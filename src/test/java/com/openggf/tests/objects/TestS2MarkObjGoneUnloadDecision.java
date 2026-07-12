@@ -8,6 +8,7 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.objects.S2ObjectWindowing;
+import com.openggf.camera.Camera;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -123,6 +124,36 @@ public class TestS2MarkObjGoneUnloadDecision {
                         + "not the top-left X (which would survive)");
     }
 
+    @Test
+    public void objectPastNativeUnloadEdgeSurvivesWhileVisibleAtSuperWidescreen() {
+        int base = S2ObjectWindowing.unloadCoarse(CAMERA_X);
+        int centreX = base + 0x300;
+        Camera wideCamera = new Camera() {
+            @Override public short getX() { return (short) CAMERA_X; }
+            @Override public short getY() { return 0; }
+            @Override public short getWidth() { return 800; }
+            @Override public short getHeight() { return 224; }
+            @Override public boolean isVerticalWrapEnabled() { return false; }
+        };
+        ObjectManager[] holder = new ObjectManager[1];
+        ObjectServices wideServices = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return wideCamera; }
+        };
+        ObjectManager wideManager = new ObjectManager(
+                List.of(), new Sonic2LayoutRegistry(), 0, null, null,
+                null, wideCamera, wideServices);
+        holder[0] = wideManager;
+        SemanticsObject obj = new SemanticsObject(
+                new ObjectSpawn(centreX, 0, 0x4B, 0, 0, false, 0), centreX, centreX);
+        wideManager.addDynamicObject(obj);
+
+        wideManager.update(CAMERA_X, null, List.of(), 0, false);
+
+        assertTrue(wideManager.getActiveObjects().contains(obj) && !obj.isDestroyed(),
+                "an S2 object inside the active 800px viewport must not use the native MarkObjGone limit");
+    }
+
     private SemanticsObject spawn(int centreX, int topLeftX) {
         SemanticsObject obj = new SemanticsObject(
                 new ObjectSpawn(centreX, 0, 0x4B, 0, 0, false, 0), centreX, topLeftX);
@@ -144,6 +175,11 @@ public class TestS2MarkObjGoneUnloadDecision {
         @Override
         public ObjectSlotLayout objectSlotLayout() {
             return ObjectSlotLayout.SONIC_2;
+        }
+
+        @Override
+        public com.openggf.level.objects.ObjectWindowingStrategy objectWindowingStrategy() {
+            return S2ObjectWindowing.INSTANCE;
         }
 
         @Override

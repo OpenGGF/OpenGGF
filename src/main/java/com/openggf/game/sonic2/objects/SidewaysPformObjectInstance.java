@@ -357,9 +357,8 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
         return out;
     }
 
-    private static boolean obj7aEndpointOutOfRange(int endpointX, int cameraX) {
-        int dist = ((endpointX & 0xFF80) - S2ObjectWindowing.unloadCoarse(cameraX)) & 0xFFFF;
-        return dist > S2ObjectWindowing.UNLOAD_COMPARE;
+    private boolean obj7aEndpointOutOfRange(int endpointX, int cameraX) {
+        return S2ObjectWindowing.markObjGone(endpointX, cameraX, services().camera().getWidth());
     }
 
     /**
