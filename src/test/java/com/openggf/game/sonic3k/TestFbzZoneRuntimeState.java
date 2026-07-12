@@ -12,6 +12,42 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestFbzZoneRuntimeState {
 
     @Test
+    void act2UsesNormalBackgroundWindowAndCarriesNoRetainedPayload() {
+        Sonic3kFBZEvents events = new Sonic3kFBZEvents();
+        events.init(1);
+        FbzZoneRuntimeState state = new FbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, events);
+        assertFalse(state.usesPersistentBackgroundVdpPlane());
+        assertEquals(0, events.captureRetainedPlaneSnapshot().length);
+        assertThrows(IllegalArgumentException.class,
+                () -> events.restoreRetainedPlaneSnapshot(new byte[64 * 32 * 4]));
+        byte[] captured = state.captureBytes();
+        state.restoreBytes(captured);
+        assertEquals(0, events.captureRetainedPlaneSnapshot().length);
+    }
+
+    @Test
+    void exactRetainedPlanePayloadRoundTripsDefensively() {
+        Sonic3kFBZEvents events = new Sonic3kFBZEvents();
+        events.init(0);
+        byte[] retained = new byte[64 * 32 * 4];
+        for (int i = 0; i < retained.length; i++) retained[i] = (byte) (i * 31);
+        events.restoreRetainedPlaneSnapshot(retained);
+        FbzZoneRuntimeState state = new FbzZoneRuntimeState(0, PlayerCharacter.SONIC_ALONE, events);
+        byte[] snapshot = state.captureBytes();
+
+        retained[0] ^= 0x7F;
+        events.restoreRetainedPlaneSnapshot(new byte[0]);
+        state.restoreBytes(snapshot);
+
+        byte[] restored = events.captureRetainedPlaneSnapshot();
+        assertEquals(64 * 32 * 4, restored.length);
+        assertEquals((byte) 0, restored[0]);
+        assertEquals((byte) 31, restored[1]);
+        restored[1] = 0;
+        assertEquals((byte) 31, events.captureRetainedPlaneSnapshot()[1]);
+    }
+
+    @Test
     void captureRestoreCaptureRoundTripsEveryAuthoritativeField() {
         Sonic3kFBZEvents events = new Sonic3kFBZEvents();
         events.init(1);

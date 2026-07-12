@@ -320,6 +320,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new HczZoneRuntimeState(act, playerCharacter, hczEvents));
         } else if (zone == Sonic3kZoneIds.ZONE_FBZ && fbzEvents != null) {
             registry.install(new FbzZoneRuntimeState(act, playerCharacter, fbzEvents));
+            fbzEvents.initializeAct1Runtime();
         } else if (zone == Sonic3kZoneIds.ZONE_MGZ && mgzEvents != null) {
             registry.install(new MgzZoneRuntimeState(act, playerCharacter, mgzEvents));
         } else if (zone == Sonic3kZoneIds.ZONE_ICZ && iczEvents != null) {
@@ -894,9 +895,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             FbzZoneRuntimeState rebound = new FbzZoneRuntimeState(currentAct, getPlayerCharacter(), fbzEvents);
             rebound.restoreBytes(restoredBytes);
             registry.install(rebound);
+            if (currentAct == 0) fbzEvents.reconcileAct1State();
             return;
         }
         ensureZoneRuntimeStateInstalled();
+        if (currentAct == 0) fbzEvents.reconcileAct1State();
     }
 
     @Override

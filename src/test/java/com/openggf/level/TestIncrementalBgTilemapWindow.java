@@ -223,6 +223,27 @@ public class TestIncrementalBgTilemapWindow {
     }
 
     @Test
+    public void retainedPlaneMutationAndRestoreSurviveNextFrameWindowPreparation() {
+        ZoneFeatureProvider zfp = new StubZoneFeatures(true, false);
+        LevelTilemapManager manager = newManager(496, zfp);
+        assertTrue(manager.setRetainedBackgroundTileDescriptorAtTilemapCell(3, 3, 0x1234));
+        byte[] retained = manager.getBackgroundTilemapData().clone();
+
+        manager.requestBgWindowBaseX(512);
+        ensure(manager, zfp);
+        assertEquals(1, manager.bgFullRebuildCount);
+        assertArrayEquals(retained, manager.getBackgroundTilemapData());
+
+        byte[] restored = retained.clone();
+        restored[0] ^= 0x55;
+        manager.restoreRetainedBackgroundTilemapData(restored);
+        manager.requestBgWindowBaseX(528);
+        ensure(manager, zfp);
+        assertEquals(1, manager.bgFullRebuildCount);
+        assertArrayEquals(restored, manager.getBackgroundTilemapData());
+    }
+
+    @Test
     public void loopBandWindowShiftsAreByteIdenticalToFullRebuild() {
         ZoneFeatureProvider zfp = new StubZoneFeatures(true, false);
         LevelTilemapManager manager = new LevelTilemapManager(geometry, graphicsManager, null);

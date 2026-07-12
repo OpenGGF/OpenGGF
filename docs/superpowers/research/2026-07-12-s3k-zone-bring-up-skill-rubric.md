@@ -26,10 +26,15 @@ Use only the skill and resources it explicitly requires. Do not infer additional
 | R10 | Cross-game donation audit | A mandatory final audit checks all donor capability profiles for route blockers and permits only explicit capability-driven workarounds that preserve native behavior. |
 | R11 | Native regression after compatibility | Strict locked-on behavior is rerun after compatibility adaptations with donation/extension modes disabled. |
 | R12 | Complete acceptance | Definition of done forbids reachable placeholders and requires events, objects, bosses, visual systems, audio, rewind/reset, focused tests, late trace/visual gates, compatibility audits, and regression preservation. |
+| R13 | Native retained plane | Incremental plane redraw work explicitly distinguishes the full CPU cache from the fixed 64x32 VDP ring and preserves native dimensions/cadence under widescreen. |
+| R14 | Layer-aware invalidation | Plane-A runtime mutations cannot invalidate/rebuild a retained Plane B; genuine Plane-B/layout invalidations explicitly clear retained authority. |
+| R15 | Palette visibility lifecycle | Target-palette state must have a production fade consumer or safe opaque-screen materialization, with first-visible-frame and rewind tests; dead metadata is rejected. |
+| R16 | Retained lifecycle/scoping | Retained state is act/mode scoped and survives real ensure/window/upload/render preparation after live writes and rewind restore. |
+| R17 | Real runtime validation | A ROM-backed tall-cache capture -> mutate -> restore -> reconcile -> next-render test is required; synthetic helper-only coverage is insufficient. |
 
 ## Verdict
 
-- **GREEN:** R1-R12 all PASS.
+- **GREEN:** R1-R17 all PASS.
 - **RED:** Any assertion fails or is only optional/implied.
 
 Record the exact prompt, raw agent output, per-assertion PASS/FAIL result, and overall verdict in both baseline and forward-test artifacts.

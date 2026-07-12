@@ -18,7 +18,7 @@ import java.util.Objects;
 /** Event-backed FBZ runtime adapter and sole rewind serializer for FBZ event RAM. */
 public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
     private static final int MAGIC = 0x46425A31;
-    private static final int VERSION = 2;
+    private static final int VERSION = 6;
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
     private final Sonic3kFBZEvents events;
@@ -33,6 +33,7 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
 
     @Override public int zoneIndex() { return Sonic3kZoneIds.ZONE_FBZ; }
     @Override public int actIndex() { return actIndex; }
+    @Override public boolean usesPersistentBackgroundVdpPlane() { return actIndex == 0; }
     @Override public PlayerCharacter playerCharacter() { return playerCharacter; }
     @Override public int getDynamicResizeRoutine() { return events.getDynamicResizeRoutine(); }
     @Override public boolean isActTransitionFlagActive() { return events.isEventsFg5(); }
@@ -42,7 +43,9 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
     public boolean backgroundOutdoor() { return events.isBackgroundOutdoor(); }
     public int backgroundRedrawStage() { return events.getBackgroundRedrawStage(); }
     public Sonic3kFBZEvents.RedrawDirection backgroundRedrawDirection() { return events.getBackgroundRedrawDirection(); }
+    public int backgroundRedrawProgress() { return events.getBackgroundRedrawProgress(); }
     public int outdoorBobOffset() { return events.getOutdoorBobOffset(); }
+    public void setOutdoorBobOffset(int value) { events.setOutdoorBobOffset(value); }
     public int hScrollAccumulator() { return events.getHScrollAccumulator(); }
     public int sampleOutdoorHScrollAccumulator(int frameCounter) {
         return events.sampleOutdoorHScrollAccumulator(frameCounter);
@@ -75,11 +78,21 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
 
     @Override public byte[] captureBytes() {
         List<ObjectRefId> clouds = events.getCloudRewindIds();
+        byte[] retainedPlane = actIndex == 0 ? events.captureRetainedPlaneSnapshot() : new byte[0];
         int cloudBytes = clouds.stream().mapToInt(id -> 1 + (id == null ? 0 : 20)).sum();
-        ByteBuffer out = ByteBuffer.allocate(96 + cloudBytes);
+        ByteBuffer out = ByteBuffer.allocate(136 + retainedPlane.length + cloudBytes);
         out.putInt(MAGIC).putInt(VERSION).putInt(events.getForegroundLayoutRegion());
         out.put(bool(events.isForegroundOutdoor())).put(bool(events.isBackgroundOutdoor()));
         out.putInt(events.getBackgroundRedrawStage()).putInt(events.getBackgroundRedrawDirection().ordinal());
+        out.putInt(events.getBackgroundRedrawProgress()).putInt(events.getBackgroundRedrawPosition());
+        out.putInt(events.getBackgroundRedrawRowCount()).putInt(events.getBackgroundRedrawVerticalAnchor());
+        out.putInt(events.getLastRoundedBackgroundY());
+        out.putInt(events.getDeformMode().ordinal());
+        out.putInt(events.getPaletteVariant().ordinal()).putInt(events.getPaletteTarget().ordinal());
+        out.put(bool(events.isAct1ScreenInitialized())).put(bool(events.isAct1BackgroundInitialized()));
+        out.put(bool(events.isOutdoorMotionAllocationAttempted()));
+        out.put(bool(events.isOutdoorMotionSpawned()));
+        out.putInt(retainedPlane.length).put(retainedPlane);
         out.putInt(events.getOutdoorBobOffset());
         out.putInt(events.getHScrollAccumulator()).put(bool(events.isHScrollAccumulatorSampled()));
         out.putInt(events.getHScrollAccumulatorLastFrame()).putInt(events.getHScrollAccumulatorLastRead());
@@ -109,6 +122,25 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
             boolean fgOutdoor = readBool(in, "foreground outdoor"), bgOutdoor = readBool(in, "background outdoor");
             int redrawStage = in.getInt();
             var redraw = enumAt(Sonic3kFBZEvents.RedrawDirection.values(), in.getInt(), "redraw direction");
+            int redrawProgress = in.getInt();
+            int redrawPosition = in.getInt(), redrawRowCount = in.getInt(), redrawVerticalAnchor = in.getInt();
+            int lastRoundedBackgroundY = in.getInt();
+            var deformMode = enumAt(Sonic3kFBZEvents.DeformMode.values(), in.getInt(), "deform mode");
+            var paletteVariant = enumAt(Sonic3kFBZEvents.PaletteVariant.values(), in.getInt(), "palette variant");
+            var paletteTarget = enumAt(Sonic3kFBZEvents.PaletteTarget.values(), in.getInt(), "palette target");
+            boolean screenInitialized = readBool(in, "Act 1 screen initialized");
+            boolean backgroundInitialized = readBool(in, "Act 1 background initialized");
+            boolean motionAllocationAttempted = readBool(in, "outdoor motion allocation attempted");
+            boolean motionSpawned = readBool(in, "outdoor motion spawned");
+            int retainedPlaneLength = in.getInt();
+            if (retainedPlaneLength != 0 && retainedPlaneLength != 64 * 32 * 4) {
+                throw new IllegalArgumentException("invalid retained Plane-B byte count: " + retainedPlaneLength);
+            }
+            byte[] retainedPlane = new byte[retainedPlaneLength];
+            in.get(retainedPlane);
+            if (actIndex != 0 && retainedPlaneLength != 0) {
+                throw new IllegalArgumentException("FBZ Act 2 cannot restore a retained Plane-B image");
+            }
             int bob = in.getInt();
             int hScrollAccumulator = in.getInt();
             boolean hScrollSampled = readBool(in, "HScroll accumulator sampled");
@@ -130,7 +162,11 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
             int shakeOffset = in.getInt(), shakePhase = in.getInt();
             boolean eventsFg5 = readBool(in, "Events_fg_5");
             if (in.hasRemaining()) throw new IllegalArgumentException("trailing FBZ rewind bytes: " + in.remaining());
-            s = new Snapshot(layout, fgOutdoor, bgOutdoor, redrawStage, redraw, bob,
+            s = new Snapshot(layout, fgOutdoor, bgOutdoor, redrawStage, redraw,
+                    redrawProgress, redrawPosition, redrawRowCount, redrawVerticalAnchor, lastRoundedBackgroundY,
+                    deformMode, paletteVariant, paletteTarget,
+                    screenInitialized, backgroundInitialized, motionAllocationAttempted, motionSpawned,
+                    retainedPlane, bob,
                     hScrollAccumulator, hScrollSampled, hScrollLastFrame, hScrollLastRead,
                     polarity, magneticPhase, magneticEdgeObserved, magneticLastEdgeFrame,
                     foregroundStage, bossStage, bossX, bossY, adjustment,
@@ -149,6 +185,10 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
         target.setForegroundLayoutRegion(s.layout());
         target.setForegroundOutdoor(s.fgOutdoor()); target.setBackgroundOutdoor(s.bgOutdoor());
         target.setBackgroundRedraw(s.redrawStage(), s.redraw()); target.setOutdoorBobOffset(s.bob());
+        target.restoreAct1EventState(s.redrawProgress(), s.redrawPosition(), s.redrawRowCount(),
+                s.redrawVerticalAnchor(), s.lastRoundedBackgroundY(), s.deformMode(), s.paletteVariant(), s.paletteTarget(),
+                s.screenInitialized(), s.backgroundInitialized(), s.motionAllocationAttempted(), s.motionSpawned());
+        target.restoreRetainedPlaneSnapshot(s.retainedPlane());
         target.restoreHScrollAccumulatorState(s.hScrollAccumulator(), s.hScrollSampled(),
                 s.hScrollLastFrame(), s.hScrollLastRead());
         target.restoreMagneticState(s.polarity(), s.magneticPhase(),
@@ -196,7 +236,16 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
         return new ObjectRefId(slot, generation, spawn, dynamic, enumAt(ObjectRefKind.values(), in.getInt(), "cloud id kind"));
     }
     private record Snapshot(int layout, boolean fgOutdoor, boolean bgOutdoor,
-                            int redrawStage, Sonic3kFBZEvents.RedrawDirection redraw, int bob,
+                            int redrawStage, Sonic3kFBZEvents.RedrawDirection redraw,
+                            int redrawProgress, int redrawPosition, int redrawRowCount, int redrawVerticalAnchor,
+                            int lastRoundedBackgroundY,
+                            Sonic3kFBZEvents.DeformMode deformMode,
+                            Sonic3kFBZEvents.PaletteVariant paletteVariant,
+                            Sonic3kFBZEvents.PaletteTarget paletteTarget,
+                            boolean screenInitialized, boolean backgroundInitialized,
+                            boolean motionAllocationAttempted, boolean motionSpawned,
+                            byte[] retainedPlane,
+                            int bob,
                             int hScrollAccumulator, boolean hScrollSampled,
                             int hScrollLastFrame, int hScrollLastRead,
                             Sonic3kFBZEvents.MagneticPolarity polarity, int magneticPhase,

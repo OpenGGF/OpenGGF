@@ -1434,7 +1434,7 @@ public class LevelManager {
                 tilemapManager.setBackgroundTilemapDirty(true);
             }
             newBgPeriodWidth = cachedBgContiguousWidthPx;
-        } else if (bgCameraX != Integer.MIN_VALUE
+        } else if (!usesPersistentBackgroundVdpPlane() && bgCameraX != Integer.MIN_VALUE
                 && zoneFeatureProvider != null && zoneFeatureProvider.bgWrapsHorizontally()) {
             int newBase = Math.floorDiv(bgCameraX, 16) * 16;
             if (newBase != tilemapManager.getBgTilemapBaseX()) {
@@ -1461,6 +1461,12 @@ public class LevelManager {
             tilemapManager.setBackgroundTilemapDirty(true);
         }
         return fullWidthPerLineTilemap;
+    }
+
+    private static boolean usesPersistentBackgroundVdpPlane() {
+        var registry = GameServices.zoneRuntimeRegistryOrNull();
+        return registry != null && registry.current() != null
+                && registry.current().usesPersistentBackgroundVdpPlane();
     }
 
     void ensureForegroundTilemapData() {
@@ -2032,10 +2038,60 @@ public class LevelManager {
                 }
                 int descriptor = getBackgroundTileDescriptorAtWorld(sourceStartX + i * Pattern.PATTERN_WIDTH,
                         sourceRowY);
-                changed |= tilemapManager.setBackgroundTileDescriptorAtTilemapCell(destTileX, destTileY, descriptor);
+                changed |= tilemapManager.setRetainedBackgroundTileDescriptorAtTilemapCell(destTileX, destTileY, descriptor);
             }
         }
         return changed;
+    }
+
+    /** Copies retained Plane-B columns; each column is 16px wide and blockRows is 16px units. */
+    public boolean copyBackgroundTileColumnsFromWorldToVdpPlane(int sourceWorldX, int sourceWorldY,
+                                                                 int destPlaneX, int columnCount,
+                                                                 int blockRows) {
+        if (tilemapManager == null || columnCount <= 0 || blockRows <= 0) return false;
+        ensureBackgroundTilemapData();
+        boolean changed = false;
+        int destTileX = Math.floorMod(destPlaneX / 8, 64);
+        int destTileY = Math.floorMod(sourceWorldY / 8, 32);
+        for (int column = 0; column < columnCount; column++) {
+            for (int tx = 0; tx < 2; tx++) {
+                for (int ty = 0; ty < blockRows * 2; ty++) {
+                    int descriptor = getBackgroundTileDescriptorAtWorld(
+                            sourceWorldX + column * 16 + tx * 8, sourceWorldY + ty * 8);
+                    changed |= tilemapManager.setRetainedBackgroundTileDescriptorAtTilemapCell(
+                            (destTileX + column * 2 + tx) & 63, (destTileY + ty) & 31, descriptor);
+                }
+            }
+        }
+        return changed;
+    }
+
+    /** Seeds all 64x32 retained Plane-B cells from one world source X, batching one upload. */
+    public void seedBackgroundVdpPlaneFromWorld(int sourceWorldX) {
+        ensureBackgroundTilemapData();
+        if (tilemapManager == null) return;
+        for (int ty = 0; ty < 32; ty++) {
+            for (int tx = 0; tx < 64; tx++) {
+                int descriptor = getBackgroundTileDescriptorAtWorld(sourceWorldX + tx * 8, ty * 8);
+                tilemapManager.setRetainedBackgroundTileDescriptorAtTilemapCell(tx, ty, descriptor);
+            }
+        }
+        tilemapManager.uploadBackgroundTilemap();
+    }
+
+    /** Captures the exact retained Plane-B descriptor buffer for deterministic rewind reconciliation. */
+    public byte[] captureBackgroundVdpPlane() {
+        ensureBackgroundTilemapData();
+        if (tilemapManager == null || tilemapManager.getBackgroundTilemapData() == null) return new byte[0];
+        return tilemapManager.captureRetainedBackgroundVdpRing();
+    }
+
+    /** Restores a retained Plane-B descriptor buffer and uploads it as one batch. */
+    public void restoreBackgroundVdpPlane(byte[] snapshot) {
+        ensureBackgroundTilemapData();
+        if (tilemapManager == null) throw new IllegalStateException("background tilemap manager unavailable");
+        tilemapManager.restoreRetainedBackgroundTilemapData(snapshot);
+        tilemapManager.uploadBackgroundTilemap();
     }
 
     private int getTileDescriptorAtWorld(byte layer, int worldX, int worldY) {

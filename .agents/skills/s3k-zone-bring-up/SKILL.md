@@ -61,6 +61,19 @@ When feature agents implement the zone, prefer the runtime-owned stack over besp
 - Objects must use `ObjectServices`; forced movement, participation, native coordinates, and lifecycle must use `ObjectControlState`, `ObjectPlayerQuery` / `ObjectPlayerParticipationPolicy`, `NativePositionOps`, and `ObjectLifetimeOps`.
 - New runtime and object state must have deterministic reset, checkpoint/death restore, session reload, and rewind capture/relink behavior. Run both rewind coverage guards and focused capture/restore round-trip tests.
 
+### Retained VDP Plane and Palette-Lifecycle Gate
+
+When the disassembly incrementally redraws a plane, distinguish the full CPU level/layout cache from the native retained VDP nametable. Model the latter as a fixed 64x32-cell ring even in widescreen; viewport width must not expand the native plane or change row/column cadence. Keep event-owned delayed position, direction, mode, and act gating in typed zone state, while generic level code exposes allocation-free row/column writes. Continue the ROM's ordinary row feed during staged redraws.
+
+Before accepting retained-plane work:
+
+- Make dirty map invalidation layer-aware. A Plane-A runtime mutation must not rebuild or erase retained Plane B; genuine Plane-B/layout/geometry invalidations must leave retained-authoritative mode and rebuild.
+- Verify retained writes and restored bytes survive the next real tilemap ensure, window preparation, upload, and render path. Test the real manager, not a no-op test double.
+- Scope retained-plane ownership and rewind payloads to the acts/modes that use them. Preserve exact native ring bytes or prove deterministic reconstruction of staged and ordinary writes.
+- Add a ROM-backed tall-cache capture -> mutate -> restore -> reconcile -> next-render test that proves the fixed ring and widescreen/native-plane semantics. Synthetic helper-only snapshots do not pass this gate.
+
+Treat `Target_palette` and live `Normal_palette` as distinct surfaces. A target write is incomplete until the engine's fade lifecycle actually consumes it or safely materializes the same colors while the screen is opaque. Test the first visible frame and target/normal rewind ownership; registry metadata without a production consumer is not implementation.
+
 ## Slice-First Completion Rule
 
 A zone bring-up is successful when it advances a playable route, not when a checklist row changes state. For current work, prioritize AIZ -> HCZ continuity first, then feed CNZ, MGZ, and ICZ into the same standard.

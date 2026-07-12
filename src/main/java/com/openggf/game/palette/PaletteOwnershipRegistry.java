@@ -6,6 +6,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Palette;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public final class PaletteOwnershipRegistry implements RewindSnapshottable<PaletteOwnershipSnapshot> {
@@ -13,12 +14,16 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
 
     private final List<PaletteWrite> writes = new ArrayList<>();
     private final String[][][] owners = new String[2][4][16];
+    /** ROM Target_palette_* staging surface used by fades; persistent across frame queues. */
+    private final byte[][] targetSegaLines = new byte[4][32];
+    private final String[][] targetOwners = new String[4][16];
     private final boolean[] normalDirty = new boolean[4];
     private boolean paletteRotationDisabled;
     private boolean resolvedThisFrame;
 
     public PaletteOwnershipRegistry() {
         resetOwners();
+        resetTargetOwners();
     }
 
     public void beginFrame() {
@@ -30,10 +35,35 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
     public void clear() {
         beginFrame();
         paletteRotationDisabled = false;
+        for (byte[] line : targetSegaLines) Arrays.fill(line, (byte) 0);
+        resetTargetOwners();
     }
 
     public void submit(PaletteWrite write) {
         writes.add(write);
+    }
+
+    /** Applies an immediate ROM Target_palette write without entering the normal/underwater frame queue. */
+    public void applyTargetPatch(String ownerId, int lineIndex, int startColor, byte[] segaData) {
+        if (ownerId == null || segaData == null || (segaData.length & 1) != 0
+                || lineIndex < 0 || lineIndex >= targetSegaLines.length
+                || startColor < 0 || startColor + segaData.length / 2 > 16) {
+            throw new IllegalArgumentException("invalid target palette patch");
+        }
+        System.arraycopy(segaData, 0, targetSegaLines[lineIndex], startColor * 2, segaData.length);
+        Arrays.fill(targetOwners[lineIndex], startColor, startColor + segaData.length / 2, ownerId);
+    }
+
+    public byte[] targetSegaData(int lineIndex, int startColor, int colorCount) {
+        if (lineIndex < 0 || lineIndex >= targetSegaLines.length || startColor < 0
+                || colorCount < 0 || startColor + colorCount > 16) {
+            throw new IllegalArgumentException("invalid target palette range");
+        }
+        return Arrays.copyOfRange(targetSegaLines[lineIndex], startColor * 2, (startColor + colorCount) * 2);
+    }
+
+    public String targetOwnerAt(int lineIndex, int colorIndex) {
+        return targetOwners[lineIndex][colorIndex];
     }
 
     public void setPaletteRotationDisabled(boolean disabled) {
@@ -137,6 +167,10 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
         }
     }
 
+    private void resetTargetOwners() {
+        for (String[] line : targetOwners) Arrays.fill(line, NO_OWNER);
+    }
+
     // ── RewindSnapshottable ───────────────────────────────────────────────
 
     /** Total cells: 2 surfaces × 4 lines × 16 colors = 128. */
@@ -158,7 +192,17 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
                 }
             }
         }
-        return new PaletteOwnershipSnapshot(ownersFlat, paletteRotationDisabled);
+        byte[] targetBytes = new byte[4 * 32];
+        String[] targetOwnersFlat = new String[4 * 16];
+        int byteOffset = 0;
+        int targetOwnerOffset = 0;
+        for (int line = 0; line < 4; line++) {
+            System.arraycopy(targetSegaLines[line], 0, targetBytes, byteOffset, 32);
+            System.arraycopy(targetOwners[line], 0, targetOwnersFlat, targetOwnerOffset, 16);
+            byteOffset += 32;
+            targetOwnerOffset += 16;
+        }
+        return new PaletteOwnershipSnapshot(ownersFlat, paletteRotationDisabled, targetBytes, targetOwnersFlat);
     }
 
     @Override
@@ -176,6 +220,19 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
                     owners[s][l][c] = ownerId == 0 ? NO_OWNER : ownerTable[ownerId - 1];
                 }
             }
+        }
+        byte[] targetBytes = snap.targetSegaData();
+        byte[] targetIds = snap.targetOwnerIds();
+        String[] targetTable = snap.targetOwnerTable();
+        int targetByteOffset = 0;
+        int targetOwnerOffset = 0;
+        for (int line = 0; line < 4; line++) {
+            System.arraycopy(targetBytes, targetByteOffset, targetSegaLines[line], 0, 32);
+            for (int color = 0; color < 16; color++) {
+                int ownerId = Byte.toUnsignedInt(targetIds[targetOwnerOffset++]);
+                targetOwners[line][color] = ownerId == 0 ? NO_OWNER : targetTable[ownerId - 1];
+            }
+            targetByteOffset += 32;
         }
     }
 }

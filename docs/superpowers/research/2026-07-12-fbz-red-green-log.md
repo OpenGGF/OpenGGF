@@ -326,3 +326,108 @@ recorded as `unknown/not previously run` rather than inferred.
   advances magnetic state only through `FbzZoneRuntimeState`, with no concrete
   event-manager lookup. The bounded Task 4 + renderer/runtime + PLC corruption
   regression set passed 168 tests with no failures, errors, or skips.
+- Task 5 Act 1 events RED: the focused `TestFbzEventsAct1`,
+  `TestFbzAct1LayoutMutations`, and `TestFbzOutdoorBgMotion` compile failed on
+  the deliberately absent Act 1 screen/background event API, exact Plane-A
+  copy-plan model, staged redraw progression, and ordinary dynamic
+  `FbzOutdoorBgMotionObjectInstance`. This proves the new tests do not pass on
+  Task 4's event-state skeleton. No production file or trace was touched before
+  observing this failure.
+- Task 5 Act 1 events GREEN: 16 focused behavior tests now cover the exact six
+  inclusive `FBZ1_LayoutModRange` rectangles and Plane-A donor/destination copy
+  shapes, screen/background initialization, foreground/background hysteresis,
+  death gating, four direction routines with trigger-frame drawing and 16-frame
+  completion, palette/deform ownership, the `$2800/$80`
+  `Gradual_SwingOffset` controller, persistence/rewind recreation, and
+  same-frame controller-to-deformation bob consumption. The bounded Task 5 plus
+  affected Task 3/4 runtime/deform/palette/rewind and direct-map guard suite
+  passed 55/55. Four mandatory guards passed 19/21; the only two failures were
+  the inherited AIZ emerald-glow final-scalar rewind gaps and AIZ miniboss
+  inline camera-controller spawns already present before Task 5. No FBZ guard
+  finding and no trace activity occurred.
+- Task 5 staged Plane-B review RED/GREEN: the first review correctly found that
+  event redraw state had no retained nametable consumer. A new cadence test
+  first failed compilation on the missing delayed-position API. The corrected
+  path uses a persistent 64x32 Plane-B cache, exact one-row/two-column 16-frame
+  scheduling (33-block horizontal and 17-block vertical prefetch extents), one
+  upload per changed batch, init source-X seeding (`0`/`$200`), normal
+  `Draw_TileRow` crossing refresh, and rewind inverse-seed plus completed-strip
+  replay. Delayed position, signed rowcount, anchor, and rounded BG Y are owned
+  by the FBZ event serializer (version 4). MutableLevel dirty-map processing is
+  now layer-aware so Plane-A swaps do not invalidate retained Plane B.
+- Final bounded Task 5 plus affected Task 3/4, palette/rewind, incremental BG
+  cache, and rewind-reset suite passed 88/88 with no failures, errors, or skips;
+  `git diff --check` was clean. Mandatory guards remain 19/21 with only the
+  already-recorded inherited AIZ failures and no FBZ findings. No trace was run.
+- Task 5 final spec-review RED/GREEN: strengthened tests first failed on the
+  multi-column redraw abstraction, missing allocation-attempt state, and absent
+  exact `Draw_TileRow` position selector. The corrected implementation issues
+  horizontal columns individually in ROM order (`$3F0,$3E0,...` or
+  `$000,$010,...`), never adds the outdoor `$200` to those delayed/source X
+  values, derives column source and retained-plane destination Y from effective
+  BG Y, and follows the `$FF0`-masked old/new-row direction plus optional second
+  update at 32-pixel crossings. `AllocateObject` is attempted exactly once even
+  when it fails; attempted and successful states round-trip independently in
+  FBZ rewind schema version 5.
+- The same correction adds a persistent runtime-owned `Target_palette` staging
+  surface. Outdoor `BackgroundInit` writes its 16 bytes there without touching
+  normal palette ownership; runtime transitions submit a normal-palette write
+  only on the trigger frame, while reconciliation deliberately reapplies the
+  serialized target. Live `LevelManager` tests exercise the 64x32 retained
+  buffer at nonzero Y, vertical wrapping, and inverse-seed plus completed-strip
+  replay after mutation. The final affected suite passed 100/100; focused live
+  retained-plane coverage passed 5/5. Mandatory guards remain 19/21 with only
+  the inherited AIZ findings, `git diff --check` is clean, and no trace ran.
+- Task 5 second re-review RED/GREEN: new high-Y tests exposed vertical staged
+  redraw truncating source rows to eight bits. Source positions now retain the
+  ROM `$FF0` mask (including `$A20`/`$AE0` test cases); only the 64x32 VDP
+  destination wraps. A mid-transition mode-jump test also proved that inverse
+  seed plus staged-prefix replay cannot reconstruct ordinary `Draw_TileRow`
+  writes. FBZ rewind schema version 6 therefore captures the exact 8192-byte
+  retained Plane-B descriptor image, validates it transactionally, and restores
+  and uploads it once during reconciliation. The live-buffer test covers a
+  staged column, a high-Y ordinary target-mode row, later mode mutation, and
+  cell-for-cell restoration.
+- Palette ownership rewind now includes the persistent target Sega bytes and
+  compact target-owner ids/table. Snapshot construction and restoration validate
+  fixed dimensions and owner references, all array access is defensive, and
+  registry-only mutation/restore tests prove the target surface round-trips
+  independently of normal frame ownership. Focused correction tests passed
+  46/46; the final affected suite passed 111/111. No trace was run.
+- Task 5 third re-review RED/GREEN: a real `LevelTilemapManager` test showed the
+  retained Plane-B image needed an explicit authoritative lifecycle rather than
+  the generic overlay invalidation path. FBZ row, column, seed, and restore
+  writes now use retained-authoritative APIs: camera window preparation updates
+  base bookkeeping without rebuilding or shifting those bytes, while genuine
+  geometry/layout/full-width invalidations clear the mode and retain the normal
+  full-build fallback. The real manager test writes and restores descriptors,
+  runs next-frame ensure preparation, and preserves the image byte-for-byte.
+- A pending FBZ Plane-B image now wins capture over the current live runtime
+  until reconciliation installs and clears it; later captures read the live
+  image. Packed palette snapshots additionally reject duplicate owner entries
+  and tables beyond the one-byte 255-id capacity. The focused lifecycle and
+  schema suite passed 48/48. No trace was run.
+- Task 5 quality-review RED/GREEN: retained capture now extracts a strict 64x32
+  VDP ring (8192 bytes) from any larger world cache and restore installs that
+  exact ring. FBZ Act 2 no longer advertises persistent Plane B and its rewind
+  payload is always empty. Horizontal redraw now treats `d2` as the ROM clipping
+  window (`0..$1F0` indoors, `$200..$3F0` outdoors); delayed X is passed directly
+  to column setup, so only the matching direction/mode pair writes columns.
+- Because the engine implements level-entry fade as an opaque overlay rather
+  than ROM palette interpolation, FBZ outdoor startup preserves its target-line
+  write and also queues the same line-4 patch into Normal while the overlay is
+  black, making the revealed post-fade palette correct. The unused registry
+  controller factory was removed; the event allocation supplier is canonical.
+  A live ObjectManager rewind graph test restores all three swing scalars along
+  with the serialized attempted/spawned event state. Focused quality tests passed
+  51/51. No trace was run.
+- Task 5 final quality lifecycle correction: the startup target patch is now
+  resolved into Normal immediately (while the black overlay is opaque), so a
+  subsequent `beginFrame()` cannot discard it. A ROM-backed `@RequiresRom`
+  FBZ1 test boots at X below `$180`, verifies displayed line-4 colors directly
+  against `Pal_FBZBGOutdoors`, proves the real backing cache is taller than 32
+  rows, captures the fixed 8192-byte VDP ring through `FbzZoneRuntimeState`,
+  mutates it, restores/reconciles/uploads it, and verifies later camera/render
+  preparation preserves the bytes. The lifecycle test passed 1/1 and the final
+  affected set passed 116/116. Mandatory guards remain 19/21 with only the
+  inherited AIZ findings; `git diff --check` is clean. No trace ran.

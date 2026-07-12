@@ -147,6 +147,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         }
         int zoneId = levelManager.getFeatureZoneId();
         return zoneId == Sonic3kZoneIds.ZONE_MGZ
+                || zoneId == Sonic3kZoneIds.ZONE_FBZ
                 || zoneId == Sonic3kZoneIds.ZONE_ICZ
                 || isCnzBossBackgroundWindowActive(zoneId);
     }

@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -64,6 +65,65 @@ public class TestLevelManagerSlotBackgroundCopy {
     }
 
     @Test
+    public void retainedColumnCopyUsesEffectiveBackgroundYAndWrapsThe64x32Plane() throws Exception {
+        TestLevelManager levelManager = new TestLevelManager(gameplayMode);
+        RecordingTilemapManager tilemapManager = new RecordingTilemapManager();
+        setTilemapManager(levelManager, tilemapManager);
+
+        levelManager.copyBackgroundTileColumnsFromWorldToVdpPlane(0x3F0, 0x60, 0x3F0, 1, 0x11);
+
+        assertEquals(levelManager.descriptorFor(0x3F0, 0x70), tilemapManager.descriptorAt(62, 14));
+        assertEquals(levelManager.descriptorFor(0x3F8, 0x70), tilemapManager.descriptorAt(63, 14));
+        assertEquals(levelManager.descriptorFor(0x3F0, 0x100), tilemapManager.descriptorAt(62, 0),
+                "the retained Plane-B destination must wrap after row 31");
+    }
+
+    @Test
+    public void retainedPlaneRebuildReplaysExactlyTheCapturedTransitionPrefix() throws Exception {
+        TestLevelManager levelManager = new TestLevelManager(gameplayMode);
+        RecordingTilemapManager tilemapManager = new RecordingTilemapManager();
+        setTilemapManager(levelManager, tilemapManager);
+        var redraw = new StagedBackgroundPlaneRedrawController(new StagedBackgroundPlaneRedrawController.Surface() {
+            @Override public void copyRow(int sx, int sy, int dy) {
+                levelManager.copyBackgroundTileRowFromWorldToVdpPlane(sx, sy,
+                        0xE000 + ((dy >>> 3) & 0x1F) * 0x80, 0x21);
+            }
+            @Override public void copyColumn(int sx, int sy, int dx) {
+                levelManager.copyBackgroundTileColumnsFromWorldToVdpPlane(sx, sy, dx, 1, 0x11);
+            }
+        });
+
+        levelManager.seedBackgroundVdpPlaneFromWorld(0);
+        redraw.replay(StagedBackgroundPlaneRedrawController.Direction.RIGHT_TO_LEFT, 2, 0x200, 0x60);
+        Map<Integer, Integer> captured = tilemapManager.snapshot();
+
+        levelManager.seedBackgroundVdpPlaneFromWorld(0x200);
+        levelManager.seedBackgroundVdpPlaneFromWorld(0);
+        redraw.replay(StagedBackgroundPlaneRedrawController.Direction.RIGHT_TO_LEFT, 2, 0x200, 0x60);
+
+        assertEquals(captured, tilemapManager.snapshot(),
+                "inverse seed plus completed-strip replay must reconstruct the captured retained plane");
+    }
+
+    @Test
+    public void exactRetainedSnapshotRestoresModeJumpAndOrdinaryRowWriteCellForCell() throws Exception {
+        TestLevelManager levelManager = new TestLevelManager(gameplayMode);
+        RecordingTilemapManager tilemapManager = new RecordingTilemapManager();
+        setTilemapManager(levelManager, tilemapManager);
+
+        levelManager.seedBackgroundVdpPlaneFromWorld(0);
+        levelManager.copyBackgroundTileColumnsFromWorldToVdpPlane(0x3F0, 0x60, 0x3F0, 1, 0x11);
+        levelManager.copyBackgroundTileRowFromWorldToVdpPlane(0x200, 0xA20, 0xE200, 0x21);
+        byte[] captured = levelManager.captureBackgroundVdpPlane();
+
+        levelManager.seedBackgroundVdpPlaneFromWorld(0x200);
+        levelManager.copyBackgroundTileRowFromWorldToVdpPlane(0, 0x330, 0xE780, 0x21);
+        levelManager.restoreBackgroundVdpPlane(captured);
+
+        assertArrayEquals(captured, levelManager.captureBackgroundVdpPlane());
+    }
+
+    @Test
     public void setLevelRebindsTilemapGeometryToReplacementLevel() throws Exception {
         TestLevelManager levelManager = new TestLevelManager(gameplayMode);
         RecordingTilemapManager tilemapManager = new RecordingTilemapManager();
@@ -98,12 +158,13 @@ public class TestLevelManagerSlotBackgroundCopy {
         }
 
         int descriptorFor(int worldX, int worldY) {
-            return ((worldY & 0xFF) << 8) | (worldX & 0xFF);
+            return ((worldY & 0x3F) << 10) | (worldX & 0x3FF);
         }
     }
 
     private static final class RecordingTilemapManager extends LevelTilemapManager {
         private final Map<Integer, Integer> writes = new HashMap<>();
+        private final byte[] retainedPlane = new byte[64 * 32 * 4];
 
         RecordingTilemapManager() {
             super(null, null, null);
@@ -126,9 +187,22 @@ public class TestLevelManagerSlotBackgroundCopy {
         }
 
         @Override
-        public boolean setBackgroundTileDescriptorAtTilemapCell(int tileX, int tileY, int descriptor) {
+        public boolean setRetainedBackgroundTileDescriptorAtTilemapCell(int tileX, int tileY, int descriptor) {
             writes.put(key(tileX, tileY), descriptor);
+            int offset = (tileY * 64 + tileX) * 4;
+            retainedPlane[offset] = (byte) (descriptor >>> 24);
+            retainedPlane[offset + 1] = (byte) (descriptor >>> 16);
+            retainedPlane[offset + 2] = (byte) (descriptor >>> 8);
+            retainedPlane[offset + 3] = (byte) descriptor;
             return true;
+        }
+
+        @Override public byte[] getBackgroundTilemapData() { return retainedPlane; }
+        @Override public byte[] captureRetainedBackgroundVdpRing() { return retainedPlane.clone(); }
+
+        @Override public void restoreRetainedBackgroundTilemapData(byte[] snapshot) {
+            if (snapshot.length != retainedPlane.length) throw new IllegalArgumentException();
+            System.arraycopy(snapshot, 0, retainedPlane, 0, snapshot.length);
         }
 
         @Override
@@ -144,6 +218,12 @@ public class TestLevelManagerSlotBackgroundCopy {
         int descriptorAt(int tileX, int tileY) {
             return writes.getOrDefault(key(tileX, tileY), -1);
         }
+
+        Map<Integer, Integer> snapshot() {
+            return new HashMap<>(writes);
+        }
+
+        @Override public void uploadBackgroundTilemap() { }
 
         private static int key(int tileX, int tileY) {
             return (tileY << 8) | tileX;
@@ -180,5 +260,3 @@ public class TestLevelManagerSlotBackgroundCopy {
         @Override public int getZoneIndex() { return 0; }
     }
 }
-
-

@@ -20,6 +20,9 @@ public interface ZoneRuntimeState {
         return false;
     }
 
+    /** Retains the fixed 64x32 Plane-B cache; zone events own row/column refreshes. */
+    default boolean usesPersistentBackgroundVdpPlane() { return false; }
+
     /**
      * Optional explicit semantic collision mode for zones whose event state
      * owns plane reversal. Empty retains the legacy game-state/scroll adapter.
