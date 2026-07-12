@@ -187,11 +187,15 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             for (int i = 0; i < sequencers.size(); i++) {
                 SmpsSequencer sequencer = sequencers.get(i);
                 sequencerIds.put(sequencer, i);
-                SmpsSourceDescriptor fallbackVoiceSource = sequencer.getFallbackVoiceData() != null
-                        ? sourceDescriptors.getOrDefault(
-                                sequencer.getFallbackVoiceData(),
-                                SmpsSourceDescriptor.from(sequencer.getFallbackVoiceData()))
-                        : null;
+                AbstractSmpsData fallbackVoiceData = sequencer.getFallbackVoiceData();
+                SmpsSourceDescriptor fallbackVoiceSource = null;
+                if (fallbackVoiceData != null) {
+                    fallbackVoiceSource = sourceDescriptors.get(fallbackVoiceData);
+                    if (fallbackVoiceSource == null) {
+                        fallbackVoiceSource = SmpsSourceDescriptor.from(fallbackVoiceData);
+                        sourceDescriptors.put(fallbackVoiceData, fallbackVoiceSource);
+                    }
+                }
                 entries.add(new SmpsDriverSnapshot.SequencerEntry(
                         isSfx(sequencer),
                         sequencer.getSourceDescriptor(),

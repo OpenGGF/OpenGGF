@@ -382,7 +382,7 @@ public class GroundSensor extends Sensor {
         // ROM angle-buffer retention: if the foot tile is solid, default to its angle.
         byte distance = calculateExtensionDefaultDistance(y, mirrorEmptyDefault);
         ChunkDesc footDesc = lm.getChunkDescAt(
-                (byte) 0, x, verticalTileLookupY(y, direction), sprite.isLoopLowPlane());
+                (byte) 0, x, verticalTileLookupY(y, direction, collisionLayoutYMask()), sprite.isLoopLowPlane());
         SolidTile footTile = getSolidTile(lm, footDesc, solidityBit);
         if (footTile != null) {
             byte angle = footTile.getAngle(
@@ -400,7 +400,7 @@ public class GroundSensor extends Sensor {
      */
     private SensorResult scanTileVertical(LevelManager lm, short origX, short origY, short checkX, short checkY,
                                           int solidityBit, Direction direction, boolean isExtension) {
-        int lookupY = verticalTileLookupY(checkY, direction);
+        int lookupY = verticalTileLookupY(checkY, direction, collisionLayoutYMask());
         ChunkDesc desc = lm.getChunkDescAt((byte) 0, checkX, lookupY, sprite.isLoopLowPlane());
         SolidTile tile = getSolidTile(lm, desc, solidityBit);
 
@@ -516,15 +516,23 @@ public class GroundSensor extends Sensor {
         return createVerticalResult(tile, desc, checkX, origY, checkY, direction);
     }
 
-    private static int verticalTileLookupY(short y, Direction direction) {
+    static int verticalTileLookupY(short y, Direction direction, int layoutYMask) {
         if (direction != Direction.UP || y >= 0) {
             return y;
         }
         // ROM FindCeiling transforms the top-edge probe with eori.w #$F before
-        // FindNearestTile masks it into the 8-row 256x256 layout window. This
+        // Find_Tile_FG applies Layout_row_index_mask to the transformed row.
+        // S1/S2 use a 0x800-pixel window; S3K's default $7C row-index mask
+        // represents a 0x1000-pixel window. This
         // is not an absolute top-boundary clamp: wrapped rows can be solid in
         // some layouts and blank in others.
-        return (y ^ 0x0F) & 0x07FF;
+        return (y ^ 0x0F) & layoutYMask;
+    }
+
+    private int collisionLayoutYMask() {
+        var rules = sprite != null ? sprite.getGameRules() : null;
+        var collisionRules = rules != null ? rules.collision() : null;
+        return collisionRules != null ? collisionRules.defaultCollisionLayoutYMask() : 0x07FF;
     }
 
     private SensorResult createVerticalResult(SolidTile tile, ChunkDesc desc,

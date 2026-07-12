@@ -6,11 +6,12 @@ import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
@@ -416,10 +417,12 @@ public class RewindBenchmark {
             CompositeSnapshot snapshot,
             IdentityHashMap<Object, Boolean> retainedSeen,
             Map<String, Long> retainedSubsystemBytes) {
-        long keyframeBytes = 0L;
-        for (var e : snapshot.entries().entrySet()) {
-            long bytes = estimateStructuralSizeShared(e.getValue(), retainedSeen);
-            retainedSubsystemBytes.merge(e.getKey(), bytes, Long::sum);
+        long containerBytes = estimateCompositeContainerSizeShared(snapshot, retainedSeen);
+        retainedSubsystemBytes.merge("composite-container", containerBytes, Long::sum);
+        long keyframeBytes = containerBytes;
+        for (int i = 0; i < snapshot.size(); i++) {
+            long bytes = estimateStructuralSizeShared(snapshot.valueAt(i), retainedSeen);
+            retainedSubsystemBytes.merge(snapshot.keyAt(i), bytes, Long::sum);
             keyframeBytes += bytes;
         }
         return keyframeBytes;
@@ -539,14 +542,25 @@ public class RewindBenchmark {
             return 0L;
         }
         Class<?> cls = obj.getClass();
+        if (seen.put(obj, Boolean.TRUE) != null) {
+            // The owning record/array/map has already charged its reference
+            // slot. A referent retained elsewhere in the same object graph
+            // must therefore contribute no additional resident bytes.
+            return 0L;
+        }
         if (isScalar(cls)) {
             return scalarSize(obj, cls);
         }
-        if (seen.put(obj, Boolean.TRUE) != null) {
-            return 8L;
-        }
         if (obj instanceof CompositeSnapshot snapshot) {
-            return estimateMap(snapshot.entries(), seen);
+            long bytes = estimateCompositeContainer(snapshot, seen);
+            for (int i = 0; i < snapshot.size(); i++) {
+                bytes += estimateStructuralSize(snapshot.valueAt(i), seen);
+            }
+            return align8(bytes);
+        }
+        if (obj instanceof AnimatedTileChannelSnapshot snapshot
+                && snapshot.compactLayoutOrNull() != null) {
+            return estimateAnimatedTileChannelSnapshot(snapshot, seen);
         }
         if (obj instanceof LevelSnapshot snapshot) {
             return estimateLevelSnapshotSize(snapshot, seen);
@@ -592,6 +606,98 @@ public class RewindBenchmark {
             return align8(bytes);
         }
         return 32L;
+    }
+
+    static long estimateCompositeContainerSizeShared(
+            CompositeSnapshot snapshot, IdentityHashMap<Object, Boolean> seen) {
+        if (seen.put(snapshot, Boolean.TRUE) != null) {
+            return 0L;
+        }
+        return align8(estimateCompositeContainer(snapshot, seen));
+    }
+
+    private static long estimateCompositeContainer(
+            CompositeSnapshot snapshot, IdentityHashMap<Object, Boolean> seen) {
+        // CompositeSnapshot + its eager array-backed AbstractMap view and
+        // unmodifiable wrapper. These are fixed-size and contain no per-key nodes.
+        long bytes = 96L;
+        bytes += align8(16L + (long) snapshot.size() * 8L);
+        bytes += estimateCompositeLayout(snapshot.layout(), seen);
+        return align8(bytes);
+    }
+
+    private static long estimateCompositeLayout(
+            CompositeSnapshotLayout layout, IdentityHashMap<Object, Boolean> seen) {
+        if (seen.put(layout, Boolean.TRUE) != null) {
+            return 0L;
+        }
+        int size = layout.size();
+        // Layout object, ordered key array, HashMap, and one HashMap node/index
+        // value per key. The layout is shared across captures and charged once.
+        long bytes = 40L;
+        bytes += align8(16L + (long) size * 8L);
+        bytes += 48L + (long) size * 32L;
+        int tableCapacity = hashTableCapacityForEntries(size);
+        if (tableCapacity > 0) {
+            bytes += align8(16L + (long) tableCapacity * 8L);
+        }
+        for (int i = 0; i < size; i++) {
+            bytes += estimateStructuralSize(layout.keyAt(i), seen);
+            bytes += estimateStructuralSize(Integer.valueOf(i), seen);
+        }
+        return align8(bytes);
+    }
+
+    private static long estimateAnimatedTileChannelSnapshot(
+            AnimatedTileChannelSnapshot snapshot, IdentityHashMap<Object, Boolean> seen) {
+        // Record header + public Map component reference.
+        long bytes = 24L;
+        Map<String, Integer> compactMap = snapshot.lastPhaseByChannel();
+        if (seen.put(compactMap, Boolean.TRUE) == null) {
+            // Compact AbstractMap facade and its snapshot-owned long[] payload.
+            bytes += 56L;
+            bytes += align8(16L + (long) snapshot.compactPayloadLength() * Long.BYTES);
+        }
+        bytes += estimateAnimatedTileChannelLayout(snapshot.compactLayoutOrNull(), seen);
+        return align8(bytes);
+    }
+
+    private static long estimateAnimatedTileChannelLayout(
+            AnimatedTileChannelSnapshot.Layout layout,
+            IdentityHashMap<Object, Boolean> seen) {
+        if (seen.put(layout, Boolean.TRUE) != null) {
+            return 0L;
+        }
+        int size = layout.size();
+        // Layout object, ordered key array, HashMap/table/nodes, then retained
+        // key and boxed-index referents. The immutable layout is shared by all
+        // captures from one graph layout generation and charged exactly once.
+        long bytes = 40L;
+        bytes += align8(16L + (long) size * 8L);
+        bytes += 48L + (long) size * 32L;
+        int tableCapacity = hashTableCapacityForEntries(size);
+        if (tableCapacity > 0) {
+            bytes += align8(16L + (long) tableCapacity * 8L);
+        }
+        for (int index = 0; index < size; index++) {
+            bytes += estimateStructuralSize(layout.keyAt(index), seen);
+            bytes += estimateStructuralSize(Integer.valueOf(index), seen);
+        }
+        return align8(bytes);
+    }
+
+    private static int hashTableCapacityForEntries(int entryCount) {
+        if (entryCount == 0) {
+            return 0;
+        }
+        int requestedCapacity = entryCount < 3
+                ? entryCount + 1
+                : (int) Math.ceil(entryCount / 0.75d);
+        int tableCapacity = 1;
+        while (tableCapacity < requestedCapacity) {
+            tableCapacity <<= 1;
+        }
+        return tableCapacity;
     }
 
     private static StructuralSizePlan createStructuralSizePlan(Class<?> type) {

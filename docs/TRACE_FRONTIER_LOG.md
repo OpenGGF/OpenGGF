@@ -18,8 +18,10 @@ reaction deferral, orb break tail + Ani_obj53 animation, boss persistence, and
 the S2 impatient-wait blink input gate), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now EMPTY: the full S2 level-select suite passes (MSE:OK passed=48).
-The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
-with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
+The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
+20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
+therefore closed as the first-red stage; HCZ is the next unstarted stage in the
+requested level order. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
 round 96 landed the ROM-backed later-orb refresh predicate. Rounds 90-94 used Lua PC-execute probes to rule out shared
@@ -98,6 +100,935 @@ integration-test follow-up) using:
   The A6 launch wiring therefore did not move or regress the frontier; no trace
   data, comparator tolerance, route/frame carve-out, or engine behavior was
   changed.
+## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
+
+The AIZ2 battleship-to-waterfall-boss capture reproduced a render-only regression
+at capture frame 1751: the native camera step from just below `$46C0` back to
+`$44C0` retained the correct ROM camera/player coordinates, but the persistent
+foreground ring interpreted its chunk-aligned `-$1E0` delta as a rewind/teleport
+and re-seeded from the flat layout. That exposed the sparse forest entrance again
+on each lap, making Sonic appear to enter the forest repeatedly.
+
+The ring now consumes the ROM-visible per-frame `Level_repeat_offset`. On the
+native `$200` repeat frame it translates the prior world-coordinate reconciliation
+baseline by the same amount, retaining Plane A cells while continuing to refill
+only newly entering columns. Arbitrary large camera jumps without that event
+signal retain the existing re-seed behavior; no zone, route, or frame exception
+was added. A before/after `TraceCaptureTool --clip aiz-battleship-to-boss` check
+showed the first formerly-bad frame changing from four sparse entrance trunks to
+the already-established dense canopy, which then remained continuous through the
+remaining wraps.
+
+Verification:
+
+- `TestS3kAizTraceReplay`: all 16 checks green.
+- `TestS3kAizCompleteRunTraceReplay`: green.
+- `TestLevelTilemapManagerRewindReset`: 7/7 green, including a native
+  `$4FC + 4 - $200 = $300` ring-retention regression guard.
+- S1 `*TraceReplay` fleet: 29/29 classes green.
+- S2 `*TraceReplay` fleet: 20/20 classes green (the optional special-stage method
+  remains skipped as before).
+
+The broad trace-package invocation also selects
+`TestS1Mz1SlotLayoutRegression`; its existing 8/15 failures reproduce unchanged
+in a detached clean worktree at pre-fix `develop` commit `62d67d5b0`, so they are
+not a regression from this render fix. Both AIZ routes remain fully green and the
+frontier stays closed at AIZ, with HCZ still the next unstarted S3K stage.
+
+## 2026-07-10 - S3K AIZ frontier campaign (in progress)
+
+Branch `bugfix/ai-s3k-trace-frontier` from `develop` `ff60ac28d`. The first red
+stage in the requested AIZ -> HCZ -> MGZ -> CNZ -> ICZ -> LBZ order is AIZ.
+Campaign baseline:
+
+- `TestS3kAizCompleteRunTraceReplay`: f1095 / 4319 errors (`x_sub` expected
+  `0x0000`, actual `0x0C00`).
+- `TestS3kAizTraceReplay`: f8941 / 1160 errors (`camera_y` expected `0x02C1`,
+  actual `0x02B9`).
+
+Round 1 separates two native cadence fixes. Complete-run bootstrap now
+pre-advances `OscillateNumDo` only when frame zero is a structural VBlank-only
+handoff/hold row; AIZ's real full-level first row advances it natively. The AIZ1
+Knuckles intro now follows its object dispatcher: the trigger returns through
+`PalLoad_Line1` before the first falling movement, and the exit routine consumes
+the previous `Draw_Sprite` render flag before the post-move flag becomes visible
+on the next dispatch (`sonic3k.asm:128608-128665,128731-128749`). These fixes
+moved the complete-run frontier through f2014 and f2138 without hydrating trace
+state. Focused guards `TestTraceReplayStartPositionPolicy` and
+`TestCutsceneKnucklesAiz1Instance` pass with MSE disabled.
+
+Round 2 banks two CPU-Tails execution fixes encountered after that intro. The
+S3K fast-leader tiny follow nudge is native unless a live interact/support object
+owns the engine's object-order suppression bridge; a stale/no-object latch no
+longer suppresses loc_13E0A/loc_13E34's +/-1 `x_pos` write
+(`sonic3k.asm:26707-26741`). Tails' airborne jump re-press also bypasses
+`Sonic_ShieldMoves`, preserving `Status_RollJump` as `Tails_JumpHeight` does
+(`sonic3k.asm:28593-28621,23401-23413`). Focused guards
+`TestSidekickCpuFollowParity#s3kFastLeaderLowSpeedFollowerStillNudgesWithoutSupportObject`
+and `TestPlayableSpriteMovement#s3kTailsJumpRepressDoesNotEnterSonicShieldMoves`
+pass with MSE disabled. These are shared sidekick-state rules, not AIZ/frame
+exceptions.
+
+Round 3 removes the legacy AIZ1 exact-distance landing carve-out. ROM
+`Tails_DoLevelCollision` rejects `d1 == 0` through `tst.w d1 / bpl`, independent
+of zone, roll state, or floor angle (`sonic3k.asm:28901-28908`); retaining the
+override made CPU Tails land early at the f3420 slope contact. The same shared
+collision pass now also models `Player_Angle`'s empty-probe fallback: two
+flagged angle-3 results round the existing angle to its cardinal quadrant before
+walk-off (`sonic3k.asm:18749-18842`). That closed the isolated f5493
+boundary-kill angle mismatch and advanced the complete-run frontier to f6237.
+Focused `TestSonic3kZoneFeatureProvider` and
+`TestCollisionSystemAirLanding` suites pass with MSE disabled. No zone, route,
+or frame predicate was added.
+
+Round 4 banks the AIZ falling-log clock/solid fix. Obj2D masks the native
+`Level_frame_counter`, not the object/VBlank execution count; during
+`Process_Sprites` the LevelManager's late-frame stored value therefore needs
+the already-visible +1 cadence (`sonic3k.asm:59918-59922`). Falling log children
+also pass the literal `d3=8` to `SolidObjectTop`, rather than using a 9-pixel
+standing height (`sonic3k.asm:60156-60163`). This closed the f3294 first-landing
+cluster and exposed the later f3420 terrain contact. New focused
+`TestAizFallingLogObjectInstance` guards both the clock source and the exact
+solid dimensions.
+
+Round 5 banks the AIZ/LRZ rock push path. `SolidObjectFull` saves each player's
+entry status before its helper mutates push bits; `sub_200A2/sub_200CC` moves only
+the concrete participant whose current and saved push bits are both active
+(`sonic3k.asm:43916-43935,44446-44478`). The engine previously collapsed that
+to an aggregate latch, so P2's first contact could move P1, stale push survived
+release, and the pushed integer coordinate lost its subpixel word. The rock now
+uses each `PlayerSolidContactResult`, clears released `Status_Push`, preserves
+`x_sub`, and runs `ObjCheckFloorDist` after each successful rock step. This
+closed the f4340 false-P2 move, f4341 subpixel, f4352 stale-push, f4781 wait,
+and f4803 spindash-resume cluster, advancing the frontier to f5158. Focused
+`TestAizLrzRockPlayerParticipation` covers player ownership, saved push phase,
+release clearing, and subpixel preservation.
+
+Round 6 banks the moving-spike render-flag gate. The moving spike routines update
+`x_pos/y_pos` before `SolidObjectFull`, but `loc_1DF88` consumes render bit 7 from
+the preceding `Render_Sprites` pass (`sonic3k.asm:41390-41392,49011-49039,
+49102-49131`). The engine had recomputed visibility from the post-move position,
+making an upside-down spike solid as it entered the viewport at f5158. A shared
+frame-start render-bounds helper now lets the S3K spike preserve the stale flag
+cadence, advancing the frontier to f5493. `TestSonic3kSpikeObjectInstance`
+guards both exclusive render edges and movement-into-view timing.
+
+Round 7 banks the Cork Floor roll-break position fix. Obj2F's roll-break path
+calls `sub_2A58E`, which writes rolling radii and status but never changes the
+player's native `y_pos` (`sonic3k.asm:58493-58554`). The engine's solid-contact
+bridge could first restore standing dimensions, after which `setRolling(true)`
+shifted centre Y upward by five pixels solely because the visual height changed.
+The roll handoff now preserves centre Y (and its subpixel word) across that
+dimension change. This closes the isolated complete-run f6729 position cluster
+and moves the stacked working-tree frontier to f6947. The focused
+`TestS3kObjectPlayerQueryParticipation#corkFloorRollBreakUsesAllLivePlayers`
+guard now asserts both the launch and native Y preservation.
+
+Round 8 banks the SolidObject-owned CPU-Tails push bypass. At complete-run
+f6947 Tails begins the frame with `status=$25` (`Status_Push|Status_Roll|
+Status_Facing`) and nonzero inertia from the prior AIZ rock side contact. ROM
+`loc_13DD0` tests that literal current push bit and, because delayed Sonic is not
+pushing, branches directly to `loc_13E9C`, preserving the prior down-only
+`Ctrl_2` word (`sonic3k.asm:26702-26705`). The engine's broad rolling/nonzero
+stale-push filter instead manufactured same-frame right input, adding `$20`
+roll deceleration on top of the correct `$09` slope repel. The shared solid
+controller now exposes whether a real per-player object pushing latch owns the
+bit; Tails preserves that source (and terrain-wall provenance) while still
+discarding unowned residue. This moves the stacked complete-run frontier from
+f6947 to f7746. Focused `TestSolidObjectManager` guards latch set/clear, and
+`TestSidekickCpuFollowParity#s3kRollingNonzeroGroundSpeedPushFallsThroughNearIczSegmentColumn`
+confirms the previously-green unowned ICZ stale-push case remains unchanged.
+
+Round 9 banks the S3K spring `jumping`-byte reset. Sonic entered the AIZ2 up
+spring with a real jump latch still set; Obj07 then replaced `y_vel` with
+`-$A00`, but the engine omitted `sub_22F98`'s following `clr.b jumping(a1)`.
+When the trace released A/B/C at f7746, engine `Sonic_JumpHeight` capped that
+spring velocity toward `-$400`, while ROM retained the object launch
+(`sonic3k.asm:47714-47726`). The equivalent down and diagonal trigger tails
+also clear `jumping` and are fixed together (`sonic3k.asm:48139-48144,
+48213-48217,48304-48308`); horizontal springs deliberately remain unchanged.
+This moves the stacked complete-run frontier from f7746 to f7849. Focused
+`TestSonic3kSpringObjectInstance` assertions cover up, down, and diagonal
+launches alongside their existing `Status_OnObj` handoff checks.
+
+Round 10 banks Rhinobot's Obj_WaitOffscreen and target-selection parity. ROM
+installs a placeholder with `width_pixels=$20` while Obj8D is dormant and
+restores its real operation when that placeholder is rendered
+(`sonic3k.asm:180266-180298`). The engine gated on the Rhinobot centre alone,
+starting patrol several frames late; by f7849 ROM had charged through x=$07D0
+and `Touch_Enemy` applied the upward-hit `y_vel += $100` bounce, while the
+engine's still-live Rhinobot was at x=$07DA and did not overlap Sonic. Using the
+placeholder margin restores the complete patrol/charge position and bounce.
+The same pass replaces Rhinobot's main-only target with the horizontally-nearest
+native P1/P2 selected by `Find_SonicTails` before its d2/d3 range and facing
+tests (`sonic3k.asm:178243-178277,182535-182553`). Focused
+`TestRhinobotBadnikInstance` guards both the exact placeholder edge and nearest
+native-player side selection. The stacked complete-run frontier moves from
+f7849 to f8014.
+
+Round 11 banks the seamless-reload oscillator tail. AIZ's act reload is issued
+inside `ScreenEvents`, after which the ROM returns to the remainder of
+`LevelLoop` and still runs `OscillateNumDo` (`sonic3k.asm:7884-7910,
+104722-104774`). The engine applies that pending reload at the next driver-frame
+top and returns immediately; its existing reload-frame bridge advanced
+`Level_frame_counter` but omitted the post-event oscillator tick. Extending the
+same state-driven bridge restores the AIZ2 floating-platform phase and moves the
+stacked complete-run frontier from f8014 to f8326. The focused
+`TestLevelManager#seamlessReloadFrameCounterBridgeAdvancesStoredLevelAndSpriteCounters`
+guard now covers both the counter and oscillator portions of the skipped ROM
+tail.
+
+Round 12 banks terrain ownership of S3K CPU-Tails underwater push state. At
+f8324 `CalcRoomInFront` sets `Status_Push` against the AIZ2 wall, but a stale
+historical `interact` slot made the engine's released-object cleanup clear that
+fresh bit after the f8325 CPU read. ROM keeps the same literal status bit live,
+so `loc_13DD0` continues bypassing the +/-1 follow nudge until the jump path
+clears it (`sonic3k.asm:26702-26705,27974-28018`). The engine already tracked
+terrain-wall provenance for its pre-CPU stale clear; that ownership now covers
+the post-CPU clear and the subsequent underwater bypass as well. Focused
+`TestSidekickCpuFollowParity` guards preserve both the old stale-object one-shot
+clear and the fresh terrain-owned case. The stacked complete-run frontier moves
+from f8326 to f8350.
+
+Round 13 banks Caterkiller Jr's complete `Obj_WaitOffscreen` state. The ROM
+parks Obj8F behind a `$20`-by-`$20` placeholder and leaves
+`collision_flags=0` until that render box becomes visible and
+`SetUp_ObjAttributes` runs (`sonic3k.asm:180266-180298,183317-183337`). The
+engine used horizontal visibility alone and exposed the constructor's enemy
+collision while the object was still vertically below the camera, so CPU Tails
+was hurt by an enemy the ROM still held at its original coordinates. Full
+placeholder bounds plus the pre-init collision latch move the stacked
+complete-run frontier from f8350 to f9295 without an AIZ/frame exception.
+
+Round 14 banks Bloominator's native dispatch chain and S3K split-row camera
+sampling. Obj8C now preserves the two-stage `Obj_WaitOffscreen`/attribute-init
+handoff, uses its real `$0C`-by-`$18` render bounds for the idle timer, and
+models `Animate_RawMultiDelay` returning script offsets `6/$E` when each shot
+is created. `CreateChild2_Complex` allocates after the parent, allowing the
+projectile's movement callback to publish its current hurt position later in
+the same object pass (`sonic3k.asm:176955-176981,180266-180298,
+182533-182650`). At f9295 the resulting hurt state was byte-aligned, but Lua's
+camera sample became visible on the following unchanged VBlank-only row. S3K
+replay now applies the existing split-row execution model to camera diagnostics
+only; ring counts remain strict to the current gameplay row. Focused
+`TestBloominatorBadnikInstance`, `TestTraceExecutionModel`, and
+`TestTraceReplayInvariantGuard` pass. The stacked complete-run frontier moves
+from f9295 to f9376, a new strict ring-count mismatch (`expected=2`,
+`actual=1`).
+
+Round 15 banks S3K's hurt-spill allocation snapshot independently of the
+remaining Obj37 cadence correction. ROM `HurtCharacter` allocates the owner in
+the player slot, then that owner uses `AllocateObjectAfterCurrent` before any
+higher slots execute; the engine deferred materialization by a frame and had
+reserved only the owner, allowing higher objects to free holes before the
+remaining 31 allocations. The pending-spill bridge now reserves the complete
+after-current chain at hurt time and materializes into exactly those slots on
+the delayed engine pass (`sonic3k.asm:21065-21088,35490-35591,37899-37934`).
+Focused lost-ring tests cover both immediate reservation and immunity to a
+subsequently-freed hole. With the prior cadence formula deliberately unchanged,
+the complete-run frontier remains f9376; this commit isolates the allocator
+cause from the next frame-counter visibility change. Full cross-game sweeps at
+this checkpoint are green: all 29 S1 and all 48 S2 trace replays pass with the
+explicit REV01 ROM paths.
+
+Round 16 banks S3K collapsing-platform fragment lifetime ordering. ROM
+`loc_20620` tests the render flag produced by the preceding `Render_Sprites`
+pass and deletes before `MoveSprite`; the shared fragment base instead moved
+first and retained objects through a fresh 128-pixel margin. S3K fragments now
+latch their inherited platform `$3C/$20` bounds in the post-camera render-state
+phase, preserve the delay routine's unconditional draw, and consume that bit
+before the first falling step (`sonic3k.asm:44879-44883,45308-45431,
+36345-36387`). Focused fragment tests cover both the wait-to-fall handoff and
+the pre-movement delete. With the prior Obj37 cadence formula unchanged, the
+complete-run frontier remains f9376. The same all-29 S1 and all-48 S2 sweeps
+reported for round 15 include this shared-base hook change and remain green.
+
+Round 17 corrects both inputs to S3K Obj37's floor-probe cadence. The native
+routine adds `V_int_run_count+3` to the live `Process_Sprites` `d7`; that
+countdown spans all 110 `Object_RAM` slots, including the fixed tail after the
+dynamic allocation window (`sonic3k.asm:35616-35637,35965-35980`). The engine's
+gameplay-scoped object clock starts without S3K's four-count native VBlank
+baseline, so the narrow `RingRules` owner now supplies values S1=0, S2=0,
+S3K=4 while slot phase uses the complete process table. Focused lost-ring and
+ring-manager tests pass. The AIZ complete-run frontier moves from f9376 (ring
+count) to f10517 (player horizontal velocity sign after an object interaction).
+Fresh full sweeps at this bank point pass all 29 S1 and all 48 S2 trace replays.
+
+Round 18 restores AIZ miniboss touch-list ordering. ROM
+`CreateChild1_Normal` repeatedly calls `AllocateObjectAfterCurrent`, placing the
+body, arm, and barrels after the attackable parent; the engine's lowest-free
+allocation had put the HURT body first, so it stopped the collision loop before
+the boss hit. The parent now also opts into the live post-motion coordinates
+held by its previous `Collision_response_list` object-RAM pointer, rather than
+the generic older snapshot (`sonic3k.asm:137222-137271,137396-137422,
+176919-176950,20656-20710`). The focused S3K boss touch-profile test passes,
+and the complete-run frontier moves from f10517 (Sonic boss-hit velocity sign)
+to f10758 (Tails boss-hit velocity sign). Fresh full sweeps pass all 29 S1 and
+all 48 S2 trace replays at this bank point.
+
+Round 19 restores CPU Tails participation in the AIZ miniboss parent response.
+The parent profile was `MAIN_ONLY`, so Tails never reached native
+`Touch_Enemy` boss handling even while attacking. It now uses the shared
+main-plus-sidekick actor policy, allowing the ROM path to negate Tails'
+`x_vel`, `y_vel`, and `ground_vel` and consume the hit
+(`sonic3k.asm:20875-20938`). The focused boss touch-profile test passes and the
+complete-run frontier moves from f10758 (Tails boss-hit velocity sign) to
+f10766 (Tails fixed horizontal speed during the following interaction). The
+all-29 S1/all-48 S2 sweep immediately preceding this S3K-only profile delta is
+green.
+
+Round 20 makes the AIZ miniboss HURT body consume its live refreshed child
+position. ROM `loc_686E8` calls `Refresh_ChildPositionAdjusted` immediately
+before `Child_DrawTouch_Sprite2` publishes the object-RAM pointer; using the
+engine's older generic snapshot missed a one-pixel boundary contact and left
+Tails in normal CPU control instead of the native hurt routine. The body now
+opts into live touch-response coordinates (`sonic3k.asm:136888-136921,
+20656-20710`). The focused boss touch-profile test passes and the complete-run
+frontier moves from f10766 (Tails hurt-state fixed velocity) to f11897 (ring
+loss absent). The all-29 S1/all-48 S2 sweep immediately preceding this
+S3K-only body-profile delta is green.
+
+Round 21 moves AIZ's Act 2 HUD reset to the in-level title-card wait boundary.
+`Obj_LevelResults` changes `Apparent_act` and creates `Obj_TitleCard`, but the
+native `Timer`/`Ring_count` clear belongs to `Obj_TitleCardWait` after the card
+children reach their display positions (`sonic3k.asm:62708-62720,
+62214-62235`). The results object now carries a reset request into the title
+card; its manager predicts the object-owned wait two manager updates ahead,
+matching the existing manager/object execution bridge, instead of waiting four
+arbitrary DISPLAY ticks. Focused results/title-card tests pass. The complete-run
+frontier moves from f11897 (ring loss absent) to f12002 (`camera_y` expected
+`$02BB`, actual `$02B8`). Fresh full sweeps on this exact working tree pass all
+29 S1 and all 48 S2 trace replays.
+
+Round 22 restores native title-child exit lifetime and the Act 2 level-size
+creation cadence. The title children do not return all the way to their initial
+coordinates: `Render_Sprites` clears bit 7 once each authored width/height is
+wholly off-screen, the child consumes that stale bit on its next dispatch, and
+`Obj_TitleCardWait2` observes the final deletion on the following parent pass
+(`sonic3k.asm:62244-62399,36345-36387`). The title-card manager now carries
+those three phases explicitly and exposes the AIZ end-sign prediction only on
+the parent-observation tick. `Obj_IncLevEndYGradual` then contributes the native
+16.16 sequence while generic boundary easing supplies the later +2 carries; the
+proxy adds its compensating +2 only on the creation frame, before the new target
+was visible to the camera step (`sonic3k.asm:178210-178225,38313-38316,
+38761-38789`). Focused title-card, results, and miniboss-camera tests pass. The
+complete-run frontier moves from f12002 (`camera_y` expected `$02BB`, actual
+`$02B8`) to f12091 (`tails_cpu_interact` expected `$0001`, actual `$0002`).
+Fresh full sweeps on this exact working tree pass all 29 S1 and all 48 S2 trace
+replays.
+
+Round 23 restores the AIZ/LRZ rock's two-player break release and S3K CPU
+interact word. `sub_13EFC` snapshots word 0 of the stood-on SST, so the intact
+rock now exposes the `$0001` high word of its native routine pointer instead of
+leaving CPU Tails' previous `$0002` Cork Floor value latched. When either player
+breaks the rock, `sub_1FF1E` clears `Status_OnObj` and sets `Status_InAir` for
+every player whose standing bit was returned by the same `SolidObjectFull`
+pass—not only the player who supplied the breaking side contact
+(`sonic3k.asm:44180-44303,26816-26843`). A focused two-player rock guard and the
+sidekick CPU interact suite pass. The complete-run frontier moves from f12091
+(`tails_cpu_interact` expected `$0001`, actual `$0002`) to f12706
+(`tails_status_byte` expected `$00`, actual `$01`). Fresh full sweeps on this
+exact working tree pass all 29 S1 and all 48 S2 trace replays.
+
+Round 24 makes the S3K low-speed Duck path consume the edge-balance decision
+from its native pre-movement instant. `Tails_InputAcceleration_Path` checks
+`ChooseChkFloorEdge`, `next_tilt`, and `tilt` before `SpeedToPos` and
+`Player_AnglePos`; the engine already performed that pre-movement check for
+the look-camera gate, but discarded its state and recomputed after advancing
+the player. The gate now retains the transient balance level and facing for
+the later moving-crouch bridge (`sonic3k.asm:27796-27861`). The focused
+movement suite passes. The complete-run frontier moves from f12706
+(`tails_status_byte` expected `$00`, actual `$01`) to f12910 (`y` expected
+`$056F`, actual `$056A`). Fresh full sweeps on this exact working tree pass all
+29 S1 and all 48 S2 trace replays.
+
+Round 25 restores Caterkiller Jr's native child allocation and folded-init
+timing. `CreateChild3_NormalRepeated` calls `AllocateObjectAfterCurrent` for
+all six bodies, so the attackable head precedes every HURT segment in the
+collision-response list. The Java bodies now use that same after-current path;
+their folded constructor also preserves routine 0 as a setup-only dispatch by
+delaying the first routine-2 wait decrement one pass (`sonic3k.asm:
+176996-177027,183317-183515`). This keeps the earlier f12778 CPU Tails body
+contact aligned while letting Sonic destroy the head before its bodies at
+f12910. The Caterkiller rewind graph suite passes. The complete-run frontier
+moves from f12910 (`y` expected `$056F`, actual `$056A`, following an incorrect
+ring spill) to f13141 (`y` expected `$04DC`, actual `$04E7`). Fresh full sweeps
+on this exact working tree pass all 29 S1 and all 48 S2 trace replays.
+
+Round 26 removes the normal collapsing log bridge's non-ROM previous-position
+landing gate. Both `loc_2AE98` and the fire path at `loc_2AF06` call
+`SolidObjectTop` after player movement and classify the current overlap. The
+extra engine gate required the prior frame to be inside the 16-pixel landing
+band, rejecting Sonic's valid fast downward 10-pixel overlap at f13141; the
+bridge now accepts that contact while retaining the next-dispatch standing-bit
+collapse arm (`sonic3k.asm:59269-59348,41793-42068`). Focused bridge, AIZ event,
+and bridge rewind suites pass. The complete-run frontier moves from f13141
+(`y` expected `$04DC`, actual `$04E7`) to f13469 (`y` expected `$022B`, actual
+`$0229`). The immediately preceding exact-tree full sweeps passed all 29 S1
+and all 48 S2 traces; this delta is confined to the S3K bridge implementation.
+
+Round 27 restores the falling log's exact-boundary `SolidObjectTop` gate. At
+f13469 the newly fallen log and airborne Sonic meet with native `d0 == 0`;
+`cmpi.w #-$10,d0 / blo` accepts only negative overlap from -16 through -1, but
+the engine's generic S3K top-solid default attached Sonic at zero. The falling
+log now advertises the routine's explicit zero-distance rejection
+(`sonic3k.asm:59965-60003,42048-42068`). Focused falling-log and rewind suites
+pass. The complete-run frontier moves from f13469 (`y` expected `$022B`, actual
+`$0229`) to f13740 (`rings` expected `1`, actual `2`), leaving one reported
+complete-run mismatch. The change is S3K-local; the most recent full 29-test S1
+and 48-test S2 sweeps remain green.
+
+Round 28 restores the AIZ results controller's native object-slot handoff.
+`Obj_EndSignControlDoStart` calls `Change_Act2Sizes`, which allocates separate
+`Obj_IncLevEndXGradual` and `Obj_IncLevEndYGradual` workers, then immediately
+deletes the former miniboss/end-sign controller slot (`sonic3k.asm:
+180415-180419,180575-180609,178154-178169,178210-178225`). The engine had kept
+the persistent miniboss itself alive as a combined resize proxy. That surplus
+low-slot occupant shifted subsequent placement and hurt-spill allocations; the
+ring corresponding to ROM slot 12 instead occupied engine slot 13, changing
+Obj37's `(V_int + d7) & 7` floor cadence and letting it bounce back into Sonic.
+The resize work now continues in two independent control objects while the boss
+slot is released. Focused camera-unlock, miniboss rewind-graph, and rewind
+coverage tests pass. The complete-run frontier moves from f13740 (`rings`
+expected `1`, actual `2`) to f16123 (`tails_status_byte` expected `$41`, actual
+`$40`), again leaving one reported mismatch. Fresh full sweeps on this exact
+working tree pass all 29 S1 and all 48 S2 trace replays.
+
+Round 29 restores the player-tail angle-latch phase used by terrain edge
+balance. S3K Tails checks the previous `next_tilt`/`tilt` bytes during
+`Tails_InputAcceleration_Path`; only after movement and `Player_AnglePos` does
+the player tail copy the newly produced `Primary_Angle`/`Secondary_Angle` bytes
+for the following dispatch (`sonic3k.asm:27796-27859,26215-26244`). The engine
+instead inferred the edge from fresh side probes, then recomputed balance after
+`AnglePos`, exposing the new right-edge result on the first grounded frame at
+f16123. Movement now retains the two ROM-visible angle latches and applies the
+balance decision captured at its native pre-movement point, including a
+non-balancing result. The complete-run frontier moves from f16123
+(`tails_status_byte` expected `$41`, actual `$40`) to f16485
+(`tails_cpu_respawn_counter` expected `$00EB`, actual `$0000`), leaving one
+reported mismatch. `TestPlayableSpriteMovement` passes all 114 checks with the
+Java-26 Byte Buddy compatibility flag, and fresh full sweeps on this exact
+working tree pass all 29 S1 and all 48 S2 trace replays.
+
+Remaining unbanked transition/event investigation has advanced through the
+later transition-floor contact and AIZ2 terrain-table handoff; together with the
+banked rounds the current stacked working-tree complete-run frontier is f16485.
+Those causes will be recorded and committed separately as their focused guards
+are completed. The banked level-select AIZ
+baseline remains f8941; the unbanked transition-timing stack currently exposes
+an earlier f5435 mismatch and must restore/advance that route before the stage
+can turn green. No AIZ-stage green claim is made yet.
+
+Round 30 restores AIZ2's two-register screen-shake phase. `AIZ2_ScreenEvent`
+adds the offset prepared by the preceding background pass to
+`Camera_Y_pos_copy`; only afterward does `AIZ2_BackgroundEvent` call
+`ShakeScreen_Setup` to publish the next offset. The engine previously computed
+and applied the new sample together, and indexed it with the zone-event
+manager's local counter instead of the ROM-visible level counter. At f16484
+that moved Tails just inside `Render_Sprites`' vertical window one pass early,
+so f16485 `sub_13EFC` cleared `Tails_CPU_flight_timer` instead of incrementing
+it to `$00EB` (`sonic3k.asm:104183-104206,104870-104875,105132-105165,
+36345-36387,26816-26833`). A separate applied-offset register now feeds the
+current scroll pass while the next offset is indexed from the stored level
+counter plus its ROM-visible pre-ScreenEvents increment. The complete-run
+frontier moves from f16485 (`tails_cpu_respawn_counter` expected `$00EB`, actual
+`$0000`) to f16756 (`rings` expected `2`, actual `3`). Focused AIZ event and
+level-event rewind tests cover the register phase and both fields' snapshot
+round-trip. Fresh full sweeps on this exact working tree pass all 29 S1 and all
+48 S2 trace replays. The focused AIZ level-select route remains red at
+the unbanked f5435 transition frontier, so the stage is not green yet.
+
+Round 31 corrects the AIZ giant ride vine's two-layer SST lifetime. The ROM
+root's `loc_22442` coarse-X test runs regardless of the handle's P1/P2 grab
+bytes, then `loc_2245C` deletes the complete child chain before
+`Delete_Current_Sprite` releases the root (`sonic3k.asm:46749-46831`). The
+consolidated engine object instead returned persistent while either grab byte
+was set; because it executes from the reserved handle slot, ordinary
+execution-slot cleanup also could not release its distinct parent slot. The
+vine now remains cullable while grabbed and explicitly releases that parent on
+unload. Focused lifecycle guards cover both contracts. In the complete-run
+route this restores the later star post from engine slot 6 to ROM slot 5 and
+removes the leaked vine-root occupant before the f16670 hurt spill. The
+remaining reported mismatch is the same three-frame ring-count cluster at
+f16755-f16757 (expected 2, actual 3): the next owner is an older object-slot
+permutation that gives the spill owner engine slot 13 instead of ROM slot 14,
+changing one ring's `(V_int_run_count+d7)&7` floor cadence. No AIZ-stage green
+claim is made yet. Fresh full sweeps on this exact tree pass all 29 S1 and all
+48 S2 trace replays; the focused level-select route also retains its unbanked
+f5435 transition frontier.
+
+Round 32 replaces the transition floor's single zero-distance retry count with
+the fixed-point carry state that differs between the two AIZ recordings. ROM
+`Obj_AIZTransitionFloor` calls `SolidObjectTop` every object pass; the engine's
+split player/object scheduler holds integer `y_pos` on the exact surface while
+retaining the native 16.16 fraction. The focused route reaches that bridge with
+`y_sub=$F700` and ROM records 20 `first_reject` passes before the f5435 first
+landing, while the complete route reaches it with `y_sub=$0100` and needs the
+low-phase carry one pass later (`sonic3k.asm:104777-104790,41642-41679,
+41793-42015`). The object now consumes 20 high-phase or 21 low-phase passes,
+driven solely by captured player state. Focused unit tests cover both phases.
+`TestS3kAizTraceReplay#replayMatchesTrace` advances from f5435 / 2 to f5496 /
+14 (the act-reload request is one gameplay dispatch late); the complete-run
+frontier remains the f16755-f16757 ring-count cluster. The stage is not green
+yet.
+
+Round 33 restores the AIZ intro controller's fixed object-RAM ownership.
+`SpawnLevelMainSprites` writes `Obj_AIZPlaneIntro` directly to
+`Dynamic_object_RAM+(object_size*2)`, which both AIZ ROM traces expose as
+absolute S3K SST slot 5; it does
+not use `AllocateObject` (`sonic3k.asm:8111-8126`). The engine event fallback
+previously inserted the controller through first-free allocation, placing it in
+slot 4 and perturbing the allocation history behind the later hollow-tree,
+miniboss, transition-floor, and hurt-spill objects. `ObjectManager` now exposes
+a guarded fixed-slot construction path and both normal intro creation and the
+prelude restore use slot 5. A focused integration assertion covers the authored
+slot and duplicate-intro fallback. With the transition timing stack held at its
+prior value, the strict frontiers remain focused f5496 / 14 and complete-run
+f16755-f16757 (rings expected 2, actual 3); this commit corrects the underlying
+SST owner without claiming a frontier move. Fresh full sweeps pass all 29 S1
+and all 48 S2 trace replays. The AIZ stage is not green yet.
+
+Round 34 restores the two SST children created with the AIZ intro plane. ROM
+`CreateChild1_Normal` allocates `loc_677CE`, `loc_6784A`, and `loc_67888` into
+three consecutive slots from `ChildObjDat_67A5A/67A62`
+(`sonic3k.asm:135702-135819,136001-136012`). The engine allocated only the plane
+and retained the latter two animated pieces as non-SST render helpers. They now
+run as real dynamic objects with ROM offsets/animation variants and generic
+rewind recreation linked to the live plane. The comparison-only occupancy probe
+therefore changes focused frame 354 from ROM slots 5-8 versus engine 5-6 to an
+exact 5-8 match; it remains exact through frame 717. Strict physics frontiers
+remain focused f5496 / 14 with the baseline transition timing and complete-run
+f16755-f16757. No stage-green claim is made yet.
+
+Round 35 preserves the intro wave's callback operation for its final SST pass.
+ROM `Animate_RawMultiDelay` command `$F4` invokes the `$34` callback, which
+writes `Go_Delete_Sprite`; only the following object dispatch deletes the slot
+(`sonic3k.asm:135820-135841,136013-136020,177558-177613`). The engine deleted
+inside the animation callback, creating a one-frame hole in slots 9-11 on each
+six-frame rotation. A pending-operation bit now keeps that callback frame live,
+with a focused unit guard. The occupancy probe's former repeating first mismatch
+at f718 and every six frames is removed; later independent lifetime differences
+remain. Strict frontiers remain focused f5496 / 14 at baseline timing and
+complete-run f16755-f16757. The AIZ stage is not green yet.
+
+Round 36 replaces the remaining fixed AIZ fire-handoff timing with the ROM
+state that owns it. The queued AIZ2 128x128/16x16 tables become collision-live
+after 20 finish ticks while module art is still pending; VBlank-only rows drain
+only the delayed post-reload plane redraw; and `AIZ1BGE_Finish` now waits at
+least 64 ticks before exposing completion on module/DMA VBlank phase 3
+(`sonic3k.asm:2726-2789,7884-7910,104664-104774,105049-105096`). The two
+recordings reach that same ready phase differently: the focused route is ready
+at tick 64, while the complete run reaches it at tick 66. Focused phase guards
+cover both cases without a route or frame branch. After merging current
+`origin/develop`, the strict focused replay advances from f5496 / 3442 errors
+to f8831 / 3418 errors (rings expected 100, actual 0); the complete-run
+frontier remains f16755 / 1056 errors (rings expected 2, actual 3). The AIZ
+stage is not green yet.
+
+Round 37 aligns the focused AIZ checkpoint helpers with the canonical replay
+bootstrap's preceding-row VBlank seed. Those helpers used the historical
+`initialVblankCounterForTraceReplay()-1` expression, which is one phase later
+than `TraceReplaySessionBootstrap.applyBootstrap()` after that API acquired its
+explicit next-row semantics. They now seed `trace.initialVblankCounter()-1`, so
+the reload-lock and fire-reveal assertions exercise the same four-phase module
+queue as the strict replay. Both focused camera guards pass. This is test
+bootstrap parity only; strict frontiers remain focused f8831 and complete-run
+f16755, and the AIZ stage is not green yet.
+
+Round 38 anchors the AIZ Act 2 in-level title handoff to the module-visible
+child phase. ROM title children become live on phase 0 of the four-phase
+module/DMA pipeline; the slotless manager can enter three ticks before or after
+that boundary in the two recordings. The pending HUD reset and later
+`Obj_TitleCardWait2` completion now retain that phase without shifting the title
+animation itself. When the title releases while Sonic is airborne, the two
+`Change_Act2Sizes` workers also defer their first fixed-point carry until the
+following camera pass, matching the ROM object/camera order
+(`sonic3k.asm:62214-62279,178154-178225,2726-2789`). The focused route's ring
+reset now occurs at f8837 in both ROM and engine, its X/Y boundary release is
+exact through f8943, and the strict frontier advances from f8831 to f9509
+(`y_speed` expected `$03A8`, actual `$0000`; 1470 errors). The complete-run
+frontier remains f16755 / 1056 errors. The AIZ stage is not green yet.
+
+Round 39 applies `SolidObjectTop`'s exact-boundary rule to the normal AIZ
+collapsing log bridge as well as its fire subtype. Both `loc_2AE98` and
+`loc_2AF06` enter `loc_1E42E`, whose unsigned `cmpi.w #-$10,d0 / blo` accepts
+only negative overlap from -16 through -1. At focused f9509 Sonic's bottom plus
+the helper's four-pixel bias is exactly level with the bridge surface, so the
+ROM keeps him airborne and lands him on the next frame; the engine had treated
+that zero-distance contact as a landing. A focused object guard now covers both
+subtypes. Frontier results are recorded after replay verification below.
+The focused replay advances from f9509 / 1470 errors (airborne bridge-boundary
+state) to f16324 / 1159 errors (camera X expected `$4160`, actual `$4164`). The
+complete-run replay is unchanged at f16755 / 1056 errors (rings expected 2,
+actual 3), confirming that its earlier fast-overlap bridge landing remains
+accepted. The AIZ stage is not green yet.
+
+Round 40 separates the AIZ2 screen-event ship-loop arm from its first completed
+special-event dispatch. ROM `AIZ2SE_Normal` consumes `Events_fg_4` and installs
+`Special_events_routine=4`; it does not execute `AIZ2_DoShipLoop` inside that
+same screen-event handoff. The engine previously set the auto-scroll latch and
+fell through to its `$+4` camera step immediately, exposing camera `$4164` on
+the row where the ROM still records `$4160`. The event pass now snapshots
+whether auto-scroll was active on entry, so a newly armed routine cannot run
+until the following `SpecialEvents` pass; a focused event test covers the arm
+and first movement phases (`sonic3k.asm:104872-104910,105200-105253`). The
+focused replay advances from f16324 / 1159 errors (camera X expected `$4160`,
+actual `$4164`) to fully green. The complete-run frontier stays f16755 while
+its errors fall from 1056 to 687. Full exact-tree
+S1 (29) and S2 (48) trace sweeps passed immediately before this S3K-local event
+delta. The AIZ stage is not green yet.
+
+Round 41 separates the AIZ2 foreground ShipRefresh redraw from battleship
+object allocation. ROM `AIZ2SE_Normal` arms `Special_events_routine=4` and
+falls through to `AIZ2SE_ShipRefresh`; `Obj_AIZBattleship` is allocated only
+when `Draw_PlaneVertBottomUp` reports completion on the following ScreenEvents
+pass (`sonic3k.asm:104872-104925`). The engine previously spawned the ship
+while arming auto-scroll, two object passes before the ROM-visible ship slot;
+the bomb's own setup recovered one pass, leaving impacts one pass early. A
+pending refresh-pass counter now delays only ship allocation while the first
+`AIZ2_DoShipLoop` `$+4` camera step retains Round 40's exact phase. The focused
+replay advances from f16943 / 302 errors (CPU Tails hurt one frame early by a
+new bomb explosion) to f19089 / 208 errors (`g_speed` sign at a later terrain
+turn). The complete-run frontier remains f16755 while its errors fall from 687
+to 668. The AIZ stage is not green yet.
+
+Round 42 corrects the AIZ end boss's revealed raw-animation and camera-bound
+visibility phases. `Animate_RawNoSSTMultiDelay` enters `byte_69DB3` at its
+second `$1B` pair, so the visible holds are five/six/seven/one frames and the
+`$F4` callback installs hover on update 20. The prior extra `$1B` frame left
+the hover oscillator one frame behind and put the boss collision centre one
+pixel too low at focused f19089, causing an early full velocity rebound. The
+shorter raw animation also installs routine `$C` one engine frame earlier;
+the boss now preserves ROM camera-pass visibility by deferring the first
+camera-minimum/right-bound write, then restores the skipped right-bound `$+2`
+after the 128-pass move loop exits. The focused replay advances from f19089 /
+208 errors to f19410 / 3 errors (a two-frame bridge-rider facing bit followed
+by two isolated late-run diagnostics). The AIZ stage is not green yet.
+
+Round 43 models the AIZ boss-end draw bridge parent's permanent status bit 7.
+ROM `Sonic_Move` tests the ridden object's status byte before its
+`width_pixels` edge calculation and skips balancing when the sign bit is set;
+the engine's consolidated bridge previously entered that branch and faced
+Sonic left for two frames because its parent centre lies far to the right of
+the rider. `suppressesObjectEdgeBalance()` now exposes the same object state.
+The focused replay advances from f19410 / 3 errors to f20715 / 2 errors (one
+CPU-Tails logical-held bit and one later camera-Y sample). The full S1 (29)
+and S2 (48) trace fleets passed with the Round 42-43 working tree. The AIZ
+stage is not green yet.
+
+Round 44 restores the late `Ctrl_2_logical` clear owned by the AIZ post-boss
+control helper at ROM `loc_863C0`. The positive controller-2 lock still lets
+Tails CPU generate and consume its delayed follow input, then the helper's
+later object slot clears the live logical word before frame observation. The
+engine now keeps the detailed CPU-step sample while exposing the cleared live
+latch to trace diagnostics. The focused replay advances from f20715 / 2 errors
+to f20769 / 1 error (a single camera-Y sample during the final fall). The AIZ
+stage is not green yet.
+
+Round 45 closes the focused AIZ replay at the HCZ `StartNewLevel` handoff.
+The ROM transition is entered from the later boss-controller slot before the
+ordinary camera pass can consume the player's just-moved position; the final
+visible camera target therefore comes from the player's pre-physics Y. The
+engine now writes that airborne `$80`-offset target and temporarily freezes the
+camera before requesting the full zone transition. The focused replay passes
+all 20,443 frames with zero errors. The complete-run replay remains red at
+f16755, with 657 errors (`rings`, expected 2 / actual 3), so the AIZ stage is
+not green yet. Full S1 (29) and S2 (48) trace fleets passed at the immediately
+preceding shared-sidekick commit boundary.
+
+Round 46 restores the ordinary AIZ ride vine's five child SST reservations.
+ROM `Obj_AIZRideVine` retains the root and allocates four link entries plus a
+final handle using `AllocateObjectAfterCurrent`; the engine's consolidated
+object previously consumed only the root slot. The reservation is made during
+the root's first execution pass and freed with the vine, matching the native
+lifetime without changing gameplay ordering. The focused replay remains green
+through all 20,443 frames. The complete-run replay remains red at f16755 / 657
+errors (`rings`, expected 2 / actual 3), proving this earlier vine's released
+children are not the live allocation mismatch at the later ring spill. The
+focused vine unit suite passes. The AIZ stage is not green yet.
+
+Round 47 restores AIZ/LRZ rock's in-place first-debris conversion. ROM
+`sub_2013A` rewrites the parent `a0` entry as fragment zero and calls
+`AllocateObjectAfterCurrent` only for the remaining table rows. The engine now
+transfers the rock's existing SST slot to fragment zero before allocating the
+rest, rather than destroying the parent after allocating every fragment and
+leaving its low slot empty. Focused rock suites pass and the focused AIZ replay
+remains green through 20,443 frames. The complete-run replay remains f16755 /
+657 errors (`rings`, expected 2 / actual 3), so this corrected conversion is
+not the final live spill-owner mismatch. The AIZ stage is not green yet.
+
+Round 48 restores the ordinary ride vine's still-sprite deletion boundary and
+S3K's native X-cursor width. ROM `loc_21DF2` consumes the preceding
+`Render_Sprites` bit after movement, writes `x_pos=$7FF0` once its 8x12 bounds
+leave the fixed 320x224 viewport, then `loc_21F38` deletes the root and all five
+children with the fixed `$280` coarse check regardless of grab bytes. The S3K
+two-axis placement cursor now also retains its native `$280` right edge instead
+of widening SST allocation timing with the renderer. This moves the later
+`x=$1EB0` spring from engine slot 26 to its ROM slot 8 and leaves no vine root
+alive at that allocation. The focused AIZ replay remains green through 20,443
+frames; the complete run remains f16755 / 657 errors (`rings`, expected 2 /
+actual 3), now owned by a later placement-slot permutation. Full exact-tree S1
+(29) and S2 (48) trace fleets both pass. The AIZ stage is not green yet.
+
+Round 49 restores S3K `HurtCharacter`'s unconditional collision-radius reset.
+S3K `Player_TouchFloor` writes `default_y_radius/default_x_radius` before it
+tests `Status_Roll`; this matters when an earlier routine cleared only the
+status bit while leaving rolling radii live. The engine's `setRolling(false)`
+was a no-op in that state, so CPU Tails approached the f17130 terrain landing
+with a 7x14 sensor box instead of ROM's recorded 9x15 box and snapped one pixel
+low. `applyHurt` now restores standing radii independently of the flag, while
+focused regression guards pin both S3K's restore and S2's distinct preservation
+of the split status/radius state
+(`sonic3k.asm:21065-21093,24335-24369,29133-29170`). Under the temporary
+comparison-only lost-ring slot-phase diagnostic, the downstream frontier moves
+from f17130 to f17545 (`rings`, expected 12 / actual 11). The diagnostic is not
+part of this commit; the committed complete-run frontier remains f16755 / 657
+until the earlier spill-owner allocation permutation is modeled. The focused
+AIZ replay remains green. Full exact-tree S1 (29) and S2 (48) trace fleets
+both pass; the S2-specific preservation guard and HTZ2 replay also pass. The
+AIZ stage is not green yet.
+
+Round 50 restores native player participation for attracted-ring collection.
+`Obj_Attracted_Ring` publishes itself through the collision-response list after
+motion, and both player slots run `TouchResponse`; the ring's attraction owner
+controls motion but does not make collection P1-only. The engine now checks the
+main player followed by live sidekicks against the prior ring position before
+moving it, so the ring crossing CPU Tails at f17545 is collected on the ROM
+frame instead of one frame later. A focused guard pins sidekick collection while
+the existing near-miss guard preserves `$47` touch bounds
+(`sonic3k.asm:18444-18531,20612-20640,35760-35837`). Under the temporary
+comparison-only spill-phase diagnostic, the downstream frontier moves from
+f17545 to f17845 / 2 errors (`tails_y`, expected `$03FF`, actual `$03F8`). The
+diagnostic remains unstaged; the committed complete-run frontier remains
+f16755 / 657 until the spill-owner slot permutation is resolved. The AIZ stage
+focused replay remains green, and full exact-tree S1 (29) and S2 (48) fleets
+both pass. The AIZ stage is not green yet.
+
+Round 51 restores the collapsing platform's fragment-transition solid skip for
+fresh contacts. ROM `ObjPlatformCollapse_CreateFragments` jumps to `Play_SFX`
+without calling `sub_205B6` / `SolidObjectTopSloped2`; existing riders retain
+their standing bits across the skipped object pass, but another player cannot
+establish a new ride until `loc_205DE` resumes the solid helper on the next
+dispatch. The engine now distinguishes those cases using the platform's native
+pending/active transition state. This prevents CPU Tails from attaching at
+f17845 while Sonic remains supported, then permits Tails' ROM landing at f17846
+(`sonic3k.asm:44814-44864,45394-45442`). Two focused guards pin both transition
+and ordinary solid-stay behavior. Under the temporary comparison-only
+spill-phase diagnostic, the downstream frontier moves from f17845 / 2 errors to
+f20714 / 3 errors (`tails_y`, expected `$0009`, actual `$000E`). The diagnostic
+is unstaged; the committed complete-run frontier remains f16755 / 657 pending
+the spill-owner slot fix. The AIZ stage is not green yet.
+
+Round 52 restores the per-game collision-layout Y mask for negative ceiling
+lookups. `Sonic_CheckCeiling` transforms the probe with `eori.w #$F`, then
+S3K `Find_Tile_FG` applies the runtime `Layout_row_index_mask`; the default
+`$7C` mask represents a 4096-pixel window, not S1/S2's 2048-pixel window. The
+engine's shared hardcoded `$07FF` mask wrapped CPU Tails' above-top probe into
+solid row `$07F4` at f20714, shifted him down five pixels, and zeroed his upward
+velocity. Typed collision rules now supply S1/S2 `$07FF` and S3K `$0FFF`, so
+the same ROM state addresses `$0FF4` and returns blank as recorded
+(`sonic3k.asm:19141-19163,20242-20282,102181-102204`). A focused unit guard
+pins both windows. Under the temporary comparison-only spill-phase diagnostic,
+the downstream frontier moves from f20714 / 3 errors to f22819 / 1 error
+(`camera_x`, expected `$460C`, actual `$4612`). The diagnostic is unstaged; the
+committed complete-run frontier remains f16755 / 657 pending the spill-owner
+slot fix. The focused AIZ replay and full exact-tree S1 (29) / S2 (48) fleets
+pass. The AIZ stage is not green yet.
+
+Round 53 separates the AIZ2 battleship's ROM `Scroll_lock` from a full camera
+freeze. While the lock is set, `DeformBgLayer` skips `MoveCameraX` without
+touching `H_scroll_frame_offset`; the engine previously released its temporary
+freeze through `Camera.setFrozen(false)` every frame, which also erased that
+parked position-history delay. The ship loop now uses an explicit scroll-lock
+operation that preserves the delay until `Obj_AIZ2BossSmall` clears the lock
+(`sonic3k.asm:38288-38303,104892-104910,105200-105253,105572-105619`). Focused
+camera and AIZ event guards pin the preserved 32-frame history value. Under the
+temporary comparison-only spill-phase diagnostic, the downstream frontier
+moves from f22819 / 201 errors to f23523 / 200 errors (`y_speed`, expected
+`-$02B0`, actual `$02B0`). The diagnostic remains unstaged; the committed
+complete-run frontier remains f16755 / 657 until the spill-owner slot
+permutation is resolved. The focused AIZ replay remains green. A fresh exact
+`*TraceReplay` sweep passes all 29 S1 replay classes and every S2 replay class
+(20 passed tests plus the ROM-optional special-stage skip); the broader S2
+trace-package `Test*` sweep also passes 70 tests with that one optional skip.
+The AIZ stage is not green yet.
+
+Round 54 restores the invisible SST timer allocated by AIZ2's dynamic-water
+rise. ROM `DynamicWaterHeight_AIZ2` sets `Screen_shake_flag=-1`, calls
+`AllocateObject`, writes `Obj_6E6E`, and seeds its `anim_frame_timer` to 180;
+that object clears the shake and deletes itself when the byte countdown expires
+(`sonic3k.asm:8648-8713`). The engine already modeled the water target and
+global shake countdown but allocated no object, leaving native slot 7 empty and
+shifting the later AnimatedStill/Caterkiller allocation landscape. Dynamic-water
+profiles can now declare that their shake timer owns an SST entry, materialized
+as a persistent, invisible countdown object through the ordinary allocator.
+Focused water-handler and 180-frame lifetime tests pass. On its own this
+correction preserves the strict complete-run frontier at f16755 / 204 errors;
+the remaining owner is the separately consolidated AIZ flipping-bridge child
+slot. The focused AIZ replay remains fully green, and a fresh exact replay
+sweep passes all 29 S1 classes plus every S2 replay (20 passed tests and the
+ROM-optional special-stage skip). No stage-green claim is made yet.
+
+Round 55 restores the AIZ flipping bridge's separately allocated multisprite
+draw owner. ROM `Obj_AIZFlippingBridge` calls `AllocateObjectAfterCurrent`,
+writes `loc_2AA78` into that child, and stores all eight subsprites there while
+the parent retains animation and solid logic (`sonic3k.asm:58872-59043`). The
+consolidated Java bridge rendered those subsprites without reserving the child
+SST, so the later collapsing platform took engine slot 27 instead of ROM slot
+28 and S3K's after-owner ring spill began its remainder at 28 instead of 29.
+The bridge now reserves one after-current child slot on its first native update;
+a focused allocation guard pins parent-plus-child ownership. Combined with
+Round 54's water-shake timer, `TestS3kAizCompleteRunTraceReplay` advances from
+f16755 / 204 errors (`rings`, expected 2 / actual 3) to f23523 / 200 errors
+(`y_speed`, expected `-$02B0`, actual `$02B0`). The focused AIZ replay remains
+green. A second exact boundary sweep passes all 29 S1 replay classes and every
+S2 replay (20 passed tests plus the ROM-optional special-stage skip). The AIZ
+stage is not green yet.
+
+Round 56 restores `Obj_SignpostSparkle`'s RNG ownership. ROM creates one
+sparkle every four falling-signpost frames; each sparkle calls
+`Random_Number`, masks the returned word with `$1F`, subtracts `$10`, and adds
+that signed offset to its initial Y position (`sonic3k.asm:176294-176300`). The
+engine already created the sparkle children but neither consumed the random
+word nor applied the offset. A focused seed/offset guard now pins both effects.
+The complete-run route observes 65 corrected signpost calls before the AIZ end
+boss; this removes the largest pre-boss RNG-cadence gap and exposes the
+remaining five calls as `Obj_MonkeyDude` root-arm timer ownership. The strict
+frontier remains f23523 (`y_speed`, expected `-$02B0`, actual `$02B0`), with
+210 downstream errors while the now-earlier ROM random sequence changes later
+boss choices. The focused AIZ replay remains fully green. A fresh explicit
+48-class sweep (29 S1 and 19 S2 `*TraceReplay` classes) passes with the one
+ROM-optional special-stage skip. The AIZ stage is not green yet.
+
+Round 57 corrects the signpost sparkle trigger from allocation-local age to
+the ROM's global `V_int_run_count & 3 == 0` phase
+(`sonic3k.asm:176148-176153`). The complete-run signpost now consumes all 66
+random words recorded during its falling routine instead of 65, while the
+focused AIZ replay remains green. This is a prerequisite cadence correction:
+the strict complete-run frontier remains f23523 / 210 errors (`y_speed`,
+expected `-$02B0`, actual `$02B0`) because five earlier non-signpost RNG calls
+are still mistimed before the end boss. A focused phase guard pins the global
+four-frame boundary. The AIZ stage is not green yet.
+
+Round 58 restores the separately allocated Monkey Dude arm root's native RNG
+cadence. The root now waits for its full `$20x$20` `Obj_WaitOffscreen` gate,
+consumes both setup dispatches, continues after its first activation, and runs
+the ROM swing/windup/throw/return phases independently of the consolidated Java
+arm renderer. Each random reset calls `Random_Number`, then reads the high word
+of the big-endian `RNG_seed` for its direction bit and `$3C`-masked timer
+(`sonic3k.asm:183755-183913`). The focused AIZ replay remains green. In the
+complete run, all Monkey/animal RNG transitions through the first end-boss
+selection now match the recording; the next remaining owner is fixed-slot air
+countdown state across the seamless act handoff. The AIZ stage is not green
+yet.
+
+Round 59 preserves the two fixed `Obj_AirCountdown` SST owners across a
+same-zone adjacent-act handoff. The ROM's fixed object RAM is not cleared by
+AIZ's seamless Act 1 to Act 2 transition, so resetting the manager during the
+engine's act reinitialization restarted both countdown timers and displaced all
+later random calls. `Sonic3kLevelEventManager` now resets those slots for a
+fresh zone/non-adjacent load but retains them for `same zone && next act`, a
+generic load-state condition rather than an AIZ carve-out
+(`sonic3k.asm:22221-22224,27436-27439`). Together with Round 58, the complete
+run's global RNG sequence now matches through the AIZ end-boss selection. The
+focused AIZ replay remains green; the complete-run frontier moves to the boss
+contact/defeat handoff. The AIZ stage is not green yet.
+
+Round 60 restores two AIZ end-boss object-pass boundaries. The emerge
+animation callback now publishes a pending collision restore which becomes
+touch-visible on the following boss entry, matching the ROM object's
+`collision_flags` write after that frame's player/touch work. On defeat, the
+ship/explosion `Wait_Draw` interval completes before the independent `$7F`
+capsule-handoff wait runs (`sonic3k.asm:177558-177610,177944-177952`). Measured
+in the composed local investigation worktree, these changes move the strict
+complete-run frontier beyond the final boss rebound and into the post-capsule
+sequence. This snapshot includes later uncommitted capsule/bridge investigation
+and is therefore not a clean-commit frontier claim; that composed worktree also
+regresses the focused AIZ replay at f19397 / 86 errors (`y`, expected `$01FC`,
+actual `$01FD`), which remains an active blocker rather than being hidden. The
+exact 29-class S1 plus 19-class S2 replay fleet passed immediately before this
+commit (with only the ROM-optional special-stage skip). The AIZ stage is not
+green yet.
+
+Round 61 restores the AIZ capsule/results P1/P2 control handoff. The capsule
+parent now publishes its signed `Ctrl_2_locked` state on its following object
+entry, and the shared CPU controller preserves the existing logical word while
+that signed lock short-circuits CPU dispatch. The results owner applies Tails'
+ending pose at its native eligibility entry, retains the standing/air bits that
+the ROM routine does not rewrite, then schedules `Restore_PlayerControl2` from
+the later results slot through rewind-captured sequence state
+(`sonic3k.asm:166696-166703,181556-181570,181900-181918`). The exact 29-class
+S1 plus 19-class S2 replay fleet passed with these shared-controller changes.
+In the composed investigation worktree, the complete run proceeds through this
+handoff; the focused AIZ regression at f19397 remains explicitly red. The AIZ
+stage is not green yet.
+
+Round 62 restores the post-results gradual camera, cutscene-button range, and
+drawbridge collapse cadence. `Child6_IncLevX` now publishes the high word of
+its `$4000` accumulator on each later controller entry. `Check_InMyRange`'s
+`word_65C48` operands are modeled as a lower offset plus a span, producing the
+native `[-$18,+$18)` window without an added bounce/landing gate. When that
+state reaches the bridge, its trigger entry initializes `$34=$0E`, creates the
+falling pieces, and returns; only subsequent `loc_2B452` entries decrement and
+eventually clear both standing bits (`sonic3k.asm:133931-133943,138282-138326,
+59614-59623,59764-59791`). In the composed worktree this advances the strict
+complete-run frontier from f25965 / 21 errors to f26064 / 8 errors, all owned by
+the still-live AIZ water flag. The focused AIZ regression remains f19397 / 86.
+The AIZ stage is not green yet.
+
+Round 63 models the mutable ROM `Water_flag` separately from the immutable fact
+that a level has water. The new runtime enable bit retains the loaded mean,
+target, palette, and dynamic-handler state and participates in the shared water
+rewind snapshot. AIZ2's `AIZ2SE_ShipRefresh` owner clears it on the redraw pass
+that allocates `Obj_AIZBattleship`, matching the ROM instead of leaving the old
+`$0618` plane active through the end cutscene (`sonic3k.asm:104911-104934`).
+This removes the final eight complete-run errors at f26064 (Tails incorrectly
+entering water and quartering `$1570` Y velocity):
+`TestS3kAizCompleteRunTraceReplay` is fully green in the composed worktree.
+The focused AIZ replay remains red at f19397 / 86 and therefore the stage is
+not yet fully green.
+
+Round 64 closes the AIZ stage across both route shapes. The focused route first
+advanced from f19397 through the capsule same-entry `Check_TailsEndPose` clear,
+the already-settled bridge replacement, Knuckles' setup-only first dispatch,
+the four-entry non-riding results-control wait, and the final forced-UP logical
+word consumed before the button clears `Ctrl_1_locked`. Its last strict error
+was f20726 (`camera_y`, expected `$015A`, actual `$015C`); preserving that final
+logical word through the next player pass retained `Distance_from_top=$92` for
+the ROM camera decision and made the focused route fully green.
+
+The complete-run route then exposed two independently owned phases. First,
+`cpu_state` records Tails' controller word at the CPU decision point before the
+later capsule slot clears the live latch. The read-only engine comparison view
+now retains both samples and selects an exact matching CPU-decision sample when
+the recorder supplies `tails_cpu_normal_step`; it never writes trace state into
+the engine and adds no tolerance. Second, the consolidated cutscene bridge can
+occupy a later SST slot than the native bridge still named by Player 1's live
+`interact` pointer. The button now initializes the replacement bridge collapse
+on its own dispatch only when that native interact owner precedes the allocated
+replacement; focused slot-8 ordering remains on the ordinary next entry, while
+complete-run's earlier owner receives the same-pass `$34=$0E` initialization.
+The still-riding P2 status likewise owns the two additional results-control
+entries before forced walking begins. These are object slot/status conditions,
+not zone, route, frame, or trace exceptions.
+
+`origin/develop` at `c2a709288` was merged into the campaign branch as
+`470959328` before the final commits. The closing commits are `90ad614c4`
+(`fix(trace): compare sidekick input at CPU decision phase`), `37cd30797`
+(`fix(trace): preserve AIZ cutscene SST ordering`), and `ad9c41977`
+(`fix(trace): derive AIZ bridge phase from interact slot`). Final verification
+after those commits and the merge:
+
+- `TestTraceBinder`, `TestS3kAizTraceReplay#replayMatchesTrace`, and
+  `TestS3kAizCompleteRunTraceReplay#replayMatchesTrace` passed together with
+  MSE disabled and the S3K ROM supplied.
+- The exact S1/S2 replay fleet command selected every `*TraceReplay.java` under
+  `trace/s1` and `trace/s2`; all 29 S1 plus 20 S2 classes passed with one fork,
+  including the newly merged S2 special-stage coverage. Output contained only
+  the known S1 mapping-table warnings.
+
+The first-red AIZ stage is now completely green. Per the requested stopping
+condition, HCZ has not been advanced in this campaign.
 
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 

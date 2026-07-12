@@ -17,6 +17,7 @@ import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.AizBattleshipInstance;
 import com.openggf.game.sonic3k.objects.AizBgTreeSpawnerInstance;
 import com.openggf.game.sonic3k.objects.AizBombExplosionInstance;
@@ -248,6 +249,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private boolean battleshipCameraWasFrozen;
     /** True once the battleship object has been spawned (one-shot guard). */
     private boolean battleshipSpawned;
+    /** Remaining ShipRefresh plane passes before AllocateObject creates the ship. */
+    private int battleshipSpawnRefreshPasses;
     /** True once the AIZ2 end boss has been handed off to the object system. */
     private boolean endBossSpawned;
     /** True once the AIZ2 bombership 8x8/16x16 terrain overlays have been applied. */
@@ -290,10 +293,14 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private int battleshipPostScrollCameraX;
     /** Current vertical shake offset produced by {@link #screenShakeTimer}. */
     private int screenShakeOffsetY;
+    /** Offset consumed by the current ScreenEvents pass before the next value is prepared. */
+    private int screenShakeAppliedOffsetY;
     /** True after the act switch request has been sent to LevelManager. */
     private boolean act2TransitionRequested;
     /** True after in-place mutation stage has been requested. */
     private boolean fireTransitionMutationRequested;
+    /** True once the queued AIZ2 block/chunk Kosinski streams are visible. */
+    private boolean fireTerrainTablesLoaded;
     /** True once the post-burn fine haze phase should be active on FG. */
     private boolean postFireHazeActive;
     /** One-shot guard for AIZ1 fire-overlay 8x8 art staging at x >= $2E00. */
@@ -333,21 +340,22 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private static final int FIRE_SOURCE_X_AIZ2 = 0x0200;
     private static final int FIRE_BG_X_PHASE_MASK = 0x0060;
     private static final int FIRE_WAVE_PHASE_STEP = 6;
-    /**
-     * Extra frames to hold fire at full screen before transitioning to act 2.
-     * The ROM's Kos decompression wait in AIZ1BGE_Finish creates a natural
-     * linger where the fire covers the screen while art decompresses.  At 60fps
-     * the same game-frame math produces a visually shorter fire because there
-     * is no decompression overhead.  This constant approximates the ROM's
-     * visual duration by pausing fire advance for the equivalent frames.
-     */
     // ROM: AIZ1BGE_Finish waits for Kos_modules_left == 0 after queuing the
-    // AIZ2 128x128/16x16/8x8 art. The engine applies the decoded art eagerly
-    // and does not expose the module queue, so keep the fire-covered finish
-    // stage alive for the observed drain time of that exact queued workload.
-    private static final int FIRE_LINGER_FRAMES = 64;
+    // AIZ2 128x128/16x16/8x8 art. The engine applies the decoded art eagerly,
+    // but the native module queue exposes completion only on its four-phase
+    // decompression/DMA handoff. Preserve the minimum drain work and wait for
+    // that hardware-visible VBlank phase rather than using one route-wide delay.
+    private static final int FIRE_LINGER_MIN_FRAMES = 64;
+    private static final int KOS_MODULE_DMA_PHASE_MASK = 3;
+    private static final int KOS_MODULE_DMA_READY_PHASE = 3;
     private static final int FIRE_TRANSITION_FALLBACK_FRAMES = 240;
     private static final int FIRE_REDRAW_FRAMES = 16;
+    // ROM queues the AIZ2 128x128 and 16x16 Kosinski streams before entering
+    // AIZ1BGE_FireRefresh, then consumes their decompressed RAM tables while
+    // AIZ1BGE_Finish is still waiting on module art (sonic3k.asm:104664-104738).
+    // The engine has no incremental Kos queue; expose that exact queued terrain
+    // workload after its observed 20 finish ticks instead of at the later act reload.
+    private static final int FIRE_TERRAIN_DECOMPRESS_FRAMES = 20;
     // ROM: after the AIZ1BGE_Finish reload (Events_routine_bg cleared, act 0->1),
     // the AIZ2 background event chain re-draws the fire plane before releasing the
     // post-reload Camera_max_X_pos lock. The release is gated by the
@@ -366,6 +374,9 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private static final int AIZ2_FIRE_REDRAW_FRAMES = 8;
     private static final int AIZ2_WAIT_FIRE_REDRAW_FRAMES = 38;
     private static final int FIRE_OVERLAY_STAGE_X = 0x2E00;
+    // SpawnLevelMainSprites writes Obj_AIZPlaneIntro to
+    // Dynamic_object_RAM+(object_size*2): absolute S3K SST slot 3+2 = 5.
+    private static final int AIZ_PLANE_INTRO_SST_SLOT = 5;
     private static final int FIRE_OVERLAY_TILE_DEST = 0x500;
     private static final int FIRE_OVERLAY_PLC = 0x0C;
     public static final int FIRE_WAVE_COLUMN_COUNT = 0x14;
@@ -465,6 +476,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         battleshipCameraFrozenForScrollLock = false;
         battleshipCameraWasFrozen = false;
         battleshipSpawned = false;
+        battleshipSpawnRefreshPasses = 0;
         endBossSpawned = false;
         battleshipTerrainLoaded = false;
         battleshipWrapX = BATTLESHIP_WRAP_X_BOMBING;
@@ -474,8 +486,10 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         battleshipPostScrollCameraX = -1;
         screenShakeTimer = 0;
         screenShakeOffsetY = 0;
+        screenShakeAppliedOffsetY = 0;
         act2TransitionRequested = false;
         fireTransitionMutationRequested = false;
+        fireTerrainTablesLoaded = false;
         postFireHazeActive = false;
         fireOverlayTilesLoaded = false;
         fireBgCopyFixed = FIRE_BG_FIXED_START;
@@ -546,7 +560,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             battleshipCameraWasFrozen = cam.getFrozen();
             battleshipCameraFrozenForScrollLock = true;
         }
-        cam.setFrozen(true);
+        cam.setScrollLocked(true);
         battleshipAutoScrollRanPrePhysics = true;
     }
 
@@ -824,7 +838,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // The event fallback may run through a separate AIZ event instance during bootstrap,
         // so reuse the existing parent instead of allocating a second scroll controller.
         ObjectSpawn spawn = new ObjectSpawn(0x60, 0x30, 0, 0, 0, false, 0);
-        AizPlaneIntroInstance intro = spawnObject(() -> new AizPlaneIntroInstance(spawn));
+        AizPlaneIntroInstance intro = lm.getObjectManager().createDynamicObjectAtSlot(
+                () -> new AizPlaneIntroInstance(spawn), AIZ_PLANE_INTRO_SST_SLOT);
         if (intro == null) {
             return false;
         }
@@ -869,7 +884,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             return;
         }
         ObjectSpawn spawn = new ObjectSpawn(0x60, 0x30, 0, 0, 0, false, 0);
-        AizPlaneIntroInstance intro = spawnObject(() -> new AizPlaneIntroInstance(spawn));
+        AizPlaneIntroInstance intro = lm.getObjectManager().createDynamicObjectAtSlot(
+                () -> new AizPlaneIntroInstance(spawn), AIZ_PLANE_INTRO_SST_SLOT);
         introSpawned = intro != null;
         if (introSpawned) {
             LOG.info("AIZ1 intro: restored plane intro object for setup prelude");
@@ -1191,6 +1207,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     private void updateAct2Continuation(int frameCounter) {
+        boolean battleshipAutoScrollActiveAtEntry = battleshipAutoScrollActive;
+        int battleshipSpawnRefreshPassesAtEntry = battleshipSpawnRefreshPasses;
         // ROM order inside LevelLoop is DeformBgLayer -> Do_ResizeEvents,
         // then ScreenEvents. The AIZ2 resize stage at camera X >= $4160 sets
         // Events_fg_4, and AIZ2_ScreenEvent consumes it in the same frame to
@@ -1202,6 +1220,13 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // refresh/draw chain. Keep this separate from AIZ2_Resize so the trigger
         // remains observable and follows the same event handoff as the ROM.
         updateAiz2ScreenEvent();
+
+        if (battleshipSpawnRefreshPassesAtEntry > 0) {
+            battleshipSpawnRefreshPasses--;
+            if (battleshipSpawnRefreshPasses == 0) {
+                spawnBattleshipObject();
+            }
+        }
 
         if (fireSequencePhase.curtainActive() || fireSequencePhase == FireSequencePhase.AIZ2_BG_REDRAW) {
             switch (fireSequencePhase) {
@@ -1273,7 +1298,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
 
         // Battleship auto-scroll loop
-        if (battleshipAutoScrollActive && !battleshipAutoScrollRanPrePhysics) {
+        if (battleshipAutoScrollActiveAtEntry && !battleshipAutoScrollRanPrePhysics) {
             updateBattleshipAutoScroll(false);
         }
         battleshipAutoScrollRanPrePhysics = false;
@@ -1294,10 +1319,45 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
 
         // ROM: ShakeScreen_Setup — timed (bomb) and constant (water trigger) modes
-        tickScreenShake(frameCounter);
+        tickScreenShake();
 
         // ROM: AIZ2_Resize — dynamic boundary state machine (sonic3k.asm:39012)
         updateAiz2EndBossSpawn();
+    }
+
+    /**
+     * Advances only the VBlank-owned delayed plane redraw. Player physics,
+     * ScreenEvents, fire-rise CPU state, and all other level state stay frozen.
+     *
+     * <p>ROM lag rows still run the VBlank handler that drains the queued plane
+     * redraw, even though LevelLoop/ScreenEvents does not execute. This matters
+     * to AIZ2BGE_FireRedraw/WaitFire because Camera_max_X_pos is released only
+     * after that redraw has drained (sonic3k.asm:105049-105096).
+     */
+    public void advanceVblankOnlyState() {
+        switch (fireSequencePhase) {
+            case AIZ2_FIRE_REDRAW -> {
+                firePhaseFrames++;
+                if (firePhaseFrames >= AIZ2_FIRE_REDRAW_FRAMES) {
+                    fireSequencePhase = FireSequencePhase.AIZ2_WAIT_FIRE;
+                    act2WaitFireDrawActive = false;
+                    firePhaseFrames = 0;
+                }
+            }
+            case AIZ2_WAIT_FIRE -> {
+                act2WaitFireDrawActive = true;
+                firePhaseFrames++;
+                if (firePhaseFrames >= AIZ2_WAIT_FIRE_REDRAW_FRAMES) {
+                    camera().setMaxX((short) AIZ2_POST_FIRE_CAMERA_MAX_X);
+                    applyPostFireContinuationPaletteLine4(levelManager());
+                    fireSequencePhase = FireSequencePhase.AIZ2_BG_REDRAW;
+                    firePhaseFrames = 0;
+                }
+            }
+            default -> {
+                // CPU-owned phases remain frozen on VBlank-only rows.
+            }
+        }
     }
 
     /**
@@ -1587,17 +1647,31 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // Lock player control during the bombing sequence
         setTransitionControlLock(false); // Player can still run left/right
 
-        if (!battleshipSpawned) {
-            battleshipSpawned = true;
-            int baseSecondaryY = (camera().getY() + 0x08F0) & 0x0FF0;
-            ObjectSpawn shipSpawn = new ObjectSpawn(cameraX, baseSecondaryY, 0, 0, 0, false, 0);
-            AizBattleshipInstance ship = new AizBattleshipInstance(shipSpawn, baseSecondaryY);
-            var objManager = levelManager().getObjectManager();
-            if (objManager != null) {
-                objManager.addDynamicObject(ship);
-            }
-            LOG.info("AIZ2 battleship: spawned at cameraX=0x" + Integer.toHexString(cameraX));
+        // AIZ2SE_Normal falls through to AIZ2SE_ShipRefresh. The plane redraw
+        // must report complete on the following ScreenEvents pass before ROM calls
+        // AllocateObject for Obj_AIZBattleship (sonic3k.asm:104885-104925).
+        // Snapshot-at-entry dispatch above prevents this newly armed work from
+        // being consumed in the same pass.
+        battleshipSpawnRefreshPasses = 1;
+    }
+
+    private void spawnBattleshipObject() {
+        if (battleshipSpawned) {
+            return;
         }
+        battleshipSpawned = true;
+        // AIZ2SE_ShipRefresh clears Water_flag on the redraw pass that owns
+        // the battleship allocation (sonic3k.asm:104911-104934).
+        waterSystem().setWaterEnabled(Sonic3kZoneIds.ZONE_AIZ, 1, false);
+        int cameraX = camera().getX();
+        int baseSecondaryY = (camera().getY() + 0x08F0) & 0x0FF0;
+        ObjectSpawn shipSpawn = new ObjectSpawn(cameraX, baseSecondaryY, 0, 0, 0, false, 0);
+        AizBattleshipInstance ship = new AizBattleshipInstance(shipSpawn, baseSecondaryY);
+        var objManager = levelManager().getObjectManager();
+        if (objManager != null) {
+            objManager.addDynamicObject(ship);
+        }
+        LOG.info("AIZ2 battleship: spawned at cameraX=0x" + Integer.toHexString(cameraX));
     }
 
     private void updateAiz2EndBossSpawn() {
@@ -1887,7 +1961,11 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (!battleshipCameraFrozenForScrollLock) {
             return;
         }
-        camera().setFrozen(battleshipCameraWasFrozen);
+        if (battleshipCameraWasFrozen) {
+            camera().setFrozen(true);
+        } else {
+            camera().setScrollLocked(false);
+        }
         battleshipCameraFrozenForScrollLock = false;
         battleshipCameraWasFrozen = false;
     }
@@ -1952,7 +2030,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     public int getScreenShakeOffsetY() {
-        return screenShakeOffsetY;
+        return screenShakeAppliedOffsetY;
     }
 
     /**
@@ -1967,15 +2045,24 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * The water system's shake timer drives the constant mode; the local
      * {@link #screenShakeTimer} drives the timed mode.
      *
-     * @param frameCounter current Level_frame_counter for constant-mode indexing
      */
-    private void tickScreenShake(int frameCounter) {
+    private void tickScreenShake() {
+        // AIZ2_ScreenEvent consumes Screen_shake_offset before the background
+        // event calls ShakeScreen_Setup to prepare the value for the next frame
+        // (sonic3k.asm:104870-104875,105132-105165). Preserve both registers:
+        // the scroll handler applies the old value while this method computes
+        // the new one.
+        screenShakeAppliedOffsetY = screenShakeOffsetY;
         // Constant-mode shake: driven by WaterSystem's shake timer (ROM: Screen_shake_flag = -1).
         // DynamicWaterHeight_AIZ2 sets it to 180; WaterSystem decrements it each frame.
         // ROM: ShakeScreen_Setup loc_4F3FA — uses ScreenShakeArray2[(Level_frame_counter & $3F)]
         WaterSystem ws = waterSystem();
         if (ws != null && ws.getShakeTimer(0, 1) > 0) { // AIZ act 2
-            screenShakeOffsetY = SCREEN_SHAKE_ARRAY_CONSTANT[frameCounter & 0x3F];
+            // LevelManager stores the previous completed frame until its later
+            // level-update phase. At ScreenEvents the ROM counter has already
+            // advanced, so +1 recovers the value ShakeScreen_Setup reads.
+            int romFrameCounter = levelManager().getFrameCounter() + 1;
+            screenShakeOffsetY = SCREEN_SHAKE_ARRAY_CONSTANT[romFrameCounter & 0x3F];
             return;
         }
 
@@ -2117,7 +2204,18 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 // and scrolls off in act 2 to reveal the new terrain.
                 advanceFireRise(false);
                 firePhaseFrames++;
-                if (firePhaseFrames >= FIRE_LINGER_FRAMES && !act2TransitionRequested) {
+                if (!fireTerrainTablesLoaded
+                        && firePhaseFrames >= FIRE_TERRAIN_DECOMPRESS_FRAMES) {
+                    S3kSeamlessMutationExecutor.apply(
+                            levelManager(),
+                            S3kSeamlessMutationExecutor.MUTATION_AIZ1_FIRE_TERRAIN_READY);
+                    fireTerrainTablesLoaded = true;
+                }
+                int vblankPhase = levelManager().getObjectManager().getVblaCounter()
+                        & KOS_MODULE_DMA_PHASE_MASK;
+                if (firePhaseFrames >= FIRE_LINGER_MIN_FRAMES
+                        && vblankPhase == KOS_MODULE_DMA_READY_PHASE
+                        && !act2TransitionRequested) {
                     requestAct2Transition();
                 }
             }
@@ -2155,6 +2253,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         act2WaitFireDrawActive = false;
 
         fireTransitionMutationRequested = false;
+        fireTerrainTablesLoaded = false;
         act2TransitionRequested = false;
         postFireHazeActive = false;
         // ROM: AIZ1/AIZ2 background fire routines do not write Ctrl_1_locked;
@@ -2469,6 +2568,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     public void    setBattleshipPostScrollCameraX(int v)    { battleshipPostScrollCameraX = v; }
     public int     getScreenShakeOffsetYRaw()               { return screenShakeOffsetY; }
     public void    setScreenShakeOffsetYRaw(int v)          { screenShakeOffsetY = v; }
+    public int     getScreenShakeAppliedOffsetYRaw()        { return screenShakeAppliedOffsetY; }
+    public void    setScreenShakeAppliedOffsetYRaw(int v)   { screenShakeAppliedOffsetY = v; }
     public boolean isAct2TransitionRequestedRaw()           { return act2TransitionRequested; }
     public void    setAct2TransitionRequestedRaw(boolean v) { act2TransitionRequested = v; }
     public boolean isFireTransitionMutationRequested()      { return fireTransitionMutationRequested; }

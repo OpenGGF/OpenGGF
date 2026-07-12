@@ -189,6 +189,7 @@ public class Sonic2SpecialStageManager {
     private int hudPatternBase;
     private int startPatternBase;
     private int messagesPatternBase;
+    private int tailsTextPatternBase;
 
     // Object system (Phase 4)
     private Sonic2SpecialStageObjectManager objectManager;
@@ -476,7 +477,7 @@ public class Sonic2SpecialStageManager {
 
         // Load ring and bomb art
         Pattern[] ringPatterns = dataLoader.getRingArtPatterns();
-        ringPatternBase = messagesPatternBase + dataLoader.getMessagesArtPatterns().length;
+        ringPatternBase = tailsTextPatternBase + dataLoader.getTailsTextArtPatterns().length;
         for (int i = 0; i < ringPatterns.length; i++) {
             graphicsManager.cachePatternTexture(ringPatterns[i], ringPatternBase + i);
         }
@@ -911,10 +912,18 @@ public class Sonic2SpecialStageManager {
         }
         LOGGER.fine("Cached " + messagesPatterns.length + " Messages patterns");
 
+        tailsTextPatternBase = messagesPatternBase + messagesPatterns.length;
+        Pattern[] tailsTextPatterns = dataLoader.getTailsTextArtPatterns();
+        for (int i = 0; i < tailsTextPatterns.length; i++) {
+            graphicsManager.cachePatternTexture(tailsTextPatterns[i], tailsTextPatternBase + i);
+        }
+        LOGGER.fine("Cached " + tailsTextPatterns.length + " TAILS text patterns");
+
         // Now set the pattern bases on the renderer (after they have valid values)
         renderer.setPatternBases(backgroundPatternBase, trackPatternBase);
         renderer.setPlayerPatternBase(playerPatternBase);
         renderer.setIntroPatternBases(hudPatternBase, startPatternBase, messagesPatternBase);
+        renderer.setTailsTextPatternBase(tailsTextPatternBase);
 
         LOGGER.fine("Special Stage art loaded: " + bgPatterns.length + " bg, " +
                 trackPatterns.length + " track, " + playerPatterns.length + " player, " +
@@ -2114,6 +2123,26 @@ public class Sonic2SpecialStageManager {
         }
     }
 
+    private Sonic2SpecialStageRenderer.RingHudState currentRingHudState() {
+        boolean sonicActive = false;
+        boolean tailsActive = false;
+        int sonicRings = 0;
+        int tailsRings = 0;
+        for (Sonic2SpecialStagePlayer player : players) {
+            if (player.getPlayerType() == Sonic2SpecialStagePlayer.PlayerType.SONIC) {
+                sonicActive = true;
+                sonicRings = player.getRings();
+            } else if (player.getPlayerType() == Sonic2SpecialStagePlayer.PlayerType.TAILS) {
+                tailsActive = true;
+                tailsRings = player.getRings();
+            }
+        }
+        int totalRings = objectManager != null ? objectManager.getRingsCollected()
+                : sonicRings + tailsRings;
+        return new Sonic2SpecialStageRenderer.RingHudState(
+                sonicActive, tailsActive, sonicRings, tailsRings, totalRings);
+    }
+
     /**
      * Renders the Special Stage.
      */
@@ -2169,7 +2198,7 @@ public class Sonic2SpecialStageManager {
 
         // Render ring counter HUD (after intro completes)
         if (intro == null || intro.isComplete()) {
-            renderer.renderRingCounter(objectManager != null ? objectManager.getRingsCollected() : 0);
+            renderer.renderRingCounter(currentRingHudState());
 
             // Render "rings to go" counter if:
             // 1. Not in checkpoint animation
@@ -2610,6 +2639,13 @@ public class Sonic2SpecialStageManager {
         skydomeScrollTable = null;
         palettes = null;
 
+        // Detach renderer-owned ordering scratch before the authoritative
+        // collections below are cleared or discarded.
+        if (renderer != null) {
+            renderer.setPlayers(null);
+            renderer.setObjectManager(null);
+        }
+
         sonicPlayer = null;
         tailsPlayer = null;
         players.clear();
@@ -2636,6 +2672,7 @@ public class Sonic2SpecialStageManager {
         hudPatternBase = 0;
         startPatternBase = 0;
         messagesPatternBase = 0;
+        tailsTextPatternBase = 0;
 
         // Object system
         if (objectManager != null) {

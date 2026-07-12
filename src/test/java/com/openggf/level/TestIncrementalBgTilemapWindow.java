@@ -7,6 +7,7 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.TilemapGpuRenderer;
+import com.openggf.graphics.TilemapTexture;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.nio.ByteBuffer;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -245,50 +247,356 @@ public class TestIncrementalBgTilemapWindow {
 
     // ── Texture upload contract ─────────────────────────────────────────────
 
-    /**
-     * Pins the texture↔shader addressing contract: the parallax shader samples the
-     * BG FBO/texture base-anchored (local column c shows world content at
-     * {@code c*8 + xQueryOffset} for the CURRENT base), so a base-X step
-     * re-addresses every texture column. The incremental shift must therefore
-     * register the FULL shifted array for upload — identical at every column to an
-     * independent full rebuild at the new base — never a column-only update.
-     */
     @Test
-    public void incrementalShiftRegistersFullShiftedArrayForUpload() throws Exception {
-        TilemapGpuRenderer renderer = new TilemapGpuRenderer();
+    public void incrementalShiftRegistersOnlyEnteringColumnsForUpload() throws Exception {
+        RecordingTilemapGpuRenderer renderer = new RecordingTilemapGpuRenderer();
         injectRenderer(renderer);
         ZoneFeatureProvider zfp = new StubZoneFeatures(true, false);
 
         LevelTilemapManager manager = newManager(496, zfp);
-        assertTrue(getBoolean(renderer, "backgroundDirty"), "initial build registers a full upload");
-
-        // Simulate render() having consumed the pending upload (render() needs GL).
-        setField(renderer, "backgroundDirty", false);
+        int fullBytes = manager.getBackgroundTilemapData().length;
+        byte[] physicalTexture = new byte[fullBytes];
+        assertEquals(fullBytes, renderer.getPendingBackgroundUploadBytes());
+        assertEquals(1, renderer.getPendingBackgroundUploadCallCount());
+        renderer.applyPendingBackgroundUploadForTest(physicalTexture);
+        assertPhysicalTextureMatchesLogical(renderer, manager, physicalTexture);
 
         manager.requestBgWindowBaseX(512);
         ensure(manager, zfp);
         assertEquals(1, manager.bgIncrementalShiftCount, "shift path must engage");
+        int columnBytes = 2 * manager.getBackgroundTilemapHeightTiles() * 4;
+        assertEquals(columnBytes, renderer.getPendingBackgroundUploadBytes());
+        assertEquals(1, renderer.getPendingBackgroundUploadCallCount());
+        assertEquals(2, renderer.getBackgroundRingBaseTiles());
+        assertLogicalToPhysicalMapping(renderer, manager.getBackgroundTilemapWidthTiles());
+        renderer.applyPendingBackgroundUploadForTest(physicalTexture);
+        assertPhysicalTextureMatchesLogical(renderer, manager, physicalTexture);
 
-        // The shift must re-register a FULL background upload...
-        assertTrue(getBoolean(renderer, "backgroundDirty"),
-                "incremental shift must mark the full background texture for re-upload");
-        byte[] registered = (byte[]) getField(renderer, "backgroundData");
-        assertSame(manager.getBackgroundTilemapData(), registered,
-                "renderer must receive the live shifted array");
-        assertEquals(manager.getBackgroundTilemapWidthTiles(), getInt(renderer, "backgroundWidthTiles"));
-        assertEquals(manager.getBackgroundTilemapHeightTiles(), getInt(renderer, "backgroundHeightTiles"));
-
-        // ...whose content at EVERY local column matches an independent full rebuild
-        // at the new base (full-array comparison, not just the entering column).
-        assertArrayEquals(fullRebuildAt(512, zfp), registered);
-
-        // Retreat re-registers the full array as well.
-        setField(renderer, "backgroundDirty", false);
         manager.requestBgWindowBaseX(496);
         ensure(manager, zfp);
         assertEquals(2, manager.bgIncrementalShiftCount);
-        assertTrue(getBoolean(renderer, "backgroundDirty"));
-        assertArrayEquals(fullRebuildAt(496, zfp), (byte[]) getField(renderer, "backgroundData"));
+        assertEquals(columnBytes, renderer.getPendingBackgroundUploadBytes());
+        assertEquals(1, renderer.getPendingBackgroundUploadCallCount());
+        assertEquals(0, renderer.getBackgroundRingBaseTiles());
+        assertLogicalToPhysicalMapping(renderer, manager.getBackgroundTilemapWidthTiles());
+        renderer.applyPendingBackgroundUploadForTest(physicalTexture);
+        assertPhysicalTextureMatchesLogical(renderer, manager, physicalTexture);
+    }
+
+    @Test
+    public void physicalRingWrapsWithoutChangingLogicalPixelOrder() throws Exception {
+        RecordingTilemapGpuRenderer renderer = new RecordingTilemapGpuRenderer();
+        injectRenderer(renderer);
+        ZoneFeatureProvider zfp = new StubZoneFeatures(true, false);
+        LevelTilemapManager manager = newManager(0, zfp);
+        byte[] physicalTexture = new byte[manager.getBackgroundTilemapData().length];
+        renderer.applyPendingBackgroundUploadForTest(physicalTexture);
+
+        int width = manager.getBackgroundTilemapWidthTiles();
+        for (int base = 16; base <= width * 8; base += 16) {
+            manager.requestBgWindowBaseX(base);
+            ensure(manager, zfp);
+            assertEquals(2 * manager.getBackgroundTilemapHeightTiles() * 4,
+                    renderer.getPendingBackgroundUploadBytes());
+            assertLogicalToPhysicalMapping(renderer, width);
+            renderer.applyPendingBackgroundUploadForTest(physicalTexture);
+            assertPhysicalTextureMatchesLogical(renderer, manager, physicalTexture);
+        }
+        assertEquals(0, renderer.getBackgroundRingBaseTiles(), "physical ring must wrap at texture width");
+    }
+
+    @Test
+    public void zeroShiftDoesNothingAndMultiColumnJumpForcesFullUpload() throws Exception {
+        RecordingTilemapGpuRenderer renderer = new RecordingTilemapGpuRenderer();
+        injectRenderer(renderer);
+        ZoneFeatureProvider zfp = new StubZoneFeatures(true, false);
+        LevelTilemapManager manager = newManager(496, zfp);
+        int fullBytes = manager.getBackgroundTilemapData().length;
+        renderer.consumePendingBackgroundUploadForTest();
+
+        manager.requestBgWindowBaseX(496);
+        ensure(manager, zfp);
+        assertEquals(0, renderer.getPendingBackgroundUploadBytes());
+        assertEquals(0, renderer.getPendingBackgroundUploadCallCount());
+
+        manager.requestBgWindowBaseX(560);
+        ensure(manager, zfp);
+        assertEquals(fullBytes, renderer.getPendingBackgroundUploadBytes());
+        assertEquals(1, renderer.getPendingBackgroundUploadCallCount());
+        assertEquals(0, renderer.getBackgroundRingBaseTiles());
+    }
+
+    @Test
+    public void invalidationAfterIncrementalShiftForcesFullUploadAndResetsRing() throws Exception {
+        RecordingTilemapGpuRenderer renderer = new RecordingTilemapGpuRenderer();
+        injectRenderer(renderer);
+        ZoneFeatureProvider zfp = new StubZoneFeatures(true, false);
+        LevelTilemapManager manager = newManager(496, zfp);
+        renderer.consumePendingBackgroundUploadForTest();
+        manager.requestBgWindowBaseX(512);
+        ensure(manager, zfp);
+        assertEquals(2, renderer.getBackgroundRingBaseTiles());
+        renderer.consumePendingBackgroundUploadForTest();
+
+        manager.invalidateAllTilemaps();
+        manager.requestBgWindowBaseX(528);
+        ensure(manager, zfp);
+        assertEquals(manager.getBackgroundTilemapData().length, renderer.getPendingBackgroundUploadBytes());
+        assertEquals(1, renderer.getPendingBackgroundUploadCallCount());
+        assertEquals(0, renderer.getBackgroundRingBaseTiles());
+    }
+
+    @Test
+    public void multiplePendingShiftsAndExplicitInvalidationCoalesceToFullUpload() {
+        RecordingTilemapGpuRenderer renderer = new RecordingTilemapGpuRenderer();
+        byte[] first = syntheticRow(8, 0);
+        renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, first, 8, 1);
+        byte[] physical = new byte[first.length];
+        renderer.applyPendingBackgroundUploadForTest(physical);
+
+        byte[] second = syntheticRow(8, 10);
+        renderer.setBackgroundTilemapDataIncremental(second, 8, 1, 2);
+        assertEquals(8, renderer.getPendingBackgroundUploadBytes());
+        byte[] third = syntheticRow(8, 20);
+        renderer.setBackgroundTilemapDataIncremental(third, 8, 1, 2);
+        assertEquals(third.length, renderer.getPendingBackgroundUploadBytes(),
+                "a second mutation before the GL consumer runs must conservatively escalate to full");
+        assertEquals(0, renderer.getBackgroundRingBaseTiles());
+        renderer.applyPendingBackgroundUploadForTest(physical);
+        assertArrayEquals(third, physical);
+
+        renderer.setBackgroundTilemapDataIncremental(syntheticRow(8, 30), 8, 1, -2);
+        renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, first, 8, 1);
+        assertEquals(first.length, renderer.getPendingBackgroundUploadBytes());
+        assertEquals(0, renderer.getBackgroundRingBaseTiles());
+    }
+
+    @Test
+    public void wrappedPhysicalSubrectIsSplitIntoTwoRowSafeUploads() {
+        RecordingTilemapGpuRenderer renderer = new RecordingTilemapGpuRenderer();
+        byte[] physical = new byte[5 * 2 * 4];
+        byte[] logical = syntheticRows(5, 2, 0);
+        renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, logical, 5, 2);
+        renderer.applyPendingBackgroundUploadForTest(physical);
+
+        logical = shiftSyntheticRows(logical, 5, 2, 4, 40);
+        renderer.setBackgroundTilemapDataIncremental(logical, 5, 2, 4);
+        renderer.applyPendingBackgroundUploadForTest(physical);
+        assertEquals(4, renderer.getBackgroundRingBaseTiles());
+
+        logical = shiftSyntheticRows(logical, 5, 2, 2, 80);
+        renderer.setBackgroundTilemapDataIncremental(logical, 5, 2, 2);
+        assertEquals(2, renderer.getPendingBackgroundUploadCallCount(),
+                "destination columns 4 and 0 require two GL subrect uploads");
+        renderer.applyPendingBackgroundUploadForTest(physical);
+        assertSyntheticPhysicalMatchesLogical(renderer, logical, physical, 5, 2);
+    }
+
+    @Test
+    public void retainedFrameCommandCannotPairOldRingBaseWithNewTextureGeneration() {
+        RecordingTilemapGpuRenderer renderer = new RecordingTilemapGpuRenderer();
+        byte[] first = syntheticRow(8, 0);
+        renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, first, 8, 1);
+        int capturedBase = renderer.getBackgroundRingBaseTiles();
+        int capturedGeneration = renderer.getBackgroundContentGeneration();
+
+        renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, syntheticRow(8, 30), 8, 1);
+        renderer.setBackgroundRenderRingBaseOverride(capturedBase, capturedGeneration);
+        renderer.render(
+                TilemapGpuRenderer.Layer.BACKGROUND,
+                8, 8, 0, 0, 8, 8,
+                0, 0, 1, 1, 0, 0, 0,
+                -1, false, false, false, 0);
+        assertEquals(first.length, renderer.getPendingBackgroundUploadBytes(),
+                "stale command must leave the newest upload pending");
+
+        byte[] physical = new byte[first.length];
+        renderer.applyPendingBackgroundUploadForTest(physical);
+        assertArrayEquals(syntheticRow(8, 30), physical,
+                "the matching newest consumer must still receive the coherent full payload");
+    }
+
+    @Test
+    public void lostTextureStorageEscalatesPendingPartialToCanonicalFullUpload() {
+        RecordingTilemapGpuRenderer renderer = new RecordingTilemapGpuRenderer();
+        byte[] initial = syntheticRow(8, 0);
+        renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, initial, 8, 1);
+        renderer.applyPendingBackgroundUploadForTest(new byte[initial.length]);
+
+        byte[] shifted = shiftSyntheticRows(initial, 8, 1, 2, 50);
+        renderer.setBackgroundTilemapDataIncremental(shifted, 8, 1, 2);
+        assertEquals(8, renderer.getPendingBackgroundUploadBytes());
+
+        // No GL storage exists in this headless renderer. The attempted draw
+        // must retain work as a canonical full upload instead of dropping it.
+        renderer.render(TilemapGpuRenderer.Layer.BACKGROUND,
+                8, 8, 0, 0, 8, 8,
+                0, 0, 1, 1, 0, 0, 0,
+                -1, false, false, false, 0);
+        assertEquals(shifted.length, renderer.getPendingBackgroundUploadBytes());
+        assertEquals(0, renderer.getBackgroundRingBaseTiles());
+        byte[] physical = new byte[shifted.length];
+        renderer.applyPendingBackgroundUploadForTest(physical);
+        assertArrayEquals(shifted, physical);
+    }
+
+    @Test
+    public void staleDrawClearsOneShotScrollAndBandState() {
+        RecordingTilemapGpuRenderer renderer = new RecordingTilemapGpuRenderer();
+        byte[] initial = syntheticRow(8, 0);
+        renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, initial, 8, 1);
+        int oldGeneration = renderer.getBackgroundContentGeneration();
+        renderer.enablePerLineScroll(7, 224, 64, 3, 5);
+        renderer.enablePerColumnVScroll(new short[] {1});
+        renderer.setUpperBandWrap(64, 16);
+        renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, syntheticRow(8, 20), 8, 1);
+        renderer.setBackgroundRenderRingBaseOverride(0, oldGeneration);
+
+        renderer.render(TilemapGpuRenderer.Layer.BACKGROUND,
+                8, 8, 0, 0, 8, 8,
+                0, 0, 1, 1, 0, 0, 0,
+                -1, false, false, false, 0);
+        assertTrue(!renderer.hasPendingOneShotRenderState(),
+                "stale early return must not leak per-line/band uniforms into the next draw");
+    }
+
+    @Test
+    public void rendererCleanupUnderCleanManagerRepublishesCanonicalFullBaseline() throws Exception {
+        RecordingTilemapGpuRenderer renderer = new RecordingTilemapGpuRenderer();
+        injectRenderer(renderer);
+        ZoneFeatureProvider zfp = new StubZoneFeatures(true, false);
+        LevelTilemapManager manager = newManager(496, zfp);
+        byte[] canonical = manager.getBackgroundTilemapData();
+        renderer.applyPendingBackgroundUploadForTest(new byte[canonical.length]);
+
+        renderer.cleanup();
+        ensure(manager, zfp);
+        assertEquals(canonical.length, renderer.getPendingBackgroundUploadBytes());
+        assertEquals(1, renderer.getPendingBackgroundUploadCallCount());
+        assertEquals(0, renderer.getBackgroundRingBaseTiles());
+        assertTrue(renderer.hasBackgroundBaseline(canonical,
+                manager.getBackgroundTilemapWidthTiles(), manager.getBackgroundTilemapHeightTiles()));
+    }
+
+    @Test
+    public void longForwardReverseAndAlternatingSequencePreservesPhysicalTexture() throws Exception {
+        RecordingTilemapGpuRenderer renderer = new RecordingTilemapGpuRenderer();
+        injectRenderer(renderer);
+        ZoneFeatureProvider zfp = new StubZoneFeatures(true, false);
+        LevelTilemapManager manager = newManager(0, zfp);
+        byte[] physical = new byte[manager.getBackgroundTilemapData().length];
+        renderer.applyPendingBackgroundUploadForTest(physical);
+
+        for (int base = 16; base <= 320; base += 16) {
+            manager.requestBgWindowBaseX(base);
+            ensure(manager, zfp);
+            renderer.applyPendingBackgroundUploadForTest(physical);
+            assertPhysicalTextureMatchesLogical(renderer, manager, physical);
+        }
+        for (int base = 304; base >= 0; base -= 16) {
+            manager.requestBgWindowBaseX(base);
+            ensure(manager, zfp);
+            renderer.applyPendingBackgroundUploadForTest(physical);
+            assertPhysicalTextureMatchesLogical(renderer, manager, physical);
+        }
+        for (int i = 0; i < 40; i++) {
+            int base = (i & 1) == 0 ? 16 : 0;
+            manager.requestBgWindowBaseX(base);
+            ensure(manager, zfp);
+            renderer.applyPendingBackgroundUploadForTest(physical);
+            assertPhysicalTextureMatchesLogical(renderer, manager, physical);
+        }
+    }
+
+    @Test
+    public void tilemapTexturePacksRowsAndReusesNativeStagingForSubrects() {
+        RecordingTilemapTexture texture = new RecordingTilemapTexture(4, 2);
+        byte[] source = syntheticRows(4, 2, 0);
+        try {
+            assertTrue(texture.uploadColumns(source, 4, 2, 1, 2, 2));
+            assertEquals(2, texture.lastDestination);
+            assertEquals(2, texture.lastColumnCount);
+            assertEquals(2, texture.lastHeight);
+            byte[] expected = new byte[16];
+            System.arraycopy(source, 4, expected, 0, 8);
+            System.arraycopy(source, 20, expected, 8, 8);
+            assertArrayEquals(expected, texture.lastPayload);
+            ByteBuffer firstBuffer = texture.lastBuffer;
+
+            assertTrue(texture.uploadColumns(source, 4, 2, 0, 0, 1));
+            assertSame(firstBuffer, texture.lastBuffer,
+                    "grow-only native staging must be reused for smaller uploads");
+            int calls = texture.calls;
+            assertTrue(!texture.uploadColumns(new byte[4], 4, 2, 0, 0, 1));
+            assertEquals(calls, texture.calls, "short source must not issue a subrect upload");
+        } finally {
+            texture.cleanup();
+        }
+    }
+
+    private static byte[] syntheticRow(int width, int seed) {
+        return syntheticRows(width, 1, seed);
+    }
+
+    private static byte[] syntheticRows(int width, int height, int seed) {
+        byte[] data = new byte[width * height * 4];
+        for (int i = 0; i < data.length; i++) data[i] = (byte) (seed + i);
+        return data;
+    }
+
+    private static byte[] shiftSyntheticRows(byte[] previous, int width, int height,
+            int shiftColumns, int enteringSeed) {
+        byte[] shifted = new byte[previous.length];
+        int retained = width - shiftColumns;
+        for (int row = 0; row < height; row++) {
+            System.arraycopy(previous, (row * width + shiftColumns) * 4,
+                    shifted, row * width * 4, retained * 4);
+            for (int column = retained; column < width; column++) {
+                int offset = (row * width + column) * 4;
+                for (int component = 0; component < 4; component++) {
+                    shifted[offset + component] = (byte) (enteringSeed + row * 16 + column * 4 + component);
+                }
+            }
+        }
+        return shifted;
+    }
+
+    private static void assertSyntheticPhysicalMatchesLogical(RecordingTilemapGpuRenderer renderer,
+            byte[] logical, byte[] physical, int width, int height) {
+        for (int row = 0; row < height; row++) {
+            for (int column = 0; column < width; column++) {
+                int physicalColumn = renderer.mapBackgroundLogicalColumnForTest(column);
+                for (int component = 0; component < 4; component++) {
+                    assertEquals(logical[(row * width + column) * 4 + component],
+                            physical[(row * width + physicalColumn) * 4 + component]);
+                }
+            }
+        }
+    }
+
+    private static void assertLogicalToPhysicalMapping(RecordingTilemapGpuRenderer renderer, int width) {
+        for (int logical = 0; logical < width; logical++) {
+            assertEquals((renderer.getBackgroundRingBaseTiles() + logical) % width,
+                    renderer.mapBackgroundLogicalColumnForTest(logical));
+        }
+    }
+
+    private static void assertPhysicalTextureMatchesLogical(RecordingTilemapGpuRenderer renderer,
+            LevelTilemapManager manager, byte[] physicalTexture) {
+        byte[] logical = manager.getBackgroundTilemapData();
+        int width = manager.getBackgroundTilemapWidthTiles();
+        int height = manager.getBackgroundTilemapHeightTiles();
+        for (int row = 0; row < height; row++) {
+            for (int logicalColumn = 0; logicalColumn < width; logicalColumn++) {
+                int physicalColumn = renderer.mapBackgroundLogicalColumnForTest(logicalColumn);
+                int logicalOffset = (row * width + logicalColumn) * 4;
+                int physicalOffset = (row * width + physicalColumn) * 4;
+                for (int component = 0; component < 4; component++) {
+                    assertEquals(logical[logicalOffset + component], physicalTexture[physicalOffset + component],
+                            "descriptor mismatch row=" + row + " logicalColumn=" + logicalColumn);
+                }
+            }
+        }
     }
 
     // ── VDP wrap height across shifts ───────────────────────────────────────
@@ -387,24 +695,57 @@ public class TestIncrementalBgTilemapWindow {
         field.set(graphicsManager, renderer);
     }
 
-    private static void setField(Object target, String name, Object value) throws Exception {
-        Field field = target.getClass().getDeclaredField(name);
-        field.setAccessible(true);
-        field.set(target, value);
+    private static final class RecordingTilemapGpuRenderer extends TilemapGpuRenderer {
+        @Override public int getPendingBackgroundUploadBytes() {
+            return super.getPendingBackgroundUploadBytes();
+        }
+        @Override public int getPendingBackgroundUploadCallCount() {
+            return super.getPendingBackgroundUploadCallCount();
+        }
+        @Override public int mapBackgroundLogicalColumnForTest(int logicalColumn) {
+            return super.mapBackgroundLogicalColumnForTest(logicalColumn);
+        }
+        @Override public void consumePendingBackgroundUploadForTest() {
+            super.consumePendingBackgroundUploadForTest();
+        }
+        @Override public void applyPendingBackgroundUploadForTest(byte[] physicalTexture) {
+            super.applyPendingBackgroundUploadForTest(physicalTexture);
+        }
+        @Override public boolean hasPendingOneShotRenderState() {
+            return super.hasPendingOneShotRenderState();
+        }
     }
 
-    private static Object getField(Object target, String name) throws Exception {
-        Field field = target.getClass().getDeclaredField(name);
-        field.setAccessible(true);
-        return field.get(target);
-    }
+    private static final class RecordingTilemapTexture extends TilemapTexture {
+        private final int width;
+        private final int height;
+        private int calls;
+        private int lastDestination;
+        private int lastColumnCount;
+        private int lastHeight;
+        private byte[] lastPayload;
+        private ByteBuffer lastBuffer;
 
-    private static boolean getBoolean(Object target, String name) throws Exception {
-        return (Boolean) getField(target, name);
-    }
+        private RecordingTilemapTexture(int width, int height) {
+            this.width = width;
+            this.height = height;
+        }
 
-    private static int getInt(Object target, String name) throws Exception {
-        return (Integer) getField(target, name);
+        @Override public boolean hasStorage(int widthTiles, int heightTiles) {
+            return widthTiles == width && heightTiles == height;
+        }
+
+        @Override protected void uploadSubImage(int destinationColumn, int columnCount,
+                int heightTiles, ByteBuffer packedRows) {
+            calls++;
+            lastDestination = destinationColumn;
+            lastColumnCount = columnCount;
+            lastHeight = heightTiles;
+            lastBuffer = packedRows;
+            lastPayload = new byte[packedRows.remaining()];
+            packedRows.get(lastPayload);
+            packedRows.rewind();
+        }
     }
 
     // ── Stubs ───────────────────────────────────────────────────────────────

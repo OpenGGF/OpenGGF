@@ -367,6 +367,96 @@ public class Sonic2SpecialStageRendererDeterminismTest {
         verify(unspawned, never()).getMappingFrame();
     }
 
+    @Test
+    void tailsUsesObj10SourcePatternsAndRendersObj88BeforeItsBody() {
+        PatternRecordingGraphicsManager graphics = new PatternRecordingGraphicsManager();
+        Sonic2SpecialStageRenderer renderer = new Sonic2SpecialStageRenderer(graphics);
+        renderer.setPlayerPatternBase(0x4000);
+
+        Sonic2SpecialStagePlayer tails = new Sonic2SpecialStagePlayer(
+                Sonic2SpecialStagePlayer.PlayerType.TAILS, false,
+                new Sonic2SpecialStageManager());
+        tails.initializeScalarStateFromRomObjectRoutine();
+        tails.setSpawned(true);
+        renderer.setPlayers(List.of(tails));
+
+        renderer.renderPlayers();
+
+        assertEquals(0x4000 + Sonic2SpecialStageSpriteMappings.TAILS_TAILS_UPRIGHT_ART_BASE,
+                graphics.patternIds.get(0),
+                "Obj88 priority is one below the Tails body, so its first translated source tile draws first");
+        assertEquals(0x4000 + Sonic2SpecialStageSpriteMappings.TAILS_UPRIGHT_ART_BASE,
+                graphics.patternIds.get(6),
+                "Obj10 frame 0 must use Tails' DPLC-translated source art instead of Sonic mappings plus an offset");
+        assertEquals(22, graphics.patternIds.size(), "Obj88 frame 0 has 6 tiles and Obj10 frame 0 has 16");
+    }
+
+    @Test
+    void obj88IsPrioritySortedAgainstOverlappingPlayerBodies() throws Exception {
+        PatternRecordingGraphicsManager graphics = new PatternRecordingGraphicsManager();
+        Sonic2SpecialStageRenderer renderer = new Sonic2SpecialStageRenderer(graphics);
+        renderer.setPlayerPatternBase(0x4000);
+        Sonic2SpecialStageManager owner = new Sonic2SpecialStageManager();
+        Sonic2SpecialStagePlayer sonic = new Sonic2SpecialStagePlayer(
+                Sonic2SpecialStagePlayer.PlayerType.SONIC, true, owner);
+        Sonic2SpecialStagePlayer tails = new Sonic2SpecialStagePlayer(
+                Sonic2SpecialStagePlayer.PlayerType.TAILS, false, owner);
+        sonic.initializeScalarStateFromRomObjectRoutine();
+        tails.initializeScalarStateFromRomObjectRoutine();
+        sonic.setSpawned(true);
+        tails.setSpawned(true);
+        setField(sonic, "priority", tails.getPriority() - 1);
+        renderer.setPlayers(List.of(sonic, tails));
+
+        renderer.renderPlayers();
+
+        int sonicBody = graphics.patternIds.indexOf(0x4000);
+        int tailsTails = graphics.patternIds.indexOf(
+                0x4000 + Sonic2SpecialStageSpriteMappings.TAILS_TAILS_UPRIGHT_ART_BASE);
+        int tailsBody = graphics.patternIds.indexOf(
+                0x4000 + Sonic2SpecialStageSpriteMappings.TAILS_UPRIGHT_ART_BASE);
+        assertTrue(tailsTails < sonicBody,
+                "Obj88 submits first so the later-submitted earlier-slot player body visually wins a priority tie");
+        assertTrue(tailsTails < tailsBody, "Obj88 remains one priority bucket behind its parent body");
+    }
+
+    @Test
+    void horizontalTailsBodyUsesPaletteTwoAndNoCorrespondingSonicSources() throws Exception {
+        PatternRecordingGraphicsManager graphics = new PatternRecordingGraphicsManager();
+        Sonic2SpecialStageRenderer renderer = new Sonic2SpecialStageRenderer(graphics);
+        renderer.setPlayerPatternBase(0x4000);
+        Sonic2SpecialStagePlayer tails = new Sonic2SpecialStagePlayer(
+                Sonic2SpecialStagePlayer.PlayerType.TAILS, false,
+                new Sonic2SpecialStageManager());
+        setField(tails, "mappingFrame", 12);
+
+        Method renderPlayer = Sonic2SpecialStageRenderer.class
+                .getDeclaredMethod("renderPlayer", Sonic2SpecialStagePlayer.class);
+        renderPlayer.setAccessible(true);
+        renderPlayer.invoke(renderer, tails);
+
+        Set<Integer> sonicSources = sourcePatternIds(
+                Sonic2SpecialStageSpriteMappings.getSonicFrame(12), 0x4000);
+        assertTrue(graphics.paletteIndexes.stream().allMatch(palette -> palette == 2),
+                "every Obj10 body tile uses Tails' special-stage palette line");
+        assertTrue(graphics.patternIds.stream().noneMatch(sonicSources::contains),
+                "horizontal Obj10 body tiles must not fall back to the corresponding Obj09 source IDs");
+        assertTrue(graphics.patternIds.stream().allMatch(id ->
+                        id >= 0x4000 + Sonic2SpecialStageSpriteMappings.TAILS_HORIZONTAL_ART_BASE),
+                "representative horizontal art comes from the Tails horizontal source section");
+    }
+
+    private static Set<Integer> sourcePatternIds(
+            Sonic2SpecialStageSpriteMappings.SpriteFrame frame, int patternBase) {
+        Set<Integer> result = new java.util.HashSet<>();
+        for (Sonic2SpecialStageSpriteMappings.SpritePiece piece : frame.pieces) {
+            for (int tile = 0; tile < piece.widthTiles * piece.heightTiles; tile++) {
+                result.add(patternBase + piece.tileIndex + tile);
+            }
+        }
+        return result;
+    }
+
     private static final class RecordingGraphicsManager extends GraphicsManager {
         int renderCount;
 
@@ -381,6 +471,25 @@ public class Sonic2SpecialStageRendererDeterminismTest {
         @Override
         public void renderPatternWithId(int patternId, PatternDesc desc, int x, int y) {
             renderCount++;
+        }
+    }
+
+    private static final class PatternRecordingGraphicsManager extends GraphicsManager {
+        final List<Integer> patternIds = new ArrayList<>();
+        final List<Integer> paletteIndexes = new ArrayList<>();
+
+        @Override
+        public void beginPatternBatch() {
+        }
+
+        @Override
+        public void flushPatternBatch() {
+        }
+
+        @Override
+        public void renderPatternWithId(int patternId, PatternDesc desc, int x, int y) {
+            patternIds.add(patternId);
+            paletteIndexes.add(desc.getPaletteIndex());
         }
     }
 

@@ -448,6 +448,16 @@ public class TestGroundSensor {
     }
 
     @Test
+    public void negativeCeilingLookupUsesPerGameLayoutRowWindow() {
+        short rawProbeY = (short) -5;
+
+        assertEquals(0x07F4,
+                GroundSensor.verticalTileLookupY(rawProbeY, Direction.UP, 0x07FF));
+        assertEquals(0x0FF4,
+                GroundSensor.verticalTileLookupY(rawProbeY, Direction.UP, 0x0FFF));
+    }
+
+    @Test
     public void testLeftWallSensorRotation() {
         // Mode: LEFTWALL.
         // Sensor: (x=5, y=10) [Relative to Sprite in GROUND mode].

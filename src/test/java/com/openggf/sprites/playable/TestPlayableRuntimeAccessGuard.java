@@ -18,6 +18,7 @@ class TestPlayableRuntimeAccessGuard {
             "src/main/java/com/openggf/sprites/playable/SidekickCpuController.java",
             "src/main/java/com/openggf/sprites/playable/DrowningController.java",
             "src/main/java/com/openggf/sprites/playable/SuperStateController.java",
+            "src/main/java/com/openggf/sprites/playable/TailsCarryController.java",
             "src/main/java/com/openggf/sprites/managers/PlayableSpriteMovement.java"
     };
 
@@ -41,5 +42,4 @@ class TestPlayableRuntimeAccessGuard {
         }
     }
 }
-
 

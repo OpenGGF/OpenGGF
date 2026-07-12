@@ -1069,8 +1069,9 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
 
         ObjectManager objectManager = GameServices.level().getObjectManager();
         if (objectManager != null) {
-            objectManager.initVblaCounter(
-                    TraceReplayBootstrap.initialVblankCounterForTraceReplay(trace) - 1);
+            // Match TraceReplaySessionBootstrap.applyBootstrap(): the first
+            // driven row advances from the preceding native VBlank value.
+            objectManager.initVblaCounter(trace.initialVblankCounter() - 1);
         }
 
         int preTraceOsc = trace.metadata().preTraceOscillationFrames();

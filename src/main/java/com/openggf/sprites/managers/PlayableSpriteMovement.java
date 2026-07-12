@@ -101,6 +101,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean inputUp, inputDown, inputLeft, inputRight;
 	private boolean inputJump, inputJumpPress;
 	private boolean inputRawLeft, inputRawRight;
+	private boolean manualTailsFlightUpdatedThisFrame;
 	private boolean slopeResistAppliedThisFrame;
 	private boolean facingFlipForcesPushClearAfterGroundWall;
 	private boolean wasCrouching;
@@ -123,6 +124,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private int staleHorizontalInputSuppressFrames;
 	private int staleHorizontalInputRideFrames;
 	private boolean staleHorizontalInputPreviousHorizontal;
+	private boolean preMoveBalanceEvaluated;
+	private int preMoveBalanceState;
+	private Direction preMoveBalanceDirection;
+	/** ROM next_tilt/tilt bytes copied from Primary/Secondary_Angle after player dispatch. */
+	private int latchedNextTilt;
+	private int latchedTilt;
 
 	public PlayableSpriteMovement(AbstractPlayableSprite sprite,
 			CollisionSystem collisionSystem,
@@ -205,6 +212,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		staleHorizontalInputSuppressFrames = 0;
 		staleHorizontalInputRideFrames = 0;
 		staleHorizontalInputPreviousHorizontal = false;
+		preMoveBalanceEvaluated = false;
+		preMoveBalanceState = 0;
+		preMoveBalanceDirection = null;
+		latchedNextTilt = 0;
+		latchedTilt = 0;
 	}
 
 	public RewindState captureRewindState() {
@@ -226,7 +238,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				staleHorizontalInputRideSlotIndex,
 				staleHorizontalInputSuppressFrames,
 				staleHorizontalInputRideFrames,
-				staleHorizontalInputPreviousHorizontal);
+				staleHorizontalInputPreviousHorizontal,
+				preMoveBalanceEvaluated,
+				preMoveBalanceState,
+				preMoveBalanceDirection,
+				latchedNextTilt,
+				latchedTilt);
 	}
 
 	public void restoreRewindState(RewindState state) {
@@ -252,6 +269,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		staleHorizontalInputSuppressFrames = state.staleHorizontalInputSuppressFrames();
 		staleHorizontalInputRideFrames = state.staleHorizontalInputRideFrames();
 		staleHorizontalInputPreviousHorizontal = state.staleHorizontalInputPreviousHorizontal();
+		preMoveBalanceEvaluated = state.preMoveBalanceEvaluated();
+		preMoveBalanceState = state.preMoveBalanceState();
+		preMoveBalanceDirection = state.preMoveBalanceDirection();
+		latchedNextTilt = state.latchedNextTilt();
+		latchedTilt = state.latchedTilt();
 	}
 
 	@com.openggf.game.ModApi
@@ -273,7 +295,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			int staleHorizontalInputRideSlotIndex,
 			int staleHorizontalInputSuppressFrames,
 			int staleHorizontalInputRideFrames,
-			boolean staleHorizontalInputPreviousHorizontal
+			boolean staleHorizontalInputPreviousHorizontal,
+			boolean preMoveBalanceEvaluated,
+			int preMoveBalanceState,
+			Direction preMoveBalanceDirection,
+			int latchedNextTilt,
+			int latchedTilt
 	) {}
 
 	public void clearJumpHeightLatch() {
@@ -411,6 +438,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// distinguish "fresh slip honour the air state" from "stale move_lock
 		// from an earlier slip".
 		sprite.setSlopeRepelJustSlipped(false);
+		manualTailsFlightUpdatedThisFrame = false;
 
 		// Invalidate the pre-friction inertia snapshot at frame start; doGroundMove
 		// repopulates it before updateCrouchState consumes it (see field comment).
@@ -418,6 +446,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		slopeResistAppliedThisFrame = false;
 		skidAnimationRefreshedThisFrame = false;
 		sprite.clearDeferredGroundWallVelocityResponse();
+		preMoveBalanceEvaluated = false;
 
 		// Snapshot pre-physics state for per-object hooks running AFTER
 		// physics in the engine's frame order. ROM order runs cage/object
@@ -833,6 +862,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		boolean hurt = sprite.isHurt();
 		if (!hurt) {
 			doJumpHeight();
+			updateManualTailsFlight();
 			doChgJumpDir();
 			doLevelBoundary();
 		}
@@ -1138,6 +1168,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 			// Shield ability: re-press jump after release while airborne (docs/skdisasm/sonic3k.asm:23397).
 			if (jumpReleasedSinceJump && inputJumpPress && sprite.getDoubleJumpFlag() == 0) {
+				if (tryActivateTailsFlight()) {
+					jumpReleasedSinceJump = false;
+					inputJumpPress = false;
+					return;
+				}
 				PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
 				if (capabilityRules != null && capabilityRules.jumpRepressClearsRollJumpBeforeAbility()
 						&& sprite.getSecondaryAbility() == SecondaryAbility.INSTA_SHIELD) {
@@ -1162,6 +1197,55 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 	}
 
+	private boolean tryActivateTailsFlight() {
+		PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
+		if (capabilityRules == null
+				|| !capabilityRules.tailsFlightEnabled()
+				|| sprite.getSecondaryAbility() != SecondaryAbility.FLY
+				|| sprite.getTailsFlightController() == null
+				|| sprite.getTailsFlightController().isActive()) {
+			return false;
+		}
+		SidekickCpuController cpu = sprite.getCpuController();
+		if (sprite.isCpuControlled() && (cpu == null || !cpu.isUnderManualControl())) {
+			return false;
+		}
+		sprite.getTailsFlightController().activate();
+		return true;
+	}
+
+	private void updateManualTailsFlight() {
+		if (!isManualTailsFlightActive()) {
+			return;
+		}
+		boolean carryingMainCharacter = sprite.getTailsCarryController() != null
+				&& sprite.getTailsCarryController().isCarryingMainCharacter();
+		sprite.getTailsFlightController().updateVertical(
+				inputJumpPress, carryingMainCharacter, romVisibleLevelFrameCounter());
+		manualTailsFlightUpdatedThisFrame = true;
+	}
+
+	private boolean isManualTailsFlightActive() {
+		PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
+		if (capabilityRules == null
+				|| !capabilityRules.tailsFlightEnabled()
+				|| sprite.getSecondaryAbility() != SecondaryAbility.FLY
+				|| sprite.getTailsFlightController() == null
+				|| !sprite.getTailsFlightController().isActive()) {
+			return false;
+		}
+		SidekickCpuController cpu = sprite.getCpuController();
+		return !sprite.isCpuControlled() || (cpu != null && cpu.isUnderManualControl());
+	}
+
+	private int romVisibleLevelFrameCounter() {
+		if (sprite.currentSpriteManagerOrNull() != null) {
+			return sprite.currentGameplayFrameCounter();
+		}
+		LevelManager level = levelManager();
+		return level != null ? level.getFrameCounter() : 0;
+	}
+
 	/**
 	 * Sonic_ShieldMoves: Try to activate the player's shield ability (sonic3k.asm:23397-23479).
 	 * @return true if an ability was activated (or suppressed by Super)
@@ -1169,6 +1253,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean tryShieldAbility() {
 		PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
 		if (capabilityRules == null) {
+			return false;
+		}
+		// Tails_JumpHeight never enters Sonic_ShieldMoves. In particular it
+		// must not clear Status_RollJump on a CPU-generated A/B/C re-press;
+		// doing so exposes Sonic_ChgJumpDir air steering for a frame that the
+		// ROM keeps roll-locked (sonic3k.asm:28593-28621 vs 23401-23413).
+		if (sprite.getSecondaryAbility() == SecondaryAbility.FLY) {
 			return false;
 		}
 		boolean hasElemental = capabilityRules.elementalShieldsEnabled();
@@ -2514,7 +2605,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// Tails_FlyingSwimming applies Tails_Move_FlySwim before
 			// MoveSprite_TestGravity2, so the carry controller owns the
 			// carrier's per-frame vertical flight velocity here.
-			cpu.applyFlyingCarryVerticalVelocity();
+			if (!manualTailsFlightUpdatedThisFrame) {
+				cpu.applyFlyingCarryVerticalVelocity();
+			}
 			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
 			return;
 		}
@@ -2524,7 +2617,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// apply +$38 air gravity (that's MoveSprite_TestGravity's job), and
 			// since Tails_Move_FlySwim already advanced y_vel by +0x08, the
 			// movement step uses the post-gravity y_vel.
-			applyGravity();
+			if (!manualTailsFlightUpdatedThisFrame) {
+				applyGravity();
+			}
 			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
 			return;
 		}
@@ -3385,7 +3480,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Hurt airborne:   net gravity = 0x30 - 0x20 = 0x10 (s2.asm:41066-41069, s1:01 Sonic.asm:1410)
 		// The ROM hurt routine (Obj01_Hurt) uses a separate code path with $20 reduction,
 		// NOT the $28 used in Obj01_MdAir/MdJump. All three games (S1/S2/S3K) are identical.
-		if (!sprite.isInWater()) {
+		// S3K Tails_FlyingSwimming owns its +$08 flight/swim gravity and skips
+		// this generic underwater subtraction (sonic3k.asm:27570, 27633).
+		if (!sprite.isInWater() || isTailsFlightPhysicsActive(sprite)) {
 			return;
 		}
 		short reduction = 0x28;
@@ -3544,6 +3641,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				&& !sprite.getAir() && !sprite.getRolling() && !sprite.getSpindash()
 				&& Math.abs(sprite.getGSpeed()) < movingThreshold
 				&& !sprite.isOnObject()) {
+			if (preMoveBalanceEvaluated && preMoveBalanceState != 0) {
+				sprite.setBalanceState(preMoveBalanceState);
+				sprite.setDirection(preMoveBalanceDirection);
+				sprite.setCrouching(false);
+				return;
+			}
 			sprite.setCrouching(true);
 			sprite.setBalanceState(0);
 			return;
@@ -3566,7 +3669,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Update balance state (checks for ledge edges)
 		// ROM: Balance check happens before crouch/lookup in Obj01_LookUpDown
 		if (standingStill && !inputLeft && !inputRight) {
-			updateBalanceState();
+			if (preMoveBalanceEvaluated) {
+				// doGroundMove evaluated the ROM balance branch before SpeedToPos
+				// and AnglePos. Reuse that result even when it was "not balancing":
+				// AnglePos has since refreshed Primary/Secondary_Angle for the
+				// player-tail next_tilt/tilt copy, and recomputing here would expose
+				// those new bytes one dispatch early (sonic3k.asm:27840-27849,
+				// 26215-26244).
+				sprite.setBalanceState(preMoveBalanceState);
+				sprite.setDirection(preMoveBalanceDirection);
+			} else {
+				updateBalanceState();
+			}
 		} else {
 			sprite.setBalanceState(0);
 		}
@@ -3820,7 +3934,27 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	/** Sensor update + angle positioning */
 	private void doAnglePosWithSensorUpdate(short originalX, short originalY) {
 		sprite.updateSensors(originalX, originalY);
+		captureTiltAnglesForGroundDispatch();
 		doAnglePos();
+	}
+
+	private void captureTiltAnglesForGroundDispatch() {
+		Sensor[] groundSensors = sprite.getGroundSensors();
+		if (groundSensors == null || groundSensors.length < 2) {
+			return;
+		}
+		// Player_AnglePos leaves the two FindFloor angle outputs in the global
+		// Primary_Angle/Secondary_Angle bytes. The player tail copies them to
+		// next_tilt/tilt only after the movement dispatch (S3K Tails:
+		// sonic3k.asm:26215-26244). Airborne landing does not run this ground
+		// AnglePos path, so the first grounded control frame must still consume
+		// the previous values; these latches update only here, after that frame's
+		// ground attachment pass. Sample before doAnglePos can snap the player:
+		// the ROM globals retain the angles produced by that routine's probes.
+		SensorResult left = groundSensors[0].scan();
+		SensorResult right = groundSensors[1].scan();
+		latchedNextTilt = right == null ? 3 : right.angle() & 0xFF;
+		latchedTilt = left == null ? 3 : left.angle() & 0xFF;
 	}
 
 	// ========================================
@@ -3848,8 +3982,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * normally computes balance in updateCrouchState() AFTER the doGroundMove()
 	 * look code, so the look code needs a current-frame read here. updateBalanceState()
 	 * sets the balance level and (on an edge) the facing direction; we snapshot and
-	 * restore both so the authoritative balance/facing is still produced at the
-	 * normal time by updateCrouchState() -- this predicate is purely a read.
+	 * restore both while retaining the decision for the later moving-crouch bridge.
+	 * This preserves the ROM's pre-movement decision point without exposing the
+	 * temporary state before updateCrouchState() applies it.
 	 *
 	 * <p>Returns false when left/right is held (ROM reaches the look/duck/balance
 	 * block only when not steering, s1.asm Sonic_CheckDpadLetGo). Callers gate on
@@ -3863,6 +3998,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int savedBalanceState = sprite.getBalanceState();
 		updateBalanceState();
 		boolean balancing = sprite.isBalancing();
+		preMoveBalanceEvaluated = true;
+		preMoveBalanceState = sprite.getBalanceState();
+		preMoveBalanceDirection = sprite.getDirection();
 		// Restore: the real balance state + facing are recomputed at their normal
 		// time by updateCrouchState(); this call must leave no trace.
 		sprite.setBalanceState(savedBalanceState);
@@ -4148,9 +4286,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (centerDist < EDGE_THRESHOLD) {
 			return; // Center still has ground — ROM branches to Lookup/Duck, no balance.
 		}
-
-		// Right edge: left sensor has ground, right sensor doesn't
-		if (leftDist < EDGE_THRESHOLD && rightDist >= EDGE_THRESHOLD) {
+		// ROM chooses the edge from the prior player-tail copy of
+		// Primary_Angle/Secondary_Angle, not from a fresh pair of side probes
+		// inside Tails_InputAcceleration_Path (sonic3k.asm:27840-27849).
+		if (latchedNextTilt == 3) {
 			// S2/S3K: precarious check - scan at center - 6 (dx = +3 from left sensor)
 			SensorResult precariousResult = groundSensors[0].scan((short) 3, (short) 0);
 			int precariousDist = (precariousResult == null) ? 99 : precariousResult.distance();
@@ -4159,8 +4298,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
-		// Left edge: right sensor has ground, left sensor doesn't
-		if (rightDist < EDGE_THRESHOLD && leftDist >= EDGE_THRESHOLD) {
+		if (latchedTilt == 3) {
 			// S2/S3K: precarious check - scan at center + 6 (dx = -3 from right sensor)
 			SensorResult precariousResult = groundSensors[1].scan((short) -3, (short) 0);
 			int precariousDist = (precariousResult == null) ? 99 : precariousResult.distance();

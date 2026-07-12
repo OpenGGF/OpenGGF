@@ -67,6 +67,15 @@ public class TestCanonicalAnimationMapping {
         assertDoesNotThrow(() -> CanonicalAnimation.valueOf("BUBBLE"));
         assertDoesNotThrow(() -> CanonicalAnimation.valueOf("HURT2"));
         assertDoesNotThrow(() -> CanonicalAnimation.valueOf("FLY"));
+        assertDoesNotThrow(() -> CanonicalAnimation.valueOf("TAILS_FLY"));
+        assertDoesNotThrow(() -> CanonicalAnimation.valueOf("TAILS_FLY_ASCEND"));
+        assertDoesNotThrow(() -> CanonicalAnimation.valueOf("TAILS_FLY_CARRY"));
+        assertDoesNotThrow(() -> CanonicalAnimation.valueOf("TAILS_FLY_CARRY_ASCEND"));
+        assertDoesNotThrow(() -> CanonicalAnimation.valueOf("TAILS_FLY_TIRED"));
+        assertDoesNotThrow(() -> CanonicalAnimation.valueOf("TAILS_SWIM"));
+        assertDoesNotThrow(() -> CanonicalAnimation.valueOf("TAILS_SWIM_ASCEND"));
+        assertDoesNotThrow(() -> CanonicalAnimation.valueOf("TAILS_SWIM_CARRY"));
+        assertDoesNotThrow(() -> CanonicalAnimation.valueOf("TAILS_SWIM_TIRED"));
 
         // S3K
         assertDoesNotThrow(() -> CanonicalAnimation.valueOf("BLINK"));
@@ -85,7 +94,7 @@ public class TestCanonicalAnimationMapping {
 
     @Test
     void canonicalEnumHasExpectedCount() {
-        assertEquals(51, CanonicalAnimation.values().length);
+        assertEquals(60, CanonicalAnimation.values().length);
     }
 
     @Test
@@ -147,5 +156,3 @@ public class TestCanonicalAnimationMapping {
         assertEquals(CanonicalAnimation.SUPER_TRANSFORM, Sonic2AnimationIds.SUPER_TRANSFORM.toCanonical());
     }
 }
-
-

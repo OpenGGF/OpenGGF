@@ -39,6 +39,8 @@ import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.animation.SpriteAnimationSet;
+import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -645,11 +647,14 @@ public final class RewindRoundTripHarness {
     private final GameId gameId;
     private ObjectManager om;
     private RewindRegistry rr;
+    private SpriteManager spriteManager;
 
-    private RewindRoundTripHarness(GameId gameId, ObjectManager om, RewindRegistry rr) {
+    private RewindRoundTripHarness(GameId gameId, ObjectManager om, RewindRegistry rr,
+            SpriteManager spriteManager) {
         this.gameId = gameId;
         this.om = om;
         this.rr = rr;
+        this.spriteManager = spriteManager;
     }
 
     // =========================================================================
@@ -670,7 +675,8 @@ public final class RewindRoundTripHarness {
         GraphicsManager.getInstance().initHeadless();
         ObjectManager[] holder = new ObjectManager[1];
         Camera camera = mockCamera();
-        ObjectServices services = makeServices(holder, camera);
+        SpriteManager spriteManager = new SpriteManager(DEFAULT_CONFIGURATION);
+        ObjectServices services = makeServices(holder, camera, spriteManager);
 
         ObjectRegistry registry = registryFor(gameId);
         ObjectManager om = new ObjectManager(
@@ -683,7 +689,7 @@ public final class RewindRoundTripHarness {
         RewindRegistry rr = new RewindRegistry();
         rr.register(om.rewindSnapshottable());
 
-        return new RewindRoundTripHarness(gameId, om, rr);
+        return new RewindRoundTripHarness(gameId, om, rr, spriteManager);
     }
 
     /**
@@ -704,10 +710,11 @@ public final class RewindRoundTripHarness {
         GraphicsManager.getInstance().initHeadless();
         ObjectManager[] holder = new ObjectManager[1];
         Camera camera = mockCamera();
-        ObjectServices services = makeServices(holder, camera);
+        SpriteManager spriteManager = new SpriteManager(DEFAULT_CONFIGURATION);
+        ObjectServices services = makeServices(holder, camera, spriteManager);
 
         ObjectRegistry registry = registryFor(gameId);
-        ObjectSpawn spawn = new ObjectSpawn(160, 240, objectId, 0, 0, false, 0);
+        ObjectSpawn spawn = placedProbeSpawn(gameId, objectId);
         ObjectManager om = new ObjectManager(
                 List.of(spawn), registry,
                 0, null, null,
@@ -718,7 +725,16 @@ public final class RewindRoundTripHarness {
         RewindRegistry rr = new RewindRegistry();
         rr.register(om.rewindSnapshottable());
 
-        return new RewindRoundTripHarness(gameId, om, rr);
+        return new RewindRoundTripHarness(gameId, om, rr, spriteManager);
+    }
+
+    private static ObjectSpawn placedProbeSpawn(GameId gameId, int objectId) {
+        int y = 240;
+        // S2/S3K encode the respawn-table/remember bit in bit 15 of the raw Y
+        // word. S1 carries it in bit 7 of the object-id byte, so its Y word
+        // contains only the coordinate/render bits represented by this probe.
+        int rawYWord = gameId == GameId.S1 ? y : y | 0x8000;
+        return new ObjectSpawn(160, y, objectId, 0, 0, true, rawYWord, 0);
     }
 
     // =========================================================================
@@ -740,7 +756,8 @@ public final class RewindRoundTripHarness {
     public void spawnPlacedAndStep(int objectId, int frames) {
         ObjectManager[] holder = new ObjectManager[1];
         Camera camera = mockCamera();
-        ObjectServices services = makeServices(holder, camera);
+        SpriteManager spriteManager = new SpriteManager(DEFAULT_CONFIGURATION);
+        ObjectServices services = makeServices(holder, camera, spriteManager);
 
         ObjectRegistry registry = registryFor(gameId);
         ObjectSpawn spawn = new ObjectSpawn(160, 240, objectId, 0, 0, false, 0);
@@ -758,6 +775,7 @@ public final class RewindRoundTripHarness {
 
         // Re-register the new ObjectManager.
         this.om = newOm;
+        this.spriteManager = spriteManager;
         this.rr = new RewindRegistry();
         this.rr.register(newOm.rewindSnapshottable());
     }
@@ -806,6 +824,10 @@ public final class RewindRoundTripHarness {
      */
     public ObjectManager objectManager() {
         return om;
+    }
+
+    public SpriteManager spriteManager() {
+        return spriteManager;
     }
 
     /**
@@ -1130,7 +1152,8 @@ public final class RewindRoundTripHarness {
     // Private helpers
     // =========================================================================
 
-    private static ObjectServices makeServices(ObjectManager[] holder, Camera camera) {
+    private static ObjectServices makeServices(ObjectManager[] holder, Camera camera,
+            SpriteManager spriteManager) {
         return new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
@@ -1140,6 +1163,11 @@ public final class RewindRoundTripHarness {
             @Override
             public Camera camera() {
                 return camera;
+            }
+
+            @Override
+            public SpriteManager spriteManager() {
+                return spriteManager;
             }
 
             @Override

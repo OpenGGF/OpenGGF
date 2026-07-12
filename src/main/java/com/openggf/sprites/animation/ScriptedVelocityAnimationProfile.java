@@ -3,6 +3,7 @@ package com.openggf.sprites.animation;
 import com.openggf.game.AnimationId;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.managers.PlayableSpriteAnimation;
+import com.openggf.sprites.playable.SecondaryAbility;
 
 /**
  * Chooses animation script IDs based on simple movement state.
@@ -142,6 +143,17 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // Hurt state uses separate hurt animation (animation 0x19)
         if (sprite.isHurt() && hurtAnimId >= 0) {
             return hurtAnimId;
+        }
+        // Tails_FlyingSwimming calls Tails_Set_Flying_Animation every frame and
+        // writes anim $20-$28 before the shared animation routine runs
+        // (sonic3k.asm:27570-27717). Preserve that ROM-owned anim byte instead
+        // of replacing it with the generic airborne walk/roll selection. CPU
+        // recovery already reaches the same result through forcedAnimationId;
+        // this branch covers player-controlled flight and swimming.
+        if (sprite.getSecondaryAbility() == SecondaryAbility.FLY
+                && sprite.getTailsFlightController() != null
+                && sprite.getTailsFlightController().isActive()) {
+            return null;
         }
         if (sprite.getSpringing() && sprite.getAir() && springAnimId >= 0) {
             return springAnimId;

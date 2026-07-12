@@ -75,7 +75,7 @@ public class TestSonic3kBonusTitleCard {
     }
 
     @Test
-    public void inLevelEndFlagPredictionLeadsManagerCompletionByOneTick() {
+    public void inLevelEndFlagPredictionUsesParentObservationTick() {
         manager.initializeInLevel(0, 1);
 
         for (int i = 0; i < 200 && !manager.willSetInLevelEndOfLevelFlagThisUpdate(); i++) {
@@ -83,11 +83,10 @@ public class TestSonic3kBonusTitleCard {
         }
 
         assertTrue(manager.willSetInLevelEndOfLevelFlagThisUpdate(),
-                "AIZ miniboss camera release asks after the title-card manager has already advanced for the frame");
-        manager.update();
-        assertFalse(manager.isComplete(),
-                "the prediction must start one title-card manager tick before manager completion");
+                "AIZ camera release must wait until the parent observes that all title children are gone");
+        assertEquals(13, manager.getExitPhaseCounter(),
+                "native render bounds remove the last title child on phase 12 and the parent observes it on 13");
+        assertFalse(manager.isComplete(), "the parent completion dispatch remains one manager tick later");
     }
 }
-
 

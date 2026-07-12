@@ -156,10 +156,13 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
         boolean fireTransition = aizState != null && aizState.isFireTransitionScrollActive();
         int bgSourceX = fireTransition ? aizState.getFireTransitionBgX() : cameraX;
 
-        // ROM mode gate: AIZ1 intro uses IntroDeform only before the $1400 transition.
+        // ROM mode gate: only AIZ1 dispatches AIZ1_IntroDeform before the $1400
+        // transition. A direct AIZ2 load also keeps Level_started_flag clear
+        // during its title card, but AIZ2_BackgroundInit dispatches AIZ2_Deform.
         boolean introMode = false;
         try {
-            introMode = !GameServices.camera().isLevelStarted()
+            introMode = actId == 0
+                    && !GameServices.camera().isLevelStarted()
                     && !AizPlaneIntroInstance.isMainLevelPhaseActive();
         } catch (Exception e) {
             LOG.fine(() -> "SwScrlAiz.update: " + e.getMessage());

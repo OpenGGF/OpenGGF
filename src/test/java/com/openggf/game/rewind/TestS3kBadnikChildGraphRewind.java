@@ -472,6 +472,24 @@ class TestS3kBadnikChildGraphRewind {
     }
 
     @Test
+    void turboSpikerCaptureIgnoresShellAfterDynamicChildRemoval() {
+        Harness harness = Harness.create(new S3klTestRegistry(), List.of(
+                new ObjectSpawn(0x1C0, 0x140, Sonic3kObjectIds.TURBO_SPIKER, 4, 0, false, 35)));
+        ObjectManager objectManager = harness.objectManager();
+        TurboSpikerBadnikInstance parent = liveByType(objectManager, TurboSpikerBadnikInstance.class).get(0);
+        parent.update(0, player());
+        ObjectInstance shell = liveByClassName(objectManager, TURBO_SPIKER_SHELL_CHILD).get(0);
+
+        ((AbstractObjectInstance) shell).setDestroyed(true);
+        objectManager.removeDynamicObject(shell);
+
+        assertDoesNotThrow(() -> registryFor(objectManager).capture(),
+                "removed shell references must not escape the live rewind identity graph");
+        assertNull(readObjectField(parent, "shellChild"),
+                "removing the shell must detach the parent's stale object reference");
+    }
+
+    @Test
     void cluckoidArrowRelinksToRestoredParentByLayoutSlot() {
         Harness harness = Harness.create(new MhzTestRegistry(), List.of(
                 new ObjectSpawn(0x140, 0x120, Sonic3kObjectIds.CLUCKOID, 0, 0, false, 0, 60),

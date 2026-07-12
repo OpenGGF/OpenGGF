@@ -4,12 +4,26 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.OptionalInt;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.lwjgl.glfw.GLFW.*;
 
 class TestGlfwKeyNameResolver {
+
+    @Test
+    void nativeImageMetadataRetainsGlfwKeyFieldsForSymbolicConfiguration() throws IOException {
+        try (var input = getClass().getClassLoader().getResourceAsStream(
+                "META-INF/native-image/com.openggf/OpenGGF/reflect-config.json")) {
+            assertNotNull(input, "Native-image reflection metadata must be packaged");
+            String metadata = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+
+            assertTrue(metadata.contains("\"name\": \"org.lwjgl.glfw.GLFW\""));
+            assertTrue(metadata.contains("\"allDeclaredFields\": true"));
+        }
+    }
 
     // --- resolve() tests ---
 

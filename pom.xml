@@ -23,6 +23,7 @@
         <test.slf4j.verbosity>ERROR</test.slf4j.verbosity>
         <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
         <surefire.forkCount>4</surefire.forkCount>
+        <native.macos.package.skip>true</native.macos.package.skip>
     </properties>
 
     <!-- LWJGL native classifier profiles -->
@@ -44,6 +45,7 @@
             <properties>
                 <lwjgl.natives>natives-macos</lwjgl.natives>
                 <surefire.argLine>-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
+                <native.macos.package.skip>false</native.macos.package.skip>
             </properties>
         </profile>
         <profile>
@@ -54,6 +56,7 @@
             <properties>
                 <lwjgl.natives>natives-macos-arm64</lwjgl.natives>
                 <surefire.argLine>-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
+                <native.macos.package.skip>false</native.macos.package.skip>
             </properties>
         </profile>
         <profile>
@@ -234,6 +237,7 @@
                                 <phase>package</phase>
                                 <goals><goal>exec</goal></goals>
                                 <configuration>
+                                    <skip>${native.macos.package.skip}</skip>
                                     <executable>bash</executable>
                                     <arguments>
                                         <argument>${basedir}/src/packaging/assemble-macos-app.sh</argument>

@@ -542,12 +542,17 @@ public abstract class AbstractTraceReplayTest {
             TraceEvent.Checkpoint engineCheckpoint = detector.observe(probe);
 
             if (TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
+                TraceFrame comparisonExpected =
+                        TraceReplayBootstrap.s3kFrameForGameplayComparison(
+                                trace, driveTraceIndex, previousDriveFrame, driveFrame, phase);
                 TraceReplayBootstrap.ReplayPrimaryState actualPrimary =
                         TraceReplayBootstrap.capturePrimaryReplayStateForComparison(
-                                trace, driveFrame, fixture.sprite());
-                EngineDiagnostics engineDiag = captureEngineDiagnostics(fixture.sprite(), driveFrame);
+                                trace, comparisonExpected, fixture.sprite());
+                EngineDiagnostics engineDiag =
+                        captureEngineDiagnostics(fixture.sprite(), comparisonExpected);
                 String romDiag = combineDiagnostics(
-                        driveFrame.hasExtendedData() ? driveFrame.formatDiagnostics() : "",
+                        comparisonExpected.hasExtendedData()
+                                ? comparisonExpected.formatDiagnostics() : "",
                         TraceEventFormatter.summariseFrameEvents(trace.getEventsForFrame(driveTraceIndex)));
                 TraceCharacterState actualSidekick = captureFirstSidekickState();
                 String secondaryCharacterLabel = meta.recordedSidekicks().isEmpty()
@@ -558,7 +563,7 @@ public abstract class AbstractTraceReplayTest {
                 TraceEvent.TailsCpuNormalStep expectedSidekickNormalStep =
                         trace.tailsCpuNormalStepForFrame(driveFrame.frame(), secondaryCharacterLabel);
                 EngineSidekickCpuState actualSidekickCpu = captureFirstSidekickCpuState();
-                binder.compareFrame(driveFrame,
+                binder.compareFrame(comparisonExpected,
                         actualPrimary.x(), actualPrimary.y(),
                         actualPrimary.xSpeed(), actualPrimary.ySpeed(), actualPrimary.gSpeed(),
                         actualPrimary.angle(),
@@ -744,6 +749,8 @@ public abstract class AbstractTraceReplayTest {
                 controller.targetY(),
                 controller.getDiagnosticGeneratedHeldInput(),
                 controller.getDiagnosticGeneratedPressedInput(),
+                controller.getDiagnosticNormalStepHeldInput(),
+                controller.getDiagnosticNormalStepPressedInput(),
                 controller.getDiagnosticFollowHistorySlot(),
                 controller.getDiagnosticJumpingFlag());
     }

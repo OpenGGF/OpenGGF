@@ -207,10 +207,10 @@ class TestEngine {
     }
 
     @Test
-    void performanceProfilerEligibilityFollowsPerformanceToggleWithoutDebugOverlayGate() {
+    void performanceProfilerEligibilityFollowsPerformanceToggleInNativeImages() {
         assertTrue(Engine.shouldEnablePerformanceProfiler(true, false));
         assertFalse(Engine.shouldEnablePerformanceProfiler(false, false));
-        assertFalse(Engine.shouldEnablePerformanceProfiler(true, true));
+        assertTrue(Engine.shouldEnablePerformanceProfiler(true, true));
     }
 
     @Test

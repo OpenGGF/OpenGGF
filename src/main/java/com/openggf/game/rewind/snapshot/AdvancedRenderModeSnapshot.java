@@ -3,6 +3,7 @@ package com.openggf.game.rewind.snapshot;
 import com.openggf.game.render.AdvancedRenderMode;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Snapshot of {@link com.openggf.game.render.AdvancedRenderModeController}
@@ -15,8 +16,16 @@ import java.util.List;
  */
 @com.openggf.game.ModApi
 public record AdvancedRenderModeSnapshot(List<AdvancedRenderMode> modes, List<ModeState> modeStates) {
+    private static final AdvancedRenderModeSnapshot EMPTY =
+            new AdvancedRenderModeSnapshot(List.of(), List.of());
+
     @com.openggf.game.ModApi
     public record ModeState(int index, String key, Object snapshot) {
+    }
+
+    /** Returns the shared immutable snapshot for a controller with no modes. */
+    public static AdvancedRenderModeSnapshot empty() {
+        return EMPTY;
     }
 
     public AdvancedRenderModeSnapshot(List<AdvancedRenderMode> modes) {
@@ -24,7 +33,9 @@ public record AdvancedRenderModeSnapshot(List<AdvancedRenderMode> modes, List<Mo
     }
 
     public AdvancedRenderModeSnapshot {
-        modes = List.copyOf(modes);
-        modeStates = List.copyOf(modeStates);
+        Objects.requireNonNull(modes, "modes");
+        Objects.requireNonNull(modeStates, "modeStates");
+        modes = modes.isEmpty() ? List.of() : List.copyOf(modes);
+        modeStates = modeStates.isEmpty() ? List.of() : List.copyOf(modeStates);
     }
 }
