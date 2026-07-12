@@ -2,6 +2,7 @@ package com.openggf.game.sonic2;
 
 import com.openggf.game.AbstractZoneRegistry;
 import com.openggf.game.sonic2.audio.Sonic2Music;
+import com.openggf.game.ZoneProgressionPlan;
 import com.openggf.level.LevelData;
 import com.openggf.level.LevelDescriptor;
 
@@ -79,5 +80,36 @@ public class Sonic2ZoneRegistry extends AbstractZoneRegistry {
             return -1;
         }
         return ZONE_MUSIC[zoneIndex];
+    }
+
+    @Override
+    public int resolveStockZoneAnchor(String stockKey) {
+        return switch (stockKey) {
+            case "ehz2" -> 0;
+            case "cpz2" -> 1;
+            case "arz2" -> 2;
+            case "cnz2" -> 3;
+            case "htz2" -> 4;
+            case "mcz2" -> 5;
+            case "ooz2" -> 6;
+            case "mtz3" -> 7;
+            default -> throw new IllegalArgumentException("Unknown Sonic 2 stock zone anchor: " + stockKey);
+        };
+    }
+
+    @Override
+    public ZoneProgressionPlan.ZoneTopology progressionTopology() {
+        java.util.ArrayList<ZoneProgressionPlan.ZoneMetadata> metadata = new java.util.ArrayList<>();
+        for (int zone = 0; zone <= 7; zone++) {
+            metadata.add(new ZoneProgressionPlan.ZoneMetadata(getActCount(zone),
+                    ZoneProgressionPlan.Completion.RESULTS_DRIVEN));
+        }
+        metadata.add(new ZoneProgressionPlan.ZoneMetadata(getActCount(8),
+                ZoneProgressionPlan.Completion.EVENT_CHAINED));
+        metadata.add(new ZoneProgressionPlan.ZoneMetadata(getActCount(9),
+                ZoneProgressionPlan.Completion.EVENT_CHAINED));
+        metadata.add(new ZoneProgressionPlan.ZoneMetadata(getActCount(10),
+                ZoneProgressionPlan.Completion.TERMINAL));
+        return ZoneProgressionPlan.ZoneTopology.of(metadata);
     }
 }

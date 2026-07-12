@@ -42,8 +42,10 @@ class TestStreamedMusicPort {
 
         assertEquals("owner", state.track().owner());
         assertEquals("track", state.track().name());
+        assertDoesNotThrow(() -> new StreamedMusicPort.State(key, -1, 0, 0, fade, 1),
+                "-1 denotes a namespaced track with no numeric stock id");
         assertThrows(IllegalArgumentException.class,
-                () -> new StreamedMusicPort.State(key, -1, 0, 0, fade, 1));
+                () -> new StreamedMusicPort.State(key, -2, 0, 0, fade, 1));
         assertThrows(IllegalArgumentException.class,
                 () -> new StreamedMusicPort.State(key, 1, Double.NaN, 0, fade, 1));
         assertThrows(IllegalArgumentException.class,

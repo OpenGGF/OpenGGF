@@ -28,6 +28,7 @@ public final class ModRuntime implements AutoCloseable {
     private Map<String, Throwable> registrationFailures = Map.of();
     private final Set<String> runtimeDisabledOwners = new java.util.LinkedHashSet<>();
     private boolean closed;
+    private ModFaultBoundary faultBoundary;
 
     ModRuntime(Map<String, ModDependencyClassLoader> loaders,
                Map<String, PackedModAssetRoot> snapshots,
@@ -65,6 +66,8 @@ public final class ModRuntime implements AutoCloseable {
         Map<PatchOwner, Set<PatchOwner>> dependencies = new LinkedHashMap<>();
         Set<String> failed = new java.util.LinkedHashSet<>();
         Map<String, Throwable> currentFailures = new LinkedHashMap<>();
+        Set<Integer> aggregateZoneIds = new java.util.HashSet<>();
+        Set<Integer> aggregateLevelIds = new java.util.HashSet<>();
         for (String owner : owners) {
             ModDescriptor descriptor = descriptors.get(owner);
             if (descriptor == null) continue;
@@ -87,7 +90,8 @@ public final class ModRuntime implements AutoCloseable {
                 ModRegistrationPlan plan;
                 try (ModAssetRoot assets = ModAssetRoot.nonClosingView(Objects.requireNonNull(
                         snapshots.get(owner), "owner assets"))) {
-                    ModContext context = new ModContext(owner, descriptor.manifest().baseGame(), assets);
+                    ModContext context = new ModContext(owner, descriptor.manifest().baseGame(), assets,
+                            descriptor.manifest().insertAfter());
                     descriptor.manifest().artOverrides().forEach((key, path) ->
                             context.registerManifestArtOverride(key, new BakedSheetRef(path)));
                     if (descriptor.manifest().entrypoint() != null && loaders.containsKey(owner)) {
@@ -99,12 +103,26 @@ public final class ModRuntime implements AutoCloseable {
                         GgfMod entrypoint = (GgfMod) type.getDeclaredConstructor().newInstance();
                         entrypoint.register(context);
                     }
-                    plan = context.freeze().prepareObjectArt(assets);
+                    plan = context.freeze().prepareObjectArt(assets).prepareZones(assets);
                 }
                 PatchOwner.Mod patchOwner = new PatchOwner.Mod(owner);
+                Set<Integer> ownerZoneIds = new java.util.HashSet<>();
+                Set<Integer> ownerLevelIds = new java.util.HashSet<>();
+                for (PreparedModZone zone : plan.preparedZones()) {
+                    if (aggregateZoneIds.contains(zone.authoredZoneIndex())
+                            || !ownerZoneIds.add(zone.authoredZoneIndex())) {
+                        throw new ModRegistrationException(owner,
+                                "Duplicate authored zoneIndex across enabled owners: " + zone.authoredZoneIndex());
+                    }
+                    if (aggregateLevelIds.contains(zone.levelIndex())
+                            || !ownerLevelIds.add(zone.levelIndex())) {
+                        throw new ModRegistrationException(owner,
+                                "Duplicate authored levelIndex across enabled owners: " + zone.levelIndex());
+                    }
+                }
                 List<RegisteredPatch> ownerRegistrations;
                 if (plan.hasContent()) {
-                    ModBackedGamePatch backing = new ModBackedGamePatch(plan);
+                    ModBackedGamePatch backing = new ModBackedGamePatch(plan, faultBoundary);
                     ownerRegistrations = ModPatchPlanAssembler.backingFirst(patchOwner, backing,
                             plan.explicitPatches());
                 } else {
@@ -125,6 +143,8 @@ public final class ModRuntime implements AutoCloseable {
                     }
                     required.add(new PatchOwner.Mod(dependency.id()));
                 }
+                aggregateZoneIds.addAll(ownerZoneIds);
+                aggregateLevelIds.addAll(ownerLevelIds);
                 registrations.addAll(ownerRegistrations);
                 dependencies.put(patchOwner, Set.copyOf(required));
             } catch (Throwable failure) {
@@ -140,6 +160,12 @@ public final class ModRuntime implements AutoCloseable {
 
     public synchronized Map<String, Throwable> registrationFailures() {
         return registrationFailures;
+    }
+
+    /** Installs the engine-owned runtime callback boundary before launch plans are built. */
+    public synchronized void installFaultBoundary(ModFaultBoundary boundary) {
+        if (closed) throw new IllegalStateException("Mod runtime is closed");
+        this.faultBoundary = Objects.requireNonNull(boundary, "boundary");
     }
 
     public synchronized void disableOwnersForProcess(Set<String> owners) {

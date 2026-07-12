@@ -39,6 +39,7 @@ CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$EndMusicOverride visibl
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$FadeOutMusic visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$MusicRoute visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$PlayMusic visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$PlaySfx visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$ResetRingAlternation visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$RestoreCause visible @com.openggf.game.ModApi
@@ -196,6 +197,9 @@ CF-ANNOTATION TYPE com.openggf.game.MiniGameProvider visible @com.openggf.game.M
 CF-ANNOTATION TYPE com.openggf.game.ModApi visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ModApi visible @java.lang.annotation.Retention(value=java.lang.annotation.RetentionPolicy.RUNTIME)
 CF-ANNOTATION TYPE com.openggf.game.ModApi visible @java.lang.annotation.Target(value=[java.lang.annotation.ElementType.TYPE])
+CF-ANNOTATION TYPE com.openggf.game.MusicReference visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.MusicReference$Namespaced visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.MusicReference$Stock visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ObjectArtProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.PhysicsModifiers visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.PhysicsProfile visible @com.openggf.game.ModApi
@@ -229,6 +233,9 @@ CF-ANNOTATION TYPE com.openggf.game.ZoneArtProvider$ArtLoadRequest visible @com.
 CF-ANNOTATION TYPE com.openggf.game.ZoneArtProvider$ObjectArtConfig visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ZoneFeatureProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ZoneFeatureRenderer visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.ZoneKey visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.ZoneKey$Mod visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.ZoneKey$Stock visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ZoneProgressionPlan visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ZoneProgressionPlan$Builder visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ZoneProgressionPlan$Completion visible @com.openggf.game.ModApi
@@ -638,10 +645,25 @@ CF-ANNOTATION TYPE com.openggf.level.rings.RingSpriteSheet visible @com.openggf.
 CF-ANNOTATION TYPE com.openggf.level.rings.SpillAnimationState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.scroll.ZoneScrollHandler visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.spawn.SpawnPoint visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.TrackKey visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.code.BakedLevelRef visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.BakedSheetRef visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.GgfMod visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.GgfMod visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.mods.code.ModContext visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.code.ModLevelDefinition visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.code.ModLevelDefinition$Bounds visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.code.ModLevelDefinition$Music visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.code.ModLevelDefinition$ObjectEntry visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.code.ModLevelDefinition$RingEntry visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.code.ModLevelDefinition$Start visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.code.ModLevelDefinition$StockMusic visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.code.ModLevelDefinition$TrackMusic visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.code.ModZoneContribution visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.code.ZoneEventFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.code.ZoneEventFactory visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.net.client.ClientRaceSession visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.ClientRaceSession$Phase visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.MasterClient visible @com.openggf.game.ModApi
@@ -862,6 +884,7 @@ CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$ChangeMusicTempo public  <init
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$EndMusicOverride public  <init>(int)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$FadeOutMusic public  <init>(int,int)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$PlayMusic public  <init>(int,com.openggf.audio.rewind.AudioCommand$MusicRoute,boolean,java.lang.String)
+CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic public  <init>(com.openggf.audio.StreamedMusicPort$TrackRef)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$PlaySfx public  <init>(int,java.lang.String,com.openggf.audio.rewind.AudioCommand$SfxRoute,float,java.lang.String)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$ResetRingAlternation public  <init>(boolean)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$RestoreMusic public  <init>(com.openggf.audio.rewind.AudioCommand$RestoreCause)
@@ -945,12 +968,16 @@ CONSTRUCTOR com.openggf.game.LevelLoadContext public  <init>()
 CONSTRUCTOR com.openggf.game.MasterTitleScreen public  <init>()
 CONSTRUCTOR com.openggf.game.MasterTitleScreen public  <init>(com.openggf.configuration.SonicConfigurationService)
 CONSTRUCTOR com.openggf.game.MasterTitleScreen public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.game.launch.LaunchProfileStore)
+CONSTRUCTOR com.openggf.game.MusicReference$Namespaced public  <init>(java.lang.String,java.lang.String)
+CONSTRUCTOR com.openggf.game.MusicReference$Stock public  <init>(int)
 CONSTRUCTOR com.openggf.game.PhysicsModifiers public  <init>(float,float,float,float,short,short,short,float,float,float,float)
 CONSTRUCTOR com.openggf.game.PhysicsProfile public  <init>(short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,boolean,short)
 CONSTRUCTOR com.openggf.game.SidekickSpawnOffset public  <init>(int,int)
 CONSTRUCTOR com.openggf.game.StaticFixup public  <init>(java.lang.String,java.lang.String,java.lang.Runnable)
 CONSTRUCTOR com.openggf.game.ZoneArtProvider$ArtLoadRequest public  <init>(java.lang.String,int,int,com.openggf.tools.disasm.CompressionType)
 CONSTRUCTOR com.openggf.game.ZoneArtProvider$ObjectArtConfig public  <init>(int,int,com.openggf.tools.disasm.CompressionType)
+CONSTRUCTOR com.openggf.game.ZoneKey$Mod public  <init>(java.lang.String,java.lang.String)
+CONSTRUCTOR com.openggf.game.ZoneKey$Stock public  <init>(int)
 CONSTRUCTOR com.openggf.game.ZoneProgressionPlan$Successor public  <init>(int,int)
 CONSTRUCTOR com.openggf.game.ZoneProgressionPlan$ZoneMetadata public  <init>(int,com.openggf.game.ZoneProgressionPlan$Completion)
 CONSTRUCTOR com.openggf.game.animation.AnimatedTileChannel public  <init>(java.lang.String,com.openggf.game.animation.ChannelGuard,com.openggf.game.animation.PhaseSource,com.openggf.game.animation.DestinationPlan,com.openggf.game.animation.AnimatedTileCachePolicy,com.openggf.game.animation.ApplyStrategy)
@@ -1286,7 +1313,17 @@ CONSTRUCTOR com.openggf.level.rings.RingSpawn public  <init>(int,int,int)
 CONSTRUCTOR com.openggf.level.rings.RingSpriteSheet public  <init>(com.openggf.level.Pattern[],java.util.List<com.openggf.level.rings.RingFrame>,int,int,int,int)
 CONSTRUCTOR com.openggf.level.rings.RingSpriteSheet public  <init>(com.openggf.level.Pattern[],java.util.List<com.openggf.level.rings.RingFrame>,int,int,int,int,int)
 CONSTRUCTOR com.openggf.level.rings.SpillAnimationState public  <init>()
+CONSTRUCTOR com.openggf.mods.TrackKey public  <init>(java.lang.String,java.lang.String)
+CONSTRUCTOR com.openggf.mods.code.BakedLevelRef public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.mods.code.BakedSheetRef public  <init>(java.lang.String)
+CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$Bounds public  <init>(int,int,int,int)
+CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  <init>(int,int,int,java.lang.String,int,int,boolean,int)
+CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$RingEntry public  <init>(int,int,int)
+CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$Start public  <init>(int,int)
+CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$StockMusic public  <init>(int)
+CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public  <init>(int,int,int,int,int,int,boolean,int)
+CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$TrackMusic public  <init>(com.openggf.mods.TrackKey)
+CONSTRUCTOR com.openggf.mods.code.ModZoneContribution public  <init>(java.lang.String,com.openggf.mods.code.BakedLevelRef,java.lang.String,com.openggf.mods.code.ZoneEventFactory)
 CONSTRUCTOR com.openggf.net.client.ClientRaceSession public  <init>(java.util.function.LongSupplier)
 CONSTRUCTOR com.openggf.net.client.RaceClient$Control public  <init>(com.openggf.net.protocol.ControlMessage)
 CONSTRUCTOR com.openggf.net.client.RaceClient$Disconnected public  <init>(java.lang.String)
@@ -2679,6 +2716,7 @@ INTERFACE com.openggf.audio.rewind.AudioCommand$ChangeMusicTempo com.openggf.aud
 INTERFACE com.openggf.audio.rewind.AudioCommand$EndMusicOverride com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$FadeOutMusic com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$PlayMusic com.openggf.audio.rewind.AudioCommand
+INTERFACE com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$PlaySfx com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$ResetRingAlternation com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$RestoreMusic com.openggf.audio.rewind.AudioCommand
@@ -2697,7 +2735,11 @@ INTERFACE com.openggf.game.GameRng com.openggf.game.rewind.RewindSnapshottable<c
 INTERFACE com.openggf.game.GameStateManager com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.GameStateSnapshot>
 INTERFACE com.openggf.game.InstaShieldHandle com.openggf.game.PowerUpObject
 INTERFACE com.openggf.game.ModApi java.lang.annotation.Annotation
+INTERFACE com.openggf.game.MusicReference$Namespaced com.openggf.game.MusicReference
+INTERFACE com.openggf.game.MusicReference$Stock com.openggf.game.MusicReference
 INTERFACE com.openggf.game.SpecialStageProvider com.openggf.game.MiniGameProvider
+INTERFACE com.openggf.game.ZoneKey$Mod com.openggf.game.ZoneKey
+INTERFACE com.openggf.game.ZoneKey$Stock com.openggf.game.ZoneKey
 INTERFACE com.openggf.game.ZoneProgressionPlan$Credits com.openggf.game.ZoneProgressionPlan$ProgressionResult
 INTERFACE com.openggf.game.ZoneProgressionPlan$Successor com.openggf.game.ZoneProgressionPlan$ProgressionResult
 INTERFACE com.openggf.game.animation.AnimatedTileChannelGraph com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot>
@@ -2745,6 +2787,10 @@ INTERFACE com.openggf.level.rings.RingFramePiece com.openggf.level.render.Sprite
 INTERFACE com.openggf.level.rings.RingManager com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.RingSnapshot>
 INTERFACE com.openggf.level.rings.RingSpawn com.openggf.level.spawn.SpawnPoint
 INTERFACE com.openggf.level.rings.RingSpriteSheet com.openggf.level.render.SpriteSheet<com.openggf.level.rings.RingFrame>
+INTERFACE com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn com.openggf.mods.code.ModLevelDefinition$ObjectEntry
+INTERFACE com.openggf.mods.code.ModLevelDefinition$StockMusic com.openggf.mods.code.ModLevelDefinition$Music
+INTERFACE com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn com.openggf.mods.code.ModLevelDefinition$ObjectEntry
+INTERFACE com.openggf.mods.code.ModLevelDefinition$TrackMusic com.openggf.mods.code.ModLevelDefinition$Music
 INTERFACE com.openggf.net.client.MasterClient java.lang.AutoCloseable
 INTERFACE com.openggf.net.client.RaceClient$Control com.openggf.net.client.RaceClient$InboundEvent
 INTERFACE com.openggf.net.client.RaceClient$Disconnected com.openggf.net.client.RaceClient$InboundEvent
@@ -2926,7 +2972,9 @@ METHOD com.openggf.GameLoop public,synchronized  void pause()
 METHOD com.openggf.GameLoop public,synchronized  void resume()
 METHOD com.openggf.GameLoop public,synchronized  void toggleUserPause()
 METHOD com.openggf.GameModeChangeListener public,abstract  void onGameModeChanged(com.openggf.game.GameMode,com.openggf.game.GameMode)
+METHOD com.openggf.audio.AudioBackend public  boolean hasStreamedMusic(com.openggf.audio.StreamedMusicPort$TrackRef)
 METHOD com.openggf.audio.AudioBackend public  boolean supportsDeterministicRuntimePresentation()
+METHOD com.openggf.audio.AudioBackend public  boolean tryPlayStreamedMusic(com.openggf.audio.StreamedMusicPort$TrackRef)
 METHOD com.openggf.audio.AudioBackend public  com.openggf.audio.rewind.AudioBackendLogicalSnapshot captureLogicalSnapshot()
 METHOD com.openggf.audio.AudioBackend public  int outputSampleRate()
 METHOD com.openggf.audio.AudioBackend public  void attachDeterministicAudioRuntime(com.openggf.audio.runtime.DeterministicAudioRuntime)
@@ -2977,6 +3025,7 @@ METHOD com.openggf.audio.AudioManager public  boolean isReverseAudioPresentation
 METHOD com.openggf.audio.AudioManager public  boolean isRewindReplaySuppressed()
 METHOD com.openggf.audio.AudioManager public  boolean playDonorMusic(java.lang.String,com.openggf.audio.GameMusic)
 METHOD com.openggf.audio.AudioManager public  boolean playMusic(com.openggf.audio.GameMusic)
+METHOD com.openggf.audio.AudioManager public  boolean playNamespacedMusic(com.openggf.audio.StreamedMusicPort$TrackRef)
 METHOD com.openggf.audio.AudioManager public  boolean playSfx(int)
 METHOD com.openggf.audio.AudioManager public  boolean playSfx(int,float)
 METHOD com.openggf.audio.AudioManager public  com.openggf.audio.AudioBackend getBackend()
@@ -3080,6 +3129,8 @@ METHOD com.openggf.audio.SegaPcmSpec public  int sampleRate()
 METHOD com.openggf.audio.SegaPcmSpec public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.audio.SegaPcmSpec public,final  int hashCode()
 METHOD com.openggf.audio.SegaPcmSpec public,final  java.lang.String toString()
+METHOD com.openggf.audio.StreamedMusicPort public  boolean hasTrack(com.openggf.audio.StreamedMusicPort$TrackRef)
+METHOD com.openggf.audio.StreamedMusicPort public  void playTrack(com.openggf.audio.StreamedMusicPort$TrackRef)
 METHOD com.openggf.audio.StreamedMusicPort public,abstract  boolean fadeActive()
 METHOD com.openggf.audio.StreamedMusicPort public,abstract  boolean fadeAtFullGain()
 METHOD com.openggf.audio.StreamedMusicPort public,abstract  boolean hasSource()
@@ -3160,6 +3211,10 @@ METHOD com.openggf.audio.rewind.AudioCommand$PlayMusic public  java.lang.String 
 METHOD com.openggf.audio.rewind.AudioCommand$PlayMusic public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.audio.rewind.AudioCommand$PlayMusic public,final  int hashCode()
 METHOD com.openggf.audio.rewind.AudioCommand$PlayMusic public,final  java.lang.String toString()
+METHOD com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic public  com.openggf.audio.StreamedMusicPort$TrackRef track()
+METHOD com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic public,final  int hashCode()
+METHOD com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic public,final  java.lang.String toString()
 METHOD com.openggf.audio.rewind.AudioCommand$PlaySfx public  com.openggf.audio.rewind.AudioCommand$SfxRoute route()
 METHOD com.openggf.audio.rewind.AudioCommand$PlaySfx public  float pitch()
 METHOD com.openggf.audio.rewind.AudioCommand$PlaySfx public  int sfxId()
@@ -4469,6 +4524,7 @@ METHOD com.openggf.game.GameModule public  com.openggf.game.EndingProvider getEn
 METHOD com.openggf.game.GameModule public  com.openggf.game.GameRng$Flavour rngFlavour()
 METHOD com.openggf.game.GameModule public  com.openggf.game.LevelInitProfile getLevelInitProfile()
 METHOD com.openggf.game.GameModule public  com.openggf.game.LevelSelectProvider getLevelSelectProvider()
+METHOD com.openggf.game.GameModule public  com.openggf.game.MusicReference getLevelMusicReference(int,int)
 METHOD com.openggf.game.GameModule public  com.openggf.game.RomOffsetProvider getRomOffsetProvider()
 METHOD com.openggf.game.GameModule public  com.openggf.game.SpecialStageProvider getSpecialStageProvider()
 METHOD com.openggf.game.GameModule public  com.openggf.game.TitleCardProvider getTitleCardProvider()
@@ -4479,6 +4535,8 @@ METHOD com.openggf.game.GameModule public  com.openggf.game.dataselect.DataSelec
 METHOD com.openggf.game.GameModule public  com.openggf.game.dataselect.DataSelectPresentationProvider getDataSelectPresentationProvider()
 METHOD com.openggf.game.GameModule public  com.openggf.game.rules.GameRules getRules()
 METHOD com.openggf.game.GameModule public  com.openggf.game.save.SaveSnapshotProvider getSaveSnapshotProvider()
+METHOD com.openggf.game.GameModule public  com.openggf.level.Level loadLevelOverride(int) THROWS java.io.IOException
+METHOD com.openggf.game.GameModule public  com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet() THROWS java.io.IOException
 METHOD com.openggf.game.GameModule public  com.openggf.sprites.art.SpriteArtSet loadTailsTailArt()
 METHOD com.openggf.game.GameModule public  com.openggf.sprites.playable.SidekickCarryTrigger getSidekickCarryTrigger()
 METHOD com.openggf.game.GameModule public  com.openggf.sprites.playable.SuperStateController createSuperStateController(com.openggf.sprites.playable.AbstractPlayableSprite)
@@ -4490,6 +4548,7 @@ METHOD com.openggf.game.GameModule public  int getRemappedFeatureZone(int,int,in
 METHOD com.openggf.game.GameModule public  int getSpecialStageCycleCount()
 METHOD com.openggf.game.GameModule public  int getTailsTailVramBase()
 METHOD com.openggf.game.GameModule public  int resolveAnimationId(com.openggf.game.CanonicalAnimation)
+METHOD com.openggf.game.GameModule public  int[] getBackgroundScrollOverride(int,int,int)
 METHOD com.openggf.game.GameModule public  java.util.Optional<com.openggf.game.startup.DonatedDataSelectWarmupTask> getDonatedDataSelectWarmupTask()
 METHOD com.openggf.game.GameModule public  java.util.function.Function<com.openggf.game.PlayableEntity,com.openggf.level.objects.AbstractObjectInstance> getInvincibilityStarsFactory()
 METHOD com.openggf.game.GameModule public  void applyPlaneSwitching(com.openggf.sprites.playable.AbstractPlayableSprite)
@@ -4765,6 +4824,17 @@ METHOD com.openggf.game.MiniGameProvider public,abstract  void handleInput(int,i
 METHOD com.openggf.game.MiniGameProvider public,abstract  void initialize() THROWS java.io.IOException
 METHOD com.openggf.game.MiniGameProvider public,abstract  void reset()
 METHOD com.openggf.game.MiniGameProvider public,abstract  void update()
+METHOD com.openggf.game.MusicReference public,static  com.openggf.game.MusicReference namespaced(java.lang.String,java.lang.String)
+METHOD com.openggf.game.MusicReference public,static  com.openggf.game.MusicReference stock(int)
+METHOD com.openggf.game.MusicReference$Namespaced public  java.lang.String localName()
+METHOD com.openggf.game.MusicReference$Namespaced public  java.lang.String owner()
+METHOD com.openggf.game.MusicReference$Namespaced public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.MusicReference$Namespaced public,final  int hashCode()
+METHOD com.openggf.game.MusicReference$Namespaced public,final  java.lang.String toString()
+METHOD com.openggf.game.MusicReference$Stock public  int musicId()
+METHOD com.openggf.game.MusicReference$Stock public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.MusicReference$Stock public,final  int hashCode()
+METHOD com.openggf.game.MusicReference$Stock public,final  java.lang.String toString()
 METHOD com.openggf.game.ObjectArtProvider public  com.openggf.level.Palette getHudLivesPaletteOverride()
 METHOD com.openggf.game.ObjectArtProvider public  com.openggf.level.Pattern[] getHudHexDigitPatterns()
 METHOD com.openggf.game.ObjectArtProvider public  com.openggf.level.objects.HudStaticArt getHudStaticArt()
@@ -5108,6 +5178,17 @@ METHOD com.openggf.game.ZoneFeatureRenderer public  int getDebugFrameCount()
 METHOD com.openggf.game.ZoneFeatureRenderer public  java.lang.String getDebugFrameDescription(int)
 METHOD com.openggf.game.ZoneFeatureRenderer public  java.lang.String getDebugFrameName(int)
 METHOD com.openggf.game.ZoneFeatureRenderer public,abstract  void cleanup()
+METHOD com.openggf.game.ZoneKey public,static  com.openggf.game.ZoneKey mod(java.lang.String,java.lang.String)
+METHOD com.openggf.game.ZoneKey public,static  com.openggf.game.ZoneKey stock(int)
+METHOD com.openggf.game.ZoneKey$Mod public  java.lang.String localName()
+METHOD com.openggf.game.ZoneKey$Mod public  java.lang.String ownerModId()
+METHOD com.openggf.game.ZoneKey$Mod public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.ZoneKey$Mod public,final  int hashCode()
+METHOD com.openggf.game.ZoneKey$Mod public,final  java.lang.String toString()
+METHOD com.openggf.game.ZoneKey$Stock public  int zoneIndex()
+METHOD com.openggf.game.ZoneKey$Stock public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.ZoneKey$Stock public,final  int hashCode()
+METHOD com.openggf.game.ZoneKey$Stock public,final  java.lang.String toString()
 METHOD com.openggf.game.ZoneProgressionPlan public  com.openggf.game.ZoneProgressionPlan$ProgressionResult next(com.openggf.game.ZoneProgressionPlan$ZoneTopology,int,int)
 METHOD com.openggf.game.ZoneProgressionPlan public  void requireCompatible(com.openggf.game.ZoneProgressionPlan$ZoneTopology)
 METHOD com.openggf.game.ZoneProgressionPlan public,static  com.openggf.game.ZoneProgressionPlan$Builder builder(com.openggf.game.ZoneProgressionPlan$ZoneTopology)
@@ -5135,6 +5216,12 @@ METHOD com.openggf.game.ZoneProgressionPlan$ZoneTopology public  int zoneCount()
 METHOD com.openggf.game.ZoneProgressionPlan$ZoneTopology public  java.util.List<com.openggf.game.ZoneProgressionPlan$ZoneMetadata> zones()
 METHOD com.openggf.game.ZoneProgressionPlan$ZoneTopology public,static  com.openggf.game.ZoneProgressionPlan$ZoneTopology of(java.util.List<com.openggf.game.ZoneProgressionPlan$ZoneMetadata>)
 METHOD com.openggf.game.ZoneProgressionPlan$ZoneTopology public,static,transient varargs  com.openggf.game.ZoneProgressionPlan$ZoneTopology linear(int[])
+METHOD com.openggf.game.ZoneRegistry public  com.openggf.game.MusicReference getMusicReference(int,int)
+METHOD com.openggf.game.ZoneRegistry public  com.openggf.game.ZoneKey zoneKey(int)
+METHOD com.openggf.game.ZoneRegistry public  com.openggf.game.ZoneProgressionPlan progressionPlan()
+METHOD com.openggf.game.ZoneRegistry public  com.openggf.game.ZoneProgressionPlan$ZoneTopology progressionTopology()
+METHOD com.openggf.game.ZoneRegistry public  int resolveStockZoneAnchor(java.lang.String)
+METHOD com.openggf.game.ZoneRegistry public  java.util.OptionalInt resolveZoneKey(com.openggf.game.ZoneKey)
 METHOD com.openggf.game.ZoneRegistry public,abstract  int getActCount(int)
 METHOD com.openggf.game.ZoneRegistry public,abstract  int getMusicId(int,int)
 METHOD com.openggf.game.ZoneRegistry public,abstract  int getZoneCount()
@@ -9169,6 +9256,15 @@ METHOD com.openggf.level.scroll.ZoneScrollHandler public,abstract  short getVscr
 METHOD com.openggf.level.scroll.ZoneScrollHandler public,abstract  void update(int[],int,int,int,int)
 METHOD com.openggf.level.spawn.SpawnPoint public,abstract  int x()
 METHOD com.openggf.level.spawn.SpawnPoint public,abstract  int y()
+METHOD com.openggf.mods.TrackKey public  java.lang.String localName()
+METHOD com.openggf.mods.TrackKey public  java.lang.String modId()
+METHOD com.openggf.mods.TrackKey public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.TrackKey public,final  int hashCode()
+METHOD com.openggf.mods.TrackKey public,final  java.lang.String toString()
+METHOD com.openggf.mods.code.BakedLevelRef public  java.lang.String levelJsonEntry()
+METHOD com.openggf.mods.code.BakedLevelRef public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.code.BakedLevelRef public,final  int hashCode()
+METHOD com.openggf.mods.code.BakedLevelRef public,final  java.lang.String toString()
 METHOD com.openggf.mods.code.BakedSheetRef public  java.lang.String entryPath()
 METHOD com.openggf.mods.code.BakedSheetRef public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.code.BakedSheetRef public,final  int hashCode()
@@ -9180,6 +9276,98 @@ METHOD com.openggf.mods.code.ModContext public  java.lang.String ownerModId()
 METHOD com.openggf.mods.code.ModContext public  void registerGamePatch(com.openggf.game.patch.GamePatch)
 METHOD com.openggf.mods.code.ModContext public  void registerObject(java.lang.String,com.openggf.level.objects.ObjectFactory)
 METHOD com.openggf.mods.code.ModContext public  void registerObjectArt(java.lang.String,com.openggf.mods.code.BakedSheetRef)
+METHOD com.openggf.mods.code.ModContext public  void registerZone(com.openggf.mods.code.ModZoneContribution)
+METHOD com.openggf.mods.code.ModLevelDefinition public  byte[] blockBytes()
+METHOD com.openggf.mods.code.ModLevelDefinition public  byte[] chunkBytes()
+METHOD com.openggf.mods.code.ModLevelDefinition public  byte[] foregroundMap()
+METHOD com.openggf.mods.code.ModLevelDefinition public  byte[] patternBytes()
+METHOD com.openggf.mods.code.ModLevelDefinition public  byte[] solidAngles()
+METHOD com.openggf.mods.code.ModLevelDefinition public  byte[] solidHeights()
+METHOD com.openggf.mods.code.ModLevelDefinition public  byte[] solidWidths()
+METHOD com.openggf.mods.code.ModLevelDefinition public  byte[][] paletteLines()
+METHOD com.openggf.mods.code.ModLevelDefinition public  com.openggf.mods.code.ModLevelDefinition$Bounds bounds()
+METHOD com.openggf.mods.code.ModLevelDefinition public  com.openggf.mods.code.ModLevelDefinition$Music music()
+METHOD com.openggf.mods.code.ModLevelDefinition public  com.openggf.mods.code.ModLevelDefinition$Start start()
+METHOD com.openggf.mods.code.ModLevelDefinition public  int blockCount()
+METHOD com.openggf.mods.code.ModLevelDefinition public  int blockGridSide()
+METHOD com.openggf.mods.code.ModLevelDefinition public  int chunkCount()
+METHOD com.openggf.mods.code.ModLevelDefinition public  int formatVersion()
+METHOD com.openggf.mods.code.ModLevelDefinition public  int height()
+METHOD com.openggf.mods.code.ModLevelDefinition public  int levelIndex()
+METHOD com.openggf.mods.code.ModLevelDefinition public  int patternCount()
+METHOD com.openggf.mods.code.ModLevelDefinition public  int solidProfileCount()
+METHOD com.openggf.mods.code.ModLevelDefinition public  int width()
+METHOD com.openggf.mods.code.ModLevelDefinition public  int zoneIndex()
+METHOD com.openggf.mods.code.ModLevelDefinition public  int[] primaryCollisionIndices()
+METHOD com.openggf.mods.code.ModLevelDefinition public  int[] secondaryCollisionIndices()
+METHOD com.openggf.mods.code.ModLevelDefinition public  java.lang.String zoneName()
+METHOD com.openggf.mods.code.ModLevelDefinition public  java.util.List<com.openggf.mods.code.ModLevelDefinition$ObjectEntry> objects()
+METHOD com.openggf.mods.code.ModLevelDefinition public  java.util.List<com.openggf.mods.code.ModLevelDefinition$RingEntry> rings()
+METHOD com.openggf.mods.code.ModLevelDefinition public  java.util.Optional<byte[]> backgroundMap()
+METHOD com.openggf.mods.code.ModLevelDefinition$Bounds public  int maxX()
+METHOD com.openggf.mods.code.ModLevelDefinition$Bounds public  int maxY()
+METHOD com.openggf.mods.code.ModLevelDefinition$Bounds public  int minX()
+METHOD com.openggf.mods.code.ModLevelDefinition$Bounds public  int minY()
+METHOD com.openggf.mods.code.ModLevelDefinition$Bounds public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.code.ModLevelDefinition$Bounds public,final  int hashCode()
+METHOD com.openggf.mods.code.ModLevelDefinition$Bounds public,final  java.lang.String toString()
+METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  boolean respawnTracked()
+METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  int placementId()
+METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  int rawYWord()
+METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  int renderFlags()
+METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  int subtype()
+METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  int x()
+METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  int y()
+METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  java.lang.String objectKey()
+METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public,final  int hashCode()
+METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public,final  java.lang.String toString()
+METHOD com.openggf.mods.code.ModLevelDefinition$ObjectEntry public,abstract  boolean respawnTracked()
+METHOD com.openggf.mods.code.ModLevelDefinition$ObjectEntry public,abstract  int placementId()
+METHOD com.openggf.mods.code.ModLevelDefinition$ObjectEntry public,abstract  int rawYWord()
+METHOD com.openggf.mods.code.ModLevelDefinition$ObjectEntry public,abstract  int renderFlags()
+METHOD com.openggf.mods.code.ModLevelDefinition$ObjectEntry public,abstract  int subtype()
+METHOD com.openggf.mods.code.ModLevelDefinition$ObjectEntry public,abstract  int x()
+METHOD com.openggf.mods.code.ModLevelDefinition$ObjectEntry public,abstract  int y()
+METHOD com.openggf.mods.code.ModLevelDefinition$RingEntry public  int placementId()
+METHOD com.openggf.mods.code.ModLevelDefinition$RingEntry public  int x()
+METHOD com.openggf.mods.code.ModLevelDefinition$RingEntry public  int y()
+METHOD com.openggf.mods.code.ModLevelDefinition$RingEntry public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.code.ModLevelDefinition$RingEntry public,final  int hashCode()
+METHOD com.openggf.mods.code.ModLevelDefinition$RingEntry public,final  java.lang.String toString()
+METHOD com.openggf.mods.code.ModLevelDefinition$Start public  int x()
+METHOD com.openggf.mods.code.ModLevelDefinition$Start public  int y()
+METHOD com.openggf.mods.code.ModLevelDefinition$Start public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.code.ModLevelDefinition$Start public,final  int hashCode()
+METHOD com.openggf.mods.code.ModLevelDefinition$Start public,final  java.lang.String toString()
+METHOD com.openggf.mods.code.ModLevelDefinition$StockMusic public  int stockId()
+METHOD com.openggf.mods.code.ModLevelDefinition$StockMusic public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.code.ModLevelDefinition$StockMusic public,final  int hashCode()
+METHOD com.openggf.mods.code.ModLevelDefinition$StockMusic public,final  java.lang.String toString()
+METHOD com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public  boolean respawnTracked()
+METHOD com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public  int placementId()
+METHOD com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public  int rawYWord()
+METHOD com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public  int renderFlags()
+METHOD com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public  int stockObjectId()
+METHOD com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public  int subtype()
+METHOD com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public  int x()
+METHOD com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public  int y()
+METHOD com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public,final  int hashCode()
+METHOD com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public,final  java.lang.String toString()
+METHOD com.openggf.mods.code.ModLevelDefinition$TrackMusic public  com.openggf.mods.TrackKey trackKey()
+METHOD com.openggf.mods.code.ModLevelDefinition$TrackMusic public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.code.ModLevelDefinition$TrackMusic public,final  int hashCode()
+METHOD com.openggf.mods.code.ModLevelDefinition$TrackMusic public,final  java.lang.String toString()
+METHOD com.openggf.mods.code.ModZoneContribution public  com.openggf.mods.code.BakedLevelRef level()
+METHOD com.openggf.mods.code.ModZoneContribution public  com.openggf.mods.code.ZoneEventFactory eventFactory()
+METHOD com.openggf.mods.code.ModZoneContribution public  java.lang.String insertAfter()
+METHOD com.openggf.mods.code.ModZoneContribution public  java.lang.String localKey()
+METHOD com.openggf.mods.code.ModZoneContribution public  java.util.Optional<com.openggf.mods.code.ZoneEventFactory> optionalEventFactory()
+METHOD com.openggf.mods.code.ModZoneContribution public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.code.ModZoneContribution public,final  int hashCode()
+METHOD com.openggf.mods.code.ModZoneContribution public,final  java.lang.String toString()
+METHOD com.openggf.mods.code.ZoneEventFactory public,abstract  com.openggf.game.LevelEventProvider create()
 METHOD com.openggf.net.client.ClientRaceSession public  boolean isWindowOpen()
 METHOD com.openggf.net.client.ClientRaceSession public  boolean needsMoreClockSamples()
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.client.ClientRaceSession$Phase phase()
@@ -11545,6 +11733,7 @@ NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioComma
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$FadeOutMusic
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$MusicRoute
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$PlayMusic
+NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$PlaySfx
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$ResetRingAlternation
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$RestoreCause
@@ -11591,11 +11780,15 @@ NESTED com.openggf.game.MasterTitleScreen com.openggf.game.MasterTitleScreen$Mod
 NESTED com.openggf.game.MasterTitleScreen com.openggf.game.MasterTitleScreen$State
 NESTED com.openggf.game.MasterTitleScreen com.openggf.game.MasterTitleScreen$TimeAttackMenuFactory
 NESTED com.openggf.game.MasterTitleScreen com.openggf.game.MasterTitleScreen$UserRecordingMenuFactory
+NESTED com.openggf.game.MusicReference com.openggf.game.MusicReference$Namespaced
+NESTED com.openggf.game.MusicReference com.openggf.game.MusicReference$Stock
 NESTED com.openggf.game.ScrollHandlerProvider com.openggf.game.ScrollHandlerProvider$ZoneConstants
 NESTED com.openggf.game.TitleScreenProvider com.openggf.game.TitleScreenProvider$State
 NESTED com.openggf.game.TitleScreenProvider com.openggf.game.TitleScreenProvider$TitleScreenAction
 NESTED com.openggf.game.ZoneArtProvider com.openggf.game.ZoneArtProvider$ArtLoadRequest
 NESTED com.openggf.game.ZoneArtProvider com.openggf.game.ZoneArtProvider$ObjectArtConfig
+NESTED com.openggf.game.ZoneKey com.openggf.game.ZoneKey$Mod
+NESTED com.openggf.game.ZoneKey com.openggf.game.ZoneKey$Stock
 NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan$Builder
 NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan$Completion
 NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan$Credits
@@ -11696,6 +11889,15 @@ NESTED com.openggf.level.objects.SubpixelMotion com.openggf.level.objects.Subpix
 NESTED com.openggf.level.objects.TouchResponseProvider com.openggf.level.objects.TouchResponseProvider$TouchRegion
 NESTED com.openggf.level.objects.art.ObjectArtBundle com.openggf.level.objects.art.ObjectArtBundle$Builder
 NESTED com.openggf.level.render.PatternSpriteRenderer com.openggf.level.render.PatternSpriteRenderer$FrameBounds
+NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$Bounds
+NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn
+NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$Music
+NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$ObjectEntry
+NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$RingEntry
+NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$Start
+NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$StockMusic
+NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn
+NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$TrackMusic
 NESTED com.openggf.net.client.ClientRaceSession com.openggf.net.client.ClientRaceSession$Phase
 NESTED com.openggf.net.host.HostMasterLink com.openggf.net.host.HostMasterLink$MessageSink
 NESTED com.openggf.net.hub.GhostHub com.openggf.net.hub.GhostHub$HubViolationRecorder
@@ -11820,6 +12022,7 @@ PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioComm
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$EndMusicOverride
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$FadeOutMusic
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$PlayMusic
+PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$PlaySfx
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$ResetRingAlternation
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$RestoreMusic
@@ -11827,6 +12030,10 @@ PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioComm
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SetSpeedShoes
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopAllSfx
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopMusic
+PERMITS com.openggf.game.MusicReference com.openggf.game.MusicReference$Namespaced
+PERMITS com.openggf.game.MusicReference com.openggf.game.MusicReference$Stock
+PERMITS com.openggf.game.ZoneKey com.openggf.game.ZoneKey$Mod
+PERMITS com.openggf.game.ZoneKey com.openggf.game.ZoneKey$Stock
 PERMITS com.openggf.game.ZoneProgressionPlan$ProgressionResult com.openggf.game.ZoneProgressionPlan$Credits
 PERMITS com.openggf.game.ZoneProgressionPlan$ProgressionResult com.openggf.game.ZoneProgressionPlan$Successor
 PERMITS com.openggf.game.patch.PatchOwner com.openggf.game.patch.PatchOwner$BuiltIn
@@ -11840,6 +12047,10 @@ PERMITS com.openggf.io.AbstractModAssetRoot com.openggf.io.NonClosingModAssetRoo
 PERMITS com.openggf.io.ModAssetRoot com.openggf.io.AbstractModAssetRoot
 PERMITS com.openggf.io.ModAssetRoot com.openggf.io.PackedModAssetRoot
 PERMITS com.openggf.io.PackedModAssetRoot com.openggf.io.JarModAssetRoot
+PERMITS com.openggf.mods.code.ModLevelDefinition$Music com.openggf.mods.code.ModLevelDefinition$StockMusic
+PERMITS com.openggf.mods.code.ModLevelDefinition$Music com.openggf.mods.code.ModLevelDefinition$TrackMusic
+PERMITS com.openggf.mods.code.ModLevelDefinition$ObjectEntry com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn
+PERMITS com.openggf.mods.code.ModLevelDefinition$ObjectEntry com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn
 PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$Control
 PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$Disconnected
 PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$GhostData
@@ -11959,6 +12170,7 @@ RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlayMusic donorGameId jav
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlayMusic musicId int
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlayMusic override boolean
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlayMusic route com.openggf.audio.rewind.AudioCommand$MusicRoute
+RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic track com.openggf.audio.StreamedMusicPort$TrackRef
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlaySfx donorGameId java.lang.String
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlaySfx pitch float
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlaySfx route com.openggf.audio.rewind.AudioCommand$SfxRoute
@@ -12388,6 +12600,9 @@ RECORD-COMPONENT com.openggf.game.DemoLamppostState waterRoutine int
 RECORD-COMPONENT com.openggf.game.InitStep action java.lang.Runnable
 RECORD-COMPONENT com.openggf.game.InitStep name java.lang.String
 RECORD-COMPONENT com.openggf.game.InitStep romRoutine java.lang.String
+RECORD-COMPONENT com.openggf.game.MusicReference$Namespaced localName java.lang.String
+RECORD-COMPONENT com.openggf.game.MusicReference$Namespaced owner java.lang.String
+RECORD-COMPONENT com.openggf.game.MusicReference$Stock musicId int
 RECORD-COMPONENT com.openggf.game.PhysicsModifiers shoesAccelMul float
 RECORD-COMPONENT com.openggf.game.PhysicsModifiers shoesDecelMul float
 RECORD-COMPONENT com.openggf.game.PhysicsModifiers shoesFrictionMul float
@@ -12431,6 +12646,9 @@ RECORD-COMPONENT com.openggf.game.ZoneArtProvider$ArtLoadRequest palette int
 RECORD-COMPONENT com.openggf.game.ZoneArtProvider$ObjectArtConfig artAddress int
 RECORD-COMPONENT com.openggf.game.ZoneArtProvider$ObjectArtConfig compression com.openggf.tools.disasm.CompressionType
 RECORD-COMPONENT com.openggf.game.ZoneArtProvider$ObjectArtConfig palette int
+RECORD-COMPONENT com.openggf.game.ZoneKey$Mod localName java.lang.String
+RECORD-COMPONENT com.openggf.game.ZoneKey$Mod ownerModId java.lang.String
+RECORD-COMPONENT com.openggf.game.ZoneKey$Stock zoneIndex int
 RECORD-COMPONENT com.openggf.game.ZoneProgressionPlan$Successor act int
 RECORD-COMPONENT com.openggf.game.ZoneProgressionPlan$Successor zone int
 RECORD-COMPONENT com.openggf.game.ZoneProgressionPlan$ZoneMetadata actCount int
@@ -13498,7 +13716,41 @@ RECORD-COMPONENT com.openggf.level.rings.RingFramePiece yOffset int
 RECORD-COMPONENT com.openggf.level.rings.RingSpawn placementId int
 RECORD-COMPONENT com.openggf.level.rings.RingSpawn x int
 RECORD-COMPONENT com.openggf.level.rings.RingSpawn y int
+RECORD-COMPONENT com.openggf.mods.TrackKey localName java.lang.String
+RECORD-COMPONENT com.openggf.mods.TrackKey modId java.lang.String
+RECORD-COMPONENT com.openggf.mods.code.BakedLevelRef levelJsonEntry java.lang.String
 RECORD-COMPONENT com.openggf.mods.code.BakedSheetRef entryPath java.lang.String
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$Bounds maxX int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$Bounds maxY int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$Bounds minX int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$Bounds minY int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn objectKey java.lang.String
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn placementId int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn rawYWord int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn renderFlags int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn respawnTracked boolean
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn subtype int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn x int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn y int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$RingEntry placementId int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$RingEntry x int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$RingEntry y int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$Start x int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$Start y int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$StockMusic stockId int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn placementId int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn rawYWord int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn renderFlags int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn respawnTracked boolean
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn stockObjectId int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn subtype int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn x int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn y int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$TrackMusic trackKey com.openggf.mods.TrackKey
+RECORD-COMPONENT com.openggf.mods.code.ModZoneContribution eventFactory com.openggf.mods.code.ZoneEventFactory
+RECORD-COMPONENT com.openggf.mods.code.ModZoneContribution insertAfter java.lang.String
+RECORD-COMPONENT com.openggf.mods.code.ModZoneContribution level com.openggf.mods.code.BakedLevelRef
+RECORD-COMPONENT com.openggf.mods.code.ModZoneContribution localKey java.lang.String
 RECORD-COMPONENT com.openggf.net.client.RaceClient$Control message com.openggf.net.protocol.ControlMessage
 RECORD-COMPONENT com.openggf.net.client.RaceClient$Disconnected reason java.lang.String
 RECORD-COMPONENT com.openggf.net.client.RaceClient$GhostData aggregate com.openggf.net.protocol.GhostPackets$Aggregate
@@ -14520,6 +14772,7 @@ TYPE class public,final com.openggf.level.objects.SpringBounceHelper SUPER java.
 TYPE class public,final com.openggf.level.objects.SubpixelMotion SUPER java.lang.Object
 TYPE class public,final com.openggf.level.rings.SpillAnimationState SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.ModContext SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.code.ModLevelDefinition SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.ClientRaceSession SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.MasterClient SUPER java.lang.Object
 TYPE class public,final com.openggf.net.host.HostMasterLink SUPER java.lang.Object
@@ -14759,6 +15012,7 @@ TYPE interface public,abstract com.openggf.level.render.SpriteSheet<F extends co
 TYPE interface public,abstract com.openggf.level.scroll.ZoneScrollHandler SUPER <none>
 TYPE interface public,abstract com.openggf.level.spawn.SpawnPoint SUPER <none>
 TYPE interface public,abstract com.openggf.mods.code.GgfMod SUPER <none>
+TYPE interface public,abstract com.openggf.mods.code.ZoneEventFactory SUPER <none>
 TYPE interface public,abstract com.openggf.net.client.RaceConnection SUPER <none>
 TYPE interface public,abstract com.openggf.net.hub.HubConnection SUPER <none>
 TYPE interface public,abstract com.openggf.net.hub.TrackValidationProfileSource SUPER <none>
@@ -14772,6 +15026,8 @@ TYPE interface public,abstract com.openggf.timer.Timer SUPER <none>
 TYPE interface public,abstract com.openggf.util.IntIndexedView SUPER <none>
 TYPE interface public,abstract com.openggf.util.ShortIndexedView SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.audio.rewind.AudioCommand SUPER <none>
+TYPE interface public,abstract,sealed com.openggf.game.MusicReference SUPER <none>
+TYPE interface public,abstract,sealed com.openggf.game.ZoneKey SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.game.patch.PatchOwner SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.game.patch.ResolutionResult SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.io.ModAssetRoot SUPER <none>
@@ -14812,6 +15068,8 @@ TYPE interface public,abstract,static com.openggf.net.hub.RoomHostHooks$RoundOut
 TYPE interface public,abstract,static com.openggf.net.hub.RoomHostHooks$VerificationHooks SUPER <none>
 TYPE interface public,abstract,static com.openggf.sprites.managers.SpriteManager$SpriteDrawCallback SUPER <none>
 TYPE interface public,abstract,static,sealed com.openggf.game.ZoneProgressionPlan$ProgressionResult SUPER <none>
+TYPE interface public,abstract,static,sealed com.openggf.mods.code.ModLevelDefinition$Music SUPER <none>
+TYPE interface public,abstract,static,sealed com.openggf.mods.code.ModLevelDefinition$ObjectEntry SUPER <none>
 TYPE interface public,abstract,static,sealed com.openggf.net.client.RaceClient$InboundEvent SUPER <none>
 TYPE record protected,static,final com.openggf.sprites.playable.SuperStateController$PaletteTarget SUPER java.lang.Record
 TYPE record public,final com.openggf.audio.SegaPcmSpec SUPER java.lang.Record
@@ -14923,7 +15181,10 @@ TYPE record public,final com.openggf.level.render.TileLoadRequest SUPER java.lan
 TYPE record public,final com.openggf.level.rings.RingFrame SUPER java.lang.Record
 TYPE record public,final com.openggf.level.rings.RingFramePiece SUPER java.lang.Record
 TYPE record public,final com.openggf.level.rings.RingSpawn SUPER java.lang.Record
+TYPE record public,final com.openggf.mods.TrackKey SUPER java.lang.Record
+TYPE record public,final com.openggf.mods.code.BakedLevelRef SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.code.BakedSheetRef SUPER java.lang.Record
+TYPE record public,final com.openggf.mods.code.ModZoneContribution SUPER java.lang.Record
 TYPE record public,final com.openggf.net.hub.RoomHostConfig SUPER java.lang.Record
 TYPE record public,final com.openggf.net.hub.RoomHostHooks SUPER java.lang.Record
 TYPE record public,final com.openggf.net.hub.TrackValidationProfile SUPER java.lang.Record
@@ -14948,6 +15209,7 @@ TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$ChangeMusi
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$EndMusicOverride SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$FadeOutMusic SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$PlayMusic SUPER java.lang.Record
+TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$PlaySfx SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$ResetRingAlternation SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$RestoreMusic SUPER java.lang.Record
@@ -14973,8 +15235,12 @@ TYPE record public,static,final com.openggf.game.BonusStageProvider$BonusStageRe
 TYPE record public,static,final com.openggf.game.CheckpointState$RewindState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.DebugOverlayProvider$ArtViewerTarget SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.DebugOverlayProvider$ObjectDebugLabel SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.MusicReference$Namespaced SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.MusicReference$Stock SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.ZoneArtProvider$ArtLoadRequest SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.ZoneArtProvider$ObjectArtConfig SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.ZoneKey$Mod SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.ZoneKey$Stock SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.ZoneProgressionPlan$Successor SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.ZoneProgressionPlan$ZoneMetadata SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.ModuleResolutionService$PatchPlan SUPER java.lang.Record
@@ -15034,6 +15300,13 @@ TYPE record public,static,final com.openggf.level.objects.TouchResponseProvider$
 TYPE record public,static,final com.openggf.level.render.PatternSpriteRenderer$FrameBounds SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.render.SpritePieceRenderer$FrameBounds SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.render.SpritePieceRenderer$PreparedPiece SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$Bounds SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$RingEntry SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$Start SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$StockMusic SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$TrackMusic SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RaceClient$Control SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RaceClient$Disconnected SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RaceClient$GhostData SUPER java.lang.Record
@@ -15178,6 +15451,7 @@ TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$EndMusicOverride @com.open
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$FadeOutMusic @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$MusicRoute @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$PlayMusic @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$PlaySfx @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$ResetRingAlternation @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$RestoreCause @com.openggf.game.ModApi
@@ -15335,6 +15609,9 @@ TYPE-ANNOTATION com.openggf.game.MiniGameProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ModApi @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ModApi @java.lang.annotation.Retention(value=java.lang.annotation.RetentionPolicy.RUNTIME)
 TYPE-ANNOTATION com.openggf.game.ModApi @java.lang.annotation.Target(value=[java.lang.annotation.ElementType.TYPE])
+TYPE-ANNOTATION com.openggf.game.MusicReference @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.MusicReference$Namespaced @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.MusicReference$Stock @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ObjectArtProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.PhysicsModifiers @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.PhysicsProfile @com.openggf.game.ModApi
@@ -15368,6 +15645,9 @@ TYPE-ANNOTATION com.openggf.game.ZoneArtProvider$ArtLoadRequest @com.openggf.gam
 TYPE-ANNOTATION com.openggf.game.ZoneArtProvider$ObjectArtConfig @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ZoneFeatureProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ZoneFeatureRenderer @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.ZoneKey @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.ZoneKey$Mod @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.ZoneKey$Stock @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ZoneProgressionPlan @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ZoneProgressionPlan$Builder @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ZoneProgressionPlan$Completion @com.openggf.game.ModApi
@@ -15777,10 +16057,25 @@ TYPE-ANNOTATION com.openggf.level.rings.RingSpriteSheet @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.rings.SpillAnimationState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.scroll.ZoneScrollHandler @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.spawn.SpawnPoint @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.TrackKey @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.code.BakedLevelRef @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.BakedSheetRef @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.GgfMod @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.GgfMod @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.mods.code.ModContext @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.code.ModLevelDefinition @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.code.ModLevelDefinition$Bounds @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.code.ModLevelDefinition$Music @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.code.ModLevelDefinition$ObjectEntry @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.code.ModLevelDefinition$RingEntry @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.code.ModLevelDefinition$Start @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.code.ModLevelDefinition$StockMusic @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.code.ModLevelDefinition$TrackMusic @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.code.ModZoneContribution @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.code.ZoneEventFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.code.ZoneEventFactory @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.net.client.ClientRaceSession @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.ClientRaceSession$Phase @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.MasterClient @com.openggf.game.ModApi

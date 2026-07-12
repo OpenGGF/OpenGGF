@@ -1165,6 +1165,7 @@ public class Engine {
 			modRuntime = replaceModRuntime(modRuntime,
 					new ModClassLoaderFactory(Engine.class.getClassLoader())
 							.create(effectiveMods, ModSubsystem.current().trustedCodeOwners()));
+			modRuntime.installFaultBoundary(ModSubsystem.current().createFaultBoundary(modRuntime));
 			ModSubsystem.current().installRewindClassResolver(
 					new ModClassResolver(modRuntime, Engine.class.getClassLoader()));
 			moduleResolutionService.installModPlanSource(

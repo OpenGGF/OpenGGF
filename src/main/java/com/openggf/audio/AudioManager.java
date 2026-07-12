@@ -532,6 +532,7 @@ public class AudioManager {
         }
         switch (command) {
             case AudioCommand.PlayMusic playMusic -> replayMusic(playMusic);
+            case AudioCommand.PlayNamespacedMusic namespaced -> requireNamespacedMusicAccepted(namespaced.track());
             case AudioCommand.PlaySfx playSfx -> replaySfx(playSfx);
             case AudioCommand.FadeOutMusic fade -> backend.fadeOutMusic(fade.steps(), fade.delay());
             case AudioCommand.StopMusic ignored -> backend.stopPlayback();
@@ -551,6 +552,7 @@ public class AudioManager {
         }
         switch (command) {
             case AudioCommand.PlayMusic playMusic -> applyLogicalMusic(playMusic);
+            case AudioCommand.PlayNamespacedMusic namespaced -> applyLogicalNamespacedMusic(namespaced.track());
             case AudioCommand.PlaySfx playSfx -> applyLogicalSfx(playSfx);
             case AudioCommand.StopMusic ignored -> restoreBackendLogicalSnapshot(
                     new AudioBackendLogicalSnapshot(null, false, false, false, 1, List.of()));
@@ -607,6 +609,25 @@ public class AudioManager {
                 current.speedShoesEnabled(),
                 current.speedMultiplier(),
                 overrides, null, null, current.streamedMusic(), streamedOverrides));
+    }
+
+    private void applyLogicalNamespacedMusic(StreamedMusicPort.TrackRef track) {
+        AudioBackendLogicalSnapshot current = currentBackendLogicalSnapshot();
+        StreamedMusicPort.State streamed = new StreamedMusicPort.State(
+                track, -1, 0, 0, StreamedMusicPort.FadeState.idle(), 1.0);
+        restoreBackendLogicalSnapshot(new AudioBackendLogicalSnapshot(
+                null,
+                false,
+                false,
+                current.speedShoesEnabled(),
+                current.speedMultiplier(),
+                List.of(), null, null, streamed, List.of()));
+    }
+
+    private void requireNamespacedMusicAccepted(StreamedMusicPort.TrackRef track) {
+        if (!backend.tryPlayStreamedMusic(track)) {
+            throw new IllegalArgumentException("Unknown namespaced streamed track: " + track);
+        }
     }
 
     private void applyLogicalSfx(AudioCommand.PlaySfx command) {
@@ -924,6 +945,23 @@ public class AudioManager {
                 backend.playMusic(musicId);
             });
         }
+    }
+
+    /** Plays an exact namespaced streamed track without allocating a stock music id. */
+    public boolean playNamespacedMusic(StreamedMusicPort.TrackRef track) {
+        java.util.Objects.requireNonNull(track, "track");
+        if (suppressingRewindReplay()) {
+            return false;
+        }
+        boolean sendsLive = sendLiveBackendCommands();
+        boolean accepted = backend != null && (sendsLive
+                ? backend.tryPlayStreamedMusic(track)
+                : backend.hasStreamedMusic(track));
+        if (!accepted) {
+            throw new IllegalArgumentException("Unknown namespaced streamed track: " + track);
+        }
+        recordTimelineCommand(new AudioCommand.PlayNamespacedMusic(track));
+        return true;
     }
 
     public boolean playMusic(GameMusic music) {

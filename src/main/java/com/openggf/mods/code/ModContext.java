@@ -20,14 +20,22 @@ public final class ModContext {
     private final Map<String, ObjectFactory> objects = new LinkedHashMap<>();
     private final Map<String, BakedSheetRef> art = new LinkedHashMap<>();
     private final List<GamePatch> patches = new ArrayList<>();
+    private final List<ModZoneContribution> zones = new ArrayList<>();
+    private final java.util.Set<String> zoneKeys = new java.util.HashSet<>();
+    private final String defaultInsertAfter;
     private final java.util.Set<String> patchIds = new java.util.HashSet<>();
     private boolean frozen;
     private ModRegistrationException poison;
 
     ModContext(String owner, String baseGame, ModAssetRoot assets) {
+        this(owner, baseGame, assets, null);
+    }
+
+    ModContext(String owner, String baseGame, ModAssetRoot assets, String defaultInsertAfter) {
         this.owner = ModKeySyntax.requireManifestId(owner);
         this.baseGame = Objects.requireNonNull(baseGame, "baseGame");
         this.assets = Objects.requireNonNull(assets, "assets");
+        this.defaultInsertAfter = defaultInsertAfter;
     }
 
     public String ownerModId() { return owner; }
@@ -66,6 +74,25 @@ public final class ModContext {
         });
     }
 
+    public void registerZone(ModZoneContribution contribution) {
+        mutate(() -> {
+            if (!"s2".equals(baseGame)) {
+                throw failure("Additive zones are supported only for Sonic 2 in Phase 2");
+            }
+            Objects.requireNonNull(contribution, "contribution");
+            ModZoneContribution frozen = contribution.insertAfter() == null
+                    ? contribution.withDefaultAnchor(defaultInsertAfter == null ? "mtz3" : defaultInsertAfter)
+                    : contribution;
+            if (!com.openggf.mods.StockProgressionAnchors.contains("s2", frozen.insertAfter())) {
+                throw failure("Zone insertion anchor is not results-driven: " + frozen.insertAfter());
+            }
+            if (!zoneKeys.add(frozen.localKey())) {
+                throw failure("Duplicate zone key: " + owner + ":" + frozen.localKey());
+            }
+            zones.add(frozen);
+        });
+    }
+
     /** Stages a manifest-declared stock-key override without creator namespacing. */
     void registerManifestArtOverride(String stockKey, BakedSheetRef sheet) {
         mutate(() -> {
@@ -78,8 +105,26 @@ public final class ModContext {
 
     ModRegistrationPlan freeze() {
         requireOpen();
-        frozen = true;
-        return new ModRegistrationPlan(owner, baseGame, objects, art, patches);
+        try {
+            java.util.ArrayList<PreparedModZone> prepared = new java.util.ArrayList<>();
+            java.util.HashSet<Integer> levelIds = new java.util.HashSet<>();
+            java.util.HashSet<Integer> zoneIds = new java.util.HashSet<>();
+            for (ModZoneContribution zone : zones) {
+                ModLevelDefinition definition = ModLevelDefinitionParser.read(assets, zone.level());
+                if (!levelIds.add(definition.levelIndex()) || !zoneIds.add(definition.zoneIndex())) {
+                    throw new IllegalArgumentException("Duplicate authored level or zone index");
+                }
+                prepared.add(PreparedModZone.prepared(owner, zone, definition));
+            }
+            frozen = true;
+            return new ModRegistrationPlan(owner, baseGame, objects, art, Map.of(), patches,
+                    zones, prepared);
+        } catch (java.io.IOException | RuntimeException rejected) {
+            if (rejected instanceof ModRegistrationException registration) poison = registration;
+            else poison = new ModRegistrationException(owner, "MOD_LEVEL_ASSET_INVALID",
+                    "Missing or invalid baked level registration", null, rejected);
+            throw poison;
+        }
     }
 
     private String ownedPatchId(String value) {

@@ -35,8 +35,17 @@ public final class StreamedMusicPlayer {
     }
 
     public void play(int musicId, PreparedTrack prepared) {
+        playInternal(musicId, prepared, false);
+    }
+
+    /** Plays a namespaced track without assigning it a numeric stock-music id. */
+    public void play(PreparedTrack prepared) {
+        playInternal(-1, prepared, true);
+    }
+
+    private void playInternal(int musicId, PreparedTrack prepared, boolean namespaced) {
         requireUsable();
-        if (musicId < 0) throw new IllegalArgumentException("Logical music id must be nonnegative");
+        if (musicId < 0 && !namespaced) throw new IllegalArgumentException("Logical music id must be nonnegative");
         Objects.requireNonNull(prepared, "prepared");
         if (prepared.pcm().sampleRate() != outputRate) {
             throw new IllegalArgumentException("Prepared PCM rate does not match player output rate");
@@ -163,7 +172,7 @@ public final class StreamedMusicPlayer {
         Objects.requireNonNull(state, "state");
         Objects.requireNonNull(resolver, "resolver");
         if (state.key() == null) throw new IllegalArgumentException("Snapshot track key is required");
-        if (state.logicalMusicId() < 0) throw new IllegalArgumentException("Logical music id must be nonnegative");
+        if (state.logicalMusicId() < -1) throw new IllegalArgumentException("Logical music id must be -1 or nonnegative");
         validatePauseMask(state.pauseMask());
         validateFade(state.fade());
         if (!Double.isFinite(state.rate()) || (state.rate() != 1.0 && state.rate() != 1.25)) {

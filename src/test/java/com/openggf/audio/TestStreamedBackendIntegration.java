@@ -19,6 +19,24 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestStreamedBackendIntegration {
     @Test
+    void namespacedPreflightSeesPendingInstallAndExactKeyBeforeTimelineAcceptance() {
+        InstrumentedBackend backend = new InstrumentedBackend();
+        RecordingPort port = new RecordingPort(8_000, true);
+        StreamedMusicPort.TrackRef key = new StreamedMusicPort.TrackRef("owner", "track");
+        backend.installStreamedMusicPort(port);
+
+        assertFalse(backend.tryPlayStreamedMusic(
+                new StreamedMusicPort.TrackRef("other", "track")));
+        assertTrue(backend.tryPlayStreamedMusic(key));
+        backend.update();
+
+        StreamedMusicPort.State state = backend.captureLogicalSnapshot().streamedMusic();
+        assertNotNull(state);
+        assertEquals(key, state.track());
+        assertEquals(-1, state.logicalMusicId());
+    }
+
+    @Test
     void portInstallAndReplacementAreConsumedInFifoOrderAtUpdateBoundary() {
         InstrumentedBackend backend = new InstrumentedBackend();
         RecordingPort first = new RecordingPort(8_000, true);
@@ -619,6 +637,14 @@ class TestStreamedBackendIntegration {
             playCount++;
             if (source && logicalMusicId == musicId) return;
             source = true; logicalMusicId = musicId; position = 0;
+        }
+        @Override public boolean hasTrack(TrackRef track) {
+            return resolves && new TrackRef("owner", "track").equals(track);
+        }
+        @Override public void playTrack(TrackRef track) {
+            if (!hasTrack(track)) throw new IllegalArgumentException("missing: " + track);
+            playCount++;
+            source = true; logicalMusicId = -1; position = 0;
         }
         @Override public boolean hasSource() { checkLock(); return source; }
         @Override public int mixInto(short[] output, int frames) {

@@ -61,6 +61,22 @@ public final class ModStreamedMusicPort implements StreamedMusicPort {
         player.play(resolved.logicalMusicId(), resolved.track());
     }
 
+    @Override
+    public boolean hasTrack(TrackRef track) {
+        requireOpen();
+        Objects.requireNonNull(track, "track");
+        return resolver.resolve(toTrackKey(track)).isPresent();
+    }
+
+    @Override
+    public void playTrack(TrackRef track) {
+        requireOpen();
+        Objects.requireNonNull(track, "track");
+        PreparedTrack prepared = resolver.resolve(toTrackKey(track)).orElseThrow(() ->
+                new IllegalArgumentException("Unknown namespaced streamed track: " + track));
+        player.play(prepared);
+    }
+
     @Override public boolean hasSource() { requireOpen(); return player.playing(); }
     @Override public int mixInto(short[] output, int frames) { requireOpen(); return player.mixInto(output, frames); }
     @Override public void pause(int reason) { requireOpen(); player.pause(reason); }
@@ -113,6 +129,10 @@ public final class ModStreamedMusicPort implements StreamedMusicPort {
                 snapshot.logicalMusicId(), snapshot.sourceFramePosition(), snapshot.pauseMask(),
                 new FadeState(fade.gain(), fade.remainingSteps(), fade.stepDelay(),
                         fade.delayCounter(), fade.stepAmount()), snapshot.rate());
+    }
+
+    private static TrackKey toTrackKey(TrackRef track) {
+        return new TrackKey(track.owner(), track.name());
     }
 
     private static String requireGameCode(String gameCode) {

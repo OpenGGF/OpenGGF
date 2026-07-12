@@ -11,6 +11,8 @@ public final class ModApiSurfaceInventory {
             "com.openggf.mods.code.GgfMod",
             "com.openggf.mods.code.ModContext",
             "com.openggf.mods.code.BakedSheetRef",
+            "com.openggf.mods.code.BakedLevelRef",
+            "com.openggf.mods.code.ModLevelDefinition",
             "com.openggf.level.objects.BakedSheetReader",
             "com.openggf.game.patch.GamePatch",
             "com.openggf.game.patch.PatchContext",

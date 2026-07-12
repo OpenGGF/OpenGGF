@@ -90,6 +90,27 @@ public interface GameModule {
      */
     ZoneRegistry getZoneRegistry();
 
+    /** Narrow level-music seam; stock modules retain their numeric registry mapping. */
+    default MusicReference getLevelMusicReference(int zoneIndex, int actIndex) {
+        return getZoneRegistry().getMusicReference(zoneIndex, actIndex);
+    }
+
+    /** Returns a prepared additive level override, or {@code null} for stock loading. */
+    default com.openggf.level.Level loadLevelOverride(int levelIndex) throws java.io.IOException {
+        return null;
+    }
+
+    /** Supplies stock ring presentation for additive levels in this game. */
+    default com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet()
+            throws java.io.IOException {
+        return null;
+    }
+
+    /** Returns an additive-zone background scroll override, or {@code null} for stock behavior. */
+    default int[] getBackgroundScrollOverride(int levelIndex, int cameraX, int cameraY) {
+        return null;
+    }
+
     /**
      * Returns the special stage provider for this game.
      * Special stages award Chaos Emeralds when completed.

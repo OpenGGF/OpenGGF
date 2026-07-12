@@ -101,6 +101,8 @@ public class Sonic2GameModule implements GameModule {
     private Sonic2ZoneFeatureProvider zoneFeatureProvider;
     private PhysicsProvider physicsProvider;
     private ObjectRegistry objectRegistry;
+    private Rom activeRom;
+    private com.openggf.level.rings.RingSpriteSheet additiveRingSheet;
 
     @Override
     public String getIdentifier() {
@@ -119,7 +121,19 @@ public class Sonic2GameModule implements GameModule {
 
     @Override
     public Game createGame(Rom rom) {
+        activeRom = java.util.Objects.requireNonNull(rom, "rom");
+        additiveRingSheet = null;
         return new Sonic2(rom);
+    }
+
+    @Override
+    public synchronized com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet()
+            throws java.io.IOException {
+        if (activeRom == null) throw new IllegalStateException("Sonic 2 game has not been created");
+        if (additiveRingSheet == null) {
+            additiveRingSheet = new Sonic2RingArt(activeRom, RomByteReader.fromRom(activeRom)).load();
+        }
+        return additiveRingSheet;
     }
 
     @Override

@@ -16,8 +16,8 @@ class TestStreamedMusicPlayer {
         StreamedFadeSnapshot idle = new StreamedFadeSnapshot(1, 0, 0, 0, 0);
         assertThrows(NullPointerException.class,
                 () -> new StreamedPlaybackSnapshot(null, 1, 0, 0, idle, 1));
-        assertThrows(IllegalArgumentException.class,
-                () -> new StreamedPlaybackSnapshot(key, -1, 0, 0, idle, 1));
+        assertDoesNotThrow(() -> new StreamedPlaybackSnapshot(key, -1, 0, 0, idle, 1),
+                "-1 is the namespaced-track sentinel and must round-trip through snapshots");
         assertThrows(IllegalArgumentException.class,
                 () -> new StreamedPlaybackSnapshot(key, 1, Double.NaN, 0, idle, 1));
         assertThrows(IllegalArgumentException.class,
@@ -158,9 +158,9 @@ class TestStreamedMusicPlayer {
         assertThrows(IllegalArgumentException.class, () -> restored.restore(
                 state(snapshot, snapshot.sourceFramePosition(), snapshot.pauseMask(), snapshot.fade(), 2.0),
                 key -> prepared("music", true)));
-        assertThrows(IllegalArgumentException.class,
-                () -> new StreamedPlaybackSnapshot(snapshot.key(), -1,
-                        snapshot.sourceFramePosition(), snapshot.pauseMask(), snapshot.fade(), snapshot.rate()));
+        assertDoesNotThrow(() -> new StreamedPlaybackSnapshot(snapshot.key(), -1,
+                snapshot.sourceFramePosition(), snapshot.pauseMask(), snapshot.fade(), snapshot.rate()),
+                "namespaced playback snapshots intentionally carry no stock music id");
         assertEquals(Optional.of(snapshot), restored.capture(), "invalid restore must be atomic");
 
         StreamedMusicPlayer wrongRate = new StreamedMusicPlayer(16_000);

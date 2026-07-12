@@ -73,12 +73,19 @@ public class Sonic2Level extends AbstractLevel {
         return new InMemoryBuilder(zoneIndex, resourcePlan);
     }
 
+    /** Starts construction from already bounded, validated raw export payloads. */
+    public static InMemoryBuilder inMemoryBuilder(int zoneIndex, byte[] patterns,
+                                                   byte[] chunks, byte[] blocks) {
+        return new InMemoryBuilder(zoneIndex, patterns, chunks, blocks);
+    }
+
     private Sonic2Level(InMemoryBuilder source) throws IOException {
         super(source.zoneIndex);
         source.requireComplete();
 
-        ResourceLoader loader = ResourceLoader.forModAssetsOnly();
-        RawModResources raw = readAndValidateModResources(source, loader);
+        RawModResources raw = source.rawResources != null
+                ? validatePreparedModResources(source)
+                : readAndValidateModResources(source, ResourceLoader.forModAssetsOnly());
         decodePatterns(raw.patterns(), false, false);
         decodeChunks(raw.chunks(), source.primaryCollisionIndices, source.secondaryCollisionIndices);
         decodeBlocks(raw.blocks());
@@ -93,6 +100,17 @@ public class Sonic2Level extends AbstractLevel {
     }
 
     private record RawModResources(byte[] patterns, byte[] chunks, byte[] blocks) {
+    }
+
+    private static RawModResources validatePreparedModResources(InMemoryBuilder source) {
+        byte[] patterns = source.rawResources.patterns().clone();
+        byte[] chunks = source.rawResources.chunks().clone();
+        byte[] blocks = source.rawResources.blocks().clone();
+        int patternCount = exactRecordCount(patterns, Pattern.PATTERN_SIZE_IN_ROM, 2048, "pattern");
+        int chunkCount = exactRecordCount(chunks, Chunk.CHUNK_SIZE_IN_ROM, 1024, "chunk");
+        int blockCount = exactRecordCount(blocks, LevelConstants.BLOCK_SIZE_IN_ROM, 256, "block");
+        validateRawReferences(source, chunks, blocks, patternCount, chunkCount, blockCount);
+        return new RawModResources(patterns, chunks, blocks);
     }
 
     private static RawModResources readAndValidateModResources(
@@ -199,6 +217,7 @@ public class Sonic2Level extends AbstractLevel {
     public static final class InMemoryBuilder {
         private final int zoneIndex;
         private final LevelResourcePlan resourcePlan;
+        private final RawModResources rawResources;
         private int mapWidth;
         private int mapHeight;
         private byte[] foregroundMap;
@@ -224,6 +243,17 @@ public class Sonic2Level extends AbstractLevel {
             }
             this.zoneIndex = zoneIndex;
             this.resourcePlan = Objects.requireNonNull(resourcePlan, "resourcePlan");
+            this.rawResources = null;
+        }
+
+        private InMemoryBuilder(int zoneIndex, byte[] patterns, byte[] chunks, byte[] blocks) {
+            if (zoneIndex < 0) throw new IllegalArgumentException("Zone index must not be negative");
+            this.zoneIndex = zoneIndex;
+            this.resourcePlan = null;
+            this.rawResources = new RawModResources(
+                    Objects.requireNonNull(patterns, "patterns").clone(),
+                    Objects.requireNonNull(chunks, "chunks").clone(),
+                    Objects.requireNonNull(blocks, "blocks").clone());
         }
 
         public InMemoryBuilder layout(int width, int height, byte[] foreground, byte[] background) {

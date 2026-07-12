@@ -7,7 +7,7 @@ public record StreamedPlaybackSnapshot(TrackKey key, int logicalMusicId,
     public StreamedPlaybackSnapshot {
         java.util.Objects.requireNonNull(key, "key");
         java.util.Objects.requireNonNull(fade, "fade");
-        if (logicalMusicId < 0) throw new IllegalArgumentException("Logical music id must be nonnegative");
+        if (logicalMusicId < -1) throw new IllegalArgumentException("Logical music id must be -1 or nonnegative");
         if (!Double.isFinite(sourceFramePosition) || sourceFramePosition < 0) {
             throw new IllegalArgumentException("Source frame position must be finite and nonnegative");
         }

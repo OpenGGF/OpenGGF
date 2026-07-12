@@ -284,7 +284,9 @@ public class LevelManager {
      */
     void refreshZoneList() {
         levels.clear();
-        levels.addAll(gameModule.getZoneRegistry().getAllZones());
+        com.openggf.game.ZoneRegistry registry = gameModule.getZoneRegistry();
+        levels.addAll(registry.getAllZones());
+        setZoneProgressionPlan(registry.progressionPlan(), registry.progressionTopology());
     }
 
     /**
@@ -431,7 +433,16 @@ public class LevelManager {
         audioManager.setSoundMap(game.getSoundMap());
         audioManager.resetRingSound();
         if (!transitions.isSuppressNextMusicChange()) {
-            audioManager.playMusic(game.getMusicId(levelIndex));
+            com.openggf.game.MusicReference music =
+                    gameModule.getLevelMusicReference(currentZone, currentAct);
+            if (music instanceof com.openggf.game.MusicReference.Stock stock) {
+                audioManager.playMusic(stock.musicId());
+            } else {
+                com.openggf.game.MusicReference.Namespaced namespaced =
+                        (com.openggf.game.MusicReference.Namespaced) music;
+                audioManager.playNamespacedMusic(new com.openggf.audio.StreamedMusicPort.TrackRef(
+                        namespaced.owner(), namespaced.localName()));
+            }
         }
         transitions.setSuppressNextMusicChange(false);
     }
@@ -450,7 +461,8 @@ public class LevelManager {
      * @return the loaded Level instance (also assigned to {@code this.level})
      */
     public Level loadLevelData(int levelIndex) throws IOException {
-        Level loaded = game.loadLevel(levelIndex);
+        Level loaded = gameModule.loadLevelOverride(levelIndex);
+        if (loaded == null) loaded = game.loadLevel(levelIndex);
         writeCurrentLevel(loaded);
         rebuildLevelDerivedState();
         return loaded;

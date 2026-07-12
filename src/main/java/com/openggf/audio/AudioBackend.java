@@ -26,6 +26,18 @@ public interface AudioBackend {
         java.util.Objects.requireNonNull(stockFallback, "stockFallback").run();
     }
 
+    /** Atomically validates and queues exact keyed playback without a stock fallback. */
+    default boolean tryPlayStreamedMusic(StreamedMusicPort.TrackRef track) {
+        java.util.Objects.requireNonNull(track, "track");
+        return false;
+    }
+
+    /** Read-only exact-key preflight for command timelines that own later presentation. */
+    default boolean hasStreamedMusic(StreamedMusicPort.TrackRef track) {
+        java.util.Objects.requireNonNull(track, "track");
+        return false;
+    }
+
     default void beginStreamedOverrideReplayBypass() { }
 
     default void endStreamedOverrideReplayBypass() { }

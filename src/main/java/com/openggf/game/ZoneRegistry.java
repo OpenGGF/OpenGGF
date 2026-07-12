@@ -3,6 +3,7 @@ package com.openggf.game;
 import com.openggf.level.LevelDescriptor;
 
 import java.util.List;
+import java.util.OptionalInt;
 
 /**
  * Interface for game-specific zone/level metadata.
@@ -70,4 +71,43 @@ public interface ZoneRegistry {
      * @return the music ID, or -1 if no music is defined
      */
     int getMusicId(int zoneIndex, int actIndex);
+
+    /** Returns a tagged stock or namespaced music reference for this level. */
+    default MusicReference getMusicReference(int zoneIndex, int actIndex) {
+        return MusicReference.stock(getMusicId(zoneIndex, actIndex));
+    }
+
+    /** Returns the stable identity represented by one current runtime index. */
+    default ZoneKey zoneKey(int zoneIndex) {
+        if (zoneIndex < 0 || zoneIndex >= getZoneCount()) {
+            throw new IllegalArgumentException("Zone index is outside this registry: " + zoneIndex);
+        }
+        return ZoneKey.stock(zoneIndex);
+    }
+
+    /** Resolves a persisted identity without interpreting unknown numeric values as mod zones. */
+    default OptionalInt resolveZoneKey(ZoneKey key) {
+        if (key instanceof ZoneKey.Stock stock
+                && stock.zoneIndex() >= 0 && stock.zoneIndex() < getZoneCount()) {
+            return OptionalInt.of(stock.zoneIndex());
+        }
+        return OptionalInt.empty();
+    }
+
+    /** Resolves a game-owned, stable lower-case stock progression anchor. */
+    default int resolveStockZoneAnchor(String stockKey) {
+        throw new IllegalArgumentException("Unknown stock zone anchor: " + stockKey);
+    }
+
+    /** Immutable completion metadata for this exact registry snapshot. */
+    default ZoneProgressionPlan.ZoneTopology progressionTopology() {
+        int[] acts = new int[getZoneCount()];
+        for (int zone = 0; zone < acts.length; zone++) acts[zone] = getActCount(zone);
+        return ZoneProgressionPlan.ZoneTopology.linear(acts);
+    }
+
+    /** Progression graph built for {@link #progressionTopology()}. */
+    default ZoneProgressionPlan progressionPlan() {
+        return ZoneProgressionPlan.builder(progressionTopology()).build();
+    }
 }

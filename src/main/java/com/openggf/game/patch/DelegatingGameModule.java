@@ -117,6 +117,27 @@ public class DelegatingGameModule implements GameModule {
     }
 
     @Override
+    public MusicReference getLevelMusicReference(int zoneIndex, int actIndex) {
+        return base.getLevelMusicReference(zoneIndex, actIndex);
+    }
+
+    @Override
+    public com.openggf.level.Level loadLevelOverride(int levelIndex) throws java.io.IOException {
+        return base.loadLevelOverride(levelIndex);
+    }
+
+    @Override
+    public com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet()
+            throws java.io.IOException {
+        return base.getAdditiveLevelRingSpriteSheet();
+    }
+
+    @Override
+    public int[] getBackgroundScrollOverride(int levelIndex, int cameraX, int cameraY) {
+        return base.getBackgroundScrollOverride(levelIndex, cameraX, cameraY);
+    }
+
+    @Override
     public SpecialStageProvider getSpecialStageProvider() {
         return base.getSpecialStageProvider();
     }

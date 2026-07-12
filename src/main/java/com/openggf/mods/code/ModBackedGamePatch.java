@@ -15,13 +15,26 @@ import java.util.Set;
 /** Engine-owned backing decorator for one frozen content registration plan. */
 public final class ModBackedGamePatch implements GamePatch {
     private final ModRegistrationPlan plan;
+    private final ModFaultBoundary faultBoundary;
 
     public ModBackedGamePatch(ModRegistrationPlan plan) {
+        this(plan, null);
+    }
+
+    public ModBackedGamePatch(ModRegistrationPlan plan, ModFaultBoundary faultBoundary) {
         this.plan = Objects.requireNonNull(plan, "plan");
+        this.faultBoundary = faultBoundary;
         if (!plan.hasContent()) throw new IllegalArgumentException("Backing patch requires content");
         if (!plan.objectArt().isEmpty()
                 && !plan.preparedObjectArt().keySet().equals(plan.objectArt().keySet())) {
             throw new IllegalArgumentException("Backing patch requires validated object art");
+        }
+        if (!plan.preparedZones().isEmpty() && plan.preparedZones().size() != plan.zones().size()) {
+            throw new IllegalArgumentException("Backing patch requires validated mod zones");
+        }
+        if (plan.preparedZones().stream().anyMatch(zone -> zone.eventFactory() != null)
+                && faultBoundary == null) {
+            throw new IllegalArgumentException("Mod zone events require an installed fault boundary");
         }
     }
 
@@ -42,6 +55,8 @@ public final class ModBackedGamePatch implements GamePatch {
         ModObjectKeyRegistry objectKeys = new ModObjectKeyRegistry(registrations);
         return new DelegatingGameModule(base, id()) {
             private com.openggf.game.ObjectArtProvider objectArtProvider;
+            private com.openggf.game.ZoneRegistry zoneRegistry;
+            private com.openggf.game.LevelEventProvider levelEvents;
 
             @Override
             public ObjectRegistry createObjectRegistry() {
@@ -60,6 +75,53 @@ public final class ModBackedGamePatch implements GamePatch {
                             : ModArtOverlayProvider.decorate(inherited, plan.preparedObjectArt());
                 }
                 return objectArtProvider;
+            }
+
+            @Override
+            public synchronized com.openggf.game.ZoneRegistry getZoneRegistry() {
+                if (zoneRegistry == null) {
+                    zoneRegistry = ModZoneRegistry.decorate(super.getZoneRegistry(), plan.preparedZones());
+                }
+                return zoneRegistry;
+            }
+
+            @Override
+            public com.openggf.game.MusicReference getLevelMusicReference(int zoneIndex, int actIndex) {
+                return getZoneRegistry().getMusicReference(zoneIndex, actIndex);
+            }
+
+            @Override
+            public com.openggf.level.Level loadLevelOverride(int levelIndex)
+                    throws java.io.IOException {
+                com.openggf.game.ZoneRegistry registry = getZoneRegistry();
+                if (registry instanceof ModZoneRegistry mods) {
+                    PreparedModZone contribution = mods.levelContribution(levelIndex);
+                    if (contribution != null) return ModZoneLoader.load(
+                            contribution, super.getAdditiveLevelRingSpriteSheet());
+                }
+                return super.loadLevelOverride(levelIndex);
+            }
+
+            @Override
+            public int[] getBackgroundScrollOverride(int levelIndex, int cameraX, int cameraY) {
+                com.openggf.game.ZoneRegistry registry = getZoneRegistry();
+                if (registry instanceof ModZoneRegistry mods && mods.levelContribution(levelIndex) != null) {
+                    return new int[]{cameraX, cameraY};
+                }
+                return super.getBackgroundScrollOverride(levelIndex, cameraX, cameraY);
+            }
+
+            @Override
+            public synchronized com.openggf.game.LevelEventProvider getLevelEventProvider() {
+                if (levelEvents == null) {
+                    com.openggf.game.ZoneRegistry registry = getZoneRegistry();
+                    if (!(registry instanceof ModZoneRegistry mods)
+                            || mods.contributions().stream().noneMatch(zone -> zone.eventFactory() != null)) {
+                        return super.getLevelEventProvider();
+                    }
+                    levelEvents = new ModZoneEventProvider(super.getLevelEventProvider(), mods, faultBoundary);
+                }
+                return levelEvents;
             }
         };
     }

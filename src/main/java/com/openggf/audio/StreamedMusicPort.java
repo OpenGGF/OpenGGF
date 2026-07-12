@@ -20,6 +20,10 @@ public interface StreamedMusicPort extends AutoCloseable {
         @Override public boolean hasStockOverride(int musicId) { return false; }
         @Override public boolean isCurrentStockOverride(int musicId) { return false; }
         @Override public void playStockOverride(int musicId) { }
+        @Override public boolean hasTrack(TrackRef track) { Objects.requireNonNull(track, "track"); return false; }
+        @Override public void playTrack(TrackRef track) {
+            throw new IllegalArgumentException("No streamed track is installed: " + track);
+        }
         @Override public boolean hasSource() { return false; }
         @Override public int mixInto(short[] output, int frames) {
             validateOutput(output, frames);
@@ -92,7 +96,7 @@ public interface StreamedMusicPort extends AutoCloseable {
         public State {
             Objects.requireNonNull(track, "track");
             Objects.requireNonNull(fade, "fade");
-            if (logicalMusicId < 0) throw new IllegalArgumentException("Logical music id must be nonnegative");
+            if (logicalMusicId < -1) throw new IllegalArgumentException("Logical music id must be -1 or nonnegative");
             if (!Double.isFinite(sourceFramePosition) || sourceFramePosition < 0) {
                 throw new IllegalArgumentException("Source frame position must be finite and nonnegative");
             }
@@ -109,6 +113,16 @@ public interface StreamedMusicPort extends AutoCloseable {
     boolean hasStockOverride(int musicId);
     boolean isCurrentStockOverride(int musicId);
     void playStockOverride(int musicId);
+    default boolean hasTrack(TrackRef track) {
+        Objects.requireNonNull(track, "track");
+        return false;
+    }
+
+    /** Plays an exact namespaced key; implementations must fail rather than use stock fallback. */
+    default void playTrack(TrackRef track) {
+        throw new IllegalArgumentException("Unknown namespaced streamed track: "
+                + Objects.requireNonNull(track, "track"));
+    }
     boolean hasSource();
     int mixInto(short[] output, int frames);
     void pause(int reason);

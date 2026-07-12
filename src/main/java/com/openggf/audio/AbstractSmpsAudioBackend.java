@@ -133,6 +133,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private sealed interface StreamedTransition { }
     private record InstallStreamedPort(StreamedMusicPort port) implements StreamedTransition { }
     private record PlayStreamedOrElse(int musicId, Runnable fallback) implements StreamedTransition { }
+    private record PlayNamespacedTrack(StreamedMusicPort.TrackRef track) implements StreamedTransition { }
     private record SetStreamedPause(int reason, boolean paused) implements StreamedTransition { }
     private record FadeForeground(int steps, int delay) implements StreamedTransition { }
     private record SetStreamedSpeed(int multiplier) implements StreamedTransition { }
@@ -141,6 +142,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private record EndForegroundOverride(int musicId) implements StreamedTransition { }
     private final Deque<StreamedTransition> pendingStreamedTransitions = new ArrayDeque<>();
     private StreamedMusicPort streamedMusicPort = StreamedMusicPort.EMPTY;
+    private volatile StreamedMusicPort streamedMusicPreflightPort = StreamedMusicPort.EMPTY;
     private volatile boolean streamedOverrideReplayBypass;
     private boolean streamedRestoreFadeUnblocksSfx;
     private int streamedGlobalPauseMask;
@@ -271,6 +273,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                     + " differs from presentation rate " + expectedRate);
         }
         synchronized (streamedPortTransitionLock) {
+            streamedMusicPreflightPort = port;
             pendingStreamedTransitions.addLast(new InstallStreamedPort(port));
         }
     }
@@ -281,6 +284,26 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         Objects.requireNonNull(stockFallback, "stockFallback");
         synchronized (streamedPortTransitionLock) {
             pendingStreamedTransitions.addLast(new PlayStreamedOrElse(musicId, stockFallback));
+        }
+    }
+
+    @Override
+    public boolean tryPlayStreamedMusic(StreamedMusicPort.TrackRef track) {
+        Objects.requireNonNull(track, "track");
+        synchronized (streamedPortTransitionLock) {
+            if (!streamedMusicPreflightPort.hasTrack(track)) {
+                return false;
+            }
+            pendingStreamedTransitions.addLast(new PlayNamespacedTrack(track));
+            return true;
+        }
+    }
+
+    @Override
+    public boolean hasStreamedMusic(StreamedMusicPort.TrackRef track) {
+        Objects.requireNonNull(track, "track");
+        synchronized (streamedPortTransitionLock) {
+            return streamedMusicPreflightPort.hasTrack(track);
         }
     }
 
@@ -326,6 +349,21 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 } else {
                     play.fallback().run();
                 }
+            } else if (transition instanceof PlayNamespacedTrack play) {
+                if (!streamedMusicPort.hasTrack(play.track())) {
+                    throw new IllegalArgumentException("Unknown namespaced streamed track: " + play.track());
+                }
+                stopStream();
+                hookStopAndClearAllMusicBuffers();
+                streamedMusicPort.stop();
+                clearMusicStack();
+                stopAllSfx();
+                streamedMusicPort.playTrack(play.track());
+                streamedMusicPort.resume(StreamedMusicPort.PAUSE_JINGLE);
+                applyGlobalPausesToPort();
+                currentMusicId = -1;
+                currentMusicDescriptor = null;
+                pendingMusicDescriptor = null;
             } else if (transition instanceof SetStreamedPause pause) {
                 if (pause.reason() == StreamedMusicPort.PAUSE_APP
                         || pause.reason() == StreamedMusicPort.PAUSE_REWIND) {
@@ -358,6 +396,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     public void resetStreamedMusicPort() {
         Set<StreamedMusicPort> toClose = Collections.newSetFromMap(new IdentityHashMap<>());
         synchronized (streamedPortTransitionLock) {
+            streamedMusicPreflightPort = StreamedMusicPort.EMPTY;
             StreamedTransition pending;
             while ((pending = pendingStreamedTransitions.pollFirst()) != null) {
                 if (pending instanceof InstallStreamedPort install
