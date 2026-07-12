@@ -37,10 +37,13 @@ Use only the skill and resources it explicitly requires. Do not infer additional
 | R21 | Exact AnPal state domain | Workflow preserves the disassembly's exact state domain and explicitly rejects richer enums/intermediate states when the ROM stores one bit. |
 | R22 | Exact AnPal frame phase | Workflow determines ordering relative to counter increment and object updates and tests the value consumers observe in the real frame pipeline. |
 | R23 | AnPal edge/lifecycle validation | Workflow tests at least two consecutive qualifying edges and exact counter/state restoration through rewind plus death/restart/checkpoint/session lifecycles as applicable. |
+| R24 | AnPal entry-point gates | Workflow audits `Palette_fade_timer` and every other entry guard, then proves whether a suppressed qualifying edge is skipped or deferred rather than assuming catch-up. |
+| R25 | Gated pipeline validation | A real integrated counter-increment -> gated AnPal -> object-consumer test covers two qualifying edges, one suppressed edge, and the native catch-up/no-catch-up result after the gate clears. |
+| R26 | Shared future-consumer API | The consumer graph includes present and planned object families (for example Blaster), and shared state/API lives at the runtime owner rather than inside the first consuming family. |
 
 ## Verdict
 
-- **GREEN:** R1-R23 all PASS.
+- **GREEN:** R1-R26 all PASS.
 - **RED:** Any assertion fails or is only optional/implied.
 
 Record the exact prompt, raw agent output, per-assertion PASS/FAIL result, and overall verdict in both baseline and forward-test artifacts.

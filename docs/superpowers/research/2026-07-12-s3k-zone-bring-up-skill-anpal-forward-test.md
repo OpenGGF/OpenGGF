@@ -91,3 +91,51 @@ Structural validation:
 - `.agents` and `.claude` mirrors are byte-identical (SHA-256 `6A1DCB43C150F6034D8C997BC5D9E40F6CD349FC7A8CA81C4B14395DE5B24274`).
 - Both mirrors pass `skill-creator/scripts/quick_validate.py` with UTF-8 mode.
 - `git diff --check` passes.
+
+## Incremental entry-gate evaluation
+
+### Exact evaluation prompt
+
+```text
+Read only the s3k-zone-bring-up skill. An S3K AnPal gameplay-state mutation is reached only when Palette_fade_timer is zero. A qualifying counter edge occurs while fading; later Blaster-family objects will consume the same state. State the mandatory analysis, ownership, ordering, and integrated tests. Score explicit PASS/FAIL: R24 audits every entry gate and distinguishes a permanently skipped edge from deferred/catch-up work; R25 requires a real counter-increment -> gated AnPal -> object-consumer pipeline test with two qualifying edges, suppression, and the post-gate catch-up/no-catch-up result; R26 includes planned consumer families such as Blaster and keeps the API shared at the runtime owner rather than family-local. Mark PASS only if explicit, not inferred.
+```
+
+### Baseline raw output (prior gate)
+
+```text
+R24: FAIL — the gate required exact counter phase and qualifying edges, but did not require auditing Palette_fade_timer or other entry guards and did not distinguish a skipped edge from deferred work.
+
+R25: FAIL — it required the real counter-increment -> AnPal -> object-update pipeline at two qualifying edges, but not a suppressed edge or the post-gate no-catch-up/catch-up result. A fade-suppressed edge could therefore be replayed later without failing the documented gate.
+
+R26: FAIL — it required the complete current consumer graph and the real runtime owner, but did not explicitly include planned families such as Blaster or reject a contract embedded in the first consuming family.
+```
+
+Baseline verdict: **RED, 0/3** for R24-R26. The prior 4/4 AnPal gate could still miss a fade-suppressed qualifying edge incorrectly deferred until `Palette_fade_timer` cleared.
+
+### Independent updated raw output
+
+```text
+- Audit every entry gate before mutation, especially `Palette_fade_timer`, plus act/mode/event guards. Trace the disassembly to determine whether a qualifying edge suppressed during fading is permanently skipped or deferred/caught up. The skill mandates this analysis; it does not prescribe which semantic is correct.
+- Put the exact native state domain at its real runtime owner, exposed through a shared typed runtime state/API—normally a `ZoneRuntimeRegistry` adapter. It must not live in `PaletteOwnershipRegistry`, the palette cycler, or the first Blaster-family consumer.
+- Reproduce exact frame ordering: establish whether the routine reads before/after counter increment, then test the real pipeline of counter increment → gated AnPal dispatch → object updates, including whether consumers observe the old or new value.
+- Integrated coverage must include an ungated qualifying edge, the next qualifying edge while fade is nonzero and therefore suppressed, gate clearing, and the following pipeline/qualifying edge proving the disassembly’s catch-up or no-catch-up result. Assert every consumer’s observed value at each edge; cover at least two consecutive qualifying edges.
+- Also capture/restore the exact state and counter phase through rewind, with round-trip coverage, and verify death/restart, checkpoint, and session reload where those lifecycles can cross the transition.
+```
+
+### Updated scoring
+
+```text
+R24: PASS — the skill explicitly requires auditing Palette_fade_timer plus every act/mode/event entry guard, and determining from the disassembly whether suppression skips the edge permanently or defers it for catch-up.
+
+R25: PASS — the skill explicitly requires the integrated counter-increment -> gated AnPal -> object-update pipeline to prove two qualifying edges, a gated suppression, and the native catch-up or no-catch-up result after the gate clears.
+
+R26: PASS — the skill explicitly inventories present and planned consumers, names later Blaster-family work as an example, and requires shared typed state/API at the real runtime owner rather than a family-local contract.
+```
+
+Updated verdict: **GREEN, 3/3** for R24-R26. The gate now rejects both fade-suppressed-edge catch-up invented by the engine and a first-family-local API that would block later consumers.
+
+Incremental structural validation:
+
+- `.agents` and `.claude` mirrors are byte-identical (SHA-256 `062069711FA1A30EDC9CBE0E887E1BEF97B95106A2968393BD4C35FE997C57F5`).
+- Both mirrors pass `skill-creator/scripts/quick_validate.py` with UTF-8 mode.
+- `git diff --check` passes.

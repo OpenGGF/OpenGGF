@@ -88,8 +88,10 @@ Preserve the exact native state domain. A ROM bit remains a bit unless the disas
 
 Before accepting an AnPal-backed state transition:
 
+- Audit every entry-point gate before the mutation, including `Palette_fade_timer` and any act, mode, or event guard. Determine from the disassembly whether a qualifying counter edge suppressed by a gate is skipped permanently or deferred for catch-up; do not infer deferred work merely because the counter continues advancing.
 - Test at least two consecutive qualifying edges, including the value observed by every consumer on each edge. A single transition can conceal an invented third state or an off-by-one phase.
-- Test the actual frame pipeline around counter increment, AnPal dispatch, and object updates rather than calling the state helper in isolation.
+- Test the actual frame pipeline around counter increment, gated AnPal dispatch, and object updates rather than calling the state helper in isolation. The integrated test must prove two qualifying edges, suppression on a gated edge, and the native catch-up or no-catch-up result after the gate clears.
+- Inventory present and planned consumers across the complete zone object graph (for example, later Blaster-family work). Expose shared typed runtime state/API at the real owner; do not place the contract in the first object family that happens to consume it.
 - Capture and restore the exact state and counter phase through rewind; verify death/restart, checkpoint, and session reload behavior when those lifecycles can cross the transition.
 
 ## Slice-First Completion Rule
