@@ -1314,6 +1314,14 @@ public final class Sonic3kPlcArtRegistry {
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_DEZ_PLAYER_LAUNCHER,
                 Sonic3kConstants.MAP_FBZ_DEZ_PLAYER_LAUNCHER_ADDR,
                 Sonic3kConstants.ARTTILE_FBZ_MISC + 0x3C, 1, null, new int[]{0}));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_DISAPPEARING_PLATFORM,Sonic3kConstants.MAP_FBZ_DISAPPEARING_PLATFORM_ADDR,Sonic3kConstants.ARTTILE_FBZ_MISC+0x41,1,null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_SCREW_DOOR,Sonic3kConstants.MAP_FBZ_SCREW_DOOR_ADDR,Sonic3kConstants.ARTTILE_FBZ_MISC+0x59,1,null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_PROPELLER,Sonic3kConstants.MAP_FBZ_PROPELLER_ADDR,Sonic3kConstants.ARTTILE_FBZ_OUTDOORS,1,null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_PISTON,Sonic3kConstants.MAP_FBZ_PISTON_ADDR,Sonic3kConstants.ARTTILE_FBZ_OUTDOORS+0x36,1,null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_PLATFORM_BLOCKS,Sonic3kConstants.MAP_FBZ_PLATFORM_BLOCKS_ADDR,Sonic3kConstants.ARTTILE_FBZ_MISC+0x94,2,null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_MISSILE_LAUNCHER,Sonic3kConstants.MAP_FBZ_MISSILE_LAUNCHER_ADDR,Sonic3kConstants.ARTTILE_FBZ_OUTDOORS+0x46,1,null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_MISSILE_LAUNCHER_COMPANION,Sonic3kConstants.MAP_FBZ_MISSILE_LAUNCHER_ADDR,Sonic3kConstants.ARTTILE_FBZ_OUTDOORS+0x46,2,null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_WALL_MISSILE,Sonic3kConstants.MAP_FBZ_WALL_MISSILE_ADDR,Sonic3kConstants.ARTTILE_FBZ_OUTDOORS+0x46,1,null));
 
         // Override shared spikes to FBZ tile address
         levelArt.removeIf(e -> e.key().equals(Sonic3kObjectArtKeys.SPIKES));

@@ -21,6 +21,7 @@ class TestFbzObjectRegistryCompleteness {
             0x00, 0x01, 0x02, 0x07, 0x08, 0x0F, 0x26, 0x28, 0x2A,
             0x2F, 0x33, 0x34, 0x3D, 0x6A, 0x6B,
             0x6F, 0x70, 0x71, 0x72, 0x75, 0x76, 0x77, 0x78,
+            0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F, 0xE0,
             0x80, 0x85);
 
     @Test
@@ -38,7 +39,7 @@ class TestFbzObjectRegistryCompleteness {
     }
 
     @Test
-    void checkedLayoutsContainExactly412CurrentPlaceholderPlacements() throws IOException {
+    void checkedLayoutsContainExactly330CurrentPlaceholderPlacements() throws IOException {
         Sonic3kObjectRegistry registry = new FbzTestRegistry();
         List<ObjectSpawn> placements = new java.util.ArrayList<>();
         placements.addAll(TestFbzObjectInventory.load("1.bin"));
@@ -48,7 +49,7 @@ class TestFbzObjectRegistryCompleteness {
                 .map(registry::create)
                 .filter(PlaceholderObjectInstance.class::isInstance)
                 .count();
-        assertEquals(412, placeholders);
+        assertEquals(330, placeholders);
 
         for (ObjectSpawn spawn : placements) {
             ObjectInstance instance = registry.create(spawn);

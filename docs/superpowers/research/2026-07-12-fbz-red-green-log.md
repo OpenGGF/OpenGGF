@@ -549,3 +549,88 @@ recorded as `unknown/not previously run` rather than inferred.
   run passed all 124 in-scope Task 7/inventory/shared/PLC/art/static-rewind
   assertions; the only failures were inherited AIZ guard findings after marking
   Bent Pipe's constructor-derived size index rewind-transient. No trace ran.
+- Task 8 mechanical-family RED began with 10 missing class symbols for the
+  locked-on `$79-$7F/$E0` implementations. Focused correction tests then exposed
+  the remaining compressed behavior: `$79` irregular-delay timing and rider
+  release, `$7B` P1-only camera ownership, missile allocation-failure state,
+  companion explosion retries, and `$E0` child fixed-point/offscreen ordering.
+- Task 8 focused GREEN implements all 82 placed records across the eight IDs.
+  `$79` follows the global phase gate and exact 6-frame non-solid / 121-frame
+  solid cycle while releasing every participating rider; `$7B` keeps scalable
+  simultaneous participant state but only a held P1 requests forced camera
+  position. `$7C-$7E` retain their exact collision, moving-solid, and P1-trigger
+  contracts without invented wind, breakage, buttons, or debris behavior.
+- Task 8 missile graph RED first failed on missing companion relink accessors,
+  then proved a real `$E0` double-shift bug (`$400` moved 1024 px instead of
+  4 px) and clarified that slot replacement marks the old missile destroyed
+  before normal ObjectManager cleanup. GREEN now round-trips a real `$7F`
+  parent/companion/missile graph through snapshot, removal/divergence, and
+  restore with exact roles, family slots, configuration, impact count, relinks,
+  no duplicate children, and same-slot explosion replacement. Companion
+  allocation failure preserves five impacts, explosion failure retries the same
+  offset, and no non-ROM parent-destruction cascade is added. `$E0` children are
+  parentless, toggle only on the four-frame boundary, and delete before motion
+  when offscreen.
+- Final Task 8 bounded coverage passed 21/21: disappearing/screw 5/5,
+  pole/propeller/piston/blocks 6/6, missile behavior 7/7, real graph rewind 1/1,
+  and registry/profile completeness 2/2. The executable placeholder ratchet is
+  exactly 330. Rewind and constructor guards contain only the inherited AIZ
+  emerald-glow final scalars and miniboss camera-controller spawns; no Task 8
+  finding remains. `git diff --check` is clean. No trace or commit ran.
+- Task 8 spec re-review RED added five direct regressions and all failed on the
+  prior compressed behavior: ordinary `$7F` missiles skipped
+  `ObjCheckFloorDist`, `$7B` treated held jump as a fresh logical press, the
+  launcher companion culled from its displaced X and survived detonation,
+  `$7C` used a 2D viewport test, and legacy `$7A` bit-4 incorrectly reversed
+  the restored `$40` Y displacement.
+- Task 8 spec re-review GREEN now probes ordinary missiles every frame with
+  radius `$C`, snaps on strictly negative distance, and replaces the same slot
+  with the explosion at snapped Y+4. The pole reads the canonical logical jump
+  press edge, so a jump held before capture cannot launch. The companion stores
+  the parent `$44` anchor, changes both X/anchor to `$7F00` on detonation, and
+  executes its solid/cull tail in that same update. Propeller deletion is the
+  exact coarse-X `$280` path, and legacy screw-door restore always adds `$40`
+  Y regardless of direction bit 4. Focused correction coverage passed 28/28.
+- Task 8 final branch re-review RED isolated two follow-on cases: a target-bit
+  missile already in flight did not start floor probing after the fifth impact
+  cleared its parent's target mode, and restored legacy horizontal doors still
+  applied subtype X motion. GREEN makes every missile use the target branch only
+  while its parent remains in target mode, otherwise falling through to the
+  ordinary floor probe; restored legacy doors now return exactly placement X and
+  placement Y+`$40`, bypassing all subtype motion. The two direct suites passed
+  21/21 after both corrections.
+- Task 8 quality-review RED isolated three implementation defects: spinning-pole
+  rolling/standing radius swaps moved native `y_pos` and lost the intended
+  distinction between the capture-time ROM radius delta and the launch-time
+  no-movement swap; piston `update` duplicated the manager's custom-range check
+  behind a broad `catch (Exception)`; and AllocateObjectAfterCurrent siblings
+  used child-named rewind adoption despite having independent lifetimes. The
+  three direct boundary tests failed before the corrections.
+- Task 8 quality-review GREEN preserves full Y subpixel state, applies the
+  explicit old-radius minus standing-radius native Y delta only when capturing
+  a rolling player, and preserves native Y across launch into each character's
+  rolling radii. Piston now leaves its null-safe custom predicate entirely to
+  `ObjectManager`. The shared after-current allocator now serves structural
+  children and independent siblings through neutral reconstruction-object
+  adoption; direct tests prove same-frame ordering, allocation failure at slot
+  127, probe-construction suppression, and absence of allocator lifetime
+  cascade. The launcher family graph passes both the default in-place restore
+  and forced reconstruction paths with exact roles, links, slots, same-slot
+  replacement, and no duplicates.
+- Mechanical formatting expanded all eleven Task 8 production classes and the
+  four focused/graph tests into readable Java. Repeated `$FF80` coarse-X delete
+  math is now a named shared helper without changing the ROM unsigned-distance
+  behavior. Focused Task 8 plus sibling-allocation coverage passed 43/43;
+  inventory/completeness/corruption coverage passed 6/6. The affected guard run
+  added no Task 8 findings: its failures remain inherited AIZ emerald-glow
+  rewind scalars, AIZ miniboss inline camera-controller spawns, and unrelated
+  pre-existing physics/lifecycle ratchet drift. `git diff --check` is clean.
+  No trace or commit ran.
+- Final Task 8 quality normalization removed the last minified methods and
+  inconsistent indentation from the disappearing-platform/screw-door test;
+  its source now has no lines over 120 characters. The disappearing platform's
+  phase masks and solid durations are named `static final` lookup tables, so
+  neither construction nor the per-cycle script transition allocates a new
+  array. The direct suite passed 9/9 and the complete Task 8 focused matrix
+  passed 43/43 after this change; `git diff --check` remains clean. No trace or
+  commit ran.

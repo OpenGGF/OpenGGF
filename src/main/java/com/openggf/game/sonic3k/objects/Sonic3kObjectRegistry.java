@@ -1295,6 +1295,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factories.put(Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER,
                 (spawn, registry) -> isFbzS3kl() ? new FbzDezPlayerLauncherObjectInstance(spawn)
                         : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_DISAPPEARING_PLATFORM,(spawn,registry)->isFbzS3kl()?new FbzDisappearingPlatformObjectInstance(spawn):new PlaceholderObjectInstance(spawn,getPrimaryName(spawn.objectId(),getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_SCREW_DOOR,(spawn,registry)->isFbzS3kl()?new FbzScrewDoorObjectInstance(spawn):new PlaceholderObjectInstance(spawn,getPrimaryName(spawn.objectId(),getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_SPINNING_POLE,(spawn,registry)->isFbzS3kl()?new FbzSpinningPoleObjectInstance(spawn):new PlaceholderObjectInstance(spawn,getPrimaryName(spawn.objectId(),getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_PROPELLER,(spawn,registry)->isFbzS3kl()?new FbzPropellerObjectInstance(spawn):new PlaceholderObjectInstance(spawn,getPrimaryName(spawn.objectId(),getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_PISTON,(spawn,registry)->isFbzS3kl()?new FbzPistonObjectInstance(spawn):new PlaceholderObjectInstance(spawn,getPrimaryName(spawn.objectId(),getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_PLATFORM_BLOCKS,(spawn,registry)->isFbzS3kl()?new FbzPlatformBlocksObjectInstance(spawn):new PlaceholderObjectInstance(spawn,getPrimaryName(spawn.objectId(),getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_MISSILE_LAUNCHER,(spawn,registry)->isFbzS3kl()?new FbzMissileLauncherObjectInstance(spawn):new PlaceholderObjectInstance(spawn,getPrimaryName(spawn.objectId(),getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_WALL_MISSILE,(spawn,registry)->isFbzS3kl()?new FbzWallMissileObjectInstance(spawn):new PlaceholderObjectInstance(spawn,getPrimaryName(spawn.objectId(),getCurrentZoneSet())));
     }
 
     private boolean isFbzS3kl() {

@@ -17,6 +17,14 @@ public final class Sonic3kObjectIds {
     public static final int FBZ_BENT_PIPE = 0x76;
     public static final int FBZ_ROTATING_PLATFORM = 0x77;
     public static final int FBZ_DEZ_PLAYER_LAUNCHER = 0x78;
+    public static final int FBZ_DISAPPEARING_PLATFORM = 0x79;
+    public static final int FBZ_SCREW_DOOR = 0x7A;
+    public static final int FBZ_SPINNING_POLE = 0x7B;
+    public static final int FBZ_PROPELLER = 0x7C;
+    public static final int FBZ_PISTON = 0x7D;
+    public static final int FBZ_PLATFORM_BLOCKS = 0x7E;
+    public static final int FBZ_MISSILE_LAUNCHER = 0x7F;
+    public static final int FBZ_WALL_MISSILE = 0xE0;
     public static final int RING = 0x00;
     public static final int MONITOR = 0x01;
     public static final int PATH_SWAP = 0x02;

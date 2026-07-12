@@ -4295,10 +4295,15 @@ public class ObjectManager {
      * parent still receives this instance as its back-reference, so adopting it in place keeps
      * the parent's child references valid while giving the child its exact captured state.
      */
-    public void registerRewindReconstructionChild(AbstractObjectInstance child) {
-        if (child != null && rewindReconstructionChildCapture) {
-            rewindReconstructionChildren.add(child);
+    public void registerRewindReconstructionObject(AbstractObjectInstance object) {
+        if (object != null && rewindReconstructionChildCapture) {
+            rewindReconstructionChildren.add(object);
         }
+    }
+
+    /** Compatibility name for construction-spawned structural children. */
+    public void registerRewindReconstructionChild(AbstractObjectInstance child) {
+        registerRewindReconstructionObject(child);
     }
 
     /**

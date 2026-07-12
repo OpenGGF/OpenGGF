@@ -364,6 +364,14 @@ public final class Sonic3kObjectArtKeys {
     public static final String FBZ_ROTATING_PLATFORM = "fbz_rotating_platform";
     public static final String FBZ_ROTATING_PLATFORM_SPECIAL = "fbz_rotating_platform_special";
     public static final String FBZ_DEZ_PLAYER_LAUNCHER = "fbz_dez_player_launcher";
+    public static final String FBZ_DISAPPEARING_PLATFORM = "fbz_disappearing_platform";
+    public static final String FBZ_SCREW_DOOR = "fbz_screw_door";
+    public static final String FBZ_PROPELLER = "fbz_propeller";
+    public static final String FBZ_PISTON = "fbz_piston";
+    public static final String FBZ_PLATFORM_BLOCKS = "fbz_platform_blocks";
+    public static final String FBZ_MISSILE_LAUNCHER = "fbz_missile_launcher";
+    public static final String FBZ_MISSILE_LAUNCHER_COMPANION = "fbz_missile_launcher_companion";
+    public static final String FBZ_WALL_MISSILE = "fbz_wall_missile";
     public static final String STILL_SOZ_001 = "still_soz_001";           // base 0x001
     public static final String STILL_SOZ_CORK = "still_soz_cork";         // base 0x3AF
     public static final String STILL_DEZ_BEAM = "still_dez_beam";         // base 0x3FF

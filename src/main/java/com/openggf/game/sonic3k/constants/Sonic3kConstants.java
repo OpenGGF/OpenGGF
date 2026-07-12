@@ -215,6 +215,15 @@ public class Sonic3kConstants {
     public static final int MAP_FBZ_SNAKE_PLATFORM_ADDR = 0x03B6CE;
     public static final int MAP_FBZ_BENT_PIPE_ADDR = 0x03B73C;
     public static final int MAP_FBZ_ROTATING_PLATFORM_ADDR = 0x03B91A;
+    public static final int MAP_FBZ_DISAPPEARING_PLATFORM_ADDR = 0x03BBBE;
+    public static final int MAP_FBZ_SCREW_DOOR_ADDR = 0x03BD8E;
+    public static final int MAP_FBZ_SPINNING_POLE_ADDR = 0x03C19C;
+    public static final int MAP_FBZ_PROPELLER_ADDR = 0x03C20C;
+    public static final int MAP_FBZ_PISTON_ADDR = 0x03C328;
+    public static final int MAP_FBZ_PLATFORM_BLOCKS_ADDR = 0x03C416;
+    public static final int MAP_FBZ_MISSILE_LAUNCHER_ADDR = 0x03C78E;
+    public static final int MAP_FBZ_WALL_MISSILE_ADDR = 0x03C906;
+    public static final int ARTTILE_FBZ_OUTDOORS = 0x02E5;
     public static final int MAP_FBZ_DEZ_PLAYER_LAUNCHER_ADDR = 0x03BA8A;
 
     // ===== Breakable Wall mappings (Obj_BreakableWall, ID 0x0D) =====

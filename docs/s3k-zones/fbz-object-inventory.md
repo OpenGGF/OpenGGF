@@ -244,13 +244,13 @@ changing native ordering.
 | `$76` BentPipe | concrete | static full-solid | `Map_FBZBentPipe` | all solid participants | placement | `TestFbzPlayerTransportObjects` | concrete; three exact solid shapes covered |
 | `$77` RotatingPlatform | concrete | traversal | `Map_FBZRotatingPlatform` | native pair riders | placement + 1-6 group FNFO | `TestFbzSnakeAndRotatingPlatforms` | concrete; used 6/2 member tables and special first form covered |
 | `$78` DEZPlayerLauncher | concrete | forced launch | `Map_FBZDEZPlayerLauncher` | native pair extended to engine sidekicks | placement | `TestFbzPlayerTransportObjects` | concrete; 12-tick acceleration/return covered |
-| `$79` DisappearingPlatform | placeholder | timed traversal | `Map_FBZDisappearingPlatform` / `Ani_FBZDisappearingPlatform` | native pair riders | placement | `TestFbzDisappearingPlatformAndScrewDoor` | pending |
-| `$7A` ScrewDoor | placeholder | gate | `Map_FBZScrewDoor` / `Ani_FBZScrewDoor` | native pair solids | placement | `TestFbzDisappearingPlatformAndScrewDoor` | pending |
-| `$7B` SpinningPole | placeholder | grab/transport | `Map_FBZSpinningPole` | native pair; exclusive grab owner | placement | `TestFbzPolePropellerPistonAndBlocks` | pending |
-| `$7C` Propeller | placeholder | wind traversal | `Map_FBZPropeller` | native pair | placement | `TestFbzPolePropellerPistonAndBlocks` | pending |
-| `$7D` Piston | placeholder | crusher | `Map_FBZPiston` | native pair | placement | `TestFbzPolePropellerPistonAndBlocks` | pending |
-| `$7E` PlatformBlocks | placeholder | breakable traversal | `Map_FBZPlatformBlocks` | native pair | placement + debris FNFO | `TestFbzPolePropellerPistonAndBlocks` | pending |
-| `$7F` MissileLauncher | placeholder | projectile hazard | `Map_FBZMissileLauncher` | native pair touch | placement + companion/projectiles FNFO; impact slot reuse | `TestFbzMissileObjects` | pending |
+| `$79` DisappearingPlatform | concrete | timed traversal | `Map_FBZDisappearingPlatform` / `Ani_FBZDisappearingPlatform` | native pair riders | placement | `TestFbzDisappearingPlatformAndScrewDoor` | concrete; subtype phase masks/offsets and solid window covered |
+| `$7A` ScrewDoor | concrete | gate | `Map_FBZScrewDoor` / `Ani_FBZScrewDoor` | native pair solids | placement | `TestFbzDisappearingPlatformAndScrewDoor` | concrete; every placed trigger/axis/direction row covered |
+| `$7B` SpinningPole | concrete | grab/transport | player mappings/DPLC | native pair plus extended sidekicks | placement | `TestFbzPolePropellerPistonAndBlocks` | concrete; scalable participant state covered |
+| `$7C` Propeller | concrete | inline blade touch hazard | `Map_FBZPropeller` | collision response list | placement | `TestFbzPolePropellerPistonAndBlocks` | concrete; exact four-phase collision flags covered |
+| `$7D` Piston | concrete | horizontal moving solid | `Map_FBZPiston` | all riders | placement | `TestFbzPolePropellerPistonAndBlocks` | concrete; subtype `$28` 320px recurrence covered |
+| `$7E` PlatformBlocks | concrete | P1-Y-triggered moving solid | `Map_FBZPlatformBlocks` | full solid; P1 trigger source | placement | `TestFbzPolePropellerPistonAndBlocks` | concrete; every placed width/travel row covered |
+| `$7F` MissileLauncher | concrete | projectile hazard | `Map_FBZMissileLauncher` | native touch | placement + companion/projectiles FNFO; impact explosion replacement | `TestFbzMissileObjects` | concrete; cadence/trajectory/failure rules covered |
 | `$80` HiddenMonitor | concrete | reward | shared monitor PLC/map | native pair/shared policy | placement | `TestFbzSharedPlacedObjects` | concrete; subtype validation pending |
 | `$85` SSEntryRing | concrete | bonus entry | shared ring art | main/native pair per shared contract | placement | `TestFbzSharedPlacedObjects` | concrete; subtype validation pending |
 | `$8A` ExitHall | placeholder | finale traversal | `Map_FBZExitHall`, exit handoff | none/solid scenery | placement | `TestFbzExitHall` | pending |
@@ -261,7 +261,7 @@ changing native ordering.
 | `$CE` ExitDoor | placeholder | finale gate | `Map_FBZExitDoor`, exit handoff | native pair solids | placement | `TestFbzExitDoor` | pending |
 | `$CF` FBZEggPrison | placeholder | destructible/reward | `Map_FBZEggCapsule`, `ArtNem_FBZEggCapsule` | native pair attack/touch | placement + top/animals FNFO; explosion slot reuse | `TestFbzEggPrison` | pending |
 | `$D0` SpringPlunger | placeholder | miniboss/finale traversal | `ObjDat_FBZSpringPlunger` mapping/art attributes | native pair riders | placement only; no child allocation | `TestFbzEggPrison` | pending |
-| `$E0` WallMissile | placeholder | projectile hazard | `Map_FBZWallMissile` | native pair touch | placement + missiles FNFO | `TestFbzMissileObjects` | pending |
+| `$E0` WallMissile | concrete | projectile hazard | `Map_FBZWallMissile` | native touch | placement + parentless missiles FNFO | `TestFbzMissileObjects` | concrete; on-screen cadence/muzzle lockout covered |
 | `$E1` Mine | placeholder | hazard | `Map_FBZMine` | native pair proximity/touch | placement; explosion in-place | `TestFbzMine` | pending |
 | `$E2` Elevator | placeholder | traversal | `Map_FBZElevator` | native pair riders | placement + car FNFO | `TestFbzElevator` | pending |
 | `$E3` TrapSpring | placeholder | forced launch | `Map_FBZTrapSpring` / `Ani_FBZTrapSpring` | native pair | placement | `TestFbzTrapSpring` | pending |

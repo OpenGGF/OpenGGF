@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 public class TestObjectManagerChildSlotAllocation {
@@ -129,6 +130,54 @@ public class TestObjectManagerChildSlotAllocation {
                 "ROM allocation failure leaves no live child object");
         assertEquals(0, parent.child.updateCount,
                 "slotless overflow children must not execute through the fallback loop");
+    }
+
+    @Test
+    public void independentSiblingUsesAfterCurrentOrderingAndDoesNotCascadeWithAllocator() {
+        ManagerFixture fixture = newManagerFixture();
+        SiblingParentObject parent = new SiblingParentObject(
+                new ObjectSpawn(0, 0, 0, 0, 0, false, 0));
+        fixture.manager().addDynamicObjectAtSlot(parent, 40);
+
+        fixture.manager().update(0, null, null, 1);
+
+        assertNotNull(parent.sibling);
+        assertTrue(parent.sibling.getSlotIndex() > parent.getSlotIndex());
+        assertEquals(1, parent.sibling.updateCount,
+                "AllocateObjectAfterCurrent sibling executes later in the same frame");
+
+        parent.setDestroyed(true);
+        fixture.manager().update(0, null, null, 2);
+
+        assertFalse(parent.sibling.isDestroyed(),
+                "independent sibling has no allocator lifetime cascade");
+        assertEquals(2, parent.sibling.updateCount);
+    }
+
+    @Test
+    public void independentSiblingAtLastSlotFailsAllocationAndProbeConstructionDoesNotRegister() {
+        ManagerFixture fixture = newManagerFixture();
+        SiblingParentObject parent = new SiblingParentObject(
+                new ObjectSpawn(0, 0, 0, 0, 0, false, 0));
+        fixture.manager().addDynamicObjectAtSlot(parent, 127);
+
+        fixture.manager().update(0, null, null, 1);
+
+        assertEquals(-1, parent.sibling.getSlotIndex());
+        assertTrue(parent.sibling.isDestroyed());
+        assertEquals(0, parent.sibling.updateCount);
+
+        ObjectManager manager = mock(ObjectManager.class);
+        SiblingParentObject probeParent = new SiblingParentObject(
+                new ObjectSpawn(0, 0, 0, 0, 0, false, 0));
+        probeParent.setServices(new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return manager;
+            }
+        });
+        ObjectConstructionContext.withProbeConstruction(probeParent::spawnSibling);
+        verifyNoInteractions(manager);
     }
 
     @Test
@@ -264,6 +313,53 @@ public class TestObjectManagerChildSlotAllocation {
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
         }
+    }
+
+    private static final class SiblingParentObject extends AbstractObjectInstance {
+        private ChildObject sibling;
+
+        private SiblingParentObject(ObjectSpawn spawn) {
+            super(spawn, "SiblingParent");
+        }
+
+        private ChildObject spawnSibling() {
+            return spawnAfterCurrentSibling(
+                    () -> new ChildObject(buildSpawnAt(spawn.x(), spawn.y())));
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            if (sibling == null) {
+                sibling = spawnSibling();
+            }
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+        }
+    }
+
+    private static ManagerFixture newManagerFixture() {
+        ObjectManager[] holder = new ObjectManager[1];
+        ObjectServices services = new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return holder[0];
+            }
+        };
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0);
+        when(camera.getY()).thenReturn((short) 0);
+        when(camera.getWidth()).thenReturn((short) 320);
+        when(camera.getHeight()).thenReturn((short) 224);
+        ObjectManager manager = new ObjectManager(
+                List.of(), null, 0, null, null,
+                GraphicsManager.getInstance(), camera, services);
+        holder[0] = manager;
+        return new ManagerFixture(manager);
+    }
+
+    private record ManagerFixture(ObjectManager manager) {
     }
 
     private static final class ChildObject extends AbstractObjectInstance {
@@ -410,4 +506,3 @@ public class TestObjectManagerChildSlotAllocation {
         }
     }
 }
-
