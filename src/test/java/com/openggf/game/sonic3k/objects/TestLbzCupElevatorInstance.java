@@ -3,6 +3,11 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.CompactFieldCapturer;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.rewind.schema.RewindObjectStateBlob;
 import com.openggf.game.sonic3k.S3kSpriteDataLoader;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kPlcArtRegistry;
@@ -13,18 +18,22 @@ import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -285,6 +294,130 @@ class TestLbzCupElevatorInstance {
                 "Released airborne Sonic must not be snapped back to the moving cup");
     }
 
+    @Test
+    void extensionOnlyEntryDrivesSharedMotionAndCarriesMainPlusThreeByIdentity() {
+        TestablePlayableSprite main = playerAt(0x1600, 0x0600);
+        TestablePlayableSprite nativeP2 = playerAt(0x1600, 0x0600);
+        TestablePlayableSprite extensionOne = playerAt(0x17C0, 0x0600);
+        TestablePlayableSprite extensionTwo = playerAt(0x1600, 0x0600);
+        LbzCupElevatorInstance elevator = configuredElevator(main,
+                List.of(nativeP2, extensionOne, extensionTwo));
+        standOn(extensionOne, elevator);
+
+        elevator.update(0, main);
+        assertFalse(main.isObjectControlled(), "native P1 must remain first and independent");
+        assertFalse(nativeP2.isObjectControlled(), "native P2 must remain second and independent");
+        assertTrue(extensionOne.isObjectControlled(), "an extension rider may activate the shared cup");
+
+        for (TestablePlayableSprite player : List.of(main, nativeP2, extensionTwo)) {
+            NativePositionOps.writeXPosPreserveSubpixel(player, elevator.getX());
+            standOn(player, elevator);
+        }
+        elevator.update(1, main);
+
+        assertEquals(2, elevator.getRoutineForTest(),
+                "extension ownership must drive the native shared-motion transition");
+        for (TestablePlayableSprite player : List.of(main, nativeP2, extensionOne, extensionTwo)) {
+            assertTrue(player.isObjectControlled());
+            assertEquals(elevator.getX(), player.getCentreX() & 0xFFFF);
+        }
+    }
+
+    @Test
+    void extensionJumpDeathFlingAndUnloadReleaseOnlyOwnedIdentities() throws Exception {
+        TestablePlayableSprite main = playerAt(0x17C0, 0x0600);
+        TestablePlayableSprite nativeP2 = playerAt(0x17C0, 0x0600);
+        TestablePlayableSprite jumping = playerAt(0x17C0, 0x0600);
+        TestablePlayableSprite dying = playerAt(0x17C0, 0x0600);
+        LbzCupElevatorInstance elevator = configuredElevator(main, List.of(nativeP2, jumping, dying));
+        for (TestablePlayableSprite player : List.of(main, nativeP2, jumping, dying)) {
+            standOn(player, elevator);
+        }
+        elevator.update(0, main);
+
+        jumping.setJumpInputPressed(true, true);
+        dying.setDead(true);
+        elevator.update(1, main);
+        assertFalse(jumping.isObjectControlled(), "extension jump must release its own state");
+        assertEquals((short) -0x480, jumping.getYSpeed());
+        assertFalse(dying.isObjectControlled(), "extension death must clear forced control");
+        assertTrue(main.isObjectControlled());
+        assertTrue(nativeP2.isObjectControlled());
+
+        invokeBeginFlicker(elevator, -0x200);
+        assertFalse(main.isObjectControlled(), "fling exit must release native P1");
+        assertFalse(nativeP2.isObjectControlled(), "fling exit must release native P2");
+
+        main = playerAt(0x17C0, 0x0600);
+        nativeP2 = playerAt(0x17C0, 0x0600);
+        jumping = playerAt(0x17C0, 0x0600);
+        dying = playerAt(0x17C0, 0x0600);
+        elevator = configuredElevator(main, List.of(nativeP2, jumping, dying));
+        for (TestablePlayableSprite player : List.of(main, nativeP2, jumping, dying)) {
+            standOn(player, elevator);
+        }
+        elevator.update(2, main);
+        elevator.onUnload();
+        for (TestablePlayableSprite player : List.of(main, nativeP2, jumping, dying)) {
+            assertFalse(player.isObjectControlled(), "unload must not strand a cup rider");
+            assertFalse(player.isControlLocked());
+            assertFalse(player.isObjectMappingFrameControl());
+        }
+    }
+
+    @Test
+    void rosterOmissionAndReorderKeepCupStateWithPlayerIdentity() {
+        TestablePlayableSprite main = playerAt(0x17C0, 0x0600);
+        TestablePlayableSprite originalP2 = playerAt(0x17C0, 0x0600);
+        TestablePlayableSprite omitted = playerAt(0x17C0, 0x0600);
+        TestablePlayableSprite retained = playerAt(0x17C0, 0x0600);
+        LbzCupElevatorInstance elevator = configuredElevator(main,
+                List.of(originalP2, omitted, retained));
+        for (TestablePlayableSprite player : List.of(main, originalP2, omitted, retained)) {
+            standOn(player, elevator);
+        }
+        elevator.update(0, main);
+
+        elevator.setServices(playerServices(main, List.of(retained, originalP2)));
+        elevator.update(1, main);
+        assertTrue(omitted.isObjectControlled(), "omitted captured identity must remain carried and cleanable");
+        assertEquals(elevator.getX(), omitted.getCentreX() & 0xFFFF);
+
+        elevator.setServices(playerServices(main, List.of(omitted, retained, originalP2)));
+        elevator.update(2, main);
+        for (TestablePlayableSprite player : List.of(originalP2, omitted, retained)) {
+            assertTrue(player.isObjectControlled(), "reordering must not transfer or discard cup ownership");
+        }
+    }
+
+    @Test
+    void nonEmptyExtensionCupStateRewindsThroughPlayerRefs() throws Exception {
+        TestablePlayableSprite oldMain = playerAt(0x17C0, 0x0600);
+        TestablePlayableSprite oldP2 = playerAt(0x17C0, 0x0600);
+        TestablePlayableSprite oldExtension = playerAt(0x17C0, 0x0600);
+        LbzCupElevatorInstance elevator = configuredElevator(oldMain, List.of(oldP2, oldExtension));
+        for (TestablePlayableSprite player : List.of(oldMain, oldP2, oldExtension)) {
+            standOn(player, elevator);
+        }
+        elevator.update(0, oldMain);
+        RewindObjectStateBlob snapshot = CompactFieldCapturer.capture(
+                elevator, rewindContext(oldMain, oldP2, oldExtension));
+
+        TestablePlayableSprite newMain = playerAt(0x17C0, 0x0600);
+        TestablePlayableSprite newP2 = playerAt(0x17C0, 0x0600);
+        TestablePlayableSprite newExtension = playerAt(0x17C0, 0x0600);
+        newExtension.setObjectControlled(true);
+        newExtension.setControlLocked(true);
+        elevator.setServices(playerServices(newMain, List.of(newP2, newExtension)));
+        CompactFieldCapturer.restore(elevator, snapshot, rewindContext(newMain, newP2, newExtension));
+        newExtension.setDead(true);
+        elevator.update(1, newMain);
+
+        assertFalse(newExtension.isObjectControlled(),
+                "restored extension ownership must relink and clean the restored player identity");
+        assertFalse(newExtension.isControlLocked());
+    }
+
     private static final class ZoneForTestRegistry extends Sonic3kObjectRegistry {
         private final int zoneId;
 
@@ -296,6 +429,50 @@ class TestLbzCupElevatorInstance {
         protected int currentRomZoneId() {
             return zoneId;
         }
+    }
+
+    private static LbzCupElevatorInstance configuredElevator(
+            TestablePlayableSprite main,
+            List<TestablePlayableSprite> sidekicks) {
+        LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
+                0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 1, 0, false, 0));
+        elevator.setServices(playerServices(main, sidekicks));
+        return elevator;
+    }
+
+    private static TestObjectServices playerServices(
+            TestablePlayableSprite main,
+            List<TestablePlayableSprite> sidekicks) {
+        return new TestObjectServices() {
+            private final ObjectPlayerQuery query = new ObjectPlayerQuery(() -> main, () -> sidekicks);
+
+            @Override
+            public ObjectPlayerQuery playerQuery() {
+                return query;
+            }
+        };
+    }
+
+    private static TestablePlayableSprite playerAt(int x, int y) {
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) x, (short) y);
+        player.setAir(false);
+        return player;
+    }
+
+    private static void standOn(TestablePlayableSprite player, LbzCupElevatorInstance elevator) {
+        player.setOnObject(true);
+        player.setLatchedSolidObject(Sonic3kObjectIds.LBZ_CUP_ELEVATOR, elevator);
+    }
+
+    private static RewindCaptureContext rewindContext(
+            TestablePlayableSprite main,
+            TestablePlayableSprite nativeP2,
+            TestablePlayableSprite extension) {
+        RewindIdentityTable table = new RewindIdentityTable();
+        table.registerPlayer(main, PlayerRefId.mainPlayer());
+        table.registerPlayer(nativeP2, PlayerRefId.sidekick(0));
+        table.registerPlayer(extension, PlayerRefId.sidekick(1));
+        return RewindCaptureContext.withIdentityTable(table);
     }
 
     private static void setPrivateInt(Object target, String fieldName, int value) throws Exception {
@@ -353,5 +530,11 @@ class TestLbzCupElevatorInstance {
                 boolean.class);
         method.setAccessible(true);
         method.invoke(elevator, player, state, 0, true);
+    }
+
+    private static void invokeBeginFlicker(LbzCupElevatorInstance elevator, int xVelocity) throws Exception {
+        Method method = LbzCupElevatorInstance.class.getDeclaredMethod("beginFlicker", int.class);
+        method.setAccessible(true);
+        method.invoke(elevator, xVelocity);
     }
 }

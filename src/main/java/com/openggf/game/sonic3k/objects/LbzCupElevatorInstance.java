@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
@@ -25,7 +26,9 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * S3K S3KL object $18 - LBZ cup elevator.
@@ -69,6 +72,9 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
     private final PlayerState p1 = new PlayerState();
     private final PlayerState p2 = new PlayerState();
+    private PlayableEntity p1Owner;
+    private PlayableEntity p2Owner;
+    private final Map<PlayableEntity, PlayerState> extensionStates = new IdentityHashMap<>();
     private boolean hFlip;
     private boolean flingAtEnd;
 
@@ -161,6 +167,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (isDisabledForKnucklesRoute()) {
+            onUnload();
             setDestroyed(true);
             return;
         }
@@ -178,9 +185,14 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
             return;
         }
 
+        AbstractPlayableSprite player1 = mainSprite(playerEntity);
+        AbstractPlayableSprite player2 = nativeP2OrNull();
+        List<PlayableEntity> participants = allParticipantsOrNull();
+        p1Owner = bindNativeState(p1, p1Owner, player1);
+        p2Owner = bindNativeState(p2, p2Owner, player2);
         updateAction();
         applyOrbitalX();
-        processPlayers(playerEntity);
+        processPlayers(player1, player2, participants);
         updateDynamicSpawn(x, y);
     }
 
@@ -278,7 +290,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     }
 
     private void updateWaitEnter() {
-        if (p1.inside || p2.inside) {
+        if (hasAnyInsidePlayer()) {
             activationFlag = 1;
             routine += 2;
         }
@@ -303,7 +315,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     }
 
     private void updateWaitExitTop() {
-        if (!p1.inside && !p2.inside) {
+        if (!hasAnyInsidePlayer()) {
             routine += 2;
         }
     }
@@ -327,7 +339,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     }
 
     private void updateWaitExitBottom() {
-        if (!p1.inside && !p2.inside) {
+        if (!hasAnyInsidePlayer()) {
             routine = ROUTINE_WAIT_ENTER_UP;
         }
     }
@@ -426,8 +438,11 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         xSub = 0;
         ySub = 0;
         playSfx(Sonic3kSfx.DEATH.id);
-        flingPlayer(p1, mainPlayerOrNull(), -0x300);
-        flingPlayer(p2, nativeP2OrNull(), -0x400);
+        flingPlayer(p1, mainSprite(p1Owner), -0x300);
+        flingPlayer(p2, mainSprite(p2Owner), -0x400);
+        for (Map.Entry<PlayableEntity, PlayerState> entry : extensionStates.entrySet()) {
+            flingPlayer(entry.getValue(), mainSprite(entry.getKey()), -0x400);
+        }
     }
 
     /**
@@ -460,9 +475,83 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         }
     }
 
-    private void processPlayers(PlayableEntity playerEntity) {
-        processPlayer(mainSprite(playerEntity), p1);
-        processPlayer(nativeP2OrNull(), p2);
+    private void processPlayers(
+            AbstractPlayableSprite player1,
+            AbstractPlayableSprite player2,
+            List<PlayableEntity> participants) {
+        // Preserve the ROM's native Player_1 then Player_2 processing prefix.
+        processPlayer(player1, p1);
+        processPlayer(player2, p2);
+        if (participants != null) {
+            for (PlayableEntity participant : participants) {
+                if (participant == p1Owner || participant == p2Owner) {
+                    continue;
+                }
+                AbstractPlayableSprite player = mainSprite(participant);
+                if (player != null) {
+                    processPlayer(player, extensionStates.computeIfAbsent(
+                            participant, ignored -> new PlayerState()));
+                }
+            }
+        }
+        // Captured identities remain carried and cleanable through temporary
+        // roster omission. Cooldowns remain identity-owned until they rejoin.
+        for (Map.Entry<PlayableEntity, PlayerState> entry : extensionStates.entrySet()) {
+            if (entry.getValue().inside && !containsIdentity(participants, entry.getKey())) {
+                processPlayer(mainSprite(entry.getKey()), entry.getValue());
+            }
+        }
+    }
+
+    private PlayableEntity bindNativeState(
+            PlayerState nativeState,
+            PlayableEntity previousOwner,
+            AbstractPlayableSprite currentPlayer) {
+        if (previousOwner == currentPlayer) {
+            return previousOwner;
+        }
+        if (previousOwner == null && currentPlayer != null
+                && (nativeState.inside || nativeState.cooldown != 0)) {
+            return currentPlayer;
+        }
+        if (previousOwner != null && (nativeState.inside || nativeState.cooldown != 0)) {
+            extensionStates.computeIfAbsent(previousOwner, ignored -> new PlayerState())
+                    .copyFrom(nativeState);
+        }
+        nativeState.clear();
+        if (currentPlayer != null) {
+            PlayerState restored = extensionStates.remove(currentPlayer);
+            if (restored != null) {
+                nativeState.copyFrom(restored);
+            }
+        }
+        return currentPlayer;
+    }
+
+    private boolean hasAnyInsidePlayer() {
+        return p1.inside || p2.inside
+                || extensionStates.values().stream().anyMatch(state -> state.inside);
+    }
+
+    private List<PlayableEntity> allParticipantsOrNull() {
+        try {
+            return services().playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        } catch (IllegalStateException ignored) {
+            return null;
+        }
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> players, PlayableEntity target) {
+        if (players == null) {
+            return false;
+        }
+        for (PlayableEntity player : players) {
+            if (player == target) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void processPlayer(AbstractPlayableSprite player, PlayerState state) {
@@ -658,12 +747,19 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         return playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
     }
 
-    private AbstractPlayableSprite mainPlayerOrNull() {
-        try {
-            PlayableEntity player = services().playerQuery().mainPlayerOrNull();
-            return player instanceof AbstractPlayableSprite sprite ? sprite : null;
-        } catch (IllegalStateException ignored) {
-            return null;
+    @Override
+    public void onUnload() {
+        releaseOwnedPlayerForUnload(p1Owner, p1);
+        releaseOwnedPlayerForUnload(p2Owner, p2);
+        for (Map.Entry<PlayableEntity, PlayerState> entry : extensionStates.entrySet()) {
+            releaseOwnedPlayerForUnload(entry.getKey(), entry.getValue());
+        }
+    }
+
+    private void releaseOwnedPlayerForUnload(PlayableEntity owner, PlayerState state) {
+        AbstractPlayableSprite player = mainSprite(owner);
+        if (player != null && state.inside) {
+            releasePlayer(player, state, OFFSCREEN_RELEASE_COOLDOWN, false);
         }
     }
 
@@ -692,6 +788,16 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     private static final class PlayerState implements RewindStateful<PlayerState.Snapshot> {
         boolean inside;
         int cooldown;
+
+        void copyFrom(PlayerState other) {
+            inside = other.inside;
+            cooldown = other.cooldown;
+        }
+
+        void clear() {
+            inside = false;
+            cooldown = 0;
+        }
 
         @Override
         public Snapshot captureRewindStateValue() {
