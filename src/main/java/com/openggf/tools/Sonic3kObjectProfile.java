@@ -57,6 +57,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     // zone-set-specific ids (where the same numeric id maps to different
     // objects in S3KL vs SKL) stay out of the cross-zoneset allowlist.
     public static final Set<Integer> SHARED_IMPLEMENTED_IDS = Set.of(
+            0x00, // Ring
             0x01, // Monitor
             0x02, // PathSwap
             0x04, // CollapsingPlatform
@@ -74,6 +75,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x33, // Button
             0x34, // StarPost
             0x3C, // Door
+            0x3D, // RetractingSpring
             0x4F, // SinkingMud
             0x51, // FloatingPlatform
             0x6C, // TensionBridge
@@ -89,8 +91,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     // Keep this zone-specific so SKL factories for remapped ids (notably A8/A9)
     // cannot make the FBZ audit report a false positive.
     private static final Set<Integer> FBZ_IMPLEMENTED_IDS = Set.of(
-            0x01, 0x02, 0x07, 0x08, 0x0F, 0x26, 0x28, 0x2A,
-            0x2F, 0x33, 0x34, 0x6A, 0x6B, 0x80, 0x85
+            0x00, 0x01, 0x02, 0x07, 0x08, 0x0F, 0x26, 0x28, 0x2A,
+            0x2F, 0x33, 0x34, 0x3D, 0x6A, 0x6B, 0x80, 0x85
     );
     // LBZ-only implementations from S3KL ids that map to different zone objects elsewhere.
     private static final Set<Integer> LBZ_IMPLEMENTED_IDS;

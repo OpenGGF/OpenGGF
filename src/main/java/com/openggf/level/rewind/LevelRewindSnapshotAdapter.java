@@ -43,6 +43,7 @@ public final class LevelRewindSnapshotAdapter implements RewindSnapshottable<Lev
                 manager.getFrameCounter(),
                 levelState != null,
                 levelState != null ? levelState.getRings() : 0,
+                levelState != null ? levelState.getRingExtraLifeFlags() : 0,
                 levelState != null ? levelState.getTimerFrames() : 0,
                 levelState != null && levelState.isTimerPaused(),
                 manager.isRespawnRequestedForRewind(),
@@ -79,6 +80,7 @@ public final class LevelRewindSnapshotAdapter implements RewindSnapshottable<Lev
         }
 
         levelState.setRings(snapshot.levelRings());
+        levelState.setRingExtraLifeFlags(snapshot.levelRingExtraLifeFlags());
         levelState.setTimerFrames(snapshot.levelTimerFrames());
         if (snapshot.levelTimerPaused()) {
             levelState.pauseTimer();

@@ -24,21 +24,24 @@ The often-quoted 421/441 and 862 totals include the final
 ## Live implementation status
 
 `Sonic3kObjectRegistry` has concrete factories for the shared families used by
-FBZ: monitor `$01`, path swap `$02`, spring `$07`, spikes `$08`, collapsing
+FBZ: placed ring `$00`, monitor `$01`, path swap `$02`, spring `$07`, spikes `$08`, collapsing
 bridge `$0F`, auto-spin `$26`, invisible block `$28`, cork floor `$2A`, still
-sprite `$2F`, button `$33`, star post `$34`, invisible hurt blocks `$6A/$6B`,
+sprite `$2F`, button `$33`, star post `$34`, retracting spring `$3D`, invisible hurt blocks `$6A/$6B`,
 hidden monitor `$80`, and special-stage entry ring `$85`.
 
 Every placed FBZ-specific family is currently a `PlaceholderObjectInstance`.
 IDs `$A8/$A9` do have factories, but those factories only construct the MHZ
 SKL remaps and explicitly return placeholders in FBZ's S3KL set. Shared
-`Obj_Ring` `$00` and `Obj_RetractingSpring` `$3D` also lack factories.
+Placed `Obj_Ring` `$00` and `Obj_RetractingSpring` `$3D` now use concrete
+shared factories. The ring remains distinct from the placement terminator and
+the retracting spring wraps the canonical shared spring collision/art/launch
+profile while moving its native centre through the ROM `$36/$38/$3A` cycle.
 
 | Act | Concrete shared placements | FBZ-specific placeholders | Other missing shared | Total placeholders |
 |---|---:|---:|---:|---:|
 | 1 | 136 | 284 | 0 | 284 |
-| 2 | 189 | 249 | 2 (`$00`, `$3D`) | 251 |
-| Total | 325 | 533 | 2 | 535 |
+| 2 | 191 | 249 | 0 | 249 |
+| Total | 327 | 533 | 0 | 533 |
 
 No FBZ end-boss `$AC` placement exists because the screen event dynamically
 creates it. It is also unimplemented.
@@ -217,7 +220,7 @@ changing native ordering.
 
 | ID / family | Factory now | Route impact | Art / map / animation | Participation | Allocation | Test owner | Status |
 |---|---|---|---|---|---|---|---|
-| `$00` Ring | missing | collectible | shared ring art | all engine players | placement | `TestFbzSharedPlacedObjects` | pending |
+| `$00` Ring | concrete | collectible | shared ring art | all engine players | placement | `TestFbzSharedObjectSubtypes` | concrete; exact placed-object collision/sparkle/lifetime covered |
 | `$01` Monitor | concrete | reward | shared monitor PLC/map | native pair/shared policy | placement | `TestFbzSharedPlacedObjects` | concrete; FBZ subtype validation pending |
 | `$02` PathSwap | concrete | plane routing | none | each touching player | placement | `TestFbzSharedPlacedObjects` | concrete; subtype validation pending |
 | `$07` Spring | concrete | traversal | shared spring PLC/map | native pair | placement | `TestFbzSharedPlacedObjects` | concrete; subtype validation pending |
@@ -229,7 +232,7 @@ changing native ordering.
 | `$2F` StillSprite | concrete | scenery | FBZ level PLC frames | none | placement | `TestFbzSharedPlacedObjects` | concrete; subtype validation pending |
 | `$33` Button | concrete | event trigger | `ArtKosM_FBZButton`/`PLCKosM_FBZ` | native pair | placement | `TestFbzSharedPlacedObjects` | concrete; FBZ linkage pending |
 | `$34` StarPost | concrete | checkpoint | shared art | main/native pair per shared contract | placement | `TestFbzSharedPlacedObjects` | concrete; FBZ restore pending |
-| `$3D` RetractingSpring | missing | traversal | shared spring art/map | native pair | placement | `TestFbzSharedPlacedObjects` | pending |
+| `$3D` RetractingSpring | concrete | traversal | shared spring art/map | native pair | placement | `TestFbzSharedObjectSubtypes` | concrete; exact movement/hold/SFX/rewind cycle covered |
 | `$6A/$6B` InvisibleHurtBlock | concrete | hazard | none | native pair | placement | `TestFbzSharedPlacedObjects` | concrete; subtype validation pending |
 | `$6F` WireCage | placeholder | carrier | player mappings/DPLC selected by `RawAni_3A220`; no standalone FBZ map | native pair/all riders | placement | `TestFbzWireCages` | pending |
 | `$70` StationaryWireCage | placeholder | solid/trap | inline multi-sprite frames from player mappings; no standalone FBZ map | native pair | placement | `TestFbzWireCages` | pending |

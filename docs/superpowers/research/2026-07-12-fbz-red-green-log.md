@@ -431,3 +431,51 @@ recorded as `unknown/not previously run` rather than inferred.
   preparation preserves the bytes. The lifecycle test passed 1/1 and the final
   affected set passed 116/116. Mandatory guards remain 19/21 with only the
   inherited AIZ findings; `git diff --check` is clean. No trace ran.
+- Task 6 shared-placement RED: the new counted-subtype/completeness suite ran
+  8 tests and failed exactly on the two missing concrete families/profile
+  entries: FBZ still had 535 placeholder placements instead of 533, and placed
+  `$00` Ring / `$3D` RetractingSpring resolved to placeholders. The same first
+  pass corrected two test-fixture assumptions (raw placement metadata and the
+  full locked-on hurt-block pointer labels) before accepting production GREEN.
+- Task 6 GREEN: all counted shared FBZ subtypes resolve through the locked-on
+  S3KL table and preserve their complete `ObjectSpawn` configuration. The real
+  six-byte FBZ2 `$00` record now executes `Obj_Ring` collision `$47`, fixed
+  right-channel ring SFX, all-eligible-player collection, four-frame sparkle,
+  permanent collected lifetime and generic rewind recreation; the trailing
+  `FFFF 0000 0000` records remain terminators, not rings. `$3D` reuses the
+  canonical spring art/collision/launch path and implements the exact `$800`
+  extension/retraction, `$2000` limit, 60-tick holds, borrow-at-zero phase
+  change, moved-centre collision/render, and on-screen-only SpikeMove edge.
+  Placeholder placements ratcheted from 535 to exactly 533 and no farther.
+- Task 6 hardened focused coverage passed 8/8. The bounded affected
+  ring/spring/registry/PLC/art-corruption/rewind/guard run passed 179/181; its
+  only failures were the inherited AIZ emerald-glow final-scalar coverage gaps
+  and the two inherited AIZ miniboss inline camera-controller constructor
+  spawns. No FBZ finding and no trace activity occurred.
+- Task 6 spec-review correction RED: 13 hardened shared-object tests produced
+  exactly four behavioral failures: the placed ring ignored Player 1's ROM
+  `$40` invulnerability-timer gate for sidekick contact, deleted sparkle on
+  tick 24 instead of tick 25, dropped `make_art_tile(...,1,1)` priority, and
+  bypassed native GiveRing threshold/cap behavior. A separate retained-visibility
+  edge test was added for the retracting spring's prior `render_flags` bit 7.
+- Task 6 correction GREEN: 14/14 focused tests now cover main-player timer 90
+  vs 89 with an extra sidekick collector; 24 drawn sparkle ticks plus next-tick
+  deletion; palette line 1, persistent priority, `$100/$80` buckets, and global
+  ring phase delegation; and GiveRing transitions 99->100, 199->200,
+  998->999, and 999->999. `Sonic3kRingAwardService` is the reusable award owner;
+  level-scoped 100/200 flags are captured by the level rewind snapshot so ring
+  loss and rewind cannot re-award a consumed threshold. Retracting-spring SFX
+  reads a retained previous-render-pass visibility bit rather than live camera
+  geometry. Subtype `$04` also has explicit canonical map/tile/palette,
+  priority/16x16, red-up velocity, and `$0C/$0D` solid-bit assertions.
+- The corrected bounded affected/guard run passed 201/203; only the same two
+  inherited AIZ guard categories failed. No FBZ finding and no trace activity
+  occurred.
+- Task 6 final spill-reset RED/GREEN: a new 100-ring loss/recollection test
+  first failed compilation on the deliberately missing named loss transition.
+  `LevelState.resetRingsForLoss()` now models the Obj37 owner-only clear of both
+  `Ring_count` and `Extra_life_flags`; `RingManager` calls it when the spill
+  materializes. Ordinary `setRings(0)` remains independent so rewind/checkpoint
+  restore can apply captured ring count and threshold flags in order. The test
+  proves 99->100 awards life/music, spill clears both values, and the later
+  99->100 correctly awards them again.

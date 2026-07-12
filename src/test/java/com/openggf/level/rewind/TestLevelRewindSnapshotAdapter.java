@@ -31,6 +31,7 @@ class TestLevelRewindSnapshotAdapter {
         StubLevel level = new StubLevel();
         LevelGamestate levelState = new LevelGamestate();
         levelState.setRings(31);
+        levelState.setRingExtraLifeFlags(0x02);
         levelState.setTimerFrames(456);
         levelState.pauseTimer();
         LevelManager manager = mock(LevelManager.class);
@@ -47,6 +48,7 @@ class TestLevelRewindSnapshotAdapter {
         assertSame(level.getMap().getData(), snapshot.mapData());
         assertEquals(77, snapshot.frameCounter());
         assertEquals(31, snapshot.levelRings());
+        assertEquals(0x02, snapshot.levelRingExtraLifeFlags());
         assertEquals(456, snapshot.levelTimerFrames());
         assertTrue(snapshot.levelTimerPaused());
         assertTrue(snapshot.respawnRequested());
@@ -70,6 +72,7 @@ class TestLevelRewindSnapshotAdapter {
                 88,
                 true,
                 9,
+                0x06,
                 123,
                 false,
                 true,
@@ -82,6 +85,7 @@ class TestLevelRewindSnapshotAdapter {
         assertSame(snapshotChunks, level.chunksReference());
         assertSame(snapshotMap, level.getMap().getData());
         assertEquals(9, levelState.getRings());
+        assertEquals(0x06, levelState.getRingExtraLifeFlags());
         assertEquals(123, levelState.getTimerFrames());
         assertTrue(!levelState.isTimerPaused());
         verify(manager).setFrameCounter(88);

@@ -434,8 +434,8 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         }
 
         boolean flipped = isFlippedHorizontal();
-        int dx = player.getCentreX() - spawn.x();
-        int dy = player.getCentreY() - spawn.y();
+        int dx = player.getCentreX() - getX();
+        int dy = player.getCentreY() - getY();
 
         // Check Y range: ±$18
         if (dy < -HORIZ_DETECT_Y || dy > HORIZ_DETECT_Y) {
@@ -487,7 +487,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         }
         // Engine ordering can leave the sidekick airborne until the next tick;
         // accept only the frame that has reached the spring's Y line.
-        return player.getYSpeed() > 0 && (player.getCentreY() & 0xFFFF) >= (spawn.y() & 0xFFFF);
+        return player.getYSpeed() > 0 && (player.getCentreY() & 0xFFFF) >= (getY() & 0xFFFF);
     }
 
     private int horizontalApproachSpeed(AbstractPlayableSprite player, boolean landingHandoff) {
@@ -510,7 +510,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
     }
 
     private boolean isPlayerOnHorizontalSpringActiveSide(AbstractPlayableSprite player) {
-        int objectX = spawn.x() & 0xFFFF;
+        int objectX = getX() & 0xFFFF;
         int playerX = player.getCentreX() & 0xFFFF;
         boolean flipped = isFlippedHorizontal();
         return flipped ? objectX >= playerX : objectX < playerX;
@@ -521,11 +521,11 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         boolean flipped = isFlippedHorizontal();
         if (flipped) {
             // ROM sub_234E6: trigger only when x_pos(a0)+4 >= x_pos(a1).
-            int lipX = (spawn.x() + 4) & 0xFFFF;
+            int lipX = (getX() + 4) & 0xFFFF;
             return Integer.compareUnsigned(lipX, playerX) >= 0;
         }
         // ROM sub_234E6: trigger only when x_pos(a0)-4 < x_pos(a1).
-        int lipX = (spawn.x() - 4) & 0xFFFF;
+        int lipX = (getX() - 4) & 0xFFFF;
         return Integer.compareUnsigned(lipX, playerX) < 0;
     }
 
@@ -554,8 +554,8 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // the horizontal spring nudge. Engine generic solid contact includes the
         // player radius in its X overlap and can otherwise pre-push the player
         // onto the spring edge before that proactive trigger runs.
-        int dx = player.getCentreX() - spawn.x();
-        int dy = player.getCentreY() - spawn.y();
+        int dx = player.getCentreX() - getX();
+        int dy = player.getCentreY() - getY();
         if (dy < -HORIZ_DETECT_Y || dy > HORIZ_DETECT_Y) {
             return false;
         }
@@ -686,7 +686,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         boolean hFlip = isFlippedHorizontal();
         boolean vFlip = springType == TYPE_DOWN || springType == TYPE_DIAGONAL_DOWN
                 || (spawn.renderFlags() & 0x2) != 0;
-        renderer.drawFrameIndex(mappingFrame, spawn.x(), spawn.y(), hFlip, vFlip);
+        renderer.drawFrameIndex(mappingFrame, getX(), getY(), hFlip, vFlip);
     }
 
     private String resolveArtKey() {

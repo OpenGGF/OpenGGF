@@ -9,6 +9,7 @@ package com.openggf.game.sonic3k.constants;
  * aware so the same numeric slot can still resolve to DEZ names on the SKL side.
  */
 public final class Sonic3kObjectIds {
+    public static final int RING = 0x00;
     public static final int MONITOR = 0x01;
     public static final int PATH_SWAP = 0x02;
     public static final int AIZ_HOLLOW_TREE = 0x03;
@@ -86,6 +87,7 @@ public final class Sonic3kObjectIds {
     public static final int HCZ_SPINNING_COLUMN = 0x68;
     public static final int HCZ_WATER_WALL = 0x3B;
     public static final int DOOR = 0x3C;
+    public static final int RETRACTING_SPRING = 0x3D;
     public static final int HCZ_HAND_LAUNCHER = 0x3A;
     public static final int HCZ_CONVEYOR_BELT = 0x3E;
     public static final int HCZ_CONVEYOR_SPIKE = 0x3F;

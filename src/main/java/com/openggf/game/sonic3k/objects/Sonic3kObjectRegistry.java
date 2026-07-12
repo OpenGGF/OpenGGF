@@ -72,6 +72,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
 
     @Override
     protected void registerDefaultFactories() {
+        factories.put(Sonic3kObjectIds.RING,
+                (spawn, registry) -> new Sonic3kPlacedRingObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.MONITOR,
                 (spawn, registry) -> new Sonic3kMonitorObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.PATH_SWAP, (spawn, registry) -> new Sonic3kPathSwapObjectInstance(spawn));
@@ -103,6 +105,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 });
         factories.put(Sonic3kObjectIds.SPRING,
                 (spawn, registry) -> new Sonic3kSpringObjectInstance(spawn));
+        factories.put(Sonic3kObjectIds.RETRACTING_SPRING,
+                (spawn, registry) -> new Sonic3kRetractingSpringObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.SPIKES,
                 (spawn, registry) -> new Sonic3kSpikeObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.AIZ1_TREE,
@@ -1400,8 +1404,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             case 0x67 -> "HCZSnakeBlocks";
             case 0x68 -> "HCZSpinningColumn";
             case 0x69 -> "HCZTwistingLoop";
-            case 0x6A -> "InvisibleHurtBlockH";
-            case 0x6B -> "InvisibleHurtBlockV";
+            case 0x6A -> "InvisibleHurtBlockHorizontal";
+            case 0x6B -> "InvisibleHurtBlockVertical";
             case 0x6C -> "TensionBridge";
             case 0x6D -> "HCZWaterSplash";
             case 0x6E -> "WaterDrop";
@@ -1626,8 +1630,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             case 0x5F -> "DEZGravityRoom";
             case 0x60 -> "DEZBumperWall";
             case 0x61 -> "DEZGravityPuzzle";
-            case 0x6A -> "InvisibleHurtBlockH";
-            case 0x6B -> "InvisibleHurtBlockV";
+            case 0x6A -> "InvisibleHurtBlockHorizontal";
+            case 0x6B -> "InvisibleHurtBlockVertical";
             case 0x6C -> "TensionBridge";
             case 0x6D -> "InvisibleShockBlock";
             case 0x6E -> "InvisibleLavaBlock";

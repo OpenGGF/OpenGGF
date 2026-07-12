@@ -4,6 +4,7 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
+import com.openggf.game.LevelState;
 import com.openggf.physics.BackgroundPlaneCollisionProvider;
 import com.openggf.physics.Direction;
 import com.openggf.graphics.GraphicsManager;
@@ -1526,7 +1527,17 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 angle = -angle;
             }
 
-            player.setRingCount(0);
+            // S3K Obj_Bouncing_Ring clears Ring_count and Extra_life_flags in
+            // the owner init (sonic3k.asm:35617-35621). Keep this named loss
+            // transition separate from setRings(0): rewind/checkpoint restore
+            // writes the two captured fields independently and must not erase
+            // the restored flags as a side effect.
+            LevelState levelState = levelManager != null ? levelManager.getLevelGamestate() : null;
+            if (levelState != null) {
+                levelState.resetRingsForLoss();
+            } else {
+                player.setRingCount(0);
+            }
             audioManager.playSfx(GameSound.RING_SPILL);
         }
 

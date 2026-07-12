@@ -18,8 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class TestFbzObjectRegistryCompleteness {
     private static final Set<Integer> CONCRETE_FBZ_IDS = Set.of(
-            0x01, 0x02, 0x07, 0x08, 0x0F, 0x26, 0x28, 0x2A,
-            0x2F, 0x33, 0x34, 0x6A, 0x6B, 0x80, 0x85);
+            0x00, 0x01, 0x02, 0x07, 0x08, 0x0F, 0x26, 0x28, 0x2A,
+            0x2F, 0x33, 0x34, 0x3D, 0x6A, 0x6B, 0x80, 0x85);
 
     @Test
     void fbzProfileAllowlistMatchesTheCheckedConcreteFactoryInventory() {
@@ -36,7 +36,7 @@ class TestFbzObjectRegistryCompleteness {
     }
 
     @Test
-    void checkedLayoutsContainExactly535CurrentPlaceholderPlacements() throws IOException {
+    void checkedLayoutsContainExactly533CurrentPlaceholderPlacements() throws IOException {
         Sonic3kObjectRegistry registry = new FbzTestRegistry();
         List<ObjectSpawn> placements = new java.util.ArrayList<>();
         placements.addAll(TestFbzObjectInventory.load("1.bin"));
@@ -46,7 +46,7 @@ class TestFbzObjectRegistryCompleteness {
                 .map(registry::create)
                 .filter(PlaceholderObjectInstance.class::isInstance)
                 .count();
-        assertEquals(535, placeholders);
+        assertEquals(533, placeholders);
 
         for (ObjectSpawn spawn : placements) {
             ObjectInstance instance = registry.create(spawn);
