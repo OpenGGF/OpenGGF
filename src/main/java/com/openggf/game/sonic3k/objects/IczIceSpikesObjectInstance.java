@@ -52,7 +52,7 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
     private static final int ARM_DISTANCE_X = 0x40;
     private static final int SHAKE_TIMER_INITIAL = 0x0F;
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
-            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     private boolean subtypeZero;
     private boolean hFlip;
