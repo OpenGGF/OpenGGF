@@ -58,6 +58,8 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     /** ROM: OPL_Next advances v_opl_screen by one chunk (0x80) per frame. */
     private static final int CHUNK_STEP = 0x80;
 
+    private final java.util.function.IntSupplier viewportWidthSupplier;
+
     private final BitSet remembered = new BitSet();
     /** Tracks spawns that should stay in active even when remembered (e.g. broken monitors). */
     private final BitSet stayActive = new BitSet();
@@ -167,6 +169,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     ObjectPlacementController(List<ObjectSpawn> spawns, java.util.function.IntSupplier widthSupplier) {
         super(spawns, EXTRA_AHEAD, UNLOAD_BEHIND, widthSupplier);
+        this.viewportWidthSupplier = widthSupplier;
     }
 
     /**
@@ -201,12 +204,13 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     /**
-     * ROM-exact S2 load/trim boundaries.
+     * ROM-exact native S2 load/trim boundaries with viewport-derived widescreen extension.
      * <p>
      * For S2 the non-counter scan consumes the windowing strategy's final
      * cursor edges directly:
      * <ul>
-     *   <li>forward load / right trim edge = {@code loadCoarse + $280}
+     *   <li>forward load / right trim edge = {@code loadCoarse + $280} at native width,
+     *       widened only to {@code viewportWidth + $80} when that is larger
      *       ({@code ObjectsManager_GoingForward} right cursor, s2.asm:33099;
      *       {@code GoingBackward} right trim, s2.asm:33076)</li>
      *   <li>backward load / left trim edge = {@code loadCoarse - $80}
@@ -222,6 +226,9 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     @Override
     protected int getWindowEnd(int cameraX) {
         if (windowingStrategy.overridesLoadWindow()) {
+            if (windowingStrategy instanceof ViewportAwareObjectWindowingStrategy viewportAware) {
+                return viewportAware.loadWindowForwardEdge(cameraX, viewportWidth());
+            }
             return windowingStrategy.loadWindowForwardEdge(cameraX);
         }
         return super.getWindowEnd(cameraX);
@@ -244,9 +251,16 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     @Override
     protected int getWindowStart(int cameraX) {
         if (windowingStrategy.overridesLoadWindow()) {
-            return Math.max(0, windowingStrategy.loadWindowLeftTrimEdge(cameraX));
+            int edge = windowingStrategy instanceof ViewportAwareObjectWindowingStrategy viewportAware
+                    ? viewportAware.loadWindowLeftTrimEdge(cameraX, viewportWidth())
+                    : windowingStrategy.loadWindowLeftTrimEdge(cameraX);
+            return Math.max(0, edge);
         }
         return super.getWindowStart(cameraX);
+    }
+
+    private int viewportWidth() {
+        return Math.max(320, viewportWidthSupplier.getAsInt());
     }
 
     /** See {@link #permanentDestroyLatch}. Enable for S3K only. */
