@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f30582 / 56 errors (5 errors under
+f3318 / 4234 errors to f30645 / 31 errors (6 errors under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -784,6 +784,26 @@ the capsule landing. Focused capsule/boss and HCZ boss-graph rewind tests pass
 7/7. The granular matrix remains unchanged: both AIZ routes green; CNZ
 complete f1846 / 5 and level-select f291 / 7; MGZ complete f1072 / 1 and
 level-select f1030 / 1; ICZ f3174 / 1; MHZ f2920 / 1; LBZ f2270 / 5.
+
+Milestone 67 makes the separate button slot publish its native standing-bit
+signal to the parent. The button now runs a manual `SolidObjectFull` checkpoint
+inside its own SST dispatch; because its slot follows the capsule parent, the
+parent consumes that signal on its next entry, changes to the open routine, and
+sets the signed `Ctrl_2_locked` byte after Tails' current player slot has already
+run. Tails therefore stops executing `Tails_CPU_Control` from the following
+frame instead of accumulating engine-only follow nudges (`sonic3k.asm:
+181520-181555`). The structural button-to-parent link is relinked during rewind
+recreation rather than inferred from trace state.
+
+This clears the f30582-f30644 sidekick position/contact tail and advances HCZ
+to f30645 / 31 full-run errors (6 under `frontierOnly`). The new first owner is
+the results transition: the engine zeros Tails' velocity when the main player
+enters the ending pose, while ROM keeps P2 moving until the later
+`Check_TailsEndPose` eligibility dispatch. Focused capsule/boss and HCZ
+boss-graph rewind tests pass 5/5. The granular nine-route matrix remains exact:
+both AIZ routes green; CNZ complete f1846 / 5 and level-select f291 / 7; MGZ
+complete f1072 / 1 and level-select f1030 / 1; ICZ f3174 / 1; MHZ f2920 / 1;
+LBZ f2270 / 5.
 
 Milestone 31 restores TurboSpiker's detached-shell direction. The shell child
 inherits the parent's post-retreat render bit, but `loc_87D72` interprets that

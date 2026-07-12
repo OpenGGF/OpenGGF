@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossGradualMaxXExtender;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleButton;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
@@ -20,7 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestHczEndBossInstance {
     @Test
     void capsuleButtonRetainsItsSeparateSolidObjectFullGeometry() {
-        HczEndBossEggCapsuleButton button = new HczEndBossEggCapsuleButton(0x4250, 0x07BC);
+        HczEndBossEggCapsuleInstance capsule = new HczEndBossEggCapsuleInstance(0x4250, 0x07E0);
+        HczEndBossEggCapsuleButton button = new HczEndBossEggCapsuleButton(
+                capsule, 0x4250, 0x07BC);
 
         assertEquals(0x4250, button.getX());
         assertEquals(0x07BC, button.getY());

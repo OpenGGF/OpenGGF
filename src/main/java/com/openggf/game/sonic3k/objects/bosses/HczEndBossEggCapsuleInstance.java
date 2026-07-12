@@ -60,13 +60,6 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
     // ROM: Button on TOP at offset (0, -0x24) from capsule centre
     private static final int BUTTON_Y_OFFSET = -0x24;
 
-    // ROM: Button detection — player stands on button (SolidObjectFull d1=$1B, d2=4, d3=6)
-    // The player is riding the button if standing on its solid surface.
-    // We check using a positional range matching the button SolidObjectFull dimensions.
-    private static final int BUTTON_SOLID_HALF_WIDTH = 0x1B;
-    private static final int BUTTON_HALF_HEIGHT_AIR = 4;
-    private static final int BUTTON_HALF_HEIGHT_GROUND = 6;
-
     // Post-open delay before results (ROM: 64-frame timer)
     private static final int POST_OPEN_DELAY = 64;
 
@@ -84,6 +77,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
     private boolean geyserSpawned;
     private int postOpenTimer;
     private boolean buttonSpawned;
+    private boolean buttonPressed;
 
     // Explosion controller (spawned when capsule opens)
     private S3kBossExplosionController explosionController;
@@ -142,16 +136,13 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         if (!buttonSpawned) {
             buttonSpawned = true;
             spawnChild(() -> new HczEndBossEggCapsuleButton(
-                    fixedX, fixedY + BUTTON_Y_OFFSET));
+                    this, fixedX, fixedY + BUTTON_Y_OFFSET));
         }
         if (!opened) {
-            // Check if player is standing on the button (on top of capsule)
-            for (PlayableEntity candidate : playerQuery(playerEntity)
-                    .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
-                checkButtonPress(candidate);
-                if (opened) {
-                    break;
-                }
+            // The button child publishes its ROM standing-bit result after this
+            // parent slot has run. Consume that signal on the next parent entry.
+            if (buttonPressed) {
+                openCapsule();
             }
         } else if (!resultsStarted) {
             // Tick explosion controller
@@ -181,35 +172,8 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         }
     }
 
-    /**
-     * ROM: Obj_EggCapsule button detection. The button sits on TOP of the
-     * capsule at (0, -0x24). Player must be standing on the button's
-     * solid surface — detected by checking if the player is riding
-     * within the button's X range and at the correct Y height.
-     *
-     * <p>ROM uses SolidObjectFull for the button (d1=$1B, d2=4, d3=6),
-     * which means the player physically lands on it. We approximate this
-     * by checking if the player's feet are within the button's top surface
-     * and they are on the ground (not jumping).
-     */
-    private void checkButtonPress(PlayableEntity playerEntity) {
-        if (opened) return;
-        if (!(playerEntity instanceof AbstractPlayableSprite player)) return;
-
-        // Player must be on the ground (standing), not in the air
-        if (player.getAir()) return;
-
-        // Check horizontal range: within button half-width of capsule X
-        int dx = Math.abs(player.getCentreX() - fixedX);
-        if (dx > BUTTON_SOLID_HALF_WIDTH) return;
-
-        // Check vertical: player's centre should be near the button's Y position
-        // Button Y = capsule Y + BUTTON_Y_OFFSET (negative = above capsule centre)
-        int buttonY = fixedY + BUTTON_Y_OFFSET;
-        int dy = Math.abs(player.getCentreY() - buttonY);
-        if (dy <= BUTTON_HALF_HEIGHT_GROUND + 8) {
-            openCapsule();
-        }
+    void signalButtonPressed() {
+        buttonPressed = true;
     }
 
     // ===== Capsule opening =====
@@ -222,6 +186,15 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         opened = true;
         mappingFrame = 1;  // ROM: move.b #1,mapping_frame(a0) — open lid
         postOpenTimer = POST_OPEN_DELAY;
+
+        // ROM sub_865DE sets Ctrl_2_locked after the capsule's button child
+        // signals the parent (sonic3k.asm:181548-181555). The capsule runs
+        // after Player_2's slot, so the current CPU step has already happened;
+        // the signed lock suppresses Tails_CPU_Control beginning next frame.
+        if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
+                && sidekick.getCpuController() != null) {
+            sidekick.getCpuController().setController2SignedLocked(true);
+        }
 
         // Play explosion SFX
         try {
