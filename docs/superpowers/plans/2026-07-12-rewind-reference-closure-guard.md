@@ -10,6 +10,33 @@
 
 ---
 
+## Execution addendum (empirical final process)
+
+The combined-selector Maven examples originally drafted for Task 0 and Task 5
+were empirically superseded because the reliable full-sweep process requires a
+fresh Surefire JVM for each class. Precompile once with
+`mvn -Dmse=off -DskipTests test-compile`, then execute, in order, every remaining
+line preserved in `target/rewind-closure-baseline/commands.txt`. Those 29
+class-scoped commands use `surefire:test`, `forkCount=1`, and `-Xmx2g`.
+
+The preserved artifact format is schema v2: `manifest.json` is the sweep wrapper
+and the top-level, sorted `method-status.json` is the comparison oracle. Baseline
+SHA `a3ad53f4a` ran 29 classes / 61 methods: 41 passed, 19 had pre-existing
+assertion failures, and one had the known CNZ behavioral error; there were no
+skips or infrastructure errors. The final exclusive sweep at `c882f3d7f`
+matched all 61 method statuses exactly, with zero reference-closure failures.
+The repair loop fixed MHZ1 actor detachment, ICZ capture-cloud detachment, and
+MCZ Obj6A shared unload anchors; it also closed the AIZ glow-child coverage audit
+gap by classifying immutable animation/plane values as spawn-derived state.
+
+Timing used the longest status-stable passing route per game, one warm-up and
+five serial samples in clean baseline/guarded worktrees. S2 WFZ medians were
+28.980 s baseline and 29.117 s guarded (+0.136 s, +0.47%); S3K AIZ complete-run
+medians were 38.197 s and 35.753 s (-2.444 s, -6.40%). Neither triggered the
+threshold of both more than one second and more than 10% slower.
+
+---
+
 ## File map
 
 - `src/main/java/com/openggf/game/rewind/schema/RewindCodec.java` — codec-owned identity-table metadata.
@@ -92,21 +119,25 @@ $selector = $tests -join ','
 - [ ] **Step 3: Run and preserve the baseline manifest**
 
 ```powershell
-if (Test-Path target/rewind-closure-baseline) {
-    Remove-Item -Recurse -Force -LiteralPath target/rewind-closure-baseline
+$commandFile = 'target/rewind-closure-baseline/commands.txt'
+if (-not (Test-Path $commandFile)) {
+    throw "Missing preserved exact sweep command list: $commandFile"
 }
-New-Item -ItemType Directory -Force target/rewind-closure-baseline | Out-Null
-if (Test-Path target/surefire-reports) {
-    Remove-Item -Recurse -Force -LiteralPath target/surefire-reports
-}
-mvn "-Dmse=off" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" `
-    "-Dmaven.test.failure.ignore=true" "-Dtest=$selector" `
-    "-DfailIfNoTests=false" test 2>&1 |
-    Tee-Object target/rewind-closure-baseline/maven.log
-Copy-Item target/surefire-reports/TEST-*.xml target/rewind-closure-baseline/
+mvn -Dmse=off -DskipTests test-compile
+Get-Content $commandFile | Select-Object -Skip 1 |
+    ForEach-Object {
+        # Execute each preserved command as its own process, in order. Each line
+        # selects one class and uses forkCount=1, -Xmx2g, and surefire:test.
+        Invoke-Expression $_
+        if ($LASTEXITCODE -ne 0) { throw "Infrastructure failure: $_" }
+    }
 ```
 
-Generate the authoritative method manifest:
+The empirically preserved `commands.txt` contains the precompile command as its
+first line and the 29 exact class-scoped commands after it. Collect each
+invocation's XML/log under the baseline artifact directory. Generate schema-v2
+`manifest.json` as the sweep wrapper and the authoritative, top-level sorted
+method oracle as `method-status.json`:
 
 ```powershell
 $rows = foreach ($file in Get-ChildItem target/rewind-closure-baseline/TEST-*.xml) {
@@ -118,7 +149,7 @@ $rows = foreach ($file in Get-ChildItem target/rewind-closure-baseline/TEST-*.xm
     }
 }
 $rows | Sort-Object class,method | ConvertTo-Json -Depth 3 |
-    Set-Content target/rewind-closure-baseline/manifest.json
+    Set-Content target/rewind-closure-baseline/method-status.json
 foreach ($test in $tests) {
     if (-not ($rows.class -contains $test)) { throw "Selected trace class did not execute: $test" }
 }
@@ -726,38 +757,31 @@ Commit the three Task-4 files with subject
 List concrete S2/S3K level trace classes and run them with the closure guard:
 
 ```powershell
-$tests = rg -l "class Test.*TraceReplay extends" src/test/java/com/openggf/tests/trace/s2 src/test/java/com/openggf/tests/trace/s3k |
-    Where-Object { $_ -notmatch 'SpecialStage' } |
-    ForEach-Object {
-        $text = Get-Content -Raw $_
-        $package = [regex]::Match($text, 'package\s+([^;]+);').Groups[1].Value
-        "$package.$([System.IO.Path]::GetFileNameWithoutExtension($_))"
-    }
-$selector = $tests -join ','
-if (Test-Path target/surefire-reports) {
-    Remove-Item -Recurse -Force -LiteralPath target/surefire-reports
-}
 if (Test-Path target/rewind-closure-guarded) {
     Remove-Item -Recurse -Force -LiteralPath target/rewind-closure-guarded
 }
 New-Item -ItemType Directory -Force target/rewind-closure-guarded | Out-Null
-mvn "-Dmse=off" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" `
-    "-Dmaven.test.failure.ignore=true" "-Dtest=$selector" `
-    "-DfailIfNoTests=false" test 2>&1 |
-    Tee-Object target/rewind-closure-guarded/maven.log
-Copy-Item target/surefire-reports/TEST-*.xml target/rewind-closure-guarded/
+mvn -Dmse=off -DskipTests test-compile
+Get-Content target/rewind-closure-baseline/commands.txt | Select-Object -Skip 1 |
+    ForEach-Object {
+        # Run each exact baseline class command independently; redirect its XML
+        # and log into the guarded artifact directory before the next command.
+        Invoke-Expression $_
+        if ($LASTEXITCODE -ne 0) { throw "Infrastructure failure: $_" }
+    }
 ```
 
 Expected intermediate outcome: either green or one/more failures whose nested
 cause names `owner#field`, owner identity, target, and first frame.
-Generate `target/rewind-closure-guarded/manifest.json` with the exact Task-0 XML
-parser, assert every selected class is represented and no method is skipped,
-then compare `(class, method, status)` with the Task-0 manifest. Classify every
+Generate the schema-v2 `target/rewind-closure-guarded/manifest.json` wrapper and
+top-level sorted `method-status.json` with the exact Task-0 XML parser, assert all
+29 selected classes are represented and no method is skipped, then compare
+`(class, method, status)` against the Task-0 `method-status.json`. Classify every
 new failure as closure-only, physics-frontier movement, or unrelated regression.
 
 ```powershell
-$baseline = Get-Content -Raw target/rewind-closure-baseline/manifest.json | ConvertFrom-Json
-$guarded = Get-Content -Raw target/rewind-closure-guarded/manifest.json | ConvertFrom-Json
+$baseline = Get-Content -Raw target/rewind-closure-baseline/method-status.json | ConvertFrom-Json
+$guarded = Get-Content -Raw target/rewind-closure-guarded/method-status.json | ConvertFrom-Json
 $baselineByKey = @{}; $baseline | ForEach-Object { $baselineByKey["$($_.class)#$($_.method)"] = $_.status }
 $regressions = foreach ($row in $guarded) {
     $key = "$($row.class)#$($row.method)"
@@ -842,8 +866,8 @@ $candidates = foreach ($file in $files) {
         frames = [int]$meta.trace_frame_count
     }
 }
-$baselineRows = Get-Content -Raw target/rewind-closure-baseline/manifest.json | ConvertFrom-Json
-$guardedRows = Get-Content -Raw target/rewind-closure-guarded/manifest.json | ConvertFrom-Json
+$baselineRows = Get-Content -Raw target/rewind-closure-baseline/method-status.json | ConvertFrom-Json
+$guardedRows = Get-Content -Raw target/rewind-closure-guarded/method-status.json | ConvertFrom-Json
 $baselineStatus = @{}; $baselineRows | ForEach-Object { $baselineStatus["$($_.class)#$($_.method)"] = $_.status }
 $guardedStatus = @{}; $guardedRows | ForEach-Object { $guardedStatus["$($_.class)#$($_.method)"] = $_.status }
 $timed = $candidates | Group-Object game | ForEach-Object {
