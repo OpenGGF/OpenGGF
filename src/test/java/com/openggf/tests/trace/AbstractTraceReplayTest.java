@@ -139,6 +139,12 @@ public abstract class AbstractTraceReplayTest {
         return true;
     }
 
+    /** Test observer invoked after a real replay frame passes rewind closure validation. */
+    protected void onRewindReferenceClosureValidated(
+            int traceIndex, TraceFrame frame, TraceExecutionPhase phase) {
+        // test observer hook
+    }
+
     @Test
     public void replayMatchesTrace() throws Exception {
         // 0. Skip if trace directory or required files are missing
@@ -246,11 +252,27 @@ public abstract class AbstractTraceReplayTest {
                     TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;
                     TraceExecutionPhase phase =
                         TraceReplayBootstrap.phaseForReplay(trace, previous, expected);
-                    if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                        bk2Input = fixture.skipFrameFromRecording();
-                    } else {
-                        bk2Input = fixture.stepFrameFromRecording();
-                    }
+                    int validationTraceIndex = i;
+                    bk2Input = TraceReplayFrameClosureDriver.driveGeneral(
+                            phase,
+                            fixture::stepFrameFromRecording,
+                            fixture::skipFrameFromRecording,
+                            () -> {
+                                TraceReplayFrameClosureDriver.validateCurrentObjectManager(
+                                        () -> {
+                                            var level = GameServices.levelOrNull();
+                                            return level != null
+                                                    ? new TraceReplayFrameClosureDriver.CurrentLevelContext(
+                                                            level.getObjectManager(),
+                                                            level.getCurrentZone(),
+                                                            level.getCurrentAct())
+                                                    : null;
+                                        },
+                                        meta.game(), meta.zone(), meta.act(),
+                                        validationTraceIndex, expected, phase);
+                                onRewindReferenceClosureValidated(
+                                        validationTraceIndex, expected, phase);
+                            });
 
                     if (!binder.validateInput(expected, bk2Input)) {
                         fail(String.format(
@@ -512,11 +534,29 @@ public abstract class AbstractTraceReplayTest {
             TraceFrame driveFrame = trace.getFrame(driveTraceIndex);
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
-            int bk2Input = phase == TraceExecutionPhase.VBLANK_ONLY
-                    ? fixture.skipFrameFromRecording()
-                    : TraceReplayBootstrap.shouldUsePreviousRecordingInputForTraceReplay(trace)
-                            ? fixture.stepFrameFromRecordingUsingPreviousInput()
-                            : fixture.stepFrameFromRecording();
+            int validationTraceIndex = driveTraceIndex;
+            int bk2Input = TraceReplayFrameClosureDriver.driveS3k(
+                    phase,
+                    TraceReplayBootstrap.shouldUsePreviousRecordingInputForTraceReplay(trace),
+                    fixture::stepFrameFromRecording,
+                    fixture::stepFrameFromRecordingUsingPreviousInput,
+                    fixture::skipFrameFromRecording,
+                    () -> {
+                        TraceReplayFrameClosureDriver.validateCurrentObjectManager(
+                                () -> {
+                                    var level = GameServices.levelOrNull();
+                                    return level != null
+                                            ? new TraceReplayFrameClosureDriver.CurrentLevelContext(
+                                                    level.getObjectManager(),
+                                                    level.getCurrentZone(),
+                                                    level.getCurrentAct())
+                                            : null;
+                                },
+                                meta.game(), meta.zone(), meta.act(),
+                                validationTraceIndex, driveFrame, phase);
+                        onRewindReferenceClosureValidated(
+                                validationTraceIndex, driveFrame, phase);
+                    });
 
             if (phase == TraceExecutionPhase.VBLANK_ONLY
                     && driveTraceIndex == replayStart.startingTraceIndex()
