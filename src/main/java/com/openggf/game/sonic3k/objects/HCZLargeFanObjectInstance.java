@@ -30,7 +30,6 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements
 
     private static final int PRIORITY = 4; // ROM: priority = $200
     private static final int FAN_FRAME_COUNT = 5;
-    private static final int KOS_MODULE_WAIT_FRAMES = 3;
     private static final int DROP_FRAMES = 8;
     private static final int DROP_SPEED = 8;
 
@@ -76,7 +75,7 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements
                 return;
             }
             phase = PHASE_LOADING_ART;
-            artWaitFramesRemaining = KOS_MODULE_WAIT_FRAMES;
+            artWaitFramesRemaining = HCZBreakableBarState.claimLargeFanModuleWaitFrames();
             return;
         }
 

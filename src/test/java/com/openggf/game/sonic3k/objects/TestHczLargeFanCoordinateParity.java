@@ -6,12 +6,14 @@ import com.openggf.level.objects.StubObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
+import static com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBreakableBarState;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestHczLargeFanCoordinateParity {
 
     @Test
     void activationWindowUsesPlayerRomCentrePositionAfterKosLoadWait() {
+        HCZBreakableBarState.reset();
         int fanX = 0x0B80;
         int fanY = 0x0580;
         HCZLargeFanObjectInstance fan = new HCZLargeFanObjectInstance(
@@ -34,6 +36,14 @@ class TestHczLargeFanCoordinateParity {
 
         assertEquals(fanY + 8, fan.getY(),
                 "Obj_HCZLargeFan compares ROM x_pos/y_pos, which map to player centre coordinates");
+    }
+
+    @Test
+    void laterFanConsumesAlreadyPrimedModuleQueueOneDispatchSooner() {
+        HCZBreakableBarState.reset();
+
+        assertEquals(3, HCZBreakableBarState.claimLargeFanModuleWaitFrames());
+        assertEquals(2, HCZBreakableBarState.claimLargeFanModuleWaitFrames());
     }
 
     private static TestablePlayableSprite standingPlayer() {

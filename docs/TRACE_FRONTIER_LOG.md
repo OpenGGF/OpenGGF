@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f27695 / 892 errors (11 errors under
+f3318 / 4234 errors to f27807 / 681 errors (1 error under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -779,6 +779,21 @@ Together with the corrected initialization-only interpretation of milestone
 nine-route S3K matrix remains exact: both AIZ routes green; CNZ complete f1846
 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030
 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 49 carries the HCZ large-fan KosM queue state across activations.
+The first Obj39 activation in the complete route observes four
+`loc_3093C` object samples before `Kos_modules_left` clears, while the later
+HCZ2 fan—after that module workload has already completed—observes three. A
+global shorter delay regressed the first fan at f2804 and was rejected. The
+engine now records whether the fan module queue has been primed, uses that
+ROM-visible state to select the later one-dispatch-shorter wait, and captures
+it in the existing HCZ static rewind adapter (`sonic3k.asm:65583-65636`).
+
+This closes f27695-f27806 and advances HCZ to f27807 / 681 full-run errors (1
+under `frontierOnly`). Focused large-fan and rewind-state checks pass. The
+granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 Milestone 28 restores the two ROM-owned HCZ2 surface handlers around the first
 large water loop. `sub_714E -> sub_717C` now samples the live foreground layout
