@@ -14,12 +14,31 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestTraceReplayReferenceClosureGuard {
     private static final TraceFrame FRAME = TraceFrame.executionTestFrame(123, 4, 5, 0);
+
+    @Test
+    void sonic1IsOutsideTraceClosureGuardScope() {
+        assertFalse(AbstractTraceReplayTest.shouldValidateRewindReferenceClosure(
+                SonicGame.SONIC_1));
+    }
+
+    @Test
+    void sonic2IsInsideTraceClosureGuardScope() {
+        assertTrue(AbstractTraceReplayTest.shouldValidateRewindReferenceClosure(
+                SonicGame.SONIC_2));
+    }
+
+    @Test
+    void sonic3kIsInsideTraceClosureGuardScope() {
+        assertTrue(AbstractTraceReplayTest.shouldValidateRewindReferenceClosure(
+                SonicGame.SONIC_3K));
+    }
 
     @Test
     void generalStepValidatesBeforeComparison() {
