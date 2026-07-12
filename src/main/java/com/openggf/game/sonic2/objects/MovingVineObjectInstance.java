@@ -107,6 +107,8 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
     private boolean player2Grabbed;         // objoff_31
     private int player1ReleaseDelay;        // objoff_32 (byte at a2+2)
     private int player2ReleaseDelay;        // objoff_33 (byte at a2+2 for player 2)
+    private PlayableEntity player1Owner;
+    private PlayableEntity player2Owner;
     private IdentityHashMap<PlayableEntity, Boolean> extraPlayerGrabbed = new IdentityHashMap<>();
     private IdentityHashMap<PlayableEntity, Integer> extraPlayerReleaseDelay = new IdentityHashMap<>();
 
@@ -227,14 +229,87 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
         // 3. Process player interactions
         // ROM: Obj80_Action processes each player via a2 pointer
         List<PlayableEntity> participants = interactionParticipants(playerEntity);
+        bindNativeOwners(participants);
         for (int i = 0; i < participants.size(); i++) {
             if (participants.get(i) instanceof AbstractPlayableSprite player) {
                 processPlayerInteraction(player, i);
             }
         }
+        pruneOmittedExtensions(participants);
 
         // 4. Update dynamic spawn for collision system
         updateDynamicSpawn(spawn.x(), currentY);
+    }
+
+    private void bindNativeOwners(List<PlayableEntity> participants) {
+        PlayableEntity main = participants.isEmpty() ? null : participants.get(0);
+        PlayableEntity nativeP2 = participants.size() < 2 ? null : participants.get(1);
+        player1Owner = bindNativeOwner(0, player1Owner, main);
+        player2Owner = bindNativeOwner(1, player2Owner, nativeP2);
+    }
+
+    private PlayableEntity bindNativeOwner(int slot, PlayableEntity previous, PlayableEntity current) {
+        if (previous == current) {
+            return previous;
+        }
+        if (previous == null && current != null) {
+            Boolean restoredGrabbed = extraPlayerGrabbed.remove(current);
+            Integer restoredDelay = extraPlayerReleaseDelay.remove(current);
+            if (restoredGrabbed != null || restoredDelay != null) {
+                if (slot == 0) {
+                    player1Grabbed = Boolean.TRUE.equals(restoredGrabbed);
+                    player1ReleaseDelay = restoredDelay != null ? restoredDelay : 0;
+                } else {
+                    player2Grabbed = Boolean.TRUE.equals(restoredGrabbed);
+                    player2ReleaseDelay = restoredDelay != null ? restoredDelay : 0;
+                }
+            }
+            return current;
+        }
+        boolean grabbed = slot == 0 ? player1Grabbed : player2Grabbed;
+        int delay = slot == 0 ? player1ReleaseDelay : player2ReleaseDelay;
+        if (previous != null && (grabbed || delay != 0)) {
+            extraPlayerGrabbed.put(previous, grabbed);
+            extraPlayerReleaseDelay.put(previous, delay);
+        }
+        if (slot == 0) {
+            player1Grabbed = false;
+            player1ReleaseDelay = 0;
+        } else {
+            player2Grabbed = false;
+            player2ReleaseDelay = 0;
+        }
+        if (current != null) {
+            boolean restoredGrabbed = extraPlayerGrabbed.remove(current) == Boolean.TRUE;
+            Integer restoredDelayValue = extraPlayerReleaseDelay.remove(current);
+            int restoredDelay = restoredDelayValue != null ? restoredDelayValue : 0;
+            if (slot == 0) {
+                player1Grabbed = restoredGrabbed;
+                player1ReleaseDelay = restoredDelay;
+            } else {
+                player2Grabbed = restoredGrabbed;
+                player2ReleaseDelay = restoredDelay;
+            }
+        }
+        return current;
+    }
+
+    private void pruneOmittedExtensions(List<PlayableEntity> participants) {
+        for (PlayableEntity player : new ArrayList<>(extraPlayerGrabbed.keySet())) {
+            if (!containsIdentity(participants, player)) {
+                releaseOwnedPlayer(player, extraPlayerGrabbed.getOrDefault(player, false));
+                extraPlayerGrabbed.remove(player);
+                extraPlayerReleaseDelay.remove(player);
+            } else if (!extraPlayerGrabbed.getOrDefault(player, false)
+                    && extraPlayerReleaseDelay.getOrDefault(player, 0) == 0) {
+                extraPlayerGrabbed.remove(player);
+                extraPlayerReleaseDelay.remove(player);
+            }
+        }
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity target) {
+        return participants.stream().anyMatch(player -> player == target);
     }
 
     private List<PlayableEntity> interactionParticipants(PlayableEntity updatePlayer) {
@@ -434,7 +509,7 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
 
         // Check if player should be released (dead, debug mode, etc.)
         // ROM: cmpi.b #4,routine(a1) / bhs.s loc_29B42
-        if (player.isHurt() || player.isDebugMode()) {
+        if (player.getDead() || player.isHurt() || player.isDebugMode()) {
             releasePlayer(player, playerIndex, false);
             return;
         }
@@ -630,6 +705,33 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
 
         LOGGER.fine(() -> String.format("Player released from vine, jumped=%s, delay=%d",
                 jumped, releaseDelayFrames));
+    }
+
+    @Override
+    public void onUnload() {
+        // Obj80 runs MarkObjGone after its native P1/P2 action pass. If the
+        // anchor leaves range while either native slot is grabbed, the ROM
+        // deletes the object without clearing obj_control (s2.asm:56753-56759).
+        // Preserve that trace-visible quirk for the two native slots, but do
+        // not strand engine-only extension players when their owner vanishes.
+        for (var entry : extraPlayerGrabbed.entrySet()) {
+            releaseOwnedPlayer(entry.getKey(), Boolean.TRUE.equals(entry.getValue()));
+        }
+        if (buttonVineMode && !player1Grabbed && !player2Grabbed) {
+            ButtonVineTriggerManager.setTrigger(buttonSwitchId, false);
+        }
+        player1Grabbed = false;
+        player2Grabbed = false;
+        player1ReleaseDelay = 0;
+        player2ReleaseDelay = 0;
+        extraPlayerGrabbed.clear();
+        extraPlayerReleaseDelay.clear();
+    }
+
+    private void releaseOwnedPlayer(PlayableEntity entity, boolean grabbed) {
+        if (grabbed && entity instanceof AbstractPlayableSprite player) {
+            ObjectControlState.none().applyTo(player);
+        }
     }
 
     @Override
