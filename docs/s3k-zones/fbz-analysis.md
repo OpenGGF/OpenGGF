@@ -565,7 +565,7 @@ locret_244C:
 | Magnetic Pendulum | `Obj_FBZMagneticPendulum` (81106) | Swinging pendulum | Yes | |
 | Exit Door | `Obj_FBZExitDoor` (149227) | End boss exit | Yes | |
 | Exit Hall | `Obj_FBZExitHall` (182234) | End-of-zone hallway | Yes | |
-| Egg Capsule | `Obj_FBZEggPrison` (187030) | Zone-specific capsule | Yes | |
+| Egg Prison | `Obj_FBZEggPrison` (187030) | Placed respawn-aware destructible prison; distinct from the generic final `Obj_EggCapsule` | Yes | |
 | Spring Plunger | `Obj_FBZSpringPlunger` (187089) | Miniboss-related spring | Yes | |
 | Outdoor BG Motion | `Obj_FBZOutdoorBGMotion` (109217) | BG bobbing oscillation | Yes | Persistent object |
 | Boss Event Control | `Obj_FBZEndBossEventControl` (109820) | Act 2 boss transition | Yes | Solid platform |
@@ -605,8 +605,8 @@ locret_244C:
 ## Dependency Map
 
 ### Events -> Animated Tiles
-- No direct dependencies. AniPLC scripts run independently of event state.
-- No VRAM conflicts: AniPLC targets tiles $200-$247; event PLCs load to different tile ranges (boss art, misc art).
+- No direct event-flag dependency. AniPLC scripts run independently of event state.
+- There is an intentional shared VRAM region: `ArtTile_FBZSpikes` is $200 while AniPLC script 3 is the first/live writer of `ArtUnc_AniFBZ__3` to $200-$207. No FBZ level PLC targets this range; spike objects reference the animated tile IDs.
 
 ### Events -> Palette Cycling
 - No dependency. `AnPal_FBZ` toggles `_unkF7C1` independently of event state; events only write BG palette (line 4, colors 2-9).
