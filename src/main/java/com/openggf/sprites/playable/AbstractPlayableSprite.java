@@ -2606,10 +2606,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // yPixel produces the same centreY shift as the ROM's radius-based subtraction.
                 boolean wasRolling = getRolling();
                 setRolling(false);
-                PlayerMovementRules movementRules = playerMovementRulesOrNull();
+                GameRules currentRules = getGameRules();
                 boolean restoresSplitSidekickRadii = !(this instanceof Tails)
-                                || movementRules == null
-                                || movementRules.sidekickHurtRestoresRadiiWithoutRoll();
+                                || currentRules == null || currentRules.sidekickCpu() == null
+                                || currentRules.sidekickCpu().sidekickHurtRestoresRadiiWithoutRoll();
                 // S3K HurtCharacter calls Player_TouchFloor, whose Tails branch
                 // restores default radii before testing Status_Roll. S2's 1P sidekick
                 // hurt path instead branches to Hurt_Sidekick and preserves a split

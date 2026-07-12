@@ -270,9 +270,10 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
         if (GenericRewindEligibility.usesDefaultBadnikSubclassCapture(getClass())
                 && base.genericState() == null
                 && base.compactGenericState() == null) {
-            var compactState = GenericFieldCapturer.captureObjectSubclassScalarsCompact(this, context);
-            if (compactState.isPresent()) {
-                base = base.withCompactGenericState(compactState.get());
+            if (GenericRewindEligibility.usesCompactDefaultSubclassCapture(getClass())) {
+                var compactState = GenericFieldCapturer
+                        .captureObjectSubclassScalarsCompact(this, context).orElseThrow();
+                base = base.withCompactGenericState(compactState);
             } else {
                 var genericState = GenericFieldCapturer.captureObjectSubclassScalars(this);
                 if (!genericState.keys().isEmpty()) {

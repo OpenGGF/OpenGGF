@@ -23,6 +23,5 @@ public record PlayerMovementRules(
         boolean waterExitBoostSkipsFastUpwardVelocity,
         boolean slopeResistAppliesAtZeroInertia,
         boolean levelBoundaryLockUsesScreenLockFlag,
-        boolean levelBoundaryUsesPreEasedMaxXDuringBossLock,
-        boolean sidekickHurtRestoresRadiiWithoutRoll) {
+        boolean levelBoundaryUsesPreEasedMaxXDuringBossLock) {
 }

@@ -4106,6 +4106,16 @@ public class ObjectManager {
         return rewindCaptureContext();
     }
 
+    /**
+     * Verifies that every identity-bearing field captured by the compact default
+     * object path points at an object or player registered in the current rewind
+     * identity context.
+     */
+    public void validateRewindReferenceClosure() {
+        ObjectRewindReferenceClosureValidator.validate(
+                activeObjects.values(), dynamicObjects, auxiliaryDynamicObjects, rewindCaptureContext());
+    }
+
     private com.openggf.game.rewind.schema.RewindCaptureContext rewindCaptureContext() {
         com.openggf.game.rewind.identity.RewindIdentityTable table =
                 new com.openggf.game.rewind.identity.RewindIdentityTable();

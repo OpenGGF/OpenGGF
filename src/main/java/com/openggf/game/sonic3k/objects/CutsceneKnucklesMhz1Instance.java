@@ -124,6 +124,13 @@ public final class CutsceneKnucklesMhz1Instance extends AbstractObjectInstance
     }
 
     @Override
+    public void onUnload() {
+        if (parentButton != null) {
+            parentButton.detachSpawnedKnuckles(this);
+        }
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES);
         if (renderer == null || !renderer.isReady()) {

@@ -317,9 +317,11 @@ public class SwScrlAizTest {
         eventsManager.initLevel(0, 0);
         Sonic3kAIZEvents act1Events = eventsManager.getAizEvents();
         assertNotNull(act1Events);
+        AizPlaneIntroInstance.setMainLevelPhaseActive(true);
 
         act1Events.setEventsFg5(true);
         for (int i = 0; i < 320 && !act1Events.isAct2TransitionRequested(); i++) {
+            GameServices.level().getObjectManager().advanceVblaCounter();
             act1Events.update(0, i);
         }
 
@@ -585,4 +587,3 @@ public class SwScrlAizTest {
         AizPlaneIntroInstance.resetIntroPhaseState();
     }
 }
-

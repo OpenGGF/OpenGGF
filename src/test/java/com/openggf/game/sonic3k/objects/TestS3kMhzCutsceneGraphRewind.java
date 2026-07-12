@@ -46,9 +46,9 @@ class TestS3kMhzCutsceneGraphRewind {
             "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild";
 
     private static final ObjectSpawn BUTTON_NEAR_DOOR =
-            new ObjectSpawn(0x0380, 0x05B0, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0x31);
+            new ObjectSpawn(0x0180, 0x05B0, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0x31);
     private static final ObjectSpawn BUTTON_CAPTURED =
-            new ObjectSpawn(0x0600, 0x05B0, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0x32);
+            new ObjectSpawn(0x0300, 0x05B0, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0x32);
     private static final ObjectSpawn CUTSCENE_KNUCKLES_CAPTURED =
             new ObjectSpawn(0x0608, 0x066C, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x1C, 0, false, 0x37);
     private static final ObjectSpawn CUTSCENE_KNUCKLES_PEER_CAPTURED =
@@ -56,11 +56,11 @@ class TestS3kMhzCutsceneGraphRewind {
     private static final ObjectSpawn OWNER_NEAR_STOPPER =
             new ObjectSpawn(0x0100, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0x33);
     private static final ObjectSpawn OWNER_CAPTURED =
-            new ObjectSpawn(0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0x34);
+            new ObjectSpawn(0x0180, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0x34);
     private static final ObjectSpawn MHZ2_PARENT_DISTRACTOR =
             new ObjectSpawn(0x0200, 0x0680, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0x35);
     private static final ObjectSpawn MHZ2_PARENT_CAPTURED =
-            new ObjectSpawn(0x03D8, 0x0680, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0x36);
+            new ObjectSpawn(0x02D8, 0x0680, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0x36);
 
     @BeforeEach
     void initHeadlessGraphics() {
@@ -402,7 +402,8 @@ class TestS3kMhzCutsceneGraphRewind {
                 AbstractPlayableSprite focusedPlayer,
                 List<? extends PlayableEntity> sidekicks) {
             ObjectManager[] holder = new ObjectManager[1];
-            TestCamera camera = new TestCamera();
+            int cameraX = initialCameraX(spawns);
+            TestCamera camera = new TestCamera(cameraX);
             camera.setFocusedSprite(focusedPlayer);
             List<? extends PlayableEntity> copiedSidekicks = List.copyOf(sidekicks);
             StubObjectServices services = new StubObjectServices() {
@@ -421,7 +422,7 @@ class TestS3kMhzCutsceneGraphRewind {
                     spawns, new MhzTestRegistry(), 0, null, null,
                     GraphicsManager.getInstance(), camera, services);
             holder[0] = objectManager;
-            objectManager.reset(0);
+            objectManager.reset(cameraX);
             objectManager.setRewindInPlaceRestoreEnabledForTest(false);
             return new Harness(objectManager, services, camera);
         }
@@ -432,15 +433,24 @@ class TestS3kMhzCutsceneGraphRewind {
     }
 
     private static final class TestCamera extends Camera {
+        private final short x;
         private AbstractPlayableSprite focusedSprite;
+
+        private TestCamera(int x) {
+            this.x = (short) x;
+        }
 
         @Override public void setFocusedSprite(AbstractPlayableSprite sprite) { focusedSprite = sprite; }
         @Override public AbstractPlayableSprite getFocusedSprite() { return focusedSprite; }
-        @Override public short getX() { return 0; }
+        @Override public short getX() { return x; }
         @Override public short getY() { return 0; }
         @Override public short getWidth() { return 0x1000; }
         @Override public short getHeight() { return 0x1000; }
         @Override public boolean isVerticalWrapEnabled() { return false; }
+    }
+
+    private static int initialCameraX(List<ObjectSpawn> spawns) {
+        return spawns.stream().mapToInt(ObjectSpawn::x).min().orElse(0) & 0xFF80;
     }
 
     private static final class MhzTestRegistry extends Sonic3kObjectRegistry {

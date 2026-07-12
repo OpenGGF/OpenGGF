@@ -73,10 +73,8 @@
              Activated automatically when CI=true (GitHub Actions, GitLab CI, etc.)
              or manually via: mvn test -Pci
 
-             Resource profile (measured):
-               1 fork × 256MB = 256MB total, ~19s for 1933 non-ROM tests
-               1 fork × 128MB = OOM on some tests
-               Local 4 forks × 512MB = 2GB total, ~19s (parallelism has <1s benefit)
+             Current release suite size requires a single 1GB fork in CI.
+             Keeping one fork also avoids native-library races between test JVMs.
         -->
         <profile>
             <id>ci</id>
@@ -87,7 +85,7 @@
                 </property>
             </activation>
             <properties>
-                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx512m</surefire.argLine>
+                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
                 <surefire.forkCount>1</surefire.forkCount>
             </properties>
         </profile>

@@ -1703,7 +1703,8 @@ class TestS3kBadnikChildGraphRewind {
     private record Harness(ObjectManager objectManager) {
         static Harness create(ObjectRegistry registry, List<ObjectSpawn> spawns) {
             ObjectManager[] holder = new ObjectManager[1];
-            Camera camera = mockCamera();
+            int cameraX = initialCameraX(spawns);
+            Camera camera = mockCamera(cameraX);
             TestablePlayableSprite player = player();
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
@@ -1722,7 +1723,7 @@ class TestS3kBadnikChildGraphRewind {
                     camera,
                     services);
             holder[0] = objectManager;
-            objectManager.reset(0);
+            objectManager.reset(cameraX);
             return new Harness(objectManager);
         }
     }
@@ -1755,9 +1756,13 @@ class TestS3kBadnikChildGraphRewind {
         }
     }
 
-    private static Camera mockCamera() {
+    private static int initialCameraX(List<ObjectSpawn> spawns) {
+        return spawns.stream().mapToInt(ObjectSpawn::x).min().orElse(0) & 0xFF80;
+    }
+
+    private static Camera mockCamera(int cameraX) {
         return new Camera() {
-            @Override public short getX() { return 0; }
+            @Override public short getX() { return (short) cameraX; }
             @Override public short getY() { return 0; }
             @Override public short getWidth() { return 0x400; }
             @Override public short getHeight() { return 0x300; }

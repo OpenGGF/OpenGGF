@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -41,16 +42,22 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
     private int animIndex;
 
     /**
-     * @param spawn   spawn data (position is overridden by parent tracking)
-     * @param parent  plane child to follow
-     * @param xOffset horizontal offset from parent position
-     * @param yOffset vertical offset from parent position
+     * @param spawn spawn data (position is overridden by parent tracking)
+     * @param parent plane child to follow
+     * @param variant normalized 0/1 animation and offset selector; must match
+     *                {@code spawn.subtype() & 1}
      */
     public AizIntroEmeraldGlowChild(
             ObjectSpawn spawn, AizIntroPlaneChild parent, int variant) {
         super(spawn, "AIZEmeraldGlow");
         this.parent = parent;
-        this.variant = Math.clamp(variant, 0, 1);
+        int spawnVariant = spawn.subtype() & 1;
+        int normalizedVariant = Math.clamp(variant, 0, 1);
+        if (normalizedVariant != spawnVariant) {
+            throw new IllegalArgumentException("AIZ intro glow variant " + normalizedVariant
+                    + " disagrees with captured spawn subtype variant " + spawnVariant);
+        }
+        this.variant = spawnVariant;
         this.xOffset = X_OFFSETS[this.variant];
         this.yOffset = Y_OFFSETS[this.variant];
     }
@@ -80,7 +87,7 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (parent.isDestroyed()) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
             return;
         }
         animTimer++;

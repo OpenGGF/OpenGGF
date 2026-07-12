@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 
@@ -80,13 +81,13 @@ final class AizAct2CameraResizeController extends AbstractObjectInstance
         if (currentMax > storedMax) {
             // A later camera owner has already widened farther than the stale
             // gradual worker's target; ROM deletes the worker at its bound.
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
             return;
         }
         int nextMax = currentMax + delta;
         if (nextMax >= storedMax) {
             camera.setMaxX((short) storedMax);
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
         } else {
             camera.setMaxX((short) nextMax);
         }
@@ -116,7 +117,7 @@ final class AizAct2CameraResizeController extends AbstractObjectInstance
         int nextMax = (camera.getMaxY() & 0xFFFF) + delta;
         if (nextMax > storedMax) {
             camera.setMaxY((short) storedMax);
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
         } else {
             camera.setMaxY((short) nextMax);
             camera.setMaxYTarget((short) storedMax);

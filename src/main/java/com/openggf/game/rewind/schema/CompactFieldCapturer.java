@@ -1,5 +1,7 @@
 package com.openggf.game.rewind.schema;
 
+import com.openggf.game.rewind.FieldKey;
+import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.level.objects.AbstractObjectInstance;
 
 import java.util.ArrayList;
@@ -52,6 +54,27 @@ public final class CompactFieldCapturer {
         return captureWithSchema(target, schema, context);
     }
 
+    public static void validateDefaultObjectSubclassReferenceClosure(
+            AbstractObjectInstance target,
+            RewindCaptureContext context) {
+
+        Objects.requireNonNull(target, "target");
+        Objects.requireNonNull(context, "context");
+        RewindClassSchema schema = RewindSchemaRegistry.defaultObjectSubclassSchemaFor(target.getClass());
+        validateSupported(schema);
+        Scratch scratch = SCRATCH.get();
+        scratch.reset();
+        try {
+            for (RewindFieldPlan field : schema.capturedFields()) {
+                if (field.codec().requiresIdentityTable()) {
+                    captureField(field, target, context, scratch);
+                }
+            }
+        } finally {
+            scratch.reset();
+        }
+    }
+
     private static RewindObjectStateBlob captureWithSchema(
             Object target,
             RewindClassSchema schema,
@@ -64,7 +87,7 @@ public final class CompactFieldCapturer {
                 if (field.hasPrimitiveFastPath()) {
                     field.capturePrimitive(target, scratch.scalarData);
                 } else {
-                    field.codec().capture(field.field(), target, scratch.scalarData, scratch.opaqueValues, context);
+                    captureField(field, target, context, scratch);
                 }
             }
             // toByteArray()/toArray() hand back fresh arrays, so ownership
@@ -75,6 +98,39 @@ public final class CompactFieldCapturer {
         } finally {
             scratch.reset();
         }
+    }
+
+    private static void captureField(
+            RewindFieldPlan field,
+            Object target,
+            RewindCaptureContext context,
+            Scratch scratch) {
+
+        try {
+            field.codec().capture(field.field(), target, scratch.scalarData, scratch.opaqueValues, context);
+        } catch (IllegalStateException failure) {
+            if (!field.codec().requiresIdentityTable()) {
+                throw failure;
+            }
+            throw contextualReferenceFailure(field, target, context, failure);
+        }
+    }
+
+    private static IllegalStateException contextualReferenceFailure(
+            RewindFieldPlan field,
+            Object target,
+            RewindCaptureContext context,
+            IllegalStateException cause) {
+
+        ObjectRefId ownerId = target instanceof AbstractObjectInstance object
+                ? context.identityTable().map(table -> table.idFor(object)).orElse(null)
+                : null;
+        String ownerDetails = target instanceof AbstractObjectInstance object
+                ? "id=" + ownerId + ", slot=" + object.getSlotIndex() + ", spawn=" + object.getSpawn()
+                : "id=" + ownerId;
+        return new IllegalStateException("Invalid rewind reference at " + FieldKey.of(field.field())
+                + " on " + target.getClass().getName() + " [" + ownerDetails + "]: "
+                + cause.getMessage(), cause);
     }
 
     public static void restore(Object target, RewindObjectStateBlob blob) {
