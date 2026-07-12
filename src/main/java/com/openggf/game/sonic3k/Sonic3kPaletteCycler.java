@@ -8,6 +8,7 @@ import com.openggf.game.palette.PaletteWrite;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
@@ -75,8 +76,19 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 cycle.tick(level, paletteRegistry);
             }
         }
+        if (zoneIndex == 0x04 && GameServices.hasRuntime()) {
+            var state = S3kRuntimeStates.currentFbz(GameServices.zoneRuntimeRegistry()).orElse(null);
+            var levelManager = GameServices.levelOrNull();
+            if (state != null && levelManager != null) {
+                dispatchFbzMagneticPhase(state, levelManager.getFrameCounter());
+            }
+        }
         paletteRegistry.resolveInto(levelPalettes(), resolveUnderwaterPalettes(),
                 GameServices.graphics(), level.getPalette(0));
+    }
+
+    static void dispatchFbzMagneticPhase(FbzZoneRuntimeState state, int frameCounter) {
+        state.advanceMagneticPhase(frameCounter);
     }
 
     private Palette[] levelPalettes() {

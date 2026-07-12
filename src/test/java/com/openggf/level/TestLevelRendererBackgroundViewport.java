@@ -2,6 +2,7 @@ package com.openggf.level;
 
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.TilemapGpuRenderer;
+import com.openggf.game.render.AdvancedRenderFrameState;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -18,6 +19,34 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestLevelRendererBackgroundViewport {
+
+    @Test
+    void advancedPlaneRoutingSwapsNametableSourcesOnceAndKeepsVScrollIndependent() {
+        AdvancedRenderFrameState normal = AdvancedRenderFrameState.disabled();
+        assertEquals(TilemapGpuRenderer.Layer.FOREGROUND, LevelRenderer.foregroundPlaneSource(normal));
+        assertEquals(TilemapGpuRenderer.Layer.BACKGROUND, LevelRenderer.backgroundPlaneSource(normal));
+        assertEquals(101.0f, LevelRenderer.foregroundVScroll(normal, 101.0f));
+        assertEquals(202.0f, LevelRenderer.backgroundVScroll(normal, 202.0f));
+
+        AdvancedRenderFrameState reversed = AdvancedRenderFrameState.builder()
+                .reversePlaneAssignment()
+                .setForegroundVScrollOverride((short) 37)
+                .setBackgroundVScrollOverride((short) -12)
+                .build();
+        assertEquals(TilemapGpuRenderer.Layer.BACKGROUND, LevelRenderer.foregroundPlaneSource(reversed),
+                "the visible foreground responsibility must read Plane B exactly once");
+        assertEquals(TilemapGpuRenderer.Layer.FOREGROUND, LevelRenderer.backgroundPlaneSource(reversed),
+                "the background/FBO responsibility must read Plane A exactly once");
+        assertEquals(37.0f, LevelRenderer.foregroundVScroll(reversed, 101.0f));
+        assertEquals(-12.0f, LevelRenderer.backgroundVScroll(reversed, 202.0f));
+    }
+
+    @Test
+    void universalPlaneRoutingHotPathUsesNoPerPassRoutingObject() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
+        assertFalse(source.contains("record PlaneRouting"));
+        assertFalse(source.contains("new PlaneRouting("));
+    }
 
     @Test
     void staleBackgroundTileGenerationAlsoSuppressesItsPairedComposite() {
@@ -231,7 +260,7 @@ class TestLevelRendererBackgroundViewport {
         }
         String commandBody = source.substring(commandStart, commandEnd).replace("\r\n", "\n");
 
-        assertTrue(commandBody.matches("(?s).*TilemapGpuRenderer\\.Layer\\.BACKGROUND,\\s+"
+        assertTrue(commandBody.matches("(?s).*backgroundPlaneSource\\(currentAdvancedRenderFrameState\\),\\s+"
                         + "pendingBgTilePassRenderWidth,\\s+"
                         + "pendingBgTilePassRenderHeight,\\s+"
                         + "0,\\s+"
@@ -240,17 +269,6 @@ class TestLevelRendererBackgroundViewport {
                         + "pendingBgTilePassRenderHeight,\\s+"
                         + "pendingBgTilePassBgTilemapWorldOffsetX,.*"),
                 "The background tile pass renders into the BG FBO; its tilemap shader viewport must be the FBO viewport, not the cached screen viewport.");
-    }
-
-    @Test
-    void highPriorityForegroundMaskUsesForegroundVScrollOrigin() throws Exception {
-        String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
-        String normalizedSource = source.replace("\r\n", "\n");
-
-        assertTrue(normalizedSource.contains("float fgWorldOffsetY = lm.parallaxManager.getVscrollFactorFG();"),
-                "The high-priority mask must use the same foreground VScroll origin as the visible Plane A pass.");
-        assertFalse(normalizedSource.contains("float fgWorldOffsetY = camera.getYWithShake();"),
-                "Using camera Y for the mask shifts low-priority sprite occlusion away from visible foreground tiles.");
     }
 
     @Test

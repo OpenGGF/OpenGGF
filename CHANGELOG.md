@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **feat(fbz): establish ROM-accurate visual and art foundations.** Flying Battery now has its locked-on indoor, outdoor, and boss-cloud deformation paths; event-owned magnetic polarity and shared scroll phase with rewind restoration; five native AniPLC channels; generic allocation-free plane reversal and independent vertical-scroll routing; and verified level, miniboss, end-boss, exit, and capsule PLC/art dependencies.
 - **feat(fbz): add event-backed runtime state and rewind reconciliation.** Flying Battery now has a typed handler-backed state owner, bridge-only object writes, versioned transactional rewind serialization, staged plane/collision modes, and an atomic ten-cloud identity recreation contract ready for the later boss-event implementation.
 - **feat(collision): centralize S3K background-plane terrain probes.** A gameplay-scoped provider now supplies ROM `Background_collision_flag` semantics to ordinary sensors, room-in-front checks, object terrain helpers, and both lost-ring implementations, including complemented left-wall camera translation and explicit zone-runtime overrides while preserving existing HCZ/MGZ/CNZ behavior.
 - **fix(rewind): detach unloaded Turbo Spiker shells from their parent object.** A launched shell that left the dynamic object set could remain referenced by its live parent, causing rewind capture to fail because the removed child no longer had a registered object identity.

@@ -244,3 +244,85 @@ recorded as `unknown/not previously run` rather than inferred.
 - Focused GREEN: 19 tests, 0 failures/errors/skips. Full Task 3 GREEN: 66 tests,
   0 failures/errors/skips. Fresh guards: 32 tests, 0 failures/errors/skips.
   `git diff --check` is clean. No trace ran.
+
+## Task 4: visual-system foundation (incomplete at PLC corruption gate)
+
+- Disassembly preflight: S&K `FBZ_Deform` at `sonic3k.asm:108859-108920`,
+  exact deform/index arrays at `109229-109296`, `FBZ2_CloudDeform` at
+  `109701-109760`, cloud position/frame data at `110038-110048`, AniPLC lists
+  at `55812-55890`, and `AnPal_FBZ` at `3370-3376`. The plan-requested
+  `docs/s3k-zones/fbz-visual-manifest.md` did not exist at Task 4 HEAD; the
+  checked inventory manifest and disassembly were used instead.
+- Scroll/render RED command: `mvn "-Dtest=TestFbzScrollHandler,TestFbzBossCloudDeform,TestFbzBossPlaneRenderMode" test "-Ds3k.rom.path=s3k.gen"`.
+- Scroll/render RED result: missing `SwScrlFbz`, `FbzBossPlaneRenderMode`, and
+  generic plane-assignment/independent V-scroll frame-state APIs. After the
+  minimal implementation, one expectation was corrected from `-$48E` to the
+  ROM scatter-order result `-$4F0` (slot zero is the eighth `$E00` drift write).
+- Animation/polarity/art RED command: `mvn "-Dtest=TestFbzAnimatedTiles,TestFbzMagneticPolarity,TestFbzPlcArtHandoffs" test "-Ds3k.rom.path=s3k.gen"`.
+- Animation/polarity/art RED result: 27 intended missing symbols covering both
+  FBZ AniPLC addresses/channels, magnetic phase dispatch, line-4 ownership,
+  consumer art keys, and PLC handoff contracts.
+- Focused GREEN command: `mvn "-Dtest=TestFbzScrollHandler,TestFbzBossCloudDeform,TestFbzBossPlaneRenderMode,TestFbzAnimatedTiles,TestFbzMagneticPolarity,TestFbzPlcArtHandoffs,TestSonic3kPatternAnimatorRewindSnapshot,TestSonic3kPlcArtRewindSnapshot" test "-Ds3k.rom.path=s3k.gen"`.
+- Focused result: every named Task 4 and snapshot class passed. The relaxed MSE
+  aggregate reported 342 passed and two unrelated inherited AIZ guard failures
+  (`AizIntroEmeraldGlowChild` final-scalar coverage and two
+  `AizAct2CameraResizeController` inline-spawn findings).
+- Mandatory PLC corruption guard first exposed the composite FBZ egg-capsule
+  mapping; it was corrected to level-backed ownership because its mapping mixes
+  FBZ misc/plunger tiles with PLC-loaded capsule tiles. The rerun then failed on
+  `fbz_boss_pillar`: shared `Map_FBZ2Preboss` was incorrectly registered as a
+  standalone sheet. Disassembly consumer tracing proves pillar uses default
+  frame 0 and clouds explicitly use frames 1-3. Both are PLC-loaded level-art
+  destinations (`$3D5` and `$3A3`) and now carry exact filters `{0}` and
+  `{1,2,3}`. A focused test first failed on the absent split, then passed.
+- The same guard identified exit door/hall as runtime PLCKosM level-art rather
+  than standalone art; they now use native destinations `$3E5/$3F4`. The exact
+  focused mapping test, PLC mapping-sanity guard, and engine corruption guard
+  exit 0. The full Task 4 plus affected-regression rerun exits 0.
+- Mandatory route-wave guard result: 48 tests, 46 passed, two inherited AIZ
+  failures only (the three `AizIntroEmeraldGlowChild` final-scalar keys and two
+  `AizAct2CameraResizeController` inline-spawn findings). No FBZ guard failed.
+- Required `mvn -Dmse=off package -Ds3k.rom.path=s3k.gen -q` was run and exits 1
+  on the worktree's broader pre-existing failures, including the same AIZ
+  coverage/spawn issues and other non-FBZ branch failures. Task 4 focused and
+  corruption verification remains green, but the foundation wave cannot be
+  declared globally GREEN until those inherited gate failures are repaired.
+  No trace capture or replay was executed. `git diff --check` was clean.
+- Renderer-consumption follow-up RED: the behavior-level
+  `advancedPlaneRoutingSwapsNametableSourcesOnceAndKeepsVScrollIndependent`
+  test failed compilation on the absent generic `PlaneRouting` contract.
+  `LevelRenderer` now swaps Plane A/B sources at the foreground/background
+  tilemap boundary only, keeps normal routing unchanged, and applies the two
+  V-scroll overrides independently to foreground, priority-mask, and background
+  responsibilities. There is no FBZ branch in the renderer.
+- Renderer/all-Task-4 GREEN rerun: 75 tests passed with no failures, errors, or
+  skips (the eight Task 4 classes plus affected renderer, render-order,
+  advanced-mode, rewind, and registration coverage). PLC registry/provider and
+  corruption rerun: 80 tests passed with no failures, errors, or skips.
+- Task 4 spec-review correction RED/GREEN: the runtime tests first exposed the
+  frame-derived deform phase and duplicate magnetic-edge toggle; art tests first
+  failed on 13 missing PLC dependency/raw-list symbols; strengthened AniPLC
+  tests first failed on seven missing deterministic inspection symbols. The
+  corrected implementation uses one event-owned, rewind-serialized 32-bit
+  `HScroll_table+$1FC` accumulator across indoor/outdoor/boss modes, serializes
+  the magnetic edge identity, publishes every exact PLC `$62-$6A`/`$6F`
+  dependency without duplicate shared keys, and replaces the fabricated
+  `[62,01,05]` handoff with the raw monitor PLC list bodies.
+- Exact Nemesis header sizes used by the corrected FBZ boss-art guards are:
+  subboss 74 tiles/2368 bytes, end boss 48/1536, Robotnik head 32/1024,
+  stand 67/2144, run 87/2784, flame 68/2176, shared ship 82/2624,
+  explosion 46/1472, and Egg Capsule 70/2240.
+- Corrected combined Task 4 + Task 3 rewind + renderer + PLC/corruption suite:
+  202 tests passed with no failures, errors, or skips. Mandatory ten-guard gate:
+  46/48 passed; only the inherited AIZ emerald-glow final-scalar coverage gap
+  and AIZ camera-resize inline-spawn guard failed. No FBZ finding was reported.
+- Task 4 quality-review allocation/ownership correction: renderer and magnetic
+  tests first failed compilation on the missing primitive routing helpers and
+  typed adapter dispatch. `LevelRenderer` now resolves plane sources and both
+  V-scroll values through allocation-free enum/primitive helpers; the former
+  `PlaneRouting` record and its three per-frame allocations are gone.
+  `SwScrlFbz` now reuses one list view and ten mutable cloud-position slots,
+  removing the boss-frame list/record/copy allocations. `Sonic3kPaletteCycler`
+  advances magnetic state only through `FbzZoneRuntimeState`, with no concrete
+  event-manager lookup. The bounded Task 4 + renderer/runtime + PLC corruption
+  regression set passed 168 tests with no failures, errors, or skips.

@@ -100,6 +100,12 @@ public class AniPlcScriptState {
     /** Returns the current frame index (rewind-restore access). */
     public int getFrameIndex() { return frameIndex; }
 
+    /** Unsigned source duration byte, exposed for deterministic script validation. */
+    public int globalDurationForTesting() { return globalDuration & 0xFF; }
+
+    /** Defensive copy of the parsed source-tile sequence. */
+    public int[] frameTileIdsForTesting() { return frameTileIds.clone(); }
+
     /** Restores playback counters from a snapshot (rewind-restore path). */
     public void restoreCounters(int timer, int frameIndex) {
         this.timer = timer;

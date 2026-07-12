@@ -235,6 +235,17 @@ public final class Sonic3kObjectArtKeys {
     public static final String FBZ_BLASTER = "fbz_blaster";
     public static final String FBZ_TECHNOSQUEEK = "fbz_technosqueek";
     public static final String FBZ_BUTTON = "fbz_button";
+    public static final String FBZ_MINIBOSS = "fbz_miniboss";
+    public static final String FBZ2_SUBBOSS = "fbz2_subboss";
+    public static final String FBZ_ROBOTNIK_STAND = "fbz_robotnik_stand";
+    public static final String FBZ_ROBOTNIK_HEAD = "fbz_robotnik_head";
+    public static final String FBZ_END_BOSS_FLAME = "fbz_end_boss_flame";
+    public static final String FBZ_CLOUD = "fbz_cloud";
+    public static final String FBZ_BOSS_PILLAR = "fbz_boss_pillar";
+    public static final String FBZ_END_BOSS = "fbz_end_boss";
+    public static final String FBZ_EXIT_DOOR = "fbz_exit_door";
+    public static final String FBZ_EXIT_HALL = "fbz_exit_hall";
+    public static final String FBZ_EGG_CAPSULE = "fbz_egg_capsule";
 
     // ICZ badniks
     public static final String ICZ_SNOWDUST = "icz_snowdust";

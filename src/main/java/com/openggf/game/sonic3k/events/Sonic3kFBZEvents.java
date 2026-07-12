@@ -28,8 +28,15 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     private int backgroundRedrawStage;
     private RedrawDirection backgroundRedrawDirection = RedrawDirection.NONE;
     private int outdoorBobOffset;
+    /** ROM HScroll_table+$1FC: one 32-bit accumulator shared by every FBZ deform mode. */
+    private int hScrollAccumulator;
+    private boolean hScrollAccumulatorSampled;
+    private int hScrollAccumulatorLastFrame;
+    private int hScrollAccumulatorLastRead;
     private MagneticPolarity magneticPolarity = MagneticPolarity.NEUTRAL;
     private int magneticTimerPhase;
+    private boolean magneticEdgeObserved;
+    private int magneticLastEdgeFrame;
     private int act2ForegroundStage;
     private int bossBackgroundStage;
     private int bossBackgroundOffsetX;
@@ -57,8 +64,14 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         backgroundRedrawStage = 0;
         backgroundRedrawDirection = RedrawDirection.NONE;
         outdoorBobOffset = 0;
+        hScrollAccumulator = 0;
+        hScrollAccumulatorSampled = false;
+        hScrollAccumulatorLastFrame = 0;
+        hScrollAccumulatorLastRead = 0;
         magneticPolarity = MagneticPolarity.NEUTRAL;
         magneticTimerPhase = 0;
+        magneticEdgeObserved = false;
+        magneticLastEdgeFrame = 0;
         act2ForegroundStage = 0;
         bossBackgroundStage = 0;
         bossBackgroundOffsetX = 0;
@@ -96,12 +109,65 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     }
     public int getOutdoorBobOffset() { return outdoorBobOffset; }
     public void setOutdoorBobOffset(int value) { outdoorBobOffset = value; }
+    public int getHScrollAccumulator() { return hScrollAccumulator; }
+    public boolean isHScrollAccumulatorSampled() { return hScrollAccumulatorSampled; }
+    public int getHScrollAccumulatorLastFrame() { return hScrollAccumulatorLastFrame; }
+    public int getHScrollAccumulatorLastRead() { return hScrollAccumulatorLastRead; }
+
+    /** ROM FBZ_Deform outdoor path: read old HScroll+$1FC, then add $E00 once. */
+    public int sampleOutdoorHScrollAccumulator(int frameCounter) {
+        return sampleHScrollAccumulator(frameCounter, 0xE00);
+    }
+
+    /** ROM FBZ2_CloudDeform: read old HScroll+$1FC >> 3, then add $8000 once. */
+    public int sampleBossHScrollAccumulator(int frameCounter) {
+        return sampleHScrollAccumulator(frameCounter, 0x8000) >> 3;
+    }
+
+    private int sampleHScrollAccumulator(int frameCounter, int increment) {
+        if (hScrollAccumulatorSampled && hScrollAccumulatorLastFrame == frameCounter) {
+            return hScrollAccumulatorLastRead;
+        }
+        hScrollAccumulatorLastRead = hScrollAccumulator;
+        hScrollAccumulator += increment; // Java int overflow is the ROM's 32-bit wrap.
+        hScrollAccumulatorLastFrame = frameCounter;
+        hScrollAccumulatorSampled = true;
+        return hScrollAccumulatorLastRead;
+    }
+
+    public void restoreHScrollAccumulatorState(int value, boolean sampled, int lastFrame, int lastRead) {
+        hScrollAccumulator = value;
+        hScrollAccumulatorSampled = sampled;
+        hScrollAccumulatorLastFrame = lastFrame;
+        hScrollAccumulatorLastRead = lastRead;
+    }
     public MagneticPolarity getMagneticPolarity() { return magneticPolarity; }
     public int getMagneticTimerPhase() { return magneticTimerPhase; }
+    public boolean isMagneticEdgeObserved() { return magneticEdgeObserved; }
+    public int getMagneticLastEdgeFrame() { return magneticLastEdgeFrame; }
     public void setMagneticState(MagneticPolarity polarity, int phase) {
         if (phase < 0 || phase > 0xFF) throw new IllegalArgumentException("magnetic timer phase: " + phase);
         magneticPolarity = Objects.requireNonNull(polarity, "polarity");
         magneticTimerPhase = phase;
+    }
+
+    /** ROM AnPal_FBZ, guarded so a recompute of one frame cannot toggle twice. */
+    public void advanceMagneticPhase(int frameCounter) {
+        int phase = frameCounter & 0xFF;
+        if (phase == 0 && (!magneticEdgeObserved || magneticLastEdgeFrame != frameCounter)) {
+            magneticPolarity = magneticPolarity == MagneticPolarity.ATTRACT
+                    ? MagneticPolarity.REPEL : MagneticPolarity.ATTRACT;
+            magneticEdgeObserved = true;
+            magneticLastEdgeFrame = frameCounter;
+        }
+        magneticTimerPhase = phase;
+    }
+
+    public void restoreMagneticState(MagneticPolarity polarity, int phase,
+                                     boolean edgeObserved, int lastEdgeFrame) {
+        setMagneticState(polarity, phase);
+        magneticEdgeObserved = edgeObserved;
+        magneticLastEdgeFrame = lastEdgeFrame;
     }
     public int getAct2ForegroundStage() { return act2ForegroundStage; }
     public void setAct2ForegroundStage(int stage) {

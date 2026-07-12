@@ -59,6 +59,10 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         patternAnimator.updateForReplayBootstrapPrelude();
     }
 
+    Sonic3kPatternAnimator patternAnimatorForTesting() {
+        return patternAnimator;
+    }
+
     @Override
     public String key() {
         return patternAnimator.key();

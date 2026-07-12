@@ -16,6 +16,11 @@ public final class AdvancedRenderFrameState {
 
     private boolean enableForegroundHeatHaze;
     private boolean enablePerLineForegroundScroll;
+    private boolean reversePlaneAssignment;
+    private boolean hasForegroundVScrollOverride;
+    private short foregroundVScrollOverride;
+    private boolean hasBackgroundVScrollOverride;
+    private short backgroundVScrollOverride;
     private short[] foregroundPerColumnVScrollOverride;
     private int foregroundPerColumnVScrollLength;
     private boolean hasForegroundPerColumnVScrollOverride;
@@ -38,6 +43,12 @@ public final class AdvancedRenderFrameState {
     public boolean enablePerLineForegroundScroll() {
         return enablePerLineForegroundScroll;
     }
+
+    public boolean reversePlaneAssignment() { return reversePlaneAssignment; }
+    public boolean hasForegroundVScrollOverride() { return hasForegroundVScrollOverride; }
+    public short foregroundVScrollOverride() { return foregroundVScrollOverride; }
+    public boolean hasBackgroundVScrollOverride() { return hasBackgroundVScrollOverride; }
+    public short backgroundVScrollOverride() { return backgroundVScrollOverride; }
 
     /** Compatibility accessor returning a defensive copy, never the frame backing. */
     public short[] foregroundPerColumnVScrollOverride() {
@@ -73,6 +84,17 @@ public final class AdvancedRenderFrameState {
         foregroundPerColumnVScrollLength = length;
     }
 
+    private void write(boolean heatHaze, boolean perLineScroll, short[] columns,
+                       boolean reversePlanes, boolean hasFgVScroll, short fgVScroll,
+                       boolean hasBgVScroll, short bgVScroll) {
+        write(heatHaze, perLineScroll, columns);
+        reversePlaneAssignment = reversePlanes;
+        hasForegroundVScrollOverride = hasFgVScroll;
+        foregroundVScrollOverride = fgVScroll;
+        hasBackgroundVScrollOverride = hasBgVScroll;
+        backgroundVScrollOverride = bgVScroll;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -81,6 +103,11 @@ public final class AdvancedRenderFrameState {
         private boolean enableForegroundHeatHaze;
         private boolean enablePerLineForegroundScroll;
         private short[] foregroundPerColumnVScrollOverride;
+        private boolean reversePlaneAssignment;
+        private boolean hasForegroundVScrollOverride;
+        private short foregroundVScrollOverride;
+        private boolean hasBackgroundVScrollOverride;
+        private short backgroundVScrollOverride;
 
         public Builder enableForegroundHeatHaze() {
             this.enableForegroundHeatHaze = true;
@@ -97,33 +124,67 @@ public final class AdvancedRenderFrameState {
             return this;
         }
 
+        public Builder reversePlaneAssignment() {
+            reversePlaneAssignment = true;
+            return this;
+        }
+
+        public Builder setForegroundVScrollOverride(short value) {
+            hasForegroundVScrollOverride = true;
+            foregroundVScrollOverride = value;
+            return this;
+        }
+
+        public Builder setBackgroundVScrollOverride(short value) {
+            hasBackgroundVScrollOverride = true;
+            backgroundVScrollOverride = value;
+            return this;
+        }
+
         public AdvancedRenderFrameState build() {
             if (!enableForegroundHeatHaze
                     && !enablePerLineForegroundScroll
-                    && foregroundPerColumnVScrollOverride == null) {
+                    && foregroundPerColumnVScrollOverride == null
+                    && !reversePlaneAssignment
+                    && !hasForegroundVScrollOverride
+                    && !hasBackgroundVScrollOverride) {
                 return DISABLED;
             }
-            return new AdvancedRenderFrameState(
+            AdvancedRenderFrameState state = new AdvancedRenderFrameState(
                     enableForegroundHeatHaze,
                     enablePerLineForegroundScroll,
                     foregroundPerColumnVScrollOverride);
+            state.write(enableForegroundHeatHaze, enablePerLineForegroundScroll,
+                    foregroundPerColumnVScrollOverride, reversePlaneAssignment,
+                    hasForegroundVScrollOverride, foregroundVScrollOverride,
+                    hasBackgroundVScrollOverride, backgroundVScrollOverride);
+            return state;
         }
 
         void reset() {
             enableForegroundHeatHaze = false;
             enablePerLineForegroundScroll = false;
             foregroundPerColumnVScrollOverride = null;
+            reversePlaneAssignment = false;
+            hasForegroundVScrollOverride = false;
+            foregroundVScrollOverride = 0;
+            hasBackgroundVScrollOverride = false;
+            backgroundVScrollOverride = 0;
         }
 
         AdvancedRenderFrameState buildInto(AdvancedRenderFrameState target) {
             if (!enableForegroundHeatHaze
                     && !enablePerLineForegroundScroll
-                    && foregroundPerColumnVScrollOverride == null) {
+                    && foregroundPerColumnVScrollOverride == null
+                    && !reversePlaneAssignment
+                    && !hasForegroundVScrollOverride
+                    && !hasBackgroundVScrollOverride) {
                 return DISABLED;
             }
-            target.write(enableForegroundHeatHaze,
-                    enablePerLineForegroundScroll,
-                    foregroundPerColumnVScrollOverride);
+            target.write(enableForegroundHeatHaze, enablePerLineForegroundScroll,
+                    foregroundPerColumnVScrollOverride, reversePlaneAssignment,
+                    hasForegroundVScrollOverride, foregroundVScrollOverride,
+                    hasBackgroundVScrollOverride, backgroundVScrollOverride);
             return target;
         }
     }

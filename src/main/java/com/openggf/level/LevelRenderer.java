@@ -304,7 +304,7 @@ public final class LevelRenderer {
         enableForegroundPerColumnVScroll(tilemapRenderer);
         // viewportBuffer cached once per frame; see cacheViewportForFrame().
         tilemapRenderer.render(
-                TilemapGpuRenderer.Layer.FOREGROUND,
+                foregroundPlaneSource(currentAdvancedRenderFrameState),
                 pendingFgScreenW_low,
                 pendingFgScreenH_low,
                 viewportBuffer[0],
@@ -334,7 +334,7 @@ public final class LevelRenderer {
         enableForegroundPerColumnVScroll(tilemapRenderer);
         // viewportBuffer cached once per frame; see cacheViewportForFrame().
         tilemapRenderer.render(
-                TilemapGpuRenderer.Layer.FOREGROUND,
+                foregroundPlaneSource(currentAdvancedRenderFrameState),
                 pendingFgScreenW_high,
                 pendingFgScreenH_high,
                 viewportBuffer[0],
@@ -371,7 +371,7 @@ public final class LevelRenderer {
         applyForegroundScrollFeatures(tilemapRenderer);
         enableForegroundPerColumnVScroll(tilemapRenderer);
         tilemapRenderer.render(
-                TilemapGpuRenderer.Layer.FOREGROUND,
+                foregroundPlaneSource(currentAdvancedRenderFrameState),
                 pendingFboScreenW,
                 pendingFboScreenH,
                 0, 0, pendingFboScreenW, pendingFboScreenH,
@@ -426,7 +426,7 @@ public final class LevelRenderer {
                     tilemapRenderer.setBackgroundRenderRingBaseOverride(
                             pendingBgTilePassRingBaseTiles, pendingBgTilePassContentGeneration);
                     tilemapRenderer.render(
-                            TilemapGpuRenderer.Layer.BACKGROUND,
+                            backgroundPlaneSource(currentAdvancedRenderFrameState),
                             pendingBgTilePassRenderWidth,
                             pendingBgTilePassRenderHeight,
                             0, 0,
@@ -812,6 +812,27 @@ public final class LevelRenderer {
 
     LevelRenderer(LevelManager levelManager) {
         this.lm = levelManager;
+    }
+
+    /** Allocation-free source routing for the universal tilemap hot path. */
+    static TilemapGpuRenderer.Layer foregroundPlaneSource(AdvancedRenderFrameState state) {
+        return state.reversePlaneAssignment()
+                ? TilemapGpuRenderer.Layer.BACKGROUND
+                : TilemapGpuRenderer.Layer.FOREGROUND;
+    }
+
+    static TilemapGpuRenderer.Layer backgroundPlaneSource(AdvancedRenderFrameState state) {
+        return state.reversePlaneAssignment()
+                ? TilemapGpuRenderer.Layer.FOREGROUND
+                : TilemapGpuRenderer.Layer.BACKGROUND;
+    }
+
+    static float foregroundVScroll(AdvancedRenderFrameState state, float defaultValue) {
+        return state.hasForegroundVScrollOverride() ? state.foregroundVScrollOverride() : defaultValue;
+    }
+
+    static float backgroundVScroll(AdvancedRenderFrameState state, float defaultValue) {
+        return state.hasBackgroundVScrollOverride() ? state.backgroundVScrollOverride() : defaultValue;
     }
 
     private boolean isBackgroundCompositeCurrent(TilemapGpuRenderer tilemapRenderer) {
@@ -1243,7 +1264,8 @@ public final class LevelRenderer {
 
         // Use zone-specific vertical scroll from parallax manager
         // This ensures zones like MCZ use their act-dependent BG Y calculations
-        int actualBgScrollY = lm.parallaxManager.getVscrollFactorBG();
+        int actualBgScrollY = Math.round(backgroundVScroll(currentAdvancedRenderFrameState,
+                lm.parallaxManager.getVscrollFactorBG()));
 
         // 1. Ensure FBO capacity (grow-only, no per-frame reallocation)
         pendingBgRenderWidth = renderWidth;
@@ -1562,7 +1584,8 @@ public final class LevelRenderer {
         //    HCZ2 wall push, MCZ boss, etc.).  Do NOT add getShakeOffsetY() again
         //    — that caused double-amplitude shake on FG tiles.
         float worldOffsetX = camera.getXWithShake();
-        float worldOffsetY = lm.parallaxManager.getVscrollFactorFG();
+        float worldOffsetY = foregroundVScroll(currentAdvancedRenderFrameState,
+                lm.parallaxManager.getVscrollFactorFG());
         // Waterline tracks the same Y offset as tile rendering
         float waterlineScreenY = (float) (waterLevel - worldOffsetY);
 
@@ -1631,7 +1654,8 @@ public final class LevelRenderer {
         float fgWorldOffsetX = camera.getXWithShake();
         // The mask must use the same Plane A origin as the visible foreground pass;
         // S3K scroll handlers can decouple foreground VScroll from camera Y.
-        float fgWorldOffsetY = lm.parallaxManager.getVscrollFactorFG();
+        float fgWorldOffsetY = foregroundVScroll(currentAdvancedRenderFrameState,
+                lm.parallaxManager.getVscrollFactorFG());
 
         pendingFboScreenW = screenW;
         pendingFboScreenH = screenH;

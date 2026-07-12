@@ -1327,6 +1327,90 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 -1
         ));
+        // Composite mapping: plunger pieces use FBZ misc tiles while capsule
+        // pieces use PLC-loaded ArtTile_FBZEggCapsule ($35D). Keep it level-backed.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_EGG_CAPSULE,
+                Sonic3kConstants.MAP_FBZ_EGG_CAPSULE_ADDR, 0, 0, null));
+        if (actIndex == 0) {
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_MINIBOSS,
+                    Sonic3kConstants.ART_KOSM_FBZ_MINIBOSS_ADDR,
+                    CompressionType.KOSINSKI_MODULED, 0,
+                    Sonic3kConstants.MAP_FBZ_MINIBOSS_ADDR, 1, -1));
+        } else {
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ2_SUBBOSS,
+                    Sonic3kConstants.ART_NEM_FBZ2_SUBBOSS_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ2_SUBBOSS_SIZE,
+                    Sonic3kConstants.MAP_FBZ2_SUBBOSS_ADDR, 1, -1));
+            // PLC_62_Through_6A dependencies used by the FBZ2 subboss sequence.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_ROBOTNIK_STAND,
+                    Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_STAND_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_STAND_SIZE,
+                    Sonic3kConstants.MAP_FBZ_ROBOTNIK_STAND_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_ROBOTNIK_RUN,
+                    Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_RUN_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_RUN_SIZE,
+                    Sonic3kConstants.MAP_FBZ_ROBOTNIK_RUN_ADDR, 0, -1));
+            // `SetUp_FBZ2BossEvent` queues both KosM blocks into the level VRAM
+            // buffer. Pillar consumes default frame 0; clouds explicitly select
+            // frames 1-3 from FBZCloud_PositionFrameData.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_BOSS_PILLAR,
+                    Sonic3kConstants.MAP_FBZ2_PREBOSS_ADDR,
+                    Sonic3kConstants.ART_TILE_FBZ_BOSS_PILLAR, 2, null,
+                    new int[]{0}));
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_CLOUD,
+                    Sonic3kConstants.MAP_FBZ2_PREBOSS_ADDR,
+                    Sonic3kConstants.ART_TILE_FBZ_CLOUD, 3, null,
+                    new int[]{1, 2, 3}));
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_END_BOSS,
+                    Sonic3kConstants.ART_NEM_FBZ_END_BOSS_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_END_BOSS_SIZE,
+                    Sonic3kConstants.MAP_FBZ_END_BOSS_ADDR, 1, -1));
+            // PLC_6F dependencies. Shared sheets are published under their
+            // canonical keys so consumers do not create FBZ-only duplicates.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_ROBOTNIK_HEAD,
+                    Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_HEAD_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_HEAD_SIZE,
+                    Sonic3kConstants.MAP_FBZ_ROBOTNIK_HEAD_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_END_BOSS_FLAME,
+                    Sonic3kConstants.ART_NEM_FBZ_END_BOSS_FLAME_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_END_BOSS_FLAME_SIZE,
+                    Sonic3kConstants.MAP_FBZ_END_BOSS_FLAME_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.ROBOTNIK_SHIP,
+                    Sonic3kConstants.ART_NEM_ROBOTNIK_SHIP_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_ROBOTNIK_SHIP_SIZE,
+                    Sonic3kConstants.MAP_ROBOTNIK_SHIP_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(
+                    ObjectArtKeys.BOSS_EXPLOSION,
+                    Sonic3kConstants.ART_NEM_BOSS_EXPLOSION_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_BOSS_EXPLOSION_SIZE,
+                    Sonic3kConstants.MAP_BOSS_EXPLOSION_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.EGG_CAPSULE,
+                    Sonic3kConstants.ART_NEM_EGG_CAPSULE_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_EGG_CAPSULE_SIZE,
+                    Sonic3kConstants.MAP_EGG_CAPSULE_ADDR, 0, -1));
+            // PLCKosM_FBZEndBoss_Exit queues these into their native level VRAM
+            // destinations after the end boss; consumers reference those slots.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_EXIT_DOOR,
+                    Sonic3kConstants.MAP_FBZ_EXIT_DOOR_ADDR,
+                    Sonic3kConstants.ART_TILE_FBZ_EXIT_DOOR, 2, null));
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_EXIT_HALL,
+                    Sonic3kConstants.MAP_FBZ_EXIT_HALL_ADDR,
+                    Sonic3kConstants.ART_TILE_FBZ_EXIT_HALL, 2, null));
+        }
 
         // Cork Floor: ArtTile_FBZMisc + $C1
         levelArt.add(new LevelArtEntry(

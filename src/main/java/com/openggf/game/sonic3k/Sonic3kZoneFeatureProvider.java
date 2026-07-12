@@ -20,6 +20,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.features.AizTransitionRenderFeature;
 import com.openggf.game.sonic3k.render.HczBgHighPriorityForegroundOverlayEffect;
 import com.openggf.game.sonic3k.render.HczWallChaseBgOverlayEffect;
+import com.openggf.game.sonic3k.render.FbzBossPlaneRenderMode;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotMachinePanelAnimator;
 import com.openggf.game.sonic3k.features.HCZWaterSkimHandler;
 import com.openggf.game.sonic3k.features.HCZWaterTunnelHandler;
@@ -62,6 +63,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
     private final SpecialRenderEffect hczWallChaseBgOverlayEffect = new HczWallChaseBgOverlayEffect();
     private final SpecialRenderEffect iczBigSnowPileBackgroundEffect = new IczBigSnowPileBackgroundEffect();
     private final SpecialRenderEffect iczBigSnowPilePriorityMaskEffect = new IczBigSnowPilePriorityMaskEffect();
+    private final AdvancedRenderMode fbzBossPlaneRenderMode = new FbzBossPlaneRenderMode();
     private final AdvancedRenderMode slotMachineForegroundScrollMode = new AdvancedRenderMode() {
         @Override
         public String id() {
@@ -552,6 +554,9 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_LBZ && actIndex == 0) {
             controller.register(lbzEndingCollapseForegroundVScrollMode);
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_FBZ && actIndex == 1) {
+            controller.register(fbzBossPlaneRenderMode);
         }
     }
 

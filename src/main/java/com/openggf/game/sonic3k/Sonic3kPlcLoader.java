@@ -39,6 +39,31 @@ import java.util.logging.Logger;
  * S3K-specific range validation and level application logic.
  */
 public final class Sonic3kPlcLoader {
+    public static int[] fbzLevelPlcIds(int actIndex) {
+        if (actIndex == 0) return new int[]{0x1A, 0x1B};
+        if (actIndex == 1) return new int[]{0x1C, 0x1D};
+        throw new IllegalArgumentException("FBZ act: " + actIndex);
+    }
+
+    /** One raw {@code plreq} entry: native VRAM tile destination plus Nemesis source. */
+    public record RawPlcEntry(int tileIndex, int artAddress) { }
+
+    /** Exact body of locked-on {@code PLC_Monitors}; this does not prescribe sequencing. */
+    public static List<RawPlcEntry> monitorPlcEntries() {
+        return List.of(new RawPlcEntry(Sonic3kConstants.ARTTILE_MONITORS,
+                Sonic3kConstants.ART_NEM_MONITORS_ADDR));
+    }
+
+    /** Exact body of locked-on {@code PLC_MonitorsSpikesSprings}; no event ordering implied. */
+    public static List<RawPlcEntry> monitorSpikesSpringsPlcEntries() {
+        return List.of(
+                new RawPlcEntry(Sonic3kConstants.ARTTILE_MONITORS,
+                        Sonic3kConstants.ART_NEM_MONITORS_ADDR),
+                new RawPlcEntry(Sonic3kConstants.ARTTILE_SPIKES_SPRINGS,
+                        Sonic3kConstants.ART_NEM_SPIKES_SPRINGS_ADDR));
+    }
+
+    public static int fbzEndBossPlcId() { return 0x6F; }
     private static final Logger LOG = Logger.getLogger(Sonic3kPlcLoader.class.getName());
 
     private Sonic3kPlcLoader() {}

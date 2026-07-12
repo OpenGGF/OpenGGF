@@ -20,6 +20,7 @@ class TestFbzZoneRuntimeState {
         events.setBackgroundOutdoor(true);
         events.setBackgroundRedraw(12, Sonic3kFBZEvents.RedrawDirection.LEFT_TO_RIGHT);
         events.setOutdoorBobOffset(-7);
+        assertEquals(0, events.sampleOutdoorHScrollAccumulator(0x1234));
         events.setMagneticState(Sonic3kFBZEvents.MagneticPolarity.REPEL, 0x5A);
         events.setAct2ForegroundStage(8);
         events.setBossBackgroundState(16, 0x1234, -0x234);
@@ -43,6 +44,7 @@ class TestFbzZoneRuntimeState {
         assertTrue(state.backgroundOutdoor());
         assertEquals(Sonic3kFBZEvents.RedrawDirection.LEFT_TO_RIGHT, state.backgroundRedrawDirection());
         assertEquals(-7, state.outdoorBobOffset());
+        assertEquals(0xE00, state.hScrollAccumulator());
         assertEquals(Sonic3kFBZEvents.MagneticPolarity.REPEL, state.magneticPolarity());
         assertEquals(0x5A, state.magneticTimerPhase());
         assertEquals(8, state.act2ForegroundStage());
@@ -61,6 +63,33 @@ class TestFbzZoneRuntimeState {
         assertEquals(-3, state.screenShakeOffset());
         assertEquals(0x22, state.screenShakePhase());
         assertTrue(state.isActTransitionFlagActive());
+    }
+
+    @Test
+    void accumulatorAndMagneticEdgeRestoreRemainIdempotentAtTheCapturedFrame() {
+        Sonic3kFBZEvents events = new Sonic3kFBZEvents();
+        events.init(1);
+        FbzZoneRuntimeState state = new FbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, events);
+
+        assertEquals(0, events.sampleOutdoorHScrollAccumulator(0x40));
+        events.advanceMagneticPhase(0x100);
+        byte[] captured = state.captureBytes();
+
+        assertEquals(0xE00 >> 3, events.sampleBossHScrollAccumulator(0x41));
+        events.advanceMagneticPhase(0x200);
+        state.restoreBytes(captured);
+
+        assertEquals(0, events.sampleOutdoorHScrollAccumulator(0x40),
+                "recomputing a captured frame must return its original read-old sample");
+        assertEquals(0xE00, state.hScrollAccumulator(), "duplicate recompute must not advance twice");
+        events.advanceMagneticPhase(0x100);
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ATTRACT, state.magneticPolarity(),
+                "restored edge metadata must suppress a duplicate toggle");
+
+        assertEquals(0xE00 >> 3, events.sampleBossHScrollAccumulator(0x41));
+        assertEquals(0x8E00, state.hScrollAccumulator());
+        events.advanceMagneticPhase(0x200);
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.REPEL, state.magneticPolarity());
     }
 
     @Test

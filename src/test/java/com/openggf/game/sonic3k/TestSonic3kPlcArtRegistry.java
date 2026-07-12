@@ -174,8 +174,9 @@ public class TestSonic3kPlcArtRegistry {
     public void fbzPlanOverridesSpikes() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x04, 0);
         assertNotNull(plan);
-        assertEquals(8, plan.standaloneArt().size());
+        assertEquals(9, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.FBZ_BLASTER)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.FBZ_MINIBOSS)));
 
         // Spikes should use FBZ art tile
         Sonic3kPlcArtRegistry.LevelArtEntry spikes = plan.levelArt().stream()
