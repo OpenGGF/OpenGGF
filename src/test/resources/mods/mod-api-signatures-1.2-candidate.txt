@@ -10561,6 +10561,7 @@ METHOD com.openggf.sprites.managers.TailsFlightController public  void updateVer
 METHOD com.openggf.sprites.managers.TailsTailsController public  com.openggf.sprites.render.PlayerSpriteRenderer getRenderer()
 METHOD com.openggf.sprites.managers.TailsTailsController public  void draw()
 METHOD com.openggf.sprites.managers.TailsTailsController public  void update()
+METHOD com.openggf.sprites.playable.AbstractPlayableSprite protected  boolean onAbilityActivate(boolean,boolean,boolean,boolean)
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite protected  void onEnterWater()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite protected  void onExitWater()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite protected  void setCollisionRadii(short,short,boolean)

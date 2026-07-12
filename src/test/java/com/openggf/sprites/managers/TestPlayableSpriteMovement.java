@@ -56,6 +56,25 @@ import static org.mockito.Mockito.mock;
 @FullReset
 public class TestPlayableSpriteMovement {
 
+        private static final class HookSprite extends AbstractPlayableSprite {
+                private int activations;
+                private List<Boolean> directions;
+
+                private HookSprite() { super("hook", (short) 0, (short) 0); }
+                @Override protected void defineSpeeds() {
+                        max = 1536; runAccel = 12; runDecel = 128; friction = 12;
+                        jump = 1664; slopeRunning = 32; slopeRollingDown = 80; slopeRollingUp = 20;
+                }
+                @Override protected void createSensorLines() { }
+                @Override public void draw() { }
+                @Override protected boolean onAbilityActivate(
+                                boolean up, boolean down, boolean left, boolean right) {
+                        activations++;
+                        directions = List.of(up, down, left, right);
+                        return true;
+                }
+        }
+
         private PlayableSpriteMovement manager;
         private AbstractPlayableSprite mockSprite;
         private GameModule previousModule;
@@ -141,6 +160,36 @@ public class TestPlayableSpriteMovement {
                 Field field = PlayableSpriteMovement.class.getDeclaredField(name);
                 field.setAccessible(true);
                 field.set(manager, value);
+        }
+
+        @Test
+        void customAbilityHookConsumesEligibleRepressBeforeBuiltinDispatch() throws Exception {
+                HookSprite sprite = new HookSprite();
+                setGameRulesForTest(sprite, GameRules.SONIC_3K);
+                sprite.setJumping(true);
+                sprite.setAir(true);
+                sprite.setYSpeed((short) 0);
+                PlayableSpriteMovement movement = new PlayableSpriteMovement(sprite);
+                for (var entry : java.util.Map.of(
+                                "jumpReleasedSinceJump", true,
+                                "inputJumpPress", true,
+                                "inputJump", true,
+                                "inputUp", true,
+                                "inputLeft", true).entrySet()) {
+                        Field field = PlayableSpriteMovement.class.getDeclaredField(entry.getKey());
+                        field.setAccessible(true);
+                        field.set(movement, entry.getValue());
+                }
+
+                Method jumpHeight = PlayableSpriteMovement.class.getDeclaredMethod("doJumpHeight");
+                jumpHeight.setAccessible(true);
+                jumpHeight.invoke(movement);
+
+                assertEquals(1, sprite.activations);
+                assertEquals(List.of(true, false, true, false), sprite.directions);
+                Field released = PlayableSpriteMovement.class.getDeclaredField("jumpReleasedSinceJump");
+                released.setAccessible(true);
+                assertFalse(released.getBoolean(movement));
         }
 
         @Test

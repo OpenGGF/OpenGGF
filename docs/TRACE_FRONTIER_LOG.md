@@ -37711,3 +37711,16 @@ GGFP v2 materialization, playable-art registry, and allocation-preflight changes
   mod-containing teams restored exact stock parity.
 - No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
   engine state was changed.
+
+### 2026-07-12 -- Phase 3 A5 ability-hook and super-gate parity sweep
+
+Measured on `next` at `7ac365dc1` with the reviewed, uncommitted Phase 3 A5
+owner-bound ability hook and registry-authoritative super-form gate:
+
+- Command:
+  `mvn "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test -Dmse=off`
+- S1 GHZ1, S2 EHZ1, and S3K AIZ all passed (3/3).
+- The new hook runs only at the valid airborne release/re-press edge; built-in
+  characters retain the default-false path into the existing ability dispatch.
+- No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
+  engine state was changed.

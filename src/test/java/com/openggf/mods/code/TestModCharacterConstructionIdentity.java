@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -162,6 +163,19 @@ class TestModCharacterConstructionIdentity {
     }
 
     @Test
+    void throwingAbilityHookUsesExpectedOwnerFaultBoundary() {
+        Fixture fixture = fixture(ThrowingAbilitySprite::new);
+        AbstractPlayableSprite sprite = fixture.definition().spriteFactory()
+                .create(EXPECTED.persisted(), 0, 0);
+
+        ModFaultBoundary.CallbackAborted aborted = assertThrows(ModFaultBoundary.CallbackAborted.class,
+                () -> com.openggf.sprites.playable.CharacterRuntimeHooks.activateAbility(sprite));
+
+        assertEquals("owner-a", aborted.owner());
+        assertEquals(Set.of("owner-a"), fixture.disabled());
+    }
+
+    @Test
     void constructionScopeRestoresAfterNestedAndExceptionalFactories() {
         assertThrows(IllegalStateException.class, () -> CharacterConstructionScope.call(EXPECTED,
                 () -> { throw new IllegalStateException("factory"); }));
@@ -179,6 +193,28 @@ class TestModCharacterConstructionIdentity {
         });
         assertSame(SPOOFED, CharacterConstructionScope.bindExpectedOrDefault(SPOOFED),
                 "nested scope must restore the unbound caller state");
+    }
+
+    @Test
+    void callbackBoundaryScopeDoesNotLeakAfterSuccessfulOrThrowingConstruction() {
+        java.util.concurrent.atomic.AtomicInteger callbackCalls =
+                new java.util.concurrent.atomic.AtomicInteger();
+        CharacterConstructionScope.CallbackInvoker boundary = callback -> {
+            callbackCalls.incrementAndGet();
+            return callback.get();
+        };
+        AbstractPlayableSprite scoped = CharacterConstructionScope.call(
+                EXPECTED, boundary, FieldBackedKeySprite::new);
+
+        assertFalse(com.openggf.sprites.playable.CharacterRuntimeHooks.activateAbility(scoped));
+        assertEquals(1, callbackCalls.get());
+        assertThrows(IllegalStateException.class, () -> CharacterConstructionScope.call(
+                EXPECTED, boundary, () -> { throw new IllegalStateException("factory"); }));
+
+        AbstractPlayableSprite unscoped = new FieldBackedKeySprite();
+        assertFalse(com.openggf.sprites.playable.CharacterRuntimeHooks.activateAbility(unscoped));
+        assertEquals(1, callbackCalls.get(),
+                "construction callback boundary must be removed after success and failure");
     }
 
     private static Fixture fixture(Supplier<? extends AbstractPlayableSprite> spriteFactory) {
@@ -290,5 +326,13 @@ class TestModCharacterConstructionIdentity {
         }
 
         @Override public CharacterKey characterKey() { return key; }
+    }
+
+    private static final class ThrowingAbilitySprite extends TestSprite {
+        @Override public CharacterKey characterKey() { return EXPECTED; }
+        @Override protected boolean onAbilityActivate(
+                boolean up, boolean down, boolean left, boolean right) {
+            throw new IllegalStateException("ability failure");
+        }
     }
 }
