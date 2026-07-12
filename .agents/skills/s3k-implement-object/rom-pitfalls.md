@@ -1018,6 +1018,9 @@ such as `Animate_RawGetFaster` can make this error much larger than one frame.
    the callback itself may already represent its initialization boundary.
 4. Allocate from the callback's native slot/order path, not merely when the
    parent first appears active.
+5. When a parent callback mutates its routine, retain any later child-slot work
+   from that same ExecuteObjects pass; do not re-gate folded child behavior on
+   the parent's post-callback routine.
 
 **ROM citation.** HCZ end-boss turbine `loc_6B1E6` installs
 `byte_6BDF4` and callback `loc_6B212`; that callback alone creates the water

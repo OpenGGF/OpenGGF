@@ -397,8 +397,9 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      * Used for both RISE (routine 4) and DESCEND (routine 8).
      */
     private void updateRiseDescend(PlayableEntity player) {
+        boolean risingAtEntry = routine == ROUTINE_RISE;
         // Track turbine X during rise
-        if (routine == ROUTINE_RISE) {
+        if (risingAtEntry) {
             currentX = turbine.getCurrentX();
             xFixed = currentX << 8;
         }
@@ -420,7 +421,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         solidActive = true;
 
         // Suction (replicated from spray child sub_6B9AC + sub_6B9E2)
-        if (routine == ROUTINE_RISE) {
+        if (risingAtEntry) {
             applySuction(player);
         }
     }
