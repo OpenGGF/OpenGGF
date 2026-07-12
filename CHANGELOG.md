@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **fix(rewind): detach unloaded ICZ capture clouds from their freezer.** When a capture cloud completes its off-phase self-delete, its live freezer parent no longer retains an unregistered object reference that breaks rewind reference-closure validation.
 - **fix(rewind): detach unloaded MHZ1 cutscene Knuckles actors from their button.** When the offscreen actor left the dynamic object set, its live parent button no longer retained an unregistered object reference that crashed rewind capture.
 - **fix(rewind): detach unloaded Turbo Spiker shells from their parent object.** A launched shell that left the dynamic object set could remain referenced by its live parent, causing rewind capture to fail because the removed child no longer had a registered object identity.
 - **fix(tails): correct S3K swimming presentation and idle vertical motion.** Swimming animations `$25-$28` now suppress the separate Obj05 flying-tail overlay because their body mappings already include Tails' tails, and active swimming bypasses the ordinary airborne underwater `-$28` adjustment so no-input motion uses only the ROM's `+$08` flight gravity.
