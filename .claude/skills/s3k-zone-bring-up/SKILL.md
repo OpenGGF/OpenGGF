@@ -80,6 +80,18 @@ For carriers, grabs, chains, and forced movement, keep participant state keyed b
 
 For parent/child families, encode every child role, phase, radius, delay, and special flag in captured recreation metadata. A shared parent `ObjectSpawn` is not sufficient. Verify the real `ObjectManager` graph with capture -> remove/diverge -> restore: exact child count/config, settled parent relink despite recreation order, no duplicate respawn, and child lifetime following the restored parent. Constructor-only rewind probes do not pass this gate.
 
+### AnPal Gameplay-State Gate
+
+Do not assume an `AnPal` entry point writes palette colors. Trace every write and the complete consumer graph first; if it mutates gameplay state, place that state with its actual runtime owner rather than forcing it through `PaletteOwnershipRegistry` or hiding it in the palette cycler.
+
+Preserve the exact native state domain. A ROM bit remains a bit unless the disassembly proves additional values; do not invent a richer enum, intermediate phase, or convenience state. Preserve the exact frame phase too: determine whether the routine reads before or after the counter increment and whether consumers observe the value before or after object updates.
+
+Before accepting an AnPal-backed state transition:
+
+- Test at least two consecutive qualifying edges, including the value observed by every consumer on each edge. A single transition can conceal an invented third state or an off-by-one phase.
+- Test the actual frame pipeline around counter increment, AnPal dispatch, and object updates rather than calling the state helper in isolation.
+- Capture and restore the exact state and counter phase through rewind; verify death/restart, checkpoint, and session reload behavior when those lifecycles can cross the transition.
+
 ## Slice-First Completion Rule
 
 A zone bring-up is successful when it advances a playable route, not when a checklist row changes state. For current work, prioritize AIZ -> HCZ continuity first, then feed CNZ, MGZ, and ICZ into the same standard.
@@ -132,7 +144,7 @@ Agent prompt: "Use /s3k-zone-analysis {ZONE}"
 
 Wait for the analysis agent to complete before proceeding. The analysis spec is the input to all subsequent steps.
 
-Do not assume `Dynamic_Resize` owns all event behavior. Explicitly audit both acts' `Dynamic_Resize`, `ScreenInit`, `ScreenEvent`, `BackgroundInit`, `BackgroundEvent`, deform/background handlers, custom animated-tile wrappers, AnPal, and any zone-specific routines reached from those entry points.
+Do not assume `Dynamic_Resize` owns all event behavior. Explicitly audit both acts' `Dynamic_Resize`, `ScreenInit`, `ScreenEvent`, `BackgroundInit`, `BackgroundEvent`, deform/background handlers, custom animated-tile wrappers, AnPal, and any zone-specific routines reached from those entry points. For AnPal, follow writes through every consumer before classifying the routine as palette cycling; it may own gameplay state instead.
 
 Create `docs/s3k-zones/{zone}-object-inventory.md` before implementation. Parse every locked-on placement file and record ID, subtype, per-act count, S3KL/SKL pointer resolution, route impact, placeholder/factory status, mappings/animation/art, audio cues, checkpoint interaction, allocation primitive, and test owner. Add a complete dynamic-spawn graph for event objects, projectiles, children, bosses, transitions, capsules/exits, and cleanup objects. Inventory shared placed objects as well as zone-prefixed objects.
 
@@ -183,6 +195,7 @@ For each feature category:
   4. Palette Cycling (AnPal)
      - Check: does the analysis say "AnPal is rts" or "no palette cycling"?
      - If rts -> SKIP
+     - If AnPal mutates non-palette state -> classify and dispatch it to the real owning feature; do not skip it or force it into palette cycling
      - If channels listed AND already implemented -> DISPATCH with --validate-only flag
      - If channels listed AND not implemented -> DISPATCH
 ```
@@ -360,3 +373,5 @@ Five files are touched by multiple feature agents. All changes are additive (new
 9. **Running the complete-run trace too early.** Use focused tests while major systems are absent. Save trace frontier work for late polish and keep it comparison-only.
 
 10. **Skipping compatibility or testing it before native parity.** Prove locked-on behavior first, audit extensions second, then rerun native parity with extensions disabled.
+
+11. **Assuming AnPal means palette cycling.** AnPal can mutate gameplay state. Audit all writes and consumers, preserve the native state domain and frame phase, and test consecutive edges plus lifecycle restoration before accepting it.

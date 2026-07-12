@@ -33,10 +33,14 @@ Use only the skill and resources it explicitly requires. Do not infer additional
 | R17 | Real runtime validation | A ROM-backed tall-cache capture -> mutate -> restore -> reconcile -> next-render test is required; synthetic helper-only coverage is insufficient. |
 | R18 | Scalable carrier state | Carrier/grab state is keyed by playable identity, not fixed arrays or mutable player-list order, and hot-path participation remains allocation-free. |
 | R19 | Dynamic-family rewind graph | Child role/config has stable recreation metadata and a real ObjectManager graph test proves exact relink, no duplication, and lifetime restoration. |
+| R20 | AnPal consumer graph | Workflow traces every AnPal write through all consumers before classifying it as palette-only and assigns non-palette state to its real runtime owner. |
+| R21 | Exact AnPal state domain | Workflow preserves the disassembly's exact state domain and explicitly rejects richer enums/intermediate states when the ROM stores one bit. |
+| R22 | Exact AnPal frame phase | Workflow determines ordering relative to counter increment and object updates and tests the value consumers observe in the real frame pipeline. |
+| R23 | AnPal edge/lifecycle validation | Workflow tests at least two consecutive qualifying edges and exact counter/state restoration through rewind plus death/restart/checkpoint/session lifecycles as applicable. |
 
 ## Verdict
 
-- **GREEN:** R1-R19 all PASS.
+- **GREEN:** R1-R23 all PASS.
 - **RED:** Any assertion fails or is only optional/implied.
 
 Record the exact prompt, raw agent output, per-assertion PASS/FAIL result, and overall verdict in both baseline and forward-test artifacts.
