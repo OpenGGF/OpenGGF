@@ -21,6 +21,8 @@ import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -123,6 +125,44 @@ public class TestSonic1PoleThatBreaksObjectInstance {
 
         assertSame(third, getPrivateObject(pole, "controlledPlayer"));
         assertTrue((Boolean) getPrivateObject(pole, "poleGrabbed"));
+    }
+
+    @Test
+    public void playerReferencesRestoreToReplacementActorsByPlayerRefId() throws Exception {
+        Sonic1PoleThatBreaksObjectInstance pole = createPole(200, 320, 0);
+        TestPlayableSprite capturedMain = playerAtPole(false);
+        TestPlayableSprite capturedSidekick = playerAtPole(true);
+        RewindIdentityTable captureIdentities = new RewindIdentityTable();
+        captureIdentities.registerPlayer(capturedMain, PlayerRefId.mainPlayer());
+        captureIdentities.registerPlayer(capturedSidekick, PlayerRefId.sidekick(0));
+
+        setPrivateObject(pole, "controlledPlayer", capturedSidekick);
+        setPrivateObject(pole, "touchPlayer", capturedMain);
+        var snapshot = pole.captureRewindState(
+                RewindCaptureContext.withIdentityTable(captureIdentities));
+
+        TestPlayableSprite restoredMain = playerAtPole(false);
+        TestPlayableSprite restoredSidekick = playerAtPole(true);
+        RewindIdentityTable restoreIdentities = new RewindIdentityTable();
+        restoreIdentities.registerPlayer(restoredMain, PlayerRefId.mainPlayer());
+        restoreIdentities.registerPlayer(restoredSidekick, PlayerRefId.sidekick(0));
+
+        setPrivateObject(pole, "controlledPlayer", null);
+        setPrivateObject(pole, "touchPlayer", null);
+        pole.restoreRewindState(snapshot, RewindCaptureContext.withIdentityTable(restoreIdentities));
+
+        Object restoredControlledPlayer = getPrivateObject(pole, "controlledPlayer");
+        Object restoredTouchPlayer = getPrivateObject(pole, "touchPlayer");
+        assertSame(restoredSidekick, restoredControlledPlayer);
+        assertSame(restoredMain, restoredTouchPlayer);
+        assertNotSame(capturedSidekick, restoredControlledPlayer,
+                "rewind must not retain the captured sidekick instance");
+        assertNotSame(capturedMain, restoredTouchPlayer,
+                "rewind must not retain the captured main-player instance");
+        assertNull(restoreIdentities.encodePlayer(capturedSidekick),
+                "captured sidekick identity must not transfer into the restored roster");
+        assertNull(restoreIdentities.encodePlayer(capturedMain),
+                "captured main-player identity must not transfer into the restored roster");
     }
 
     @Test
@@ -339,6 +379,12 @@ public class TestSonic1PoleThatBreaksObjectInstance {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.get(target);
+    }
+
+    private static void setPrivateObject(Object target, String fieldName, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 
 }
