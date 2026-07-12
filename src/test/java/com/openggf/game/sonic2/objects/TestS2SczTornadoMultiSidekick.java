@@ -2,6 +2,9 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.level.ParallaxManager;
@@ -11,7 +14,9 @@ import com.openggf.level.objects.StubObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -70,7 +75,8 @@ class TestS2SczTornadoMultiSidekick {
 
         tornado.update(1, capturedMain);
         assertForcedRight(capturedMain, capturedFirst, capturedSecond, capturedThird);
-        var beforeUnload = tornado.captureRewindState();
+        var beforeUnload = tornado.captureRewindState(rewindContext(
+                capturedMain, capturedFirst, capturedSecond, capturedThird));
         tornado.onUnload();
         assertReleased(capturedMain, capturedFirst, capturedSecond, capturedThird);
 
@@ -79,13 +85,72 @@ class TestS2SczTornadoMultiSidekick {
         TestablePlayableSprite restoredSecond = player("restored-knuckles", 0x1520);
         TestablePlayableSprite restoredThird = player("restored-sonic-2", 0x1530);
         services.replaceRoster(restoredMain, List.of(restoredFirst, restoredSecond, restoredThird));
-        forceRight(restoredMain, restoredFirst, restoredSecond, restoredThird);
+        forceJump(restoredMain, restoredFirst, restoredSecond, restoredThird);
 
-        tornado.restoreRewindState(beforeUnload);
+        tornado.restoreRewindState(beforeUnload, rewindContext(
+                restoredMain, restoredFirst, restoredSecond, restoredThird));
+        Map<?, ?> restoredOwners = controlledPlayers(tornado);
+        for (TestablePlayableSprite restored : List.of(
+                restoredMain, restoredFirst, restoredSecond, restoredThird)) {
+            assertTrue(restoredOwners.containsKey(restored),
+                    restored.getCode() + " must restore through its PlayerRefId");
+        }
+        for (TestablePlayableSprite captured : List.of(
+                capturedMain, capturedFirst, capturedSecond, capturedThird)) {
+            assertFalse(restoredOwners.containsKey(captured),
+                    captured.getCode() + " must not survive as a stale captured instance");
+        }
         tornado.onUnload();
 
         assertReleased(restoredMain, restoredFirst, restoredSecond, restoredThird);
         assertReleased(capturedMain, capturedFirst, capturedSecond, capturedThird);
+    }
+
+    @Test
+    void invalidSidekicksAreReleasedInsteadOfRelockedDuringFinishUpdate() {
+        TestablePlayableSprite main = player("sonic", 0x1500);
+        TestablePlayableSprite dead = player("dead", 0x1510);
+        TestablePlayableSprite hurt = player("hurt", 0x1520);
+        TestablePlayableSprite debug = player("debug", 0x1530);
+        TornadoServices services = new TornadoServices(main, List.of(dead, hurt, debug));
+        TornadoObjectInstance tornado = tornado(services);
+
+        tornado.update(1, main);
+        assertForcedRight(main, dead, hurt, debug);
+
+        dead.setDead(true);
+        hurt.setHurt(true);
+        debug.setDebugMode(true);
+        tornado.update(2, main);
+
+        assertForcedRight(main);
+        assertReleased(dead, hurt, debug);
+    }
+
+    @Test
+    void replacementBeforeCleanupReleasesOnlyTheOriginalOwnedIdentities() {
+        TestablePlayableSprite originalMain = player("sonic", 0x1500);
+        TestablePlayableSprite originalFirst = player("tails", 0x1510);
+        TestablePlayableSprite originalSecond = player("knuckles", 0x1520);
+        TestablePlayableSprite originalThird = player("sonic-2", 0x1530);
+        TornadoServices services = new TornadoServices(
+                originalMain, List.of(originalFirst, originalSecond, originalThird));
+        TornadoObjectInstance tornado = tornado(services);
+        tornado.update(1, originalMain);
+        assertForcedRight(originalMain, originalFirst, originalSecond, originalThird);
+
+        TestablePlayableSprite replacementMain = player("replacement-main", 0x1500);
+        TestablePlayableSprite replacementFirst = player("replacement-first", 0x1510);
+        TestablePlayableSprite replacementSecond = player("replacement-second", 0x1520);
+        TestablePlayableSprite replacementThird = player("replacement-third", 0x1530);
+        services.replaceRoster(replacementMain,
+                List.of(replacementFirst, replacementSecond, replacementThird));
+        forceJump(replacementMain, replacementFirst, replacementSecond, replacementThird);
+
+        tornado.onUnload();
+
+        assertReleased(originalMain, originalFirst, originalSecond, originalThird);
+        assertForcedJump(replacementMain, replacementFirst, replacementSecond, replacementThird);
     }
 
     private static TornadoObjectInstance tornado(TornadoServices services) {
@@ -119,6 +184,41 @@ class TestS2SczTornadoMultiSidekick {
         for (TestablePlayableSprite player : players) {
             player.setControlLocked(true);
             player.setForcedInputMask(TestablePlayableSprite.INPUT_RIGHT);
+        }
+    }
+
+    private static void forceJump(TestablePlayableSprite... players) {
+        for (TestablePlayableSprite player : players) {
+            player.setControlLocked(true);
+            player.setForcedInputMask(TestablePlayableSprite.INPUT_JUMP);
+        }
+    }
+
+    private static void assertForcedJump(TestablePlayableSprite... players) {
+        for (TestablePlayableSprite player : players) {
+            assertTrue(player.isControlLocked());
+            assertEquals(TestablePlayableSprite.INPUT_JUMP, player.getForcedInputMask());
+        }
+    }
+
+    private static RewindCaptureContext rewindContext(
+            TestablePlayableSprite main,
+            TestablePlayableSprite... sidekicks) {
+        RewindIdentityTable identities = new RewindIdentityTable();
+        identities.registerPlayer(main, PlayerRefId.mainPlayer());
+        for (int index = 0; index < sidekicks.length; index++) {
+            identities.registerPlayer(sidekicks[index], PlayerRefId.sidekick(index));
+        }
+        return RewindCaptureContext.withIdentityTable(identities);
+    }
+
+    private static Map<?, ?> controlledPlayers(TornadoObjectInstance tornado) {
+        try {
+            Field field = TornadoObjectInstance.class.getDeclaredField("controlledPlayers");
+            field.setAccessible(true);
+            return (Map<?, ?>) field.get(tornado);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
         }
     }
 

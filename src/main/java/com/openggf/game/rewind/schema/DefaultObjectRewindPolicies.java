@@ -191,6 +191,7 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SpringboardObjectInstance", "launchPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance", "player"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance", "displayChild"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.TornadoObjectInstance", "controlledPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.TornadoObjectInstance", "thrusterFollowerChild"), RewindFieldPolicy.CAPTURED),
             // Extra sidekicks extend Obj8B beyond its native P2 byte; keep each crossing
             // latch keyed by the stable rewind player id rather than live object identity.
