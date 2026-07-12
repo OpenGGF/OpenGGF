@@ -190,6 +190,23 @@ class TestLbzRideGrappleInstance {
     }
 
     @Test
+    void publicUpdateCapturesMainAndThreeSidekicks() {
+        TestablePlayableSprite main = playerAt(0x1E00, 0x0620);
+        TestablePlayableSprite nativeP2 = playerAt(0x1E00, 0x0620);
+        TestablePlayableSprite extensionOne = playerAt(0x1E00, 0x0620);
+        TestablePlayableSprite extensionTwo = playerAt(0x1E00, 0x0620);
+        AbstractObjectInstance grapple = configuredGrapple(0x1E00, 0x0600, 3,
+                main, List.of(nativeP2, extensionOne, extensionTwo));
+
+        grapple.update(0, main);
+
+        for (TestablePlayableSprite player : List.of(main, nativeP2, extensionOne, extensionTwo)) {
+            assertTrue(player.isObjectControlled(),
+                    "every policy participant must receive independent grapple state");
+        }
+    }
+
+    @Test
     void extensionJumpReleaseDoesNotReleaseOtherHeldPlayers() {
         TestablePlayableSprite main = playerAt(0x1E00, 0x0620);
         TestablePlayableSprite nativeP2 = playerAt(0x1E00, 0x0620);
@@ -240,6 +257,55 @@ class TestLbzRideGrappleInstance {
         assertFalse(extension.isObjectMappingFrameControl());
         assertTrue(main.isObjectControlled());
         assertTrue(nativeP2.isObjectControlled());
+    }
+
+    @Test
+    void pathEndEjectsExtensionSidekicks() {
+        TestablePlayableSprite main = playerAt(0x1E00, 0x0620);
+        main.setDirection(Direction.RIGHT);
+        TestablePlayableSprite nativeP2 = playerAt(0x1E00, 0x0620);
+        nativeP2.setDirection(Direction.RIGHT);
+        TestablePlayableSprite extension = playerAt(0x1E00, 0x0620);
+        extension.setDirection(Direction.RIGHT);
+        AbstractObjectInstance grapple = configuredGrapple(0x1E00, 0x0600, 3,
+                main, List.of(nativeP2, extension));
+        grapple.update(0, main);
+
+        for (int frame = 1; frame < 400 && extension.isObjectControlled(); frame++) {
+            grapple.update(frame, main);
+        }
+
+        assertFalse(extension.isObjectControlled(),
+                "an extension sidekick must be ejected when the shared grapple reaches its path end");
+        assertFalse(extension.isObjectMappingFrameControl());
+        assertTrue(extension.getAir());
+        assertEquals(0, extension.getYSpeed());
+    }
+
+    @Test
+    void temporarilyOmittedExtensionRejoinsWithoutTransferringGrabState() {
+        TestablePlayableSprite main = playerAt(0x1E00, 0x0620);
+        TestablePlayableSprite nativeP2 = playerAt(0x1E00, 0x0620);
+        TestablePlayableSprite omitted = playerAt(0x1E00, 0x0620);
+        TestablePlayableSprite retained = playerAt(0x1E00, 0x0620);
+        AbstractObjectInstance grapple = configuredGrapple(0x1E00, 0x0600, 3,
+                main, List.of(nativeP2, omitted, retained));
+        grapple.update(0, main);
+
+        grapple.setServices(playerServices(main, List.of(nativeP2, retained)));
+        grapple.update(1, main);
+        assertTrue(omitted.isObjectControlled(),
+                "temporary roster omission must not abandon a held player's cleanup ownership");
+
+        grapple.setServices(playerServices(main, List.of(nativeP2, omitted, retained)));
+        omitted.setJumpInputPressed(true, true);
+        grapple.update(2, main);
+
+        assertFalse(omitted.isObjectControlled(),
+                "the returning player must recover its own held state and accept its own release input");
+        assertEquals((short) -0x380, omitted.getYSpeed());
+        assertTrue(retained.isObjectControlled(),
+                "the returning player's state must not be transferred to another extension participant");
     }
 
     @Test

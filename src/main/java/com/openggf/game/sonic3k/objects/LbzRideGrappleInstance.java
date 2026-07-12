@@ -427,8 +427,10 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
 
     private void updateExtensionPlayers(List<PlayableEntity> participants) {
         if (participants != null) {
-            for (int i = 2; i < participants.size(); i++) {
-                PlayableEntity participant = participants.get(i);
+            for (PlayableEntity participant : participants) {
+                if (participant == p1Owner || participant == p2Owner) {
+                    continue;
+                }
                 AbstractPlayableSprite player = playableSprite(participant);
                 if (player != null) {
                     updateHeldOrCapture(
