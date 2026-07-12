@@ -1,5 +1,14 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.CompactFieldCapturer;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.rewind.schema.RewindObjectStateBlob;
+import com.openggf.game.rules.CrossGameRuleComposer;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.sonic1.Sonic1GameModule;
+import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.ObjectSpawn;
@@ -7,6 +16,7 @@ import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -23,6 +33,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 class MgzDashTriggerObjectInstanceTest {
+
+    private static final int FALLBACK_HOLD_FRAMES = 12;
+
+    @BeforeEach
+    void resetLevelTriggers() {
+        Sonic3kLevelTriggerManager.reset();
+    }
 
     @Test
     void appendRenderCommandsWhileArmedDrawsMainAndChildSpriteFrames() {
@@ -93,6 +110,113 @@ class MgzDashTriggerObjectInstanceTest {
         assertFalse(sloped.usesSlopeForNewLanding(),
                 "sub_1DD0E only calls SolidObjSloped2 after the standing bit is already set "
                         + "(sonic3k.asm:41112-41142,41727-41753)");
+    }
+
+    @Test
+    void nativeSpindashCapabilityNeverSubstitutesSustainedRunForAnimationNine() {
+        MGZDashTriggerObjectInstance trigger = triggerAtTestPosition();
+        AbstractPlayableSprite player = groundedRightIntentPlayer(GameRules.SONIC_3K);
+
+        for (int frame = 1; frame <= FALLBACK_HOLD_FRAMES + 4; frame++) {
+            trigger.update(frame, player);
+        }
+
+        assertFalse(Sonic3kLevelTriggerManager.testAny(0),
+                "Native S3K capability must retain the ROM animation-9-only arm gate");
+    }
+
+    @Test
+    void missingSpindashCapabilityRequiresExactSustainedGroundedIntentThreshold() {
+        MGZDashTriggerObjectInstance trigger = triggerAtTestPosition();
+        AbstractPlayableSprite player = groundedRightIntentPlayer(noSpindashDonorRules());
+
+        for (int frame = 1; frame < FALLBACK_HOLD_FRAMES; frame++) {
+            trigger.update(frame, player);
+        }
+        assertFalse(Sonic3kLevelTriggerManager.testAny(0),
+                "Incidental contact shorter than the fallback threshold must not arm");
+
+        trigger.update(FALLBACK_HOLD_FRAMES, player);
+
+        assertTrue(Sonic3kLevelTriggerManager.testAny(0));
+    }
+
+    @Test
+    void interruptedNoSpindashIntentRestartsTheThreshold() {
+        MGZDashTriggerObjectInstance trigger = triggerAtTestPosition();
+        AbstractPlayableSprite player = groundedRightIntentPlayer(noSpindashDonorRules());
+        for (int frame = 1; frame < FALLBACK_HOLD_FRAMES; frame++) {
+            trigger.update(frame, player);
+        }
+        doReturn(false).when(player).isRightPressed();
+        trigger.update(FALLBACK_HOLD_FRAMES, player);
+        doReturn(true).when(player).isRightPressed();
+
+        for (int frame = FALLBACK_HOLD_FRAMES + 1;
+             frame < FALLBACK_HOLD_FRAMES * 2;
+             frame++) {
+            trigger.update(frame, player);
+        }
+        assertFalse(Sonic3kLevelTriggerManager.testAny(0));
+
+        trigger.update(FALLBACK_HOLD_FRAMES * 2, player);
+        assertTrue(Sonic3kLevelTriggerManager.testAny(0));
+    }
+
+    @Test
+    void noSpindashIntentProgressRestoresByStablePlayerIdentity() {
+        MGZDashTriggerObjectInstance trigger = triggerAtTestPosition();
+        AbstractPlayableSprite capturedPlayer = groundedRightIntentPlayer(noSpindashDonorRules());
+        for (int frame = 1; frame <= FALLBACK_HOLD_FRAMES / 2; frame++) {
+            trigger.update(frame, capturedPlayer);
+        }
+        RewindObjectStateBlob blob = CompactFieldCapturer.capture(
+                trigger, rewindContext(capturedPlayer));
+
+        AbstractPlayableSprite restoredPlayer = groundedRightIntentPlayer(noSpindashDonorRules());
+        CompactFieldCapturer.restore(trigger, blob, rewindContext(restoredPlayer));
+        for (int frame = FALLBACK_HOLD_FRAMES / 2 + 1; frame <= FALLBACK_HOLD_FRAMES; frame++) {
+            trigger.update(frame, restoredPlayer);
+        }
+
+        assertTrue(Sonic3kLevelTriggerManager.testAny(0),
+                "Fallback progress must follow PlayerRefId rather than the pre-rewind Java instance");
+    }
+
+    private static MGZDashTriggerObjectInstance triggerAtTestPosition() {
+        MGZDashTriggerObjectInstance trigger = new MGZDashTriggerObjectInstance(
+                new ObjectSpawn(0x1200, 0x0340, Sonic3kObjectIds.MGZ_DASH_TRIGGER,
+                        0, 0, false, 0));
+        trigger.setServices(new TestObjectServices());
+        return trigger;
+    }
+
+    private static AbstractPlayableSprite groundedRightIntentPlayer(GameRules rules) {
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        doReturn(rules).when(player).getGameRules();
+        doReturn(false).when(player).getAir();
+        doReturn(true).when(player).isRightPressed();
+        doReturn(false).when(player).isLeftPressed();
+        doReturn((short) (0x1200 - 36)).when(player).getCentreX();
+        doReturn((short) 0x0340).when(player).getCentreY();
+        doReturn((short) 9).when(player).getXRadius();
+        doReturn((short) 19).when(player).getYRadius();
+        doReturn(Sonic3kAnimationIds.WALK.id()).when(player).getAnimationId();
+        doReturn(false).when(player).getSpindash();
+        return player;
+    }
+
+    private static RewindCaptureContext rewindContext(AbstractPlayableSprite player) {
+        RewindIdentityTable table = new RewindIdentityTable();
+        table.registerPlayer(player, PlayerRefId.mainPlayer());
+        return RewindCaptureContext.withIdentityTable(table);
+    }
+
+    private static GameRules noSpindashDonorRules() {
+        return CrossGameRuleComposer.compose(
+                GameRules.SONIC_3K,
+                GameRules.SONIC_1,
+                new Sonic1GameModule().getDonorCapabilities());
     }
 
     private static final class TestDashTrigger extends MGZDashTriggerObjectInstance {
