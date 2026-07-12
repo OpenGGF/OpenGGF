@@ -35,6 +35,7 @@ import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
+import com.openggf.game.session.PatternWindowSessionState;
 import com.openggf.level.rewind.LevelRewindSnapshotAdapter;
 import com.openggf.level.objects.HudRenderManager;
 import com.openggf.level.objects.HudStaticArt;
@@ -1195,6 +1196,7 @@ public class LevelManager {
         PatternAtlas patternAtlas = graphicsManager.getPatternAtlas();
         if (patternAtlas != null) {
             patternAtlas.clearRanges();
+            PatternWindowSessionState.of(worldSession).registerRanges(patternAtlas::registerRange);
         }
         ObjectArtProvider provider = gameModule != null ? gameModule.getObjectArtProvider() : null;
         if (provider == null) {
@@ -1215,7 +1217,8 @@ public class LevelManager {
             int objectEndIndex = objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
             if (patternAtlas != null) {
                 patternAtlas.registerRange(
-                    OBJECT_PATTERN_BASE, objectEndIndex - OBJECT_PATTERN_BASE, "Objects");
+                    OBJECT_PATTERN_BASE,
+                    alignPatternRangeSize(objectEndIndex - OBJECT_PATTERN_BASE), "Objects");
             }
 
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
@@ -1279,6 +1282,11 @@ public class LevelManager {
         if (gameplayMode != null && provider != null) {
             gameplayMode.registerPlcArtAdapter(provider);
         }
+    }
+
+    private static int alignPatternRangeSize(int size) {
+        int positiveSize = Math.max(size, 1);
+        return Math.multiplyExact(Math.floorDiv(Math.addExact(positiveSize, 0xFFF), 0x1000), 0x1000);
     }
 
     boolean isHudSuppressed() {

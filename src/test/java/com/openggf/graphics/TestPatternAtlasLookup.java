@@ -87,7 +87,7 @@ public class TestPatternAtlasLookup {
         Entry cached = atlas.cachePatternHeadless(p, objectsId);
         assertNotNull(cached);
 
-        atlas.registerRange(PatternAtlasRange.OBJECTS.base(), 0x100, "Objects");
+        atlas.registerRange(PatternAtlasRange.OBJECTS.base(), 0x1000, "Objects");
         assertSame(cached, atlas.getEntry(objectsId));
     }
 

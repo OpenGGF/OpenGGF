@@ -14,6 +14,8 @@ import com.openggf.mods.ModState;
 import com.openggf.mods.ModStateSaveResult;
 import com.openggf.mods.PendingModStateEditor;
 import com.openggf.mods.RepositoryScanFailure;
+import com.openggf.game.session.PatternWindowState;
+import com.openggf.mods.code.ModPatternWindowAllocator;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -49,6 +51,7 @@ public final class ModManagerScreen {
     private final List<ModDescriptor> descriptorsInScanOrder;
     private final List<InvalidModEntry> invalidEntries;
     private final List<RepositoryScanFailure> repositoryFailures;
+    private final PatternWindowState patternWindows;
 
     private List<Row> rows = List.of();
     private int selectedIndex;
@@ -65,10 +68,17 @@ public final class ModManagerScreen {
 
     public ModManagerScreen(ModCatalog catalog, PendingModStateEditor editor,
                             ModRuntimeFindingStore runtimeFindings, TextSink text) {
+        this(catalog, editor, runtimeFindings, text, PatternWindowState.EMPTY);
+    }
+
+    public ModManagerScreen(ModCatalog catalog, PendingModStateEditor editor,
+                            ModRuntimeFindingStore runtimeFindings, TextSink text,
+                            PatternWindowState patternWindows) {
         this.catalog = Objects.requireNonNull(catalog, "catalog");
         this.editor = Objects.requireNonNull(editor, "editor");
         this.runtimeFindings = Objects.requireNonNull(runtimeFindings, "runtimeFindings");
         this.text = text;
+        this.patternWindows = Objects.requireNonNull(patternWindows, "patternWindows");
         Map<String, ModDescriptor> descriptors = new LinkedHashMap<>();
         Map<String, Integer> counts = new LinkedHashMap<>();
         List<ModDescriptor> scannedDescriptors = new ArrayList<>();
@@ -138,6 +148,8 @@ public final class ModManagerScreen {
         try {
             int y = 4;
             draw("MOD MANAGER", 6, y, 1f, 1f, 1f);
+            y += LINE_HEIGHT;
+            draw(patternBudgetLine(), 6, y, 0.72f, 0.72f, 0.72f);
             y += LINE_HEIGHT;
             for (String banner : bannerLines()) {
                 draw(banner, 6, y, 1f, 0.55f, 0.35f);
@@ -225,6 +237,11 @@ public final class ModManagerScreen {
     public ModState pendingState() { return editor.pendingState(); }
 
     public String statusMessage() { return statusMessage; }
+
+    public String patternBudgetLine() {
+        return "Current pattern windows: " + patternWindows.totalWindows()
+                + "/" + ModPatternWindowAllocator.MAX_WINDOWS;
+    }
 
     public boolean closeRequested() { return closeRequested; }
 
@@ -582,6 +599,12 @@ public final class ModManagerScreen {
         lines.add(manifest.name() + "  " + manifest.version());
         lines.add("Jar: " + filename(descriptor.jarPath()));
         lines.add("Id: " + manifest.id() + "  Game: " + manifest.baseGame());
+        int requestedWindows = manifest.patternWindows().orElse(1);
+        String allocation = patternWindows.assignment(manifest.id())
+                .map(value -> " at 0x" + Integer.toHexString(value.base())
+                        + "-0x" + Integer.toHexString(value.endExclusive()))
+                .orElse(" (not allocated in the effective catalog)");
+        lines.add("Pattern windows: " + requestedWindows + allocation);
         lines.add("Authors: " + String.join(", ", manifest.authors()));
         lines.add("Description: " + manifest.description());
         if (manifest.dependencies().isEmpty()) {

@@ -37,6 +37,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -403,6 +404,9 @@ class TestExternalContentPolicy {
         assertTrue(accepted.processCatalog().effective().orderedEnabled().stream()
                 .anyMatch(descriptor -> descriptor.manifest().id().equals("boot-code")));
         assertTrue(accepted.trustedCodeOwners().contains("boot-code"));
+        assertEquals(1, accepted.patternWindowStateForSession().totalWindows());
+        accepted.disableForDeterministicSession();
+        assertEquals(0, accepted.patternWindowStateForSession().totalWindows());
         accepted.close();
 
         writeCodeModJar(jar, "payload-two");

@@ -1116,6 +1116,9 @@ public class Engine {
 
 	private void initializeGameplayRuntime(GameplayModeContext gameplayMode, boolean initializeGlobalGameplayServices) {
 		GameModule module = gameplayMode.getWorldSession().getGameModule();
+		com.openggf.game.session.PatternWindowSessionState.install(
+				gameplayMode.getWorldSession(),
+				ModSubsystem.current().patternWindowStateForSession());
 		GameplaySessionFactory.attachManagers(gameplayMode, EngineServices.current());
 		bindGameplayMode(gameplayMode);
 		gameplayMode.getGameStateManager().configureSpecialStageProgress(

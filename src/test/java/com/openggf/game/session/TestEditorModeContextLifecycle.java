@@ -2,11 +2,14 @@ package com.openggf.game.session;
 
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.mods.code.ModPatternWindowAllocator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -87,6 +90,39 @@ class TestEditorModeContextLifecycle {
         assertNotNull(editor.getCamera());
         assertNotNull(editor.getSpriteManager());
         assertNotNull(editor.getLevelManager());
+    }
+
+    @Test
+    void editorTeardownAndGameplayRebuildRetainModPatternWindowAssignments() {
+        GameplayModeContext gameplay = SessionManager.openGameplaySession(new Sonic2GameModule());
+        ModPatternWindowAllocator windows = new ModPatternWindowAllocator(List.of(
+                new ModPatternWindowAllocator.Request("owner-one", 2)), 0x108000);
+        PatternWindowSessionState.install(gameplay.getWorldSession(), windows);
+
+        EditorModeContext editor = SessionManager.enterEditorMode(new EditorCursorState(77, 88));
+        GameplayModeContext resumed = SessionManager.resumeGameplayFromEditor();
+
+        assertEquals(windows.assignments(),
+                PatternWindowSessionState.of(editor.getWorldSession()).assignments());
+        assertEquals(windows.assignments(),
+                PatternWindowSessionState.of(resumed.getWorldSession()).assignments());
+        assertEquals(2, PatternWindowSessionState.of(resumed.getWorldSession()).totalWindows());
+    }
+
+    @Test
+    void sessionCopiesPatternAssignmentsAwayFromMutableCallerImplementations() {
+        WorldSession world = new WorldSession(new Sonic2GameModule());
+        List<PatternWindowState.Assignment> callerAssignments = new ArrayList<>();
+        callerAssignments.add(new PatternWindowState.Assignment(
+                "owner-one", 0x108000, 1, 0x8000));
+        PatternWindowState callerState = () -> callerAssignments;
+
+        PatternWindowSessionState.install(world, callerState);
+        callerAssignments.clear();
+
+        assertEquals(1, PatternWindowSessionState.of(world).assignments().size());
+        assertEquals("owner-one",
+                PatternWindowSessionState.of(world).assignments().getFirst().owner());
     }
 
     @Test
@@ -190,5 +226,3 @@ class TestEditorModeContextLifecycle {
         throw new AssertionError("Unclosed method body: " + signature);
     }
 }
-
-

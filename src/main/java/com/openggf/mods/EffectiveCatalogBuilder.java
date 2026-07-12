@@ -123,7 +123,8 @@ public final class EffectiveCatalogBuilder {
         int requestedWindows = descriptor.manifest().patternWindows().orElse(1);
         if (allocatedPatternWindows[0] + requestedWindows > 128) {
             return blocked(id, "PATTERN_WINDOW_BUDGET_EXCEEDED",
-                    "Pattern-window allocation exceeds the process limit of 128", List.of(id));
+                    "Pattern-window allocation for " + id
+                            + " exceeds the process limit of 128", List.of(id));
         }
         allocatedPatternWindows[0] += requestedWindows;
         return new ModEligibility(id, ModEligibility.Status.EFFECTIVE, List.of());

@@ -33,6 +33,9 @@ import java.util.function.Supplier;
 import java.util.function.Function;
 import java.util.LinkedHashMap;
 import com.openggf.level.objects.RewindClassResolver;
+import com.openggf.game.session.PatternWindowState;
+import com.openggf.mods.code.ModPatternWindowAllocator;
+import com.openggf.graphics.PatternAtlasRange;
 
 /**
  * Process-lifetime mod catalog owner and the sole atomic owner of the session view.
@@ -48,6 +51,7 @@ public final class ModSubsystem implements AutoCloseable {
     private final PendingModStateEditor pendingEditor;
     private final Set<String> trustedCodeOwners;
     private final SessionAudioBoundary audioBoundary;
+    private final ModPatternWindowAllocator patternWindowAllocator;
     private ExternalContentPolicy policy;
     private SessionExternalContentView sessionView = SessionExternalContentView.EMPTY;
     private long sessionEpoch;
@@ -91,6 +95,10 @@ public final class ModSubsystem implements AutoCloseable {
         this.sessionFactory = Objects.requireNonNull(sessionFactory, "sessionFactory");
         this.pendingEditor = pendingEditor;
         this.audioBoundary = Objects.requireNonNull(audioBoundary, "audioBoundary");
+        int firstFreePatternId = java.util.Arrays.stream(PatternAtlasRange.values())
+                .mapToInt(PatternAtlasRange::endExclusive).max().orElse(0);
+        this.patternWindowAllocator = new ModPatternWindowAllocator(
+                processCatalog.effective(), firstFreePatternId);
         this.policy = Objects.requireNonNull(policy, "policy");
         this.trustedCodeOwners = Set.copyOf(Objects.requireNonNull(
                 trustedCodeOwners, "trustedCodeOwners"));
@@ -209,10 +217,14 @@ public final class ModSubsystem implements AutoCloseable {
         }
         ModManagerScreen.TextSink text = font == null ? null : ModManagerScreenHost.textSink(font);
         return new ModManagerScreenHost(new ModManagerScreen(
-                processCatalog, pendingEditor, runtimeFindings, text));
+                processCatalog, pendingEditor, runtimeFindings, text, patternWindowAllocator));
     }
 
     public synchronized SessionExternalContentView sessionView() { return sessionView; }
+
+    public synchronized PatternWindowState patternWindowStateForSession() {
+        return policy.mayUseInSession() ? patternWindowAllocator : PatternWindowState.EMPTY;
+    }
 
     public void beginNormalSession(int outputRate, String gameCode) {
         long expectedEpoch;

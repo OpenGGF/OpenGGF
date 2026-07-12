@@ -13,9 +13,9 @@ public class TestPatternAtlasRangeRegistration {
     public void adjacentHalfOpenRangesAreValid() {
         PatternAtlas atlas = new PatternAtlas(256, 256);
 
-        atlas.registerRange(0x38000, 0x100, "First");
+        atlas.registerRange(0x38000, 0x1000, "First");
 
-        assertDoesNotThrow(() -> atlas.registerRange(0x38100, 0x100, "Adjacent"));
+        assertDoesNotThrow(() -> atlas.registerRange(0x39000, 0x1000, "Adjacent"));
     }
 
     @Test
@@ -38,30 +38,30 @@ public class TestPatternAtlasRangeRegistration {
     public void partiallyOverlappingRangesFailFast() {
         PatternAtlas atlas = new PatternAtlas(256, 256);
 
-        atlas.registerRange(0x38000, 0x100, "First");
+        atlas.registerRange(0x38000, 0x2000, "First");
 
         assertThrows(IllegalArgumentException.class,
-            () -> atlas.registerRange(0x38080, 0x100, "Partial"));
+            () -> atlas.registerRange(0x39000, 0x2000, "Partial"));
     }
 
     @Test
     public void exactDuplicateRangesFailFast() {
         PatternAtlas atlas = new PatternAtlas(256, 256);
 
-        atlas.registerRange(0x38000, 0x100, "First");
+        atlas.registerRange(0x38000, 0x1000, "First");
 
         assertThrows(IllegalArgumentException.class,
-            () -> atlas.registerRange(0x38000, 0x100, "Duplicate"));
+            () -> atlas.registerRange(0x38000, 0x1000, "Duplicate"));
     }
 
     @Test
     public void enclosingRangesFailFast() {
         PatternAtlas atlas = new PatternAtlas(256, 256);
 
-        atlas.registerRange(0x38080, 0x80, "Inner");
+        atlas.registerRange(0x39000, 0x1000, "Inner");
 
         assertThrows(IllegalArgumentException.class,
-            () -> atlas.registerRange(0x38000, 0x200, "Outer"));
+            () -> atlas.registerRange(0x38000, 0x3000, "Outer"));
     }
 
     @Test

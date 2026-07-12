@@ -140,6 +140,8 @@ class TestEffectiveCatalogBuilder {
         expected.add("later-default");
         assertEquals(expected, effectiveIds(result));
         assertReason(result, "overflow", "PATTERN_WINDOW_BUDGET_EXCEEDED");
+        assertTrue(reason(result, "overflow", "PATTERN_WINDOW_BUDGET_EXCEEDED")
+                .message().contains("overflow"));
         assertReason(result, "dependent", "DEPENDENCY_BLOCKED");
         assertEquals(ModEligibility.Status.EFFECTIVE, result.eligibility().get("later-default").status());
 

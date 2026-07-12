@@ -29,6 +29,7 @@ public class PatternAtlas {
     private static final float UV_INSET_PIXELS = 0.01f;
     private static final int MAX_ATLASES = 2;
     private static final int NATIVE_PATTERN_ID_MAX = 0x7FF;
+    private static final int GOVERNED_RANGE_ALIGNMENT = 0x1000;
     // Max distinct dirty slots tracked exactly per page per batch. Below/at this count,
     // endBatch() uploads each dirty tile individually; past it, the bounding rectangle
     // of ALL dirty tiles (bounds keep updating after overflow) is uploaded instead.
@@ -144,18 +145,31 @@ public class PatternAtlas {
      * @param category a human-readable name for logging (e.g., "Objects", "HUD")
      */
     public void registerRange(int base, int size, String category) {
-        int newEnd = base + size;
+        if (base < 0 || size <= 0
+                || base % GOVERNED_RANGE_ALIGNMENT != 0
+                || size % GOVERNED_RANGE_ALIGNMENT != 0) {
+            throw new IllegalArgumentException("Pattern ranges require positive 0x"
+                    + Integer.toHexString(GOVERNED_RANGE_ALIGNMENT)
+                    + "-aligned base and size: base=0x" + Integer.toHexString(base)
+                    + " size=0x" + Integer.toHexString(size));
+        }
+        String rangeCategory = java.util.Objects.requireNonNull(category, "category");
+        int newEnd = Math.addExact(base, size);
         for (PatternRange existing : registeredRanges) {
-            int existingEnd = existing.base() + existing.size();
+            int existingEnd = checkedRangeEnd(existing);
             if (base < existingEnd && existing.base() < newEnd) {
-                throw new IllegalArgumentException("Pattern range collision: " + category
+                throw new IllegalArgumentException("Pattern range collision: " + rangeCategory
                     + " [0x" + Integer.toHexString(base) + "-0x" + Integer.toHexString(newEnd)
                     + "] overlaps " + existing.category()
                     + " [0x" + Integer.toHexString(existing.base())
                     + "-0x" + Integer.toHexString(existingEnd) + "]");
             }
         }
-        registeredRanges.add(new PatternRange(base, size, category));
+        registeredRanges.add(new PatternRange(base, size, rangeCategory));
+    }
+
+    private static int checkedRangeEnd(PatternRange range) {
+        return Math.addExact(range.base(), range.size());
     }
 
     /** Clears all registered ranges. Called on level unload or atlas reset. */
@@ -589,6 +603,11 @@ public class PatternAtlas {
         }
         if (PatternAtlasRange.forPatternId(patternId) != null) {
             return;
+        }
+        for (PatternRange range : registeredRanges) {
+            if (patternId >= range.base() && patternId < checkedRangeEnd(range)) {
+                return;
+            }
         }
         throw new IllegalArgumentException("Virtual pattern ID 0x"
                 + Integer.toHexString(patternId)

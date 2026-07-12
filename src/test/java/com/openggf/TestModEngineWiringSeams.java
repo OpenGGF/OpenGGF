@@ -115,6 +115,15 @@ class TestModEngineWiringSeams {
     }
 
     @Test
+    void gameplayRuntimeAttachesPolicyFilteredPatternWindowsToWorldSession() throws IOException {
+        String source = source("Engine.java");
+        assertMethodOrder(source, "private void initializeGameplayRuntime(",
+                "PatternWindowSessionState.install(",
+                "GameplaySessionFactory.attachManagers(");
+        assertTrue(source.contains("ModSubsystem.current().patternWindowStateForSession()"));
+    }
+
+    @Test
     void engineInstallsRealManagerFactoryAndClearsSessionBeforeAudioReset() throws IOException {
         String source = source("Engine.java");
         assertMethodOrder(source, "private MasterTitleScreen createMasterTitleScreen()",

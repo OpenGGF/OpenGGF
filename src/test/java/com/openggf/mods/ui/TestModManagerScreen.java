@@ -28,6 +28,7 @@ import com.openggf.mods.PendingModStateEditor;
 import com.openggf.mods.RepositoryScanFailure;
 import com.openggf.mods.SemanticVersion;
 import com.openggf.mods.VersionRange;
+import com.openggf.mods.code.ModPatternWindowAllocator;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -102,6 +103,29 @@ class TestModManagerScreen {
         screen.render();
         assertTrue(font.drawn.stream().anyMatch(line -> line.contains("MOD MANAGER")));
         assertTrue(font.drawn.stream().anyMatch(line -> line.contains("OGG decode failed")));
+    }
+
+    @Test
+    void displaysRetainedPerOwnerAndTotalPatternWindowBudget() {
+        ModDescriptor small = descriptorWithWindows("pack-small", "Small", 1);
+        ModDescriptor large = descriptorWithWindows("pack-large", "Large", 16);
+        ModCatalog catalog = new ModCatalog(List.of(small, large),
+                new EffectiveModCatalog(List.of(small, large)), Map.of());
+        RecordingFont font = new RecordingFont();
+        ModPatternWindowAllocator allocator = new ModPatternWindowAllocator(
+                catalog.effective(), 0x108000);
+        PendingModStateEditor editor = new PendingModStateEditor(
+                state(true, true, "pack-small", "pack-large"), catalog.scanned(),
+                new ModStateStore(temp.resolve("budget").toAbsolutePath().normalize()));
+        ModManagerScreen screen = new ModManagerScreen(catalog, editor,
+                new ModRuntimeFindingStore(), font == null ? null : textSink(font), allocator);
+
+        assertEquals("Current pattern windows: 17/128", screen.patternBudgetLine());
+        assertTrue(screen.detailLines().stream().anyMatch(line -> line.contains("Pattern windows: 1")));
+        screen.select(1);
+        assertTrue(screen.detailLines().stream().anyMatch(line -> line.contains("Pattern windows: 16")));
+        screen.render();
+        assertTrue(font.drawn.contains("Current pattern windows: 17/128"));
     }
 
     @Test
@@ -615,6 +639,14 @@ class TestModManagerScreen {
     private static ModDescriptor descriptor(String id, String name, List<ModDependency> dependencies,
                                             List<ModFinding> findings) {
         return descriptorAt(id, name, Path.of(id + ".jar"), dependencies, findings);
+    }
+
+    private static ModDescriptor descriptorWithWindows(String id, String name, int windows) {
+        ModManifest manifest = new ModManifest(1, id, name, SemanticVersion.parse("1.2.3"),
+                List.of("Alice"), "Pattern owner", VersionRange.parse(">=1.0.0 <2.0.0"),
+                ModType.PATCH, "s2", null, List.of(), Map.of(), Map.of(), null,
+                OptionalInt.of(windows));
+        return new ModDescriptor(Path.of(id + ".jar"), manifest, "a".repeat(64), false, List.of());
     }
 
     private static ModDescriptor descriptorAt(String id, String name, Path path,

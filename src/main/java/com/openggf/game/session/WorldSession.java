@@ -26,6 +26,7 @@ public final class WorldSession {
     // write-through during level load; new LevelManagers inherit it on
     // construction.
     private Level currentLevel;
+    PatternWindowState patternWindowState = PatternWindowState.EMPTY;
 
     public WorldSession(GameModule gameModule) {
         this(gameModule, null);
@@ -100,4 +101,5 @@ public final class WorldSession {
     public void setCurrentLevel(Level currentLevel) {
         this.currentLevel = currentLevel;
     }
+
 }
