@@ -3,7 +3,7 @@ package com.openggf.game.sonic1.objects;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.GenericFieldCapturer;
-import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
+import com.openggf.game.CanonicalAnimation;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -442,25 +442,18 @@ public class Sonic1SeesawBallObjectInstance extends AbstractObjectInstance
      * </pre>
      */
     private void launchStandingPlayer() {
-        AbstractPlayableSprite player = parent.getStandingPlayer();
-        if (player == null) {
+        var players = parent.getStandingPlayers();
+        if (players.isEmpty()) {
             return;
         }
-
-        // move.w obVelY(a0),obVelY(a2) / neg.w obVelY(a2)
-        player.setYSpeed((short) -yVel);
-
-        // bset #1,obStatus(a2) — set airborne
-        player.setAir(true);
-
-        // bclr #3,obStatus(a2) — clear standing-on-object
-        player.setOnObject(false);
-
-        // clr.b objoff_3C(a2) — clear jumping flag
-        player.setJumping(false);
-
-        // move.b #id_Spring,obAnim(a2) — spring animation
-        player.setAnimationId(Sonic1AnimationIds.SPRING);
+        for (AbstractPlayableSprite player : players) {
+            // Native main is first; extension sidekicks receive the same launch afterward.
+            player.setYSpeed((short) -yVel);
+            player.setAir(true);
+            player.setOnObject(false);
+            player.setJumping(false);
+            player.setAnimationId(player.resolveAnimationId(CanonicalAnimation.SPRING));
+        }
 
         // Clear parent's standing bit
         parent.clearPlayerStanding();
