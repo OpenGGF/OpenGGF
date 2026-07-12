@@ -3,6 +3,7 @@ package com.openggf.sprites.playable;
 import com.openggf.camera.Camera;
 import com.openggf.game.AnimationId;
 import com.openggf.game.CanonicalAnimation;
+import com.openggf.game.CharacterKey;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameModule;
@@ -67,6 +68,9 @@ import com.openggf.timer.timers.SpeedShoesTimer;
 @com.openggf.game.ModApi
 public abstract class AbstractPlayableSprite extends AbstractSprite implements com.openggf.game.PlayableEntity {
         private static final Logger LOGGER = Logger.getLogger(AbstractPlayableSprite.class.getName());
+
+        @RewindTransient(reason = "character registry identity is immutable structural state")
+        private final CharacterKey boundCharacterKey;
 
         @RewindTransient(reason = "playable controller is structural; mutable controller state is captured explicitly")
         protected final PlayableSpriteController controller;
@@ -889,7 +893,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.statusTertiary = 0;
                 defineSpeeds(); // Reset speeds to default
                 instaShieldRegistered = false; // Force re-registration with new ObjectManager on level load
-                resolvePhysicsProfile();
+                resolvePhysicsProfile(GameServices.bootstrapGameModule());
                 // ROM: Obj01_Init unconditionally sets y_radius=$13, x_radius=9.
                 // Since we reuse the sprite rather than recreating it, we must
                 // explicitly restore standing dimensions and sensor offsets here.
@@ -3593,10 +3597,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         protected AbstractPlayableSprite(String code, short x, short y) {
                 super(code, x, y);
+                boundCharacterKey = PlayableCharacterIdentity.bindForConstruction(this);
                 // Must define speeds before creating Manager (it will read speeds upon
                 // instantiation).
                 defineSpeeds();
-                resolvePhysicsProfile();
+                resolvePhysicsProfile(GameServices.bootstrapGameModule());
 
                 applyStandingRadii(false);
 
@@ -3614,15 +3619,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 controller = new PlayableSpriteController(this);
         }
 
+        /** Returns the stable persisted identity for this playable character. */
+        public CharacterKey characterKey() {
+                return PlayableCharacterIdentity.defaultFor(this);
+        }
+
         /**
          * Resolves physics profile, modifiers, and game rules from the active GameModule.
          * Overwrites the protected speed fields set by defineSpeeds() with values from the profile.
          * Falls back gracefully if no provider is available (defineSpeeds() values remain).
          */
-        private void resolvePhysicsProfile() {
-                resolvePhysicsProfile(bootstrapSafeGameModule());
-        }
-
         private void resolvePhysicsProfile(GameModule module) {
                 runtimeBoundStateModule = module;
                 try {
@@ -3631,10 +3637,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 bubbleAnimId = module != null ? module.resolveAnimationId(CanonicalAnimation.BUBBLE) : -1;
                                 return;
                         }
-                        String charType;
-                        if (this instanceof Tails) charType = "tails";
-                        else if (this instanceof Knuckles) charType = "knuckles";
-                        else charType = "sonic";
+                        String charType = boundCharacterKey.persisted();
                         PhysicsProfile profile = provider.getProfile(charType);
                         if (profile != null) {
                                 this.physicsProfile = profile;
@@ -3709,10 +3712,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         return;
                 }
                 resolvePhysicsProfile(module);
-        }
-
-        private GameModule bootstrapSafeGameModule() {
-                return GameServices.bootstrapGameModule();
         }
 
         /**

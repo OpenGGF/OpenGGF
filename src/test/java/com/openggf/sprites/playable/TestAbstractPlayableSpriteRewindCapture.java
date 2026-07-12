@@ -692,6 +692,17 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertFalse(spawner.lastShield.isDestroyed());
     }
 
+    @Test
+    void runtimeCodeSurvivesRewindWhileStableCharacterIdentityIsUnchanged() {
+        Sonic sidekick = new Sonic("sonic_p4", (short) 100, (short) 200);
+
+        PerObjectRewindSnapshot snapshot = sidekick.captureRewindState();
+        sidekick.restoreRewindState(snapshot);
+
+        assertEquals("sonic_p4", sidekick.getCode());
+        assertSame(com.openggf.game.CharacterKey.SONIC, sidekick.characterKey());
+    }
+
     private static void setBooleanField(Object target, String name, boolean value) throws Exception {
         Field field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);

@@ -95,9 +95,10 @@ public final class ModBackedGamePatch implements GamePatch {
                     com.openggf.game.CharacterDefinition definition) {
                 return new com.openggf.game.CharacterDefinition(key, definition.displayName(),
                         (code, x, y) -> faultBoundary.callCharacter(key,
-                                () -> Objects.requireNonNull(
-                                        definition.spriteFactory().create(code, x, y),
-                                        "Mod sprite factory returned null for " + key.persisted())),
+                                () -> com.openggf.game.CharacterConstructionScope.call(key,
+                                        () -> com.openggf.game.CharacterConstructionScope
+                                                .validateFactoryResult(key,
+                                                        definition.spriteFactory().create(code, x, y)))),
                         controller -> faultBoundary.callCharacter(key,
                                 () -> Objects.requireNonNull(
                                         definition.respawnStrategyFactory().create(controller),
