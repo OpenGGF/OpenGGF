@@ -1311,16 +1311,15 @@ public class GraphicsManager {
 			if (source == null) {
 				rowCase = UNDERWATER_ROW_ABSENT;
 				if (normalLine0 != null && underwaterLine0 != null) {
-					for (RenderContext ctx : RenderContext.getDonorContexts()) {
-						int base = ctx.getPaletteLineBase();
-						if (row >= base && row < base + RenderContext.LINES_PER_CONTEXT) {
-							source = ctx.getPalette(row - base);
-							if (source != null) {
-								rowCase = UNDERWATER_ROW_DERIVED;
-								hasDerivedDonorRow = true;
-							}
-							break;
-						}
+					source = RenderContext.getUnderwaterPaletteForEffectiveLine(row);
+					if (source != null) {
+						rowCase = UNDERWATER_ROW_DIRECT;
+					} else {
+						source = RenderContext.getPaletteForEffectiveLine(row);
+					}
+					if (source != null && rowCase != UNDERWATER_ROW_DIRECT) {
+						rowCase = UNDERWATER_ROW_DERIVED;
+						hasDerivedDonorRow = true;
 					}
 				}
 			}

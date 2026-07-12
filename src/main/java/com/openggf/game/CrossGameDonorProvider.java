@@ -30,6 +30,14 @@ public interface CrossGameDonorProvider {
         return null;
     }
 
+    /**
+     * Loads the donor game's native underwater character palette, when it has
+     * one distinct from the ordinary character palette.
+     */
+    default Palette loadUnderwaterCharacterPalette(RomByteReader reader, String characterCode) {
+        return null;
+    }
+
     default Palette loadHostCompatiblePalette(RomByteReader reader, String characterCode) {
         return null;
     }

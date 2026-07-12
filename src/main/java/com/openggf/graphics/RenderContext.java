@@ -92,6 +92,39 @@ public class RenderContext {
     }
 
     /**
+     * Returns the normal palette assigned to an expanded palette-texture row.
+     * Covers both shared donor contexts and per-sidekick contexts so every
+     * cross-game sprite can receive a derived underwater row.
+     */
+    public static Palette getPaletteForEffectiveLine(int effectiveLine) {
+        Palette palette = getPaletteForEffectiveLine(donorContexts.values(), effectiveLine, false);
+        return palette != null
+                ? palette
+                : getPaletteForEffectiveLine(sidekickContexts, effectiveLine, false);
+    }
+
+    /** Returns a donor-supplied native underwater palette for an expanded row. */
+    public static Palette getUnderwaterPaletteForEffectiveLine(int effectiveLine) {
+        Palette palette = getPaletteForEffectiveLine(donorContexts.values(), effectiveLine, true);
+        return palette != null
+                ? palette
+                : getPaletteForEffectiveLine(sidekickContexts, effectiveLine, true);
+    }
+
+    private static Palette getPaletteForEffectiveLine(
+            Collection<RenderContext> contexts, int effectiveLine, boolean underwater) {
+        for (RenderContext ctx : contexts) {
+            int logicalLine = effectiveLine - ctx.paletteLineBase;
+            if (logicalLine >= 0 && logicalLine < LINES_PER_CONTEXT) {
+                return underwater
+                        ? ctx.underwaterPalettes[logicalLine]
+                        : ctx.palettes[logicalLine];
+            }
+        }
+        return null;
+    }
+
+    /**
      * Derives an underwater palette for a donor sprite by applying the base
      * game's average normal-to-underwater color shift to each donor color.
      *
@@ -184,6 +217,7 @@ public class RenderContext {
     private final GameId gameId;
     private final int paletteLineBase;
     private final Palette[] palettes = new Palette[LINES_PER_CONTEXT];
+    private final Palette[] underwaterPalettes = new Palette[LINES_PER_CONTEXT];
 
     private RenderContext(GameId gameId, int paletteLineBase) {
         this.gameId = gameId;
@@ -212,5 +246,13 @@ public class RenderContext {
 
     public Palette getPalette(int line) {
         return palettes[line];
+    }
+
+    public void setUnderwaterPalette(int line, Palette palette) {
+        underwaterPalettes[line] = palette;
+    }
+
+    public Palette getUnderwaterPalette(int line) {
+        return underwaterPalettes[line];
     }
 }
