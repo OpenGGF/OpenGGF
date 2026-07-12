@@ -1,11 +1,11 @@
 package com.openggf.game.sonic1.events;
 
 import com.openggf.game.AbstractLevelEventManager;
+import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic1.Sonic1LoopManager;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.level.LevelManager;
-import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.nio.ByteBuffer;
@@ -237,7 +237,7 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
             if (playerX >= 0x2000) {
                 // Transition to SBZ3 (our engine: zone SBZ, act 2)
                 sbz3TransitionRequested = true;
-                lockPlayersForSbz3Transition(progressionOwner);
+                lockPlayersForTransition(progressionOwner);
                 levelManager().requestZoneAndAct(
                         Sonic1ZoneConstants.ZONE_SBZ, 2);
                 return true;
@@ -246,12 +246,10 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         return false;
     }
 
-    private void lockPlayersForSbz3Transition(AbstractPlayableSprite progressionOwner) {
+    static void lockPlayersForTransition(AbstractPlayableSprite progressionOwner) {
         progressionOwner.setControlLocked(true);
-        for (var participant : playerQuery().playersFor(
-                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
-            if (participant instanceof AbstractPlayableSprite sidekick
-                    && sidekick != progressionOwner) {
+        for (var sidekick : GameServices.sprites().getRegisteredSidekicks()) {
+            if (sidekick != progressionOwner) {
                 sidekick.setControlLocked(true);
             }
         }

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
@@ -13,6 +14,8 @@ import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
+import java.util.IdentityHashMap;
+import java.util.Map;
 
 /**
  * Object 0x67 -- Running Disc spot (SBZ).
@@ -86,7 +89,23 @@ public class Sonic1RunningDiscObjectInstance extends AbstractObjectInstance impl
     private int y;
 
     // disc_sonic_attached = objoff_3A: whether Sonic is currently attached
-    private boolean sonicAttached;
+    private PlayableEntity nativeOwner;
+    private final PlayerState nativeState = new PlayerState();
+    private final Map<PlayableEntity, PlayerState> extensionStates = new IdentityHashMap<>();
+
+    private static final class PlayerState implements RewindStateful<Boolean> {
+        private boolean attached;
+
+        @Override
+        public Boolean captureRewindStateValue() {
+            return attached;
+        }
+
+        @Override
+        public void restoreRewindStateValue(Boolean state) {
+            attached = Boolean.TRUE.equals(state);
+        }
+    }
 
     public Sonic1RunningDiscObjectInstance(ObjectSpawn spawn) {
         super(spawn, "RunningDisc");
@@ -152,9 +171,50 @@ public class Sonic1RunningDiscObjectInstance extends AbstractObjectInstance impl
         }
 
         // Disc_Action: bsr.w Disc_MoveSonic / bsr.w Disc_MoveSpot / bra.w Disc_ChkDel
-        updateSonicAttachment(player);
+        nativeOwner = bindNativeOwner(player);
+        updateSonicAttachment(player, nativeState);
+        List<PlayableEntity> sidekicks = services().sidekicks();
+        for (PlayableEntity participant : sidekicks) {
+            if (participant instanceof AbstractPlayableSprite sidekick && participant != nativeOwner) {
+                updateSonicAttachment(sidekick,
+                        extensionStates.computeIfAbsent(participant, ignored -> new PlayerState()));
+            }
+        }
+        for (Map.Entry<PlayableEntity, PlayerState> entry : extensionStates.entrySet()) {
+            if (entry.getValue().attached
+                    && !containsIdentity(sidekicks, entry.getKey())
+                    && entry.getKey() instanceof AbstractPlayableSprite omitted) {
+                updateSonicAttachment(omitted, entry.getValue());
+            }
+        }
+        extensionStates.entrySet().removeIf(entry -> !entry.getValue().attached
+                && !containsIdentity(sidekicks, entry.getKey()));
         updateSpotPosition();
         updateDynamicSpawn(x, y);
+    }
+
+    private PlayableEntity bindNativeOwner(AbstractPlayableSprite current) {
+        if (nativeOwner == current) {
+            return current;
+        }
+        if (nativeOwner != null && nativeState.attached) {
+            extensionStates.computeIfAbsent(nativeOwner, ignored -> new PlayerState()).attached = true;
+        }
+        nativeState.attached = false;
+        if (current != null) {
+            PlayerState restored = extensionStates.remove(current);
+            if (restored != null) {
+                nativeState.attached = restored.attached;
+            }
+        }
+        return current;
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> players, PlayableEntity target) {
+        for (PlayableEntity player : players) {
+            if (player == target) return true;
+        }
+        return false;
     }
 
     /**
@@ -186,7 +246,7 @@ public class Sonic1RunningDiscObjectInstance extends AbstractObjectInstance impl
      *   rts
      * </pre>
      */
-    private void updateSonicAttachment(AbstractPlayableSprite player) {
+    private void updateSonicAttachment(AbstractPlayableSprite player, PlayerState playerState) {
         if (player == null) {
             return;
         }
@@ -201,10 +261,10 @@ public class Sonic1RunningDiscObjectInstance extends AbstractObjectInstance impl
         // Unsigned comparison: if dx < 0 or dx >= diameter, outside range
         if ((dx & 0xFFFF) >= diameter || (dy & 0xFFFF) >= diameter) {
             // .detach: if was attached, clear stick_to_convex
-            if (sonicAttached) {
+            if (playerState.attached) {
                 // clr.b stick_to_convex(a1)
                 player.setStickToConvex(false);
-                sonicAttached = false;
+                playerState.attached = false;
             }
             return;
         }
@@ -212,14 +272,14 @@ public class Sonic1RunningDiscObjectInstance extends AbstractObjectInstance impl
         // btst #1,obStatus(a1) — check if Sonic is airborne
         if (player.getAir()) {
             // Airborne: clear attachment but don't clear stick_to_convex
-            sonicAttached = false;
+            playerState.attached = false;
             return;
         }
 
         // .attach:
-        if (!sonicAttached) {
+        if (!playerState.attached) {
             // First frame of attachment
-            sonicAttached = true;
+            playerState.attached = true;
 
             // btst #2,obStatus(a1) — check rolling status
             if (!player.getRolling()) {
@@ -239,6 +299,21 @@ public class Sonic1RunningDiscObjectInstance extends AbstractObjectInstance impl
 
         // loc_155E2: Clamp Sonic's inertia (ground speed) to min/max range
         clampSonicSpeed(player);
+    }
+
+    @Override
+    public void onUnload() {
+        clearAttachment(nativeOwner, nativeState);
+        for (Map.Entry<PlayableEntity, PlayerState> entry : extensionStates.entrySet()) {
+            clearAttachment(entry.getKey(), entry.getValue());
+        }
+    }
+
+    private static void clearAttachment(PlayableEntity entity, PlayerState state) {
+        if (state.attached && entity instanceof AbstractPlayableSprite player) {
+            player.setStickToConvex(false);
+        }
+        state.attached = false;
     }
 
     /**

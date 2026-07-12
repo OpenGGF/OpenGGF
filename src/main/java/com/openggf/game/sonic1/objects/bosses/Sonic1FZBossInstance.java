@@ -27,6 +27,7 @@ import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Object 0x85 — Final Zone Boss (Eggman in machine with crushing cylinders and plasma launcher).
@@ -701,8 +702,8 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         updateEscapeLegs();
 
         // ROM: Player control lock when player X >= boss_fz_end + $90
-        if (player != null) {
-            int playerX = player.getCentreX() & 0xFFFF;
+        for (AbstractPlayableSprite participant : finalFlightParticipants(player)) {
+            int playerX = participant.getCentreX() & 0xFFFF;
 
             // ROM: loc_1A216 — lock player controls past threshold
             if (playerX >= BOSS_FZ_END + 0x90) {
@@ -711,8 +712,8 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
                 // it never clears obVelX, so an airborne rolling Sonic keeps his
                 // x_speed (FZ trace f4200: ROM x_speed stays 0x0255). The prior
                 // setXSpeed(0) zeroed it and diverged.
-                player.setControlLocked(true);
-                player.setGSpeed((short) 0);
+                participant.setControlLocked(true);
+                participant.setGSpeed((short) 0);
 
                 // ROM: tst.w obVelY(a0) / bpl loc_1A248 — only when the boss is still
                 // rising (velY < 0, i.e. Eggman escaped un-hit) does ROM force btnUp to
@@ -722,7 +723,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
 
             // ROM: Cap player X at boss_fz_end + $E0
             if (playerX >= BOSS_FZ_END + 0xE0) {
-                player.setCentreX((short) (BOSS_FZ_END + 0xE0));
+                participant.setCentreX((short) (BOSS_FZ_END + 0xE0));
             }
         }
 
@@ -742,6 +743,17 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         }
 
         updateSeggAnimation();
+    }
+
+    private List<AbstractPlayableSprite> finalFlightParticipants(AbstractPlayableSprite main) {
+        ArrayList<AbstractPlayableSprite> players = new ArrayList<>();
+        if (main != null) players.add(main);
+        for (PlayableEntity sidekick : services().sidekicks()) {
+            if (sidekick instanceof AbstractPlayableSprite playable && playable != main) {
+                players.add(playable);
+            }
+        }
+        return players;
     }
 
     private void updateEscapeLegs() {
@@ -1042,7 +1054,8 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     private boolean isBossOnScreen() {
         Camera camera = services().camera();
         int screenX = state.x - camera.getX();
-        return screenX >= -64 && screenX <= 384;
+        int viewportWidth = camera.getWidth() & 0xFFFF;
+        return screenX >= -64 && screenX <= viewportWidth + 64;
     }
 
     @Override
