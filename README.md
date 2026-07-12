@@ -221,7 +221,7 @@ The `next` branch is where post-0.6 work is staged before it graduates into the 
 Highlights:
 
 - **Time Attack:** solo Time Attack is available from the master title menu with curated S1/S2/S3K signpost tracks, best-ghost racing, split deltas, instant retry, hash-bound input files, and local Ed25519 player identity; multiplayer Time Attack is planned as the next extension of this system.
-- **Mod support:** Phase 0 provides patch-composition and editor foundations. Phase 1 adds strict packed, data-only mod discovery; dependency-aware restart-scoped management from the master title; and bounded WAV/OGG overrides for existing S1/S2/S3K music IDs. Code mods, art/level/character content, standalone games, streamed SFX, MP3, hot reload, and the `ggfmod` toolchain remain later-phase work. See [Music packs](docs/modding/music-packs.md).
+- **Mod support:** Phase 0 provides patch-composition and editor foundations; Phase 1 adds strict restart-scoped mod discovery and bounded WAV/OGG stock-music overrides; and Phase 2 adds trusted code-backed objects, data-only art reskins, complete Sonic 2 zones, tagged mod-zone saves, immutable development snapshots, and the two-artifact `ggfmod` creator toolchain. Characters, standalone games, S1/S3K new zones, streamed SFX, MP3, and hot reload remain later-phase work. See [Content mods](docs/modding/content-mods.md) and [Music packs](docs/modding/music-packs.md).
 
 ### v0.6.prerelease (Current development snapshot)
 

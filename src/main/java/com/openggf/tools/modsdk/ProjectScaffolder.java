@@ -55,7 +55,7 @@ public final class ProjectScaffolder {
                 catch (IOException failure) { throw new ScaffoldFailure(failure); }
             });
             writeSamplePng(staging.resolve("src/main/mod/sample.png"));
-            writeMinimalLevel(staging.resolve("src/main/mod/level-source"));
+            writeMinimalLevel(staging.resolve("src/main/mod/level-source"), modId);
             Files.move(staging, output);
             return output;
         } catch (ScaffoldFailure failure) {
@@ -90,55 +90,99 @@ public final class ProjectScaffolder {
         if (!ImageIO.write(image, "png", path.toFile())) throw new IOException("PNG writer unavailable");
     }
 
-    /** One pattern/chunk/block/map and four black palette lines in Task 14's exact v1 format. */
-    private static void writeMinimalLevel(Path root) throws IOException {
+    /** A visible two-pattern sample with an empty upper block and solid lower floor. */
+    private static void writeMinimalLevel(Path root, String modId) throws IOException {
         Files.createDirectories(root);
         writeBinary(root.resolve("patterns.bin"), out -> {
-            out.writeBytes("GPTN"); out.writeShort(1); out.writeShort(32); out.writeInt(1);
+            out.writeBytes("GPTN");
+            out.writeShort(1);
+            out.writeShort(32);
+            out.writeInt(2);
             out.write(new byte[32]);
+            byte[] visible = new byte[32];
+            java.util.Arrays.fill(visible, (byte) 0x11);
+            out.write(visible);
         });
         writeBinary(root.resolve("chunks.bin"), out -> {
-            out.writeBytes("GCHK"); out.writeShort(1); out.writeShort(8); out.writeInt(1);
-            for (int i=0;i<4;i++) out.writeShort(0);
+            out.writeBytes("GCHK");
+            out.writeShort(1);
+            out.writeShort(8);
+            out.writeInt(2);
+            for (int i = 0; i < 4; i++) out.writeShort(0);
+            for (int i = 0; i < 4; i++) out.writeShort(1);
         });
         writeBinary(root.resolve("blocks.bin"), out -> {
-            out.writeBytes("GBLK"); out.writeShort(1); out.writeByte(8); out.writeByte(0); out.writeInt(1);
-            for (int i=0;i<64;i++) out.writeShort(0);
+            out.writeBytes("GBLK");
+            out.writeShort(1);
+            out.writeByte(8);
+            out.writeByte(0);
+            out.writeInt(2);
+            for (int i = 0; i < 64; i++) out.writeShort(0);
+            for (int i = 0; i < 64; i++) out.writeShort(0x5001); // chunk 1, top-solid on both paths
         });
         writeBinary(root.resolve("fg-map.bin"), out -> {
-            out.writeBytes("GMAP"); out.writeShort(1); out.writeShort(1); out.writeShort(1);
-            out.writeShort(1); out.writeInt(1); out.writeByte(0);
+            out.writeBytes("GMAP");
+            out.writeShort(1);
+            out.writeShort(2);
+            out.writeShort(2);
+            out.writeShort(1);
+            out.writeInt(4);
+            out.write(new byte[]{0, 0, 1, 1});
         });
         for (String name : new String[]{"solid-heights.bin", "solid-widths.bin"})
             writeBinary(root.resolve(name), out -> {
                 out.writeBytes(name.startsWith("solid-h") ? "GSHG" : "GSWD");
-                out.writeShort(1); out.writeShort(16); out.writeInt(1); out.write(new byte[16]);
+                out.writeShort(1);
+                out.writeShort(16);
+                out.writeInt(2);
+                out.write(new byte[16]);
+                byte[] solid = new byte[16];
+                java.util.Arrays.fill(solid, (byte) 16);
+                out.write(solid);
             });
         writeBinary(root.resolve("solid-angles.bin"), out -> {
-            out.writeBytes("GSAN"); out.writeShort(1); out.writeShort(1); out.writeInt(1); out.writeByte(0);
+            out.writeBytes("GSAN");
+            out.writeShort(1);
+            out.writeShort(1);
+            out.writeInt(2);
+            out.write(new byte[]{0, 0});
         });
-        for (int secondary=0; secondary<2; secondary++) {
-            int flag=secondary;
+        for (int secondary = 0; secondary < 2; secondary++) {
+            int flag = secondary;
             writeBinary(root.resolve(secondary == 0 ? "collision-primary.bin" : "collision-secondary.bin"), out -> {
-                out.writeBytes("GCOL"); out.writeShort(1); out.writeByte(flag); out.writeByte(2);
-                out.writeInt(1); out.writeShort(0);
+                out.writeBytes("GCOL");
+                out.writeShort(1);
+                out.writeByte(flag);
+                out.writeByte(2);
+                out.writeInt(2);
+                out.writeShort(0);
+                out.writeShort(1);
             });
         }
         writeBinary(root.resolve("palettes.bin"), out -> {
-            out.writeBytes("GPAL"); out.writeShort(1); out.writeShort(4); out.writeShort(16); out.writeShort(0);
-            for (int i=0;i<64;i++) out.writeShort(0);
+            out.writeBytes("GPAL");
+            out.writeShort(1);
+            out.writeShort(4);
+            out.writeShort(16);
+            out.writeShort(0);
+            for (int line = 0; line < 4; line++) {
+                for (int color = 0; color < 16; color++) {
+                    out.writeShort(line == 0 && (color == 1 || color == 15) ? 0x0EEE : 0);
+                }
+            }
         });
         writeText(root.resolve("level.json"), """
                 {"formatVersion":1,"zoneName":"Sample Zone","zoneIndex":64,"levelIndex":1024,
-                "blockGridSide":8,"width":1,"height":1,
+                "blockGridSide":8,"width":2,"height":2,
                 "bounds":{"minX":0,"maxX":256,"minY":0,"maxY":256},
-                "start":{"x":32,"y":32},"music":{"stockId":0},
+                "start":{"x":32,"y":96},"music":{"stockId":129},
                 "assets":{"patterns":"patterns.bin","chunks":"chunks.bin","blocks":"blocks.bin",
                 "foregroundMap":"fg-map.bin","solidHeights":"solid-heights.bin","solidWidths":"solid-widths.bin",
                 "solidAngles":"solid-angles.bin","collisionPrimary":"collision-primary.bin",
                 "collisionSecondary":"collision-secondary.bin","palettes":"palettes.bin"},
-                "objects":[],"rings":[]}
-                """);
+                "objects":[{"placementId":1,"x":96,"y":96,"objectKey":"%s:sample-badnik",
+                "subtype":0,"renderFlags":0,"respawnTracked":false,"rawYWord":96}],"rings":[]}
+                """.formatted(modId));
     }
 
     private static void writeBinary(Path path, BinaryWriter writer) throws IOException {

@@ -4,11 +4,11 @@ Phase 1 music packs are restart-loaded patch mods that replace stock music with
 bounded WAV or Ogg/Vorbis assets. They do not contain executable code, and they
 never replace ROM data on disk.
 
-Phase 1 accepts packed, data-only patch JARs only. Code/entrypoints, standalone
-games, art reskins, level or character content, new zones, streamed SFX, MP3,
-development-directory hot runs, hot reload, and the `ggfmod` CLI/SDK are later
-phases. Their manifest fields may already parse for forward compatibility, but
-Phase 1 eligibility rejects a pack that attempts to activate them.
+The Phase 1 music-pack path accepts packed, data-only patch JARs only. The current
+engine also supports Phase 2 code-backed objects, art reskins, Sonic 2 zones, and
+explicit development-directory runs through `ggfmod`; those use separate eligibility
+and trust rules documented in [Content mods](content-mods.md). Standalone games,
+characters, streamed SFX, MP3, and hot reload remain later phases.
 
 ## Source and packaged layout
 
@@ -65,7 +65,7 @@ artOverrides: {}
 - `engineApiRange` and dependency `versionRange` accept `*`, one exact version,
   or at most four whitespace-separated `<`, `<=`, `=`, `>=`, or `>`
   comparators. Ranges must not be empty or contradictory. The current mod API is
-  `1.0.0`.
+  `1.1.0`.
 - The schema parses `type: patch` or `standalone`, but Phase 1 eligibility accepts
   only `patch`. A patch requires `baseGame: s1`, `s2`, or `s3k`; standalone games
   are future work.

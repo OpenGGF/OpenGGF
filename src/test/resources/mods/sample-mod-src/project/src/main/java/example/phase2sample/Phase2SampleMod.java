@@ -1,4 +1,4 @@
-package {{PACKAGE}};
+package example.phase2sample;
 
 import com.openggf.mods.code.GgfMod;
 import com.openggf.mods.code.ModContext;
@@ -6,7 +6,7 @@ import com.openggf.mods.code.BakedSheetRef;
 import com.openggf.mods.code.BakedLevelRef;
 import com.openggf.mods.code.ModZoneContribution;
 
-public final class {{CLASS_PREFIX}}Mod implements GgfMod {
+public final class Phase2SampleMod implements GgfMod {
     @Override public void register(ModContext context) {
         context.registerObject("sample-badnik", (spawn, registry) -> new SampleBadnik(spawn));
         context.registerObjectArt("sample-badnik", new BakedSheetRef("art/sample.ggfs"));

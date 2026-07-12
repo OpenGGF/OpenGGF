@@ -254,14 +254,25 @@ public final class HeadlessGameBoot implements AutoCloseable {
      */
     public static GameplayModeContext openResolvedSessionForBoot(
             EngineContext services, GameModule rootModule) {
-        disableExternalContentForDeterminism();
+        return openResolvedSessionForBoot(services, rootModule,
+                ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
+    }
+
+    /** No-graphics boot using an explicit launch policy; integration-only STANDARD seam. */
+    public static GameplayModeContext openResolvedSessionForBoot(
+            EngineContext services, GameModule rootModule,
+            ModuleResolutionService.LaunchPolicy policy) {
+        if (policy == ModuleResolutionService.LaunchPolicy.DETERMINISTIC) {
+            disableExternalContentForDeterminism();
+        }
         java.util.Objects.requireNonNull(services, "services");
         java.util.Objects.requireNonNull(rootModule, "rootModule");
+        java.util.Objects.requireNonNull(policy, "policy");
         ModuleResolutionService moduleResolutionService = services.moduleResolutionService();
         GameModule module = moduleResolutionService.resolveForLaunch(rootModule,
                 GameplayLaunchRequest.fromConfig(
                         services.configuration(), rootModule.getGameId().code()),
-                ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
+                policy);
         return SessionManager.openGameplaySession(rootModule, module, null);
     }
 

@@ -1,0 +1,13 @@
+formatVersion: 1
+id: phase2-reskin
+name: Phase 2 End Sign Reskin
+version: 1.0.0
+authors: [OpenGGF]
+description: Data-only fixture replacing the stock EndSign object art.
+engineApiRange: ">=1.1.0 <2.0.0"
+type: patch
+baseGame: s2
+dependencies: []
+audioOverrides: {}
+artOverrides:
+  EndSign: art/reskin.ggfs

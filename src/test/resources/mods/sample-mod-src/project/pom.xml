@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>{{PACKAGE}}</groupId><artifactId>{{MOD_ID}}</artifactId><version>1.0.0</version>
+  <groupId>example.phase2sample</groupId><artifactId>phase2-sample</artifactId><version>1.0.0</version>
   <properties><maven.compiler.release>21</maven.compiler.release></properties>
   <profiles>
     <profile><id>published-openggf</id><activation><activeByDefault>true</activeByDefault></activation><dependencies>
@@ -21,7 +21,7 @@
       <execution><id>remove-stale-generated-mod-outputs</id><phase>initialize</phase><goals><goal>run</goal></goals><configuration><target>
         <delete file="${project.build.outputDirectory}/art/sample.ggfs" quiet="true"/>
         <delete dir="${project.build.outputDirectory}/levels/sample" quiet="true"/>
-        <delete file="${project.build.directory}/{{MOD_ID}}-mod.jar" quiet="true"/>
+        <delete file="${project.build.directory}/phase2-sample-mod.jar" quiet="true"/>
       </target></configuration></execution>
     </executions></plugin>
     <plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.1.0</version><executions>
@@ -38,7 +38,7 @@
       <execution><id>package-validated-mod</id><phase>prepare-package</phase><goals><goal>exec</goal></goals><configuration>
         <executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>
           <argument>package</argument><argument>--input</argument><argument>${project.build.outputDirectory}</argument>
-          <argument>--out</argument><argument>${project.build.directory}/{{MOD_ID}}-mod.jar</argument>
+          <argument>--out</argument><argument>${project.build.directory}/phase2-sample-mod.jar</argument>
         </arguments></configuration></execution>
     </executions></plugin>
   </plugins></build>
