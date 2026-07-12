@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **HCZ water-skim jump exits now preserve the native player position word:** `loc_38652` changes velocity, radii, animation, and roll status without writing `y_pos`; the engine now restores the centre after its visual-box transition so Tails does not shift one pixel upward on exit (`docs/skdisasm/sonic3k.asm:75481-75491`).
 - **HCZ Jawz now resolves attacks through native `$D7` special-property ownership:** `Touch_Special` accumulates P1/P2 collision-property values before Obj93 selects the final native player and runs `Check_PlayerAttack` / `EnemyDefeated`, so simultaneous overlap gives the kill bounce to P2 instead of whichever engine touch callback destroys the badnik first (`docs/skdisasm/sonic3k.asm:21162-21194,179747-179865,183518-183570`).
 - **HCZ hand launchers now retain `SolidObjectTop`'s relative fresh-landing snap:** Obj3A no longer applies the separate `PlatformObject_ChkYRange` absolute surface override after `sub_1E410`, preserving the native landing Y when Tails restores his standing radius in the same frame (`docs/skdisasm/sonic3k.asm:41982-42068,65798-65827`).
 - **HCZ spinning columns now preserve exact-right-edge side contact:** Obj68's `SolidObjectFull` path keeps `relX == d1*2` in the zero-distance collision window, restoring the native one-frame `Status_Push` contact (`docs/skdisasm/sonic3k.asm:41394-41403,68148-68157`).

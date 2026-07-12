@@ -127,6 +127,20 @@ class TestHCZWaterSkimHandler {
         assertTrue(HCZWaterSkimHandler.isSkimActiveP1());
     }
 
+    @Test
+    void jumpExitPreservesNativeCentreYWhileEnteringRoll() {
+        AbstractPlayableSprite main = skimmingCandidate();
+        ObjectPlayerQuery query = new ObjectPlayerQuery(() -> main, List::of);
+
+        HCZWaterSkimHandler.update(query, 0x200, 1);
+        when(main.isJumpPressed()).thenReturn(true);
+        HCZWaterSkimHandler.update(query, 0x200, 2);
+
+        assertFalse(HCZWaterSkimHandler.isSkimActiveP1());
+        verify(main).setRolling(true);
+        verify(main).setCentreYPreserveSubpixel((short) 0x1EF);
+    }
+
     private static AbstractPlayableSprite skimmingCandidate() {
         AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
         when(player.getYSpeed()).thenReturn((short) 0);

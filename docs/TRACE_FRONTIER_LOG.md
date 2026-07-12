@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f21937 / 1200 errors (1 error under `frontierOnly`).
+f3318 / 4234 errors to f22615 / 1199 errors (1 error under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -700,6 +700,19 @@ under `frontierOnly`). The focused Jawz suite passes 3/3. The granular S3K
 replay matrix remains exact: both AIZ routes green; CNZ complete f1846 / 5, CNZ
 level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ
 f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 44 preserves the player centre across HCZ water-skim jump exit.
+`loc_38652` writes `y_vel=-$680`, rolling radii, animation 2, and the roll bit,
+but never writes `y_pos`. The engine's `setRolling(true)` also shrinks its
+top-left-based visual box, moving Tails' centre up one pixel unless the native
+position word is restored after that representation change
+(`sonic3k.asm:75481-75491`).
+
+This closes f21937-f22614 and advances HCZ to f22615 / 1199 full-run errors (1
+under `frontierOnly`). The focused water-skim suites pass 13/13. The granular
+S3K replay matrix remains exact: both AIZ routes green; CNZ complete f1846 / 5,
+CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
+ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 Milestone 28 restores the two ROM-owned HCZ2 surface handlers around the first
 large water loop. `sub_714E -> sub_717C` now samples the live foreground layout

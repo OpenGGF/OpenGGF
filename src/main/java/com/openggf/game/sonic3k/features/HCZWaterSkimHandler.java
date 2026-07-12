@@ -301,6 +301,7 @@ public final class HCZWaterSkimHandler {
      * ROM: loc_38652 (sonic3k.asm:75481-75491).
      */
     private static boolean exitWithJump(AbstractPlayableSprite player, boolean isP1) {
+        int centreY = player.getCentreY();
         player.setYSpeed(JUMP_EXIT_Y_VEL);
         player.setAir(true);
         player.setJumping(true);
@@ -308,6 +309,10 @@ public final class HCZWaterSkimHandler {
         player.applyRollingRadii(false);
         player.setAnimationId(Sonic3kAnimationIds.ROLL);
         player.setRolling(true);
+        // loc_38652 writes y_vel, radii, anim, and Status_Roll without writing
+        // y_pos. setRolling(true) also switches the engine's visual box, so
+        // restore the native centre word after that representation change.
+        NativePositionOps.writeYPosPreserveSubpixel(player, centreY);
 
         if (isP1) {
             splashAnimFrameP1 = SPLASH_EXIT_FRAME;
