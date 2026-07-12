@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f30580 / 58 errors (11 errors under
+f3318 / 4234 errors to f30582 / 56 errors (5 errors under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -768,6 +768,21 @@ main player's capsule-area floor/vertical state (`y_speed=0` expected versus
 `$0458` actual). Focused HCZ boss/blade/chute and boss-graph rewind tests pass
 15/15. The granular nine-route S3K matrix remains exact: both AIZ routes green;
 CNZ complete f1846 / 5 and level-select f291 / 7; MGZ complete f1072 / 1 and
+level-select f1030 / 1; ICZ f3174 / 1; MHZ f2920 / 1; LBZ f2270 / 5.
+
+Milestone 66 adds the ground capsule's separate button SST. ROM slot 11 sits
+at `(capsule.x, capsule.y-$24)` and runs `SolidObjectFull` with `$1B/$04/$06`
+dimensions; the engine had only rendered that button while exposing the lower
+capsule body as solid. The new persistent, rewind-recreatable slot lets Sonic
+land at `y_pos=$07A4`, clear rolling/airborne state, and publish the native
+interact slot before the parent observes the press (`sonic3k.asm:
+181496-181535`).
+
+HCZ advances from f30580 / 58 to f30582 / 56 full-run errors (5 under
+`frontierOnly`). The new first owner is CPU Tails' one-pixel X position after
+the capsule landing. Focused capsule/boss and HCZ boss-graph rewind tests pass
+7/7. The granular matrix remains unchanged: both AIZ routes green; CNZ
+complete f1846 / 5 and level-select f291 / 7; MGZ complete f1072 / 1 and
 level-select f1030 / 1; ICZ f3174 / 1; MHZ f2920 / 1; LBZ f2270 / 5.
 
 Milestone 31 restores TurboSpiker's detached-shell direction. The shell child

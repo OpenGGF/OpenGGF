@@ -83,6 +83,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
     private boolean resultsStarted;
     private boolean geyserSpawned;
     private int postOpenTimer;
+    private boolean buttonSpawned;
 
     // Explosion controller (spawned when capsule opens)
     private S3kBossExplosionController explosionController;
@@ -138,6 +139,11 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        if (!buttonSpawned) {
+            buttonSpawned = true;
+            spawnChild(() -> new HczEndBossEggCapsuleButton(
+                    fixedX, fixedY + BUTTON_Y_OFFSET));
+        }
         if (!opened) {
             // Check if player is standing on the button (on top of capsule)
             for (PlayableEntity candidate : playerQuery(playerEntity)
