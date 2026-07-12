@@ -140,7 +140,14 @@ CF-ANNOTATION TYPE com.openggf.editor.EditorStockObjectPalette$Navigation visibl
 CF-ANNOTATION TYPE com.openggf.editor.LevelEditorController visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.editor.persistence.EditorSaveManager visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.editor.persistence.EditorSaveManager$ApplyResult visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.editor.persistence.EditorSaveManager$EditorApplyFinding visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.editor.persistence.EditorSaveManager$SaveResult visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.editor.persistence.FullLevelExporter visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.editor.persistence.FullLevelExporter$ExportMusic visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Stock visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Track visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.editor.persistence.FullLevelExporter$ExportRequest visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.editor.persistence.FullLevelExporter$ExportResult visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.AnimationId visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.BonusStageProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.BonusStageProvider$BonusStageRewards visible @com.openggf.game.ModApi
@@ -522,6 +529,8 @@ CF-ANNOTATION TYPE com.openggf.level.ChunkDesc visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.CollisionMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.Level visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.LevelDescriptor visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.LevelExportStagingValidator visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.LevelExportStagingValidator visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.level.LevelGeometry visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.LevelManager visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.LevelManager$LevelRenderOptions visible @com.openggf.game.ModApi
@@ -946,11 +955,19 @@ CONSTRUCTOR com.openggf.debug.playback.Bk2Movie public  <init>(java.nio.file.Pat
 CONSTRUCTOR com.openggf.editor.EditorInputHandler public  <init>(com.openggf.editor.LevelEditorController)
 CONSTRUCTOR com.openggf.editor.EditorInputHandler public  <init>(com.openggf.editor.LevelEditorController,java.util.function.Supplier<com.openggf.camera.Camera>,java.util.function.Supplier<com.openggf.graphics.GraphicsManager>)
 CONSTRUCTOR com.openggf.editor.EditorInputHandler public  <init>(com.openggf.editor.LevelEditorController,java.util.function.Supplier<com.openggf.camera.Camera>,java.util.function.Supplier<com.openggf.graphics.GraphicsManager>,java.lang.Runnable)
+CONSTRUCTOR com.openggf.editor.EditorInputHandler public  <init>(com.openggf.editor.LevelEditorController,java.util.function.Supplier<com.openggf.camera.Camera>,java.util.function.Supplier<com.openggf.graphics.GraphicsManager>,java.lang.Runnable,java.lang.Runnable)
 CONSTRUCTOR com.openggf.editor.EditorSelectionState public  <init>(java.lang.Integer,java.lang.Integer)
 CONSTRUCTOR com.openggf.editor.EditorStockObjectPalette public  <init>(com.openggf.level.objects.ObjectRegistry)
 CONSTRUCTOR com.openggf.editor.LevelEditorController public  <init>()
 CONSTRUCTOR com.openggf.editor.persistence.EditorSaveManager public  <init>(java.nio.file.Path)
+CONSTRUCTOR com.openggf.editor.persistence.EditorSaveManager public  <init>(java.nio.file.Path,java.util.function.Predicate<java.lang.String>,java.util.function.Consumer<com.openggf.editor.persistence.EditorSaveManager$EditorApplyFinding>)
+CONSTRUCTOR com.openggf.editor.persistence.EditorSaveManager$EditorApplyFinding public  <init>(java.lang.String,java.lang.String,int)
 CONSTRUCTOR com.openggf.editor.persistence.EditorSaveManager$SaveResult public  <init>(boolean,java.nio.file.Path,java.lang.String,com.openggf.editor.persistence.EditorSaveManager$ApplyResult)
+CONSTRUCTOR com.openggf.editor.persistence.FullLevelExporter public  <init>(com.openggf.level.LevelExportStagingValidator)
+CONSTRUCTOR com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Stock public  <init>(int)
+CONSTRUCTOR com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Track public  <init>(java.lang.String,java.lang.String)
+CONSTRUCTOR com.openggf.editor.persistence.FullLevelExporter$ExportRequest public  <init>(java.nio.file.Path,java.lang.String,int,int,int,int,com.openggf.editor.persistence.FullLevelExporter$ExportMusic)
+CONSTRUCTOR com.openggf.editor.persistence.FullLevelExporter$ExportResult public  <init>(java.nio.file.Path,int,int)
 CONSTRUCTOR com.openggf.game.BonusStageProvider$BonusStageRewards public  <init>(int,int,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.BonusStageState public  <init>(int,int,int,int,int,int,int,int,int,int,int,int,byte,byte,int,long)
 CONSTRUCTOR com.openggf.game.BonusStageState public  <init>(int,int,int,int,int,int,int,int,int,int,int,int,byte,byte,int,long,int)
@@ -1933,6 +1950,7 @@ FIELD com.openggf.editor.EditorInputHandler$Action public,static,final com.openg
 FIELD com.openggf.editor.EditorInputHandler$Action public,static,final com.openggf.editor.EditorInputHandler$Action DECREMENT_SUBTYPE
 FIELD com.openggf.editor.EditorInputHandler$Action public,static,final com.openggf.editor.EditorInputHandler$Action DELETE_SPAWN
 FIELD com.openggf.editor.EditorInputHandler$Action public,static,final com.openggf.editor.EditorInputHandler$Action DESCEND
+FIELD com.openggf.editor.EditorInputHandler$Action public,static,final com.openggf.editor.EditorInputHandler$Action EXPORT
 FIELD com.openggf.editor.EditorInputHandler$Action public,static,final com.openggf.editor.EditorInputHandler$Action INCREMENT_SOLID_TILE_INDEX
 FIELD com.openggf.editor.EditorInputHandler$Action public,static,final com.openggf.editor.EditorInputHandler$Action INCREMENT_SUBTYPE
 FIELD com.openggf.editor.EditorInputHandler$Action public,static,final com.openggf.editor.EditorInputHandler$Action MOVE_SELECTED_SPAWN_TO_CURSOR
@@ -2730,6 +2748,8 @@ INTERFACE com.openggf.camera.Camera com.openggf.game.rewind.RewindSnapshottable<
 INTERFACE com.openggf.data.Rom java.lang.AutoCloseable
 INTERFACE com.openggf.data.RomManager java.lang.AutoCloseable
 INTERFACE com.openggf.debug.PerformanceProfiler com.openggf.debug.SectionProfiler
+INTERFACE com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Stock com.openggf.editor.persistence.FullLevelExporter$ExportMusic
+INTERFACE com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Track com.openggf.editor.persistence.FullLevelExporter$ExportMusic
 INTERFACE com.openggf.game.CrossGameFeatureProvider com.openggf.data.PlayerSpriteArtProvider
 INTERFACE com.openggf.game.CrossGameFeatureProvider com.openggf.data.SpindashDustArtProvider
 INTERFACE com.openggf.game.GameRng com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.GameRngSnapshot>
@@ -4231,6 +4251,7 @@ METHOD com.openggf.editor.LevelEditorController public  com.openggf.editor.Edito
 METHOD com.openggf.editor.LevelEditorController public  com.openggf.editor.EditorSpawnEditMode spawnEditMode()
 METHOD com.openggf.editor.LevelEditorController public  com.openggf.editor.EditorStockObjectPalette objectPalette()
 METHOD com.openggf.editor.LevelEditorController public  com.openggf.editor.persistence.EditorSaveManager$ApplyResult persistenceStatus()
+METHOD com.openggf.editor.LevelEditorController public  com.openggf.editor.persistence.FullLevelExporter$ExportResult exportLevel(com.openggf.editor.persistence.FullLevelExporter,com.openggf.editor.persistence.FullLevelExporter$ExportRequest) THROWS java.io.IOException
 METHOD com.openggf.editor.LevelEditorController public  com.openggf.game.session.EditorCursorState worldCursor()
 METHOD com.openggf.editor.LevelEditorController public  com.openggf.level.Block selectedBlockPreview()
 METHOD com.openggf.editor.LevelEditorController public  com.openggf.level.Chunk selectedBlockCellPreview()
@@ -4246,6 +4267,7 @@ METHOD com.openggf.editor.LevelEditorController public  int selectedChunkCellX()
 METHOD com.openggf.editor.LevelEditorController public  int selectedChunkCellY()
 METHOD com.openggf.editor.LevelEditorController public  java.lang.Integer selectedBlockIndex()
 METHOD com.openggf.editor.LevelEditorController public  java.lang.String breadcrumb()
+METHOD com.openggf.editor.LevelEditorController public  java.nio.file.Path lastExportDirectory()
 METHOD com.openggf.editor.LevelEditorController public  void adjustSelectedChunkSolidTileIndex(int)
 METHOD com.openggf.editor.LevelEditorController public  void applyPrimaryAction()
 METHOD com.openggf.editor.LevelEditorController public  void ascend()
@@ -4284,6 +4306,12 @@ METHOD com.openggf.editor.persistence.EditorSaveManager public  com.openggf.edit
 METHOD com.openggf.editor.persistence.EditorSaveManager public  java.nio.file.Path editPath(com.openggf.game.GameId,int,int)
 METHOD com.openggf.editor.persistence.EditorSaveManager$ApplyResult public,static  com.openggf.editor.persistence.EditorSaveManager$ApplyResult valueOf(java.lang.String)
 METHOD com.openggf.editor.persistence.EditorSaveManager$ApplyResult public,static  com.openggf.editor.persistence.EditorSaveManager$ApplyResult[] values()
+METHOD com.openggf.editor.persistence.EditorSaveManager$EditorApplyFinding public  int skippedCount()
+METHOD com.openggf.editor.persistence.EditorSaveManager$EditorApplyFinding public  java.lang.String code()
+METHOD com.openggf.editor.persistence.EditorSaveManager$EditorApplyFinding public  java.lang.String message()
+METHOD com.openggf.editor.persistence.EditorSaveManager$EditorApplyFinding public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.editor.persistence.EditorSaveManager$EditorApplyFinding public,final  int hashCode()
+METHOD com.openggf.editor.persistence.EditorSaveManager$EditorApplyFinding public,final  java.lang.String toString()
 METHOD com.openggf.editor.persistence.EditorSaveManager$SaveResult public  boolean ok()
 METHOD com.openggf.editor.persistence.EditorSaveManager$SaveResult public  com.openggf.editor.persistence.EditorSaveManager$ApplyResult persistenceStatus()
 METHOD com.openggf.editor.persistence.EditorSaveManager$SaveResult public  java.lang.String hash()
@@ -4291,6 +4319,32 @@ METHOD com.openggf.editor.persistence.EditorSaveManager$SaveResult public  java.
 METHOD com.openggf.editor.persistence.EditorSaveManager$SaveResult public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.editor.persistence.EditorSaveManager$SaveResult public,final  int hashCode()
 METHOD com.openggf.editor.persistence.EditorSaveManager$SaveResult public,final  java.lang.String toString()
+METHOD com.openggf.editor.persistence.FullLevelExporter public  com.openggf.editor.persistence.FullLevelExporter$ExportResult export(com.openggf.level.MutableLevel,com.openggf.editor.persistence.FullLevelExporter$ExportRequest) THROWS java.io.IOException
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Stock public  int id()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Stock public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Stock public,final  int hashCode()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Stock public,final  java.lang.String toString()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Track public  java.lang.String localName()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Track public  java.lang.String owner()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Track public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Track public,final  int hashCode()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Track public,final  java.lang.String toString()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportRequest public  com.openggf.editor.persistence.FullLevelExporter$ExportMusic music()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportRequest public  int levelIndex()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportRequest public  int startX()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportRequest public  int startY()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportRequest public  int zoneIndex()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportRequest public  java.lang.String zoneName()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportRequest public  java.nio.file.Path outputDirectory()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportRequest public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportRequest public,final  int hashCode()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportRequest public,final  java.lang.String toString()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportResult public  int objectCount()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportResult public  int ringCount()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportResult public  java.nio.file.Path directory()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportResult public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportResult public,final  int hashCode()
+METHOD com.openggf.editor.persistence.FullLevelExporter$ExportResult public,final  java.lang.String toString()
 METHOD com.openggf.game.AnimationId public,abstract  int id()
 METHOD com.openggf.game.AnimationId public,static <E extends java.lang.Enum<E>&com.openggf.game.AnimationId> int fromCanonical(E[],java.util.function.Function<E,com.openggf.game.CanonicalAnimation>,com.openggf.game.CanonicalAnimation)
 METHOD com.openggf.game.BonusStageProvider public  boolean hasCompletedExitFadeToBlack()
@@ -7394,6 +7448,7 @@ METHOD com.openggf.level.Level public,abstract  java.util.List<com.openggf.level
 METHOD com.openggf.level.LevelDescriptor public,abstract  int levelIndex()
 METHOD com.openggf.level.LevelDescriptor public,abstract  int startX()
 METHOD com.openggf.level.LevelDescriptor public,abstract  int startY()
+METHOD com.openggf.level.LevelExportStagingValidator public,abstract  void validate(java.nio.file.Path) THROWS java.io.IOException
 METHOD com.openggf.level.LevelGeometry public  com.openggf.level.Level level()
 METHOD com.openggf.level.LevelGeometry public  int bgContiguousWidthPx()
 METHOD com.openggf.level.LevelGeometry public  int bgHeightPx()
@@ -8295,6 +8350,7 @@ METHOD com.openggf.level.objects.ObjectManager$ObjectDrawCallback public,abstrac
 METHOD com.openggf.level.objects.ObjectPlacementEncoding public  boolean isReservedForRingEditing(int)
 METHOD com.openggf.level.objects.ObjectPlacementEncoding public  boolean supportsEditorObjectId(int)
 METHOD com.openggf.level.objects.ObjectPlacementEncoding public  boolean usesObjectBackedRingPlacements()
+METHOD com.openggf.level.objects.ObjectPlacementEncoding public  com.openggf.level.objects.ObjectSpawn createKeyed(int,int,java.lang.String,int,int,boolean,int)
 METHOD com.openggf.level.objects.ObjectPlacementEncoding public  com.openggf.level.objects.ObjectSpawn createRingBackingObject(int,int,int)
 METHOD com.openggf.level.objects.ObjectPlacementEncoding public  com.openggf.level.objects.ObjectSpawn move(com.openggf.level.objects.ObjectSpawn,int,int)
 METHOD com.openggf.level.objects.ObjectPlacementEncoding public,abstract  com.openggf.level.objects.ObjectSpawn create(int,int,int,int,int,boolean,int)
@@ -8315,6 +8371,7 @@ METHOD com.openggf.level.objects.ObjectPlayerQuery$NearestPlayerX public  int di
 METHOD com.openggf.level.objects.ObjectPlayerQuery$NearestPlayerX public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.level.objects.ObjectPlayerQuery$NearestPlayerX public,final  int hashCode()
 METHOD com.openggf.level.objects.ObjectPlayerQuery$NearestPlayerX public,final  java.lang.String toString()
+METHOD com.openggf.level.objects.ObjectRegistry public  boolean hasObjectKey(java.lang.String)
 METHOD com.openggf.level.objects.ObjectRegistry public  com.openggf.level.objects.ObjectSlotLayout objectSlotLayout()
 METHOD com.openggf.level.objects.ObjectRegistry public  com.openggf.level.objects.ObjectWindowingStrategy objectWindowingStrategy()
 METHOD com.openggf.level.objects.ObjectRegistry public  java.util.List<java.lang.String> getAliases(int)
@@ -11767,7 +11824,13 @@ NESTED com.openggf.debug.playback.PlaybackDebugManager com.openggf.debug.playbac
 NESTED com.openggf.editor.EditorInputHandler com.openggf.editor.EditorInputHandler$Action
 NESTED com.openggf.editor.EditorStockObjectPalette com.openggf.editor.EditorStockObjectPalette$Navigation
 NESTED com.openggf.editor.persistence.EditorSaveManager com.openggf.editor.persistence.EditorSaveManager$ApplyResult
+NESTED com.openggf.editor.persistence.EditorSaveManager com.openggf.editor.persistence.EditorSaveManager$EditorApplyFinding
 NESTED com.openggf.editor.persistence.EditorSaveManager com.openggf.editor.persistence.EditorSaveManager$SaveResult
+NESTED com.openggf.editor.persistence.FullLevelExporter com.openggf.editor.persistence.FullLevelExporter$ExportMusic
+NESTED com.openggf.editor.persistence.FullLevelExporter com.openggf.editor.persistence.FullLevelExporter$ExportRequest
+NESTED com.openggf.editor.persistence.FullLevelExporter com.openggf.editor.persistence.FullLevelExporter$ExportResult
+NESTED com.openggf.editor.persistence.FullLevelExporter$ExportMusic com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Stock
+NESTED com.openggf.editor.persistence.FullLevelExporter$ExportMusic com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Track
 NESTED com.openggf.game.BonusStageProvider com.openggf.game.BonusStageProvider$BonusStageRewards
 NESTED com.openggf.game.DataSelectProvider com.openggf.game.DataSelectProvider$State
 NESTED com.openggf.game.DebugModeProvider com.openggf.game.DebugModeProvider$SpecialStageDebugController
@@ -12032,6 +12095,8 @@ PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioComm
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SetSpeedShoes
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopAllSfx
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopMusic
+PERMITS com.openggf.editor.persistence.FullLevelExporter$ExportMusic com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Stock
+PERMITS com.openggf.editor.persistence.FullLevelExporter$ExportMusic com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Track
 PERMITS com.openggf.game.MusicReference com.openggf.game.MusicReference$Namespaced
 PERMITS com.openggf.game.MusicReference com.openggf.game.MusicReference$Stock
 PERMITS com.openggf.game.ZoneKey com.openggf.game.ZoneKey$Mod
@@ -12538,10 +12603,26 @@ RECORD-COMPONENT com.openggf.debug.playback.Bk2FrameInput p2StartPressed boolean
 RECORD-COMPONENT com.openggf.debug.playback.Bk2FrameInput rawLine java.lang.String
 RECORD-COMPONENT com.openggf.editor.EditorSelectionState selectedBlock java.lang.Integer
 RECORD-COMPONENT com.openggf.editor.EditorSelectionState selectedChunk java.lang.Integer
+RECORD-COMPONENT com.openggf.editor.persistence.EditorSaveManager$EditorApplyFinding code java.lang.String
+RECORD-COMPONENT com.openggf.editor.persistence.EditorSaveManager$EditorApplyFinding message java.lang.String
+RECORD-COMPONENT com.openggf.editor.persistence.EditorSaveManager$EditorApplyFinding skippedCount int
 RECORD-COMPONENT com.openggf.editor.persistence.EditorSaveManager$SaveResult file java.nio.file.Path
 RECORD-COMPONENT com.openggf.editor.persistence.EditorSaveManager$SaveResult hash java.lang.String
 RECORD-COMPONENT com.openggf.editor.persistence.EditorSaveManager$SaveResult ok boolean
 RECORD-COMPONENT com.openggf.editor.persistence.EditorSaveManager$SaveResult persistenceStatus com.openggf.editor.persistence.EditorSaveManager$ApplyResult
+RECORD-COMPONENT com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Stock id int
+RECORD-COMPONENT com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Track localName java.lang.String
+RECORD-COMPONENT com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Track owner java.lang.String
+RECORD-COMPONENT com.openggf.editor.persistence.FullLevelExporter$ExportRequest levelIndex int
+RECORD-COMPONENT com.openggf.editor.persistence.FullLevelExporter$ExportRequest music com.openggf.editor.persistence.FullLevelExporter$ExportMusic
+RECORD-COMPONENT com.openggf.editor.persistence.FullLevelExporter$ExportRequest outputDirectory java.nio.file.Path
+RECORD-COMPONENT com.openggf.editor.persistence.FullLevelExporter$ExportRequest startX int
+RECORD-COMPONENT com.openggf.editor.persistence.FullLevelExporter$ExportRequest startY int
+RECORD-COMPONENT com.openggf.editor.persistence.FullLevelExporter$ExportRequest zoneIndex int
+RECORD-COMPONENT com.openggf.editor.persistence.FullLevelExporter$ExportRequest zoneName java.lang.String
+RECORD-COMPONENT com.openggf.editor.persistence.FullLevelExporter$ExportResult directory java.nio.file.Path
+RECORD-COMPONENT com.openggf.editor.persistence.FullLevelExporter$ExportResult objectCount int
+RECORD-COMPONENT com.openggf.editor.persistence.FullLevelExporter$ExportResult ringCount int
 RECORD-COMPONENT com.openggf.game.BonusStageProvider$BonusStageRewards bubbleShield boolean
 RECORD-COMPONENT com.openggf.game.BonusStageProvider$BonusStageRewards fireShield boolean
 RECORD-COMPONENT com.openggf.game.BonusStageProvider$BonusStageRewards lightningShield boolean
@@ -14714,6 +14795,7 @@ TYPE class public,final com.openggf.editor.EditorInputHandler SUPER java.lang.Ob
 TYPE class public,final com.openggf.editor.EditorStockObjectPalette SUPER java.lang.Object
 TYPE class public,final com.openggf.editor.LevelEditorController SUPER java.lang.Object
 TYPE class public,final com.openggf.editor.persistence.EditorSaveManager SUPER java.lang.Object
+TYPE class public,final com.openggf.editor.persistence.FullLevelExporter SUPER java.lang.Object
 TYPE class public,final com.openggf.game.GameRng SUPER java.lang.Object
 TYPE class public,final com.openggf.game.ZoneProgressionPlan SUPER java.lang.Object
 TYPE class public,final com.openggf.game.animation.AnimatedTileChannel SUPER java.lang.Object
@@ -14994,6 +15076,7 @@ TYPE interface public,abstract com.openggf.game.zone.ZoneRuntimeState SUPER <non
 TYPE interface public,abstract com.openggf.graphics.GLCommandable SUPER <none>
 TYPE interface public,abstract com.openggf.level.Level SUPER <none>
 TYPE interface public,abstract com.openggf.level.LevelDescriptor SUPER <none>
+TYPE interface public,abstract com.openggf.level.LevelExportStagingValidator SUPER <none>
 TYPE interface public,abstract com.openggf.level.animation.AnimatedPaletteManager SUPER <none>
 TYPE interface public,abstract com.openggf.level.animation.AnimatedPatternManager SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.ObjectFactory SUPER <none>
@@ -15069,6 +15152,7 @@ TYPE interface public,abstract,static com.openggf.net.hub.RoomHostHooks$ChatGate
 TYPE interface public,abstract,static com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener SUPER <none>
 TYPE interface public,abstract,static com.openggf.net.hub.RoomHostHooks$VerificationHooks SUPER <none>
 TYPE interface public,abstract,static com.openggf.sprites.managers.SpriteManager$SpriteDrawCallback SUPER <none>
+TYPE interface public,abstract,static,sealed com.openggf.editor.persistence.FullLevelExporter$ExportMusic SUPER <none>
 TYPE interface public,abstract,static,sealed com.openggf.game.ZoneProgressionPlan$ProgressionResult SUPER <none>
 TYPE interface public,abstract,static,sealed com.openggf.mods.code.ModLevelDefinition$Music SUPER <none>
 TYPE interface public,abstract,static,sealed com.openggf.mods.code.ModLevelDefinition$ObjectEntry SUPER <none>
@@ -15232,7 +15316,12 @@ TYPE record public,static,final com.openggf.audio.synth.Ym2612Chip$Snapshot SUPE
 TYPE record public,static,final com.openggf.control.GamepadStateSource$DeviceState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.debug.DebugRenderContext$DebugTextEntry SUPER java.lang.Record
 TYPE record public,static,final com.openggf.debug.MemoryStats$SectionAllocation SUPER java.lang.Record
+TYPE record public,static,final com.openggf.editor.persistence.EditorSaveManager$EditorApplyFinding SUPER java.lang.Record
 TYPE record public,static,final com.openggf.editor.persistence.EditorSaveManager$SaveResult SUPER java.lang.Record
+TYPE record public,static,final com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Stock SUPER java.lang.Record
+TYPE record public,static,final com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Track SUPER java.lang.Record
+TYPE record public,static,final com.openggf.editor.persistence.FullLevelExporter$ExportRequest SUPER java.lang.Record
+TYPE record public,static,final com.openggf.editor.persistence.FullLevelExporter$ExportResult SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.BonusStageProvider$BonusStageRewards SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.CheckpointState$RewindState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.DebugOverlayProvider$ArtViewerTarget SUPER java.lang.Record
@@ -15554,7 +15643,14 @@ TYPE-ANNOTATION com.openggf.editor.EditorStockObjectPalette$Navigation @com.open
 TYPE-ANNOTATION com.openggf.editor.LevelEditorController @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.editor.persistence.EditorSaveManager @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.editor.persistence.EditorSaveManager$ApplyResult @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.editor.persistence.EditorSaveManager$EditorApplyFinding @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.editor.persistence.EditorSaveManager$SaveResult @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.editor.persistence.FullLevelExporter @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.editor.persistence.FullLevelExporter$ExportMusic @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Stock @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Track @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.editor.persistence.FullLevelExporter$ExportRequest @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.editor.persistence.FullLevelExporter$ExportResult @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.AnimationId @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.BonusStageProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.BonusStageProvider$BonusStageRewards @com.openggf.game.ModApi
@@ -15936,6 +16032,8 @@ TYPE-ANNOTATION com.openggf.level.ChunkDesc @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.CollisionMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.Level @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.LevelDescriptor @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.LevelExportStagingValidator @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.LevelExportStagingValidator @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.level.LevelGeometry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.LevelManager @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.LevelManager$LevelRenderOptions @com.openggf.game.ModApi

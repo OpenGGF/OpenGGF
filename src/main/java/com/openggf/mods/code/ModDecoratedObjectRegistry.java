@@ -40,4 +40,5 @@ public final class ModDecoratedObjectRegistry implements ObjectRegistry {
     @Override public ObjectSlotLayout objectSlotLayout() { return base.objectSlotLayout(); }
     @Override public ObjectWindowingStrategy objectWindowingStrategy() { return base.objectWindowingStrategy(); }
     @Override public List<String> getAliases(int objectId) { return base.getAliases(objectId); }
+    @Override public boolean hasObjectKey(String objectKey) { return modKeys.contains(objectKey); }
 }

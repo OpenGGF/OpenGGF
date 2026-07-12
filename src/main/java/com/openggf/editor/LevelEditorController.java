@@ -12,6 +12,7 @@ import com.openggf.editor.commands.PlaceObjectSpawnCommand;
 import com.openggf.editor.commands.PlaceRingSpawnCommand;
 import com.openggf.editor.commands.SetChunkSolidTileIndexCommand;
 import com.openggf.editor.persistence.EditorSaveManager;
+import com.openggf.editor.persistence.FullLevelExporter;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.ChunkDesc;
@@ -52,6 +53,7 @@ public final class LevelEditorController {
     private boolean collisionOverlayEnabled;
     private EditorCollisionPath collisionPath = EditorCollisionPath.PRIMARY;
     private EditorSaveManager.ApplyResult persistenceStatus = EditorSaveManager.ApplyResult.NONE;
+    private java.nio.file.Path lastExportDirectory;
 
     public void attachLevel(MutableLevel level) {
         this.level = Objects.requireNonNull(level, "level");
@@ -227,6 +229,17 @@ public final class LevelEditorController {
     public void setPersistenceStatus(EditorSaveManager.ApplyResult persistenceStatus) {
         this.persistenceStatus = Objects.requireNonNull(persistenceStatus, "persistenceStatus");
     }
+
+    public FullLevelExporter.ExportResult exportLevel(FullLevelExporter exporter,
+                                                       FullLevelExporter.ExportRequest request)
+            throws java.io.IOException {
+        if (level == null) throw new IllegalStateException("No mutable level is attached");
+        FullLevelExporter.ExportResult result = exporter.export(level, request);
+        lastExportDirectory = result.directory();
+        return result;
+    }
+
+    public java.nio.file.Path lastExportDirectory() { return lastExportDirectory; }
 
     public boolean isCollisionOverlayEnabled() {
         return collisionOverlayEnabled;

@@ -7,6 +7,7 @@ import com.openggf.mods.code.ModClassLoaderFactory;
 import com.openggf.mods.code.ModClassResolver;
 import com.openggf.mods.code.ModRuntime;
 import com.openggf.mods.code.ModFaultBoundary;
+import com.openggf.mods.code.ModLevelExportStagingValidator;
 import com.openggf.mods.code.EffectiveCatalogPatchEnablement;
 import com.openggf.game.*;
 import com.openggf.graphics.*;
@@ -21,6 +22,7 @@ import com.openggf.editor.EditorInputHandler;
 import com.openggf.editor.EditorHierarchyDepth;
 import com.openggf.editor.LevelEditorController;
 import com.openggf.editor.persistence.EditorSaveManager;
+import com.openggf.editor.persistence.FullLevelExporter;
 import com.openggf.editor.render.EditorOverlayRenderer;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.LWJGLAudioBackend;
@@ -150,7 +152,7 @@ public class Engine {
 	private final EngineRenderDispatcher.ClearActions clearActions = new EngineClearActions();
 	private final EngineRenderDispatcher.DrawActions drawActions = new EngineDrawActions();
 	private final LevelEditorController levelEditorController = new LevelEditorController();
-	private EditorSaveManager editorSaveManager = new EditorSaveManager(Path.of("saves"));
+	private EditorSaveManager editorSaveManager;
 	private final EditorInputHandler editorInputHandler;
 	private final EditorOverlayRenderer editorOverlayRenderer;
 	// Match the rest of the debug overlay — no drop shadow.
@@ -288,6 +290,8 @@ public class Engine {
 		this.playbackDebugManager = engineServices.playbackDebug();
 		this.moduleResolutionService = engineServices.moduleResolutionService();
 		this.profiler = engineServices.profiler();
+		this.editorSaveManager = new EditorSaveManager(Path.of("saves"), this::effectiveObjectKeyExists,
+				finding -> LOGGER.warning(finding.code() + ": " + finding.message()));
 		this.graphicsManager.setPerformanceProfiler(profiler);
 		this.editorOverlayRenderer = new EditorOverlayRenderer(levelEditorController, graphicsManager);
 		this.gameLoop = new GameLoop(engineServices);
@@ -327,7 +331,8 @@ public class Engine {
 		this.windowHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT);
 		this.targetFps = configService.getInt(SonicConfiguration.FPS);
 		this.editorInputHandler = new EditorInputHandler(
-				levelEditorController, () -> camera, () -> graphicsManager, this::saveCurrentEditorLevel);
+				levelEditorController, () -> camera, () -> graphicsManager, this::saveCurrentEditorLevel,
+				this::exportCurrentEditorLevel);
 
 		// Set up game mode change listener to update projection width
 		gameLoop.setGameModeChangeListener((oldMode, newMode) -> {
@@ -1105,6 +1110,42 @@ public class Engine {
 			LOGGER.warning("Failed to save editor edits: " + e.getMessage());
 			return false;
 		}
+	}
+
+	/**
+	 * Production editor-export policy: a stable, non-overwriting directory per active game/act,
+	 * reserved mod ids derived from the runtime indices, stock registry start/music metadata,
+	 * and the effective (already patched) game module.
+	 */
+	private void exportCurrentEditorLevel() {
+		MutableLevel level = levelEditorController.currentLevel();
+		com.openggf.game.session.WorldSession session = SessionManager.getCurrentWorldSession();
+		if (level == null || session == null) return;
+		GameModule module = session.getGameModule();
+		int zone = session.getCurrentZone(), act = session.getCurrentAct();
+		ZoneRegistry zones = module.getZoneRegistry();
+		int[] start = zones.getStartPosition(zone, act);
+		MusicReference reference = zones.getMusicReference(zone, act);
+		FullLevelExporter.ExportMusic music = reference instanceof MusicReference.Namespaced keyed
+				? new FullLevelExporter.ExportMusic.Track(keyed.owner(), keyed.localName())
+				: new FullLevelExporter.ExportMusic.Stock(Math.max(0, ((MusicReference.Stock) reference).musicId()));
+		Path output = Path.of("exports", "editor", module.getGameId().code(),
+				"zone_" + zone + "_act_" + act);
+		FullLevelExporter.ExportRequest request = new FullLevelExporter.ExportRequest(output,
+				zones.getZoneName(zone) + " EDITOR EXPORT", Math.addExact(0x40, zone),
+				Math.addExact(0x400, Math.addExact(Math.multiplyExact(zone, 16), act)),
+				start[0], start[1], music);
+		try {
+			levelEditorController.exportLevel(new FullLevelExporter(new ModLevelExportStagingValidator()), request);
+			LOGGER.info("Exported editor level to " + output.toAbsolutePath().normalize());
+		} catch (IOException | RuntimeException failure) {
+			LOGGER.warning("Failed to export editor level: " + failure.getMessage());
+		}
+	}
+
+	private boolean effectiveObjectKeyExists(String objectKey) {
+		com.openggf.game.session.WorldSession session = SessionManager.getCurrentWorldSession();
+		return session != null && session.getGameModule().createObjectRegistry().hasObjectKey(objectKey);
 	}
 
 	public void startGameplayFromBeginning() {

@@ -1,6 +1,7 @@
 package com.openggf.editor.persistence;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.openggf.game.GameId;
 import com.openggf.editor.LevelEditorController;
 import com.openggf.editor.render.EditorTextRenderer;
@@ -35,6 +36,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestEditorSaveManager {
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -142,6 +144,84 @@ class TestEditorSaveManager {
 
         assertEquals(EditorSaveManager.ApplyResult.NONE,
                 manager.tryApplyEdits(GameId.S2, new CommonObjectPlacementEncoding(), 1, 0, createMutableLevel()));
+    }
+
+    @Test
+    void keyedObjectUsesV3TaggedIdentityAndRoundTripsOrSkipsWithOneFinding() throws Exception {
+        MutableLevel edited = createMutableLevel();
+        ObjectSpawn keyed = new ObjectSpawn(32, 48, 0, 2, 0, false, 48, 77,
+                "owner", "owner:badnik");
+        edited.replaceObjectSpawnsPersisted(List.of(keyed));
+        EditorSaveManager writer = new EditorSaveManager(tempDir);
+        Path file = writer.save(GameId.S2, new CommonObjectPlacementEncoding(), 4, 0, edited).file();
+        var tree = MAPPER.readTree(file.toFile());
+        assertEquals(3, tree.get("version").intValue());
+        assertEquals("owner:badnik", tree.at("/payload/objects/0/objectKey").textValue());
+        assertTrue(tree.at("/payload/objects/0/stockObjectId").isMissingNode());
+
+        MutableLevel restored = createMutableLevel();
+        EditorSaveManager reader = new EditorSaveManager(tempDir,
+                "owner:badnik"::equals, finding -> {});
+        assertEquals(EditorSaveManager.ApplyResult.APPLIED,
+                reader.tryApplyEdits(GameId.S2, new CommonObjectPlacementEncoding(), 4, 0, restored));
+        assertEquals("owner:badnik", restored.getObjects().getFirst().objectKey());
+
+        List<EditorSaveManager.EditorApplyFinding> findings = new java.util.ArrayList<>();
+        MutableLevel missing = createMutableLevel();
+        EditorSaveManager missingReader = new EditorSaveManager(tempDir, key -> false, findings::add);
+        assertEquals(EditorSaveManager.ApplyResult.APPLIED,
+                missingReader.tryApplyEdits(GameId.S2, new CommonObjectPlacementEncoding(), 4, 0, missing));
+        assertTrue(missing.getObjects().isEmpty());
+        assertEquals(1, findings.size());
+        assertEquals(1, findings.getFirst().skippedCount());
+    }
+
+    @Test
+    void explicitV1V2MigrationProducesOnlyStockTaggedV3Spawns() {
+        EditorSavePayload.ObjectState stock = new EditorSavePayload.ObjectState(1, 2, 3, 4, 5, 0, false, 3);
+        EditorSavePayloadV3 fromV2 = EditorSavePayloadMigrator.fromV2(
+                new EditorSavePayload(List.of(), List.of(), List.of(), List.of(stock), List.of()));
+        assertEquals(4, fromV2.objects().getFirst().stockObjectId());
+        assertEquals(null, fromV2.objects().getFirst().objectKey());
+        assertTrue(EditorSavePayloadMigrator.fromV1(
+                new EditorSavePayloadV1(List.of(), List.of(), List.of())).objects().isEmpty());
+    }
+
+    @Test
+    void missingKeySkipsExactlyItsBackedRingsAndReportsCombinedCount() throws Exception {
+        MutableLevel edited = createMutableLevel();
+        ObjectSpawn backing = new ObjectSpawn(32, 48, 0, 0, 0, false, 48, 77,
+                "owner", "owner:ring-backing");
+        RingSpawn backed = new RingSpawn(32, 48, 90);
+        RingSpawn independent = new RingSpawn(64, 48, 91);
+        edited.replaceSpawnsPersisted(List.of(backing), List.of(backed, independent),
+                java.util.Map.of(backing, List.of(backed)));
+        new EditorSaveManager(tempDir).save(GameId.S2, new CommonObjectPlacementEncoding(), 4, 0, edited);
+
+        List<EditorSaveManager.EditorApplyFinding> findings = new java.util.ArrayList<>();
+        MutableLevel restored = createMutableLevel();
+        EditorSaveManager reader = new EditorSaveManager(tempDir, key -> false, findings::add);
+        assertEquals(EditorSaveManager.ApplyResult.APPLIED,
+                reader.tryApplyEdits(GameId.S2, new CommonObjectPlacementEncoding(), 4, 0, restored));
+        assertEquals(List.of(independent), restored.getRings());
+        assertEquals(2, findings.getFirst().skippedCount());
+    }
+
+    @Test
+    void legacyV2ReaderQuarantinesV3InsteadOfInterpretingKeyAsNumericFallback() throws Exception {
+        Path legacyRoot = tempDir.resolve("legacy-reader");
+        MutableLevel keyed = createMutableLevel();
+        keyed.replaceObjectSpawnsPersisted(List.of(new ObjectSpawn(
+                32, 48, 0, 0, 0, false, 48, 9, "owner", "owner:key")));
+        EditorSaveManager current = new EditorSaveManager(legacyRoot);
+        Path file = current.save(GameId.S2, new CommonObjectPlacementEncoding(), 1, 0, keyed).file();
+
+        EditorSaveManager legacy = EditorSaveManager.legacyV2Reader(legacyRoot);
+        assertEquals(EditorSaveManager.ApplyResult.QUARANTINED,
+                legacy.tryApplyEdits(GameId.S2, new CommonObjectPlacementEncoding(), 1, 0,
+                        createMutableLevel()));
+        assertFalse(Files.exists(file));
+        assertTrue(Files.exists(file.resolveSibling(file.getFileName() + ".corrupt")));
     }
 
     @Test
@@ -368,6 +448,42 @@ class TestEditorSaveManager {
     }
 
     @Test
+    void inconsistentV2StockRawWordQuarantinesWithoutMutating() throws Exception {
+        EditorSaveManager manager = new EditorSaveManager(tempDir);
+        EditorSavePayload payload = new EditorSavePayload(List.of(), List.of(),
+                List.of(new EditorSavePayload.MapCell(0, 0, 0, 0)),
+                List.of(new EditorSavePayload.ObjectState(7, 32, 48, 3, 0, 0, false, 49)), List.of());
+        Path file = manager.editPath(GameId.S2, 2, 0);
+        Files.createDirectories(file.getParent());
+        MAPPER.writeValue(file.toFile(), new EditorSaveEnvelope(2, "s2", 2, 0,
+                "2026-05-09T00:00:00Z", payload, sha256(MAPPER.writeValueAsString(payload))));
+        MutableLevel level = createMutableLevel();
+        ObjectSpawn existing = new CommonObjectPlacementEncoding().create(16, 16, 1, 0, 0, false, 1);
+        level.replaceObjectSpawnsPersisted(List.of(existing));
+
+        assertEquals(EditorSaveManager.ApplyResult.QUARANTINED,
+                manager.tryApplyEdits(GameId.S2, new CommonObjectPlacementEncoding(), 2, 0, level));
+        assertEquals(List.of(existing), level.getObjects());
+    }
+
+    @Test
+    void outOfRangeTerrainEntryQuarantinesBeforeValidTerrainMutation() throws Exception {
+        EditorSaveManager manager = new EditorSaveManager(tempDir);
+        EditorSavePayload payload = new EditorSavePayload(List.of(),
+                List.of(new EditorSavePayload.ChunkState(99, new Chunk().saveState())),
+                List.of(new EditorSavePayload.MapCell(0, 0, 0, 1)));
+        Path file = manager.editPath(GameId.S2, 2, 1);
+        Files.createDirectories(file.getParent());
+        MAPPER.writeValue(file.toFile(), new EditorSaveEnvelope(2, "s2", 2, 1,
+                "2026-05-09T00:00:00Z", payload, sha256(MAPPER.writeValueAsString(payload))));
+        MutableLevel level = createMutableLevel();
+
+        assertEquals(EditorSaveManager.ApplyResult.QUARANTINED,
+                manager.tryApplyEdits(GameId.S2, new CommonObjectPlacementEncoding(), 2, 1, level));
+        assertEquals(0, Byte.toUnsignedInt(level.getMap().getValue(0, 0, 0)));
+    }
+
+    @Test
     void v2RoundTripsS2RawPlacementFieldsStableIdsAndDuplicateBytes() throws Exception {
         MutableLevel edited = createMutableLevel();
         CommonObjectPlacementEncoding encoding = new CommonObjectPlacementEncoding();
@@ -432,9 +548,12 @@ class TestEditorSaveManager {
         Path file = manager.editPath(GameId.S2, 4, 1);
         Files.createDirectories(file.getParent());
         String rawPayload = "{\"blocks\":[],\"chunks\":[],\"mapCells\":[]}";
+        String historicalRawPayloadSha256 =
+                "864b06384b5030d5520162eb3d3b10dd3f8b8079bc8e458adf0be3b427e37084";
+        assertEquals(historicalRawPayloadSha256, sha256(rawPayload));
         Files.writeString(file, "{\"version\":2,\"gameCode\":\"s2\",\"zone\":4,\"act\":1,"
                 + "\"savedAt\":\"2026-05-09T00:00:00Z\",\"payload\":" + rawPayload
-                + ",\"hash\":\"" + sha256(rawPayload) + "\"}");
+                + ",\"hash\":\"" + historicalRawPayloadSha256 + "\"}");
         MutableLevel fresh = createMutableLevel();
         ObjectSpawn object = new CommonObjectPlacementEncoding().create(32, 48, 1, 0, 0, false, 1);
         fresh.replaceSpawnsPersisted(List.of(object), List.of(new RingSpawn(64, 80, 2)), java.util.Map.of());
@@ -446,12 +565,60 @@ class TestEditorSaveManager {
     }
 
     @Test
+    void canonicalFiveFieldV2WriterHashIsPinnedWithRepresentativeStockSpawn() throws Exception {
+        MutableLevel level = createMutableLevel();
+        ObjectSpawn stock = new CommonObjectPlacementEncoding().create(32, 48, 3, 2, 0, false, 7);
+        level.replaceSpawnsPersisted(List.of(stock), List.of(new RingSpawn(64, 80, 9)), java.util.Map.of());
+        Path file = new EditorSaveManager(tempDir).save(
+                GameId.S2, new CommonObjectPlacementEncoding(), 4, 3, level).file();
+        JsonNode payload = MAPPER.readTree(file.toFile()).get("payload");
+        assertEquals(5, payload.size());
+        assertTrue(payload.has("blocks") && payload.has("chunks") && payload.has("mapCells")
+                && payload.has("objects") && payload.has("rings"));
+        assertEquals("b2756d3a521ec85f6b495cc6a4733bfff1dff38dc13ccd76f655365f4682397b",
+                sha256(MAPPER.writeValueAsString(payload)));
+    }
+
+    @Test
+    void malformedLiveKeyedPlacementFailsBeforePublicationAndRemainsDirty() {
+        MutableLevel level = createMutableLevel();
+        level.addObjectSpawn(new ObjectSpawn(32, 48, 0, 0, 0, false, 49, 77,
+                "owner", "owner:badnik"));
+        EditorSaveManager manager = new EditorSaveManager(tempDir);
+        assertThrows(IllegalArgumentException.class, () -> manager.save(
+                GameId.S2, new CommonObjectPlacementEncoding(), 4, 4, level));
+        assertTrue(level.isModifiedSinceLastSave());
+        assertFalse(Files.exists(manager.editPath(GameId.S2, 4, 4)));
+    }
+
+    @Test
+    void literalHistoricalV1RawPayloadRetainsLegacySpawnSemantics() throws Exception {
+        EditorSaveManager manager = new EditorSaveManager(tempDir);
+        Path file = manager.editPath(GameId.S2, 4, 2);
+        Files.createDirectories(file.getParent());
+        String rawPayload = "{\"blocks\":[],\"chunks\":[],\"mapCells\":[]}";
+        String historicalRawPayloadSha256 =
+                "864b06384b5030d5520162eb3d3b10dd3f8b8079bc8e458adf0be3b427e37084";
+        assertEquals(historicalRawPayloadSha256, sha256(rawPayload));
+        Files.writeString(file, "{\"version\":1,\"gameCode\":\"s2\",\"zone\":4,\"act\":2,"
+                + "\"savedAt\":\"2026-05-09T00:00:00Z\",\"payload\":" + rawPayload
+                + ",\"hash\":\"" + historicalRawPayloadSha256 + "\"}");
+        MutableLevel fresh = createMutableLevel();
+        ObjectSpawn existing = new CommonObjectPlacementEncoding().create(32, 48, 1, 0, 0, false, 1);
+        fresh.replaceSpawnsPersisted(List.of(existing), List.of(), java.util.Map.of());
+
+        assertEquals(EditorSaveManager.ApplyResult.APPLIED,
+                manager.tryApplyEdits(GameId.S2, new CommonObjectPlacementEncoding(), 4, 2, fresh));
+        assertEquals(List.of(existing), fresh.getObjects());
+    }
+
+    @Test
     void futureV3EnvelopeIsQuarantined() throws Exception {
         EditorSaveManager manager = new EditorSaveManager(tempDir);
         Path file = manager.editPath(GameId.S2, 5, 0);
         Files.createDirectories(file.getParent());
         Files.writeString(file, """
-                {"version":3,"gameCode":"s2","zone":5,"act":0,"savedAt":"2026-05-09T00:00:00Z",
+                {"version":4,"gameCode":"s2","zone":5,"act":0,"savedAt":"2026-05-09T00:00:00Z",
                  "payload":{"blocks":[],"chunks":[],"mapCells":[],"objects":[],"rings":[]},"hash":"ignored"}
                 """);
 
@@ -465,7 +632,7 @@ class TestEditorSaveManager {
         EditorSaveManager manager = new EditorSaveManager(tempDir);
         Path file = manager.editPath(GameId.S3K, 5, 0);
         Files.createDirectories(file.getParent());
-        Files.writeString(file, "{\"version\":3,\"gameCode\":\"s3k\",\"zone\":5,\"act\":0,"
+        Files.writeString(file, "{\"version\":4,\"gameCode\":\"s3k\",\"zone\":5,\"act\":0,"
                 + "\"savedAt\":\"2026-05-09T00:00:00Z\",\"payload\":{},\"hash\":\"ignored\"}");
 
         assertEquals(EditorSaveManager.ApplyResult.QUARANTINED,

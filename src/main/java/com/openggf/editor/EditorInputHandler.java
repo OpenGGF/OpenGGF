@@ -52,6 +52,7 @@ public final class EditorInputHandler {
         PERFORM_EYEDROP,
         TOGGLE_LAYER,
         SAVE,
+        EXPORT,
         UNDO,
         REDO,
         CYCLE_SPAWN_EDIT_MODE,
@@ -74,6 +75,7 @@ public final class EditorInputHandler {
     private final Supplier<Camera> cameraSupplier;
     private final Supplier<GraphicsManager> graphicsSupplier;
     private final Runnable saveAction;
+    private final Runnable exportAction;
     private DragStroke activeStroke;
 
     public EditorInputHandler(LevelEditorController controller) {
@@ -90,10 +92,19 @@ public final class EditorInputHandler {
                               Supplier<Camera> cameraSupplier,
                               Supplier<GraphicsManager> graphicsSupplier,
                               Runnable saveAction) {
+        this(controller, cameraSupplier, graphicsSupplier, saveAction, () -> {});
+    }
+
+    public EditorInputHandler(LevelEditorController controller,
+                              Supplier<Camera> cameraSupplier,
+                              Supplier<GraphicsManager> graphicsSupplier,
+                              Runnable saveAction,
+                              Runnable exportAction) {
         this.controller = Objects.requireNonNull(controller, "controller");
         this.cameraSupplier = Objects.requireNonNull(cameraSupplier, "cameraSupplier");
         this.graphicsSupplier = Objects.requireNonNull(graphicsSupplier, "graphicsSupplier");
         this.saveAction = Objects.requireNonNull(saveAction, "saveAction");
+        this.exportAction = Objects.requireNonNull(exportAction, "exportAction");
     }
 
     public void update(InputHandler inputHandler) {
@@ -127,8 +138,11 @@ public final class EditorInputHandler {
         if (inputHandler.isKeyPressed(GLFW_KEY_TAB) && !shiftDown) {
             handleAction(Action.CYCLE_FOCUS_REGION);
         }
+        boolean controlDown = inputHandler.isKeyDown(GLFW_KEY_LEFT_CONTROL)
+                || inputHandler.isKeyDown(GLFW_KEY_RIGHT_CONTROL);
+        boolean exportChord = controlDown && shiftDown && inputHandler.isKeyPressed(GLFW_KEY_E);
         boolean rawPrimary = inputHandler.isKeyPressed(GLFW_KEY_SPACE);
-        boolean rawEyedrop = inputHandler.isKeyPressed(GLFW_KEY_E);
+        boolean rawEyedrop = !exportChord && inputHandler.isKeyPressed(GLFW_KEY_E);
         boolean rawModeCycle = inputHandler.isKeyPressed(GLFW_KEY_O);
         boolean rawDelete = inputHandler.isKeyPressed(GLFW_KEY_DELETE);
         if (rawPrimary && !controller.isSpawnEditing()) {
@@ -175,13 +189,14 @@ public final class EditorInputHandler {
                 handleAction(Action.DELETE_SPAWN);
             }
         }
-        boolean controlDown = inputHandler.isKeyDown(GLFW_KEY_LEFT_CONTROL)
-                || inputHandler.isKeyDown(GLFW_KEY_RIGHT_CONTROL);
         if (controlDown && inputHandler.isKeyPressed(GLFW_KEY_Z)) {
             handleAction(Action.UNDO);
         }
         if (controlDown && inputHandler.isKeyPressed(GLFW_KEY_S)) {
             handleAction(Action.SAVE);
+        }
+        if (exportChord) {
+            handleAction(Action.EXPORT);
         }
         if (controlDown && inputHandler.isKeyPressed(GLFW_KEY_Y)) {
             handleAction(Action.REDO);
@@ -204,6 +219,7 @@ public final class EditorInputHandler {
             case PERFORM_EYEDROP -> controller.performEyedrop();
             case TOGGLE_LAYER -> controller.toggleActiveLayer();
             case SAVE -> saveAction.run();
+            case EXPORT -> exportAction.run();
             case UNDO -> controller.undo();
             case REDO -> controller.redo();
             case CYCLE_SPAWN_EDIT_MODE -> controller.cycleSpawnEditMode();

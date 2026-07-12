@@ -59,6 +59,10 @@ public final class ModObjectKeyRegistry {
         return found.factory();
     }
 
+    boolean contains(String namespacedKey) {
+        return factories.containsKey(ModKeySyntax.requireDisplayKey(namespacedKey));
+    }
+
     public record Registration(String ownerModId, String namespacedKey, ObjectFactory factory) {}
 
     private record OwnedFactory(String ownerModId, ObjectFactory factory) {}

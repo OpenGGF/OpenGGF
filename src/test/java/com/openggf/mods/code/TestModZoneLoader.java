@@ -149,6 +149,23 @@ class TestModZoneLoader {
     }
 
     @Test
+    void sonic2RuntimeRejectsGenericSixteenGridDefinition() {
+        ModLevelDefinition base = minimalDefinition();
+        ModLevelDefinition sixteen = new ModLevelDefinition(base.formatVersion(), base.zoneName(),
+                base.zoneIndex(), base.levelIndex(), 16, base.width(), base.height(), base.bounds(),
+                base.start(), base.music(), base.objects(), base.rings(), base.patternBytes(),
+                base.chunkBytes(), new byte[512], base.foregroundMap(), null, base.solidHeights(),
+                base.solidWidths(), base.solidAngles(), base.primaryCollisionIndices(),
+                base.secondaryCollisionIndices(), base.paletteLines(), base.patternCount(),
+                base.chunkCount(), base.blockCount(), base.solidProfileCount());
+        PreparedModZone prepared = PreparedModZone.prepared("alpha",
+                new ModZoneContribution("zone", new BakedLevelRef("level.json"), "mtz3", null), sixteen);
+        var sheet = new com.openggf.level.rings.RingSpriteSheet(
+                new com.openggf.level.Pattern[0], List.of(), 1, 8, 0, 0);
+        assertThrows(java.io.IOException.class, () -> ModZoneLoader.load(prepared, sheet));
+    }
+
+    @Test
     void creatorEventCallbacksCrossTheRealFaultBoundary() {
         com.openggf.mods.ModRuntimeFindingStore findings = new com.openggf.mods.ModRuntimeFindingStore();
         ModFaultBoundary boundary = new ModFaultBoundary(Map.of(), findings,

@@ -401,6 +401,7 @@ press `Shift+Tab` to toggle gameplay (playtest) ↔ editor.
 | `L` | Toggle active layer (FG / BG) |
 | `Enter` / `Escape` | Descend / ascend the hierarchy |
 | `Ctrl+Z` / `Ctrl+Y` / `Ctrl+S` | Undo / Redo / Save |
+| `Ctrl+Shift+E` | Export the complete level to its deterministic local mod-project directory |
 | `C` | Toggle the collision overlay |
 | `P` | Toggle the collision path (primary / secondary) |
 | `V` | Cycle the selected block cell's collision mode |
@@ -409,6 +410,32 @@ press `Shift+Tab` to toggle gameplay (playtest) ↔ editor.
 | Right mouse | Eyedrop the hovered block or spawn |
 
 Bindings live in `EditorInputHandler` and are not affected by the Key Bindings entries above.
+
+#### Complete level export
+
+`Ctrl+Shift+E` writes a complete `ModLevelDefinition` v1 directory beneath
+`exports/editor/<game-code>/zone_<zone>_act_<act>`, relative to the process working directory. The
+directory is deterministic for the active game, zone, and act. Export is deliberately
+non-overwriting: if that directory already exists, the action fails without changing it. Move,
+rename, or remove an earlier export before exporting the same level again.
+
+The exporter snapshots the active editor level and uses explicit runtime metadata for the export:
+
+- the displayed name is `<stock zone name> EDITOR EXPORT`;
+- the authored zone id is `0x40 + stock zone index`;
+- the authored level id is `0x400 + (stock zone index * 16) + act`;
+- the start position and music reference come from the active game's zone registry; and
+- installed keyed objects retain their fully qualified `owner:key` identity. Objects used only as
+  backing records for expanded ring placements are omitted; their individual rings are exported.
+
+Before publishing, every asset and reference is checked for an exact, lossless v1 representation,
+and the staged directory is read back through the strict mod-level parser. Publication then renames
+the complete staged directory into place, so a failed export does not leave a partial target.
+
+The directory contains data decoded from the user's supplied game ROM as well as editor-authored
+changes. OpenGGF does not grant rights to redistribute Sega assets. Treat exports as local mod
+development material unless you independently have permission to distribute every included asset;
+prefer distributing original replacement assets and mod metadata rather than extracted ROM data.
 
 ---
 

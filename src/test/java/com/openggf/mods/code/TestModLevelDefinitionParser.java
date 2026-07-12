@@ -95,8 +95,16 @@ class TestModLevelDefinitionParser {
                 "zoneIndex");
         assertJsonRejected(validJson(false).replace("\"levelIndex\":1024", "\"levelIndex\":11"),
                 "levelIndex");
-        assertJsonRejected(validJson(false).replace("\"blockGridSide\":8", "\"blockGridSide\":16"),
-                "blockGridSide");
+    }
+
+    @Test
+    void parserAcceptsGenericSixteenBySixteenBlockGrid() throws Exception {
+        writeMinimalLevel(validJson(false).replace("\"blockGridSide\":8", "\"blockGridSide\":16"));
+        overwrite("blocks.bin", blocksFile(16, 0, 1));
+        try (ModAssetRoot root = openRoot()) {
+            assertEquals(16, ModLevelDefinitionParser.read(root,
+                    new BakedLevelRef("levels/demo/level.json")).blockGridSide());
+        }
     }
 
     @Test

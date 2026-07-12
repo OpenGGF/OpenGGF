@@ -640,6 +640,7 @@ class TestLevelEditorController {
                         EditorInputHandler.Action.PERFORM_EYEDROP,
                         EditorInputHandler.Action.TOGGLE_LAYER,
                         EditorInputHandler.Action.SAVE,
+                        EditorInputHandler.Action.EXPORT,
                         EditorInputHandler.Action.UNDO,
                         EditorInputHandler.Action.REDO,
                         EditorInputHandler.Action.CYCLE_SPAWN_EDIT_MODE,

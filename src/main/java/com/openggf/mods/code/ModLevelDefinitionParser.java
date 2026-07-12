@@ -59,9 +59,7 @@ public final class ModLevelDefinitionParser {
         int zoneIndex = ranged(required(metadata, "zoneIndex"), 0x40, Integer.MAX_VALUE, "zoneIndex");
         int levelIndex = ranged(required(metadata, "levelIndex"), 0x400, Integer.MAX_VALUE, "levelIndex");
         int blockGridSide = ranged(required(metadata, "blockGridSide"), 8, 16, "blockGridSide");
-        if (blockGridSide != 8) {
-            fail("Sonic 2 ModLevelDefinition v1 currently requires blockGridSide 8");
-        }
+        if (blockGridSide != 8 && blockGridSide != 16) fail("blockGridSide must be 8 or 16");
         int width = ranged(required(metadata, "width"), 1, limits.maxMapWidth(), "width");
         int height = ranged(required(metadata, "height"), 1, limits.maxMapHeight(), "height");
         long cells = (long) width * height;

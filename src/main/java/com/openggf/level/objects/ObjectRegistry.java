@@ -26,4 +26,9 @@ public interface ObjectRegistry {
     default List<String> getAliases(int objectId) {
         return List.of();
     }
+
+    /** Whether this effective registry snapshot can instantiate a namespaced object key. */
+    default boolean hasObjectKey(String objectKey) {
+        return false;
+    }
 }
