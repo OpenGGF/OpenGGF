@@ -17,6 +17,7 @@ import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import org.junit.jupiter.api.AfterEach;
@@ -183,6 +184,91 @@ public class TestTornadoObjectInstance {
         assertEquals(0x38, getField(tornado, "jumpTimer"));
         assertEquals(0, main.getForcedInputMask());
         assertTrue(main.isControlLocked());
+    }
+
+    @Test
+    public void wfzLeaderWaitClearsStaleInputForWholeTeam() throws Exception {
+        TornadoObjectInstance tornado = createTornado(0x2E58, 0x066C, 0x54);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x2E31, (short) 0x05EC);
+        TestPlayableSprite nativeP2 = new TestPlayableSprite("tails", (short) 0x2E20, (short) 0x05EC);
+        TestPlayableSprite extra = new TestPlayableSprite("knuckles", (short) 0x2E10, (short) 0x05EC);
+        tornado.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extra)));
+        for (TestPlayableSprite player : List.of(main, nativeP2, extra)) {
+            player.setForcedInputMask(AbstractPlayableSprite.INPUT_LEFT);
+            player.setControlLocked(true);
+        }
+
+        tornado.update(0, main);
+
+        assertEquals(1, getField(tornado, "leaderWaitCounter"),
+                "only the main player's position advances the WFZ wait counter");
+        for (TestPlayableSprite player : List.of(main, nativeP2, extra)) {
+            assertEquals(0, player.getForcedInputMask());
+            assertTrue(player.isControlLocked());
+        }
+    }
+
+    @Test
+    public void wfzLeaderMoveAppliesRightInputToWholeTeam() throws Exception {
+        TornadoObjectInstance tornado = createTornado(0x2E58, 0x066C, 0x54);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x2E00, (short) 0x05EC);
+        TestPlayableSprite nativeP2 = new TestPlayableSprite("tails", (short) 0x2E20, (short) 0x05EC);
+        TestPlayableSprite extra = new TestPlayableSprite("knuckles", (short) 0x2E10, (short) 0x05EC);
+        tornado.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extra)));
+        setField(tornado, "routineSecondary", 2);
+
+        tornado.update(0, main);
+
+        assertEquals(2, getField(tornado, "routineSecondary"),
+                "only the main player's X position advances the WFZ leader script");
+        for (TestPlayableSprite player : List.of(main, nativeP2, extra)) {
+            assertEquals(AbstractPlayableSprite.INPUT_RIGHT, player.getForcedInputMask());
+            assertTrue(player.isControlLocked());
+        }
+    }
+
+    @Test
+    public void wfzLeaderEdgeStopsAndWaitAnimatesWholeTeam() throws Exception {
+        TornadoObjectInstance tornado = createTornado(0x2E58, 0x066C, 0x54);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x2E40, (short) 0x05EC);
+        TestPlayableSprite nativeP2 = new TestPlayableSprite("tails", (short) 0x2E20, (short) 0x05EC);
+        TestPlayableSprite extra = new TestPlayableSprite("knuckles", (short) 0x2E10, (short) 0x05EC);
+        tornado.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extra)));
+        setField(tornado, "routineSecondary", 2);
+        for (TestPlayableSprite player : List.of(main, nativeP2, extra)) {
+            player.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
+            player.setXSpeed((short) 0x100);
+        }
+
+        tornado.update(0, main);
+
+        assertEquals(4, getField(tornado, "routineSecondary"));
+        for (TestPlayableSprite player : List.of(main, nativeP2, extra)) {
+            assertEquals(0, player.getForcedInputMask());
+            assertEquals(0, player.getXSpeed());
+            assertEquals(Sonic2AnimationIds.WAIT.id(), player.getAnimationId());
+        }
+    }
+
+    @Test
+    public void tornadoUnloadBeforePrepareClearsEventOwnedControlForWholeTeam() throws Exception {
+        TornadoObjectInstance tornado = createTornado(0x2E58, 0x066C, 0x54);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x2E31, (short) 0x0500);
+        TestPlayableSprite nativeP2 = new TestPlayableSprite("tails", (short) 0x2E20, (short) 0x0500);
+        TestPlayableSprite extra = new TestPlayableSprite("knuckles", (short) 0x2E10, (short) 0x0500);
+        tornado.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extra)));
+        for (TestPlayableSprite player : List.of(main, nativeP2, extra)) {
+            player.setForcedInputMask(AbstractPlayableSprite.INPUT_LEFT);
+            player.setControlLocked(true);
+        }
+
+        tornado.update(0, main);
+        tornado.onUnload();
+
+        for (TestPlayableSprite player : List.of(main, nativeP2, extra)) {
+            assertEquals(0, player.getForcedInputMask());
+            assertFalse(player.isControlLocked());
+        }
     }
 
     @Test

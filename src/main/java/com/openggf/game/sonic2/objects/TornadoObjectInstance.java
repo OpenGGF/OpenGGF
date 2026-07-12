@@ -541,6 +541,12 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        // LevEvents_WFZ locks the configured team before ObjB2 begins its end
+        // sequence. From this first ObjB2 frame onward, the Tornado owns cleanup
+        // for those locks even while the main player is still approaching the
+        // leader trigger.
+        ownsPlayerControl = true;
+
         advanceMainAnimation();
         highPriority = true;
         previousWfzDockPlayerXSpeed = lastWfzDockPlayerXSpeed;
@@ -569,7 +575,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        applyScriptInput(player, 0, true);
+        applyTeamScriptInput(player, 0, true);
         leaderWaitCounter++;
         if (leaderWaitCounter < WFZ_WAIT_FRAMES) {
             return;
@@ -579,7 +585,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         currentX = 0x2E58;
         currentY = 0x66C;
         syncFixedFromPosition();
-        applyWaitingAnimation(player);
+        applyTeamWaitingAnimation(player);
 
         // LoadChildObject sequence from ObjB2_Wait_Leader_position.
         TornadoObjectInstance child56 = spawnTornadoChild(SUBTYPE_INVISIBLE_GRABBER, 0x3118, 0x03F0);
@@ -593,22 +599,24 @@ public class TornadoObjectInstance extends AbstractObjectInstance
 
     private void wfzMoveLeaderEdge(AbstractPlayableSprite player) {
         if (player.getCentreX() < WFZ_LEADER_EDGE_X) {
-            applyScriptInput(player, INPUT_RIGHT, true);
+            applyTeamScriptInput(player, INPUT_RIGHT, true);
             return;
         }
 
         routineSecondary = 4;
-        applyScriptInput(player, 0, true);
-        player.setXSpeed((short) 0);
-        player.setYSpeed((short) 0);
-        player.setGSpeed((short) 0);
-        applyWaitingAnimation(player);
+        applyTeamScriptInput(player, 0, true);
+        forEachTeamPlayer(player, teamPlayer -> {
+            teamPlayer.setXSpeed((short) 0);
+            teamPlayer.setYSpeed((short) 0);
+            teamPlayer.setGSpeed((short) 0);
+        });
+        applyTeamWaitingAnimation(player);
     }
 
     private void wfzWaitForPlane(AbstractPlayableSprite player) {
         int bgX = getWfzBgXOffset();
         if (bgX < WFZ_PLANE_WAIT_BG_X) {
-            applyWaitingAnimation(player);
+            applyTeamWaitingAnimation(player);
             return;
         }
 
@@ -616,11 +624,11 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         xVel = 0x100;
         yVel = -0x100;
         scriptTimer = 0;
-        applyWaitingAnimation(player);
+        applyTeamWaitingAnimation(player);
     }
 
     private void wfzPrepareToJump(AbstractPlayableSprite player) {
-        applyWaitingAnimation(player);
+        applyTeamWaitingAnimation(player);
         scriptTimer++;
         if (scriptTimer == WFZ_PREPARE_TO_JUMP_FRAMES) {
             routineSecondary = 8;
@@ -677,7 +685,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     private void wfzApproachingShip(AbstractPlayableSprite player) {
-        applyWaitingAnimation(player);
+        applyTeamWaitingAnimation(player);
         if (scriptTimer >= WFZ_JUMP_TO_SHIP_START) {
             routineSecondary = 0x0E;
         }
@@ -685,7 +693,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     private void wfzJumpToShip(AbstractPlayableSprite player) {
-        applyWaitingAnimation(player);
+        applyTeamWaitingAnimation(player);
         wfzJumpToShipCommon(player);
     }
 
@@ -1283,6 +1291,10 @@ public class TornadoObjectInstance extends AbstractObjectInstance
 
     private void applyTeamScriptInput(AbstractPlayableSprite updatePlayer, int forcedMask, boolean lock) {
         forEachTeamPlayer(updatePlayer, player -> applyScriptInput(player, forcedMask, lock));
+    }
+
+    private void applyTeamWaitingAnimation(AbstractPlayableSprite updatePlayer) {
+        forEachTeamPlayer(updatePlayer, this::applyWaitingAnimation);
     }
 
     private List<PlayableEntity> teamPlayers(AbstractPlayableSprite updatePlayer) {
