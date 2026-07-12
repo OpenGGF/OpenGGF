@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.features;
 
 import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
+import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBreakableBarState;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -29,7 +30,7 @@ class TestHCZWaterTunnelHandler {
     }
 
     @Test
-    void updateUsesNativeP2QueryAndIgnoresExtraSidekicks() {
+    void updateProcessesNativePlayersThenExtraSidekicks() {
         AbstractPlayableSprite main = playerInsideFirstHcz1Tunnel();
         AbstractPlayableSprite nativeP2 = playerInsideFirstHcz1Tunnel();
         AbstractPlayableSprite extraSidekick = playerInsideFirstHcz1Tunnel();
@@ -39,18 +40,19 @@ class TestHCZWaterTunnelHandler {
 
         assertTrue(HCZWaterTunnelHandler.isPlayerInTunnel(0));
         assertTrue(HCZWaterTunnelHandler.isPlayerInTunnel(1));
+        assertTrue(HCZWaterTunnelHandler.isPlayerInTunnel(2));
         verify(nativeP2).setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
         verify(nativeP2).move(anyShort(), anyShort());
         verify(nativeP2, never()).suppressNextObjectMoveAndFallY();
         verify(nativeP2).setAir(true);
-        verify(extraSidekick, never()).setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
-        verify(extraSidekick, never()).move(anyShort(), anyShort());
+        verify(extraSidekick).setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
+        verify(extraSidekick).move(anyShort(), anyShort());
         verify(extraSidekick, never()).suppressNextObjectMoveAndFallY();
-        verify(extraSidekick, never()).setAir(anyBoolean());
+        verify(extraSidekick).setAir(true);
     }
 
     @Test
-    void extraSidekickDoesNotShareNativeP2TunnelState() {
+    void extraSidekickHasIndependentTunnelState() {
         AbstractPlayableSprite main = playerOutsideTunnels();
         AbstractPlayableSprite nativeP2 = playerOutsideTunnels();
         AbstractPlayableSprite extraSidekick = playerInsideFirstHcz1Tunnel();
@@ -60,8 +62,9 @@ class TestHCZWaterTunnelHandler {
 
         assertFalse(HCZWaterTunnelHandler.isPlayerInTunnel(0));
         assertFalse(HCZWaterTunnelHandler.isPlayerInTunnel(1));
-        verify(extraSidekick, never()).setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
-        verify(extraSidekick, never()).move(anyShort(), anyShort());
+        assertTrue(HCZWaterTunnelHandler.isPlayerInTunnel(2));
+        verify(extraSidekick).setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
+        verify(extraSidekick).move(anyShort(), anyShort());
         verify(extraSidekick, never()).suppressNextObjectMoveAndFallY();
     }
 
@@ -105,6 +108,38 @@ class TestHCZWaterTunnelHandler {
         verify(nativeP2, never()).setForcedAnimationId(Sonic3kAnimationIds.HURT);
         assertFalse(HCZWaterTunnelHandler.isPlayerInTunnel(0));
         assertTrue(HCZWaterTunnelHandler.isPlayerInTunnel(1));
+    }
+
+    @Test
+    void sidekickReorderKeepsTunnelStateWithPlayerIdentity() {
+        AbstractPlayableSprite main = playerOutsideTunnels();
+        AbstractPlayableSprite first = playerInsideFirstHcz1Tunnel();
+        AbstractPlayableSprite second = playerOutsideTunnels();
+        HCZWaterTunnelHandler.update(query(main, first, second), 0);
+
+        HCZWaterTunnelHandler.update(query(main, second, first), 0);
+
+        assertFalse(HCZWaterTunnelHandler.isPlayerInTunnel(1));
+        assertTrue(HCZWaterTunnelHandler.isPlayerInTunnel(2));
+    }
+
+    @Test
+    void rewindSnapshotRestoresThirdPlayerTunnelStateByPlayerRefSlot() {
+        AbstractPlayableSprite main = playerOutsideTunnels();
+        AbstractPlayableSprite nativeP2 = playerOutsideTunnels();
+        AbstractPlayableSprite third = playerInsideFirstHcz1Tunnel();
+        ObjectPlayerQuery query = query(main, nativeP2, third);
+        HCZWaterTunnelHandler.update(query, 0);
+        HCZWaterTunnelHandler.Snapshot snapshot = HCZWaterTunnelHandler.snapshot();
+
+        HCZWaterTunnelHandler.reset();
+        HCZWaterTunnelHandler.restore(snapshot);
+        assertTrue(HCZWaterTunnelHandler.snapshot().extensionStates().stream()
+                .anyMatch(state -> state.playerRef().equals(PlayerRefId.sidekick(1))));
+        HCZWaterTunnelHandler.update(query, 0);
+
+        assertTrue(HCZWaterTunnelHandler.isPlayerInTunnel(2));
+        assertFalse(snapshot.extensionStates().isEmpty());
     }
 
     @Test

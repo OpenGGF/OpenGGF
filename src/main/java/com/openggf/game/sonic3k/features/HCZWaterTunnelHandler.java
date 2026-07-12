@@ -2,13 +2,19 @@ package com.openggf.game.sonic3k.features;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBreakableBarState;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.IdentityHashMap;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * HCZ Water Tunnel physics — a global per-frame subroutine that pushes the
@@ -62,6 +68,12 @@ public final class HCZWaterTunnelHandler {
 
     private static int exitAnimTimerP1;
     private static int exitAnimTimerP2;
+
+    /** Engine extension state. Native P1/P2 fields above remain byte-for-byte owners. */
+    private static final Map<PlayableEntity, ExtensionTunnelState> extensionStates = new IdentityHashMap<>();
+    private static final Map<PlayerRefId, ExtensionTunnelSnapshot> pendingExtensionStates = new HashMap<>();
+    private static List<PlayableEntity> lastParticipants = List.of();
+    private static final NativeP2Binding nativeP2Binding = new NativeP2Binding();
 
     // =========================================================================
     // Tunnel region tables
@@ -138,6 +150,9 @@ public final class HCZWaterTunnelHandler {
         // For simplicity, process P1 with its own flag, sidekicks with theirs.
 
         int[][] tunnels = (act == 0) ? HCZ1_TUNNELS : HCZ2_TUNNELS;
+        List<PlayableEntity> participants = query.playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        hydratePendingExtensionStates(participants);
 
         if (!player.isDebugMode()) {
             windTunnelFlagP1 = processPlayer(player, tunnels, windTunnelFlagP1, 0);
@@ -150,6 +165,7 @@ public final class HCZWaterTunnelHandler {
         }
 
         AbstractPlayableSprite p2 = nativeP2From(query);
+        bindNativeP2(p2);
         if (p2 != null) {
             if (!p2.isDebugMode()) {
                 windTunnelFlagP2 = processPlayer(p2, tunnels, windTunnelFlagP2, 1);
@@ -161,6 +177,26 @@ public final class HCZWaterTunnelHandler {
                 }
             }
         }
+
+        lastParticipants = List.copyOf(participants);
+        for (int index = 2; index < participants.size(); index++) {
+            PlayableEntity participant = participants.get(index);
+            AbstractPlayableSprite extension = asPlayableSprite(participant);
+            if (extension == null) {
+                continue;
+            }
+            ExtensionTunnelState state = extensionStates.computeIfAbsent(
+                    participant, ignored -> new ExtensionTunnelState());
+            if (!extension.isDebugMode()) {
+                state.inTunnel = processPlayer(extension, tunnels, state.inTunnel, index, state);
+            }
+            if (state.exitAnimTimer > 0 && !extension.getAir()) {
+                state.exitAnimTimer = 0;
+                extension.setForcedAnimationId(-1);
+            }
+        }
+        extensionStates.entrySet().removeIf(entry -> !entry.getValue().hasState()
+                && !containsIdentity(participants, entry.getKey()));
     }
 
     /**
@@ -173,20 +209,44 @@ public final class HCZWaterTunnelHandler {
         activeTunnelInfluenceP2 = 0;
         exitAnimTimerP1 = 0;
         exitAnimTimerP2 = 0;
+        extensionStates.clear();
+        pendingExtensionStates.clear();
+        lastParticipants = List.of();
+        nativeP2Binding.reset(false);
     }
 
     /** Immutable rewind snapshot of per-player wind-tunnel state. */
     public record Snapshot(
             boolean windTunnelFlagP1, boolean windTunnelFlagP2,
             int activeTunnelInfluenceP1, int activeTunnelInfluenceP2,
-            int exitAnimTimerP1, int exitAnimTimerP2) {
+            int exitAnimTimerP1, int exitAnimTimerP2,
+            List<ExtensionTunnelSnapshot> extensionStates) {
+        public Snapshot(boolean windTunnelFlagP1, boolean windTunnelFlagP2,
+                        int activeTunnelInfluenceP1, int activeTunnelInfluenceP2,
+                        int exitAnimTimerP1, int exitAnimTimerP2) {
+            this(windTunnelFlagP1, windTunnelFlagP2,
+                    activeTunnelInfluenceP1, activeTunnelInfluenceP2,
+                    exitAnimTimerP1, exitAnimTimerP2, List.of());
+        }
     }
+
+    public record ExtensionTunnelSnapshot(
+            PlayerRefId playerRef, boolean inTunnel, int activeInfluence, int exitAnimTimer) {}
 
     /** Captures the current per-player wind-tunnel state for rewind snapshots. */
     public static Snapshot snapshot() {
+        List<ExtensionTunnelSnapshot> extensions = new ArrayList<>(pendingExtensionStates.values());
+        for (int index = 2; index < lastParticipants.size(); index++) {
+            ExtensionTunnelState state = extensionStates.get(lastParticipants.get(index));
+            if (state != null && state.hasState()) {
+                PlayerRefId playerRef = PlayerRefId.sidekick(index - 1);
+                extensions.removeIf(snapshot -> snapshot.playerRef().equals(playerRef));
+                extensions.add(state.snapshot(playerRef));
+            }
+        }
         return new Snapshot(windTunnelFlagP1, windTunnelFlagP2,
                 activeTunnelInfluenceP1, activeTunnelInfluenceP2,
-                exitAnimTimerP1, exitAnimTimerP2);
+                exitAnimTimerP1, exitAnimTimerP2, List.copyOf(extensions));
     }
 
     /** Restores per-player wind-tunnel state from a previously captured snapshot. */
@@ -197,6 +257,12 @@ public final class HCZWaterTunnelHandler {
         activeTunnelInfluenceP2 = snapshot.activeTunnelInfluenceP2();
         exitAnimTimerP1 = snapshot.exitAnimTimerP1();
         exitAnimTimerP2 = snapshot.exitAnimTimerP2();
+        extensionStates.clear();
+        pendingExtensionStates.clear();
+        for (ExtensionTunnelSnapshot state : snapshot.extensionStates()) {
+            pendingExtensionStates.put(state.playerRef(), state);
+        }
+        nativeP2Binding.reset(true);
     }
 
     /**
@@ -206,7 +272,11 @@ public final class HCZWaterTunnelHandler {
      * @param playerIndex 0 for P1, 1 for P2/sidekick
      */
     public static boolean isPlayerInTunnel(int playerIndex) {
-        return playerIndex == 0 ? windTunnelFlagP1 : windTunnelFlagP2;
+        if (playerIndex == 0) return windTunnelFlagP1;
+        if (playerIndex == 1) return windTunnelFlagP2;
+        if (playerIndex < 0 || playerIndex >= lastParticipants.size()) return false;
+        ExtensionTunnelState state = extensionStates.get(lastParticipants.get(playerIndex));
+        return state != null && state.inTunnel;
     }
 
 
@@ -215,7 +285,8 @@ public final class HCZWaterTunnelHandler {
      * purposes during the water-rush/tunnel sequence.
      */
     public static boolean shouldForceDryPresentation() {
-        return windTunnelFlagP1 || windTunnelFlagP2;
+        return windTunnelFlagP1 || windTunnelFlagP2
+                || extensionStates.values().stream().anyMatch(state -> state.inTunnel);
     }
 
     // =========================================================================
@@ -226,6 +297,14 @@ public final class HCZWaterTunnelHandler {
                                           int[][] tunnels,
                                           boolean wasInTunnel,
                                           int playerIndex) {
+        return processPlayer(player, tunnels, wasInTunnel, playerIndex, null);
+    }
+
+    private static boolean processPlayer(AbstractPlayableSprite player,
+                                          int[][] tunnels,
+                                          boolean wasInTunnel,
+                                          int playerIndex,
+                                          ExtensionTunnelState extensionState) {
         int playerX = player.getCentreX() & 0xFFFF;
         int playerY = player.getCentreY() & 0xFFFF;
 
@@ -263,7 +342,9 @@ public final class HCZWaterTunnelHandler {
             player.setSuppressAirCollision(false);
             player.setForceFloorCheck(true);
 
-            if (playerIndex == 0) {
+            if (extensionState != null) {
+                extensionState.activeInfluence = entry[INFLUENCE_FLAG];
+            } else if (playerIndex == 0) {
                 activeTunnelInfluenceP1 = entry[INFLUENCE_FLAG];
             } else {
                 activeTunnelInfluenceP2 = entry[INFLUENCE_FLAG];
@@ -346,7 +427,9 @@ public final class HCZWaterTunnelHandler {
 
         // ROM: tst.b (a3) / beq locret_705A / move.b #$1A,anim(a1)
         if (wasInTunnel) {
-            if (playerIndex == 0) {
+            if (extensionState != null) {
+                extensionState.exitAnimTimer = 1;
+            } else if (playerIndex == 0) {
                 exitAnimTimerP1 = 1;
             } else {
                 exitAnimTimerP2 = 1;
@@ -375,5 +458,83 @@ public final class HCZWaterTunnelHandler {
 
     private static AbstractPlayableSprite asPlayableSprite(PlayableEntity player) {
         return player instanceof AbstractPlayableSprite sprite ? sprite : null;
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> players, PlayableEntity target) {
+        for (PlayableEntity player : players) {
+            if (player == target) return true;
+        }
+        return false;
+    }
+
+    private static void bindNativeP2(AbstractPlayableSprite current) {
+        if (nativeP2Binding.pending) {
+            nativeP2Binding.owner = current;
+            nativeP2Binding.pending = false;
+            return;
+        }
+        if (nativeP2Binding.owner == current) return;
+        if (nativeP2Binding.owner != null && (windTunnelFlagP2 || activeTunnelInfluenceP2 != 0 || exitAnimTimerP2 != 0)) {
+            ExtensionTunnelState migrated = extensionStates.computeIfAbsent(
+                    nativeP2Binding.owner, ignored -> new ExtensionTunnelState());
+            migrated.inTunnel = windTunnelFlagP2;
+            migrated.activeInfluence = activeTunnelInfluenceP2;
+            migrated.exitAnimTimer = exitAnimTimerP2;
+        }
+        windTunnelFlagP2 = false;
+        activeTunnelInfluenceP2 = 0;
+        exitAnimTimerP2 = 0;
+        if (current != null) {
+            ExtensionTunnelState restored = extensionStates.remove(current);
+            if (restored != null) {
+                windTunnelFlagP2 = restored.inTunnel;
+                activeTunnelInfluenceP2 = restored.activeInfluence;
+                exitAnimTimerP2 = restored.exitAnimTimer;
+            }
+        }
+        nativeP2Binding.owner = current;
+    }
+
+    private static void hydratePendingExtensionStates(List<PlayableEntity> participants) {
+        if (pendingExtensionStates.isEmpty()) return;
+        for (Map.Entry<PlayerRefId, ExtensionTunnelSnapshot> entry : pendingExtensionStates.entrySet()) {
+            int playerIndex = entry.getKey().encoded() - 1;
+            if (playerIndex >= 2 && playerIndex < participants.size()) {
+                extensionStates.put(participants.get(playerIndex), ExtensionTunnelState.from(entry.getValue()));
+            }
+        }
+        pendingExtensionStates.clear();
+    }
+
+    private static final class ExtensionTunnelState {
+        private boolean inTunnel;
+        private int activeInfluence;
+        private int exitAnimTimer;
+
+        private boolean hasState() {
+            return inTunnel || activeInfluence != 0 || exitAnimTimer != 0;
+        }
+
+        private ExtensionTunnelSnapshot snapshot(PlayerRefId playerRef) {
+            return new ExtensionTunnelSnapshot(playerRef, inTunnel, activeInfluence, exitAnimTimer);
+        }
+
+        private static ExtensionTunnelState from(ExtensionTunnelSnapshot snapshot) {
+            ExtensionTunnelState state = new ExtensionTunnelState();
+            state.inTunnel = snapshot.inTunnel();
+            state.activeInfluence = snapshot.activeInfluence();
+            state.exitAnimTimer = snapshot.exitAnimTimer();
+            return state;
+        }
+    }
+
+    private static final class NativeP2Binding {
+        private PlayableEntity owner;
+        private boolean pending;
+
+        private void reset(boolean pending) {
+            owner = null;
+            this.pending = pending;
+        }
     }
 }

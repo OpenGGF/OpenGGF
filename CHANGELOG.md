@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **HCZ water tunnels and surface skimming now support every configured sidekick.** Native P1/P2 execution remains first and trace-identical, while extension players keep independent identity-owned tunnel, exit-animation, skim, splash, reorder, omission, and rewind state encoded with stable player references.
 - **LBZ tube elevators now carry every configured sidekick safely.** Player-identity state extends the native P1-then-P2 transport path across entry, motion, exit, death, unload, roster changes, closed-destination suppression, and rewind without transferring forced control between sidekicks.
 - **Sonic 1 Labyrinth transports now support every configured sidekick.** Wind tunnels and water-slide terrain process the main player first and then each engine sidekick with independent release state and donor-resolved animations, while breakable poles retain a stable rewindable owner, resist off-screen unload while occupied, and release dead actors instead of stranding them under object control. Native main-player globals, sound cadence, and ordering remain unchanged.
 - **Sonic 2 object windows now follow widescreen viewports without changing native timing.** Placement keeps the shared slot-safe preload cap, while standard `MarkObjGone` lifetimes and paired sideways-platform endpoint ownership expand with the active width so visible objects are not deleted at ultrawide edges; 320px boundaries remain ROM-exact.
