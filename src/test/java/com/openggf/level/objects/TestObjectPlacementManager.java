@@ -267,23 +267,26 @@ public class TestObjectPlacementManager {
     }
 
     @Test
-    public void s2LoadWindowUsesViewportWidthWithoutChangingNativeBoundary() {
+    public void s2LoadWindowStrictExclusiveEdgeMatchesEveryExposedViewportWidth() {
         int cameraX = 0x1000;
-        ObjectSpawn beyondNativeEdge =
-                new ObjectSpawn(0x1300, 0, 0x65, 0, 0, false, 0);
+        int[] widths = {320, 352, 400, 528, 800};
 
-        ObjectPlacementController nativeManager =
-                new ObjectPlacementController(List.of(beyondNativeEdge), () -> 320);
-        nativeManager.setWindowingStrategy(S2ObjectWindowing.INSTANCE);
-        nativeManager.reset(cameraX);
-        assertFalse(nativeManager.getActiveSpawns().contains(beyondNativeEdge),
-                "native S2 edge must remain camera coarse + $280");
+        for (int width : widths) {
+            int edge = S2ObjectWindowing.forwardLoadEdge(cameraX, width);
+            ObjectSpawn edgeMinusOne =
+                    new ObjectSpawn(edge - 1, 0, 0x65, 0, 0, false, 0);
+            ObjectSpawn exactlyAtEdge =
+                    new ObjectSpawn(edge, 0, 0x66, 0, 0, false, 0);
+            ObjectPlacementController manager =
+                    new ObjectPlacementController(List.of(edgeMinusOne, exactlyAtEdge), () -> width);
+            manager.setWindowingStrategy(S2ObjectWindowing.INSTANCE);
 
-        ObjectPlacementController wideManager =
-                new ObjectPlacementController(List.of(beyondNativeEdge), () -> 800);
-        wideManager.setWindowingStrategy(S2ObjectWindowing.INSTANCE);
-        wideManager.reset(cameraX);
-        assertTrue(wideManager.getActiveSpawns().contains(beyondNativeEdge),
-                "SUPER_32_9 must load a spawn visible beyond the native S2 cursor edge");
+            manager.reset(cameraX);
+
+            assertTrue(manager.getActiveSpawns().contains(edgeMinusOne),
+                    "spawn at edge-1 must load for viewport width " + width);
+            assertFalse(manager.getActiveSpawns().contains(exactlyAtEdge),
+                    "spawn exactly at the exclusive edge must not load for viewport width " + width);
+        }
     }
 }

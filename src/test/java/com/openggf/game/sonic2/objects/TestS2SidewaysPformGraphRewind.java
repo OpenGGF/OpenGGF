@@ -122,25 +122,29 @@ class TestS2SidewaysPformGraphRewind {
     }
 
     @Test
-    void sidewaysPlatformEndpointLifetimeUsesActiveViewportWidth() {
+    void sidewaysPlatformEndpointLifetimePinsNativeUltraAndSuperWideCoarseBuckets() {
         int cameraX = 0x1500;
-        int endpointX = S2ObjectWindowing.unloadCoarse(cameraX) + 0x300;
+        int base = S2ObjectWindowing.unloadCoarse(cameraX);
+        int[] widths = {320, 528, 800};
+        int[] lastSurvivingBucket = {0x280, 0x300, 0x400};
+        int[] firstDeletingBucket = {0x300, 0x380, 0x480};
 
-        Harness nativeHarness = Harness.create(List.of(), cameraX, 320);
-        SidewaysPformObjectInstance nativePlatform = nativeHarness.objectManager().createDynamicObject(
-                () -> new SidewaysPformObjectInstance(PARENT_SPAWN, "SidewaysPform"));
-        setIntField(nativePlatform, "minX", endpointX);
-        setIntField(nativePlatform, "maxX", endpointX);
-        assertTrue(nativePlatform.isCustomOutOfRange(cameraX),
-                "native Obj7A endpoint lifetime must retain the ROM $280 compare");
+        for (int i = 0; i < widths.length; i++) {
+            Harness harness = Harness.create(List.of(), cameraX, widths[i]);
+            SidewaysPformObjectInstance survivor = harness.objectManager().createDynamicObject(
+                    () -> new SidewaysPformObjectInstance(PARENT_SPAWN, "SidewaysPform"));
+            setIntField(survivor, "minX", base + lastSurvivingBucket[i]);
+            setIntField(survivor, "maxX", base + lastSurvivingBucket[i]);
+            assertFalse(survivor.isCustomOutOfRange(cameraX),
+                    "Obj7A's last endpoint bucket must survive at width " + widths[i]);
 
-        Harness wideHarness = Harness.create(List.of(), cameraX, 800);
-        SidewaysPformObjectInstance widePlatform = wideHarness.objectManager().createDynamicObject(
-                () -> new SidewaysPformObjectInstance(PARENT_SPAWN, "SidewaysPform"));
-        setIntField(widePlatform, "minX", endpointX);
-        setIntField(widePlatform, "maxX", endpointX);
-        assertFalse(widePlatform.isCustomOutOfRange(cameraX),
-                "Obj7A endpoints visible at SUPER_32_9 must not use the native unload compare");
+            SidewaysPformObjectInstance deleted = harness.objectManager().createDynamicObject(
+                    () -> new SidewaysPformObjectInstance(PARENT_SPAWN, "SidewaysPform"));
+            setIntField(deleted, "minX", base + firstDeletingBucket[i]);
+            setIntField(deleted, "maxX", base + firstDeletingBucket[i]);
+            assertTrue(deleted.isCustomOutOfRange(cameraX),
+                    "Obj7A's first endpoint bucket beyond the compare must delete at width " + widths[i]);
+        }
     }
 
     private record Harness(ObjectManager objectManager) {

@@ -66,6 +66,28 @@ class TestS2ObjectWindowing {
                 "the next $80 bucket beyond viewport plus native margins unloads");
     }
 
+    @Test
+    void everyExposedViewportPinsExclusiveLoadAndCoarseUnloadBoundaries() {
+        int cameraX = 0x1500;
+        int base = S2ObjectWindowing.unloadCoarse(cameraX);
+        int[] widths = {320, 352, 400, 528, 800};
+        int[] loadAhead = {0x280, 0x280, 0x280, 0x290, 0x3A0};
+        int[] lastSurvivingBucket = {0x280, 0x280, 0x280, 0x300, 0x400};
+        int[] firstDeletingBucket = {0x300, 0x300, 0x300, 0x380, 0x480};
+
+        for (int i = 0; i < widths.length; i++) {
+            int edge = S2ObjectWindowing.forwardLoadEdge(cameraX, widths[i]);
+            assertEquals(cameraX + loadAhead[i], edge,
+                    "forward edge mismatch at viewport width " + widths[i]);
+            assertFalse(S2ObjectWindowing.markObjGone(
+                            base + lastSurvivingBucket[i], cameraX, widths[i]),
+                    "last coarse bucket must survive at viewport width " + widths[i]);
+            assertTrue(S2ObjectWindowing.markObjGone(
+                            base + firstDeletingBucket[i], cameraX, widths[i]),
+                    "first coarse bucket beyond the compare must delete at viewport width " + widths[i]);
+        }
+    }
+
     // ---- Task 1.4b: directional load cursor consumes S2ObjectWindowing final boundaries ----
 
     @Test

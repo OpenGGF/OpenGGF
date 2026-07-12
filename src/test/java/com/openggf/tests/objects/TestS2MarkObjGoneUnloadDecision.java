@@ -154,6 +154,53 @@ public class TestS2MarkObjGoneUnloadDecision {
                 "an S2 object inside the active 800px viewport must not use the native MarkObjGone limit");
     }
 
+    @Test
+    public void realManagerUsesLastSurvivingAndFirstDeletingBucketsAtNativeUltraAndSuperWide() {
+        int[] widths = {320, 528, 800};
+        int[] lastSurvivingBucket = {0x280, 0x300, 0x400};
+        int[] firstDeletingBucket = {0x300, 0x380, 0x480};
+        int base = S2ObjectWindowing.unloadCoarse(CAMERA_X);
+
+        for (int i = 0; i < widths.length; i++) {
+            int width = widths[i];
+            Camera camera = fixedCamera(width);
+            ObjectManager[] holder = new ObjectManager[1];
+            ObjectServices services = new StubObjectServices() {
+                @Override public ObjectManager objectManager() { return holder[0]; }
+                @Override public Camera camera() { return camera; }
+            };
+            ObjectManager manager = new ObjectManager(
+                    List.of(), new Sonic2LayoutRegistry(), 0, null, null,
+                    null, camera, services);
+            holder[0] = manager;
+            SemanticsObject survivor = new SemanticsObject(
+                    new ObjectSpawn(base + lastSurvivingBucket[i], 0, 0x4B, 0, 0, false, 0),
+                    base + lastSurvivingBucket[i], base + lastSurvivingBucket[i]);
+            SemanticsObject deleted = new SemanticsObject(
+                    new ObjectSpawn(base + firstDeletingBucket[i], 0, 0x4C, 0, 0, false, 0),
+                    base + firstDeletingBucket[i], base + firstDeletingBucket[i]);
+            manager.addDynamicObject(survivor);
+            manager.addDynamicObject(deleted);
+
+            manager.update(CAMERA_X, null, List.of(), 0, false);
+
+            assertTrue(manager.getActiveObjects().contains(survivor) && !survivor.isDestroyed(),
+                    "last coarse bucket must survive through ObjectManager at width " + width);
+            assertFalse(manager.getActiveObjects().contains(deleted),
+                    "first deleting bucket must leave ObjectManager at width " + width);
+        }
+    }
+
+    private static Camera fixedCamera(int width) {
+        return new Camera() {
+            @Override public short getX() { return (short) CAMERA_X; }
+            @Override public short getY() { return 0; }
+            @Override public short getWidth() { return (short) width; }
+            @Override public short getHeight() { return 224; }
+            @Override public boolean isVerticalWrapEnabled() { return false; }
+        };
+    }
+
     private SemanticsObject spawn(int centreX, int topLeftX) {
         SemanticsObject obj = new SemanticsObject(
                 new ObjectSpawn(centreX, 0, 0x4B, 0, 0, false, 0), centreX, topLeftX);
