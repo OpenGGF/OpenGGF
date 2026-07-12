@@ -8,6 +8,8 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
@@ -19,6 +21,29 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 
 class TestTraceSessionLauncherSpecialStageEntry {
+
+    private SonicConfigurationService config;
+    private TraceReplaySessionBootstrap.ConfigSnapshot originalConfig;
+
+    @BeforeEach
+    void captureOriginalConfig() {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        config = SonicConfigurationService.getInstance();
+        originalConfig = TraceReplaySessionBootstrap.snapshotGameplayConfig();
+    }
+
+    @AfterEach
+    void restoreOriginalConfigAndVerify() {
+        TraceReplaySessionBootstrap.restoreGameplayConfig(originalConfig);
+        assertEquals(originalConfig.mainCharacterCode(),
+                config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals(originalConfig.sidekickCharacterCode(),
+                config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+        assertEquals(originalConfig.crossGameFeaturesEnabled(),
+                config.getConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
+        assertEquals(originalConfig.displayAspect(),
+                config.getConfigValue(SonicConfiguration.DISPLAY_ASPECT));
+    }
 
     @Test
     void traceEntryRequestsAccurateStartupBeforeDisablingNativeLag() {
@@ -36,8 +61,6 @@ class TestTraceSessionLauncherSpecialStageEntry {
     @Test
     void specialStageConfigurationUsesNativeViewportAndRecordedTeamThenRestoresAspect()
             throws Exception {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "WIDE_16_9");
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
         config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
