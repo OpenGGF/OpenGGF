@@ -40,8 +40,8 @@ final class LevelActTransitionExecutor {
             levelManager.gameModule = GameServices.module();
             levelManager.refreshZoneList();
         }
-        LevelData levelData = levelManager.levels.get(levelManager.currentZone).get(levelManager.currentAct);
-        levelManager.loadLevelData(levelData.getLevelIndex());
+        LevelDescriptor levelData = levelManager.levels.get(levelManager.currentZone).get(levelManager.currentAct);
+        levelManager.loadLevelData(levelData.levelIndex());
 
         if (request.mutationKey() != null && !request.mutationKey().isBlank()) {
             levelManager.applySeamlessMutation(request.mutationKey());

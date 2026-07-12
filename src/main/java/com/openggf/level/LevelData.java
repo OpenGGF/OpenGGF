@@ -1,7 +1,7 @@
 package com.openggf.level;
 
-@com.openggf.game.ModApi
-public enum LevelData {
+/** Stock game level descriptors backed by the engine's fixed ROM index tables. */
+public enum LevelData implements LevelDescriptor {
     EMERALD_HILL_1(0x00, 0x0060, 0x028F),
     EMERALD_HILL_2(0x01, 0x0060, 0x02AF),
     CHEMICAL_PLANT_1(0x02, 0x0060, 0x01EC),
@@ -108,4 +108,19 @@ public enum LevelData {
     }
     public int getStartXPos() { return startXPos; }
     public int getStartYPos() { return startYPos; }
+
+    @Override
+    public int levelIndex() {
+        return getLevelIndex();
+    }
+
+    @Override
+    public int startX() {
+        return getStartXPos();
+    }
+
+    @Override
+    public int startY() {
+        return getStartYPos();
+    }
 }

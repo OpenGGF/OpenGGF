@@ -1,6 +1,6 @@
 package com.openggf.game;
 
-import com.openggf.level.LevelData;
+import com.openggf.level.LevelDescriptor;
 
 import java.util.List;
 
@@ -47,20 +47,20 @@ public interface ZoneRegistry {
     int[] getStartPosition(int zoneIndex, int actIndex);
 
     /**
-     * Returns the LevelData entries for all acts in a zone.
+     * Returns the level descriptors for all acts in a zone.
      *
      * @param zoneIndex the zone index (0-based)
-     * @return list of LevelData for each act
+     * @return list of level descriptors for each act
      */
-    List<LevelData> getLevelDataForZone(int zoneIndex);
+    List<LevelDescriptor> getLevelDataForZone(int zoneIndex);
 
     /**
-     * Returns all zones as a list of lists of LevelData.
+     * Returns all zones as a list of lists of level descriptors.
      * Outer list is zones, inner list is acts.
      *
      * @return the complete zone/act structure
      */
-    List<List<LevelData>> getAllZones();
+    List<List<LevelDescriptor>> getAllZones();
 
     /**
      * Returns the music ID for a given level.

@@ -3,6 +3,7 @@ package com.openggf.game.sonic2;
 import com.openggf.game.AbstractZoneRegistry;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.level.LevelData;
+import com.openggf.level.LevelDescriptor;
 
 import java.util.List;
 
@@ -64,12 +65,12 @@ public class Sonic2ZoneRegistry extends AbstractZoneRegistry {
         if (zoneIndex < 0 || zoneIndex >= zones.size()) {
             return new int[]{0x60, 0x280};
         }
-        List<LevelData> acts = zones.get(zoneIndex);
+        List<LevelDescriptor> acts = zones.get(zoneIndex);
         if (actIndex < 0 || actIndex >= acts.size()) {
             return new int[]{0x60, 0x280};
         }
-        LevelData level = acts.get(actIndex);
-        return new int[]{level.getStartXPos(), level.getStartYPos()};
+        LevelDescriptor level = acts.get(actIndex);
+        return new int[]{level.startX(), level.startY()};
     }
 
     @Override

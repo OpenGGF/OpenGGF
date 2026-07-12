@@ -2,7 +2,7 @@ package com.openggf.game;
 
 import com.openggf.data.Rom;
 import com.openggf.level.Level;
-import com.openggf.level.LevelData;
+import com.openggf.level.LevelDescriptor;
 
 /**
  * Mutable context accumulated during level load step execution.
@@ -44,7 +44,7 @@ public class LevelLoadContext {
     // Post-load assembly fields
     private boolean includePostLoadAssembly;
     private boolean showTitleCard = true;
-    private LevelData levelData;
+    private LevelDescriptor levelData;
     private int spawnY = -1;
 
     public Rom getRom() { return rom; }
@@ -96,8 +96,8 @@ public class LevelLoadContext {
     public boolean isShowTitleCard() { return showTitleCard; }
     public void setShowTitleCard(boolean showTitleCard) { this.showTitleCard = showTitleCard; }
 
-    public LevelData getLevelData() { return levelData; }
-    public void setLevelData(LevelData levelData) { this.levelData = levelData; }
+    public LevelDescriptor getLevelData() { return levelData; }
+    public void setLevelData(LevelDescriptor levelData) { this.levelData = levelData; }
 
     public int getSpawnY() { return spawnY; }
     public void setSpawnY(int spawnY) { this.spawnY = spawnY; }

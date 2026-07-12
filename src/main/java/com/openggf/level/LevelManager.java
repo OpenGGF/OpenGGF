@@ -150,7 +150,7 @@ public class LevelManager {
     LevelDebugRenderer debugRenderer;
     PerformanceProfiler profiler;
     private CrossGameFeatureProvider crossGameFeatures;
-    final List<List<LevelData>> levels = new ArrayList<>();
+    final List<List<LevelDescriptor>> levels = new ArrayList<>();
     private final List<PendingLostRingSpawn> pendingLostRingSpawns = new ArrayList<>();
     private final WorldSession worldSession;
     // Local mirror of zone/act state owned by WorldSession. Reads use these
@@ -2218,7 +2218,7 @@ public class LevelManager {
             return -1;
         }
         try {
-            int levelIdx = levels.get(currentZone).get(currentAct).getLevelIndex();
+            int levelIdx = levels.get(currentZone).get(currentAct).levelIndex();
             return game.getMusicId(levelIdx);
         } catch (Exception e) {
             LOGGER.warning("Failed to get music ID for current level: " + e.getMessage());
@@ -2358,7 +2358,7 @@ public class LevelManager {
                     + "' — skipping. Register the player sprite before loadZoneAndAct().");
             return;
         }
-        LevelData levelData = ctx.getLevelData();
+        LevelDescriptor levelData = ctx.getLevelData();
         if (levelData == null) {
             levelData = resolveLevelData();
             if (levelData == null) {
@@ -2368,7 +2368,7 @@ public class LevelManager {
                     "Ensure InitGameModule has run before SpawnPlayer.");
             }
             ctx.setLevelData(levelData);
-            LOGGER.info("Auto-resolved levelData from levels map: " + levelData.name());
+            LOGGER.info("Auto-resolved levelData from levels map: " + levelData);
         }
 
         int spawnY = -1;
@@ -2387,8 +2387,8 @@ public class LevelManager {
             LOGGER.info("Set player position from checkpoint: X=" + ctx.getCheckpointX() +
                     ", Y=" + ctx.getCheckpointY() + " (center coordinates)");
         } else {
-            int spawnX = levelData.getStartXPos();
-            spawnY = levelData.getStartYPos();
+            int spawnX = levelData.startX();
+            spawnY = levelData.startY();
 
             if (game instanceof DynamicStartPositionProvider dynamicStartProvider) {
                 try {
@@ -2400,7 +2400,7 @@ public class LevelManager {
                                 ", Y=" + spawnY + " (zone=" + currentZone + ", act=" + currentAct + ")");
                     } else {
                         LOGGER.info("Dynamic start provider unavailable, using levelData fallback for " +
-                                levelData.name());
+                                levelData.toString());
                     }
                 } catch (IOException e) {
                     LOGGER.warning("DynamicStartPositionProvider failed, using levelData fallback: " + e.getMessage());
@@ -2411,7 +2411,7 @@ public class LevelManager {
             player.setCentreY((short) spawnY);
             LOGGER.info("Set player position from level start: X=" + spawnX +
                     ", Y=" + spawnY + " (center coordinates)" +
-                    ", level: " + levelData.name());
+                    ", level: " + levelData);
         }
         ctx.setSpawnY(spawnY);
     }
@@ -2617,18 +2617,18 @@ public class LevelManager {
     }
 
     /**
-     * Resolves the {@link LevelData} for the current zone and act from the
+     * Resolves the {@link LevelDescriptor} for the current zone and act from the
      * {@code levels} map.
      * <p>
      * Used as a fallback when {@code LevelLoadContext.levelData} has not been
      * pre-seeded by the caller. Returns {@code null} if the levels map is
      * empty or the current zone/act is out of bounds.
      */
-    private LevelData resolveLevelData() {
+    private LevelDescriptor resolveLevelData() {
         if (levels.isEmpty() || currentZone < 0 || currentZone >= levels.size()) {
             return null;
         }
-        List<LevelData> acts = levels.get(currentZone);
+        List<LevelDescriptor> acts = levels.get(currentZone);
         if (acts == null || currentAct < 0 || currentAct >= acts.size()) {
             return null;
         }
@@ -2676,7 +2676,7 @@ public class LevelManager {
                 gameModule = GameServices.module();
                 refreshZoneList();
             }
-            LevelData levelData = levels.get(currentZone).get(currentAct);
+            LevelDescriptor levelData = levels.get(currentZone).get(currentAct);
 
             LevelLoadContext ctx = new LevelLoadContext();
             ctx.setShowTitleCard(showTitleCard);
@@ -2684,7 +2684,7 @@ public class LevelManager {
             ctx.setIncludePostLoadAssembly(true);
             ctx.snapshotCheckpoint(checkpointCoordinator.state());
 
-            loadLevel(levelData.getLevelIndex(), loadMode, ctx);
+            loadLevel(levelData.levelIndex(), loadMode, ctx);
             if (loadMode != LevelLoadMode.PREVIEW_CAPTURE) {
                 applyPersistedEditorEdits();
             }

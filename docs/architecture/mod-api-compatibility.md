@@ -8,11 +8,18 @@ types, supertypes, interfaces, record components, and sealed permits clauses is
 part of the same contract and must also be annotated.
 
 At Mod API 1.1.0 the recursive surface contains **789 engine types** and
-**15,987 canonical signature entries**. The breadth is intentional. In
+**15,910 canonical signature entries**. The breadth is intentional. In
 particular, the legacy-wide signatures of `GameModule`, `ObjectServices`, and
 the object base classes expose substantial runtime infrastructure; silently
 treating those transitive types as unsupported would make creator binaries depend
 on an undocumented, unstable ABI.
+
+The Phase 2 zone seam replaces the fixed `LevelData` enum in creator-facing
+signatures with `LevelDescriptor`. `LevelData` remains the stock implementation
+and every enum constant delegates its unchanged index and start coordinates
+through that interface; the enum itself is no longer part of the creator ABI.
+This replacement was made while 1.1 remained unpublished, before the final
+Phase 2 baseline freeze.
 
 The 1.1 surface also includes the additive loader-aware rewind contract:
 `DynamicObjectEntry.ownerModId` identifies the compiled-mod loader that owns a

@@ -49,7 +49,7 @@ final class LevelFrameRuntimeUpdater {
         int levelIdx = levelManager.levels
                 .get(levelManager.currentZone)
                 .get(levelManager.currentAct)
-                .getLevelIndex();
+                .levelIndex();
         int[] scroll = levelManager.game.getBackgroundScroll(
                 levelIdx,
                 levelManager.camera.getX(),

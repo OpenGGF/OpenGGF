@@ -506,7 +506,7 @@ CF-ANNOTATION TYPE com.openggf.level.Chunk visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.ChunkDesc visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.CollisionMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.Level visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.level.LevelData visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.LevelDescriptor visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.LevelGeometry visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.LevelManager visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.LevelManager$LevelRenderOptions visible @com.openggf.game.ModApi
@@ -2316,81 +2316,6 @@ FIELD com.openggf.level.CollisionMode public,static,final com.openggf.level.Coll
 FIELD com.openggf.level.CollisionMode public,static,final com.openggf.level.CollisionMode LEFT_RIGHT_BOTTOM_SOLID
 FIELD com.openggf.level.CollisionMode public,static,final com.openggf.level.CollisionMode NO_COLLISION
 FIELD com.openggf.level.CollisionMode public,static,final com.openggf.level.CollisionMode TOP_SOLID
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData AQUATIC_RUIN_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData AQUATIC_RUIN_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData CASINO_NIGHT_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData CASINO_NIGHT_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData CHEMICAL_PLANT_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData CHEMICAL_PLANT_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData DEATH_EGG
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData EMERALD_HILL_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData EMERALD_HILL_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData HILL_TOP_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData HILL_TOP_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData METROPOLIS_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData METROPOLIS_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData METROPOLIS_3
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData MYSTIC_CAVE_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData MYSTIC_CAVE_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData OIL_OCEAN_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData OIL_OCEAN_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_ENDING_FLOWERS
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_ENDING_NO_EMERALDS
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_FINAL_ZONE
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_GREEN_HILL_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_GREEN_HILL_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_GREEN_HILL_3
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_LABYRINTH_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_LABYRINTH_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_LABYRINTH_3
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_MARBLE_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_MARBLE_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_MARBLE_3
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_SCRAP_BRAIN_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_SCRAP_BRAIN_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_SCRAP_BRAIN_3
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_SPRING_YARD_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_SPRING_YARD_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_SPRING_YARD_3
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_STAR_LIGHT_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_STAR_LIGHT_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S1_STAR_LIGHT_3
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_ANGEL_ISLAND_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_ANGEL_ISLAND_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_AZURE_LAKE
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_BALLOON_PARK
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_CARNIVAL_NIGHT_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_CARNIVAL_NIGHT_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_CHROME_GADGET
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_DEATH_EGG_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_DEATH_EGG_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_DESERT_PALACE
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_DOOMSDAY
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_ENDLESS_MINE
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_FLYING_BATTERY_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_FLYING_BATTERY_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_GLOWING_SPHERE
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_GUMBALL
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_HYDROCITY_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_HYDROCITY_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_ICECAP_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_ICECAP_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_LAUNCH_BASE_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_LAUNCH_BASE_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_LAVA_REEF_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_LAVA_REEF_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_MARBLE_GARDEN_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_MARBLE_GARDEN_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_MUSHROOM_HILL_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_MUSHROOM_HILL_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_RESERVED_18
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_SANDOPOLIS_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_SANDOPOLIS_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_SKY_SANCTUARY_1
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_SKY_SANCTUARY_2
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData S3K_SLOT_MACHINE
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData SKY_CHASE
-FIELD com.openggf.level.LevelData public,static,final com.openggf.level.LevelData WING_FORTRESS
 FIELD com.openggf.level.LevelManager public,static,final int SIDEKICK_PATTERN_BASE
 FIELD com.openggf.level.Palette public,final com.openggf.level.Palette$Color[] colors
 FIELD com.openggf.level.Palette public,static,final int BYTES_PER_COLOR
@@ -4706,7 +4631,7 @@ METHOD com.openggf.game.LevelLoadContext public  com.openggf.data.Rom getRom()
 METHOD com.openggf.game.LevelLoadContext public  com.openggf.game.GameModule getGameModule()
 METHOD com.openggf.game.LevelLoadContext public  com.openggf.game.LevelLoadMode getLoadMode()
 METHOD com.openggf.game.LevelLoadContext public  com.openggf.level.Level getLevel()
-METHOD com.openggf.game.LevelLoadContext public  com.openggf.level.LevelData getLevelData()
+METHOD com.openggf.game.LevelLoadContext public  com.openggf.level.LevelDescriptor getLevelData()
 METHOD com.openggf.game.LevelLoadContext public  int getAct()
 METHOD com.openggf.game.LevelLoadContext public  int getCheckpointCameraMaxY()
 METHOD com.openggf.game.LevelLoadContext public  int getCheckpointCameraX()
@@ -4724,7 +4649,7 @@ METHOD com.openggf.game.LevelLoadContext public  void setAct(int)
 METHOD com.openggf.game.LevelLoadContext public  void setGameModule(com.openggf.game.GameModule)
 METHOD com.openggf.game.LevelLoadContext public  void setIncludePostLoadAssembly(boolean)
 METHOD com.openggf.game.LevelLoadContext public  void setLevel(com.openggf.level.Level)
-METHOD com.openggf.game.LevelLoadContext public  void setLevelData(com.openggf.level.LevelData)
+METHOD com.openggf.game.LevelLoadContext public  void setLevelData(com.openggf.level.LevelDescriptor)
 METHOD com.openggf.game.LevelLoadContext public  void setLevelIndex(int)
 METHOD com.openggf.game.LevelLoadContext public  void setLoadMode(com.openggf.game.LevelLoadMode)
 METHOD com.openggf.game.LevelLoadContext public  void setRom(com.openggf.data.Rom)
@@ -5171,8 +5096,8 @@ METHOD com.openggf.game.ZoneRegistry public,abstract  int getMusicId(int,int)
 METHOD com.openggf.game.ZoneRegistry public,abstract  int getZoneCount()
 METHOD com.openggf.game.ZoneRegistry public,abstract  int[] getStartPosition(int,int)
 METHOD com.openggf.game.ZoneRegistry public,abstract  java.lang.String getZoneName(int)
-METHOD com.openggf.game.ZoneRegistry public,abstract  java.util.List<com.openggf.level.LevelData> getLevelDataForZone(int)
-METHOD com.openggf.game.ZoneRegistry public,abstract  java.util.List<java.util.List<com.openggf.level.LevelData>> getAllZones()
+METHOD com.openggf.game.ZoneRegistry public,abstract  java.util.List<com.openggf.level.LevelDescriptor> getLevelDataForZone(int)
+METHOD com.openggf.game.ZoneRegistry public,abstract  java.util.List<java.util.List<com.openggf.level.LevelDescriptor>> getAllZones()
 METHOD com.openggf.game.animation.AnimatedTileCachePolicy public,static  com.openggf.game.animation.AnimatedTileCachePolicy valueOf(java.lang.String)
 METHOD com.openggf.game.animation.AnimatedTileCachePolicy public,static  com.openggf.game.animation.AnimatedTileCachePolicy[] values()
 METHOD com.openggf.game.animation.AnimatedTileChannel public  com.openggf.game.animation.AnimatedTileCachePolicy cachePolicy()
@@ -7333,11 +7258,9 @@ METHOD com.openggf.level.Level public,abstract  int getPatternCount()
 METHOD com.openggf.level.Level public,abstract  int getZoneIndex()
 METHOD com.openggf.level.Level public,abstract  java.util.List<com.openggf.level.objects.ObjectSpawn> getObjects()
 METHOD com.openggf.level.Level public,abstract  java.util.List<com.openggf.level.rings.RingSpawn> getRings()
-METHOD com.openggf.level.LevelData public  int getLevelIndex()
-METHOD com.openggf.level.LevelData public  int getStartXPos()
-METHOD com.openggf.level.LevelData public  int getStartYPos()
-METHOD com.openggf.level.LevelData public,static  com.openggf.level.LevelData valueOf(java.lang.String)
-METHOD com.openggf.level.LevelData public,static  com.openggf.level.LevelData[] values()
+METHOD com.openggf.level.LevelDescriptor public,abstract  int levelIndex()
+METHOD com.openggf.level.LevelDescriptor public,abstract  int startX()
+METHOD com.openggf.level.LevelDescriptor public,abstract  int startY()
 METHOD com.openggf.level.LevelGeometry public  com.openggf.level.Level level()
 METHOD com.openggf.level.LevelGeometry public  int bgContiguousWidthPx()
 METHOD com.openggf.level.LevelGeometry public  int bgHeightPx()
@@ -14618,7 +14541,6 @@ TYPE enum public,final com.openggf.graphics.shaderlib.ShaderPhase SUPER java.lan
 TYPE enum public,final com.openggf.graphics.shaderlib.WrapMode SUPER java.lang.Enum<com.openggf.graphics.shaderlib.WrapMode>
 TYPE enum public,final com.openggf.io.DirectoryAccess SUPER java.lang.Enum<com.openggf.io.DirectoryAccess>
 TYPE enum public,final com.openggf.level.CollisionMode SUPER java.lang.Enum<com.openggf.level.CollisionMode>
-TYPE enum public,final com.openggf.level.LevelData SUPER java.lang.Enum<com.openggf.level.LevelData>
 TYPE enum public,final com.openggf.level.objects.ObjectPlayerParticipationPolicy SUPER java.lang.Enum<com.openggf.level.objects.ObjectPlayerParticipationPolicy>
 TYPE enum public,final com.openggf.level.objects.TouchActorContextPolicy SUPER java.lang.Enum<com.openggf.level.objects.TouchActorContextPolicy>
 TYPE enum public,final com.openggf.level.objects.TouchAttackBouncePolicy SUPER java.lang.Enum<com.openggf.level.objects.TouchAttackBouncePolicy>
@@ -14753,6 +14675,7 @@ TYPE interface public,abstract com.openggf.game.timeattack.mp.RaceTransport SUPE
 TYPE interface public,abstract com.openggf.game.zone.ZoneRuntimeState SUPER <none>
 TYPE interface public,abstract com.openggf.graphics.GLCommandable SUPER <none>
 TYPE interface public,abstract com.openggf.level.Level SUPER <none>
+TYPE interface public,abstract com.openggf.level.LevelDescriptor SUPER <none>
 TYPE interface public,abstract com.openggf.level.animation.AnimatedPaletteManager SUPER <none>
 TYPE interface public,abstract com.openggf.level.animation.AnimatedPatternManager SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.ObjectFactory SUPER <none>
@@ -15656,7 +15579,7 @@ TYPE-ANNOTATION com.openggf.level.Chunk @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.ChunkDesc @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.CollisionMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.Level @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.level.LevelData @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.LevelDescriptor @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.LevelGeometry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.LevelManager @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.LevelManager$LevelRenderOptions @com.openggf.game.ModApi

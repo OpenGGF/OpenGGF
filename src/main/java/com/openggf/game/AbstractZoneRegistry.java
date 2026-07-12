@@ -1,6 +1,6 @@
 package com.openggf.game;
 
-import com.openggf.level.LevelData;
+import com.openggf.level.LevelDescriptor;
 
 import java.util.List;
 
@@ -16,14 +16,14 @@ import java.util.List;
  */
 public abstract class AbstractZoneRegistry implements ZoneRegistry {
 
-    protected final List<List<LevelData>> zones;
+    protected final List<List<LevelDescriptor>> zones;
     protected final String[] zoneNames;
 
     /**
      * @param zones     outer list = zones, inner list = acts
      * @param zoneNames display names, one per zone
      */
-    protected AbstractZoneRegistry(List<List<LevelData>> zones, String[] zoneNames) {
+    protected AbstractZoneRegistry(List<List<LevelDescriptor>> zones, String[] zoneNames) {
         this.zones = zones;
         this.zoneNames = zoneNames;
     }
@@ -50,7 +50,7 @@ public abstract class AbstractZoneRegistry implements ZoneRegistry {
     }
 
     @Override
-    public List<LevelData> getLevelDataForZone(int zoneIndex) {
+    public List<LevelDescriptor> getLevelDataForZone(int zoneIndex) {
         if (zoneIndex < 0 || zoneIndex >= zones.size()) {
             return List.of();
         }
@@ -58,7 +58,7 @@ public abstract class AbstractZoneRegistry implements ZoneRegistry {
     }
 
     @Override
-    public List<List<LevelData>> getAllZones() {
+    public List<List<LevelDescriptor>> getAllZones() {
         return zones;
     }
 }
