@@ -8,6 +8,7 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,7 @@ class TestTraceSessionLauncherSpecialStageEntry {
 
     @BeforeEach
     void captureOriginalConfig() {
+        TestEnvironment.resetAll();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         config = SonicConfigurationService.getInstance();
         originalConfig = TraceReplaySessionBootstrap.snapshotGameplayConfig();

@@ -446,9 +446,7 @@ public class Sonic2WFZEvents extends Sonic2ZoneEvents {
     }
 
     private void lockPlayerInputWithCurrentLogicalState() {
-        ObjectPlayerQuery query = new ObjectPlayerQuery(
-                () -> camera().getFocusedSprite(),
-                () -> List.copyOf(spriteManager().getSidekicks()));
+        ObjectPlayerQuery query = playerQueryFromRuntime();
         for (PlayableEntity entity : query.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (entity instanceof AbstractPlayableSprite player) {
                 int mask = player.getLogicalInputState();
@@ -456,6 +454,14 @@ public class Sonic2WFZEvents extends Sonic2ZoneEvents {
                 player.setForcedInputMask(mask);
             }
         }
+    }
+
+    private ObjectPlayerQuery playerQueryFromRuntime() {
+        AbstractPlayableSprite focusedPlayer = camera().getFocusedSprite();
+        List<AbstractPlayableSprite> sidekicks = List.copyOf(spriteManager().getSidekicks());
+        return new ObjectPlayerQuery(
+                () -> focusedPlayer,
+                () -> sidekicks);
     }
 
     private void requestPlc(int plcId) {
