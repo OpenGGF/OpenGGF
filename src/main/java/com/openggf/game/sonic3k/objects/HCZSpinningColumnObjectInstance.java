@@ -322,6 +322,21 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean rejectsBit7ObjectControlSideContact(PlayableEntity player) {
+        // SolidObject_cont returns on a signed object_control byte before side
+        // separation. Positive Obj68 capture value $03 still participates,
+        // while Tails' $81 catch-up-flight marker cannot be displaced.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) {
+        // The same signed test precedes new side/top classification
+        // (sonic3k.asm:41438-41440).
+        return true;
+    }
+
+    @Override
     public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
         // loc_326B6 moves the column before loading its updated x_pos into d4
         // for SolidObjectFull. MvSonicOnPtfm then subtracts that same current
