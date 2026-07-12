@@ -53,12 +53,13 @@ Tracked Git hooks live in `.githooks/`. A Maven build (`mvn`, `mvn test`, etc.) 
 
 ## ROM Requirement
 
-Keep ROMs in the working directory (gitignored):
-- `s1.gen` - Sonic 1 World REV01, CRC32 `AFE05EEE`, SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`
-- `s2.gen` - Sonic 2 World REV01, CRC32 `7B905383`, SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`
-- `s3k.gen` - Sonic 3&K locked-on combined ROM, CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`
+When a task needs a ROM, search the project root for `.gen` files and use the filename that is actually present. Identify the appropriate game sensibly from the filename and verify its hash when necessary. Do not assume a fixed filename or rename, copy, delete, or create a symlink for a ROM merely to satisfy an example command.
 
-For S3K tests: `-Ds3k.rom.path=s3k.gen`. `TestRomLogic` is skipped when ROM is absent.
+- Sonic 1 World REV01: CRC32 `AFE05EEE`, SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`
+- Sonic 2 World REV01: CRC32 `7B905383`, SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`
+- Sonic 3&K locked-on combined: CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`
+
+For ROM-backed tests, pass the discovered root-level path through the relevant `-D<game>.rom.path=...` property. `TestRomLogic` is skipped when its ROM is absent.
 
 ## Reference Materials
 
