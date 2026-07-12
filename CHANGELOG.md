@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **LBZ tube elevators now carry every configured sidekick safely.** Player-identity state extends the native P1-then-P2 transport path across entry, motion, exit, death, unload, roster changes, closed-destination suppression, and rewind without transferring forced control between sidekicks.
 - **Sonic 2 object windows now follow widescreen viewports without changing native timing.** Placement keeps the shared slot-safe preload cap, while standard `MarkObjGone` lifetimes and paired sideways-platform endpoint ownership expand with the active width so visible objects are not deleted at ultrawide edges; 320px boundaries remain ROM-exact.
 - **LBZ ride grapples now carry every configured sidekick safely.** Extension riders keep independent, PlayerRefId-backed grab and cooldown state while native P2-then-P1 ordering continues to drive shared grapple motion; jump, death, path-end, unload, roster-change, and rewind cleanup preserve the active rider identity.
 - **LBZ player launchers now handle every configured sidekick independently.** The native P1/P2 counter order remains unchanged, while extension sidekicks receive separate launch counters and arm-reset ownership so third and later characters cannot be stranded at mandatory Launch Base launchers. Focused launcher, graph-rewind, and rewind-coverage tests protect the extension without changing the native path.

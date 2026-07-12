@@ -1,8 +1,15 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.CompactFieldCapturer;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.rewind.schema.RewindObjectStateBlob;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -12,6 +19,7 @@ import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -150,6 +158,188 @@ class TestLbzTubeElevatorInstance {
                 "Obj_LBZTubeElevatorClosed moves off-screen when Player_1.interact is Obj_LBZTubeElevatorActive");
     }
 
+    @Test
+    void mainAndThreeSidekicksEnterAndRideWithIndependentState() {
+        TestablePlayableSprite main = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite nativeP2 = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite extensionOne = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite extensionTwo = playerAt(0x1200, 0x0600);
+        AbstractObjectInstance elevator = configuredElevator(main,
+                List.of(nativeP2, extensionOne, extensionTwo));
+
+        elevator.update(0, main);
+        elevator.update(1, main);
+        for (int frame = 2; frame < 205; frame++) {
+            elevator.update(frame, main);
+        }
+
+        assertTrue(elevator.getX() != 0x1200,
+                "the fixture must reach shared path motion, not only the entry frame");
+        for (TestablePlayableSprite player : List.of(main, nativeP2, extensionOne, extensionTwo)) {
+            assertTrue(player.isObjectControlled(),
+                    "every policy participant must retain independent tube ownership");
+            assertEquals(elevator.getX(), player.getCentreX() & 0xFFFF,
+                    "every captured player must follow the shared native elevator position");
+        }
+        assertFalse(((SolidObjectProvider) elevator).isTopSolidOnly(),
+                "captured extension players must participate in the shared start-spin transition");
+    }
+
+    @Test
+    void nativePlayerOneThenPlayerTwoCaptureSemanticsRemainAuthoritative() {
+        TestablePlayableSprite main = playerAt(0x1300, 0x0600);
+        TestablePlayableSprite nativeP2 = playerAt(0x1200, 0x0600);
+        AbstractObjectInstance elevator = configuredElevator(main, List.of(nativeP2));
+
+        elevator.update(0, main);
+
+        assertFalse(main.isObjectControlled(),
+                "P2 entering alone must not retroactively force the already-processed native P1 slot");
+        assertTrue(nativeP2.isObjectControlled());
+    }
+
+    @Test
+    void closedDestinationAlsoSuppressesForExtensionRider() {
+        ObjectInstance activeElevator = elevator(0x1200, 0x0600, 0x10);
+        AbstractObjectInstance closedDestination = (AbstractObjectInstance) elevator(0x1360, 0x0878, 0x50);
+        TestablePlayableSprite main = playerAt(0x1460, 0x0878);
+        TestablePlayableSprite nativeP2 = playerAt(0x1460, 0x0878);
+        TestablePlayableSprite extension = playerAt(0x1360, 0x0878);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectPlayerQuery query = new ObjectPlayerQuery(() -> main, () -> List.of(nativeP2, extension));
+        closedDestination.setServices(new TestObjectServices() {
+            @Override public ObjectManager objectManager() { return objectManager; }
+            @Override public ObjectPlayerQuery playerQuery() { return query; }
+        });
+        extension.setOnObject(true);
+        extension.setObjectControlled(true);
+        when(objectManager.getRidingObject(extension)).thenReturn(activeElevator);
+
+        closedDestination.update(0, main);
+
+        assertEquals(0x7FF0, closedDestination.getX() & 0xFFFF,
+                "closed destinations must not collide with third and later riders");
+    }
+
+    @Test
+    void waitExitReleasesAllExtensionsAndUnloadCleansForcedControl() throws Exception {
+        TestablePlayableSprite main = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite nativeP2 = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite extensionOne = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite extensionTwo = playerAt(0x1200, 0x0600);
+        AbstractObjectInstance elevator = configuredElevator(main,
+                List.of(nativeP2, extensionOne, extensionTwo));
+        elevator.update(0, main);
+        assertTrue(extensionOne.isObjectControlled());
+        assertTrue(extensionTwo.isObjectControlled());
+
+        setField(elevator, "state", 8);
+        elevator.update(1, main);
+
+        for (TestablePlayableSprite player : List.of(main, nativeP2, extensionOne, extensionTwo)) {
+            assertFalse(player.isObjectControlled(), "WaitExit must release every captured participant");
+            assertFalse(player.isControlLocked());
+            assertFalse(player.isObjectMappingFrameControl());
+        }
+
+        // Recapture in a fresh elevator and prove unload does not strand any owner.
+        elevator = configuredElevator(main, List.of(nativeP2, extensionOne, extensionTwo));
+        elevator.update(2, main);
+        elevator.onUnload();
+        for (TestablePlayableSprite player : List.of(main, nativeP2, extensionOne, extensionTwo)) {
+            assertFalse(player.isObjectControlled(), "unload must clear forced control for every owner");
+            assertFalse(player.isControlLocked());
+        }
+    }
+
+    @Test
+    void deadExtensionReleasesWithoutDisturbingOtherRiders() {
+        TestablePlayableSprite main = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite nativeP2 = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite extension = playerAt(0x1200, 0x0600);
+        AbstractObjectInstance elevator = configuredElevator(main, List.of(nativeP2, extension));
+        elevator.update(0, main);
+        assertTrue(extension.isObjectControlled(), "precondition: extension must be captured before death");
+        extension.setDead(true);
+
+        elevator.update(1, main);
+
+        assertFalse(extension.isObjectControlled());
+        assertFalse(extension.isControlLocked());
+        assertTrue(main.isObjectControlled());
+        assertTrue(nativeP2.isObjectControlled());
+    }
+
+    @Test
+    void rosterOmissionAndReorderKeepTubeStateWithPlayerIdentity() {
+        TestablePlayableSprite main = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite originalP2 = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite omitted = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite retained = playerAt(0x1200, 0x0600);
+        AbstractObjectInstance elevator = configuredElevator(main,
+                List.of(originalP2, omitted, retained));
+        elevator.update(0, main);
+        assertTrue(omitted.isObjectControlled());
+        assertTrue(retained.isObjectControlled());
+
+        elevator.setServices(playerServices(main, List.of(retained, originalP2)));
+        elevator.update(1, main);
+        assertTrue(omitted.isObjectControlled(),
+                "temporary omission must retain cleanup and carry ownership");
+
+        elevator.setServices(playerServices(main, List.of(omitted, retained, originalP2)));
+        elevator.update(2, main);
+        assertTrue(omitted.isObjectControlled(), "rejoining player must recover its own tube state");
+        assertTrue(originalP2.isObjectControlled(), "native-to-extension reorder must not discard state");
+        assertTrue(retained.isObjectControlled(), "extension-to-native reorder must not transfer state");
+    }
+
+    @Test
+    void releasedExtensionStateCannotForceCaptureAPlayerOutsideTheEntry() throws Exception {
+        TestablePlayableSprite main = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite nativeP2 = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite released = playerAt(0x1200, 0x0600);
+        AbstractObjectInstance elevator = configuredElevator(main, List.of(nativeP2, released));
+        elevator.update(0, main);
+        setField(elevator, "state", 8);
+        elevator.update(1, main);
+
+        TestablePlayableSprite newcomer = playerAt(0x1800, 0x0600);
+        elevator.setServices(playerServices(main, List.of(nativeP2, released, newcomer)));
+        elevator.update(2, main);
+
+        assertFalse(newcomer.isObjectControlled(),
+                "phase-4 history must not act like an occupied tube and capture remote extension players");
+    }
+
+    @Test
+    void nonEmptyExtensionStateRewindsThroughPlayerRefs() throws Exception {
+        TestablePlayableSprite oldMain = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite oldP2 = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite oldExtension = playerAt(0x1200, 0x0600);
+        AbstractObjectInstance elevator = configuredElevator(oldMain, List.of(oldP2, oldExtension));
+        elevator.update(0, oldMain);
+        RewindObjectStateBlob snapshot = CompactFieldCapturer.capture(
+                elevator, rewindContext(oldMain, oldP2, oldExtension));
+
+        TestablePlayableSprite newMain = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite newP2 = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite newExtension = playerAt(0x1200, 0x0600);
+        newExtension.setObjectControlled(true);
+        newExtension.setControlLocked(true);
+        newExtension.setObjectMappingFrameControl(true);
+        elevator.setServices(playerServices(newMain, List.of(newP2, newExtension)));
+        CompactFieldCapturer.restore(
+                elevator, snapshot, rewindContext(newMain, newP2, newExtension));
+        setField(elevator, "state", 8);
+        elevator.update(1, newMain);
+
+        assertFalse(newExtension.isObjectControlled(),
+                "restored extension ownership must relink through PlayerRefId and release the restored player");
+        assertFalse(newExtension.isControlLocked());
+        assertFalse(newExtension.isObjectMappingFrameControl());
+    }
+
     private static ObjectInstance elevator(int x, int y, int subtype) {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_LBZ);
         ObjectInstance elevator = registry.create(new ObjectSpawn(x, y, 0x10, subtype, 0, false, 0));
@@ -157,6 +347,38 @@ class TestLbzTubeElevatorInstance {
             object.setServices(new TestObjectServices());
         }
         return elevator;
+    }
+
+    private static AbstractObjectInstance configuredElevator(
+            TestablePlayableSprite main,
+            List<TestablePlayableSprite> sidekicks) {
+        AbstractObjectInstance elevator = (AbstractObjectInstance) elevator(0x1200, 0x0600, 0);
+        elevator.setServices(playerServices(main, sidekicks));
+        return elevator;
+    }
+
+    private static TestObjectServices playerServices(
+            TestablePlayableSprite main,
+            List<TestablePlayableSprite> sidekicks) {
+        return new TestObjectServices() {
+            private final ObjectPlayerQuery query = new ObjectPlayerQuery(() -> main, () -> sidekicks);
+
+            @Override
+            public ObjectPlayerQuery playerQuery() {
+                return query;
+            }
+        };
+    }
+
+    private static RewindCaptureContext rewindContext(
+            TestablePlayableSprite main,
+            TestablePlayableSprite nativeP2,
+            TestablePlayableSprite extension) {
+        RewindIdentityTable table = new RewindIdentityTable();
+        table.registerPlayer(main, PlayerRefId.mainPlayer());
+        table.registerPlayer(nativeP2, PlayerRefId.sidekick(0));
+        table.registerPlayer(extension, PlayerRefId.sidekick(1));
+        return RewindCaptureContext.withIdentityTable(table);
     }
 
     private static TestablePlayableSprite playerAt(int x, int y) {
