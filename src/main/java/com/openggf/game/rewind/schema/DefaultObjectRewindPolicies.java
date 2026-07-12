@@ -323,11 +323,6 @@ final class DefaultObjectRewindPolicies {
             // it stays compact-eligible while silently dropping the whole rider array without
             // this explicit CAPTURED policy.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HCZSpinningColumnObjectInstance", "riders"), RewindFieldPolicy.CAPTURED),
-            // Immutable constructor derivatives of ObjectSpawn.subtype; graph recreation
-            // recomputes all three through AizIntroEmeraldGlowChild's constructor.
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild", "variant"), RewindFieldPolicy.TRANSIENT),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild", "xOffset"), RewindFieldPolicy.TRANSIENT),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild", "yOffset"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczFreezerObjectInstance", "lastCaptureCloud"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$CaptureCloud", "frozenBlock"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
