@@ -465,7 +465,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        clearTeamScriptInput(player);
+        clearTeamScriptInput();
         camera.setMaxX((short) (cameraX - SCZ_CAMERA_MAX_OFFSET));
     }
 
@@ -1336,8 +1336,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void clearTeamScriptInput(AbstractPlayableSprite updatePlayer) {
-        forEachTeamPlayer(updatePlayer, this::releaseScriptControl);
+    private void clearTeamScriptInput() {
         releaseAllScriptControl();
     }
 
@@ -1361,7 +1360,11 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     private void releaseScriptControl(PlayableEntity entity) {
-        boolean ownsObjectControl = Boolean.TRUE.equals(controlledPlayers.remove(entity));
+        Boolean ownedObjectControl = controlledPlayers.remove(entity);
+        if (ownedObjectControl == null) {
+            return;
+        }
+        boolean ownsObjectControl = ownedObjectControl;
         if (!(entity instanceof AbstractPlayableSprite player)) {
             return;
         }

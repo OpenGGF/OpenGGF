@@ -153,6 +153,42 @@ class TestS2SczTornadoMultiSidekick {
         assertForcedJump(replacementMain, replacementFirst, replacementSecond, replacementThird);
     }
 
+    @Test
+    void cameraBacktrackReleasesOriginalOwnersWithoutClearingReplacementControl() {
+        TestablePlayableSprite originalMain = player("sonic", 0x1500);
+        TestablePlayableSprite originalSidekick = player("tails", 0x1510);
+        TornadoServices services = new TornadoServices(originalMain, List.of(originalSidekick));
+        TornadoObjectInstance tornado = tornado(services);
+        tornado.update(1, originalMain);
+        assertForcedRight(originalMain, originalSidekick);
+
+        TestablePlayableSprite replacementMain = player("replacement-main", 0x1500);
+        TestablePlayableSprite replacementSidekick = player("replacement-sidekick", 0x1510);
+        services.replaceRoster(replacementMain, List.of(replacementSidekick));
+        forceJump(replacementMain, replacementSidekick);
+        services.camera.setX((short) 0x13FF);
+
+        tornado.update(2, replacementMain);
+
+        assertReleased(originalMain, originalSidekick);
+        assertForcedJump(replacementMain, replacementSidekick);
+    }
+
+    @Test
+    void invalidNeverOwnedSidekickRetainsUnrelatedForcedControl() {
+        TestablePlayableSprite main = player("sonic", 0x1500);
+        TestablePlayableSprite invalidSidekick = player("invalid", 0x1510);
+        invalidSidekick.setDead(true);
+        forceJump(invalidSidekick);
+        TornadoServices services = new TornadoServices(main, List.of(invalidSidekick));
+        TornadoObjectInstance tornado = tornado(services);
+
+        tornado.update(1, main);
+
+        assertForcedRight(main);
+        assertForcedJump(invalidSidekick);
+    }
+
     private static TornadoObjectInstance tornado(TornadoServices services) {
         TornadoObjectInstance tornado = new TornadoObjectInstance(
                 new ObjectSpawn(0x1500, 0x300, 0xB2, 0x50, 0, false, 0));
