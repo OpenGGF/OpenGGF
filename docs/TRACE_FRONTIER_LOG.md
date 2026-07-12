@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f29152 / 316 errors (12 errors under
+f3318 / 4234 errors to f29176 / 355 errors (10 errors under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -656,6 +656,21 @@ The granular nine-route S3K matrix keeps both AIZ routes green and preserves
 every non-HCZ frontier/count exactly: CNZ complete f1846 / 5, CNZ level-select
 f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1,
 MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 59 retains the turbine's active hurt byte throughout its slowdown
+routine. `loc_6B244` changes the routine and installs `byte_6BE01`, but leaves
+`collision_flags=$A6` intact; only the later `Animate_RawGetSlower` callback
+`loc_6B262` clears collision and returns the turbine to its wait routine. The
+engine had cleared collision on routine-8 entry, missing Sonic's final native
+turbine contact (`sonic3k.asm:141084-141106,142249-142257,177749-177792`).
+
+This closes the f29152 hurt/ring-spill cluster and advances HCZ to f29176 / 355
+full-run errors (10 under `frontierOnly`), where Tails' post-hit vertical state
+is the next owner. The focused boss/turbine/water-column tests pass 6/6. The
+granular nine-route S3K matrix keeps both AIZ routes green and preserves every
+non-HCZ frontier/count exactly: CNZ complete f1846 / 5, CNZ level-select f291 /
+7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ
+f2920 / 1, and LBZ f2270 / 5.
 
 Milestone 31 restores TurboSpiker's detached-shell direction. The shell child
 inherits the parent's post-retreat render bit, but `loc_87D72` interprets that

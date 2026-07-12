@@ -251,11 +251,11 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
         animSpeed = ANIM_SPEED_STOPPING;
         tickAnimation();
 
-        // Clear collision flags — turbine is no longer dangerous
-        collisionFlags = 0;
-
-        // One full cycle at stopping speed means turbine has halted — go back to WAIT
+        // loc_6B244 only selects routine 8 and the slower animation. The
+        // active $A6 collision byte survives until Animate_RawGetSlower fires
+        // loc_6B262 after the final cycle.
         if (animCounter == 0 && animFrame == 0) {
+            collisionFlags = 0;
             routine = ROUTINE_WAIT;
         }
     }

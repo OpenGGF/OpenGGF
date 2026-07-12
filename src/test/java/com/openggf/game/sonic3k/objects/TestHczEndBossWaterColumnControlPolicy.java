@@ -22,6 +22,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestHczEndBossWaterColumnControlPolicy {
 
     @Test
+    void turbineRetainsHurtCollisionUntilSlowdownCallback() throws Exception {
+        HczEndBossTurbine turbine = newTurbine();
+        setIntField(turbine, "routine", 8);
+        turbine.setCollisionFlags(0xA6);
+        setIntField(turbine, "animFrame", 0);
+        setIntField(turbine, "animCounter", 0);
+
+        invokeNoArgPrivate(turbine, "updateStopping");
+
+        assertEquals(0xA6, turbine.getCollisionFlags(),
+                "loc_6B244 does not clear collision_flags while Animate_RawGetSlower is active");
+
+        setIntField(turbine, "animFrame", 3);
+        setIntField(turbine, "animCounter", 7);
+        invokeNoArgPrivate(turbine, "updateStopping");
+
+        assertEquals(0, turbine.getCollisionFlags(),
+                "loc_6B262 clears collision_flags only after the slowdown callback");
+        assertEquals(2, getIntField(turbine, "routine"));
+    }
+
+    @Test
     void descentRetainsTheLaterSpraySlotsFinalInteraction() throws Exception {
         HczEndBossWaterColumn column = newWaterColumn();
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x4000, (short) 0x0738);
@@ -97,6 +119,18 @@ class TestHczEndBossWaterColumnControlPolicy {
         return column;
     }
 
+    private static HczEndBossTurbine newTurbine() {
+        ObjectSpawn spawn = new ObjectSpawn(0x4000, 0x0738, 0x9A, 0, 0, false, 0);
+        ObjectServices services = new TestObjectServices()
+                .withConfiguration(SonicConfigurationService.createStandalone());
+        HczEndBossInstance boss = withConstructionContext(services, () -> new HczEndBossInstance(spawn));
+        boss.setServices(services);
+        HczEndBossTurbine turbine = withConstructionContext(
+                services, () -> new HczEndBossTurbine(boss, 0, 0x24));
+        turbine.setServices(services);
+        return turbine;
+    }
+
     private static void invokeGrab(HczEndBossWaterColumn column, TestablePlayableSprite player, boolean isPlayer1)
             throws Exception {
         Method method = HczEndBossWaterColumn.class.getDeclaredMethod(
@@ -118,6 +152,12 @@ class TestHczEndBossWaterColumnControlPolicy {
         Method method = HczEndBossWaterColumn.class.getDeclaredMethod(name, com.openggf.game.PlayableEntity.class);
         method.setAccessible(true);
         method.invoke(column, player);
+    }
+
+    private static void invokeNoArgPrivate(Object target, String name) throws Exception {
+        Method method = target.getClass().getDeclaredMethod(name);
+        method.setAccessible(true);
+        method.invoke(target);
     }
 
     private static void setIntField(Object target, String name, int value) throws Exception {

@@ -1108,6 +1108,29 @@ and calls `Delete_Sprite_If_Not_In_Range` only when both are zero
 
 ---
 
+## P31 -- Routine handoff does not imply immediate collision disable
+
+**Symptom.** A spinning or animated hazard becomes harmless as soon as its
+parent clears an activation flag, while ROM still permits one or more contacts
+during the visible slowdown/retraction animation.
+
+**Root cause.** The routine handoff installs an `Animate_Raw*` script but does
+not write `collision_flags`. Collision remains owned by the later animation
+callback, so clearing it on routine entry shortens the native touch lifetime.
+
+**What to check.** Track the collision byte separately from the routine and
+animation speed. Locate the exact instruction that clears it and preserve the
+old value through every intermediate animation dispatch.
+
+**ROM citation.** HCZ end-boss turbine `loc_6B244` selects routine 8 and
+`byte_6BE01`; `loc_6B262` alone clears collision after
+`Animate_RawGetSlower` completes (`docs/skdisasm/sonic3k.asm:141084-141106,
+142249-142257,177749-177792`).
+
+**Originating commit.** `<pending: HCZ milestone 59>`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
