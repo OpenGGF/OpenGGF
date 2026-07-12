@@ -20,7 +20,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -126,6 +128,18 @@ class MgzDashTriggerObjectInstanceTest {
     }
 
     @Test
+    void spindashFlagWithoutAnimationNineDoesNotNativeArm() {
+        MGZDashTriggerObjectInstance trigger = triggerAtTestPosition();
+        AbstractPlayableSprite player = groundedRightIntentPlayer(GameRules.SONIC_3K);
+        doReturn(true).when(player).getSpindash();
+
+        trigger.update(1, player);
+
+        assertFalse(Sonic3kLevelTriggerManager.testAny(0),
+                "ROM Obj_MGZDashTrigger gates on animation 9, not spin_dash_flag");
+    }
+
+    @Test
     void missingSpindashCapabilityRequiresExactSustainedGroundedIntentThreshold() {
         MGZDashTriggerObjectInstance trigger = triggerAtTestPosition();
         AbstractPlayableSprite player = groundedRightIntentPlayer(noSpindashDonorRules());
@@ -183,6 +197,34 @@ class MgzDashTriggerObjectInstanceTest {
                 "Fallback progress must follow PlayerRefId rather than the pre-rewind Java instance");
     }
 
+    @Test
+    void threePlayerIntentCountersRestoreToReplacementIdentitiesWithoutTransfer() throws Exception {
+        MGZDashTriggerObjectInstance trigger = triggerAtTestPosition();
+        AbstractPlayableSprite capturedMain = groundedRightIntentPlayer(noSpindashDonorRules());
+        AbstractPlayableSprite capturedSidekick0 = groundedRightIntentPlayer(noSpindashDonorRules());
+        AbstractPlayableSprite capturedSidekick1 = groundedRightIntentPlayer(noSpindashDonorRules());
+        advanceIntent(trigger, capturedMain, 2);
+        advanceIntent(trigger, capturedSidekick0, 5);
+        advanceIntent(trigger, capturedSidekick1, 8);
+        RewindObjectStateBlob blob = CompactFieldCapturer.capture(
+                trigger, rewindContext(capturedMain, capturedSidekick0, capturedSidekick1));
+
+        AbstractPlayableSprite restoredMain = groundedRightIntentPlayer(noSpindashDonorRules());
+        AbstractPlayableSprite restoredSidekick0 = groundedRightIntentPlayer(noSpindashDonorRules());
+        AbstractPlayableSprite restoredSidekick1 = groundedRightIntentPlayer(noSpindashDonorRules());
+        CompactFieldCapturer.restore(trigger, blob,
+                rewindContext(restoredMain, restoredSidekick0, restoredSidekick1));
+
+        Map<AbstractPlayableSprite, Integer> restored = intentFrames(trigger);
+        assertEquals(3, restored.size());
+        assertEquals(2, restored.get(restoredMain));
+        assertEquals(5, restored.get(restoredSidekick0));
+        assertEquals(8, restored.get(restoredSidekick1));
+        assertFalse(restored.containsKey(capturedMain));
+        assertFalse(restored.containsKey(capturedSidekick0));
+        assertFalse(restored.containsKey(capturedSidekick1));
+    }
+
     private static MGZDashTriggerObjectInstance triggerAtTestPosition() {
         MGZDashTriggerObjectInstance trigger = new MGZDashTriggerObjectInstance(
                 new ObjectSpawn(0x1200, 0x0340, Sonic3kObjectIds.MGZ_DASH_TRIGGER,
@@ -206,9 +248,37 @@ class MgzDashTriggerObjectInstanceTest {
         return player;
     }
 
+    private static void advanceIntent(MGZDashTriggerObjectInstance trigger,
+                                      AbstractPlayableSprite player,
+                                      int frames) {
+        for (int frame = 1; frame <= frames; frame++) {
+            trigger.update(frame, player);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<AbstractPlayableSprite, Integer> intentFrames(
+            MGZDashTriggerObjectInstance trigger) throws ReflectiveOperationException {
+        Field field = MGZDashTriggerObjectInstance.class.getDeclaredField("noSpindashIntentFrames");
+        field.setAccessible(true);
+        return (Map<AbstractPlayableSprite, Integer>) field.get(trigger);
+    }
+
     private static RewindCaptureContext rewindContext(AbstractPlayableSprite player) {
+        return rewindContext(player, null, null);
+    }
+
+    private static RewindCaptureContext rewindContext(AbstractPlayableSprite main,
+                                                       AbstractPlayableSprite firstSidekick,
+                                                       AbstractPlayableSprite secondSidekick) {
         RewindIdentityTable table = new RewindIdentityTable();
-        table.registerPlayer(player, PlayerRefId.mainPlayer());
+        table.registerPlayer(main, PlayerRefId.mainPlayer());
+        if (firstSidekick != null) {
+            table.registerPlayer(firstSidekick, PlayerRefId.sidekick(0));
+        }
+        if (secondSidekick != null) {
+            table.registerPlayer(secondSidekick, PlayerRefId.sidekick(1));
+        }
         return RewindCaptureContext.withIdentityTable(table);
     }
 
