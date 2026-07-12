@@ -1,19 +1,25 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * S3K Obj 0x03 - AIZ Hollow Tree.
@@ -48,10 +54,13 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
 
     private int treeX;
     private int treeY;
-    private final int[] progress = new int[2];
-    private final boolean[] riding = new boolean[2];
-    private final boolean[] releaseObjectControlPending = new boolean[2];
+    private final RideState[] nativeRideStates = {new RideState(), new RideState()};
+    @RewindTransient(reason = "debug-only trace labels; no gameplay decisions read this array")
     private final String[] lastDecision = {"init", "init"};
+    private final Map<AbstractPlayableSprite, RideState> extensionRideStates = new IdentityHashMap<>();
+    private AbstractPlayableSprite mainOwner;
+    private AbstractPlayableSprite nativeP2Owner;
+    private boolean nativeP2UsesExtensionState;
 
     private int cameraLockTimer;
 
@@ -76,12 +85,44 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        updatePlayer(player, PLAYER_SLOT_MAIN, true);
+        bindMainPlayer(player);
+        updatePlayer(player, nativeRideStates[PLAYER_SLOT_MAIN], PLAYER_SLOT_MAIN, true);
         AbstractPlayableSprite sidekick = firstTrackedSidekick();
+        bindNativeP2(sidekick);
         if (sidekick != null) {
-            updatePlayer(sidekick, PLAYER_SLOT_SIDEKICK, false);
+            RideState nativeP2State = nativeRideStates[PLAYER_SLOT_SIDEKICK];
+            if (nativeP2UsesExtensionState && sidekick.getDead()) {
+                releaseOwnedPlayer(sidekick, nativeP2State);
+            } else {
+                updatePlayer(sidekick, nativeP2State, PLAYER_SLOT_SIDEKICK, false);
+            }
         }
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        for (PlayableEntity candidate : participants) {
+            if (candidate instanceof AbstractPlayableSprite extension
+                    && extension != player && extension != sidekick) {
+                RideState state = extensionRideStates.computeIfAbsent(extension, ignored -> new RideState());
+                if (extension.getDead()) {
+                    releaseExtension(extension, state);
+                } else {
+                    updatePlayer(extension, state, -1, false);
+                }
+            }
+        }
+        releaseMissingExtensions(participants);
         updateCameraLock(player);
+    }
+
+    @Override
+    public void onUnload() {
+        releaseOwnedPlayer(mainOwner, nativeRideStates[PLAYER_SLOT_MAIN]);
+        releaseOwnedPlayer(nativeP2Owner, nativeRideStates[PLAYER_SLOT_SIDEKICK]);
+        for (Map.Entry<AbstractPlayableSprite, RideState> entry
+                : new ArrayList<>(extensionRideStates.entrySet())) {
+            releaseOwnedPlayer(entry.getKey(), entry.getValue());
+        }
+        extensionRideStates.clear();
     }
 
     @Override
@@ -96,21 +137,22 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
     }
 
     private void updatePlayer(AbstractPlayableSprite player,
+            RideState state,
             int slot,
             boolean mainPlayer) {
         if (player == null) {
-            lastDecision[slot] = "missing";
+            setLastDecision(slot, "missing");
             return;
         }
 
-        if (releaseObjectControlPending[slot]) {
-            releaseObjectControlPending[slot] = false;
+        if (state.releaseObjectControlPending) {
+            state.releaseObjectControlPending = false;
             ObjectControlState.none().applyTo(player);
-            lastDecision[slot] = "release-control";
+            setLastDecision(slot, "release-control");
         }
 
-        if (!riding[slot]) {
-            tryCapturePlayer(player, slot, mainPlayer);
+        if (!state.riding) {
+            tryCapturePlayer(player, state, slot, mainPlayer);
             return;
         }
 
@@ -118,14 +160,14 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
 
         int absGroundSpeed = Math.abs(player.getGSpeed());
         if (absGroundSpeed < MIN_CAPTURE_X_SPEED) {
-            if (progressWord(progress[slot]) >= 0x400) {
-                lastDecision[slot] = "fall-low-speed-done";
-                fallOffTree(player, slot);
+            if (progressWord(state.progress) >= 0x400) {
+                setLastDecision(slot, "fall-low-speed-done");
+                fallOffTree(player, state);
                 return;
             }
-            setPlayerOnTree(player, slot);
-            lastDecision[slot] = "fall-low-speed-early";
-            fallOffTree(player, slot);
+            setPlayerOnTree(player, state, slot);
+            setLastDecision(slot, "fall-low-speed-early");
+            fallOffTree(player, state);
             return;
         }
 
@@ -133,12 +175,12 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
             int dy = player.getCentreY() - treeY;
             int check = dy + 0x90;
             if (check < 0 || check > 0x130) {
-                lastDecision[slot] = "fall-y-range";
-                fallOffTree(player, slot);
+                setLastDecision(slot, "fall-y-range");
+                fallOffTree(player, state);
                 return;
             }
-            setPlayerOnTree(player, slot);
-            lastDecision[slot] = "ride-ground";
+            setPlayerOnTree(player, state, slot);
+            setLastDecision(slot, "ride-ground");
             return;
         }
 
@@ -150,37 +192,37 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
             player.setCentreX((short) TREE_CAPTURE_MAX_X);
             player.setXSpeed((short) -0x400);
         }
-        lastDecision[slot] = "fall-air";
-        fallOffTree(player, slot);
+        setLastDecision(slot, "fall-air");
+        fallOffTree(player, state);
     }
 
-    private void tryCapturePlayer(AbstractPlayableSprite player, int slot, boolean mainPlayer) {
+    private void tryCapturePlayer(AbstractPlayableSprite player, RideState state, int slot, boolean mainPlayer) {
         if (player.getAir()) {
-            lastDecision[slot] = "no-capture-air";
+            setLastDecision(slot, "no-capture-air");
             return;
         }
         int dx = (player.getCentreX() + 0x10) - treeX;
         if (dx < 0 || dx >= 0x40) {
-            lastDecision[slot] = "no-capture-x";
+            setLastDecision(slot, "no-capture-x");
             return;
         }
         int dy = player.getCentreY() - treeY;
         if (dy < -0x5A || dy > 0xA0) {
-            lastDecision[slot] = "no-capture-y";
+            setLastDecision(slot, "no-capture-y");
             return;
         }
         if (player.getXSpeed() < MIN_CAPTURE_X_SPEED) {
-            lastDecision[slot] = "no-capture-speed";
+            setLastDecision(slot, "no-capture-speed");
             return;
         }
         if (isObjectControlActive(player)) {
-            lastDecision[slot] = "no-capture-control";
+            setLastDecision(slot, "no-capture-control");
             return;
         }
 
-        riding[slot] = true;
-        progress[slot] = 0;
-        releaseObjectControlPending[slot] = false;
+        state.riding = true;
+        state.progress = 0;
+        state.releaseObjectControlPending = false;
 
         player.setOnObject(true);
         player.setLatchedSolidObject(Sonic3kObjectIds.AIZ_HOLLOW_TREE, this);
@@ -198,7 +240,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
         // RideObject_SetRide semantics: preserve horizontal inertia as ground speed.
         player.setGSpeed(player.getXSpeed());
         player.setAnimationId(Sonic3kAnimationIds.WALK);
-        lastDecision[slot] = "capture";
+        setLastDecision(slot, "capture");
         // Obj_AIZHollowTree sets object_control bits 6 and 1 only
         // (sonic3k.asm:43688-43693). Bit 6 skips Sonic_WalkSpeed's
         // CalcRoomInFront wall probe (sonic3k.asm:22713-22714), while the
@@ -221,7 +263,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
         }
     }
 
-    private void setPlayerOnTree(AbstractPlayableSprite player, int slot) {
+    private void setPlayerOnTree(AbstractPlayableSprite player, RideState state, int slot) {
         // This object is logic-only and not a SolidObjectProvider, so SolidContacts would
         // otherwise clear onObject each frame. Keep this sticky while the tree ride is active.
         player.setOnObject(true);
@@ -229,12 +271,12 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
         player.setObjectMappingFrameControl(true);
         player.setForcedAnimationId(Sonic3kAnimationIds.WALK);
 
-        int progressValue = progress[slot];
+        int progressValue = state.progress;
         progressValue += player.getGSpeed() << 8;
-        progress[slot] = progressValue;
+        state.progress = progressValue;
         if (progressValue < 0) {
-            lastDecision[slot] = "fall-progress-negative";
-            fallOffTree(player, slot);
+            setLastDecision(slot, "fall-progress-negative");
+            fallOffTree(player, state);
             return;
         }
 
@@ -268,9 +310,9 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
     public String traceDebugDetails() {
         return String.format("tree m=%s/%04X s=%s/%04X fg4=%04X cam=%02X",
                 lastDecision[PLAYER_SLOT_MAIN],
-                progressWord(progress[PLAYER_SLOT_MAIN]),
+                progressWord(nativeRideStates[PLAYER_SLOT_MAIN].progress),
                 lastDecision[PLAYER_SLOT_SIDEKICK],
-                progressWord(progress[PLAYER_SLOT_SIDEKICK]),
+                progressWord(nativeRideStates[PLAYER_SLOT_SIDEKICK].progress),
                 eventsFg4 & 0xFFFF,
                 cameraLockTimer & 0xFF);
     }
@@ -284,9 +326,9 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
         player.move(player.getGSpeed(), (short) 0);
     }
 
-    private void fallOffTree(AbstractPlayableSprite player, int slot) {
-        riding[slot] = false;
-        progress[slot] = 0;
+    private void fallOffTree(AbstractPlayableSprite player, RideState state) {
+        state.riding = false;
+        state.progress = 0;
 
         player.setAir(true);
         // Hollow-tree fall-off in ROM updates collision radius (center-based) directly.
@@ -307,7 +349,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
         player.setControlLocked(false);
         ObjectControlState.none().applyTo(player);
         player.setSuppressGroundWallCollision(false);
-        releaseObjectControlPending[slot] = false;
+        state.releaseObjectControlPending = false;
         player.setXSpeed((short) (player.getXSpeed() >> 1));
         player.setYSpeed((short) (player.getYSpeed() >> 1));
     }
@@ -327,7 +369,9 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
     }
 
     private void updateCameraLock(AbstractPlayableSprite mainPlayer) {
-        if (riding[PLAYER_SLOT_MAIN] || riding[PLAYER_SLOT_SIDEKICK] || cameraLockTimer <= 0 || mainPlayer == null) {
+        if (nativeRideStates[PLAYER_SLOT_MAIN].riding || nativeRideStates[PLAYER_SLOT_SIDEKICK].riding
+                || extensionRideStates.values().stream().anyMatch(state -> state.riding)
+                || cameraLockTimer <= 0 || mainPlayer == null) {
             return;
         }
 
@@ -353,6 +397,116 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
             } else {
                 camera.setMaxX((short) (camera.getMaxX() + 4));
             }
+        }
+    }
+
+    private void bindNativeP2(AbstractPlayableSprite current) {
+        if (nativeP2Owner == current) {
+            return;
+        }
+        RideState nativeState = nativeRideStates[PLAYER_SLOT_SIDEKICK];
+        if (nativeP2Owner != null && nativeState.isActive()) {
+            extensionRideStates.computeIfAbsent(nativeP2Owner, ignored -> new RideState()).copyFrom(nativeState);
+        }
+        nativeState.clear();
+        nativeP2UsesExtensionState = false;
+        if (current != null) {
+            RideState restored = extensionRideStates.remove(current);
+            if (restored != null) {
+                nativeState.copyFrom(restored);
+                nativeP2UsesExtensionState = true;
+            }
+        }
+        nativeP2Owner = current;
+    }
+
+    private void bindMainPlayer(AbstractPlayableSprite current) {
+        if (mainOwner == current) {
+            return;
+        }
+        RideState mainState = nativeRideStates[PLAYER_SLOT_MAIN];
+        if (mainOwner != null) {
+            // Engine extension: a runtime main-character replacement is a new
+            // identity, not the ROM's fixed Player_1 RAM slot. Release the old
+            // owner and start the replacement with a clean native P1 state.
+            releaseOwnedPlayer(mainOwner, mainState);
+            mainState.clear();
+        }
+        mainOwner = current;
+    }
+
+    private void releaseMissingExtensions(List<PlayableEntity> participants) {
+        for (Map.Entry<AbstractPlayableSprite, RideState> entry
+                : new ArrayList<>(extensionRideStates.entrySet())) {
+            if (containsIdentity(participants, entry.getKey())) {
+                continue;
+            }
+            releaseExtension(entry.getKey(), entry.getValue());
+            extensionRideStates.remove(entry.getKey());
+        }
+    }
+
+    private void releaseExtension(AbstractPlayableSprite player, RideState state) {
+        if (state.isActive()) {
+            fallOffTree(player, state);
+        }
+    }
+
+    private void releaseOwnedPlayer(AbstractPlayableSprite player, RideState state) {
+        if (player != null && state.isActive()) {
+            fallOffTree(player, state);
+        }
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity target) {
+        for (PlayableEntity participant : participants) {
+            if (participant == target) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void setLastDecision(int slot, String decision) {
+        if (slot >= 0) {
+            lastDecision[slot] = decision;
+        }
+    }
+
+    private static final class RideState implements RewindStateful<RideState.Snapshot> {
+        private int progress;
+        private boolean riding;
+        private boolean releaseObjectControlPending;
+
+        private boolean isActive() {
+            return riding || releaseObjectControlPending;
+        }
+
+        private void clear() {
+            progress = 0;
+            riding = false;
+            releaseObjectControlPending = false;
+        }
+
+        private void copyFrom(RideState other) {
+            progress = other.progress;
+            riding = other.riding;
+            releaseObjectControlPending = other.releaseObjectControlPending;
+        }
+
+        @Override
+        public Snapshot captureRewindStateValue() {
+            return new Snapshot(progress, riding, releaseObjectControlPending);
+        }
+
+        @Override
+        public void restoreRewindStateValue(Snapshot snapshot) {
+            progress = snapshot.progress();
+            riding = snapshot.riding();
+            releaseObjectControlPending = snapshot.releaseObjectControlPending();
+        }
+
+        private record Snapshot(int progress, boolean riding, boolean releaseObjectControlPending) {
         }
     }
 
