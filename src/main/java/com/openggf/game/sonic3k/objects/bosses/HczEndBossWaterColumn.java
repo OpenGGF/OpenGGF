@@ -229,12 +229,6 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
     // -- Spray animation state (inline — replaces spray child loc_6B3DE) --
     private int sprayAnimIndex;
     private int sprayAnimTimer;
-    /**
-     * Whether the folded spray child has completed its routine-0 dispatch.
-     * ROM loc_6B3FC initializes the child and returns; loc_6B410 starts
-     * suction on the following object dispatch (sonic3k.asm:141217-141229).
-     */
-    private boolean sprayChildInitialized;
 
     /** Platform wait counter for ROUTINE_PLATFORM (ROM $2E). */
     private int platformWait;
@@ -330,7 +324,10 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
 
         // Init spin-up animation (byte_6BE0C)
         spinupIndex = 0;
-        spinupTimer = SPINUP_DELAY;
+        // The setup frame already publishes byte_6BE0C's initial mapping.
+        // Seed the folded countdown at delay-1 so its pre-decrement cadence
+        // reaches the $F4 callback on the same dispatch as Animate_Raw.
+        spinupTimer = SPINUP_DELAY - 1;
 
         // Init column animation (will be used after spin-up)
         columnAnimIndex = 0;
@@ -339,7 +336,6 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         // Init spray animation
         sprayAnimIndex = 0;
         sprayAnimTimer = SPRAY_ANIM_DELAY;
-        sprayChildInitialized = false;
 
         updateDynamicSpawn();
 
@@ -423,9 +419,8 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         // Solid platform active during rise/descend
         solidActive = true;
 
-        // The newly allocated spray child's first dispatch is initialization
-        // only (loc_6B3FC); interactions begin at loc_6B410 one dispatch later.
-        if (routine == ROUTINE_RISE && sprayChildReadyForInteractions()) {
+        // Suction (replicated from spray child sub_6B9AC + sub_6B9E2)
+        if (routine == ROUTINE_RISE) {
             applySuction(player);
         }
     }
@@ -522,9 +517,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         solidActive = true;
 
         // Suction/grab during hold
-        if (sprayChildReadyForInteractions()) {
-            applySuction(player);
-        }
+        applySuction(player);
 
         // Check boss propeller state (ROM: btst #3,$38(a1))
         if (!boss.isPropellerActive()) {
@@ -650,14 +643,6 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
                 applySuctionTo(sprite);
             }
         }
-    }
-
-    private boolean sprayChildReadyForInteractions() {
-        if (!sprayChildInitialized) {
-            sprayChildInitialized = true;
-            return false;
-        }
-        return true;
     }
 
     /**

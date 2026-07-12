@@ -1012,8 +1012,10 @@ such as `Animate_RawGetFaster` can make this error much larger than one frame.
    extra counter byte consumed by the animation helper.
 2. Keep routine entry, animation completion, callback dispatch, child
    initialization, and first active child dispatch as distinct boundaries.
-3. If a consolidated engine object folds the child into its parent, retain the
-   child's routine-0 initialization-only dispatch before enabling interaction.
+3. If a consolidated engine object folds the child into its parent, determine
+   whether allocation lands above or below the current SST slot. An above-slot
+   child can consume routine 0 in the callback's same ExecuteObjects pass, so
+   the callback itself may already represent its initialization boundary.
 4. Allocate from the callback's native slot/order path, not merely when the
    parent first appears active.
 
