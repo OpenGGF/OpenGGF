@@ -25,6 +25,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestHczEndBossWaterColumnControlPolicy {
 
     @Test
+    void bossPublishesItsPostMovementTouchCoordinate() {
+        HczEndBossBlade blade = newBlade();
+        HczEndBossInstance boss = (HczEndBossInstance) getObjectFieldUnchecked(blade, "boss");
+
+        assertTrue(boss.usesCurrentTouchResponseState(),
+                "loc_6AF0C moves before Draw_And_Touch_Sprite publishes the boss");
+    }
+
+    @Test
     void bladeSlowdownRetainsEntryTickBeforeAdvancingRawAnimation() throws Exception {
         HczEndBossBlade blade = newBlade();
         invokeNoArgPrivate(blade, "transitionToSpinDown");
@@ -300,6 +309,14 @@ class TestHczEndBossWaterColumnControlPolicy {
         var field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
         return field.get(target);
+    }
+
+    private static Object getObjectFieldUnchecked(Object target, String name) {
+        try {
+            return getObjectField(target, name);
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
     }
 
     private static void setBooleanField(Object target, String name, boolean value) throws Exception {

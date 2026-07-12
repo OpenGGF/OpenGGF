@@ -250,6 +250,15 @@ public class HczEndBossInstance extends AbstractBossInstance
     }
 
     @Override
+    public boolean usesCurrentTouchResponseState() {
+        // loc_6AF0C runs the movement/routine handler before
+        // Draw_And_Touch_Sprite publishes this boss to Collision_response_list.
+        // The next player pass therefore observes the post-movement coordinate,
+        // not this object's pre-update snapshot.
+        return true;
+    }
+
+    @Override
     public boolean isPersistent() {
         // ROUTINE_FLEE runs off-screen for 0x77 frames before loc_6B0E8 clears
         // Boss_flag, widens the camera, and spawns Obj_EggCapsule.

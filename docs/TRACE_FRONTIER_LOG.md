@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f30027 / 140 errors (7 errors under
+f3318 / 4234 errors to f30462 / 65 errors (1 error under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -738,6 +738,21 @@ green and preserves every non-HCZ frontier/count exactly: CNZ complete f1846 /
 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5. Commands used the explicit
 S3K ROM path, one Surefire fork, and `-Dmse=off`; the full HCZ run omitted
 `trace.frontierOnly`, while the matrix included it.
+
+Milestone 64 gives the HCZ boss body the same published-coordinate phase as
+its ROM tail. `loc_6AF0C` completes the selected movement/routine handler,
+runs `sub_6BBC4`, and only then calls `Draw_And_Touch_Sprite`; the engine now
+uses that post-movement coordinate when the retained response-list pointer is
+consumed. This moves CPU Tails' exact sign-negating boss bounce from f30027 to
+the native f30028 (`sonic3k.asm:140808-140821`).
+
+HCZ advances from f30027 / 140 to f30462 / 65 full-run errors (1 under
+`frontierOnly`). The new owner is camera X at the boss transition (`$4050`
+expected, `$4068` actual). The focused HCZ policy suite passes 9/9. The
+granular nine-route S3K matrix again keeps AIZ complete and level-select green
+and preserves every non-HCZ frontier/count: CNZ complete f1846 / 5, CNZ
+level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
+ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 Milestone 31 restores TurboSpiker's detached-shell direction. The shell child
 inherits the parent's post-retreat render bit, but `loc_87D72` interprets that
