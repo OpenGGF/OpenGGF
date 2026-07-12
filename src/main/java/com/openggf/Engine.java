@@ -831,6 +831,63 @@ public class Engine {
 		enterConfiguredStartupMode();
 	}
 
+	/** Detection-free boot for one effective standalone descriptor. */
+	void initializeStandaloneGame(com.openggf.mods.ModDescriptor descriptor) {
+		Objects.requireNonNull(descriptor, "descriptor");
+		try {
+			GameplayModeContext gameplay = openStandaloneSession(descriptor);
+			GameModule module = gameplay.getWorldSession().getGameModule();
+			pinStandaloneDefaultTeam(module);
+			if (!preparePresentationForLaunch(module, true)) return;
+			initializeGameplayRuntime(gameplay, true);
+			loadDefaultStartingLevel(false);
+			gameLoop.setGameMode(GameMode.LEVEL);
+		} catch (com.openggf.mods.code.ModFaultBoundary.CallbackAborted aborted) {
+			LOGGER.log(java.util.logging.Level.SEVERE,
+					"Standalone mod callback aborted launch", aborted);
+			showStandaloneLaunchError();
+		} catch (IOException | RuntimeException failure) {
+			LOGGER.log(java.util.logging.Level.SEVERE, "Standalone mod launch failed", failure);
+			showStandaloneLaunchError();
+		}
+	}
+
+	/** Package-visible no-render standalone session seam for headless integration tests. */
+	GameplayModeContext openStandaloneSession(com.openggf.mods.ModDescriptor descriptor)
+			throws IOException {
+		Objects.requireNonNull(descriptor, "descriptor");
+		if (descriptor.manifest().type() != com.openggf.mods.ModType.STANDALONE) {
+			throw new IllegalArgumentException("Descriptor is not standalone");
+		}
+		String owner = descriptor.manifest().id();
+		com.openggf.mods.ModDescriptor retained = modRuntime.standaloneDescriptor(owner);
+		if (!retained.sha256().equals(descriptor.sha256())
+				|| !retained.manifest().equals(descriptor.manifest())) {
+			throw new IllegalArgumentException("Standalone descriptor does not match runtime snapshot");
+		}
+		GameModule module = modRuntime.prepareStandaloneModule(owner).orElseThrow(() ->
+				new com.openggf.mods.code.ModRegistrationException(owner,
+						"Standalone registration did not publish a module"));
+		ModSubsystem.current().recordRegistrationFailures(modRuntime.registrationFailures());
+		GameDataSource source = new ModAssetDataSource(
+				owner, modRuntime.standaloneAssetSnapshot(owner));
+		return com.openggf.tools.HeadlessGameBoot.openStandaloneSessionForBoot(
+				EngineServices.current(), module, source);
+	}
+
+	private void pinStandaloneDefaultTeam(GameModule module) {
+		PlayableCharacterRegistry registry = module.getPlayableCharacterRegistry();
+		configService.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,
+				standaloneDefaultCharacter(registry).persisted());
+		configService.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+	}
+
+	static CharacterKey standaloneDefaultCharacter(PlayableCharacterRegistry registry) {
+		return Objects.requireNonNull(registry, "registry").definitions().keySet().stream()
+				.findFirst().orElseThrow(() ->
+						new IllegalStateException("Standalone module has no playable character"));
+	}
+
 	GameModule resolveInitialModuleForLaunch(GameModule rootModule) {
 		ModuleResolutionService.LaunchPolicy launchPolicy =
 				configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
@@ -912,6 +969,11 @@ public class Engine {
 		masterTitleScreen.showModLaunchError(
 				configService.getString(SonicConfiguration.DEFAULT_ROM));
 		gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+	}
+
+	void showStandaloneLaunchError() {
+		SessionManager.closeGameplaySession();
+		showModLaunchError();
 	}
 
 	private void showStartupRomError(String message) {
@@ -1264,6 +1326,10 @@ public class Engine {
 	}
 
 	private boolean preparePresentationForLaunch(GameModule module) {
+		return preparePresentationForLaunch(module, false);
+	}
+
+	private boolean preparePresentationForLaunch(GameModule module, boolean standalone) {
 		try {
 			if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
 				audioManager.setBackendForLaunch(new LWJGLAudioBackend(configService, profiler));
@@ -1271,15 +1337,15 @@ public class Engine {
 			ModSubsystem subsystem = ModSubsystem.current();
 			if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)
 					&& subsystem.policy().mayUseInSession()) {
-				subsystem.beginNormalSession(audioManager.outputSampleRate(),
-						module.getGameId().code());
+				subsystem.beginNormalSession(audioManager.outputSampleRate(), module.getGameCode());
 			}
 			return true;
 		} catch (RuntimeException error) {
 			LOGGER.severe("Failed to prepare external presentation content: " + error.getMessage());
 			ModSubsystem.current().returnToTitle();
 			audioManager.resetState();
-			showStartupRomError("Failed to initialize audio or mod presentation content.");
+			if (standalone) showStandaloneLaunchError();
+			else showStartupRomError("Failed to initialize audio or mod presentation content.");
 			return false;
 		}
 	}
@@ -1324,8 +1390,8 @@ public class Engine {
 		}
 	}
 
-	private void loadDefaultStartingLevel(boolean requireRom) {
-		if (!requireRom && !romManager.isRomAvailable()) {
+	void loadDefaultStartingLevel(boolean requireRom) {
+		if (requireRom && !romManager.isRomAvailable()) {
 			return;
 		}
 		try {

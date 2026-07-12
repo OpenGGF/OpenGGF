@@ -295,6 +295,21 @@ public final class HeadlessGameBoot implements AutoCloseable {
         return SessionManager.openGameplaySession(rootModule, module, dataSource, null);
     }
 
+    /** Detection-free no-ROM join point for an already owner-wrapped standalone module. */
+    public static GameplayModeContext openStandaloneSessionForBoot(
+            EngineContext services, GameModule module,
+            com.openggf.game.GameDataSource dataSource) {
+        java.util.Objects.requireNonNull(services, "services");
+        java.util.Objects.requireNonNull(module, "module");
+        java.util.Objects.requireNonNull(dataSource, "dataSource");
+        if (module.getGameId() != com.openggf.game.GameId.STANDALONE
+                || !module.getGameCode().equals(module.getIdentifier())
+                || dataSource.rom().isPresent()) {
+            throw new IllegalArgumentException("Invalid standalone module/data source join");
+        }
+        return SessionManager.openGameplaySession(module, module, dataSource, null);
+    }
+
     static void disableExternalContentForDeterminism() {
         ModSubsystem.disableCurrentSessionForDeterminism();
     }

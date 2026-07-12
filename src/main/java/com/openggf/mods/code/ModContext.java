@@ -16,6 +16,7 @@ import java.util.Objects;
 public final class ModContext {
     private final String owner;
     private final String baseGame;
+    private final boolean standalone;
     private final ModAssetRoot assets;
     private final Map<String, ObjectFactory> objects = new LinkedHashMap<>();
     private final Map<String, BakedSheetRef> art = new LinkedHashMap<>();
@@ -29,14 +30,24 @@ public final class ModContext {
             = new LinkedHashMap<>();
     private boolean frozen;
     private ModRegistrationException poison;
+    private com.openggf.game.GameModule gameModule;
 
     ModContext(String owner, String baseGame, ModAssetRoot assets) {
         this(owner, baseGame, assets, null);
     }
 
     ModContext(String owner, String baseGame, ModAssetRoot assets, String defaultInsertAfter) {
+        this(owner, baseGame, assets, defaultInsertAfter, false);
+    }
+
+    ModContext(String owner, String baseGame, ModAssetRoot assets, String defaultInsertAfter,
+            boolean standalone) {
         this.owner = ModKeySyntax.requireManifestId(owner);
-        this.baseGame = Objects.requireNonNull(baseGame, "baseGame");
+        this.standalone = standalone;
+        this.baseGame = standalone ? baseGame : Objects.requireNonNull(baseGame, "baseGame");
+        if (standalone && baseGame != null) {
+            throw new IllegalArgumentException("Standalone registration forbids a base game");
+        }
         this.assets = Objects.requireNonNull(assets, "assets");
         this.defaultInsertAfter = defaultInsertAfter;
     }
@@ -45,8 +56,25 @@ public final class ModContext {
     public String baseGameId() { return baseGame; }
     public ModAssetRoot modAssets() { requireOpen(); return assets; }
 
+    /** Stages the single no-ROM module owned by a standalone manifest. */
+    public void registerGameModule(com.openggf.game.GameModule module) {
+        mutate(() -> {
+            if (!standalone) throw failure("Only standalone manifests may register a game module");
+            Objects.requireNonNull(module, "module");
+            if (module.getGameId() != com.openggf.game.GameId.STANDALONE) {
+                throw failure("Standalone module must report GameId.STANDALONE");
+            }
+            if (!owner.equals(module.getGameCode()) || !owner.equals(module.getIdentifier())) {
+                throw failure("Standalone module identifier and game code must equal owner " + owner);
+            }
+            if (gameModule != null) throw failure("Standalone game module is already registered");
+            gameModule = module;
+        });
+    }
+
     public void registerGamePatch(GamePatch patch) {
         mutate(() -> {
+            if (standalone) throw failure("Standalone manifests cannot register game patches");
             Objects.requireNonNull(patch, "patch");
             if (!baseGame.equals(patch.baseGameId())) {
                 throw failure("Patch targets " + patch.baseGameId() + " instead of " + baseGame);
@@ -133,6 +161,9 @@ public final class ModContext {
     ModRegistrationPlan freeze() {
         requireOpen();
         try {
+            if (standalone && gameModule == null) {
+                throw failure("Standalone manifest must register exactly one game module");
+            }
             objectPreviewArtKeys.forEach((objectKey,artKey)-> {
                 if(!objects.containsKey(objectKey))throw failure("Preview maps unknown object key: "+objectKey);
                 if(!art.containsKey(artKey))throw failure("Preview maps unknown art key: "+artKey);
@@ -149,7 +180,7 @@ public final class ModContext {
             }
             frozen = true;
             return new ModRegistrationPlan(owner, baseGame, objects, art, Map.of(), patches,
-                    zones, prepared,objectPreviewArtKeys,characters);
+                    zones, prepared,objectPreviewArtKeys,characters,gameModule);
         } catch (java.io.IOException | RuntimeException rejected) {
             if (rejected instanceof ModRegistrationException registration) poison = registration;
             else poison = new ModRegistrationException(owner, "MOD_LEVEL_ASSET_INVALID",

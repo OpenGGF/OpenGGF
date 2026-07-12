@@ -43,7 +43,7 @@ class TestEffectiveCatalogBuilder {
     }
 
     @Test
-    void phaseTwoActivatesDataFieldsAndTrustedCodeButKeepsStandaloneAndUntrustedCodeBlocked() {
+    void phaseThreeActivatesStandaloneAndTrustedCodeButKeepsUntrustedCodeBlocked() {
         ModDescriptor standalone = descriptor("standalone", ModType.STANDALONE, null, "1.0.0", "*",
                 List.of(), false, null, Map.of(), null, OptionalInt.empty(), List.of());
         ModDescriptor codeEntry = descriptor("code-entry", "s1", "1.0.0", "*",
@@ -66,12 +66,13 @@ class TestEffectiveCatalogBuilder {
                         new ModState.Entry("trusted-code", true, 3, true, trustedCode.sha256()),
                         entry("art", true, 4), entry("insert", true, 5), entry("windows", true, 6)));
 
-        assertReason(result, "standalone", "PHASE1_STANDALONE_UNSUPPORTED");
+        assertEquals(ModEligibility.Status.EFFECTIVE,
+                result.eligibility().get("standalone").status());
         assertEquals(ModEligibility.Status.EFFECTIVE, result.eligibility().get("code-entry").status());
         assertReason(result, "code-file", "CODE_TRUST_REQUIRED");
         assertEquals("contains code — trust required (press accept twice)",
                 reason(result, "code-file", "CODE_TRUST_REQUIRED").message());
-        assertEquals(List.of("code-entry", "trusted-code", "art", "insert", "windows"),
+        assertEquals(List.of("standalone", "code-entry", "trusted-code", "art", "insert", "windows"),
                 effectiveIds(result));
     }
 

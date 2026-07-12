@@ -9661,6 +9661,7 @@ METHOD com.openggf.mods.code.ModContext public  com.openggf.io.ModAssetRoot modA
 METHOD com.openggf.mods.code.ModContext public  java.lang.String baseGameId()
 METHOD com.openggf.mods.code.ModContext public  java.lang.String ownerModId()
 METHOD com.openggf.mods.code.ModContext public  void registerCharacter(java.lang.String,com.openggf.game.CharacterDefinition)
+METHOD com.openggf.mods.code.ModContext public  void registerGameModule(com.openggf.game.GameModule)
 METHOD com.openggf.mods.code.ModContext public  void registerGamePatch(com.openggf.game.patch.GamePatch)
 METHOD com.openggf.mods.code.ModContext public  void registerObject(java.lang.String,com.openggf.level.objects.ObjectFactory)
 METHOD com.openggf.mods.code.ModContext public  void registerObjectArt(java.lang.String,com.openggf.mods.code.BakedSheetRef)
