@@ -672,6 +672,21 @@ non-HCZ frontier/count exactly: CNZ complete f1846 / 5, CNZ level-select f291 /
 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ
 f2920 / 1, and LBZ f2270 / 5.
 
+Milestone 60 removes the synthetic `$100` pre-attack timer introduced while
+separating the consolidated setup dispatch. `loc_6B01E` now stores the ROM's
+literal `$FF`; expiry retains `loc_6B03A` for a setup-only engine dispatch,
+which changes the routine/velocities without performing an extra
+`Swing_UpAndDown` or `MoveSprite2` step (`sonic3k.asm:140934-140973,
+177944-177952`).
+
+The full HCZ comparison remains at f29176 / 355 errors (10 under
+`frontierOnly`), now narrowed to Tails' post-hit Y (`0x077F` expected versus
+`0x0780` actual). Focused boss/turbine/water-column tests pass. The granular
+nine-route S3K matrix keeps both AIZ routes green and preserves every non-HCZ
+frontier/count exactly: CNZ complete f1846 / 5, CNZ level-select f291 / 7,
+MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920
+/ 1, and LBZ f2270 / 5.
+
 Milestone 31 restores TurboSpiker's detached-shell direction. The shell child
 inherits the parent's post-retreat render bit, but `loc_87D72` interprets that
 bit oppositely for its own `$100` X velocity: the badnik retreats one way while

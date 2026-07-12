@@ -132,6 +132,8 @@ public class HczEndBossInstance extends AbstractBossInstance
     // =========================================================================
     private int waitTimer = -1;
     private WaitCallback waitCallback = WaitCallback.NONE;
+    /** Retains loc_6B03A for the next consolidated setup dispatch. */
+    private boolean pendingAttackSetupDispatch;
     private boolean customFlashDirty;
     private S3kSharedBossCameraGate cameraGate;
 
@@ -181,6 +183,7 @@ public class HczEndBossInstance extends AbstractBossInstance
         state.renderFlags = 0;
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
+        pendingAttackSetupDispatch = false;
         customFlashDirty = false;
         if (cameraGate == null) {
             cameraGate = new S3kSharedBossCameraGate();
@@ -295,6 +298,14 @@ public class HczEndBossInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+        if (pendingAttackSetupDispatch) {
+            pendingAttackSetupDispatch = false;
+            beginAttackPhase();
+            updateCustomFlash();
+            updateDynamicSpawn(state.x, state.y);
+            return;
+        }
+
         switch (state.routine) {
             case ROUTINE_INIT -> updateInit();
             case ROUTINE_DESCEND -> updateMoveAndWait();
@@ -479,11 +490,7 @@ public class HczEndBossInstance extends AbstractBossInstance
         state.y = hoverCentreY;
         state.yFixed = hoverCentreY << 16;
         state.yVel = 0;
-        // The consolidated engine reaches this callback inside the preceding
-        // move/wait dispatch. Keep the setup dispatch separate from the ROM
-        // $FF countdown consumed by loc_6AFB6 -> Obj_Wait: the first future
-        // update publishes the setup state, then the native countdown runs.
-        setWait(0x100, WaitCallback.BEGIN_ATTACK_PHASE);
+        setWait(0xFF, WaitCallback.BEGIN_ATTACK_PHASE);
     }
 
     /**
@@ -739,7 +746,7 @@ public class HczEndBossInstance extends AbstractBossInstance
             case PRE_ATTACK_WAIT_COMPLETE -> onPreAttackWaitComplete();
             case ST_DESCENT_COMPLETE -> onStDescentComplete();
             case ST_RISE_COMPLETE -> onStRiseComplete();
-            case BEGIN_ATTACK_PHASE -> beginAttackPhase();
+            case BEGIN_ATTACK_PHASE -> pendingAttackSetupDispatch = true;
             case ATTACK_PASS_COMPLETE -> onAttackPassComplete();
             case BEGIN_FLEE_SEQUENCE -> beginFleeSequence();
             case NONE -> {

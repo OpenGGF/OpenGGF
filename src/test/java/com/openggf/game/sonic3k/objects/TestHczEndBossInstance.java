@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestHczEndBossInstance {
     @Test
-    void preAttackSetupRetainsTheNativeFullFfCountdown() throws Exception {
+    void preAttackSetupDefersTheCallbackWithoutAddingASwingStep() throws Exception {
         TestObjectServices services = new TestObjectServices()
                 .withConfiguration(SonicConfigurationService.getInstance());
         HczEndBossInstance boss = ObjectConstructionContext.construct(
@@ -31,8 +31,30 @@ class TestHczEndBossInstance {
 
         Field waitTimer = HczEndBossInstance.class.getDeclaredField("waitTimer");
         waitTimer.setAccessible(true);
-        assertEquals(0x100, waitTimer.getInt(boss),
-                "the folded callback must retain a setup dispatch before loc_6AFB6 consumes the $FF timer");
+        assertEquals(0xFF, waitTimer.getInt(boss),
+                "loc_6B01E stores the native $FF Obj_Wait countdown");
+        Field stateY = boss.getState().getClass().getField("y");
+        int setupY = stateY.getInt(boss.getState());
+        waitTimer.setInt(boss, 0);
+
+        Method tickWait = HczEndBossInstance.class.getDeclaredMethod("tickWait");
+        tickWait.setAccessible(true);
+        tickWait.invoke(boss);
+
+        Field pending = HczEndBossInstance.class.getDeclaredField("pendingAttackSetupDispatch");
+        pending.setAccessible(true);
+        assertTrue(pending.getBoolean(boss));
+        assertEquals(10, boss.getState().routine);
+
+        Method update = HczEndBossInstance.class.getDeclaredMethod(
+                "updateBossLogic", int.class, com.openggf.game.PlayableEntity.class);
+        update.setAccessible(true);
+        update.invoke(boss, 0, null);
+
+        assertFalse(pending.getBoolean(boss));
+        assertEquals(12, boss.getState().routine);
+        assertEquals(setupY, stateY.getInt(boss.getState()),
+                "the setup-only dispatch must not add an extra swing movement");
     }
 
     @Test
