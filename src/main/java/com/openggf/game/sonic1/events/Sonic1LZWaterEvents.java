@@ -1,9 +1,9 @@
 package com.openggf.game.sonic1.events;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.sonic1.Sonic1SwitchManager;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
-import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.audio.AudioManager;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
@@ -722,8 +722,23 @@ public class Sonic1LZWaterEvents {
      * matching the ROM's call order in LZWaterFeatures.
      */
     public void updateWindTunnels() {
-        AbstractPlayableSprite player = camera().getFocusedSprite();
+        updateWindTunnels(camera().getFocusedSprite(), true);
+    }
+
+    /**
+     * Engine extension of the native single-player tunnel routine. The focused
+     * main path remains first and owns the ROM globals/sound cadence; configured
+     * sidekicks receive the same transport without sharing an anonymous latch.
+     */
+    public void updateWindTunnels(AbstractPlayableSprite player, boolean nativeMain) {
         if (player == null) {
+            return;
+        }
+
+        if (!nativeMain && player.isObjectControlled()) {
+            if (isWindTunnelActiveFor(player, false)) {
+                player.setForcedAnimationId(-1);
+            }
             return;
         }
 
@@ -761,28 +776,34 @@ public class Sonic1LZWaterEvents {
             // ROM: play rushing water sound every $40 (64) frames.
             // Uses the global v_vbla_byte for parity with ROM frame-cycle phasing.
             // move.b (v_vbla_byte).w,d0 / andi.b #$3F,d0 / bne.s .skipsound
-            if ((vblaByte() & 0x3F) == 0) {
+            if (nativeMain && (vblaByte() & 0x3F) == 0) {
                 audio().playSfx(Sonic1Sfx.WATERFALL.id);
             }
 
             // ROM: tst.b (f_wtunnelallow).w / bne.w .quit
             if (windTunnelDisabled) {
-                windTunnelPreserveGroundContact = false;
+                if (nativeMain) {
+                    windTunnelPreserveGroundContact = false;
+                }
                 return;
             }
 
             // ROM: cmpi.b #4,obRoutine(a1) / bhs.s .clrquit
             // obRoutine >= 4 means Sonic is hurt or dying
             if (player.isHurt() || player.getDead()) {
-                windTunnelActive = false;
-                windTunnelPreserveGroundContact = false;
+                if (nativeMain) {
+                    windTunnelActive = false;
+                    windTunnelPreserveGroundContact = false;
+                }
                 player.setForcedAnimationId(-1);
                 return;
             }
 
             // ROM: move.b #1,(f_wtunnelmode).w
-            windTunnelActive = true;
-            windTunnelPreserveGroundContact = !player.getAir();
+            if (nativeMain) {
+                windTunnelActive = true;
+                windTunnelPreserveGroundContact = !player.getAir();
+            }
 
             // ROM REV01 parity: the non-FixBugs path clobbers d0 with
             // v_vblank_byte during the sound gate and then reuses d0 for the
@@ -820,8 +841,9 @@ public class Sonic1LZWaterEvents {
             player.setYSpeed((short) 0);
 
             // move.b #id_Float2,obAnim(a1)  - floating animation
-            player.setAnimationId(Sonic1AnimationIds.FLOAT2);
-            player.setForcedAnimationId(Sonic1AnimationIds.FLOAT2);
+            int floatAnimation = player.resolveAnimationId(CanonicalAnimation.FLOAT2);
+            player.setAnimationId(floatAnimation);
+            player.setForcedAnimationId(floatAnimation);
 
             // bset #1,obStatus(a1)  - set airborne flag
             player.setAir(true);
@@ -845,14 +867,27 @@ public class Sonic1LZWaterEvents {
 
         // No tunnel matched
         // ROM: .chknext / dbf / tst.b (f_wtunnelmode).w / beq.s .quit
-        if (windTunnelActive) {
+        if (isWindTunnelActiveFor(player, nativeMain)) {
             // ROM: move.b #id_Walk,obAnim(a1) - restore walk animation
-            player.setAnimationId(Sonic1AnimationIds.WALK);
+            player.setAnimationId(player.resolveAnimationId(CanonicalAnimation.WALK));
             player.setForcedAnimationId(-1);
             // ROM: .clrquit: clr.b (f_wtunnelmode).w
-            windTunnelActive = false;
-            windTunnelPreserveGroundContact = false;
+            if (nativeMain) {
+                windTunnelActive = false;
+                windTunnelPreserveGroundContact = false;
+            }
         }
+    }
+
+    private boolean isWindTunnelActiveFor(AbstractPlayableSprite player, boolean nativeMain) {
+        if (nativeMain) {
+            return windTunnelActive;
+        }
+        if (player == null) {
+            return false;
+        }
+        int floatAnimation = player.resolveAnimationId(CanonicalAnimation.FLOAT2);
+        return floatAnimation >= 0 && player.getForcedAnimationId() == floatAnimation;
     }
 
     /**
@@ -875,8 +910,18 @@ public class Sonic1LZWaterEvents {
      * SBZ3 uses LZ water mechanics with its own tunnel region.
      */
     public void updateWindTunnelsSBZ3() {
-        AbstractPlayableSprite player = camera().getFocusedSprite();
+        updateWindTunnelsSBZ3(camera().getFocusedSprite(), true);
+    }
+
+    public void updateWindTunnelsSBZ3(AbstractPlayableSprite player, boolean nativeMain) {
         if (player == null || player.isDebugMode()) {
+            return;
+        }
+
+        if (!nativeMain && player.isObjectControlled()) {
+            if (isWindTunnelActiveFor(player, false)) {
+                player.setForcedAnimationId(-1);
+            }
             return;
         }
 
@@ -890,24 +935,30 @@ public class Sonic1LZWaterEvents {
 
             // Player is inside this tunnel region.
             // Use the global v_vbla_byte for sound timing parity with ROM.
-            if ((vblaByte() & 0x3F) == 0) {
+            if (nativeMain && (vblaByte() & 0x3F) == 0) {
                 audio().playSfx(Sonic1Sfx.WATERFALL.id);
             }
 
             if (windTunnelDisabled) {
-                windTunnelPreserveGroundContact = false;
+                if (nativeMain) {
+                    windTunnelPreserveGroundContact = false;
+                }
                 return;
             }
 
             if (player.isHurt() || player.getDead()) {
-                windTunnelActive = false;
-                windTunnelPreserveGroundContact = false;
+                if (nativeMain) {
+                    windTunnelActive = false;
+                    windTunnelPreserveGroundContact = false;
+                }
                 player.setForcedAnimationId(-1);
                 return;
             }
 
-            windTunnelActive = true;
-            windTunnelPreserveGroundContact = !player.getAir();
+            if (nativeMain) {
+                windTunnelActive = true;
+                windTunnelPreserveGroundContact = !player.getAir();
+            }
 
             // SBZ3 curve: no act-specific negation (not act 2)
             // ROM uses add.w / addq.w / subq.w word writes, preserving obSubpixelX/Y.
@@ -923,8 +974,9 @@ public class Sonic1LZWaterEvents {
             player.setCentreXPreserveSubpixel((short) (player.getCentreX() + 4));
             player.setXSpeed(WIND_TUNNEL_X_VELOCITY);
             player.setYSpeed((short) 0);
-            player.setAnimationId(Sonic1AnimationIds.FLOAT2);
-            player.setForcedAnimationId(Sonic1AnimationIds.FLOAT2);
+            int floatAnimation = player.resolveAnimationId(CanonicalAnimation.FLOAT2);
+            player.setAnimationId(floatAnimation);
+            player.setForcedAnimationId(floatAnimation);
             player.setAir(true);
 
             if (player.isUpPressed()) {
@@ -936,11 +988,13 @@ public class Sonic1LZWaterEvents {
             return;
         }
 
-        if (windTunnelActive) {
-            player.setAnimationId(Sonic1AnimationIds.WALK);
+        if (isWindTunnelActiveFor(player, nativeMain)) {
+            player.setAnimationId(player.resolveAnimationId(CanonicalAnimation.WALK));
             player.setForcedAnimationId(-1);
-            windTunnelActive = false;
-            windTunnelPreserveGroundContact = false;
+            if (nativeMain) {
+                windTunnelActive = false;
+                windTunnelPreserveGroundContact = false;
+            }
         }
     }
 
@@ -979,7 +1033,11 @@ public class Sonic1LZWaterEvents {
      *                        or -1 if not available
      */
     public void checkWaterSlide(int chunkIdAtPlayer) {
-        AbstractPlayableSprite player = camera().getFocusedSprite();
+        checkWaterSlide(camera().getFocusedSprite(), chunkIdAtPlayer, true);
+    }
+
+    /** Main-first multi-player extension of {@code LZWaterSlides}. */
+    public void checkWaterSlide(AbstractPlayableSprite player, int chunkIdAtPlayer, boolean nativeMain) {
         if (player == null) {
             return;
         }
@@ -989,8 +1047,8 @@ public class Sonic1LZWaterEvents {
         // In our engine objects update first, so skip slide logic when an object
         // has control to avoid overriding the object's animation.
         if (player.isObjectControlled()) {
-            if (waterSlideActive) {
-                handleSlideExit(player);
+            if (isWaterSlideActiveFor(player, nativeMain)) {
+                handleSlideExit(player, nativeMain);
             }
             return;
         }
@@ -1007,7 +1065,7 @@ public class Sonic1LZWaterEvents {
             // non-matching chunk after a slide (docs/s1disasm/_inc/
             // LZWaterFeatures.asm:408-415). Keeping slide mode alive for
             // hysteresis skips Sonic_Move input longer than the ROM.
-            handleSlideExit(player);
+            handleSlideExit(player, nativeMain);
             return;
         }
 
@@ -1032,17 +1090,19 @@ public class Sonic1LZWaterEvents {
         player.setGSpeed((short) (speed * 256));
 
         // ROM: move.b #id_WaterSlide,obAnim(a1)
-        player.setAnimationId(Sonic1AnimationIds.WATER_SLIDE);
+        player.setAnimationId(player.resolveAnimationId(CanonicalAnimation.WATER_SLIDE));
         player.setSliding(true);
 
         // ROM: move.b #1,(f_slidemode).w
-        waterSlideActive = true;
+        if (nativeMain) {
+            waterSlideActive = true;
+        }
 
         // ROM: play waterfall SFX every $20 (32) frames
         // move.b (v_vbla_byte).w,d0 / andi.b #$1F,d0 / bne.s locret_3FBE
         // Note: water slides use $1F mask (every 32 frames), not $3F like tunnels.
         // Uses the global v_vbla_byte for parity with ROM frame-cycle phasing.
-        if ((vblaByte() & 0x1F) == 0) {
+        if (nativeMain && (vblaByte() & 0x1F) == 0) {
             audio().playSfx(Sonic1Sfx.WATERFALL.id);
         }
     }
@@ -1054,8 +1114,8 @@ public class Sonic1LZWaterEvents {
      * <p>When leaving a slide, the ROM sets objoff_3E to 5 (a brief cooldown
      * before normal movement resumes) and clears f_slidemode.
      */
-    private void handleSlideExit(AbstractPlayableSprite player) {
-        if (!waterSlideActive) {
+    private void handleSlideExit(AbstractPlayableSprite player, boolean nativeMain) {
+        if (!isWaterSlideActiveFor(player, nativeMain)) {
             return;
         }
         // ROM: move.w #5,objoff_3E(a1)
@@ -1064,8 +1124,14 @@ public class Sonic1LZWaterEvents {
         player.setMoveLockTimer(5);
 
         // ROM: clr.b (f_slidemode).w
-        waterSlideActive = false;
+        if (nativeMain) {
+            waterSlideActive = false;
+        }
         player.setSliding(false);
+    }
+
+    private boolean isWaterSlideActiveFor(AbstractPlayableSprite player, boolean nativeMain) {
+        return nativeMain ? waterSlideActive : player != null && player.isSliding();
     }
 
     private int findSlideChunkIndex(int chunkId) {

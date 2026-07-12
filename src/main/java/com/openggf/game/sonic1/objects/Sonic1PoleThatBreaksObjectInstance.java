@@ -1,11 +1,11 @@
 package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.CanonicalAnimation;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.Sonic1ZoneFeatureProvider;
 import com.openggf.game.ZoneFeatureProvider;
-import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -82,6 +82,12 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
 
     // obColProp emulation signal from touch callback.
     private boolean touchSignal;
+    /** Stable owner for the engine's extended sidekick path; null on the native wait path. */
+    private AbstractPlayableSprite controlledPlayer;
+    /** First eligible actor from the main-first touch pass for this frame. */
+    private AbstractPlayableSprite touchPlayer;
+    /** Whether the current owner is the native v_player path that owns f_wtunnelallow. */
+    private boolean nativeControlOwner;
 
     public Sonic1PoleThatBreaksObjectInstance(ObjectSpawn spawn) {
         super(spawn, "PoleThatBreaks");
@@ -91,21 +97,33 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        AbstractPlayableSprite updatePlayer = (AbstractPlayableSprite) playerEntity;
         if (routine != Routine.ACTION) {
             return;
         }
 
         if (poleGrabbed) {
-            updateGrabbedPlayer(player);
+            if (controlledPlayer == null || controlledPlayer.getDead()) {
+                releasePlayer(controlledPlayer);
+                return;
+            }
+            updateGrabbedPlayer(controlledPlayer);
             return;
         }
 
-        tryGrabPlayer(player);
+        tryGrabPlayer(touchPlayer != null ? touchPlayer : updatePlayer);
+    }
+
+    @Override
+    public boolean isPersistent() {
+        // The engine extension can bind a sidekick that is not the camera focus.
+        // Keep Obj0B alive until its single owner releases so off-screen
+        // windowing cannot leave that actor under permanent object control.
+        return poleGrabbed && routine == Routine.ACTION;
     }
 
     private void tryGrabPlayer(AbstractPlayableSprite player) {
-        if (!touchSignal || player == null || player.isCpuControlled()) {
+        if (!touchSignal || player == null) {
             return;
         }
 
@@ -137,16 +155,23 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
         // Clear any forcedAnimationId left by wind tunnels (FLOAT2) since the ROM
         // has no separate forced field — obAnim is simply overwritten by the pole.
         player.setForcedAnimationId(-1);
-        player.setAnimationId(Sonic1AnimationIds.HANG);
+        player.setAnimationId(player.resolveAnimationId(CanonicalAnimation.HANG));
 
         // move.b #1,(f_playerctrl).w
         ObjectControlState.nativeBit7FullControl().applyTo(player);
 
-        // move.b #1,(f_wtunnelallow).w
-        setWindTunnelDisabled(true);
+        // move.b #1,(f_wtunnelallow).w belongs to native v_player. Extension
+        // sidekicks suppress their own tunnel path through object control and
+        // must not clobber this shared ROM flag while main is on another pole.
+        nativeControlOwner = isNativeMain(player);
+        if (nativeControlOwner) {
+            setWindTunnelDisabled(true);
+        }
 
         // move.b #1,pole_grabbed(a0)
         poleGrabbed = true;
+        controlledPlayer = player;
+        touchPlayer = null;
     }
 
     private void updateGrabbedPlayer(AbstractPlayableSprite player) {
@@ -200,11 +225,16 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
         if (player != null) {
             ObjectControlState.none().applyTo(player);
         }
-        setWindTunnelDisabled(false);
+        if (nativeControlOwner) {
+            setWindTunnelDisabled(false);
+        }
 
         // clr.b pole_grabbed(a0)
         poleGrabbed = false;
         touchSignal = false;
+        controlledPlayer = null;
+        touchPlayer = null;
+        nativeControlOwner = false;
     }
 
     @Override
@@ -230,10 +260,16 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
     @Override
     public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (routine != Routine.ACTION || poleGrabbed || player == null || player.isCpuControlled()) {
+        if (routine != Routine.ACTION || poleGrabbed || player == null) {
             return;
         }
-        touchSignal = true;
+        boolean nativeMain = isNativeMain(player);
+        if (touchPlayer == null || nativeMain) {
+            // Native main always wins if an unusual harness/contact order
+            // reports an extension sidekick first in the same touch pass.
+            touchSignal = true;
+            touchPlayer = player;
+        }
     }
 
     @Override
@@ -272,6 +308,15 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
         ZoneFeatureProvider provider = services().zoneFeatureProvider();
         if (provider instanceof Sonic1ZoneFeatureProvider sonic1Provider) {
             sonic1Provider.setWindTunnelDisabled(disabled);
+        }
+    }
+
+    private boolean isNativeMain(AbstractPlayableSprite player) {
+        try {
+            PlayableEntity main = services().playerQuery().mainPlayerOrNull();
+            return main != null ? main == player : player != null && !player.isCpuControlled();
+        } catch (IllegalStateException ignored) {
+            return player != null && !player.isCpuControlled();
         }
     }
 }
