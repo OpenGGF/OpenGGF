@@ -69,12 +69,10 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
     // (x_pos - cam_x - width_pixels) < screen_width. width_pixels for Obj8C is $C
     // (subObjData ...,4,$C,$B at s2.asm:73223 -> the $C width field).
     private static final int RENDER_WIDTH_PIXELS = 0x0C;   // width_pixels(a0) for Obj8C
-    private static final int SCREEN_WIDTH = 320;
     // Obj8C is displayed with the approximate-Y check (level_fg, no explicit_height),
     // which assumes a Y radius of 32px: on-screen in Y when
     // (y_pos - cam_y) in [-32, screen_height+32) (s2.asm:30603-30609).
     private static final int RENDER_Y_RADIUS = 32;
-    private static final int SCREEN_HEIGHT = 224;
 
     private State state;
     private int timer;
@@ -164,12 +162,12 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
         int screenX = currentX - camera.getX();
         // X: (screenX + width) >= 0 && (screenX - width) < screen_width (s2.asm:30566-30571)
         if (screenX + RENDER_WIDTH_PIXELS < 0) return false;
-        if (screenX - RENDER_WIDTH_PIXELS >= SCREEN_WIDTH) return false;
+        if (screenX - RENDER_WIDTH_PIXELS >= viewportWidth()) return false;
         // Y: approximate check, radius 32 -> screenY in [-32, screen_height+32)
         // (s2.asm:30603-30609)
         int screenY = currentY - camera.getY();
         if (screenY + RENDER_Y_RADIUS < 0) return false;
-        if (screenY - RENDER_Y_RADIUS >= SCREEN_HEIGHT) return false;
+        if (screenY - RENDER_Y_RADIUS >= viewportHeight()) return false;
         return true;
     }
 

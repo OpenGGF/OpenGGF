@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.ButtonVineTriggerManager;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -18,7 +19,9 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -61,6 +64,9 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance implements 
     private boolean player2Grabbed;         // objoff_31
     private int player1ReleaseDelay;        // objoff_32 (byte at a2+2)
     private int player2ReleaseDelay;        // objoff_33 (byte at a2+2 for player 2)
+    private PlayableEntity player1Owner;
+    private PlayableEntity player2Owner;
+    private final Map<PlayableEntity, PlayerState> extensionStates = new IdentityHashMap<>();
 
     // === Rendering State ===
     private int mappingFrame;               // 0 = normal, 1 = grabbed
@@ -116,13 +122,75 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance implements 
         // Process player interactions
         // ROM: Obj7F_Main (loc_2981E) calls Obj7F_Action for each player
         List<PlayableEntity> participants = interactionParticipants(playerEntity);
+        bindNativeOwners(participants);
         for (int i = 0; i < participants.size(); i++) {
-            processPlayerInteraction((AbstractPlayableSprite) participants.get(i), i != 0);
+            AbstractPlayableSprite player = (AbstractPlayableSprite) participants.get(i);
+            if (i < 2) {
+                processPlayerInteraction(player, i == 1);
+            } else {
+                processExtensionPlayer(player);
+            }
         }
+        pruneOmittedExtensions(participants);
 
         // Update mapping frame based on grab state
         // ROM: tst.w objoff_30(a0) / beq.s + / move.b #1,mapping_frame(a0)
         updateMappingFrame();
+    }
+
+    private void bindNativeOwners(List<PlayableEntity> participants) {
+        PlayableEntity main = participants.isEmpty() ? null : participants.get(0);
+        PlayableEntity nativeP2 = participants.size() < 2 ? null : participants.get(1);
+        player1Owner = bindNativeOwner(false, player1Owner, main);
+        player2Owner = bindNativeOwner(true, player2Owner, nativeP2);
+    }
+
+    private PlayableEntity bindNativeOwner(boolean player2, PlayableEntity previous, PlayableEntity current) {
+        if (previous == current) {
+            return previous;
+        }
+        if (previous == null && current != null) {
+            PlayerState restored = extensionStates.remove(current);
+            if (restored != null) {
+                writeNativeState(player2, restored);
+            }
+            return current;
+        }
+        PlayerState nativeState = nativeState(player2);
+        if (previous != null && nativeState.hasState()) {
+            extensionStates.put(previous, nativeState);
+        }
+        clearNativeState(player2);
+        PlayerState restored = current != null ? extensionStates.remove(current) : null;
+        if (restored != null) {
+            writeNativeState(player2, restored);
+        }
+        return current;
+    }
+
+    private void processExtensionPlayer(AbstractPlayableSprite player) {
+        PlayerState extension = extensionStates.computeIfAbsent(player, ignored -> new PlayerState());
+        PlayerState nativeP2 = nativeState(true);
+        writeNativeState(true, extension);
+        processPlayerInteraction(player, true);
+        extension.copyFrom(nativeState(true));
+        writeNativeState(true, nativeP2);
+    }
+
+    private void pruneOmittedExtensions(List<PlayableEntity> participants) {
+        for (var iterator = extensionStates.entrySet().iterator(); iterator.hasNext();) {
+            var entry = iterator.next();
+            if (!containsIdentity(participants, entry.getKey())) {
+                releaseOwnedPlayer(entry.getKey(), entry.getValue());
+                iterator.remove();
+            } else if (!entry.getValue().hasState()) {
+                iterator.remove();
+            }
+        }
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity target) {
+        return participants.stream().anyMatch(player -> player == target);
     }
 
     private List<PlayableEntity> interactionParticipants(PlayableEntity updatePlayer) {
@@ -183,6 +251,10 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance implements 
      * @param isPlayer2 true if this is player 2
      */
     private void handleGrabbedPlayer(AbstractPlayableSprite player, boolean isPlayer2) {
+        if (player.getDead() || player.isHurt() || player.isDebugMode()) {
+            releasePlayer(player, isPlayer2);
+            return;
+        }
         // Check for A/B/C button PRESS (edge-triggered) to release.
         // ROM: andi.b #button_B_mask|button_C_mask|button_A_mask,d0 / beq.w return_29936
         // Critical: Obj7F_Main reads the RAW per-controller word -- (Ctrl_1) for the
@@ -369,8 +441,90 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance implements 
     private void updateMappingFrame() {
         // ROM: move.b #0,mapping_frame(a0) / tst.w objoff_30(a0) / beq.s + / move.b #1,mapping_frame(a0)
         // objoff_30 is a word containing both player grab flags
-        boolean anyPlayerGrabbed = player1Grabbed || player2Grabbed;
+        boolean anyPlayerGrabbed = player1Grabbed || player2Grabbed
+                || extensionStates.values().stream().anyMatch(state -> state.grabbed);
         mappingFrame = anyPlayerGrabbed ? 1 : 0;
+    }
+
+    @Override
+    public void onUnload() {
+        // Obj7F likewise tails its native action pass with MarkObjGone and
+        // leaves native obj_control untouched on deletion (s2.asm:56543-56549).
+        // Keep that native trace behavior while cleaning up extension owners.
+        for (var entry : extensionStates.entrySet()) {
+            releaseOwnedPlayer(entry.getKey(), entry.getValue());
+        }
+        extensionStates.clear();
+        clearNativeState(false);
+        clearNativeState(true);
+    }
+
+    private void releaseOwnedPlayer(PlayableEntity entity, PlayerState state) {
+        if (!state.grabbed || !(entity instanceof AbstractPlayableSprite player)) {
+            return;
+        }
+        ObjectControlState.none().applyTo(player);
+        state.grabbed = false;
+        if (!player1Grabbed && !player2Grabbed
+                && extensionStates.values().stream().noneMatch(other -> other.grabbed)) {
+            ButtonVineTriggerManager.setTrigger(switchId, false);
+        }
+    }
+
+    private PlayerState nativeState(boolean player2) {
+        return player2
+                ? new PlayerState(player2Grabbed, player2ReleaseDelay)
+                : new PlayerState(player1Grabbed, player1ReleaseDelay);
+    }
+
+    private void writeNativeState(boolean player2, PlayerState state) {
+        if (player2) {
+            player2Grabbed = state.grabbed;
+            player2ReleaseDelay = state.releaseDelay;
+        } else {
+            player1Grabbed = state.grabbed;
+            player1ReleaseDelay = state.releaseDelay;
+        }
+    }
+
+    private void clearNativeState(boolean player2) {
+        writeNativeState(player2, new PlayerState());
+    }
+
+    private static final class PlayerState implements RewindStateful<PlayerState.Snapshot> {
+        private boolean grabbed;
+        private int releaseDelay;
+
+        private PlayerState() {
+        }
+
+        private PlayerState(boolean grabbed, int releaseDelay) {
+            this.grabbed = grabbed;
+            this.releaseDelay = releaseDelay;
+        }
+
+        private void copyFrom(PlayerState other) {
+            grabbed = other.grabbed;
+            releaseDelay = other.releaseDelay;
+        }
+
+        private boolean hasState() {
+            return grabbed || releaseDelay != 0;
+        }
+
+        @Override
+        public Snapshot captureRewindStateValue() {
+            return new Snapshot(grabbed, releaseDelay);
+        }
+
+        @Override
+        public void restoreRewindStateValue(Snapshot state) {
+            grabbed = state.grabbed();
+            releaseDelay = state.releaseDelay();
+        }
+
+        private record Snapshot(boolean grabbed, int releaseDelay) {
+        }
     }
 
     @Override
