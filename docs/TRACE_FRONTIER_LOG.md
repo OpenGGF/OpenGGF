@@ -36752,3 +36752,16 @@ character-identity and physics-resolution changes:
   8941 on `camera_y` (expected `0x02C1`, actual `0x02B9`).
 - No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
   engine state was changed.
+
+### 2026-07-12 -- Phase 3 A3 behavior-archetype parity spot sweep
+
+Measured on `next` at `29aa96451` with the reviewed, uncommitted Phase 3 A3
+active-team archetype resolution changes:
+
+- Command:
+  `mvn "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test -Dmse=off`
+- S1 GHZ1 passed (1/1) and S2 EHZ1 passed (1/1).
+- S3K AIZ remained baseline-identical at 1,160 errors, first divergence frame
+  8941 on `camera_y` (expected `0x02C1`, actual `0x02B9`).
+- No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
+  engine state was changed.
