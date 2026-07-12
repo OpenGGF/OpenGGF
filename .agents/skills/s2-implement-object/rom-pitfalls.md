@@ -3426,6 +3426,30 @@ through `MvSonicOnPtfm` (`docs/s2disasm/s2.asm:35728-35739,35641-35660`).
 
 ---
 
+## P83 -- Shifted child positions can share the parent's unload anchor
+
+**Symptom.** One child of a multi-object assembly unloads at a camera boundary
+while the parent and sibling remain active. A captured parent list then exposes
+the stale reference because the removed child correctly loses its rewind id.
+
+**Root cause / fix.** The port derived each child's off-screen anchor from its
+shifted Java spawn. ROM initialized the child's live `x_pos/y_pos` and its
+`objoff_32/30` anchor from the parent first, then shifted only live position.
+Carry the pre-shift parent anchor separately from the child's spawn/current
+position. If Java also tracks the graph, retain the captured parent list as the
+authority and use only a deferred inverse owner link for defensive detach and
+post-restore relinking; do not hide the authoritative edge as transient.
+
+**ROM citation.** MCZ Obj6A allocates its two after-current children and shifts
+their live positions (`docs/s2disasm/s2.asm:54184-54204`), while
+`Obj6A_InitSubObject` copies the unshifted parent position into each child's
+`objoff_32/30` first (`s2.asm:54207-54213`). Both movement routines feed
+`objoff_32` to `MarkObjGone2` (`s2.asm:54278-54280,54303-54305`).
+
+**Originating commit.** `fix(rewind): detach unloaded MCZ rotating platform`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

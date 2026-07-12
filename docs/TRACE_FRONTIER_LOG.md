@@ -37599,3 +37599,41 @@ Verification:
   exited 0 with expected-red reports preserved: CNZ2 f9977 / 10
   (`tails_x_speed` expected `-0200`, actual `0x023A`) and MTZ3 f13477 / 4
   (`x_speed` expected `-03FB`, actual `0x03FB`).
+
+### 2026-07-12 -- S2 MCZ Obj6A rewind reference-closure repair
+
+The runtime reference-closure sweep on `bugfix/ai-rewind-reference-closure`
+at `a4b624b92` found two regressions in traces that were green in the pre-guard
+baseline:
+
+- MCZ1 stopped at trace index/ROM frame 944 after the engine dropped the left
+  child while the live parent was at X `$098F` and camera X reached `$0A05`.
+- MCZ2 stopped at trace index/ROM frame 4964 after the same false child drop
+  while the parent was at X `$0E60` and camera X reached `$0F07`.
+
+The closure guard exposed an engine lifetime bug, not an independently owned
+ROM child lifetime. Obj6A allocates separate child SST entries and shifts their
+live positions, but `Obj6A_InitSubObject` copies the parent's unshifted
+`x_pos/y_pos` into every child's `objoff_32/30` first. All three movement tails
+therefore test the same parent X anchor in `MarkObjGone2`
+(`docs/s2disasm/s2.asm:54184-54213,54278-54280,54303-54305`). The engine had
+incorrectly derived child anchors from shifted Java spawns, allowing one child
+to leave the live identity set early. Children now keep shifted live
+positions/spawns while inheriting the parent unload anchor.
+
+Parameterized manager-driven coverage seeds the previous S2 post-camera latch,
+passes the current pre-camera X to `ObjectManager.update`, and reproduces both
+former route windows (parent/camera `$098F/$0A05` and `$0E60/$0F07`) without
+manual deletion. It proves all three entries remain eligible together, closure
+capture succeeds, and a farther camera naturally culls the assembly together.
+Supplemental graph coverage retains the captured parent list, deferred inverse
+owner detach/relink, rewind restoration, and late pre-seek callback check.
+
+Verification from the uncommitted implementation worktree:
+
+- `mvn "-Dtest=com.openggf.game.sonic2.objects.TestS2MczRotPformsGraphRewind,com.openggf.level.objects.TestObjectManagerRewindReferenceClosure" surefire:test`
+  exited 0; all focused graph and manager reference-closure checks passed.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dsurefire.argLine=-Xmx2g" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`
+  exited 0; MCZ1 returned to its baseline PASS with no closure failure.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dsurefire.argLine=-Xmx2g" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`
+  exited 0; MCZ2 returned to its baseline PASS with no closure failure.

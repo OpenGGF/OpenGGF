@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **fix(rewind): preserve MCZ rotating-platform shared unload anchors.** Obj6A children keep their shifted live positions but now inherit the parent's pre-shift `objoff_32/30` anchor, so their independent SST execution cannot drop one child early and leave a stale captured reference. The authoritative parent child list retains a deferred inverse owner link for defensive detach and post-rewind relinking (`docs/s2disasm/s2.asm:54184-54213,54278-54280,54303-54305`).
 - **fix(rewind): classify AIZ intro glow spawn-derived state.** The glow child's immutable animation variant and plane offsets are now explicitly identified as derivatives of captured spawn subtype; construction rejects a disagreeing selector argument, and focused rewind coverage proves both child variants reconstruct their ROM-authored offsets.
 - **fix(rewind): detach unloaded ICZ capture clouds from their freezer.** When a capture cloud completes its off-phase self-delete, its live freezer parent no longer retains an unregistered object reference that breaks rewind reference-closure validation.
 - **fix(rewind): detach unloaded MHZ1 cutscene Knuckles actors from their button.** When the offscreen actor left the dynamic object set, its live parent button no longer retained an unregistered object reference that crashed rewind capture.
