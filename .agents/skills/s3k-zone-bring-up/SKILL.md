@@ -1,11 +1,11 @@
 ---
 name: s3k-zone-bring-up
-description: Use when bringing up a new S3K zone — orchestrates analysis, parallel feature implementation (events, parallax, animated tiles, palette cycling), merge, and validation for a target zone.
+description: Use when bringing up or completing an S3K zone, especially when work spans nonstandard events, objects, bosses, visual systems, route validation, or compatibility audits.
 ---
 
 # S3K Zone Bring-Up Orchestrator
 
-One-stop skill for full zone bring-up in Sonic 3 & Knuckles. Given a zone abbreviation, this skill runs analysis against the disassembly, dispatches parallel agents to implement each feature category, merges their work, verifies the build, and validates the result. It coordinates 6 other skills and is itself a coordinator -- it contains no implementation details.
+One-stop coordinator for complete Sonic 3 & Knuckles zone delivery. Preserve locked-on disassembly behavior first, close playable route slices second, defer expensive complete-run trace work until reachable content is broadly implemented, then audit OpenGGF compatibility modes without changing the native path.
 
 ## Agent Workflow Tooling
 
@@ -31,14 +31,18 @@ CNZ --validate-only
 
 ## Related Skills
 
-| Skill | Path | Purpose |
-|-------|------|---------|
-| **s3k-zone-analysis** | `.agents/skills/s3k-zone-analysis/SKILL.md` | Read the disassembly and produce a structured zone feature catalogue |
-| **s3k-zone-events** | `.agents/skills/s3k-zone-events/SKILL.md` | Implement camera locks, boss arenas, cutscenes, act transitions, palette mutations from Dynamic_Resize |
-| **s3k-parallax** | `.agents/skills/s3k-parallax/SKILL.md` | Implement per-line scroll handlers and deform routines |
-| **s3k-animated-tiles** | `.agents/skills/s3k-animated-tiles/SKILL.md` | Implement AniPLC script triggers, gating conditions, dynamic art overrides |
-| **s3k-palette-cycling** | `.agents/skills/s3k-palette-cycling/SKILL.md` | Implement AnPal handlers with counter/step/limit cycling and validation |
-| **s3k-zone-validate** | `.agents/skills/s3k-zone-validate/SKILL.md` | Visual comparison via stable-retro + image recognition for validation |
+| Required sub-skill | Purpose |
+|---|---|
+| **s3k-zone-analysis** | Read the disassembly and produce a structured zone feature catalogue |
+| **s3k-zone-events** | Implement camera locks, boss arenas, cutscenes, act transitions, and event palette mutations |
+| **s3k-parallax** | Implement per-line scroll handlers and deform routines |
+| **s3k-animated-tiles** | Implement AniPLC triggers, gating, and dynamic art overrides |
+| **s3k-palette-cycling** | Implement AnPal handlers and validation |
+| **s3k-zone-validate** | Compare stable-retro and engine visuals |
+| **s3k-implement-object** | Port placed gimmicks, hazards, badniks, and dynamic children |
+| **s3k-implement-boss** | Port minibosses, bosses, arenas, children, and defeat sequences |
+| **s3k-plc-system** | Implement and verify level, boss, and transition art handoffs |
+| **trace-replay-bug-fixing** | Run comparison-only late trace polish without hydration or carve-outs |
 
 ## S&K-Side Addresses by Default — Sonic 3 Standalone Is a Rare Fallback
 
@@ -54,6 +58,8 @@ When feature agents implement the zone, prefer the runtime-owned stack over besp
 - Tile/block/chunk edits should use `ZoneLayoutMutationPipeline` (directly or via `S3kSeamlessMutationExecutor`).
 - Extra overlays and frame render flags should go through `SpecialRenderEffectRegistry` / `AdvancedRenderModeController`.
 - New scanline-fill math should reuse `ScrollEffectComposer`, `DeformationPlan`, `ScatterFillPlan`, and `WaterlineBlendComposer`.
+- Objects must use `ObjectServices`; forced movement, participation, native coordinates, and lifecycle must use `ObjectControlState`, `ObjectPlayerQuery` / `ObjectPlayerParticipationPolicy`, `NativePositionOps`, and `ObjectLifetimeOps`.
+- New runtime and object state must have deterministic reset, checkpoint/death restore, session reload, and rewind capture/relink behavior. Run both rewind coverage guards and focused capture/restore round-trip tests.
 
 ## Slice-First Completion Rule
 
@@ -65,6 +71,7 @@ Every bring-up plan should identify:
 - Event flow: camera locks, bounds, cutscenes, act transitions, boss/miniboss arenas, and palette mutations.
 - Visual coherence: parallax, animated tiles, palette cycling, PLC/art loads, staged overlays, and render-mode state needed for the area to look recognizable.
 - Parity gates: known trace blockers, object lifecycle, player/sidekick participation, coordinate semantics, rewind-relevant state, focused headless tests, and stable-retro visual validation where practical.
+- Content inventory: placed IDs/subtypes/counts, shared objects, dynamic spawn graph, badniks, bosses/children, checkpoints, art/PLC/VRAM handoffs, audio cues, transitions, and placeholder status.
 
 When route blockers involve objects or bosses, make the object contract decision explicit in the plan: `ObjectControlState` for forced/control bits, `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` for native slots versus OpenGGF sidekicks, `ObjectLifetimeOps` for delete/despawn/remembered-object behavior, and canonical solid/touch/lifecycle profiles through compatibility wrappers. Guard work should ratchet baselines from inventory before hard-failing new shortcuts.
 
@@ -106,9 +113,17 @@ Agent prompt: "Use /s3k-zone-analysis {ZONE}"
 
 Wait for the analysis agent to complete before proceeding. The analysis spec is the input to all subsequent steps.
 
+Do not assume `Dynamic_Resize` owns all event behavior. Explicitly audit both acts' `Dynamic_Resize`, `ScreenInit`, `ScreenEvent`, `BackgroundInit`, `BackgroundEvent`, deform/background handlers, custom animated-tile wrappers, AnPal, and any zone-specific routines reached from those entry points.
+
+Create `docs/s3k-zones/{zone}-object-inventory.md` before implementation. Parse every locked-on placement file and record ID, subtype, per-act count, S3KL/SKL pointer resolution, route impact, placeholder/factory status, mappings/animation/art, audio cues, checkpoint interaction, allocation primitive, and test owner. Add a complete dynamic-spawn graph for event objects, projectiles, children, bosses, transitions, capsules/exits, and cleanup objects. Inventory shared placed objects as well as zone-prefixed objects.
+
+The analysis review packet must print the numeric total placement count for each act and the numeric count for every ID/subtype row. “All objects inventoried” without counts fails the gate.
+
 ### Step 2: Human Review Gate
 
 Present the analysis spec to the user for review. Display a summary:
+
+The four visual/event categories are not the full zone scope. Also decide and display route events and nonstandard handlers; traversal blockers; shared and zone-specific objects, badniks, bosses, projectiles, and children; PLC/KosinskiM/VRAM handoffs; music/SFX timing; checkpoints; exits; reset/rewind behavior; and the next-zone transition.
 
 ```
 Zone Analysis Complete: {ZONE} ({Full Name})
@@ -163,7 +178,26 @@ Feature Scope for {ZONE}:
   [VALIDATE] Palette Cycling -- {N} channels, already implemented
 ```
 
-### Step 4: Dispatch Feature Agents
+### Step 3.5: Build Route-Driven Implementation Waves
+
+Order work by playable dependency:
+
+1. Typed runtime state, event ownership, collision/render modes, art/animation foundations
+2. Act 1 traversal blockers/hazards, boss gate, and seamless transition
+3. Act 2 traversal blockers/hazards and boss prerequisites
+4. End-boss event, boss, defeat, exit, capsule, and next-zone transition
+5. Remaining reachable objects/badniks and visual/audio polish
+6. Late complete-run trace and stable-retro validation
+7. Multi-sidekick, widescreen, and cross-game donation audit
+8. Native-parity regression with compatibility features disabled
+
+No reachable placeholder is acceptable after wave 5. Each wave must name disjoint file ownership, dependencies, tests, verification commands, and reviewer checks.
+
+### Test-First Gate for Every Behavior Task
+
+Every behavior task follows RED-GREEN-REFACTOR: write one focused failing test, run and record the expected RED failure, implement the minimum disassembly-backed behavior, run focused and regression tests to GREEN, then obtain spec-compliance and code-quality review. Do not accept tests added only after implementation. Freeze known-red trace baselines before shared changes and reject regressions by first-error frame/error/warning comparison.
+
+### Step 4: Dispatch Implementation Agents
 
 Launch one agent per applicable feature in a separate worktree. Each agent receives the zone name and the path to the analysis spec.
 
@@ -201,7 +235,7 @@ Zone analysis spec: docs/s3k-zones/{zone}-analysis.md
 Read the Palette Cycling section of the analysis spec first for channel definitions and counter addresses.
 ```
 
-All applicable agents run in parallel. Wait for all to complete before proceeding to Step 5.
+Dispatch only independent tasks within the current route wave in parallel. Use `s3k-implement-object` for every object/badnik family, `s3k-implement-boss` for each boss sequence, and `s3k-plc-system` for art handoffs. Give each worker the analysis path, inventory rows, ROM labels, file ownership, failing test, verification command, and cross-cutting state dependencies. Wait for implementation and two-stage reviews to become green before starting dependent work.
 
 ### Step 5: Merge Results
 
@@ -234,7 +268,7 @@ Also run existing S3K tests to verify no regressions:
 mvn test -Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
 ```
 
-### Step 7: Validate
+### Step 7: Validate Focused and Visual Behavior
 
 Dispatch an agent with the `s3k-zone-validate` skill for the target zone:
 
@@ -243,6 +277,34 @@ Use /s3k-zone-validate {ZONE}
 ```
 
 The validation agent captures reference screenshots from stable-retro and compares them against the engine's output for feature presence (parallax layers, palette cycling, animated tiles, camera locks). Review the validation report and flag any FAIL results for manual investigation.
+
+Focused/headless tests remain the normal development loop. Do not start token-intensive complete-run trace capture/replay while major route events, reachable objects, bosses, or visual systems are placeholders.
+
+### Step 8: Run Late Complete-Run Trace Polish
+
+Only after both acts and all reachable content are broadly implemented, record/install the target complete-run BK2 segment and add fixture/replay tests. Replay controller input only: trace state is comparison context and must never hydrate engine state. Move the first divergence through disassembly-backed fixes. Never add tolerance masking, zone/route/frame carve-outs, or known-trace exceptions. Update `docs/TRACE_FRONTIER_LOG.md` whenever the frontier moves or a prior green regresses.
+
+### Step 9: Audit Compatibility Modes
+
+After native parity and late trace/visual polish, run mandatory final audits:
+
+- **Multi-sidekicks:** 0-3 sidekicks plus duplicate-character banks; explicitly test participant policy and shared mutable zone/event/boss state with three or more characters, plus solids/hazards, carriers, forced movement, bosses, transitions, and full-route completion.
+- **Widescreen:** every supported viewport width; verify world-coordinate gates, camera locks/releases, spawning/culling, hazards, boss arenas, screen-edge transitions, and prevention of premature activation or unsafe falls.
+- **Cross-game donation:** donor off plus every external donor supported by the host; complete mandatory routes and identify mechanics requiring unavailable abilities. Add only explicit semantic capability/profile workarounds with the blocked route and rationale documented. Preserve native behavior when donation is off.
+
+Rerun the strict locked-on native suite after compatibility work with donation and extension modes disabled.
+
+The compatibility report is invalid unless it explicitly records multi-sidekick shared-state results and, for every widescreen width, world-coordinate event-threshold results, boss-arena containment, premature event/object activation, unsafe falls/deaths, and camera-lock/release behavior. Do not collapse these into a generic “route passed” result.
+
+### Complete Definition of Done
+
+- Every applicable event entry point and nonstandard handler is implemented from the locked-on disassembly.
+- Every reachable placed ID/subtype and dynamic spawn has a concrete correct factory; no reachable placeholder remains.
+- Objects, badniks, bosses, transitions, art/PLC/VRAM, audio, visual systems, collision, reset, checkpoint, session, and rewind behavior have focused test-first coverage.
+- Both acts and all native character routes complete without debug bypasses.
+- Late complete-run replay is comparison-only and green; mandatory stable-retro checkpoints are PASS.
+- Multi-sidekick, widescreen, and cross-game donation audits pass.
+- Native locked-on tests are rerun after compatibility changes, and existing regression baselines are preserved.
 
 ## Shared File Conflict Resolution
 
@@ -273,3 +335,9 @@ Five files are touched by multiple feature agents. All changes are additive (new
 6. **Ignoring cross-cutting concerns from the analysis.** The analysis spec's "Cross-Cutting Concerns" section flags water systems, screen shake, character branching, and dynamic tilemap changes. These affect multiple features (e.g., water level changes in events affect parallax water-split logic). Review cross-cutting concerns before dispatch and include relevant notes in each agent's prompt.
 
 7. **Wrong merge order.** Events should merge first because event state variables (routine counters, boss flags) may be referenced by other features (animated tile gating, parallax mode switches). Merging parallax first and then events can create forward-reference errors if the parallax handler reads an event field that the events agent introduces.
+
+8. **Treating four feature agents as full zone completion.** A zone is not complete without placed/dynamic objects, badniks, bosses, art/audio handoffs, checkpoints, exits, reset/rewind behavior, and route validation.
+
+9. **Running the complete-run trace too early.** Use focused tests while major systems are absent. Save trace frontier work for late polish and keep it comparison-only.
+
+10. **Skipping compatibility or testing it before native parity.** Prove locked-on behavior first, audit extensions second, then rerun native parity with extensions disabled.
