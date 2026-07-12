@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestSpriteManagerRewindCapture {
 
@@ -46,6 +47,23 @@ class TestSpriteManagerRewindCapture {
         assertHasFollowHistory(entries.get("sonic"));
         assertHasFollowHistory(entries.get("tails_p2"));
         assertHasNoFollowHistory(entries.get("tails_p3"));
+    }
+
+    @Test
+    void canonicalOwnerCharacterCodeSurvivesProductionSpriteRewindRoundTrip() {
+        SpriteManager manager = new SpriteManager();
+        Sonic runner = new Sonic("owner:runner", (short) 0x100, (short) 0x200);
+        manager.addSprite(runner);
+        var rewind = manager.rewindSnapshottable();
+        int originalCentreX = runner.getCentreX();
+
+        var snapshot = rewind.capture();
+        runner.setCentreX((short) 0x180);
+        rewind.restore(snapshot);
+
+        assertEquals("owner:runner", snapshot.sprites()[0].code());
+        assertEquals("owner:runner", runner.getCode());
+        assertEquals(originalCentreX, runner.getCentreX());
     }
 
     private static Tails cpuTails(String code, short x, Sonic leader) {

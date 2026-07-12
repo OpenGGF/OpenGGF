@@ -22,10 +22,12 @@ import java.util.TreeSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestModApiSignatureSurface {
     private static final String BASELINE = "mods/mod-api-signatures-1.1.txt";
+    private static final String PLATFORM_ALLOWLIST = "mods/mod-api-platform-allowlist.txt";
     private static final SemanticVersion BASELINE_VERSION = new SemanticVersion(1, 1, 0);
 
     @Retention(RetentionPolicy.CLASS)
@@ -39,7 +41,7 @@ class TestModApiSignatureSurface {
     }
 
     @Test
-    void recursiveSurfaceIsAnnotatedAndHasNoUnauditedSignatureTypes() {
+    void recursiveSurfaceIsAnnotatedAndHasNoUnauditedSignatureTypes() throws IOException {
         List<String> missing = ModApiSignatureSurface.recursiveTypes().stream()
                 .filter(type -> !type.isAnnotationPresent(ModApi.class))
                 .map(Class::getName)
@@ -47,8 +49,17 @@ class TestModApiSignatureSurface {
         assertTrue(missing.isEmpty(), () -> "Recursive API types lack @ModApi: " + missing);
         assertTrue(ModApiSignatureSurface.externalSignatureTypes().isEmpty(),
                 () -> "Unaudited signature types: " + ModApiSignatureSurface.externalSignatureTypes());
-        assertEquals(48, ModApiSignatureSurface.allowedPlatformTypeNames().size(),
-                "Platform allowlist changes require explicit review");
+        List<String> pinned;
+        try (var input = getClass().getClassLoader().getResourceAsStream(PLATFORM_ALLOWLIST)) {
+            if (input == null) throw new IOException("Missing " + PLATFORM_ALLOWLIST);
+            try (var reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
+                pinned = reader.lines().toList();
+            }
+        }
+        assertEquals(new ArrayList<>(new TreeSet<>(pinned)), pinned,
+                "Platform allowlist baseline must be unique and sorted");
+        assertEquals(new TreeSet<>(pinned), ModApiSignatureSurface.allowedPlatformTypeNames(),
+                "Platform allowlist changes require exact explicit review");
     }
 
     @Test
@@ -69,6 +80,24 @@ class TestModApiSignatureSurface {
     }
 
     @Test
+    void phaseThreeCandidateSurfaceIsPinnedWithoutPublishingIt() throws Exception {
+        List<String> candidate;
+        try (var input = getClass().getClassLoader().getResourceAsStream(
+                "mods/mod-api-signatures-1.2-candidate.txt")) {
+            assertNotNull(input, "Missing canonical Phase 3 candidate API snapshot");
+            try (var reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
+                candidate = reader.lines().toList();
+            }
+        }
+        assertEquals(new ArrayList<>(new TreeSet<>(candidate)), candidate,
+                "Candidate API baseline must be unique, sorted canonical UTF-8 text");
+        assertEquals(new ArrayList<>(ModApiSignatureSurface.snapshotLines()), candidate,
+                "Review additive Phase 3 API changes and refresh the full candidate snapshot");
+        assertEquals(new SemanticVersion(1, 1, 0), ModApiVersion.CURRENT,
+                "Task 0 must not publish API 1.2");
+    }
+
+    @Test
     void versionOneOneBaselineRemainsAnAdditiveSubset() throws IOException {
         List<String> baseline;
         try (var input = getClass().getClassLoader().getResourceAsStream(BASELINE)) {
@@ -81,8 +110,11 @@ class TestModApiSignatureSurface {
         assertEquals(sorted, baseline, "Baseline must be unique, sorted canonical UTF-8 text");
 
         Set<String> current = ModApiSignatureSurface.snapshotLines();
+        assertFalse(ModApiSignatureSurface.baselineViolations(
+                BASELINE_VERSION, Set.copyOf(baseline), ModApiVersion.CURRENT, current).isEmpty(),
+                "The still-published 1.1 version must reject the additive Phase 3 surface");
         List<String> violations = ModApiSignatureSurface.baselineViolations(
-                BASELINE_VERSION, Set.copyOf(baseline), ModApiVersion.CURRENT, current);
+                BASELINE_VERSION, Set.copyOf(baseline), ModApiVersion.PHASE3_CANDIDATE, current);
         assertTrue(violations.isEmpty(), () -> String.join("\n", violations));
     }
 

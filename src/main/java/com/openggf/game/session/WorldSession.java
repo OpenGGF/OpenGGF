@@ -1,6 +1,8 @@
 package com.openggf.game.session;
 
 import com.openggf.game.GameModule;
+import com.openggf.game.GameDataSource;
+import com.openggf.game.PlayableCharacterRegistry;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.level.Level;
 
@@ -11,6 +13,8 @@ public final class WorldSession {
     private final GameModule rootGameModule;
     private final GameModule gameModule;
     private final SaveSessionContext saveSessionContext;
+    private final GameDataSource dataSource;
+    private final PlayableCharacterRegistry playableCharacterRegistry;
 
     // Loaded-level metadata. Owned by WorldSession because the loaded zone/act
     // identity must survive editor mode swaps (per
@@ -38,8 +42,20 @@ public final class WorldSession {
 
     public WorldSession(GameModule rootGameModule, GameModule resolvedGameModule,
             SaveSessionContext saveSessionContext) {
+        this(rootGameModule, resolvedGameModule,
+                new MissingDataSource("legacy:" + rootGameModule.getIdentifier()),
+                saveSessionContext);
+    }
+
+    public WorldSession(GameModule rootGameModule, GameModule resolvedGameModule,
+            GameDataSource dataSource, SaveSessionContext saveSessionContext) {
         this.rootGameModule = Objects.requireNonNull(rootGameModule, "rootGameModule");
         this.gameModule = Objects.requireNonNull(resolvedGameModule, "resolvedGameModule");
+        this.dataSource = Objects.requireNonNull(dataSource, "dataSource");
+        PlayableCharacterRegistry registry = resolvedGameModule.getPlayableCharacterRegistry();
+        this.playableCharacterRegistry = registry == null
+                ? PlayableCharacterRegistry.empty()
+                : registry;
         this.saveSessionContext = saveSessionContext;
     }
 
@@ -56,6 +72,13 @@ public final class WorldSession {
      */
     public GameModule getGameModule() {
         return gameModule;
+    }
+
+    public GameDataSource getDataSource() { return dataSource; }
+
+    /** Returns the one immutable registry view pinned when this session opened. */
+    public PlayableCharacterRegistry getPlayableCharacterRegistry() {
+        return playableCharacterRegistry;
     }
 
     /**
@@ -100,6 +123,23 @@ public final class WorldSession {
 
     public void setCurrentLevel(Level currentLevel) {
         this.currentLevel = currentLevel;
+    }
+
+    /** Internal placeholder for legacy callers that have not reached the B1 boot seam yet. */
+    private record MissingDataSource(String identity) implements GameDataSource {
+        private MissingDataSource {
+            Objects.requireNonNull(identity, "identity");
+            if (identity.isBlank()) throw new IllegalArgumentException("identity must not be blank");
+        }
+
+        @Override public java.util.Optional<com.openggf.data.Rom> rom() {
+            return java.util.Optional.empty();
+        }
+
+        @Override public java.io.InputStream openAsset(String normalizedPath) throws java.io.IOException {
+            Objects.requireNonNull(normalizedPath, "normalizedPath");
+            throw new java.io.IOException("Missing legacy data source does not expose named assets");
+        }
     }
 
 }

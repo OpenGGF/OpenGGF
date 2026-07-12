@@ -63,11 +63,25 @@ public final class ModBackedGamePatch implements GamePatch {
                 .toList();
         ModObjectKeyRegistry objectKeys = new ModObjectKeyRegistry(registrations);
         return new DelegatingGameModule(base, id()) {
+            private com.openggf.game.PlayableCharacterRegistry playableCharacters;
             private com.openggf.game.ObjectArtProvider objectArtProvider;
             private com.openggf.game.ZoneRegistry zoneRegistry;
             private com.openggf.game.LevelEventProvider levelEvents;
             private com.openggf.game.dataselect.DataSelectHostProfile dataSelectHost;
             private com.openggf.game.dataselect.DataSelectPresentationProvider dataSelectPresentation;
+
+            @Override
+            public synchronized com.openggf.game.PlayableCharacterRegistry getPlayableCharacterRegistry() {
+                if (playableCharacters == null) {
+                    com.openggf.game.PlayableCharacterRegistry registry =
+                            super.getPlayableCharacterRegistry();
+                    for (var entry : plan.characters().entrySet()) {
+                        registry = registry.register(entry.getKey(), entry.getValue());
+                    }
+                    playableCharacters = registry;
+                }
+                return playableCharacters;
+            }
 
             @Override
             public ObjectRegistry createObjectRegistry() {

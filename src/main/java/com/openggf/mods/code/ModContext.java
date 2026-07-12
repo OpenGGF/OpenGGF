@@ -25,6 +25,8 @@ public final class ModContext {
     private final java.util.Set<String> zoneKeys = new java.util.HashSet<>();
     private final String defaultInsertAfter;
     private final java.util.Set<String> patchIds = new java.util.HashSet<>();
+    private final Map<com.openggf.game.CharacterKey, com.openggf.game.CharacterDefinition> characters
+            = new LinkedHashMap<>();
     private boolean frozen;
     private ModRegistrationException poison;
 
@@ -62,6 +64,20 @@ public final class ModContext {
             String owned = ModKeySyntax.requireOwnedKey(owner, key);
             if (objects.putIfAbsent(owned, Objects.requireNonNull(factory, "factory")) != null) {
                 throw failure("Duplicate object key: " + owned);
+            }
+        });
+    }
+
+    /** Stages one owner-tagged playable character in this registration transaction. */
+    public void registerCharacter(String localName, com.openggf.game.CharacterDefinition definition) {
+        mutate(() -> {
+            com.openggf.game.CharacterKey expected = com.openggf.game.CharacterKey.mod(owner, localName);
+            Objects.requireNonNull(definition, "definition");
+            if (!expected.equals(definition.key())) {
+                throw failure("Character definition key must equal owner-scoped key " + expected.persisted());
+            }
+            if (characters.putIfAbsent(expected, definition) != null) {
+                throw failure("Duplicate character key: " + expected.persisted());
             }
         });
     }
@@ -133,7 +149,7 @@ public final class ModContext {
             }
             frozen = true;
             return new ModRegistrationPlan(owner, baseGame, objects, art, Map.of(), patches,
-                    zones, prepared,objectPreviewArtKeys);
+                    zones, prepared,objectPreviewArtKeys,characters);
         } catch (java.io.IOException | RuntimeException rejected) {
             if (rejected instanceof ModRegistrationException registration) poison = registration;
             else poison = new ModRegistrationException(owner, "MOD_LEVEL_ASSET_INVALID",

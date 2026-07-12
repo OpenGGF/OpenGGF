@@ -56,6 +56,15 @@ public class DelegatingGameModule implements GameModule {
         return base.createGame(rom);
     }
 
+    @Override public Game createGame(GameDataSource source) { return base.createGame(source); }
+
+    @Override public TouchResponseTable createTouchResponseTable(GameDataSource source)
+            throws java.io.IOException { return base.createTouchResponseTable(source); }
+
+    @Override public PlayableCharacterRegistry getPlayableCharacterRegistry() {
+        return base.getPlayableCharacterRegistry();
+    }
+
     @Override
     public ObjectRegistry createObjectRegistry() {
         return base.createObjectRegistry();

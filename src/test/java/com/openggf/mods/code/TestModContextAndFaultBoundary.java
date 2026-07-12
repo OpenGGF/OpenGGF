@@ -8,6 +8,7 @@ import com.openggf.game.patch.PatchContext;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.mods.ModRuntimeFindingStore;
 import com.openggf.mods.ModStateSaveResult;
+import com.openggf.game.CharacterKey;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -71,6 +72,24 @@ class TestModContextAndFaultBoundary {
     }
 
     @Test
+    void characterCollisionPoisonsTransactionAndCannotPublishPartialRegistry() {
+        ModContext context = new ModContext("owner", "s2", ModAssetRoot.forTests("owner"));
+        var key = CharacterKey.mod("owner", "runner");
+        var definition = new com.openggf.game.CharacterDefinition(key, "Runner",
+                (code, x, y) -> null, null, com.openggf.game.PlayerCharacter.SONIC_ALONE,
+                com.openggf.sprites.playable.SecondaryAbility.NONE, false, code -> null);
+        context.registerCharacter("runner", definition);
+        ModRegistrationException collision = assertThrows(ModRegistrationException.class,
+                () -> context.registerCharacter("runner", definition));
+        assertSame(collision, assertThrows(ModRegistrationException.class, context::freeze));
+        GameModule base = org.mockito.Mockito.mock(GameModule.class);
+        org.mockito.Mockito.when(base.getPlayableCharacterRegistry())
+                .thenReturn(com.openggf.game.PlayableCharacterRegistry.empty());
+        assertTrue(base.getPlayableCharacterRegistry().definitions().isEmpty(),
+                "A poisoned transaction never reaches patch publication");
+    }
+
+    @Test
     void callbackFailureDisablesClosurePublishesFindingAndThrowsTypedAbort() {
         ModRuntimeFindingStore findings = new ModRuntimeFindingStore();
         List<Set<String>> persisted = new ArrayList<>();
@@ -88,6 +107,25 @@ class TestModContextAndFaultBoundary {
         assertEquals(List.of(aborted.disabledOwners()), persisted);
         assertEquals(persisted, processDisabled);
         assertEquals("MOD_CALLBACK_FAILED", findings.findingsFor("owner").get(0).code());
+    }
+
+    @Test
+    void ownerDerivedCharacterAndStandaloneBoundariesPreserveDirectAndAbortSignals() {
+        ModRuntimeFindingStore findings = new ModRuntimeFindingStore();
+        List<Set<String>> saved = new ArrayList<>();
+        ModFaultBoundary boundary = new ModFaultBoundary(
+                Map.of("dependent", Set.of("owner")), findings,
+                owners -> { saved.add(owners); return new ModStateSaveResult.Saved(); }, owners -> {});
+        assertEquals("builtin", boundary.callCharacter(CharacterKey.SONIC, () -> "builtin"));
+        var characterAbort = assertThrows(ModFaultBoundary.CallbackAborted.class,
+                () -> boundary.callCharacter(CharacterKey.mod("owner", "runner"),
+                        () -> { throw new IllegalStateException("character"); }));
+        assertEquals(Set.of("owner", "dependent"), characterAbort.disabledOwners());
+        assertEquals("MOD_CALLBACK_FAILED", findings.findingsFor("owner").getFirst().code());
+        var standaloneAbort = assertThrows(ModFaultBoundary.CallbackAborted.class,
+                () -> boundary.callStandalone("standalone", () -> { throw new IllegalStateException("game"); }));
+        assertEquals(Set.of("standalone"), standaloneAbort.disabledOwners());
+        assertEquals(List.of(Set.of("owner", "dependent"), Set.of("standalone")), saved);
     }
 
     @Test

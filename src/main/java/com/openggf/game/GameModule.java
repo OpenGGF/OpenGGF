@@ -24,6 +24,23 @@ public interface GameModule {
 
     Game createGame(Rom rom);
 
+    /** Creates the game from the active session capability; stock modules require a ROM. */
+    default Game createGame(GameDataSource source) {
+        return createGame(source.rom().orElseThrow(() ->
+                new IllegalStateException("Game module requires a ROM data source")));
+    }
+
+    /** Creates touch-response data from the session capability; stock modules require a ROM. */
+    default TouchResponseTable createTouchResponseTable(GameDataSource source) throws java.io.IOException {
+        return createTouchResponseTable(RomByteReader.fromRom(source.rom().orElseThrow(() ->
+                new IllegalStateException("Game module requires a ROM data source"))));
+    }
+
+    /** One immutable character-registry view owned by this resolved module. */
+    default PlayableCharacterRegistry getPlayableCharacterRegistry() {
+        return PlayableCharacterRegistry.empty();
+    }
+
     ObjectRegistry createObjectRegistry();
 
     /** Returns the lossless native object-placement encoder used by the editor. */

@@ -348,6 +348,33 @@ class TestModAssetRoot {
     }
 
     @Test
+    void directorySnapshotIdentityUsesUnambiguousEntryFraming() throws Exception {
+        Path twoEntryTree = Files.createDirectory(temp.resolve("two-entry-identity"));
+        Files.write(twoEntryTree.resolve("a"), new byte[0]);
+        Files.write(twoEntryTree.resolve("b"), new byte[]{'X'});
+        Path oneEntryTree = Files.createDirectory(temp.resolve("one-entry-identity"));
+        Files.write(oneEntryTree.resolve("a"), new byte[]{'b', 0, 'X'});
+
+        String firstDigest;
+        String repeatedDigest;
+        String distinctDigest;
+        try (SnapshotModAssetRoot first = ModAssetRoot.snapshotDirectory(
+                twoEntryTree, twoEntryTree, ModInputLimits.production(), DirectoryAccess.TEST);
+             SnapshotModAssetRoot repeated = ModAssetRoot.snapshotDirectory(
+                     twoEntryTree, twoEntryTree, ModInputLimits.production(), DirectoryAccess.TEST);
+             SnapshotModAssetRoot distinct = ModAssetRoot.snapshotDirectory(
+                     oneEntryTree, oneEntryTree, ModInputLimits.production(), DirectoryAccess.TEST)) {
+            firstDigest = first.immutableSha256();
+            repeatedDigest = repeated.immutableSha256();
+            distinctDigest = distinct.immutableSha256();
+        }
+
+        assertEquals(firstDigest, repeatedDigest, "the same directory tree must have a stable identity");
+        assertNotEquals(firstDigest, distinctDigest,
+                "entry names and contents must not admit concatenation collisions");
+    }
+
+    @Test
     void directorySnapshotHookMakesSourceReplacementBeforeValidationInvisible() throws Exception {
         Path rootDir = Files.createDirectory(temp.resolve("directory-hook-snapshot"));
         Path asset = Files.write(rootDir.resolve("a.bin"), new byte[]{1});

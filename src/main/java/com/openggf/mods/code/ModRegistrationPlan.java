@@ -1,6 +1,8 @@
 package com.openggf.mods.code;
 
 import com.openggf.game.patch.GamePatch;
+import com.openggf.game.CharacterDefinition;
+import com.openggf.game.CharacterKey;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.level.objects.BakedSheetReader;
 import com.openggf.level.objects.ObjectFactory;
@@ -17,7 +19,8 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                                   List<GamePatch> explicitPatches,
                                   List<ModZoneContribution> zones,
                                   List<PreparedModZone> preparedZones,
-                                  Map<String, String> objectPreviewArtKeys) {
+                                  Map<String, String> objectPreviewArtKeys,
+                                  Map<CharacterKey, CharacterDefinition> characters) {
     public ModRegistrationPlan {
         Objects.requireNonNull(ownerModId, "ownerModId");
         Objects.requireNonNull(baseGameId, "baseGameId");
@@ -29,6 +32,13 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 Objects.requireNonNull(preparedObjectArt, "preparedObjectArt")));
         objectPreviewArtKeys = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
                 Objects.requireNonNull(objectPreviewArtKeys, "objectPreviewArtKeys")));
+        characters = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
+                Objects.requireNonNull(characters, "characters")));
+        characters.forEach((key, definition) -> {
+            if (!key.equals(definition.key()) || !ownerModId.equals(key.ownerModId().orElse(null))) {
+                throw new IllegalArgumentException("Character contribution owner/key mismatch");
+            }
+        });
         if (!preparedObjectArt.isEmpty() && !preparedObjectArt.keySet().equals(objectArt.keySet())) {
             throw new IllegalArgumentException("Prepared object-art keys must match declared keys");
         }
@@ -55,7 +65,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                                List<GamePatch> explicitPatches, List<ModZoneContribution> zones,
                                List<PreparedModZone> preparedZones) {
         this(ownerModId,baseGameId,objectFactories,objectArt,preparedObjectArt,explicitPatches,zones,
-                preparedZones,Map.of());
+                preparedZones,Map.of(),Map.of());
     }
 
     public ModRegistrationPlan(String ownerModId, String baseGameId,
@@ -63,7 +73,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                                Map<String, BakedSheetRef> objectArt,
                                List<GamePatch> explicitPatches) {
         this(ownerModId, baseGameId, objectFactories, objectArt, Map.of(), explicitPatches,
-                List.of(),List.of(),Map.of());
+                List.of(),List.of(),Map.of(),Map.of());
     }
 
     public ModRegistrationPlan(String ownerModId, String baseGameId,
@@ -72,11 +82,30 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                                Map<String, BakedSheetReader.BakedSheet> preparedObjectArt,
                                List<GamePatch> explicitPatches) {
         this(ownerModId, baseGameId, objectFactories, objectArt, preparedObjectArt,
-                explicitPatches, List.of(), List.of(),Map.of());
+                explicitPatches, List.of(), List.of(),Map.of(),Map.of());
+    }
+
+    /** Compatibility constructor for the Phase-2 canonical record shape. */
+    public ModRegistrationPlan(String ownerModId, String baseGameId,
+                               Map<String, ObjectFactory> objectFactories,
+                               Map<String, BakedSheetRef> objectArt,
+                               Map<String, BakedSheetReader.BakedSheet> preparedObjectArt,
+                               List<GamePatch> explicitPatches, List<ModZoneContribution> zones,
+                               List<PreparedModZone> preparedZones,
+                               Map<String, String> objectPreviewArtKeys) {
+        this(ownerModId, baseGameId, objectFactories, objectArt, preparedObjectArt,
+                explicitPatches, zones, preparedZones, objectPreviewArtKeys, Map.of());
+    }
+
+    public static ModRegistrationPlan characterOnly(String ownerModId, String baseGameId,
+            Map<CharacterKey, CharacterDefinition> characters) {
+        return new ModRegistrationPlan(ownerModId, baseGameId, Map.of(), Map.of(), Map.of(),
+                List.of(), List.of(), List.of(), Map.of(), characters);
     }
 
     public boolean hasContent() {
-        return !objectFactories.isEmpty() || !objectArt.isEmpty() || !zones.isEmpty();
+        return !objectFactories.isEmpty() || !objectArt.isEmpty() || !zones.isEmpty()
+                || !characters.isEmpty();
     }
 
     /** Resolves and validates all declared sheets before the contribution is published. */
@@ -95,7 +124,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
             }
         }
         return new ModRegistrationPlan(ownerModId, baseGameId, objectFactories, objectArt,
-                prepared, explicitPatches, zones, preparedZones,objectPreviewArtKeys);
+                prepared, explicitPatches, zones, preparedZones,objectPreviewArtKeys,characters);
     }
 
     /** Resolves all level exports while the bounded creator view is still alive. */

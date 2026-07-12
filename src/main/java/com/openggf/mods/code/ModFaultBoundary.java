@@ -77,6 +77,27 @@ public final class ModFaultBoundary {
         }
     }
 
+    /** Owner-derived boundary for a mod-character callback; builtins execute directly. */
+    public <T> T callCharacter(com.openggf.game.CharacterKey key, Supplier<T> callback) {
+        Objects.requireNonNull(key, "key");
+        String owner = key.ownerModId().orElse(null);
+        return owner == null ? Objects.requireNonNull(callback, "callback").get()
+                : call(owner, callback);
+    }
+
+    public void runCharacter(com.openggf.game.CharacterKey key, Runnable callback) {
+        callCharacter(key, () -> { Objects.requireNonNull(callback, "callback").run(); return null; });
+    }
+
+    /** Owner-derived boundary for a standalone module/game/provider callback. */
+    public <T> T callStandalone(String ownerModId, Supplier<T> callback) {
+        return call(com.openggf.game.ModKeySyntax.requireManifestId(ownerModId), callback);
+    }
+
+    public void runStandalone(String ownerModId, Runnable callback) {
+        callStandalone(ownerModId, () -> { Objects.requireNonNull(callback, "callback").run(); return null; });
+    }
+
     private void publishSaveFailure(String owner, String message) {
         findings.replaceOwner(owner, java.util.List.of(
                 new ModFinding(ModFindingSeverity.ERROR, "MOD_CALLBACK_FAILED",

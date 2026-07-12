@@ -3,6 +3,7 @@ package com.openggf.io;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -561,14 +562,35 @@ final class DirectoryModAssetRoot extends AbstractModAssetRoot implements Snapsh
         try {
             java.security.MessageDigest digest = getInstance("SHA-256");
             for (String name : entryNames) {
-                digest.update(name.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                digest.update((byte) 0);
-                digest.update(Files.readAllBytes(root.resolve(name)));
+                byte[] nameBytes = name.getBytes(StandardCharsets.UTF_8);
+                Path entry = root.resolve(name);
+                updateInt(digest, nameBytes.length);
+                digest.update(nameBytes);
+                updateLong(digest, Files.size(entry));
+                try (InputStream input = Files.newInputStream(entry)) {
+                    byte[] buffer = new byte[8192];
+                    int read;
+                    while ((read = input.read(buffer)) != -1) {
+                        digest.update(buffer, 0, read);
+                    }
+                }
             }
             return java.util.HexFormat.of().formatHex(digest.digest());
         } catch (java.security.NoSuchAlgorithmException impossible) {
             throw new IllegalStateException(impossible);
         }
+    }
+
+    private static void updateInt(java.security.MessageDigest digest, int value) {
+        digest.update((byte) (value >>> 24));
+        digest.update((byte) (value >>> 16));
+        digest.update((byte) (value >>> 8));
+        digest.update((byte) value);
+    }
+
+    private static void updateLong(java.security.MessageDigest digest, long value) {
+        updateInt(digest, (int) (value >>> 32));
+        updateInt(digest, (int) value);
     }
 
     @Override public Path immutableContentPath() throws IOException { ensureOpen(); return root; }
