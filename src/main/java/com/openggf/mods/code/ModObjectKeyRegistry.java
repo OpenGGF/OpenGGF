@@ -63,6 +63,10 @@ public final class ModObjectKeyRegistry {
         return factories.containsKey(ModKeySyntax.requireDisplayKey(namespacedKey));
     }
 
+    java.util.List<String> keys() {
+        return java.util.List.copyOf(factories.keySet());
+    }
+
     public record Registration(String ownerModId, String namespacedKey, ObjectFactory factory) {}
 
     private record OwnedFactory(String ownerModId, ObjectFactory factory) {}

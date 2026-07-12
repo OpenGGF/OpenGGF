@@ -19,6 +19,17 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestModObjectKeyRegistry {
 
     @Test
+    void creatorPreviewMappingKeepsObjectAndArtIdentitiesIndependent() {
+        ModContext context=new ModContext("owner","s2",com.openggf.io.ModAssetRoot.forTests("preview"));
+        context.registerObject("enemy",named("enemy"));
+        context.registerObjectArt("cards/enemy",new BakedSheetRef("art/enemy.gsheet"));
+        context.registerObjectPreview("enemy","cards/enemy");
+        ModRegistrationPlan plan=context.freeze();
+        assertEquals("owner:cards/enemy",plan.objectPreviewArtKeys().get("owner:enemy"));
+        assertNotEquals("owner:enemy",plan.objectPreviewArtKeys().get("owner:enemy"));
+    }
+
+    @Test
     void untaggedStockSpawnDelegatesWithoutConsultingModFactories() {
         AtomicInteger baseCreates = new AtomicInteger();
         ObjectRegistry base = baseRegistry(baseCreates);
@@ -127,6 +138,8 @@ class TestModObjectKeyRegistry {
         assertSame(child, created.getSpawn());
         assertEquals(-1, created.getSpawn().layoutIndex());
         assertEquals("example", created.getSpawn().ownerModId());
+        assertEquals(List.of("example:objects/parent", "example:children/projectile"),
+                registry.browsableObjectKeys());
     }
 
 

@@ -13,6 +13,7 @@ import com.openggf.editor.commands.PlaceRingSpawnCommand;
 import com.openggf.editor.commands.SetChunkSolidTileIndexCommand;
 import com.openggf.editor.persistence.EditorSaveManager;
 import com.openggf.editor.persistence.FullLevelExporter;
+import com.openggf.editor.render.EditorLibraryBrowserPane;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.ChunkDesc;
@@ -23,6 +24,8 @@ import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.game.session.EditorCursorState;
+import com.openggf.game.ObjectArtProvider;
+import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.Objects;
 
@@ -54,6 +57,9 @@ public final class LevelEditorController {
     private EditorCollisionPath collisionPath = EditorCollisionPath.PRIMARY;
     private EditorSaveManager.ApplyResult persistenceStatus = EditorSaveManager.ApplyResult.NONE;
     private java.nio.file.Path lastExportDirectory;
+    private final EditorLibraryBrowserPane libraryBrowser = new EditorLibraryBrowserPane();
+    private ObjectArtProvider objectArtProvider;
+    private boolean libraryFilterInputActive;
 
     public void attachLevel(MutableLevel level) {
         this.level = Objects.requireNonNull(level, "level");
@@ -73,24 +79,37 @@ public final class LevelEditorController {
         spawnEditMode = EditorSpawnEditMode.TILES;
         objectPalette = null;
         spawnFactory = null;
+        objectArtProvider = null;
         selectedObjectSpawn = null;
         selectedRingSpawn = null;
         selectedRingBackingObject = null;
         collisionOverlayEnabled = false;
         collisionPath = EditorCollisionPath.PRIMARY;
+        libraryBrowser.setFilter("");
+        libraryFilterInputActive=false;
+        refreshLibraryBrowser();
     }
 
     public void configureSpawnEditing(ObjectRegistry registry, ObjectPlacementEncoding encoding) {
+        configureSpawnEditing(registry, encoding, null);
+    }
+
+    public void configureSpawnEditing(ObjectRegistry registry, ObjectPlacementEncoding encoding,
+                                      ObjectArtProvider objectArtProvider) {
         MutableLevel attachedLevel = requireLevel();
         objectPalette = new EditorStockObjectPalette(registry);
         spawnFactory = new EditorSpawnFactory(encoding, new EditorPlacementIdAllocator(attachedLevel));
+        this.objectArtProvider = objectArtProvider;
+        refreshLibraryBrowser();
     }
 
     public void setSpawnEditMode(EditorSpawnEditMode mode) {
+        libraryFilterInputActive=false;
         spawnEditMode = Objects.requireNonNull(mode, "mode");
         selectedObjectSpawn = null;
         selectedRingSpawn = null;
         selectedRingBackingObject = null;
+        refreshLibraryBrowser();
     }
 
     public EditorSpawnEditMode spawnEditMode() { return spawnEditMode; }
@@ -110,11 +129,15 @@ public final class LevelEditorController {
 
     public void placeObjectSpawnAtCursor() {
         requireSpawnMode(EditorSpawnEditMode.OBJECTS);
-        if (!requireSpawnFactory().canCreateObject(objectPalette().selectedObjectId())) {
+        if (!objectPalette().selectedIsKeyed()
+                && !requireSpawnFactory().canCreateObject(objectPalette().selectedObjectId())) {
             return;
         }
-        ObjectSpawn spawn = requireSpawnFactory().createObjectSpawn(worldCursor.x(), worldCursor.y(),
-                objectPalette().selectedObjectId(), objectPalette().selectedSubtype(), 0, true);
+        ObjectSpawn spawn = objectPalette().selectedIsKeyed()
+                ? requireSpawnFactory().createKeyedObjectSpawn(worldCursor.x(), worldCursor.y(),
+                        objectPalette().selectedObjectKey(), objectPalette().selectedSubtype(), 0, true)
+                : requireSpawnFactory().createObjectSpawn(worldCursor.x(), worldCursor.y(),
+                        objectPalette().selectedObjectId(), objectPalette().selectedSubtype(), 0, true);
         history.execute(new PlaceObjectSpawnCommand(requireLevel(), spawn));
         selectedObjectSpawn = spawn;
     }
@@ -439,6 +462,7 @@ public final class LevelEditorController {
     }
 
     public void descend() {
+        libraryFilterInputActive=false;
         if (depth == EditorHierarchyDepth.WORLD && selection.selectedBlock() != null) {
             depth = EditorHierarchyDepth.BLOCK;
             focusRegion = EditorFocusRegion.BLOCK_PANE;
@@ -446,9 +470,11 @@ public final class LevelEditorController {
             depth = EditorHierarchyDepth.CHUNK;
             focusRegion = EditorFocusRegion.CHUNK_PANE;
         }
+        refreshLibraryBrowser();
     }
 
     public void ascend() {
+        libraryFilterInputActive=false;
         if (depth == EditorHierarchyDepth.CHUNK) {
             depth = EditorHierarchyDepth.BLOCK;
             focusRegion = EditorFocusRegion.BLOCK_PANE;
@@ -456,6 +482,7 @@ public final class LevelEditorController {
             depth = EditorHierarchyDepth.WORLD;
             focusRegion = EditorFocusRegion.WORLD_CANVAS;
         }
+        refreshLibraryBrowser();
     }
 
     public EditorHierarchyDepth depth() {
@@ -467,17 +494,24 @@ public final class LevelEditorController {
     }
 
     public void cycleFocusRegion() {
+        libraryFilterInputActive=false;
         EditorFocusRegion[] cycle = activeFocusCycle();
         for (int i = 0; i < cycle.length; i++) {
             if (cycle[i] == focusRegion) {
                 focusRegion = cycle[(i + 1) % cycle.length];
+                refreshLibraryBrowser();
                 return;
             }
         }
         focusRegion = cycle[0];
+        refreshLibraryBrowser();
     }
 
     public void applyPrimaryAction() {
+        if (isLibraryBrowserFocused()) {
+            selectLibraryEntry();
+            return;
+        }
         if (isSpawnEditing()) {
             placeSpawnAtCursor();
             return;
@@ -741,6 +775,71 @@ public final class LevelEditorController {
 
     public EditorSelectionState selection() {
         return selection;
+    }
+
+    public EditorLibraryBrowserPane libraryBrowser() { return libraryBrowser; }
+
+    public Block libraryPreviewBlock(int index) {
+        return level!=null&&index>=0&&index<level.getBlockCount()?level.getBlock(index):null;
+    }
+
+    public Chunk libraryPreviewChunk(int index) {
+        return level!=null&&index>=0&&index<level.getChunkCount()?level.getChunk(index):null;
+    }
+
+    /** Exact namespaced lookup only; callers render a generic placeholder when no sheet exists. */
+    public PatternSpriteRenderer libraryObjectPreviewRenderer(String previewArtKey) {
+        return objectArtProvider==null||previewArtKey==null?null:objectArtProvider.getRenderer(previewArtKey);
+    }
+
+    public void setLibraryFilter(String filter) { libraryBrowser.setFilter(filter); }
+
+    /** Text-input seam for UI hosts that receive character/codepoint callbacks. */
+    public void appendLibraryFilterText(String text) {
+        Objects.requireNonNull(text, "text");
+        libraryBrowser.setFilter(libraryBrowser.filter() + text);
+    }
+
+    public void backspaceLibraryFilter() {
+        String current=libraryBrowser.filter();
+        if(!current.isEmpty())libraryBrowser.setFilter(current.substring(0,current.length()-1));
+    }
+
+    public boolean isLibraryFilterInputActive(){return libraryFilterInputActive&&isLibraryBrowserFocused();}
+    public void toggleLibraryFilterInput(){
+        if(isLibraryBrowserFocused())libraryFilterInputActive=!libraryFilterInputActive;
+        else libraryFilterInputActive=false;
+    }
+    public void endLibraryFilterInput(){libraryFilterInputActive=false;}
+
+    public void browseLibrary(int delta) { libraryBrowser.move(delta); }
+
+    public void selectLibraryEntry() {
+        EditorLibraryBrowserPane.Entry entry=libraryBrowser.selected();
+        if(entry==null)return;
+        switch(entry.kind()) {
+            case BLOCK -> selectBlock(entry.index());
+            case CHUNK -> selectChunk(entry.index());
+            case OBJECT -> {
+                if(entry.objectKey()!=null)objectPalette().setObjectKey(entry.objectKey());
+                else objectPalette().setObjectId(entry.stockObjectId());
+            }
+        }
+    }
+
+    public boolean isLibraryBrowserFocused() {
+        if(spawnEditMode==EditorSpawnEditMode.OBJECTS && focusRegion==EditorFocusRegion.SPAWN_PALETTE)return true;
+        return (depth==EditorHierarchyDepth.WORLD && focusRegion==EditorFocusRegion.BLOCK_PANE)
+                || (depth==EditorHierarchyDepth.BLOCK && focusRegion==EditorFocusRegion.CHUNK_PANE);
+    }
+
+    private void refreshLibraryBrowser() {
+        if(level==null)return;
+        String retainedFilter=libraryBrowser.filter();
+        if(focusRegion==EditorFocusRegion.SPAWN_PALETTE&&objectPalette!=null)libraryBrowser.showObjects(objectPalette);
+        else if(depth==EditorHierarchyDepth.WORLD)libraryBrowser.showBlocks(level);
+        else if(depth==EditorHierarchyDepth.BLOCK&&focusRegion==EditorFocusRegion.CHUNK_PANE)libraryBrowser.showChunks(level);
+        libraryBrowser.setFilter(retainedFilter);
     }
 
     public Integer selectedBlockIndex() {

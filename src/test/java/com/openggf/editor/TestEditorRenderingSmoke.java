@@ -26,6 +26,9 @@ import com.openggf.level.PatternDesc;
 import com.openggf.level.Pattern;
 import com.openggf.level.rings.RingSpriteSheet;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.game.common.CommonObjectPlacementEncoding;
 import com.openggf.level.rings.RingSpawn;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -156,6 +159,19 @@ class TestEditorRenderingSmoke {
     }
 
     @Test
+    void overlayRenderer_rendersLibraryPaneForSpawnPaletteFocus() {
+        LevelEditorController controller=createPreviewController();
+        controller.setSpawnEditMode(EditorSpawnEditMode.OBJECTS);
+        controller.cycleFocusRegion();
+        TrackingLibraryPaneRenderer libraryPane=new TrackingLibraryPaneRenderer();
+        EditorOverlayRenderer renderer=new EditorOverlayRenderer(controller,new TrackingToolbarRenderer(),
+                new TrackingCommandStripRenderer(),new TrackingWorldOverlayRenderer(),
+                new TrackingFocusedEditorPaneRenderer(),libraryPane);
+        renderer.renderScreenSpaceOverlay();
+        assertEquals(1,libraryPane.renderCalls);
+    }
+
+    @Test
     void overlayRenderer_rendersFocusedPaneAndLibraryPaneWhenFocusedModeLibraryIsActive() {
         LevelEditorController controller = createPreviewController();
         controller.selectBlock(1);
@@ -232,6 +248,68 @@ class TestEditorRenderingSmoke {
         assertFalse(renderer.buildCommands().isEmpty());
         assertTrue(String.join(" ", renderer.buildLines()).contains("Block library"));
         assertTrue(String.join(" ", renderer.buildLines()).contains("Block 2"));
+        assertTrue(String.join(" ", renderer.buildLines()).contains("Cursor"));
+        assertFalse(renderer.buildTilePreview().isEmpty());
+    }
+
+    @Test
+    void libraryPaneRendererShowsEnabledNamespacedObjectAndGenericPreview() {
+        LevelEditorController controller=createPreviewController();
+        controller.configureSpawnEditing(new ObjectRegistry() {
+            public ObjectInstance create(ObjectSpawn spawn){return null;}
+            public void reportCoverage(List<ObjectSpawn> spawns){}
+            public String getPrimaryName(int id){return "Stock "+id;}
+            public List<String> browsableObjectKeys(){return List.of("owner:badnik");}
+            public java.util.Optional<String> editorPreviewArtKey(int id){
+                return id==0?java.util.Optional.of("stock:monitor-card"):java.util.Optional.empty();
+            }
+        },new CommonObjectPlacementEncoding());
+        controller.setSpawnEditMode(EditorSpawnEditMode.OBJECTS);
+        controller.cycleFocusRegion();
+        controller.setLibraryFilter("owner:");
+        InspectableLibraryPaneRenderer renderer=new InspectableLibraryPaneRenderer(controller);
+        String lines=String.join(" ",renderer.buildLines());
+        assertTrue(lines.contains("owner:badnik"));
+        assertTrue(lines.contains("generic object"));
+        assertTrue(renderer.buildCommands().size()>10,"fallback must draw placeholder geometry");
+    }
+
+    @Test
+    void libraryPaneRendererResolvesExactNamespacedObjectArtWithoutGuessing() {
+        LevelEditorController controller=createPreviewController();
+        ObjectRegistry registry=new ObjectRegistry() {
+            public ObjectInstance create(ObjectSpawn spawn){return null;}
+            public void reportCoverage(List<ObjectSpawn> spawns){}
+            public String getPrimaryName(int id){return "Stock "+id;}
+            public List<String> browsableObjectKeys(){return List.of("owner:badnik");}
+            public java.util.Optional<String> editorPreviewArtKey(int id){
+                return id==0?java.util.Optional.of("stock:monitor-card"):java.util.Optional.empty();
+            }
+            public java.util.Optional<String> editorPreviewArtKey(String key){
+                return java.util.Optional.of("owner:art/badnik-card");
+            }
+        };
+        var sheet=new com.openggf.level.objects.ObjectSpriteSheet(new Pattern[0],List.of(),0,0);
+        var exactRenderer=new com.openggf.level.render.PatternSpriteRenderer(sheet,TEST_GRAPHICS);
+        com.openggf.game.ObjectArtProvider provider=(com.openggf.game.ObjectArtProvider)
+                java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
+                        new Class<?>[]{com.openggf.game.ObjectArtProvider.class},(proxy,method,args)-> {
+                            if(method.getName().equals("getRenderer"))return ("owner:art/badnik-card".equals(args[0])
+                                    ||"stock:monitor-card".equals(args[0]))?exactRenderer:null;
+                            if(method.getReturnType()==boolean.class)return false;
+                            if(method.getReturnType()==int.class)return 0;
+                            if(method.getReturnType()==List.class)return List.of();
+                            return null;
+                        });
+        controller.configureSpawnEditing(registry,new CommonObjectPlacementEncoding(),provider);
+        controller.setSpawnEditMode(EditorSpawnEditMode.OBJECTS);
+        controller.cycleFocusRegion();
+        controller.setLibraryFilter("owner:");
+        InspectableLibraryPaneRenderer renderer=new InspectableLibraryPaneRenderer(controller);
+        assertTrue(renderer.hasExactPreview());
+        assertTrue(String.join(" ",renderer.buildLines()).contains("exact object art"));
+        controller.setLibraryFilter("00:");
+        assertTrue(renderer.hasExactPreview(),"stock ids may carry explicit preview-art metadata too");
     }
 
     @Test
@@ -660,6 +738,9 @@ class TestEditorRenderingSmoke {
         private List<String> buildLines() {
             return buildLibraryLines(EditorHierarchyDepth.WORLD);
         }
+
+        private List<PreviewPlacement> buildTilePreview() { return buildSelectedTilePreview(); }
+        private boolean hasExactPreview() { return hasExactObjectArtPreview(); }
     }
 
     private static final class InspectableTextRenderer extends EditorTextRenderer {

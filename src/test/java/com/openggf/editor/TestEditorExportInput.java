@@ -26,5 +26,7 @@ class TestEditorExportInput {
         assertEquals(true, source.contains("this::exportCurrentEditorLevel"));
         assertEquals(true, source.contains("Path.of(\"exports\", \"editor\", module.getGameId().code()"));
         assertEquals(true, source.contains("createObjectRegistry().hasObjectKey(objectKey)"));
+        assertEquals(true, source.contains("glfwSetCharCallback"));
+        assertEquals(true, source.contains("editorInputHandler.handleTextInputCodepoint(codepoint)"));
     }
 }

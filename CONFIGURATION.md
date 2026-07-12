@@ -389,10 +389,14 @@ press `Shift+Tab` to toggle gameplay (playtest) ↔ editor.
 |-------|--------|
 | `Shift+Tab` | Toggle editor / playtest mode |
 | `F5` | Leave the editor and restart the playtest from the level start (does not save the sidecar) |
-| Arrows / gamepad menu directions | Move world cursor / nudge hierarchy selection; in the object palette, left/right chooses the previous/next object and up/down increments/decrements its subtype |
+| Arrows / gamepad menu directions | Move the world cursor, or browse the focused block/chunk/object library in two dimensions |
+| `Page Up` / `Page Down` | Move by one page in the focused library |
 | `Tab` | Cycle focused region |
+| `Space` while a library is focused | Confirm the hovered block, chunk, or object as the active brush |
+| `Insert` | Enter/leave library filter capture; while active, typed text filters the library and other editor shortcuts are suppressed |
+| `Backspace` / `Ctrl+Backspace` while filtering | Remove one filter character / clear the filter |
 | `O` / gamepad Start | Cycle spawn editing mode: terrain → objects → rings |
-| `Space` | Apply the primary action: place the selected block, object, or ring for the active mode |
+| `Space` | Apply the primary action when no library browser is focused |
 | Gamepad A | Place the selected object or ring while spawn editing is active |
 | `E` | Eyedrop the block or spawn under the cursor |
 | Gamepad B | Eyedrop the spawn under the cursor while spawn editing is active |

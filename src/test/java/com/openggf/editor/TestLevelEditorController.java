@@ -654,7 +654,13 @@ class TestLevelEditorController {
                         EditorInputHandler.Action.TOGGLE_COLLISION_PATH,
                         EditorInputHandler.Action.CYCLE_COLLISION_MODE,
                         EditorInputHandler.Action.INCREMENT_SOLID_TILE_INDEX,
-                        EditorInputHandler.Action.DECREMENT_SOLID_TILE_INDEX
+                        EditorInputHandler.Action.DECREMENT_SOLID_TILE_INDEX,
+                        EditorInputHandler.Action.BROWSE_LIBRARY_NEXT,
+                        EditorInputHandler.Action.BROWSE_LIBRARY_PREVIOUS,
+                        EditorInputHandler.Action.BROWSE_LIBRARY_ROW_NEXT,
+                        EditorInputHandler.Action.BROWSE_LIBRARY_ROW_PREVIOUS,
+                        EditorInputHandler.Action.BROWSE_LIBRARY_PAGE_NEXT,
+                        EditorInputHandler.Action.BROWSE_LIBRARY_PAGE_PREVIOUS
                 },
                 EditorInputHandler.Action.values());
     }

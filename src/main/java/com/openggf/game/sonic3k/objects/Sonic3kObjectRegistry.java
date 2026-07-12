@@ -64,6 +64,13 @@ import com.openggf.level.objects.PlaceholderObjectInstance;
  * same underlying object names in most cases.
  */
 public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
+    @Override public java.util.Optional<String> editorPreviewArtKey(int objectId) {
+        return switch(objectId) {
+            case com.openggf.game.sonic3k.constants.Sonic3kObjectIds.MONITOR -> java.util.Optional.of(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.MONITOR);
+            case com.openggf.game.sonic3k.constants.Sonic3kObjectIds.SPRING -> java.util.Optional.of(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.SPRING_VERTICAL);
+            default -> java.util.Optional.empty();
+        };
+    }
 
     @Override
     public ObjectSlotLayout objectSlotLayout() {

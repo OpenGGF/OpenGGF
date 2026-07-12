@@ -16,7 +16,8 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                                   Map<String, BakedSheetReader.BakedSheet> preparedObjectArt,
                                   List<GamePatch> explicitPatches,
                                   List<ModZoneContribution> zones,
-                                  List<PreparedModZone> preparedZones) {
+                                  List<PreparedModZone> preparedZones,
+                                  Map<String, String> objectPreviewArtKeys) {
     public ModRegistrationPlan {
         Objects.requireNonNull(ownerModId, "ownerModId");
         Objects.requireNonNull(baseGameId, "baseGameId");
@@ -26,6 +27,8 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 Objects.requireNonNull(objectArt, "objectArt")));
         preparedObjectArt = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
                 Objects.requireNonNull(preparedObjectArt, "preparedObjectArt")));
+        objectPreviewArtKeys = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
+                Objects.requireNonNull(objectPreviewArtKeys, "objectPreviewArtKeys")));
         if (!preparedObjectArt.isEmpty() && !preparedObjectArt.keySet().equals(objectArt.keySet())) {
             throw new IllegalArgumentException("Prepared object-art keys must match declared keys");
         }
@@ -47,10 +50,20 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
     }
 
     public ModRegistrationPlan(String ownerModId, String baseGameId,
+                               Map<String,ObjectFactory> objectFactories, Map<String,BakedSheetRef> objectArt,
+                               Map<String,BakedSheetReader.BakedSheet> preparedObjectArt,
+                               List<GamePatch> explicitPatches, List<ModZoneContribution> zones,
+                               List<PreparedModZone> preparedZones) {
+        this(ownerModId,baseGameId,objectFactories,objectArt,preparedObjectArt,explicitPatches,zones,
+                preparedZones,Map.of());
+    }
+
+    public ModRegistrationPlan(String ownerModId, String baseGameId,
                                Map<String, ObjectFactory> objectFactories,
                                Map<String, BakedSheetRef> objectArt,
                                List<GamePatch> explicitPatches) {
-        this(ownerModId, baseGameId, objectFactories, objectArt, Map.of(), explicitPatches);
+        this(ownerModId, baseGameId, objectFactories, objectArt, Map.of(), explicitPatches,
+                List.of(),List.of(),Map.of());
     }
 
     public ModRegistrationPlan(String ownerModId, String baseGameId,
@@ -59,7 +72,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                                Map<String, BakedSheetReader.BakedSheet> preparedObjectArt,
                                List<GamePatch> explicitPatches) {
         this(ownerModId, baseGameId, objectFactories, objectArt, preparedObjectArt,
-                explicitPatches, List.of(), List.of());
+                explicitPatches, List.of(), List.of(),Map.of());
     }
 
     public boolean hasContent() {
@@ -82,7 +95,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
             }
         }
         return new ModRegistrationPlan(ownerModId, baseGameId, objectFactories, objectArt,
-                prepared, explicitPatches, zones, preparedZones);
+                prepared, explicitPatches, zones, preparedZones,objectPreviewArtKeys);
     }
 
     /** Resolves all level exports while the bounded creator view is still alive. */

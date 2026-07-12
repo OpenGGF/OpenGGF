@@ -106,7 +106,8 @@ public final class EditorOverlayRenderer {
 
     private static boolean isLibraryPaneFocus(EditorHierarchyDepth depth, EditorFocusRegion focusRegion) {
         return switch (depth) {
-            case WORLD -> focusRegion == EditorFocusRegion.BLOCK_PANE;
+            case WORLD -> focusRegion == EditorFocusRegion.BLOCK_PANE
+                    || focusRegion == EditorFocusRegion.SPAWN_PALETTE;
             case BLOCK -> focusRegion == EditorFocusRegion.CHUNK_PANE;
             case CHUNK -> focusRegion == EditorFocusRegion.PATTERN_PANE;
         };

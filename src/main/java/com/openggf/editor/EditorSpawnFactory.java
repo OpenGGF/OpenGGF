@@ -21,6 +21,12 @@ public final class EditorSpawnFactory {
         return encoding.create(x, y, objectId, subtype, renderFlags, respawnTracked, ids.nextObjectId());
     }
 
+    public ObjectSpawn createKeyedObjectSpawn(int x, int y, String objectKey, int subtype,
+                                              int renderFlags, boolean respawnTracked) {
+        return encoding.createKeyed(x, y, objectKey, subtype, renderFlags, respawnTracked,
+                ids.nextObjectId());
+    }
+
     public boolean canCreateObject(int objectId) {
         return encoding.supportsEditorObjectId(objectId)
                 && !encoding.isReservedForRingEditing(objectId);

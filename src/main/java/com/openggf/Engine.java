@@ -415,6 +415,7 @@ public class Engine {
 				inputHandler.handleKeyEvent(key, action);
 			}
 		});
+		installEditorTextInputCallback();
 		glfwSetCursorPosCallback(window, (windowHandle, x, y) -> {
 			if (inputHandler != null) {
 				inputHandler.handleMouseMove(x, y);
@@ -554,6 +555,14 @@ public class Engine {
 		}
 
 		lastFrameTime = System.nanoTime();
+	}
+
+	private void installEditorTextInputCallback() {
+		glfwSetCharCallback(window, (windowHandle, codepoint) -> {
+			if (getCurrentGameMode() == GameMode.EDITOR) {
+				editorInputHandler.handleTextInputCodepoint(codepoint);
+			}
+		});
 	}
 
 	private void refreshDisplayPalettes() {
@@ -2014,7 +2023,8 @@ public class Engine {
 		levelEditorController.setPersistenceStatus(editorSaveManager.lastApplyResult());
 		GameModule editorModule = GameServices.module();
 		levelEditorController.configureSpawnEditing(
-				editorModule.createObjectRegistry(), editorModule.getObjectPlacementEncoding());
+				editorModule.createObjectRegistry(), editorModule.getObjectPlacementEncoding(),
+				editorModule.getObjectArtProvider());
 	}
 
 	private void primeEditorSelection(int playerX, int playerY) {

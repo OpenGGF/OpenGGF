@@ -19,6 +19,7 @@ public final class ModContext {
     private final ModAssetRoot assets;
     private final Map<String, ObjectFactory> objects = new LinkedHashMap<>();
     private final Map<String, BakedSheetRef> art = new LinkedHashMap<>();
+    private final Map<String, String> objectPreviewArtKeys = new LinkedHashMap<>();
     private final List<GamePatch> patches = new ArrayList<>();
     private final List<ModZoneContribution> zones = new ArrayList<>();
     private final java.util.Set<String> zoneKeys = new java.util.HashSet<>();
@@ -74,6 +75,16 @@ public final class ModContext {
         });
     }
 
+    /** Explicit editor-preview association; object identity and art identity remain independent. */
+    public void registerObjectPreview(String objectKey, String artKey) {
+        mutate(() -> {
+            String object=ModKeySyntax.requireOwnedKey(owner,objectKey);
+            String artIdentity=ModKeySyntax.requireOwnedKey(owner,artKey);
+            if(objectPreviewArtKeys.putIfAbsent(object,artIdentity)!=null)
+                throw failure("Duplicate object preview mapping: "+object);
+        });
+    }
+
     public void registerZone(ModZoneContribution contribution) {
         mutate(() -> {
             if (!"s2".equals(baseGame)) {
@@ -106,6 +117,10 @@ public final class ModContext {
     ModRegistrationPlan freeze() {
         requireOpen();
         try {
+            objectPreviewArtKeys.forEach((objectKey,artKey)-> {
+                if(!objects.containsKey(objectKey))throw failure("Preview maps unknown object key: "+objectKey);
+                if(!art.containsKey(artKey))throw failure("Preview maps unknown art key: "+artKey);
+            });
             java.util.ArrayList<PreparedModZone> prepared = new java.util.ArrayList<>();
             java.util.HashSet<Integer> levelIds = new java.util.HashSet<>();
             java.util.HashSet<Integer> zoneIds = new java.util.HashSet<>();
@@ -118,7 +133,7 @@ public final class ModContext {
             }
             frozen = true;
             return new ModRegistrationPlan(owner, baseGame, objects, art, Map.of(), patches,
-                    zones, prepared);
+                    zones, prepared,objectPreviewArtKeys);
         } catch (java.io.IOException | RuntimeException rejected) {
             if (rejected instanceof ModRegistrationException registration) poison = registration;
             else poison = new ModRegistrationException(owner, "MOD_LEVEL_ASSET_INVALID",

@@ -31,4 +31,17 @@ public interface ObjectRegistry {
     default boolean hasObjectKey(String objectKey) {
         return false;
     }
+
+    /** Sorted namespaced identities exposed to creator/editor object palettes. */
+    default List<String> browsableObjectKeys() {
+        return List.of();
+    }
+
+    default java.util.Optional<String> editorPreviewArtKey(int stockObjectId) {
+        return java.util.Optional.empty();
+    }
+
+    default java.util.Optional<String> editorPreviewArtKey(String objectKey) {
+        return java.util.Optional.empty();
+    }
 }

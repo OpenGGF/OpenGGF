@@ -40,6 +40,13 @@ import java.util.Map;
  * Uses factory-based registration following the Sonic 2 pattern.
  */
 public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
+    @Override public java.util.Optional<String> editorPreviewArtKey(int objectId) {
+        return switch(objectId) {
+            case com.openggf.game.sonic1.constants.Sonic1ObjectIds.MONITOR -> java.util.Optional.of(com.openggf.level.objects.ObjectArtKeys.MONITOR);
+            case com.openggf.game.sonic1.constants.Sonic1ObjectIds.SPRING -> java.util.Optional.of(com.openggf.level.objects.ObjectArtKeys.SPRING_VERTICAL);
+            default -> java.util.Optional.empty();
+        };
+    }
 
     private Map<ObjectSpawn, List<RingSpawn>> ringSpawnMapping = Map.of();
 

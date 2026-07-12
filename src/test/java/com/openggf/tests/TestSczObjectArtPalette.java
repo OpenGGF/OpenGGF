@@ -17,12 +17,28 @@ import com.openggf.tests.rules.SonicGame;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 /**
  * ROM-backed regression tests for SCZ object art palette line selection.
  */
 @RequiresRom(SonicGame.SONIC_2)
 public class TestSczObjectArtPalette {
+    @Test
+    public void realStockRegistryMetadataResolvesAndDrawsLoadedMonitorPreview() throws Exception {
+        Rom rom=com.openggf.tests.TestEnvironment.currentRom();
+        var registry=new com.openggf.game.sonic2.objects.Sonic2ObjectRegistry();
+        String artKey=registry.editorPreviewArtKey(
+                com.openggf.game.sonic2.constants.Sonic2ObjectIds.MONITOR).orElseThrow();
+        assertEquals(com.openggf.level.objects.ObjectArtKeys.MONITOR,artKey);
+        Sonic2ObjectArtProvider provider=new Sonic2ObjectArtProvider(rom,RomByteReader.fromRom(rom));
+        provider.loadArtForZone(Sonic2ZoneConstants.ROM_ZONE_EHZ);
+        var renderer=provider.getRenderer(artKey);
+        assertNotNull(renderer);
+        var graphics=com.openggf.game.GameServices.graphics();graphics.initHeadless();
+        provider.ensurePatternsCached(graphics,0x50000);
+        assertDoesNotThrow(()->renderer.drawFrameIndex(0,0,0));
+    }
     @Test
     public void sczProviderRegistersTornadoRendererForGameplayStartup() throws Exception {
         Rom rom = com.openggf.tests.TestEnvironment.currentRom();
@@ -117,5 +133,4 @@ public class TestSczObjectArtPalette {
         return false;
     }
 }
-
 

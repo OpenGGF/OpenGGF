@@ -58,6 +58,13 @@ import java.util.Set;
 import java.util.logging.Logger;
 
 public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
+    @Override public java.util.Optional<String> editorPreviewArtKey(int objectId) {
+        return switch(objectId) {
+            case Sonic2ObjectIds.MONITOR -> java.util.Optional.of(com.openggf.level.objects.ObjectArtKeys.MONITOR);
+            case Sonic2ObjectIds.SPRING -> java.util.Optional.of(com.openggf.level.objects.ObjectArtKeys.SPRING_VERTICAL);
+            default -> java.util.Optional.empty();
+        };
+    }
     private static final Logger LOGGER = Logger.getLogger(Sonic2ObjectRegistry.class.getName());
 
     private final Map<Integer, List<String>> namesById = new HashMap<>();
