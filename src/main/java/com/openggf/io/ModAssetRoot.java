@@ -16,10 +16,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import static java.security.MessageDigest.getInstance;
+
 /** A validated, bounded source of files owned by one mod. */
 @com.openggf.game.ModApi
 public sealed interface ModAssetRoot extends AutoCloseable
-        permits AbstractModAssetRoot, PackedModAssetRoot {
+        permits AbstractModAssetRoot, PackedModAssetRoot, SnapshotModAssetRoot {
     byte[] readBounded(String normalizedEntry, long maxBytes) throws IOException;
     String describe();
     ModInputLimits limits();
@@ -43,6 +45,12 @@ public sealed interface ModAssetRoot extends AutoCloseable
 
     static ModAssetRoot directory(Path declaredRoot, Path directory, ModInputLimits limits,
                                   DirectoryAccess access) throws IOException {
+        return snapshotDirectory(declaredRoot, directory, limits, access);
+    }
+
+    static SnapshotModAssetRoot snapshotDirectory(Path declaredRoot, Path directory,
+                                                   ModInputLimits limits,
+                                                   DirectoryAccess access) throws IOException {
         Objects.requireNonNull(access, "access").requireDirectoryAllowed();
         return new DirectoryModAssetRoot(declaredRoot, directory, limits, access);
     }
@@ -421,10 +429,12 @@ final class JarModAssetRoot extends AbstractModAssetRoot implements PackedModAss
 
 /** Immutable snapshot root for explicitly trusted development and test directories only. */
 @com.openggf.game.ModApi
-final class DirectoryModAssetRoot extends AbstractModAssetRoot {
+final class DirectoryModAssetRoot extends AbstractModAssetRoot implements SnapshotModAssetRoot {
     private final String sourceDescription;
     private final ModAssetSnapshot snapshot;
     private final Path root;
+    private java.util.List<String> entryNames = java.util.List.of();
+    private boolean directoryClosed;
 
     DirectoryModAssetRoot(Path declaredRoot, Path directory, ModInputLimits limits,
                           DirectoryAccess access) throws IOException {
@@ -462,6 +472,7 @@ final class DirectoryModAssetRoot extends AbstractModAssetRoot {
         long[] nameBytes = {0};
         long[] total = {0};
         int[] count = {0};
+        java.util.ArrayList<String> validatedNames = new java.util.ArrayList<>();
         try (var paths = Files.walk(root)) {
             paths.filter(path -> !path.equals(root)).forEach(path -> {
                 try {
@@ -483,6 +494,7 @@ final class DirectoryModAssetRoot extends AbstractModAssetRoot {
                     }
                     String name = ModAssetSnapshot.normalizedRelativeName(root.relativize(path));
                     registerName(name, limits(), exact, folded, nameBytes);
+                    validatedNames.add(name);
                     long size = Files.size(real);
                     if (size > limits().maxAssetBytes()) {
                         throw new IOException("Directory asset exceeds limit: " + name);
@@ -498,6 +510,8 @@ final class DirectoryModAssetRoot extends AbstractModAssetRoot {
         } catch (DirectoryValidationException e) {
             throw e.ioCause;
         }
+        validatedNames.sort(String::compareTo);
+        entryNames = java.util.List.copyOf(validatedNames);
     }
 
     @Override
@@ -538,8 +552,31 @@ final class DirectoryModAssetRoot extends AbstractModAssetRoot {
     @Override
     public String describe() { return sourceDescription; }
 
+    @Override public java.util.List<String> validatedEntryNames() throws IOException {
+        ensureOpen(); return entryNames;
+    }
+
+    @Override public String immutableSha256() throws IOException {
+        ensureOpen();
+        try {
+            java.security.MessageDigest digest = getInstance("SHA-256");
+            for (String name : entryNames) {
+                digest.update(name.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                digest.update((byte) 0);
+                digest.update(Files.readAllBytes(root.resolve(name)));
+            }
+            return java.util.HexFormat.of().formatHex(digest.digest());
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException(impossible);
+        }
+    }
+
+    @Override public Path immutableContentPath() throws IOException { ensureOpen(); return root; }
+
     @Override
     public void close() throws IOException {
+        if (directoryClosed) return;
+        directoryClosed=true;
         markClosed();
         snapshot.close();
     }

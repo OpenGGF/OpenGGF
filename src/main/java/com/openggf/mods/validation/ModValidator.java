@@ -79,6 +79,23 @@ public final class ModValidator {
         }
     }
 
+    /** Validates classes directly from an already-retained immutable development directory. */
+    public ModValidationReport validateDirectory(Path root,String entrypointBinaryName){
+        Objects.requireNonNull(root,"root");
+        try{
+            java.io.ByteArrayOutputStream bytes=new java.io.ByteArrayOutputStream();
+            try(java.util.jar.JarOutputStream jar=new java.util.jar.JarOutputStream(bytes);
+                var paths=Files.walk(root)){
+                for(Path path:paths.filter(p->Files.isRegularFile(p)&&p.toString().endsWith(".class"))
+                        .sorted().toList()){
+                    String name=root.relativize(path).toString().replace('\\','/');
+                    jar.putNextEntry(new java.util.jar.JarEntry(name));jar.write(Files.readAllBytes(path));jar.closeEntry();
+                }
+            }
+            return validate(bytes.toByteArray(),entrypointBinaryName);
+        }catch(IOException error){return report(error("JAR_READ_FAILED","","",safeMessage(error)));}
+    }
+
     public ModValidationReport validate(byte[] jarBytes, String entrypointBinaryName) {
         Objects.requireNonNull(jarBytes, "jarBytes");
         if (jarBytes.length > limits.maxJarBytes()) {

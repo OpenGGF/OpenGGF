@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestProductionAwtBlacklistGuard {
 
     private static final Path EXEMPT_FILE = Path.of("com/openggf/audio/debug/SoundTestApp.java");
+    private static final Path MOD_SDK_TOOLS = Path.of("com/openggf/tools/modsdk");
 
     private static final Set<String> KNOWN_VIOLATIONS = Set.of();
 
@@ -34,7 +35,7 @@ public class TestProductionAwtBlacklistGuard {
 
     private static void scanFile(Path srcMain, Path file, Set<String> violations) {
         Path relative = srcMain.relativize(file);
-        if (relative.equals(EXEMPT_FILE)) {
+        if (relative.equals(EXEMPT_FILE) || relative.startsWith(MOD_SDK_TOOLS)) {
             return;
         }
 

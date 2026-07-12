@@ -1,0 +1,101 @@
+package com.openggf.tools.modsdk;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import javax.tools.ToolProvider;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class TestProjectScaffolder {
+    @TempDir Path temp;
+
+    @Test void createsExactCompilableUneditedProjectAndRefusesOverwrite() throws Exception {
+        Path project = temp.resolve("sample");
+        new ProjectScaffolder().scaffold(project, "my-sample", "example.mods.sample");
+
+        Set<String> files;
+        try (var paths = Files.walk(project)) {
+            files = paths.filter(Files::isRegularFile).map(project::relativize)
+                    .map(Path::toString).map(s -> s.replace('\\', '/')).collect(Collectors.toSet());
+        }
+        assertEquals(Set.of("pom.xml", "README.md",
+                "src/main/java/example/mods/sample/MySampleMod.java",
+                "src/main/java/example/mods/sample/SampleBadnik.java",
+                "src/main/resources/META-INF/openggf-mod.yaml",
+                "src/main/mod/sample.png", "src/main/mod/sample-sheet.yaml",
+                "src/main/mod/level-source/level.json",
+                "src/main/mod/level-source/patterns.bin",
+                "src/main/mod/level-source/chunks.bin",
+                "src/main/mod/level-source/blocks.bin",
+                "src/main/mod/level-source/fg-map.bin",
+                "src/main/mod/level-source/solid-heights.bin",
+                "src/main/mod/level-source/solid-widths.bin",
+                "src/main/mod/level-source/solid-angles.bin",
+                "src/main/mod/level-source/collision-primary.bin",
+                "src/main/mod/level-source/collision-secondary.bin",
+                "src/main/mod/level-source/palettes.bin"), files);
+
+        var compiler = ToolProvider.getSystemJavaCompiler();
+        assertNotNull(compiler);
+        Path classes = temp.resolve("classes"); Files.createDirectories(classes);
+        List<String> sources;
+        try (var paths = Files.walk(project.resolve("src/main/java"))) {
+            sources = paths.filter(p -> p.toString().endsWith(".java"))
+                    .map(Path::toString).toList();
+        }
+        var args = new java.util.ArrayList<>(List.of("--release", "21", "-cp",
+                Path.of("target/classes").toAbsolutePath().toString(), "-d", classes.toString()));
+        args.addAll(sources);
+        assertEquals(0, compiler.run(null, null, null, args.toArray(String[]::new)));
+        Path convertedArt = classes.resolve("art/sample.ggfs"); Files.createDirectories(convertedArt.getParent());
+        new ArtConverter().convert(project.resolve("src/main/mod/sample.png"),
+                project.resolve("src/main/mod/sample-sheet.yaml"), convertedArt);
+        new LevelConverter().convert(project.resolve("src/main/mod/level-source"),
+                classes.resolve("levels/sample"));
+        Path manifestSource = project.resolve("src/main/resources/META-INF/openggf-mod.yaml");
+        Path manifestTarget = classes.resolve("META-INF/openggf-mod.yaml");
+        Files.createDirectories(manifestTarget.getParent()); Files.copy(manifestSource, manifestTarget);
+        Path jar = temp.resolve("my-sample.jar");
+        JarPackager.packageDirectory(classes, jar);
+        assertTrue(Files.isRegularFile(jar));
+        assertTrue(new ModJarValidator().validate(jar).valid());
+
+        Path localEngine=temp.resolve("local-engine.jar"); createJar(Path.of("target/classes"),localEngine);
+        String mavenExecutable=System.getProperty("os.name","").startsWith("Windows")?"mvn.cmd":"mvn";
+        Process maven=new ProcessBuilder(mavenExecutable,"-q","package",
+                "-Dopenggf.engine.jar="+localEngine.toAbsolutePath(),
+                "-Dopenggf.sdk.jar="+localEngine.toAbsolutePath())
+                .directory(project.toFile()).redirectErrorStream(true).start();
+        String buildOutput=new String(maven.getInputStream().readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);
+        assertEquals(0,maven.waitFor(),buildOutput);
+        Path mavenMod=project.resolve("target/my-sample-mod.jar");
+        assertTrue(Files.isRegularFile(mavenMod),buildOutput);
+        assertTrue(new ModJarValidator().validate(mavenMod).valid());
+        assertThrows(Exception.class,
+                () -> new ProjectScaffolder().scaffold(project, "my-sample", "example.mods.sample"));
+    }
+
+    private static void createJar(Path root,Path jar)throws Exception{
+        try(JarOutputStream output=new JarOutputStream(Files.newOutputStream(jar));var paths=Files.walk(root)){
+            for(Path file:paths.filter(Files::isRegularFile).sorted().toList()){
+                output.putNextEntry(new JarEntry(root.relativize(file).toString().replace('\\','/')));
+                Files.copy(file,output);output.closeEntry();
+            }
+        }
+    }
+
+    @Test void rejectsInvalidIdentityBeforeCreatingOutput() {
+        Path output = temp.resolve("bad");
+        assertThrows(IllegalArgumentException.class,
+                () -> new ProjectScaffolder().scaffold(output, "Upper", "not-a-package"));
+        assertFalse(Files.exists(output));
+    }
+}

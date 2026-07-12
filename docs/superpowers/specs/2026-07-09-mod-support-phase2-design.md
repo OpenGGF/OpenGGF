@@ -292,7 +292,9 @@ addresses each:
   - `run` — dev-mode launch with the mod from build output. (Correction:
     dev mode is **built in Phase 2**, not inherited — Phase 1 ships no dev
     flag; the scanner gains exploded-directory support behind a system
-    property here, exempt from trace/test force-disable per §7.)
+    property here, exempt from trace/test force-disable per §7.) The exact property
+    is `ggfmod.dev.modDir`; only its explicit presence enables the exemption, and the
+    directory is copied once into an engine-owned immutable snapshot before parsing.
 
 ### F. Trust gate
 

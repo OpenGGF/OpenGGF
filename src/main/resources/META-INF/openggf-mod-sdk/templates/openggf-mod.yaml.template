@@ -1,0 +1,14 @@
+formatVersion: 1
+id: {{MOD_ID}}
+name: {{DISPLAY_NAME}}
+version: 1.0.0
+authors:
+  - Mod Author
+description: Generated OpenGGF sample mod.
+engineApiRange: ">=1.0.0 <2.0.0"
+type: patch
+baseGame: s2
+entrypoint: {{PACKAGE}}.{{CLASS_PREFIX}}Mod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

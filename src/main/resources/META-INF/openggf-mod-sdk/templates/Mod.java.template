@@ -1,0 +1,10 @@
+package {{PACKAGE}};
+
+import com.openggf.mods.code.GgfMod;
+import com.openggf.mods.code.ModContext;
+
+public final class {{CLASS_PREFIX}}Mod implements GgfMod {
+    @Override public void register(ModContext context) {
+        context.registerObject("sample-badnik", (spawn, registry) -> new SampleBadnik(spawn));
+    }
+}

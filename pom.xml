@@ -533,10 +533,9 @@
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>3.1.1</version>
                 <configuration>
-                    <!-- get all project dependencies -->
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
+                    <descriptors>
+                        <descriptor>src/assembly/openggf-jar-with-dependencies.xml</descriptor>
+                    </descriptors>
                     <!-- MainClass in mainfest make a executable jar -->
                     <archive>
                         <manifest>
@@ -652,6 +651,21 @@
                             </arguments>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>verify-openggf-mod-sdk-artifacts</id>
+                        <phase>verify</phase>
+                        <goals><goal>exec</goal></goals>
+                        <configuration>
+                            <executable>java</executable>
+                            <arguments>
+                                <argument>-cp</argument><classpath/>
+                                <argument>com.openggf.tools.modsdk.ModSdkArtifactVerifier</argument>
+                                <argument>${project.build.directory}/${project.build.finalName}.jar</argument>
+                                <argument>${project.build.directory}/${project.build.finalName}-jar-with-dependencies.jar</argument>
+                                <argument>${project.build.directory}/${project.build.finalName}-openggf-mod-sdk.jar</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
 
@@ -660,6 +674,15 @@
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.4.2</version>
                 <executions>
+                    <execution>
+                        <id>default-jar</id>
+                        <configuration>
+                            <excludes>
+                                <exclude>com/openggf/tools/modsdk/**</exclude>
+                                <exclude>META-INF/openggf-mod-sdk/**</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>attach-openggf-mod-sdk</id>
                         <phase>package</phase>

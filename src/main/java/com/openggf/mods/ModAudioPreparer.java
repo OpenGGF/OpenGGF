@@ -3,6 +3,7 @@ package com.openggf.mods;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
 import com.openggf.io.PackedModAssetRoot;
+import com.openggf.io.SnapshotModAssetRoot;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -97,8 +98,12 @@ public final class ModAudioPreparer {
             LinkedHashMap<CacheKey, CachedPcm> ownerCache = new LinkedHashMap<>();
             LinkedHashMap<PrimaryKey, CacheKey> ownerPrimaryCache = new LinkedHashMap<>();
             long provisionalBytes = 0;
-            try (PackedModAssetRoot assets = ModAssetRoot.jar(root, descriptor.jarPath(), limits)) {
-                if (!assets.immutableSha256().equals(descriptor.sha256())) {
+            try {
+            SnapshotModAssetRoot sourceAssets = descriptor.retainedSource() != null
+                    ? descriptor.retainedSource() : ModAssetRoot.jar(root,descriptor.jarPath(),limits);
+            try (ModAssetRoot assets = descriptor.retainedSource() != null
+                    ? ModAssetRoot.nonClosingView(sourceAssets) : sourceAssets) {
+                if (!sourceAssets.immutableSha256().equals(descriptor.sha256())) {
                     throw new ChangedJar("Packed mod digest changed after eligibility freeze");
                 }
                 for (ModAudioTrack track : ownerTracks) {
@@ -169,7 +174,7 @@ public final class ModAudioPreparer {
                 preparedByOwner.put(owner, List.copyOf(ownerPrepared));
                 keysByOwner.put(owner, Set.copyOf(ownerCache.keySet()));
                 ownerFindings.put(owner, List.of());
-            } catch (ChangedJar error) {
+            }} catch (ChangedJar error) {
                 failOwner(owner, "MOD_JAR_CHANGED", error.getMessage(), failed, ownerFindings);
             } catch (IOException | IllegalArgumentException | ArithmeticException | SecurityException error) {
                 failOwner(owner, "AUDIO_PREPARATION_FAILED", safeMessage(error), failed, ownerFindings);

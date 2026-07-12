@@ -3,11 +3,17 @@ package com.openggf.mods;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import com.openggf.io.SnapshotModAssetRoot;
 
 /** Valid manifest metadata and immutable-content identity for one packed mod. */
 public record ModDescriptor(Path jarPath, ModManifest manifest, String sha256,
-                            boolean containsCode, List<ModFinding> findings)
+                            boolean containsCode, List<ModFinding> findings,
+                            SnapshotModAssetRoot retainedSource)
         implements ModCatalogEntry {
+    public ModDescriptor(Path jarPath, ModManifest manifest, String sha256,
+                         boolean containsCode, List<ModFinding> findings) {
+        this(jarPath,manifest,sha256,containsCode,findings,null);
+    }
     public ModDescriptor {
         Objects.requireNonNull(jarPath, "jarPath");
         Objects.requireNonNull(manifest, "manifest");

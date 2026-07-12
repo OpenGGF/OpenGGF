@@ -1,0 +1,30 @@
+package {{PACKAGE}};
+
+import com.openggf.game.PlayableEntity;
+import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractBadnikInstance;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
+import java.util.List;
+
+/** Minimal namespaced badnik shell. Replace its patrol with game-accurate behavior. */
+public final class SampleBadnik extends AbstractBadnikInstance implements RewindRecreatable {
+    public SampleBadnik(ObjectSpawn spawn) { super(spawn, "{{MOD_ID}}:sample-badnik"); }
+
+    @Override protected void updateMovement(int frameCounter, PlayableEntity player) {
+        int direction = ((frameCounter / 120) & 1) == 0 ? 1 : -1;
+        currentX += direction;
+    }
+
+    @Override protected int getCollisionSizeIndex() { return 1; }
+
+    @Override public void appendRenderCommands(List<GLCommand> commands) {
+        // Register converted art and render it here when replacing the sample sheet.
+    }
+
+    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+        return new SampleBadnik(context.spawn());
+    }
+}

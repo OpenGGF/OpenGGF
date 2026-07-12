@@ -3,6 +3,11 @@ package com.openggf.tools.modsdk;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.nio.file.InvalidPathException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -24,10 +29,30 @@ public final class GgfModCli {
         Objects.requireNonNull(args, "args");
         Objects.requireNonNull(output, "output");
         Objects.requireNonNull(validator, "validator");
-        if (args.length != 2 || !"validate".equals(args[0])) {
-            output.println("Usage: ggfmod validate <mod.jar>");
+        if (args.length == 0) return usage(output);
+        try {
+            return switch (args[0]) {
+                case "validate" -> validate(args, output, validator);
+                case "convert" -> convert(args, output);
+                case "init" -> init(args, output);
+                case "package" -> packageMod(args, output);
+                case "run" -> runEngine(args, output);
+                default -> usage(output);
+            };
+        } catch (InvalidPathException error) {
+            output.println("ERROR CLI_INPUT_INVALID Invalid path");
+            return 1;
+        } catch (Exception error) {
+            String message = error.getMessage();
+            output.println("ERROR COMMAND_FAILED "
+                    + (message == null || message.isBlank() ? error.getClass().getSimpleName() : message));
             return 1;
         }
+    }
+
+    private static int validate(String[] args, PrintStream output,
+                                Function<Path, ModJarValidator.Report> validator) {
+        if (args.length != 2) return usage(output);
         ModJarValidator.Report report;
         try {
             report = Objects.requireNonNull(validator.apply(Path.of(args[1])), "validator report");
@@ -45,5 +70,85 @@ public final class GgfModCli {
             output.println("Validation passed: 0 findings");
         }
         return report.valid() ? 0 : 1;
+    }
+
+    private static int convert(String[] args, PrintStream output) throws IOException {
+        if (args.length < 2) return usage(output);
+        Map<String,String> flags = flags(args, 2);
+        switch (args[1]) {
+            case "art" -> new ArtConverter().convert(path(flags, "--image"), path(flags, "--sheet"),
+                    path(flags, "--out"));
+            case "level" -> new LevelConverter().convert(path(flags, "--from-export"), path(flags, "--out"));
+            case "audio" -> new AudioConverter().convert(required(flags, "--owner"),
+                    path(flags, "--manifest"), path(flags, "--root"), path(flags, "--out"));
+            default -> { return usage(output); }
+        }
+        output.println("Conversion completed");
+        return 0;
+    }
+
+    private static int init(String[] args, PrintStream output) throws IOException {
+        if (args.length < 2) return usage(output);
+        Map<String,String> flags = flags(args, 2);
+        Path result = new ProjectScaffolder().scaffold(Path.of(args[1]),
+                required(flags, "--id"), required(flags, "--package"));
+        output.println("Created " + result);
+        return 0;
+    }
+
+    private static int packageMod(String[] args, PrintStream output) throws IOException {
+        Map<String,String> flags = flags(args, 1);
+        Path out = path(flags, "--out");
+        JarPackager.packageDirectory(path(flags, "--input"), out);
+        output.println("Packaged " + out.toAbsolutePath().normalize());
+        return 0;
+    }
+
+    private static int runEngine(String[] args, PrintStream output) throws IOException, InterruptedException {
+        if (args.length != 2) return usage(output);
+        Process process = new ProcessBuilder(engineCommand(Path.of(args[1])))
+                .inheritIO().start();
+        int exit = process.waitFor();
+        if (exit != 0) output.println("Engine exited with status " + exit);
+        return normalizeProcessExit(exit);
+    }
+
+    static int normalizeProcessExit(int exit){return exit==0?0:1;}
+
+    static List<String> engineCommand(Path buildOutput) {
+        Path root = Objects.requireNonNull(buildOutput, "buildOutput").toAbsolutePath().normalize();
+        if (!java.nio.file.Files.isDirectory(root))
+            throw new IllegalArgumentException("Run input must be an exploded build directory: " + root);
+        String executable = Path.of(System.getProperty("java.home"), "bin",
+                System.getProperty("os.name", "").startsWith("Windows") ? "java.exe" : "java").toString();
+        return List.of(executable, "-Dggfmod.dev.modDir=" + root,
+                "-cp", System.getProperty("java.class.path"), "com.openggf.Engine");
+    }
+
+    private static Map<String,String> flags(String[] args, int start) {
+        if ((args.length - start) % 2 != 0) throw new IllegalArgumentException("Flags require values");
+        java.util.LinkedHashMap<String,String> result = new java.util.LinkedHashMap<>();
+        for (int i=start;i<args.length;i+=2) {
+            if (!args[i].startsWith("--") || result.putIfAbsent(args[i], args[i+1]) != null)
+                throw new IllegalArgumentException("Invalid or duplicate flag: " + args[i]);
+        }
+        return Map.copyOf(result);
+    }
+
+    private static String required(Map<String,String> flags, String name) {
+        String value = flags.get(name);
+        if (value == null || value.isBlank()) throw new IllegalArgumentException("Missing required flag " + name);
+        return value;
+    }
+
+    private static Path path(Map<String,String> flags, String name) { return Path.of(required(flags, name)); }
+
+    private static int usage(PrintStream output) {
+        output.println("Usage: ggfmod validate <mod.jar> | init <dir> --id <id> --package <java.pkg>");
+        output.println("       ggfmod convert art --image <png> --sheet <yaml> --out <ggfs>");
+        output.println("       ggfmod convert level --from-export <dir> --out <dir>");
+        output.println("       ggfmod convert audio --owner <id> --manifest <yaml> --root <dir> --out <dir>");
+        output.println("       ggfmod package --input <classes/resources> --out <jar> | run <build-output>");
+        return 1;
     }
 }

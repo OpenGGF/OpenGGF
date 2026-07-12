@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+set -eu
+engine_jar=$1
+sdk_jar=$2
+shift 2
+exec java -cp "$engine_jar:$sdk_jar" com.openggf.tools.modsdk.GgfModCli "$@"

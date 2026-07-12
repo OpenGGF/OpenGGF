@@ -8,6 +8,7 @@ import com.openggf.mods.validation.ModValidator;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
 import com.openggf.io.PackedModAssetRoot;
+import com.openggf.io.SnapshotModAssetRoot;
 
 import java.io.IOException;
 import java.net.URL;
@@ -25,8 +26,10 @@ public final class ModClassLoaderFactory {
     private final ModInputLimits limits;
 
     public ModClassLoaderFactory(ClassLoader engineParent) {
-        this(engineParent, (descriptor, snapshot) -> new ModValidator().validate(
-                snapshot, descriptor.manifest().entrypoint()), ModInputLimits.production());
+        this(engineParent, (descriptor, snapshot) -> java.nio.file.Files.isDirectory(snapshot)
+                ? new ModValidator().validateDirectory(snapshot,descriptor.manifest().entrypoint())
+                : new ModValidator().validate(snapshot, descriptor.manifest().entrypoint()),
+                ModInputLimits.production());
     }
 
     ModClassLoaderFactory(ClassLoader engineParent,
@@ -56,7 +59,7 @@ public final class ModClassLoaderFactory {
         Set<String> trusted = Set.copyOf(Objects.requireNonNull(trustedCodeOwners,
                 "trustedCodeOwners"));
         Map<String, ModDependencyClassLoader> loaders = new LinkedHashMap<>();
-        Map<String, PackedModAssetRoot> snapshots = new LinkedHashMap<>();
+        Map<String, SnapshotModAssetRoot> snapshots = new LinkedHashMap<>();
         Map<String, ModDescriptor> loadedDescriptors = new LinkedHashMap<>();
         Set<String> availableOwners = new java.util.LinkedHashSet<>();
         Map<String, ModRuntime.Rejection> rejections = new LinkedHashMap<>();
@@ -76,7 +79,8 @@ public final class ModClassLoaderFactory {
                 }
                 boolean loadCode = descriptor.containsCode()
                         && descriptor.manifest().entrypoint() != null;
-                boolean retainData = !descriptor.manifest().artOverrides().isEmpty();
+                boolean retainData = !descriptor.manifest().artOverrides().isEmpty()
+                        || descriptor.retainedSource()!=null;
                 if (!loadCode && !retainData) {
                     availableOwners.add(owner);
                     continue;
@@ -84,7 +88,8 @@ public final class ModClassLoaderFactory {
                 java.nio.file.Path source = descriptor.jarPath().toAbsolutePath().normalize();
                 final long currentSourceBytes;
                 try {
-                    currentSourceBytes = java.nio.file.Files.size(source);
+                    currentSourceBytes = descriptor.retainedSource() == null
+                            ? java.nio.file.Files.size(source) : 0L;
                 } catch (IOException expectedOwnerFailure) {
                     rejections.put(owner, rejection(ModRuntime.RejectionReason.SNAPSHOT_FAILED,
                             "immutable snapshot unavailable"));
@@ -97,10 +102,10 @@ public final class ModClassLoaderFactory {
                     continue;
                 }
                 inspectedBytes += currentSourceBytes;
-                PackedModAssetRoot snapshot;
+                SnapshotModAssetRoot snapshot;
                 try {
-                    snapshot = ModAssetRoot.jar(source.getParent(), source,
-                            limits, currentSourceBytes);
+                    snapshot = descriptor.retainedSource() != null ? descriptor.retainedSource()
+                            : ModAssetRoot.jar(source.getParent(), source, limits, currentSourceBytes);
                 } catch (IOException expectedOwnerFailure) {
                     rejections.put(owner, rejection(ModRuntime.RejectionReason.SNAPSHOT_FAILED,
                             "immutable snapshot unavailable"));
@@ -188,7 +193,7 @@ public final class ModClassLoaderFactory {
     }
 
     private static void closeAll(Map<String, ModDependencyClassLoader> loaders,
-                                 Map<String, PackedModAssetRoot> snapshots,
+                                 Map<String, SnapshotModAssetRoot> snapshots,
                                  Map<String, ModRuntime.Rejection> rejections) {
         try {
             new ModRuntime(loaders, snapshots, Map.of(), rejections).close();
@@ -216,7 +221,7 @@ public final class ModClassLoaderFactory {
         return summary.isEmpty() ? "structural validation failed" : summary;
     }
 
-    private static void closeRejected(PackedModAssetRoot snapshot) {
+    private static void closeRejected(SnapshotModAssetRoot snapshot) {
         try {
             snapshot.close();
         } catch (IOException ignored) {

@@ -3,6 +3,7 @@ package com.openggf.mods;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
 import com.openggf.io.PackedModAssetRoot;
+import com.openggf.io.SnapshotModAssetRoot;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -117,6 +118,16 @@ public final class ModCatalogValidator {
 
     private ModAudioManifest validateDescriptor(ModDescriptor descriptor, List<ModFinding> findings,
                                                 long expectedBytes) {
+        if (descriptor.retainedSource() != null) {
+            try {
+                return validateDescriptorContents(descriptor, findings, descriptor.retainedSource());
+            } catch (ModManifestException error) {
+                findings.add(error("AUDIO_MANIFEST_INVALID", safeMessage(error), AUDIO_MANIFEST_PATH));
+            } catch (IOException | SecurityException error) {
+                findings.add(error("MOD_JAR_CHANGED", safeMessage(error), descriptor.jarPath().getFileName().toString()));
+            }
+            return null;
+        }
         try (PackedModAssetRoot assets = ModAssetRoot.jar(
                 root, descriptor.jarPath(), limits, expectedBytes)) {
             return validateDescriptorContents(descriptor, findings, assets);
@@ -131,7 +142,7 @@ public final class ModCatalogValidator {
 
     private ModAudioManifest validateDescriptorContents(ModDescriptor descriptor,
                                                          List<ModFinding> findings,
-                                                         PackedModAssetRoot assets)
+                                                         SnapshotModAssetRoot assets)
             throws IOException, ModManifestException {
         if (!assets.immutableSha256().equals(descriptor.sha256())) {
             findings.add(error("MOD_JAR_CHANGED", "Packed mod digest changed after discovery", null));
@@ -181,6 +192,7 @@ public final class ModCatalogValidator {
         long total = 0;
         for (ModDescriptor descriptor : descriptors) {
             Path path = descriptor.jarPath();
+            if (descriptor.retainedSource() != null) { sizes.put(path,0L); continue; }
             try {
                 BasicFileAttributes attributes = Files.readAttributes(
                         path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
@@ -267,7 +279,7 @@ public final class ModCatalogValidator {
 
     private static ModDescriptor copy(ModDescriptor descriptor, List<ModFinding> findings) {
         return new ModDescriptor(descriptor.jarPath(), descriptor.manifest(), descriptor.sha256(),
-                descriptor.containsCode(), findings);
+                descriptor.containsCode(), findings, descriptor.retainedSource());
     }
     private static ModFinding error(String code,String message,String path){return new ModFinding(ModFindingSeverity.ERROR,code,message,path);}
     private static String safeMessage(Throwable error){String message=error.getMessage();return message==null||message.isBlank()?error.getClass().getSimpleName():message;}

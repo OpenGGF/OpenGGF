@@ -12,6 +12,8 @@ import com.openggf.mods.PendingModStateEditor;
 import com.openggf.mods.PreparedAudioSession;
 import com.openggf.mods.PreparedModMusic;
 import com.openggf.mods.DefaultModRepositoryScanner;
+import com.openggf.mods.DevelopmentModSource;
+import com.openggf.mods.ModDescriptor;
 import com.openggf.mods.EffectiveCatalogBuilder;
 import com.openggf.mods.ModCatalogValidator;
 import com.openggf.mods.ModStateStore;
@@ -56,6 +58,7 @@ public final class ModSubsystem implements AutoCloseable {
     private SessionExternalContentView sessionView = SessionExternalContentView.EMPTY;
     private long sessionEpoch;
     private RewindClassResolver rewindClassResolver = RewindClassResolver.ENGINE_ONLY;
+    private AutoCloseable bootResource = () -> { };
 
     public ModSubsystem(ModCatalog processCatalog, ModRuntimeFindingStore runtimeFindings,
                         SessionViewFactory sessionFactory) {
@@ -145,6 +148,14 @@ public final class ModSubsystem implements AutoCloseable {
     }
 
     public ModRuntimeFindingStore runtimeFindings() { return runtimeFindings; }
+
+    /** Transfers the explicit dev snapshot from boot ownership to ModRuntime construction. */
+    public synchronized void transferDevelopmentSourceOwnership() {
+        if (bootResource instanceof DevelopmentModSource development) {
+            development.transferOwnership();
+            bootResource = () -> { };
+        }
+    }
 
     /** Engine-owned callback boundary factory used by later object/provider registration wrappers. */
     public synchronized com.openggf.mods.code.ModFaultBoundary createFaultBoundary(
@@ -280,7 +291,11 @@ public final class ModSubsystem implements AutoCloseable {
         previous.close();
     }
 
-    @Override public void close() { returnToTitle(); }
+    @Override public void close() {
+        returnToTitle();
+        try { bootResource.close(); } catch (Exception ignored) { }
+        bootResource = () -> { };
+    }
 
     private static ModSubsystem disabled(ExternalContentPolicy policy) {
         return new ModSubsystem(new ModCatalog(List.of(), EffectiveModCatalog.EMPTY),
@@ -329,25 +344,60 @@ public final class ModSubsystem implements AutoCloseable {
             if (!declared.equals(root)) {
                 throw new IllegalArgumentException("Mod root supplier must return an absolute normalized path");
             }
-            var scanned = new DefaultModRepositoryScanner(limits).scan(root);
+            DevelopmentModSource development = null;
+            java.util.Optional<Path> developmentPath = DevelopmentModSource.configuredPath();
+            if (developmentPath.isPresent()) {
+                try {
+                    development = DevelopmentModSource.snapshot(developmentPath.orElseThrow(), limits);
+                } catch (java.io.IOException failure) {
+                    throw new IllegalStateException("Unable to snapshot explicit development mod", failure);
+                }
+            }
+            var scanned = development == null ? new DefaultModRepositoryScanner(limits).scan(root)
+                    : development.scan();
+            boolean completed=false;
+            try {
             ModCatalogValidator.ValidationResult validated = new ModCatalogValidator(
                     root, limits, stockMusicDomain).validate(scanned);
-            ModStateStore stateStore = new ModStateStore(root, limits);
-            var loadedState = stateStore.load().state();
-            BootTrustReconciliation trust = reconcileBootTrust(
-                    loadedState, validated.entries(), stateStore::save);
-            var startup = trust.state();
+            ModStateStore stateStore = development == null ? new ModStateStore(root, limits) : null;
+            BootTrustReconciliation trust;
+            ModState startup;
+            if (development == null) {
+                var loadedState = stateStore.load().state();
+                trust = reconcileBootTrust(loadedState, validated.entries(), stateStore::save);
+                startup = trust.state();
+            } else {
+                ModDescriptor descriptor = validated.entries().stream()
+                        .filter(ModDescriptor.class::isInstance).map(ModDescriptor.class::cast)
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Development descriptor invalid"));
+                startup = new ModState(ModState.CURRENT_FORMAT_VERSION,List.of(new ModState.Entry(
+                        descriptor.manifest().id(),true,0,descriptor.containsCode(),
+                        descriptor.containsCode()?descriptor.sha256():null)));
+                trust = new BootTrustReconciliation(startup,
+                        descriptor.containsCode()?Set.of(descriptor.manifest().id()):Set.of(),Map.of());
+            }
             ModCatalog catalog = new EffectiveCatalogBuilder().build(validated.entries(), startup);
-            PendingModStateEditor editor = new PendingModStateEditor(
-                    startup, catalog.scanned(), stateStore);
+            if(development!=null&&catalog.effective().orderedEnabled().size()!=1)
+                throw new IllegalStateException("Development mod must be the sole effective owner");
+            PendingModStateEditor editor = development == null ? new PendingModStateEditor(
+                    startup, catalog.scanned(), stateStore) : null;
             ModRuntimeFindingStore findings = new ModRuntimeFindingStore();
             trust.findings().forEach(findings::replaceOwner);
             ModAudioPreparer preparer = new ModAudioPreparer(root, limits, findings,
-                    ModAudioPreparer.FailureStateSink.pending(editor));
-            return new ModSubsystem(catalog, editor, findings,
+                    editor == null ? owners -> new ModStateSaveResult.Saved()
+                            : ModAudioPreparer.FailureStateSink.pending(editor));
+            Set<String> trustedOwners = development == null ? trust.trustedCodeOwners()
+                    : validated.entries().stream().filter(entry -> entry instanceof com.openggf.mods.ModDescriptor)
+                    .map(entry -> ((com.openggf.mods.ModDescriptor) entry).manifest().id())
+                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
+            ModSubsystem subsystem = new ModSubsystem(catalog, editor, findings,
                     preparedAudioFactory(preparer, catalog.effective(), validated.registry()),
                     audioBoundary, new ExternalContentPolicy(ExternalContentMode.NORMAL),
-                    trust.trustedCodeOwners());
+                    trustedOwners);
+            if (development != null) subsystem.bootResource = development;
+            completed=true;
+            return subsystem;
+            } finally {if(!completed&&development!=null)development.close();}
         };
     }
 

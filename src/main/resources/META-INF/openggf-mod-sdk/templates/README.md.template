@@ -1,0 +1,9 @@
+# {{DISPLAY_NAME}}
+
+This project uses both OpenGGF artifacts: the engine jar supplies the public mod API,
+and the `openggf-mod-sdk` classifier supplies `ggfmod` and its templates.
+
+1. Convert `src/main/mod/sample.png` with `src/main/mod/sample-sheet.yaml`.
+2. Convert `src/main/mod/level-source` with `ggfmod convert level`.
+3. Compile classes and package the build output with `ggfmod package`.
+4. Launch an exploded build explicitly with `ggfmod run`.

@@ -1,6 +1,7 @@
 package com.openggf.mods.code;
 
 import com.openggf.io.PackedModAssetRoot;
+import com.openggf.io.SnapshotModAssetRoot;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.game.patch.ModuleResolutionService;
 import com.openggf.game.patch.PatchOwner;
@@ -21,7 +22,7 @@ import java.util.Optional;
 public final class ModRuntime implements AutoCloseable {
     private final Map<String, ModDependencyClassLoader> loaders;
     private final List<String> owners;
-    private final Map<String, PackedModAssetRoot> snapshots;
+    private final Map<String, SnapshotModAssetRoot> snapshots;
     private final Map<String, ModDescriptor> descriptors;
     private final Set<String> availableOwners;
     private final Map<String, Rejection> rejectedOwners;
@@ -33,7 +34,7 @@ public final class ModRuntime implements AutoCloseable {
             com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink = (owner, finding) -> {};
 
     ModRuntime(Map<String, ModDependencyClassLoader> loaders,
-               Map<String, PackedModAssetRoot> snapshots,
+               Map<String, SnapshotModAssetRoot> snapshots,
                Map<String, ModDescriptor> descriptors,
                Map<String, Rejection> rejectedOwners) {
         this(loaders, snapshots, descriptors,
@@ -41,7 +42,7 @@ public final class ModRuntime implements AutoCloseable {
     }
 
     ModRuntime(Map<String, ModDependencyClassLoader> loaders,
-               Map<String, PackedModAssetRoot> snapshots,
+               Map<String, SnapshotModAssetRoot> snapshots,
                Map<String, ModDescriptor> descriptors,
                Set<String> availableOwners,
                Map<String, Rejection> rejectedOwners) {
@@ -248,7 +249,7 @@ public final class ModRuntime implements AutoCloseable {
                 else failure.addSuppressed(error);
             }
         }
-        List<PackedModAssetRoot> snapshotValues = new ArrayList<>(snapshots.values());
+        List<SnapshotModAssetRoot> snapshotValues = new ArrayList<>(snapshots.values());
         for (int index = snapshotValues.size() - 1; index >= 0; index--) {
             try {
                 snapshotValues.get(index).close();

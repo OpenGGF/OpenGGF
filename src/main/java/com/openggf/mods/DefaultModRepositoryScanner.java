@@ -157,7 +157,7 @@ public final class DefaultModRepositoryScanner implements ModRepositoryScanner {
                 findings.add(error("DUPLICATE_MOD_ID",
                         "Mod id is used by multiple jars: " + group.getKey(), MANIFEST_PATH));
                 entries.set(index, new ModDescriptor(descriptor.jarPath(), descriptor.manifest(),
-                        descriptor.sha256(), descriptor.containsCode(), findings));
+                        descriptor.sha256(), descriptor.containsCode(), findings, descriptor.retainedSource()));
             }
         }
     }

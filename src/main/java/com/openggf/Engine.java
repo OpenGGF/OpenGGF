@@ -1199,10 +1199,8 @@ public class Engine {
 	}
 
 	private void initializeExternalContentAtBoot() {
-		ExternalContentPolicy policy = new ExternalContentPolicy(
-				configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
-						? ExternalContentMode.STARTUP_DETERMINISTIC
-						: ExternalContentMode.NORMAL);
+		ExternalContentPolicy policy = new ExternalContentPolicy(externalContentBootMode(
+				configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)));
 		ModSubsystem.installAtBoot(policy, ModSubsystem.normalBootLoader(
 				() -> Path.of("mods").toAbsolutePath().normalize(),
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
@@ -1212,6 +1210,7 @@ public class Engine {
 				com.openggf.level.objects.RewindClassResolver.ENGINE_ONLY);
 		try {
 			var effectiveMods = ModSubsystem.current().processCatalog().effective();
+			ModSubsystem.current().transferDevelopmentSourceOwnership();
 			modRuntime = replaceModRuntime(modRuntime,
 					new ModClassLoaderFactory(Engine.class.getClassLoader())
 							.create(effectiveMods, ModSubsystem.current().trustedCodeOwners()));
@@ -1233,6 +1232,11 @@ public class Engine {
 		} catch (IOException error) {
 			LOGGER.log(java.util.logging.Level.WARNING, "Compiled-mod runtime initialization failed", error);
 		}
+	}
+
+	static ExternalContentMode externalContentBootMode(boolean testMode){
+		return testMode&&!com.openggf.mods.DevelopmentModSource.isConfigured()
+				?ExternalContentMode.STARTUP_DETERMINISTIC:ExternalContentMode.NORMAL;
 	}
 
 	private MasterTitleScreen createMasterTitleScreen() {

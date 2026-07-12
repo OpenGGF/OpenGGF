@@ -18,9 +18,11 @@ class TestModApiSdkPackager {
     @TempDir Path temp;
 
     @Test
-    void copiesOnlyExactAnnotatedClassfilesAndGeneratesTheirJavadocs() throws Exception {
+    void copiesOnlySdkToolClassesTemplatesAndServiceResourcesAndGeneratesApiJavadocs() throws Exception {
         Class<?> packagePrivate = Class.forName("com.openggf.io.AbstractModAssetRoot");
         Path compiled = temp.resolve("build/classes");
+        copyCompiledPackage(compiled, Path.of("com/openggf/tools/modsdk"));
+        copyCompiledPackage(compiled, Path.of("META-INF/openggf-mod-sdk"));
         copyCompiledFixture(compiled, com.openggf.mods.code.GgfMod.class);
         copyCompiledFixture(compiled, packagePrivate);
         Path classes = temp.resolve("build/sdk-classes");
@@ -35,9 +37,15 @@ class TestModApiSdkPackager {
                     .map(classes::relativize).map(Path::toString)
                     .map(value -> value.replace('\\', '/')).collect(Collectors.toSet());
         }
-        assertTrue(copied.equals(Set.of(
-                "com/openggf/mods/code/GgfMod.class",
-                "com/openggf/io/AbstractModAssetRoot.class")), copied::toString);
+        assertTrue(copied.contains("com/openggf/tools/modsdk/GgfModCli.class"), copied::toString);
+        assertTrue(copied.stream().anyMatch(value -> value.startsWith(
+                "com/openggf/tools/modsdk/") && value.contains("$")), copied::toString);
+        assertTrue(copied.contains("META-INF/openggf-mod-sdk/templates/pom.xml.template"), copied::toString);
+        assertTrue(copied.stream().allMatch(value -> value.startsWith("com/openggf/tools/modsdk/")
+                || value.startsWith("META-INF/openggf-mod-sdk/templates/")
+                || value.startsWith("META-INF/services/")), copied::toString);
+        assertFalse(copied.contains("com/openggf/mods/code/GgfMod.class"));
+        assertFalse(copied.contains("com/openggf/io/AbstractModAssetRoot.class"));
         assertFalse(Files.exists(classes.resolve(
                 "com/openggf/level/objects/BootstrapObjectServices.class")));
         assertTrue(Files.isRegularFile(docs.resolve("index.html")));
@@ -102,6 +110,8 @@ class TestModApiSdkPackager {
         assertTrue(pom.contains("<classifier>openggf-mod-sdk-javadoc</classifier>"));
         assertTrue(pom.contains("${project.build.directory}/mod-sdk/classes"));
         assertTrue(pom.contains("${project.build.directory}/mod-sdk/javadocs"));
+        assertTrue(pom.contains("com/openggf/tools/modsdk/**"));
+        assertTrue(pom.contains("src/assembly/openggf-jar-with-dependencies.xml"));
     }
 
     private static void copyCompiledFixture(Path compiledRoot, Class<?> type) throws Exception {
@@ -109,5 +119,16 @@ class TestModApiSdkPackager {
         Path destination = compiledRoot.resolve(relative);
         Files.createDirectories(destination.getParent());
         Files.copy(Path.of("target/classes").resolve(relative), destination);
+    }
+
+    private static void copyCompiledPackage(Path compiledRoot, Path relativeRoot) throws Exception {
+        Path sourceRoot = Path.of("target/classes").resolve(relativeRoot);
+        try (var paths = Files.walk(sourceRoot)) {
+            for (Path source : paths.filter(Files::isRegularFile).toList()) {
+                Path destination = compiledRoot.resolve(Path.of("target/classes").relativize(source));
+                Files.createDirectories(destination.getParent());
+                Files.copy(source, destination);
+            }
+        }
     }
 }

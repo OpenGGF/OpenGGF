@@ -11,7 +11,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-/** Prepares exact class and Javadoc directory trees for the attached mod SDK jars. */
+/** Prepares the creator-tool classifier and exact API Javadocs. */
 public final class ModApiSdkPackager {
     private ModApiSdkPackager() { }
 
@@ -44,21 +44,9 @@ public final class ModApiSdkPackager {
 
         resetDirectory(sdkOutput);
         resetDirectory(docsOutput);
-        for (Class<?> type : exact) {
-            Path relative = Path.of(type.getName().replace('.', '/') + ".class");
-            Path source = classes.resolve(relative).normalize();
-            if (!source.startsWith(classes) || !Files.isRegularFile(source)) {
-                throw new IllegalArgumentException("Missing compiled class for annotated type "
-                        + type.getName() + ": " + source);
-            }
-            Path destination = sdkOutput.resolve(relative).normalize();
-            if (!destination.startsWith(sdkOutput)) {
-                throw new IllegalArgumentException("Unsafe SDK class destination: " + destination);
-            }
-            Files.createDirectories(destination.getParent());
-            Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING,
-                    StandardCopyOption.COPY_ATTRIBUTES);
-        }
+        copyTree(classes, sdkOutput, Path.of("com/openggf/tools/modsdk"));
+        copyTree(classes, sdkOutput, Path.of("META-INF/openggf-mod-sdk/templates"));
+        copySdkServices(classes, sdkOutput);
         ModApiJavadocTool.generate(sources, docsOutput, exact);
     }
 
@@ -100,5 +88,50 @@ public final class ModApiSdkPackager {
             }
         }
         Files.createDirectories(directory);
+    }
+
+    private static void copyTree(Path classes, Path output, Path relativeRoot) throws IOException {
+        Path sourceRoot = classes.resolve(relativeRoot).normalize();
+        if (!sourceRoot.startsWith(classes) || !Files.isDirectory(sourceRoot)) {
+            throw new IllegalArgumentException("Missing SDK classifier input: " + sourceRoot);
+        }
+        try (var paths = Files.walk(sourceRoot)) {
+            for (Path source : paths.filter(Files::isRegularFile).toList()) {
+                Path relative = classes.relativize(source);
+                Path destination = output.resolve(relative).normalize();
+                if (!destination.startsWith(output)) {
+                    throw new IllegalArgumentException("Unsafe SDK destination: " + destination);
+                }
+                Files.createDirectories(destination.getParent());
+                Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING,
+                        StandardCopyOption.COPY_ATTRIBUTES);
+            }
+        }
+    }
+
+    private static void copySdkServices(Path classes, Path output) throws IOException {
+        Path services = classes.resolve("META-INF/services");
+        if (!Files.isDirectory(services)) {
+            return;
+        }
+        try (var paths = Files.walk(services)) {
+            for (Path source : paths.filter(Files::isRegularFile).toList()) {
+                List<String> providers = Files.readAllLines(source).stream()
+                        .map(line -> line.replaceFirst("#.*$", "").trim())
+                        .filter(line -> !line.isEmpty()).toList();
+                if (providers.isEmpty()
+                        || providers.stream().anyMatch(provider -> !provider.startsWith(
+                        "com.openggf.tools.modsdk."))) {
+                    continue;
+                }
+                Path destination = output.resolve(classes.relativize(source)).normalize();
+                if (!destination.startsWith(output)) {
+                    throw new IllegalArgumentException("Unsafe SDK service destination: " + destination);
+                }
+                Files.createDirectories(destination.getParent());
+                Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING,
+                        StandardCopyOption.COPY_ATTRIBUTES);
+            }
+        }
     }
 }

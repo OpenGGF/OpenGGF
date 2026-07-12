@@ -525,6 +525,7 @@ CF-ANNOTATION TYPE com.openggf.io.ModInputLimits visible @com.openggf.game.ModAp
 CF-ANNOTATION TYPE com.openggf.io.ModInputLimits$Builder visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.io.NonClosingModAssetRoot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.io.PackedModAssetRoot visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.io.SnapshotModAssetRoot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.AbstractLevel visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.BigRingReturnState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.Block visible @com.openggf.game.ModApi
@@ -2798,9 +2799,12 @@ INTERFACE com.openggf.game.zone.ZoneRuntimeRegistry com.openggf.game.rewind.Rewi
 INTERFACE com.openggf.graphics.FadeManager com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.FadeManagerSnapshot>
 INTERFACE com.openggf.graphics.GLCommand com.openggf.graphics.GLCommandable
 INTERFACE com.openggf.io.AbstractModAssetRoot com.openggf.io.ModAssetRoot
+INTERFACE com.openggf.io.DirectoryModAssetRoot com.openggf.io.SnapshotModAssetRoot
 INTERFACE com.openggf.io.JarModAssetRoot com.openggf.io.PackedModAssetRoot
 INTERFACE com.openggf.io.ModAssetRoot java.lang.AutoCloseable
 INTERFACE com.openggf.io.PackedModAssetRoot com.openggf.io.ModAssetRoot
+INTERFACE com.openggf.io.PackedModAssetRoot com.openggf.io.SnapshotModAssetRoot
+INTERFACE com.openggf.io.SnapshotModAssetRoot com.openggf.io.ModAssetRoot
 INTERFACE com.openggf.level.AbstractLevel com.openggf.level.Level
 INTERFACE com.openggf.level.MutableLevel com.openggf.level.objects.RingObjectPlacementMapping
 INTERFACE com.openggf.level.ParallaxManager com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.ParallaxSnapshot>
@@ -7297,6 +7301,9 @@ METHOD com.openggf.io.DirectoryAccess public,static  com.openggf.io.DirectoryAcc
 METHOD com.openggf.io.DirectoryAccess public,static  com.openggf.io.DirectoryAccess[] values()
 METHOD com.openggf.io.DirectoryModAssetRoot public  byte[] readBounded(java.lang.String,long) THROWS java.io.IOException
 METHOD com.openggf.io.DirectoryModAssetRoot public  java.lang.String describe()
+METHOD com.openggf.io.DirectoryModAssetRoot public  java.lang.String immutableSha256() THROWS java.io.IOException
+METHOD com.openggf.io.DirectoryModAssetRoot public  java.nio.file.Path immutableContentPath() THROWS java.io.IOException
+METHOD com.openggf.io.DirectoryModAssetRoot public  java.util.List<java.lang.String> validatedEntryNames() THROWS java.io.IOException
 METHOD com.openggf.io.DirectoryModAssetRoot public  void close() THROWS java.io.IOException
 METHOD com.openggf.io.InMemoryModAssetRoot public  byte[] readBounded(java.lang.String,long) THROWS java.io.IOException
 METHOD com.openggf.io.InMemoryModAssetRoot public  java.lang.String describe()
@@ -7318,6 +7325,7 @@ METHOD com.openggf.io.ModAssetRoot public,static  com.openggf.io.ModAssetRoot no
 METHOD com.openggf.io.ModAssetRoot public,static  com.openggf.io.PackedModAssetRoot jar(java.nio.file.Path,java.nio.file.Path) THROWS java.io.IOException
 METHOD com.openggf.io.ModAssetRoot public,static  com.openggf.io.PackedModAssetRoot jar(java.nio.file.Path,java.nio.file.Path,com.openggf.io.ModInputLimits) THROWS java.io.IOException
 METHOD com.openggf.io.ModAssetRoot public,static  com.openggf.io.PackedModAssetRoot jar(java.nio.file.Path,java.nio.file.Path,com.openggf.io.ModInputLimits,long) THROWS java.io.IOException
+METHOD com.openggf.io.ModAssetRoot public,static  com.openggf.io.SnapshotModAssetRoot snapshotDirectory(java.nio.file.Path,java.nio.file.Path,com.openggf.io.ModInputLimits,com.openggf.io.DirectoryAccess) THROWS java.io.IOException
 METHOD com.openggf.io.ModAssetRoot public,static  java.lang.String requireNormalizedEntry(java.lang.String)
 METHOD com.openggf.io.ModInputLimits public  com.openggf.io.ModInputLimits withMaxAudioCacheBytes(long)
 METHOD com.openggf.io.ModInputLimits public  double maxAudioGain()
@@ -7405,6 +7413,9 @@ METHOD com.openggf.io.NonClosingModAssetRoot public  void close()
 METHOD com.openggf.io.PackedModAssetRoot public,abstract  java.lang.String immutableSha256() THROWS java.io.IOException
 METHOD com.openggf.io.PackedModAssetRoot public,abstract  java.nio.file.Path immutableContentPath() THROWS java.io.IOException
 METHOD com.openggf.io.PackedModAssetRoot public,abstract  java.util.List<java.lang.String> validatedEntryNames() THROWS java.io.IOException
+METHOD com.openggf.io.SnapshotModAssetRoot public,abstract  java.lang.String immutableSha256() THROWS java.io.IOException
+METHOD com.openggf.io.SnapshotModAssetRoot public,abstract  java.nio.file.Path immutableContentPath() THROWS java.io.IOException
+METHOD com.openggf.io.SnapshotModAssetRoot public,abstract  java.util.List<java.lang.String> validatedEntryNames() THROWS java.io.IOException
 METHOD com.openggf.level.AbstractLevel public  com.openggf.level.Block getBlock(int)
 METHOD com.openggf.level.AbstractLevel public  com.openggf.level.Block[] blocksReference()
 METHOD com.openggf.level.AbstractLevel public  com.openggf.level.Chunk getChunk(int)
@@ -12185,6 +12196,7 @@ PERMITS com.openggf.io.AbstractModAssetRoot com.openggf.io.JarModAssetRoot
 PERMITS com.openggf.io.AbstractModAssetRoot com.openggf.io.NonClosingModAssetRoot
 PERMITS com.openggf.io.ModAssetRoot com.openggf.io.AbstractModAssetRoot
 PERMITS com.openggf.io.ModAssetRoot com.openggf.io.PackedModAssetRoot
+PERMITS com.openggf.io.ModAssetRoot com.openggf.io.SnapshotModAssetRoot
 PERMITS com.openggf.io.PackedModAssetRoot com.openggf.io.JarModAssetRoot
 PERMITS com.openggf.mods.code.ModLevelDefinition$Music com.openggf.mods.code.ModLevelDefinition$StockMusic
 PERMITS com.openggf.mods.code.ModLevelDefinition$Music com.openggf.mods.code.ModLevelDefinition$TrackMusic
@@ -15194,6 +15206,7 @@ TYPE interface public,abstract com.openggf.sprites.playable.SidekickRespawnStrat
 TYPE interface public,abstract com.openggf.timer.Timer SUPER <none>
 TYPE interface public,abstract com.openggf.util.IntIndexedView SUPER <none>
 TYPE interface public,abstract com.openggf.util.ShortIndexedView SUPER <none>
+TYPE interface public,abstract,non-sealed com.openggf.io.SnapshotModAssetRoot SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.audio.rewind.AudioCommand SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.game.MusicReference SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.game.ZoneKey SUPER <none>
@@ -16114,6 +16127,7 @@ TYPE-ANNOTATION com.openggf.io.ModInputLimits @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.io.ModInputLimits$Builder @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.io.NonClosingModAssetRoot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.io.PackedModAssetRoot @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.io.SnapshotModAssetRoot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.AbstractLevel @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.BigRingReturnState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.Block @com.openggf.game.ModApi
