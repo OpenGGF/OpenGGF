@@ -66,6 +66,16 @@ public final class ModContext {
         });
     }
 
+    /** Stages a manifest-declared stock-key override without creator namespacing. */
+    void registerManifestArtOverride(String stockKey, BakedSheetRef sheet) {
+        mutate(() -> {
+            String key = com.openggf.mods.ModManifest.requireArtOverrideKey(stockKey);
+            if (art.putIfAbsent(key, Objects.requireNonNull(sheet, "sheet")) != null) {
+                throw failure("Duplicate object-art key: " + key);
+            }
+        });
+    }
+
     ModRegistrationPlan freeze() {
         requireOpen();
         frozen = true;

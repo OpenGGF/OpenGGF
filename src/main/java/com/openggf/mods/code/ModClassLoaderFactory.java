@@ -58,19 +58,27 @@ public final class ModClassLoaderFactory {
         Map<String, ModDependencyClassLoader> loaders = new LinkedHashMap<>();
         Map<String, PackedModAssetRoot> snapshots = new LinkedHashMap<>();
         Map<String, ModDescriptor> loadedDescriptors = new LinkedHashMap<>();
+        Set<String> availableOwners = new java.util.LinkedHashSet<>();
         Map<String, ModRuntime.Rejection> rejections = new LinkedHashMap<>();
         long inspectedBytes = 0;
         try {
             for (ModDescriptor descriptor : catalog.orderedEnabled()) {
                 String owner = descriptor.manifest().id();
-                if (!descriptor.containsCode() || descriptor.manifest().entrypoint() == null
-                        || !trusted.contains(owner)) {
+                if (descriptor.containsCode() && !trusted.contains(owner)) continue;
+                String unavailableDependency = descriptor.manifest().dependencies().stream()
+                        .map(ModDependency::id)
+                        .filter(dependency -> !availableOwners.contains(dependency))
+                        .findFirst().orElse(null);
+                if (unavailableDependency != null) {
+                    rejections.put(owner, rejection(ModRuntime.RejectionReason.DEPENDENCY_UNAVAILABLE,
+                            unavailableDependency + ": dependency is unavailable"));
                     continue;
                 }
-                DependencyResolution dependencyResolution = directDependencies(
-                        descriptor, catalog, loaders, trusted);
-                if (dependencyResolution.rejection() != null) {
-                    rejections.put(owner, dependencyResolution.rejection());
+                boolean loadCode = descriptor.containsCode()
+                        && descriptor.manifest().entrypoint() != null;
+                boolean retainData = !descriptor.manifest().artOverrides().isEmpty();
+                if (!loadCode && !retainData) {
+                    availableOwners.add(owner);
                     continue;
                 }
                 java.nio.file.Path source = descriptor.jarPath().toAbsolutePath().normalize();
@@ -118,24 +126,35 @@ public final class ModClassLoaderFactory {
                     snapshots.remove(owner);
                     continue;
                 }
-                ModValidationReport validation = validator.apply(descriptor, snapshotPath);
-                if (!validation.eligible()) {
-                    rejections.put(owner, rejection(ModRuntime.RejectionReason.VALIDATION_FAILED,
-                            validationSummary(validation)));
-                    closeRejected(snapshot);
-                    snapshots.remove(owner);
-                    continue;
-                }
-                URL jarUrl = snapshotPath.toUri().toURL();
-                ModDependencyClassLoader loader = new ModDependencyClassLoader(owner,
-                        new URL[] {jarUrl}, engineParent, dependencyResolution.loaders());
-                if (loaders.putIfAbsent(owner, loader) != null) {
-                    loader.close();
-                    throw new IOException("Duplicate compiled-mod owner: " + owner);
+                if (loadCode) {
+                    DependencyResolution dependencyResolution = directDependencies(
+                            descriptor, catalog, loaders, trusted);
+                    if (dependencyResolution.rejection() != null) {
+                        rejections.put(owner, dependencyResolution.rejection());
+                        closeRejected(snapshot);
+                        snapshots.remove(owner);
+                        continue;
+                    }
+                    ModValidationReport validation = validator.apply(descriptor, snapshotPath);
+                    if (!validation.eligible()) {
+                        rejections.put(owner, rejection(ModRuntime.RejectionReason.VALIDATION_FAILED,
+                                validationSummary(validation)));
+                        closeRejected(snapshot);
+                        snapshots.remove(owner);
+                        continue;
+                    }
+                    URL jarUrl = snapshotPath.toUri().toURL();
+                    ModDependencyClassLoader loader = new ModDependencyClassLoader(owner,
+                            new URL[] {jarUrl}, engineParent, dependencyResolution.loaders());
+                    if (loaders.putIfAbsent(owner, loader) != null) {
+                        loader.close();
+                        throw new IOException("Duplicate compiled-mod owner: " + owner);
+                    }
                 }
                 loadedDescriptors.put(owner, descriptor);
+                availableOwners.add(owner);
             }
-            return new ModRuntime(loaders, snapshots, loadedDescriptors, rejections);
+            return new ModRuntime(loaders, snapshots, loadedDescriptors, availableOwners, rejections);
         } catch (IOException | RuntimeException failure) {
             closeAll(loaders, snapshots, rejections);
             throw failure;

@@ -158,20 +158,26 @@ public final class ModSubsystem implements AutoCloseable {
             java.util.logging.Logger.getLogger(ModSubsystem.class.getName()).log(
                     java.util.logging.Level.SEVERE, "Compiled-mod registration failed for " + owner,
                     failure);
-            runtimeFindings.replaceOwner(owner, List.of(new com.openggf.mods.ModFinding(
-                    com.openggf.mods.ModFindingSeverity.ERROR, "MOD_REGISTRATION_FAILED",
-                    "Compiled-mod registration failed", null)));
+            runtimeFindings.replaceOwner(owner, List.of(registrationFinding(failure)));
         });
         if (failures.isEmpty() || pendingEditor == null) return;
         pendingEditor.setEnabledCascade(failures.keySet(), false);
         com.openggf.mods.ModStateSaveResult saved = pendingEditor.save();
         if (saved instanceof com.openggf.mods.ModStateSaveResult.Failed failed) {
             failures.keySet().forEach(owner -> runtimeFindings.replaceOwner(owner, List.of(
-                    new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.ERROR,
-                            "MOD_REGISTRATION_FAILED", "Compiled-mod registration failed", null),
+                    registrationFinding(failures.get(owner)),
                     new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.ERROR,
                             "MOD_REGISTRATION_DISABLE_SAVE_FAILED", failed.message(), null))));
         }
+    }
+
+    private static com.openggf.mods.ModFinding registrationFinding(Throwable failure) {
+        if (failure instanceof com.openggf.mods.code.ModRegistrationException structured) {
+            return new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.ERROR,
+                    structured.findingCode(), structured.getMessage(), structured.path());
+        }
+        return new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.ERROR,
+                "MOD_REGISTRATION_FAILED", "Compiled-mod registration failed", null);
     }
 
     /** Publishes a patch/runtime failure closure and pending-disables every affected mod owner. */

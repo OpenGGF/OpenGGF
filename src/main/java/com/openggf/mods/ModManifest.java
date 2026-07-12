@@ -55,7 +55,7 @@ public record ModManifest(int formatVersion, String id, String name,
             ModKeySyntax.requireLocalName(localName);
         });
         artOverrides.forEach((stockKey, path) -> {
-            requireDisplayText(stockKey, "art override key");
+            requireArtOverrideKey(stockKey);
             requireArtPath(path, ModInputLimits.DEFAULT_MAX_ENTRY_NAME_BYTES);
         });
         insertAfter = requireInsertAfter(insertAfter);
@@ -104,5 +104,10 @@ public record ModManifest(int formatVersion, String id, String name,
             throw new IllegalArgumentException("art override path exceeds entry-name byte limit");
         }
         return normalized;
+    }
+
+    /** Validates a case-preserving stock provider key from {@code artOverrides}. */
+    public static String requireArtOverrideKey(String key) {
+        return requireDisplayText(key, "art override key");
     }
 }

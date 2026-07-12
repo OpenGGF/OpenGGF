@@ -23,6 +23,7 @@ public final class ModRuntime implements AutoCloseable {
     private final List<String> owners;
     private final Map<String, PackedModAssetRoot> snapshots;
     private final Map<String, ModDescriptor> descriptors;
+    private final Set<String> availableOwners;
     private final Map<String, Rejection> rejectedOwners;
     private Map<String, Throwable> registrationFailures = Map.of();
     private final Set<String> runtimeDisabledOwners = new java.util.LinkedHashSet<>();
@@ -32,16 +33,29 @@ public final class ModRuntime implements AutoCloseable {
                Map<String, PackedModAssetRoot> snapshots,
                Map<String, ModDescriptor> descriptors,
                Map<String, Rejection> rejectedOwners) {
+        this(loaders, snapshots, descriptors,
+                new java.util.LinkedHashSet<>(descriptors.keySet()), rejectedOwners);
+    }
+
+    ModRuntime(Map<String, ModDependencyClassLoader> loaders,
+               Map<String, PackedModAssetRoot> snapshots,
+               Map<String, ModDescriptor> descriptors,
+               Set<String> availableOwners,
+               Map<String, Rejection> rejectedOwners) {
         this.loaders = Map.copyOf(new LinkedHashMap<>(Objects.requireNonNull(loaders, "loaders")));
-        this.owners = List.copyOf(loaders.keySet());
+        this.owners = List.copyOf(descriptors.keySet());
         this.snapshots = Map.copyOf(new LinkedHashMap<>(Objects.requireNonNull(snapshots, "snapshots")));
         this.descriptors = Map.copyOf(new LinkedHashMap<>(Objects.requireNonNull(descriptors, "descriptors")));
+        this.availableOwners = Set.copyOf(Objects.requireNonNull(availableOwners, "availableOwners"));
+        if (!this.availableOwners.containsAll(this.descriptors.keySet())) {
+            throw new IllegalArgumentException("Every retained descriptor owner must be available");
+        }
         this.rejectedOwners = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(
                 Objects.requireNonNull(rejectedOwners, "rejectedOwners")));
     }
 
     public static ModRuntime empty() {
-        return new ModRuntime(Map.of(), Map.of(), Map.of(), Map.of());
+        return new ModRuntime(Map.of(), Map.of(), Map.of(), Set.of(), Map.of());
     }
 
     /** Builds fresh entrypoint instances and private transactions for one launch preparation. */
@@ -70,17 +84,22 @@ public final class ModRuntime implements AutoCloseable {
                 continue;
             }
             try {
-                Class<?> type = loadOwned(owner, descriptor.manifest().entrypoint());
-                if (!GgfMod.class.isAssignableFrom(type)) {
-                    throw new ModRegistrationException(owner, "Entrypoint does not implement GgfMod");
-                }
-                GgfMod entrypoint = (GgfMod) type.getDeclaredConstructor().newInstance();
                 ModRegistrationPlan plan;
                 try (ModAssetRoot assets = ModAssetRoot.nonClosingView(Objects.requireNonNull(
                         snapshots.get(owner), "owner assets"))) {
                     ModContext context = new ModContext(owner, descriptor.manifest().baseGame(), assets);
-                    entrypoint.register(context);
-                    plan = context.freeze();
+                    descriptor.manifest().artOverrides().forEach((key, path) ->
+                            context.registerManifestArtOverride(key, new BakedSheetRef(path)));
+                    if (descriptor.manifest().entrypoint() != null && loaders.containsKey(owner)) {
+                        Class<?> type = loadOwned(owner, descriptor.manifest().entrypoint());
+                        if (!GgfMod.class.isAssignableFrom(type)) {
+                            throw new ModRegistrationException(owner,
+                                    "Entrypoint does not implement GgfMod");
+                        }
+                        GgfMod entrypoint = (GgfMod) type.getDeclaredConstructor().newInstance();
+                        entrypoint.register(context);
+                    }
+                    plan = context.freeze().prepareObjectArt(assets);
                 }
                 PatchOwner.Mod patchOwner = new PatchOwner.Mod(owner);
                 List<RegisteredPatch> ownerRegistrations;
@@ -100,7 +119,11 @@ public final class ModRuntime implements AutoCloseable {
                 }
                 java.util.LinkedHashSet<PatchOwner> required = new java.util.LinkedHashSet<>();
                 for (ModDependency dependency : descriptor.manifest().dependencies()) {
-                    if (descriptors.containsKey(dependency.id())) required.add(new PatchOwner.Mod(dependency.id()));
+                    if (!availableOwners.contains(dependency.id())) {
+                        throw new ModRegistrationException(owner,
+                                "Declared dependency is unavailable in runtime: " + dependency.id());
+                    }
+                    required.add(new PatchOwner.Mod(dependency.id()));
                 }
                 registrations.addAll(ownerRegistrations);
                 dependencies.put(patchOwner, Set.copyOf(required));
@@ -133,8 +156,13 @@ public final class ModRuntime implements AutoCloseable {
             ModDescriptor descriptor = descriptors.get(owner);
             if (descriptor == null) continue;
             java.util.LinkedHashSet<String> required = new java.util.LinkedHashSet<>();
-            descriptor.manifest().dependencies().stream().map(ModDependency::id)
-                    .filter(descriptors::containsKey).forEach(required::add);
+            for (ModDependency dependency : descriptor.manifest().dependencies()) {
+                if (!availableOwners.contains(dependency.id())) {
+                    throw new IllegalStateException("Runtime owner " + owner
+                            + " retained without dependency " + dependency.id());
+                }
+                required.add(dependency.id());
+            }
             result.put(owner, Set.copyOf(required));
         }
         return Map.copyOf(result);

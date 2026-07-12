@@ -19,6 +19,10 @@ public final class ModBackedGamePatch implements GamePatch {
     public ModBackedGamePatch(ModRegistrationPlan plan) {
         this.plan = Objects.requireNonNull(plan, "plan");
         if (!plan.hasContent()) throw new IllegalArgumentException("Backing patch requires content");
+        if (!plan.objectArt().isEmpty()
+                && !plan.preparedObjectArt().keySet().equals(plan.objectArt().keySet())) {
+            throw new IllegalArgumentException("Backing patch requires validated object art");
+        }
     }
 
     public ModRegistrationPlan plan() { return plan; }
@@ -37,12 +41,25 @@ public final class ModBackedGamePatch implements GamePatch {
                 .toList();
         ModObjectKeyRegistry objectKeys = new ModObjectKeyRegistry(registrations);
         return new DelegatingGameModule(base, id()) {
+            private com.openggf.game.ObjectArtProvider objectArtProvider;
+
             @Override
             public ObjectRegistry createObjectRegistry() {
                 ObjectRegistry stockOrDecorated = super.createObjectRegistry();
                 return registrations.isEmpty()
                         ? stockOrDecorated
                         : new ModDecoratedObjectRegistry(stockOrDecorated, objectKeys);
+            }
+
+            @Override
+            public synchronized com.openggf.game.ObjectArtProvider getObjectArtProvider() {
+                if (objectArtProvider == null) {
+                    com.openggf.game.ObjectArtProvider inherited = super.getObjectArtProvider();
+                    objectArtProvider = plan.preparedObjectArt().isEmpty()
+                            ? inherited
+                            : ModArtOverlayProvider.decorate(inherited, plan.preparedObjectArt());
+                }
+                return objectArtProvider;
             }
         };
     }
