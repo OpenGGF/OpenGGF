@@ -1,11 +1,11 @@
 package com.openggf.game.sonic1.events;
 
 import com.openggf.game.AbstractLevelEventManager;
-import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic1.Sonic1LoopManager;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.level.LevelManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.nio.ByteBuffer;
@@ -248,8 +248,10 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
 
     private void lockPlayersForSbz3Transition(AbstractPlayableSprite progressionOwner) {
         progressionOwner.setControlLocked(true);
-        for (AbstractPlayableSprite sidekick : GameServices.sprites().getRegisteredSidekicks()) {
-            if (sidekick != progressionOwner) {
+        for (var participant : playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (participant instanceof AbstractPlayableSprite sidekick
+                    && sidekick != progressionOwner) {
                 sidekick.setControlLocked(true);
             }
         }
