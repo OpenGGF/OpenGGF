@@ -381,17 +381,18 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
         }
         // Object execution sees the camera position completed by the preceding
         // frame, the same position whose copy Render_Sprites used to produce
-        // this frame's incoming render_flags bit. Keep the ROM's fixed 320x224
-        // viewport here; the $7FF0 self-delete gate is not widescreen-scaled.
+        // this frame's incoming render_flags bit. The engine's render viewport
+        // extends that native 320x224 rectangle in widescreen; at native width
+        // these bounds collapse exactly to the ROM result.
         int relativeX = renderedX - svc.camera().getX();
         int relativeY = renderedY - svc.camera().getY();
-        return overlapsExactNativeViewport(relativeX, relativeY, 8, 12);
+        return overlapsActiveViewport(relativeX, relativeY, 8, 12);
     }
 
-    private static boolean overlapsExactNativeViewport(
+    private boolean overlapsActiveViewport(
             int relativeX, int relativeY, int halfWidth, int halfHeight) {
-        return relativeX + halfWidth >= 0 && relativeX - halfWidth < 320
-                && relativeY + halfHeight >= 0 && relativeY - halfHeight < 224;
+        return relativeX + halfWidth >= 0 && relativeX - halfWidth < viewportWidth()
+                && relativeY + halfHeight >= 0 && relativeY - halfHeight < viewportHeight();
     }
 
     private void clearGrabbedPlayers() {

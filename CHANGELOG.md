@@ -3,7 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
-- **AIZ hollow-tree rides and end-capsule poses now support every configured sidekick.** Native P1/P2 execution stays first, while identity-owned extension ride and ending-pose state handles death, unload, roster replacement/reorder, controller release, and PlayerRef rewind; ordinary ride-vine debris also observes the preceding native 320×224 render flag without widening its self-delete gate.
+- **AIZ hollow-tree rides and end-capsule poses now support every configured sidekick.** Native P1/P2 execution stays first, while identity-owned extension ride and ending-pose state handles death, unload, roster replacement/reorder, controller release, and PlayerRef rewind; ordinary ride-vine debris also observes the preceding render flag across active widescreen viewports while retaining exact 320×224 boundaries at native width.
 - **AIZ ride-vine handles now support every configured sidekick safely.** Ride and giant vines retain the native P1-then-P2 handle prefix while identity-owned extension grab, jump, death, unload, roster-change, replacement, and PlayerRefId rewind state prevents stranded control.
 - **LBZ cup elevators now carry every configured sidekick safely.** Player-identity state extends the native P1-then-P2 cup path across entry, shared motion, jump/fling exits, death, unload, roster changes, and rewind without transferring forced control between riders.
 - **LBZ tube elevators now carry every configured sidekick safely.** Player-identity state extends the native P1-then-P2 transport path across entry, motion, exit, death, unload, roster changes, closed-destination suppression, and rewind without transferring forced control between sidekicks.

@@ -214,6 +214,34 @@ class TestAizHollowTreeObjectInstance {
     }
 
     @Test
+    void replacingRuntimeMainReleasesOldIdentityWithoutTransferringRideState() {
+        AbstractPlayableSprite oldMain = newPlayer();
+        AbstractPlayableSprite replacementMain = newPlayer();
+        AbstractPlayableSprite nativeP2 = newPlayer();
+        AbstractPlayableSprite unrelated = newPlayer();
+        MutablePlayerServices services = new MutablePlayerServices(oldMain, List.of(nativeP2));
+        AizHollowTreeObjectInstance tree = new AizHollowTreeObjectInstance(new ObjectSpawn(
+                0x2D00, 0x03CC, Sonic3kObjectIds.AIZ_HOLLOW_TREE, 0, 0, false, 0));
+        tree.setServices(services);
+        prepareForCapture(oldMain);
+        prepareOutsideTree(nativeP2);
+        prepareOutsideTree(replacementMain);
+        ObjectControlState.nativeBit7FullControl().applyTo(unrelated);
+        tree.update(0, oldMain);
+        assertTrue(oldMain.isObjectControlled());
+
+        services.setMain(replacementMain);
+        tree.update(1, replacementMain);
+
+        assertFalse(oldMain.isObjectControlled(),
+                "replacing the runtime main must release the identity that owned the native P1 ride");
+        assertFalse(oldMain.isOnObject());
+        assertFalse(replacementMain.isObjectControlled(),
+                "the replacement main must not inherit the previous identity's native P1 state");
+        assertTrue(unrelated.isObjectControlled(), "main replacement must not clear unrelated control");
+    }
+
+    @Test
     void treeRevealControlUsesPlayerCentreYForRomYPos() throws Exception {
         AbstractPlayableSprite player = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_AIZ, 0)
@@ -271,7 +299,7 @@ class TestAizHollowTreeObjectInstance {
     }
 
     private static final class MutablePlayerServices extends TestObjectServices {
-        private final AbstractPlayableSprite main;
+        private AbstractPlayableSprite main;
         private List<? extends PlayableEntity> sidekicks;
         private final Camera camera = new Camera();
 
@@ -284,6 +312,11 @@ class TestAizHollowTreeObjectInstance {
 
         private void setSidekicks(List<? extends PlayableEntity> sidekicks) {
             this.sidekicks = sidekicks;
+        }
+
+        private void setMain(AbstractPlayableSprite main) {
+            this.main = main;
+            camera.setFocusedSprite(main);
         }
 
         @Override

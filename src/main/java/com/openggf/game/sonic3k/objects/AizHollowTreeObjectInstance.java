@@ -85,7 +85,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        mainOwner = player;
+        bindMainPlayer(player);
         updatePlayer(player, nativeRideStates[PLAYER_SLOT_MAIN], PLAYER_SLOT_MAIN, true);
         AbstractPlayableSprite sidekick = firstTrackedSidekick();
         bindNativeP2(sidekick);
@@ -418,6 +418,21 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
             }
         }
         nativeP2Owner = current;
+    }
+
+    private void bindMainPlayer(AbstractPlayableSprite current) {
+        if (mainOwner == current) {
+            return;
+        }
+        RideState mainState = nativeRideStates[PLAYER_SLOT_MAIN];
+        if (mainOwner != null) {
+            // Engine extension: a runtime main-character replacement is a new
+            // identity, not the ROM's fixed Player_1 RAM slot. Release the old
+            // owner and start the replacement with a clean native P1 state.
+            releaseOwnedPlayer(mainOwner, mainState);
+            mainState.clear();
+        }
+        mainOwner = current;
     }
 
     private void releaseMissingExtensions(List<PlayableEntity> participants) {
