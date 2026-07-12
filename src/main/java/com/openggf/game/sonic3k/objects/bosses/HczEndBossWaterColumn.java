@@ -636,14 +636,21 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         // across the native P1 -> P2 calls. Two players on the same side of
         // the column therefore receive opposite pushes.
         int suctionDelta = 2;
+        // sub_6B9E2 also shares a1 between calls. Reaching loc_6BA6C consumes
+        // (a1)+, so P2 can observe the next word in word_6BAC2 after P1 carry.
+        int grabZoneWordOffset = 0;
 
         if (player instanceof AbstractPlayableSprite sprite) {
-            applyGrabAndCarry(sprite, true, sprayY);
+            if (applyGrabAndCarry(sprite, true, sprayY, grabZoneWordOffset)) {
+                grabZoneWordOffset++;
+            }
             suctionDelta = applySuctionTo(sprite, suctionDelta);
         }
         for (PlayableEntity candidate : nativeParticipants(player)) {
             if (candidate != player && candidate instanceof AbstractPlayableSprite sprite) {
-                applyGrabAndCarry(sprite, false, sprayY);
+                if (applyGrabAndCarry(sprite, false, sprayY, grabZoneWordOffset)) {
+                    grabZoneWordOffset++;
+                }
                 suctionDelta = applySuctionTo(sprite, suctionDelta);
             }
         }
@@ -697,7 +704,8 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      * @param isPlayer1 true for main player, false for sidekick
      * @param sprayY    precomputed spray Y position for this frame
      */
-    private void applyGrabAndCarry(AbstractPlayableSprite sprite, boolean isPlayer1, int sprayY) {
+    private boolean applyGrabAndCarry(AbstractPlayableSprite sprite, boolean isPlayer1,
+            int sprayY, int grabZoneWordOffset) {
         boolean isGrabbed = isPlayer1 ? player1Grabbed : player2Grabbed;
 
         // ROM: btst #7,status(a3) — if boss defeated, release
@@ -705,7 +713,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
             if (isGrabbed) {
                 releasePlayer(sprite, isPlayer1);
             }
-            return;
+            return false;
         }
 
         // ROM: cmpi.b #6,routine(a2) — dead/dying → displace off
@@ -714,7 +722,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
                 clearGrabFlag(isPlayer1);
                 ObjectControlState.none().applyTo(sprite);
             }
-            return;
+            return false;
         }
 
         // ROM: tst.b invulnerability_timer(a2) — invulnerable → displace off
@@ -723,7 +731,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
                 clearGrabFlag(isPlayer1);
                 ObjectControlState.none().applyTo(sprite);
             }
-            return;
+            return false;
         }
 
         // ROM: tst.b object_control(a2) — check if player is controlled
@@ -733,42 +741,49 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
                 // Another object has control. Fall through to range check
                 // (ROM falls through to loc_6BA32). But since we don't own
                 // this player, just skip.
-                return;
+                return false;
             }
             // We own this player — go to carry logic (loc_6BA6C)
-            doCarry(sprite, isPlayer1, sprayY);
-            return;
+            doCarry(sprite, isPlayer1, sprayY, grabZoneWordOffset);
+            return true;
         }
 
         // Player is NOT object-controlled — range check + initial grab (loc_6BA32)
         int idx = Math.min(segmentCount, GRAB_ZONES.length - 1);
-        int[] zone = GRAB_ZONES[idx];
 
         int spriteY = sprite.getCentreY();
-        int yTop = sprayY + zone[0];
-        int yHeight = zone[1];
+        int zoneWordIndex = idx * 2 + grabZoneWordOffset;
+        int yTop = sprayY + grabZoneWord(zoneWordIndex);
 
         // ROM: add.w (a1),d0; cmp.w d0,d2; blo locret — player above zone top
         if (spriteY < yTop) {
-            return;
+            return false;
         }
         // ROM: add.w 2(a1),d0; cmp.w d0,d2; bhs locret — player below zone bottom
-        if (spriteY >= yTop + yHeight) {
-            return;
+        if (spriteY >= yTop + grabZoneWord(zoneWordIndex + 1)) {
+            return false;
         }
 
         // ROM: x range check: sub.w d2,d0; addi.w #$10,d0; cmpi.w #$20,d0
         int spriteX = sprite.getCentreX();
         int hDist = currentX - spriteX + GRAB_H_DIST;
         if (hDist < 0 || hDist >= (GRAB_H_DIST * 2)) {
-            return;
+            return false;
         }
 
         // In range — initial grab (sub_6BADA)
         doInitialGrab(sprite, isPlayer1);
 
         // Immediately enter carry logic this frame (ROM falls through to loc_6BA6C)
-        doCarry(sprite, isPlayer1, sprayY);
+        doCarry(sprite, isPlayer1, sprayY, grabZoneWordOffset);
+        return true;
+    }
+
+    private int grabZoneWord(int wordIndex) {
+        if (wordIndex < 0 || wordIndex >= GRAB_ZONES.length * 2) {
+            return 0;
+        }
+        return GRAB_ZONES[wordIndex / 2][wordIndex & 1];
     }
 
     /**
@@ -818,13 +833,13 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      *   subq.w #2,y_pos(a2)
      * </pre>
      */
-    private void doCarry(AbstractPlayableSprite sprite, boolean isPlayer1, int sprayY) {
+    private void doCarry(AbstractPlayableSprite sprite, boolean isPlayer1,
+            int sprayY, int grabZoneWordOffset) {
         int idx = Math.min(segmentCount, GRAB_ZONES.length - 1);
-        int[] zone = GRAB_ZONES[idx];
         int spriteY = sprite.getCentreY();
 
         // ROM: check if player has risen above the top of grab zone → release
-        int yTop = sprayY + zone[0];
+        int yTop = sprayY + grabZoneWord(idx * 2 + grabZoneWordOffset);
         if (spriteY < yTop) {
             releasePlayer(sprite, isPlayer1);
             return;

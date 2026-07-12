@@ -1048,8 +1048,9 @@ value through eligibility early returns as well as the active branch.
 
 **ROM citation.** HCZ `sub_6B9AC` initializes `d2=+$20000` once, then calls
 `sub_6B9C8` for P1 and P2. A player right of the column negates `d2`, so the
-second player's direction depends on the first call
-(`docs/skdisasm/sonic3k.asm:141757-141785`).
+second player's direction depends on the first call. Its sibling `sub_6B9E2`
+likewise shares `a1`; P1 carry consumes `(a1)+`, shifting P2's grab-zone table
+view by one word (`docs/skdisasm/sonic3k.asm:141757-141881,141925-141930`).
 
 **Originating commit.** `<pending: HCZ milestone 53>`.
 
