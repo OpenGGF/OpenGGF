@@ -167,7 +167,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
             var camera = services().camera();
             camera.setMinX((short) camera.getX());
 
-            if (services().gameState().isEndOfLevelFlag()) {
+            if (!services().gameState().isEndOfLevelActive()) {
                 spawnGeyserCutscene();
             }
         }

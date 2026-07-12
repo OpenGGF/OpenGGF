@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f30758 / 37 errors (2 errors under
+f3318 / 4234 errors to f31121 / 48 errors (8 errors under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -826,6 +826,23 @@ matrix again keeps both AIZ routes green and preserves every established red
 frontier/count: CNZ complete f1846 / 5 and level-select f291 / 7; MGZ complete
 f1072 / 1 and level-select f1030 / 1; ICZ f3174 / 1; MHZ f2920 / 1; LBZ f2270 /
 5.
+
+Milestone 69 moves the geyser handoff onto the ROM results-lifetime gate.
+`loc_6B154` waits for `_unkFAA8` to clear; `End_of_level_flag` is already set
+during this Act 2 results sequence and is not evidence that the results object
+has retired. The capsule now waits for the live `End_ofLevelActive` owner to
+clear before creating `loc_6B7BC`, preventing the 95-frame shake/rise sequence
+from starting hundreds of frames early (`sonic3k.asm:140986-141006,
+141545-141623`).
+
+This closes the premature geyser carry and advances HCZ from f30758 / 37 to
+f31121 / 48 full-run errors (8 under `frontierOnly`). The larger later total is
+newly exposed after the removed early carry; there is no mismatch before the
+new frontier. The next owner is the boss-wait camera lock (`$4180` expected,
+`$4198` actual). Focused HCZ plus rewind/static coverage checks pass. The
+granular matrix remains unchanged: both AIZ routes green; CNZ complete f1846 /
+5 and level-select f291 / 7; MGZ complete f1072 / 1 and level-select f1030 / 1;
+ICZ f3174 / 1; MHZ f2920 / 1; LBZ f2270 / 5.
 
 Milestone 31 restores TurboSpiker's detached-shell direction. The shell child
 inherits the parent's post-retreat render bit, but `loc_87D72` interprets that
