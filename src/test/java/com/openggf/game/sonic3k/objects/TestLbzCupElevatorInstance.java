@@ -329,8 +329,10 @@ class TestLbzCupElevatorInstance {
         TestablePlayableSprite nativeP2 = playerAt(0x17C0, 0x0600);
         TestablePlayableSprite jumping = playerAt(0x17C0, 0x0600);
         TestablePlayableSprite dying = playerAt(0x17C0, 0x0600);
-        LbzCupElevatorInstance elevator = configuredElevator(main, List.of(nativeP2, jumping, dying));
-        for (TestablePlayableSprite player : List.of(main, nativeP2, jumping, dying)) {
+        TestablePlayableSprite flungExtension = playerAt(0x17C0, 0x0600);
+        LbzCupElevatorInstance elevator = configuredElevator(
+                main, List.of(nativeP2, jumping, dying, flungExtension));
+        for (TestablePlayableSprite player : List.of(main, nativeP2, jumping, dying, flungExtension)) {
             standOn(player, elevator);
         }
         elevator.update(0, main);
@@ -343,10 +345,31 @@ class TestLbzCupElevatorInstance {
         assertFalse(dying.isObjectControlled(), "extension death must clear forced control");
         assertTrue(main.isObjectControlled());
         assertTrue(nativeP2.isObjectControlled());
+        assertTrue(flungExtension.isObjectControlled(),
+                "precondition: a third extension identity must remain owned until the fling exit");
+
+        TestablePlayableSprite unrelated = playerAt(0x1500, 0x0500);
+        unrelated.setObjectControlled(true);
+        unrelated.setControlLocked(true);
+        unrelated.setXSpeed((short) 0x123);
+        unrelated.setYSpeed((short) -0x234);
 
         invokeBeginFlicker(elevator, -0x200);
         assertFalse(main.isObjectControlled(), "fling exit must release native P1");
         assertFalse(nativeP2.isObjectControlled(), "fling exit must release native P2");
+        assertFalse(flungExtension.isObjectControlled(),
+                "fling exit must release a still-inside third extension identity");
+        assertFalse(flungExtension.isControlLocked());
+        assertEquals(nativeP2.getXSpeed(), flungExtension.getXSpeed(),
+                "extension fling x velocity must match the native P2 path");
+        assertEquals(nativeP2.getYSpeed(), flungExtension.getYSpeed(),
+                "extension fling y velocity must match the native P2 path");
+        assertEquals(nativeP2.getDirection(), flungExtension.getDirection(),
+                "extension fling direction must match the native P2 path");
+        assertTrue(unrelated.isObjectControlled(), "fling must not alter an unrelated player identity");
+        assertTrue(unrelated.isControlLocked());
+        assertEquals((short) 0x123, unrelated.getXSpeed());
+        assertEquals((short) -0x234, unrelated.getYSpeed());
 
         main = playerAt(0x17C0, 0x0600);
         nativeP2 = playerAt(0x17C0, 0x0600);
