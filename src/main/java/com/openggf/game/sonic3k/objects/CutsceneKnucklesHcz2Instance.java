@@ -170,17 +170,27 @@ public class CutsceneKnucklesHcz2Instance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean isPersistent() {
-        return true;
-    }
-
-    @Override
     public boolean isHighPriority() {
         return true;
     }
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        // ROM Check_CameraInRange aborts the object routine whenever the camera
+        // leaves word_62150. This is distinct from the wider slotted-object
+        // despawn window: while still allocated, the cutscene controller must
+        // stop advancing and, critically, stop rewriting the camera minima.
+        // The HCZ route briefly backs out of this rectangle before releasing a
+        // spindash, so continuing routine 2 here incorrectly blocks the ROM's
+        // H_scroll_frame_offset camera jerk.
+        Camera camera = services().camera();
+        int cameraX = Short.toUnsignedInt(camera.getX());
+        int cameraY = Short.toUnsignedInt(camera.getY());
+        if (cameraX < CAM_RANGE_X_MIN || cameraX > CAM_RANGE_X_MAX
+                || cameraY < CAM_RANGE_Y_MIN || cameraY > CAM_RANGE_Y_MAX) {
+            return;
+        }
+
         if (!initialized) {
             initialized = true;
             activeInstance = this;

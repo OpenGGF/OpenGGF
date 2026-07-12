@@ -25,8 +25,8 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f27042 / 897 errors (the previously active
-`frontierOnly` window is green).
+f3318 / 4234 errors to f27416 / 596 errors (1 error under
+`frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -747,6 +747,22 @@ green; CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 /
 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 The full HCZ replay was used for the milestone decision so the rejected
 earlier-contact candidate at f14033 could not be hidden by frontier filtering.
+
+Milestone 47 restores `Check_CameraInRange` ownership for the HCZ2 cutscene
+Knuckles controller. The ROM aborts the object's state-machine dispatch when
+the camera leaves `word_62150`, independently of the wider slotted-object
+despawn window. The engine had made the controller permanently persistent and
+continued routine 2 outside that rectangle, repeatedly pinning
+`Camera_min_X_pos` to the live camera. When the route backed left of `$3900`,
+that stale execution suppressed the native spindash
+`H_scroll_frame_offset=$2000` camera jerk (`sonic3k.asm:128908-128972,
+180428-180459,38364-38429`).
+
+This closes f27042-f27415 and advances HCZ to f27416 / 596 full-run errors (1
+under `frontierOnly`). The full HCZ replay confirms the reduced report. The
+granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 Milestone 28 restores the two ROM-owned HCZ2 surface handlers around the first
 large water loop. `sub_714E -> sub_717C` now samples the live foreground layout
