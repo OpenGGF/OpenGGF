@@ -271,9 +271,9 @@ class TestS3kHczEndBossGraphRewind {
 
     private static void spawnWaterColumnViaTurbine(HczEndBossInstance boss, HczEndBossTurbine turbine) {
         boss.setPropellerActive(true);
-        turbine.update(1, null);
-        turbine.update(2, null);
-        turbine.update(3, null);
+        for (int frame = 1; frame <= 256 && readObjectField(turbine, "waterColumn") == null; frame++) {
+            turbine.update(frame, null);
+        }
         assertNotNull(readObjectField(turbine, "waterColumn"),
                 "production turbine ACTIVE path must spawn and retain its water column");
     }

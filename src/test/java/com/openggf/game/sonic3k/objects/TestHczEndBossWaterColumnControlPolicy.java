@@ -4,6 +4,8 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeImpactExplosion;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeWaterChute;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -21,6 +23,53 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestHczEndBossWaterColumnControlPolicy {
+
+    @Test
+    void bladeSlowdownRetainsEntryTickBeforeAdvancingRawAnimation() throws Exception {
+        HczEndBossBlade blade = newBlade();
+        invokeNoArgPrivate(blade, "transitionToSpinDown");
+
+        invokeNoArgPrivate(blade, "updateSpinDown");
+        assertEquals(6, getIntField(blade, "mappingFrame"));
+
+        invokeNoArgPrivate(blade, "updateSpinDown");
+        assertEquals(7, getIntField(blade, "mappingFrame"),
+                "Animate_RawGetFaster advances from anim_frame 0 to script frame 7");
+    }
+
+    @Test
+    void bladeImpactUsesNativeHarmfulCollisionDuringFirstThreeFrames() throws Exception {
+        HczEndBossImpactFixture fixture = newImpactFixture();
+        HczEndBossBladeImpactExplosion impact = fixture.impact();
+
+        assertAll(
+                () -> assertEquals(0x8B, impact.getCollisionFlags()),
+                () -> assertFalse(impact.requiresRenderFlagForTouch(),
+                        "loc_6B7A2 adds the impact directly to Collision_response_list"));
+
+        for (int i = 0; i < 25; i++) {
+            impact.update(i, null);
+        }
+        assertEquals(0, impact.getCollisionFlags(),
+                "mapping frame 3 is the first non-hurting impact frame");
+    }
+
+    @Test
+    void bladeWaterChuteDefersZeroWaitUntilAfterSetupDispatch() throws Exception {
+        HczEndBossImpactFixture fixture = newImpactFixture();
+        HczEndBossBladeWaterChute chute = fixture.chute();
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x4000, (short) chute.getY());
+        player.setYSpeed((short) 0x123);
+
+        chute.update(0, player);
+        chute.update(1, player);
+        assertEquals((short) 0x123, player.getYSpeed(),
+                "loc_6B4C4 setup and the following Obj_Wait callback do not run loc_6B502");
+
+        chute.update(2, player);
+        assertEquals((short) -0x800, player.getYSpeed());
+    }
 
     @Test
     void firingBladeUsesNativePreLaunchOffsetAndLightGravityOrder() throws Exception {
@@ -178,6 +227,26 @@ class TestHczEndBossWaterColumnControlPolicy {
                 services, () -> new HczEndBossBlade(boss, 0, 0x23, 0x12));
         blade.setServices(services);
         return blade;
+    }
+
+    private static HczEndBossImpactFixture newImpactFixture() {
+        ObjectSpawn spawn = new ObjectSpawn(0x4000, 0x0738, 0x9A, 0, 0, false, 0);
+        ObjectServices services = new TestObjectServices()
+                .withConfiguration(SonicConfigurationService.createStandalone());
+        HczEndBossInstance boss = withConstructionContext(services, () -> new HczEndBossInstance(spawn));
+        boss.setServices(services);
+        HczEndBossBladeImpactExplosion impact = withConstructionContext(
+                services, () -> new HczEndBossBladeImpactExplosion(boss, 0x4000, 0x07F7));
+        impact.setServices(services);
+        HczEndBossBladeWaterChute chute = withConstructionContext(
+                services, () -> new HczEndBossBladeWaterChute(boss, 0x4000, 0));
+        chute.setServices(services);
+        return new HczEndBossImpactFixture(impact, chute);
+    }
+
+    private record HczEndBossImpactFixture(
+            HczEndBossBladeImpactExplosion impact,
+            HczEndBossBladeWaterChute chute) {
     }
 
     private static void invokeGrab(HczEndBossWaterColumn column, TestablePlayableSprite player, boolean isPlayer1)

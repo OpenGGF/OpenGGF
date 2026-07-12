@@ -6,7 +6,6 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
-import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -155,6 +154,7 @@ public class HczEndBossBlade extends AbstractBossChild implements TouchResponseP
     private int spinDownLoopCounter;   // starts at 0, incremented each loop; callback at 8
     private int spinDownFrameIndex;    // index into SPIN_DOWN_FRAMES
     private int spinDownFrameTimer;    // ticks remaining for current frame
+    private boolean spinDownInitialized;
 
     /** Current mapping frame for rendering. */
     private int mappingFrame;
@@ -471,47 +471,37 @@ public class HczEndBossBlade extends AbstractBossChild implements TouchResponseP
     private void updateSpinDown() {
         collisionFlags = 0;
 
-        // Emulate Animate_RawGetFaster (ROM: sonic3k.asm line 177749)
-        // Each tick: decrement frame timer. When it expires, advance frame index.
-        // When frame index wraps ($FC marker), one loop is complete:
-        //   - Decrement delay counter (animation gets faster)
-        //   - If delay counter reaches 0: increment loop counter
-        //     - If loop counter >= SPIN_DOWN_LOOP_COUNT (8): fire callback
-        //   - Otherwise restart loop from first frame
+        // Animate_RawGetFaster initializes $2E/$2F on its first dispatch but
+        // deliberately retains anim_frame_timer=0 and anim_frame=0. Thus the
+        // first subq expires immediately and selects script frame 7 (index 1).
+        if (!spinDownInitialized) {
+            spinDownInitialized = true;
+            spinDownDelayCounter = SPIN_DOWN_INITIAL_DELAY;
+            spinDownLoopCounter = 0;
+        }
         spinDownFrameTimer--;
         if (spinDownFrameTimer >= 0) {
-            // Still displaying current frame
             return;
         }
 
-        // Advance to next frame in the sequence
         spinDownFrameIndex++;
         if (spinDownFrameIndex < SPIN_DOWN_FRAMES.length) {
-            // Show next frame at current delay
             mappingFrame = SPIN_DOWN_FRAMES[spinDownFrameIndex];
             spinDownFrameTimer = spinDownDelayCounter;
             return;
         }
 
-        // Completed one loop through the sequence
-        // ROM: tst.b d2 / beq.s loc_84750 — check if delay has hit zero
-        if (spinDownDelayCounter <= 0) {
-            // Delay exhausted — increment loop counter (ROM: $2F)
+        spinDownFrameIndex = 0;
+        mappingFrame = SPIN_DOWN_FRAMES[0];
+        if (spinDownDelayCounter == 0) {
             spinDownLoopCounter++;
             if (spinDownLoopCounter >= SPIN_DOWN_LOOP_COUNT) {
-                // All loops done — ROM: loc_6B73A callback
                 onSpinDownComplete();
                 return;
             }
-            // More loops needed but delay is 0 — restart at delay 0 (fastest)
         } else {
-            // Decrement delay (animation gets faster each loop)
             spinDownDelayCounter--;
         }
-
-        // Restart loop from first frame
-        spinDownFrameIndex = 0;
-        mappingFrame = SPIN_DOWN_FRAMES[0];
         spinDownFrameTimer = spinDownDelayCounter;
     }
 
@@ -539,13 +529,10 @@ public class HczEndBossBlade extends AbstractBossChild implements TouchResponseP
             LOG.fine(() -> "HczEndBossBlade.onSpinDownComplete: SFX failed: " + e.getMessage());
         }
 
-        // 3. Spawn explosion child (ROM: ChildObjDat_6BDB2 → loc_6B77C, Map_Explosion)
+        // 3. Spawn the damaging loc_6B77C impact explosion.
         try {
-            boss.spawnDynamicChild(() -> new ExplosionObjectInstance(
-                    0x27,
-                    currentX,
-                    currentY,
-                    services().renderManager()));
+            boss.spawnDynamicChild(() ->
+                    new HczEndBossBladeImpactExplosion(boss, currentX, currentY));
         } catch (Exception e) {
             LOG.fine(() -> "HczEndBossBlade.onSpinDownComplete: explosion spawn failed: "
                     + e.getMessage());
@@ -663,16 +650,16 @@ public class HczEndBossBlade extends AbstractBossChild implements TouchResponseP
      */
     private void transitionToSpinDown() {
         routine = ROUTINE_SPIN_DOWN;
-        // Initialize Animate_RawGetFaster state (ROM: byte_6BE07)
-        // byte_6BE07: dc.b 5, 8, 6, 7, $FC
-        // Format: [initial_delay, loop_count, frames..., $FC]
-        // Animate_RawGetFaster initializes: $2E = byte[0] (5), anim_frame = 0, $2F = 0
-        spinDownDelayCounter = SPIN_DOWN_INITIAL_DELAY;
+        // loc_6B71C only swaps routine/script/callback pointers. The first
+        // Animate_RawGetFaster dispatch initializes its own counters.
+        spinDownDelayCounter = 0;
         spinDownLoopCounter = 0;
         spinDownFrameIndex = 0;
-        // Preserve the blade's native entry cadence: the first GetFaster
-        // advance occurs after the two retained display ticks.
-        spinDownFrameTimer = 2;
+        // The floor-hit callback changes the operation pointer after the
+        // current Child_DrawTouch dispatch; retain that dispatch's single
+        // animation-timer tick before the new script's first expiry.
+        spinDownFrameTimer = 1;
+        spinDownInitialized = false;
         mappingFrame = SPIN_DOWN_FRAMES[0];  // frame 6
         LOG.fine(() -> "HCZ End Boss Blade: hit floor at y=" + currentY + ", transitioning to SPIN_DOWN");
     }

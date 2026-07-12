@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f30010 / 163 errors (12 errors under
+f3318 / 4234 errors to f30027 / 140 errors (7 errors under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -718,6 +718,26 @@ water-column tests pass. The granular nine-route S3K matrix keeps both AIZ
 routes green and preserves every non-HCZ frontier/count exactly: CNZ complete
 f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select
 f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 63 replaces the blade's generic visual explosion with the native
+`loc_6B77C` impact object. Its `$8B` collision byte follows S3K's harmful
+category decode, publishes directly to `Collision_response_list` during
+mapping frames 0-2, and then becomes visual-only while `byte_6BF02` finishes.
+The blade slowdown now keeps the `Animate_RawGetFaster` delay and loop counters
+separate from the floor-hit callback, while each chute child preserves the
+setup-only `loc_6B4C4` dispatch before its subtype-based `Obj_Wait` begins
+(`sonic3k.asm:141287-141307,141492-141509,142247,177749-177792`).
+
+This closes the f30010 harmful-impact landing cluster and advances HCZ to
+f30027 / 140 full-run errors (7 under `frontierOnly`). The new owner is the
+CPU-sidekick boss contact: ROM negates Tails' x/y/ground velocities while the
+engine leaves all three positive. Focused blade/chute and HCZ boss-graph rewind
+tests pass (10/10). The granular nine-route S3K matrix keeps both AIZ routes
+green and preserves every non-HCZ frontier/count exactly: CNZ complete f1846 /
+5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 /
+1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5. Commands used the explicit
+S3K ROM path, one Surefire fork, and `-Dmse=off`; the full HCZ run omitted
+`trace.frontierOnly`, while the matrix included it.
 
 Milestone 31 restores TurboSpiker's detached-shell direction. The shell child
 inherits the parent's post-retreat render bit, but `loc_87D72` interprets that
