@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossGradualMaxXExtender;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
@@ -15,6 +17,47 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestHczEndBossInstance {
+    @Test
+    void gradualMaxXHelperUsesNativeQuarterPixelAcceleration() {
+        TestObjectServices services = new TestObjectServices()
+                .withConfiguration(SonicConfigurationService.getInstance())
+                .withCamera(new Camera(SonicConfigurationService.getInstance()));
+        services.camera().setMaxX((short) 0x4050);
+        HczEndBossGradualMaxXExtender extender = ObjectConstructionContext.construct(
+                services, () -> new HczEndBossGradualMaxXExtender(0x4178, 0x07E0, 0x4180));
+        extender.setServices(services);
+
+        extender.update(0, null);
+        extender.update(1, null);
+        extender.update(2, null);
+        assertEquals(0x4050, services.camera().getMaxX() & 0xFFFF);
+
+        extender.update(3, null);
+        assertEquals(0x4051, services.camera().getMaxX() & 0xFFFF,
+                "Obj_IncLevEndXGradual adds the swapped $4000 accumulator");
+    }
+
+    @Test
+    void fleeUsesConstantMoveSpriteVelocityAndObjWaitUnderflow() throws Exception {
+        TestObjectServices services = new TestObjectServices()
+                .withConfiguration(SonicConfigurationService.getInstance());
+        HczEndBossInstance boss = ObjectConstructionContext.construct(
+                services,
+                () -> new HczEndBossInstance(
+                        new ObjectSpawn(0x4050, 0x0738, 0x9A, 0, 0, false, 0x0738)));
+        boss.setServices(services);
+        boss.getState().routine = 16;
+        boss.getState().yVel = -0x200;
+        setIntField(boss, "fleeTimer", 2);
+
+        Method updateFlee = HczEndBossInstance.class.getDeclaredMethod("updateFlee");
+        updateFlee.setAccessible(true);
+        updateFlee.invoke(boss);
+
+        assertEquals(-0x200, boss.getState().yVel,
+                "loc_6B0CC calls MoveSprite without gravity");
+        assertEquals(1, getIntField(boss, "fleeTimer"));
+    }
     @Test
     void preAttackSetupDefersTheCallbackWithoutAddingASwingStep() throws Exception {
         TestObjectServices services = new TestObjectServices()
@@ -74,5 +117,17 @@ class TestHczEndBossInstance {
         assertTrue(boss.isPersistent(),
                 "ROUTINE_FLEE must survive off-screen culling until loc_6B0E8 clears Boss_flag, "
                         + "widens the camera, and spawns the egg capsule");
+    }
+
+    private static void setIntField(Object target, String name, int value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.setInt(target, value);
+    }
+
+    private static int getIntField(Object target, String name) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getInt(target);
     }
 }

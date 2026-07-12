@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f30462 / 65 errors (1 error under
+f3318 / 4234 errors to f30580 / 58 errors (11 errors under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -753,6 +753,22 @@ granular nine-route S3K matrix again keeps AIZ complete and level-select green
 and preserves every non-HCZ frontier/count: CNZ complete f1846 / 5, CNZ
 level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
 ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 65 restores the post-defeat camera handoff. The custom hit path now
+leaves the freshly installed `$3F` wait untouched on the hit frame;
+`loc_6B0CC` uses constant `MoveSprite` velocity and completes only after
+`Obj_Wait` underflows; and `loc_6B0E8` writes the stored max-X target while a
+rewind-safe `Child6_IncLevX` helper advances live `Camera_max_X_pos` with the
+ROM's accumulating `$4000` longword (`sonic3k.asm:140937-140969,
+142015-142044,177944-177952,178154-178169`).
+
+This clears the f30462-f30546 camera-release cluster and advances HCZ to
+f30580 / 58 full-run errors (11 under `frontierOnly`). The next owner is the
+main player's capsule-area floor/vertical state (`y_speed=0` expected versus
+`$0458` actual). Focused HCZ boss/blade/chute and boss-graph rewind tests pass
+15/15. The granular nine-route S3K matrix remains exact: both AIZ routes green;
+CNZ complete f1846 / 5 and level-select f291 / 7; MGZ complete f1072 / 1 and
+level-select f1030 / 1; ICZ f3174 / 1; MHZ f2920 / 1; LBZ f2270 / 5.
 
 Milestone 31 restores TurboSpiker's detached-shell direction. The shell child
 inherits the parent's post-retreat render bit, but `loc_87D72` interprets that
