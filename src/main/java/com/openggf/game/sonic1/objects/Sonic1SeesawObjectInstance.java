@@ -17,7 +17,10 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Object 0x5E -- Seesaws (SLZ).
@@ -85,6 +88,9 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
 
     // Standing player tracking (obStatus bit 3 = player standing)
     private boolean playerStanding;
+    /** Extension-only standing actors; native main state remains in playerStanding. */
+    private Set<PlayableEntity> extraStandingPlayers =
+            Collections.newSetFromMap(new IdentityHashMap<>());
 
     // Child spikeball reference
     private Sonic1SeesawBallObjectInstance ball;
@@ -123,8 +129,10 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
 
         ensureBallSpawned();
 
-        // Validate standing player
+        // Validate the native owner first, then extension actors in roster order.
         validateStandingPlayer(player);
+        extraStandingPlayers.removeIf(actor -> !(actor instanceof AbstractPlayableSprite playable)
+                || playable.getAir() || !isPlayerInXRange(playable));
 
         // See_Slope (routine 2): Store player Y velocity when approaching
         // move.w obVelY(a1),see_speed(a0)
@@ -165,12 +173,16 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
         // had latched to frame 2 (dropped left end) by f9863, let him free-fall
         // past it. Drive the tilt target from the riding state so it tracks the
         // rider's side and latches after they leave, matching ROM obFrame 0->1->2.
-        boolean tiltTracking = player != null && !player.getAir()
-                && (playerStanding
-                        || (services().objectManager() != null
-                                && services().objectManager().isRidingObject(player, this)));
+        AbstractPlayableSprite tiltPlayer = player;
+        boolean tiltTracking = tiltPlayer != null && !tiltPlayer.getAir()
+                && (playerStanding || isRiding(tiltPlayer));
+        if (!tiltTracking) {
+            tiltPlayer = firstExtraStandingPlayer();
+            tiltTracking = tiltPlayer != null && !tiltPlayer.getAir()
+                    && (extraStandingPlayers.contains(tiltPlayer) || isRiding(tiltPlayer));
+        }
         if (tiltTracking) {
-            targetFrame = calculateTargetAngle(player);
+            targetFrame = calculateTargetAngle(tiltPlayer);
         }
 
         // Animate mapping frame toward target (See_ChgFrame)
@@ -184,9 +196,13 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        boolean nativeMain = isNativeMain(player);
         if (!contact.standing()) {
-            // Player left the seesaw
-            playerStanding = false;
+            if (nativeMain) {
+                playerStanding = false;
+            } else {
+                extraStandingPlayers.remove(player);
+            }
             return;
         }
 
@@ -196,7 +212,11 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
         // matching ROM See_Slope2 ordering. onSolidContact only maintains the
         // standing bit here (it fires during the player's solid pass, before the
         // post-physics object update).
-        playerStanding = true;
+        if (nativeMain) {
+            playerStanding = true;
+        } else {
+            extraStandingPlayers.add(player);
+        }
     }
 
     /**
@@ -297,7 +317,7 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
      * Checks if a player is standing on this seesaw (obStatus bit 3).
      */
     public boolean isPlayerStanding() {
-        return playerStanding;
+        return playerStanding || !extraStandingPlayers.isEmpty();
     }
 
     /**
@@ -305,23 +325,75 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
      */
     public void clearPlayerStanding() {
         this.playerStanding = false;
+        extraStandingPlayers.clear();
     }
 
     /**
      * Gets the standing player reference for the ball to launch.
      */
     public AbstractPlayableSprite getStandingPlayer() {
-        if (!playerStanding) {
-            return null;
+        List<AbstractPlayableSprite> players = getStandingPlayers();
+        return players.isEmpty() ? null : players.getFirst();
+    }
+
+    /** Native main first, followed by configured extension sidekicks. */
+    public List<AbstractPlayableSprite> getStandingPlayers() {
+        List<AbstractPlayableSprite> players = new java.util.ArrayList<>();
+        PlayableEntity main = mainPlayerOrNull();
+        if (playerStanding && main instanceof AbstractPlayableSprite playable) {
+            players.add(playable);
         }
-        // Get from SpriteManager - the standing player is always the main character
-        var sprites = services().spriteManager().getAllSprites();
-        for (var sprite : sprites) {
-            if (sprite instanceof AbstractPlayableSprite aps) {
-                return aps;
+        for (PlayableEntity sidekick : sidekicks()) {
+            if (sidekick instanceof AbstractPlayableSprite playable
+                    && extraStandingPlayers.contains(sidekick)) {
+                players.add(playable);
+            }
+        }
+        return List.copyOf(players);
+    }
+
+    private AbstractPlayableSprite firstExtraStandingPlayer() {
+        for (PlayableEntity sidekick : sidekicks()) {
+            if (sidekick instanceof AbstractPlayableSprite playable
+                    && extraStandingPlayers.contains(sidekick)) {
+                return playable;
             }
         }
         return null;
+    }
+
+    private boolean isNativeMain(AbstractPlayableSprite player) {
+        PlayableEntity main = mainPlayerOrNull();
+        return main != null ? main == player : !player.isCpuControlled();
+    }
+
+    private PlayableEntity mainPlayerOrNull() {
+        try {
+            return services().playerQuery().mainPlayerOrNull();
+        } catch (IllegalStateException | UnsupportedOperationException ignored) {
+            if (services().spriteManager() == null) {
+                return null;
+            }
+            return services().spriteManager().getAllSprites().stream()
+                    .filter(PlayableEntity.class::isInstance)
+                    .map(PlayableEntity.class::cast)
+                    .filter(player -> !player.isCpuControlled())
+                    .findFirst()
+                    .orElse(null);
+        }
+    }
+
+    private List<PlayableEntity> sidekicks() {
+        try {
+            return services().playerQuery().sidekicks();
+        } catch (IllegalStateException | UnsupportedOperationException ignored) {
+            return List.of();
+        }
+    }
+
+    private boolean isRiding(AbstractPlayableSprite player) {
+        return services().objectManager() != null
+                && services().objectManager().isRidingObject(player, this);
     }
 
     private void validateStandingPlayer(AbstractPlayableSprite player) {

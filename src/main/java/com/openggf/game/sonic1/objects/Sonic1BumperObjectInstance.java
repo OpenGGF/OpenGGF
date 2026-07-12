@@ -24,7 +24,9 @@ import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Sonic 1 Pinball Bumper (Object 0x47) - Spring Yard Zone.
@@ -114,9 +116,12 @@ public class Sonic1BumperObjectInstance extends AbstractObjectInstance
     private int hitAnimIndex = -1;  // -1 = not playing hit anim
     private int hitAnimTimer = 0;
     private int collisionProperty = 0;
-    private transient AbstractPlayableSprite pendingTouchedPlayer;
+    private AbstractPlayableSprite pendingTouchedPlayer;
     private int pendingTouchCentreX;
     private int pendingTouchCentreY;
+    /** Extension-only contacts, consumed after the native main-player slot. */
+    private Map<PlayableEntity, Integer> extraPendingTouchCentreX = new LinkedHashMap<>();
+    private Map<PlayableEntity, Integer> extraPendingTouchCentreY = new LinkedHashMap<>();
     private int hitCount = 0;
 
     public Sonic1BumperObjectInstance(ObjectSpawn spawn) {
@@ -128,15 +133,26 @@ public class Sonic1BumperObjectInstance extends AbstractObjectInstance
         // ROM Bump_Hit consumes obColProp after ReactToItem increments it for
         // $D7: docs/s1disasm/_incObj/47 Bumper.asm:24-40 and
         // docs/s1disasm/_incObj/sub ReactToItem.asm:377-427.
-        if (collisionProperty != 0 && pendingTouchedPlayer != null) {
+        if (collisionProperty != 0) {
             collisionProperty = 0;
-            AbstractPlayableSprite touchedPlayer = pendingTouchedPlayer;
-            int touchCentreX = pendingTouchCentreX;
-            int touchCentreY = pendingTouchCentreY;
-            pendingTouchedPlayer = null;
-            if (!touchedPlayer.isHurt() && !touchedPlayer.getDead()) {
-                applyBounce(touchedPlayer, touchCentreX, touchCentreY);
+            if (pendingTouchedPlayer != null) {
+                AbstractPlayableSprite touchedPlayer = pendingTouchedPlayer;
+                int touchCentreX = pendingTouchCentreX;
+                int touchCentreY = pendingTouchCentreY;
+                if (!touchedPlayer.isHurt() && !touchedPlayer.getDead()) {
+                    applyBounce(touchedPlayer, touchCentreX, touchCentreY);
+                }
             }
+            pendingTouchedPlayer = null;
+            for (var entry : List.copyOf(extraPendingTouchCentreX.entrySet())) {
+                if (entry.getKey() instanceof AbstractPlayableSprite touchedPlayer
+                        && !touchedPlayer.isHurt() && !touchedPlayer.getDead()) {
+                    applyBounce(touchedPlayer, entry.getValue(),
+                            extraPendingTouchCentreY.getOrDefault(touchedPlayer, (int) touchedPlayer.getCentreY()));
+                }
+            }
+            extraPendingTouchCentreX.clear();
+            extraPendingTouchCentreY.clear();
         }
 
         // Update hit animation sequence
@@ -328,13 +344,27 @@ public class Sonic1BumperObjectInstance extends AbstractObjectInstance
             // ROM React_Special .D7orE1: addq.b #1,obColProp(a1). Bump_Hit
             // consumes the property from the object's own slot later this frame.
             collisionProperty = (collisionProperty + 1) & 0xFF;
-            pendingTouchedPlayer = player;
+            if (isNativeMain(player)) {
+                pendingTouchedPlayer = player;
+                pendingTouchCentreX = player.getCentreX();
+                pendingTouchCentreY = player.getCentreY();
+                return;
+            }
             // Capture position at the moment of the touch (see applyBounce's
             // Javadoc): our update() defers consumption to the object's NEXT
             // update() call, one frame after ROM's same-frame Bump_Hit would
             // have read it, so the live position must not be re-sampled then.
-            pendingTouchCentreX = player.getCentreX();
-            pendingTouchCentreY = player.getCentreY();
+            extraPendingTouchCentreX.put(player, (int) player.getCentreX());
+            extraPendingTouchCentreY.put(player, (int) player.getCentreY());
+        }
+    }
+
+    private boolean isNativeMain(AbstractPlayableSprite player) {
+        try {
+            PlayableEntity main = services().playerQuery().mainPlayerOrNull();
+            return main != null ? main == player : !player.isCpuControlled();
+        } catch (IllegalStateException | UnsupportedOperationException ignored) {
+            return !player.isCpuControlled();
         }
     }
 
