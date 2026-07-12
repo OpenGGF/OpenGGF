@@ -53,6 +53,8 @@ public class AizIntroWaveChild extends AbstractObjectInstance implements RewindR
     private int animTimer;
     /** Current mapping frame to render. */
     private int mappingFrame;
+    /** ROM callback has replaced the routine with Go_Delete_Sprite. */
+    private boolean deleteRoutinePending;
 
     /**
      * @param spawn  spawn position for the wave
@@ -97,6 +99,10 @@ public class AizIntroWaveChild extends AbstractObjectInstance implements RewindR
         if (isDestroyed()) {
             return;
         }
+        if (deleteRoutinePending) {
+            setDestroyed(true);
+            return;
+        }
 
         // ROM order (loc_678DA): check delete threshold, subtract scroll, animate, draw.
         // Check x < DELETE_X before scroll subtraction to match ROM
@@ -113,8 +119,10 @@ public class AizIntroWaveChild extends AbstractObjectInstance implements RewindR
             // Advance to next animation entry
             animIndex += 2;
             if (animIndex >= ANIM_DATA.length || ANIM_DATA[animIndex] == -1) {
-                // Sentinel: delete sprite
-                setDestroyed(true);
+                // $F4 invokes the $34 callback, which writes Go_Delete_Sprite
+                // into the object routine. The slot remains occupied by that
+                // routine until its next object dispatch.
+                deleteRoutinePending = true;
                 return;
             }
             mappingFrame = ANIM_DATA[animIndex];
@@ -124,6 +132,10 @@ public class AizIntroWaveChild extends AbstractObjectInstance implements RewindR
 
     public int getAnimFrame() {
         return mappingFrame;
+    }
+
+    boolean isDeleteRoutinePending() {
+        return deleteRoutinePending;
     }
 
     @Override

@@ -125,12 +125,15 @@ class TestCollisionSystemAirLanding {
         sprite.setAir(false);
         sprite.setOnObject(false);
         sprite.setPushing(true);
+        sprite.setAngle((byte) 0x08);
 
         CollisionSystem collisionSystem = new CollisionSystem(new StubTerrainCollisionManager(null, null));
         collisionSystem.resolveGroundAttachment(sprite, 14, () -> true);
 
         assertTrue(sprite.getAir(), "Stale object-side support must still allow terrain walk-off once Status_OnObj is clear");
         assertFalse(sprite.getPushing(), "Walk-off should clear pushing just like the normal terrain path");
+        assertEquals(0, sprite.getAngle() & 0xFF,
+                "Player_Angle rounds an empty-floor flagged angle to the current cardinal quadrant");
     }
 
     @Test

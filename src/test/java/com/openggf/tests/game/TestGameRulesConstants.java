@@ -23,15 +23,18 @@ class TestGameRulesConstants {
     @Test
     void directConstantsExposeCoreGameDifferences() {
         assertFalse(GameRules.SONIC_1.playerCapability().spindashEnabled());
+        assertFalse(GameRules.SONIC_1.playerCapability().tailsFlightEnabled());
         assertEquals(CollisionModel.UNIFIED, GameRules.SONIC_1.collision().collisionModel());
         assertTrue(GameRules.SONIC_1.camera().waterShimmerEnabled());
 
         assertTrue(GameRules.SONIC_2.playerCapability().spindashEnabled());
+        assertFalse(GameRules.SONIC_2.playerCapability().tailsFlightEnabled());
         assertEquals(CollisionModel.DUAL_PATH, GameRules.SONIC_2.collision().collisionModel());
         assertEquals(0, GameRules.SONIC_2.drowningBubble().initialDrowningCountdownFrameTimer());
 
         assertTrue(GameRules.SONIC_3K.playerCapability().elementalShieldsEnabled());
         assertTrue(GameRules.SONIC_3K.playerCapability().instaShieldEnabled());
+        assertTrue(GameRules.SONIC_3K.playerCapability().tailsFlightEnabled());
         assertTrue(GameRules.SONIC_3K.playerAnimation().singleFacingBalanceAnimationSet());
         assertTrue(GameRules.SONIC_3K.objectInteraction().bossHitNegatesGroundSpeed());
     }
@@ -62,7 +65,7 @@ class TestGameRulesConstants {
         short[] superTable = new short[]{4, 5, 6};
 
         PlayerCapabilityRules rules = new PlayerCapabilityRules(true, spindashTable, true, true,
-                true, true, superTable);
+                false, true, true, superTable);
 
         spindashTable[0] = 99;
         superTable[0] = 99;
@@ -85,12 +88,14 @@ class TestGameRulesConstants {
                 first.spindashSpeedTable(),
                 first.elementalShieldsEnabled(),
                 first.instaShieldEnabled(),
+                first.tailsFlightEnabled(),
                 first.jumpRepressClearsRollJumpBeforeAbility(),
                 first.lightningShieldEnabled(),
                 first.superSpindashSpeedTable());
 
         assertEquals(first, second);
         assertEquals(first.hashCode(), second.hashCode());
+        assertTrue(first.toString().contains("tailsFlightEnabled=true"));
         assertTrue(first.toString().contains("superSpindashSpeedTable=[2816, 2944, 3072"));
     }
 

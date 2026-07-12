@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.GameRng;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -59,7 +60,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     private int animFrame;
     private int animIndex;
     private int animTimer;
-    private int sparkleCounter;
 
     /**
      * ROM-accurate spin animation sequences.
@@ -187,7 +187,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
 
         switch (state) {
             case INIT -> updateInit(player);
-            case FALLING -> updateFalling(player);
+            case FALLING -> updateFalling(frameCounter, player);
             case LANDED -> updateLanded();
             case RESULTS -> updateResults(player);
             case AFTER -> updateAfter();
@@ -208,7 +208,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         animIndex = 0;
         animFrame = animSequence[0];
         animTimer = 0;
-        sparkleCounter = 0;
 
         try {
             services().playSfx(Sonic3kSfx.SIGNPOST.id);
@@ -227,7 +226,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     // FALLING
     // =========================================================================
 
-    private void updateFalling(AbstractPlayableSprite player) {
+    private void updateFalling(int frameCounter, AbstractPlayableSprite player) {
         // Apply gravity
         yVel += GRAVITY;
 
@@ -246,10 +245,11 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         }
 
         // Sparkle effect
-        sparkleCounter++;
-        if (sparkleCounter >= SPARKLE_INTERVAL) {
-            sparkleCounter = 0;
-            spawnDynamicObject(new S3kSignpostSparkleChild(worldX, worldY));
+        // ROM tests the global V_int_run_count low bits, not a counter local
+        // to the signpost's allocation frame.
+        if (isRomSparkleFrame(frameCounter)) {
+            spawnDynamicObject(new S3kSignpostSparkleChild(
+                    worldX, worldY + romSparkleYOffset(services().rng())));
         }
 
         // Check bump from below
@@ -286,6 +286,18 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
             state = State.LANDED;
             LOG.fine("S3K Signpost FALLING -> LANDED at Y=" + worldY);
         }
+    }
+
+    /**
+     * ROM {@code loc_839B8}: every signpost sparkle consumes one random word
+     * and applies {@code (d0 & $1F) - $10} to its initial Y position.
+     */
+    static int romSparkleYOffset(GameRng rng) {
+        return rng.nextBits(0x1F) - 0x10;
+    }
+
+    static boolean isRomSparkleFrame(int frameCounter) {
+        return (frameCounter & (SPARKLE_INTERVAL - 1)) == 0;
     }
 
     /**

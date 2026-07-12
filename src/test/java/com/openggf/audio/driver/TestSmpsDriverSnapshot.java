@@ -127,6 +127,65 @@ class TestSmpsDriverSnapshot {
     }
 
     @Test
+    void sharedExternalFallbackIsDescribedOncePerCaptureAndRehashedAfterMutation() {
+        SmpsDriver driver = new SmpsDriver();
+        driver.addSequencer(newSequencer("music", 0x81, driver), false);
+        CountingSmpsData fallback = new CountingSmpsData(new byte[4096], 0x90);
+        for (int index = 0; index < 4; index++) {
+            SmpsSequencer sfx = newSequencer("sfx-" + index, 0xB0 + index, driver);
+            sfx.setFallbackVoiceData(fallback);
+            driver.addSequencer(sfx, true);
+        }
+
+        fallback.resetDataReads();
+        SmpsDriverSnapshot before = driver.captureSnapshot();
+        assertEquals(1, fallback.dataReads(),
+                "one external fallback identity should be hashed once per capture");
+        int beforeHash = before.sequencers().get(1).fallbackVoiceSource().dataHash();
+        for (int index = 1; index < before.sequencers().size(); index++) {
+            assertEquals(beforeHash, before.sequencers().get(index).fallbackVoiceSource().dataHash());
+        }
+
+        fallback.getDataWithoutCounting()[17] = 1;
+        fallback.resetDataReads();
+        SmpsDriverSnapshot after = driver.captureSnapshot();
+
+        assertEquals(1, fallback.dataReads(),
+                "capture-local dedup must not become a persistent descriptor cache");
+        int afterHash = after.sequencers().get(1).fallbackVoiceSource().dataHash();
+        assertNotEquals(beforeHash, afterHash,
+                "in-place fallback bytes must be re-hashed by the next capture");
+        for (int index = 1; index < after.sequencers().size(); index++) {
+            assertEquals(afterHash, after.sequencers().get(index).fallbackVoiceSource().dataHash());
+        }
+    }
+
+    @Test
+    void distinctExternalFallbacksAreEachDescribedOnce() {
+        SmpsDriver driver = new SmpsDriver();
+        driver.addSequencer(newSequencer("music", 0x81, driver), false);
+        CountingSmpsData firstFallback = new CountingSmpsData(new byte[] {1, 2, 3}, 0x91);
+        CountingSmpsData secondFallback = new CountingSmpsData(new byte[] {4, 5, 6}, 0x92);
+        SmpsSequencer firstSfx = newSequencer("first-sfx", 0xB0, driver);
+        firstSfx.setFallbackVoiceData(firstFallback);
+        SmpsSequencer secondSfx = newSequencer("second-sfx", 0xB1, driver);
+        secondSfx.setFallbackVoiceData(secondFallback);
+        driver.addSequencer(firstSfx, true);
+        driver.addSequencer(secondSfx, true);
+        firstFallback.resetDataReads();
+        secondFallback.resetDataReads();
+
+        SmpsDriverSnapshot snapshot = driver.captureSnapshot();
+
+        assertEquals(1, firstFallback.dataReads());
+        assertEquals(1, secondFallback.dataReads());
+        assertEquals(java.util.Arrays.hashCode(firstFallback.getDataWithoutCounting()),
+                snapshot.sequencers().get(1).fallbackVoiceSource().dataHash());
+        assertEquals(java.util.Arrays.hashCode(secondFallback.getDataWithoutCounting()),
+                snapshot.sequencers().get(2).fallbackVoiceSource().dataHash());
+    }
+
+    @Test
     void restoreWithResolverIsAtomicWhenSourceIsMissing() {
         SmpsDriver sourceDriver = new SmpsDriver();
         sourceDriver.addSequencer(newSequencer("music", 0x81, sourceDriver), false);
@@ -207,6 +266,25 @@ class TestSmpsDriverSnapshot {
         AbstractSmpsData data = new AudioTestFixtures.StubSmpsData(name);
         data.setId(id);
         return data;
+    }
+
+    private static final class CountingSmpsData extends AbstractSmpsData {
+        private int dataReads;
+
+        private CountingSmpsData(byte[] data, int id) {
+            super(data, 0);
+            setId(id);
+        }
+
+        @Override public byte[] getData() { dataReads++; return super.getData(); }
+        private byte[] getDataWithoutCounting() { return super.getData(); }
+        private int dataReads() { return dataReads; }
+        private void resetDataReads() { dataReads = 0; }
+        @Override protected void parseHeader() { }
+        @Override public byte[] getVoice(int voiceId) { return new byte[0]; }
+        @Override public byte[] getPsgEnvelope(int id) { return new byte[0]; }
+        @Override public int read16(int offset) { return 0; }
+        @Override public int getBaseNoteOffset() { return 0; }
     }
 
     private static SmpsDriver configuredDriver() {

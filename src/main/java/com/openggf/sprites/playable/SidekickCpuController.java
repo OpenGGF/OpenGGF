@@ -1,7 +1,5 @@
 package com.openggf.sprites.playable;
 
-import java.util.Objects;
-
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
@@ -22,9 +20,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectProvider;
-import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
-import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.sprites.managers.SpriteManager;
 
 /**
@@ -168,6 +164,8 @@ public class SidekickCpuController {
     private int despawnCounter;
     private int frameCounter;
     private int controlCounter;
+    @RewindTransient(reason = "frame-local ownership marker is cleared before every CPU tick and on restore")
+    private boolean manualInputAppliedThisTick;
     // Engine-internal approach/spawn frame counter for the multi-sidekick respawn
     // cadence. Kept SEPARATE from controlCounter, which models ROM
     // Tails_control_counter ($F702) — the manual-control timer set to 600 on P2
@@ -279,17 +277,15 @@ public class SidekickCpuController {
     private NormalStepDiagnostics latestNormalStepDiagnostics;
     private int diagnosticCtrl2HeldLatch;
     private int diagnosticCtrl2PressedLatch;
+    private int diagnosticPreObjectCtrl2Frame = -1;
+    private int diagnosticPreObjectCtrl2Held;
+    private int diagnosticPreObjectCtrl2Pressed;
 
     // =====================================================================
     // Tails-carry-Sonic support (S3K-only; null trigger = feature disabled)
     // =====================================================================
     @RewindTransient(reason = "carry trigger is level/runtime-owned behavior installed by the live game module")
     private SidekickCarryTrigger carryTrigger;
-    private short carryLatchX;
-    private short carryLatchY;
-    private boolean flyingCarryingFlag;
-    private boolean carryParentagePending;
-    private int releaseCooldown;
     /**
      * True only for a throwaway carrier spawned for a solo (no-sidekick) leader's
      * intro carry — ROM SpawnLevelMainSprites loc_68D8 writes Obj_Tails into the
@@ -376,10 +372,10 @@ public class SidekickCpuController {
     public void update(int frameCount) {
         this.frameCounter = resolveCpuFrameCounter(frameCount);
         deferredDespawnDeadFallContinuingThisFrame = false;
+        manualInputAppliedThisTick = false;
 
         if (controller2SignedLocked) {
-            clearInputs();
-            carryParentagePending = false;
+            carryController().setParentagePending(false);
             if (sidekick.isObjectControlled() && !sidekick.isObjectControlAllowsCpu()) {
                 mirrorRawController2LogicalForEndingPose();
             }
@@ -390,23 +386,16 @@ public class SidekickCpuController {
         boolean releasedCarryCooldown =
                 state == State.CARRYING
                         && carryTrigger != null
-                        && !flyingCarryingFlag;
-
-        // Decrement release cooldown every frame regardless of state (applies after carry).
-        // Released carry paths decrement inside their active routine and return
-        // for that frame, matching loc_14534's byte 1(a2) cooldown gate.
-        if (releaseCooldown > 0 && !releasedCarryCooldown) {
-            releaseCooldown--;
-        }
+                        && !carryController().isCarryingMainCharacter();
 
         if (leader == null) {
             clearInputs();
-            carryParentagePending = false;
+            carryController().setParentagePending(false);
             return;
         }
 
         clearInputs();
-        carryParentagePending = false;
+        carryController().setParentagePending(false);
         if ((controller2Held & MANUAL_HELD_MASK) != 0) {
             controlCounter = MANUAL_CONTROL_FRAMES;
         }
@@ -555,6 +544,9 @@ public class SidekickCpuController {
         // Tails_Control pass copies raw Ctrl_2 into Ctrl_2_logical before
         // Set_PlayerEndingPose's object_control=$81 freezes movement
         // (docs/skdisasm/sonic3k.asm:26196-26203,181919-181988).
+        diagnosticPreObjectCtrl2Frame = frameCounter;
+        diagnosticPreObjectCtrl2Held = diagnosticCtrl2HeldLatch & 0xFF;
+        diagnosticPreObjectCtrl2Pressed = diagnosticCtrl2PressedLatch & 0xFF;
         diagnosticCtrl2HeldLatch = controller2Held & MANUAL_HELD_MASK;
         diagnosticCtrl2PressedLatch = controller2Logical & MANUAL_HELD_MASK;
     }
@@ -578,6 +570,11 @@ public class SidekickCpuController {
      */
     public int getDiagnosticControlCounter() {
         return controlCounter;
+    }
+
+    /** Returns whether Player 2 currently owns this sidekick's existing manual-control window. */
+    public boolean isUnderManualControl() {
+        return controlCounter != 0 || manualInputAppliedThisTick;
     }
 
     public int getDiagnosticRespawnCounter() {
@@ -628,25 +625,37 @@ public class SidekickCpuController {
     }
 
     public int getDiagnosticGeneratedHeldInput() {
-        NormalStepDiagnostics d = latestNormalStepDiagnostics;
-        if (state == State.NORMAL
-                && d != null
-                && d.frameCounter() == frameCounter
-                && d.hasCpuResult()) {
-            return d.generatedInput() & 0xFF;
-        }
+        // Return the live Ctrl_2_logical latch, not the earlier NORMAL-step
+        // sample. Later object slots can overwrite/clear the global after the
+        // CPU pass (for example AIZ loc_863C0), while the detailed normal-step
+        // diagnostic intentionally retains the value generated inside CPU code.
         return diagnosticCtrl2HeldLatch & 0xFF;
     }
 
     public int getDiagnosticGeneratedPressedInput() {
-        NormalStepDiagnostics d = latestNormalStepDiagnostics;
-        if (state == State.NORMAL
-                && d != null
-                && d.frameCounter() == frameCounter
-                && d.hasCpuResult()) {
-            return d.generatedPressedInput() & 0xFF;
-        }
         return diagnosticCtrl2PressedLatch & 0xFF;
+    }
+
+    public int getDiagnosticNormalStepHeldInput() {
+        if (diagnosticPreObjectCtrl2Frame >= 0) {
+            return diagnosticPreObjectCtrl2Held;
+        }
+        NormalStepDiagnostics diagnostics = latestNormalStepDiagnostics;
+        if (diagnostics != null && diagnostics.frameCounter() == frameCounter) {
+            return diagnostics.generatedInput() & 0xFF;
+        }
+        return -1;
+    }
+
+    public int getDiagnosticNormalStepPressedInput() {
+        if (diagnosticPreObjectCtrl2Frame >= 0) {
+            return diagnosticPreObjectCtrl2Pressed;
+        }
+        NormalStepDiagnostics diagnostics = latestNormalStepDiagnostics;
+        if (diagnostics != null && diagnostics.frameCounter() == frameCounter) {
+            return diagnostics.generatedPressedInput() & 0xFF;
+        }
+        return -1;
     }
 
     public int getDiagnosticFollowHistorySlot() {
@@ -2088,7 +2097,15 @@ public class SidekickCpuController {
                         && collisionRules.sidekickPushBypassUsesGraceStatus()
                         && !sidekick.getAir()
                         && sidekick.getRolling()
-                        && sidekick.getGSpeed() != 0;
+                        && sidekick.getGSpeed() != 0
+                        // A terrain wall push normally zeroes ground_vel before
+                        // setting Status_Push, but SolidObjectFull can own the
+                        // same native bit while rolling inertia remains nonzero.
+                        // Preserve that concrete object latch for loc_13DD0;
+                        // only an unowned player-only bit is stale
+                        // (sonic3k.asm:26702-26705,43916-43935).
+                        && !sidekick.isPushFromGroundWallCollision()
+                        && !hasLiveObjectPushingLatch();
         boolean romVisibleCurrentStatusPush =
                 currentStatusPush && !rollingNonzeroGroundSpeedStalePush;
         boolean frameStartStatusPush = sidekick.getPushingAtFrameStart();
@@ -2119,11 +2136,20 @@ public class SidekickCpuController {
                 && (!sidekick.isInWater()
                 || !restrictUnderwaterPushBypassToContactPulses
                 || delayedObjectOrPushContext
+                || sidekick.isPushFromGroundWallCollision()
                 || isUnderwaterCurrentPushPulse()))
                 || frameStartPushBypass;
         boolean clearReleasedUnderwaterPushAfterCpu = currentPushBypass
                 && releasedUnderwaterZeroSpeedPush
-                && !releasedUnderwaterPushConsumed;
+                && !releasedUnderwaterPushConsumed
+                // A released interact slot is only evidence that an old
+                // object-owned bit may be stale. A terrain CalcRoomInFront
+                // response can set the same native Status_Push bit after that
+                // release; ROM loc_13DD0 consumes it and a zero-distance next
+                // probe leaves it intact (sonic3k.asm:26702-26705,
+                // 27974-28018). Do not classify that fresh terrain source as
+                // the released object's one-shot clear.
+                && !sidekick.isPushFromGroundWallCollision();
         boolean pushBypassGraceEnabled = collisionRules != null && collisionRules.sidekickPushBypassUsesGraceStatus();
         boolean gracePushBypass = !sidekick.getAir()
                 && pushBypassGraceEnabled
@@ -2238,6 +2264,12 @@ public class SidekickCpuController {
                         && collisionRules.sidekickSuppressesFastLeaderTinyFollowNudge()
                         && effectiveLeader.getGSpeed() >= 0x400
                         && !leaderStatusOnObject
+                        // This is an engine object-order bridge for the live
+                        // spring/wall support case, not a ROM-wide fast-leader
+                        // rule. With no latched support, loc_13E0A/loc_13E34
+                        // still applies its native +/-1 x_pos nudge
+                        // (sonic3k.asm:26707-26741).
+                        && hasLiveInteractSlotObject(currentInteractSlotObject())
                         && Math.abs(sidekick.getGSpeed()) < 0x100
                         && localGraceAbsDx < followSnapThreshold
                         && dy < -JUMP_HEIGHT_THRESHOLD
@@ -2787,6 +2819,13 @@ public class SidekickCpuController {
         return sidekick.getLatchedSolidObjectInstance();
     }
 
+    private boolean hasLiveObjectPushingLatch() {
+        LevelManager levelManager = sidekick.currentLevelManagerIfAvailable();
+        return levelManager != null
+                && levelManager.getObjectManager() != null
+                && levelManager.getObjectManager().hasObjectPushingBit(sidekick);
+    }
+
     private ObjectInstance currentInteractSlotObject() {
         int slot = sidekick.getInteractSlotIndex();
         if (slot < 0) {
@@ -3198,13 +3237,16 @@ public class SidekickCpuController {
         // that input must remain visible to Tails_Move_FlySwim.
         sidekick.setControlLocked(false);
         sidekick.setForcedAnimationId(flyAnimId);
-        pickupLeaderForCarry();
+        if (!carryController().isCarryingMainCharacter()) {
+            carryController().forceScriptedCarry(carryTrigger.usesMgzBossTransitionControl()
+                    ? TailsCarryController.CarryContext.MGZ_BOSS
+                    : TailsCarryController.CarryContext.CNZ);
+        }
 
         // Initialize the latch
-        flyingCarryingFlag = true;
         mgzCarryIntroAscend = carryTrigger.usesMgzBossTransitionControl();
         mgzCarryFlapTimer = 0;
-        releaseCooldown = 0;
+        carryController().setCooldown(0);
 
         state = State.CARRYING;
         // ROM 0x0C -> 0x20 fall-through: one tick of the body this same frame.
@@ -3223,7 +3265,7 @@ public class SidekickCpuController {
             return;
         }
 
-        if (carryTrigger.usesMgzBossTransitionControl() && !flyingCarryingFlag) {
+        if (carryTrigger.usesMgzBossTransitionControl() && !carryController().isCarryingMainCharacter()) {
             updateMgzReleasedCarry();
             return;
         }
@@ -3232,28 +3274,28 @@ public class SidekickCpuController {
         // jump-out / external-velocity / hurt release, Tails stays in routine $E
         // and runs the loc_14534 cooldown/regrab loop. Persistent Tails returns to
         // follow only when Sonic lands; throwaway intro carriers fly off instead.
-        if (!flyingCarryingFlag) {
+        if (!carryController().isCarryingMainCharacter()) {
             updateReleasedCarry();
             return;
         }
 
         // 1. Hurt/dead (Sonic routine >= 4)
         if (leader.isHurt() || leader.getDead()) {
-            carryParentagePending = false;
+            carryController().setParentagePending(false);
             releaseCarry(carryTrigger.carryLatchReleaseCooldownFrames());
             return;
         }
 
         // 2. External velocity change (release path C: latch mismatch)
-        if (leader.getXSpeed() != carryLatchX || leader.getYSpeed() != carryLatchY) {
-            carryParentagePending = false;
+        if (!carryController().velocityLatchMatches(leader)) {
+            carryController().setParentagePending(false);
             releaseCarry(carryTrigger.carryLatchReleaseCooldownFrames());
             return;
         }
 
         // 3. A/B/C just-pressed (release path B)
         if (leader.isJumpJustPressed()) {
-            carryParentagePending = false;
+            carryController().setParentagePending(false);
             performJumpRelease();
             return;
         }
@@ -3279,7 +3321,7 @@ public class SidekickCpuController {
             // Small upward impulse on the carried Sonic before clearing
             // object_control, matching ROM fall-through into loc_14460/loc_14466.
             leader.setYSpeed((short) -0x100);
-            carryParentagePending = false;
+            carryController().setParentagePending(false);
             releaseCarry(0);
             if (transientCarrySidekick) {
                 // ROM loc_14016: when Sonic lands while being carried, the routine
@@ -3294,7 +3336,7 @@ public class SidekickCpuController {
         if (carryTrigger.usesMgzBossTransitionControl()) {
             updateMgzBossTransitionCarryInput();
             mirrorCarryDiagnosticInput();
-            carryParentagePending = true;
+            carryController().setParentagePending(true);
             return;
         }
 
@@ -3317,7 +3359,7 @@ public class SidekickCpuController {
         // loc_13FFA body only injects a right press every 32 frames, letting
         // normal Tails flight movement raise x_vel ($118/$130/$148...).
         mirrorCarryDiagnosticInput();
-        carryParentagePending = true;
+        carryController().setParentagePending(true);
     }
 
     private void updateMgzBossTransitionCarryInput() {
@@ -3358,7 +3400,7 @@ public class SidekickCpuController {
         sidekick.setAir(true);
         sidekick.setDoubleJumpProperty((byte) 0xF0);
         sidekick.setForcedAnimationId(flyAnimId);
-        carryParentagePending = false;
+        carryController().setParentagePending(false);
 
         // ROM loc_142E2 runs Tails's released rescue/chase body before
         // falling through to Tails_Carry_Sonic's cooldown/proximity probe.
@@ -3367,17 +3409,16 @@ public class SidekickCpuController {
         // ROM loc_14534: if byte 1(a2) is nonzero, decrement and return
         // only while it remains nonzero. When the decrement reaches zero, the
         // same frame continues into the proximity pickup test.
-        if (releaseCooldown > 0) {
-            releaseCooldown--;
-            if (releaseCooldown > 0) {
+        if (carryController().cooldown() > 0) {
+            if (carryController().decrementCooldown() > 0) {
                 return;
             }
         }
 
         if (canRegrabLeaderInPickupRange()) {
             pickupLeaderForCarry();
-            flyingCarryingFlag = true;
-            carryParentagePending = true;
+            carryController().setCarrying(true);
+            carryController().setParentagePending(true);
             mgzReleasedChaseLatched = false;
             return;
         }
@@ -3415,7 +3456,7 @@ public class SidekickCpuController {
             } else {
                 state = State.NORMAL;
                 normalFrameCount = 0;
-                releaseCooldown = 0;
+                carryController().setCooldown(0);
                 sidekick.setXSpeed((short) 0);
                 sidekick.setYSpeed((short) 0);
                 sidekick.setGSpeed((short) 0);
@@ -3435,9 +3476,8 @@ public class SidekickCpuController {
 
         // ROM loc_14534: while the cooldown byte is nonzero, decrement and wait.
         // It only falls through to the regrab test on the frame it reaches zero.
-        if (releaseCooldown > 0) {
-            releaseCooldown--;
-            if (releaseCooldown > 0) {
+        if (carryController().cooldown() > 0) {
+            if (carryController().decrementCooldown() > 0) {
                 return;
             }
         }
@@ -3447,8 +3487,8 @@ public class SidekickCpuController {
         if (canRegrabLeaderInPickupRange()) {
             pickupLeaderForCarry();
             playGrabSfx();
-            flyingCarryingFlag = true;
-            carryParentagePending = true;
+            carryController().setCarrying(true);
+            carryController().setParentagePending(true);
         }
     }
 
@@ -3462,17 +3502,10 @@ public class SidekickCpuController {
 
     private void releaseCarryForCarrierDisabled() {
         boolean mgzBossTransitionCarry = carryTrigger != null && carryTrigger.usesMgzBossTransitionControl();
-        if (leader != null && flyingCarryingFlag) {
-            ObjectControlState.none().applyTo(leader);
-            leader.setForcedAnimationId(-1);
-            leader.setAir(true);
-        }
-        flyingCarryingFlag = false;
-        carryParentagePending = false;
+        carryController().releaseWithCooldown(0);
         mgzCarryIntroAscend = false;
         mgzCarryFlapTimer = 0;
         mgzReleasedChaseLatched = false;
-        releaseCooldown = 0;
         if (!mgzBossTransitionCarry) {
             state = State.NORMAL;
             normalFrameCount = 0;
@@ -3549,26 +3582,9 @@ public class SidekickCpuController {
     }
 
     private void pickupLeaderForCarry() {
-        // ROM sub_1459E (sonic3k.asm:27399): clear Sonic's velocities/angle,
-        // parent him to Tails, then copy Tails's current x/y velocity into both
-        // Sonic and the latch globals used by Tails_Carry_Sonic. It does not
-        // clear Status_Roll or restore radii; a regrabbed jump-off stays curled.
-        ObjectControlState.nativeBit7FullControl().applyTo(leader);
-        leader.setAir(true);
-        leader.setRollingJump(false);
-        leader.setSpindash(false);
-        leader.setSpindashCounter((short) 0);
-        leader.setJumping(false);
-        leader.setGSpeed((short) 0);
-        leader.setCentreXPreserveSubpixel(sidekick.getCentreX());
-        leader.setCentreYPreserveSubpixel(
-                (short) (sidekick.getCentreY() + carryTrigger.carryDescendOffsetY()));
-        leader.setDirection(sidekick.getDirection());
-        leader.setForcedAnimationId(leader.resolveAnimationId(CanonicalAnimation.TAILS_CARRIED));
-        leader.setXSpeed(sidekick.getXSpeed());
-        leader.setYSpeed(sidekick.getYSpeed());
-        carryLatchX = leader.getXSpeed();
-        carryLatchY = leader.getYSpeed();
+        carryController().forceScriptedCarry(carryTrigger.usesMgzBossTransitionControl()
+                ? TailsCarryController.CarryContext.MGZ_BOSS
+                : TailsCarryController.CarryContext.CNZ);
     }
 
     private int signedWord(int value) {
@@ -3849,87 +3865,12 @@ public class SidekickCpuController {
      * mirrors the later {@code Tails_Carry_Sonic} parentage/probe timing.
      */
     public void finishCarryAfterCarrierMovement() {
-        if (!carryParentagePending || state != State.CARRYING || !flyingCarryingFlag
+        if (!carryController().parentagePending() || state != State.CARRYING
+                || !carryController().isCarryingMainCharacter()
                 || leader == null || carryTrigger == null) {
             return;
         }
-        carryParentagePending = false;
-
-        // Sonic parentage (Tails_Carry_Sonic steps 5 + 8):
-        //   x_pos = Tails.x_pos
-        //   y_pos = Tails.y_pos + carryDescendOffsetY()
-        //   x_vel = Tails.x_vel
-        //   y_vel = Tails.y_vel
-        leader.setCentreXPreserveSubpixel(sidekick.getCentreX());
-        leader.setCentreYPreserveSubpixel(
-                (short) (sidekick.getCentreY() + carryTrigger.carryDescendOffsetY()));
-        leader.setDirection(sidekick.getDirection());
-        leader.setXSpeed(sidekick.getXSpeed());
-        leader.setYSpeed(sidekick.getYSpeed());
-
-        // ROM Tails_Carry_Sonic loc_144F8 (sonic3k.asm:27328-27331):
-        //   movem.l d0-a6,-(sp)
-        //   lea     (Player_1).w,a0
-        //   bsr.w   SonicKnux_DoLevelCollision
-        //   movem.l (sp)+,d0-a6
-        //
-        // After parentage writes the ROM explicitly runs the full airborne
-        // collision on Sonic (Player_1).  That probe's Player_TouchFloor tail
-        // (sonic3k.asm:24366) clears Status_InAir when Tails's descended
-        // position puts Sonic on ground.  Next frame's in-air check at
-        // sonic3k.asm:27227 then branches to loc_1445A (release path A).
-        //
-        // Without this probe, the engine leaves Sonic's air flag set forever
-        // while object_control holds him to Tails, so the ground-release path
-        // is unreachable once Tails lands.
-        //
-        // NOTE: the normal landing handler (PlayableSpriteMovement.calculateLanding)
-        // calls resetOnFloor(), which early-returns when isObjectControlled() is
-        // true, so it would not apply this carried landing state. The inline
-        // handler mirrors the flat-floor result used by SonicKnux_DoLevelCollision:
-        // Player_TouchFloor first restores default radii and clears Status_Roll
-        // with a y_pos adjustment based on the previous y_radius
-        // (sonic3k.asm:24335-24363), then clears Status_InAir/Push/RollJump
-        // (sonic3k.asm:24366-24369).
-        CollisionSystem collision = Objects.requireNonNull(
-                leader.currentCollisionSystem(),
-                "CollisionSystem must be available during CARRYING state "
-                        + "(Tails-carry post-parentage probe, sonic3k.asm:27330)");
-        collision.resolveAirCollision(FrameCollisionPlan.terrainOnly(), leader, sprite -> {
-            if (sprite.getRolling()) {
-                int oldCentreY = sprite.getCentreY();
-                int oldYRadius = sprite.getYRadius();
-                sprite.setRolling(false);
-                int radiusDelta = oldYRadius - sprite.getStandYRadius();
-                if (((sprite.getAngle() + 0x40) & 0x80) != 0) {
-                    radiusDelta = -radiusDelta;
-                }
-                sprite.setCentreYPreserveSubpixel((short) (oldCentreY + radiusDelta));
-            } else if (sprite.getXRadius() != sprite.getStandXRadius()
-                    || sprite.getYRadius() != sprite.getStandYRadius()) {
-                sprite.applyStandingRadii(false);
-            }
-
-            // ROM Player_TouchFloor (sonic3k.asm:24366-24369):
-            //   bclr #Status_InAir,status(a0)
-            //   bclr #Status_Push,status(a0)
-            //   bclr #Status_RollJump,status(a0)
-            //   move.b #0,jumping(a0)
-            sprite.setYSpeed((short) 0);
-            sprite.setGSpeed(sprite.getXSpeed());
-            sprite.setAir(false);
-            sprite.setPushing(false);
-            sprite.setRollingJump(false);
-            sprite.setJumping(false);
-        });
-
-        // Refresh the latch AFTER our writes so the next frame's compare is
-        // against what we just wrote, not stale values.  The probe above may
-        // have cleared the leader's y_vel via the collision adjustment, so
-        // the latch captures the post-probe values to avoid a false latch
-        // mismatch on the next frame.
-        carryLatchX = leader.getXSpeed();
-        carryLatchY = leader.getYSpeed();
+        carryController().updateAfterTailsCollision(0);
     }
 
     private void performJumpRelease() {
@@ -3957,16 +3898,12 @@ public class SidekickCpuController {
 
     private void releaseCarry(int cooldownFrames) {
         boolean mgzBossTransitionCarry = carryTrigger != null && carryTrigger.usesMgzBossTransitionControl();
-        ObjectControlState.none().applyTo(leader);
-        leader.setForcedAnimationId(-1);
+        carryController().releaseWithCooldown(cooldownFrames);
         sidekick.setControlLocked(false);
         sidekick.setForcedAnimationId(mgzBossTransitionCarry ? flyAnimId : -1);
-        flyingCarryingFlag = false;
-        carryParentagePending = false;
         mgzCarryIntroAscend = false;
         mgzCarryFlapTimer = 0;
         mgzReleasedChaseLatched = false;
-        releaseCooldown = cooldownFrames;
         if (mgzBossTransitionCarry) {
             state = State.CARRYING;
             sidekick.setAir(true);
@@ -3979,8 +3916,6 @@ public class SidekickCpuController {
             // cooldown/regrab loop until pickup succeeds or the landed-Sonic path
             // transitions out. Only the ground-release path uses cooldown 0 and
             // falls back to NORMAL for a persistent sidekick.
-            flyingCarryingFlag = false;
-            carryParentagePending = false;
             state = State.CARRYING;
             sidekick.setAir(true);
             sidekick.setDoubleJumpProperty((byte) 0xF0);
@@ -4006,8 +3941,8 @@ public class SidekickCpuController {
         despawnCounter = 0;
         normalFrameCount = 0;
         jumpingFlag = false;
-        flyingCarryingFlag = false;
-        carryParentagePending = false;
+        carryController().setCarrying(false);
+        carryController().setParentagePending(false);
         // ROM routine $10 (loc_1408A) does NOT object-control Tails or write its
         // position; Tails stays FLYING (double_jump_flag persists from the carry)
         // with the flight timer (double_jump_property) topped up, and normal
@@ -4074,6 +4009,7 @@ public class SidekickCpuController {
     }
 
     private void applyManualControl() {
+        manualInputAppliedThisTick = true;
         inputUp = (controller2Held & AbstractPlayableSprite.INPUT_UP) != 0;
         inputDown = (controller2Held & AbstractPlayableSprite.INPUT_DOWN) != 0;
         inputLeft = (controller2Held & AbstractPlayableSprite.INPUT_LEFT) != 0;
@@ -5096,6 +5032,7 @@ public class SidekickCpuController {
         skipPhysicsThisFrame = false;
         lastNormalAutoJumpPressFrameCounter = -1;
         this.controlCounter = Math.max(0, controlCounter);
+        this.manualInputAppliedThisTick = false;
         this.despawnCounter = Math.max(0, respawnCounter);
         this.lastInteractObjectId = interactId & 0xFF;
         this.diagnosticS3kInteractWord = usesS3kPointerInteract() ? interactId & 0xFFFF : 0;
@@ -5328,14 +5265,14 @@ public class SidekickCpuController {
      * loc_1488C in sonic3k.asm:27633) for the standard +0x38 air gravity.
      */
     public boolean isFlyingCarrying() {
-        return flyingCarryingFlag;
+        return carryController().isCarryingMainCharacter();
     }
 
     public boolean usesFlyingCarryMovement() {
         if (sidekick.isHurt() || sidekick.getDead()) {
             return false;
         }
-        return flyingCarryingFlag
+        return carryController().isCarryingMainCharacter()
                 // ROM routine $10 (loc_1408A) keeps the throwaway carrier in
                 // Tails_FlyingSwimming: the A/B/C flaps injected by
                 // updateCarryFlyoff drive the same Tails_Move_FlySwim ascent
@@ -5394,11 +5331,6 @@ public class SidekickCpuController {
                 lastNormalAutoJumpPressFrameCounter,
                 controller2SignedLocked,
                 latestNormalStepDiagnostics,
-                carryLatchX,
-                carryLatchY,
-                flyingCarryingFlag,
-                carryParentagePending,
-                releaseCooldown,
                 mgzCarryIntroAscend,
                 mgzCarryFlapTimer,
                 mgzReleasedChaseLatched,
@@ -5410,6 +5342,7 @@ public class SidekickCpuController {
     }
 
     public void restoreRewindState(SidekickCpuRewindExtra snapshot) {
+        manualInputAppliedThisTick = false;
         state = snapshot.state();
         deadFallingRomCpuRoutine = snapshot.deadFallingRomCpuRoutine();
         despawnCounter = snapshot.despawnCounter();
@@ -5455,11 +5388,6 @@ public class SidekickCpuController {
         lastNormalAutoJumpPressFrameCounter = snapshot.lastNormalAutoJumpPressFrameCounter();
         controller2SignedLocked = snapshot.controller2SignedLocked();
         latestNormalStepDiagnostics = snapshot.latestNormalStepDiagnostics();
-        carryLatchX = snapshot.carryLatchX();
-        carryLatchY = snapshot.carryLatchY();
-        flyingCarryingFlag = snapshot.flyingCarryingFlag();
-        carryParentagePending = snapshot.carryParentagePending();
-        releaseCooldown = snapshot.releaseCooldown();
         mgzCarryIntroAscend = snapshot.mgzCarryIntroAscend();
         mgzCarryFlapTimer = snapshot.mgzCarryFlapTimer();
         mgzReleasedChaseLatched = snapshot.mgzReleasedChaseLatched();
@@ -5474,59 +5402,29 @@ public class SidekickCpuController {
         if (!usesFlyingCarryMovement()) {
             return;
         }
-
-        int flightTimer = sidekick.getDoubleJumpProperty() & 0xFF;
-        // ROM flight-timer decrement keys on Level_frame_counter parity; recover
-        // the post-increment value via romVisibleLevelFrameCounter() so the cadence
-        // matches whether the counter source is the sprite cadence or stored copy.
-        if ((romVisibleLevelFrameCounter() & 1) != 0 && flightTimer != 0) {
-            flightTimer = (flightTimer - 1) & 0xFF;
-            sidekick.setDoubleJumpProperty((byte) flightTimer);
-        }
-
-        int flag = sidekick.getDoubleJumpFlag() & 0xFF;
-        int ySpeed = sidekick.getYSpeed();
-        if (flag != 1) {
-            if (ySpeed >= -0x100) {
-                ySpeed -= 0x20;
-                flag = (flag + 1) & 0xFF;
-                if (flag == 0x20) {
-                    flag = 1;
-                }
-            } else {
-                flag = 1;
-            }
-        } else {
-            if (inputJumpPress && ySpeed >= -0x100 && flightTimer != 0) {
-                flag = 2;
-            }
-            ySpeed += 0x08;
-        }
-
-        Camera camera = sidekick.currentCamera();
-        if (camera != null && ySpeed < 0) {
-            int cameraMinY = camera.getMinY() & 0xFFFF;
-            if ((sidekick.getCentreY() & 0xFFFF) <= cameraMinY + 0x10) {
-                ySpeed = 0;
-            }
-        }
-
-        sidekick.setDoubleJumpFlag(flag);
-        sidekick.setYSpeed((short) ySpeed);
+        sidekick.getTailsFlightController().updateVertical(
+                inputJumpPress, sidekick.getTailsCarryController().isCarryingMainCharacter(),
+                romVisibleLevelFrameCounter());
     }
 
     /** Test/debug accessor for the release-cooldown byte (ROM Flying_carrying_Sonic_flag+1). */
-    int getReleaseCooldownForTest() { return releaseCooldown; }
+    int getReleaseCooldownForTest() { return carryController().cooldown(); }
+
+    private TailsCarryController carryController() {
+        return sidekick.getTailsCarryController();
+    }
 
     int resolveAnimationId(CanonicalAnimation animation) {
         return sidekick.resolveAnimationId(animation);
     }
 
     public void reset() {
+        carryController().clearAndReleaseMain();
         state = State.INIT;
         deadFallingRomCpuRoutine = -1;
         despawnCounter = 0;
         controlCounter = 0;
+        manualInputAppliedThisTick = false;
         approachFrameCount = 0;
         controller2Held = 0;
         controller2Logical = 0;
@@ -5560,10 +5458,7 @@ public class SidekickCpuController {
         sidekick.setControlLocked(false);
         ObjectControlState.none().applyTo(sidekick);
         // Carry state (carryTrigger is intentionally NOT cleared — level-load-scoped)
-        carryLatchX = 0;
-        carryLatchY = 0;
-        flyingCarryingFlag = false;
-        releaseCooldown = 0;
+        carryController().clearState();
         flightTimer = 0;
         catchUpTargetX = 0;
         catchUpTargetY = 0;

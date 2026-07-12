@@ -330,7 +330,7 @@ public class TestVerifierPoolBenchmark {
         add(sb, "rewindEntries", () -> reflectSize(gm.getRewindRegistry(), "entries"));
         add(sb, "rewindCbs", () -> reflectSize(gm.getRewindRegistry(), "postRestoreCallbacks"));
         add(sb, "palWrites", () -> reflectSize(gm.getPaletteOwnershipRegistry(), "writes"));
-        add(sb, "aniChannels", () -> reflectSize(gm.getAnimatedTileChannelGraph(), "lastPhaseByChannel"));
+        add(sb, "aniChannels", () -> gm.getAnimatedTileChannelGraph().recordedPhaseCount());
         add(sb, "layoutQueued", () -> reflectSize(gm.getZoneLayoutMutationPipeline(), "queued"));
         return sb.toString();
     }

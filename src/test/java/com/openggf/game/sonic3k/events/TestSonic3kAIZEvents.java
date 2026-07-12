@@ -39,6 +39,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.io.IOException;
@@ -166,6 +167,23 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
+    public void shakeSetupPublishesPriorOffsetBeforePreparingNextFrame() throws Exception {
+        var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        events.setScreenShakeOffsetYRaw(3);
+        events.setScreenShakeAppliedOffsetYRaw(0);
+        events.setScreenShakeTimer(0);
+
+        Method tick = Sonic3kAIZEvents.class.getDeclaredMethod("tickScreenShake");
+        tick.setAccessible(true);
+        tick.invoke(events);
+
+        assertEquals(3, events.getScreenShakeOffsetY(),
+                "AIZ2_ScreenEvent consumes the offset prepared by the prior background event");
+        assertEquals(0, events.getScreenShakeOffsetYRaw(),
+                "ShakeScreen_Setup prepares the following frame after ScreenEvents consumes the old value");
+    }
+
+    @Test
     public void act1ResizeLocksCameraMinXAtFirePaletteGate() {
         Camera camera = GameServices.camera();
         var events = new Sonic3kAIZEvents(
@@ -191,6 +209,7 @@ public class TestSonic3kAIZEvents {
         camera.setMinX((short) 0x4640);
         camera.setMaxX((short) 0x4640);
         camera.setFrozen(false);
+        camera.setHorizScrollDelay(32);
 
         var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         setPrivateBoolean(events, "battleshipAutoScrollActive", true);
@@ -202,6 +221,8 @@ public class TestSonic3kAIZEvents {
 
         assertFalse(camera.getFrozen(),
                 "Obj_AIZ2BossSmall clears Scroll_lock before writing Camera_max_X_pos=$6000");
+        assertEquals(32, camera.getHorizScrollDelay(),
+                "Scroll_lock must park H_scroll_frame_offset while the ship loop owns the camera");
         assertEquals(0x6000, camera.getMaxX() & 0xFFFF,
                 "Obj_AIZ2BossSmall loc_50720 writes Camera_max_X_pos=$6000 on exit");
     }
@@ -285,6 +306,13 @@ public class TestSonic3kAIZEvents {
     public void updateFallbackDoesNotDuplicateExistingIntroObject() {
         assertEquals(1, countActiveIntroObjects(),
                 "ROM SpawnLevelMainSprites installs exactly one Obj_AIZPlaneIntro object");
+        AizPlaneIntroInstance intro = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(AizPlaneIntroInstance.class::isInstance)
+                .map(AizPlaneIntroInstance.class::cast)
+                .findFirst()
+                .orElseThrow();
+        assertEquals(5, intro.getSlotIndex(),
+                "SpawnLevelMainSprites writes the intro parent to Dynamic_object_RAM+2 (SST slot 5)");
 
         var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         events.update(0, 0);
@@ -806,10 +834,23 @@ public class TestSonic3kAIZEvents {
         assertEquals(0x10, events.getDynamicResizeRoutine(), "Stage $0E should advance to terminal state");
         assertFalse(events.isEventsFg4(), "AIZ2_ScreenEvent should consume Events_fg_4 in the same frame");
         assertTrue(events.isBattleshipAutoScrollActive(), "AIZ2_ScreenEvent should start the bombing sequence");
+        assertEquals(0x4160, camera.getX() & 0xFFFF,
+                "ScreenEvents should arm SpecialEvents without running the ship loop in the same frame");
+        var objectManager = GameServices.level().getObjectManager();
+        assertFalse(objectManager.getActiveObjects().stream()
+                        .anyMatch(AizBattleshipInstance.class::isInstance),
+                "AIZ2SE_ShipRefresh must finish on the following ScreenEvents pass before allocating the ship");
+
+        events.updatePrePhysics(1);
+        assertEquals(0x4164, camera.getX() & 0xFFFF,
+                "the following SpecialEvents pass should perform the first +4 ship-loop step");
 
         events.update(1, 4);
         assertFalse(events.isEventsFg4(), "AIZ2_ScreenEvent should consume Events_fg_4");
         assertTrue(events.isBattleshipAutoScrollActive(), "Battleship bombing should remain active after the handoff");
+        assertTrue(objectManager.getActiveObjects().stream()
+                        .anyMatch(AizBattleshipInstance.class::isInstance),
+                "the completed ShipRefresh pass should allocate the battleship");
     }
 
     @Test

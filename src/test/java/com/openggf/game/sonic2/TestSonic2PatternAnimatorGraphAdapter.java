@@ -117,6 +117,8 @@ class TestSonic2PatternAnimatorGraphAdapter {
         for (int i = 0; i < scripts.size(); i++) {
             AnimatedTileChannel channel = graph.channels().get(i);
             AniPlcScriptState script = scripts.get(i);
+            assertEquals("s2.script." + i, channel.channelId(),
+                    "Sonic 2 graph must retain AniPLC registration order");
             assertEquals(script.destinationTileIndex(), channel.destinationPlan().primaryTile(),
                     "primary destination tile for script " + i);
             if (script.tilesPerFrame() > 1) {

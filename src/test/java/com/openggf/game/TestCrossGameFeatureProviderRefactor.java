@@ -6,25 +6,68 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.data.RomManager;
 import com.openggf.graphics.RenderContext;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.sprites.art.SpriteArtSet;
+import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
+import com.openggf.sprites.animation.SpriteAnimationEndAction;
+import com.openggf.sprites.animation.SpriteAnimationScript;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Nested;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.RecordComponent;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
 class TestCrossGameFeatureProviderRefactor {
+
+    @Nested
+    @RequiresRom(SonicGame.SONIC_3K)
+    class S3kTailsDonationIntegration {
+
+        @Test
+        void s3kTailsScriptsSurviveTranslationIntoS1Host() throws Exception {
+            assertS3kTailsScriptsSurviveTranslation(new com.openggf.game.sonic1.Sonic1GameModule());
+        }
+
+        @Test
+        void s3kTailsScriptsSurviveTranslationIntoS2Host() throws Exception {
+            assertS3kTailsScriptsSurviveTranslation(new com.openggf.game.sonic2.Sonic2GameModule());
+        }
+
+        private void assertS3kTailsScriptsSurviveTranslation(GameModule host) throws Exception {
+            GameModuleRegistry.setCurrent(host);
+            SessionManager.openGameplaySession(host);
+            CrossGameFeatureProvider provider = new CrossGameFeatureProvider(
+                    RomManager.getInstance(), EngineServices.current().configuration());
+            provider.initialize("s3k");
+
+            SpriteArtSet donated = provider.loadPlayerSpriteArt("tails");
+
+            assertNotNull(donated);
+            assertInstanceOf(ScriptedVelocityAnimationProfile.class, donated.animationProfile());
+            assertNotNull(donated.animationSet());
+            for (int animationId = 0x20; animationId <= 0x28; animationId++) {
+                assertNotNull(donated.animationSet().getScript(animationId),
+                        "host " + host.getGameId() + " lost donated Tails script 0x"
+                                + Integer.toHexString(animationId));
+            }
+        }
+    }
 
     @BeforeEach
     void setUp() {
@@ -109,6 +152,93 @@ class TestCrossGameFeatureProviderRefactor {
         assertSame(knucklesPalette, context.getPalette(0));
     }
 
+    @Test
+    void tailsFlightDonorRejectsMissingRequiredAnimationContract() throws Exception {
+        CrossGameFeatureProvider provider = configuredArtProvider(
+                new StubDonorCapabilities(true, CanonicalAnimation.TAILS_SWIM_CARRY));
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> provider.loadPlayerSpriteArt("tails"));
+
+        assertTrue(error.getMessage().contains("TAILS_SWIM_CARRY"));
+    }
+
+    @Test
+    void tailsFlightDonorAcceptsCompleteRequiredAnimationContract() throws Exception {
+        CrossGameFeatureProvider provider = configuredArtProvider(
+                new StubDonorCapabilities(true, null));
+
+        assertNotNull(provider.loadPlayerSpriteArt("tails"));
+    }
+
+    @Test
+    void tailsFlightDonorRejectsMissingAnimationSetAfterArtLoad() throws Exception {
+        CrossGameFeatureProvider provider = configuredArtProvider(
+                new StubDonorCapabilities(true, null),
+                characterCode -> new SpriteArtSet(
+                        new Pattern[0], List.of(), List.of(), 0, 0, 0, 1, null, null));
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> provider.loadPlayerSpriteArt("tails"));
+
+        assertTailsContractDiagnostic(error, CanonicalAnimation.TAILS_FLY, 0x20);
+    }
+
+    @Test
+    void tailsFlightDonorRejectsMissingRequiredNativeScriptAfterArtLoad() throws Exception {
+        CrossGameFeatureProvider provider = configuredArtProvider(
+                new StubDonorCapabilities(true, null),
+                characterCode -> tailsArtMissingScript(0x27));
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> provider.loadPlayerSpriteArt("tails"));
+
+        assertTailsContractDiagnostic(error, CanonicalAnimation.TAILS_SWIM_CARRY, 0x27);
+    }
+
+    @Test
+    void tailsFlightDonorPreservesNullArtSemantics() throws Exception {
+        CrossGameFeatureProvider provider = configuredArtProvider(
+                new StubDonorCapabilities(true, null), characterCode -> null);
+
+        assertNull(provider.loadPlayerSpriteArt("tails"));
+    }
+
+    private static void assertTailsContractDiagnostic(
+            IllegalStateException error, CanonicalAnimation canonical, int nativeId) {
+        assertAll(
+                () -> assertTrue(error.getMessage().contains("s3k")),
+                () -> assertTrue(error.getMessage().contains("tails")),
+                () -> assertTrue(error.getMessage().contains(canonical.name())),
+                () -> assertTrue(error.getMessage().contains("0x" + Integer.toHexString(nativeId))));
+    }
+
+    private static SpriteArtSet tailsArtMissingScript(int missingId) {
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        for (int id = 0x20; id <= 0x28; id++) {
+            if (id != missingId) {
+                animations.addScript(id, new SpriteAnimationScript(
+                        1, List.of(0), SpriteAnimationEndAction.LOOP, 0));
+            }
+        }
+        return new SpriteArtSet(
+                new Pattern[0], List.of(), List.of(), 0, 0, 0, 1, null, animations);
+    }
+
+    private static CrossGameFeatureProvider configuredArtProvider(DonorCapabilities capabilities) throws Exception {
+        return configuredArtProvider(capabilities, StubDonorCapabilities.PROVIDER);
+    }
+
+    private static CrossGameFeatureProvider configuredArtProvider(
+            DonorCapabilities capabilities, PlayerSpriteArtProvider artProvider) throws Exception {
+        CrossGameFeatureProvider provider = spy(new CrossGameFeatureProvider(null, null));
+        doReturn(null).when(provider).loadCharacterPalette("tails");
+        setField(provider, "donorGameId", GameId.S3K);
+        setField(provider, "donorCapabilities", capabilities);
+        setField(provider, "donorPlayerArtProvider", artProvider);
+        return provider;
+    }
+
     private static void setField(Object target, String name, Object value) throws Exception {
         Field field = CrossGameFeatureProvider.class.getDeclaredField(name);
         field.setAccessible(true);
@@ -154,18 +284,45 @@ class TestCrossGameFeatureProviderRefactor {
     }
 
     private static final class StubDonorCapabilities implements DonorCapabilities {
-        private static final PlayerSpriteArtProvider PROVIDER = characterCode -> new SpriteArtSet(
-                new Pattern[0], List.of(), List.of(), 0, 0, 0, 1, null, null);
+        private static final PlayerSpriteArtProvider PROVIDER = characterCode -> tailsArtMissingScript(-1);
+        private final boolean tailsFlight;
+        private final CanonicalAnimation missingAnimation;
+
+        private StubDonorCapabilities() {
+            this(false, null);
+        }
+
+        private StubDonorCapabilities(boolean tailsFlight, CanonicalAnimation missingAnimation) {
+            this.tailsFlight = tailsFlight;
+            this.missingAnimation = missingAnimation;
+        }
 
         @Override public java.util.Set<PlayerCharacter> getPlayableCharacters() { return java.util.Set.of(PlayerCharacter.SONIC_ALONE, PlayerCharacter.KNUCKLES); }
         @Override public boolean hasSpindash() { return false; }
         @Override public boolean hasSuperTransform() { return false; }
         @Override public boolean hasHyperTransform() { return false; }
         @Override public boolean hasInstaShield() { return false; }
+        @Override public boolean hasTailsFlight() { return tailsFlight; }
         @Override public boolean hasElementalShields() { return false; }
         @Override public boolean hasSidekick() { return false; }
-        @Override public java.util.Map<CanonicalAnimation, CanonicalAnimation> getAnimationFallbacks() { return java.util.Map.of(); }
-        @Override public int resolveNativeId(CanonicalAnimation canonical) { return -1; }
+        @Override public Map<CanonicalAnimation, CanonicalAnimation> getAnimationFallbacks() { return Map.of(); }
+        @Override public int resolveNativeId(CanonicalAnimation canonical) {
+            if (canonical == missingAnimation) {
+                return -1;
+            }
+            return switch (canonical) {
+                case TAILS_FLY -> 0x20;
+                case TAILS_FLY_ASCEND -> 0x21;
+                case TAILS_FLY_CARRY -> 0x22;
+                case TAILS_FLY_CARRY_ASCEND -> 0x23;
+                case TAILS_FLY_TIRED -> 0x24;
+                case TAILS_SWIM -> 0x25;
+                case TAILS_SWIM_ASCEND -> 0x26;
+                case TAILS_SWIM_CARRY -> 0x27;
+                case TAILS_SWIM_TIRED -> 0x28;
+                default -> -1;
+            };
+        }
         @Override public PlayerSpriteArtProvider getPlayerArtProvider(com.openggf.data.RomByteReader reader) { return PROVIDER; }
     }
 

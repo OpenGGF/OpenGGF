@@ -725,11 +725,22 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
             planeChild = new AizIntroPlaneChild(planeSpawn, this);
             spawnDynamicObject(planeChild);
 
-            // Create two emerald glow children attached to the plane
-            ObjectSpawn glow1Spawn = new ObjectSpawn(currentX, currentY, 0, 0, 0, false, 0);
-            AizIntroEmeraldGlowChild glow1 = new AizIntroEmeraldGlowChild(glow1Spawn, planeChild, -8, -12);
-            ObjectSpawn glow2Spawn = new ObjectSpawn(currentX, currentY, 0, 0, 0, false, 0);
-            AizIntroEmeraldGlowChild glow2 = new AizIntroEmeraldGlowChild(glow2Spawn, planeChild, 8, -12);
+            // CreateChild1_Normal also allocates the two animated plane pieces
+            // in their own following SST slots (sonic3k.asm:135702-135718,
+            // 135741-135819). They must remain real dynamic objects so later
+            // AllocateObject calls observe the same slot pressure.
+            ObjectSpawn glow1Spawn = new ObjectSpawn(
+                    planeChild.getX() + 0x38, planeChild.getY() + 0x04,
+                    0, 0, 0, false, 0);
+            AizIntroEmeraldGlowChild glow1 =
+                    new AizIntroEmeraldGlowChild(glow1Spawn, planeChild, 0);
+            spawnDynamicObject(glow1);
+            ObjectSpawn glow2Spawn = new ObjectSpawn(
+                    planeChild.getX() + 0x18, planeChild.getY() + 0x18,
+                    0, 1, 0, false, 0);
+            AizIntroEmeraldGlowChild glow2 =
+                    new AizIntroEmeraldGlowChild(glow2Spawn, planeChild, 1);
+            spawnDynamicObject(glow2);
             planeChild.setGlowChildren(glow1, glow2);
 
             advanceRoutine();

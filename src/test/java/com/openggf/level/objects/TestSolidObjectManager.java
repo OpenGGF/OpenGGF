@@ -580,6 +580,8 @@ public class TestSolidObjectManager {
         manager.updateSolidContacts(player);
 
         assertTrue(player.getPushing());
+        assertTrue(manager.hasObjectPushingBit(player),
+                "SolidObject side contact must retain the native per-player pushing latch");
     }
 
     @Test
@@ -606,6 +608,8 @@ public class TestSolidObjectManager {
 
         assertFalse(player.getPushing(),
                 "SolidObject_TestClearPush clears Status_Push only for the object that owned the push bit");
+        assertFalse(manager.hasObjectPushingBit(player),
+                "Clearing the owning SolidObject contact must release its pushing latch");
         assertFalse(object.lastPushingState);
         assertEquals(2, object.pushingStateChanges);
     }

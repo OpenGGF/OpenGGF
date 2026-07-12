@@ -98,6 +98,7 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
     private final int[] segmentY = new int[SEGMENT_COUNT];
     private final int[] segmentFrames = new int[SEGMENT_COUNT];
     private final List<PlayableEntity> standingPlayers = new ArrayList<>(2);
+    private boolean childSlotReserved;
 
     public AizFlippingBridgeObjectInstance(ObjectSpawn spawn) {
         super(spawn, "AIZFlippingBridge");
@@ -231,6 +232,7 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        reserveNativeMultispriteSlot();
         updateAnimation(frameCounter);
 
         // Check riding players: eject any standing on non-solid segments.
@@ -252,6 +254,19 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
                 ejectPlayer(player);
                 standingPlayers.remove(i);
             }
+        }
+    }
+
+    private void reserveNativeMultispriteSlot() {
+        if (childSlotReserved) {
+            return;
+        }
+        childSlotReserved = true;
+        if (services().objectManager() != null) {
+            // Obj_AIZFlippingBridge uses AllocateObjectAfterCurrent for the
+            // loc_2AA78 eight-subsprite draw owner. The Java bridge renders the
+            // segments itself, but that child still occupies one native SST slot.
+            services().objectManager().allocateChildSlotsAfter(spawn, 1, getSlotIndex());
         }
     }
 

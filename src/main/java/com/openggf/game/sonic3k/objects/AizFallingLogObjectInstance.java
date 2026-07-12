@@ -147,9 +147,13 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
             return;
         }
 
-        // Spawner timing: (Level_frame_counter + phaseOffset) & timingMask == 0
-        // ROM: loc_2B5D4 (sonic3k.asm line 59918-59922)
-        if (((frameCounter + phaseOffset) & timingMask) != 0) {
+        // Spawner timing: (Level_frame_counter + phaseOffset) & timingMask == 0.
+        // ObjectManager passes its VBlank execution clock, but the ROM reads the
+        // independent Level_frame_counter here (sonic3k.asm:59918-59922). The
+        // LevelManager stores the previous completed frame until its late-frame
+        // update, so +1 is the value visible during Process_Sprites.
+        int levelFrameCounter = levelFrameCounterForSpawner(frameCounter);
+        if (((levelFrameCounter + phaseOffset) & timingMask) != 0) {
             return;
         }
 
@@ -160,6 +164,12 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
 
         spawnDynamicObject(log);
         spawnDynamicObject(splash);
+    }
+
+    protected int levelFrameCounterForSpawner(int fallbackFrameCounter) {
+        return services().levelManager() != null
+                ? services().levelManager().getFrameCounter() + 1
+                : fallbackFrameCounter;
     }
 
     @Override
@@ -202,7 +212,7 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
         private static final int BOB_MASK = 3;
         // ROM: cmpi.w #$280,d0 — coarse range threshold for culling
         private static final SolidObjectParams SOLID_PARAMS =
-                new SolidObjectParams(HALF_WIDTH, HALF_HEIGHT, HALF_HEIGHT + 1);
+                new SolidObjectParams(HALF_WIDTH, HALF_HEIGHT, HALF_HEIGHT);
 
         private static final int STATE_FALLING = 0;
         private static final int STATE_AT_WATER = 1;
@@ -248,6 +258,13 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
 
         @Override
         public boolean isTopSolidOnly() {
+            return true;
+        }
+
+        @Override
+        public boolean rejectsZeroDistanceTopSolidLanding() {
+            // SolidObjectTop accepts only d0 in [-16,-1]. At exact contact,
+            // cmpi.w #-$10,d0 / blo rejects d0 == 0 before RideObject_SetRide.
             return true;
         }
 

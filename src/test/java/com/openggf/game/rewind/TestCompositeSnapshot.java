@@ -43,4 +43,28 @@ class TestCompositeSnapshot {
         assertNotNull(v);
         assertNull(cs.get("missing"));
     }
+
+    @Test
+    void publicConstructorPreservesPresentNullAndNullKey() {
+        var entries = new LinkedHashMap<String, Object>();
+        entries.put(null, "null-key");
+        entries.put("present-null", null);
+
+        CompositeSnapshot cs = new CompositeSnapshot(entries);
+
+        assertTrue(cs.containsKey(null));
+        assertEquals("null-key", cs.get(null));
+        assertTrue(cs.containsKey("present-null"));
+        assertNull(cs.get("present-null"));
+        assertFalse(cs.containsKey("missing"));
+    }
+
+    @Test
+    void entriesIteratorSignalsExhaustionWithNoSuchElementException() {
+        CompositeSnapshot cs = new CompositeSnapshot(java.util.Map.of("k", "v"));
+        var iterator = cs.entries().entrySet().iterator();
+
+        assertEquals(java.util.Map.entry("k", "v"), iterator.next());
+        assertThrows(java.util.NoSuchElementException.class, iterator::next);
+    }
 }

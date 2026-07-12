@@ -254,11 +254,12 @@ class TestTraceReplayStartPositionPolicy {
             assertEquals(1, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
                     route + " complete-run segments must reproduce the native S3K setup Process_Sprites pass "
                             + "before the frame-zero RNG seed is installed.");
-            assertEquals(1, TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(trace, -1),
-                    route + " complete-run segments begin after the ROM's setup OscillateNumDo pass, "
-                            + "so the first replay-driven object pass must read that prior oscillator phase.");
             TraceExecutionPhase frameZeroPhase =
                     TraceReplayBootstrap.phaseForReplay(trace, null, trace.getFrame(0));
+            assertEquals(frameZeroPhase == TraceExecutionPhase.VBLANK_ONLY ? 1 : 0,
+                    TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(trace, -1),
+                    route + " only needs the setup OscillateNumDo pre-advance when its first row "
+                            + "is structural and therefore not driven through LevelLoop.");
             TraceFrame frameZero = trace.getFrame(0);
             boolean handoffBeforeNativeMotionRow = !frameZero.stateEquals(trace.getFrame(1))
                     && frameZero.xSpeed() == 0

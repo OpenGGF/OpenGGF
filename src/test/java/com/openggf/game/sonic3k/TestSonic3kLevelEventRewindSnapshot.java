@@ -101,6 +101,8 @@ class TestSonic3kLevelEventRewindSnapshot {
         aiz.setBattleshipSpawned(true);
         aiz.setBattleshipWrapX(0x46C0);
         aiz.setScreenShakeTimer(10);
+        aiz.setScreenShakeOffsetYRaw(3);
+        aiz.setScreenShakeAppliedOffsetYRaw(2);
         aiz.setLevelRepeatOffsetRaw(0x200);
         aiz.setBattleshipSmoothScrollXRaw(0x1234);
         aiz.setBattleshipPostScrollCameraX(0x4440);
@@ -125,6 +127,8 @@ class TestSonic3kLevelEventRewindSnapshot {
         assertTrue(aiz2.isBattleshipSpawned());
         assertEquals(0x46C0,      aiz2.getBattleshipWrapX());
         assertEquals(10,          aiz2.getScreenShakeTimer());
+        assertEquals(3,           aiz2.getScreenShakeOffsetYRaw());
+        assertEquals(2,           aiz2.getScreenShakeAppliedOffsetYRaw());
         assertEquals(0x200,       aiz2.getLevelRepeatOffsetRaw());
         assertEquals(0x1234,      aiz2.getBattleshipSmoothScrollXRaw());
         assertEquals(0x4440,      aiz2.getBattleshipPostScrollCameraX());

@@ -370,7 +370,7 @@ public class Engine {
 	}
 
 	static boolean shouldEnablePerformanceProfiler(boolean performanceOverlayEnabled, boolean nativeImage) {
-		return performanceOverlayEnabled && !nativeImage;
+		return performanceOverlayEnabled;
 	}
 
 	static boolean shouldRenderPerformanceOverlay(GameMode currentMode,

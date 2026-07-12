@@ -241,6 +241,25 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void s3kTailsJumpRepressDoesNotEnterSonicShieldMoves() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                Tails tails = new Tails("tails_p2", (short) 0, (short) 0);
+                setGameRulesForTest(tails, GameRules.SONIC_3K);
+                tails.setAir(true);
+                tails.setRolling(true);
+                tails.setRollingJump(true);
+                tails.setJumping(true);
+                PlayableSpriteMovement tailsMovement = new PlayableSpriteMovement(tails);
+
+                Method shieldAbility = PlayableSpriteMovement.class.getDeclaredMethod("tryShieldAbility");
+                shieldAbility.setAccessible(true);
+
+                assertFalse((boolean) shieldAbility.invoke(tailsMovement));
+                assertTrue(tails.getRollingJump(),
+                                "Tails_JumpHeight does not call Sonic_ShieldMoves or clear Status_RollJump");
+        }
+
+        @Test
         public void s3kShieldMoveTransformsInsteadOfInstaShieldWhenEligible() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
                 setGameRulesForTest(GameRules.SONIC_3K);
@@ -880,6 +899,39 @@ public class TestPlayableSpriteMovement {
                 assertEquals(flatHurt, slopeHurt,
                                 "Hurt state after several airborne-hurt ticks should not depend on the ground angle at impact");
                 assertTrue(flatHurt, "Hurt should still be active after a few airborne ticks with no ground contact");
+        }
+
+        @Test
+        public void s3kSidekickHurtRestoresStandingRadiiWhenRollStatusWasAlreadyCleared() {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                Tails tails = new Tails("tails_p2", (short) 0x200, (short) 0x300);
+                tails.applyRollingRadii(false);
+                tails.clearRollingFlagPreserveRadii();
+
+                assertFalse(tails.getRolling());
+                assertEquals(7, tails.getXRadius());
+                assertEquals(14, tails.getYRadius());
+
+                assertTrue(tails.applyHurt(tails.getCentreX() - 16));
+
+                assertEquals(9, tails.getXRadius(),
+                                "HurtCharacter Player_TouchFloor must restore default_x_radius");
+                assertEquals(15, tails.getYRadius(),
+                                "HurtCharacter Player_TouchFloor must restore default_y_radius");
+                assertEquals(-9, tails.getGroundSensors()[0].getX());
+                assertEquals(15, tails.getGroundSensors()[0].getY());
+        }
+
+        @Test
+        public void s2SidekickHurtPreservesRadiiWhenRollStatusWasAlreadyCleared() {
+                Tails tails = new Tails("tails_p2", (short) 0x200, (short) 0x300);
+                tails.applyRollingRadii(false);
+                tails.clearRollingFlagPreserveRadii();
+
+                assertTrue(tails.applyHurt(tails.getCentreX() - 16));
+
+                assertEquals(7, tails.getXRadius());
+                assertEquals(14, tails.getYRadius());
         }
 
         private boolean driveHurtFromAngleAndReturnFinalHurtState(byte startingAngle,

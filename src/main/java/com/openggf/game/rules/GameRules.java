@@ -38,11 +38,13 @@ public record GameRules(
                     false,
                     false,
                     true,
-                    false
+                    false,
+                    true
             ),
             new PlayerCapabilityRules(
                     false,
                     null,
+                    false,
                     false,
                     false,
                     false,
@@ -68,7 +70,8 @@ public record GameRules(
                     false,
                     true,
                     false,
-                    true
+                    true,
+                    0x07FF
             ),
             new PlayerAnimationRules(
                     false,
@@ -85,6 +88,7 @@ public record GameRules(
             ),
             new RingRules(
                     3,
+                    0,
                     false,
                     6,
                     6,
@@ -167,11 +171,13 @@ public record GameRules(
                     false,
                     false,
                     false,
-                    true
+                    true,
+                    false
             ),
             new PlayerCapabilityRules(
                     true,
                     new short[]{0x0800, 0x0880, 0x0900, 0x0980, 0x0A00, 0x0A80, 0x0B00, 0x0B80, 0x0C00},
+                    false,
                     false,
                     false,
                     false,
@@ -197,7 +203,8 @@ public record GameRules(
                     false,
                     true,
                     false,
-                    true
+                    true,
+                    0x07FF
             ),
             new PlayerAnimationRules(
                     true,
@@ -214,6 +221,7 @@ public record GameRules(
             ),
             new RingRules(
                     7,
+                    0,
                     true,
                     6,
                     6,
@@ -296,11 +304,13 @@ public record GameRules(
                     true,
                     true,
                     false,
-                    false
+                    false,
+                    true
             ),
             new PlayerCapabilityRules(
                     true,
                     new short[]{0x0800, 0x0880, 0x0900, 0x0980, 0x0A00, 0x0A80, 0x0B00, 0x0B80, 0x0C00},
+                    true,
                     true,
                     true,
                     true,
@@ -326,7 +336,8 @@ public record GameRules(
                     true,
                     false,
                     true,
-                    false
+                    false,
+                    0x0FFF
             ),
             new PlayerAnimationRules(
                     true,
@@ -343,6 +354,7 @@ public record GameRules(
             ),
             new RingRules(
                     7,
+                    4,
                     true,
                     6,
                     6,

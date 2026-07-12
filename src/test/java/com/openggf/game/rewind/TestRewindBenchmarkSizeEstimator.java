@@ -1,5 +1,11 @@
 package com.openggf.game.rewind;
 
+import com.openggf.game.animation.AnimatedTileCachePolicy;
+import com.openggf.game.animation.AnimatedTileChannel;
+import com.openggf.game.animation.AnimatedTileChannelGraph;
+import com.openggf.game.animation.ChannelContext;
+import com.openggf.game.animation.DestinationPlan;
+import com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot;
 import com.openggf.game.rewind.snapshot.CameraSnapshot;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
@@ -10,13 +16,17 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import org.junit.jupiter.api.Test;
 
+import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.IdentityHashMap;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindBenchmarkSizeEstimator {
 
@@ -112,7 +122,20 @@ class TestRewindBenchmarkSizeEstimator {
         long secondBytes = RewindBenchmark.estimateStructuralSizeShared(second, seen);
 
         assertTrue(firstBytes > secondBytes,
-                "second retained keyframe should charge repeated shared payloads as references");
+                "second retained keyframe should not charge the shared payload again");
+    }
+
+    @Test
+    void retainedEstimatorDoesNotDoubleCountAlreadySeenReferents() {
+        byte[] sharedPayload = new byte[64 * 1024];
+        IdentityHashMap<Object, Boolean> seen = new IdentityHashMap<>();
+
+        long firstBytes = RewindBenchmark.estimateStructuralSizeShared(sharedPayload, seen);
+        long repeatedBytes = RewindBenchmark.estimateStructuralSizeShared(sharedPayload, seen);
+
+        assertTrue(firstBytes > 0L);
+        assertEquals(0L, repeatedBytes,
+                "the owning container already accounts for the repeated reference slot");
     }
 
     @Test
@@ -129,6 +152,68 @@ class TestRewindBenchmarkSizeEstimator {
 
         assertTrue(firstBytes > secondBytes,
                 "second level keyframe should charge shared block/chunk/map references only once");
+    }
+
+    @Test
+    void compactAnimatedTileSnapshotsChargeSharedLayoutAndOwnedPayloadByIdentity() {
+        AnimatedTileChannelGraph graph = animatedTileGraph(2);
+        graph.update(new ChannelContext(null, null, null, null, 0, 0, 211));
+        AnimatedTileChannelSnapshot first = graph.capture();
+        graph.update(new ChannelContext(null, null, null, null, 0, 0, 212));
+        AnimatedTileChannelSnapshot second = graph.capture();
+        AnimatedTileChannelSnapshot publicWrapper =
+                new AnimatedTileChannelSnapshot(first.lastPhaseByChannel());
+
+        assertSame(first.compactLayoutOrNull(), second.compactLayoutOrNull());
+        assertNotSame(first.lastPhaseByChannel(), second.lastPhaseByChannel());
+        assertSame(first.lastPhaseByChannel(), publicWrapper.lastPhaseByChannel(),
+                "the public constructor may safely retain the private immutable compact facade");
+
+        IdentityHashMap<Object, Boolean> seen = new IdentityHashMap<>();
+        long firstBytes = RewindBenchmark.estimateStructuralSizeShared(first, seen);
+        long secondBytes = RewindBenchmark.estimateStructuralSizeShared(second, seen);
+        long wrapperBytes = RewindBenchmark.estimateStructuralSizeShared(publicWrapper, seen);
+
+        assertTrue(firstBytes > secondBytes,
+                "only the first compact capture should charge the shared layout");
+        assertTrue(secondBytes > wrapperBytes,
+                "a distinct compact map owns a payload; the wrapper shares an already charged map");
+        assertEquals(24L, wrapperBytes,
+                "the wrapper should retain only its record and shared map reference");
+
+        AnimatedTileChannelSnapshot external =
+                new AnimatedTileChannelSnapshot(Map.of("external", 211));
+        assertNull(external.compactLayoutOrNull());
+        assertTrue(RewindBenchmark.estimateStructuralSize(external) > 24L,
+                "external snapshots must continue through the generic record/map estimator");
+    }
+
+    @Test
+    void retainedAnimatedTileEstimateUsesCompactLayoutOnceAcrossOneThousandCaptures() {
+        AnimatedTileChannelGraph graph = animatedTileGraph(32);
+        graph.update(new ChannelContext(null, null, null, null, 0, 0, 211));
+        IdentityHashMap<Object, Boolean> compactSeen = new IdentityHashMap<>();
+        IdentityHashMap<Object, Boolean> legacySeen = new IdentityHashMap<>();
+        long compactBytes = 0L;
+        long legacyBytes = 0L;
+        for (int capture = 0; capture < 1_000; capture++) {
+            compactBytes += RewindBenchmark.estimateStructuralSizeShared(graph.capture(), compactSeen);
+            LinkedHashMap<String, Integer> legacyMap = new LinkedHashMap<>();
+            for (AnimatedTileChannel channel : graph.channels()) {
+                legacyMap.put(channel.channelId(), 211);
+            }
+            legacyBytes += RewindBenchmark.estimateStructuralSizeShared(
+                    new AnimatedTileChannelSnapshot(legacyMap), legacySeen);
+        }
+
+        System.out.printf("animated-channel retained 1000 snapshots legacyEstimate=%d compactEstimate=%d%n",
+                legacyBytes, compactBytes);
+        assertEquals(2_378_048L, legacyBytes,
+                "frozen external Map.copyOf retained estimate must remain directly comparable");
+        assertEquals(356_728L, compactBytes,
+                "compact retained estimate must charge one shared layout and 1,000 owned payloads");
+        assertTrue(compactBytes * 2 < legacyBytes,
+                "identity-aware compact estimate should be less than half the external Map.copyOf graph");
     }
 
     @Test
@@ -164,5 +249,21 @@ class TestRewindBenchmarkSizeEstimator {
                 System.setProperty("openggf.rewind.benchmark.keyframeInterval", oldValue);
             }
         }
+    }
+
+    private static AnimatedTileChannelGraph animatedTileGraph(int channelCount) {
+        AnimatedTileChannelGraph graph = new AnimatedTileChannelGraph();
+        java.util.ArrayList<AnimatedTileChannel> channels = new java.util.ArrayList<>(channelCount);
+        for (int index = 0; index < channelCount; index++) {
+            channels.add(new AnimatedTileChannel(
+                    "estimator." + index,
+                    () -> true,
+                    ChannelContext::frameCounter,
+                    DestinationPlan.single(index),
+                    AnimatedTileCachePolicy.ALWAYS,
+                    context -> { }));
+        }
+        graph.install(channels);
+        return graph;
     }
 }

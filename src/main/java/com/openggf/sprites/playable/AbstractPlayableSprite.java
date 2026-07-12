@@ -3,6 +3,7 @@ package com.openggf.sprites.playable;
 import com.openggf.camera.Camera;
 import com.openggf.game.AnimationId;
 import com.openggf.game.CanonicalAnimation;
+import com.openggf.game.CharacterKey;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameModule;
@@ -46,6 +47,7 @@ import com.openggf.physics.Sensor;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.managers.SpriteMovementManager;
 import com.openggf.sprites.managers.TailsTailsController;
+import com.openggf.sprites.managers.TailsFlightController;
 import com.openggf.sprites.AbstractSprite;
 import com.openggf.sprites.SensorConfiguration;
 import com.openggf.sprites.managers.PlayableSpriteAnimation;
@@ -67,6 +69,9 @@ import com.openggf.timer.timers.SpeedShoesTimer;
 @com.openggf.game.ModApi
 public abstract class AbstractPlayableSprite extends AbstractSprite implements com.openggf.game.PlayableEntity {
         private static final Logger LOGGER = Logger.getLogger(AbstractPlayableSprite.class.getName());
+
+        @RewindTransient(reason = "character registry identity is immutable structural state")
+        private final CharacterKey boundCharacterKey;
 
         @RewindTransient(reason = "playable controller is structural; mutable controller state is captured explicitly")
         protected final PlayableSpriteController controller;
@@ -768,12 +773,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 // Clear Super state
                 this.superSonic = false;
-                if (controller != null && controller.getSuperState() != null) {
-                        controller.getSuperState().reset();
-                }
+                controller.resetSuperState();
         }
 
         public void resetState() {
+                controller.clearCarryAndReleaseMain();
                 this.shield = false;
                 this.shieldType = null;
                 if (this.shieldObject != null) {
@@ -876,9 +880,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.waterSkimActive = false;
                 this.preventTailsRespawn = false;
                 this.superSonic = false;
-                if (controller != null && controller.getSuperState() != null) {
-                        controller.getSuperState().reset();
-                }
+                controller.resetSuperState();
                 // Reset collision path to Path 0 (primary collision).
                 // Without this, if player was on Path 1 in previous level,
                 // solidity bits would remain 0x0E/0x0F causing collision checks
@@ -889,7 +891,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.statusTertiary = 0;
                 defineSpeeds(); // Reset speeds to default
                 instaShieldRegistered = false; // Force re-registration with new ObjectManager on level load
-                resolvePhysicsProfile();
+                resolvePhysicsProfile(GameServices.bootstrapGameModule());
                 // ROM: Obj01_Init unconditionally sets y_radius=$13, x_radius=9.
                 // Since we reuse the sprite rather than recreating it, we must
                 // explicitly restore standing dimensions and sensor offsets here.
@@ -980,16 +982,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         animationFrameIndex,
                         animationTick,
                         debugMode,
-                        controller.getMovement().captureRewindState(),
-                        controller.getSpindashDust() != null
-                                ? controller.getSpindashDust().captureRewindState()
-                                : null,
-                        controller.getAnimation() != null
-                                ? controller.getAnimation().captureRewindState()
-                                : null,
-                        controller.getDrowning() != null
-                                ? controller.getDrowning().captureRewindState()
-                                : null,
+                        controller.captureRewindState(),
                         sidekickCpuExtra,
                         includeFollowHistory ? xHistory : null,
                         includeFollowHistory ? yHistory : null,
@@ -1164,16 +1157,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.animationFrameIndex = extra.animationFrameIndex();
                 this.animationTick = extra.animationTick();
                 this.debugMode = extra.debugMode();
-                controller.getMovement().restoreRewindState(extra.movementState());
-                if (controller.getSpindashDust() != null) {
-                        controller.getSpindashDust().restoreRewindState(extra.spindashDustState());
-                }
-                if (controller.getAnimation() != null) {
-                        controller.getAnimation().restoreRewindState(extra.animationState());
-                }
-                if (controller.getDrowning() != null) {
-                        controller.getDrowning().restoreRewindState(extra.drowningState());
-                }
+                // Carry is shared player state. Restore it before CPU sequencing,
+                // whose restored routine may consume the carry context immediately.
+                controller.restoreRewindState(extra.controllerState());
                 if (extra.sidekickCpuExtra() != null) {
                         if (cpuController == null) {
                                 throw new IllegalStateException(
@@ -1553,7 +1539,17 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public final com.openggf.game.GameRng currentRngOrNull() { return PlayableSpriteRuntimeServices.rngOrNull(); }
 
         public final DrowningController getDrowningController() { return controller != null ? controller.getDrowning() : null; }
+        public final TailsFlightController getTailsFlightController() {
+                return controller != null ? controller.getTailsFlight() : null;
+        }
+        public final TailsCarryController getTailsCarryController() {
+                return controller != null ? controller.getTailsCarry() : null;
+        }
         public final WaterSystem currentWaterSystem() { return PlayableSpriteRuntimeServices.water(); }
+        public final com.openggf.sprites.managers.SpriteManager currentSpriteManagerOrNull() {
+                return PlayableSpriteRuntimeServices.spritesOrNull();
+        }
+        public final int currentGameplayFrameCounter() { return PlayableSpriteRuntimeServices.gameplayFrameCounter(); }
 
         /**
          * Returns this character's secondary (double-jump) ability.
@@ -2386,6 +2382,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setDead(boolean dead) {
                 this.dead = dead;
+                controller.clearTailsFlightIf(dead && getSecondaryAbility() == SecondaryAbility.FLY);
         }
 
         /**
@@ -2609,6 +2606,18 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // yPixel produces the same centreY shift as the ROM's radius-based subtraction.
                 boolean wasRolling = getRolling();
                 setRolling(false);
+                PlayerMovementRules movementRules = playerMovementRulesOrNull();
+                boolean restoresSplitSidekickRadii = !(this instanceof Tails)
+                                || movementRules == null
+                                || movementRules.sidekickHurtRestoresRadiiWithoutRoll();
+                // S3K HurtCharacter calls Player_TouchFloor, whose Tails branch
+                // restores default radii before testing Status_Roll. S2's 1P sidekick
+                // hurt path instead branches to Hurt_Sidekick and preserves a split
+                // status/radius state (observed by the HTZ2 trace). Keep that ROM
+                // distinction in the movement profile rather than a game-name branch.
+                if (restoresSplitSidekickRadii) {
+                        applyStandingRadii(false);
+                }
                 if (wasRolling) {
                         setY((short) (getY() - getRollHeightAdjustment()));
                 }
@@ -2976,6 +2985,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void setObjectControlled(boolean objectControlled) {
                 this.objectControlled = objectControlled;
                 if (objectControlled) {
+                        controller.clearTailsFlightIf(getSecondaryAbility() == SecondaryAbility.FLY);
                         this.deferredObjectControlRelease = false;
                         this.objectControlSuppressesMovement = true;
                 } else {
@@ -3593,10 +3603,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         protected AbstractPlayableSprite(String code, short x, short y) {
                 super(code, x, y);
+                boundCharacterKey = PlayableCharacterIdentity.bindForConstruction(this);
                 // Must define speeds before creating Manager (it will read speeds upon
                 // instantiation).
                 defineSpeeds();
-                resolvePhysicsProfile();
+                resolvePhysicsProfile(GameServices.bootstrapGameModule());
 
                 applyStandingRadii(false);
 
@@ -3614,15 +3625,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 controller = new PlayableSpriteController(this);
         }
 
+        /** Returns the stable persisted identity for this playable character. */
+        public CharacterKey characterKey() {
+                return PlayableCharacterIdentity.defaultFor(this);
+        }
+
         /**
          * Resolves physics profile, modifiers, and game rules from the active GameModule.
          * Overwrites the protected speed fields set by defineSpeeds() with values from the profile.
          * Falls back gracefully if no provider is available (defineSpeeds() values remain).
          */
-        private void resolvePhysicsProfile() {
-                resolvePhysicsProfile(bootstrapSafeGameModule());
-        }
-
         private void resolvePhysicsProfile(GameModule module) {
                 runtimeBoundStateModule = module;
                 try {
@@ -3631,10 +3643,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 bubbleAnimId = module != null ? module.resolveAnimationId(CanonicalAnimation.BUBBLE) : -1;
                                 return;
                         }
-                        String charType;
-                        if (this instanceof Tails) charType = "tails";
-                        else if (this instanceof Knuckles) charType = "knuckles";
-                        else charType = "sonic";
+                        String charType = boundCharacterKey.persisted();
                         PhysicsProfile profile = provider.getProfile(charType);
                         if (profile != null) {
                                 this.physicsProfile = profile;
@@ -3709,10 +3718,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         return;
                 }
                 resolvePhysicsProfile(module);
-        }
-
-        private GameModule bootstrapSafeGameModule() {
-                return GameServices.bootstrapGameModule();
         }
 
         /**

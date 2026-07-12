@@ -90,6 +90,18 @@ public class TestCamera {
     }
 
     @Test
+    public void scrollLockPreservesPendingHorizontalHistoryDelay() {
+        camera.setHorizScrollDelay(32);
+
+        camera.setScrollLocked(true);
+        camera.updatePosition();
+        camera.setScrollLocked(false);
+
+        assertEquals(32, camera.getHorizScrollDelay(),
+                "ROM Scroll_lock skips MoveCameraX without clearing H_scroll_frame_offset");
+    }
+
+    @Test
     public void testCameraFollowsPlayerMovingLeft() {
         // Position camera ahead of player
         camera.setX((short) 200);

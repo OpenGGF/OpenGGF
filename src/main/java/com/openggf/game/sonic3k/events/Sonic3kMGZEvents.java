@@ -32,6 +32,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.SidekickCarryTrigger;
 import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.sprites.playable.TailsCarryController;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
 
@@ -1344,6 +1345,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             tails.setCpuController(controller);
         }
         controller.setCarryTrigger(mgzBossTransitionCarryTrigger());
+        tails.getTailsCarryController().forceScriptedCarry(TailsCarryController.CarryContext.MGZ_BOSS);
         controller.setInitialState(SidekickCpuController.State.CARRY_INIT);
     }
 

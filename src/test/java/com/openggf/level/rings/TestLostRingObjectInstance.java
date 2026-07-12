@@ -95,6 +95,14 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void s3kObj37CounterPhaseModelsNativeVIntVisibility() {
+        assertEquals(0, GameRules.SONIC_1.ring().ringFloorCheckCounterPhase());
+        assertEquals(0, GameRules.SONIC_2.ring().ringFloorCheckCounterPhase());
+        assertEquals(4, GameRules.SONIC_3K.ring().ringFloorCheckCounterPhase(),
+                "S3K Obj37 must see the native V_int_run_count byte four counts ahead of the object clock");
+    }
+
+    @Test
     void s3kReverseGravityProbesCeilingNotFloor() {
         // ROM: S3K Reverse_gravity_flag routes Obj37 to Obj_Bouncing_Ring_Reverse_Gravity,
         // which probes the CEILING (RingCheckFloorDist_ReverseGravity, upward) and only when
@@ -451,9 +459,9 @@ class TestLostRingObjectInstance {
         ringManager.spawnLostRings(player, 1, 0);
 
         LostRingObjectInstance ring = objectManager.activeObjectsOfType(LostRingObjectInstance.class).get(0);
-        assertEquals(ObjectSlotLayout.SONIC_3K.lastDynamicSlotExclusive() - 1 - ring.getSlotIndex(),
+        assertEquals(ObjectSlotLayout.SONIC_3K.lastProcessSlotExclusive() - 1 - ring.getSlotIndex(),
                 ring.getPhaseOffset(),
-                "S3K Obj37 cadence uses the managed dynamic-object countdown for spilled rings");
+                "S3K Obj37 cadence uses the full Process_Sprites Object_RAM countdown");
     }
 
     @Test
@@ -562,6 +570,58 @@ class TestLostRingObjectInstance {
                 "S3K Obj_Bouncing_Ring allocates ring 1 after the owner slot");
         assertEquals(32, rings.get(2).getSlotIndex(),
                 "S3K Obj_Bouncing_Ring continues after the previous ring slot");
+    }
+
+    @Test
+    void s3kPendingHurtReservesWholeAfterCurrentAllocationSnapshot() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_3K), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
+        setField(levelManager, "ringManager", ringManager);
+
+        for (int slot = 4; slot <= 8; slot++) {
+            assertTrue(objectManager.reserveDynamicSlot(slot), "setup should reserve slot " + slot);
+        }
+        assertTrue(objectManager.reserveDynamicSlot(10), "setup should leave a hole after the owner");
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+        player.setRingCount(3);
+
+        levelManager.spawnLostRingsAfterCurrentFrame(player, 0);
+
+        assertEquals(9, objectManager.getAllocatedSlotCount(),
+                "HurtCharacter must reserve owner plus both S3K remainder slots immediately");
+        assertFalse(objectManager.reserveDynamicSlot(9), "owner slot should already be reserved");
+        assertFalse(objectManager.reserveDynamicSlot(11), "first after-current slot should already be reserved");
+        assertFalse(objectManager.reserveDynamicSlot(12), "second after-current slot should already be reserved");
+    }
+
+    @Test
+    void delayedS3kSpawnConsumesReservedSnapshotWithoutFreshHoles() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_3K), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
+        setField(levelManager, "ringManager", ringManager);
+        assertTrue(objectManager.reserveDynamicSlot(30));
+        assertTrue(objectManager.reserveDynamicSlot(31));
+        assertTrue(objectManager.reserveDynamicSlot(33));
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+
+        ringManager.spawnLostRingsWithInitialObjectStep(
+                player, 3, 1, player.getCentreX(), player.getCentreY(),
+                new int[] {30, 31, 33}, true);
+
+        List<LostRingObjectInstance> rings =
+                objectManager.activeObjectsOfType(LostRingObjectInstance.class);
+        assertEquals(List.of(30, 31, 33),
+                rings.stream().map(LostRingObjectInstance::getSlotIndex).toList());
+        assertTrue(objectManager.reserveDynamicSlot(32),
+                "deferred materialization must not consume a hole freed after the reservation snapshot");
     }
 
     @Test
