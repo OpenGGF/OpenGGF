@@ -153,6 +153,8 @@ public class LevelManager {
     final List<List<LevelDescriptor>> levels = new ArrayList<>();
     private final List<PendingLostRingSpawn> pendingLostRingSpawns = new ArrayList<>();
     private final WorldSession worldSession;
+    private ZoneProgressionPlan zoneProgressionPlan = ZoneProgressionPlan.LINEAR;
+    private ZoneProgressionPlan.ZoneTopology zoneProgressionTopology;
     // Local mirror of zone/act state owned by WorldSession. Reads use these
     // fields directly for speed; writes go through writeCurrentZone /
     // writeCurrentAct / writeApparentAct so both copies stay in sync.
@@ -283,6 +285,47 @@ public class LevelManager {
     void refreshZoneList() {
         levels.clear();
         levels.addAll(gameModule.getZoneRegistry().getAllZones());
+    }
+
+    /**
+     * Installs one immutable progression plan and the registry snapshot it was
+     * built against. Mod catalog integration owns construction of both values;
+     * the level manager only executes the frozen result.
+     */
+    public void setZoneProgressionPlan(ZoneProgressionPlan plan,
+                                       ZoneProgressionPlan.ZoneTopology topology) {
+        java.util.Objects.requireNonNull(plan, "plan");
+        java.util.Objects.requireNonNull(topology, "topology");
+        validateProgressionTopology(topology);
+        plan.requireCompatible(topology);
+        this.zoneProgressionPlan = plan;
+        this.zoneProgressionTopology = topology;
+    }
+
+    private ZoneProgressionPlan.ZoneTopology activeProgressionTopology() {
+        if (zoneProgressionTopology != null) {
+            validateProgressionTopology(zoneProgressionTopology);
+            return zoneProgressionTopology;
+        }
+        int[] actCounts = new int[levels.size()];
+        for (int zone = 0; zone < levels.size(); zone++) {
+            actCounts[zone] = levels.get(zone).size();
+        }
+        return ZoneProgressionPlan.ZoneTopology.linear(actCounts);
+    }
+
+    private void validateProgressionTopology(ZoneProgressionPlan.ZoneTopology topology) {
+        if (levels.isEmpty()) {
+            return;
+        }
+        if (topology.zoneCount() != levels.size()) {
+            throw new IllegalArgumentException("Progression topology does not match the zone registry size");
+        }
+        for (int zone = 0; zone < levels.size(); zone++) {
+            if (topology.actCount(zone) != levels.get(zone).size()) {
+                throw new IllegalArgumentException("Progression topology act count does not match zone " + zone);
+            }
+        }
     }
 
     /**
@@ -2748,16 +2791,20 @@ public class LevelManager {
             transitions.requestTimeAttackMenuReturn();
             return;
         }
-        writeCurrentAct(currentAct + 1);
-        if (currentAct >= levels.get(currentZone).size()) {
-            // Move to next zone
-            writeCurrentZone(currentZone + 1);
+        ZoneProgressionPlan.ZoneTopology topology = activeProgressionTopology();
+        ZoneProgressionPlan.ProgressionResult next = zoneProgressionPlan.next(
+                topology, currentZone, currentAct);
+        if (next == ZoneProgressionPlan.Credits.INSTANCE) {
+            // Preserve an out-of-range sentinel rather than wrapping to zone
+            // zero, including when a terminal stock zone precedes appended mods.
+            writeCurrentZone(topology.zoneCount());
             writeCurrentAct(0);
-            if (currentZone >= levels.size()) {
-                requestCreditsTransition();
-                return;
-            }
+            requestCreditsTransition();
+            return;
         }
+        ZoneProgressionPlan.Successor successor = (ZoneProgressionPlan.Successor) next;
+        writeCurrentZone(successor.zone());
+        writeCurrentAct(successor.act());
         writeApparentAct(currentAct);
         // Clear checkpoint when advancing
         checkpointCoordinator.clear();
@@ -2770,13 +2817,15 @@ public class LevelManager {
      * the level counters before entering the special stage (Got_NextLevel).
      */
     public void advanceZoneActOnly() {
-        writeCurrentAct(currentAct + 1);
-        if (currentAct >= levels.get(currentZone).size()) {
-            writeCurrentZone(currentZone + 1);
+        ZoneProgressionPlan.ProgressionResult next = zoneProgressionPlan.next(
+                activeProgressionTopology(), currentZone, currentAct);
+        if (next == ZoneProgressionPlan.Credits.INSTANCE) {
             writeCurrentAct(0);
-            if (currentZone >= levels.size()) {
-                writeCurrentZone(0);
-            }
+            writeCurrentZone(0);
+        } else {
+            ZoneProgressionPlan.Successor successor = (ZoneProgressionPlan.Successor) next;
+            writeCurrentZone(successor.zone());
+            writeCurrentAct(successor.act());
         }
         writeApparentAct(currentAct);
         checkpointCoordinator.clear();

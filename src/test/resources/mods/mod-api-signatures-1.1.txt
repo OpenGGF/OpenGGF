@@ -229,6 +229,14 @@ CF-ANNOTATION TYPE com.openggf.game.ZoneArtProvider$ArtLoadRequest visible @com.
 CF-ANNOTATION TYPE com.openggf.game.ZoneArtProvider$ObjectArtConfig visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ZoneFeatureProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ZoneFeatureRenderer visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.ZoneProgressionPlan visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.ZoneProgressionPlan$Builder visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.ZoneProgressionPlan$Completion visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.ZoneProgressionPlan$Credits visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.ZoneProgressionPlan$ProgressionResult visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.ZoneProgressionPlan$Successor visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.ZoneProgressionPlan$ZoneMetadata visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.ZoneProgressionPlan$ZoneTopology visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ZoneRegistry visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.animation.AnimatedTileCachePolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.animation.AnimatedTileChannel visible @com.openggf.game.ModApi
@@ -943,6 +951,8 @@ CONSTRUCTOR com.openggf.game.SidekickSpawnOffset public  <init>(int,int)
 CONSTRUCTOR com.openggf.game.StaticFixup public  <init>(java.lang.String,java.lang.String,java.lang.Runnable)
 CONSTRUCTOR com.openggf.game.ZoneArtProvider$ArtLoadRequest public  <init>(java.lang.String,int,int,com.openggf.tools.disasm.CompressionType)
 CONSTRUCTOR com.openggf.game.ZoneArtProvider$ObjectArtConfig public  <init>(int,int,com.openggf.tools.disasm.CompressionType)
+CONSTRUCTOR com.openggf.game.ZoneProgressionPlan$Successor public  <init>(int,int)
+CONSTRUCTOR com.openggf.game.ZoneProgressionPlan$ZoneMetadata public  <init>(int,com.openggf.game.ZoneProgressionPlan$Completion)
 CONSTRUCTOR com.openggf.game.animation.AnimatedTileChannel public  <init>(java.lang.String,com.openggf.game.animation.ChannelGuard,com.openggf.game.animation.PhaseSource,com.openggf.game.animation.DestinationPlan,com.openggf.game.animation.AnimatedTileCachePolicy,com.openggf.game.animation.ApplyStrategy)
 CONSTRUCTOR com.openggf.game.animation.AnimatedTileChannelGraph public  <init>()
 CONSTRUCTOR com.openggf.game.animation.ChannelContext public  <init>(com.openggf.game.animation.AnimatedTileChannelGraph,com.openggf.game.animation.AnimatedTileChannel,com.openggf.level.Level,java.lang.Object,int,int,int)
@@ -2063,6 +2073,11 @@ FIELD com.openggf.game.TitleScreenProvider$TitleScreenAction public,static,final
 FIELD com.openggf.game.TitleScreenProvider$TitleScreenAction public,static,final com.openggf.game.TitleScreenProvider$TitleScreenAction OTHER
 FIELD com.openggf.game.TitleScreenProvider$TitleScreenAction public,static,final com.openggf.game.TitleScreenProvider$TitleScreenAction TWO_PLAYER
 FIELD com.openggf.game.ZoneFeatureRenderer public,static,final com.openggf.game.ZoneFeatureRenderer NONE
+FIELD com.openggf.game.ZoneProgressionPlan public,static,final com.openggf.game.ZoneProgressionPlan LINEAR
+FIELD com.openggf.game.ZoneProgressionPlan$Completion public,static,final com.openggf.game.ZoneProgressionPlan$Completion EVENT_CHAINED
+FIELD com.openggf.game.ZoneProgressionPlan$Completion public,static,final com.openggf.game.ZoneProgressionPlan$Completion RESULTS_DRIVEN
+FIELD com.openggf.game.ZoneProgressionPlan$Completion public,static,final com.openggf.game.ZoneProgressionPlan$Completion TERMINAL
+FIELD com.openggf.game.ZoneProgressionPlan$Credits public,static,final com.openggf.game.ZoneProgressionPlan$Credits INSTANCE
 FIELD com.openggf.game.animation.AnimatedTileCachePolicy public,static,final com.openggf.game.animation.AnimatedTileCachePolicy ALWAYS
 FIELD com.openggf.game.animation.AnimatedTileCachePolicy public,static,final com.openggf.game.animation.AnimatedTileCachePolicy ON_PHASE_CHANGE
 FIELD com.openggf.game.dataselect.AbstractDataSelectProvider protected com.openggf.game.DataSelectProvider$State state
@@ -2683,6 +2698,8 @@ INTERFACE com.openggf.game.GameStateManager com.openggf.game.rewind.RewindSnapsh
 INTERFACE com.openggf.game.InstaShieldHandle com.openggf.game.PowerUpObject
 INTERFACE com.openggf.game.ModApi java.lang.annotation.Annotation
 INTERFACE com.openggf.game.SpecialStageProvider com.openggf.game.MiniGameProvider
+INTERFACE com.openggf.game.ZoneProgressionPlan$Credits com.openggf.game.ZoneProgressionPlan$ProgressionResult
+INTERFACE com.openggf.game.ZoneProgressionPlan$Successor com.openggf.game.ZoneProgressionPlan$ProgressionResult
 INTERFACE com.openggf.game.animation.AnimatedTileChannelGraph com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot>
 INTERFACE com.openggf.game.dataselect.AbstractDataSelectProvider com.openggf.game.DataSelectProvider
 INTERFACE com.openggf.game.dataselect.DataSelectGameProfile com.openggf.game.dataselect.DataSelectHostProfile
@@ -5091,6 +5108,33 @@ METHOD com.openggf.game.ZoneFeatureRenderer public  int getDebugFrameCount()
 METHOD com.openggf.game.ZoneFeatureRenderer public  java.lang.String getDebugFrameDescription(int)
 METHOD com.openggf.game.ZoneFeatureRenderer public  java.lang.String getDebugFrameName(int)
 METHOD com.openggf.game.ZoneFeatureRenderer public,abstract  void cleanup()
+METHOD com.openggf.game.ZoneProgressionPlan public  com.openggf.game.ZoneProgressionPlan$ProgressionResult next(com.openggf.game.ZoneProgressionPlan$ZoneTopology,int,int)
+METHOD com.openggf.game.ZoneProgressionPlan public  void requireCompatible(com.openggf.game.ZoneProgressionPlan$ZoneTopology)
+METHOD com.openggf.game.ZoneProgressionPlan public,static  com.openggf.game.ZoneProgressionPlan$Builder builder(com.openggf.game.ZoneProgressionPlan$ZoneTopology)
+METHOD com.openggf.game.ZoneProgressionPlan$Builder public  com.openggf.game.ZoneProgressionPlan build()
+METHOD com.openggf.game.ZoneProgressionPlan$Builder public  com.openggf.game.ZoneProgressionPlan$Builder insertAfter(int,int)
+METHOD com.openggf.game.ZoneProgressionPlan$Completion public,static  com.openggf.game.ZoneProgressionPlan$Completion valueOf(java.lang.String)
+METHOD com.openggf.game.ZoneProgressionPlan$Completion public,static  com.openggf.game.ZoneProgressionPlan$Completion[] values()
+METHOD com.openggf.game.ZoneProgressionPlan$Credits public,static  com.openggf.game.ZoneProgressionPlan$Credits valueOf(java.lang.String)
+METHOD com.openggf.game.ZoneProgressionPlan$Credits public,static  com.openggf.game.ZoneProgressionPlan$Credits[] values()
+METHOD com.openggf.game.ZoneProgressionPlan$Successor public  int act()
+METHOD com.openggf.game.ZoneProgressionPlan$Successor public  int zone()
+METHOD com.openggf.game.ZoneProgressionPlan$Successor public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.ZoneProgressionPlan$Successor public,final  int hashCode()
+METHOD com.openggf.game.ZoneProgressionPlan$Successor public,final  java.lang.String toString()
+METHOD com.openggf.game.ZoneProgressionPlan$ZoneMetadata public  com.openggf.game.ZoneProgressionPlan$Completion completion()
+METHOD com.openggf.game.ZoneProgressionPlan$ZoneMetadata public  int actCount()
+METHOD com.openggf.game.ZoneProgressionPlan$ZoneMetadata public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.ZoneProgressionPlan$ZoneMetadata public,final  int hashCode()
+METHOD com.openggf.game.ZoneProgressionPlan$ZoneMetadata public,final  java.lang.String toString()
+METHOD com.openggf.game.ZoneProgressionPlan$ZoneTopology public  boolean equals(java.lang.Object)
+METHOD com.openggf.game.ZoneProgressionPlan$ZoneTopology public  com.openggf.game.ZoneProgressionPlan$ZoneMetadata zone(int)
+METHOD com.openggf.game.ZoneProgressionPlan$ZoneTopology public  int actCount(int)
+METHOD com.openggf.game.ZoneProgressionPlan$ZoneTopology public  int hashCode()
+METHOD com.openggf.game.ZoneProgressionPlan$ZoneTopology public  int zoneCount()
+METHOD com.openggf.game.ZoneProgressionPlan$ZoneTopology public  java.util.List<com.openggf.game.ZoneProgressionPlan$ZoneMetadata> zones()
+METHOD com.openggf.game.ZoneProgressionPlan$ZoneTopology public,static  com.openggf.game.ZoneProgressionPlan$ZoneTopology of(java.util.List<com.openggf.game.ZoneProgressionPlan$ZoneMetadata>)
+METHOD com.openggf.game.ZoneProgressionPlan$ZoneTopology public,static,transient varargs  com.openggf.game.ZoneProgressionPlan$ZoneTopology linear(int[])
 METHOD com.openggf.game.ZoneRegistry public,abstract  int getActCount(int)
 METHOD com.openggf.game.ZoneRegistry public,abstract  int getMusicId(int,int)
 METHOD com.openggf.game.ZoneRegistry public,abstract  int getZoneCount()
@@ -7443,6 +7487,7 @@ METHOD com.openggf.level.LevelManager public  void setFrameCounter(int)
 METHOD com.openggf.level.LevelManager public  void setLevel(com.openggf.level.Level)
 METHOD com.openggf.level.LevelManager public  void setRewindClassResolver(com.openggf.level.objects.RewindClassResolver)
 METHOD com.openggf.level.LevelManager public  void setSuppressNextMusicChange(boolean)
+METHOD com.openggf.level.LevelManager public  void setZoneProgressionPlan(com.openggf.game.ZoneProgressionPlan,com.openggf.game.ZoneProgressionPlan$ZoneTopology)
 METHOD com.openggf.level.LevelManager public  void snapshotForegroundTilemapBeforeRuntimeLayoutMutation()
 METHOD com.openggf.level.LevelManager public  void spawnLostRings(com.openggf.sprites.playable.AbstractPlayableSprite,int)
 METHOD com.openggf.level.LevelManager public  void spawnLostRingsAfterCurrentFrame(com.openggf.sprites.playable.AbstractPlayableSprite,int)
@@ -11551,6 +11596,13 @@ NESTED com.openggf.game.TitleScreenProvider com.openggf.game.TitleScreenProvider
 NESTED com.openggf.game.TitleScreenProvider com.openggf.game.TitleScreenProvider$TitleScreenAction
 NESTED com.openggf.game.ZoneArtProvider com.openggf.game.ZoneArtProvider$ArtLoadRequest
 NESTED com.openggf.game.ZoneArtProvider com.openggf.game.ZoneArtProvider$ObjectArtConfig
+NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan$Builder
+NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan$Completion
+NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan$Credits
+NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan$ProgressionResult
+NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan$Successor
+NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan$ZoneMetadata
+NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan$ZoneTopology
 NESTED com.openggf.game.dataselect.HostSlotPreview com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType
 NESTED com.openggf.game.ghost.GhostRenderRegistry com.openggf.game.ghost.GhostRenderRegistry$GhostLayerRenderer
 NESTED com.openggf.game.launch.LaunchProfile com.openggf.game.launch.LaunchProfile$Row
@@ -11775,6 +11827,8 @@ PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioComm
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SetSpeedShoes
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopAllSfx
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopMusic
+PERMITS com.openggf.game.ZoneProgressionPlan$ProgressionResult com.openggf.game.ZoneProgressionPlan$Credits
+PERMITS com.openggf.game.ZoneProgressionPlan$ProgressionResult com.openggf.game.ZoneProgressionPlan$Successor
 PERMITS com.openggf.game.patch.PatchOwner com.openggf.game.patch.PatchOwner$BuiltIn
 PERMITS com.openggf.game.patch.PatchOwner com.openggf.game.patch.PatchOwner$Mod
 PERMITS com.openggf.game.patch.ResolutionResult com.openggf.game.patch.ResolutionResult$LaunchAborted
@@ -12377,6 +12431,10 @@ RECORD-COMPONENT com.openggf.game.ZoneArtProvider$ArtLoadRequest palette int
 RECORD-COMPONENT com.openggf.game.ZoneArtProvider$ObjectArtConfig artAddress int
 RECORD-COMPONENT com.openggf.game.ZoneArtProvider$ObjectArtConfig compression com.openggf.tools.disasm.CompressionType
 RECORD-COMPONENT com.openggf.game.ZoneArtProvider$ObjectArtConfig palette int
+RECORD-COMPONENT com.openggf.game.ZoneProgressionPlan$Successor act int
+RECORD-COMPONENT com.openggf.game.ZoneProgressionPlan$Successor zone int
+RECORD-COMPONENT com.openggf.game.ZoneProgressionPlan$ZoneMetadata actCount int
+RECORD-COMPONENT com.openggf.game.ZoneProgressionPlan$ZoneMetadata completion com.openggf.game.ZoneProgressionPlan$Completion
 RECORD-COMPONENT com.openggf.game.animation.ChannelContext actIndex int
 RECORD-COMPONENT com.openggf.game.animation.ChannelContext channel com.openggf.game.animation.AnimatedTileChannel
 RECORD-COMPONENT com.openggf.game.animation.ChannelContext frameCounter int
@@ -14403,6 +14461,7 @@ TYPE class public,final com.openggf.editor.EditorStockObjectPalette SUPER java.l
 TYPE class public,final com.openggf.editor.LevelEditorController SUPER java.lang.Object
 TYPE class public,final com.openggf.editor.persistence.EditorSaveManager SUPER java.lang.Object
 TYPE class public,final com.openggf.game.GameRng SUPER java.lang.Object
+TYPE class public,final com.openggf.game.ZoneProgressionPlan SUPER java.lang.Object
 TYPE class public,final com.openggf.game.animation.AnimatedTileChannel SUPER java.lang.Object
 TYPE class public,final com.openggf.game.animation.AnimatedTileChannelGraph SUPER java.lang.Object
 TYPE class public,final com.openggf.game.dataselect.DataSelectPresentationProvider SUPER com.openggf.game.dataselect.AbstractDataSelectProvider
@@ -14479,6 +14538,8 @@ TYPE class public,static com.openggf.level.Palette$Color SUPER java.lang.Object
 TYPE class public,static com.openggf.level.WaterSystem$DynamicWaterState SUPER java.lang.Object
 TYPE class public,static com.openggf.level.WaterSystem$WaterConfig SUPER java.lang.Object
 TYPE class public,static,final com.openggf.audio.smps.SmpsSequencerConfig$Builder SUPER java.lang.Object
+TYPE class public,static,final com.openggf.game.ZoneProgressionPlan$Builder SUPER java.lang.Object
+TYPE class public,static,final com.openggf.game.ZoneProgressionPlan$ZoneTopology SUPER java.lang.Object
 TYPE class public,static,final com.openggf.game.patch.ModuleResolutionService$PreparedLaunch SUPER java.lang.Object
 TYPE class public,static,final com.openggf.game.render.AdvancedRenderFrameState$Builder SUPER java.lang.Object
 TYPE class public,static,final com.openggf.io.ModInputLimits$Builder SUPER java.lang.Object
@@ -14580,6 +14641,8 @@ TYPE enum public,static,final com.openggf.game.MasterTitleScreen$GameEntry SUPER
 TYPE enum public,static,final com.openggf.game.MasterTitleScreen$State SUPER java.lang.Enum<com.openggf.game.MasterTitleScreen$State>
 TYPE enum public,static,final com.openggf.game.TitleScreenProvider$State SUPER java.lang.Enum<com.openggf.game.TitleScreenProvider$State>
 TYPE enum public,static,final com.openggf.game.TitleScreenProvider$TitleScreenAction SUPER java.lang.Enum<com.openggf.game.TitleScreenProvider$TitleScreenAction>
+TYPE enum public,static,final com.openggf.game.ZoneProgressionPlan$Completion SUPER java.lang.Enum<com.openggf.game.ZoneProgressionPlan$Completion>
+TYPE enum public,static,final com.openggf.game.ZoneProgressionPlan$Credits SUPER java.lang.Enum<com.openggf.game.ZoneProgressionPlan$Credits>
 TYPE enum public,static,final com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType SUPER java.lang.Enum<com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType>
 TYPE enum public,static,final com.openggf.game.launch.LaunchProfile$Row SUPER java.lang.Enum<com.openggf.game.launch.LaunchProfile$Row>
 TYPE enum public,static,final com.openggf.game.patch.ModuleResolutionService$LaunchPolicy SUPER java.lang.Enum<com.openggf.game.patch.ModuleResolutionService$LaunchPolicy>
@@ -14748,6 +14811,7 @@ TYPE interface public,abstract,static com.openggf.net.hub.RoomHostHooks$ChatGate
 TYPE interface public,abstract,static com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener SUPER <none>
 TYPE interface public,abstract,static com.openggf.net.hub.RoomHostHooks$VerificationHooks SUPER <none>
 TYPE interface public,abstract,static com.openggf.sprites.managers.SpriteManager$SpriteDrawCallback SUPER <none>
+TYPE interface public,abstract,static,sealed com.openggf.game.ZoneProgressionPlan$ProgressionResult SUPER <none>
 TYPE interface public,abstract,static,sealed com.openggf.net.client.RaceClient$InboundEvent SUPER <none>
 TYPE record protected,static,final com.openggf.sprites.playable.SuperStateController$PaletteTarget SUPER java.lang.Record
 TYPE record public,final com.openggf.audio.SegaPcmSpec SUPER java.lang.Record
@@ -14911,6 +14975,8 @@ TYPE record public,static,final com.openggf.game.DebugOverlayProvider$ArtViewerT
 TYPE record public,static,final com.openggf.game.DebugOverlayProvider$ObjectDebugLabel SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.ZoneArtProvider$ArtLoadRequest SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.ZoneArtProvider$ObjectArtConfig SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.ZoneProgressionPlan$Successor SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.ZoneProgressionPlan$ZoneMetadata SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.ModuleResolutionService$PatchPlan SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.PatchOwner$BuiltIn SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.PatchOwner$Mod SUPER java.lang.Record
@@ -15302,6 +15368,14 @@ TYPE-ANNOTATION com.openggf.game.ZoneArtProvider$ArtLoadRequest @com.openggf.gam
 TYPE-ANNOTATION com.openggf.game.ZoneArtProvider$ObjectArtConfig @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ZoneFeatureProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ZoneFeatureRenderer @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.ZoneProgressionPlan @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.ZoneProgressionPlan$Builder @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.ZoneProgressionPlan$Completion @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.ZoneProgressionPlan$Credits @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.ZoneProgressionPlan$ProgressionResult @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.ZoneProgressionPlan$Successor @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.ZoneProgressionPlan$ZoneMetadata @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.ZoneProgressionPlan$ZoneTopology @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ZoneRegistry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.animation.AnimatedTileCachePolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.animation.AnimatedTileChannel @com.openggf.game.ModApi
