@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f29086 / 303 errors (1 error under
+f3318 / 4234 errors to f29134 / 301 errors (1 error under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -620,6 +620,23 @@ this ROM-owned child path (`sonic3k.asm:141019-141033,178139-178153`).
 This closes f28970-f29085 and advances HCZ to f29086 / 303 full-run errors (1
 under `frontierOnly`). The focused water-column control tests pass 2/2. The
 granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 57 restores the idle HCZ twisting loop's ordinary off-screen
+lifetime. ROM `loc_3909C` calls `Delete_Sprite_If_Not_In_Range` whenever both
+per-player phase bytes are zero; only a loop actively carrying P1 or P2 must
+survive beyond its placement window. The engine's placement path now supports
+respawnable off-screen deletion, so the controller no longer keeps every
+visited loop SST slot resident for the rest of the act
+(`sonic3k.asm:76482-76505,37262-37277`).
+
+This releases the stale loop slots before the end-boss allocation sequence,
+restores the later Obj37 countdown/floor-bounce phase, and closes the f29086
+lost-ring pickup. HCZ advances to f29134 / 301 full-run errors (1 under
+`frontierOnly`), where native Tails horizontal motion is the next owner. The
+focused twisting-loop tests pass 4/4. The granular nine-route S3K matrix keeps
+both AIZ routes green and preserves every non-HCZ frontier/count exactly: CNZ
 complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
 level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 

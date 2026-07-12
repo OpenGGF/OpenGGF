@@ -201,11 +201,10 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         }
 
         // ROM: loc_3909C — if both players are in phase 0 (not captured),
-        // call Delete_Sprite_If_Not_In_Range. In the ROM this frees the slot
-        // but clears the "loaded" bit so the object respawns when the camera
-        // returns. Our engine doesn't support respawning, so we keep the
-        // object alive — isPersistent() already returns true, and the per-frame
-        // cost of idle detection checks is negligible for an invisible object.
+        // call Delete_Sprite_If_Not_In_Range. ObjectManager's ordinary
+        // off-screen path now clears the placement-loaded state and permits a
+        // later respawn, so only an actively captured player needs to make the
+        // controller persistent.
     }
 
     // =========================================================================
@@ -561,6 +560,10 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
 
     @Override
     public boolean isPersistent() {
-        return true;  // Must survive while player is captured
+        // sonic3k.asm loc_3909C tests both per-player phase bytes before
+        // Delete_Sprite_If_Not_In_Range. A captured player can carry the
+        // invisible controller beyond its placement window, but an idle loop
+        // must release its SST slot just like any other placed object.
+        return p1State.phase != 0 || p2State.phase != 0;
     }
 }

@@ -1083,6 +1083,31 @@ change previous-list snapshot semantics.
 
 ---
 
+## P30 -- Controller persistence must follow the ROM's active-state gate
+
+**Symptom.** A distant controller no longer affects players, yet its SST slot
+remains occupied for the rest of the act. A much later boss child or lost-ring
+spill then allocates into a different slot and observes a different object-loop
+countdown phase.
+
+**Root cause.** Invisible controller objects are often persistent only while a
+player-owned phase/capture byte is nonzero. If the idle tail explicitly calls
+`Delete_Sprite_If_Not_In_Range`, unconditional engine persistence converts a
+temporary capture safeguard into a permanent slot leak.
+
+**What to check.** Trace every per-player state byte tested immediately before
+the range-delete helper. Make persistence depend on those active states, and
+let ordinary off-screen deletion clear placement-loaded state so the controller
+can respawn if the camera returns.
+
+**ROM citation.** HCZ twisting loop `loc_3909C` tests both player phase bytes
+and calls `Delete_Sprite_If_Not_In_Range` only when both are zero
+(`docs/skdisasm/sonic3k.asm:76482-76505,37262-37277`).
+
+**Originating commit.** `<pending: HCZ milestone 57>`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
