@@ -2,10 +2,16 @@ package com.openggf.game.sonic1.objects;
 
 import org.junit.jupiter.api.Test;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
+
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSonic1TeleporterObjectInstance {
@@ -66,6 +72,73 @@ public class TestSonic1TeleporterObjectInstance {
         assertEquals(-1, player.getForcedAnimationId());
     }
 
+    @Test
+    void extraSidekickCanOwnTransportWithoutRedirectingControlToMainPlayer() throws Exception {
+        TestPlayableSprite main = new TestPlayableSprite();
+        main.setCentreX((short) 0x200);
+        main.setCentreY((short) 0x300);
+        TestPlayableSprite extraSidekick = new TestPlayableSprite();
+        extraSidekick.setCentreX((short) 0x300);
+        extraSidekick.setCentreY((short) 0x300);
+        Sonic1TeleporterObjectInstance teleporter = createTeleporter(
+                0x00, 0, 0x300, 0x300, main, List.of(extraSidekick));
+
+        teleporter.update(1, main);
+
+        assertSame(extraSidekick, readField(teleporter, "controlledPlayer"));
+        assertTrue(extraSidekick.isObjectControlled());
+        assertFalse(main.isObjectControlled());
+
+        int mainX = main.getCentreX();
+        int mainY = main.getCentreY();
+        for (int frame = 2; frame < 800 && extraSidekick.isObjectControlled(); frame++) {
+            teleporter.update(frame, main);
+        }
+
+        assertFalse(extraSidekick.isObjectControlled(), "captured extension sidekick must be released");
+        assertEquals(mainX, main.getCentreX(), "active transport must not move the update-argument main player");
+        assertEquals(mainY, main.getCentreY(), "active transport must not move the update-argument main player");
+    }
+
+    @Test
+    void simultaneousEntryKeepsMainPlayerFirstInParticipationOrder() throws Exception {
+        TestPlayableSprite main = new TestPlayableSprite();
+        main.setCentreX((short) 0x300);
+        main.setCentreY((short) 0x300);
+        TestPlayableSprite extraSidekick = new TestPlayableSprite();
+        extraSidekick.setCentreX((short) 0x300);
+        extraSidekick.setCentreY((short) 0x300);
+        Sonic1TeleporterObjectInstance teleporter = createTeleporter(
+                0x00, 0, 0x300, 0x300, main, List.of(extraSidekick));
+
+        teleporter.update(1, main);
+
+        assertSame(main, readField(teleporter, "controlledPlayer"));
+        assertTrue(main.isObjectControlled());
+        assertFalse(extraSidekick.isObjectControlled());
+    }
+
+    @Test
+    void deadCapturedSidekickIsReleasedForRespawn() throws Exception {
+        TestPlayableSprite main = new TestPlayableSprite();
+        main.setCentreX((short) 0x200);
+        main.setCentreY((short) 0x300);
+        TestPlayableSprite extraSidekick = new TestPlayableSprite();
+        extraSidekick.setCentreX((short) 0x300);
+        extraSidekick.setCentreY((short) 0x300);
+        Sonic1TeleporterObjectInstance teleporter = createTeleporter(
+                0x00, 0, 0x300, 0x300, main, List.of(extraSidekick));
+        teleporter.update(1, main);
+        extraSidekick.setDead(true);
+
+        teleporter.update(2, main);
+
+        assertFalse(extraSidekick.isObjectControlled());
+        assertFalse(extraSidekick.isControlLocked());
+        assertEquals(-1, extraSidekick.getForcedAnimationId());
+        assertNull(readField(teleporter, "controlledPlayer"));
+    }
+
     private static Sonic1TeleporterObjectInstance createTeleporter(int subtype, int renderFlags, int x, int y) {
         Sonic1TeleporterObjectInstance instance = new Sonic1TeleporterObjectInstance(
                 new ObjectSpawn(x, y, 0x72, subtype, renderFlags, false, 0));
@@ -73,6 +146,30 @@ public class TestSonic1TeleporterObjectInstance {
         return instance;
     }
 
+    private static Sonic1TeleporterObjectInstance createTeleporter(
+            int subtype,
+            int renderFlags,
+            int x,
+            int y,
+            TestPlayableSprite main,
+            List<TestPlayableSprite> sidekicks) {
+        Sonic1TeleporterObjectInstance instance = new Sonic1TeleporterObjectInstance(
+                new ObjectSpawn(x, y, 0x72, subtype, renderFlags, false, 0));
+        instance.setServices(new TestObjectServices() {
+            private final ObjectPlayerQuery query = new ObjectPlayerQuery(() -> main, () -> sidekicks);
+
+            @Override
+            public ObjectPlayerQuery playerQuery() {
+                return query;
+            }
+        });
+        return instance;
+    }
+
+    private static Object readField(Object target, String name) throws Exception {
+        var field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
 }
-
-
