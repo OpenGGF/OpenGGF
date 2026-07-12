@@ -237,19 +237,9 @@ public final class TraceSessionLauncher {
         }
     }
 
-    /**
-     * Applies the recorded team + cross-game config for an SS session. Mirrors
-     * the team half of {@link TraceReplaySessionBootstrap#prepareConfiguration}
-     * without its level-only S3K fresh-load branch (SS traces are S2-only).
-     */
+    /** Applies the shared replay config without the level-only S3K branch. */
     private static void prepareSpecialStageConfiguration(TraceMetadata meta) {
-        SonicConfigurationService config = GameServices.configuration();
-        String main = meta.recordedMainCharacter();
-        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,
-                main == null || main.isBlank() ? "sonic" : main);
-        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                String.join(",", meta.recordedSidekicks()));
-        config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+        TraceReplaySessionBootstrap.prepareConfiguration(null, meta);
     }
 
     private void finishSpecialStageLaunch() {
