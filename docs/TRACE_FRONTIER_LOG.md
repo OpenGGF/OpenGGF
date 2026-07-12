@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f28658 / 679 errors (1 error under
+f3318 / 4234 errors to f28814 / 551 errors (1 error under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -532,6 +532,23 @@ word, and Obj36 uses those bits for bar movement and release
 
 This closes f27807-f28657 and advances HCZ to f28658 / 679 full-run errors (1
 under `frontierOnly`). The focused HCZ breakable-bar suite passes 10/10. The
+granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 51 restores the HCZ end-boss turbine's acceleration callback as the
+owner of water-column creation. ROM routine 4 runs `Animate_RawGetFaster` over
+`byte_6BDF4`; only its `loc_6B212` callback advances the turbine to routine 6
+and allocates the water-column child. The engine had allocated that child on
+routine-4 entry, allowing its folded spray/suction logic to affect Sonic while
+the ROM turbine was still accelerating. The engine now models the animation's
+decreasing delay and eight zero-delay revolutions, creates the column from the
+callback, and preserves the spray child's own initialization-only first
+dispatch (`sonic3k.asm:141030-141069,141205-141229,142241-142247,
+177749-177792`).
+
+This closes f28658-f28813 and advances HCZ to f28814 / 551 full-run errors (1
+under `frontierOnly`). The focused water-column control tests pass 2/2. The
 granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
 complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
 level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.

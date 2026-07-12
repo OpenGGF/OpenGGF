@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **HCZ end-boss turbines now create their water column from the native spin-up callback:** `Animate_RawGetFaster` completes its decreasing-delay sequence before `loc_6B212` allocates the column, preventing premature spray suction while the turbine is still accelerating; the folded spray child also retains its initialization-only first dispatch (`docs/skdisasm/sonic3k.asm:141030-141069,141205-141229,142241-142247,177749-177792`).
 - **HCZ breakable bars now read raw controller holds while carrying players:** Obj36 no longer treats CPU Tails' generated `Ctrl_2_logical` directions as manual P2 input, so captured movement and release follow the native `(Ctrl_2).w` word (`docs/skdisasm/sonic3k.asm:42770-42836,42924-42990`).
 - **HCZ large fans now retain their shared KosM queue warm state:** the first Obj39 activation preserves the longer still-busy module workload, while later activations consume the already-primed queue one object dispatch sooner; the cross-activation state is rewind-captured (`docs/skdisasm/sonic3k.asm:65583-65636`).
 - **HCZ2 trigger-collapse tension bridges now retain both riders through the native countdown:** the live trigger byte suppresses the split solid pass while `loc_3890C` returns without the ordinary slope helper; countdown expiry then clears every riding player's standing state and sets them airborne (`docs/skdisasm/sonic3k.asm:75592-75605,75743-75795`).

@@ -991,6 +991,43 @@ sample the pre-scroll camera instead of the render-visible camera.
 
 ---
 
+---
+
+## P27 -- Animation callbacks own child allocation and routine handoff
+
+**Symptom.** A child object becomes visible or interactive dozens of frames
+early even though its parent has entered the apparently correct routine. Later
+player movement diverges when the premature child first overlaps or applies a
+force.
+
+**Root cause.** The parent routine starts an `Animate_Raw*` script and stores a
+callback in `$34`; the callback performs the child allocation and routine
+advance only after the animation command/counter completes. Spawning the child
+on routine entry collapses the animation-owned boundary. Accelerating scripts
+such as `Animate_RawGetFaster` can make this error much larger than one frame.
+
+**What to check.**
+
+1. Read the complete animation data, including delay, loop/end command, and any
+   extra counter byte consumed by the animation helper.
+2. Keep routine entry, animation completion, callback dispatch, child
+   initialization, and first active child dispatch as distinct boundaries.
+3. If a consolidated engine object folds the child into its parent, retain the
+   child's routine-0 initialization-only dispatch before enabling interaction.
+4. Allocate from the callback's native slot/order path, not merely when the
+   parent first appears active.
+
+**ROM citation.** HCZ end-boss turbine `loc_6B1E6` installs
+`byte_6BDF4` and callback `loc_6B212`; that callback alone creates the water
+column. The column later creates spray child `loc_6B3DE`, whose
+`loc_6B3FC` setup returns before `loc_6B410` begins suction
+(`docs/skdisasm/sonic3k.asm:141030-141069,141205-141229,142241-142247,
+177749-177792`).
+
+**Originating commit.** `<pending: HCZ milestone 51>`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
