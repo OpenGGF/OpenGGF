@@ -53,8 +53,30 @@ public final class HczEndBossEggCapsuleButton extends AbstractObjectInstance
     }
 
     @Override
+    public boolean allowsObjectControlledSolidContacts() {
+        // SolidObjectFull_1P handles an existing standing bit before its later
+        // signed object_control test, so Set_PlayerEndingPose must not clear the
+        // rider. New contacts still reject bit-7 control below.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) {
+        return true;
+    }
+
+    @Override
+    public boolean preservesObjectManagedRideWhileNotSolidFor(PlayableEntity player) {
+        // The standing-bit branch precedes SolidObject_cont's signed
+        // object_control rejection. Preserve only an already-established ride;
+        // the new-contact path remains blocked by the predicate above.
+        return player.isObjectControlled();
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity player) {
-        if (hasStandingContact(checkpointAll())) {
+        var batch = checkpointAll();
+        if (hasStandingContact(batch)) {
             parent.signalButtonPressed();
         }
     }

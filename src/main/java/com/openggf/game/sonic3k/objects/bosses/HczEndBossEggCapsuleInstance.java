@@ -14,8 +14,6 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
-import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
-import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
@@ -78,6 +76,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
     private int postOpenTimer;
     private boolean buttonSpawned;
     private boolean buttonPressed;
+    private boolean tailsEndingPoseApplied;
 
     // Explosion controller (spawned when capsule opens)
     private S3kBossExplosionController explosionController;
@@ -161,6 +160,8 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
                 startResults(player);
             }
         } else if (!geyserSpawned) {
+            advanceTailsEndingPoseCheck();
+
             // ROM: loc_6B154 — Lock camera from scrolling left each frame
             // and wait for results to COMPLETE before spawning the geyser.
             var camera = services().camera();
@@ -257,18 +258,38 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         if (resultsStarted) return;
         resultsStarted = true;
         services().gameState().setEndOfLevelActive(true);
-        for (PlayableEntity candidate : playerQuery(player)
-                .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
-            if (candidate instanceof AbstractPlayableSprite sprite) {
-                lockForResults(sprite);
-            }
-        }
+        // sub_868F8 calls Set_PlayerEndingPose for Player_1 only. The parent
+        // changes to routine 6 here; Check_TailsEndPose starts on the following
+        // routine-6 entry, not in this same dispatch.
+        lockForResults(player);
         spawnChild(() -> new S3kResultsScreenObjectInstance(getPlayerCharacter(), services().currentAct()));
+    }
+
+    private void advanceTailsEndingPoseCheck() {
+        if (tailsEndingPoseApplied) {
+            return;
+        }
+        if (!(services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick)
+                || sidekick.isPreventTailsRespawn()
+                || sidekick.getAir()
+                || sidekick.getDead()) {
+            return;
+        }
+
+        // Check_TailsEndPose clears Ctrl_2_locked immediately before tail-calling
+        // Set_PlayerEndingPose (sonic3k.asm:181919-181940).
+        tailsEndingPoseApplied = true;
+        if (sidekick.getCpuController() != null) {
+            sidekick.getCpuController().queueNativeEndingPoseForNextPlayerSlot();
+        }
     }
 
     private void lockForResults(AbstractPlayableSprite sprite) {
         ObjectControlState.nativeBit7FullControl().applyTo(sprite);
-        sprite.setControlLocked(true);
+        // Set_PlayerEndingPose does not write Ctrl_1_locked/Ctrl_2_locked.
+        sprite.setControlLocked(false);
+        sprite.setSpindash(false);
+        sprite.setPushing(false);
         sprite.setXSpeed((short) 0);
         sprite.setYSpeed((short) 0);
         sprite.setGSpeed((short) 0);
@@ -279,11 +300,6 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         return S3kRuntimeStates.resolvePlayerCharacter(
                 services().zoneRuntimeRegistry(),
                 services().configuration());
-    }
-
-    private ObjectPlayerQuery playerQuery(PlayableEntity updatePlayer) {
-        ObjectPlayerQuery query = services().playerQuery();
-        return new ObjectPlayerQuery(() -> updatePlayer, query::sidekicks);
     }
 
     // ===== Geyser cutscene (delegated from HczEndBossInstance) =====

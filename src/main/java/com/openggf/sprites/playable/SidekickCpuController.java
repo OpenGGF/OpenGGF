@@ -273,6 +273,7 @@ public class SidekickCpuController {
      * call the CPU routine (sonic3k.asm:26196-26205).
      */
     private boolean controller2SignedLocked;
+    private boolean nativeEndingPosePending;
     private NormalStepDiagnostics latestNormalStepDiagnostics;
     private int diagnosticCtrl2HeldLatch;
     private int diagnosticCtrl2PressedLatch;
@@ -561,6 +562,15 @@ public class SidekickCpuController {
         controller2SignedLocked = locked;
     }
 
+    /**
+     * Queues Check_TailsEndPose's Set_PlayerEndingPose tail-call for the next
+     * Player_2 control slot. The capsule/signpost object runs later in the SST
+     * list, after Tails has already moved for the current frame.
+     */
+    public void queueNativeEndingPoseForNextPlayerSlot() {
+        nativeEndingPosePending = true;
+    }
+
     public void clearController2LogicalLatch() {
         // ROM objects that write Ctrl_2_locked often also clear Ctrl_2_logical
         // at the same site. Keep this separate from setController2SignedLocked:
@@ -753,19 +763,39 @@ public class SidekickCpuController {
     }
 
     public void recordDiagnosticPostPhysics() {
-        if (latestNormalStepDiagnostics == null
-                || latestNormalStepDiagnostics.frameCounter() != frameCounter) {
+        if (latestNormalStepDiagnostics != null
+                && latestNormalStepDiagnostics.frameCounter() == frameCounter) {
+            latestNormalStepDiagnostics = latestNormalStepDiagnostics.withPostPhysics(
+                    diagnosticStatusByte(),
+                    diagnosticObjectControlByte(),
+                    sidekick.getXSpeed(),
+                    sidekick.getYSpeed(),
+                    sidekick.getGSpeed(),
+                    sidekick.getCentreX(),
+                    (short) sidekick.getXSubpixelRaw(),
+                    sidekick.getAngle());
+        }
+        applyPendingNativeEndingPoseAfterPhysics();
+    }
+
+    private void applyPendingNativeEndingPoseAfterPhysics() {
+        if (!nativeEndingPosePending) {
             return;
         }
-        latestNormalStepDiagnostics = latestNormalStepDiagnostics.withPostPhysics(
-                diagnosticStatusByte(),
-                diagnosticObjectControlByte(),
-                sidekick.getXSpeed(),
-                sidekick.getYSpeed(),
-                sidekick.getGSpeed(),
-                sidekick.getCentreX(),
-                (short) sidekick.getXSubpixelRaw(),
-                sidekick.getAngle());
+        nativeEndingPosePending = false;
+        controller2SignedLocked = false;
+        mirrorRawController2LogicalForEndingPose();
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+        sidekick.setControlLocked(false);
+        sidekick.setSpindash(false);
+        sidekick.setPushing(false);
+        sidekick.setXSpeed((short) 0);
+        sidekick.setYSpeed((short) 0);
+        sidekick.setGSpeed((short) 0);
+        int victoryAnimation = sidekick.resolveAnimationId(CanonicalAnimation.VICTORY);
+        if (victoryAnimation >= 0) {
+            sidekick.setAnimationId(victoryAnimation);
+        }
     }
 
     /**
@@ -5464,6 +5494,7 @@ public class SidekickCpuController {
                 catchUpFrameCounterOverride,
                 lastNormalAutoJumpPressFrameCounter,
                 controller2SignedLocked,
+                nativeEndingPosePending,
                 latestNormalStepDiagnostics,
                 carryLatchX,
                 carryLatchY,
@@ -5525,6 +5556,7 @@ public class SidekickCpuController {
         catchUpFrameCounterOverride = snapshot.catchUpFrameCounterOverride();
         lastNormalAutoJumpPressFrameCounter = snapshot.lastNormalAutoJumpPressFrameCounter();
         controller2SignedLocked = snapshot.controller2SignedLocked();
+        nativeEndingPosePending = snapshot.nativeEndingPosePending();
         latestNormalStepDiagnostics = snapshot.latestNormalStepDiagnostics();
         carryLatchX = snapshot.carryLatchX();
         carryLatchY = snapshot.carryLatchY();
@@ -5613,6 +5645,7 @@ public class SidekickCpuController {
         skipPhysicsThisFrame = false;
         deadOnObjectReenteredVisibleWindow = false;
         controller2SignedLocked = false;
+        nativeEndingPosePending = false;
         nextCpuFrameCounterOverride = -1;
         catchUpFrameCounterOverride = -1;
         // Note: leader is NOT cleared — it's a structural chain relationship set at

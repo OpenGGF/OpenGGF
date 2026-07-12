@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f30645 / 31 errors (6 errors under
+f3318 / 4234 errors to f30758 / 37 errors (2 errors under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -804,6 +804,28 @@ boss-graph rewind tests pass 5/5. The granular nine-route matrix remains exact:
 both AIZ routes green; CNZ complete f1846 / 5 and level-select f291 / 7; MGZ
 complete f1072 / 1 and level-select f1030 / 1; ICZ f3174 / 1; MHZ f2920 / 1;
 LBZ f2270 / 5.
+
+Milestone 68 separates the capsule's Player 1 results pose from
+`Check_TailsEndPose`. `sub_868F8` applies `Set_PlayerEndingPose` only to P1;
+the next routine-6 capsule entry checks P2 eligibility and queues the P2 pose
+for the following player slot. The rewind-captured CPU state keeps
+`Ctrl_2_locked` through that slot's no-input deceleration and position add,
+then clears the signed lock and applies object control, victory animation, and
+zero velocities after physics. This preserves Tails' final `$72` subpixel move
+before the ROM zeroes the velocity (`sonic3k.asm:181900-181940,181977-181990`).
+
+The button's established-rider path also now remains attached after P1 receives
+bit-7 object control: `SolidObjectFull_1P` consumes an existing standing bit
+before `SolidObject_cont` reaches its signed object-control rejection, while
+new bit-7 contacts remain blocked (`sonic3k.asm:41016-41035,41390-41442`).
+This clears the f30645-f30757 results-pose cluster and advances HCZ to f30758 /
+37 full-run errors (2 under `frontierOnly`), where the next owner is P1's
+post-results vertical position (`$07A3` expected, `$079D` actual). Focused HCZ,
+rewind coverage, and static-state coverage checks pass. The granular nine-route
+matrix again keeps both AIZ routes green and preserves every established red
+frontier/count: CNZ complete f1846 / 5 and level-select f291 / 7; MGZ complete
+f1072 / 1 and level-select f1030 / 1; ICZ f3174 / 1; MHZ f2920 / 1; LBZ f2270 /
+5.
 
 Milestone 31 restores TurboSpiker's detached-shell direction. The shell child
 inherits the parent's post-retreat render bit, but `loc_87D72` interprets that
