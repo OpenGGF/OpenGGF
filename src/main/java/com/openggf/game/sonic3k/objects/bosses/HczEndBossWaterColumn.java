@@ -632,15 +632,19 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
     private void applySuction(PlayableEntity player) {
         // Spray Y position for grab zone calculations
         int sprayY = getSprayY();
+        // sub_6B9AC initializes d2 once, then sub_6B9C8 mutates and reuses it
+        // across the native P1 -> P2 calls. Two players on the same side of
+        // the column therefore receive opposite pushes.
+        int suctionDelta = 2;
 
         if (player instanceof AbstractPlayableSprite sprite) {
             applyGrabAndCarry(sprite, true, sprayY);
-            applySuctionTo(sprite);
+            suctionDelta = applySuctionTo(sprite, suctionDelta);
         }
         for (PlayableEntity candidate : nativeParticipants(player)) {
             if (candidate != player && candidate instanceof AbstractPlayableSprite sprite) {
                 applyGrabAndCarry(sprite, false, sprayY);
-                applySuctionTo(sprite);
+                suctionDelta = applySuctionTo(sprite, suctionDelta);
             }
         }
     }
@@ -652,9 +656,9 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      * (not velocity-based), so the player can escape by running/swimming
      * in the opposite direction.
      */
-    private void applySuctionTo(AbstractPlayableSprite sprite) {
+    private int applySuctionTo(AbstractPlayableSprite sprite, int suctionDelta) {
         if (sprite.getDead() || sprite.isObjectControlled()) {
-            return;
+            return suctionDelta;
         }
 
         int waterY = getWaterLevelY();
@@ -663,17 +667,18 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         // ROM: cmp.w y_pos(a1),d1; bhs locret — skip if water+8 >= player_y
         // (skip when player is above water+8; apply when player is below water+8)
         if (spriteY <= waterY + 8) {
-            return;
+            return suctionDelta;
         }
 
         int spriteX = sprite.getCentreX();
         // ROM: cmp.w x_pos(a1),d0; bhs.s loc_6B9DC; neg.l d2
-        // If column_x >= sprite_x: push right (positive). Otherwise: push left.
-        if (spriteX < currentX) {
-            sprite.shiftX(2);
-        } else if (spriteX > currentX) {
-            sprite.shiftX(-2);
+        // d2 is shared between P1 and P2, so negate the incoming value rather
+        // than selecting an absolute direction independently for each player.
+        if (spriteX > currentX) {
+            suctionDelta = -suctionDelta;
         }
+        sprite.shiftX(suctionDelta);
+        return suctionDelta;
     }
 
     /**

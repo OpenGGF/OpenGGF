@@ -1030,6 +1030,31 @@ column. The column later creates spray child `loc_6B3DE`, whose
 
 ---
 
+## P28 -- Preserve mutable data registers across sequential P1/P2 helper calls
+
+**Symptom.** Player 1 matches an object force or carry routine while Player 2
+moves in the wrong direction or by the wrong amount, despite both calls using
+the same helper and apparently identical geometry.
+
+**Root cause.** The parent routine initializes a data register once and invokes
+the helper for P1 and P2 without restoring it. If the helper negates,
+increments, shifts, or otherwise mutates that register, P2 consumes the value
+left by P1. Recomputing an absolute result independently per player changes the
+native behavior.
+
+**What to check.** Trace every input/output register across the full caller,
+not only inside the helper. Port native player order and thread every mutated
+value through eligibility early returns as well as the active branch.
+
+**ROM citation.** HCZ `sub_6B9AC` initializes `d2=+$20000` once, then calls
+`sub_6B9C8` for P1 and P2. A player right of the column negates `d2`, so the
+second player's direction depends on the first call
+(`docs/skdisasm/sonic3k.asm:141757-141785`).
+
+**Originating commit.** `<pending: HCZ milestone 53>`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

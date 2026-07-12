@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f28856 / 506 errors (1 error under
+f3318 / 4234 errors to f28879 / 509 errors (7 errors under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -563,6 +563,20 @@ represents that initialization and needs no extra boolean delay
 (`sonic3k.asm:141107-141131,141205-141229,142249-142257,177328-177372`).
 
 This closes f28814-f28855 and advances HCZ to f28856 / 506 full-run errors (1
+under `frontierOnly`). The focused water-column control tests pass 2/2. The
+granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 53 preserves `sub_6B9AC`'s shared suction register across its native
+P1/P2 calls. The ROM initializes `d2=+$20000` once; each eligible player to the
+right of the column negates that same register before adding it to `x_pos`.
+When both players are on the right, P1 therefore receives -2 pixels and P2
+negates the retained value back to +2. The engine had independently selected a
+direction for each player and incorrectly pulled both left
+(`sonic3k.asm:141757-141785`).
+
+This closes f28856-f28878 and advances HCZ to f28879 / 509 full-run errors (7
 under `frontierOnly`). The focused water-column control tests pass 2/2. The
 granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
 complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
