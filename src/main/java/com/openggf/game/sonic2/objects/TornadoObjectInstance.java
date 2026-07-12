@@ -401,6 +401,10 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     // ------------------------------------------------------------------------
 
     private void updateSczMain(AbstractPlayableSprite player) {
+        PlayableEntity nativeMain = playerQuery(player).mainPlayerOrNull();
+        if (nativeMain instanceof AbstractPlayableSprite mainPlayer) {
+            player = mainPlayer;
+        }
         if (player == null) {
             return;
         }
@@ -450,13 +454,13 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                     sczTransitionRequested = true;
                 }
             } else {
-                applyScriptInput(player, INPUT_RIGHT, true);
+                applyTeamScriptInput(player, INPUT_RIGHT, true);
             }
             camera.setMaxX((short) cameraX);
             return;
         }
 
-        clearScriptInput(player);
+        clearTeamScriptInput(player);
         camera.setMaxX((short) (cameraX - SCZ_CAMERA_MAX_OFFSET));
     }
 
@@ -1323,6 +1327,10 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         }
         player.clearForcedInputMask();
         player.setControlLocked(false);
+    }
+
+    private void clearTeamScriptInput(AbstractPlayableSprite updatePlayer) {
+        forEachTeamPlayer(updatePlayer, this::clearScriptInput);
     }
 
     private boolean isMainPlayerStanding(AbstractPlayableSprite player) {

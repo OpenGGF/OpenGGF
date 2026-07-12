@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Sky Chase's Tornado finish now choreographs every configured sidekick safely.** SCZ progression remains main-player-driven while forced-right control, camera-backtrack release, unload/death cleanup, and rewind-restored cleanup cover the live player roster without changing native trace timing.
 - **LBZ tube elevators now carry every configured sidekick safely.** Player-identity state extends the native P1-then-P2 transport path across entry, motion, exit, death, unload, roster changes, closed-destination suppression, and rewind without transferring forced control between sidekicks.
 - **Sonic 2 object windows now follow widescreen viewports without changing native timing.** Placement keeps the shared slot-safe preload cap, while standard `MarkObjGone` lifetimes and paired sideways-platform endpoint ownership expand with the active width so visible objects are not deleted at ultrawide edges; 320px boundaries remain ROM-exact.
 - **LBZ ride grapples now carry every configured sidekick safely.** Extension riders keep independent, PlayerRefId-backed grab and cooldown state while native P2-then-P1 ordering continues to drive shared grapple motion; jump, death, path-end, unload, roster-change, and rewind cleanup preserve the active rider identity.
