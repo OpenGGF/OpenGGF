@@ -42,7 +42,10 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
 import com.openggf.debug.DebugColor;
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Object 0xB2 - Tornado (SCZ/WFZ scripted biplane sequence).
@@ -207,7 +210,9 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     private boolean highPriority;
 
     // Script control ownership/cleanup.
-    private boolean ownsPlayerControl;
+    // The Boolean records whether this Tornado also owns the native object-control bits
+    // (the invisible grabber does; SCZ/WFZ logical-input choreography does not).
+    private final Map<PlayableEntity, Boolean> controlledPlayers = new IdentityHashMap<>();
     private boolean sczTransitionRequested;
     private boolean dezTransitionRequested;
     private boolean levelLayoutPatched;
@@ -401,6 +406,10 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     // ------------------------------------------------------------------------
 
     private void updateSczMain(AbstractPlayableSprite player) {
+        PlayableEntity nativeMain = playerQuery(player).mainPlayerOrNull();
+        if (nativeMain instanceof AbstractPlayableSprite mainPlayer) {
+            player = mainPlayer;
+        }
         if (player == null) {
             return;
         }
@@ -450,13 +459,13 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                     sczTransitionRequested = true;
                 }
             } else {
-                applyScriptInput(player, INPUT_RIGHT, true);
+                applyTeamScriptInput(player, INPUT_RIGHT, true);
             }
             camera.setMaxX((short) cameraX);
             return;
         }
 
-        clearScriptInput(player);
+        clearTeamScriptInput();
         camera.setMaxX((short) (cameraX - SCZ_CAMERA_MAX_OFFSET));
     }
 
@@ -545,7 +554,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         // sequence. From this first ObjB2 frame onward, the Tornado owns cleanup
         // for those locks even while the main player is still approaching the
         // leader trigger.
-        ownsPlayerControl = true;
+        adoptTeamScriptControl(player);
 
         advanceMainAnimation();
         highPriority = true;
@@ -635,8 +644,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             jumpTimer = player.isSuperSonic() ? WFZ_JUMP_TIMER_SUPER : WFZ_JUMP_TIMER_NORMAL;
             // ObjB2_Prepare_to_jump writes Ctrl_1_Logical here, after Sonic's player step
             // has already run for this frame (docs/s2disasm/s2.asm:79007-79023).
-            forEachTeamPlayer(player, teamPlayer -> teamPlayer.setControlLocked(true));
-            ownsPlayerControl = true;
+            applyTeamScriptInput(player, 0, true);
         }
 
         alignPlaneAndSolid();
@@ -817,7 +825,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         player.setAnimationTick(0);
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
-        ownsPlayerControl = true;
+        controlledPlayers.put(player, Boolean.TRUE);
     }
 
     // ------------------------------------------------------------------------
@@ -1030,19 +1038,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onUnload() {
-        if (!ownsPlayerControl) {
-            return;
-        }
-        for (PlayableEntity entity : teamPlayers(getMainPlayer())) {
-            if (entity instanceof AbstractPlayableSprite player) {
-                player.clearForcedInputMask();
-                player.setControlLocked(false);
-                if (player.isObjectControlled()) {
-                    ObjectControlState.none().applyTo(player);
-                }
-            }
-        }
-        ownsPlayerControl = false;
+        releaseAllScriptControl();
     }
 
     // ------------------------------------------------------------------------
@@ -1285,12 +1281,35 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             player.setForcedInputMask(forcedMask & (INPUT_UP | INPUT_DOWN | INPUT_RIGHT | INPUT_JUMP));
         }
         if (lock || forcedMask != 0) {
-            ownsPlayerControl = true;
+            controlledPlayers.putIfAbsent(player, Boolean.FALSE);
         }
     }
 
     private void applyTeamScriptInput(AbstractPlayableSprite updatePlayer, int forcedMask, boolean lock) {
-        forEachTeamPlayer(updatePlayer, player -> applyScriptInput(player, forcedMask, lock));
+        List<PlayableEntity> participants = teamPlayers(updatePlayer);
+        releaseControlledPlayersMissingFrom(participants);
+        for (PlayableEntity entity : participants) {
+            if (entity instanceof AbstractPlayableSprite player) {
+                if (isValidScriptControlParticipant(player)) {
+                    applyScriptInput(player, forcedMask, lock);
+                } else {
+                    releaseScriptControl(player);
+                }
+            }
+        }
+    }
+
+    private void adoptTeamScriptControl(AbstractPlayableSprite updatePlayer) {
+        List<PlayableEntity> participants = teamPlayers(updatePlayer);
+        releaseControlledPlayersMissingFrom(participants);
+        for (PlayableEntity entity : participants) {
+            if (entity instanceof AbstractPlayableSprite player
+                    && isValidScriptControlParticipant(player)
+                    && (player.isControlLocked()
+                        || player.getForcedInputMask() != 0)) {
+                controlledPlayers.putIfAbsent(player, Boolean.FALSE);
+            }
+        }
     }
 
     private void applyTeamWaitingAnimation(AbstractPlayableSprite updatePlayer) {
@@ -1317,12 +1336,52 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void clearScriptInput(AbstractPlayableSprite player) {
-        if (player == null) {
+    private void clearTeamScriptInput() {
+        releaseAllScriptControl();
+    }
+
+    private boolean isValidScriptControlParticipant(AbstractPlayableSprite player) {
+        return !player.getDead() && !player.isHurt() && !player.isDebugMode();
+    }
+
+    private void releaseControlledPlayersMissingFrom(List<PlayableEntity> participants) {
+        for (PlayableEntity controlledPlayer : new ArrayList<>(controlledPlayers.keySet())) {
+            if (!containsIdentity(participants, controlledPlayer)) {
+                releaseScriptControl(controlledPlayer);
+            }
+        }
+    }
+
+    private void releaseAllScriptControl() {
+        for (PlayableEntity controlledPlayer : new ArrayList<>(controlledPlayers.keySet())) {
+            releaseScriptControl(controlledPlayer);
+        }
+        controlledPlayers.clear();
+    }
+
+    private void releaseScriptControl(PlayableEntity entity) {
+        Boolean ownedObjectControl = controlledPlayers.remove(entity);
+        if (ownedObjectControl == null) {
+            return;
+        }
+        boolean ownsObjectControl = ownedObjectControl;
+        if (!(entity instanceof AbstractPlayableSprite player)) {
             return;
         }
         player.clearForcedInputMask();
         player.setControlLocked(false);
+        if (ownsObjectControl && player.isObjectControlled()) {
+            ObjectControlState.none().applyTo(player);
+        }
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity target) {
+        for (PlayableEntity participant : participants) {
+            if (participant == target) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isMainPlayerStanding(AbstractPlayableSprite player) {
