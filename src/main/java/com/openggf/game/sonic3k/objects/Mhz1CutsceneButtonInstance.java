@@ -232,6 +232,12 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
         doorSwitchActive = false;
     }
 
+    void detachSpawnedKnuckles(CutsceneKnucklesMhz1Instance actor) {
+        if (spawnedKnuckles == actor) {
+            spawnedKnuckles = null;
+        }
+    }
+
     boolean isDoorLowered() {
         return doorLowered;
     }

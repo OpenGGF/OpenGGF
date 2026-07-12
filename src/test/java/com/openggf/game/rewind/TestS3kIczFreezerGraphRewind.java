@@ -10,6 +10,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
@@ -23,9 +24,11 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -203,15 +206,94 @@ class TestS3kIczFreezerGraphRewind {
                 "missing live player identity must fail loudly");
     }
 
+    @Test
+    void terminalCaptureCloudRemovalDetachesParentReferenceBeforeClosureValidation() {
+        TestablePlayableSprite player = player("sonic", 0x2600, 0x0340);
+        Harness harness = Harness.create(player);
+        ObjectManager objectManager = harness.objectManager();
+        IczFreezerObjectInstance freezer = objectManager.createDynamicObject(
+                () -> new IczFreezerObjectInstance(FREEZER_SPAWN));
+        IczFreezerObjectInstance.CaptureCloud cloud = objectManager.createDynamicObject(
+                () -> freezer.createCaptureCloudForTesting(0x2400, 0x0330, false));
+        writeObjectField(freezer, "lastCaptureCloud", cloud);
+        writeBooleanField(cloud, "offPhase", true);
+        writeIntField(cloud, "offPhaseDelay", -1);
+
+        stepManager(harness, 1);
+        assertTrue(cloud.isDestroyed(), "terminal off-phase must mark the cloud destroyed during update");
+        stepManager(harness, 2);
+
+        assertFalse(objectManager.getActiveObjects().contains(cloud),
+                "the following ObjectManager pass must remove the destroyed cloud");
+        assertNull(freezer.lastCaptureCloudForTesting(),
+                "cloud onUnload must detach the parent's captured reference");
+        assertDoesNotThrow(objectManager::validateRewindReferenceClosure);
+    }
+
+    @Test
+    void nullCaptureCloudSnapshotDropsDivergentCloudAndRestoresNullLink() {
+        Harness harness = Harness.create(player("sonic", 0x2600, 0x0340));
+        ObjectManager objectManager = harness.objectManager();
+        IczFreezerObjectInstance freezer = objectManager.createDynamicObject(
+                () -> new IczFreezerObjectInstance(FREEZER_SPAWN));
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot snapshot = registry.capture();
+
+        IczFreezerObjectInstance.CaptureCloud divergentCloud = objectManager.createDynamicObject(
+                () -> freezer.createCaptureCloudForTesting(0x2400, 0x0330, false));
+        writeObjectField(freezer, "lastCaptureCloud", divergentCloud);
+
+        registry.restore(snapshot);
+
+        assertEquals(0, countLive(objectManager, IczFreezerObjectInstance.CaptureCloud.class),
+                "restore must remove a cloud absent from the captured graph");
+        IczFreezerObjectInstance restoredFreezer = objectManager.getActiveObjects().stream()
+                .filter(IczFreezerObjectInstance.class::isInstance)
+                .map(IczFreezerObjectInstance.class::cast)
+                .findFirst()
+                .orElseThrow();
+        assertNull(restoredFreezer.lastCaptureCloudForTesting(),
+                "captured null graph edge must replace the divergent live edge");
+        assertDoesNotThrow(objectManager::validateRewindReferenceClosure);
+    }
+
+    @Test
+    void unloadingOldCloudCannotDetachNewerParentLink() {
+        TestablePlayableSprite player = player("sonic", 0x2410, 0x0340);
+        Harness harness = Harness.create(player);
+        ObjectManager objectManager = harness.objectManager();
+        IczFreezerObjectInstance freezer = objectManager.createDynamicObject(
+                () -> new IczFreezerObjectInstance(FREEZER_SPAWN));
+        IczFreezerObjectInstance.CaptureCloud oldCloud = objectManager.createDynamicObject(
+                () -> freezer.createCaptureCloudForTesting(0x2400, 0x0330, false));
+        IczFreezerObjectInstance.CaptureCloud newerCloud = objectManager.createDynamicObject(
+                () -> freezer.createCaptureCloudForTesting(0x2400, 0x0330, false));
+        writeObjectField(freezer, "lastCaptureCloud", newerCloud);
+        writeBooleanField(freezer, "frostCycleActive", true);
+        writeBooleanField(freezer, "freezeJetActive", true);
+        writeIntField(freezer, "phaseTimer", 10);
+        oldCloud.setDestroyed(true);
+
+        stepManager(harness, 1);
+
+        assertFalse(objectManager.getActiveObjects().contains(oldCloud));
+        assertSame(newerCloud, freezer.lastCaptureCloudForTesting(),
+                "an obsolete child's unload must not clear its replacement edge");
+        assertDoesNotThrow(objectManager::validateRewindReferenceClosure);
+    }
+
     private record Harness(ObjectManager objectManager, TestCamera camera, StubObjectServices services) {
         static Harness create(AbstractPlayableSprite focusedPlayer) {
             ObjectManager[] holder = new ObjectManager[1];
             TestCamera camera = new TestCamera();
             camera.setFocusedSprite(focusedPlayer);
+            ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(camera::getFocusedSprite, List::of);
             StubObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
                 @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
+                @Override public ObjectPlayerQuery playerQuery() { return playerQuery; }
             };
             ObjectManager objectManager = new ObjectManager(
                     List.of(),
@@ -292,6 +374,15 @@ class TestS3kIczFreezerGraphRewind {
 
     private static TestablePlayableSprite player(String code, int x, int y) {
         return new TestablePlayableSprite(code, (short) x, (short) y);
+    }
+
+    private static void stepManager(Harness harness, int frameCounter) {
+        harness.objectManager().update(
+                harness.camera().getX(),
+                harness.camera().getFocusedSprite(),
+                List.of(),
+                frameCounter,
+                false);
     }
 
     private static Object readObjectField(Object target, String name) {

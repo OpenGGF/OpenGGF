@@ -231,7 +231,8 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     }
 
     private boolean hasRidingSidekick(AbstractPlayableSprite player) {
-        for (PlayableEntity sidekick : services().playerQuery().sidekicks()) {
+        for (PlayableEntity sidekick : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (sidekick != player && sidekick instanceof AbstractPlayableSprite sprite
                     && sprite.isOnObject()) {
                 return true;

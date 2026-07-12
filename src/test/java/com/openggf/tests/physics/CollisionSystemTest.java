@@ -834,9 +834,9 @@ public class CollisionSystemTest {
     private static int invokeVerticalTileLookupY(short y, Direction direction) {
         try {
             Method method = GroundSensor.class.getDeclaredMethod(
-                    "verticalTileLookupY", short.class, Direction.class);
+                    "verticalTileLookupY", short.class, Direction.class, int.class);
             method.setAccessible(true);
-            return ((Number) method.invoke(null, y, direction)).intValue();
+            return ((Number) method.invoke(null, y, direction, 0x07FF)).intValue();
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Failed to invoke GroundSensor.verticalTileLookupY", e);
         }

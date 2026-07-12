@@ -152,6 +152,12 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         captureCloudsSpawned++;
     }
 
+    private void detachCaptureCloud(CaptureCloud candidate) {
+        if (lastCaptureCloud == candidate) {
+            lastCaptureCloud = null;
+        }
+    }
+
     private void spawnFrostPuff() {
         int puffY = y + (verticalFlip ? -0x0C : 0x0C);
         spawnChild(() -> new FrostPuff(x, puffY, verticalFlip));
@@ -437,6 +443,13 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         @Override
         public boolean isPersistent() {
             return true;
+        }
+
+        @Override
+        public void onUnload() {
+            if (parent != null) {
+                parent.detachCaptureCloud(this);
+            }
         }
 
         public FrozenPlayerBlock frozenBlockForTesting() {

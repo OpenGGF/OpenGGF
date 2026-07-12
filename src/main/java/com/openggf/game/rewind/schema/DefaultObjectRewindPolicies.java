@@ -163,6 +163,8 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance", "children"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance", "initialized"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance", "moveTable"), RewindFieldPolicy.TRANSIENT),
+            // Inverse Obj6A owner linkage is rebuilt from captured children after restore settles.
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance", "owner"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.MCZBrickObjectInstance", "displayChild"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZLauncherObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SidewaysPformObjectInstance", "linkedPlatform"), RewindFieldPolicy.CAPTURED),
@@ -293,6 +295,10 @@ final class DefaultObjectRewindPolicies {
             // CorkFloor onto the generic path and silently drop the CAPTURED rollingBreakPlayer.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CorkFloorObjectInstance", "effectiveVelTable"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CorkFloorObjectInstance", "rollingBreakPlayer"), RewindFieldPolicy.CAPTURED),
+            // Immutable glow layout metadata is reconstructed from captured ObjectSpawn.subtype.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild", "variant"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild", "xOffset"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild", "yOffset"), RewindFieldPolicy.TRANSIENT),
             // Gumball live child links are rebuilt from the restored child graph in
             // afterRewindRestoreSettled(). Capturing them as object refs can crash
             // after the dispenser/springs have been removed from ObjectManager while

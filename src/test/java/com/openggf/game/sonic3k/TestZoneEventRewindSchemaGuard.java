@@ -37,7 +37,9 @@ public class TestZoneEventRewindSchemaGuard {
             Sonic3kMGZEvents.class,
             Sonic3kMHZEvents.class,
             Sonic3kICZEvents.class);
-    private static final Set<String> AIZ_ALLOWED_TRANSIENT_FIELDS = Set.of("bootstrap");
+    private static final Set<String> AIZ_ALLOWED_TRANSIENT_FIELDS = Set.of(
+            "bootstrap",
+            "vblankCounterSource");
     private static final Set<String> HCZ_ALLOWED_TRANSIENT_FIELDS = Set.of("wallObject");
     private static final Set<String> CNZ_ALLOWED_TRANSIENT_FIELDS = Set.of();
     private static final Set<String> MGZ_ALLOWED_TRANSIENT_FIELDS = Set.of(

@@ -19,13 +19,18 @@ public final class ScreenShakeTimerSlotObjectInstance extends AbstractObjectInst
         this.remainingFrames = Math.max(0, remainingFrames);
     }
 
+    /** Headless rewind-probe constructor; live timers use the duration constructor. */
+    ScreenShakeTimerSlotObjectInstance(ObjectSpawn spawn) {
+        super(spawn, "ScreenShakeTimer");
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (remainingFrames > 0) {
             remainingFrames--;
         }
         if (remainingFrames == 0) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
         }
     }
 
