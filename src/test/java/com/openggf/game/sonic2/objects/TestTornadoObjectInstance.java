@@ -186,6 +186,80 @@ public class TestTornadoObjectInstance {
     }
 
     @Test
+    public void wfzPrepareToJumpLocksEveryEngineSidekickWithoutChangingMainAuthority() throws Exception {
+        TornadoObjectInstance tornado = createTornado(0x2E58, 0x066C, 0x54);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x2E31, (short) 0x05EC);
+        TestPlayableSprite nativeP2 = new TestPlayableSprite("tails", (short) 0x2E20, (short) 0x05EC);
+        TestPlayableSprite extra = new TestPlayableSprite("knuckles", (short) 0x2E10, (short) 0x05EC);
+        tornado.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extra)));
+        setField(tornado, "routineSecondary", 6);
+        setField(tornado, "scriptTimer", 0x2F);
+
+        tornado.update(0, main);
+
+        assertEquals(8, getField(tornado, "routineSecondary"),
+                "only the main player's Tornado update advances the WFZ script");
+        assertTrue(main.isControlLocked());
+        assertTrue(nativeP2.isControlLocked());
+        assertTrue(extra.isControlLocked());
+    }
+
+    @Test
+    public void tornadoUnloadClearsScriptControlForWholeTeam() throws Exception {
+        TornadoObjectInstance tornado = createTornado(0x2E58, 0x066C, 0x54);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x2E31, (short) 0x05EC);
+        TestPlayableSprite nativeP2 = new TestPlayableSprite("tails", (short) 0x2E20, (short) 0x05EC);
+        TestPlayableSprite extra = new TestPlayableSprite("knuckles", (short) 0x2E10, (short) 0x05EC);
+        tornado.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extra)));
+        setField(tornado, "routineSecondary", 6);
+        setField(tornado, "scriptTimer", 0x2F);
+        tornado.update(0, main);
+
+        tornado.onUnload();
+
+        assertFalse(main.isControlLocked());
+        assertFalse(nativeP2.isControlLocked());
+        assertFalse(extra.isControlLocked());
+    }
+
+    @Test
+    public void wfzJumpToPlaneAppliesScriptedJumpToWholeTeam() throws Exception {
+        TornadoObjectInstance tornado = createTornado(0x2EC1, 0x0603, 0x54);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x2EA4, (short) 0x05D0);
+        TestPlayableSprite nativeP2 = new TestPlayableSprite("tails", (short) 0x2E90, (short) 0x05D0);
+        TestPlayableSprite extra = new TestPlayableSprite("knuckles", (short) 0x2E80, (short) 0x05D0);
+        tornado.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extra)));
+        setField(tornado, "routineSecondary", 8);
+        setField(tornado, "jumpTimer", 0);
+
+        tornado.update(0, main);
+
+        int expected = AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP;
+        assertEquals(expected, main.getForcedInputMask());
+        assertEquals(expected, nativeP2.getForcedInputMask());
+        assertEquals(expected, extra.getForcedInputMask());
+    }
+
+    @Test
+    public void wfzLandedOnPlaneSeatsWholeTeamWhileMainAdvancesScript() throws Exception {
+        TornadoObjectInstance tornado = createTornado(0x2EC4, 0x0600, 0x54);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x2EA4, (short) 0x05D0);
+        TestPlayableSprite nativeP2 = new TestPlayableSprite("tails", (short) 0x2E90, (short) 0x05B0);
+        TestPlayableSprite extra = new TestPlayableSprite("knuckles", (short) 0x2E80, (short) 0x05A0);
+        tornado.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extra)));
+        setField(tornado, "routineSecondary", 0x0A);
+
+        tornado.update(0, main);
+
+        assertEquals(1, getField(tornado, "scriptTimer"));
+        for (TestPlayableSprite player : List.of(main, nativeP2, extra)) {
+            assertEquals(0x2EC4, player.getCentreX() & 0xFFFF);
+            assertEquals(0x05E4, player.getCentreY() & 0xFFFF);
+            assertFalse(player.getAir());
+        }
+    }
+
+    @Test
     public void wfzJumpToPlaneKeepsScriptedInputOnFinalTimerFrame() throws Exception {
         TornadoObjectInstance tornado = createTornado(0x2EC1, 0x0603, 0x54);
         TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x2EA4, (short) 0x05D0);

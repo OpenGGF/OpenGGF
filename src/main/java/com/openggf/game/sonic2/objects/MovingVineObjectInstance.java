@@ -20,6 +20,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -106,6 +107,8 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
     private boolean player2Grabbed;         // objoff_31
     private int player1ReleaseDelay;        // objoff_32 (byte at a2+2)
     private int player2ReleaseDelay;        // objoff_33 (byte at a2+2 for player 2)
+    private IdentityHashMap<PlayableEntity, Boolean> extraPlayerGrabbed = new IdentityHashMap<>();
+    private IdentityHashMap<PlayableEntity, Integer> extraPlayerReleaseDelay = new IdentityHashMap<>();
 
     // === Position Tracking ===
     private int currentY;                   // Dynamic Y position = initialY + currentExtension
@@ -226,7 +229,7 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
         List<PlayableEntity> participants = interactionParticipants(playerEntity);
         for (int i = 0; i < participants.size(); i++) {
             if (participants.get(i) instanceof AbstractPlayableSprite player) {
-                processPlayerInteraction(player, i != 0);
+                processPlayerInteraction(player, i);
             }
         }
 
@@ -257,7 +260,8 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
      * </ul>
      */
     private void updateExtension() {
-        boolean anyPlayerGrabbed = player1Grabbed || player2Grabbed;
+        boolean anyPlayerGrabbed = player1Grabbed || player2Grabbed
+                || extraPlayerGrabbed.containsValue(Boolean.TRUE);
 
         // ROM logic (simplified):
         // if objoff_36 != 0 (reversed mode):
@@ -334,34 +338,62 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
      * <p>
      * ROM Reference: Obj80_Action (loc_29ACC-29BF8)
      *
-     * @param player   The player sprite to check
-     * @param isPlayer2 true if this is player 2 (Sidekick)
+     * @param player      the player sprite to check
+     * @param playerIndex native P1/P2 slot index, or the extended sidekick index
      */
-    private void processPlayerInteraction(AbstractPlayableSprite player, boolean isPlayer2) {
+    private void processPlayerInteraction(AbstractPlayableSprite player, int playerIndex) {
         if (player == null) {
             return;
         }
 
-        boolean isGrabbed = isPlayer2 ? player2Grabbed : player1Grabbed;
-        int releaseDelay = isPlayer2 ? player2ReleaseDelay : player1ReleaseDelay;
+        boolean isGrabbed = isPlayerGrabbed(player, playerIndex);
+        int releaseDelay = playerReleaseDelay(player, playerIndex);
 
         if (isGrabbed) {
             // Player is currently grabbed - check for release
-            handleGrabbedPlayer(player, isPlayer2);
+            handleGrabbedPlayer(player, playerIndex);
         } else {
             // Check release delay timer
             // ROM: tst.b 2(a2) / beq.s + / subq.b #1,2(a2) / bne.w return_29BF8
             if (releaseDelay > 0) {
-                if (isPlayer2) {
-                    player2ReleaseDelay--;
-                } else {
-                    player1ReleaseDelay--;
-                }
+                setPlayerReleaseDelay(player, playerIndex, releaseDelay - 1);
                 return;  // Still in release delay
             }
 
             // Check for new grab
-            checkForGrab(player, isPlayer2);
+            checkForGrab(player, playerIndex);
+        }
+    }
+
+    private boolean isPlayerGrabbed(PlayableEntity player, int playerIndex) {
+        return switch (playerIndex) {
+            case 0 -> player1Grabbed;
+            case 1 -> player2Grabbed;
+            default -> extraPlayerGrabbed.getOrDefault(player, false);
+        };
+    }
+
+    private void setPlayerGrabbed(PlayableEntity player, int playerIndex, boolean grabbed) {
+        switch (playerIndex) {
+            case 0 -> player1Grabbed = grabbed;
+            case 1 -> player2Grabbed = grabbed;
+            default -> extraPlayerGrabbed.put(player, grabbed);
+        }
+    }
+
+    private int playerReleaseDelay(PlayableEntity player, int playerIndex) {
+        return switch (playerIndex) {
+            case 0 -> player1ReleaseDelay;
+            case 1 -> player2ReleaseDelay;
+            default -> extraPlayerReleaseDelay.getOrDefault(player, 0);
+        };
+    }
+
+    private void setPlayerReleaseDelay(PlayableEntity player, int playerIndex, int delay) {
+        switch (playerIndex) {
+            case 0 -> player1ReleaseDelay = delay;
+            case 1 -> player2ReleaseDelay = delay;
+            default -> extraPlayerReleaseDelay.put(player, delay);
         }
     }
 
@@ -370,10 +402,10 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
      * <p>
      * ROM Reference: Obj80_Action (loc_29ACC-29B50)
      *
-     * @param player    The grabbed player
-     * @param isPlayer2 true if this is player 2
+     * @param player      the grabbed player
+     * @param playerIndex native P1/P2 slot index, or the extended sidekick index
      */
-    private void handleGrabbedPlayer(AbstractPlayableSprite player, boolean isPlayer2) {
+    private void handleGrabbedPlayer(AbstractPlayableSprite player, int playerIndex) {
         // ROM: tst.b (a2) / beq.w loc_29B5E
         // (a2) points to objoff_30/31 grab flag
 
@@ -396,14 +428,14 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
         // populated (hasRenderFlagOnScreenState) so a yet-uninitialised state
         // does not spuriously release the grab.
         if (player.hasRenderFlagOnScreenState() && !player.isRenderFlagOnScreen()) {
-            releasePlayer(player, isPlayer2, false);
+            releasePlayer(player, playerIndex, false);
             return;
         }
 
         // Check if player should be released (dead, debug mode, etc.)
         // ROM: cmpi.b #4,routine(a1) / bhs.s loc_29B42
         if (player.isHurt() || player.isDebugMode()) {
-            releasePlayer(player, isPlayer2, false);
+            releasePlayer(player, playerIndex, false);
             return;
         }
 
@@ -423,7 +455,7 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
         // This matches the sister object Obj7F (VineSwitchObjectInstance, which
         // reads the same raw (Ctrl_1)/(Ctrl_2) word, docs/s2disasm/s2.asm:56463-56491).
         if (player.isRawControllerJumpJustPressed()) {
-            releasePlayer(player, isPlayer2, true);
+            releasePlayer(player, playerIndex, true);
             return;
         }
 
@@ -440,10 +472,10 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
      * <p>
      * ROM Reference: Obj80_Action (loc_29B5E-29BF8)
      *
-     * @param player    The player to check
-     * @param isPlayer2 true if this is player 2
+     * @param player      the player to check
+     * @param playerIndex native P1/P2 slot index, or the extended sidekick index
      */
-    private void checkForGrab(AbstractPlayableSprite player, boolean isPlayer2) {
+    private void checkForGrab(AbstractPlayableSprite player, int playerIndex) {
         // Check horizontal grab zone: player must be within [-0x10, +0x0F] of vine center
         // ROM: move.w x_pos(a1),d0 / sub.w x_pos(a0),d0 / addi.w #$10,d0 / cmpi.w #$20,d0 / bhs.w return_29BF8
         // The ROM adds 0x10 to delta, then checks if result is < 0x20 (unsigned)
@@ -479,7 +511,7 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
         }
 
         // Grab the player
-        grabPlayer(player, isPlayer2);
+        grabPlayer(player, playerIndex);
     }
 
     /**
@@ -487,10 +519,10 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
      * <p>
      * ROM Reference: Obj80_Action (loc_29BC8-29BF8)
      *
-     * @param player    The player to grab
-     * @param isPlayer2 true if this is player 2
+     * @param player      the player to grab
+     * @param playerIndex native P1/P2 slot index, or the extended sidekick index
      */
-    private void grabPlayer(AbstractPlayableSprite player, boolean isPlayer2) {
+    private void grabPlayer(AbstractPlayableSprite player, int playerIndex) {
         // Zero velocity and inertia
         // ROM: clr.w x_vel(a1) / clr.w y_vel(a1) / clr.w inertia(a1)
         player.setXSpeed((short) 0);
@@ -514,11 +546,7 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
 
         // Mark as grabbed
         // ROM: move.b #1,(a2)
-        if (isPlayer2) {
-            player2Grabbed = true;
-        } else {
-            player1Grabbed = true;
-        }
+        setPlayerGrabbed(player, playerIndex, true);
 
         // Button vine trigger
         // ROM: tst.b objoff_34(a0) / beq.s return_29BF8
@@ -540,22 +568,18 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
      * <p>
      * ROM Reference: Obj80_Action (loc_29AE0-29B40)
      *
-     * @param player    The player to release
-     * @param isPlayer2 true if this is player 2
-     * @param jumped    true if player pressed jump button to release
+     * @param player      the player to release
+     * @param playerIndex native P1/P2 slot index, or the extended sidekick index
+     * @param jumped      true if player pressed jump button to release
      */
-    private void releasePlayer(AbstractPlayableSprite player, boolean isPlayer2, boolean jumped) {
+    private void releasePlayer(AbstractPlayableSprite player, int playerIndex, boolean jumped) {
         // Clear control lock
         // ROM: clr.b obj_control(a1)
         ObjectControlState.none().applyTo(player);
 
         // Clear grab flag
         // ROM: clr.b (a2)
-        if (isPlayer2) {
-            player2Grabbed = false;
-        } else {
-            player1Grabbed = false;
-        }
+        setPlayerGrabbed(player, playerIndex, false);
 
         // Set release delay
         // ROM: move.b #18,2(a2) (normal) or move.b #60,2(a2) (if direction held)
@@ -596,11 +620,7 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
         }
 
         // Set the release delay timer
-        if (isPlayer2) {
-            player2ReleaseDelay = releaseDelayFrames;
-        } else {
-            player1ReleaseDelay = releaseDelayFrames;
-        }
+        setPlayerReleaseDelay(player, playerIndex, releaseDelayFrames);
 
         // Clear button vine trigger
         // ROM: tst.b objoff_34(a0) / beq.s + / ... / bclr #0,(a3)

@@ -180,10 +180,18 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SeesawBallObjectInstance", "originalSpawn"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SeesawObjectInstance", "standingPlayer1"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SeesawObjectInstance", "standingPlayer2"), RewindFieldPolicy.TRANSIENT),
+            // Engine-extension sidekicks need independent durable Obj80 grab/cooldown state.
+            // The map codec stores PlayableEntity keys as PlayerRefId values through the
+            // ObjectManager identity context, preserving identity across recreated players.
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.MovingVineObjectInstance", "extraPlayerGrabbed"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.MovingVineObjectInstance", "extraPlayerReleaseDelay"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SpringboardObjectInstance", "launchPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance", "player"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance", "displayChild"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.TornadoObjectInstance", "thrusterFollowerChild"), RewindFieldPolicy.CAPTURED),
+            // Extra sidekicks extend Obj8B beyond its native P2 byte; keep each crossing
+            // latch keyed by the stable rewind player id rather than live object identity.
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance", "extraPlayerPastTrigger"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractS3kFloatingEndEggCapsuleInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractS3kUprightEggCapsuleInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
             // AIZ collapsing log bridge: once collapsing it stops being a solid surface (onSolidContact no longer

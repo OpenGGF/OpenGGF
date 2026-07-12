@@ -1,9 +1,13 @@
 package com.openggf.game.sonic2.events;
 
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 /**
  * Wing Fortress Zone events.
@@ -442,13 +446,16 @@ public class Sonic2WFZEvents extends Sonic2ZoneEvents {
     }
 
     private void lockPlayerInputWithCurrentLogicalState() {
-        AbstractPlayableSprite player = camera().getFocusedSprite();
-        if (player == null) {
-            return;
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> camera().getFocusedSprite(),
+                () -> List.copyOf(spriteManager().getSidekicks()));
+        for (PlayableEntity entity : query.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (entity instanceof AbstractPlayableSprite player) {
+                int mask = player.getLogicalInputState();
+                player.setControlLocked(true);
+                player.setForcedInputMask(mask);
+            }
         }
-        int mask = player.getLogicalInputState();
-        player.setControlLocked(true);
-        player.setForcedInputMask(mask);
     }
 
     private void requestPlc(int plcId) {

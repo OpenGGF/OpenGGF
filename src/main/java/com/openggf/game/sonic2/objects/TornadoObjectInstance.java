@@ -158,6 +158,8 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     private static final int INPUT_UP = AbstractPlayableSprite.INPUT_UP;
     private static final int INPUT_DOWN = AbstractPlayableSprite.INPUT_DOWN;
     private static final int INPUT_JUMP = AbstractPlayableSprite.INPUT_JUMP;
+    private static final ObjectPlayerParticipationPolicy TEAM_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
 
     // ------------------------------------------------------------------------
     // State
@@ -625,7 +627,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             jumpTimer = player.isSuperSonic() ? WFZ_JUMP_TIMER_SUPER : WFZ_JUMP_TIMER_NORMAL;
             // ObjB2_Prepare_to_jump writes Ctrl_1_Logical here, after Sonic's player step
             // has already run for this frame (docs/s2disasm/s2.asm:79007-79023).
-            player.setControlLocked(true);
+            forEachTeamPlayer(player, teamPlayer -> teamPlayer.setControlLocked(true));
             ownsPlayerControl = true;
         }
 
@@ -637,9 +639,9 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     private void wfzJumpToPlane(AbstractPlayableSprite player) {
         scriptTimer++;
         if (jumpTimer >= 0) {
-            applyScriptInput(player, INPUT_RIGHT | INPUT_JUMP, true);
+            applyTeamScriptInput(player, INPUT_RIGHT | INPUT_JUMP, true);
         } else {
-            applyScriptInput(player, 0, true);
+            applyTeamScriptInput(player, 0, true);
         }
         jumpTimer--;
 
@@ -669,7 +671,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         // ROM ObjB2_Landed_on_plane writes Sonic's x_pos/y_pos and clears his
         // movement state before ObjB2_Align_plane moves the Tornado
         // (docs/s2disasm/s2.asm:79047-79071).
-        placePlayerOnWfzPlane(player);
+        forEachTeamPlayer(player, this::placePlayerOnWfzPlane);
         alignPlaneAndSolid();
         renderThisFrame = true;
     }
@@ -679,25 +681,24 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         if (scriptTimer >= WFZ_JUMP_TO_SHIP_START) {
             routineSecondary = 0x0E;
         }
-        wfzJumpToShipCommon();
+        wfzJumpToShipCommon(player);
     }
 
     private void wfzJumpToShip(AbstractPlayableSprite player) {
         applyWaitingAnimation(player);
-        wfzJumpToShipCommon();
+        wfzJumpToShipCommon(player);
     }
 
-    private void wfzJumpToShipCommon() {
-        AbstractPlayableSprite player = getMainPlayer();
+    private void wfzJumpToShipCommon(AbstractPlayableSprite player) {
         // ROM writes Ctrl_1_Logical from ObjB2_Jump_to_ship after Sonic's player
         // step for that frame has already run (docs/s2disasm/s2.asm:79075-79089).
         // Engine forced input persists into the next player step, so latch it one
         // ObjB2 tick later than the ROM counter compare.
         boolean jumpingToShip = scriptTimer > WFZ_JUMP_TO_SHIP_START && scriptTimer < WFZ_JUMP_TO_SHIP_END;
         if (jumpingToShip) {
-            applyScriptInput(player, INPUT_JUMP, true);
+            applyTeamScriptInput(player, INPUT_JUMP, true);
         } else {
-            applyScriptInput(player, 0, true);
+            applyTeamScriptInput(player, 0, true);
         }
 
         if (scriptTimer >= WFZ_SPAWN_EXTRA_CHILDREN_AT && !spawnedWfzDockChildren) {
@@ -711,7 +712,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
 
         boolean keepPlayerOnPlane = scriptTimer <= WFZ_JUMP_TO_SHIP_START + 1;
         if (keepPlayerOnPlane) {
-            placePlayerOnWfzPlane(player);
+            forEachTeamPlayer(player, this::placePlayerOnWfzPlane);
         }
         wfzDockOnDez();
     }
@@ -1024,12 +1025,13 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         if (!ownsPlayerControl) {
             return;
         }
-        AbstractPlayableSprite player = getMainPlayer();
-        if (player != null) {
-            player.clearForcedInputMask();
-            player.setControlLocked(false);
-            if (player.isObjectControlled()) {
-                ObjectControlState.none().applyTo(player);
+        for (PlayableEntity entity : teamPlayers(getMainPlayer())) {
+            if (entity instanceof AbstractPlayableSprite player) {
+                player.clearForcedInputMask();
+                player.setControlLocked(false);
+                if (player.isObjectControlled()) {
+                    ObjectControlState.none().applyTo(player);
+                }
             }
         }
         ownsPlayerControl = false;
@@ -1276,6 +1278,30 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         }
         if (lock || forcedMask != 0) {
             ownsPlayerControl = true;
+        }
+    }
+
+    private void applyTeamScriptInput(AbstractPlayableSprite updatePlayer, int forcedMask, boolean lock) {
+        forEachTeamPlayer(updatePlayer, player -> applyScriptInput(player, forcedMask, lock));
+    }
+
+    private List<PlayableEntity> teamPlayers(AbstractPlayableSprite updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(TEAM_PARTICIPATION);
+        if (updatePlayer == null || participants.contains(updatePlayer)) {
+            return participants;
+        }
+        java.util.ArrayList<PlayableEntity> withUpdatePlayer = new java.util.ArrayList<>(participants.size() + 1);
+        withUpdatePlayer.add(updatePlayer);
+        withUpdatePlayer.addAll(participants);
+        return withUpdatePlayer;
+    }
+
+    private void forEachTeamPlayer(AbstractPlayableSprite updatePlayer,
+                                   java.util.function.Consumer<AbstractPlayableSprite> action) {
+        for (PlayableEntity entity : teamPlayers(updatePlayer)) {
+            if (entity instanceof AbstractPlayableSprite player) {
+                action.accept(player);
+            }
         }
     }
 
