@@ -113,6 +113,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private int createGateFrames = RESULTS_CREATE_KOS_GATE_FRAMES;
     private boolean actTransitionSignaled;
     private int carriedResultsRenderRetireDispatches;
+    private boolean exitRetireDispatchesInitialized;
 
     public S3kResultsScreenObjectInstance(PlayerCharacter character, int act) {
         super("S3kResults");
@@ -396,6 +397,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      */
     private void updateExitQueue() {
         if (childrenRemaining <= 0) {
+            if (!exitRetireDispatchesInitialized) {
+                carriedResultsRenderRetireDispatches += additionalChildRetireDispatches();
+                exitRetireDispatchesInitialized = true;
+            }
             if (carriedResultsRenderRetireDispatches > 0) {
                 carriedResultsRenderRetireDispatches--;
                 return;
@@ -417,6 +422,14 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 }
             }
         }
+    }
+
+    /**
+     * Additional owner dispatches while ROM child SSTs finish retiring after
+     * the engine's embedded result elements have left the screen.
+     */
+    protected int additionalChildRetireDispatches() {
+        return 0;
     }
 
     @Override
@@ -589,7 +602,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         if (!lbzAct2PostBossHandoff) {
             cam.setFrozen(false);
         }
-        if (shouldRestoreLevelCameraBoundsOnExit(zone, act)
+        if (shouldRestoreCameraBoundsOnExit(zone, act)
                 && !Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
             var level = services().currentLevel();
             if (level != null) {
@@ -673,6 +686,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 && (zone == 0x00 || zone == 0x01 || zone == 0x02);
         boolean lbzActTwoPostBossHandoff = zone == 0x06 && act == 1;
         return !actOneInLevelTitleHandoff && !lbzActTwoPostBossHandoff;
+    }
+
+    protected boolean shouldRestoreCameraBoundsOnExit(int zone, int act) {
+        return shouldRestoreLevelCameraBoundsOnExit(zone, act);
     }
 
     protected boolean shouldRestorePlayerControlsOnExit() {

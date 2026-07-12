@@ -25,8 +25,8 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f31121 / 48 errors (8 errors under
-`frontierOnly`).
+f3318 / 4234 errors to GREEN through the HCZ-to-MGZ boundary after milestone
+70.
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -843,6 +843,33 @@ new frontier. The next owner is the boss-wait camera lock (`$4180` expected,
 granular matrix remains unchanged: both AIZ routes green; CNZ complete f1846 /
 5 and level-select f291 / 7; MGZ complete f1072 / 1 and level-select f1030 / 1;
 ICZ f3174 / 1; MHZ f2920 / 1; LBZ f2270 / 5.
+
+Milestone 70 completes the HCZ results/geyser handoff. HCZ2 results retain the
+boss-arena camera bounds and the event-owned results parent accounts for its
+remaining child-SST retire dispatches before `_unkFAA8` clears. The resulting
+`loc_6B154` handoff signs both controller-lock bytes and clears their logical
+words before creating the primary geyser owner (`sonic3k.asm:62679-62693,
+140986-141006`).
+
+The geyser sequence now allocates the delayed subtype `-1` P2 owner with its
+four-count `Obj_Wait`, targets the native P2 slot, and leaves transition timing
+owned solely by the primary subtype. Both owners keep carrying upward while
+the primary `$5F` wait passes through zero; `StartNewLevel #$0200` preserves
+the carried control/position state and the pre-boundary camera sample
+(`sonic3k.asm:141545-141633`). The engine's embedded results children and
+camera-before-object phase are bridged at those owning object boundaries; no
+trace data is hydrated and no route/frame exception is used.
+
+The complete HCZ replay now passes both with and without `trace.frontierOnly`,
+closing the prior f31121 / 48 full-run report. Focused results-camera,
+end-boss, water-column policy, and HCZ boss-graph rewind checks pass. The fresh
+nine-route S3K matrix keeps both AIZ routes green and reproduces every other
+established frontier/count exactly: CNZ complete f1846 / 5 and level-select
+f291 / 7; MGZ complete f1072 / 1 and level-select f1030 / 1; ICZ f3174 / 1;
+MHZ f2920 / 1; LBZ f2270 / 5. The broader HCZ batch's Mockito cases require
+`-Dnet.bytebuddy.experimental=true` under the workspace's Java 26 runtime;
+the rewind coverage guard separately reports the pre-existing AIZ intro glow
+final-scalar gaps introduced before this HCZ milestone.
 
 Milestone 31 restores TurboSpiker's detached-shell direction. The shell child
 inherits the parent's post-retreat render bit, but `loc_87D72` interprets that

@@ -14,7 +14,9 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -60,6 +62,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
 
     // Post-open delay before results (ROM: 64-frame timer)
     private static final int POST_OPEN_DELAY = 64;
+    private static final int HCZ_RESULTS_CHILD_RETIRE_DISPATCHES = 6;
 
     // Animal spawn count (ROM: 14 animals)
     private static final int ANIMAL_COUNT = 14;
@@ -262,7 +265,8 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         // changes to routine 6 here; Check_TailsEndPose starts on the following
         // routine-6 entry, not in this same dispatch.
         lockForResults(player);
-        spawnChild(() -> new S3kResultsScreenObjectInstance(getPlayerCharacter(), services().currentAct()));
+        spawnChild(() -> new HczEndBossResultsScreenObjectInstance(
+                getPlayerCharacter(), services().currentAct()));
     }
 
     private void advanceTailsEndingPoseCheck() {
@@ -349,5 +353,53 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         int buttonFrame = opened ? 0xC : 0x5;
         int buttonY = fixedY + BUTTON_Y_OFFSET;
         renderer.drawFrameIndex(buttonFrame, fixedX, buttonY, false, false);
+    }
+
+    private static final class HczEndBossResultsScreenObjectInstance
+            extends S3kResultsScreenObjectInstance {
+        private HczEndBossResultsScreenObjectInstance(PlayerCharacter character, int act) {
+            super(character, act);
+        }
+
+        private HczEndBossResultsScreenObjectInstance() {
+            this(PlayerCharacter.SONIC_AND_TAILS, 1);
+        }
+
+        @Override
+        protected void onExitReady() {
+            super.onExitReady();
+
+            // loc_6B154 clears the logical words and signs both controller-lock
+            // bytes before restoring object control and creating the geyser.
+            if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite main) {
+                main.setControlLocked(true);
+            }
+            if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
+                    && sidekick.getCpuController() != null) {
+                sidekick.getCpuController().setController2SignedLocked(true);
+                sidekick.getCpuController().clearController2LogicalLatch();
+            }
+        }
+
+        @Override
+        protected int additionalChildRetireDispatches() {
+            // Obj_LevelResultsWait2 polls its live child-SST count at $30
+            // before loc_2DCE2 may clear _unkFAA8 (sonic3k.asm:62679-62693).
+            // HCZ's event-owned results retain six owner dispatches after the
+            // engine's embedded result elements have left the screen.
+            return HCZ_RESULTS_CHILD_RETIRE_DISPATCHES;
+        }
+
+        @Override
+        protected boolean shouldRestoreCameraBoundsOnExit(int zone, int act) {
+            // loc_6B154 retains the boss-arena X lock for the geyser handoff.
+            return false;
+        }
+
+        @Override
+        public HczEndBossResultsScreenObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            return ObjectConstructionContext.construct(ctx.objectServices(),
+                    HczEndBossResultsScreenObjectInstance::new);
+        }
     }
 }
