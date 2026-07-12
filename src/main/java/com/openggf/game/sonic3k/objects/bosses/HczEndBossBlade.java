@@ -88,7 +88,7 @@ public class HczEndBossBlade extends AbstractBossChild implements TouchResponseP
     /** Horizontal velocity when fired (magnitude; direction is boss-facing-dependent). */
     private static final int FLY_XVEL = 0x100;
     /** Gravity applied each frame during FALL and UNDERWATER_FALL (subpixels). */
-    private static final int GRAVITY = 0x38;
+    private static final int GRAVITY = 0x20;
     /** Floor Y boundary below which the blade self-destructs (pixels). */
     private static final int FLOOR_Y_LIMIT = 0x1000;
     /** Off-screen margin for deletion while flying. */
@@ -336,13 +336,16 @@ public class HczEndBossBlade extends AbstractBossChild implements TouchResponseP
      * </ul>
      */
     private void updatePreLaunch() {
+        // loc_6B678 adds $40 (1 for the firing blade) to child_dx before
+        // Refresh_ChildPositionAdjusted on every Obj_Wait dispatch.
+        if (subtype == 0 && boss.isBladeFireSignal()) {
+            xOffset++;
+        }
         // Track boss position (ROM: Refresh_ChildPositionAdjusted)
         int dx = boss.isFacingRight() ? -xOffset : xOffset;
         currentX = boss.getState().x + dx;
         currentY = boss.getState().y + yOffset;
         updateDynamicSpawn();
-
-        tickAnimation();
 
         // Decrement wait timer
         waitTimer--;
@@ -400,15 +403,10 @@ public class HczEndBossBlade extends AbstractBossChild implements TouchResponseP
             return;
         }
 
-        // ROM: MoveSprite_LightGravity — apply gravity and velocity
-        yVel += GRAVITY;
-        yFixed += yVel;
-        xFixed += xVel;
+        moveWithLightGravity();
         currentX = xFixed >> 8;
         currentY = yFixed >> 8;
         updateDynamicSpawn();
-
-        tickAnimation();
 
         // Off-screen deletion
         if (!isOnScreen(OFFSCREEN_MARGIN)) {
@@ -428,15 +426,10 @@ public class HczEndBossBlade extends AbstractBossChild implements TouchResponseP
      * When floor is hit, callback (loc_6B71C) transitions to SPIN_DOWN.
      */
     private void updateUnderwaterFall() {
-        // ROM: MoveSprite_LightGravity — apply gravity and velocity
-        yVel += GRAVITY;
-        yFixed += yVel;
-        xFixed += xVel;
+        moveWithLightGravity();
         currentX = xFixed >> 8;
         currentY = yFixed >> 8;
         updateDynamicSpawn();
-
-        tickAnimation();
 
         // Off-screen / floor boundary safety net
         if (currentY >= FLOOR_Y_LIMIT) {
@@ -520,6 +513,13 @@ public class HczEndBossBlade extends AbstractBossChild implements TouchResponseP
         spinDownFrameIndex = 0;
         mappingFrame = SPIN_DOWN_FRAMES[0];
         spinDownFrameTimer = spinDownDelayCounter;
+    }
+
+    /** ROM MoveSprite_LightGravity: move with old velocity, then add $20 Y gravity. */
+    private void moveWithLightGravity() {
+        yFixed += yVel;
+        xFixed += xVel;
+        yVel += GRAVITY;
     }
 
     /**
@@ -670,7 +670,9 @@ public class HczEndBossBlade extends AbstractBossChild implements TouchResponseP
         spinDownDelayCounter = SPIN_DOWN_INITIAL_DELAY;
         spinDownLoopCounter = 0;
         spinDownFrameIndex = 0;
-        spinDownFrameTimer = spinDownDelayCounter;
+        // Preserve the blade's native entry cadence: the first GetFaster
+        // advance occurs after the two retained display ticks.
+        spinDownFrameTimer = 2;
         mappingFrame = SPIN_DOWN_FRAMES[0];  // frame 6
         LOG.fine(() -> "HCZ End Boss Blade: hit floor at y=" + currentY + ", transitioning to SPIN_DOWN");
     }

@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f29530 / 267 errors (3 errors under
+f3318 / 4234 errors to f30010 / 163 errors (12 errors under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -701,6 +701,23 @@ boss/turbine/water-column tests pass. The granular nine-route S3K matrix keeps
 both AIZ routes green and preserves every non-HCZ frontier/count exactly: CNZ
 complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
 level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 62 restores the fired blade's native launch and fall state. The four
+`loc_6B678` wait dispatches increment `child_dx` from `$23` to `$27` before
+the blade detaches; `MoveSprite_LightGravity` moves with the old velocity and
+then adds `$20`; fall routines leave animation state alone; and the spin-down
+helper retains its two entry display ticks. The resulting chute spawns at the
+ROM X and its `sub_6BB40` rectangle refreshes `y_vel=-$800` for exactly the
+native frames (`sonic3k.asm:141445-141549,141932-141979,177749-177792,
+178352-178365`).
+
+This clears the f29530-f29544 launch window and advances HCZ to f30010 / 163
+full-run errors (12 under `frontierOnly`), where main-player landing Y is the
+next owner (`0x07EC` expected, `0x07F1` actual). The focused blade/turbine/
+water-column tests pass. The granular nine-route S3K matrix keeps both AIZ
+routes green and preserves every non-HCZ frontier/count exactly: CNZ complete
+f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select
+f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 Milestone 31 restores TurboSpiker's detached-shell direction. The shell child
 inherits the parent's post-retreat render bit, but `loc_87D72` interprets that

@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -20,6 +21,35 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestHczEndBossWaterColumnControlPolicy {
+
+    @Test
+    void firingBladeUsesNativePreLaunchOffsetAndLightGravityOrder() throws Exception {
+        HczEndBossBlade blade = newBlade();
+        HczEndBossInstance boss = (HczEndBossInstance) getObjectField(blade, "boss");
+        setBooleanField(boss, "bladeFireSignal", true);
+        setBooleanField(boss, "facingRight", true);
+        setIntField(blade, "waitTimer", 3);
+
+        for (int i = 0; i < 4; i++) {
+            invokeNoArgPrivate(blade, "updatePreLaunch");
+        }
+
+        assertEquals(0x27, getIntField(blade, "xOffset"),
+                "loc_6B678 adds one to child_dx on all four Obj_Wait dispatches");
+
+        setIntField(blade, "xFixed", 0x10000);
+        setIntField(blade, "yFixed", 0x20000);
+        setIntField(blade, "xVel", -0x100);
+        setIntField(blade, "yVel", 0x80);
+        invokeNoArgPrivate(blade, "moveWithLightGravity");
+
+        assertAll(
+                () -> assertEquals(0x0FF00, getIntField(blade, "xFixed")),
+                () -> assertEquals(0x20080, getIntField(blade, "yFixed"),
+                        "MoveSprite_LightGravity moves with the old y_vel"),
+                () -> assertEquals(0xA0, getIntField(blade, "yVel"),
+                        "MoveSprite_LightGravity adds $20 after movement"));
+    }
 
     @Test
     void turbineRetainsHurtCollisionUntilSlowdownCallback() throws Exception {
@@ -138,6 +168,18 @@ class TestHczEndBossWaterColumnControlPolicy {
         return turbine;
     }
 
+    private static HczEndBossBlade newBlade() {
+        ObjectSpawn spawn = new ObjectSpawn(0x4000, 0x0738, 0x9A, 0, 0, false, 0);
+        ObjectServices services = new TestObjectServices()
+                .withConfiguration(SonicConfigurationService.createStandalone());
+        HczEndBossInstance boss = withConstructionContext(services, () -> new HczEndBossInstance(spawn));
+        boss.setServices(services);
+        HczEndBossBlade blade = withConstructionContext(
+                services, () -> new HczEndBossBlade(boss, 0, 0x23, 0x12));
+        blade.setServices(services);
+        return blade;
+    }
+
     private static void invokeGrab(HczEndBossWaterColumn column, TestablePlayableSprite player, boolean isPlayer1)
             throws Exception {
         Method method = HczEndBossWaterColumn.class.getDeclaredMethod(
@@ -183,6 +225,18 @@ class TestHczEndBossWaterColumnControlPolicy {
         var field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
         return field.getBoolean(target);
+    }
+
+    private static Object getObjectField(Object target, String name) throws Exception {
+        var field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
+    private static void setBooleanField(Object target, String name, boolean value) throws Exception {
+        var field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.setBoolean(target, value);
     }
 
     private static <T> T withConstructionContext(ObjectServices services, ThrowingSupplier<T> supplier) {
