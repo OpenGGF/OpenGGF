@@ -388,6 +388,10 @@ public class SidekickCpuController {
         }
         if (state == State.DEAD_FALLING) {
             clearInputs();
+            // Generic KillCharacter adoption must retain the status maintenance
+            // previously reached through NORMAL before Obj02_Dead continues its
+            // fall (docs/s2disasm/s2.asm:40736-40759,41018-41043).
+            clearStaleDeadOnObjectAfterVisibleWindow();
             updateDeadFalling();
             return;
         }

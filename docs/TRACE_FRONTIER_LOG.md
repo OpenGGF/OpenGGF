@@ -18,11 +18,9 @@ reaction deferral, orb break tail + Ani_obj53 animation, boss persistence, and
 the S2 impatient-wait blink input gate), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now EMPTY: the full S2 level-select suite passes (MSE:OK passed=48).
-The full S1 sweep remains 29/29 green. On this HCZ branch, the selected S2
-TraceReplay fleet has one pre-existing OOZ level-select mismatch at f447; an
-isolated replay at branch commit `92a4703f1` reproduced that exact mismatch,
-so it is not an HCZ campaign regression. The other 19 selected S2 classes and
-both S3K AIZ routes are green after AIZ round 64. AIZ is
+The full S1 sweep remains 29/29 green. On this HCZ branch, all 20 S2 replay
+classes are green after restoring the deferred-death oil-support release that
+had regressed OOZ1 at f447. Both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is closed on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
 f3318 / 4234 errors to GREEN through the HCZ-to-MGZ boundary after milestone
@@ -47,6 +45,44 @@ probe is required before the bounce is accepted.
 Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
+
+## 2026-07-12 - S2 OOZ1 deferred-death oil-support release green
+
+After merging `origin/develop` into `bugfix/ai-hcz-trace-replays`, OOZ1
+reproduced one error at f447: ROM Tails changed `Status_OnObj` from set to
+clear (`status=$0A->$02`) while falling dead below manager-hosted Obj07, but
+the engine retained `$0A` through f468. OOZ2 remained green.
+
+Root cause: `807119045` correctly made a generic `KillCharacter` death adopt
+the shared `DEAD_FALLING` dispatch on the following CPU tick, matching
+`Obj02_Dead`, but this bypassed the existing dead-sidekick stale-support
+release because it was only called from `updateNormal`. The accepted fix runs
+that same release before the deferred dead-fall update. S2 `Obj02_Dead` owns
+the continuing corpse fall, while `KillCharacter` / `Tails_ResetOnFloor_Part2`
+do not themselves clear `Status_OnObj`, and Obj07 clears its own standing
+state separately (`docs/s2disasm/s2.asm:40736-40759,41018-41043,
+50086-50149`). No trace state is hydrated and there is no zone, route, or
+frame predicate.
+
+Focused gate after the candidate:
+
+- `mvn clean test -Ptrace-replay "-Dtest=com.openggf.tests.TestSidekickCpuControllerLevelStart#deadSidekickClearsStaleOnObjectAfterLeavingVisibleWindowAgain,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-Dsonic2.rom.path=<S2-ROM>" -DfailIfNoTests=false`
+- Result: 3/3 green; OOZ1 and OOZ2 produced no divergence reports.
+
+The complete A/B replay gate used all three explicit ROM paths, one fork, and
+a 3 GB heap:
+
+- Candidate off: `mvn clean test -Ptrace-replay "-Dtest=*TraceReplay" -Dmaven.test.failure.ignore=true "-Dsonic1.rom.path=<S1-ROM>" "-Dsonic2.rom.path=<S2-ROM>" "-Ds3k.rom.path=<S3K-ROM>" -Dsurefire.forkCount=1 "-Dsurefire.argLine=-Xshare:off -Xmx3g" -DfailIfNoTests=false`
+  completed all 92 checks: 70 passed, 19 failed, 2 errors, 1 skipped; OOZ1
+  reproduced f447 / 1.
+- Candidate on: the identical command completed all 92 checks: 71 passed,
+  18 failed, 2 errors, 1 skipped. OOZ1 became green; every other replay result
+  was unchanged. All 29 S1 and all 20 S2 classes are green. The pre-existing
+  S3K results were identical in both runs: CNZ complete f1846 / 7184, MGZ
+  complete f1072 / 10221, MGZ level-select input-alignment f33271, ICZ f3174 /
+  3205, MHZ f2920 / 2452, and LBZ f2270 / 5881; CNZ's auxiliary failures/input
+  alignment and HCZ's develop-merged Turbo Spiker rewind-reference-closure
+  error were also unchanged.
 
 ## 2026-07-11 - S3K HCZ frontier campaign (in progress)
 
