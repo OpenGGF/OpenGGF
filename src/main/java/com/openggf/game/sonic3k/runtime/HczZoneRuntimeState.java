@@ -31,4 +31,9 @@ public final class HczZoneRuntimeState implements S3kZoneRuntimeState {
     public boolean wallChaseBgOverlayActive() {
         return events.isWallChaseBgOverlayActive();
     }
+
+    /** Whether HCZ2 is using the post-chase 512px Plane B nametable. */
+    public boolean normalBackgroundPlaneActive() {
+        return actIndex == 1 && events.isAct2NormalBackgroundPlaneActive();
+    }
 }

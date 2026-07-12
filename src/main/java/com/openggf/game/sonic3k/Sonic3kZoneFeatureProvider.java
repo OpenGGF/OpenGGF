@@ -28,6 +28,7 @@ import com.openggf.game.sonic3k.render.IczBigSnowPileBackgroundEffect;
 import com.openggf.game.sonic3k.render.IczBigSnowPilePriorityMaskEffect;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GraphicsManager;
@@ -146,7 +147,23 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         int zoneId = levelManager.getFeatureZoneId();
         return zoneId == Sonic3kZoneIds.ZONE_MGZ
                 || zoneId == Sonic3kZoneIds.ZONE_ICZ
+                || isHcz2NormalBackgroundPlaneActive(zoneId)
                 || isCnzBossBackgroundWindowActive(zoneId);
+    }
+
+    /**
+     * HCZ2's opening wall occupies the second 512px BG-layout strip. Once the
+     * ROM's bottom-up refresh reaches state $C, Plane B contains only the
+     * ordinary strip sourced from X=$000 and wraps at the VDP's 512px width.
+     */
+    private boolean isHcz2NormalBackgroundPlaneActive(int zoneId) {
+        if (zoneId != Sonic3kZoneIds.ZONE_HCZ || !GameServices.hasRuntime()) {
+            return false;
+        }
+        return GameServices.zoneRuntimeRegistry()
+                .currentAs(HczZoneRuntimeState.class)
+                .map(HczZoneRuntimeState::normalBackgroundPlaneActive)
+                .orElse(false);
     }
 
     @Override

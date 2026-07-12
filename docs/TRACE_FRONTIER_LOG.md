@@ -38861,3 +38861,19 @@ Representative serial timing used clean baseline (`a3ad53f4a`) and guarded
 The performance threshold (guarded median both more than one second and more
 than 10% slower) was false for both targets. Timing evidence is preserved in
 `target/rewind-closure-timing.json` and `target/rewind-closure-timing/`.
+
+### 2026-07-12 -- HCZ background-wall rendering regression sweep
+
+The HCZ Act 2 background-wall rendering fix was checked on branch
+`bugfix/ai-hcz-trace-replays` with local uncommitted implementation and test
+changes, against a detached clean-HEAD worktree at `2afa97b5b`
+(`.worktrees/trace-hcz-baseline`). Both worktrees ran:
+
+`mvn -q -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dtrace.frontierOnly=true -Dtrace.context.radius=8 "-Dtest=*TraceReplay" -DfailIfNoTests=false "-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=<repo>/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=<repo>/Sonic and Knuckles & Sonic 3 (W) [!].gen" test`
+
+Both runs produced exactly the same **92 tests: 71 passed, 18 known failures,
+2 known errors, 1 skip**. A normalized comparison of every Surefire testcase
+status and failure/error message was empty: zero status changes and zero
+first-frontier changes. The retained errors were the existing CNZ miniboss
+null-parent assertion and HCZ TurboSpiker rewind reference-closure failure at
+frame 14211. No trace regression was introduced by the rendering fix.
