@@ -21,6 +21,8 @@ import com.openggf.level.Pattern;
  * </ul>
  */
 public class Sonic3kConstants {
+    /** Obj_FBZCloud stores exactly ten stable addresses at FBZ_cloud_addr. */
+    public static final int FBZ_CLOUD_REWIND_SLOT_COUNT = 10;
 
     private Sonic3kConstants() {}
 

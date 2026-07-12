@@ -146,3 +146,101 @@ recorded as `unknown/not previously run` rather than inferred.
 - Quality GREEN result (2026-07-12): 144 tests, 0 failures, 0 errors, 0 skipped.
   Focused coverage proves one state lookup per ordinary sensor scan and stable
   cached state until semantic camera inputs change. No trace capture/replay ran.
+
+## Task 3 — event-backed FBZ runtime state and registration
+
+- Requirement: establish one event-backed owner for all FBZ event/runtime fields,
+  serialize it only through `FbzZoneRuntimeState`, route object writes through a
+  narrow bridge, register/reconcile the adapter, and preserve the established
+  post-camera frame order and next-pass collision visibility.
+- RED command: `mvn "-Dtest=TestFbzZoneRuntimeState,TestFbzRuntimeStateRegistration,TestFbzEventWriteSupport,TestFbzEventRewindRoundTrip,TestFbzFramePhaseOrdering,TestS3kZoneRuntimeStateAdapters,TestSonic3kLevelEventRewindSnapshot" test "-Ds3k.rom.path=s3k.gen" "-Dmse=off"`
+- RED result (2026-07-12): exit 1 during focused test compilation on the intended
+  absent `Sonic3kFBZEvents`, `FbzZoneRuntimeState`, `FbzObjectEventBridge`,
+  `S3kFbzEventWriteSupport`, manager FBZ accessor, and `currentFbz` registration
+  API. One test-only import typo was corrected before production implementation.
+- GREEN command: identical to the RED command above.
+- GREEN result (2026-07-12): exit 0; 52 tests, 0 failures, 0 errors, 0 skipped.
+  The new focused classes contribute 9 tests; existing runtime-adapter and
+  event-rewind regression classes contribute 43. Expected warning output comes
+  only from existing malformed-sidecar negative tests.
+- Guard result: `TestStaticStateRewindCoverageGuard`,
+  `TestZoneEventRewindSchemaGuard`, and `TestObjectServicesMigrationGuard` are
+  green (32 tests total). The combined guard command also found unrelated AIZ
+  worktree failures: three new `AizIntroEmeraldGlowChild` final-scalar coverage
+  keys and two existing unsafe `AizAct2CameraResizeController` inline-spawn
+  findings. Task 3 adds no spawnable object or static gameplay manager and did
+  not modify those AIZ files or guard baselines.
+- No trace capture or replay was executed.
+
+### Task 3 specification-review correction
+
+- Review RED: cloud IDs were serialized but never resolved after object-manager
+  restore; FBZ was missing from the standard `Events_fg_5` transition path;
+  inherited dynamic-resize state was duplicated despite FBZ not owning that ROM
+  field; reload seams and Act-2-only modes were under-tested and under-validated.
+- Correction RED command: `mvn "-Dtest=TestFbzCloudReconciliation,TestFbzZoneRuntimeState,TestFbzRuntimeStateRegistration,TestFbzFramePhaseOrdering" test "-Ds3k.rom.path=s3k.gen" "-Dmse=off"`
+- Correction RED result (2026-07-12): exit 1 on ten intended missing
+  cloud-cleanup/reconciliation symbols before correction production code.
+- Correction: added restored-object identity resolution and a narrow Task-15
+  `FbzCloudRecreator` seam. Non-null missing pre-cleanup IDs recreate in original
+  index order and failed/absent recreation throws; terminal cleanup leaves them
+  absent. Added exact lifecycle/backing tests, FBZ transition flag routing,
+  strict Act-2-only mode validation, impossible plane/collision rejection, and
+  removed dynamic-resize state from FBZ serialization/authority.
+- Correction GREEN command: `mvn "-Dtest=TestFbzZoneRuntimeState,TestFbzRuntimeStateRegistration,TestFbzEventWriteSupport,TestFbzEventRewindRoundTrip,TestFbzFramePhaseOrdering,TestFbzCloudReconciliation,TestS3kZoneRuntimeStateAdapters,TestSonic3kLevelEventRewindSnapshot" test "-Ds3k.rom.path=s3k.gen" "-Dmse=off"`
+- Correction GREEN result (2026-07-12): exit 0; 62 tests, 0 failures,
+  0 errors, 0 skipped. A final removal of the manager's redundant FBZ
+  dynamic-resize branches plus its new checkpoint assertion was followed by a
+  14-test affected rerun with 0 failures/errors/skips. No trace capture/replay ran.
+
+### Task 3 second specification-review correction
+
+- Review RED: plane assignment and collision mode were incorrectly coupled;
+  stale-adapter repair reset already-restored bytes; terminal cloud cleanup
+  retained identities; and cloud recreation neither returned nor verified a
+  live rebound identity.
+- RED command: `mvn "-Dtest=TestFbzCloudReconciliation,TestFbzZoneRuntimeState,TestFbzRuntimeStateRegistration,TestFbzEventWriteSupport,TestFbzFramePhaseOrdering" test "-Ds3k.rom.path=s3k.gen" "-Dmse=off"`
+- RED result (2026-07-12): exit 1 on the intended missing separate
+  plane/collision APIs, byte-preserving stale-state migration method, and
+  ObjectRefId-returning recreator contract.
+- Correction: plane and collision writes now validate independently so every
+  ROM boss-transition intermediate is representable. Rewind reconciliation
+  migrates compatible restored bytes transactionally onto the current handler
+  before installing its adapter. Terminal cleanup atomically nulls all cloud
+  IDs and terminal snapshots with present IDs are rejected. Recreation returns
+  the rebound ID, writes it into the stable slot, and verifies it against a live
+  ObjectManager identity query that is refreshed after each recreation.
+- GREEN command: `mvn "-Dtest=TestFbzZoneRuntimeState,TestFbzRuntimeStateRegistration,TestFbzEventWriteSupport,TestFbzEventRewindRoundTrip,TestFbzFramePhaseOrdering,TestFbzCloudReconciliation,TestS3kZoneRuntimeStateAdapters,TestSonic3kLevelEventRewindSnapshot" test "-Ds3k.rom.path=s3k.gen" "-Dmse=off"`
+- GREEN result (2026-07-12): exit 0; 64 tests, 0 failures, 0 errors,
+  0 skipped. No trace capture/replay ran.
+
+### Task 3 final transactional-reconciliation correction
+
+- RED: five focused cloud-reconciliation tests ran; two failed because an
+  unresolved rebound and a later-index recreation failure left an earlier slot
+  mutated, changing both the ten-ID list and serialized runtime bytes.
+- Correction: reconciliation now stages all ten resulting IDs in a cloned array,
+  completes the ordered recreate/non-null/live verification loop, and commits
+  the authoritative array only after every slot succeeds.
+- Focused GREEN: `TestFbzCloudReconciliation` reports 5 tests, 0 failures,
+  0 errors, 0 skipped.
+- Full GREEN: the complete Task 3 command reports 65 tests, 0 failures,
+  0 errors, 0 skipped. `git diff --check` is clean. No trace ran.
+
+### Task 3 quality-review correction
+
+- Review RED exposed that handler-ID staging did not roll back already-created
+  live objects, accepted changed rebound identities, repeatedly rebuilt identity
+  tables, retained stale factory closures across loads, and used source-string
+  frame-order assertions.
+- Correction replaces per-cloud recreation with one ordered batch transaction
+  (`recreateAll`/`commit`/`rollback`). Any count, null, exact-ID, liveness, or
+  later-slot failure rolls back the modeled live object graph and leaves handler
+  IDs/bytes unchanged. Initial liveness uses one identity table; one explicit
+  refresh occurs after batch commit. Public terminal writes reject, while atomic
+  restore permits terminal-to-preterminal rewind. Level init clears batch
+  closures on restart, act reload, and zone exit. Frame tests now execute
+  `LevelFrameStep` with phase-logging mocks and a two-frame collision sample.
+- Focused GREEN: 19 tests, 0 failures/errors/skips. Full Task 3 GREEN: 66 tests,
+  0 failures/errors/skips. Fresh guards: 32 tests, 0 failures/errors/skips.
+  `git diff --check` is clean. No trace ran.

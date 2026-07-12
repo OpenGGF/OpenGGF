@@ -19,6 +19,10 @@ public final class S3kRuntimeStates {
         return registry.currentAs(HczZoneRuntimeState.class);
     }
 
+    public static Optional<FbzZoneRuntimeState> currentFbz(ZoneRuntimeRegistry registry) {
+        return registry.currentAs(FbzZoneRuntimeState.class);
+    }
+
     public static Optional<CnzZoneRuntimeState> currentCnz(ZoneRuntimeRegistry registry) {
         return registry.currentAs(CnzZoneRuntimeState.class);
     }
