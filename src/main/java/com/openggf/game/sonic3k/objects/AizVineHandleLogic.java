@@ -1,12 +1,19 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Shared handle/ride logic for AIZ ride-vine objects (Obj06/Obj0C).
@@ -42,11 +49,42 @@ final class AizVineHandleLogic {
             0x12, 0x13
     };
 
-    static final class PlayerState {
+    static final class PlayerState implements RewindStateful<PlayerState.Snapshot> {
         int grabFlag;
         int releaseDelay;
         boolean pendingJumpRelease;
         int pendingReleaseAngle;
+
+        void copyFrom(PlayerState other) {
+            grabFlag = other.grabFlag;
+            releaseDelay = other.releaseDelay;
+            pendingJumpRelease = other.pendingJumpRelease;
+            pendingReleaseAngle = other.pendingReleaseAngle;
+        }
+
+        void clear() {
+            grabFlag = 0;
+            releaseDelay = 0;
+            pendingJumpRelease = false;
+            pendingReleaseAngle = 0;
+        }
+
+        @Override
+        public Snapshot captureRewindStateValue() {
+            return new Snapshot(grabFlag, releaseDelay, pendingJumpRelease, pendingReleaseAngle);
+        }
+
+        @Override
+        public void restoreRewindStateValue(Snapshot state) {
+            grabFlag = state.grabFlag();
+            releaseDelay = state.releaseDelay();
+            pendingJumpRelease = state.pendingJumpRelease();
+            pendingReleaseAngle = state.pendingReleaseAngle();
+        }
+
+        private record Snapshot(int grabFlag, int releaseDelay,
+                                boolean pendingJumpRelease, int pendingReleaseAngle) {
+        }
     }
 
     static final class State {
@@ -57,6 +95,9 @@ final class AizVineHandleLogic {
         int prevY;
         final PlayerState p1 = new PlayerState();
         final PlayerState p2 = new PlayerState();
+        PlayableEntity p1Owner;
+        PlayableEntity p2Owner;
+        final Map<PlayableEntity, PlayerState> extensionStates = new IdentityHashMap<>();
     }
 
     private AizVineHandleLogic() {
@@ -84,7 +125,8 @@ final class AizVineHandleLogic {
     }
 
     static boolean anyGrabbed(State state) {
-        return state.p1.grabFlag != 0 || state.p2.grabFlag != 0;
+        return state.p1.grabFlag != 0 || state.p2.grabFlag != 0
+                || state.extensionStates.values().stream().anyMatch(player -> player.grabFlag != 0);
     }
 
     static boolean shouldRender(State state) {
@@ -98,6 +140,11 @@ final class AizVineHandleLogic {
         if (state.p2.grabFlag != 0) {
             state.p2.grabFlag = (byte) 0x81;
         }
+        for (PlayerState extension : state.extensionStates.values()) {
+            if (extension.grabFlag != 0) {
+                extension.grabFlag = (byte) 0x81;
+            }
+        }
     }
 
     static void updatePlayers(State state,
@@ -105,8 +152,65 @@ final class AizVineHandleLogic {
             AbstractPlayableSprite player1,
             AbstractPlayableSprite player2,
             int parentAngle) {
+        if (services == null) {
+            updatePlayer(state, state.p1, null, player1, parentAngle);
+            updatePlayer(state, state.p2, null, player2, parentAngle);
+            return;
+        }
+        state.p1Owner = bindNativeState(state, state.p1, state.p1Owner, player1);
+        state.p2Owner = bindNativeState(state, state.p2, state.p2Owner, player2);
         updatePlayer(state, state.p1, services, player1, parentAngle);
         updatePlayer(state, state.p2, services, player2, parentAngle);
+        List<PlayableEntity> participants = services.playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        for (PlayableEntity participant : participants) {
+            if (participant == state.p1Owner || participant == state.p2Owner) {
+                continue;
+            }
+            if (participant instanceof AbstractPlayableSprite player) {
+                updatePlayer(state, state.extensionStates.computeIfAbsent(
+                        participant, ignored -> new PlayerState()), services, player, parentAngle);
+            }
+        }
+        for (Map.Entry<PlayableEntity, PlayerState> entry : state.extensionStates.entrySet()) {
+            if (entry.getValue().grabFlag != 0
+                    && !containsIdentity(participants, entry.getKey())
+                    && entry.getKey() instanceof AbstractPlayableSprite player) {
+                updatePlayer(state, entry.getValue(), services, player, parentAngle);
+            }
+        }
+    }
+
+    private static PlayableEntity bindNativeState(State handle, PlayerState nativeState,
+            PlayableEntity previousOwner, AbstractPlayableSprite currentPlayer) {
+        if (previousOwner == currentPlayer) {
+            return previousOwner;
+        }
+        if (previousOwner == null && currentPlayer != null
+                && (nativeState.grabFlag != 0 || nativeState.releaseDelay != 0)) {
+            return currentPlayer;
+        }
+        if (previousOwner != null && (nativeState.grabFlag != 0 || nativeState.releaseDelay != 0)) {
+            handle.extensionStates.computeIfAbsent(previousOwner, ignored -> new PlayerState())
+                    .copyFrom(nativeState);
+        }
+        nativeState.clear();
+        if (currentPlayer != null) {
+            PlayerState restored = handle.extensionStates.remove(currentPlayer);
+            if (restored != null) {
+                nativeState.copyFrom(restored);
+            }
+        }
+        return currentPlayer;
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity target) {
+        for (PlayableEntity participant : participants) {
+            if (participant == target) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void updatePlayer(State handle,
@@ -252,6 +356,34 @@ final class AizVineHandleLogic {
             AbstractPlayableSprite player2) {
         updatePostPlayer(state, state.p1, player1);
         updatePostPlayer(state, state.p2, player2);
+        for (Map.Entry<PlayableEntity, PlayerState> entry : state.extensionStates.entrySet()) {
+            updatePostPlayer(state, entry.getValue(),
+                    entry.getKey() instanceof AbstractPlayableSprite player ? player : null);
+        }
+    }
+
+    static void clearGrabbedPlayers(State state,
+            AbstractPlayableSprite player1,
+            AbstractPlayableSprite player2) {
+        AbstractPlayableSprite ownedP1 = playable(state.p1Owner);
+        AbstractPlayableSprite ownedP2 = playable(state.p2Owner);
+        clearOwnedPlayer(ownedP1 != null ? ownedP1 : player1, state.p1);
+        clearOwnedPlayer(ownedP2 != null ? ownedP2 : player2, state.p2);
+        for (Map.Entry<PlayableEntity, PlayerState> entry : state.extensionStates.entrySet()) {
+            clearOwnedPlayer(playable(entry.getKey()), entry.getValue());
+        }
+    }
+
+    private static void clearOwnedPlayer(AbstractPlayableSprite player, PlayerState playerState) {
+        if (player != null && playerState.grabFlag != 0) {
+            clearPlayerControl(player);
+        }
+        playerState.grabFlag = 0;
+        playerState.pendingJumpRelease = false;
+    }
+
+    private static AbstractPlayableSprite playable(PlayableEntity entity) {
+        return entity instanceof AbstractPlayableSprite player ? player : null;
     }
 
     private static void updatePostPlayer(State handle, PlayerState playerState, AbstractPlayableSprite player) {

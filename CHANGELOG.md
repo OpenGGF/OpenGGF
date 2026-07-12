@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **AIZ ride-vine handles now support every configured sidekick safely.** Ride and giant vines retain the native P1-then-P2 handle prefix while identity-owned extension grab, jump, death, unload, roster-change, replacement, and PlayerRefId rewind state prevents stranded control.
 - **LBZ cup elevators now carry every configured sidekick safely.** Player-identity state extends the native P1-then-P2 cup path across entry, shared motion, jump/fling exits, death, unload, roster changes, and rewind without transferring forced control between riders.
 - **LBZ tube elevators now carry every configured sidekick safely.** Player-identity state extends the native P1-then-P2 transport path across entry, motion, exit, death, unload, roster changes, closed-destination suppression, and rewind without transferring forced control between sidekicks.
 - **Sonic 1 Labyrinth transports now support every configured sidekick.** Wind tunnels and water-slide terrain process the main player first and then each engine sidekick with independent release state and donor-resolved animations, while breakable poles retain a stable rewindable owner, resist off-screen unload while occupied, and release dead actors instead of stranding them under object control. Native main-player globals, sound cadence, and ordering remain unchanged.

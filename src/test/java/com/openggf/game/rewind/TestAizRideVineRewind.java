@@ -2,6 +2,9 @@ package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.rewind.schema.CompactFieldCapturer;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.schema.RewindObjectStateBlob;
 import com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance;
 import com.openggf.game.sonic3k.objects.AizRideVineObjectInstance;
@@ -18,14 +21,16 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Prove-first rewind coverage for the AIZ ride vines (ride mechanics in the
  * primary release slice). Both the {@code handle} plain-state-holder (the
- * player's ride anchor — scalar grab flags, no player refs) and the {@code chain}
+ * player's ride anchor — native grab flags plus PlayerRefId-backed extension state) and the {@code chain}
  * {@code Segment[]} (the rendered swing/deploy link positions) ride keyframes: a
  * live rewind hold renders restored state without re-running {@code update()}, so
  * a dropped chain would show the vine links detached from the captured root/handle
@@ -59,11 +64,12 @@ class TestAizRideVineRewind {
     @Test
     void rideVineGrabStateAndRootScalarsSurviveRewind() {
         // Capture/restore the compact default-object-subclass schema directly: the vine's
-        // captured fields are pure scalars plus the scalar-only handle plain-state-holder
-        // (no identity references), so RewindCaptureContext.none() suffices. This exercises
+        // captured fields are scalars plus the handle plain-state-holder. Supply the focused
+        // player identity because the handle now owns optional player-reference fields. This exercises
         // exactly the keyframe path without ObjectManager's onUnload grab-clear (which needs
         // config/sprite services the stub harness omits).
-        Harness harness = Harness.create(player("sonic"));
+        TestablePlayableSprite rewindPlayer = player("sonic");
+        Harness harness = Harness.create(rewindPlayer);
         ObjectManager objectManager = harness.objectManager();
 
         // subtype low bits set the zip distance; keep it small and in range.
@@ -89,7 +95,8 @@ class TestAizRideVineRewind {
         writeChainInt(vine, 2, "angle", 0x00C0);
         writeChainInt(vine, 2, "mappingFrame", 5);
 
-        RewindObjectStateBlob blob = CompactFieldCapturer.captureDefaultObjectSubclassScalars(vine);
+        RewindCaptureContext context = rewindContext(rewindPlayer);
+        RewindObjectStateBlob blob = CompactFieldCapturer.capture(vine, context);
 
         // Drive live state away from the captured keyframe (as if play continued forward).
         writeInt(vine, "handle.mode", 0);
@@ -107,7 +114,7 @@ class TestAizRideVineRewind {
         writeChainInt(vine, 2, "angle", 0);
         writeChainInt(vine, 2, "mappingFrame", 0);
 
-        CompactFieldCapturer.restoreDefaultObjectSubclassScalars(vine, blob);
+        CompactFieldCapturer.restore(vine, blob, context);
 
         // The ride anchor: handle grab flags + position survive → the player is not stranded.
         assertEquals(1, readInt(vine, "handle.p1.grabFlag"),
@@ -130,6 +137,62 @@ class TestAizRideVineRewind {
         assertEquals(0x0532, readChainInt(vine, 0, "y"), "chain[0] Y must survive rewind");
         assertEquals(0x00C0, readChainInt(vine, 2, "angle"), "chain[2] angle must survive rewind");
         assertEquals(5, readChainInt(vine, 2, "mappingFrame"), "chain[2] mappingFrame must survive rewind");
+    }
+
+    @Test
+    void nonEmptyExtensionGrabStateRelinksThroughPlayerRefs() throws Exception {
+        TestablePlayableSprite oldMain = player("old-main");
+        TestablePlayableSprite oldP2 = player("old-p2");
+        TestablePlayableSprite oldExtension = player("old-extension");
+        AizRideVineObjectInstance vine = new AizRideVineObjectInstance(
+                new ObjectSpawn(0x1800, 0x0500, 0x04, 0, 1, false, 0, 72));
+        Object handle = findField(vine.getClass(), "handle").get(vine);
+        findField(handle.getClass(), "p1Owner").set(handle, oldMain);
+        findField(handle.getClass(), "p2Owner").set(handle, oldP2);
+        Map<Object, Object> extensions = extensionStates(handle);
+        var stateConstructor = Class.forName(
+                "com.openggf.game.sonic3k.objects.AizVineHandleLogic$PlayerState")
+                .getDeclaredConstructor();
+        stateConstructor.setAccessible(true);
+        Object extensionState = stateConstructor.newInstance();
+        findField(extensionState.getClass(), "grabFlag").setInt(extensionState, 1);
+        extensions.put(oldExtension, extensionState);
+
+        RewindObjectStateBlob blob = CompactFieldCapturer.capture(
+                vine, rewindContext(oldMain, oldP2, oldExtension));
+        TestablePlayableSprite newMain = player("new-main");
+        TestablePlayableSprite newP2 = player("new-p2");
+        TestablePlayableSprite newExtension = player("new-extension");
+        CompactFieldCapturer.restore(vine, blob, rewindContext(newMain, newP2, newExtension));
+
+        Object restoredHandle = findField(vine.getClass(), "handle").get(vine);
+        assertSame(newMain, findField(restoredHandle.getClass(), "p1Owner").get(restoredHandle));
+        assertSame(newP2, findField(restoredHandle.getClass(), "p2Owner").get(restoredHandle));
+        assertTrue(extensionStates(restoredHandle).containsKey(newExtension));
+        assertEquals(1, findField(extensionStates(restoredHandle).get(newExtension).getClass(), "grabFlag")
+                .getInt(extensionStates(restoredHandle).get(newExtension)));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<Object, Object> extensionStates(Object handle) throws ReflectiveOperationException {
+        return (Map<Object, Object>) findField(handle.getClass(), "extensionStates").get(handle);
+    }
+
+    private static RewindCaptureContext rewindContext(
+            TestablePlayableSprite main,
+            TestablePlayableSprite nativeP2,
+            TestablePlayableSprite extension) {
+        RewindIdentityTable identities = new RewindIdentityTable();
+        identities.registerPlayer(main, PlayerRefId.mainPlayer());
+        identities.registerPlayer(nativeP2, PlayerRefId.sidekick(0));
+        identities.registerPlayer(extension, PlayerRefId.sidekick(1));
+        return RewindCaptureContext.withIdentityTable(identities);
+    }
+
+    private static RewindCaptureContext rewindContext(TestablePlayableSprite main) {
+        RewindIdentityTable identities = new RewindIdentityTable();
+        identities.registerPlayer(main, PlayerRefId.mainPlayer());
+        return RewindCaptureContext.withIdentityTable(identities);
     }
 
     private static TestablePlayableSprite player(String code) {

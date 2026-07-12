@@ -388,12 +388,9 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
     }
 
     private void clearGrabbedPlayers() {
-        AbstractPlayableSprite player = resolveMainPlayer();
-        AbstractPlayableSprite sidekick = firstTrackedSidekick();
-        clearControlFor(player, handle.p1.grabFlag != 0);
-        clearControlFor(sidekick, handle.p2.grabFlag != 0);
-        handle.p1.grabFlag = 0;
-        handle.p2.grabFlag = 0;
+        AbstractPlayableSprite player = handle.p1.grabFlag != 0 ? resolveMainPlayer() : null;
+        AbstractPlayableSprite sidekick = handle.p2.grabFlag != 0 ? firstTrackedSidekick() : null;
+        AizVineHandleLogic.clearGrabbedPlayers(handle, player, sidekick);
     }
 
     private AbstractPlayableSprite firstTrackedSidekick() {
@@ -406,13 +403,6 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
         var sprite = services().spriteManager().getSprite(
                 ActiveGameplayTeamResolver.resolveMainCharacterCode(config()));
         return sprite instanceof AbstractPlayableSprite playable ? playable : null;
-    }
-
-    private static void clearControlFor(AbstractPlayableSprite player, boolean wasGrabbed) {
-        if (player == null || !wasGrabbed) {
-            return;
-        }
-        AizVineHandleLogic.clearPlayerControl(player);
     }
 
     @Override
