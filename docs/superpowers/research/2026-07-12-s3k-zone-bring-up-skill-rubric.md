@@ -63,10 +63,21 @@ Use only the skill and resources it explicitly requires. Do not infer additional
 | R47 | Two-phase rewind graph recreation | Parent-required graph members use a parent-free recreate shell when needed, restore role/family scalars without object references in phase 1, and clear/rebuild only the captured prefix in settled phase 2, closing cycles only when the captured terminal exists. |
 | R48 | Native end-control lifecycle | End-of-level-in-effect, delayed sign allocation, and later results/event publication remain distinct; exact allocation primitive/order/success, converted-slot non-solid lifetime, and the real sign/results route handoff are tested without a substitute controller or boss-local flag. |
 | R49 | Executable compatibility boundary | Multi-sidekick authority, widescreen world-coordinate locks, donation-neutral traversal, and object-manager/session reset leakage are executable tests at the owning feature boundary, followed by the exact native route with extensions disabled. |
+| R50 | Synchronous event continuation | Seamless reload analysis records the exact publisher/consumer, completes reload inside the current screen/background-event invocation when native, resumes its remaining tail, and preserves later loader phases; a merely asynchronous request is rejected. |
+| R51 | Survival versus offset domains | Workflow independently models surviving state, original-slot survival, coordinate-offset eligibility, and deliberately fresh ring/placement respawn state; the offset scan cannot act as a carry filter. |
+| R52 | Original-slot graph and once-only offsets | Every live fixed/SST occupant is restored at its original logical slot, complete links settle before a separate start-inclusive/end-exclusive range plus bit-predicate offset, and centre/subpixel plus anchor/origin/target shifts occur exactly once. |
+| R53 | Identity, title, music, and PLC ownership | Current identity changes at reload while apparent/presentation identity waits for its native publisher; results/title routines retain title and music ownership, and explicit transition art is not duplicated by loader aliases. |
+| R54 | Live camera-copy and bound preservation | Workflow captures live camera current/copy coordinates and current/target bounds before target defaults, shifts only native-selected axes/live bounds, preserves the rest, and rejects replacement by full destination defaults. |
+| R55 | Ring and placement loader cadence | Real-pipeline tests prove same-transition-frame ring initialization after screen events versus next-frame object placement after sprite processing, both windowed from the post-offset camera with their exact fresh-state semantics. |
+| R56 | Early controls versus late bounds | Results/title/controller ownership is phase-separated: controls restore while title completion remains blocked; only the later timer/child-completion publisher releases gradual bound workers, with intermediate-state, first-growth, and rate tests. |
+| R57 | Rewind hard boundary | A completed synchronous reload is a hard boundary with deterministic snapshots immediately before publication and after full in-call completion; seeking across or restoring a half-reload is forbidden, and restart is verified independently on both sides. |
+| R58 | Transition multi-sidekick execution | More-than-two and duplicate-character tests prove every sidekick survives, shifts, and regains control exactly once with daisy-chain state intact while native transition authority remains native-only. |
+| R59 | Transition widescreen execution | Every supported viewport proves shifted world bounds/camera copies, ring and placement windowing, and event thresholds use actual viewport dimensions without premature activation or unsafe gaps. |
+| R60 | Transition donation execution | Donation off and every supported donor traverse the identical reload/title/control path without raw game-name branches or ability workarounds unless a mandatory route is proven blocked, followed by the native transition rerun. |
 
 ## Verdict
 
-- **GREEN:** R1-R49 all PASS.
+- **GREEN:** R1-R60 all PASS.
 - **RED:** Any assertion fails or is only optional/implied.
 
 Record the exact prompt, raw agent output, per-assertion PASS/FAIL result, and overall verdict in both baseline and forward-test artifacts.

@@ -125,6 +125,27 @@ Before scheduling object-family work, require the object analysis to trace every
 
 Require a focused RED test across the last non-firing and exact firing updates, plus the competing consumer's later boundary. If the code, comments, and disassembly oracle disagree, pause implementation for independent disassembly adjudication; do not weaken the expectation or choose the locally convenient interpretation.
 
+### Seamless Same-Event Transition Gate
+
+Before implementing an in-place act or section reload, trace the whole native frame and loader continuation, not only the transition request. Record the exact publisher and consumer, whether the reload completes synchronously inside the current `ScreenEvent`/background-event call, which event tail still runs after it, and which loader phases execute later that frame or on the next frame. An asynchronous request is not equivalent unless it preserves that same in-call continuation and every later phase boundary.
+
+Model four independent sets: state that survives reload, entities whose original logical slots survive, entities eligible for the native coordinate-offset scan, and placement/ring state that is deliberately reinitialized. Never use the offset scan as a carry filter. If the native load leaves object RAM live but the engine must rebuild it, capture every live fixed/SST occupant at its original slot, including occupants outside the offset range and occupants that fail the offset predicate. Rebind the complete owner/child/link graph first; then apply the range-and-bit eligibility test, native centre-coordinate/subpixel-preserving offset exactly once, and separate anchor/origin/target hooks exactly once. Keep the request's offset range start-inclusive/end-exclusive and distinct from survival/carry policy.
+
+Preserve ownership and publication order exactly:
+
+- Change current level identity only at the native reload point; keep apparent/presentation identity unchanged until its later native owner publishes it.
+- Keep title-card creation/conversion and music stop/restore with their actual results/title routines. Do not show a reload title, change music early, or let a broad transition callback substitute for those owners.
+- Audit explicit transition PLC/art work against later loader aliases and prove each upload occurs only at its native owner.
+- Capture live camera position, copy coordinates, current bounds, and target bounds before loading target defaults. Shift only the disassembly-selected current/copy axes and live bounds; preserve the other axes/targets, and do not replace live bounds with the destination's full entry defaults. Use the actual viewport when later windowing or locking depends on screen width.
+
+Test the loader cadence through the real frame pipeline. A ring loader reached after screen events can reinitialize and window from the post-offset camera in the transition frame; object placement cannot do so until the next frame if sprite processing has already run. Prove both boundaries, fresh respawn state, and absence of restart, fade, title, duplicate art upload, or premature music work.
+
+Keep end-control phases separate. A later results/presentation exit may clear the gate that lets an existing controller restore every participating player's controls while the title is still active. The title wait owns only the resets, music restoration, and routine advancement proven by the disassembly; a later timer/child-completion phase publishes the completion flag. Only the native completion consumer may then start gradual live-bound workers. Add an intermediate-state test proving controls are already restored while title completion is still blocked and bounds have not begun changing, followed by exact first-growth and per-update-rate tests.
+
+Treat a completed synchronous reload as a rewind hard boundary. Require deterministic snapshots immediately before its publication and immediately after the full in-call reload, but do not seek through a half-executed reload or across the boundary. Verify checkpoint/death restart independently on both sides, including current/apparent identity, original slots/links, camera copies/bounds, loader phase, and title/control ownership.
+
+Make compatibility executable at this transition boundary. Offset and later restore controls for every configured sidekick exactly once while preserving native signal authority and daisy-chain state; test more than two characters and duplicate characters. At every supported widescreen width, prove post-shift world bounds, camera copies, ring/placement windowing, and event thresholds use the actual viewport without early activation or unsafe gaps. Run donation disabled and every supported donor through the same reload/title/control path; add no ability workaround unless a mandatory route is genuinely blocked, and never branch on a raw game name. Rerun the exact native transition after these cases with extension modes disabled.
+
 ## Slice-First Completion Rule
 
 A zone bring-up is successful when it advances a playable route, not when a checklist row changes state. For current work, prioritize AIZ -> HCZ continuity first, then feed CNZ, MGZ, and ICZ into the same standard.
