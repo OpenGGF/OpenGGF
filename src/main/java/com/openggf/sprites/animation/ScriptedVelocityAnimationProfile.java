@@ -434,6 +434,10 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         return runSpeedThreshold;
     }
 
+    public boolean isRunFramesUseWalkAnimationId() {
+        return runFramesUseWalkAnimationId;
+    }
+
     public int getWalkSpeedThreshold() {
         return walkSpeedThreshold;
     }

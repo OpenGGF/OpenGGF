@@ -42,6 +42,7 @@ public final class AnimationTranslator {
         result.setCompactSuperRunSlope(donorProfile.isCompactSuperRunSlope());
         result.setWalkSpeedThreshold(donorProfile.getWalkSpeedThreshold());
         result.setRunSpeedThreshold(donorProfile.getRunSpeedThreshold());
+        result.setRunFramesUseWalkAnimationId(donorProfile.isRunFramesUseWalkAnimationId());
         result.setFallbackFrame(donorProfile.getFallbackFrame());
 
         // Translate each animation field

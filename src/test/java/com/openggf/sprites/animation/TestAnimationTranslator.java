@@ -58,6 +58,21 @@ class TestAnimationTranslator {
     }
 
     @Test
+    void translatedProfilePreservesRawWalkIdForRunFrames() {
+        DonorCapabilities donor = buildS1Donor();
+        ScriptedVelocityAnimationProfile donorProfile = buildS1Profile()
+                .setRunFramesUseWalkAnimationId(true);
+        SpriteAnimationSet donorSet = buildAnimSet(0, 1, 2, 3, 4, 5, 6, 7, 8,
+                0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x17, 0x18, 0x1A);
+
+        ScriptedVelocityAnimationProfile translated =
+                AnimationTranslator.translate(donor, donorProfile, donorSet);
+
+        assertTrue(translated.isRunFramesUseWalkAnimationId(),
+                "donor translation must retain the ROM raw-Walk/rendered-Run split");
+    }
+
+    @Test
     void translatedProfileHasValidScriptsForCoreAnimations() {
         DonorCapabilities donor = buildS1Donor();
         ScriptedVelocityAnimationProfile donorProfile = buildS1Profile();
@@ -129,5 +144,4 @@ class TestAnimationTranslator {
         assertEquals(Sonic1AnimationIds.WAIT.id(), translated.getIdleAnimId());
     }
 }
-
 
