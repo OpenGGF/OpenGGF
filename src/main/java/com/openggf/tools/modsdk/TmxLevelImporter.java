@@ -3,6 +3,7 @@ package com.openggf.tools.modsdk;
 import com.openggf.io.ModInputLimits;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.game.ModKeySyntax;
+import com.openggf.mods.TrackKey;
 
 import javax.xml.XMLConstants;
 import javax.xml.stream.XMLInputFactory;
@@ -42,6 +43,18 @@ public final class TmxLevelImporter {
 
     public Result importLevel(Path tmxFile, Path paletteFile, Path solidProfileDirectory,
                               Path outputDirectory) throws IOException {
+        return importLevel(tmxFile, paletteFile, solidProfileDirectory, outputDirectory, null);
+    }
+
+    /**
+     * Same as the four-argument overload, but lets a standalone TMX level declare a namespaced
+     * streamed music track (see {@code ModZoneLoader#loadStandalone}, which requires every
+     * standalone level to carry a {@code TrackMusic} owned by the declaring mod). Pass
+     * {@code music == null} for the default {@code StockMusic(0)} placeholder used by patch-type
+     * TMX levels that reference stock zone music through a different mechanism.
+     */
+    public Result importLevel(Path tmxFile, Path paletteFile, Path solidProfileDirectory,
+                              Path outputDirectory, TrackKey music) throws IOException {
         Objects.requireNonNull(tmxFile, "tmxFile");
         Objects.requireNonNull(paletteFile, "paletteFile");
         Path tmx = tmxFile.toRealPath();
@@ -52,7 +65,7 @@ public final class TmxLevelImporter {
         BufferedImage image = new TmxPngReader().read(parsed.tileset().image(),
                 parsed.tileset().imageWidth(), parsed.tileset().imageHeight(), limits);
         Compiled compiled = compile(parsed, image, palette, profiles.count());
-        Path output = new TmxLevelExportPublisher().publish(outputDirectory, parsed, palette, profiles, compiled);
+        Path output = new TmxLevelExportPublisher().publish(outputDirectory, parsed, palette, profiles, compiled, music);
         List<String> warnings = parsed.start() == null
                 ? List.of("TMX has no start marker; using 128,128") : List.of();
         return new Result(output, compiled.patterns().size(), compiled.chunks().size(),

@@ -187,6 +187,7 @@ class TestSampleModsPackage {
                 "--out", output.resolve("art/bolt.ggfp").toString());
         assertCli("convert", "level", "--from-tmx", PLATFORMER.resolve("src/main/mod/level.tmx").toString(),
                 "--palette", PLATFORMER.resolve("src/main/mod/palette.gpal").toString(),
+                "--music", "sample-platformer:zone-theme",
                 "--out", output.resolve("levels/act1").toString());
     }
 

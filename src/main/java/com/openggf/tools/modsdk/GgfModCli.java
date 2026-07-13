@@ -123,11 +123,19 @@ public final class GgfModCli {
             return;
         }
 
-        requireExactFlags(flags, Set.of("--from-tmx", "--palette", "--solid-tiles", "--out"));
+        requireExactFlags(flags, Set.of("--from-tmx", "--palette", "--solid-tiles", "--music", "--out"));
         Path solidTiles = flags.containsKey("--solid-tiles") ? path(flags, "--solid-tiles") : null;
+        com.openggf.mods.TrackKey music = flags.containsKey("--music") ? parseTrackKey(flags.get("--music")) : null;
         var result = new TmxLevelImporter().importLevel(path(flags, "--from-tmx"),
-                path(flags, "--palette"), solidTiles, path(flags, "--out"));
+                path(flags, "--palette"), solidTiles, path(flags, "--out"), music);
         result.warnings().forEach(warning -> output.println("WARNING " + warning));
+    }
+
+    /** Parses a {@code owner:localName} CLI value into a namespaced streamed-music track key. */
+    private static com.openggf.mods.TrackKey parseTrackKey(String value) {
+        String canonical = com.openggf.game.ModKeySyntax.requireDisplayKey(value);
+        int separator = canonical.indexOf(':');
+        return new com.openggf.mods.TrackKey(canonical.substring(0, separator), canonical.substring(separator + 1));
     }
 
     private static void requireExactFlags(Map<String, String> flags, Set<String> allowed) {
@@ -206,7 +214,7 @@ public final class GgfModCli {
         output.println("       ggfmod convert art [--playable] --image <png> --sheet <yaml> --out <ggfs|ggfp>");
         output.println("       ggfmod convert level --from-export <dir> --out <dir>");
         output.println("       ggfmod convert level --from-tmx <map.tmx> --palette <GPAL>"
-                + " [--solid-tiles <profile-dir>] --out <dir>");
+                + " [--solid-tiles <profile-dir>] [--music <owner:localName>] --out <dir>");
         output.println("       ggfmod convert audio --owner <id> --manifest <yaml> --root <dir> --out <dir>");
         output.println("       ggfmod package --input <classes/resources> --out <jar> | run <build-output>");
         return 1;
