@@ -8,6 +8,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -361,8 +362,8 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         player.setAngle(CAPTURE_ANGLE);
         player.setGroundMode(GroundMode.GROUND);
         player.setAir(false);
-        player.setCentreXPreserveSubpixel(captureX);
-        player.setCentreYPreserveSubpixel(captureY);
+        NativePositionOps.writeXPosPreserveSubpixel(player, captureX);
+        NativePositionOps.writeYPosPreserveSubpixel(player, captureY);
 
         // Initial vertical progress = player Y - topY
         // ROM: move.w d1,2(a4) — stores as word in upper half of the 16.16 long
@@ -503,8 +504,8 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         int y = loopDef.topY + progress;
 
         // ROM: move.w d0,x_pos(a1); move.w d0,y_pos(a1) — center coordinates
-        player.setCentreXPreserveSubpixel((short) x);
-        player.setCentreYPreserveSubpixel((short) y);
+        NativePositionOps.writeXPosPreserveSubpixel(player, x);
+        NativePositionOps.writeYPosPreserveSubpixel(player, y);
 
         advanceProgress(player, state);
     }
@@ -534,8 +535,8 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         int y = loopDef.topY + state.getProgressPixels();
 
         // ROM: move.w d0,x_pos(a1); move.w d0,y_pos(a1) — center coordinates
-        player.setCentreXPreserveSubpixel((short) x);
-        player.setCentreYPreserveSubpixel((short) y);
+        NativePositionOps.writeXPosPreserveSubpixel(player, x);
+        NativePositionOps.writeYPosPreserveSubpixel(player, y);
 
         advanceProgress(player, state);
     }

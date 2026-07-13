@@ -25,6 +25,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.Tails;
@@ -272,7 +273,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
 
         int snapX = facingLeft ? baseX + GRAB_X_SNAP_OFFSET : baseX - GRAB_X_SNAP_OFFSET;
         // ROM move.w writes x_pos only and preserves the incoming subpixel word.
-        player.setCentreXPreserveSubpixel((short) snapX);
+        NativePositionOps.writeXPosPreserveSubpixel(player, snapX);
 
         int gVel = facingLeft ? -GRAB_GROUND_VEL : GRAB_GROUND_VEL;
         player.setGSpeed((short) gVel);

@@ -5,6 +5,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.boss.AbstractBossChild;
 
 import java.util.List;
@@ -72,6 +73,11 @@ public final class HczEndBossBladeImpactExplosion extends AbstractBossChild
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TouchResponseProfile.fromProvider(this);
     }
 
     @Override

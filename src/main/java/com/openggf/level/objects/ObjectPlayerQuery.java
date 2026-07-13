@@ -39,6 +39,12 @@ public final class ObjectPlayerQuery {
                 services::sidekicks);
     }
 
+    /** Builds the same policy query for non-object runtime code that owns a sprite manager. */
+    public static ObjectPlayerQuery from(SpriteManager spriteManager, PlayableEntity mainPlayer) {
+        Objects.requireNonNull(spriteManager, "spriteManager");
+        return new ObjectPlayerQuery(() -> mainPlayer, spriteManager::getSidekicks);
+    }
+
     public PlayableEntity mainPlayerOrNull() {
         return mainPlayerSource.get();
     }

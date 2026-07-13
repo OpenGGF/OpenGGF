@@ -6,6 +6,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
@@ -163,6 +164,11 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
     @Override
     public int getCollisionProperty() {
         return collisionProperty;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TouchResponseProfile.fromProvider(this);
     }
 
     @Override

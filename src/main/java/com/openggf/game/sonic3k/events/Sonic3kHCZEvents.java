@@ -15,13 +15,15 @@ import com.openggf.game.sonic3k.scroll.SwScrlHcz;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.scroll.ZoneScrollHandler;
 import com.openggf.physics.Direction;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -446,8 +448,8 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         // Engine sprites store top-left bounds while the ROM stores x_pos/y_pos.
         // FLOAT2 changes the rendered bounds immediately; preserve the native
         // centre words around that animation write just as move.b anim does.
-        player.setCentreXPreserveSubpixel((short) x);
-        player.setCentreYPreserveSubpixel((short) (y - carrierBoundsYOffset(p1)));
+        NativePositionOps.writeXPosPreserveSubpixel(player, x);
+        NativePositionOps.writeYPosPreserveSubpixel(player, y - carrierBoundsYOffset(p1));
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
@@ -470,8 +472,8 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         xFixed += xVelocity;
         yFixed += CARRIER_Y_VELOCITY;
         int y = yFixed >> 8;
-        player.setCentreXPreserveSubpixel((short) (xFixed >> 8));
-        player.setCentreYPreserveSubpixel((short) (y - carrierBoundsYOffset(p1)));
+        NativePositionOps.writeXPosPreserveSubpixel(player, xFixed >> 8);
+        NativePositionOps.writeYPosPreserveSubpixel(player, y - carrierBoundsYOffset(p1));
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
 
@@ -575,15 +577,12 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     }
 
     private List<AbstractPlayableSprite> nativeCarrierParticipants() {
-        List<AbstractPlayableSprite> participants = new ArrayList<>(2);
-        if (camera().getFocusedSprite() != null) {
-            participants.add(camera().getFocusedSprite());
-        }
-        var nativeP2 = spriteManager().getRegisteredSidekicks().stream().findFirst().orElse(null);
-        if (nativeP2 != null && nativeP2 != camera().getFocusedSprite()) {
-            participants.add(nativeP2);
-        }
-        return participants;
+        ObjectPlayerQuery query = ObjectPlayerQuery.from(
+                spriteManager(), camera().getFocusedSprite());
+        return query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2).stream()
+                .filter(AbstractPlayableSprite.class::isInstance)
+                .map(AbstractPlayableSprite.class::cast)
+                .toList();
     }
 
     // =========================================================================

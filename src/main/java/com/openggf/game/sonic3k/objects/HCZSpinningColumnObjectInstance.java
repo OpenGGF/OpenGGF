@@ -17,6 +17,7 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -183,7 +184,7 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         rider.swingAngle = (rider.swingAngle + CAPTURE_SWING_STEP) & 0xFF;
 
         // ROM move.w writes x_pos only; the low subpixel word remains intact.
-        player.setCentreXPreserveSubpixel((short) (currentX + xOffset));
+        NativePositionOps.writeXPosPreserveSubpixel(player, currentX + xOffset);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
@@ -222,7 +223,7 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
             // setRolling changes the engine sprite height around its top-left
             // anchor; ROM writes the radii/status bytes in place and never
             // adjusts y_pos, so restore the native centre after that box change.
-            player.setCentreYPreserveSubpixel((short) releaseY);
+            NativePositionOps.writeYPosPreserveSubpixel(player, releaseY);
             player.setAnimationId(Sonic3kAnimationIds.ROLL);
             // sub_32784 copies y_vel(a0), not the column's direct oscillation
             // delta. Obj_HCZSpinningColumn never writes its y_vel field, so the

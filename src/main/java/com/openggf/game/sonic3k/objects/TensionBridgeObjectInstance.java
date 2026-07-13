@@ -12,6 +12,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -249,8 +250,7 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
             return;
         }
         int segment = segmentIndexFor(player);
-        List<PlayableEntity> sidekicks = services().sidekicks();
-        if (!sidekicks.isEmpty() && sidekicks.getFirst() == player) {
+        if (services().playerQuery().nativeP2OrNull() == player) {
             // sub_38AA2 stores Player 2's current segment in $3B after the
             // bend calculation, for the following object dispatch.
             sidekickSegmentIndex = segment;
@@ -322,8 +322,7 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
         playerOnBridge = playerEntity != null && objectManager != null
                 && objectManager.isAnyPlayerRiding(this);
         int nextPlayerSegmentIndex = playerSegmentIndex;
-        List<PlayableEntity> sidekicks = services().sidekicks();
-        PlayableEntity nativeSidekick = sidekicks.isEmpty() ? null : sidekicks.getFirst();
+        PlayableEntity nativeSidekick = services().playerQuery().nativeP2OrNull();
         boolean sidekickOnBridge = nativeSidekick != null
                 && objectManager != null
                 && objectManager.isRidingObject(nativeSidekick, this);
@@ -526,12 +525,8 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
 
     private void releasePlayerAtCollapse() {
         ObjectManager objectManager = services().objectManager();
-        List<PlayableEntity> participants = new java.util.ArrayList<>();
-        PlayableEntity mainPlayer = services().camera().getFocusedSprite();
-        if (mainPlayer != null) {
-            participants.add(mainPlayer);
-        }
-        participants.addAll(services().sidekicks());
+        List<PlayableEntity> participants = services().playerQuery()
+                .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
 
         // loc_38918/loc_3892C independently clear the P1 and P2 standing bits
         // and set Status_InAir. Query the live riding table here so both native
