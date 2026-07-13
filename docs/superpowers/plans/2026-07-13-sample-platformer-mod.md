@@ -42,6 +42,7 @@
   - `bolt.png` + `bolt-sheet.yaml` (character: 2+ frames, antenna blink cycle; `paletteLine: 0`, 16 `#RRGGBB` Genesis-representable colors)
   - `zapbug.png` + `zapbug-sheet.yaml` (badnik: 2 frames)
   - `springpad.png` + `springpad-sheet.yaml` (gimmick: compressed + extended frames)
+  - `ring.png` + `ring-sheet.yaml` (4-frame spin cycle, 16×16, `paletteLine: 1` — consumed by the entrypoint's real `RingSpriteSheet`; the phase-3 sample's empty ring sheet is NOT sufficient because this level places rings)
 - Create under `.../project/src/main/resources/audio/`: `zone-theme.ogg`, `jump2.wav`, `hit.wav`, `spring.wav`, `audio-manifest.yaml`
 - Test: `src/test/java/com/openggf/tools/modsdk/TestSamplePlatformerLevelSource.java`
 
@@ -144,7 +145,7 @@ git commit -m "test: sample-platformer deterministic assets and TMX level source
 
 **Files:**
 - Create (clone `sample-standalone-src` with renames): `src/test/resources/mods/sample-platformer-src/{README.md,build.sh,build.ps1}`, `project/pom.xml` (swap the level execution to `convert level --from-tmx ... --palette ...`; add the three extra art conversions; keep audio as plain resources), `project/README.md`, `project/src/main/resources/META-INF/openggf-mod.yaml`, `project/src/main/java/example/platformer/{PlatformerMod,PlatformerModule,BoltCharacter,ZapBug,SpringPad}.java` (compilable stubs beyond the module skeleton)
-- Modify: `src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java` (count +1; `EXPECTED_IDS`, `EXPECTED_API_RANGES` (`">=2.0.0 <3.0.0"`), `TRUSTED_CODE_SAMPLES`; add `materializePlatformer(Path)` modeled on `materializeStandalone` but running `convert art` for the three object sheets, `convert art --playable` for bolt, and `convert level --from-tmx --palette` for the level)
+- Modify: `src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java` (count +1 — including the `exactlyFive...` method name and assertion messages; `EXPECTED_IDS`, `EXPECTED_API_RANGES` (`">=2.0.0 <3.0.0"`), `TRUSTED_CODE_SAMPLES`; **generalize the hardcoded standalone check at L86-89** — `boolean standalone = "phase3-standalone".equals(id)` drives the ModType/baseGame assertions and must become a standalone-ids set containing both `phase3-standalone` and `sample-platformer`; add `materializePlatformer(Path)` modeled on `materializeStandalone` but running `convert art` for the object+ring sheets, `convert art --playable` for bolt, and `convert level --from-tmx --palette` for the level — note the converter requires `--out` to not pre-exist)
 
 **Interfaces:**
 - Produces: `sample-platformer` builds, packages, and validates green in the gallery test. Entrypoint (final shape — later tasks fill class bodies):
@@ -159,7 +160,12 @@ public final class PlatformerMod implements GgfMod {
                     assets.readBounded("art/bolt.ggfp", assets.limits().maxAssetBytes()));
             Level level = StandaloneLevelLoader.load(assets,
                     new BakedLevelRef("levels/act1/level.json"), context.ownerModId(),
-                    new RingSpriteSheet(new Pattern[0], List.of(), 0, 8, 0, 0));
+                    buildRingSheet(assets));
+            // NOTE: the phase-3 sample passes an EMPTY ring sheet (new Pattern[0]) — its
+            // level has no rings. Ours places ~20 ring markers, so buildRingSheet must
+            // return a real sheet: the generator (Task 1) also emits ring.png +
+            // ring-sheet.yaml, converted to art/ring.ggfs, and buildRingSheet reads it
+            // (BakedSheetReader) into the 6-arg RingSpriteSheet (RingSpriteSheet.java:22).
             context.registerObject("zapbug", (spawn, registry) -> new ZapBug(spawn));
             context.registerObjectArt("zapbug", new BakedSheetRef("art/zapbug.ggfs"));
             context.registerObject("springpad", (spawn, registry) -> new SpringPad(spawn));
@@ -270,12 +276,15 @@ public final class BoltCharacter extends AbstractPlayableSprite {
         return true;
     }
 
-    /* landing reset: find the per-frame hook or air-state transition SampleCharacter/
-       AbstractPlayableSprite exposes (an overridable update/land hook) and clear
-       doubleJumpUsed when getAir() goes false. If no overridable per-frame hook exists,
-       clear it inside onAbilityActivate's guard via a grounded check:
-       doubleJumpUsed && !getAir() cannot happen at press-time (hook is airborne-only),
-       so a lazily-reset latch needs the real landing hook — resolve from source. */
+    /* Landing reset — verified seam: AbstractPlayableSprite has NO dedicated landing
+       hook, but draw() is an overridable per-frame method SampleCharacter already
+       overrides. Clear the latch there:
+           @Override public void draw() {
+               if (!getAir()) doubleJumpUsed = false;
+               ...existing SampleCharacter-style draw body...
+           }
+       If a cleaner published per-frame hook is discovered while reading, prefer it —
+       but draw() is the designated fallback and is known to work. */
 }
 ```
 
@@ -317,7 +326,7 @@ git commit -m "test: sample-platformer double-jump character with rewind latch"
 - Consumes: `AbstractBadnikInstance` (`updateMovement(int,PlayableEntity)`, `getCollisionSizeIndex()`, `getDestructionConfig()`, `appendRenderCommands`), `PatrolMovementHelper` (the intended patrol API — use it, unlike the phase-3 sample's raw subpixel counter), `SpringBounceHelper` (`strength(boolean)`, `STRENGTH_YELLOW`, `CONTROL_LOCK_FRAMES`), `getRenderer("sample-platformer:zapbug"/"sample-platformer:springpad")`, `services().playSfx(new StreamedMusicPort.SfxRef("sample-platformer","spring"/"hit"))`, `RewindRecreatable`.
 - Produces:
   - `ZapBug extends AbstractBadnikInstance implements RewindRecreatable` — patrols via `PatrolMovementHelper`, 2-frame animation, real rendering, ENEMY touch (inherited badnik behavior), destruction config with the `hit` SFX fired on destruction if the badnik surface exposes it (else on player contact — mirror how stock badnik destruction SFX works via `DestructionEffects`).
-  - `SpringPad extends AbstractObjectInstance implements RewindRecreatable` — when the player lands on its 32×16 top (detect via the solid/riding surface available on the 2.0 surface: if `SolidObjectProvider` is NOT published, do proximity+velocity detection: player centre within the pad rect and `getYSpeed() > 0`), apply `player.setYSpeed(-SpringBounceHelper.STRENGTH_YELLOW)` semantics via the helper's real API, play `spring` SFX, switch to the extended frame for 8 frames (`animTick` non-final field).
+  - `SpringPad extends AbstractObjectInstance implements RewindRecreatable` — when the player lands on its 32×16 top (detect via the solid/riding surface available on the 2.0 surface: if `SolidObjectProvider` is NOT published, do proximity+velocity detection: player centre within the pad rect and `getYSpeed() > 0`), apply `player.setYSpeed((short) SpringBounceHelper.STRENGTH_YELLOW)` (**STRENGTH_YELLOW is already negative** = upward, `SpringBounceHelper.java:36` — do not negate it), play `spring` SFX, switch to the extended frame for 8 frames (`animTick` non-final field).
 
 - [ ] **Step 1: Read the helper surfaces**
 
@@ -373,6 +382,7 @@ git commit -m "docs: standalone-platformer and ai-art build-along guides" # trai
 
 ## Plan-level notes for the executor
 
+- **Verified base facts:** `PlayableSheetMaterializer` lives in `level.objects` (not `mods.code`) — mind the import. `GgfModCli.run` is `run(String[], PrintStream)` — no 1-arg overload; mirror `TestSampleModsPackage`'s invocation. `AbstractObjectInstance`'s only constructor is `(ObjectSpawn, String)` with a `protected final ObjectSpawn spawn` field (no accessor). `RingSpriteSheet` has the 6-arg constructor at `RingSpriteSheet.java:22`.
 - **Consume-only discipline:** touching any `@ModApi` type breaks `TestModApiSignatureSurface`. If a needed surface is missing (e.g. a sprite-side SFX path or a published solid-object interface), work around it inside the mod (skip the sound / proximity detection) and note the gap in the guide — do NOT extend the API in this plan.
 - The double-jump landing-reset seam (Task 4) and the spring contact detection (Task 5) are the two genuine discovery points; both have designated fallbacks.
 - The OGG encode is the one non-hermetic generator step: encode once, check in, document the exact command in the generator's Javadoc. If no encoder exists on the machine, surface it — don't silently substitute WAV for the track.

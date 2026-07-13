@@ -48,7 +48,7 @@ The mod zone needs `level.json` plus the 10-11 binary assets of the exact `ggfmo
 - Test: `src/test/java/com/openggf/tools/modsdk/TestSampleFlappyLevelSource.java`
 
 **Interfaces:**
-- Produces: a level-source dir that `GgfModCli convert level --from-export` accepts, with `zoneName: "FLAPPY GARDEN"`, `zoneIndex: 0x40`, `levelIndex: 0x400`, `blockGridSide: 8`, `width: 80`, `height: 2`, bounds `{minX:0, maxX:10240-320, minY:0, maxY:32}`, start `{x:128, y:128}`, music `{"stockId": <stock S2 id — reuse sample-mod-src's 129 unless the guide picks another>}`, `objects[]` = one `sample-flappy:controller` at (128,128) + pipe entries `sample-flappy:pipe` every 224 px from x=512 to x=9700 with `subtype` = gap-centre row variant (0-4 cycling deterministically by index), `rings: []`.
+- Produces: a level-source dir that `GgfModCli convert level --from-export` accepts, with `zoneName: "FLAPPY GARDEN"`, `zoneIndex: 0x40`, `levelIndex: 0x400`, `blockGridSide: 8`, `width: 80`, `height: 2`, bounds `{minX:0, maxX:10240, minY:0, maxY:256}` (**level-pixel** semantics — full level size, matching sample-mod-src's `maxX:256, maxY:256` precedent; these are NOT camera bounds, and start must lie inside them per `ModLevelDefinitionParser.parseStart`), start `{x:128, y:128}`, music `{"stockId": <stock S2 id — reuse sample-mod-src's 129 unless the guide picks another>}`, `objects[]` = one `sample-flappy:controller` at (128,128) + pipe entries `sample-flappy:pipe` every 224 px from x=512 to x=9700 with `subtype` = gap-centre row variant (0-4 cycling deterministically by index), `rings: []`.
 
 - [ ] **Step 1: Read the format sources**
 
@@ -145,15 +145,14 @@ public final class FlappySampleMod implements GgfMod {
         context.registerObjectArt("pipe", new BakedSheetRef("art/pipe.ggfs"));
         context.registerObjectPreview("pipe", "pipe");
         // Tails' flying body frames, materialized from the player's ROM at launch.
-        // Addresses: Sonic2Constants ART_UNC_TAILS_ADDR/SIZE, MAP_UNC_TAILS_ADDR,
-        // MAP_R_UNC_TAILS_ADDR (DPLC). paletteLine: verify the line the S2 player
-        // palette occupies via Sonic2PlayerArt.loadTails() and use that literal.
+        // Literals verified against Sonic2Constants.java:112-117 and ART_TILE_TAILS
+        // (0x07A0 -> palette bits 13-14 = line 0). Re-confirm at implementation.
         context.registerRomObjectArt("bird", new RomArtRequest(
-                0x50000 /* ART_UNC_TAILS_ADDR literal */, RomArtCompression.UNCOMPRESSED,
-                0x2960 /* ART_UNC_TAILS_SIZE literal */,
-                0x60000 /* MAP_UNC_TAILS_ADDR literal */,
-                0x70000 /* MAP_R_UNC_TAILS_ADDR literal */,
-                0 /* verified palette line */, 1));
+                0x64320 /* ART_UNC_TAILS_ADDR */, RomArtCompression.UNCOMPRESSED,
+                0xB8C0 /* ART_UNC_TAILS_SIZE */,
+                0x739E2 /* MAP_UNC_TAILS_ADDR */,
+                0x7446C /* MAP_R_UNC_TAILS_ADDR (DPLC) */,
+                0 /* palette line from ART_TILE_TAILS */, 1));
         context.registerZone(new ModZoneContribution("flappy-garden",
                 new BakedLevelRef("levels/flappy/level.json"), "ehz2", null));
     }
@@ -273,7 +272,7 @@ The heart of the mod. The controller is a layout object at the level start that:
 - Test: `src/test/java/com/openggf/mods/code/TestSampleFlappyIntegration.java` (ROM-gated on S2)
 
 **Interfaces:**
-- Consumes: `ObjectPlayerQuery` via `services().playerQuery().mainPlayerOrNull()`; `AbstractPlayableSprite` control surface (`applyObjectControlState(ObjectControlState.NATIVE_BIT_7_FULL_CONTROL)`, `releaseFromObjectControl(int)`, `setHidden`, `isJumpJustPressed`, `getCentreX/getCentreY`); `NativePositionOps.writeXPosPreserveSubpixel/writeYPosPreserveSubpixel` (or the `addYPosPreserveSubpixel` delta variant — pick per real signatures); `services().camera().requestForcedScroll(int,int)` **every frame** (it is frame-scoped); `services().levelGamestate().addRings(int)`; `services().playSfx(GameSound.RING)` (or raw stock SFX id); `player.applyHurtOrDeath(int, DamageCause.NORMAL, boolean)`; `FlappyPipe` geometry accessors (Task 3); `getRenderer("sample-flappy:bird")` (ROM-art key).
+- Consumes: `ObjectPlayerQuery` via `services().playerQuery().mainPlayerOrNull()`; `AbstractPlayableSprite` control surface (`applyObjectControlState(ObjectControlState.NATIVE_BIT_7_FULL_CONTROL)`, `releaseFromObjectControl(int)`, `setHidden`, `isJumpJustPressed`, `getCentreX/getCentreY`); position writes via the **published** sprite methods `setCentreXPreserveSubpixel(short)` / `setCentreYPreserveSubpixel(short)` / `shiftX(int)` / `shiftY(int)` — do NOT reference `NativePositionOps` from mod source: it is not `@ModApi`, and any non-API engine reference makes `ModValidator` emit `NON_API_ENGINE_REFERENCE`, failing the gallery's zero-findings gate; `services().camera().requestForcedScroll(int,int)` **every frame** (it is frame-scoped; it takes ROM `Scroll_forced_X/Y_pos` **focus coordinates**, not a camera origin — Javadoc at `Camera.java:1302-1314`, MHZ vine precedent passes focus-point coords); `services().levelGamestate().addRings(int)`; `services().playSfx(GameSound.RING)` (or raw stock SFX id); `player.applyHurtOrDeath(int, DamageCause.NORMAL, boolean)`; `FlappyPipe` geometry accessors (Task 3); `getRenderer("sample-flappy:bird")` (ROM-art key).
 - Produces: controller behavior contract below (the integration test asserts it).
 
 **Controller structure (all session state in non-final capturable scalar fields for rewind):**
@@ -305,7 +304,9 @@ public final class FlappyController extends AbstractObjectInstance implements Re
             case 1 -> {
                 if (player.isJumpJustPressed()) velY = -0x400;
                 velY = Math.min(velY + 0x38, 0x800);
-                /* x += 0x200 via subpixel-preserving write; y += velY via ySub accumulator */
+                /* x += 0x200, y += velY: integrate via the ySub/xSub accumulators and write
+                   whole-pixel deltas with player.shiftX(dx)/player.shiftY(dy) (published);
+                   or write absolute positions with setCentreX/YPreserveSubpixel */
                 int px = player.getCentreX(), py = player.getCentreY();
                 services().camera().requestForcedScroll(px - 96 + 160, /* fixed */ 112);
                 scoreAndCollide(player, px, py, frameCounter);
@@ -456,6 +457,10 @@ git commit -m "docs: flappy-remix build-along guide for gallery sample" # traile
 ## Plan-level notes for the executor
 
 - **Hard dependency:** do not start before the ModRomArtIntake plan is merged into this branch — Task 2's entrypoint and Task 4's bird rendering need `registerRomObjectArt` + Mod API 2.1.0.
+- **Mod source may reference ONLY `@ModApi` types** (check `mod-api-signatures-2.*.txt`): `ModValidator` emits `NON_API_ENGINE_REFERENCE` for anything else and the gallery gate requires zero findings. Known verified-published surfaces this plan uses: `setCentreX/YPreserveSubpixel`, `shiftX/shiftY`, `ObjectManager.activeObjectsOfType(Class)`, `GameSound.RING`, `LevelState.addRings(int)`, `DamageCause`, `GLCommand`.
+- **Base-class facts** (verified): `AbstractObjectInstance` has only the 2-arg constructor `(ObjectSpawn spawn, String name)` and a `protected final ObjectSpawn spawn` **field** (no `spawn()` accessor) — sketches' `super(spawn)`/`spawn()` adapt to `super(spawn, "sample-flappy:pipe")`/`spawn.x`. `update(int, PlayableEntity)` is overridable on `AbstractObjectInstance` (final only on `AbstractBadnikInstance`). `GgfModCli.run` is `run(String[], PrintStream)` — no 1-arg overload.
+- **Spec deviation (documented):** the spec's "bird companion object" is folded into the controller's own `appendRenderCommands` — two mod object classes (controller, pipe), not three. State this in the guide so the spec's rewind sentence reads correctly.
+- **`bestScore` is controller-lifetime:** a death reload recreates the controller and resets it. That is consistent with the spec's session-lifetime-only scope; say so in the guide rather than fighting it.
 - The controller/pipe code sketches are behavioral contracts; every `/* ... */` marks a read-then-adapt against a named real surface. The constants table at the top is fixed — tests and guide use those exact values.
 - **Two verified-at-implementation facts** must be pinned before Task 2 commits: the Sonic2Constants Tails address literals and the S2 player palette line (from `Sonic2PlayerArt.loadTails()`).
 - Layout-object despawn windowing is the classic trap: the controller must move its own object position with the player every frame or it despawns once the camera scrolls away from the level start.
