@@ -3,6 +3,9 @@ package com.openggf.game.sonic1.objects;
 import com.openggf.camera.Camera;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.solid.SolidCheckpointBatch;
+import com.openggf.game.solid.ContactKind;
+import com.openggf.game.solid.DefaultSolidExecutionRegistry;
+import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
@@ -12,11 +15,9 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonic1GlassBlockObjectInstance {
 
@@ -44,6 +45,33 @@ class TestSonic1GlassBlockObjectInstance {
                 "Glass block update should still end at the moved Y");
     }
 
+    @Test
+    void movingGlassBlockKeepsNativeSolidObjectLatchGeometry() {
+        Sonic1GlassBlockObjectInstance block = new Sonic1GlassBlockObjectInstance(
+                new ObjectSpawn(0x0D60, 0x03E0, 0x30, 0x01, 0, false, 0));
+
+        assertTrue(block.usesInstanceSolidStateLatchKey(),
+                "Obj30 status belongs to the live SST while its dynamic position changes");
+        assertTrue(block.usesInclusiveRightEdge(),
+                "Obj30 retains SolidObject's inclusive right bound");
+    }
+
+    @Test
+    void exactRightEdgeRemainsAFullSolidContact() {
+        ProbeGlassBlock block = new ProbeGlassBlock(
+                new ObjectSpawn(0x0D60, 0x047C, 0x30, 0x00, 0, false, 0));
+        ObjectManager manager = buildManager(block);
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) 0x0D8B);
+        player.setCentreY((short) 0x03EC);
+        player.setAir(false);
+
+        manager.update(0, player, List.of(), 0, false, true, false);
+
+        assertTrue(block.checkpointBatch.perPlayer().get(player).kind() != ContactKind.NONE,
+                "SolidObject's `bhi` bound includes relX == d1*2");
+    }
+
     private static void setPrivateInt(Object instance, String fieldName, int value) throws Exception {
         Field field = instance.getClass().getSuperclass().getDeclaredField(fieldName);
         field.setAccessible(true);
@@ -52,19 +80,22 @@ class TestSonic1GlassBlockObjectInstance {
 
     private static ObjectManager buildManager(ProbeGlassBlock block) {
         ObjectManager[] holder = new ObjectManager[1];
+        SolidExecutionRegistry solidExecutionRegistry = new DefaultSolidExecutionRegistry();
         ObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
                 return holder[0];
             }
+
+            @Override
+            public SolidExecutionRegistry solidExecutionRegistry() {
+                return solidExecutionRegistry;
+            }
         };
 
-        Camera camera = mock(Camera.class);
-        when(camera.getX()).thenReturn((short) 0);
-        when(camera.getY()).thenReturn((short) 0);
-        when(camera.getWidth()).thenReturn((short) 320);
-        when(camera.getHeight()).thenReturn((short) 224);
-        when(camera.isVerticalWrapEnabled()).thenReturn(false);
+        Camera camera = new Camera();
+        camera.setX((short) 0x0CFA);
+        camera.setY((short) 0x0340);
 
         ObjectManager manager = new ObjectManager(
                 List.of(), null, 0, null, null, null, camera, services);
@@ -75,6 +106,7 @@ class TestSonic1GlassBlockObjectInstance {
 
     private static final class ProbeGlassBlock extends Sonic1GlassBlockObjectInstance {
         private int checkpointY = Integer.MIN_VALUE;
+        private SolidCheckpointBatch checkpointBatch;
 
         private ProbeGlassBlock(ObjectSpawn spawn) {
             super(spawn);
@@ -83,7 +115,8 @@ class TestSonic1GlassBlockObjectInstance {
         @Override
         protected SolidCheckpointBatch checkpointAll() {
             checkpointY = getY();
-            return new SolidCheckpointBatch(this, Map.of());
+            checkpointBatch = super.checkpointAll();
+            return checkpointBatch;
         }
     }
 }

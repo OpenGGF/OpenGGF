@@ -1,5 +1,23 @@
 # Trace Frontier Log
 
+### 2026-07-13 -- S1 frame-start push pairing advances MZ1
+
+MZ1 complete-run frame 2404 began with both Sonic and Obj30's native
+`Status_Push` bits set. Sonic's earlier movement slot cleared the player bit
+and selected Wait; the later oscillating glass-block slot then reached retail
+`Solid_NoCollision`, observed its still-set object bit, and wrote the adjacent
+Walk/Run animation word for one frame. The engine required the live player bit
+or an already-Walk animation, so it suppressed this valid later-slot write.
+
+Push release now pairs the exact object's immediately previous solid checkpoint
+with the player's existing frame-start push snapshot. Obj30 also keys its push
+state by live instance while its dynamic Y changes and exposes `SolidObject`'s
+inclusive right edge. This is native status/slot-order state, not a zone, route,
+frame, or trace gate; no trace data or tolerance changed. Focused stale-latch,
+previous-checkpoint, persistent-latch, and Obj30 geometry tests pass.
+`TestS1Mz1CompleteRunTraceReplay` advances from frame 2404 to frame 2815 with
+zero warnings and physics errors.
+
 ### 2026-07-13 -- Forced logical direction greens S1 SLZ2
 
 SLZ2 remained byte-exact through signpost walk-off frame 5289, where forced

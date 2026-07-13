@@ -735,7 +735,9 @@ public class TestSolidObjectManager {
         // S1 MoveLeft/MoveRight can clear Status_Push before the later object
         // slot runs Solid_NoCollision. The immediately previous checkpoint is
         // the bounded owner of that object's still-set status bit.
+        player.captureOnObjectAtFrameStart();
         player.setPushing(false);
+        player.setAnimationId(5);
         player.setCentreX((short) 40);
         manager.update(0, player, List.of(), 1, false, true, false);
 

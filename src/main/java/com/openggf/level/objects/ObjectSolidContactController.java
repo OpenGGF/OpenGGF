@@ -351,7 +351,7 @@ final class ObjectSolidContactController {
         boolean persistentNativeLatch = instance instanceof SolidObjectProvider provider
                 && provider.preservesNativePushLatchAcrossSkippedSolidCheckpoints();
         boolean previousCheckpointStillOwnsWalk = checkpointPushingLastFrame
-                && sprite.getAnimationId() == walkAnimationId;
+                && sprite.getPushingAtFrameStart();
         boolean persistentLatchStillOwnsWalk = persistentNativeLatch
                 && sprite.getAnimationId() == walkAnimationId;
         if (!sprite.getPushing()
@@ -364,12 +364,13 @@ final class ObjectSolidContactController {
         // prev_anim are adjacent bytes, this publishes anim=Walk ($00) and
         // prev_anim=Run ($01), restarting Walk on the next player slot without
         // changing the mapping already rendered this frame. Require either the
-        // live paired player Status_Push bit, or raw Walk plus this exact object's
-        // immediately previous checkpoint push state. MoveLeft/MoveRight can
-        // clear the player bit before the later object slot reaches
-        // Solid_NoCollision, while the object's own status bit still owns the
-        // native write. The checkpoint value is replaced every frame, so an old
-        // global latch cannot overwrite Roll after an unrelated later cleanup.
+        // live paired player Status_Push bit, or this exact object's immediately
+        // previous checkpoint paired with the player's frame-start Status_Push.
+        // MoveLeft/MoveRight can clear the player bit and publish Wait before the
+        // later object slot reaches Solid_NoCollision, while the object's own
+        // status bit still owns the native Walk/Run write. Both snapshots are
+        // replaced every frame, so an old global latch cannot overwrite Roll
+        // after an unrelated later cleanup.
         // Push-block states 4/6 deliberately skip Solid_ChkEnter; their provider
         // opts the live SST latch into the same raw-Walk fallback until the next
         // state-0 checkpoint consumes it.
