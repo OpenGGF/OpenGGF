@@ -4,6 +4,7 @@ import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
@@ -51,11 +52,13 @@ class TestTensionBridgeBendTiming {
         TensionBridgeObjectInstance bridge = new TensionBridgeObjectInstance(new ObjectSpawn(
                 0x1000, 0x0788, Sonic3kObjectIds.TENSION_BRIDGE, 0x08, 0, false, 0x0788));
         ObjectManager objectManager = mock(ObjectManager.class);
-        bridge.setServices(new StubObjectServices() {
+        StubObjectServices services = new StubObjectServices() {
             @Override public ObjectManager objectManager() { return objectManager; }
             @Override public int romZoneId() { return Sonic3kZoneIds.ZONE_HCZ; }
             @Override public int featureZoneId() { return Sonic3kZoneIds.ZONE_HCZ; }
-        });
+        };
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
+        bridge.setServices(services);
         when(objectManager.isAnyPlayerRiding(bridge)).thenReturn(true);
 
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
@@ -81,12 +84,14 @@ class TestTensionBridgeBendTiming {
                 0x1000, 0x0788, Sonic3kObjectIds.TENSION_BRIDGE, 0x08, 0, false, 0x0788));
         ObjectManager objectManager = mock(ObjectManager.class);
         TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0, (short) 0);
-        bridge.setServices(new StubObjectServices() {
+        StubObjectServices services = new StubObjectServices() {
             @Override public ObjectManager objectManager() { return objectManager; }
             @Override public List<com.openggf.game.PlayableEntity> sidekicks() { return List.of(sidekick); }
             @Override public int romZoneId() { return Sonic3kZoneIds.ZONE_HCZ; }
             @Override public int featureZoneId() { return Sonic3kZoneIds.ZONE_HCZ; }
-        });
+        };
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> null, () -> List.of(sidekick)));
+        bridge.setServices(services);
         when(objectManager.isAnyPlayerRiding(bridge)).thenReturn(true);
         when(objectManager.isRidingObject(sidekick, bridge)).thenReturn(true);
 
