@@ -25,6 +25,7 @@ effort.
 - [`ggfmod validate` findings](troubleshooting.md)
 - [Maintained sample gallery](samples/index.md)
 - [Deferred-backlog decisions](BACKLOG.md)
+- [GUI tooling evaluation](GUI_TOOLING_EVALUATION.md)
 
 The five sample sources are built by the default test suite. Treat them as executable
 contracts rather than snippets copied out of context.
