@@ -117,6 +117,8 @@ class TestSonic1MonitorObjectInstance {
         assertTrue(profile.monitorSolidity());
         assertEquals(0, profile.monitorVerticalOffset());
         assertFalse(profile.stickyContactBuffer());
+        assertTrue(profile.inclusiveRightEdge(),
+                "Mon_SolidSides retains the exact BHI right edge");
     }
 
     private static AbstractObjectInstance findByObjectId(Collection<ObjectInstance> activeObjects, int objectId) {

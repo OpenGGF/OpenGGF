@@ -103,6 +103,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean inputRawLeft, inputRawRight;
 	private boolean manualTailsFlightUpdatedThisFrame;
 	private boolean slopeResistAppliedThisFrame;
+	private boolean directionalBrakeReachedZero;
 	private boolean facingFlipForcesPushClearAfterGroundWall;
 	private boolean wasCrouching;
 	// ROM Sonic_Move/Tails_Move decide the standing-still duck/look-up/balance
@@ -443,6 +444,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// repopulates it before updateCrouchState consumes it (see field comment).
 		preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
 		slopeResistAppliedThisFrame = false;
+		directionalBrakeReachedZero = false;
 		skidAnimationRefreshedThisFrame = false;
 		sprite.getAnimationManager().clearGroundMovementAnimSpeed();
 		sprite.clearDeferredGroundWallVelocityResponse();
@@ -2181,6 +2183,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				if (gSpeed > 0) {
 					gSpeed -= runDecel;
 					if (gSpeed < 0) gSpeed = (short) -128;
+					directionalBrakeReachedZero = gSpeed == 0;
 					if (shouldTriggerGroundSkid(gSpeed, false)) {
 						sprite.setDirection(Direction.RIGHT);
 						handleSkid();
@@ -2250,7 +2253,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// normal time by updateCrouchState(), so other traces are unaffected.
 			boolean lookGateActive = isOnFlatGround() && gSpeed == 0;
 			boolean balancingNow = lookGateActive && computeCurrentFrameBalancing();
-			if (lookGateActive && !inputLeft && !inputRight) {
+			if (lookGateActive
+					&& ((!inputLeft && !inputRight) || directionalBrakeReachedZero)) {
 				// ROM clears Status_Push before choosing Wait/Balance/Look/Duck,
 				// so a released direction exits the push display even when the
 				// standing-on-object balance branch diverts to ResetScr
@@ -3737,7 +3741,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Update balance state (checks for ledge edges)
 		// ROM: Balance check happens before crouch/lookup in Obj01_LookUpDown
-		if (standingStill) {
+		if (standingStill
+				&& ((!inputLeft && !inputRight) || directionalBrakeReachedZero)) {
 			if (preMoveBalanceEvaluated) {
 				// doGroundMove evaluated the ROM balance branch before SpeedToPos
 				// and AnglePos. Reuse that result even when it was "not balancing":
@@ -4075,16 +4080,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * This preserves the ROM's pre-movement decision point without exposing the
 	 * temporary state before updateCrouchState() applies it.
 	 *
-	 * <p>Callers gate on the standing-still-on-flat-ground precondition. Held
-	 * left/right does not independently suppress this block: an opposite-direction
-	 * MoveLeft/MoveRight call can decelerate inertia to exactly zero, after which
-	 * the enclosing Move routine continues into Wait/Balance with the button still
-	 * held (S1 01 Sonic.asm:395-414,634-757).
+	 * <p>Callers gate on the standing-still-on-flat-ground precondition. Directional
+	 * input suppresses the balance probe unless S1's asymmetric MoveLeft braking
+	 * branch has reduced positive inertia to exactly zero. That helper returns
+	 * without writing an animation, then the enclosing Move routine immediately
+	 * continues through its zero-inertia Wait/Balance tail while Left remains held
+	 * (_incObj/01 Sonic.asm:390-431, 634-697).
 	 */
 	private boolean computeCurrentFrameBalancing() {
+		if ((inputLeft || inputRight) && !directionalBrakeReachedZero) {
+			return false;
+		}
 		Direction savedDirection = sprite.getDirection();
 		int savedBalanceState = sprite.getBalanceState();
-		updateBalanceState();
+		// doGroundMove has only updated its local gSpeed at this point. The exact
+		// MoveLeft deceleration-to-zero case must therefore bypass the stale live
+		// sprite inertia gate while probing the enclosing Move routine's tail.
+		updateBalanceState(true);
 		boolean balancing = sprite.isBalancing();
 		preMoveBalanceEvaluated = true;
 		preMoveBalanceState = sprite.getBalanceState();
@@ -4097,11 +4109,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private void updateBalanceState() {
+		updateBalanceState(false);
+	}
+
+	private void updateBalanceState(boolean standingStillAtMovementDispatch) {
 		// Reset balance state first
 		sprite.setBalanceState(0);
 
 		// Balance only applies when standing still on flat ground
-		if (sprite.getGSpeed() != 0 || !isOnFlatGround()) {
+		if ((!standingStillAtMovementDispatch && sprite.getGSpeed() != 0) || !isOnFlatGround()) {
 			return;
 		}
 

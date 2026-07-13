@@ -773,7 +773,7 @@ public class TestSolidObjectManager {
     }
 
     @Test
-    public void sonic1ObjectPushLatchPublishesAfterPlayerPushWasCleared() {
+    public void sonic1ObjectPushLatchPublishesWhilePlayerPushIsPaired() {
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
         TestMultiPieceSolidObject object = new TestMultiPieceSolidObject(
                 100, 100, new SolidObjectParams(16, 8, 8));
@@ -796,17 +796,16 @@ public class TestSolidObjectManager {
 
         manager.updateSolidContacts(player);
         assertTrue(player.getPushing());
-        player.setPushing(false);
         player.setCentreX((short) 40);
         manager.updateSolidContacts(player);
 
         assertEquals(0, player.getAnimationId(),
-                "The object's still-set Status_Push bit owns S1 Solid_NoCollision even after Sonic clears its bit");
+                "The paired object/player Status_Push bits own S1 Solid_NoCollision");
         assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId());
     }
 
     @Test
-    public void sonic1PreviousObjectCheckpointPublishesWalkAfterMovementClearsLivePush() {
+    public void sonic1PreviousObjectCheckpointPublishesAfterMovementClearsLivePush() {
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
         ManualPushCheckpointObject object = new ManualPushCheckpointObject(100, 100, false);
         ObjectManager manager = buildManager(object);
@@ -815,10 +814,11 @@ public class TestSolidObjectManager {
         manager.update(0, player, List.of(), 0, false, true, false);
         assertTrue(player.getPushing());
 
-        // S1 MoveLeft/MoveRight can clear Status_Push before the later object
-        // slot runs Solid_NoCollision. The immediately previous checkpoint is
-        // the bounded owner of that object's still-set status bit.
+        // MoveLeft/MoveRight can clear the live player bit before the later
+        // object slot. The paired frame-start bit plus this object's previous
+        // checkpoint remains the bounded native owner.
         player.captureOnObjectAtFrameStart();
+        assertTrue(player.getPushingAtFrameStart());
         player.setPushing(false);
         player.setAnimationId(5);
         player.setCentreX((short) 40);
@@ -826,6 +826,45 @@ public class TestSolidObjectManager {
 
         assertEquals(0, player.getAnimationId());
         assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId());
+    }
+
+    @Test
+    public void sonic1AirborneMonitorPushReleaseBypassesAnimationWord() {
+        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        SolidObjectParams params = new SolidObjectParams(0x1A, 0x0F, 0x10);
+        TestMultiPieceSolidObject object = new ProfileBackedMultiPieceSolidObject(
+                100, 100, params, SolidRoutineProfile.monitorSolid(0, false));
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_1);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setCentreX((short) 75);
+        player.setCentreY((short) 100);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0,
+                List.of(0x08, 0x09), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(5, new SpriteAnimationScript(0,
+                List.of(0x01), SpriteAnimationEndAction.LOOP, 0));
+        player.setAnimationSet(animations);
+        player.setAnimationId(5);
+        player.getAnimationManager().update(0);
+
+        manager.updateSolidContacts(player);
+        assertTrue(player.getPushing(), "Fixture should establish the monitor's native push latch");
+
+        player.setAir(true);
+        player.setCentreX((short) 40);
+        manager.updateSolidContacts(player);
+
+        assertFalse(player.getPushing());
+        assertFalse(manager.hasObjectPushingBit(player));
+        assertEquals(5, player.getAnimationId(),
+                "Mon_Solid airborne release branches directly to stoppushing without writing Walk");
+        assertEquals(5, player.getAnimationManager().captureRewindState().lastAnimationId());
     }
 
     @Test
@@ -1936,7 +1975,7 @@ public class TestSolidObjectManager {
         }
     }
 
-    private static final class TestMultiPieceSolidObject extends TestSolidObject
+    private static class TestMultiPieceSolidObject extends TestSolidObject
             implements MultiPieceSolidProvider {
         private boolean lastPushingState;
         private int pushingStateChanges;
@@ -1964,6 +2003,21 @@ public class TestSolidObjectManager {
         public void setPlayerPushing(PlayableEntity player, boolean pushing) {
             lastPushingState = pushing;
             pushingStateChanges++;
+        }
+    }
+
+    private static final class ProfileBackedMultiPieceSolidObject extends TestMultiPieceSolidObject {
+        private final SolidRoutineProfile profile;
+
+        private ProfileBackedMultiPieceSolidObject(
+                int x, int y, SolidObjectParams params, SolidRoutineProfile profile) {
+            super(x, y, params);
+            this.profile = profile;
+        }
+
+        @Override
+        public SolidRoutineProfile getSolidRoutineProfile() {
+            return profile;
         }
     }
 

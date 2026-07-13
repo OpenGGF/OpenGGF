@@ -1270,6 +1270,46 @@ public class TestPlayableSpriteMovement {
         @Test
         public void heldOppositeDirectionStillAllowsBalanceWhenBrakingReachesZero() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_1);
+                mockSprite.setGSpeed((short) 0x80);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setOnObject(false);
+                setInputState(true, false, false, false, false);
+
+                Sensor left = new Sensor(mockSprite, Direction.DOWN, (byte) -9, (byte) 19, true) {
+                        @Override
+                        protected SensorResult doScan(short dx, short dy) {
+                                return new SensorResult((byte) 0, (byte) 25, 0, Direction.DOWN);
+                        }
+                };
+                Sensor right = new Sensor(mockSprite, Direction.DOWN, (byte) 9, (byte) 19, true) {
+                        @Override
+                        protected SensorResult doScan(short dx, short dy) {
+                                return new SensorResult((byte) 3, (byte) 25, 0, Direction.DOWN);
+                        }
+                };
+                mockSprite.setGroundSensors(new Sensor[]{left, right});
+                setMovementField("latchedNextTilt", 3);
+                setMovementField("latchedTilt", 0);
+
+                Method groundMove = PlayableSpriteMovement.class.getDeclaredMethod("doGroundMove");
+                groundMove.setAccessible(true);
+                groundMove.invoke(manager);
+                assertEquals(0, mockSprite.getGSpeed(),
+                                "S1 MoveLeft must preserve the exact positive-deceleration zero result");
+
+                Method computeBalance = PlayableSpriteMovement.class
+                                .getDeclaredMethod("computeCurrentFrameBalancing");
+                computeBalance.setAccessible(true);
+
+                assertTrue((boolean) computeBalance.invoke(manager),
+                                "MoveLeft can brake inertia to zero before Sonic_Move enters its balance tail");
+        }
+
+        @Test
+        public void heldDirectionAtRestDoesNotBroadlyEnableBalance() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_1);
                 mockSprite.setGSpeed((short) 0);
                 mockSprite.setAngle((byte) 0);
                 mockSprite.setAir(false);
@@ -1297,8 +1337,8 @@ public class TestPlayableSpriteMovement {
                                 .getDeclaredMethod("computeCurrentFrameBalancing");
                 computeBalance.setAccessible(true);
 
-                assertTrue((boolean) computeBalance.invoke(manager),
-                                "MoveLeft can brake inertia to zero before Sonic_Move enters its balance tail");
+                assertFalse((boolean) computeBalance.invoke(manager),
+                                "held input only reaches Balance through the exact deceleration-to-zero branch");
         }
 
         @Test

@@ -1,5 +1,43 @@
 # Trace Frontier Log
 
+### 2026-07-13 -- Sonic 1 animation-verification fleet fully green
+
+The animation/frame verifier exposed native state that physics-only replay had
+not distinguished. The final fixes model that state rather than carving out
+zones, routes, or frames:
+
+- `Solid_NoCollision` publishes the retail Walk/Run animation word only while
+  the paired player/checkpoint owner is live. A folded staircase's
+  standing-only sibling release and Obj33's skipped state-2 exit retain their
+  own explicit native owners; `Solid_SideAir` and an airborne monitor release
+  clear push without publishing.
+- S1 monitors (Obj26), MZ bricks (Obj46), and chained stompers (Obj31) retain
+  exact-right-edge contact because their native comparison rejects with `bhi`,
+  not `bhs`. Moving owners use their live SST identity.
+- Obj33 preserves its state-2 ride/exit transition and consumes the retained
+  push owner at the following state-0 checkpoint.
+- The only held-direction balance exception is the S1 `MoveLeft` braking branch
+  that subtracts `$80` from positive inertia to reach exactly zero; ordinary
+  held input at rest remains suppressed.
+
+The screenshot audit was also locked down as a focused contract: at angle
+`$18`, facing right, raw animation `$00` is correctly Walk and the ROM's coarse
+slope quantization selects mapping `$1C` (shown as decimal `28` by the debug
+overlay) before incrementing the animation frame index.
+
+Authoritative root-level REV01 sweep:
+
+```text
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true \
+  -Dsonic1.rom.path=<REV01 ROM> \
+  -Dtest=com.openggf.tests.trace.s1.*TraceReplay test
+Tests run: 29, Failures: 0, Errors: 0, Skipped: 0
+```
+
+All 29 Sonic 1 traces are green with zero release-blocking physics or animation
+divergences. Focused solid-controller, movement, object-profile, and slope-bank
+regressions also pass.
+
 ### 2026-07-13 -- S1 prison-capsule balance width greens GHZ3
 
 GHZ3 frame 8736 left Sonic stationary on the Obj3E capsule body at X offset

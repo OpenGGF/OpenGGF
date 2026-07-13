@@ -102,6 +102,10 @@ public class TestSonic1ChainedStomperObjectInstanceRender {
         assertEquals(0x10, small.getBalanceWidthPixels());
         assertEquals(0x38 + 0x0B, wide.getSolidParams().halfWidth(),
                 "CStom's SolidObject-only $B extension must remain collision-local");
+        assertTrue(wide.getSolidRoutineProfile().inclusiveRightEdge(),
+                "CStom's SolidObject BHI must retain exact-edge side contact");
+        assertTrue(wide.usesInstanceSolidStateLatchKey(),
+                "CStom status bits belong to its live SST while its Y changes");
     }
 
     private static final class StubObjectArtProvider implements ObjectArtProvider {
@@ -221,4 +225,3 @@ public class TestSonic1ChainedStomperObjectInstanceRender {
         }
     }
 }
-
