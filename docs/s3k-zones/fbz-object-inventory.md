@@ -178,10 +178,16 @@ family implementation/tests. Line references are to `docs/skdisasm/sonic3k.asm`.
   `70F0A`, `70F24`), boss explosions, a song-fade controller, `Obj_EggCapsule`,
   and camera-bound helpers. The Robotnik ship creates its Robotnik head/flame
   children through the shared Robotnik child tables (`136500-136704`).
-- `Obj_FBZMiniboss` (`146766`) creates seven linked body/weapon children
-  (`ChildObjDat_6FA76`), an additional child (`6FAA8`), a helper (`6FAB0`),
-  five capsule-animal-like children (`ChildObjDat_89ED0`), five shared capsule
-  children (`ChildObjDat_86B7A`), boss explosions, and music helpers.
+- `Obj_FBZMiniboss` (`146766`) creates seven body/weapon children
+  (`ChildObjDat_6FA76`). Each of its two arm controllers independently creates
+  a five-link `loc_6F3DE` chain from `word_6FAA2`, for ten links at full
+  allocation (not five total); the endpoint links close each arm/chain into a
+  cycle. The persistent full graph is 18 slots including the boss, and an
+  attack-start palette child (`6FAA8`) temporarily raises it to 19. Defeat
+  creates one helper (`6FAB0`), five freed animals (`ChildObjDat_89ED0`), five
+  capsule fragments (`ChildObjDat_86B7A`), boss explosions, and music/sign
+  helpers. Every after-current table stops on its first allocation failure;
+  later independently called defeat tables are still attempted.
 - `Obj_FBZ2Subboss` (`148033`) creates four repeated main pieces
   (`ChildObjDat_703C8`), two controller/Robotnik children (`703D0`), a sprite
   mask (`703DE`), two repeated secondary pieces (`703E4`), another child
@@ -307,7 +313,7 @@ changing native ordering.
 | `$8A` ExitHall | placeholder | finale traversal | `Map_FBZExitHall`, exit handoff | none/solid scenery | placement | `TestFbzExitHall` | pending |
 | `$A8` Blaster | S3KL placeholder (SKL factory exists) | badnik; 24 placements, 12 magnetic ceiling consumers | `Map_Blaster` (11 frames; pieces `4,4,4,1,1,1,1,1,1,1,1`, max tile `$27`), `ArtKosM_Blaster`, raw anim tables | initial velocity tracks P1; attack selects closest native P1/P2 with P1 tie, safely extended to extra sidekicks; continuous ENEMY touch | placement + parent-relative but independently terminating `89726` FNFO + independent `8972E/89746` FNFO; `$CF` falling form owned by Task 10 | `TestFbzBlaster`, `TestFbzBadnikGraphRewind` | pending; exact `101->38` wave and MHZ remap guarded |
 | `$A9` TechnoSqueek | S3KL placeholder (SKL factory exists) | badnik; 39 placements; horizontal `$00/$02`, vertical `$04` | `Map_TechnoSqueek` (10 one-piece frames, max base tile `$22`), `ArtKosM_Technosqueek`, raw anim tables | no target/fire routine; continuous ENEMY touch | placement + one parent-owned `89B24` FNFO; `$CF` falling form and its child owned by Task 10 | `TestFbzTechnoSqueek`, `TestFbzBadnikGraphRewind` | pending; exact `101->38` wave and MHZ remap guarded |
-| `$AA` Act1 miniboss | placeholder | mandatory boss | `Map_FBZMiniboss`, `ArtKosM_FBZMiniboss`, boss PLC/palette | native pair touch/arena | placement + child tables FNFO + fade FFO | `TestFbzAct1Miniboss` | pending |
+| `$AA` Act1 miniboss | placeholder | mandatory boss; one S3KL placement at `$2F00,$05E0`; object-owned camera/plunger arena; scripted six-cycle self-damage | `Map_FBZMiniboss` (18 frames; pieces `4,1,1,2,2,2,2,4,6,6,6,6,6,6,6,6,6,2`), direct `ArtKosM_FBZMiniboss`, `Pal_FBZMiniboss`, shared raw boss-explosion PLC; S3 PLC `$5E` is unused | closest native-pair aimer/terminal touch; P1-only lunge target; only plunger status bit 3 (P1 standing) starts the fight, while P2/extras may ride and collide without setting root bit 0; SKL `$AA` remains Hyudoro | placement + seven-child FNFO table + two five-link cyclic FNFO chains + transient palette FNFO + defeat helper/5 animals/5 fragments FNFO + fade FFO | `TestFbzAct1Miniboss`, `TestFbzMinibossChildren`, `TestFbzMinibossRewind` | pending; completeness decreases exactly one; `$78` music wait fires on wait update 121 and cover `$20/$20/$40` phases consume 33/33/65 wait updates; boss does not set `Events_fg_5`, later level-results flow does |
 | `$AB` Act2 subboss | placeholder | mandatory boss | `Map_FBZ2Subboss`, character PLCs/palette | native pair; character-id branch | placement + child tables FNFO + fade FFO | `TestFbzAct2Subboss` | pending |
 | `$CE` ExitDoor | placeholder | finale gate | `Map_FBZExitDoor`, exit handoff | native pair solids | placement | `TestFbzExitDoor` | pending |
 | `$CF` FBZEggPrison | placeholder | destructible/reward; subtype 2 releases falling badnik forms | `Map_FBZEggCapsule`, `ArtNem_FBZEggCapsule` | native pair attack/touch | placement + top/animals FNFO; subtype-2 `89F16/89F24` integrates Task 10 concrete falling forms; explosion slot reuse | `TestFbzEggPrison` plus Task 10 badnik tests | pending; badnik behavior must not be reimplemented here |

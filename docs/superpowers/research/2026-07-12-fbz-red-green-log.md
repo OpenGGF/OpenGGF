@@ -771,3 +771,32 @@ recorded as `unknown/not previously run` rather than inferred.
   initialization update. The same pass removes per-animation-update array
   allocation from Blaster projectiles and the TechnoSqueek attachment. Focused
   parent/graph coverage passes 28/28. No trace or commit ran.
+- Task 11 oracle RED corrected the Act 1 miniboss plan before implementation.
+  The placed S3KL `$AA` occurs once at `$2F00,$05E0` and therefore reduces
+  completeness by exactly one; SKL `$AA` remains Hyudoro. `ChildObjDat_6FA76`
+  creates seven initial children, then each of the two arm controllers makes
+  its own five-link `word_6FAA2` chain. The full persistent graph is therefore
+  18 slots including the boss, temporarily 19 with the attack palette child,
+  and the arm/chain endpoint links are cyclic. Every after-current table stops
+  at its first failure and preserves a partial prefix without retry.
+  The boss owns its camera activation and plunger start, uses the closest native
+  pair only for its aimer but P1 only for outward lunge targeting, and takes six
+  scripted self-damage cycles rather than direct player hits. The locked-on art
+  path is direct Kosinski-Moduled art plus the shared boss-explosion PLC; S3 PLC
+  `$5E` is unused. Defeat preserves its independent explosion/helper/animal/
+  capsule-fragment allocations and per-routine lifetimes. The boss itself never
+  publishes `Events_fg_5`: the later level-results flow publishes it and Task 12
+  consumes it for the seamless background transition. The corrected tests now
+  require exact palette/audio/art shapes, allocation-prefix and cyclic-link
+  rewind, restart cleanup, multi-sidekick participation without retargeting,
+  and widescreen world-coordinate camera locking. This was documentation-only;
+  no production code, tests, trace, or commit ran.
+- Residual Task 11 oracle review corrected native plunger authority and exact
+  wait timing. Only plunger status bit 3 (P1 standing) sets the root start bit;
+  P2 and additional sidekicks still ride/collide but cannot start the fight.
+  `Obj_Wait` predecrements its word and invokes the callback only when negative,
+  so `$78` reaches miniboss music on wait update 121 and the cover `$20/$20/$40`
+  phases consume 33/33/65 wait updates. The distinct `$1F` phases consume 32.
+  The art gate now spells the exact 18-frame piece-count vector as
+  `4,1,1,2,2,2,2,4,6,6,6,6,6,6,6,6,6,2`. This remained documentation-only;
+  no production code, tests, trace, or commit ran.
