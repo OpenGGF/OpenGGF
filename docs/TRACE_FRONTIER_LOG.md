@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+### 2026-07-13 -- S1 prison-capsule balance width greens GHZ3
+
+GHZ3 frame 8736 left Sonic stationary on the Obj3E capsule body at X offset
+`-$19`. Native `Pri_Var` stores `obActWid=$20` for that body, and
+`Pri_BodyMain` adds Sonic's `$B` solid width only to the `$2B` passed in `d1`
+to `SolidObject`. The later `Sonic_Move` balance check reads the unchanged
+`obActWid`, placing Sonic safely inside the native edge window. The engine
+instead used its full-solid fallback balance width of 16 and falsely selected
+Balance rather than Wait. The later frame-8771 span was the same body and
+position.
+
+Obj3E now exposes `$20` through `getBalanceWidthPixels()` while retaining its
+`$2B` collision half-width. This is object data shared by every prison body,
+not a zone, route, frame, trace-data, or tolerance exception. With the local
+REV01 Sonic 1 ROM, `TestS1Ghz3CompleteRunTraceReplay` advances frame 8736 / 4
+animation errors to fully green, with zero physics errors or warnings. The
+focused Obj3E contract test and the existing Obj56/Obj61 balance-width sanity
+tests also pass.
+
 ### 2026-07-13 -- S1 MZ1 native solid/standing animation owners
 
 After the native edge-balance cluster, MZ1 standalone had seven
