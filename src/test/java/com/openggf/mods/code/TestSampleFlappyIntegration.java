@@ -107,6 +107,17 @@ class TestSampleFlappyIntegration {
             PatternSpriteRenderer birdRenderer = resolved.getObjectArtProvider()
                     .getRenderer("sample-flappy:bird");
             assertNotNull(birdRenderer, "sample-flappy:bird must resolve to a renderer");
+            // Guard the controller's hardcoded fly-cycle frames (94/95, TailsAni_Fly's $5E/$5F
+            // at docs/s2disasm/s2.asm:41625): PatternSpriteRenderer.drawFrameIndex silently
+            // no-ops on an out-of-range index, so wrong indices would render an invisible
+            // bird without failing anything downstream. The materialized sheet must actually
+            // contain those frames, each with at least one mapping piece.
+            var birdSheet = resolved.getObjectArtProvider().getSheet("sample-flappy:bird");
+            assertNotNull(birdSheet, "sample-flappy:bird must resolve to a materialized sheet");
+            assertTrue(birdSheet.getFrameCount() > 95,
+                    "bird sheet must cover fly frames 94/95, frameCount=" + birdSheet.getFrameCount());
+            assertFalse(birdSheet.getFrame(94).pieces().isEmpty(), "fly frame 94 must have mapping pieces");
+            assertFalse(birdSheet.getFrame(95).pieces().isEmpty(), "fly frame 95 must have mapping pieces");
 
             EngineContext previous = EngineServices.current();
             EngineContext injected = withResolver(previous, resolver, isolatedRomManager());
@@ -193,9 +204,51 @@ class TestSampleFlappyIntegration {
                     releaseGuardFrames++;
                 }
                 assertFalse(player.isObjectControlled(), "an unavoided fall must release object control");
-                assertTrue(player.isHidden() == false, "release must unhide the native player sprite");
+                assertFalse(player.isHidden(), "release must unhide the native player sprite");
                 assertTrue(player.isHurt() || player.getDead(),
                         "release must hand off to engine-owned hurt/death");
+
+                // Assertion 8: the engine's own death flow runs to completion headlessly.
+                // The level is terrain-free, so the hurt knockback can never land (hurt only
+                // clears on an air->ground transition); instead the released player falls
+                // past the level's bottom kill plane (maxY + 224, PlayableSpriteMovement's
+                // Sonic_LevelBound port) into applyPitDeath, then the death countdown fires
+                // levelManager.requestRespawn(). Drive real frames until that request latches.
+                boolean respawnRequested = false;
+                for (int i = 0; i < 600 && !respawnRequested; i++) {
+                    runner.stepFrame(false, false, false, false, false);
+                    respawnRequested = GameServices.level().consumeRespawnRequest();
+                }
+                assertTrue(respawnRequested,
+                        "the engine's pit-death flow must reach a respawn request");
+
+                // Assertion 9: re-seize after respawn. The respawn request is normally
+                // consumed by GameLoop.updateLevel (GameLoop.java:1481 -> startRespawnFade ->
+                // level reload -> enterTitleCard), which resets the player's death state
+                // (setDead(false)/setHurt(false)/setDeathCountdown(0), GameLoop.java:3077-3086;
+                // the special-stage-return variant does the same at GameLoop.java:3000-3012).
+                // The headless LevelFrameStep harness has no GameLoop, so apply that same
+                // reset here (plus a respawn-equivalent reposition into open air between
+                // pipes 1 and 2), then verify the controller's routine-2 predicate re-arms
+                // and routine 0 re-seizes the player.
+                player.setCentreXPreserveSubpixel((short) 600);
+                player.setCentreYPreserveSubpixel((short) 64);
+                player.setXSpeed((short) 0);
+                player.setYSpeed((short) 0);
+                player.setGSpeed((short) 0);
+                player.setAir(false);
+                player.setDead(false);
+                player.setHurt(false);
+                player.setDeathCountdown(0);
+                player.setInvulnerableFrames(0);
+                player.setRolling(false);
+                // Two frames: one for routine 2 to observe the normal player and re-arm,
+                // one for routine 0 to seize again.
+                runner.stepIdleFrames(2);
+                assertTrue(player.isObjectControlled(),
+                        "controller must re-seize the player after respawn");
+                assertTrue(player.isHidden(),
+                        "controller must re-hide the native player sprite after re-seizing");
             } finally {
                 SessionManager.clear();
                 EngineServices.configure(previous);
