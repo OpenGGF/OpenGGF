@@ -128,6 +128,44 @@ class TestCnzCylinderInstance {
     }
 
     @Test
+    void soleActiveExtensionPromotionRecomputesSharedStandingBitsBeforeMode0Motion() throws Exception {
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(spawn());
+        TestPlayableSprite main = new TestPlayableSprite();
+        TestPlayableSprite idleNativeP2 = new TestPlayableSprite();
+        TestPlayableSprite rider = new TestPlayableSprite();
+        List<PlayableEntity> sidekicks = new ArrayList<>(List.of(idleNativeP2, rider));
+        cylinder.setServices(new StubObjectServices().withPlayerQuery(
+                new ObjectPlayerQuery(() -> main, () -> sidekicks)));
+        cylinder.update(1, main);
+        rider.setCentreX((short) 0x1BC6);
+        rider.setCentreY((short) 0x07AC);
+        cylinder.onSolidContact(rider, new SolidContact(true, false, false, true, false), 2);
+        cylinder.update(3, main);
+        assertTrue(rider.isObjectControlled());
+
+        setPrivateField(cylinder, "standingMask", 0x04);
+        setPrivateField(cylinder, "nextStandingMask", 0x04);
+        setPrivateField(cylinder, "standingMaskCache", 0x04);
+        setPrivateField(cylinder, "centerY", spawn().y());
+        setPrivateField(cylinder, "mode0Velocity", 0);
+        setPrivateField(cylinder, "mode0YSubpixel", 0);
+        sidekicks.clear();
+        sidekicks.add(rider);
+
+        cylinder.update(4, main);
+
+        assertEquals(0x02, getPrivateIntField(cylinder, "standingMask"),
+                "promoted rider must occupy only the native P2 standing bit");
+        assertEquals(0, getPrivateIntField(cylinder, "nextStandingMask"),
+                "no stale shared extension contact may survive promotion");
+        assertEquals(0x02, getPrivateIntField(cylinder, "standingMaskCache"));
+        assertEquals(0, getPrivateIntField(cylinder, "mode0Velocity"),
+                "false 0x04->0x06 growth must not inject a landing boost");
+        assertEquals(spawn().y(), cylinder.getY());
+        assertTrue(rider.isObjectControlled(), "promotion must preserve the rider controller state");
+    }
+
+    @Test
     void freshRecreatedCylinderRelinksNativeP2SlotToReplacementPlayer() {
         CnzCylinderInstance source = new CnzCylinderInstance(spawn());
         TestPlayableSprite oldMain = new TestPlayableSprite();

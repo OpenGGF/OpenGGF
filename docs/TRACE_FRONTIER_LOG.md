@@ -37765,3 +37765,15 @@ Representative serial timing used clean baseline (`a3ad53f4a`) and guarded
 The performance threshold (guarded median both more than one second and more
 than 10% slower) was false for both targets. Timing evidence is preserved in
 `target/rewind-closure-timing.json` and `target/rewind-closure-timing/`.
+
+### 2026-07-13 -- CNZ cylinder extension-promotion mask preservation
+
+- Branch base: generic traversal commit `231461639`.
+- A sole active extension promoted into native P2 now clears the aggregate
+  extension-standing bit from the remaining identity states before mode-0
+  motion observes the mask; ownership and control remain with the same actor.
+- Exact isolated verification used `-Dmse=off` and
+  `-Dsurefire.argLine="-Xshare:off -Xmx3g"`.
+- `TestS3kCnzCompleteRunTraceReplay` retained exactly 7,130 errors, zero
+  warnings, and first divergence frame 1,846 (`tails_x_speed`, expected
+  `$0024`, actual `-$1000`). No fixture, comparator, or trace hydration changed.

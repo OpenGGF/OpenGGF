@@ -500,8 +500,8 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
                 ExtensionRiderState demoted = new ExtensionRiderState();
                 copySlot(playerTwoSlot, demoted);
                 extensionRiderStates.put(priorOwner, demoted);
-                standingMask = moveStandingBit(standingMask, 0x02, 0x04);
-                nextStandingMask = moveStandingBit(nextStandingMask, 0x02, 0x04);
+                standingMask &= ~0x02;
+                nextStandingMask &= ~0x02;
             } else {
                 releaseOwnedSlot(playerTwoSlot, frameCounter);
             }
@@ -519,6 +519,8 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         } else {
             playerTwoSlot.player = currentNativeP2;
         }
+        standingMask = withExtensionStandingBit(standingMask, false);
+        nextStandingMask = withExtensionStandingBit(nextStandingMask, true);
     }
 
     private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity candidate) {
@@ -526,8 +528,10 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         return false;
     }
 
-    private static int moveStandingBit(int mask, int from, int to) {
-        return (mask & from) == 0 ? mask : (mask & ~from) | to;
+    private int withExtensionStandingBit(int mask, boolean contactsOnly) {
+        boolean extensionStanding = extensionRiderStates.values().stream().anyMatch(slot ->
+                slot.contactLatched || (!contactsOnly && slot.active));
+        return extensionStanding ? mask | 0x04 : mask & ~0x04;
     }
 
     private static void copySlot(RiderSlot source, RiderSlot target) {
