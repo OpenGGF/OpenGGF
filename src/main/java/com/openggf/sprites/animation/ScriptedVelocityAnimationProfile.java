@@ -324,6 +324,18 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
                 : sprite.getGSpeed();
         int speed = Math.abs(animSpeed);
 
+        // Releasing the opposite direction while inertia remains non-zero does
+        // not execute either directional helper, so Move reaches ResetScr
+        // without replacing an already-published Stop byte. Preserve it until
+        // the Stop script's $FD command writes Walk; the engine-only skidding
+        // flag controls dust/trigger refresh, not native obAnim ownership (S1
+        // 01 Sonic.asm:385-407,634-757; S2 s2.asm:36880-36999; S3K
+        // sonic3k.asm:22792-22918).
+        if (!pressingDirection && speed > 0
+                && skidAnimId >= 0 && sprite.getAnimationId() == skidAnimId) {
+            return null;
+        }
+
         // S1 MoveLeft/MoveRight always write id_Walk to obAnim; Sonic_Animate
         // selects SonAni_Run from inertia >= $600 instead
         // (docs/s1disasm/_incObj/01 Sonic.asm:634-658,704-722,2253-2315).
@@ -368,20 +380,8 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             return idleAnimId;
         }
 
-        // If no direction is pressed and inertia is non-zero, preserve Stop only
-        // while the fixed Obj08 dust routine is active; Obj08_CheckSkid keys its
-        // allocation cadence from the parent's Stop anim byte (s2.asm:42813-42841).
         if (pressingDirection) {
             return walkAnimId;
-        }
-        if (speed > 0
-                && skidAnimId >= 0
-                && sprite.getAnimationId() == skidAnimId
-                && sprite.getGameRules() != null
-                && sprite.getGameRules().powerUp() != null
-                && sprite.getGameRules().powerUp().fixedSkidDustAllocatesAfterDynamicObjectPass()
-                && sprite.isFixedSkidDustActive()) {
-            return null;
         }
         return walkAnimId;
     }

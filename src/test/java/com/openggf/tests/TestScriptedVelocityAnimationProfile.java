@@ -114,6 +114,21 @@ public class TestScriptedVelocityAnimationProfile {
     }
 
     @Test
+    void releasedDirectionPreservesPublishedStopUntilItsScriptSwitches() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setAnimationId(profile.getSkidAnimId());
+        sprite.setSkidding(false);
+        sprite.setMovementInputActive(false);
+        sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) -0x0700);
+
+        Integer animId = profile.resolveAnimationId(sprite, 0, 32);
+
+        assertNull(animId,
+                "no-input Sonic_Move reaches ResetScr without replacing the existing Stop byte");
+    }
+
+    @Test
     void groundMovementWaitSurvivesAnglePosDetachFrame() {
         ScriptedVelocityAnimationProfile profile = createProfile();
         TestSprite sprite = new TestSprite();

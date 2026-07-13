@@ -57,6 +57,36 @@ for exact fields and values.
 
 ## 2026-07-13 - Player and Sidekick animation verification
 
+### Released-input Stop animation ownership
+
+Branch `bugfix/ai-s1-skid-publication`, based exactly on `075b9fd03`, restores
+the native lifetime of a published Stop animation after the player releases
+the opposite direction. LZ3 f1571 and SLZ2 f1740 share the same signature:
+the grounded player retains nonzero inertia and no direction is held, the ROM
+keeps Stop `$0D`, and the engine previously replaced it with Walk `$00`.
+
+In the native grounded routine, the no-direction path tests angle and inertia,
+then reaches `ResetScr` without writing `obAnim`. A Stop byte written by the
+earlier opposite-direction braking helper therefore remains active until the
+Stop script's `$FD` command explicitly switches it to Walk. The engine's
+`skidding` boolean is a synthetic trigger/dust owner and may clear on input
+release, but it must not imply an animation write. The same control shape is
+present in S1 (`docs/s1disasm/_incObj/01 Sonic.asm:379-430,634-757`), S2
+(`docs/s2disasm/s2.asm:36880-36999`), and S3K
+(`docs/skdisasm/sonic3k.asm:22792-22918`).
+
+Comparison-only results with the verified REV01 ROM, with zero physics errors:
+
+- LZ3 complete run: 31 animation errors at f1571 -> 27 errors at f2004
+  (WaterSlide `$1B` expected, Roll2 `$02` actual).
+- SLZ2 complete run: 4 animation errors at f1740 -> 1 error at f2609
+  (`player_mapping_frame`, expected `$08`, actual `$09`).
+
+Those later frontiers are separate slide/roll ownership and mapping-cadence
+issues. The combined movement/profile unit suite passes 132/132, including a
+focused regression with Stop active above the Run threshold after input
+release.
+
 ### Dispatch-time move-lock and slide animation ownership
 
 Branch `bugfix/ai-s1-lz-slide-frontiers`, based exactly on `f76d96095`,
