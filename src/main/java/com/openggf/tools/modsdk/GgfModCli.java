@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 
 /** Command-line entrypoint for the OpenGGF mod SDK. */
@@ -100,13 +101,41 @@ public final class GgfModCli {
                             path(flags, "--out"));
                 }
             }
-            case "level" -> new LevelConverter().convert(path(flags, "--from-export"), path(flags, "--out"));
+            case "level" -> convertLevel(flags, output);
             case "audio" -> new AudioConverter().convert(required(flags, "--owner"),
                     path(flags, "--manifest"), path(flags, "--root"), path(flags, "--out"));
             default -> { return usage(output); }
         }
         output.println("Conversion completed");
         return 0;
+    }
+
+    private static void convertLevel(Map<String, String> flags, PrintStream output) throws IOException {
+        boolean fromExport = flags.containsKey("--from-export");
+        boolean fromTmx = flags.containsKey("--from-tmx");
+        if (fromExport == fromTmx) {
+            throw new IllegalArgumentException(
+                    "Select exactly one level source: --from-export or --from-tmx");
+        }
+        if (fromExport) {
+            requireExactFlags(flags, Set.of("--from-export", "--out"));
+            new LevelConverter().convert(path(flags, "--from-export"), path(flags, "--out"));
+            return;
+        }
+
+        requireExactFlags(flags, Set.of("--from-tmx", "--palette", "--solid-tiles", "--out"));
+        Path solidTiles = flags.containsKey("--solid-tiles") ? path(flags, "--solid-tiles") : null;
+        var result = new TmxLevelImporter().importLevel(path(flags, "--from-tmx"),
+                path(flags, "--palette"), solidTiles, path(flags, "--out"));
+        result.warnings().forEach(warning -> output.println("WARNING " + warning));
+    }
+
+    private static void requireExactFlags(Map<String, String> flags, Set<String> allowed) {
+        for (String flag : flags.keySet()) {
+            if (!allowed.contains(flag)) {
+                throw new IllegalArgumentException("Invalid flag for selected conversion mode: " + flag);
+            }
+        }
     }
 
     private static String[] removeArgument(String[] args, int index) {
@@ -176,6 +205,8 @@ public final class GgfModCli {
         output.println("Usage: ggfmod validate <mod.jar> | init <dir> --id <id> --package <java.pkg>");
         output.println("       ggfmod convert art [--playable] --image <png> --sheet <yaml> --out <ggfs|ggfp>");
         output.println("       ggfmod convert level --from-export <dir> --out <dir>");
+        output.println("       ggfmod convert level --from-tmx <map.tmx> --palette <GPAL>"
+                + " [--solid-tiles <profile-dir>] --out <dir>");
         output.println("       ggfmod convert audio --owner <id> --manifest <yaml> --root <dir> --out <dir>");
         output.println("       ggfmod package --input <classes/resources> --out <jar> | run <build-output>");
         return 1;
