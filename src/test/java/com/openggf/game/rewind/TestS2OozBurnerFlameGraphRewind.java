@@ -11,6 +11,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -170,11 +171,14 @@ class TestS2OozBurnerFlameGraphRewind {
         static Harness create(List<ObjectSpawn> spawns) {
             ObjectManager[] holder = new ObjectManager[1];
             Camera camera = mockCameraAtOrigin();
-            ObjectServices services = new StubObjectServices() {
+            TestablePlayableSprite mainPlayer =
+                    new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+            StubObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
                 @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
             };
+            services.withPlayerQuery(new ObjectPlayerQuery(() -> mainPlayer, List::of));
             ObjectManager objectManager = new ObjectManager(
                     spawns,
                     new Sonic2ObjectRegistry(),
