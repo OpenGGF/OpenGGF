@@ -18,6 +18,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -242,6 +243,14 @@ public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
         }
         // Spik_Upright: d1=obActWid+$B, d2=$10, d3=$11. ROM-exact.
         return new SolidObjectParams(actWidth + 0x0B, 0x10, 0x11);
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        // Spikes call the shared S1 SolidObject routine, whose horizontal
+        // bounds reject only values above 2*d1 (`bhi`). A player exactly flush
+        // with the right face therefore remains a side contact.
+        return SolidRoutineProfile.fullSolid(usesStickyContactBuffer(), true, false);
     }
     @Override
     public int getX() {

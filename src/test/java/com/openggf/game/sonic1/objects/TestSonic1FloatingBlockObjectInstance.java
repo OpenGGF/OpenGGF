@@ -103,6 +103,8 @@ public class TestSonic1FloatingBlockObjectInstance {
                 "Sonic_Move reads Obj56 obActWid from FBlock_Var");
         assertEquals(0x2B, block.getSolidParams().halfWidth(),
                 "FBlock_Solid adds $B only to the SolidObject collision width");
+        assertTrue(block.getSolidRoutineProfile().inclusiveRightEdge(),
+                "FBlock_Solid retains SolidObject's inclusive right edge");
     }
 
     @Test
@@ -210,4 +212,3 @@ public class TestSonic1FloatingBlockObjectInstance {
         return door;
     }
 }
-

@@ -57,6 +57,7 @@ public class TestSonic1SpikeObjectInstance {
         Sonic1SpikeObjectInstance spikes = new Sonic1SpikeObjectInstance(
                 new ObjectSpawn(160, 112, 0x36, 0x01, 0, false, 0));
         assertFalse(spikes.usesStickyContactBuffer());
+        assertTrue(spikes.getSolidRoutineProfile().inclusiveRightEdge());
     }
 
     @Test
@@ -231,5 +232,4 @@ public class TestSonic1SpikeObjectInstance {
         }
     }
 }
-
 

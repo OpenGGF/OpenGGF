@@ -16,6 +16,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SpawnRomZoneRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -272,6 +273,13 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
         // move.w d2,d3 / addq.w #1,d3 -> d3 = halfHeight + 1
         // bsr.w SolidObject
         return new SolidObjectParams(halfWidth + 0x0B, halfHeight, halfHeight + 1);
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        // FBlock_Solid calls S1 SolidObject, whose initial horizontal bounds
+        // use `bhi`; equality at the right face remains a side collision.
+        return SolidRoutineProfile.fullSolid(usesStickyContactBuffer(), true, false);
     }
 
     @Override

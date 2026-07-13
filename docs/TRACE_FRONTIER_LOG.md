@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+### 2026-07-13 -- S1 full-solid caller inclusive edges
+
+GHZ2 frame 829 and LZ3 frame 2894 both reached the same false animation
+restart after an exact-edge side contact. Obj36 spikes and Obj56 floating
+blocks/doors call the S1 `SolidObject` routine, whose initial horizontal check
+uses `bhi`: a relative X equal to twice `d1` remains inside. Their engine
+profiles inherited an exclusive right edge, so the per-object push bit cleared
+and the retail S1 `Solid_NoCollision` animation word ran one frame too early.
+
+Both native callers now expose an inclusive right edge through their solid
+profiles. This is routine geometry shared by every instance, not a zone, route,
+or frame carve-out; trace data and comparison tolerances are unchanged.
+Verification with the local REV01 Sonic 1 ROM:
+
+- `TestS1Ghz2CompleteRunTraceReplay` is fully green (animation and physics).
+- `TestS1Lz3CompleteRunTraceReplay` advances from frame 2894 / 17 errors to
+  frame 13792 / 4 errors, with zero warnings and physics errors.
+- Focused Obj36 and Obj56 contract tests cover the inclusive edge.
+
 ### 2026-07-13 -- S1 button inclusive-edge push ownership
 
 SBZ3 complete-run frame 49 placed Sonic exactly at the right edge of Obj32's
