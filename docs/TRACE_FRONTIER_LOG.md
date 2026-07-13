@@ -39,6 +39,41 @@ Verification with the local REV01 Sonic 1 ROM:
   frame 13792 / 4 errors, with zero warnings and physics errors.
 - Focused Obj36 and Obj56 contract tests cover the inclusive edge.
 
+### 2026-07-13 -- Grounded roll preserves later animation owners
+
+At composed baseline `47e9a5eed`, SBZ1 complete-run frame 1432 cleared Obj70
+Girder's native pushing bit while Sonic remained in `Status_Roll`.
+`Solid_NoCollision` wrote the retail S1 word `#id_Run` across `obAnim` and
+`obPrevAni`, leaving raw Walk `$00` active. The ROM's following
+`Sonic_MdRoll` frames do not write `obAnim`; only roll entry does. The shared
+animation profile instead reselected Roll `$02` every grounded rolling frame,
+overwriting the later object owner at frame 1433.
+
+Grounded rolling now preserves the existing animation byte. Roll entry remains
+the explicit Roll publisher, as in the S1, S2, and S3K movement routines. The
+fix is shared routine ownership, with no route, zone, frame, trace-data, or
+tolerance change.
+
+Verification used the local REV01 Sonic 1 ROM:
+
+- `TestScriptedVelocityAnimationProfile#groundedRollPreservesAnimationWrittenByLaterObjectDispatch`
+  passed.
+- `TestS1Sbz1CompleteRunTraceReplay` advanced from frame 1433 to frame 1453.
+  The new first error is a separate raw-animation owner transition (expected
+  Roll `$02`, actual Walk `$00`). The report has 1,208 animation errors because
+  preserving the native byte exposes later unmodelled owner transitions that
+  the old unconditional Roll selection had masked; physics remains at zero
+  errors and the report has zero warnings.
+- `TestS1Mz1CompleteRunTraceReplay` retained its pre-existing frame-2404
+  animation-only frontier (7 errors, 0 warnings, green physics). Its release
+  occurs after the engine player push bit has already cleared and needs a
+  future exact object-push-lifetime correction; the animation resolver does not
+  infer that missing state.
+- The previously green `TestS1Ghz1CompleteRunTraceReplay`,
+  `TestS1Ghz1TraceReplay`, and `TestS1Slz3CompleteRunTraceReplay` all remained
+  green. The comparison-only S2 EHZ1 check retained its pre-existing frame-1
+  mapping frontier.
+
 ### 2026-07-13 -- S1 button inclusive-edge push ownership
 
 SBZ3 complete-run frame 49 placed Sonic exactly at the right edge of Obj32's

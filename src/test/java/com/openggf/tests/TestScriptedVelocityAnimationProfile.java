@@ -119,6 +119,20 @@ public class TestScriptedVelocityAnimationProfile {
     }
 
     @Test
+    void groundedRollPreservesAnimationWrittenByLaterObjectDispatch() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setRolling(true);
+        sprite.setAir(false);
+        sprite.setAnimationId(profile.getWalkAnimId());
+
+        Integer animId = profile.resolveAnimationId(sprite, 0, 32);
+
+        assertNull(animId,
+                "MdRoll does not overwrite a SolidObject push-release animation write");
+    }
+
+    @Test
     void zeroInertiaChoosesWaitEvenWhileOppositeDirectionRemainsHeld() {
         ScriptedVelocityAnimationProfile profile = createProfile();
         TestSprite sprite = new TestSprite();

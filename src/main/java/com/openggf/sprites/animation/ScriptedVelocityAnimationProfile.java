@@ -257,7 +257,16 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             return sprite.getRolling() ? rollAnimId : airAnimId;
         }
         if (sprite.getRolling()) {
-            return rollAnimId;
+            // Grounded roll movement does not rewrite the native anim byte.
+            // Roll entry publishes Roll once, but subsequent MdRoll frames
+            // leave later object writes intact. In retail S1, SolidObject's
+            // push-release word write can therefore leave Walk active while
+            // Status_Roll remains set (01 Sonic.asm:344-353, 759-919;
+            // sub SolidObject.asm:254-265). S2/S3K keep the same ownership:
+            // their roll entry writes Roll and their rolling movement routine
+            // does not (s2.asm:36654-36675,36954-37161; sonic3k.asm:
+            // 22144-22166,22924-23269).
+            return null;
         }
         if (sprite.getLookingUp() && lookUpAnimId >= 0) {
             return lookUpAnimId;
