@@ -21,7 +21,7 @@ import java.util.List;
  *
  * <p>Each tree is spawned by {@link AizBgTreeSpawnerInstance} with a baseline
  * smooth-scroll X value. Each frame the tree computes:
- * {@code screenX = INITIAL_X_OFFSET - (scrollDelta * 3/4)}
+ * {@code screenX = viewportRightEdge - (scrollDelta * 3/4)}
  * where scrollDelta is the current smooth scroll X minus the baseline at spawn.
  *
  * <p>The tree is fixed at screen Y = $69 (VDP $E9 - $80 = 105 pixels from
@@ -30,8 +30,8 @@ import java.util.List;
 public class AizBgTreeInstance extends AbstractObjectInstance
         implements ZeroScalarArgsRewindRecreatable {
 
-    /** Initial screen-relative X offset. ROM VDP X $1C0 → screen $1C0-$80 = $140 (right edge). */
-    private static final int INITIAL_X_OFFSET = 0x1C0 - 0x80; // 320 = right edge of screen
+    /** Native screen-relative X offset. ROM VDP X $1C0 → screen $1C0-$80 = $140. */
+    private static final int NATIVE_INITIAL_X_OFFSET = 0x1C0 - 0x80;
 
     /** Fixed screen Y position. ROM: VDP Y $E9 -> screen $E9 - $80 = $69. */
     private static final int SCREEN_Y = 0xE9 - 0x80; // 105 pixels from top
@@ -46,6 +46,8 @@ public class AizBgTreeInstance extends AbstractObjectInstance
 
     /** Current screen-relative X position, updated each frame. */
     private int screenX;
+    /** Prevents a deferred dynamic slot from drawing before its first update. */
+    private boolean positionInitialized;
 
     /**
      * @param spawnSmoothScrollX the battleship smooth scroll X at the moment
@@ -54,7 +56,8 @@ public class AizBgTreeInstance extends AbstractObjectInstance
     public AizBgTreeInstance(int spawnSmoothScrollX) {
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "AIZ2BGTree");
         this.spawnSmoothScrollX = spawnSmoothScrollX;
-        this.screenX = INITIAL_X_OFFSET; // starts hidden (>= INITIAL_X_OFFSET)
+        this.screenX = NATIVE_INITIAL_X_OFFSET;
+        this.positionInitialized = false;
     }
 
     AizBgTreeInstance(ObjectSpawn spawn) {
@@ -79,7 +82,8 @@ public class AizBgTreeInstance extends AbstractObjectInstance
 
         // 3/4 parallax: scrollDelta - (scrollDelta >> 2)
         int parallaxDelta = scrollDelta - (scrollDelta >> 2);
-        screenX = INITIAL_X_OFFSET - parallaxDelta;
+        screenX = entryScreenX() - parallaxDelta;
+        positionInitialized = true;
     }
 
     /**
@@ -109,8 +113,9 @@ public class AizBgTreeInstance extends AbstractObjectInstance
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) return;
+        if (!positionInitialized) return;
         // Tree is off-screen right until it scrolls into view
-        if (screenX >= INITIAL_X_OFFSET) return;
+        if (screenX >= entryScreenX()) return;
 
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.AIZ2_BG_TREE);
         if (renderer == null) return;
@@ -140,5 +145,9 @@ public class AizBgTreeInstance extends AbstractObjectInstance
 
     private AizZoneRuntimeState currentAizState() {
         return S3kRuntimeStates.currentAiz(services().zoneRuntimeRegistry()).orElse(null);
+    }
+
+    private int entryScreenX() {
+        return Math.max(NATIVE_INITIAL_X_OFFSET, viewportWidth());
     }
 }
