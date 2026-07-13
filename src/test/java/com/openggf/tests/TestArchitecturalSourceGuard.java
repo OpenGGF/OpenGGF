@@ -239,7 +239,18 @@ class TestArchitecturalSourceGuard {
             "com/openggf/GameLoop.java",
             "com/openggf/game/CrossGameFeatureProvider.java",
             "com/openggf/game/session/GameplayTeamBootstrap.java",
-            "com/openggf/game/startup/DataSelectPresentationResolution.java"
+            "com/openggf/game/startup/DataSelectPresentationResolution.java",
+            // Presentation routing: maps GameId -> human-readable rich-presence title.
+            // No gameplay behavior branches; there is no per-game display-name owner to
+            // route through, so this is the same enum->text routing surface as the sibling
+            // menuName(GameMode) switch in the same class.
+            "com/openggf/integration/presence/RuntimePresenceSnapshotProvider.java",
+            // Composition-root precondition guards: validate that a module registered/booted
+            // on the standalone (no-ROM mod) join point actually reports GameId.STANDALONE.
+            // These are wiring-time invariant checks, not per-game runtime behavior branches.
+            "com/openggf/mods/code/ModContext.java",
+            "com/openggf/mods/code/ModRegistrationPlan.java",
+            "com/openggf/tools/HeadlessGameBoot.java"
     );
     private static final List<String> GAME_ID_BRANCH_APPROVED_PREFIXES = List.of(
             "com/openggf/game/dataselect/"
