@@ -46,6 +46,8 @@ public class AizBgTreeInstance extends AbstractObjectInstance
 
     /** Current screen-relative X position, updated each frame. */
     private int screenX;
+    /** Prevents a deferred dynamic slot from drawing before its first update. */
+    private boolean positionInitialized;
 
     /**
      * @param spawnSmoothScrollX the battleship smooth scroll X at the moment
@@ -55,6 +57,7 @@ public class AizBgTreeInstance extends AbstractObjectInstance
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "AIZ2BGTree");
         this.spawnSmoothScrollX = spawnSmoothScrollX;
         this.screenX = NATIVE_INITIAL_X_OFFSET;
+        this.positionInitialized = false;
     }
 
     AizBgTreeInstance(ObjectSpawn spawn) {
@@ -80,6 +83,7 @@ public class AizBgTreeInstance extends AbstractObjectInstance
         // 3/4 parallax: scrollDelta - (scrollDelta >> 2)
         int parallaxDelta = scrollDelta - (scrollDelta >> 2);
         screenX = entryScreenX() - parallaxDelta;
+        positionInitialized = true;
     }
 
     /**
@@ -109,6 +113,7 @@ public class AizBgTreeInstance extends AbstractObjectInstance
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) return;
+        if (!positionInitialized) return;
         // Tree is off-screen right until it scrolls into view
         if (screenX >= entryScreenX()) return;
 

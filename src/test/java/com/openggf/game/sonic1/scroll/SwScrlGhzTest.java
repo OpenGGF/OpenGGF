@@ -17,6 +17,28 @@ public class SwScrlGhzTest {
     }
 
     @Test
+    public void cameraDifferentialRoundsOnlyAfterCrossingThe512PixelBoundary() {
+        assertEquals(512, SwScrlGhz.requiredBgPeriodWidth(
+                0x400, 0x340, 0, 0, 0, 320));
+        assertEquals(1024, SwScrlGhz.requiredBgPeriodWidth(
+                0x400, 0x33F, 0, 0, 0, 320));
+    }
+
+    @Test
+    public void cloudDifferentialRoundsOnlyAfterCrossingThe512PixelBoundary() {
+        assertEquals(512, SwScrlGhz.requiredBgPeriodWidth(
+                0x400, 0x400, 192 << 16, 0, 0, 320));
+        assertEquals(1024, SwScrlGhz.requiredBgPeriodWidth(
+                0x400, 0x400, 193 << 16, 0, 0, 320));
+    }
+
+    @Test
+    public void periodCapsAtTheFull8192PixelBackgroundSourceExtent() {
+        assertEquals(8192, SwScrlGhz.requiredBgPeriodWidth(
+                0x4000, 0, 0, 0, 0, 800));
+    }
+
+    @Test
     public void cloudsAutoScrollAtDifferentSpeedsWhenCameraIsStationary() {
         SwScrlGhz handler = new SwScrlGhz();
         int[] hScroll = new int[224];
@@ -127,4 +149,3 @@ public class SwScrlGhzTest {
         return (short) (end - start);
     }
 }
-
