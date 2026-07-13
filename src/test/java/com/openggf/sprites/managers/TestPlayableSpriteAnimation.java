@@ -1,7 +1,6 @@
 package com.openggf.sprites.managers;
 
 import com.openggf.tests.TestEnvironment;
-import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.rules.GameRules;
 import com.openggf.physics.Direction;
@@ -329,7 +328,7 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
-    public void slowSteepSlopeTurnaroundRefreshesMappingFrameBeforeWalkTickExpires() {
+    public void slowSteepSlopeTurnaroundKeepsMappingFrameUntilWalkTickExpires() {
         TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
         SpriteAnimationSet animations = new SpriteAnimationSet();
         SpriteAnimationScript walk = new SpriteAnimationScript(0xFF,
@@ -352,10 +351,35 @@ public class TestPlayableSpriteAnimation {
         sprite.setDirection(Direction.RIGHT);
         sprite.getAnimationManager().update(1);
 
-        assertEquals(14, sprite.getMappingFrame(),
-                "Changing facing on the same steep slope must refresh the slope frame set even while the walk delay is live");
-        assertTrue(sprite.getRenderVFlip(),
-                "The refreshed frame set is intentionally paired with the flipped render flags");
+        assertEquals(22, sprite.getMappingFrame(),
+                "The ROM delay path returns without rewriting the displayed slope mapping frame");
+        assertFalse(sprite.getRenderVFlip(),
+                "Facing still updates at frame start, but the delayed slope-frame selection must not run");
+    }
+
+    @Test
+    public void walkDelayHoldsMappingAcrossRunThresholdChange() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_1);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0xFF,
+                List.of(0x08), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(1, new SpriteAnimationScript(0xFF,
+                List.of(0x1E), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0);
+        sprite.getAnimationManager().restoreRewindState(
+                new PlayableSpriteAnimation.RewindState(0, 0));
+        sprite.setAnimationFrameIndex(1);
+        sprite.setAnimationTick(1);
+        sprite.setMappingFrame(0x08);
+        sprite.setMovementInputActive(true);
+        sprite.setGSpeed((short) 0x1000);
+        sprite.setForcedAnimationId(0);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0x08, sprite.getMappingFrame(),
+                "Crossing into run speed must not replace the latched walk frame before obTimeFrame expires");
     }
 
     private static TestablePlayableSprite createSprite(GameRules featureSet) {

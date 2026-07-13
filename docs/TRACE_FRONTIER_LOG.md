@@ -39062,6 +39062,7 @@ Sonic 1 ROM and comparison-only replay path:
   frame 33 (`player_mapping_frame`, expected `0x000A`, actual `0x0020`), with
   149 errors and 0 warnings. The new frontier is the next animation-cadence
   mismatch; no trace state was hydrated or tolerated.
+
 ### 2026-07-13 -- S1 credits stable-retro schema compatibility (8 traces green)
 
 On branch `bugfix/ai-trace-s1-bootstrap-schema` at feature baseline
@@ -39086,3 +39087,23 @@ Verification with the local REV01 Sonic 1 ROM:
 The newly green fixtures are `Credits00Ghz1`, `Credits01Mz2`,
 `Credits02Syz3`, `Credits03Lz3`, `Credits04Slz3`, `Credits05Sbz1`,
 `Credits06Sbz2`, and `Credits07Ghz1b`.
+
+### 2026-07-13 -- Shared animation delay latches mapping (S1 SYZ2 f33 -> f47)
+
+The shared scripted animator previously reselected walk/run mappings and slope
+offsets on every delay frame. The ROM decrements `obTimeFrame` before reading
+the script or entering its special handler, and its non-negative path returns
+without touching `obFrame` (`docs/s1disasm/_incObj/01 Sonic.asm:2174-2193,
+2253-2282`). This was visible when the SYZ2 horizontal spring changed Sonic's
+speed while the prior walk frame still had a live delay: the engine displayed
+a run mapping one frame before the ROM.
+
+The timer decrement now gates all script selection and frame writes. Focused
+verification with the local REV01 Sonic 1 ROM:
+
+- `mvn -Dmse=off "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteAnimation" test`
+  exited 0: 16 tests passed.
+- `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Syz2CompleteRunTraceReplay" "-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen" test`
+  advanced the first animation error from frame 33 to frame 47 and reduced the
+  report from 133 to 125 errors. The new frontier is the distinct engine Run-id
+  publication mismatch; no trace state was hydrated or tolerated.

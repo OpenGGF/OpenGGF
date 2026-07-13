@@ -152,6 +152,16 @@ public class PlayableSpriteAnimation {
             return;
         }
 
+        // Sonic_Animate decrements obTimeFrame before it reads the script delay
+        // or dispatches any special handler. Its non-negative branch is a bare
+        // return, so speed-script selection, slope offsets and obFrame all stay
+        // latched until the timer expires.
+        int remaining = sprite.getAnimationTick() - 1;
+        if (remaining >= 0) {
+            sprite.setAnimationTick(remaining);
+            return;
+        }
+
         int delayOrFlag = script.delay() & 0xFF;
         if (delayOrFlag >= 0x80) {
             updateSpecialScript(delayOrFlag, script);
@@ -194,13 +204,6 @@ public class PlayableSpriteAnimation {
         // (01 Sonic.asm:2253-2282,2353-2376). Do not replace the raw animation
         // id or reset the shared special-animation frame index when push begins.
         if (pushUsesWalkSpecialHandler() && sprite.getPushing()) {
-            int remaining = sprite.getAnimationTick();
-            if (remaining > 0) {
-                // ROM .delay is a bare rts: retain whichever walk/push mapping
-                // frame was selected at the preceding animation-step boundary.
-                sprite.setAnimationTick(remaining - 1);
-                return;
-            }
             SpriteAnimationScript pushScript = resolveScript(
                     profile != null ? profile.getPushAnimId() : -1, baseScript);
             int pushDelay = computeSpeedDelay(speed, 0x800, 6);
@@ -334,15 +337,7 @@ public class PlayableSpriteAnimation {
             return;
         }
 
-        int duration = sprite.getAnimationTick() - 1;
-        if (duration >= 0) {
-            sprite.setAnimationTick(duration);
-            refreshDelayedMappingFrame(script, frameOffset);
-            return;
-        }
-
-        duration = delay;
-        sprite.setAnimationTick(duration);
+        sprite.setAnimationTick(delay);
 
         int frameIndex = sprite.getAnimationFrameIndex();
         if (frameIndex < 0) {
@@ -362,17 +357,6 @@ public class PlayableSpriteAnimation {
         int mappingFrame = script.frames().get(frameIndex) + frameOffset;
         sprite.setMappingFrame(mappingFrame);
         sprite.setAnimationFrameIndex(frameIndex + 1);
-    }
-
-    private void refreshDelayedMappingFrame(SpriteAnimationScript script, int frameOffset) {
-        int displayedFrameIndex = sprite.getAnimationFrameIndex() - 1;
-        if (displayedFrameIndex < 0) {
-            displayedFrameIndex = 0;
-        }
-        if (displayedFrameIndex >= script.frames().size()) {
-            displayedFrameIndex = script.frames().size() - 1;
-        }
-        sprite.setMappingFrame(script.frames().get(displayedFrameIndex) + frameOffset);
     }
 
     private boolean processEndAction(SpriteAnimationScript script) {
