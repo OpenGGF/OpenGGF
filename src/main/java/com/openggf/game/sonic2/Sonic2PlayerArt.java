@@ -103,6 +103,7 @@ public class Sonic2PlayerArt {
                 .setIdleAnimId(Sonic2AnimationIds.WAIT)
                 .setWalkAnimId(Sonic2AnimationIds.WALK)
                 .setRunAnimId(Sonic2AnimationIds.RUN)
+                .setRunFramesUseWalkAnimationId(true)
                 .setRollAnimId(Sonic2AnimationIds.ROLL)
                 .setRoll2AnimId(Sonic2AnimationIds.ROLL2)
                 .setPushAnimId(Sonic2AnimationIds.PUSH)

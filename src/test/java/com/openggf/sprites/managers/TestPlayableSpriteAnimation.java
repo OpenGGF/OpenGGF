@@ -232,6 +232,37 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void classicRunFramesKeepRawWalkAnimationIdAcrossGames() {
+        for (GameRules rules : List.of(GameRules.SONIC_1, GameRules.SONIC_2, GameRules.SONIC_3K)) {
+            TestablePlayableSprite sprite = createSprite(rules);
+            sprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                    .setIdleAnimId(5)
+                    .setWalkAnimId(0)
+                    .setRunAnimId(1)
+                    .setRunFramesUseWalkAnimationId(true)
+                    .setRunSpeedThreshold(0x600));
+            SpriteAnimationSet animations = new SpriteAnimationSet();
+            animations.addScript(0, new SpriteAnimationScript(0xFF,
+                    List.of(0x08), SpriteAnimationEndAction.LOOP, 0));
+            animations.addScript(1, new SpriteAnimationScript(0xFF,
+                    List.of(0x1E), SpriteAnimationEndAction.LOOP, 0));
+            animations.addScript(5, new SpriteAnimationScript(0,
+                    List.of(0x00), SpriteAnimationEndAction.LOOP, 0));
+            sprite.setAnimationSet(animations);
+            sprite.setAnimationId(0);
+            sprite.setMovementInputActive(true);
+            sprite.setGSpeed((short) 0x600);
+
+            sprite.getAnimationManager().update(0);
+
+            assertEquals(0, sprite.getAnimationId(),
+                    "MoveLeft/MoveRight publish Walk in every classic game");
+            assertEquals(0x1E, sprite.getMappingFrame(),
+                    "Animate_* must still select the speed-gated Run frame script");
+        }
+    }
+
+    @Test
     public void typedPlayerAnimationRuleClearsPushWithoutFallback() throws Exception {
         GameRules base = GameRules.SONIC_1;
         GameRules typedRules = new GameRules(

@@ -36,6 +36,9 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     private int runSpeedThreshold;
     private int walkSpeedThreshold;
     private int fallbackFrame;
+    // Classic Sonic movement keeps the raw anim byte at Walk and selects the
+    // Run frame script by speed inside Animate_*.
+    private boolean runFramesUseWalkAnimationId;
     // S2 adjusts the angle by -1 for positive values before computing the slope frame
     // offset (subq.b #1,d0 at s2.asm:38080). S1 does not do this.
     private boolean anglePreAdjust;
@@ -91,6 +94,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     public ScriptedVelocityAnimationProfile setBalance4AnimId(int balance4AnimId) { this.balance4AnimId = balance4AnimId; return this; }
     public ScriptedVelocityAnimationProfile setBalance4AnimId(AnimationId id) { return setBalance4AnimId(id.id()); }
     public ScriptedVelocityAnimationProfile setRunSpeedThreshold(int runSpeedThreshold) { this.runSpeedThreshold = runSpeedThreshold; return this; }
+    public ScriptedVelocityAnimationProfile setRunFramesUseWalkAnimationId(boolean value) { this.runFramesUseWalkAnimationId = value; return this; }
     public ScriptedVelocityAnimationProfile setWalkSpeedThreshold(int walkSpeedThreshold) { this.walkSpeedThreshold = walkSpeedThreshold; return this; }
     public ScriptedVelocityAnimationProfile setFallbackFrame(int fallbackFrame) { this.fallbackFrame = fallbackFrame; return this; }
     public ScriptedVelocityAnimationProfile setAnglePreAdjust(boolean anglePreAdjust) { this.anglePreAdjust = anglePreAdjust; return this; }
@@ -264,9 +268,14 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
                 : sprite.getGSpeed();
         int speed = Math.abs(animSpeed);
 
-        // Run animation at high speeds (ROM: cmpi.w #$600,d2)
+        // S1 MoveLeft/MoveRight always write id_Walk to obAnim; Sonic_Animate
+        // selects SonAni_Run from inertia >= $600 instead
+        // (docs/s1disasm/_incObj/01 Sonic.asm:634-658,704-722,2253-2315).
+        // S2 and S3K use the same split (s2.asm:36880-36962,38473-38503;
+        // sonic3k.asm:22792-22877,24833-24879). Preserve a distinct Run script
+        // for rendering while exposing the ROM-accurate raw animation id.
         if (speed >= runSpeedThreshold) {
-            return runAnimId;
+            return runFramesUseWalkAnimationId ? walkAnimId : runAnimId;
         }
 
         // Walk animation when pressing direction. If no direction is pressed and
@@ -460,6 +469,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         copy.balance4AnimId = this.balance4AnimId;
         copy.walkSpeedThreshold = this.walkSpeedThreshold;
         copy.runSpeedThreshold = newThreshold;
+        copy.runFramesUseWalkAnimationId = this.runFramesUseWalkAnimationId;
         copy.fallbackFrame = this.fallbackFrame;
         copy.anglePreAdjust = this.anglePreAdjust;
         copy.compactSuperRunSlope = this.compactSuperRunSlope;

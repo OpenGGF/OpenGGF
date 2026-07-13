@@ -90,6 +90,36 @@ committed normal-gameplay metadata file and every CSV row for v7/42-column
 completeness, so absent Player or Sidekick animation samples cannot silently
 enter the fixture fleet.
 
+## 2026-07-13 - Classic raw Walk id with speed-selected Run frames
+
+Branch `bugfix/ai-trace-s1-run-id`, based exactly on `8811c088d`, fixes the
+shared movement-profile model exposed by the new animation fields. The classic
+ROMs do not publish a separate Run animation id during ordinary high-speed
+movement: S1 `MoveLeft`/`MoveRight` keep `obAnim=id_Walk`, then
+`Sonic_Animate` selects `SonAni_Run` from inertia `$600` upward
+(`docs/s1disasm/_incObj/01 Sonic.asm:634-658,704-722,2253-2315`). S2 and
+S3K use the same raw-id/render-script split (`docs/s2disasm/s2.asm:36880-36962,
+38473-38503`; `docs/skdisasm/sonic3k.asm:22792-22877,24833-24879`). The
+typed `ScriptedVelocityAnimationProfile` now expresses that relationship;
+all shipped classic player profiles opt in, while custom profiles retain the
+previous default.
+
+ROM-backed comparison-only results, with no trace hydration or tolerances:
+
+- SBZ2 advances from f170 `player_animation_id` (137 errors) to f173
+  `player_mapping_frame` (118 errors).
+- SLZ1 advances from f122 `player_animation_id` to f277
+  `player_animation_id` (64 errors).
+- GHZ3 clears the f347 `player_animation_id` mismatch; its independent
+  `player_mapping_frame` mismatch remains on f347 (110 errors).
+
+`TestPlayableSpriteAnimation` passes 16/16, including a cross-game regression
+that asserts raw Walk id plus Run mapping selection for S1, S2, and S3K. An
+expected-red S2 EHZ1 replay retained its pre-existing f1 mapping-frame
+frontier. The broad S3K AIZ replay class remains unsuitable as a clean
+regression oracle on this base because its existing multi-fixture failures and
+input-alignment error precede this change.
+
 ## 2026-07-13 - HCZ branch repair, rewind closure, and final verification
 
 This repair pass used the existing checkout only (no auxiliary worktrees).

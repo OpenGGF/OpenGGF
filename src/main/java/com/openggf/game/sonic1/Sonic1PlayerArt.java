@@ -77,6 +77,7 @@ public class Sonic1PlayerArt {
                 .setIdleAnimId(Sonic1AnimationIds.WAIT)
                 .setWalkAnimId(Sonic1AnimationIds.WALK)
                 .setRunAnimId(Sonic1AnimationIds.RUN)
+                .setRunFramesUseWalkAnimationId(true)
                 .setRollAnimId(Sonic1AnimationIds.ROLL)
                 .setRoll2AnimId(Sonic1AnimationIds.ROLL2)
                 .setPushAnimId(Sonic1AnimationIds.PUSH)
