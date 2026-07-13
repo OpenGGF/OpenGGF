@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -20,7 +21,11 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 
 /**
  * OOZ Popping Platform (Object 0x33) - Green burner platform from Oil Ocean Zone.
@@ -103,6 +108,10 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
     // Tracking which players are locked onto the platform (mode 6)
     private boolean mainCharLocked;
     private boolean sidekickLocked;
+    private PlayableEntity mainLockOwner;
+    private PlayableEntity sidekickLockOwner;
+    private final Set<PlayableEntity> extensionLockedPlayers =
+            Collections.newSetFromMap(new IdentityHashMap<>());
 
     // Flame child
     private OOZBurnerFlameObjectInstance flameChild;
@@ -184,15 +193,62 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureFlameChildSpawned();
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        List<PlayableEntity> participants = participants(playerEntity);
+        AbstractPlayableSprite player = participants.isEmpty() ? null
+                : (AbstractPlayableSprite) participants.get(0);
+        bindNativeLockOwners(participants);
+        releaseOmittedLockedPlayers(participants);
         switch (mode) {
             case TIMER_COUNTDOWN -> updateTimerCountdown();
             case POP_PHYSICS -> updatePopPhysics();
-            case WAIT_FOR_PLAYER -> updateWaitForPlayer(player, frameCounter);
-            case RISE_AND_LAUNCH -> updateRiseAndLaunch(player, frameCounter);
+            case WAIT_FOR_PLAYER -> updateWaitForPlayer(participants, frameCounter);
+            case RISE_AND_LAUNCH -> updateRiseAndLaunch(participants, frameCounter);
             case IDLE -> { /* rts - do nothing */ }
         }
         updateDynamicSpawn(x, currentY);
+    }
+
+    private List<PlayableEntity> participants(PlayableEntity fallback) {
+        List<PlayableEntity> players = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (fallback == null || players.contains(fallback)) return players;
+        ArrayList<PlayableEntity> withFallback = new ArrayList<>(players.size() + 1);
+        withFallback.add(fallback);
+        withFallback.addAll(players);
+        return withFallback;
+    }
+
+    private void bindNativeLockOwners(List<PlayableEntity> participants) {
+        mainLockOwner = bindNativeLockOwner(mainLockOwner,
+                participants.isEmpty() ? null : participants.get(0), true);
+        sidekickLockOwner = bindNativeLockOwner(sidekickLockOwner,
+                participants.size() > 1 ? participants.get(1) : null, false);
+    }
+
+    private PlayableEntity bindNativeLockOwner(
+            PlayableEntity previous, PlayableEntity current, boolean mainSlot) {
+        if (previous == current) return current;
+        boolean locked = mainSlot ? mainCharLocked : sidekickLocked;
+        if (previous == null && current != null && !extensionLockedPlayers.contains(current)) {
+            return current;
+        }
+        if (previous != null && locked) extensionLockedPlayers.add(previous);
+        boolean restored = current != null && extensionLockedPlayers.remove(current);
+        if (mainSlot) mainCharLocked = restored;
+        else sidekickLocked = restored;
+        return current;
+    }
+
+    private void releaseOmittedLockedPlayers(List<PlayableEntity> participants) {
+        for (PlayableEntity locked : List.copyOf(extensionLockedPlayers)) {
+            if (participants.stream().noneMatch(live -> live == locked)) {
+                if (locked instanceof AbstractPlayableSprite player) {
+                    ObjectControlState.none().applyTo(player);
+                    player.setControlLocked(false);
+                }
+                extensionLockedPlayers.remove(locked);
+            }
+        }
     }
 
     // ========================================================================
@@ -249,51 +305,36 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
     // Mode 4: Wait for Player Standing (loc_23C26)
     // ========================================================================
 
-    private void updateWaitForPlayer(AbstractPlayableSprite player, int frameCounter) {
+    private void updateWaitForPlayer(List<PlayableEntity> participants, int frameCounter) {
         ObjectManager objectManager = services().objectManager();
-        AbstractPlayableSprite sidekick = firstTrackedSidekick();
-
-        // ROM: Check standing bits first, then X range
-        boolean mainStanding = isPlayerStandingOnThis(player, objectManager);
-        boolean sidekickStanding = sidekick != null && isPlayerStandingOnThis(sidekick, objectManager);
-
-        if (!mainStanding && !sidekickStanding) {
+        ArrayList<AbstractPlayableSprite> standing = new ArrayList<>();
+        for (PlayableEntity participant : participants) {
+            if (participant instanceof AbstractPlayableSprite player
+                    && isPlayerStandingOnThis(player, objectManager)) {
+                standing.add(player);
+            }
+        }
+        if (standing.isEmpty()) {
             return; // No one standing on platform
         }
-
-        // ROM: cmpi.b #standing_mask,d0 / beq.s loc_23CA0
-        // When BOTH players are standing, both must be in X range (loc_23CA0).
-        // When only one is standing, check that one individually.
-        if (mainStanding && sidekickStanding) {
-            // Both standing: both must be in X trigger range or no pop
-            boolean mainInRange = isPlayerInXRange(player);
-            boolean sidekickInRange = isPlayerInXRange(sidekick);
-            if (!mainInRange || !sidekickInRange) {
-                return;
-            }
+        if (standing.stream().anyMatch(player -> !isPlayerInXRange(player))) {
+            return;
+        }
+        for (AbstractPlayableSprite player : standing) {
             lockPlayer(player);
-            lockPlayer(sidekick);
-            mainCharLocked = true;
-            sidekickLocked = true;
-        } else if (mainStanding) {
-            if (!isPlayerInXRange(player)) {
-                return;
-            }
-            lockPlayer(player);
-            mainCharLocked = true;
-        } else {
-            // sidekickStanding
-            if (!isPlayerInXRange(sidekick)) {
-                return;
-            }
-            lockPlayer(sidekick);
-            sidekickLocked = true;
+            setLocked(player, participants.indexOf(player));
         }
 
         // Pop
         velocity = POP_VELOCITY;
         mode = Mode.RISE_AND_LAUNCH;
         services().playSfx(Sonic2Sfx.OOZ_LID_POP.id);
+    }
+
+    private void setLocked(PlayableEntity player, int index) {
+        if (index == 0) mainCharLocked = true;
+        else if (index == 1) sidekickLocked = true;
+        else extensionLockedPlayers.add(player);
     }
 
     /**
@@ -333,7 +374,7 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
     // Mode 6: Rise to Apex and Launch Player (loc_23D20)
     // ========================================================================
 
-    private void updateRiseAndLaunch(AbstractPlayableSprite player, int frameCounter) {
+    private void updateRiseAndLaunch(List<PlayableEntity> participants, int frameCounter) {
         // Apply velocity (same as pop physics)
         int yPos32 = (currentY << 16) | (yFractional & 0xFFFF);
         yPos32 += velocity;
@@ -352,7 +393,7 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
             // frames only. ROM loc_23D20 launches without writing y_pos(a1), then clears
             // Status_OnObj before Obj33_Main reaches SolidObject, so the apex frame must not
             // re-seat the player to the platform top.
-            moveLockedPlayers(player);
+            moveLockedPlayers(participants);
             return; // Not at apex yet
         }
 
@@ -361,32 +402,74 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         mode = Mode.IDLE;
         ObjectManager objectManager = services().objectManager();
 
-        if (player != null && objectManager.isRidingObject(player, this)) {
-            launchPlayer(player, frameCounter);
+        for (PlayableEntity participant : participants) {
+            if (participant instanceof AbstractPlayableSprite rider
+                    && objectManager.isRidingObject(rider, this)) {
+                launchPlayer(rider, frameCounter);
+                clearLocked(rider);
+            }
         }
-        mainCharLocked = false;
-
-        AbstractPlayableSprite sidekick = firstTrackedSidekick();
-        if (sidekick != null && objectManager.isRidingObject(sidekick, this)) {
-            launchPlayer(sidekick, frameCounter);
+        for (AbstractPlayableSprite locked : lockedPlayersInNativeOrder(participants)) {
+            if (!objectManager.isRidingObject(locked, this)) {
+                ObjectControlState.none().applyTo(locked);
+            } else {
+                launchPlayer(locked, frameCounter);
+            }
         }
-        sidekickLocked = false;
+        clearLockState();
     }
 
-    private void moveLockedPlayers(AbstractPlayableSprite mainChar) {
-        if (mainCharLocked && mainChar != null) {
-            NativePositionOps.writeYPosPreserveSubpixel(mainChar, currentY - SOLID_HALF_HEIGHT_AIR);
+    private void moveLockedPlayers(List<PlayableEntity> participants) {
+        for (AbstractPlayableSprite locked : lockedPlayersInNativeOrder(participants)) {
+            if (locked.getDead() || locked.isHurt() || locked.isDebugMode()) {
+                ObjectControlState.none().applyTo(locked);
+                clearLocked(locked);
+            } else {
+                NativePositionOps.writeYPosPreserveSubpixel(locked, currentY - SOLID_HALF_HEIGHT_AIR);
+            }
         }
-        AbstractPlayableSprite sidekick = firstTrackedSidekick();
-        if (sidekickLocked && sidekick != null) {
-            NativePositionOps.writeYPosPreserveSubpixel(sidekick, currentY - SOLID_HALF_HEIGHT_AIR);
+    }
+
+    private List<AbstractPlayableSprite> lockedPlayersInNativeOrder(List<PlayableEntity> participants) {
+        ArrayList<AbstractPlayableSprite> result = new ArrayList<>();
+        if (mainCharLocked && mainLockOwner instanceof AbstractPlayableSprite main) result.add(main);
+        if (sidekickLocked && sidekickLockOwner instanceof AbstractPlayableSprite p2 && p2 != mainLockOwner) result.add(p2);
+        for (PlayableEntity participant : participants) {
+            if (extensionLockedPlayers.contains(participant)
+                    && participant instanceof AbstractPlayableSprite extension && !result.contains(extension)) {
+                result.add(extension);
+            }
         }
+        for (PlayableEntity omitted : extensionLockedPlayers) {
+            if (omitted instanceof AbstractPlayableSprite extension && !result.contains(extension)) result.add(extension);
+        }
+        return result;
+    }
+
+    private void clearLocked(PlayableEntity player) {
+        if (player == mainLockOwner) mainCharLocked = false;
+        else if (player == sidekickLockOwner) sidekickLocked = false;
+        else extensionLockedPlayers.remove(player);
+    }
+
+    private void clearLockState() {
+        mainCharLocked = false;
+        sidekickLocked = false;
+        extensionLockedPlayers.clear();
     }
 
     private AbstractPlayableSprite firstTrackedSidekick() {
         return services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
                 ? sidekick
                 : null;
+    }
+
+    @Override
+    public void onUnload() {
+        for (AbstractPlayableSprite locked : lockedPlayersInNativeOrder(List.of())) {
+            ObjectControlState.none().applyTo(locked);
+        }
+        clearLockState();
     }
 
     /**

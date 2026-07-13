@@ -2,11 +2,13 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
@@ -19,7 +21,10 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * MTZ Nut Object (Obj69) - Screw nut from Metropolis Zone.
@@ -105,6 +110,28 @@ public class NutObjectInstance extends AbstractObjectInstance
 
     private final PlayerActionState p1 = new PlayerActionState();
     private final PlayerActionState p2 = new PlayerActionState();
+    private PlayableEntity mainStateOwner;
+    private PlayableEntity sidekickStateOwner;
+    private final Map<PlayableEntity, ExtensionPlayerState> extensionPlayerStates = new IdentityHashMap<>();
+
+    private static final class ExtensionPlayerState implements RewindStateful<ExtensionPlayerState.Snapshot> {
+        final PlayerActionState action = new PlayerActionState();
+        boolean contactStanding;
+        boolean standing;
+
+        @Override
+        public Snapshot captureRewindStateValue() {
+            return new Snapshot(action.mode, action.direction, contactStanding, standing);
+        }
+
+        @Override
+        public void restoreRewindStateValue(Snapshot value) {
+            action.mode = value.mode; action.direction = value.direction;
+            contactStanding = value.contactStanding; standing = value.standing;
+        }
+
+        private record Snapshot(int mode, int direction, boolean contactStanding, boolean standing) { }
+    }
 
     // Per-player standing detection. ROM gates each Obj69_Action pass on
     // p1_standing_bit / p2_standing_bit (set by SolidObject when that specific
@@ -212,23 +239,33 @@ public class NutObjectInstance extends AbstractObjectInstance
         }
         // ROM sets p1_standing_bit / p2_standing_bit per player; record which
         // engine player is riding so the matching Obj69_Action pass sees standing.
-        if (playerEntity == resolveSidekick()) {
+        PlayableEntity main = resolveMainCharacter();
+        PlayableEntity sidekick = resolveSidekick();
+        if (playerEntity == sidekick) {
             contactStandingP2 = true;
-        } else {
+        } else if (playerEntity == main) {
             contactStandingP1 = true;
+        } else {
+            extensionPlayerStates.computeIfAbsent(playerEntity, ignored -> new ExtensionPlayerState()).contactStanding = true;
         }
     }
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        List<PlayableEntity> participants = interactionParticipants(playerEntity);
+        bindNativeOwners(participants);
         // Latch per-player standing detected during this frame's collision pass.
         standingP1 = contactStandingP1;
         standingP2 = contactStandingP2;
         contactStandingP1 = false;
         contactStandingP2 = false;
+        for (ExtensionPlayerState state : extensionPlayerStates.values()) {
+            state.standing = state.contactStanding;
+            state.contactStanding = false;
+        }
 
         switch (routine) {
-            case ROUTINE_MAIN -> updateMain();
+            case ROUTINE_MAIN -> updateMain(participants);
             case ROUTINE_FALLING -> {
                 updateFalling();
                 // ROM loc_279FC falls through to loc_278F4 (s2.asm:53655), so the
@@ -246,6 +283,54 @@ public class NutObjectInstance extends AbstractObjectInstance
         y &= 0x7FF;
 
         updateDynamicSpawn(x, y);
+        pruneOmittedExtensions(participants);
+    }
+
+    private List<PlayableEntity> interactionParticipants(PlayableEntity fallback) {
+        try {
+            List<PlayableEntity> players = services().playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+            if (fallback == null || players.contains(fallback)) return players;
+            ArrayList<PlayableEntity> result = new ArrayList<>(players.size() + 1);
+            result.add(fallback); result.addAll(players); return result;
+        } catch (RuntimeException unavailable) {
+            return fallback == null ? List.of() : List.of(fallback);
+        }
+    }
+
+    private void bindNativeOwners(List<PlayableEntity> players) {
+        mainStateOwner = bindNativeOwner(mainStateOwner, players.isEmpty() ? null : players.get(0), p1, true);
+        sidekickStateOwner = bindNativeOwner(sidekickStateOwner, players.size() > 1 ? players.get(1) : null, p2, false);
+    }
+
+    private PlayableEntity bindNativeOwner(PlayableEntity previous, PlayableEntity current,
+                                            PlayerActionState action, boolean mainSlot) {
+        if (previous == current) return current;
+        if (previous == null && current != null && !extensionPlayerStates.containsKey(current)) {
+            return current;
+        }
+        if (previous != null) {
+            ExtensionPlayerState saved = new ExtensionPlayerState();
+            saved.action.mode = action.mode; saved.action.direction = action.direction;
+            saved.standing = mainSlot ? standingP1 : standingP2;
+            saved.contactStanding = mainSlot ? contactStandingP1 : contactStandingP2;
+            extensionPlayerStates.put(previous, saved);
+        }
+        ExtensionPlayerState restored = current == null ? null : extensionPlayerStates.remove(current);
+        action.mode = restored == null ? MODE_IDLE : restored.action.mode;
+        action.direction = restored == null ? 0 : restored.action.direction;
+        if (mainSlot) {
+            standingP1 = restored != null && restored.standing;
+            contactStandingP1 = restored != null && restored.contactStanding;
+        } else {
+            standingP2 = restored != null && restored.standing;
+            contactStandingP2 = restored != null && restored.contactStanding;
+        }
+        return current;
+    }
+
+    private void pruneOmittedExtensions(List<PlayableEntity> participants) {
+        extensionPlayerStates.keySet().removeIf(player -> participants.stream().noneMatch(live -> live == player));
     }
 
     /**
@@ -287,9 +372,11 @@ public class NutObjectInstance extends AbstractObjectInstance
      * (objoff_3C / p2_standing_bit). Each pass is gated by that player's own
      * standing bit.
      */
-    private void updateMain() {
-        AbstractPlayableSprite mainPlayer = resolveMainCharacter();
-        AbstractPlayableSprite sidekickPlayer = resolveSidekick();
+    private void updateMain(List<PlayableEntity> participants) {
+        AbstractPlayableSprite mainPlayer = participants.isEmpty() ? null
+                : participants.get(0) instanceof AbstractPlayableSprite sprite ? sprite : null;
+        AbstractPlayableSprite sidekickPlayer = participants.size() > 1
+                && participants.get(1) instanceof AbstractPlayableSprite sprite ? sprite : null;
 
         if (mainPlayer != null) {
             processPlayerAction(p1, mainPlayer, isStandingOnThis(mainPlayer, standingP1));
@@ -300,6 +387,19 @@ public class NutObjectInstance extends AbstractObjectInstance
         // would no-op on a falling nut since the sidekick's standing bit clears.)
         if (sidekickPlayer != null && routine == ROUTINE_MAIN) {
             processPlayerAction(p2, sidekickPlayer, isStandingOnThis(sidekickPlayer, standingP2));
+        }
+        for (int index = 2; index < participants.size() && routine == ROUTINE_MAIN; index++) {
+            if (participants.get(index) instanceof AbstractPlayableSprite extension) {
+                ExtensionPlayerState state = extensionPlayerStates.computeIfAbsent(extension,
+                        ignored -> new ExtensionPlayerState());
+                if (extension.getDead() || extension.isHurt() || extension.isDebugMode()) {
+                    state.action.mode = MODE_IDLE;
+                    state.standing = false;
+                } else {
+                    processPlayerAction(state.action, extension,
+                            isStandingOnThis(extension, state.standing));
+                }
+            }
         }
     }
 

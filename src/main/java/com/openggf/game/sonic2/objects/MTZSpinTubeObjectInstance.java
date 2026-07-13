@@ -1,6 +1,8 @@
 package com.openggf.game.sonic2.objects;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.level.objects.ObjectAnimationState;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 
 import com.openggf.audio.GameSound;
 import com.openggf.debug.DebugRenderContext;
@@ -22,7 +24,10 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
 import com.openggf.debug.DebugColor;
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -135,7 +140,7 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements
     //   pathRemaining: bytes of path data remaining (word; 4(a4))
     //   pathIndex: current index into path data array
     //   pathReverse: traversing path backwards (mirrors subtype bit 7)
-    private static final class CharacterState {
+    private static final class CharacterState implements RewindStateful<CharacterState.Snapshot> {
         int state = 0;
         int sineAngle = 0;
         int duration = 0;
@@ -143,11 +148,29 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements
         int pathIndex = 0;
         int[] path = null;
         boolean pathReverse = false;
+
+        @Override
+        public Snapshot captureRewindStateValue() {
+            return new Snapshot(state, sineAngle, duration, pathRemaining, pathIndex, path, pathReverse);
+        }
+
+        @Override
+        public void restoreRewindStateValue(Snapshot value) {
+            state = value.state; sineAngle = value.sineAngle; duration = value.duration;
+            pathRemaining = value.pathRemaining; pathIndex = value.pathIndex;
+            path = value.path; pathReverse = value.pathReverse;
+        }
+
+        private record Snapshot(int state, int sineAngle, int duration, int pathRemaining,
+                                int pathIndex, int[] path, boolean pathReverse) { }
     }
 
     // objoff_2C (MainCharacter) and objoff_36 (Sidekick).
     private final CharacterState mainCharState = new CharacterState();
     private final CharacterState sidekickCharState = new CharacterState();
+    private PlayableEntity mainStateOwner;
+    private PlayableEntity sidekickStateOwner;
+    private final Map<PlayableEntity, CharacterState> extensionStates = new IdentityHashMap<>();
 
     // Whether object is x-flipped (from render_flags bit 0)
     private boolean xFlipped;
@@ -181,7 +204,10 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements
         // the player-query API; the participation policy NATIVE_P1_P2 yields the
         // native P1 (main) first and native P2 (sidekick) second, matching the ROM.
         AbstractPlayableSprite mainPlayer = resolveMainCharacter(playerEntity);
-        AbstractPlayableSprite sidekickPlayer = resolveSidekick();
+        List<PlayableEntity> participants = interactionParticipants(mainPlayer);
+        bindNativeOwners(participants);
+        AbstractPlayableSprite sidekickPlayer = participants.size() > 1
+                && participants.get(1) instanceof AbstractPlayableSprite sprite ? sprite : null;
 
         if (mainPlayer != null) {
             updateCharacter(mainCharState, mainPlayer);
@@ -189,13 +215,86 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements
         if (sidekickPlayer != null) {
             updateCharacter(sidekickCharState, sidekickPlayer);
         }
+        for (int index = 2; index < participants.size(); index++) {
+            if (participants.get(index) instanceof AbstractPlayableSprite extension) {
+                CharacterState state = extensionStates.computeIfAbsent(extension, ignored -> new CharacterState());
+                if (extension.getDead() || extension.isHurt() || extension.isDebugMode()) {
+                    releaseCharacter(state, extension);
+                    extensionStates.remove(extension);
+                } else {
+                    updateCharacter(state, extension);
+                }
+            }
+        }
+        releaseOmittedExtensions(participants);
 
         // ROM: move.b objoff_2C(a0),d0 / add.b objoff_36(a0),d0 / beq.w MarkObjGone3
         // (s2.asm:52952-52954). Only animate (and render) when at least one
         // character is actively in the tube.
-        if (mainCharState.state != 0 || sidekickCharState.state != 0) {
+        if (hasActiveCharacter()) {
             animationState.update();
         }
+    }
+
+    private List<PlayableEntity> interactionParticipants(AbstractPlayableSprite main) {
+        List<PlayableEntity> players;
+        try {
+            players = services().playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        } catch (RuntimeException unavailable) {
+            return main == null ? List.of() : List.of(main);
+        }
+        if (main == null || players.contains(main)) return players;
+        ArrayList<PlayableEntity> result = new ArrayList<>(players.size() + 1);
+        result.add(main); result.addAll(players); return result;
+    }
+
+    private void bindNativeOwners(List<PlayableEntity> players) {
+        mainStateOwner = bindOwner(mainStateOwner, players.isEmpty() ? null : players.get(0), mainCharState);
+        sidekickStateOwner = bindOwner(sidekickStateOwner, players.size() > 1 ? players.get(1) : null, sidekickCharState);
+    }
+
+    private PlayableEntity bindOwner(PlayableEntity previous, PlayableEntity current, CharacterState nativeState) {
+        if (previous == current) return current;
+        if (previous != null) extensionStates.put(previous, copyState(nativeState));
+        CharacterState restored = current == null ? null : extensionStates.remove(current);
+        nativeState.restoreRewindStateValue(restored == null
+                ? new CharacterState().captureRewindStateValue() : restored.captureRewindStateValue());
+        return current;
+    }
+
+    private CharacterState copyState(CharacterState source) {
+        CharacterState copy = new CharacterState(); copy.restoreRewindStateValue(source.captureRewindStateValue()); return copy;
+    }
+
+    private void releaseOmittedExtensions(List<PlayableEntity> players) {
+        for (PlayableEntity player : List.copyOf(extensionStates.keySet())) {
+            if (players.stream().noneMatch(live -> live == player)) {
+                if (player instanceof AbstractPlayableSprite sprite) releaseCharacter(extensionStates.get(player), sprite);
+                extensionStates.remove(player);
+            }
+        }
+    }
+
+    private void releaseCharacter(CharacterState state, AbstractPlayableSprite player) {
+        if (state != null && state.state != 0) {
+            state.state = 0; state.path = null;
+            ObjectControlState.none().applyTo(player); player.setControlLocked(false);
+            player.setPriorityBucket(RenderPriority.PLAYER_DEFAULT);
+        }
+    }
+
+    private boolean hasActiveCharacter() {
+        return mainCharState.state != 0 || sidekickCharState.state != 0
+                || extensionStates.values().stream().anyMatch(state -> state.state != 0);
+    }
+
+    @Override
+    public void onUnload() {
+        if (mainStateOwner instanceof AbstractPlayableSprite sprite) releaseCharacter(mainCharState, sprite);
+        if (sidekickStateOwner instanceof AbstractPlayableSprite sprite) releaseCharacter(sidekickCharState, sprite);
+        extensionStates.forEach((player, state) -> { if (player instanceof AbstractPlayableSprite sprite) releaseCharacter(state, sprite); });
+        extensionStates.clear();
     }
 
     /**
@@ -499,7 +598,7 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements
         // tube. ROM gates visibility/animation on objoff_2C + objoff_36 at the top
         // of Obj67 (s2.asm:52952-52954); if the other character is still riding,
         // its flash animation must keep running.
-        if (mainCharState.state == 0 && sidekickCharState.state == 0) {
+        if (!hasActiveCharacter()) {
             animationState.setAnimId(0);
         }
     }
@@ -590,7 +689,7 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         // ROM: only render when a character is in the tube (objoff_2C + objoff_36 != 0)
-        if (mainCharState.state == 0 && sidekickCharState.state == 0) {
+        if (!hasActiveCharacter()) {
             return;
         }
 
