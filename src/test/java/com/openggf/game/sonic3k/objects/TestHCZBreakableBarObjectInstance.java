@@ -186,17 +186,70 @@ class TestHCZBreakableBarObjectInstance {
     }
 
     @Test
-    void extraSidekickDoesNotShareNativeP2CaptureSlot() {
+    void extensionSidekicksCaptureWithIndependentBarState() {
         TestablePlayableSprite main = positionedAwayFromBar("sonic");
         TestablePlayableSprite nativeP2 = positionedAwayFromBar("tails");
         TestablePlayableSprite extraSidekick = positionedPlayer("knuckles");
-        List<PlayableEntity> sidekicks = List.of(nativeP2, extraSidekick);
+        TestablePlayableSprite thirdSidekick = positionedPlayer("sonic-extra");
+        List<PlayableEntity> sidekicks = List.of(nativeP2, extraSidekick, thirdSidekick);
         HCZBreakableBarObjectInstance bar = verticalBar(0x40);
         bar.setServices(new QueryOnlyPlayerServices(main, sidekicks, sidekicks));
 
         bar.update(0, main);
 
-        assertNoObjectControl(extraSidekick);
+        assertNativeBitZeroControl(extraSidekick);
+        assertNativeBitZeroControl(thirdSidekick);
+    }
+
+    @Test
+    void deadCapturedExtensionIsReleased() {
+        TestablePlayableSprite main = positionedAwayFromBar("sonic");
+        TestablePlayableSprite nativeP2 = positionedAwayFromBar("tails");
+        TestablePlayableSprite extension = positionedPlayer("knuckles");
+        HCZBreakableBarObjectInstance bar = verticalBar(0x40);
+        bar.setServices(new QueryOnlyPlayerServices(
+                main, List.of(nativeP2, extension), List.of(nativeP2, extension)));
+        bar.update(0, main);
+
+        extension.setDead(true);
+        bar.update(1, main);
+
+        assertNoObjectControl(extension);
+    }
+
+    @Test
+    void omittedCapturedExtensionIsReleasedWithoutTouchingUnrelatedControl() {
+        TestablePlayableSprite main = positionedAwayFromBar("sonic");
+        TestablePlayableSprite nativeP2 = positionedAwayFromBar("tails");
+        TestablePlayableSprite captured = positionedPlayer("knuckles");
+        TestablePlayableSprite unrelated = positionedPlayer("other");
+        com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(unrelated);
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(
+                main, List.of(nativeP2, captured, unrelated), List.of(nativeP2, captured, unrelated));
+        HCZBreakableBarObjectInstance bar = verticalBar(0x40);
+        bar.setServices(services);
+        bar.update(0, main);
+
+        services.setSidekicks(List.of(nativeP2));
+        bar.update(1, main);
+
+        assertNoObjectControl(captured);
+        assertTrue(unrelated.isObjectControlled(), "control owned by another object must remain intact");
+    }
+
+    @Test
+    void unloadReleasesCapturedExtension() {
+        TestablePlayableSprite main = positionedAwayFromBar("sonic");
+        TestablePlayableSprite nativeP2 = positionedAwayFromBar("tails");
+        TestablePlayableSprite extension = positionedPlayer("knuckles");
+        HCZBreakableBarObjectInstance bar = verticalBar(0x40);
+        bar.setServices(new QueryOnlyPlayerServices(
+                main, List.of(nativeP2, extension), List.of(nativeP2, extension)));
+        bar.update(0, main);
+
+        bar.onUnload();
+
+        assertNoObjectControl(extension);
     }
 
     private static HCZBreakableBarObjectInstance verticalBar(int subtype) {
@@ -246,8 +299,8 @@ class TestHCZBreakableBarObjectInstance {
 
     private static final class QueryOnlyPlayerServices extends TestObjectServices {
         private final PlayableEntity main;
-        private final List<? extends PlayableEntity> queriedSidekicks;
-        private final List<PlayableEntity> rawSidekicks;
+        private List<? extends PlayableEntity> queriedSidekicks;
+        private List<PlayableEntity> rawSidekicks;
 
         private QueryOnlyPlayerServices(PlayableEntity main,
                                         List<? extends PlayableEntity> queriedSidekicks,
@@ -255,6 +308,11 @@ class TestHCZBreakableBarObjectInstance {
             this.main = main;
             this.queriedSidekicks = List.copyOf(queriedSidekicks);
             this.rawSidekicks = List.copyOf(rawSidekicks);
+        }
+
+        private void setSidekicks(List<PlayableEntity> sidekicks) {
+            queriedSidekicks = List.copyOf(sidekicks);
+            rawSidekicks = List.copyOf(sidekicks);
         }
 
         @Override

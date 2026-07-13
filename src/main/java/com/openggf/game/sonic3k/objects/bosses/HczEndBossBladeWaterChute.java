@@ -237,7 +237,10 @@ public class HczEndBossBladeWaterChute extends AbstractBossChild implements Rewi
         try {
             ObjectPlayerQuery query = services().playerQuery();
             ObjectPlayerQuery participants = new ObjectPlayerQuery(() -> player, query::sidekicks);
-            for (PlayableEntity candidate : participants.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            // Preserve the ROM P1/P2 prefix, then apply the stateless launch probe
+            // independently to novelty sidekicks.
+            for (PlayableEntity candidate : participants.playersFor(
+                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
                 tryLaunchPlayer(candidate);
             }
         } catch (Exception e) {
