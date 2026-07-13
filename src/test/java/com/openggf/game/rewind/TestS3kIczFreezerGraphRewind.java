@@ -21,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -136,6 +137,35 @@ class TestS3kIczFreezerGraphRewind {
                 "frozen block break timer must restore exactly");
         assertTrue(readBooleanField(restoredBlock, "landedOnTerrain"),
                 "frozen block terrain scalar must restore exactly");
+    }
+
+    @Test
+    void extensionFrozenBlockRestoresThroughStableSidekickPlayerRef() {
+        TestablePlayableSprite main = player("sonic", 0x2300, 0x0340);
+        TestablePlayableSprite nativeP2 = player("tails", 0x2380, 0x0340);
+        TestablePlayableSprite extension = player("knuckles-old", 0x2410, 0x0340);
+        Harness harness = Harness.create(main);
+        harness.setSidekicks(nativeP2, extension);
+        IczFreezerObjectInstance freezer = harness.objectManager().createDynamicObject(
+                () -> new IczFreezerObjectInstance(FREEZER_SPAWN));
+        harness.objectManager().createDynamicObject(() -> new IczFreezerObjectInstance.FrozenPlayerBlock(
+                extension, 0x2410, 0x0340, freezer.getX(), false));
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(harness.objectManager().rewindSnapshottable());
+        CompositeSnapshot snapshot = registry.capture();
+
+        TestablePlayableSprite replacementNativeP2 = player("tails-new", 0x2380, 0x0340);
+        TestablePlayableSprite replacementExtension = player("knuckles-new", 0x2410, 0x0340);
+        harness.setSidekicks(replacementNativeP2, replacementExtension);
+        registry.restore(snapshot);
+
+        IczFreezerObjectInstance.FrozenPlayerBlock restored = harness.objectManager().getActiveObjects().stream()
+                .filter(IczFreezerObjectInstance.FrozenPlayerBlock.class::isInstance)
+                .map(IczFreezerObjectInstance.FrozenPlayerBlock.class::cast)
+                .findFirst()
+                .orElseThrow();
+        assertSame(replacementExtension, restored.capturedPlayerForTesting(),
+                "extension frost ownership must restore by sidekick PlayerRef slot, not stale Java identity");
     }
 
     @Test
@@ -283,17 +313,20 @@ class TestS3kIczFreezerGraphRewind {
         assertDoesNotThrow(objectManager::validateRewindReferenceClosure);
     }
 
-    private record Harness(ObjectManager objectManager, TestCamera camera, StubObjectServices services) {
+    private record Harness(ObjectManager objectManager, TestCamera camera, StubObjectServices services,
+                           List<AbstractPlayableSprite> sidekicks) {
         static Harness create(AbstractPlayableSprite focusedPlayer) {
             ObjectManager[] holder = new ObjectManager[1];
             TestCamera camera = new TestCamera();
             camera.setFocusedSprite(focusedPlayer);
-            ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(camera::getFocusedSprite, List::of);
+            List<AbstractPlayableSprite> sidekicks = new ArrayList<>();
+            ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(camera::getFocusedSprite, () -> sidekicks);
             StubObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
                 @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
                 @Override public ObjectPlayerQuery playerQuery() { return playerQuery; }
+                @Override public List<PlayableEntity> sidekicks() { return List.copyOf(sidekicks); }
             };
             ObjectManager objectManager = new ObjectManager(
                     List.of(),
@@ -307,11 +340,16 @@ class TestS3kIczFreezerGraphRewind {
             holder[0] = objectManager;
             objectManager.reset(camera.getX());
             objectManager.setRewindInPlaceRestoreEnabledForTest(false);
-            return new Harness(objectManager, camera, services);
+            return new Harness(objectManager, camera, services, sidekicks);
         }
 
         void setPlayer(AbstractPlayableSprite player) {
             camera.setFocusedSprite(player);
+        }
+
+        void setSidekicks(AbstractPlayableSprite... players) {
+            sidekicks.clear();
+            sidekicks.addAll(List.of(players));
         }
     }
 

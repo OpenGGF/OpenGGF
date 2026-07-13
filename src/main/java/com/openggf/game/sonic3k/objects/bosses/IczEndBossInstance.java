@@ -634,7 +634,8 @@ public final class IczEndBossInstance extends AbstractBossInstance
 
     private List<PlayableEntity> frostCaptureParticipants(PlayableEntity fallbackPlayer) {
         try {
-            return services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+            return services().playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
         } catch (RuntimeException ignored) {
             return fallbackPlayer == null ? List.of() : List.of(fallbackPlayer);
         }

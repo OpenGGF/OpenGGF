@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.StubObjectServices;
@@ -102,6 +103,20 @@ class TestS3kIczStalagtiteObject {
 
         assertEquals("SHAKING", stalagtite.getPhaseNameForTesting(),
                 "Find_SonicTails subtracts 16-bit x_pos words, so $FFE0-$0020 becomes a $40 trigger distance");
+    }
+
+    @Test
+    void thirdPlayerCanTriggerStalagtiteWhileNativePlayersRemainOutOfRange() {
+        IczStalagtiteObjectInstance stalagtite = createStalagtite(0x3200, 0x05C0);
+        PlayableEntity main = playerAt(0x3000);
+        PlayableEntity nativeP2 = playerAt(0x3000);
+        PlayableEntity extension = playerAt(0x326F);
+        stalagtite.setServices(new StubObjectServices()
+                .withPlayerQuery(new ObjectPlayerQuery(() -> main, () -> List.of(nativeP2, extension))));
+
+        stalagtite.update(10, main);
+
+        assertEquals("SHAKING", stalagtite.getPhaseNameForTesting());
     }
 
     @Test
