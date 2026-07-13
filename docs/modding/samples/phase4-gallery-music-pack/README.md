@@ -6,7 +6,8 @@ root:
 
 ```sh
 python generate-assets.py
-jar --create --file openggf-gallery-music-sample.jar META-INF audio
+ggfmod package --input . --out ../openggf-gallery-music-sample.jar
+ggfmod validate ../openggf-gallery-music-sample.jar
 ```
 
 Copy the resulting JAR into OpenGGF's `mods/` directory, enable it in the Mod

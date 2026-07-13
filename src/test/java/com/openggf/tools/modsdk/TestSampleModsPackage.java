@@ -1,0 +1,215 @@
+package com.openggf.tools.modsdk;
+
+import com.openggf.io.ModInputLimits;
+import com.openggf.mods.DefaultModRepositoryScanner;
+import com.openggf.mods.ModCatalogValidator;
+import com.openggf.mods.ModDescriptor;
+import com.openggf.mods.ModType;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import javax.tools.ToolProvider;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class TestSampleModsPackage {
+    private static final Path MUSIC = Path.of("docs/modding/samples/phase4-gallery-music-pack");
+    private static final Path RESKIN = Path.of("src/test/resources/mods/sample-reskin-src");
+    private static final Path BADNIK_ZONE = Path.of("src/test/resources/mods/sample-mod-src/project");
+    private static final Path CHARACTER = Path.of("src/test/resources/mods/sample-character-src/project");
+    private static final Path STANDALONE = Path.of("src/test/resources/mods/sample-standalone-src/project");
+    private static final Set<String> EXPECTED_IDS = Set.of(
+            "openggf-gallery-music-sample", "phase2-reskin", "phase2-sample",
+            "phase3-character", "phase3-standalone");
+    private static final Map<String, String> EXPECTED_API_RANGES = Map.of(
+            "openggf-gallery-music-sample", ">=1.0.0 <2.0.0",
+            "phase2-reskin", ">=1.1.0 <2.0.0",
+            "phase2-sample", ">=1.1.0 <2.0.0",
+            "phase3-character", ">=1.2.0 <2.0.0",
+            "phase3-standalone", ">=1.2.0 <2.0.0");
+    private static final Set<String> TRUSTED_CODE_SAMPLES = Set.of(
+            "phase2-sample", "phase3-character", "phase3-standalone");
+
+    @TempDir Path temp;
+
+    @Test
+    void exactlyFiveMaintainedSourcesBuildThroughRealPackageAndValidateAsOneRepository() throws Exception {
+        List<Sample> samples = List.of(
+                new Sample("music", this::materializeMusic),
+                new Sample("reskin", this::materializeReskin),
+                new Sample("badnik-zone", this::materializeBadnikZone),
+                new Sample("character", this::materializeCharacter),
+                new Sample("standalone", this::materializeStandalone));
+        assertEquals(5, samples.size(), "The Phase 4 gallery contract is exactly five source mods");
+
+        Path repository = temp.resolve("repository");
+        Files.createDirectory(repository);
+        for (Sample sample : samples) {
+            Path exploded = temp.resolve(sample.name() + "-exploded");
+            Files.createDirectories(exploded);
+            sample.materializer().materialize(exploded);
+            Path jar = repository.resolve(sample.name() + ".jar");
+            assertCli("package", "--input", exploded.toString(), "--out", jar.toString());
+            assertTrue(Files.isRegularFile(jar), sample.name());
+            assertCleanValidation(jar);
+        }
+
+        var scanned = new DefaultModRepositoryScanner().scan(repository.toAbsolutePath().normalize());
+        assertEquals(5, scanned.size());
+        var validated = new ModCatalogValidator(repository.toAbsolutePath().normalize(),
+                ModInputLimits.production(), (game, stockId) -> true).validate(scanned);
+        assertEquals(5, validated.entries().size());
+        Set<String> ids = new java.util.LinkedHashSet<>();
+        for (var entry : validated.entries()) {
+            ModDescriptor descriptor = assertInstanceOf(ModDescriptor.class, entry);
+            assertFalse(descriptor.hasErrors(), descriptor.findings()::toString);
+            String id = descriptor.manifest().id();
+            ids.add(id);
+            assertEquals(EXPECTED_API_RANGES.get(id), descriptor.manifest().engineApiRange().toString(), id);
+            boolean trustedCode = TRUSTED_CODE_SAMPLES.contains(id);
+            assertEquals(trustedCode, descriptor.containsCode(), id + " code inventory");
+            assertEquals(trustedCode, descriptor.manifest().entrypoint() != null, id + " entrypoint");
+            boolean standalone = "phase3-standalone".equals(id);
+            assertEquals(standalone ? ModType.STANDALONE : ModType.PATCH,
+                    descriptor.manifest().type(), id + " type");
+            assertEquals(standalone ? null : "s2", descriptor.manifest().baseGame(), id + " base game");
+            assertTrue(descriptor.findings().isEmpty(), id + " catalog findings: " + descriptor.findings());
+        }
+        assertEquals(EXPECTED_IDS, ids);
+    }
+
+    private void materializeMusic(Path output) throws Exception {
+        copyTree(MUSIC, output);
+        String python = System.getProperty("os.name", "").startsWith("Windows") ? "python" : "python3";
+        Process process = new ProcessBuilder(python, output.resolve("generate-assets.py").toString())
+                .redirectErrorStream(true).start();
+        String log = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertEquals(0, process.waitFor(), log);
+        assertTrue(Files.isRegularFile(output.resolve("audio/gallery-theme.wav")));
+    }
+
+    private void materializeReskin(Path output) throws Exception {
+        Files.createDirectories(output.resolve("META-INF"));
+        Files.copy(RESKIN.resolve("META-INF/openggf-mod.yaml"),
+                output.resolve("META-INF/openggf-mod.yaml"));
+        Path image = temp.resolve("reskin.png");
+        Files.write(image, Base64.getDecoder().decode(Files.readString(
+                RESKIN.resolve("reskin.png.base64")).trim()));
+        assertCli("convert", "art", "--image", image.toString(), "--sheet",
+                RESKIN.resolve("reskin-sheet.yaml").toString(), "--out",
+                output.resolve("art/reskin.ggfs").toString());
+    }
+
+    private void materializeBadnikZone(Path output) throws Exception {
+        copyTree(BADNIK_ZONE.resolve("src/main/resources"), output);
+        compileJava(BADNIK_ZONE.resolve("src/main/java"), output);
+        assertCli("convert", "art", "--image", BADNIK_ZONE.resolve("src/main/mod/sample.png").toString(),
+                "--sheet", BADNIK_ZONE.resolve("src/main/mod/sample-sheet.yaml").toString(),
+                "--out", output.resolve("art/sample.ggfs").toString());
+        Path level = materializeLevel(BADNIK_ZONE.resolve("src/main/mod/level-source"), "badnik-level");
+        assertCli("convert", "level", "--from-export", level.toString(),
+                "--out", output.resolve("levels/sample").toString());
+    }
+
+    private void materializeCharacter(Path output) throws Exception {
+        copyTree(CHARACTER.resolve("src/main/resources"), output);
+        compileJava(CHARACTER.resolve("src/main/java"), output);
+        Path image = temp.resolve("character-runner.png");
+        Files.write(image, Base64.getDecoder().decode(Files.readString(
+                CHARACTER.resolve("src/main/mod/runner.png.base64")).trim()));
+        assertCli("convert", "art", "--playable", "--image", image.toString(),
+                "--sheet", CHARACTER.resolve("src/main/mod/runner-sheet.yaml").toString(),
+                "--out", output.resolve("art/runner.ggfp").toString());
+    }
+
+    private void materializeStandalone(Path output) throws Exception {
+        copyTree(STANDALONE.resolve("src/main/resources"), output);
+        compileJava(STANDALONE.resolve("src/main/java"), output);
+        Path image = temp.resolve("standalone-runner.png");
+        Files.write(image, Base64.getDecoder().decode(Files.readString(
+                STANDALONE.resolve("src/main/mod/runner.png.base64")).trim()));
+        assertCli("convert", "art", "--playable", "--image", image.toString(),
+                "--sheet", STANDALONE.resolve("src/main/mod/runner-sheet.yaml").toString(),
+                "--out", output.resolve("art/runner.ggfp").toString());
+        Path level = materializeLevel(STANDALONE.resolve("src/main/mod/level-source"), "standalone-level");
+        assertCli("convert", "level", "--from-export", level.toString(),
+                "--out", output.resolve("levels/sample").toString());
+        Files.write(output.resolve("audio/sample-tone.wav"), Base64.getDecoder().decode(Files.readString(
+                STANDALONE.resolve("src/main/mod/sample-tone.wav.base64")).trim()));
+    }
+
+    private Path materializeLevel(Path source, String name) throws Exception {
+        Path output = temp.resolve(name);
+        copyTree(source, output);
+        Path encoded = output.resolve("binary-assets.properties");
+        Properties assets = new Properties();
+        try (var input = Files.newInputStream(encoded)) {
+            assets.load(input);
+        }
+        Files.delete(encoded);
+        for (String file : assets.stringPropertyNames()) {
+            Files.write(output.resolve(file), Base64.getDecoder().decode(assets.getProperty(file)));
+        }
+        return output;
+    }
+
+    private static void compileJava(Path source, Path output) throws Exception {
+        List<String> arguments = new ArrayList<>(List.of("--release", "21", "-classpath",
+                Path.of("target/classes").toAbsolutePath().toString(), "-d", output.toString()));
+        try (var files = Files.walk(source)) {
+            files.filter(path -> path.toString().endsWith(".java")).sorted()
+                    .map(Path::toString).forEach(arguments::add);
+        }
+        int exit = ToolProvider.getSystemJavaCompiler().run(null, null, null,
+                arguments.toArray(String[]::new));
+        assertEquals(0, exit, source.toString());
+    }
+
+    private static void copyTree(Path source, Path output) throws Exception {
+        try (var files = Files.walk(source)) {
+            for (Path file : files.toList()) {
+                Path destination = output.resolve(source.relativize(file).toString());
+                if (Files.isDirectory(file)) Files.createDirectories(destination);
+                else {
+                    Files.createDirectories(destination.getParent());
+                    Files.copy(file, destination);
+                }
+            }
+        }
+    }
+
+    private static void assertCli(String... arguments) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        int exit = GgfModCli.run(arguments, new PrintStream(bytes));
+        assertEquals(0, exit, bytes.toString(StandardCharsets.UTF_8));
+    }
+
+    private static void assertCleanValidation(Path jar) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        int exit = GgfModCli.run(new String[]{"validate", jar.toString()}, new PrintStream(bytes));
+        String output = bytes.toString(StandardCharsets.UTF_8);
+        assertEquals(0, exit, output);
+        assertTrue(output.contains("Validation passed: 0 findings"), output);
+    }
+
+    private record Sample(String name, Materializer materializer) { }
+
+    @FunctionalInterface
+    private interface Materializer {
+        void materialize(Path output) throws Exception;
+    }
+}
