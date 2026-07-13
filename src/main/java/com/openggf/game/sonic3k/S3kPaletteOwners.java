@@ -24,6 +24,7 @@ public final class S3kPaletteOwners {
     public static final String ZONE_EVENT_PALETTE_LOAD = "s3k.zoneEvents.paletteLoad";
     public static final String HCZ_EVENT_PALETTE = "s3k.hcz.eventPalette";
     public static final String FBZ_EVENT_PALETTE = "s3k.fbz.eventPalette";
+    public static final String FBZ_MINIBOSS = "s3k.fbz.miniboss";
     public static final String HCZ_WATER_CYCLE = "s3k.hcz.waterCycle";
     public static final String HCZ_CAVE_LIGHTING = "s3k.hcz.caveLighting";
     public static final String HCZ_MINIBOSS = "s3k.hcz.miniboss";

@@ -800,3 +800,45 @@ recorded as `unknown/not previously run` rather than inferred.
   The art gate now spells the exact 18-frame piece-count vector as
   `4,1,1,2,2,2,2,4,6,6,6,6,6,6,6,6,6,2`. This remained documentation-only;
   no production code, tests, trace, or commit ran.
+- Task 11 implementation ports the locked-on `$AA` Act 1 miniboss as the full
+  18-slot persistent object graph: root, three covers, P1-authority plunger,
+  native-pair aimer, two arm controllers, and two independent cyclic five-link
+  chains. The 11 arm and 16 link callbacks preserve setup-only dispatch,
+  asymmetric waits, unsigned byte-angle endpoints, native circular axes,
+  phase-dependent priorities, one-shot attack palette requests, scripted
+  terminal self-damage, and move/gravity/flicker defeat behavior. The root owns
+  exact vertical/horizontal arena convergence, lock-time max-X storage, boss
+  flags, music waits, six-hit flash cadence, conversion to a non-solid end-sign
+  controller, independent fade/prison/animal/fragment allocations, after-current
+  sign creation, and the later results/end-flag handoff without publishing
+  `Events_fg_5` itself. Parent-free rewind shells restore scalars before a
+  family-slot relinker rebuilds only captured contiguous prefixes and closes a
+  cycle only at a real terminal link. Focused core/child/defeat/rewind/art/
+  registry tests and the real ObjectManager route cover palette, allocation,
+  camera, sign/results, restart, multi-sidekicks, widescreen, and donation-neutral
+  standing activation. No complete-run trace was run; trace polish remains the
+  final zone phase after broad FBZ implementation.
+- Task 11 final verification is green across all 59 focused checks: 31 FBZ
+  miniboss, real-route, child, defeat, rewind, art, and registry assertions;
+  seven actual results/signpost checks; five object-profile checks; and 16
+  static-state, service-migration, and renderer guard checks. The real route
+  uses `ObjectManager` contact and the six terminal arm/link impacts, then
+  observes the independently allocated defeat family and actual `S3kSignpost`
+  through results clear and the act-end flag. It includes executable restart,
+  arbitrary-sidekick, widescreen-camera, and donation-neutral coverage. The
+  aggregate shared-worktree guard run was 151/155; its four failures belonged
+  to concurrent AIZ/ObjectManager/other-FBZ-family changes, and no Task 11
+  class remained in a violation. `git diff --check` was clean. Trace remained
+  intentionally deferred to final broad-zone polish.
+- Task 11 acceptance recovery corrected the Act 1 capsule fragments to use a
+  dedicated, Act-1-only level-art key backed by generic `Map_EggCapsule` at
+  `ArtTile_EggCapsule-$46`; the act-2 standalone capsule sheet and the distinct
+  placed-FBZ-capsule mapping are no longer used. Render coverage observes the
+  exact `2,3,$A,4,$B` frames and the obsolete per-fragment art-tile scalar was
+  removed. Allocation coverage now exhausts the real S3K object pool at every
+  ordinal of the seven-entry initial table and both independent five-link arm
+  tables. All 40 partial-prefix cases capture, corrupt or remove, and restore in
+  both in-place and forced-reconstruction modes, asserting stable SST slots,
+  no retry after capacity returns, no missing-ordinal healing, and cycle closure
+  only at link four. The focused art/defeat/rewind matrix passed 56/56. No trace
+  or commit ran.

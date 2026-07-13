@@ -280,6 +280,8 @@ public final class Sonic3kObjectIds {
     public static final int CNZ_MINIBOSS = 0xA6;
     // S3KL object table: Obj_CNZEndBoss. SKL reuses $A7 for DEZEndBoss.
     public static final int CNZ_END_BOSS = 0xA7;
+    // S3KL object table: Obj_FBZMiniboss. SKL reuses $AA for Hyudoro.
+    public static final int FBZ_MINIBOSS = 0xAA;
     // S3KL object table: Obj_Penguinator.
     public static final int PENGUINATOR = 0xAD;
     // S3KL object table: Obj_StarPointer.

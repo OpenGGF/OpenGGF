@@ -236,6 +236,8 @@ public final class Sonic3kObjectArtKeys {
     public static final String FBZ_TECHNOSQUEEK = "fbz_technosqueek";
     public static final String FBZ_BUTTON = "fbz_button";
     public static final String FBZ_MINIBOSS = "fbz_miniboss";
+    /** FBZ1 miniboss defeat fragments: generic capsule map over the act-1 PLC tile window. */
+    public static final String FBZ1_MINIBOSS_FRAGMENTS = "fbz1_miniboss_fragments";
     public static final String FBZ2_SUBBOSS = "fbz2_subboss";
     public static final String FBZ_ROBOTNIK_STAND = "fbz_robotnik_stand";
     public static final String FBZ_ROBOTNIK_HEAD = "fbz_robotnik_head";

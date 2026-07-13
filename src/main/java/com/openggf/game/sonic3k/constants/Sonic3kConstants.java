@@ -1504,6 +1504,8 @@ public class Sonic3kConstants {
     public static final int ARTTILE_FBZ_BUTTON = 0x0500;
     // FBZ consumer art/mappings, verified from the S&K-side sonic3k.lst symbol table.
     public static final int ART_KOSM_FBZ_MINIBOSS_ADDR = 0x1652B4;
+    /** Pal_FBZMiniboss, locked-on S&K-side bytes (32-byte palette line). */
+    public static final int PAL_FBZ_MINIBOSS_ADDR = 0x06FAC0;
     public static final int ART_NEM_FBZ2_SUBBOSS_ADDR = 0x0DBDDE;
     public static final int ART_NEM_FBZ2_SUBBOSS_SIZE = 2368;
     public static final int ART_KOSM_FBZ_CLOUD_ADDR = 0x165826;

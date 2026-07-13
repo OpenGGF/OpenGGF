@@ -1412,6 +1412,13 @@ public final class Sonic3kPlcArtRegistry {
                     Sonic3kConstants.ART_KOSM_FBZ_MINIBOSS_ADDR,
                     CompressionType.KOSINSKI_MODULED, 0,
                     Sonic3kConstants.MAP_FBZ_MINIBOSS_ADDR, 1, -1));
+            // Obj_EndSignControl reuses Map_EggCapsule frames but points them
+            // $46 tiles below ArtTile_EggCapsule into the FBZ1 PLC window.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.FBZ1_MINIBOSS_FRAGMENTS,
+                    Sonic3kConstants.MAP_EGG_CAPSULE_ADDR,
+                    Sonic3kConstants.ARTTILE_EGG_CAPSULE - 0x46,
+                    0, null, new int[] {2, 3, 0xA, 4, 0xB}));
         } else {
             standalone.add(new StandaloneArtEntry(
                     Sonic3kObjectArtKeys.FBZ2_SUBBOSS,
