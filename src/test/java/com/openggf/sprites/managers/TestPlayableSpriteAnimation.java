@@ -232,6 +232,35 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void finalAnimationMatchingPrevAnimPreservesCadenceAcrossTransientWrites() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_1);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0,
+                List.of(0x08), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(15, new SpriteAnimationScript(7,
+                List.of(0x3C, 0x3D), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        // A terrain landing can write Walk before a later state owner restores
+        // Spring in the same player dispatch. ROM Animate compares the final
+        // anim byte with prev_anim; the transient write must not restart it.
+        sprite.setAnimationId(0);
+        sprite.setForcedAnimationId(15);
+        sprite.getAnimationManager().restoreRewindState(
+                new PlayableSpriteAnimation.RewindState(15, 0));
+        sprite.setAnimationFrameIndex(1);
+        sprite.setAnimationTick(1);
+        sprite.setMappingFrame(0x3C);
+
+        sprite.getAnimationManager().update(0);
+        assertEquals(0x3C, sprite.getMappingFrame());
+        assertEquals(0, sprite.getAnimationTick());
+
+        sprite.getAnimationManager().update(1);
+        assertEquals(0x3D, sprite.getMappingFrame(),
+                "final anim == prev_anim continues the existing script instead of restarting it");
+    }
+
+    @Test
     public void classicRunFramesKeepRawWalkAnimationIdAcrossGames() {
         for (GameRules rules : List.of(GameRules.SONIC_1, GameRules.SONIC_2, GameRules.SONIC_3K)) {
             TestablePlayableSprite sprite = createSprite(rules);

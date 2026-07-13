@@ -39449,3 +39449,28 @@ Verification with the local REV01 Sonic 1 ROM:
   other 20 expected-red first errors were byte-identical; SBZ3 was the sole
   changed frontier (frame 0 to frame 243). Both sweeps had zero skips and zero
   infrastructure errors.
+
+### 2026-07-13 -- Final animation byte owns script restart
+
+At composed baseline `075b9fd03`, LZ2 and SBZ3 exposed the same Spring-script
+cadence reset. A landing path could write Walk transiently before a later state
+owner restored Spring in the same player dispatch. The ROM's animator compares
+the final `anim` byte against `prev_anim`; because both are still Spring, it
+continues the existing script. The engine instead reset immediately when its
+resolver replaced the transient current value, despite its own `lastAnimationId`
+already matching the final Spring value.
+
+Script restart is now owned solely by the existing final-animation versus
+previous-animation comparison inside the scripted update. A focused test proves
+that a transient Walk followed by final Spring advances the existing timer and
+mapping rather than restarting frame `$3C`. No trace data or tolerance changed,
+and no route, zone, or frame gate was added.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- The focused final-animation cadence regression passed.
+- `TestS1Lz2CompleteRunTraceReplay` advanced from frame 2279 / 16 errors to
+  frame 2293 / 13 errors (`player_animation_id`, expected `$0F`, actual `$00`).
+- `TestS1Sbz3CompleteRunTraceReplay` advanced from frame 3178 / 21 errors to
+  frame 3491 / 3 errors (`player_animation_id`, expected Wait `$05`, actual
+  Balance `$06`). Both reports retained zero warnings and green physics.

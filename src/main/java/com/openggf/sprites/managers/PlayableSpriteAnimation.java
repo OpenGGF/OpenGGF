@@ -135,7 +135,6 @@ public class PlayableSpriteAnimation {
                     : resolveDesiredAnimationId(profile, frameCounter);
             if (desiredAnimId != null && desiredAnimId != sprite.getAnimationId()) {
                 sprite.setAnimationId(desiredAnimId);
-                resetScriptState();
             }
             if (sprite.isObjectMappingFrameControl()) {
                 return;
