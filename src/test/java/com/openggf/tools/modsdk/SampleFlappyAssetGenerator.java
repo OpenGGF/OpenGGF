@@ -1,5 +1,6 @@
 package com.openggf.tools.modsdk;
 
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -8,16 +9,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.TreeMap;
+import javax.imageio.ImageIO;
 
 /**
  * Deterministic offline generator for the {@code sample-flappy} gallery mod's zone-agnostic
- * level source: the binary asset inventory (base64-embedded in {@code binary-assets.properties},
- * matching the {@code sample-mod-src} template) plus the {@code objects[]} JSON fragment pasted
- * into the hand-written {@code level.json}.
+ * level source (the binary asset inventory, base64-embedded in {@code binary-assets.properties},
+ * matching the {@code sample-mod-src} template, plus the {@code objects[]} JSON fragment pasted
+ * into the hand-written {@code level.json}) and the {@code pipe.png} obstacle art sheet consumed
+ * by {@code pipe-sheet.yaml}.
  *
  * <p>This is a plain {@code main()} utility, run manually and checked in as data (not executed by
  * the build). It contains no timestamps, randomness, or environment-dependent input, so re-running
- * it always reproduces byte-identical output.
+ * it always reproduces the same pixel content (the level-source binary output is byte-identical
+ * across runs; the PNG's pixel data is deterministic, though PNG container bytes can vary slightly
+ * across JDK/ImageIO versions -- {@code ArtConverter} only requires exact pixel-to-palette matches,
+ * not byte-identical PNG files).
  *
  * <p>Mirrors {@code FullLevelExporter}'s exact binary writers (pattern/chunk/block/map/solid/
  * collision/palette layouts) so the generated directory round-trips through
@@ -25,8 +31,21 @@ import java.util.TreeMap;
  * {@code sample-mod-src} template.
  */
 public final class SampleFlappyAssetGenerator {
-    private static final Path OUTPUT_DIR = Path.of(
-            "src/test/resources/mods/sample-flappy-src/project/src/main/mod/level-source");
+    private static final Path MOD_DIR = Path.of(
+            "src/test/resources/mods/sample-flappy-src/project/src/main/mod");
+    private static final Path OUTPUT_DIR = MOD_DIR.resolve("level-source");
+
+    /**
+     * Pipe sheet colors. Must exactly match the palette declared (in the same order) in
+     * {@code pipe-sheet.yaml} so {@code ArtConverter}'s exact-pixel-match check passes.
+     * Only black plus 4 flat greens are actually painted; the rest of the 16-entry palette
+     * (declared in the YAML) is unused filler.
+     */
+    private static final int PIPE_BLACK = 0x000000;
+    private static final int PIPE_GREEN_DEEPEST = 0x004900;
+    private static final int PIPE_GREEN_DARK = 0x006D00;
+    private static final int PIPE_GREEN_MID = 0x009200;
+    private static final int PIPE_GREEN_LIGHT = 0x00B600;
 
     /** Map is 80x2 blocks of {@code blockGridSide=8} chunks of 16px each: 10240x256 level pixels. */
     private static final int MAP_WIDTH_BLOCKS = 80;
@@ -70,7 +89,62 @@ public final class SampleFlappyAssetGenerator {
         Files.writeString(OUTPUT_DIR.resolve("binary-assets.properties"), out.toString(),
                 StandardCharsets.US_ASCII);
 
+        writePipeSheet();
+
         System.out.println(objectsJsonFragment());
+    }
+
+    // ---- Pipe obstacle art sheet (pipe.png) ----
+
+    /**
+     * Writes {@code pipe.png}: a 32x48 single-column sheet holding frame 0 (32x32 pipe body
+     * tile at y=0, tiled vertically by {@code FlappyPipe} to build the pipe stack) and frame 1
+     * (32x16 pipe lip/flange tile at y=32, capping each stack at the gap edge). Geometry mirrors
+     * {@code pipe-sheet.yaml}'s two piece definitions exactly.
+     */
+    private static void writePipeSheet() throws IOException {
+        BufferedImage image = new BufferedImage(32, 48, BufferedImage.TYPE_INT_RGB);
+        // Frame 0 (y 0-31): body tile. Purely vertical color banding (no per-row variation)
+        // so consecutive tiles stack with no visible horizontal seam.
+        for (int y = 0; y < 32; y++) {
+            for (int x = 0; x < 32; x++) {
+                image.setRGB(x, y, bodyColumnColor(x));
+            }
+        }
+        // Frame 1 (y 32-47): lip/flange tile. Rows 0-3 of the piece are the flange bezel
+        // (black/black/highlight/black); rows 4-15 continue the same body banding so the lip
+        // reads as a continuation of the stack it caps.
+        for (int y = 0; y < 16; y++) {
+            for (int x = 0; x < 32; x++) {
+                int color;
+                if (y == 0 || y == 1 || y == 3) {
+                    color = PIPE_BLACK;
+                } else if (y == 2) {
+                    color = PIPE_GREEN_LIGHT;
+                } else {
+                    color = bodyColumnColor(x);
+                }
+                image.setRGB(x, 32 + y, color);
+            }
+        }
+        Path out = MOD_DIR.resolve("pipe.png");
+        Files.deleteIfExists(out);
+        if (!ImageIO.write(image, "png", out.toFile())) {
+            throw new IOException("No PNG writer available for pipe.png");
+        }
+    }
+
+    /**
+     * Vertical color band for a given column, used by both the body tile and the lip tile's
+     * non-flange rows. Left/right 2px edges are black outline; the interior is a 4-shade
+     * highlight-to-shadow green ramp simulating a cylindrical cross-section.
+     */
+    private static int bodyColumnColor(int x) {
+        if (x < 2 || x >= 30) return PIPE_BLACK;
+        if (x < 10) return PIPE_GREEN_LIGHT;
+        if (x < 20) return PIPE_GREEN_MID;
+        if (x < 28) return PIPE_GREEN_DARK;
+        return PIPE_GREEN_DEEPEST;
     }
 
     // ---- Binary asset writers (mirror FullLevelExporter's exact layouts) ----
