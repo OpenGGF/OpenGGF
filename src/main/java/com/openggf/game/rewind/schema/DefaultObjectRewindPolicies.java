@@ -230,6 +230,15 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance", "endingControlledPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractS3kFloatingEndEggCapsuleInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractS3kUprightEggCapsuleInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LbzLoweringGrappleObjectInstance", "player1Owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LbzLoweringGrappleObjectInstance", "player2Owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LbzLoweringGrappleObjectInstance", "extensionStates"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LbzRollingDrumInstance", "player1Owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LbzRollingDrumInstance", "player2Owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LbzRollingDrumInstance", "extensionStates"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LbzExplodingTriggerInstance", "extensionTouchers"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LbzExplodingTriggerInstance", "pendingPlayer1Owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LbzExplodingTriggerInstance", "pendingPlayer2Owner"), RewindFieldPolicy.CAPTURED),
             // Compatibility owner references are live player identities. Compact capture
             // serializes them as PlayerRefId values so recreated player instances replace,
             // rather than coexist with, stale pre-rewind references.

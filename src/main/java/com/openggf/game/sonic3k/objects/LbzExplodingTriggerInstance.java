@@ -23,7 +23,10 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Object 0x13 - LBZ Exploding Trigger.
@@ -49,6 +52,10 @@ public final class LbzExplodingTriggerInstance extends AbstractObjectInstance
     private boolean exploding;
     private int explosionFrame;
     private int explosionFrameDuration = -1;
+    private PlayableEntity pendingPlayer1Owner;
+    private PlayableEntity pendingPlayer2Owner;
+    private final Set<PlayableEntity> extensionTouchers =
+            Collections.newSetFromMap(new IdentityHashMap<>());
 
     public LbzExplodingTriggerInstance(ObjectSpawn spawn) {
         super(spawn, "LBZExplodingTrigger");
@@ -65,27 +72,36 @@ public final class LbzExplodingTriggerInstance extends AbstractObjectInstance
             return;
         }
         int pending = collisionProperty;
-        if (pending == 0) {
+        if (pending == 0 && extensionTouchers.isEmpty()) {
             return;
         }
 
         // ROM loc_25CF0 consumes each player bit with bclr before testing anim.
         collisionProperty = 0;
-        if ((pending & 0x01) != 0 && playerEntity instanceof AbstractPlayableSprite player) {
-            tryTriggerFrom(player);
+        List<PlayableEntity> participants = playerQuery(playerEntity)
+                .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        AbstractPlayableSprite main = pendingPlayer1Owner instanceof AbstractPlayableSprite owner ? owner
+                : participants.isEmpty() ? null
+                : participants.get(0) instanceof AbstractPlayableSprite sprite ? sprite : null;
+        if ((pending & 0x01) != 0) {
+            tryTriggerFrom(main);
         }
         if (!exploding && (pending & 0x02) != 0) {
-            List<PlayableEntity> participants = playerQuery(playerEntity)
-                    .playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
-            for (int i = 1; i < participants.size(); i++) {
-                if (participants.get(i) instanceof AbstractPlayableSprite sprite) {
-                    tryTriggerFrom(sprite);
-                    if (exploding) {
-                        break;
-                    }
-                }
+            if (pendingPlayer2Owner instanceof AbstractPlayableSprite owner) {
+                tryTriggerFrom(owner);
+            } else if (participants.size() > 1 && participants.get(1) instanceof AbstractPlayableSprite sprite) {
+                tryTriggerFrom(sprite);
             }
         }
+        for (int i = 0; !exploding && i < participants.size(); i++) {
+            PlayableEntity participant = participants.get(i);
+            if (extensionTouchers.contains(participant) && participant instanceof AbstractPlayableSprite sprite) {
+                tryTriggerFrom(sprite);
+            }
+        }
+        pendingPlayer1Owner = null;
+        pendingPlayer2Owner = null;
+        extensionTouchers.clear();
     }
 
     @Override
@@ -123,7 +139,16 @@ public final class LbzExplodingTriggerInstance extends AbstractObjectInstance
             return;
         }
         // ROM Touch_Special sets bit 0 for Player_1 and bit 1 for native Player_2.
-        collisionProperty |= isNativeP2(player) ? 0x02 : 0x01;
+        PlayableEntity main = services().playerQuery().mainPlayerOrNull();
+        if (player == main || (main == null && !isNativeP2(player))) {
+            collisionProperty |= 0x01;
+            pendingPlayer1Owner = player;
+        } else if (isNativeP2(player)) {
+            collisionProperty |= 0x02;
+            pendingPlayer2Owner = player;
+        } else {
+            extensionTouchers.add(player);
+        }
     }
 
     @Override
@@ -158,7 +183,8 @@ public final class LbzExplodingTriggerInstance extends AbstractObjectInstance
 
     private void tryTriggerFrom(AbstractPlayableSprite player) {
         // ROM sub_25D2C: cmpi.b #2,anim(a1)
-        if (player == null || player.getAnimationId() != Sonic3kAnimationIds.ROLL.id()) {
+        if (player == null || player.getDead() || player.isDebugMode()
+                || player.getAnimationId() != Sonic3kAnimationIds.ROLL.id()) {
             return;
         }
 

@@ -37879,3 +37879,13 @@ ROM-free `ModLevel` decoder and Sonic 2 compatibility-facade changes:
   stock ROM constructors and HTZ overlay/dynamic-art paths remain unchanged.
 - No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
   engine state was changed.
+### 2026-07-13 -- LBZ residual compatibility exact-frontier preservation
+
+- Branch/worktree base: `80c49c683` / `bugfix/ai-lbz-residual-compat`.
+- Base and post-change commands used `TestS3kLbzCompleteRunTraceReplay` with
+  `-Dsurefire.argLine="-Xshare:off -Xmx3g"` because the default 1 GB fork
+  exhausted heap before producing a report.
+- Both runs reported exactly 5,881 errors and zero warnings. First divergence
+  remained frame 2,270, `tails_x`, expected `0x04E1`, actual `0x04E0`.
+- The comparison-only trace was not regenerated or used to hydrate engine state.
+  Flying Battery was excluded from this compatibility wave.
