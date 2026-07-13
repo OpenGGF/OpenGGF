@@ -14,6 +14,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -221,6 +222,18 @@ public class Sonic1LabyrinthBlockObjectInstance extends AbstractObjectInstance
         // move.w d2,d3 / addq.w #1,d3 -> d3 = halfHeight + 1
         // bsr.w SolidObject
         return new SolidObjectParams(halfWidth + 0x0B, halfHeight, halfHeight + 1);
+    }
+
+    @Override
+    public int getBalanceWidthPixels() {
+        // Sonic_Move reads the block SST's obActWid byte from LBlk_Var; the
+        // extra $B belongs only to SolidObject's collision width.
+        return halfWidth;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.fullSolid(usesStickyContactBuffer(), true, false);
     }
 
     @Override

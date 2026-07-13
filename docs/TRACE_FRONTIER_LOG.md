@@ -1,5 +1,21 @@
 # Trace Frontier Log
 
+### 2026-07-13 -- S1 Labyrinth-block balance width
+
+SBZ3 complete-run frame 3491 placed Sonic on Obj61 subtype `$13`, whose
+`LBlk_Var` entry gives `obActWid=$20`. The object passes `$20+$B` to
+`SolidObject` for collision, but native `Sonic_Move` reads the unpadded
+`obActWid` when deciding whether to balance. Reusing the collision width made
+the engine select Balance while the trace remained in Wait.
+
+Obj61 now exposes its native active width separately and retains
+`SolidObject`'s inclusive right edge. This is subtype/routine data, not a zone,
+route, frame, or trace exception; trace data and comparison tolerances are
+unchanged. With the local REV01 Sonic 1 ROM, the focused object contract test
+passes and `TestS1Sbz3CompleteRunTraceReplay` advances from frame 3491 / 3
+animation errors to frame 5818 / 1 animation error, with zero warnings and
+physics errors.
+
 ### 2026-07-13 -- Coasting animation ownership greens S1 LZ3
 
 After the full-solid edge fixes, LZ3 retained four animation errors. At frame
