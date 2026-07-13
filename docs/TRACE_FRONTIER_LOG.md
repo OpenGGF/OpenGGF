@@ -37765,3 +37765,14 @@ Representative serial timing used clean baseline (`a3ad53f4a`) and guarded
 The performance threshold (guarded median both more than one second and more
 than 10% slower) was false for both targets. Timing evidence is preserved in
 `target/rewind-closure-timing.json` and `target/rewind-closure-timing/`.
+
+### 2026-07-13 -- LBZ residual compatibility exact-frontier preservation
+
+- Branch/worktree base: `80c49c683` / `bugfix/ai-lbz-residual-compat`.
+- Base and post-change commands used `TestS3kLbzCompleteRunTraceReplay` with
+  `-Dsurefire.argLine="-Xshare:off -Xmx3g"` because the default 1 GB fork
+  exhausted heap before producing a report.
+- Both runs reported exactly 5,881 errors and zero warnings. First divergence
+  remained frame 2,270, `tails_x`, expected `0x04E1`, actual `0x04E0`.
+- The comparison-only trace was not regenerated or used to hydrate engine state.
+  Flying Battery was excluded from this compatibility wave.

@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.GroundMode;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -17,7 +18,9 @@ import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Invisible Launch Base rolling cylinder controller.
@@ -54,6 +57,9 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
     private int fallbackP1Angle;
     private boolean p2Riding;
     private int fallbackP2Angle;
+    private PlayableEntity player1Owner;
+    private PlayableEntity player2Owner;
+    private final Map<PlayableEntity, RiderState> extensionStates = new IdentityHashMap<>();
 
     public LbzRollingDrumInstance(ObjectSpawn spawn) {
         super(spawn, "LBZRollingDrum");
@@ -64,16 +70,23 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        int playerIndex = 0;
-        for (PlayableEntity candidate : playersToProcess(playerEntity)) {
-            if (candidate instanceof AbstractPlayableSprite player) {
-                updatePlayer(player, playerIndex);
-            }
-            playerIndex++;
-            if (playerIndex >= 2) {
-                break;
-            }
+        List<PlayableEntity> players = playersToProcess(playerEntity);
+        bindNativeOwners(players);
+        releaseOmittedExtensions(players);
+        for (int playerIndex = 0; playerIndex < players.size(); playerIndex++) {
+            if (!(players.get(playerIndex) instanceof AbstractPlayableSprite player)) continue;
+            if (playerIndex < 2) updatePlayer(player, playerIndex);
+            else updateExtensionPlayer(player);
         }
+    }
+
+    private void updateExtensionPlayer(AbstractPlayableSprite player) {
+        RiderState state = extensionStates.computeIfAbsent(player, ignored -> new RiderState());
+        boolean savedRiding = p2Riding; int savedAngle = getAngle(1);
+        p2Riding = state.riding; setAngle(1, state.angle);
+        updatePlayer(player, 1);
+        state.riding = p2Riding; state.angle = getAngle(1);
+        p2Riding = savedRiding; setAngle(1, savedAngle);
     }
 
     @Override
@@ -115,7 +128,7 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
     private List<PlayableEntity> playersToProcess(PlayableEntity fallbackPlayer) {
         try {
             List<PlayableEntity> players = services().playerQuery()
-                    .playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+                    .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
             if (!players.isEmpty()) {
                 return players;
             }
@@ -123,6 +136,51 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
             // Direct object tests can instantiate without ObjectServices.
         }
         return fallbackPlayer == null ? List.of() : List.of(fallbackPlayer);
+    }
+
+    private void bindNativeOwners(List<PlayableEntity> players) {
+        player1Owner = bindOwner(player1Owner, players.isEmpty() ? null : players.get(0), 0);
+        player2Owner = bindOwner(player2Owner, players.size() > 1 ? players.get(1) : null, 1);
+    }
+
+    private PlayableEntity bindOwner(PlayableEntity previous, PlayableEntity current, int slot) {
+        if (previous == current) return current;
+        if (previous == null && current != null && !extensionStates.containsKey(current)) return current;
+        if (previous != null) extensionStates.put(previous, new RiderState(isRiding(slot), getAngle(slot)));
+        RiderState restored = current == null ? null : extensionStates.remove(current);
+        setRiding(slot, restored != null && restored.riding);
+        setAngle(slot, restored == null ? 0 : restored.angle);
+        return current;
+    }
+
+    private void releaseOmittedExtensions(List<PlayableEntity> players) {
+        for (PlayableEntity omitted : List.copyOf(extensionStates.keySet())) {
+            if (players.stream().noneMatch(live -> live == omitted)) {
+                RiderState state = extensionStates.remove(omitted);
+                if (state.riding && omitted instanceof AbstractPlayableSprite player) releasePlayerPresentation(player);
+            }
+        }
+    }
+
+    @Override
+    public void onUnload() {
+        releaseOwner(player1Owner, p1Riding, 0);
+        releaseOwner(player2Owner, p2Riding, 1);
+        extensionStates.forEach((owner, state) -> releaseOwner(owner, state.riding, 1));
+        extensionStates.clear(); p1Riding = p2Riding = false;
+    }
+
+    private void releaseOwner(PlayableEntity owner, boolean riding, int slot) {
+        if (riding && owner instanceof AbstractPlayableSprite player) release(player, slot);
+    }
+
+    private static final class RiderState implements RewindStateful<RiderState.Snapshot> {
+        boolean riding; int angle;
+        RiderState() { }
+        RiderState(boolean riding, int angle) { this.riding = riding; this.angle = angle; }
+        @Override public Snapshot captureRewindStateValue() { return new Snapshot(riding, angle); }
+        @Override public void restoreRewindStateValue(Snapshot state) { riding = state.riding; angle = state.angle; }
+        private record Snapshot(boolean riding, int angle) { }
     }
 
     private void updatePlayer(AbstractPlayableSprite player, int nativePlayerIndex) {
@@ -170,6 +228,10 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
     }
 
     private void updateActiveRide(AbstractPlayableSprite player, int nativePlayerIndex) {
+        if (player.getDead() || player.isDebugMode()) {
+            release(player, nativePlayerIndex);
+            return;
+        }
         int dx = signedWordDelta(player.getCentreX(), spawn.x());
         boolean insideHorizontalWindow = dx >= leftBound && dx < rightBound;
         if (player.getAir()) {
@@ -217,6 +279,14 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
 
     private void release(AbstractPlayableSprite player, int nativePlayerIndex) {
         setRiding(nativePlayerIndex, false);
+        releasePlayerPresentation(player);
+    }
+
+    private void releasePlayerPresentation(AbstractPlayableSprite player) {
+        if (player.getLatchedSolidObjectInstance() != null
+                && player.getLatchedSolidObjectInstance() != this) {
+            return;
+        }
         player.setOnObject(false);
         player.setLatchedSolidObjectId(0);
         player.setFlipsRemaining(0);
@@ -288,7 +358,17 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         }
         if (player.getLatchedSolidObjectInstance() instanceof LbzRollingDrumInstance previousDrum
                 && previousDrum != this) {
-            previousDrum.setRiding(nativePlayerIndex, false);
+            previousDrum.clearRideForPlayer(player, nativePlayerIndex);
+        }
+    }
+
+    private void clearRideForPlayer(PlayableEntity player, int nativePlayerIndex) {
+        if (player == player1Owner) p1Riding = false;
+        else if (player == player2Owner) p2Riding = false;
+        else {
+            RiderState state = extensionStates.get(player);
+            if (state != null) state.riding = false;
+            else setRiding(nativePlayerIndex, false);
         }
     }
 
