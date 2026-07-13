@@ -1,6 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.events.Sonic3kHCZEvents;
+import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
@@ -40,10 +43,11 @@ class TestHczLargeFanCoordinateParity {
 
     @Test
     void laterFanConsumesAlreadyPrimedModuleQueueOneDispatchSooner() {
-        HCZBreakableBarState.reset();
+        HczZoneRuntimeState state = new HczZoneRuntimeState(
+                0, PlayerCharacter.SONIC_AND_TAILS, new Sonic3kHCZEvents());
 
-        assertEquals(3, HCZBreakableBarState.claimLargeFanModuleWaitFrames());
-        assertEquals(2, HCZBreakableBarState.claimLargeFanModuleWaitFrames());
+        assertEquals(3, state.claimLargeFanModuleWaitFrames());
+        assertEquals(2, state.claimLargeFanModuleWaitFrames());
     }
 
     private static TestablePlayableSprite standingPlayer() {
