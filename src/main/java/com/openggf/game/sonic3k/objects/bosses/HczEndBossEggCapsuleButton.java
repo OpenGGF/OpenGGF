@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -20,7 +19,6 @@ public final class HczEndBossEggCapsuleButton extends AbstractObjectInstance
         implements SolidObjectProvider, RewindRecreatable {
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x1B, 4, 6);
 
-    @RewindTransient(reason = "Structural parent link relinked to the live egg capsule during recreate.")
     private final HczEndBossEggCapsuleInstance parent;
 
     public HczEndBossEggCapsuleButton(HczEndBossEggCapsuleInstance parent, int x, int y) {

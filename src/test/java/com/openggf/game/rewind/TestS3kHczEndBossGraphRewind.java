@@ -9,6 +9,7 @@ import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeImpactExplosion;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeSplash;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeWaterChute;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance;
@@ -107,6 +108,7 @@ class TestS3kHczEndBossGraphRewind {
         assertSame(graph.boss(), readObjectField(graph.blade1(), "boss"));
         assertSame(graph.boss(), readObjectField(graph.blade2(), "boss"));
         assertSame(graph.boss(), readObjectField(graph.splash(), "boss"));
+        assertSame(graph.boss(), readObjectField(graph.impact(), "boss"));
         assertSame(graph.boss(), readObjectField(graph.chute0(), "boss"));
         assertSame(graph.boss(), readObjectField(graph.chute1(), "boss"));
         assertSame(graph.boss(), readObjectField(graph.chute2(), "boss"));
@@ -130,6 +132,7 @@ class TestS3kHczEndBossGraphRewind {
         assertNotSame(before.blade1(), restored.blade1());
         assertNotSame(before.blade2(), restored.blade2());
         assertNotSame(before.splash(), restored.splash());
+        assertNotSame(before.impact(), restored.impact());
         assertNotSame(before.chute0(), restored.chute0());
         assertNotSame(before.chute1(), restored.chute1());
         assertNotSame(before.chute2(), restored.chute2());
@@ -178,6 +181,7 @@ class TestS3kHczEndBossGraphRewind {
             HczEndBossBlade blade1,
             HczEndBossBlade blade2,
             HczEndBossBladeSplash splash,
+            HczEndBossBladeImpactExplosion impact,
             HczEndBossBladeWaterChute chute0,
             HczEndBossBladeWaterChute chute1,
             HczEndBossBladeWaterChute chute2,
@@ -194,6 +198,8 @@ class TestS3kHczEndBossGraphRewind {
             setIntField(blade0, "currentX", 0x4140);
             invokeNoArg(blade0, "spawnSplash");
             invokeNoArg(blade0, "spawnWaterChute");
+            objectManager.createDynamicObject(
+                    () -> new HczEndBossBladeImpactExplosion(boss, 0x4140, 0x07F7));
             return fromLiveObjects(objectManager);
         }
 
@@ -217,6 +223,7 @@ class TestS3kHczEndBossGraphRewind {
                     bladeBySubtype(blades, 2),
                     bladeBySubtype(blades, 4),
                     only(objectManager, HczEndBossBladeSplash.class),
+                    only(objectManager, HczEndBossBladeImpactExplosion.class),
                     chutes.get(0),
                     chutes.get(1),
                     chutes.get(2),
@@ -243,6 +250,7 @@ class TestS3kHczEndBossGraphRewind {
             ids.put("blade1", table.idFor(blade1));
             ids.put("blade2", table.idFor(blade2));
             ids.put("splash", table.idFor(splash));
+            ids.put("impact", table.idFor(impact));
             ids.put("chute0", table.idFor(chute0));
             ids.put("chute1", table.idFor(chute1));
             ids.put("chute2", table.idFor(chute2));
@@ -259,12 +267,12 @@ class TestS3kHczEndBossGraphRewind {
         }
 
         private List<ObjectInstance> objects() {
-            return List.of(boss, ship, turbine, blade0, blade1, blade2, splash,
+            return List.of(boss, ship, turbine, blade0, blade1, blade2, splash, impact,
                     chute0, chute1, chute2, chute3, chute4, waterColumn);
         }
 
         private List<ObjectInstance> dynamicChildren() {
-            return List.of(ship, turbine, blade0, blade1, blade2, splash,
+            return List.of(ship, turbine, blade0, blade1, blade2, splash, impact,
                     chute0, chute1, chute2, chute3, chute4, waterColumn);
         }
     }
