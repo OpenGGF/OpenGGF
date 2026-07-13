@@ -2982,21 +2982,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.moveLockTimer = Math.max(0, moveLockTimer);
         }
 
-        public boolean isHidden() {
-                return hidden;
-        }
+        public boolean isHidden() { return hidden; }
 
-        public void setHidden(boolean hidden) {
-                this.hidden = hidden;
-        }
+        public void setHidden(boolean hidden) { this.hidden = hidden; }
 
         /**
          * Returns whether an object has full control of the player (physics disabled).
          * When true, the movement manager skips all physics processing.
          */
-        public boolean isObjectControlled() {
-                return objectControlled;
-        }
+        public boolean isObjectControlled() { return objectControlled; }
 
         /**
          * Sets whether an object has full control of the player.
@@ -3019,9 +3013,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /** Identifies the most recent object-control acquisition or replacement. */
-        public int getObjectControlGeneration() {
-                return objectControlGeneration;
-        }
+        public int getObjectControlGeneration() { return objectControlGeneration; }
 
         /**
          * ROM-bit-7 ({@code bmi.w}) test for {@link SidekickCpuController#updateNormal}'s
@@ -3037,13 +3029,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * {@code false}; the controlling object must re-assert the flag every time it
          * re-asserts {@link #setObjectControlled}{@code (true)}.
          */
-        public boolean isObjectControlAllowsCpu() {
-                return objectControlAllowsCpu;
-        }
+        public boolean isObjectControlAllowsCpu() { return objectControlAllowsCpu; }
 
-        public void setObjectControlAllowsCpu(boolean objectControlAllowsCpu) {
-                this.objectControlAllowsCpu = objectControlAllowsCpu;
-        }
+        public void setObjectControlAllowsCpu(boolean objectControlAllowsCpu) { this.objectControlAllowsCpu = objectControlAllowsCpu; }
 
         /**
          * Returns true when normal movement, gravity, boundary checks, and terrain
@@ -3051,13 +3039,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Some object routines set only this movement gate while still allowing
          * TouchResponse and later SolidObject checks in the same ExecuteObjects pass.
          */
-        public boolean isObjectControlSuppressesMovement() {
-                return objectControlSuppressesMovement;
-        }
+        public boolean isObjectControlSuppressesMovement() { return objectControlSuppressesMovement; }
 
-        public void setObjectControlSuppressesMovement(boolean objectControlSuppressesMovement) {
-                this.objectControlSuppressesMovement = objectControlSuppressesMovement;
-        }
+        public void setObjectControlSuppressesMovement(boolean objectControlSuppressesMovement) { this.objectControlSuppressesMovement = objectControlSuppressesMovement; }
 
         public void applyObjectControlState(ObjectControlState state) {
                 Objects.requireNonNull(state, "state");

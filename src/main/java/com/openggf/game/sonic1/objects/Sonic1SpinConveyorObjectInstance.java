@@ -11,6 +11,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -603,7 +604,8 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
         if (player != null && objectManager.getRidingObject(player) == this) {
             objectManager.clearRidingObject(player);
         }
-        for (PlayableEntity sidekick : services().sidekicks()) {
+        for (PlayableEntity sidekick : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
             if (sidekick != player && objectManager.getRidingObject(sidekick) == this) {
                 objectManager.clearRidingObject(sidekick);
             }
