@@ -1200,10 +1200,10 @@ CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rul
 CONSTRUCTOR com.openggf.game.rules.ObjectInteractionRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerAnimationRules public  <init>(boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerCapabilityRules public  <init>(boolean,short[],boolean,boolean,boolean,boolean,boolean,short[])
-CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,short,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,short,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PowerUpRules public  <init>(int,int,int,int,boolean,boolean,int,int)
 CONSTRUCTOR com.openggf.game.rules.RingRules public  <init>(int,int,boolean,int,int,boolean,boolean)
-CONSTRUCTOR com.openggf.game.rules.SidekickCpuRules public  <init>(int,int,int,boolean,boolean,boolean,boolean,int,boolean,int,int,int,int,int,int,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.game.rules.SidekickCpuRules public  <init>(int,int,int,boolean,boolean,boolean,boolean,int,boolean,int,int,int,int,int,int,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.save.SaveManager public  <init>(java.nio.file.Path)
 CONSTRUCTOR com.openggf.game.save.SaveSlotSummary public  <init>(int,com.openggf.game.save.SaveSlotState,java.util.Map<java.lang.String,java.lang.Object>)
 CONSTRUCTOR com.openggf.game.save.SelectedTeam public  <init>(java.lang.String,java.util.List<java.lang.String>)
@@ -1338,7 +1338,7 @@ CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$BuzzerRewindExtra 
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$CoconutsRewindExtra public  <init>(int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$MasherRewindExtra public  <init>(int,int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$MonitorRewindExtra public  <init>(java.lang.String)
-CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  <init>(short,short,short,short,int,int,com.openggf.physics.Direction,byte,com.openggf.game.GroundMode,short,short,short,short,short,short,byte,byte,boolean,byte,byte,boolean,byte,short,short,short,short,short,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,boolean,boolean,boolean,int,boolean,int,short,int,int,boolean,int,boolean,boolean,int,boolean,int,int,boolean,int,boolean,short,boolean,boolean,short,int,byte,boolean,com.openggf.game.ShieldType,boolean,boolean,int,boolean,boolean,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,boolean,boolean,boolean,int,boolean,boolean,boolean,int,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,short,boolean,boolean,byte,boolean,int,byte,byte,byte,byte,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,int,int,int,int,int,boolean,com.openggf.sprites.playable.PlayableSpriteController$RewindState,com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra,short[],short[],short[],byte[],byte[])
+CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  <init>(short,short,short,short,int,int,com.openggf.physics.Direction,byte,com.openggf.game.GroundMode,short,short,short,short,short,short,byte,byte,boolean,byte,byte,boolean,byte,short,short,short,short,short,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,boolean,boolean,boolean,int,boolean,int,short,int,int,boolean,int,boolean,boolean,int,boolean,int,int,boolean,int,boolean,short,boolean,boolean,short,int,byte,boolean,com.openggf.game.ShieldType,boolean,boolean,int,boolean,boolean,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,boolean,boolean,boolean,int,int,boolean,boolean,boolean,int,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,short,boolean,boolean,byte,boolean,int,byte,byte,byte,byte,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,int,int,int,int,int,boolean,com.openggf.sprites.playable.PlayableSpriteController$RewindState,com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra,short[],short[],short[],byte[],byte[])
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra public  <init>(com.openggf.sprites.playable.SidekickCpuController$State,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,int,int,int,boolean,boolean,int,int,int,int,int,boolean,boolean,boolean,int,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,int,boolean,com.openggf.sprites.playable.SidekickCpuController$NormalStepDiagnostics,boolean,int,boolean,short,short,int,int,int)
 CONSTRUCTOR com.openggf.level.objects.PlaneSwitcherConfig public  <init>(byte,byte,byte,byte)
 CONSTRUCTOR com.openggf.level.objects.PlatformBobHelper public  <init>()
@@ -2717,6 +2717,7 @@ FIELD com.openggf.sprites.playable.AbstractPlayableSprite protected int latchedS
 FIELD com.openggf.sprites.playable.AbstractPlayableSprite protected int mgzTopPlatformSpringHandoffXVel
 FIELD com.openggf.sprites.playable.AbstractPlayableSprite protected int mgzTopPlatformSpringHandoffYVel
 FIELD com.openggf.sprites.playable.AbstractPlayableSprite protected int moveLockTimer
+FIELD com.openggf.sprites.playable.AbstractPlayableSprite protected int objectControlGeneration
 FIELD com.openggf.sprites.playable.AbstractPlayableSprite protected int objectControlReleasedFrame
 FIELD com.openggf.sprites.playable.AbstractPlayableSprite protected int rightWallPenetrationTimer
 FIELD com.openggf.sprites.playable.AbstractPlayableSprite protected int skidDustTimer
@@ -6651,7 +6652,6 @@ METHOD com.openggf.game.rules.PlayerMovementRules public  boolean pinballLanding
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean rollControlledDecelUsesEffectiveDecelQuarter()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean rollStopsBelowMinimumSpeed()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean rollingJumpPinballGateRequiresSpindashFlag()
-METHOD com.openggf.game.rules.PlayerMovementRules public  boolean sidekickHurtRestoresRadiiWithoutRoll()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean slopeRepelChecksOnObject()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean slopeRepelUsesS3kSlipKick()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean slopeResistAppliesAtZeroInertia()
@@ -6688,6 +6688,7 @@ METHOD com.openggf.game.rules.SidekickCpuRules public  boolean sidekickDeathUses
 METHOD com.openggf.game.rules.SidekickCpuRules public  boolean sidekickDelayedJumpPressUsesHistoryEdge()
 METHOD com.openggf.game.rules.SidekickCpuRules public  boolean sidekickFlyLandRequiresLeaderAlive()
 METHOD com.openggf.game.rules.SidekickCpuRules public  boolean sidekickFollowNudgeBlockedByObjectControlBit0()
+METHOD com.openggf.game.rules.SidekickCpuRules public  boolean sidekickHurtRestoresRadiiWithoutRoll()
 METHOD com.openggf.game.rules.SidekickCpuRules public  boolean sidekickPanicTreatsPinballModeAsSpindashFlag()
 METHOD com.openggf.game.rules.SidekickCpuRules public  boolean sidekickRespawnEntersCatchUpFlight()
 METHOD com.openggf.game.rules.SidekickCpuRules public  boolean sidekickSpawningRequiresGroundedLeader()
@@ -8643,6 +8644,7 @@ METHOD com.openggf.level.objects.ObjectManager public  void update(int,com.openg
 METHOD com.openggf.level.objects.ObjectManager public  void update(int,com.openggf.game.PlayableEntity,java.util.List<? extends com.openggf.game.PlayableEntity>,int,boolean,boolean,boolean,java.lang.Runnable)
 METHOD com.openggf.level.objects.ObjectManager public  void updateSolidContacts(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.ObjectManager public  void updateSolidContacts(com.openggf.game.PlayableEntity,boolean,boolean)
+METHOD com.openggf.level.objects.ObjectManager public  void validateRewindReferenceClosure()
 METHOD com.openggf.level.objects.ObjectManager public <T extends com.openggf.level.objects.ObjectInstance> T createDynamicObject(java.util.function.Supplier<T>)
 METHOD com.openggf.level.objects.ObjectManager public <T extends com.openggf.level.objects.ObjectInstance> T createDynamicObjectAtSlot(java.util.function.Supplier<T>,int)
 METHOD com.openggf.level.objects.ObjectManager public <T extends com.openggf.level.objects.ObjectInstance> T createDynamicObjectWithReservedSlot(java.util.function.Supplier<T>)
@@ -9092,6 +9094,7 @@ METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra publi
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  int mgzTopPlatformSpringHandoffXVel()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  int mgzTopPlatformSpringHandoffYVel()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  int moveLockTimer()
+METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  int objectControlGeneration()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  int objectControlReleasedFrame()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  int rightWallPenetrationTimer()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  int skidDustTimer()
@@ -10779,6 +10782,7 @@ METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  int getMappin
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  int getMgzTopPlatformSpringHandoffXVel()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  int getMgzTopPlatformSpringHandoffYVel()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  int getMoveLockTimer()
+METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  int getObjectControlGeneration()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  int getPriorityBucket()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  int getRenderFlagWidthPixels()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  int getRightWallPenetrationTimer()
@@ -13652,7 +13656,6 @@ RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules pinballLandingPreser
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules rollControlledDecelUsesEffectiveDecelQuarter boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules rollStopsBelowMinimumSpeed boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules rollingJumpPinballGateRequiresSpindashFlag boolean
-RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules sidekickHurtRestoresRadiiWithoutRoll boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules slopeRepelChecksOnObject boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules slopeRepelUsesS3kSlipKick boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules slopeResistAppliesAtZeroInertia boolean
@@ -13688,6 +13691,7 @@ RECORD-COMPONENT com.openggf.game.rules.SidekickCpuRules sidekickFlyLandStatusBl
 RECORD-COMPONENT com.openggf.game.rules.SidekickCpuRules sidekickFollowLeadOffset int
 RECORD-COMPONENT com.openggf.game.rules.SidekickCpuRules sidekickFollowNudgeBlockedByObjectControlBit0 boolean
 RECORD-COMPONENT com.openggf.game.rules.SidekickCpuRules sidekickFollowSnapThreshold int
+RECORD-COMPONENT com.openggf.game.rules.SidekickCpuRules sidekickHurtRestoresRadiiWithoutRoll boolean
 RECORD-COMPONENT com.openggf.game.rules.SidekickCpuRules sidekickPanicTreatsPinballModeAsSpindashFlag boolean
 RECORD-COMPONENT com.openggf.game.rules.SidekickCpuRules sidekickRespawnEntersCatchUpFlight boolean
 RECORD-COMPONENT com.openggf.game.rules.SidekickCpuRules sidekickSpawningRequiresGroundedLeader boolean
@@ -14035,6 +14039,7 @@ RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindE
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra moveLockTimer int
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra movementInputActive boolean
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra objectControlAllowsCpu boolean
+RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra objectControlGeneration int
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra objectControlReleasedFrame int
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra objectControlSuppressesMovement boolean
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra objectControlled boolean
