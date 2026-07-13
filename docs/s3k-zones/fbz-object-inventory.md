@@ -242,6 +242,96 @@ children use shared lifetime ownership; launcher missiles, flames, and the
 spider visual are independent after-current siblings. Every separate slot needs
 rewind recreation/link coverage.
 
+## Act 1-to-Act 2 seamless SST/owner-graph contract
+
+The FBZ Act 1 transition is not a conventional level restart and does not use
+`StartNewLevel`. The authoritative sequence is split across several ROM owners
+(`docs/skdisasm/sonic3k.asm` line references):
+
+- `Obj_LevelResultsCreate` (`62591-62623`) waits for `Kos_modules_left==0`,
+  creates the results children, advances its routine, and only then sets
+  `Events_fg_5` for FBZ Act 1. The miniboss/signpost defeat path is not the
+  writer. `LevelLoop` (`7893-7900`) runs `Process_Sprites`, `ScreenEvents`, then
+  `Load_Rings`, so the FBZ background event consumes the signal in the same
+  frame, long before results tally/exit.
+- `FBZ1BGE_Normal` (`108794-108825`) tests and clears the signal before its
+  death gate, calls `Load_PLC($1C)` exactly once (never a second load through
+  the `$1D` level-load alias), changes only `Current_zone_and_act` to `$0401`,
+  clears Dynamic-resize/Object-load/Rings-manager/Boss/Respawn-keep and the
+  whole level-trigger array (`Clear_Switches`, `104284-104291`), reloads level
+  and solids, installs immediate palette `$13`, applies offsets, and then still
+  runs the ordinary `FBZ1BGE_GoDeform` tile-row/deformation tail. There is no
+  fade, restart, title card, or music restart at this point.
+- `Load_Level` (`38747-38762`) copies only `$1000` layout bytes; it does not
+  clear object RAM. Therefore every live SST/fixed occupant survives at its
+  original slot. Survival must not be inferred from the narrower offset loop.
+  If the engine must rebuild its object manager, it must snapshot and restore
+  all live SST/fixed occupants, stable slots, links, and owner graphs.
+- The offset loop (`104166-104181`) starts at global SST slot 4 (dynamic slot 1),
+  visits 90 entries through slot 93 inclusive, and stops before global slot 94
+  (`Breathing_bubbles`). Only an entry with nonzero code and render flag bit 2
+  receives the X subtraction. Thus `[4,94)` plus code/bit-2 is a
+  `ROM_WORLD_OFFSET_RANGE`, never a survival/carry policy: slot 3, slot 94 and
+  later, and bit-2-clear results/title objects all survive but do not shift.
+  Player 1/2, camera current/copy, and current min/max X bounds also subtract
+  `$2E00`; Y positions, current Y/target bounds, and all subpixel lows remain
+  unchanged.
+- Slot-backed `BossChildComponent` instances retain their original slots and
+  shift only if that slot and render flag satisfy the offset rule. Slotless or
+  composite children survive through their owner graph, never through a second
+  allocation, and must not shift twice. Restoration order is: recreate every
+  captured occupant at its stable slot (including slot 93), rebind all graph
+  links, apply native centre-coordinate/subpixel-preserving offsets once, then
+  update object-specific anchors/origins/targets once.
+- Ring initialization (`18218-18266`, `18563-18610`) follows `ScreenEvents` in
+  the same frame. With `Respawn_table_keep=0`, it resets its routine and ring
+  status, selects FBZ2 ring data, and windows from the shifted camera. Object
+  placement initialization (`37393-37548`) waits until the next frame because
+  that frame's sprite processing already ran; it clears object respawn status,
+  selects FBZ2 placements, and windows from the same shifted camera.
+
+The request must preserve live timer/ring count, music, player control and
+subpixel state through reload, while requesting fresh FBZ2 placement/ring
+respawn state. It must restore post-transition camera X bounds as the captured
+Act 1 bounds minus `$2E00`, leave captured Y/target bounds unchanged, and not
+replace them with FBZ2's full `$0000..$6000/$0000..$0B00` `LevelSizes` values.
+`Current_act` becomes 1 immediately; `Apparent_act` remains 0.
+
+Later ownership remains distinct. Results exit (`62713-62725`) sets
+`Apparent_act=1`, clears starpost/bonus state and `_unkFAA8`, and converts itself
+to the in-level title card. The `_unkFAA8` clear immediately releases
+`Obj_EndSignControlAwaitStart` (`180411-180424`): it changes the controller to
+`Obj_EndSignControlDoStart` and restores player controls before the title card
+finishes. `Obj_TitleCardWait` (`62220-62242`) independently clears timer, ring
+totals and extra-life flags, resets air, restores level music, clears `$48`,
+and advances routine; it does not publish the end-of-level flag.
+`Obj_TitleCardWait2` then consumes the exact 90-frame `$2E` wait and continues
+blocking while title-card child count `$30` is nonzero. Only after both gates
+does Wait2 set `End_of_level_flag`. Only the already-installed
+`Obj_EndSignControlDoStart` waits for that publication; it then runs FBZ
+`Change_Act2Sizes` (`180580-180615`) and deletes the controller. The size change
+copies stored Act 2 targets and starts independent 16.16 workers for max-X
+`+$4000`, min-Y `-$4000`, and max-Y `+$8000` per update. Tests must observe the
+intermediate state with controls restored but all three bounds still unchanged,
+then the first growth only after Wait2's 90-frame-plus-child-zero publication.
+These bounds must grow gradually; a direct snap to full Act 2 sizes is not
+equivalent.
+
+The reload must execute synchronously, or through an exactly equivalent in-call
+path, during the same `ScreenEvents`/`FBZ1BGE_Normal` invocation and before
+that frame's `Load_Rings`, using the immediate act-transition execution path.
+It must still complete the ordinary background-event tail before returning.
+
+Compatibility extends the ROM native pair without changing authority: every
+configured sidekick receives the same world offset and later control restore,
+while the native main-player results path remains the signal owner. Widescreen
+windowing uses the actual viewport and shifted world bounds, never a hard-coded
+320-pixel assumption. Donation-disabled, S1-donated, and S2-donated runs all
+follow the same position/control/title path without a spindash exception or
+game-name carve-out. The reload is a rewind hard boundary. Rewind tests cover
+deterministic pre-signal and post-synchronous-reload states rather than seeking
+across that hard boundary.
+
 ### Dynamic allocation contract
 
 The locked-on child helpers `CreateChild1_Normal`, `CreateChild2_Complex`,
@@ -404,7 +494,7 @@ recorded as `included-binary` rather than substituting an S3-half address.
 | Stage | Required ordered load | Ownership/result | Test owner |
 |---|---|---|---|
 | Act 1 load | PLC `$1A/$1B` | misc, outdoors, egg-prison/capsule art; AniPLC owns `$200-$247` | `TestFbzArtAndPlcRegistry`, `TestFbzAniPlc` |
-| Seamless Act 2 reload | PLC `$1C/$1D` | misc1 -> misc2 and egg-prison/capsule art; AniPLC remains sole `$200-$247` writer | `TestFbzActTransition`, `TestFbzAniPlc` |
+| Seamless Act 2 reload | `Load_PLC($1C)` exactly once; no duplicate `$1D` alias load | misc1 -> misc2 and egg-prison/capsule art; AniPLC remains sole `$200-$247` writer | `TestFbzActTransition`, `TestFbzAniPlc` |
 | Act 1 miniboss entry | `ArtKosM_FBZMiniboss` plus shared boss-explosion PLC | temporary miniboss bank | `TestFbzAct1Miniboss` |
 | Act 2 subboss entry | character-selected `PLC_FBZ2Subboss_*` | Robotnik art for Sonic/Tails; EggRobo art for Knuckles | `TestFbz2SubbossCharacterArt` |
 | Act 2 subboss defeat | `PLCKosM_FBZ2Subboss`, then `PLC_Monitors`, then `PLC_MonitorsSpikesSprings` | cloud/pillar queue followed by restoration of monitor and spike/spring banks in ROM order | `TestFbz2SubbossArtHandoff` |

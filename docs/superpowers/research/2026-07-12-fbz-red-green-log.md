@@ -842,3 +842,40 @@ recorded as `unknown/not previously run` rather than inferred.
   no retry after capacity returns, no missing-ordinal healing, and cycle closure
   only at link four. The focused art/defeat/rewind matrix passed 56/56. No trace
   or commit ran.
+- Task 12 oracle review left implementation deliberately RED and corrected the
+  plan before production work. The previous draft incorrectly treated the
+  offset scan as an object-carry filter, discarded live gameplay state, and
+  collapsed later results/title/camera work into the reload. The locked-on ROM
+  instead keeps all live SST/fixed occupants because `Load_Level` does not clear
+  object RAM; only slots `[4,94)` with nonzero code and render bit 2 receive the
+  `$2E00` X subtraction. Slot 3, slot 94 and later, and bit-2-clear results/title
+  owners survive unshifted. Stable slot restoration and complete owner-graph
+  relinking therefore precede a separate, once-only centre-coordinate/anchor
+  offset pass.
+- The corrected Task 12 RED also fixes writer and cadence ownership.
+  `Obj_LevelResultsCreate`, after Kosinski modules finish, publishes
+  `Events_fg_5`; `FBZ1BGE_Normal` consumes and clears it in the same frame
+  between sprite processing and ring loading, reloads FBZ2, and still completes
+  its tile-row/deformation tail. Rings initialize from the shifted camera later
+  that frame; object placement initializes from it on the next frame. Timer,
+  ring count, music, control state, subpixels, and shifted live camera bounds
+  survive this reload; only fresh placement/ring respawn state is requested.
+  `Current_act` becomes 1 while `Apparent_act` stays 0.
+- Results exit later sets `Apparent_act=1`, clears starpost/bonus state, and
+  clears `_unkFAA8` before becoming the in-level title card. That clear releases
+  `Obj_EndSignControlAwaitStart` immediately: it installs DoStart and restores
+  player controls while the title card is still active. `Obj_TitleCardWait`
+  owns timer/ring-total/air and music reset plus routine advance, but does not
+  publish completion. `Obj_TitleCardWait2` consumes the exact 90-frame wait,
+  then waits for child count zero before setting `End_of_level_flag`; only the
+  already-installed DoStart routine waits for that publication and then starts
+  the three gradual `Change_Act2Sizes` workers (`+$4000` max-X, `-$4000` min-Y,
+  `+$8000` max-Y per update). The corrected RED explicitly observes controls
+  restored during Wait2 with no early camera-bound growth.
+  The reload must execute through the immediate path inside the same
+  ScreenEvents call before ring loading. It calls `Load_PLC($1C)` exactly once
+  and never duplicates it through `$1D`. Rewind treats the synchronous reload
+  as a hard boundary, and compatibility covers arbitrary sidekicks, actual
+  widescreen viewports, and donation disabled/S1 donor/S2 donor runs. This pass
+  modified only the Task 12 plan, FBZ inventory, and this research log; no
+  production code, tests, trace, or commit ran.
