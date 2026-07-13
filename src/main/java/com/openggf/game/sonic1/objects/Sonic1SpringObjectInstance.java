@@ -256,8 +256,14 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
         // Horizontal springs do NOT set airborne
         player.setGSpeed((short) xVel);
 
-        // ROM: bchg #0,obStatus(a1) — toggle facing direction
-        player.setDirection(xVel > 0 ? Direction.RIGHT : Direction.LEFT);
+        // ROM Spring_BounceLR toggles Sonic's existing facing bit with
+        // `bchg #0,obStatus(a1)`; it does not derive facing from launch
+        // velocity. This matters when the spring reverses a player who was
+        // already facing along the launch direction: status and slope-frame
+        // selection intentionally remain opposite to the new velocity.
+        // (docs/s1disasm/_incObj/41 Springs.asm:146-149)
+        player.setDirection(player.getDirection() == Direction.LEFT
+                ? Direction.RIGHT : Direction.LEFT);
 
         // ROM: move.w #$F,objoff_3E(a1) — 15 frame control lock (Spring_BounceLR,
         // docs/s1disasm/_incObj/41 Springs.asm:145). objoff_3E is the player's

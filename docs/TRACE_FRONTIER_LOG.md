@@ -39811,3 +39811,21 @@ Verification with the root-level REV01 Sonic 1 ROM:
 - The shared-path checks also remain green: S2 EHZ1 physics-only trace replay
   passed 1/1, and `TestS3kAiz1SkipHeadless` passed 8/8 with their respective
   root-level ROMs.
+
+## 2026-07-13 — S1 SYZ1 horizontal-spring facing toggle
+
+Branch `feature/ai-trace-animation-verification`, measured with the engine
+change and focused test locally applied on top of `f16d5dfce`. The SYZ1
+complete-run replay advances from frame 690 / 11 errors to frame 1742 / 4
+errors; physics remains green. At frame 679 Obj41 reverses the player from
+leftward `$F05B` to rightward `$1000`. ROM `Spring_BounceLR` performs
+`bchg #0,obStatus(a1)`, so the prior right-facing state toggles to left and
+the later steep-slope run frames use mapping `$2B-$2D`. The engine instead
+faced the player from the positive launch velocity and rendered `$23-$25`.
+The object now toggles the prior direction literally; no trace state,
+zone/route/frame predicate, tolerance, or physics value is involved.
+
+Command:
+`mvn -Dmse=relaxed "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dtest=com.openggf.game.sonic1.objects.TestSonic1SpringObjectInstance,com.openggf.tests.trace.s1.TestS1Syz1CompleteRunTraceReplay" test`
+
+ROM reference: `docs/s1disasm/_incObj/41 Springs.asm:146-149`.

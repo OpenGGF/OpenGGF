@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,6 +33,25 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ExtendWith(SingletonResetExtension.class)
 @FullReset
 class TestSonic1SpringObjectInstance {
+    @Test
+    void horizontalSpringTogglesExistingFacingInsteadOfFacingLaunchVelocity() throws Exception {
+        Sonic1SpringObjectInstance spring = new Sonic1SpringObjectInstance(
+                new ObjectSpawn(0x100, 0x100, 0x41, 0x10, 0, false, 0));
+        spring.setServices(new StubObjectServices());
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x100, (short) 0x100);
+        Method applyHorizontalSpring = Sonic1SpringObjectInstance.class
+                .getDeclaredMethod("applyHorizontalSpring", AbstractPlayableSprite.class);
+        applyHorizontalSpring.setAccessible(true);
+
+        player.setDirection(Direction.RIGHT);
+        applyHorizontalSpring.invoke(spring, player);
+
+        assertEquals(0x1000, player.getXSpeed());
+        assertEquals(Direction.LEFT, player.getDirection(),
+                "Spring_BounceLR bchg toggles the prior status bit even for a rightward launch");
+    }
+
     @Test
     void exposesFullSolidRoutineProfileForVerticalAndHorizontalSprings() {
         Sonic1SpringObjectInstance vertical = new Sonic1SpringObjectInstance(
