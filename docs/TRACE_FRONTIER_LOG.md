@@ -10,12 +10,15 @@ directly, clearing the object/player push pair without passing through
 paths retained the old push latch through this non-pushing contact, then later
 cleared it as no-contact and emitted the wrong animation word.
 
-Single-piece inline and batched contacts now clear a native latch whenever the
-resolved contact is non-pushing, while reserving the animation-word publication
-for a null/no-collision result. This is the shared `SolidObject` control-flow
-distinction, not a zone, route, frame, or trace exception; trace data and
-comparison tolerances are unchanged. The focused full-solid SideAir test is
-green. Composed SYZ1 trace verification is pending the coordinated Maven run.
+Single-piece inline and batched contacts now clear a native latch when the
+resolved contact is a non-pushing side result, while top/standing contacts
+retain their native owner and null/no-collision alone publishes the animation
+word. This is the shared `SolidObject` control-flow distinction, not a zone,
+route, frame, or trace exception; trace data and comparison tolerances are
+unchanged. The focused full-solid SideAir test is green. Composed SYZ1 trace
+verification is fully green with zero animation or physics divergences. The
+already-green SBZ2 replay remains green, and MZ1 complete-run retains its prior
+frame-3969 animation frontier (four unrelated errors) with zero physics errors.
 
 ### 2026-07-13 -- S1 SBZ2 greens on Obj6B solid state
 

@@ -1590,7 +1590,7 @@ final class ObjectSolidContactController {
             player.setPushing(true);
             setObjectPushingBit(player, instance);
             provider.setPlayerPushing(player, true);
-        } else if (clearObjectPushingBit(player, instance)) {
+        } else if (contact.touchSide() && clearObjectPushingBit(player, instance)) {
             // Solid_SideAir calls Solid_NotPushing directly when the player is
             // airborne or within four pixels of the top/bottom edge. Unlike
             // Solid_NoCollision, that entry does not execute retail S1's
@@ -2613,7 +2613,7 @@ final class ObjectSolidContactController {
                 // ROM: s2.asm:35220-35226 — also set pushing bit on the object
                 setObjectPushingBit(player, instance);
                 provider.setPlayerPushing(player, true);
-            } else if (clearObjectPushingBit(player, instance)) {
+            } else if (contact.touchSide() && clearObjectPushingBit(player, instance)) {
                 // Non-pushing contacts (notably Solid_SideAir) enter
                 // Solid_NotPushing below Solid_NoCollision's S1-only animation
                 // write, so only the object/player status pair is cleared.
