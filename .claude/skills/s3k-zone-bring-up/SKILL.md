@@ -103,6 +103,12 @@ Before accepting an AnPal-backed state transition:
 - Inventory present and planned consumers across the complete zone object graph (for example, later Blaster-family work). Expose shared typed runtime state/API at the real owner; do not place the contract in the first object family that happens to consume it.
 - Capture and restore the exact state and counter phase through rewind; verify death/restart, checkpoint, and session reload behavior when those lifecycles can cross the transition.
 
+### Shared Timer and Callback Oracle Gate
+
+Before scheduling object-family work, require the object analysis to trace every tail-jumped shared routine, callback/function pointer field, field width, and competing consumer before naming a timer or animation semantic. Calculate native signed predecrement edges exactly: `subq.w #1` plus `bmi` fires on update `N+1`, after the word passes from zero to `$FFFF`. When raw animation `$F4` and `Obj_Wait` share a callback, compare both paths from the real entry state and implement the earliest reachable path.
+
+Require a focused RED test across the last non-firing and exact firing updates, plus the competing consumer's later boundary. If the code, comments, and disassembly oracle disagree, pause implementation for independent disassembly adjudication; do not weaken the expectation or choose the locally convenient interpretation.
+
 ## Slice-First Completion Rule
 
 A zone bring-up is successful when it advances a playable route, not when a checklist row changes state. For current work, prioritize AIZ -> HCZ continuity first, then feed CNZ, MGZ, and ICZ into the same standard.

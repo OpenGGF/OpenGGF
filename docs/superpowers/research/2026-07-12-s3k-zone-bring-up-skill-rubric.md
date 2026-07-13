@@ -45,10 +45,15 @@ Use only the skill and resources it explicitly requires. Do not infer additional
 | R29 | Explicit mapping frame count | When the first frame pointer cannot delimit the pointer table, a disassembly-verified explicit frame count is required instead of inferred length. |
 | R30 | Real-ROM mapping-shape regression | A real-ROM test asserts exact table shape and catches runaway/oversized/OOM behavior; fixes must target the generic decoder or verified metadata, not heap workarounds or object-specific address cases. |
 | R31 | Complete art corruption suite | New or changed mappings require both the complete ROM-conditional S3K art crawler and `TestPatternSpriteRendererCorruptionGuard`, in addition to focused table-shape coverage. |
+| R32 | Shared callback graph | Object analysis traces every tail-jumped shared routine, callback/function pointer field, field width, and competing consumer before assigning timer or animation semantics. |
+| R33 | Signed predecrement edge | Workflow derives `subq.w #1` plus `bmi` as firing on update `N+1`, after zero becomes `$FFFF`, and rejects unsigned/animation-derived substitutions. |
+| R34 | Earliest reachable consumer | When raw animation `$F4` and `Obj_Wait` share a callback, the workflow compares both reachable paths and treats the earliest one as behavior-owning. |
+| R35 | Boundary-first RED test | A focused observed-RED test covers the last non-firing update, exact firing update, and the competing consumer's later boundary. |
+| R36 | Independent oracle adjudication | A code/comment/disassembly conflict pauses implementation for independent disassembly adjudication instead of weakening the expectation or choosing local behavior. |
 
 ## Verdict
 
-- **GREEN:** R1-R31 all PASS.
+- **GREEN:** R1-R36 all PASS.
 - **RED:** Any assertion fails or is only optional/implied.
 
 Record the exact prompt, raw agent output, per-assertion PASS/FAIL result, and overall verdict in both baseline and forward-test artifacts.
