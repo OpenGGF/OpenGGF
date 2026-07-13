@@ -13,6 +13,15 @@ public final class ModApiVersion {
      * {@code mod-api-signatures-2.0.txt}. See
      * {@code docs/architecture/mod-api-compatibility.md} ("Mod API 2.0.0
      * breaking transition") for the migration notes.
+     *
+     * <p>Version-lineage breadcrumb: a separate in-progress branch (the
+     * mod-support work in the {@code next} worktree) independently bumped this
+     * constant 1.1.0 -> 1.2.0 for an unrelated additive surface change and froze
+     * its own {@code mod-api-signatures-1.2.txt}. That is a different change set
+     * from this breaking rewind/rules transition. Whoever reconciles this branch
+     * with {@code next} must decide the final version lineage (e.g. whether the
+     * merged history is 1.1 -> 1.2 -> 2.0 or otherwise) rather than assuming a
+     * single "past 1.1" bump.
      */
     public static final SemanticVersion CURRENT = new SemanticVersion(2, 0, 0);
 
