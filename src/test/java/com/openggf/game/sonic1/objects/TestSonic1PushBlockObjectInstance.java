@@ -11,6 +11,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestSonic1PushBlockObjectInstance {
 
     @Test
+    public void rawWalkPushReleaseFallbackIsScopedToLavaMotion() throws Exception {
+        Sonic1PushBlockObjectInstance block = new Sonic1PushBlockObjectInstance(
+                new ObjectSpawn(0x100, 0x100, Sonic1ObjectIds.PUSH_BLOCK, 0, 0, false, 0));
+
+        assertFalse(block.preservesNativePushLatchAcrossSkippedSolidCheckpoints(),
+                "An ordinary state-0 Solid_ChkCollision has a current checkpoint");
+
+        var inMotion = Sonic1PushBlockObjectInstance.class.getDeclaredField("inMotion");
+        inMotion.setAccessible(true);
+        inMotion.setBoolean(block, true);
+
+        assertTrue(block.preservesNativePushLatchAcrossSkippedSolidCheckpoints(),
+                "PushB_OnLava retains the native motion-mode latch");
+    }
+
+    @Test
     public void rowSubtypeUsesObjectLevelHighPriority() {
         Sonic1PushBlockObjectInstance single = new Sonic1PushBlockObjectInstance(
                 new ObjectSpawn(0x100, 0x100, Sonic1ObjectIds.PUSH_BLOCK, 0, 0, false, 0));

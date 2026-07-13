@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
@@ -17,6 +18,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSonic1SpikeObjectInstance {
+
+    @Test
+    public void movingSpikesKeepSolidLatchOnLiveInstance() {
+        Sonic1SpikeObjectInstance spikes = new Sonic1SpikeObjectInstance(
+                new ObjectSpawn(0x100, 0x100, Sonic1ObjectIds.SPIKES, 1, 0, false, 0));
+
+        assertTrue(spikes.usesInstanceSolidStateLatchKey(),
+                "Obj36 status bits belong to its live SST while coordinates retract");
+    }
 
     @Test
     public void spikesHurtDuringInvulnerabilityFrames() {

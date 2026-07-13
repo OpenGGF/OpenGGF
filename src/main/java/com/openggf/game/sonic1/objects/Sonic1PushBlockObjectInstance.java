@@ -638,11 +638,14 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean preservesNativePushLatchAcrossSkippedSolidCheckpoints() {
-        // loc_C1AA/loc_C1F2 return without Solid_ChkEnter. The pre-fall object
-        // push bit therefore survives states 4/6 and is consumed only after the
-        // block returns to state 0.
-        // docs/s1disasm/_incObj/33 Pushable Blocks.asm:207-252
-        return true;
+        // PushB_OnLava can carry the object's native push bit across movement
+        // frames for which the engine has no immediately preceding checkpoint.
+        // The raw-Walk fallback is needed while that ROM motion mode remains
+        // live, but not for an ordinary state-0 block: Solid_ChkCollision runs
+        // every frame there and a stale engine latch must not synthesize a later
+        // `move.w #id_Run,obAnim` write after Sonic has already left the block.
+        // docs/s1disasm/_incObj/33 MZ, LZ Pushable Blocks.asm:133-211
+        return inMotion;
     }
 
     /**

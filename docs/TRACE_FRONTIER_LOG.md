@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-13 -- S1 moving-solid animation release ownership
+
+Three remaining mapping mismatches shared one native state-ownership theme.
+GHZ3's collapsing ledge cleared Sonic's ride/push status at `Ledge_TimeZero`
+but omitted the adjacent `move.b #id_Run,obPrevAni(a1)`, so Walk did not
+restart when the platform forced him off. LZ1's moving Obj56 door and MZ2's
+retracting Obj36 spikes rebuilt position-derived spawn keys while their ROM
+standing/pushing bits remained in the same live SST, stranding the solid latch
+that owns the following animation release. MZ2 also exposed that Obj33's
+raw-Walk fallback must survive skipped solid checkpoints only while its native
+lava-motion state is active; applying it to an ordinary state-0 block invented
+a later release.
+
+The ledge now publishes the native previous-animation sentinel, moving spikes
+and floating blocks retain their solid state by live instance, and Obj33 scopes
+its skipped-checkpoint fallback to `inMotion`. These are object routine/state
+rules, not zone, route, frame, trace-data, or tolerance exceptions. Focused
+object tests pass. With the local REV01 Sonic 1 ROM and zero physics errors:
+
+- `TestS1Lz1CompleteRunTraceReplay` advances frame 1492 / 1 animation error to
+  fully green.
+- `TestS1Ghz3CompleteRunTraceReplay` advances frame 6464 / 5 animation errors
+  to frame 8736 / 4 animation errors; the new frontier is a separate animation
+  ID mismatch (expected `$05`, actual `$06`).
+- `TestS1Mz2CompleteRunTraceReplay` advances frame 3634 / 19 animation errors
+  through frame 4276 to frame 5817 / 17 animation errors; the new frontier is
+  a separate mapping mismatch (expected `$09`, actual `$46`).
+
 ### 2026-07-13 -- S1 full-solid SideAir push-latch cleanup
 
 SYZ1's remaining frame-5761 mapping restart came from conflating two native

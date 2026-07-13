@@ -499,7 +499,6 @@ public class TestSolidObjectManager {
         ObjectSpawn spawn = new ObjectSpawn(100, 100, 0x1A, 0, 0, false, 0);
         Sonic1CollapsingLedgeObjectInstance ledge = new Sonic1CollapsingLedgeObjectInstance(spawn);
         ObjectManager manager = buildManager(ledge);
-
         TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
         player.setWidth(20);
         player.setHeight(20);
@@ -544,6 +543,52 @@ public class TestSolidObjectManager {
         // runs walk-off collision and should not remain solid.
         setPrivateBoolean(ledge, "collapseFlag", false);
         assertFalse(ledge.isSolidFor(null));
+    }
+
+    @Test
+    public void collapsingLedgeForcedReleasePublishesRunAsPreviousAnimation() throws Exception {
+        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        ObjectSpawn spawn = new ObjectSpawn(100, 100, 0x1A, 0, 0, false, 0);
+        Sonic1CollapsingLedgeObjectInstance ledge = new Sonic1CollapsingLedgeObjectInstance(spawn);
+        ObjectManager manager = buildManager(ledge);
+        ledge.setServices(new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return manager;
+            }
+        });
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_1);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setCentreX((short) 64);
+        player.setCentreY((short) 49);
+        player.setYSpeed((short) 0x100);
+        player.setAir(true);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(5,
+                List.of(0x08, 0x09, 0x0A), SpriteAnimationEndAction.LOOP, 0));
+        player.setAnimationSet(animations);
+        player.setAnimationId(0);
+        player.getAnimationManager().update(0);
+        player.setMappingFrame(0x0A);
+        player.setAnimationFrameIndex(2);
+        player.setAnimationTick(5);
+
+        manager.forceRidingObjectForBootstrap(player, ledge);
+        assertTrue(player.isOnObject(), "Fixture should establish the collapsing ledge ride");
+        setPrivateInt(ledge, "routine", 6);
+        setPrivateBoolean(ledge, "collapseFlag", true);
+        setPrivateInt(ledge, "collapseDelay", 1);
+
+        ledge.update(1, player);
+        assertFalse(player.isOnObject());
+        assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "Ledge_TimeZero writes canonical Run to prev_anim");
+        player.getAnimationManager().update(2);
+        assertEquals(0x08, player.getMappingFrame(),
+                "Walk restarts at its first mapping on the next player slot");
     }
 
     @Test
