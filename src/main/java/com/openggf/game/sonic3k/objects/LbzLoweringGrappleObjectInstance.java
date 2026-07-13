@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
-import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -161,13 +160,10 @@ public final class LbzLoweringGrappleObjectInstance extends AbstractObjectInstan
         }
     }
 
-    private static final class PlayerState implements RewindStateful<PlayerState.Snapshot> {
+    private static final class PlayerState {
         boolean grabbed; int cooldown;
         PlayerState() { }
         PlayerState(boolean grabbed, int cooldown) { this.grabbed = grabbed; this.cooldown = cooldown; }
-        @Override public Snapshot captureRewindStateValue() { return new Snapshot(grabbed, cooldown); }
-        @Override public void restoreRewindStateValue(Snapshot state) { grabbed = state.grabbed; cooldown = state.cooldown; }
-        private record Snapshot(boolean grabbed, int cooldown) { }
     }
 
     @Override

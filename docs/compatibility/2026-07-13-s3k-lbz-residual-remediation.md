@@ -15,6 +15,6 @@ Scope: `LbzLoweringGrappleObjectInstance`, `LbzRollingDrumInstance`, `LbzExplodi
 
 ## Verification
 
-Focused tests cover main plus three sidekicks, native-first behavior, reorder, omission, death, unload, unrelated-control protection, replacement PlayerRefs, and 320/352/400/528/800 viewports. Both rewind coverage guards pass.
+Focused tests cover main plus three sidekicks, native-first behavior, reorder, omission, death, unload, unrelated-control protection, replacement PlayerRefs, exact non-default grapple/drum map values restored into recreated objects, and 320/352/400/528/800 viewports. Both rewind coverage guards pass.
 
 The LBZ complete-run trace intentionally remains the known red. Exact base and post-change runs both report 5,881 errors with first divergence at frame 2,270: `tails_x` expected `0x04E1`, actual `0x04E0`. No reference data or trace-to-engine hydration changed.

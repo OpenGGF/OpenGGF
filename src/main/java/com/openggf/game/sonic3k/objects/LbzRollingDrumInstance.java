@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.GroundMode;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -174,13 +173,10 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         if (riding && owner instanceof AbstractPlayableSprite player) release(player, slot);
     }
 
-    private static final class RiderState implements RewindStateful<RiderState.Snapshot> {
+    private static final class RiderState {
         boolean riding; int angle;
         RiderState() { }
         RiderState(boolean riding, int angle) { this.riding = riding; this.angle = angle; }
-        @Override public Snapshot captureRewindStateValue() { return new Snapshot(riding, angle); }
-        @Override public void restoreRewindStateValue(Snapshot state) { riding = state.riding; angle = state.angle; }
-        private record Snapshot(boolean riding, int angle) { }
     }
 
     private void updatePlayer(AbstractPlayableSprite player, int nativePlayerIndex) {

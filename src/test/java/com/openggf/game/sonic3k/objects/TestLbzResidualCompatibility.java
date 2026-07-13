@@ -86,23 +86,48 @@ class TestLbzResidualCompatibility {
                 new ObjectSpawn(0x1800, 0x0600, 0x13, 5, 0, false, 0));
         trigger.setServices(old.services); trigger.onTouchResponse(old.third,
                 new TouchResponseResult(6, 16, 16, TouchCategory.SPECIAL), 0);
+        setNestedState(grapple, "extensionStates", old.second, "grabbed", false);
+        setNestedState(grapple, "extensionStates", old.second, "cooldown", 37);
+        setNestedState(grapple, "extensionStates", old.third, "grabbed", true);
+        setNestedState(grapple, "extensionStates", old.third, "cooldown", 12);
+        setNestedState(drum, "extensionStates", old.second, "riding", false);
+        setNestedState(drum, "extensionStates", old.second, "angle", 0x93);
+        setNestedState(drum, "extensionStates", old.third, "riding", true);
+        setNestedState(drum, "extensionStates", old.third, "angle", 0xA5);
         RewindCaptureContext oldContext = context(old);
         var grappleBlob = CompactFieldCapturer.capture(grapple, oldContext);
         var drumBlob = CompactFieldCapturer.capture(drum, oldContext);
         var triggerBlob = CompactFieldCapturer.capture(trigger, oldContext);
 
         Roster replacement = roster(0x1800, 0x05AD);
-        CompactFieldCapturer.restore(grapple, grappleBlob, context(replacement));
-        CompactFieldCapturer.restore(drum, drumBlob, context(replacement));
-        CompactFieldCapturer.restore(trigger, triggerBlob, context(replacement));
+        LbzLoweringGrappleObjectInstance restoredGrapple = new LbzLoweringGrappleObjectInstance(
+                new ObjectSpawn(0x1800, 0x051D, Sonic3kObjectIds.LBZ_LOWERING_GRAPPLE, 0x1A, 0, false, 0));
+        LbzRollingDrumInstance restoredDrum = new LbzRollingDrumInstance(
+                new ObjectSpawn(0x1800, 0x0600, Sonic3kObjectIds.LBZ_ROLLING_DRUM, 0x40, 0, false, 0));
+        LbzExplodingTriggerInstance restoredTrigger = new LbzExplodingTriggerInstance(
+                new ObjectSpawn(0x1800, 0x0600, 0x13, 5, 0, false, 0));
+        restoredGrapple.setServices(replacement.services);
+        restoredDrum.setServices(replacement.services);
+        restoredTrigger.setServices(replacement.services);
+        CompactFieldCapturer.restore(restoredGrapple, grappleBlob, context(replacement));
+        CompactFieldCapturer.restore(restoredDrum, drumBlob, context(replacement));
+        CompactFieldCapturer.restore(restoredTrigger, triggerBlob, context(replacement));
 
-        assertReplacementKeys(grapple, "extensionStates", old, replacement);
-        assertReplacementKeys(drum, "extensionStates", old, replacement);
-        assertSame(replacement.main, fieldValue(grapple, "player1Owner"));
-        assertSame(replacement.first, fieldValue(grapple, "player2Owner"));
-        assertSame(replacement.main, fieldValue(drum, "player1Owner"));
-        assertSame(replacement.first, fieldValue(drum, "player2Owner"));
-        Map<?, ?> touchers = identityMap(trigger, "extensionTouchers");
+        assertReplacementKeys(restoredGrapple, "extensionStates", old, replacement);
+        assertReplacementKeys(restoredDrum, "extensionStates", old, replacement);
+        assertSame(replacement.main, fieldValue(restoredGrapple, "player1Owner"));
+        assertSame(replacement.first, fieldValue(restoredGrapple, "player2Owner"));
+        assertSame(replacement.main, fieldValue(restoredDrum, "player1Owner"));
+        assertSame(replacement.first, fieldValue(restoredDrum, "player2Owner"));
+        assertNestedState(restoredGrapple, "extensionStates", replacement.second, "grabbed", false);
+        assertNestedState(restoredGrapple, "extensionStates", replacement.second, "cooldown", 37);
+        assertNestedState(restoredGrapple, "extensionStates", replacement.third, "grabbed", true);
+        assertNestedState(restoredGrapple, "extensionStates", replacement.third, "cooldown", 12);
+        assertNestedState(restoredDrum, "extensionStates", replacement.second, "riding", false);
+        assertNestedState(restoredDrum, "extensionStates", replacement.second, "angle", 0x93);
+        assertNestedState(restoredDrum, "extensionStates", replacement.third, "riding", true);
+        assertNestedState(restoredDrum, "extensionStates", replacement.third, "angle", 0xA5);
+        Map<?, ?> touchers = identityMap(restoredTrigger, "extensionTouchers");
         assertTrue(touchers.containsKey(replacement.third));
         assertFalse(touchers.containsKey(old.third));
     }
@@ -172,6 +197,22 @@ class TestLbzResidualCompatibility {
     private static Object fieldValue(Object object, String name) throws Exception {
         Field field = object.getClass().getDeclaredField(name); field.setAccessible(true);
         return field.get(object);
+    }
+
+    private static void setNestedState(Object object, String mapField, PlayableEntity player,
+                                       String valueField, Object value) throws Exception {
+        Object holder = identityMap(object, mapField).get(player);
+        assertNotNull(holder);
+        Field field = holder.getClass().getDeclaredField(valueField); field.setAccessible(true);
+        field.set(holder, value);
+    }
+
+    private static void assertNestedState(Object object, String mapField, PlayableEntity player,
+                                          String valueField, Object expected) throws Exception {
+        Object holder = identityMap(object, mapField).get(player);
+        assertNotNull(holder);
+        Field field = holder.getClass().getDeclaredField(valueField); field.setAccessible(true);
+        assertEquals(expected, field.get(holder));
     }
 
     private static RewindCaptureContext context(Roster roster) {
