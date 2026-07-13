@@ -2938,7 +2938,52 @@ public class TestPlayableSpriteMovement {
 
                 assertEquals(10, mockSprite.getMappingFrame(),
                                 "S1/S2/S3K MoveLeft/MoveRight force prev_anim=Run on a grounded facing flip, "
-                                                + "so Animate_* must restart the walk script from frame 0");
+                                + "so Animate_* must restart the walk script from frame 0");
+        }
+
+        @Test
+        public void slopeResistanceCrossingZeroRestartsWalkOnSameFrameAsFacingFlip() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_1);
+                SpriteAnimationSet animations = new SpriteAnimationSet();
+                animations.addScript(0, new SpriteAnimationScript(0xFF,
+                                List.of(10, 11, 12, 13), SpriteAnimationEndAction.LOOP, 0));
+                animations.addScript(1, new SpriteAnimationScript(0xFF,
+                                List.of(20, 21, 22, 23), SpriteAnimationEndAction.LOOP, 0));
+                animations.addScript(5, new SpriteAnimationScript(0,
+                                List.of(30), SpriteAnimationEndAction.LOOP, 0));
+                mockSprite.setAnimationSet(animations);
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setIdleAnimId(5)
+                                .setWalkAnimId(0)
+                                .setRunAnimId(1)
+                                .setRunSpeedThreshold(0x600));
+                mockSprite.setAnimationId(0);
+                mockSprite.setMovementInputActive(true);
+                mockSprite.setDirection(Direction.LEFT);
+                mockSprite.setGSpeed((short) -1);
+                mockSprite.setAngle((byte) 0x20);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+
+                mockSprite.getAnimationManager().update(0);
+                mockSprite.setAnimationFrameIndex(2);
+                mockSprite.setAnimationTick(0);
+
+                Method slopeResist = PlayableSpriteMovement.class.getDeclaredMethod("doSlopeResist");
+                slopeResist.setAccessible(true);
+                slopeResist.invoke(manager);
+                assertTrue(mockSprite.getGSpeed() > 0,
+                                "Sonic_SlopeResist should cross inertia through zero before MoveRight");
+
+                Method updatePush = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "updatePushingOnDirectionChange", boolean.class, boolean.class);
+                updatePush.setAccessible(true);
+                updatePush.invoke(manager, false, true);
+                mockSprite.setDirection(Direction.RIGHT);
+                mockSprite.getAnimationManager().update(1);
+
+                assertEquals(1, mockSprite.getAnimationFrameIndex(),
+                                "MoveRight must observe post-slope inertia and restart Walk at script frame zero");
         }
 
         /**

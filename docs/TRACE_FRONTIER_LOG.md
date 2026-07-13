@@ -39272,3 +39272,31 @@ Verification with the local REV01 Sonic 1 ROM:
     - SLZ1 complete-run: frame 319 to 1423 (`player_mapping_frame`, expected
       `0x002E`, actual `0x0032`), errors 30 to 22.
   All reports contained 0 warnings.
+
+### 2026-07-13 -- S1 post-slope facing-flip animation restart
+
+On branch `bugfix/ai-trace-s1-walk-cadence` at composed baseline `fe3fdf7ac`,
+the MZ1 standalone replay reached a grounded right-facing change at frame 119.
+The frame started with inertia `$FFFF`; `Sonic_SlopeResist` carried it positive
+before `MoveRight` tested it, so the ROM cleared `Status_Facing` and wrote
+`prev_anim=Run` on that same frame. The engine checked for the animation
+restart before slope resistance, then changed direction later in its ground
+move without publishing the restart (`docs/s1disasm/_incObj/01 Sonic.asm:283-291,634-659,704-723`).
+
+The shared grounded facing-change check now runs after slope resistance and
+immediately before ground input, matching the native state boundary. No zone,
+route, or frame gate was added, and no trace state was modified, hydrated into
+engine state, or tolerated.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `mvn -Dmse=off "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement#groundedFacingFlipRestartsWalkScriptLikeRomPrevAnimSentinel+slopeResistanceCrossingZeroRestartsWalkOnSameFrameAsFacingFlip" test`
+  exited 0: both focused restart cases passed.
+- `TestS1Mz1TraceReplay` advanced from frame 124 to frame 381
+  (`player_mapping_frame`, expected `0x0008`, actual `0x000A`) and reduced the
+  report from 73 to 70 errors, with 0 warnings.
+- `TestS1Ghz1CompleteRunTraceReplay` retained its frame-740 frontier and
+  27-error report; `TestS1Syz2CompleteRunTraceReplay` retained its frame-196
+  frontier and 78-error report. Both were compared directly against the exact
+  baseline in a detached worktree, confirming no representative-route
+  regression.

@@ -524,7 +524,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		facingFlipForcesPushClearAfterGroundWall = false;
-		updatePushingOnDirectionChange(left, right);
 
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
@@ -742,6 +741,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		doSlopeResist();
+		// ROM MoveLeft/MoveRight observes inertia after Sonic_SlopeResist. A
+		// slope can therefore carry inertia across zero on the same frame that
+		// input flips Status_Facing and writes prev_anim=Run (S1
+		// _incObj/01 Sonic.asm:283-291,634-659,704-723). Keep the restart test
+		// at that same state boundary; checking before slope resistance misses
+		// the facing flip even though doGroundMove subsequently applies it.
+		updatePushingOnDirectionChange(inputLeft, inputRight);
 		doGroundMove();
 		doCheckStartRoll();
 		doLevelBoundary();
