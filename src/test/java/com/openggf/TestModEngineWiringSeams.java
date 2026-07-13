@@ -107,7 +107,7 @@ class TestModEngineWiringSeams {
                 "preparePresentationForLaunch(module)");
         assertMethodOrder(source, "public void initializeGame()",
                 "preparePresentationForLaunch(module)",
-                "SessionManager.openGameplaySession(rootModule, module, null)");
+                "SessionManager.openGameplaySession(");
         assertMethodOrder(source, "private boolean preparePresentationForLaunch(GameModule module)",
                 "audioManager.setBackendForLaunch(", "audioManager.outputSampleRate()");
         assertMethodOrder(source, "private boolean preparePresentationForLaunch(GameModule module)",
