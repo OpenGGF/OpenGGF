@@ -1,10 +1,19 @@
+# paletteLine is a BASE, not the final CRAM line: SpritePieceRenderer.preparePiece
+# computes the rendered line as (paletteLine + piece.paletteIndex) & 0x3 (Genesis
+# art_tile-addition semantics). Every piece below declares paletteIndex: 0, so this
+# sheet renders on CRAM line (1 + 0) & 3 = 1 -- the tile/object color line the
+# level's palette.gpal actually populates. Do not bump paletteIndex to 1: that
+# would move rendering to line 2, which this mod's 2-line GPAL leaves zero-filled
+# (solid black). Note the declared 16-color palette list below is used only at
+# convert time for exact pixel quantization; at runtime the colors come from the
+# level GPAL at the computed line.
 formatVersion: 1
 paletteLine: 1
 palette: ["#000000", "#242424", "#6D6D6D", "#B6B6B6", "#FFFF00", "#929200", "#FF0000", "#00FF00", "#0000FF", "#FFFFFF", "#494949", "#DB6D00", "#6D00DB", "#00DBDB", "#DBDB6D", "#6DDB6D"]
 frames:
   - delay: 4
     pieces:
-      - { sourceX: 0, sourceY: 0, widthPixels: 32, heightPixels: 16, xOffset: -16, yOffset: -8, hFlip: false, vFlip: false, paletteIndex: 1, priority: false }
+      - { sourceX: 0, sourceY: 0, widthPixels: 32, heightPixels: 16, xOffset: -16, yOffset: -8, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }
   - delay: 8
     pieces:
-      - { sourceX: 0, sourceY: 16, widthPixels: 32, heightPixels: 16, xOffset: -16, yOffset: -8, hFlip: false, vFlip: false, paletteIndex: 1, priority: false }
+      - { sourceX: 0, sourceY: 16, widthPixels: 32, heightPixels: 16, xOffset: -16, yOffset: -8, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }

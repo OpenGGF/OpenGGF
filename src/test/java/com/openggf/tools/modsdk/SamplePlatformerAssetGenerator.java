@@ -74,13 +74,38 @@ public final class SamplePlatformerAssetGenerator {
             {2, 4, 7}, // 15: sky detail2 dark blue
     };
 
-    /** Palette line 0 (character colors) -- unused by the tileset; kept disjoint from LINE1. */
+    /**
+     * Palette line 0 (character colors) -- a PLACEHOLDER, not Bolt's runtime colors. Bolt's
+     * on-screen colors come from the {@code .ggfp} BASE palette (the 16 colors declared in
+     * {@code bolt-sheet.yaml}) via {@code CharacterDefinition}'s palette supplier
+     * ({@code ignored -> materialized.palette()}, per the sample-standalone-src precedent),
+     * which the player-palette path loads over CRAM line 0 at runtime. This GPAL line only
+     * needs to exist (GPAL requires whole 16-color lines) and to stay disjoint from LINE1 so
+     * tileset patterns always quantize against line 1.
+     */
     private static final int[][] LINE0 = {
             {0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {3, 3, 3},
             {4, 4, 4}, {5, 5, 5}, {6, 6, 6}, {7, 7, 6},
             {1, 2, 4}, {2, 4, 6}, {3, 5, 7}, {6, 1, 1},
             {7, 3, 3}, {7, 5, 1}, {5, 3, 6}, {1, 5, 3},
     };
+
+    /**
+     * Warning header emitted into every object-sheet YAML. paletteLine is a BASE, not the final
+     * CRAM line: SpritePieceRenderer.preparePiece computes the rendered line as
+     * {@code (piece.paletteIndex + paletteLine) & 0x3} (Genesis art_tile-addition semantics).
+     */
+    private static final String OBJECT_LINE_WARNING = """
+            # paletteLine is a BASE, not the final CRAM line: SpritePieceRenderer.preparePiece
+            # computes the rendered line as (paletteLine + piece.paletteIndex) & 0x3 (Genesis
+            # art_tile-addition semantics). Every piece below declares paletteIndex: 0, so this
+            # sheet renders on CRAM line (1 + 0) & 3 = 1 -- the tile/object color line the
+            # level's palette.gpal actually populates. Do not bump paletteIndex to 1: that
+            # would move rendering to line 2, which this mod's 2-line GPAL leaves zero-filled
+            # (solid black). Note the declared 16-color palette list below is used only at
+            # convert time for exact pixel quantization; at runtime the colors come from the
+            # level GPAL at the computed line.
+            """;
 
     private SamplePlatformerAssetGenerator() {}
 
@@ -310,7 +335,15 @@ public final class SamplePlatformerAssetGenerator {
             }
         }
         writePng(image, "bolt.png");
-        writeSheetYaml("bolt-sheet.yaml", 0, palette, List.of(
+        writeSheetYaml("bolt-sheet.yaml",
+                """
+                # Character sheet: paletteLine 0 + piece paletteIndex 0 => rendered CRAM line
+                # (0 + 0) & 3 = 0. Bolt's runtime colors come from this sheet's own 16-color
+                # palette below, carried into the .ggfp BASE palette and loaded over CRAM
+                # line 0 by CharacterDefinition's palette supplier -- NOT from the level
+                # GPAL's line 0 (which is placeholder data).
+                """,
+                0, palette, List.of(
                 frameYaml(30, pieceYaml(0, 0, 24, 32, -12, -16, 0)),
                 frameYaml(30, pieceYaml(0, 32, 24, 32, -12, -16, 0))));
     }
@@ -350,9 +383,9 @@ public final class SamplePlatformerAssetGenerator {
             }
         }
         writePng(image, "zapbug.png");
-        writeSheetYaml("zapbug-sheet.yaml", 1, palette, List.of(
-                frameYaml(16, pieceYaml(0, 0, 24, 16, -12, -8, 1)),
-                frameYaml(16, pieceYaml(0, 16, 24, 16, -12, -8, 1))));
+        writeSheetYaml("zapbug-sheet.yaml", OBJECT_LINE_WARNING, 1, palette, List.of(
+                frameYaml(16, pieceYaml(0, 0, 24, 16, -12, -8, 0)),
+                frameYaml(16, pieceYaml(0, 16, 24, 16, -12, -8, 0))));
     }
 
     private static int zapbugPixel(int x, int y, int frame) {
@@ -390,9 +423,9 @@ public final class SamplePlatformerAssetGenerator {
             }
         }
         writePng(image, "springpad.png");
-        writeSheetYaml("springpad-sheet.yaml", 1, palette, List.of(
-                frameYaml(4, pieceYaml(0, 0, 32, 16, -16, -8, 1)),
-                frameYaml(8, pieceYaml(0, 16, 32, 16, -16, -8, 1))));
+        writeSheetYaml("springpad-sheet.yaml", OBJECT_LINE_WARNING, 1, palette, List.of(
+                frameYaml(4, pieceYaml(0, 0, 32, 16, -16, -8, 0)),
+                frameYaml(8, pieceYaml(0, 16, 32, 16, -16, -8, 0))));
     }
 
     private static int springpadPixel(int x, int y, int frame) {
@@ -424,11 +457,11 @@ public final class SamplePlatformerAssetGenerator {
             }
         }
         writePng(image, "ring.png");
-        writeSheetYaml("ring-sheet.yaml", 1, palette, List.of(
-                frameYaml(6, pieceYaml(0, 0, 16, 16, -8, -8, 1)),
-                frameYaml(6, pieceYaml(0, 16, 16, 16, -8, -8, 1)),
-                frameYaml(6, pieceYaml(0, 32, 16, 16, -8, -8, 1)),
-                frameYaml(6, pieceYaml(0, 48, 16, 16, -8, -8, 1))));
+        writeSheetYaml("ring-sheet.yaml", OBJECT_LINE_WARNING, 1, palette, List.of(
+                frameYaml(6, pieceYaml(0, 0, 16, 16, -8, -8, 0)),
+                frameYaml(6, pieceYaml(0, 16, 16, 16, -8, -8, 0)),
+                frameYaml(6, pieceYaml(0, 32, 16, 16, -8, -8, 0)),
+                frameYaml(6, pieceYaml(0, 48, 16, 16, -8, -8, 0))));
     }
 
     private static int ringPixel(int x, int y, int frame) {
@@ -466,9 +499,10 @@ public final class SamplePlatformerAssetGenerator {
         return "  - delay: %d\n    pieces:\n      - %s\n".formatted(delay, piece);
     }
 
-    private static void writeSheetYaml(String fileName, int paletteLine, int[][] palette, List<String> frames)
-            throws IOException {
+    private static void writeSheetYaml(String fileName, String headerComment, int paletteLine,
+                                       int[][] palette, List<String> frames) throws IOException {
         StringBuilder sb = new StringBuilder();
+        sb.append(headerComment);
         sb.append("formatVersion: 1\n");
         sb.append("paletteLine: ").append(paletteLine).append('\n');
         sb.append("palette: [");
