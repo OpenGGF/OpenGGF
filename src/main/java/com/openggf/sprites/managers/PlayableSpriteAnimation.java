@@ -22,6 +22,7 @@ public class PlayableSpriteAnimation {
     // ScriptedVelocityAnimationProfile.resolveGroundMovementAnimId.
     private int lastGroundMovementAnimId = -1;
     private int groundMovementAnimSpeedSnapshot = Integer.MIN_VALUE;
+    private boolean groundMovementAnimationSuppressed;
 
     /**
      * Resets the tracked animation ID so the next update sees a mismatch
@@ -87,6 +88,7 @@ public class PlayableSpriteAnimation {
 
     public void clearGroundMovementAnimSpeed() {
         groundMovementAnimSpeedSnapshot = Integer.MIN_VALUE;
+        groundMovementAnimationSuppressed = false;
     }
 
     public boolean hasGroundMovementAnimSpeed() {
@@ -95,6 +97,14 @@ public class PlayableSpriteAnimation {
 
     public short getGroundMovementAnimSpeed() {
         return hasGroundMovementAnimSpeed() ? (short) groundMovementAnimSpeedSnapshot : sprite.getGSpeed();
+    }
+
+    public void suppressGroundMovementAnimationForFrame() {
+        groundMovementAnimationSuppressed = true;
+    }
+
+    public boolean isGroundMovementAnimationSuppressed() {
+        return groundMovementAnimationSuppressed;
     }
 
     public void update(int frameCounter) {

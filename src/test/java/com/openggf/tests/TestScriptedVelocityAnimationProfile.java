@@ -53,6 +53,37 @@ public class TestScriptedVelocityAnimationProfile {
     }
 
     @Test
+    public void preservesSlideAnimationWhenTerrainDetachSetsAirAfterSlideDispatch() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setAnimationId(13);
+        sprite.setSliding(true);
+        sprite.setRolling(false);
+        sprite.setJumping(false);
+        sprite.setAir(true);
+
+        Integer animId = profile.resolveAnimationId(sprite, 0, 32);
+
+        assertNull(animId,
+                "AnglePos terrain detach does not overwrite LZWaterSlides' animation byte");
+    }
+
+    @Test
+    public void preservesAnimationWhenFinalMoveLockTickExpiresAfterMoveDispatch() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setAnimationId(1);
+        sprite.setSkidding(true);
+        sprite.setMoveLockTimer(0);
+        sprite.getAnimationManager().suppressGroundMovementAnimationForFrame();
+
+        Integer animId = profile.resolveAnimationId(sprite, 0, 32);
+
+        assertNull(animId,
+                "Sonic_Move skipped animation writes while locktime was non-zero at dispatch");
+    }
+
+    @Test
     public void preservesObjectAnimationForAirborneExternalReleaseWithRollingStatus() {
         ScriptedVelocityAnimationProfile profile = createProfile();
         TestSprite sprite = new TestSprite();

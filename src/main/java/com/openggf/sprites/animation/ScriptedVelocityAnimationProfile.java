@@ -127,6 +127,17 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         if (sprite.getMoveLockTimer() > 0) {
             return null;
         }
+        // The last locktime tick reaches Sonic_Move while still non-zero, so
+        // that routine branches to ResetScr without writing obAnim. The later
+        // SlopeRepel call decrements locktime before Sonic_Animate runs. Preserve
+        // the movement dispatch result rather than interpreting the final zero
+        // timer as an unlocked movement frame (S1 01 Sonic.asm:385-388,
+        // 1405-1434; S2 s2.asm:36423-36429,37458-37479; S3K
+        // sonic3k.asm:21619-21623,23909-23948).
+        if (sprite.getAnimationManager() != null
+                && sprite.getAnimationManager().isGroundMovementAnimationSuppressed()) {
+            return null;
+        }
         // ROM S2 Obj01_MdNormal_Checks (s2.asm:36444-36468): while the
         // impatient-wait Blink/GetUp interrupt animation plays, the whole
         // grounded update -- including Sonic_Move's anim writes -- is skipped,
@@ -169,9 +180,12 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
                 && !(sprite.getPinballMode() && sprite.getRolling())) {
             return spindashAnimId;
         }
-        // ROM: slide animation only applies on ground. When airborne (e.g. jumping
-        // off a water slide), the jump/roll mode directly overwrites obAnim with
-        // id_Roll, so the slide animation never shows in the air.
+        // LZWaterSlides writes Slide only while grounded. A jump/roll dispatch
+        // later overwrites it with Roll, but AnglePos terrain detach only changes
+        // Status_InAir and prev_anim. Preserve Slide for that detach frame; the
+        // next LZWaterSlides call observes InAir, clears slide mode, and installs
+        // locktime (S1 LZWaterFeatures.asm:468-513; Sonic AnglePos.asm terrain
+        // detach tails).
         if (sprite.isSliding() && !sprite.getAir() && slideAnimId >= 0) {
             return slideAnimId;
         }
@@ -202,6 +216,10 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             // but set flip_angle + an object-written walk/tumble anim, s3.asm
             // sub_31E96). Fall through to the object-anim / walk-tumble path so the
             // fan's frames persist instead of snapping back to the ball.
+            if (sprite.isSliding() && !sprite.getRolling()
+                    && !sprite.isJumping() && !sprite.getRollingJump()) {
+                return null;
+            }
             if (sprite.getRolling() && sprite.getFlipAngle() == 0) {
                 if (!sprite.isSliding() && !sprite.getRollingJump() && sprite.getAnimationId() != rollAnimId) {
                     return null;

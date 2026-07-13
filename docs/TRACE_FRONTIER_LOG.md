@@ -57,6 +57,40 @@ for exact fields and values.
 
 ## 2026-07-13 - Player and Sidekick animation verification
 
+### Dispatch-time move-lock and slide animation ownership
+
+Branch `bugfix/ai-s1-lz-slide-frontiers`, based exactly on `f76d96095`,
+restores two animation decisions made before the final player status is
+published. Neither correction depends on the zone, route, or trace frame.
+
+On LZ2 f575, native `Sonic_Move` reads `locktime=1` and branches to
+`Sonic_ResetScr` before any direction or animation write. `Sonic_SlopeRepel`
+then decrements the timer to zero later in the same grounded routine. The
+engine previously resolved animation from that final zero and selected stale
+Stop `$0D`; its animation manager now retains the movement dispatch's explicit
+write suppression through the later animation pass. The same routine ordering
+exists in S1 (`docs/s1disasm/_incObj/01 Sonic.asm:379-430,1402-1435`), S2
+(`docs/s2disasm/s2.asm:36423-36429,37458-37479`), and S3K
+(`docs/skdisasm/sonic3k.asm:21619-21623,23909-23948`).
+
+On LZ3 f1377, `LZWaterSlides` begins with Sonic grounded and writes Slide
+`$1B`; the subsequent `AnglePos` terrain-detach tail sets Status_InAir and the
+previous-animation sentinel but does not replace `obAnim`. The shared profile
+now preserves that earlier explicit Slide write when no jump/roll dispatch
+superseded it. The next pre-physics water-slide call observes the air bit and
+clears slide mode normally (`docs/s1disasm/_inc/LZWaterFeatures.asm:468-513`).
+
+Comparison-only results with the verified REV01 ROM, with zero physics errors:
+
+- LZ2 complete run: 32 animation errors at f575 -> 16 errors at f2279
+  (`player_mapping_frame`, expected `$3D`, actual `$3C`).
+- LZ3 complete run: 41 animation errors at f1377 -> 31 errors at f1571
+  (`player_animation_id`, expected Stop `$0D`, actual Walk `$00`).
+
+The later frontiers are separate animation cadence and skid-trigger owners.
+The combined movement/profile unit suite passes 130/130, including focused
+dispatch-time regressions for the expiring lock and terrain-detached slide.
+
 ### Terrain-detach rolling animation restart
 
 Branch `bugfix/ai-trace-s1-roll-cadence`, based exactly on `07f12969a`,

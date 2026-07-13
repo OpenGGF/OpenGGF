@@ -444,6 +444,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
 		slopeResistAppliedThisFrame = false;
 		skidAnimationRefreshedThisFrame = false;
+		sprite.getAnimationManager().clearGroundMovementAnimSpeed();
 		sprite.clearDeferredGroundWallVelocityResponse();
 		preMoveBalanceEvaluated = false;
 
@@ -565,7 +566,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// This is the input state AFTER control lock/move lock filtering, used to determine
 		// walk vs idle animation (ROM: Sonic_MoveLeft/MoveRight set walk anim when called).
 		sprite.setMovementInputActive(inputLeft || inputRight);
-		sprite.getAnimationManager().clearGroundMovementAnimSpeed();
 
 		clearStaleCpuPushVelocityBeforeGroundMove();
 
@@ -2167,6 +2167,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		boolean moveLockActive = sprite.getMoveLockTimer() > 0;
 
 		if (moveLockActive) {
+			// Sonic_Move tests locktime before any direction or animation write,
+			// then Sonic_SlopeRepel decrements it later in the grounded routine.
+			// Retain that dispatch decision when the final tick reaches zero so
+			// the later animation pass cannot synthesize a state the ROM skipped.
+			sprite.getAnimationManager().suppressGroundMovementAnimationForFrame();
 			// Camera easing during move lock
 			if (camera != null) camera.easeYBiasToDefault();
 		} else {
