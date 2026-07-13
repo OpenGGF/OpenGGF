@@ -115,8 +115,12 @@ public final class SampleFlappyAssetGenerator {
     }
 
     /**
-     * One block (index 0): an 8x8 chunk grid, all flat-sky chunk 0 except grid row 3 (32-40px
-     * band), which uses the dimmer chunk 1 -- a simple horizontal band across the block.
+     * Two blocks. Index 0 is reserved-empty filler: {@code ModLevel.decodeBlocks} force-replaces
+     * block 0 with an empty {@code Block} at gameplay load, so visible content must never live
+     * there (matches the sample-mod-src / sample-standalone-src precedent, whose fg-maps keep
+     * real content at index 1). Index 1 holds the sky layout: an 8x8 chunk grid, all flat-sky
+     * chunk 0 except grid row 3 (48-64px band), which uses the dimmer chunk 1 -- a simple
+     * horizontal band across the block.
      */
     private static byte[] blocks() throws IOException {
         return binary(out -> {
@@ -124,7 +128,10 @@ public final class SampleFlappyAssetGenerator {
             out.writeShort(1);
             out.writeByte(BLOCK_GRID_SIDE);
             out.writeByte(0);
-            out.writeInt(1);
+            out.writeInt(2);
+            // Block 0: reserved-empty (contents ignored; force-emptied at gameplay load).
+            for (int i = 0; i < BLOCK_GRID_SIDE * BLOCK_GRID_SIDE; i++) out.writeShort(0);
+            // Block 1: sky with a dimmer horizontal band on grid row 3.
             for (int row = 0; row < BLOCK_GRID_SIDE; row++) {
                 int chunkIndex = row == 3 ? 1 : 0;
                 for (int col = 0; col < BLOCK_GRID_SIDE; col++) out.writeShort(chunkIndex);
@@ -132,7 +139,7 @@ public final class SampleFlappyAssetGenerator {
         });
     }
 
-    /** 80x2 map cells, all referencing block 0. */
+    /** 80x2 map cells, all referencing content block 1 (block 0 is reserved-empty at load). */
     private static byte[] foregroundMap() throws IOException {
         return binary(out -> {
             out.writeBytes("GMAP");
@@ -141,7 +148,7 @@ public final class SampleFlappyAssetGenerator {
             out.writeShort(MAP_HEIGHT_BLOCKS);
             out.writeShort(1);
             out.writeInt(MAP_WIDTH_BLOCKS * MAP_HEIGHT_BLOCKS);
-            for (int i = 0; i < MAP_WIDTH_BLOCKS * MAP_HEIGHT_BLOCKS; i++) out.writeByte(0);
+            for (int i = 0; i < MAP_WIDTH_BLOCKS * MAP_HEIGHT_BLOCKS; i++) out.writeByte(1);
         });
     }
 
