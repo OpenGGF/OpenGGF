@@ -73,6 +73,38 @@ class TestNamespacedMusicRouting {
     }
 
     @Test
+    void namespacedSfxIsExactAndPresentationOnly() {
+        RecordingBackend backend = new RecordingBackend();
+        audio.resetState();
+        audio.setBackend(backend);
+        audio.beginCommandTimelineFrame(6);
+        StreamedMusicPort.SfxRef sfx = new StreamedMusicPort.SfxRef("owner", "jump");
+
+        assertTrue(audio.playNamespacedSfx(sfx));
+
+        assertEquals(sfx, backend.sfx);
+        assertEquals(0, audio.commandTimeline().entryCount(),
+                "one-shots must not enter deterministic audio history");
+    }
+
+    @Test
+    void namespacedSfxIsSuppressedDuringRewindAndUnknownKeysDoNotMutatePresentation() {
+        RecordingBackend backend = new RecordingBackend();
+        audio.resetState();
+        audio.setBackend(backend);
+        backend.sfxAvailable = false;
+        assertFalse(audio.playNamespacedSfx(new StreamedMusicPort.SfxRef("owner", "missing")));
+        assertNull(backend.sfx);
+
+        backend.sfxAvailable = true;
+        try (var ignored = audio.beginRewindReplay(10, 5,
+                com.openggf.audio.rewind.AudioReplayReason.SEEK)) {
+            assertFalse(audio.playNamespacedSfx(new StreamedMusicPort.SfxRef("owner", "jump")));
+        }
+        assertNull(backend.sfx);
+    }
+
+    @Test
     void logicalReplayReconstructsNamespacedSnapshotWithoutLivePlayback() {
         RecordingBackend backend = new RecordingBackend();
         audio.resetState();
@@ -96,6 +128,8 @@ class TestNamespacedMusicRouting {
         private StreamedMusicPort.TrackRef track;
         private boolean available = true;
         private int livePlayCount;
+        private StreamedMusicPort.SfxRef sfx;
+        private boolean sfxAvailable = true;
         private AudioBackendLogicalSnapshot snapshot = AudioBackendLogicalSnapshot.empty();
 
         @Override
@@ -114,6 +148,13 @@ class TestNamespacedMusicRouting {
         @Override
         public boolean hasStreamedMusic(StreamedMusicPort.TrackRef track) {
             return available;
+        }
+
+        @Override
+        public boolean tryPlayStreamedSfx(StreamedMusicPort.SfxRef sfx) {
+            if (!sfxAvailable) return false;
+            this.sfx = sfx;
+            return true;
         }
 
         @Override

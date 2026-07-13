@@ -42,6 +42,27 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-13 - Mod-support Phase 3 standalone audio verification
+
+Workstream B5 added exact namespaced standalone music and prepared one-shot SFX
+without changing any stock trace fixture, tolerance, comparator, or replay state.
+One-shots remain presentation-only: they do not enter the deterministic command
+timeline or rewind PCM history, and rewind entry clears both active and queued
+one-shot work.
+
+- Focused catalog, preparation, resolver, routing, backend-pool, rewind, and SDK
+  verification passed 102 tests with 0 failures/errors and 1 skipped test.
+- The post-review security/ownership suite passed 94 tests with 0 failures/errors
+  and 1 skipped test. It covers the 16-voice/17th-steal contract, dedicated
+  30-second/32-MiB SFX decode limits, cross-owner isolation, numeric-route
+  rejection, and shared track/SFX cache revalidation.
+- Broad audio snapshot/runtime parity passed 63 tests with 0 failures/errors and
+  7 benchmark/environment skips.
+- Mods-off trace spot command:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" "-Ds3k.rom.path=s3k.gen" test`.
+  S1 GHZ1 passed 1/1, S2 EHZ1 passed 1/1, and S3K AIZ passed 16/16
+  (18 tests total, 0 failures/errors/skips).
+
 ## 2026-07-11 - Mod-support Phase 0 final verification
 
 Final Phase-0 verification ran from `next` commit

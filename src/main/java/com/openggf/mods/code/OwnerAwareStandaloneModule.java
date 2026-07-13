@@ -51,8 +51,19 @@ final class OwnerAwareStandaloneModule {
                 };
             }
             Object value = boundary.callStandalone(owner,
-                    () -> invokeCallback(delegate, method, args));
+                    () -> validateOwnedReturn(method, invokeCallback(delegate, method, args)));
             return wrapReturnedValue(method, args, value);
+        }
+
+        private Object validateOwnedReturn(Method method, Object value) {
+            if (method.getName().equals("getLevelMusicReference")) {
+                if (!(value instanceof com.openggf.game.MusicReference.Namespaced namespaced)
+                        || !owner.equals(namespaced.owner())) {
+                    throw new IllegalArgumentException(
+                            "Standalone level music must be a namespaced track owned by " + owner);
+                }
+            }
+            return value;
         }
 
         private Object wrapReturnedValue(Method method, Object[] args, Object value) {

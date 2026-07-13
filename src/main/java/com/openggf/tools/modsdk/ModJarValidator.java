@@ -7,6 +7,7 @@ import com.openggf.io.PackedModAssetRoot;
 import com.openggf.level.objects.BakedSheetReader;
 import com.openggf.mods.ModApiVersion;
 import com.openggf.mods.ModAudioAssetValidation;
+import com.openggf.mods.ModAudioSfx;
 import com.openggf.mods.ModCatalogEntry;
 import com.openggf.mods.ModCatalogValidator;
 import com.openggf.mods.ModDescriptor;
@@ -102,6 +103,7 @@ public final class ModJarValidator {
                 }
             }
             validateAudioAssets(assets, descriptor, audio.declaredTracks(), findings);
+            validateSfxAssets(assets, descriptor, audio.declaredSfx(), findings);
             validateCompiledCode(snapshotPath, descriptor, findings);
         } catch (IOException | SecurityException failure) {
             String message = safeMessage(failure);
@@ -189,6 +191,29 @@ public final class ModJarValidator {
                             && failure.getMessage().startsWith("Loop metadata")
                             ? "AUDIO_LOOP_INVALID" : "AUDIO_ASSET_INVALID";
                     findings.add(error(code, track.assetPath(), track.key().toString(), safeMessage(failure)));
+                }
+            }
+        } catch (SecurityException failure) {
+            findings.add(error("MOD_JAR_INVALID", descriptor.jarPath().toString(), "", safeMessage(failure)));
+        }
+    }
+
+    private void validateSfxAssets(PackedModAssetRoot assets, ModDescriptor descriptor,
+                                   List<ModAudioSfx> sfx,
+                                   List<Finding> findings) {
+        if (sfx.isEmpty()) {
+            return;
+        }
+        try {
+            for (ModAudioSfx value : sfx.stream()
+                    .filter(item -> item.key().modId().equals(descriptor.manifest().id()))
+                    .sorted(Comparator.comparing(item -> item.key().toString())).toList()) {
+                try {
+                    byte[] encoded = assets.readBounded(value.assetPath(), limits.maxAssetBytes());
+                    ModAudioAssetValidation.decodeAndValidate(value, encoded, limits);
+                } catch (IOException | IllegalArgumentException | ArithmeticException failure) {
+                    findings.add(error("AUDIO_ASSET_INVALID", value.assetPath(),
+                            value.key().toString(), safeMessage(failure)));
                 }
             }
         } catch (SecurityException failure) {

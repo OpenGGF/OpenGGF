@@ -15,6 +15,7 @@ CF-ANNOTATION TYPE com.openggf.GameLoop visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.GameLoop$GameModeChangeListener visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.GameLoop$GameModeChangeListener visible @java.lang.Deprecated
 CF-ANNOTATION TYPE com.openggf.GameModeChangeListener visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.SpritePriorityLayerHook visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.SpritePriorityLayerHook visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.architecture.CompositionRoot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.architecture.CompositionRoot visible @java.lang.annotation.Retention(value=java.lang.annotation.RetentionPolicy.RUNTIME)
@@ -30,6 +31,8 @@ CF-ANNOTATION TYPE com.openggf.audio.GameSound visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.SegaPcmSpec visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.StreamedMusicPort visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.StreamedMusicPort$FadeState visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.StreamedMusicPort$OneShot visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.StreamedMusicPort$SfxRef visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.StreamedMusicPort$State visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.StreamedMusicPort$TrackRef visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.driver.SmpsDriver$ReadMode visible @com.openggf.game.ModApi
@@ -398,6 +401,7 @@ CF-ANNOTATION TYPE com.openggf.game.rewind.schema.RewindObjectStateBlob visible 
 CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot$ModeState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot$Layout visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.CameraSnapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.FadeManagerSnapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.GameRngSnapshot visible @com.openggf.game.ModApi
@@ -687,6 +691,7 @@ CF-ANNOTATION TYPE com.openggf.level.rings.RingSpriteSheet visible @com.openggf.
 CF-ANNOTATION TYPE com.openggf.level.rings.SpillAnimationState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.scroll.ZoneScrollHandler visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.spawn.SpawnPoint visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.SfxKey visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.TrackKey visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.BakedLevelRef visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.BakedSheetRef visible @com.openggf.game.ModApi
@@ -821,6 +826,7 @@ CF-ANNOTATION TYPE com.openggf.sprites.managers.SpindashDustController$RewindSta
 CF-ANNOTATION TYPE com.openggf.sprites.managers.SpriteManager visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.managers.SpriteManager$SpriteDrawCallback visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.managers.SpriteMovementManager visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.sprites.managers.TailsFlightController visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.managers.TailsTailsController visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.playable.AbstractPlayableSprite visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.playable.DrowningController visible @com.openggf.game.ModApi
@@ -829,6 +835,7 @@ CF-ANNOTATION TYPE com.openggf.sprites.playable.DrowningController$RewindState v
 CF-ANNOTATION TYPE com.openggf.sprites.playable.GroundWallResponseState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.playable.ObjectControlState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.playable.PlayableSpriteController visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.sprites.playable.PlayableSpriteController$RewindState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.playable.SecondaryAbility visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.playable.SidekickCarryTrigger visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.playable.SidekickCpuController visible @com.openggf.game.ModApi
@@ -839,6 +846,9 @@ CF-ANNOTATION TYPE com.openggf.sprites.playable.SidekickRespawnStrategy visible 
 CF-ANNOTATION TYPE com.openggf.sprites.playable.SuperState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.playable.SuperStateController visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.playable.SuperStateController$PaletteTarget visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.sprites.playable.TailsCarryController visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.sprites.playable.TailsCarryController$CarryContext visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.sprites.playable.TailsCarryController$Snapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.render.PlayerSpriteRenderer visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.testmode.TraceCameraFocusController visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.testmode.TraceCameraFocusController$FocusMode visible @com.openggf.game.ModApi
@@ -917,6 +927,7 @@ CONSTRUCTOR com.openggf.GameLoop public  <init>(com.openggf.game.session.EngineC
 CONSTRUCTOR com.openggf.GameLoop public  <init>(com.openggf.game.session.EngineContext,com.openggf.control.InputHandler)
 CONSTRUCTOR com.openggf.audio.SegaPcmSpec public  <init>(int,int,int)
 CONSTRUCTOR com.openggf.audio.StreamedMusicPort$FadeState public  <init>(float,int,int,int,float)
+CONSTRUCTOR com.openggf.audio.StreamedMusicPort$SfxRef public  <init>(java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.audio.StreamedMusicPort$State public  <init>(com.openggf.audio.StreamedMusicPort$TrackRef,int,double,int,com.openggf.audio.StreamedMusicPort$FadeState,double)
 CONSTRUCTOR com.openggf.audio.StreamedMusicPort$TrackRef public  <init>(java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.audio.rewind.AudioBackendLogicalSnapshot public  <init>(com.openggf.audio.rewind.AudioSourceDescriptor,boolean,boolean,boolean,int,java.util.List<com.openggf.audio.rewind.AudioSourceDescriptor>)
@@ -1383,6 +1394,7 @@ CONSTRUCTOR com.openggf.level.rings.RingSpawn public  <init>(int,int,int)
 CONSTRUCTOR com.openggf.level.rings.RingSpriteSheet public  <init>(com.openggf.level.Pattern[],java.util.List<com.openggf.level.rings.RingFrame>,int,int,int,int)
 CONSTRUCTOR com.openggf.level.rings.RingSpriteSheet public  <init>(com.openggf.level.Pattern[],java.util.List<com.openggf.level.rings.RingFrame>,int,int,int,int,int)
 CONSTRUCTOR com.openggf.level.rings.SpillAnimationState public  <init>()
+CONSTRUCTOR com.openggf.mods.SfxKey public  <init>(java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.mods.TrackKey public  <init>(java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.mods.code.BakedLevelRef public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.mods.code.BakedSheetRef public  <init>(java.lang.String)
@@ -2820,6 +2832,7 @@ FIELD com.openggf.trace.ToleranceConfig$RingCountMode public,static,final com.op
 INTERFACE com.openggf.GameLoop$GameModeChangeListener com.openggf.GameModeChangeListener
 INTERFACE com.openggf.architecture.CompositionRoot java.lang.annotation.Annotation
 INTERFACE com.openggf.audio.StreamedMusicPort java.lang.AutoCloseable
+INTERFACE com.openggf.audio.StreamedMusicPort$OneShot java.lang.AutoCloseable
 INTERFACE com.openggf.audio.rewind.AudioCommand$ChangeMusicTempo com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$EndMusicOverride com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$FadeOutMusic com.openggf.audio.rewind.AudioCommand
@@ -3091,6 +3104,7 @@ METHOD com.openggf.SpritePriorityLayerHook public,abstract  void beforePriorityL
 METHOD com.openggf.audio.AudioBackend public  boolean hasStreamedMusic(com.openggf.audio.StreamedMusicPort$TrackRef)
 METHOD com.openggf.audio.AudioBackend public  boolean supportsDeterministicRuntimePresentation()
 METHOD com.openggf.audio.AudioBackend public  boolean tryPlayStreamedMusic(com.openggf.audio.StreamedMusicPort$TrackRef)
+METHOD com.openggf.audio.AudioBackend public  boolean tryPlayStreamedSfx(com.openggf.audio.StreamedMusicPort$SfxRef)
 METHOD com.openggf.audio.AudioBackend public  com.openggf.audio.rewind.AudioBackendLogicalSnapshot captureLogicalSnapshot()
 METHOD com.openggf.audio.AudioBackend public  int outputSampleRate()
 METHOD com.openggf.audio.AudioBackend public  void attachDeterministicAudioRuntime(com.openggf.audio.runtime.DeterministicAudioRuntime)
@@ -3142,6 +3156,7 @@ METHOD com.openggf.audio.AudioManager public  boolean isRewindReplaySuppressed()
 METHOD com.openggf.audio.AudioManager public  boolean playDonorMusic(java.lang.String,com.openggf.audio.GameMusic)
 METHOD com.openggf.audio.AudioManager public  boolean playMusic(com.openggf.audio.GameMusic)
 METHOD com.openggf.audio.AudioManager public  boolean playNamespacedMusic(com.openggf.audio.StreamedMusicPort$TrackRef)
+METHOD com.openggf.audio.AudioManager public  boolean playNamespacedSfx(com.openggf.audio.StreamedMusicPort$SfxRef)
 METHOD com.openggf.audio.AudioManager public  boolean playSfx(int)
 METHOD com.openggf.audio.AudioManager public  boolean playSfx(int,float)
 METHOD com.openggf.audio.AudioManager public  com.openggf.audio.AudioBackend getBackend()
@@ -3245,7 +3260,9 @@ METHOD com.openggf.audio.SegaPcmSpec public  int sampleRate()
 METHOD com.openggf.audio.SegaPcmSpec public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.audio.SegaPcmSpec public,final  int hashCode()
 METHOD com.openggf.audio.SegaPcmSpec public,final  java.lang.String toString()
+METHOD com.openggf.audio.StreamedMusicPort public  boolean hasSfx(com.openggf.audio.StreamedMusicPort$SfxRef)
 METHOD com.openggf.audio.StreamedMusicPort public  boolean hasTrack(com.openggf.audio.StreamedMusicPort$TrackRef)
+METHOD com.openggf.audio.StreamedMusicPort public  com.openggf.audio.StreamedMusicPort$OneShot openSfx(com.openggf.audio.StreamedMusicPort$SfxRef)
 METHOD com.openggf.audio.StreamedMusicPort public  void playTrack(com.openggf.audio.StreamedMusicPort$TrackRef)
 METHOD com.openggf.audio.StreamedMusicPort public,abstract  boolean fadeActive()
 METHOD com.openggf.audio.StreamedMusicPort public,abstract  boolean fadeAtFullGain()
@@ -3275,6 +3292,14 @@ METHOD com.openggf.audio.StreamedMusicPort$FadeState public,final  boolean equal
 METHOD com.openggf.audio.StreamedMusicPort$FadeState public,final  int hashCode()
 METHOD com.openggf.audio.StreamedMusicPort$FadeState public,final  java.lang.String toString()
 METHOD com.openggf.audio.StreamedMusicPort$FadeState public,static  com.openggf.audio.StreamedMusicPort$FadeState idle()
+METHOD com.openggf.audio.StreamedMusicPort$OneShot public,abstract  boolean complete()
+METHOD com.openggf.audio.StreamedMusicPort$OneShot public,abstract  void close()
+METHOD com.openggf.audio.StreamedMusicPort$OneShot public,abstract  void mixInto(short[],int)
+METHOD com.openggf.audio.StreamedMusicPort$SfxRef public  java.lang.String name()
+METHOD com.openggf.audio.StreamedMusicPort$SfxRef public  java.lang.String owner()
+METHOD com.openggf.audio.StreamedMusicPort$SfxRef public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.audio.StreamedMusicPort$SfxRef public,final  int hashCode()
+METHOD com.openggf.audio.StreamedMusicPort$SfxRef public,final  java.lang.String toString()
 METHOD com.openggf.audio.StreamedMusicPort$State public  com.openggf.audio.StreamedMusicPort$FadeState fade()
 METHOD com.openggf.audio.StreamedMusicPort$State public  com.openggf.audio.StreamedMusicPort$TrackRef track()
 METHOD com.openggf.audio.StreamedMusicPort$State public  double rate()
@@ -8711,6 +8736,7 @@ METHOD com.openggf.level.objects.ObjectRenderManager public  java.util.List<java
 METHOD com.openggf.level.objects.ObjectRenderManager$SpringVariant public,static  com.openggf.level.objects.ObjectRenderManager$SpringVariant valueOf(java.lang.String)
 METHOD com.openggf.level.objects.ObjectRenderManager$SpringVariant public,static  com.openggf.level.objects.ObjectRenderManager$SpringVariant[] values()
 METHOD com.openggf.level.objects.ObjectServices public  boolean playMusic(com.openggf.audio.GameMusic)
+METHOD com.openggf.level.objects.ObjectServices public  boolean playSfx(com.openggf.mods.SfxKey)
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.BonusStageProvider bonusStageProviderOrNull()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.LevelEventProvider levelEventProvider()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.TitleCardProvider titleCardProvider()
@@ -9643,6 +9669,11 @@ METHOD com.openggf.level.scroll.ZoneScrollHandler public,abstract  short getVscr
 METHOD com.openggf.level.scroll.ZoneScrollHandler public,abstract  void update(int[],int,int,int,int)
 METHOD com.openggf.level.spawn.SpawnPoint public,abstract  int x()
 METHOD com.openggf.level.spawn.SpawnPoint public,abstract  int y()
+METHOD com.openggf.mods.SfxKey public  java.lang.String localName()
+METHOD com.openggf.mods.SfxKey public  java.lang.String modId()
+METHOD com.openggf.mods.SfxKey public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.SfxKey public,final  int hashCode()
+METHOD com.openggf.mods.SfxKey public,final  java.lang.String toString()
 METHOD com.openggf.mods.TrackKey public  java.lang.String localName()
 METHOD com.openggf.mods.TrackKey public  java.lang.String modId()
 METHOD com.openggf.mods.TrackKey public,final  boolean equals(java.lang.Object)
@@ -12171,6 +12202,8 @@ METHOD com.openggf.version.BuildIdentity public,final  java.lang.String toString
 NESTED com.openggf.GameLoop com.openggf.GameLoop$GameModeChangeListener
 NESTED com.openggf.audio.GameAudioProfile com.openggf.audio.GameAudioProfile$SpeedMode
 NESTED com.openggf.audio.StreamedMusicPort com.openggf.audio.StreamedMusicPort$FadeState
+NESTED com.openggf.audio.StreamedMusicPort com.openggf.audio.StreamedMusicPort$OneShot
+NESTED com.openggf.audio.StreamedMusicPort com.openggf.audio.StreamedMusicPort$SfxRef
 NESTED com.openggf.audio.StreamedMusicPort com.openggf.audio.StreamedMusicPort$State
 NESTED com.openggf.audio.StreamedMusicPort com.openggf.audio.StreamedMusicPort$TrackRef
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$ChangeMusicTempo
@@ -12619,6 +12652,8 @@ RECORD-COMPONENT com.openggf.audio.StreamedMusicPort$FadeState gain float
 RECORD-COMPONENT com.openggf.audio.StreamedMusicPort$FadeState remainingSteps int
 RECORD-COMPONENT com.openggf.audio.StreamedMusicPort$FadeState stepAmount float
 RECORD-COMPONENT com.openggf.audio.StreamedMusicPort$FadeState stepDelay int
+RECORD-COMPONENT com.openggf.audio.StreamedMusicPort$SfxRef name java.lang.String
+RECORD-COMPONENT com.openggf.audio.StreamedMusicPort$SfxRef owner java.lang.String
 RECORD-COMPONENT com.openggf.audio.StreamedMusicPort$State fade com.openggf.audio.StreamedMusicPort$FadeState
 RECORD-COMPONENT com.openggf.audio.StreamedMusicPort$State logicalMusicId int
 RECORD-COMPONENT com.openggf.audio.StreamedMusicPort$State pauseMask int
@@ -14252,6 +14287,8 @@ RECORD-COMPONENT com.openggf.level.rings.RingFramePiece yOffset int
 RECORD-COMPONENT com.openggf.level.rings.RingSpawn placementId int
 RECORD-COMPONENT com.openggf.level.rings.RingSpawn x int
 RECORD-COMPONENT com.openggf.level.rings.RingSpawn y int
+RECORD-COMPONENT com.openggf.mods.SfxKey localName java.lang.String
+RECORD-COMPONENT com.openggf.mods.SfxKey modId java.lang.String
 RECORD-COMPONENT com.openggf.mods.TrackKey localName java.lang.String
 RECORD-COMPONENT com.openggf.mods.TrackKey modId java.lang.String
 RECORD-COMPONENT com.openggf.mods.code.BakedLevelRef levelJsonEntry java.lang.String
@@ -15606,6 +15643,7 @@ TYPE interface public,abstract,sealed com.openggf.io.PackedModAssetRoot SUPER <n
 TYPE interface public,abstract,sealed com.openggf.net.protocol.ControlMessage SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.trace.TraceEvent SUPER <none>
 TYPE interface public,abstract,static com.openggf.GameLoop$GameModeChangeListener SUPER <none>
+TYPE interface public,abstract,static com.openggf.audio.StreamedMusicPort$OneShot SUPER <none>
 TYPE interface public,abstract,static com.openggf.audio.rewind.SmpsDriverSnapshot$DependencyResolver SUPER <none>
 TYPE interface public,abstract,static com.openggf.debug.playback.PlaybackDebugManager$PlaybackFrameObserver SUPER <none>
 TYPE interface public,abstract,static com.openggf.game.CharacterDefinition$ArtSupplier SUPER <none>
@@ -15758,6 +15796,7 @@ TYPE record public,final com.openggf.level.render.TileLoadRequest SUPER java.lan
 TYPE record public,final com.openggf.level.rings.RingFrame SUPER java.lang.Record
 TYPE record public,final com.openggf.level.rings.RingFramePiece SUPER java.lang.Record
 TYPE record public,final com.openggf.level.rings.RingSpawn SUPER java.lang.Record
+TYPE record public,final com.openggf.mods.SfxKey SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.TrackKey SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.code.BakedLevelRef SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.code.BakedSheetRef SUPER java.lang.Record
@@ -15780,6 +15819,7 @@ TYPE record public,final com.openggf.trace.TraceMetadata SUPER java.lang.Record
 TYPE record public,final com.openggf.trace.live.MismatchEntry SUPER java.lang.Record
 TYPE record public,final com.openggf.version.BuildIdentity SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.StreamedMusicPort$FadeState SUPER java.lang.Record
+TYPE record public,static,final com.openggf.audio.StreamedMusicPort$SfxRef SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.StreamedMusicPort$State SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.StreamedMusicPort$TrackRef SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$ChangeMusicTempo SUPER java.lang.Record
@@ -16022,6 +16062,7 @@ TYPE-ANNOTATION com.openggf.GameLoop @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.GameLoop$GameModeChangeListener @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.GameLoop$GameModeChangeListener @java.lang.Deprecated(forRemoval=false,since="")
 TYPE-ANNOTATION com.openggf.GameModeChangeListener @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.SpritePriorityLayerHook @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.SpritePriorityLayerHook @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.architecture.CompositionRoot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.architecture.CompositionRoot @java.lang.annotation.Retention(value=java.lang.annotation.RetentionPolicy.RUNTIME)
@@ -16037,6 +16078,8 @@ TYPE-ANNOTATION com.openggf.audio.GameSound @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.SegaPcmSpec @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.StreamedMusicPort @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.StreamedMusicPort$FadeState @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.StreamedMusicPort$OneShot @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.StreamedMusicPort$SfxRef @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.StreamedMusicPort$State @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.StreamedMusicPort$TrackRef @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.driver.SmpsDriver$ReadMode @com.openggf.game.ModApi
@@ -16405,6 +16448,7 @@ TYPE-ANNOTATION com.openggf.game.rewind.schema.RewindObjectStateBlob @com.opengg
 TYPE-ANNOTATION com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot$ModeState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot$Layout @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rewind.snapshot.CameraSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rewind.snapshot.FadeManagerSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rewind.snapshot.GameRngSnapshot @com.openggf.game.ModApi
@@ -16694,6 +16738,7 @@ TYPE-ANNOTATION com.openggf.level.rings.RingSpriteSheet @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.rings.SpillAnimationState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.scroll.ZoneScrollHandler @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.spawn.SpawnPoint @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.SfxKey @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.TrackKey @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.BakedLevelRef @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.BakedSheetRef @com.openggf.game.ModApi
@@ -16828,6 +16873,7 @@ TYPE-ANNOTATION com.openggf.sprites.managers.SpindashDustController$RewindState 
 TYPE-ANNOTATION com.openggf.sprites.managers.SpriteManager @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.managers.SpriteManager$SpriteDrawCallback @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.managers.SpriteMovementManager @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.sprites.managers.TailsFlightController @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.managers.TailsTailsController @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.playable.AbstractPlayableSprite @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.playable.DrowningController @com.openggf.game.ModApi
@@ -16836,6 +16882,7 @@ TYPE-ANNOTATION com.openggf.sprites.playable.DrowningController$RewindState @com
 TYPE-ANNOTATION com.openggf.sprites.playable.GroundWallResponseState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.playable.ObjectControlState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.playable.PlayableSpriteController @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.sprites.playable.PlayableSpriteController$RewindState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.playable.SecondaryAbility @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.playable.SidekickCarryTrigger @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.playable.SidekickCpuController @com.openggf.game.ModApi
@@ -16846,6 +16893,9 @@ TYPE-ANNOTATION com.openggf.sprites.playable.SidekickRespawnStrategy @com.opengg
 TYPE-ANNOTATION com.openggf.sprites.playable.SuperState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.playable.SuperStateController @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.playable.SuperStateController$PaletteTarget @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.sprites.playable.TailsCarryController @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.sprites.playable.TailsCarryController$CarryContext @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.sprites.playable.TailsCarryController$Snapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.render.PlayerSpriteRenderer @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.testmode.TraceCameraFocusController @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.testmode.TraceCameraFocusController$FocusMode @com.openggf.game.ModApi

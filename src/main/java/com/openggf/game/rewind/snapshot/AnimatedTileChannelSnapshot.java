@@ -115,6 +115,7 @@ public record AnimatedTileChannelSnapshot(Map<String, Integer> lastPhaseByChanne
     }
 
     /** Immutable key layout owned by one graph installation/diagnostic generation. */
+    @com.openggf.game.ModApi
     public static final class Layout {
         private final String[] keys;
         private final Map<String, Integer> indexByKey;

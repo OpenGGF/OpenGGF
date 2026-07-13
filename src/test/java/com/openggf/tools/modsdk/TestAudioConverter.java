@@ -18,19 +18,37 @@ class TestAudioConverter {
     void validatesDecodedAudioAndLoopThenCopiesCanonicalManifestAndAsset() throws Exception {
         Path root=temp.resolve("source"); Files.createDirectories(root.resolve("audio"));
         Path manifest=root.resolve("custom-input.yaml");
-        Files.writeString(manifest, "# author formatting\n"+manifest(0,2)); Files.write(root.resolve("audio/test.wav"),tinyWav());
+        Files.writeString(manifest, "# author formatting\n"+manifestWithSfx(0,2));
+        Files.write(root.resolve("audio/test.wav"),tinyWav());
+        Files.write(root.resolve("audio/hit.wav"),tinyWav());
         Path output=temp.resolve("out");
 
         AudioConverter.Result result=new AudioConverter().convert("example",
                 Path.of("custom-input.yaml"),root,output);
 
         assertEquals(1,result.trackCount());
+        assertEquals(1,result.sfxCount());
         assertArrayEquals(tinyWav(),Files.readAllBytes(output.resolve("audio/test.wav")));
+        assertArrayEquals(tinyWav(),Files.readAllBytes(output.resolve("audio/hit.wav")));
         Path canonical=output.resolve("audio/audio-manifest.yaml");assertTrue(Files.isRegularFile(canonical));
         assertFalse(Files.exists(output.resolve("custom-input.yaml")));
         assertNotEquals(Files.readString(manifest),Files.readString(canonical));
         assertEquals(1,new com.openggf.mods.ModAudioManifestParser("example")
                 .parse(Files.readAllBytes(canonical)).tracks().size());
+        assertEquals(1,new com.openggf.mods.ModAudioManifestParser("example")
+                .parse(Files.readAllBytes(canonical)).sfx().size());
+    }
+
+    @Test
+    void rejectsMalformedDeclaredSfxBeforePublishing() throws Exception {
+        Path root=temp.resolve("sfx-source");Files.createDirectories(root.resolve("audio"));
+        Path manifest=root.resolve("audio/audio-manifest.yaml");Path output=temp.resolve("sfx-out");
+        Files.writeString(manifest,manifestWithSfx(0,2));
+        Files.write(root.resolve("audio/test.wav"),tinyWav());
+        Files.write(root.resolve("audio/hit.wav"),new byte[]{1});
+
+        assertThrows(Exception.class,()->new AudioConverter().convert("example",manifest,root,output));
+        assertFalse(Files.exists(output));
     }
 
     @Test
@@ -74,6 +92,12 @@ class TestAudioConverter {
                 tempoEffects: false
             sfx: []
             """.formatted(start,end);}
+    private static String manifestWithSfx(long start,long end){return manifest(start,end).replace("sfx: []", """
+            sfx:
+              - id: hit
+                assetPath: audio/hit.wav
+                gain: 1.0
+            """);}
     private static byte[] tinyWav() throws Exception{ByteArrayOutputStream bytes=new ByteArrayOutputStream();try(DataOutputStream out=new DataOutputStream(bytes)){out.writeBytes("RIFF");le32(out,40);out.writeBytes("WAVEfmt ");le32(out,16);le16(out,1);le16(out,1);le32(out,8000);le32(out,16000);le16(out,2);le16(out,16);out.writeBytes("data");le32(out,4);out.write(new byte[4]);}return bytes.toByteArray();}
     private static void le16(DataOutputStream out,int v)throws Exception{out.writeByte(v);out.writeByte(v>>>8);}
     private static void le32(DataOutputStream out,int v)throws Exception{out.writeByte(v);out.writeByte(v>>>8);out.writeByte(v>>>16);out.writeByte(v>>>24);}

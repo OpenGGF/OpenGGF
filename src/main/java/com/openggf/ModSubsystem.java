@@ -309,15 +309,29 @@ public final class ModSubsystem implements AutoCloseable {
     public static SessionViewFactory preparedAudioFactory(ModAudioPreparer preparer,
                                                           EffectiveModCatalog effective,
                                                           ModTrackRegistry registry) {
+        return preparedAudioFactory(preparer, effective, registry, com.openggf.mods.ModSfxRegistry.EMPTY);
+    }
+
+    public static SessionViewFactory preparedAudioFactory(ModAudioPreparer preparer,
+                                                          EffectiveModCatalog effective,
+                                                          ModTrackRegistry registry,
+                                                          com.openggf.mods.ModSfxRegistry sfxRegistry) {
         Objects.requireNonNull(preparer, "preparer");
         Objects.requireNonNull(effective, "effective");
         Objects.requireNonNull(registry, "registry");
+        Objects.requireNonNull(sfxRegistry, "sfxRegistry");
         return (outputRate, gameCode) -> {
-            if (registry.tracks().isEmpty()) return SessionExternalContentView.EMPTY;
-            PreparedAudioSession audio = preparer.prepare(effective, registry, outputRate);
+            boolean stock = "s1".equals(gameCode) || "s2".equals(gameCode) || "s3k".equals(gameCode);
+            boolean selectedTrack = stock ? !registry.tracks().isEmpty() : registry.tracks().stream()
+                    .anyMatch(track -> track.key().modId().equals(gameCode));
+            boolean selectedSfx = !stock && sfxRegistry.sfx().stream()
+                    .anyMatch(sfx -> sfx.key().modId().equals(gameCode));
+            if (!selectedTrack && !selectedSfx) return SessionExternalContentView.EMPTY;
+            PreparedAudioSession audio = preparer.prepare(effective, registry, sfxRegistry, outputRate);
             PreparedModMusic music;
             try {
-                music = PreparedModMusic.build(effective, registry, audio, outputRate);
+                music = PreparedModMusic.build(effective, registry, sfxRegistry, audio, outputRate,
+                        stock ? null : gameCode);
             } catch (RuntimeException error) {
                 audio.close();
                 throw error;
@@ -391,7 +405,7 @@ public final class ModSubsystem implements AutoCloseable {
                     .map(entry -> ((com.openggf.mods.ModDescriptor) entry).manifest().id())
                     .collect(java.util.stream.Collectors.toUnmodifiableSet());
             ModSubsystem subsystem = new ModSubsystem(catalog, editor, findings,
-                    preparedAudioFactory(preparer, catalog.effective(), validated.registry()),
+                    preparedAudioFactory(preparer, catalog.effective(), validated.registry(), validated.sfxRegistry()),
                     audioBoundary, new ExternalContentPolicy(ExternalContentMode.NORMAL),
                     trustedOwners);
             if (development != null) subsystem.bootResource = development;

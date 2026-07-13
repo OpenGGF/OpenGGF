@@ -89,6 +89,16 @@ class TestModJarValidator {
         ModJarValidator.Report combinedReport = new ModJarValidator().validate(jar(combined));
         assertCode(combinedReport, "AUDIO_OVERRIDE_ID_INVALID");
         assertCode(combinedReport, "AUDIO_ASSET_INVALID");
+
+        Map<String, byte[]> malformedSfx = validEntries();
+        malformedSfx.put("audio/audio-manifest.yaml", audioManifestWithSfx());
+        malformedSfx.put("audio/test.wav", tinyWav());
+        malformedSfx.put("audio/hit.wav", new byte[] {1, 2, 3});
+        ModJarValidator.Report malformedSfxReport = new ModJarValidator().validate(jar(malformedSfx));
+        assertCode(malformedSfxReport, "AUDIO_ASSET_INVALID");
+        assertTrue(malformedSfxReport.findings().stream().anyMatch(finding ->
+                finding.member().equals(new com.openggf.mods.SfxKey("example", "hit").toString())
+                        && finding.location().equals("audio/hit.wav")));
     }
 
     @Test
@@ -332,6 +342,12 @@ class TestModJarValidator {
         return ("formatVersion: 1\ntracks:\n  - id: test\n    assetPath: audio/test.wav\n"
                 + "    loop: " + (loopEnd != null) + "\n    loopStartFrame: " + loopStart + "\n"
                 + end + "    gain: 1.0\n    tempoEffects: false\nsfx: []\n")
+                .getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static byte[] audioManifestWithSfx() {
+        return new String(audioManifest(0, null), StandardCharsets.UTF_8)
+                .replace("sfx: []", "sfx:\n  - id: hit\n    assetPath: audio/hit.wav\n    gain: 1.0")
                 .getBytes(StandardCharsets.UTF_8);
     }
 

@@ -964,6 +964,14 @@ public class AudioManager {
         return true;
     }
 
+    /** Plays an exact namespaced one-shot outside the deterministic audio timeline. */
+    public boolean playNamespacedSfx(StreamedMusicPort.SfxRef sfx) {
+        java.util.Objects.requireNonNull(sfx, "sfx");
+        if (suppressingRewindReplay() || reverseAudioPresentationActive) return false;
+        if (backend == null || !sendLiveBackendCommands()) return false;
+        return backend.tryPlayStreamedSfx(sfx);
+    }
+
     public boolean playMusic(GameMusic music) {
         Integer musicId = resolveMusic(audioProfile, music);
         if (musicId == null) {

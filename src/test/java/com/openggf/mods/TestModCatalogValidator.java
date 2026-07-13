@@ -70,6 +70,23 @@ class TestModCatalogValidator {
     }
 
     @Test
+    void standaloneSfxIsEligibleWhilePatchSfxRemainsDeferred() throws Exception {
+        Map<String, byte[]> entries = Map.of(
+                "audio/audio-manifest.yaml", bytes(audio("music", "audio/music.ogg", true)),
+                "audio/music.ogg", new byte[] {1}, "audio/hit.wav", new byte[] {2});
+        ModDescriptor standalone = descriptor("standalone-sfx", ModType.STANDALONE, null,
+                Map.of(), entries);
+        ModDescriptor patch = descriptor("patch-sfx", "s1", Map.of(), entries);
+
+        ModCatalogValidator.ValidationResult result = validator().validate(List.of(standalone, patch));
+
+        assertFalse(descriptor(result, "standalone-sfx").hasErrors());
+        assertTrue(result.sfxRegistry().find(new SfxKey("standalone-sfx", "hit")).isPresent());
+        assertTrue(codes(result, "patch-sfx").contains("SFX_UNSUPPORTED_PHASE1"));
+        assertTrue(result.sfxRegistry().find(new SfxKey("patch-sfx", "hit")).isEmpty());
+    }
+
+    @Test
     void overrideDomainStandaloneDigestAndCollisionRulesAreEnforced() throws Exception {
         ModDescriptor first = descriptor("first", "s1", Map.of(0x81, "music"), audioEntries("music"));
         ModDescriptor second = descriptor("second", "s1", Map.of(0x81, "music"), audioEntries("music"));

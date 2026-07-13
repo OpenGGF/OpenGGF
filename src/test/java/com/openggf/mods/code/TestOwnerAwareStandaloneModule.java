@@ -91,5 +91,28 @@ class TestOwnerAwareStandaloneModule {
                 () -> wrapped.getGameService(DynamicService.class).invoke());
     }
 
+    @Test
+    void standaloneLevelMusicMustBeNonNullNamespacedAndOwnedByTheModule() {
+        assertEquals(com.openggf.game.MusicReference.namespaced("owner", "level"),
+                wrappedMusic(com.openggf.game.MusicReference.namespaced("owner", "level"))
+                        .getLevelMusicReference(0, 0));
+        assertThrows(ModFaultBoundary.CallbackAborted.class,
+                () -> wrappedMusic(com.openggf.game.MusicReference.stock(1))
+                        .getLevelMusicReference(0, 0));
+        assertThrows(ModFaultBoundary.CallbackAborted.class,
+                () -> wrappedMusic(com.openggf.game.MusicReference.namespaced("other", "level"))
+                        .getLevelMusicReference(0, 0));
+        assertThrows(ModFaultBoundary.CallbackAborted.class,
+                () -> wrappedMusic(null).getLevelMusicReference(0, 0));
+    }
+
+    private static GameModule wrappedMusic(com.openggf.game.MusicReference music) {
+        ModFaultBoundary boundary = new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
+                owners -> new ModStateSaveResult.Saved(), owners -> { });
+        GameModule delegate = mock(GameModule.class);
+        when(delegate.getLevelMusicReference(0, 0)).thenReturn(music);
+        return OwnerAwareStandaloneModule.wrap("owner", delegate, boundary, Map.of());
+    }
+
     private interface DynamicService { void invoke(); }
 }

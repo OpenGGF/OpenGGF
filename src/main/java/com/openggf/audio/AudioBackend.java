@@ -38,6 +38,12 @@ public interface AudioBackend {
         return false;
     }
 
+    /** Atomically validates and queues an exact keyed presentation-only one-shot. */
+    default boolean tryPlayStreamedSfx(StreamedMusicPort.SfxRef sfx) {
+        java.util.Objects.requireNonNull(sfx, "sfx");
+        return false;
+    }
+
     default void beginStreamedOverrideReplayBypass() { }
 
     default void endStreamedOverrideReplayBypass() { }

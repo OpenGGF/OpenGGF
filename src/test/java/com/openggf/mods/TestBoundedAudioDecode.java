@@ -69,6 +69,28 @@ class TestBoundedAudioDecode {
     }
 
     @Test
+    void oneShotDecodeUsesDedicatedByteAndDurationCapsBeforeAllocation() throws Exception {
+        PcmDecoder decoder = new PcmDecoder();
+        byte[] shortWav = wav(8_000, 1, 16, new short[] { 1, 2, 3 }, false);
+        ModInputLimits tinySfx = ModInputLimits.loweringBuilder().maxSfxPcmBytes(5).build();
+        assertDoesNotThrow(() -> decoder.decode("audio/effect.wav", shortWav, tinySfx));
+        assertThrows(IOException.class, () -> decoder.decodeSfx("audio/effect.wav", shortWav, tinySfx));
+
+        ModInputLimits oneSecondSfx = ModInputLimits.loweringBuilder().maxSfxSeconds(1).build();
+        byte[] overOneSecond = wav(8_000, 1, 16, new short[8_001], false);
+        assertDoesNotThrow(() -> decoder.decode("audio/effect.wav", overOneSecond, oneSecondSfx));
+        assertThrows(IOException.class,
+                () -> decoder.decodeSfx("audio/effect.wav", overOneSecond, oneSecondSfx));
+
+        byte[] overProductionSfxDuration = wav(8_000, 1, 16,
+                new short[8_000 * ModInputLimits.DEFAULT_MAX_SFX_SECONDS + 1], false);
+        assertDoesNotThrow(() -> decoder.decode(
+                "audio/effect.wav", overProductionSfxDuration, ModInputLimits.production()));
+        assertThrows(IOException.class, () -> decoder.decodeSfx(
+                "audio/effect.wav", overProductionSfxDuration, ModInputLimits.production()));
+    }
+
+    @Test
     void wavHostileHeaderMatrixRejectsUnsignedSizesOrderingDuplicatesAndInconsistentFormat() {
         byte[] base = wav(8_000, 1, 16, new short[] {1, 2, 3}, false);
         List<byte[]> hostile = new ArrayList<>();

@@ -82,6 +82,11 @@ public interface ObjectServices {
     // Audio
     void playSfx(int soundId);
     void playSfx(GameSound sound);
+    default boolean playSfx(com.openggf.mods.SfxKey sound) {
+        java.util.Objects.requireNonNull(sound, "sound");
+        return audioManager().playNamespacedSfx(
+                new com.openggf.audio.StreamedMusicPort.SfxRef(sound.modId(), sound.localName()));
+    }
     void playMusic(int musicId);
     default boolean playMusic(GameMusic music) {
         return audioManager().playMusic(music);
