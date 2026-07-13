@@ -75,6 +75,33 @@ public final class SamplePlatformerAssetGenerator {
     };
 
     /**
+     * Palette line 2: the unified OBJECT palette shared by zapbug, springpad, and ring
+     * (flappy-precedent: the level GPAL deliberately populates the CRAM line the object
+     * sheets land on). The three object PNGs are drawn strictly from these RGB values and
+     * each object sheet YAML declares exactly this 16-color list, so convert-time
+     * quantization is lossless AND the runtime colors (sourced from this GPAL line) match
+     * the designed art.
+     */
+    private static final int[][] LINE2 = {
+            {0, 0, 0}, // 0: transparent slot (background pixels quantize here; hidden at runtime)
+            {1, 1, 1}, // 1: outline near-black
+            {7, 6, 0}, // 2: ring gold light
+            {5, 4, 0}, // 3: ring gold dark
+            {7, 0, 0}, // 4: bright red (zapbug core / springpad accent stripe)
+            {4, 0, 0}, // 5: zapbug mid red
+            {1, 0, 0}, // 6: zapbug outline dark red
+            {2, 2, 2}, // 7: dark gray (zapbug legs frame 0)
+            {5, 5, 5}, // 8: light gray (zapbug legs frame 1 / springpad coil shade)
+            {7, 7, 0}, // 9: yellow (zapbug eye / springpad coil bright)
+            {4, 4, 0}, // 10: dark yellow (springpad compressed coil)
+            {3, 3, 3}, // 11: mid gray (springpad base plate)
+            {7, 7, 7}, // 12: white highlight
+            {7, 4, 0}, // 13: orange (spare)
+            {3, 2, 0}, // 14: brown (spare)
+            {6, 6, 6}, // 15: bright gray (spare)
+    };
+
+    /**
      * Palette line 0 (character colors) -- a PLACEHOLDER, not Bolt's runtime colors. Bolt's
      * on-screen colors come from the {@code .ggfp} BASE palette (the 16 colors declared in
      * {@code bolt-sheet.yaml}) via {@code CharacterDefinition}'s palette supplier
@@ -99,12 +126,13 @@ public final class SamplePlatformerAssetGenerator {
             # paletteLine is a BASE, not the final CRAM line: SpritePieceRenderer.preparePiece
             # computes the rendered line as (paletteLine + piece.paletteIndex) & 0x3 (Genesis
             # art_tile-addition semantics). Every piece below declares paletteIndex: 0, so this
-            # sheet renders on CRAM line (1 + 0) & 3 = 1 -- the tile/object color line the
-            # level's palette.gpal actually populates. Do not bump paletteIndex to 1: that
-            # would move rendering to line 2, which this mod's 2-line GPAL leaves zero-filled
-            # (solid black). Note the declared 16-color palette list below is used only at
-            # convert time for exact pixel quantization; at runtime the colors come from the
-            # level GPAL at the computed line.
+            # sheet renders on CRAM line (2 + 0) & 3 = 2 -- which this mod's palette.gpal
+            # DELIBERATELY populates with the shared 16-color object palette (ring golds,
+            # zapbug reds, springpad grays/yellow), mirroring the sample-flappy pipe-sheet
+            # approach. The declared palette list below is byte-for-byte that GPAL line, so
+            # convert-time quantization and runtime colors agree. Keep the three in sync:
+            # this list, the PNG's pixels, and the generator's LINE2 GPAL data. Do not bump
+            # paletteIndex: (2 + 1) & 3 = 3 is zero-filled in the GPAL (solid black).
             """;
 
     private SamplePlatformerAssetGenerator() {}
@@ -137,11 +165,12 @@ public final class SamplePlatformerAssetGenerator {
         byte[] bytes = binary(out -> {
             out.writeBytes("GPAL");
             out.writeShort(1);
-            out.writeShort(2);
+            out.writeShort(3);
             out.writeShort(16);
             out.writeShort(0);
-            writeLine(out, LINE0);
-            writeLine(out, LINE1);
+            writeLine(out, LINE0); // line 0: player placeholder (overridden by .ggfp palette)
+            writeLine(out, LINE1); // line 1: tileset colors
+            writeLine(out, LINE2); // line 2: shared object colors (zapbug/springpad/ring)
         });
         Files.write(MOD_DIR.resolve("palette.gpal"), bytes);
     }
@@ -369,101 +398,86 @@ public final class SamplePlatformerAssetGenerator {
     }
 
     private static void writeZapbug() throws IOException {
-        int[][] palette = {
-                {0, 0, 0}, {1, 0, 0}, {4, 0, 0}, {7, 0, 0},
-                {2, 2, 2}, {5, 5, 5}, {7, 7, 0}, {0, 4, 7},
-                {3, 0, 3}, {0, 7, 0}, {7, 4, 0}, {0, 0, 7},
-                {7, 7, 7}, {3, 3, 0}, {0, 3, 3}, {7, 0, 7},
-        };
         BufferedImage image = new BufferedImage(24, 32, BufferedImage.TYPE_INT_RGB);
         for (int frame = 0; frame < 2; frame++) {
             int oy = frame * 16;
             for (int y = 0; y < 16; y++) for (int x = 0; x < 24; x++) {
-                image.setRGB(x, oy + y, rgb8Of(palette, zapbugPixel(x, y, frame)));
+                image.setRGB(x, oy + y, rgb8Of(LINE2, zapbugPixel(x, y, frame)));
             }
         }
         writePng(image, "zapbug.png");
-        writeSheetYaml("zapbug-sheet.yaml", OBJECT_LINE_WARNING, 1, palette, List.of(
+        writeSheetYaml("zapbug-sheet.yaml", OBJECT_LINE_WARNING, 2, LINE2, List.of(
                 frameYaml(16, pieceYaml(0, 0, 24, 16, -12, -8, 0)),
                 frameYaml(16, pieceYaml(0, 16, 24, 16, -12, -8, 0))));
     }
 
+    /** Returns LINE2 indices. */
     private static int zapbugPixel(int x, int y, int frame) {
         int cx = 12, cy = 8;
         double dx = (x - cx) / 9.0, dy = (y - cy) / 6.0;
         double d2 = dx * dx + dy * dy;
         if (d2 <= 1.0) {
-            if (d2 >= 0.75) return 1; // outline
-            return d2 <= 0.35 ? 3 : 2; // bright core / mid red
+            if (d2 >= 0.75) return 6; // dark red outline
+            return d2 <= 0.35 ? 4 : 5; // bright core / mid red
         }
         // Legs: alternate diagonals per frame for a simple 2-frame walk cycle.
         int legPhase = frame == 0 ? 1 : -1;
         for (int leg = -1; leg <= 1; leg += 2) {
             int lx = cx + leg * 10;
             int ly = cy + legPhase * leg;
-            if (Math.abs(x - lx) <= 1 && Math.abs(y - ly) <= 6) return frame == 0 ? 4 : 5;
+            if (Math.abs(x - lx) <= 1 && Math.abs(y - ly) <= 6) return frame == 0 ? 7 : 8; // gray legs
         }
         int eyeDx = x - cx, eyeDy = y - (cy - 2);
-        if (eyeDx * eyeDx + eyeDy * eyeDy <= 1) return 6;
+        if (eyeDx * eyeDx + eyeDy * eyeDy <= 1) return 9; // yellow eye
         return 0;
     }
 
     private static void writeSpringpad() throws IOException {
-        int[][] palette = {
-                {0, 0, 0}, {1, 1, 1}, {3, 3, 3}, {5, 5, 5},
-                {7, 7, 0}, {4, 4, 0}, {7, 0, 0}, {0, 7, 0},
-                {0, 0, 7}, {7, 7, 7}, {2, 2, 2}, {6, 3, 0},
-                {3, 0, 6}, {0, 6, 6}, {6, 6, 3}, {3, 6, 3},
-        };
         BufferedImage image = new BufferedImage(32, 32, BufferedImage.TYPE_INT_RGB);
         for (int frame = 0; frame < 2; frame++) {
             int oy = frame * 16;
             for (int y = 0; y < 16; y++) for (int x = 0; x < 32; x++) {
-                image.setRGB(x, oy + y, rgb8Of(palette, springpadPixel(x, y, frame)));
+                image.setRGB(x, oy + y, rgb8Of(LINE2, springpadPixel(x, y, frame)));
             }
         }
         writePng(image, "springpad.png");
-        writeSheetYaml("springpad-sheet.yaml", OBJECT_LINE_WARNING, 1, palette, List.of(
+        writeSheetYaml("springpad-sheet.yaml", OBJECT_LINE_WARNING, 2, LINE2, List.of(
                 frameYaml(4, pieceYaml(0, 0, 32, 16, -16, -8, 0)),
                 frameYaml(8, pieceYaml(0, 16, 32, 16, -16, -8, 0))));
     }
 
+    /** Returns LINE2 indices. */
     private static int springpadPixel(int x, int y, int frame) {
         boolean edge = x == 0 || x == 31 || y == 0 || y == 15;
-        if (edge) return 1;
+        if (edge) return 1; // near-black outline
         // Base plate: bottom 4 rows always solid.
-        if (y >= 12) return (y == 12) ? 6 : 2;
+        if (y >= 12) return (y == 12) ? 4 : 11; // red accent stripe over mid-gray plate
         // Coil: compressed (frame 0) fills fewer rows than extended (frame 1).
         int coilTop = frame == 0 ? 8 : 2;
         if (y >= coilTop && y < 12) {
             boolean stripe = ((x / 2) + y) % 2 == 0;
-            return stripe ? (frame == 0 ? 5 : 4) : 3;
+            return stripe ? (frame == 0 ? 10 : 9) : 8; // yellow coil stripes over light gray
         }
         return 0;
     }
 
     private static void writeRing() throws IOException {
-        int[][] palette = {
-                {0, 0, 0}, {7, 6, 0}, {5, 4, 0}, {3, 2, 0},
-                {7, 7, 4}, {6, 5, 1}, {4, 3, 0}, {2, 1, 0},
-                {7, 7, 7}, {1, 1, 1}, {6, 6, 0}, {5, 5, 0},
-                {4, 4, 0}, {3, 3, 0}, {2, 2, 0}, {7, 6, 2},
-        };
         BufferedImage image = new BufferedImage(16, 64, BufferedImage.TYPE_INT_RGB);
         for (int frame = 0; frame < 4; frame++) {
             int oy = frame * 16;
             for (int y = 0; y < 16; y++) for (int x = 0; x < 16; x++) {
-                image.setRGB(x, oy + y, rgb8Of(palette, ringPixel(x, y, frame)));
+                image.setRGB(x, oy + y, rgb8Of(LINE2, ringPixel(x, y, frame)));
             }
         }
         writePng(image, "ring.png");
-        writeSheetYaml("ring-sheet.yaml", OBJECT_LINE_WARNING, 1, palette, List.of(
+        writeSheetYaml("ring-sheet.yaml", OBJECT_LINE_WARNING, 2, LINE2, List.of(
                 frameYaml(6, pieceYaml(0, 0, 16, 16, -8, -8, 0)),
                 frameYaml(6, pieceYaml(0, 16, 16, 16, -8, -8, 0)),
                 frameYaml(6, pieceYaml(0, 32, 16, 16, -8, -8, 0)),
                 frameYaml(6, pieceYaml(0, 48, 16, 16, -8, -8, 0))));
     }
 
+    /** Returns LINE2 indices. */
     private static int ringPixel(int x, int y, int frame) {
         // 4-frame spin illusion: ellipse width narrows toward a thin edge-on line then back out.
         double[] halfWidths = {6.0, 3.5, 1.2, 3.5};
@@ -475,7 +489,7 @@ public final class SamplePlatformerAssetGenerator {
         double innerScale = halfWidth <= 2.0 ? 0.4 : 0.6;
         double idx = (x - cx) / (halfWidth * innerScale), idy = (y - cy) / (halfHeight * innerScale);
         if (idx * idx + idy * idy <= 1.0) return 0; // hollow center
-        return (x + y) % 2 == 0 ? 1 : 2;
+        return (x + y) % 2 == 0 ? 2 : 3; // light/dark gold dither
     }
 
     private static int rgb8Of(int[][] palette, int index) {
