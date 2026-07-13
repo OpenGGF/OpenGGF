@@ -801,7 +801,9 @@ public class CollisionSystem {
         // stale grounded mode retained after leaving a loop or wall, causing an
         // airborne floor check to scan sideways.
         CollisionRules collisionRules = collisionRulesOrNull(sprite);
-        if (collisionRules != null && collisionRules.airborneProbesResetStaleGroundMode()) {
+        if (collisionRules != null
+                && collisionRules.air() != null
+                && collisionRules.air().probesResetStaleGroundMode()) {
             sprite.setGroundMode(GroundMode.GROUND);
         }
         int quadrant = TrigLookupTable.calcMovementQuadrant(sprite.getXSpeed(), sprite.getYSpeed());
@@ -859,12 +861,16 @@ public class CollisionSystem {
 
     private boolean airRightWallHitContinuesIntoCeilingSeparation(AbstractPlayableSprite sprite) {
         CollisionRules rules = collisionRulesOrNull(sprite);
-        return rules != null && rules.airRightWallHitContinuesIntoCeilingSeparation();
+        return rules != null
+                && rules.air() != null
+                && rules.air().rightWallHitContinuesIntoCeilingSeparation();
     }
 
     private boolean airLeftWallHitContinuesIntoCeilingSeparation(AbstractPlayableSprite sprite) {
         CollisionRules rules = collisionRulesOrNull(sprite);
-        return rules != null && rules.airLeftWallHitContinuesIntoCeilingSeparation();
+        return rules != null
+                && rules.air() != null
+                && rules.air().leftWallHitContinuesIntoCeilingSeparation();
     }
 
     /**

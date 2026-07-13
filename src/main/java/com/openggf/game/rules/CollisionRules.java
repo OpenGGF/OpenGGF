@@ -8,9 +8,7 @@ public record CollisionRules(
         boolean groundWallPushRequiresFacingIntoWall,
         boolean repeatedObjectRideGroundWallResponseDeferred,
         boolean topSolidLandingAllowsZeroDist,
-        boolean airBottomSolidHitClearsGroundSpeed,
-        boolean airRightWallHitContinuesIntoCeilingSeparation,
-        boolean airLeftWallHitContinuesIntoCeilingSeparation,
+        AirCollisionRules air,
         boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly,
         boolean solidObjectOffscreenGate,
         boolean solidObjectRequiresSidekickOnScreen,
@@ -22,6 +20,5 @@ public record CollisionRules(
         boolean solidObjectBarelyPokingResolvesAsSide,
         boolean solidObjectKeepsOnObjWhenJumpedOffSameFrame,
         boolean advanceWaterLevelBeforePlayerPhysics,
-        boolean airborneProbesResetStaleGroundMode,
         int defaultCollisionLayoutYMask) {
 }

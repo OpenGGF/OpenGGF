@@ -353,6 +353,7 @@ class TestSidekickCpuFollowParity {
                         GameRules.SONIC_2.sidekickCpu().sidekickDespawnX(),
                         0,
                         false,
+                        false,
                         true,
                         true,
                         GameRules.SONIC_2.sidekickCpu().sidekickFlyLandStatusBlockerMask(),
