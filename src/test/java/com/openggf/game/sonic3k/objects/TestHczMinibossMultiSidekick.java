@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -14,10 +15,14 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestHczMinibossMultiSidekick {
@@ -95,6 +100,86 @@ class TestHczMinibossMultiSidekick {
 
         assertFalse(newExtra.isObjectControlled());
         assertTrue(oldExtra.isObjectControlled(), "rewind cleanup must not target stale player instances");
+    }
+
+    @Test
+    void freshBossRestoreUsesCompactRocketBubbleAndPlayerReferences() throws Exception {
+        HczMinibossInstance source = new HczMinibossInstance(
+                new ObjectSpawn(0x1800, 0x0600, 0x99, 0, 0, false, 0));
+        TestablePlayableSprite oldMain = player("sonic");
+        TestablePlayableSprite oldP2 = player("tails");
+        TestablePlayableSprite oldExtra = player("knuckles");
+        source.setServices(new QueryServices(oldMain, List.of(oldP2, oldExtra)));
+        pull(source, oldMain);
+        Object oldBubble = bubble(0x1800, 0x0748);
+        bubbleList(source).add(oldBubble);
+        setRocketField(source, 2, "phaseX", 0x57);
+        setRocketField(source, 2, "routine", 8);
+
+        RewindIdentityTable captured = identities(oldMain, oldP2, oldExtra);
+        ObjectRefId bubbleId = ObjectRefId.dynamic(7, 3, 41);
+        captured.registerObject((com.openggf.level.objects.ObjectInstance) oldBubble, bubbleId);
+        var snapshot = source.captureRewindState(RewindCaptureContext.withIdentityTable(captured));
+        assertNotNull(snapshot.compactGenericState(), "HCZ boss must not fall back to legacy generic capture");
+
+        HczMinibossInstance restored = new HczMinibossInstance(
+                new ObjectSpawn(0x1800, 0x0600, 0x99, 0, 0, false, 0));
+        TestablePlayableSprite newMain = player("sonic");
+        TestablePlayableSprite newP2 = player("tails");
+        TestablePlayableSprite newExtra = player("knuckles");
+        restored.setServices(new QueryServices(newMain, List.of(newP2, newExtra)));
+        Object newBubble = bubble(0x1800, 0x0748);
+        RewindIdentityTable replacement = identities(newMain, newP2, newExtra);
+        replacement.registerObject((com.openggf.level.objects.ObjectInstance) newBubble, bubbleId);
+        restored.restoreRewindState(snapshot, RewindCaptureContext.withIdentityTable(replacement));
+
+        assertEquals(0x57, rocketInt(restored, 2, "phaseX"));
+        assertEquals(8, rocketInt(restored, 2, "routine"));
+        assertEquals(1, bubbleList(restored).size());
+        assertSame(newBubble, bubbleList(restored).getFirst(), "bubble graph must relink to the recreated child");
+        assertTrue(vortexOwners(restored).containsKey(newExtra), "player ownership must relink through PlayerRefId");
+        assertFalse(vortexOwners(restored).containsKey(oldExtra));
+    }
+
+    private static Object bubble(int x, int y) throws Exception {
+        Class<?> type = Class.forName(HczMinibossInstance.class.getName() + "$VortexBubbleChild");
+        Constructor<?> constructor = type.getDeclaredConstructor(int.class, int.class, int.class, int.class, int.class);
+        constructor.setAccessible(true);
+        return constructor.newInstance(x, y, 0x16, x, y);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<Object> bubbleList(HczMinibossInstance boss) throws Exception {
+        Field field = HczMinibossInstance.class.getDeclaredField("vortexBubbles");
+        field.setAccessible(true);
+        return (List<Object>) field.get(boss);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static java.util.Map<PlayableEntity, Boolean> vortexOwners(HczMinibossInstance boss) throws Exception {
+        Field field = HczMinibossInstance.class.getDeclaredField("vortexControlledPlayers");
+        field.setAccessible(true);
+        return (java.util.Map<PlayableEntity, Boolean>) field.get(boss);
+    }
+
+    private static void setRocketField(HczMinibossInstance boss, int index, String name, int value) throws Exception {
+        Object rocket = rockets(boss)[index];
+        Field field = rocket.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.setInt(rocket, value);
+    }
+
+    private static int rocketInt(HczMinibossInstance boss, int index, String name) throws Exception {
+        Object rocket = rockets(boss)[index];
+        Field field = rocket.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getInt(rocket);
+    }
+
+    private static Object[] rockets(HczMinibossInstance boss) throws Exception {
+        Field field = HczMinibossInstance.class.getDeclaredField("rockets");
+        field.setAccessible(true);
+        return (Object[]) field.get(boss);
     }
 
     private static void pull(HczMinibossInstance boss, TestablePlayableSprite main) throws Exception {

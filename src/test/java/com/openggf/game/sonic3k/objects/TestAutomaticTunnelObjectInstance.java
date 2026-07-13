@@ -106,6 +106,28 @@ class TestAutomaticTunnelObjectInstance {
     }
 
     @Test
+    void unrelatedControlTakeoverIsNotClearedByRosterOmissionOrUnload() {
+        AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(
+                new ObjectSpawn(0x0F60, 0x0578, 0x24, 0, 0, false, 0));
+        TestPlayableSprite main = playerAt(0x0100, 0x0100);
+        TestPlayableSprite nativeP2 = playerAt(0x0100, 0x0100);
+        TestPlayableSprite extra = playerAt(0x0F60, 0x0578);
+        List<com.openggf.game.PlayableEntity> sidekicks = new ArrayList<>(List.of(nativeP2, extra));
+        tunnel.setServices(new StubObjectServices().withPlayerQuery(
+                new ObjectPlayerQuery(() -> main, () -> sidekicks)));
+        tunnel.update(0, main);
+
+        ObjectControlState.nativeBit7FullControl().applyTo(extra);
+        extra.setControlLocked(true);
+        sidekicks.remove(extra);
+        tunnel.update(1, main);
+        tunnel.onUnload();
+
+        assertTrue(extra.isObjectControlled(), "tunnel must not release a later owner's matching generic control bits");
+        assertTrue(extra.isControlLocked());
+    }
+
+    @Test
     void rewindRelinksExtensionTunnelOwnerToReplacementPlayer() {
         AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(
                 new ObjectSpawn(0x0F60, 0x0578, 0x24, 0, 0, false, 0));

@@ -93,6 +93,73 @@ class TestCnzCylinderInstance {
         assertTrue(oldExtra.isObjectControlled(), "rewind unload must not target the stale captured rider");
     }
 
+    @Test
+    void activeNativeP2StateFollowsActorAcrossDemotionPromotionAndOmission() {
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(spawn());
+        TestPlayableSprite main = new TestPlayableSprite();
+        TestPlayableSprite rider = new TestPlayableSprite();
+        TestPlayableSprite replacement = new TestPlayableSprite();
+        List<PlayableEntity> sidekicks = new ArrayList<>(List.of(rider, replacement));
+        cylinder.setServices(new StubObjectServices().withPlayerQuery(
+                new ObjectPlayerQuery(() -> main, () -> sidekicks)));
+        cylinder.update(1, main);
+        rider.setCentreX((short) 0x1BC6);
+        rider.setCentreY((short) 0x07AC);
+        cylinder.onSolidContact(rider, new SolidContact(true, false, false, true, false), 2);
+        cylinder.update(3, main);
+        assertTrue(rider.isObjectControlled());
+
+        sidekicks.clear();
+        sidekicks.add(replacement);
+        sidekicks.add(rider);
+        cylinder.update(4, main);
+        assertTrue(rider.isObjectControlled(), "demoted native P2 must retain its rider state by identity");
+        assertFalse(replacement.isObjectControlled(), "new native P2 must not inherit the prior actor's state");
+
+        sidekicks.clear();
+        sidekicks.add(rider);
+        sidekicks.add(replacement);
+        cylinder.update(5, main);
+        assertTrue(rider.isObjectControlled(), "promoting the same actor must migrate its extension state back to P2");
+
+        sidekicks.remove(rider);
+        cylinder.update(6, main);
+        assertFalse(rider.isObjectControlled(), "omitting the active former P2 must release the actual actor");
+    }
+
+    @Test
+    void freshRecreatedCylinderRelinksNativeP2SlotToReplacementPlayer() {
+        CnzCylinderInstance source = new CnzCylinderInstance(spawn());
+        TestPlayableSprite oldMain = new TestPlayableSprite();
+        TestPlayableSprite oldP2 = new TestPlayableSprite();
+        TestPlayableSprite oldExtra = new TestPlayableSprite();
+        source.setServices(new StubObjectServices().withPlayerQuery(
+                new ObjectPlayerQuery(() -> oldMain, () -> List.of(oldP2, oldExtra))));
+        source.update(1, oldMain);
+        oldP2.setCentreX((short) 0x1BC6);
+        oldP2.setCentreY((short) 0x07AC);
+        source.onSolidContact(oldP2, new SolidContact(true, false, false, true, false), 2);
+        source.update(3, oldMain);
+        var snapshot = source.captureRewindState(RewindCaptureContext.withIdentityTable(
+                identities(oldMain, oldP2, oldExtra)));
+
+        TestPlayableSprite newMain = new TestPlayableSprite();
+        TestPlayableSprite newP2 = new TestPlayableSprite();
+        TestPlayableSprite newExtra = new TestPlayableSprite();
+        CnzCylinderInstance restored = new CnzCylinderInstance(spawn());
+        restored.setServices(new StubObjectServices().withPlayerQuery(
+                new ObjectPlayerQuery(() -> newMain, () -> List.of(newP2, newExtra))));
+        restored.restoreRewindState(snapshot, RewindCaptureContext.withIdentityTable(
+                identities(newMain, newP2, newExtra)));
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(newP2);
+        newP2.setObjectMappingFrameControl(true);
+
+        restored.onUnload();
+
+        assertFalse(newP2.isObjectControlled());
+        assertTrue(oldP2.isObjectControlled(), "fresh restore must not retain the captured Java actor");
+    }
+
     private static RewindIdentityTable identities(TestPlayableSprite main,
                                                    TestPlayableSprite p2,
                                                    TestPlayableSprite extra) {

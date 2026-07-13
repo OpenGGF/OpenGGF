@@ -191,7 +191,10 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        List<AbstractPlayableSprite> extensionPlayers = extensionPlayers();
+        List<PlayableEntity> participants = participants();
+        AbstractPlayableSprite nativeP2 = currentNativeP2();
+        reconcileNativeP2(nativeP2, participants, frameCounter);
+        List<AbstractPlayableSprite> extensionPlayers = extensionPlayers(participants, playerEntity, nativeP2);
         reconcileExtensionRoster(extensionPlayers, frameCounter);
         // ROM sub_324C0 / SolidObjectFull (sonic3k.asm:41006-41008): when a
         // rider is offscreen (`tst.b render_flags(a1); bpl.w locret_1DCB4`)
@@ -462,18 +465,89 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         }
     }
 
-    private List<AbstractPlayableSprite> extensionPlayers() {
+    private List<PlayableEntity> participants() {
         ObjectServices svc = tryServices();
         if (svc == null) return List.of();
-        PlayableEntity main = svc.playerQuery().mainPlayerOrNull();
-        PlayableEntity nativeP2 = svc.playerQuery().nativeP2OrNull();
+        return svc.playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+    }
+
+    private AbstractPlayableSprite currentNativeP2() {
+        ObjectServices svc = tryServices();
+        return svc != null && svc.playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite player
+                ? player : null;
+    }
+
+    private List<AbstractPlayableSprite> extensionPlayers(List<PlayableEntity> participants,
+                                                           PlayableEntity main,
+                                                           AbstractPlayableSprite nativeP2) {
         List<AbstractPlayableSprite> extensions = new ArrayList<>();
-        for (PlayableEntity participant : svc.playerQuery().playersFor(
-                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+        for (PlayableEntity participant : participants) {
             if (participant != main && participant != nativeP2
                     && participant instanceof AbstractPlayableSprite player) extensions.add(player);
         }
         return List.copyOf(extensions);
+    }
+
+    private void reconcileNativeP2(AbstractPlayableSprite currentNativeP2,
+                                   List<PlayableEntity> participants,
+                                   int frameCounter) {
+        AbstractPlayableSprite priorOwner = playerTwoSlot.player;
+        if (priorOwner == currentNativeP2) return;
+
+        if (priorOwner != null) {
+            if (containsIdentity(participants, priorOwner)) {
+                ExtensionRiderState demoted = new ExtensionRiderState();
+                copySlot(playerTwoSlot, demoted);
+                extensionRiderStates.put(priorOwner, demoted);
+                standingMask = moveStandingBit(standingMask, 0x02, 0x04);
+                nextStandingMask = moveStandingBit(nextStandingMask, 0x02, 0x04);
+            } else {
+                releaseOwnedSlot(playerTwoSlot, frameCounter);
+            }
+        }
+
+        ExtensionRiderState promoted = currentNativeP2 == null
+                ? null : extensionRiderStates.remove(currentNativeP2);
+        resetSlot(playerTwoSlot);
+        if (promoted != null) {
+            copySlot(promoted, playerTwoSlot);
+            if (promoted.active || promoted.contactLatched) {
+                standingMask |= 0x02;
+                nextStandingMask |= 0x02;
+            }
+        } else {
+            playerTwoSlot.player = currentNativeP2;
+        }
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity candidate) {
+        for (PlayableEntity participant : participants) if (participant == candidate) return true;
+        return false;
+    }
+
+    private static int moveStandingBit(int mask, int from, int to) {
+        return (mask & from) == 0 ? mask : (mask & ~from) | to;
+    }
+
+    private static void copySlot(RiderSlot source, RiderSlot target) {
+        target.active = source.active;
+        target.contactLatched = source.contactLatched;
+        target.twistAngle = source.twistAngle;
+        target.horizontalDistance = source.horizontalDistance;
+        target.priorityThresholdSource = source.priorityThresholdSource;
+        target.player = source.player;
+        target.jumpPressedLastFrame = source.jumpPressedLastFrame;
+    }
+
+    private static void resetSlot(RiderSlot slot) {
+        slot.active = false;
+        slot.contactLatched = false;
+        slot.twistAngle = 0;
+        slot.horizontalDistance = 0;
+        slot.priorityThresholdSource = 0;
+        slot.player = null;
+        slot.jumpPressedLastFrame = false;
     }
 
     private void reconcileExtensionRoster(List<AbstractPlayableSprite> players, int frameCounter) {

@@ -243,6 +243,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         int[] path;
         /** Traversing path backwards */
         boolean reverse;
+        /** Generation of the exact object-control lease acquired by this tunnel. */
+        int controlGeneration;
 
         void copyFrom(CharState state) {
             phase = state.phase;
@@ -251,6 +253,7 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
             pathIndex = state.pathIndex;
             path = state.path;
             reverse = state.reverse;
+            controlGeneration = state.controlGeneration;
         }
 
         void reset() {
@@ -260,6 +263,7 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
             pathIndex = 0;
             path = null;
             reverse = false;
+            controlGeneration = 0;
         }
     }
 
@@ -403,6 +407,7 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         // ROM: move.b #$81,object_control(a1)
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
+        state.controlGeneration = player.getObjectControlGeneration();
 
         // ROM: move.b #2,anim(a1)
         player.setRolling(true);
@@ -709,18 +714,19 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
     // =========================================================================
 
     private void releasePlayer(AbstractPlayableSprite player, CharState state) {
-        if (state.phase != 0 && ownsTunnelControl(player)) {
+        if (state.phase != 0 && ownsTunnelControl(player, state)) {
             ObjectControlState.none().applyTo(player);
             player.setControlLocked(false);
         }
         state.reset();
     }
 
-    private boolean ownsTunnelControl(AbstractPlayableSprite player) {
+    private boolean ownsTunnelControl(AbstractPlayableSprite player, CharState state) {
         return player.isObjectControlled()
                 && player.isObjectControlSuppressesMovement()
                 && !player.isObjectControlAllowsCpu()
-                && player.isControlLocked();
+                && player.isControlLocked()
+                && player.getObjectControlGeneration() == state.controlGeneration;
     }
 
     // =========================================================================
