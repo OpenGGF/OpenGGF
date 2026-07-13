@@ -1,14 +1,20 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.sonic1.objects.TestPlayableSprite;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.playable.ObjectControlState;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -26,7 +32,7 @@ import static org.mockito.Mockito.when;
 
 class TestAutomaticTunnelObjectInstance {
     @Test
-    void sidekickProcessingUsesNativeP2QueryOnly() {
+    void sidekickProcessingKeepsNativeP2PrefixThenProcessesExtensions() {
         AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(
                 new ObjectSpawn(0x0F60, 0x0578, 0x24, 0, 0, false, 0));
         TestPlayableSprite nativeP2 = new TestPlayableSprite();
@@ -45,7 +51,126 @@ class TestAutomaticTunnelObjectInstance {
 
         assertFalse(main.isObjectControlled());
         assertTrue(nativeP2.isObjectControlled());
-        assertFalse(extraSidekick.isObjectControlled());
+        assertTrue(extraSidekick.isObjectControlled(),
+                "additional sidekicks must receive independent tunnel traversal state after native P2");
+    }
+
+    @Test
+    void activeTunnelStateFollowsActorsAcrossNativeP2ReorderAndUnload() {
+        AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(
+                new ObjectSpawn(0x0F60, 0x0578, 0x24, 0, 0, false, 0));
+        TestPlayableSprite main = playerAt(0x0100, 0x0100);
+        TestPlayableSprite capturedP2 = playerAt(0x0F60, 0x0578);
+        TestPlayableSprite replacementP2 = playerAt(0x0100, 0x0100);
+        List<com.openggf.game.PlayableEntity> sidekicks = new ArrayList<>(List.of(capturedP2, replacementP2));
+        tunnel.setServices(new StubObjectServices().withPlayerQuery(
+                new ObjectPlayerQuery(() -> main, () -> sidekicks)));
+        tunnel.update(0, main);
+
+        sidekicks.clear();
+        sidekicks.add(replacementP2);
+        sidekicks.add(capturedP2);
+        tunnel.update(1, main);
+
+        assertTrue(capturedP2.isObjectControlled(), "demoted P2 must continue its own tunnel route");
+        assertFalse(replacementP2.isObjectControlled(), "new P2 must not inherit the old actor's route state");
+        tunnel.onUnload();
+        assertFalse(capturedP2.isObjectControlled(), "unload must release the demoted actual owner");
+    }
+
+    @Test
+    void omittedOrDeadExtensionTunnelRiderIsReleased() {
+        AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(
+                new ObjectSpawn(0x0F60, 0x0578, 0x24, 0, 0, false, 0));
+        TestPlayableSprite main = playerAt(0x0100, 0x0100);
+        TestPlayableSprite nativeP2 = playerAt(0x0100, 0x0100);
+        TestPlayableSprite extra = playerAt(0x0F60, 0x0578);
+        List<com.openggf.game.PlayableEntity> sidekicks = new ArrayList<>(List.of(nativeP2, extra));
+        tunnel.setServices(new StubObjectServices().withPlayerQuery(
+                new ObjectPlayerQuery(() -> main, () -> sidekicks)));
+        tunnel.update(0, main);
+        assertTrue(extra.isObjectControlled());
+
+        sidekicks.remove(extra);
+        tunnel.update(1, main);
+        assertFalse(extra.isObjectControlled(), "omitted extension must not remain under tunnel control");
+
+        sidekicks.add(extra);
+        extra.setDead(false);
+        extra.setCentreX((short) 0x0F60);
+        extra.setCentreY((short) 0x0578);
+        tunnel.update(2, main);
+        extra.setDead(true);
+        tunnel.update(3, main);
+        assertFalse(extra.isObjectControlled(), "death must release extension tunnel control");
+    }
+
+    @Test
+    void unrelatedControlTakeoverIsNotClearedByRosterOmissionOrUnload() {
+        AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(
+                new ObjectSpawn(0x0F60, 0x0578, 0x24, 0, 0, false, 0));
+        TestPlayableSprite main = playerAt(0x0100, 0x0100);
+        TestPlayableSprite nativeP2 = playerAt(0x0100, 0x0100);
+        TestPlayableSprite extra = playerAt(0x0F60, 0x0578);
+        List<com.openggf.game.PlayableEntity> sidekicks = new ArrayList<>(List.of(nativeP2, extra));
+        tunnel.setServices(new StubObjectServices().withPlayerQuery(
+                new ObjectPlayerQuery(() -> main, () -> sidekicks)));
+        tunnel.update(0, main);
+
+        ObjectControlState.nativeBit7FullControl().applyTo(extra);
+        extra.setControlLocked(true);
+        sidekicks.remove(extra);
+        tunnel.update(1, main);
+        tunnel.onUnload();
+
+        assertTrue(extra.isObjectControlled(), "tunnel must not release a later owner's matching generic control bits");
+        assertTrue(extra.isControlLocked());
+    }
+
+    @Test
+    void rewindRelinksExtensionTunnelOwnerToReplacementPlayer() {
+        AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(
+                new ObjectSpawn(0x0F60, 0x0578, 0x24, 0, 0, false, 0));
+        TestPlayableSprite oldMain = playerAt(0x0100, 0x0100);
+        TestPlayableSprite oldP2 = playerAt(0x0100, 0x0100);
+        TestPlayableSprite oldExtra = playerAt(0x0F60, 0x0578);
+        tunnel.setServices(new StubObjectServices().withPlayerQuery(
+                new ObjectPlayerQuery(() -> oldMain, () -> List.of(oldP2, oldExtra))));
+        tunnel.update(0, oldMain);
+        RewindIdentityTable captured = identities(oldMain, oldP2, oldExtra);
+        var snapshot = tunnel.captureRewindState(RewindCaptureContext.withIdentityTable(captured));
+
+        TestPlayableSprite newMain = playerAt(0x0100, 0x0100);
+        TestPlayableSprite newP2 = playerAt(0x0100, 0x0100);
+        TestPlayableSprite newExtra = playerAt(0x0F60, 0x0578);
+        tunnel.setServices(new StubObjectServices().withPlayerQuery(
+                new ObjectPlayerQuery(() -> newMain, () -> List.of(newP2, newExtra))));
+        tunnel.restoreRewindState(snapshot,
+                RewindCaptureContext.withIdentityTable(identities(newMain, newP2, newExtra)));
+        ObjectControlState.nativeBit7FullControl().applyTo(newExtra);
+        newExtra.setControlLocked(true);
+
+        tunnel.onUnload();
+
+        assertFalse(newExtra.isObjectControlled());
+        assertTrue(oldExtra.isObjectControlled(), "rewind cleanup must not target the stale actor instance");
+    }
+
+    private static RewindIdentityTable identities(TestPlayableSprite main,
+                                                   TestPlayableSprite p2,
+                                                   TestPlayableSprite extra) {
+        RewindIdentityTable table = new RewindIdentityTable();
+        table.registerPlayer(main, PlayerRefId.mainPlayer());
+        table.registerPlayer(p2, PlayerRefId.sidekick(0));
+        table.registerPlayer(extra, PlayerRefId.sidekick(1));
+        return table;
+    }
+
+    private static TestPlayableSprite playerAt(int x, int y) {
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) x);
+        player.setCentreY((short) y);
+        return player;
     }
 
     @Test

@@ -66,6 +66,24 @@ class TestSonic3kTwistedRampObjectInstance {
                 "Delete_Current_Sprite via respawn_addr clears the loaded bit so the ramp can respawn");
     }
 
+    @Test
+    void additionalSidekickCanLaunchAfterNativeP2Prefix() {
+        Sonic3kTwistedRampObjectInstance ramp = new Sonic3kTwistedRampObjectInstance(new ObjectSpawn(
+                0x1800, 0x0600, TWISTED_RAMP, 0, 0, false, 0));
+        TestablePlayableSprite main = playerAt(0x1600, 0x0600);
+        TestablePlayableSprite nativeP2 = playerAt(0x1600, 0x0600);
+        TestablePlayableSprite extra = playerAt(0x17F0, 0x0600);
+        extra.setXSpeed((short) 0x0400);
+        ramp.setServices(new StubObjectServices().withPlayerQuery(new ObjectPlayerQuery(
+                () -> main, () -> List.of(nativeP2, extra))));
+
+        ramp.update(0, main);
+
+        assertTrue(extra.getAir());
+        assertEquals(0x0800, extra.getXSpeed() & 0xFFFF);
+        assertEquals((short) -0x700, extra.getYSpeed());
+    }
+
     private static TestablePlayableSprite playerAt(int x, int y) {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) x, (short) y);
         player.setAir(false);

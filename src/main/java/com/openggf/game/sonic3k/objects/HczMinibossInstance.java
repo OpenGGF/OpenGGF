@@ -35,7 +35,9 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -238,6 +240,8 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private int lastHitWaterEffectRoutine = -1;
     private String lastHitSource = "none";
     private List<VortexBubbleChild> vortexBubbles;
+    /** Players whose full-control state was acquired by this boss's vortex. */
+    private final Map<PlayableEntity, Boolean> vortexControlledPlayers = new IdentityHashMap<>();
     private S3kBossExplosionController defeatExplosionController;
 
     private enum WaitCallback {
@@ -273,7 +277,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     }
 
     private static final class RocketState implements com.openggf.game.rewind.RewindStateful<RocketState.RewindState> {
-        private final int subtype;
+        private int subtype;
         private int phaseX;
         private int phaseY;
         private int x;
@@ -290,6 +294,10 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         private record RewindState(int phaseX, int phaseY, int x, int y, int frame,
                                    boolean front, boolean hFlip, boolean collisionArmed,
                                    int routine, int speed, int timer, RocketSpeedCallback callback) {}
+
+        /** Rewind codec construction path; captured fields are restored immediately. */
+        private RocketState() {
+        }
 
         private RocketState(int subtype) {
             this.subtype = subtype;
@@ -700,13 +708,10 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     }
 
     private void releaseVortexPlayers() {
-        PlayableEntity focused = services().camera().getFocusedSprite();
-        for (PlayableEntity entity : nativeParticipants(focused)) {
-            if (entity instanceof AbstractPlayableSprite sprite && sprite.isObjectControlled()) {
-                ObjectControlState.none().applyTo(sprite);
-                sprite.setForcedAnimationId(-1);
-            }
+        for (PlayableEntity entity : List.copyOf(vortexControlledPlayers.keySet())) {
+            releaseVortexPlayer(entity);
         }
+        vortexControlledPlayers.clear();
     }
 
     /**
@@ -955,17 +960,38 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     }
 
     private void applyVortexPull(AbstractPlayableSprite player) {
-        for (PlayableEntity entity : nativeParticipants(player)) {
+        List<PlayableEntity> participants = vortexParticipants(player);
+        reconcileVortexPlayers(participants);
+        for (PlayableEntity entity : participants) {
             if (entity instanceof AbstractPlayableSprite sprite) {
                 applyVortexPullTo(sprite);
             }
         }
     }
 
-    private List<PlayableEntity> nativeParticipants(PlayableEntity player) {
+    private List<PlayableEntity> vortexParticipants(PlayableEntity player) {
         ObjectPlayerQuery query = services().playerQuery();
         return new ObjectPlayerQuery(() -> player, query::sidekicks)
-                .playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+                .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+    }
+
+    private void reconcileVortexPlayers(List<PlayableEntity> participants) {
+        for (PlayableEntity entity : List.copyOf(vortexControlledPlayers.keySet())) {
+            if (!participants.contains(entity) || entity.getDead()) {
+                releaseVortexPlayer(entity);
+                vortexControlledPlayers.remove(entity);
+            }
+        }
+    }
+
+    private void releaseVortexPlayer(PlayableEntity entity) {
+        if (entity instanceof AbstractPlayableSprite sprite
+                && sprite.isObjectControlled()
+                && !sprite.isObjectControlAllowsCpu()
+                && sprite.getForcedAnimationId() == Sonic3kAnimationIds.FLOAT2.id()) {
+            ObjectControlState.none().applyTo(sprite);
+            sprite.setForcedAnimationId(-1);
+        }
     }
 
     /**
@@ -1027,7 +1053,13 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             sprite.setXSpeed((short) 0);
             sprite.setYSpeed((short) 0);
             sprite.setGSpeed((short) 0);
+            vortexControlledPlayers.put(sprite, Boolean.TRUE);
         }
+    }
+
+    @Override
+    public void onUnload() {
+        releaseVortexPlayers();
     }
 
     @Override

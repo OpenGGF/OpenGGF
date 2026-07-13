@@ -404,7 +404,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
             // unconditionally inside the outer animation gate.
             boolean sawUpdatePlayer = false;
             for (PlayableEntity candidate : services().playerQuery().playersFor(
-                    ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
                 if (candidate == playerEntity) {
                     sawUpdatePlayer = true;
                 }

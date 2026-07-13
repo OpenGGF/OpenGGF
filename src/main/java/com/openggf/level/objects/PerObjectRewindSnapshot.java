@@ -402,6 +402,7 @@ public record PerObjectRewindSnapshot(
             boolean hasQueuedForceInputRightState, boolean queuedForceInputRight,
             int moveLockTimer,
             boolean objectControlled, boolean objectControlAllowsCpu, boolean objectControlSuppressesMovement,
+            int objectControlGeneration,
             int objectControlReleasedFrame,
             boolean suppressAirCollision, boolean suppressGroundWallCollision, boolean forceFloorCheck,
             int suppressedObjectMoveAndFallAxes,

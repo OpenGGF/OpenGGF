@@ -614,6 +614,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * asserted preserves existing engine semantics for legacy callers.
          */
         protected boolean objectControlSuppressesMovement = false;
+        /** Monotonic discriminator for object-control acquisition/replacement. */
+        protected int objectControlGeneration = 0;
         /**
          * Narrow seam for MGZ top-platform carry. That object uses object control for
          * ownership but still needs SolidObject side/top feedback from its controlling
@@ -855,6 +857,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.objectControlled = false;
                 this.objectControlAllowsCpu = false;
                 this.objectControlSuppressesMovement = false;
+                this.objectControlGeneration = 0;
                 this.suppressedObjectMoveAndFallAxes = 0;
                 this.mgzTopPlatformCarrySolidContactObject = null;
                 this.hidden = false;
@@ -956,6 +959,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         hasQueuedForceInputRightState, queuedForceInputRight,
                         moveLockTimer,
                         objectControlled, objectControlAllowsCpu, objectControlSuppressesMovement,
+                        objectControlGeneration,
                         objectControlReleasedFrame,
                         suppressAirCollision, suppressGroundWallCollision, forceFloorCheck,
                         suppressedObjectMoveAndFallAxes,
@@ -1113,6 +1117,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.objectControlled = extra.objectControlled();
                 this.objectControlAllowsCpu = extra.objectControlAllowsCpu();
                 this.objectControlSuppressesMovement = extra.objectControlSuppressesMovement();
+                this.objectControlGeneration = extra.objectControlGeneration();
                 this.objectControlReleasedFrame = extra.objectControlReleasedFrame();
                 this.suppressAirCollision = extra.suppressAirCollision();
                 this.suppressGroundWallCollision = extra.suppressGroundWallCollision();
@@ -2999,6 +3004,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * The controlling object is responsible for updating the player's position.
          */
         public void setObjectControlled(boolean objectControlled) {
+                this.objectControlGeneration++;
                 this.objectControlled = objectControlled;
                 if (objectControlled) {
                         controller.clearTailsFlightIf(getSecondaryAbility() == SecondaryAbility.FLY);
@@ -3010,6 +3016,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         this.objectControlAllowsCpu = false;
                         this.objectControlSuppressesMovement = false;
                 }
+        }
+
+        /** Identifies the most recent object-control acquisition or replacement. */
+        public int getObjectControlGeneration() {
+                return objectControlGeneration;
         }
 
         /**

@@ -37899,3 +37899,14 @@ ROM-free `ModLevel` decoder and Sonic 2 compatibility-facade changes:
   `TestS3kAizTraceReplay`, and `TestS3kAizCompleteRunTraceReplay` passed with
   native 320-pixel configuration (76 focused checks total with the related unit
   suites). No frontier, fixture, comparator, or trace hydration changed.
+### 2026-07-13 -- CNZ cylinder extension-promotion mask preservation
+
+- Branch base: generic traversal commit `231461639`.
+- A sole active extension promoted into native P2 now clears the aggregate
+  extension-standing bit from the remaining identity states before mode-0
+  motion observes the mask; ownership and control remain with the same actor.
+- Exact isolated verification used `-Dmse=off` and
+  `-Dsurefire.argLine="-Xshare:off -Xmx3g"`.
+- `TestS3kCnzCompleteRunTraceReplay` retained exactly 7,130 errors, zero
+  warnings, and first divergence frame 1,846 (`tails_x_speed`, expected
+  `$0024`, actual `-$1000`). No fixture, comparator, or trace hydration changed.
