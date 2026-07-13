@@ -1,6 +1,6 @@
 # Maintained sample gallery
 
-The default test suite builds and validates exactly these five checked-in sources.
+The default test suite builds and validates exactly these six checked-in sources.
 They contain only original/generated test assets; built jars are not checked in.
 
 1. [Music pack](phase4-gallery-music-pack/README.md) — a data-only API 1.0-compatible
@@ -16,6 +16,10 @@ They contain only original/generated test assets; built jars are not checked in.
 5. [Standalone game](../../../src/test/resources/mods/sample-standalone-src/README.md)
    — API 1.2 no-ROM module, level, badnik, character/team, streamed music/SFX,
    title launch, namespaced save, and Continue.
+6. [Flappy remix](../../../src/test/resources/mods/sample-flappy-src/README.md) —
+   API 2.1 additive S2 patch — object-controlled minigame gameplay, ROM-art intake,
+   forced scroll, and layout obstacles. See the
+   [build-along guide](../guides/flappy-remix.md) for a narrated walkthrough.
 
 Use the linked source rather than a copied jar. Gallery CI exercises the real
 `ggfmod package` validation boundary so manifest/container/API drift fails visibly.

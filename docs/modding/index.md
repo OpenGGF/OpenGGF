@@ -12,6 +12,12 @@ effort.
 5. [Playable character](quickstarts/character.md)
 6. [Standalone game](quickstarts/standalone.md)
 
+## Follow-along guides
+
+- [Flappy remix](guides/flappy-remix.md) — build-along tour of the `sample-flappy`
+  gallery sample: object-controlled minigame gameplay, ROM-art intake, forced scroll,
+  and layout obstacles inside a Sonic 2 patch.
+
 ## Reference
 
 - [`ggfmod` command reference](ggfmod.md)
@@ -27,5 +33,5 @@ effort.
 - [Deferred-backlog decisions](BACKLOG.md)
 - [GUI tooling evaluation](GUI_TOOLING_EVALUATION.md)
 
-The five sample sources are built by the default test suite. Treat them as executable
+The six sample sources are built by the default test suite. Treat them as executable
 contracts rather than snippets copied out of context.

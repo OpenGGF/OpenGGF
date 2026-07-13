@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Sixth gallery sample **`sample-flappy`** plus a narrated build-along guide
+  (`docs/modding/guides/flappy-remix.md`): an additive Sonic 2 patch demonstrating
+  object-controlled minigame gameplay (full player seize/hide/release), ROM-art
+  intake of Tails' flying frames via `registerRomObjectArt`, per-frame forced camera
+  scroll, and a layout-object obstacle course. `TestSampleFlappyIntegration` adds
+  ROM-gated frame-driven coverage; `TestSampleModsPackage` now builds and validates
+  six sources as one repository. See `docs/modding/samples/index.md`.
 - Mod API 2.1.0: ROM art intake for Sonic 2 patch mods — `ModContext.registerRomObjectArt`
   materializes object art (Nemesis/Kosinski/uncompressed + S2 mappings + optional DPLC)
   from the player's ROM at launch under the mod's namespaced art key.
