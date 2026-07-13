@@ -21,6 +21,8 @@ Trace report artifacts are produced under `target/trace-reports/`:
 
 - `target/trace-reports/<game>_<zone>_report.json` — per-frame comparison, first divergence.
 - `target/trace-reports/<game>_<zone>_context.txt` — surrounding context.
+- `target/trace-reports/<game>_<zone>_physics_report.json` — physics-only frontier when `-Dtrace.verification=physics` is selected.
+- `target/trace-reports/<game>_<zone>_animation_report.json` — animation-only frontier when `-Dtrace.verification=animation` is selected.
 - Optional `src/test/resources/traces/<game>/.../aux_state.jsonl` — aux events/object state.
 
 ```powershell
@@ -29,7 +31,17 @@ mvn "-Dtest=*Mtz1TraceReplay" test "-Ds3k.rom.path=s3k.gen"
 
 # Full sweep to pick the next target:
 mvn "-Dtest=*TraceReplay" test
+
+# Hold the existing movement frontier while animation is being fixed:
+mvn "-Dtest=*TraceReplay" "-Dtrace.verification=physics" test
+
+# Compare only Player/Sidekick animation ID and displayed mapping frame:
+mvn "-Dtest=*TraceReplay" "-Dtrace.verification=animation" test
 ```
+
+`trace.verification` defaults to `all`. Animation-only replay requires a CSV v7
+trace, preventing an older fixture with no animation columns from passing
+silently. Full reports retain a `verification_groups` summary for both gates.
 
 Trace catalog default dir: `src/test/resources/traces` (`TRACE_CATALOG_DIR`). All replay tests extend `src/test/java/com/openggf/tests/trace/AbstractTraceReplayTest.java` (or the credits-demo base).
 
@@ -46,6 +58,7 @@ From the report, find the first divergent frame and field, then map to the likel
 | Ring count / damage spike | Touch response | `ObjectManager.TouchResponses`, badnik instance |
 | Camera | Event / camera | `Sonic{1,2,3k}LevelEventManager`, `Camera` |
 | Sidekick fields | Sidekick rules | `SidekickCpuRules`, sidekick controller |
+| Player/Sidekick animation ID or mapping frame | Animation selection/script/DPLC frame | `PlayableSpriteAnimation`, the game character animation provider |
 | Palette / tile | Palette / layout | `PaletteOwnershipRegistry`, `ZoneLayoutMutationPipeline` |
 | Diverges at frame 0 / before input | Test bootstrap | replay test setup |
 
@@ -64,6 +77,10 @@ mvn exec:java "-Dexec.mainClass=com.openggf.tools.disasm.RomOffsetFinder" "-Dexe
 1. Model the ROM state at the divergence; change shared engine code to match (no carve-out).
 2. Re-run the focused replay test.
 3. If the trace itself needs regeneration (recorder extended), follow the regeneration workflow in the `trace-replay-bug-fixing` skill — do not hand-edit recorded data.
+   For S3K animation-column refreshes, `OGGF_TRACE_LIGHTWEIGHT=1` records the
+   authoritative CSV v7 physics/animation stream without the expensive
+   auxiliary memory hooks; retain the fixture's existing `aux_state.jsonl.gz`
+   when installing this `physics_animation_only` output.
 4. Re-run the full `*TraceReplay` sweep to confirm no regressions elsewhere.
 
 ---

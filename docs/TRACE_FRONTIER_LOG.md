@@ -46,6 +46,50 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+On branch `feature/ai-trace-animation-verification`, trace CSV v7 adds the
+ROM animation id and displayed mapping frame for both Player and Sidekick.
+`trace.verification=physics|animation|all` now holds independent verification
+frontiers: S1 GHZ1 physics remains green through 3,905 frames while animation
+first differs at f387; S2 EHZ1 physics remains green while animation first
+differs at f1; S3K AIZ retains its existing physics first-red at f290 and has
+an independently classified animation first-red at f290. See the entry below
+for exact fields and values.
+
+## 2026-07-13 - Player and Sidekick animation verification
+
+Branch `feature/ai-trace-animation-verification` extends the comparison-only
+trace path with Player and Sidekick animation ids and displayed mapping frames.
+The BizHawk recorders sample the native `anim` and `mapping_frame` bytes at the
+same end-of-frame point as the existing physics state. The engine comparator
+checks those bytes against `getAnimationId()` and `getMappingFrame()` without
+hydrating engine state from the trace.
+
+All 50 committed normal-gameplay fixtures were regenerated as the universal
+42-column CSV v7 schema: 21 S1, 19 S2, and 10 S3K traces. The separate S2
+special-stage and credits-demo formats remain on their dedicated schemas. S3K
+regeneration used `OGGF_TRACE_LIGHTWEIGHT=1`, which records the authoritative
+physics and animation stream while retaining the existing auxiliary diagnostic
+streams; the normal recorder mode remains available for full auxiliary capture.
+
+Verification groups are selected with `-Dtrace.verification=physics`,
+`animation`, or `all` (the default). Scoped reports use `_physics` and
+`_animation` suffixes and preserve separate error summaries and frontier stop
+conditions. Focused ROM-backed evidence with `-Dtrace.frontierOnly=true`:
+
+- S1 GHZ1 physics-only: PASS through all 3,905 frames. Animation-only:
+  expected-red f387, `player_animation_id`, ROM `0x001A`, engine `0x0002`.
+- S2 EHZ1 physics-only: PASS. Animation-only: expected-red f1,
+  `player_mapping_frame`, ROM `0x0010`, engine `0x000F`.
+- S3K AIZ physics-only: retained expected-red f290, `x`, ROM `0x0040`,
+  engine `0x13A0`. Animation-only: independently expected-red f290,
+  `player_mapping_frame`, ROM `0x0000`, engine `0x0007`.
+
+The focused parser/binder/report/frontier/triage/recorder-contract/invariant
+suite passed 183/183 tests. The recorder contract additionally checks every
+committed normal-gameplay metadata file and every CSV row for v7/42-column
+completeness, so absent Player or Sidekick animation samples cannot silently
+enter the fixture fleet.
+
 ## 2026-07-13 - HCZ branch repair, rewind closure, and final verification
 
 This repair pass used the existing checkout only (no auxiliary worktrees).

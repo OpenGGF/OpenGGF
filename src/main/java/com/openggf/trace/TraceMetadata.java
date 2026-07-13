@@ -157,6 +157,11 @@ public record TraceMetadata(
         return !recordedCharacters().isEmpty();
     }
 
+    /** Whether the primary CSV carries strict per-character animation fields. */
+    public boolean hasPerFrameCharacterAnimation() {
+        return csvVersion != null && csvVersion >= 7;
+    }
+
     /**
      * Whether the trace's aux_state.jsonl emits per-frame {@code cpu_state}
      * events (the v6+ recorder extension that snapshots the full Tails CPU
@@ -465,5 +470,4 @@ public record TraceMetadata(
         return mapper.readValue(metadataFile.toFile(), TraceMetadata.class);
     }
 }
-
 

@@ -9,6 +9,41 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TestTraceBinder {
 
     @Test
+    void playerAndSidekickAnimationMismatchesUseIndependentGate() {
+        TraceCharacterState expectedSidekick = new TraceCharacterState(true,
+                (short) 0x0040, (short) 0x03A0,
+                (short) 0x0010, (short) 0, (short) 0x0010,
+                (byte) 0, false, false, 0,
+                0, 0, 0x02, 0, 0, 0x11, 0x42);
+        TraceFrame frame = new TraceFrame(0, 0,
+                (short) 0x0050, (short) 0x03B0,
+                (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0,
+                0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                0x05, 0x23, expectedSidekick);
+        TraceCharacterState actualSidekick = new TraceCharacterState(true,
+                (short) 0x0040, (short) 0x03A0,
+                (short) 0x0010, (short) 0, (short) 0x0010,
+                (byte) 0, false, false, 0,
+                0, 0, 0x02, 0, 0, 0x12, 0x43);
+        EngineDiagnostics diagnostics = EngineDiagnostics.formattedWithCameraAndAnimation(
+                -1, -1, 0x06, 0x24, "");
+
+        FrameComparison result = new TraceBinder(ToleranceConfig.DEFAULT).compareFrame(frame,
+                frame.x(), frame.y(), frame.xSpeed(), frame.ySpeed(), frame.gSpeed(),
+                frame.angle(), frame.air(), frame.rolling(), frame.groundMode(),
+                null, diagnostics, "tails", actualSidekick);
+
+        assertTrue(result.hasError(TraceVerificationScope.ANIMATION));
+        assertFalse(result.hasError(TraceVerificationScope.PHYSICS));
+        assertEquals(VerificationGroup.ANIMATION,
+                result.fields().get("player_animation_id").verificationGroup());
+        assertEquals(Severity.ERROR, result.fields().get("player_mapping_frame").severity());
+        assertEquals(Severity.ERROR, result.fields().get("tails_animation_id").severity());
+        assertEquals(Severity.ERROR, result.fields().get("tails_mapping_frame").severity());
+    }
+
+    @Test
     public void testExactMatchReturnsNoError() {
         TraceFrame frame = TraceFrame.of(0, 0x0000,
             (short) 0x0050, (short) 0x03B0,

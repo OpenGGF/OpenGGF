@@ -292,6 +292,9 @@ local MOVIE_FRAME_SAFETY_MARGIN = 30
 local TRACE_PROFILE = "complete_run"
 TRACE_STOP_FRAME = tonumber(os.getenv("OGGF_TRACE_STOP_FRAME") or "")
 local BK2_FRAME_COUNT = tonumber(os.getenv("OGGF_BK2_FRAME_COUNT") or "")
+-- Physics/animation-only regeneration skips expensive diagnostic hooks/scans.
+-- Existing aux_state streams can be retained when only CSV v7 is refreshed.
+LIGHTWEIGHT_REGEN = os.getenv("OGGF_TRACE_LIGHTWEIGHT") == "1"
 -- GLOBALS (no `local`): keeps the main chunk under Lua's 200-local limit.
 BIZHAWK_VERSION = "2.11"
 GENESIS_CORE = "Genplus-gx"
@@ -506,19 +509,39 @@ end
 -- Windows mkdir takes multiple paths in one call; 2>NUL swallows "already
 -- exists". GLOBAL (no `local`) to respect this recorder's 200-local budget.
 function precreate_segment_dirs()
-    -- Strip trailing slash before quoting: a trailing "\" inside a cmd-quoted
-    -- path escapes the closing quote (`"trace_output\"` is malformed).
+    local is_windows = package.config:sub(1, 1) == "\\"
     local function quote_dir(p)
-        local win = (p:gsub("/", "\\"))
-        win = (win:gsub("\\+$", ""))
-        return "\"" .. win .. "\""
+        if is_windows then
+            local win = (p:gsub("/", "\\"))
+            win = (win:gsub("\\+$", ""))
+            return "\"" .. win .. "\""
+        end
+        return "\"" .. (p:gsub("/+$", "")) .. "\""
     end
-    local quoted = { quote_dir(BASE_OUTPUT_DIR) }
+    local paths = { BASE_OUTPUT_DIR }
     for _, token in pairs(ZONE_TOKEN) do
-        quoted[#quoted + 1] = quote_dir(BASE_OUTPUT_DIR .. token)
+        paths[#paths + 1] = BASE_OUTPUT_DIR .. token .. "/"
     end
-    -- One brief cmd window for the whole run.
-    os.execute("mkdir " .. table.concat(quoted, " ") .. " 2>NUL")
+    local all_exist = true
+    for _, path in ipairs(paths) do
+        local probe_path = path .. ".oggf_dir_probe"
+        local probe = io.open(probe_path, "w")
+        if probe then
+            probe:close()
+            os.remove(probe_path)
+        else
+            all_exist = false
+            break
+        end
+    end
+    if all_exist then return end
+    local quoted = {}
+    for _, path in ipairs(paths) do
+        quoted[#quoted + 1] = quote_dir(path)
+    end
+    local mkdir = is_windows and "mkdir " or "mkdir -p "
+    local stderr = is_windows and " 2>NUL" or " 2>/dev/null"
+    os.execute(mkdir .. table.concat(quoted, " ") .. stderr)
 end
 
 -- Shell-free fallback for an UNKNOWN zone token not in the pre-created set
@@ -533,7 +556,11 @@ function ensure_segment_dir(dir)
         os.remove(probe_path)
         return  -- dir exists (pre-created); no shell-out.
     end
-    os.execute("mkdir \"" .. (dir:gsub("/", "\\")) .. "\" 2>NUL")
+    if package.config:sub(1, 1) == "\\" then
+        os.execute("mkdir \"" .. (dir:gsub("/", "\\")) .. "\" 2>NUL")
+    else
+        os.execute("mkdir -p \"" .. (dir:gsub("/+$", "")) .. "\" 2>/dev/null")
+    end
 end
 
 -- GLOBALS (no `local`): keeps the main chunk under Lua's 200-local limit
@@ -1070,12 +1097,16 @@ local function open_files()
     physics_file = io.open(OUTPUT_DIR .. "physics.csv", "w")
     aux_file = io.open(OUTPUT_DIR .. "aux_state.jsonl", "w")
 
-    physics_file:write("frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,"
-        .. "x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,"
-        .. "vblank_counter,lag_counter,sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,"
+    physics_file:write("frame,input,camera_x,camera_y,rings,gameplay_frame_counter,"
+        .. "vblank_counter,lag_counter,player_present,player_x,player_y,player_x_speed,"
+        .. "player_y_speed,player_g_speed,player_angle,player_air,player_rolling,"
+        .. "player_ground_mode,player_x_sub,player_y_sub,player_routine,player_status_byte,"
+        .. "player_stand_on_obj,player_animation_id,player_mapping_frame,"
+        .. "sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,"
         .. "sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,"
         .. "sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,"
-        .. "sidekick_status_byte,sidekick_stand_on_obj\n")
+        .. "sidekick_status_byte,sidekick_stand_on_obj,sidekick_animation_id,"
+        .. "sidekick_mapping_frame\n")
     physics_file:flush()
 end
 
@@ -1109,8 +1140,9 @@ local function write_metadata()
     meta_file:write('  "sidekicks": ["tails"],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "6.28-s3k-completerun",\n')
-    -- trace_schema: csv schema is unchanged from 5. v5 CSV + new per-frame
+    meta_file:write('  "lua_script_version": "6.29-s3k-completerun",\n')
+    -- trace_schema remains 6 for the auxiliary event vocabulary. csv_version 7
+    -- adds player and sidekick animation_id/mapping_frame to physics.csv. New per-frame
     -- cpu_state, oscillation_state, object_state, and interact_state aux
     -- events are detected by parsers via aux_schema_extras rather than a
     -- schema bump. v6.3 adds cage_state_per_frame and cage_execution.
@@ -1174,8 +1206,11 @@ local function write_metadata()
     -- and camera copy).
     -- Diagnostic-only.
     -- All diagnostic-only.
-    meta_file:write('  "trace_schema": 5,\n')
-    meta_file:write('  "csv_version": 5,\n')
+    meta_file:write('  "trace_schema": 6,\n')
+    meta_file:write('  "csv_version": 7,\n')
+    if LIGHTWEIGHT_REGEN then
+        meta_file:write('  "capture_mode": "physics_animation_only",\n')
+    end
     local aux_schema_extras = {
         "cpu_state_per_frame",
         "oscillation_state_per_frame",
@@ -1408,6 +1443,8 @@ local function read_character_trace_state(base)
             routine = 0,
             status = 0,
             stand_on_obj = 0,
+            animation_id = 0,
+            mapping_frame = 0,
         }
     end
 
@@ -1432,6 +1469,8 @@ local function read_character_trace_state(base)
         routine = mainmemory.read_u8(base + OFF_ROUTINE),
         status = status,
         stand_on_obj = read_stand_on_slot_for(base),
+        animation_id = mainmemory.read_u8(base + OFF_ANIM_ID),
+        mapping_frame = mainmemory.read_u8(base + 0x22),
     }
 end
 
@@ -4888,8 +4927,10 @@ function on_frame_end()
     end
 
     if not pre_trace_snapshots_written then
-        write_tails_cpu_snapshot()
-        write_object_snapshots()
+        if not LIGHTWEIGHT_REGEN then
+            write_tails_cpu_snapshot()
+            write_object_snapshots()
+        end
         pre_trace_snapshots_written = true
         -- v6.1-s3k: capture Level_frame_counter at the moment the first
         -- physics row is recorded. The engine's seeded-frame-0 mode
@@ -4916,6 +4957,8 @@ function on_frame_end()
     local angle = mainmemory.read_u8(PLAYER_BASE + OFF_ANGLE)
     local status = mainmemory.read_u8(PLAYER_BASE + OFF_STATUS)
     local routine = mainmemory.read_u8(PLAYER_BASE + OFF_ROUTINE)
+    local animation_id = mainmemory.read_u8(PLAYER_BASE + OFF_ANIM_ID)
+    local mapping_frame = mainmemory.read_u8(PLAYER_BASE + 0x22)
 
     local camera_x = mainmemory.read_u16_be(ADDR_CAMERA_X)
     local camera_y = mainmemory.read_u16_be(ADDR_CAMERA_Y)
@@ -4945,9 +4988,16 @@ function on_frame_end()
     local sidekick = read_character_trace_state(SIDEKICK_BASE)
 
     physics_file:write(string.format(
-        "%04X,%04X,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%04X,%04X,%04X,%02X,%04X,%02X,%04X,%04X,"
-            .. "%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X\n",
-        trace_frame, input_mask, x, y,
+        "%04X,%04X,%04X,%04X,%04X,%04X,%04X,%04X,%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,%02X,%02X,"
+            .. "%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,%02X,%02X\n",
+        trace_frame, input_mask,
+        camera_x, camera_y,
+        rings,
+        gameplay_frame_counter,
+        vblank_counter,
+        lag_counter,
+        1,
+        x, y,
         uhex(x_speed), uhex(y_speed), uhex(g_speed),
         angle,
         air and 1 or 0,
@@ -4955,13 +5005,10 @@ function on_frame_end()
         ground_mode,
         x_sub, y_sub,
         routine,
-        camera_x, camera_y,
-        rings,
         status,
-        gameplay_frame_counter,
         stand_on_obj,
-        vblank_counter,
-        lag_counter,
+        animation_id,
+        mapping_frame,
         sidekick.present,
         sidekick.x,
         sidekick.y,
@@ -4976,13 +5023,20 @@ function on_frame_end()
         sidekick.y_sub,
         sidekick.routine,
         sidekick.status,
-        sidekick.stand_on_obj))
+        sidekick.stand_on_obj,
+        sidekick.animation_id,
+        sidekick.mapping_frame))
 
     if trace_frame % 60 == 0 then
         physics_file:flush()
     end
     if trace_frame % 300 == 0 then
         write_metadata()
+    end
+
+    if LIGHTWEIGHT_REGEN then
+        trace_frame = trace_frame + 1
+        return
     end
 
     emit_s3k_semantic_events(trace_frame)
@@ -5162,44 +5216,21 @@ print(string.format(
 -- before the main loop runs so the memoryexecute callbacks are armed for
 -- every frame the script processes. Only active when 'started' so we
 -- don't accumulate hits during pre-trace level loading.
-CAGE_DIAG.register_cage_hooks()
-
--- Register Tails velocity-write hooks. Same lifetime model as cage hooks.
-WRITE_DIAG.register_velocity_hooks()
-
--- Register Tails position-write hooks. Same lifetime model as cage hooks.
-WRITE_DIAG.register_position_hooks()
-
--- Register focused AIZ ship-loop hooks. Same lifetime model as cage hooks.
-V618_AIZ_SHIP.register_hooks()
-V621_SONIC_RECORD.register_hooks()
-V625_RNG_CALLS.register_hooks()
-
--- Register focused Tails CPU normal-step hooks. Same lifetime model as cage hooks.
-V65.register_tails_cpu_normal_step_hooks()
-
--- Register focused AIZ tree/boundary hooks. Same lifetime model as cage hooks.
-V66.register_aiz_boundary_hooks()
-
--- Register focused AIZ transition-floor hooks. Same lifetime model as cage hooks.
-V67_AIZ.register_aiz_transition_floor_hooks()
-
--- Register focused AIZ handoff terrain hooks. Same lifetime model as cage hooks.
-V69_AIZ.register_aiz_handoff_terrain_hooks()
-
--- Register focused CNZ cylinder P2 hooks. Same lifetime model as cage hooks.
-V67_CNZ.register_cnz_cylinder_hooks()
-
--- Register SolidObject_cont entry hook (v6.11-s3k). Same lifetime model
--- as cage hooks. Captures geometry inputs to the loc_1DFD6/loc_1E154
--- conditional path used by Spring_Down/SolidObjectFull2_1P at CNZ F7614.
-V611_SOLID.register_hooks()
-
--- Register Collision_response_list snapshot hook (v6.15-s3k). Hooks
--- Touch_Process entry (0x10440) so each frame's Sonic/Tails TouchResponse
--- snapshot exposes the full list contents and any active spring-child
--- collision_property bytes during the CNZ F=619-625 window.
-V615_CRL.register_hooks()
+if not LIGHTWEIGHT_REGEN then
+    CAGE_DIAG.register_cage_hooks()
+    WRITE_DIAG.register_velocity_hooks()
+    WRITE_DIAG.register_position_hooks()
+    V618_AIZ_SHIP.register_hooks()
+    V621_SONIC_RECORD.register_hooks()
+    V625_RNG_CALLS.register_hooks()
+    V65.register_tails_cpu_normal_step_hooks()
+    V66.register_aiz_boundary_hooks()
+    V67_AIZ.register_aiz_transition_floor_hooks()
+    V69_AIZ.register_aiz_handoff_terrain_hooks()
+    V67_CNZ.register_cnz_cylinder_hooks()
+    V611_SOLID.register_hooks()
+    V615_CRL.register_hooks()
+end
 
 -- v6.27 hard safety net: even if every movie-end signal fails (movie.length()==0,
 -- mode never reports FINISHED, never leaves a level family), the loop must not

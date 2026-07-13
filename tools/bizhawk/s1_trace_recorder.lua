@@ -25,6 +25,8 @@
 -- RNG-frontier diagnostics. CSV schema is unchanged.
 -- v3.4 changes: add s1_obj64_state aux events for LZ air-bubble maker
 -- frontier diagnostics. CSV schema is unchanged.
+-- v3.5 changes: CSV v7 records the player's animation ID and displayed mapping
+-- frame every frame using the shared Player/Sidekick character-block layout.
 ------------------------------------------------------------------------------
 
 -----------------
@@ -258,10 +260,17 @@ local function open_files()
     physics_file = io.open(OUTPUT_DIR .. "physics.csv", "w")
     aux_file = io.open(OUTPUT_DIR .. "aux_state.jsonl", "w")
 
-    -- v3 header: gameplay/VBlank execution counters plus stand_on_obj.
-    physics_file:write("frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,"
-        .. "x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,"
-        .. "vblank_counter,lag_counter\n")
+    -- v7 header: shared execution counters plus symmetric Player/Sidekick blocks.
+    physics_file:write("frame,input,camera_x,camera_y,rings,gameplay_frame_counter,"
+        .. "vblank_counter,lag_counter,player_present,player_x,player_y,player_x_speed,"
+        .. "player_y_speed,player_g_speed,player_angle,player_air,player_rolling,"
+        .. "player_ground_mode,player_x_sub,player_y_sub,player_routine,player_status_byte,"
+        .. "player_stand_on_obj,player_animation_id,player_mapping_frame,"
+        .. "sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,"
+        .. "sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,"
+        .. "sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,"
+        .. "sidekick_status_byte,sidekick_stand_on_obj,sidekick_animation_id,"
+        .. "sidekick_mapping_frame\n")
     physics_file:flush()
 end
 
@@ -277,11 +286,14 @@ local function write_metadata()
     meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
     meta_file:write('  "start_x": "0x' .. hex(start_x) .. '",\n')
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
+    meta_file:write('  "characters": ["sonic"],\n')
+    meta_file:write('  "main_character": "sonic",\n')
+    meta_file:write('  "sidekicks": [],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.4",\n')
-    meta_file:write('  "trace_schema": 3,\n')
-    meta_file:write('  "csv_version": 4,\n')
+    meta_file:write('  "lua_script_version": "3.5",\n')
+    meta_file:write('  "trace_schema": 4,\n')
+    meta_file:write('  "csv_version": 7,\n')
     meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame"],\n')
     meta_file:write('  "rom_checksum": "",\n')
     meta_file:write('  "notes": ""\n')
@@ -605,6 +617,8 @@ local function on_frame_end()
     local angle = mainmemory.read_u8(PLAYER_BASE + OFF_ANGLE)
     local status = mainmemory.read_u8(PLAYER_BASE + OFF_STATUS)
     local routine = mainmemory.read_u8(PLAYER_BASE + OFF_ROUTINE)
+    local animation_id = mainmemory.read_u8(PLAYER_BASE + OFF_ANIM_ID)
+    local mapping_frame = mainmemory.read_u8(PLAYER_BASE + OFF_ANIM_FRAME_DISP)
 
     -- Camera position (pixel words from 32-bit values)
     local camera_x = mainmemory.read_u16_be(ADDR_CAMERA_X)
@@ -642,10 +656,18 @@ local function on_frame_end()
     local vblank_counter = mainmemory.read_u16_be(ADDR_VBLA_WORD)
     local lag_counter = 0
 
-    -- v3 CSV: execution counters plus stand_on_obj.
+    -- v7 CSV: shared counters, Player state, and an absent Sidekick block.
     physics_file:write(string.format(
-        "%04X,%04X,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%04X,%04X,%04X,%02X,%04X,%02X,%04X,%04X\n",
-        trace_frame, input_mask, x, y,
+        "%04X,%04X,%04X,%04X,%04X,%04X,%04X,%04X,%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,%02X,%02X,"
+            .. "%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,%02X,%02X\n",
+        trace_frame, input_mask,
+        camera_x, camera_y,
+        rings,
+        gameplay_frame_counter,
+        vblank_counter,
+        lag_counter,
+        1,
+        x, y,
         uhex(x_speed), uhex(y_speed), uhex(g_speed),
         angle,
         air and 1 or 0,
@@ -653,13 +675,11 @@ local function on_frame_end()
         ground_mode,
         x_sub, y_sub,
         routine,
-        camera_x, camera_y,
-        rings,
         status,
-        gameplay_frame_counter,
         stand_on_obj,
-        vblank_counter,
-        lag_counter))
+        animation_id,
+        mapping_frame,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
     -- Flush periodically instead of every frame to reduce I/O overhead.
     -- Also update metadata every 300 frames (~5 sec) so a killed process
     -- still has a valid (if slightly stale) metadata.json.

@@ -5,6 +5,7 @@ import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
+import com.openggf.trace.TraceVerificationScope;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -107,6 +108,25 @@ class TestTraceReplayReportPolicy {
                 "First error: frame 7 -- x mismatch (expected=0x0100, actual=0x0101)"));
         assertFalse(message.contains("Latest checkpoint:"));
         assertFalse(message.contains("Latest zone/act state:"));
+    }
+
+    @Test
+    void reportKeepsIndependentPhysicsAndAnimationFrontiers() {
+        Map<String, FieldComparison> animationFields = new LinkedHashMap<>();
+        animationFields.put("player_mapping_frame", FieldComparison.animation(
+                "player_mapping_frame", "0x01", "0x02", Severity.ERROR, 1));
+        Map<String, FieldComparison> physicsFields = new LinkedHashMap<>();
+        physicsFields.put("x", new FieldComparison(
+                "x", "0x0100", "0x0101", Severity.ERROR, 1));
+        DivergenceReport report = new DivergenceReport(List.of(
+                new FrameComparison(3, animationFields),
+                new FrameComparison(7, physicsFields)));
+
+        assertEquals(3, report.firstErrorFrame(TraceVerificationScope.ANIMATION));
+        assertEquals(7, report.firstErrorFrame(TraceVerificationScope.PHYSICS));
+        assertTrue(report.hasErrors(TraceVerificationScope.ANIMATION));
+        assertTrue(report.hasErrors(TraceVerificationScope.PHYSICS));
+        assertTrue(report.toJson().contains("\"verification_groups\""));
     }
 
     private static DivergenceReport errorReport() {

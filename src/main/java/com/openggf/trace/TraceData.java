@@ -762,7 +762,10 @@ public class TraceData {
             while ((line = reader.readLine()) != null) {
                 String trimmed = line.trim();
                 if (!trimmed.isEmpty()) {
-                    frames.add(TraceFrame.parseCsvRow(trimmed, metadata.traceSchema()));
+                    Integer csvVersion = metadata.csvVersion() != null
+                            ? metadata.csvVersion()
+                            : metadata.traceSchema();
+                    frames.add(TraceFrame.parseCsvRow(trimmed, csvVersion));
                 }
             }
         }

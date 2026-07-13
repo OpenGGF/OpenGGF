@@ -338,6 +338,55 @@ public class TestTraceDataParsing {
         assertEquals((short) 0x0288, tails.y());
         assertEquals((short) 0x0010, tails.xSpeed());
         assertEquals(0x03, tails.standOnObj());
+        assertEquals(-1, sonic.animationId());
+        assertEquals(-1, tails.mappingFrame());
+        assertFalse(meta.hasPerFrameCharacterAnimation());
+    }
+
+    @Test
+    void v7TraceParsesPlayerAndSidekickAnimationState() throws IOException {
+        Path dir = Files.createTempDirectory("trace-v7-animation");
+        Files.writeString(dir.resolve("metadata.json"), """
+            {
+              "game": "s2",
+              "zone": "ehz",
+              "zone_id": 0,
+              "act": 1,
+              "bk2_frame_offset": 899,
+              "trace_frame_count": 1,
+              "start_x": "0x0060",
+              "start_y": "0x0290",
+              "recording_date": "2026-07-13",
+              "lua_script_version": "9.11-s2",
+              "trace_schema": 9,
+              "csv_version": 7,
+              "characters": ["sonic", "tails"]
+            }
+            """);
+        Files.writeString(dir.resolve("physics.csv"), """
+            frame,input,camera_x,camera_y,rings,gameplay_frame_counter,vblank_counter,lag_counter,player_present,player_x,player_y,player_x_speed,player_y_speed,player_g_speed,player_angle,player_air,player_rolling,player_ground_mode,player_x_sub,player_y_sub,player_routine,player_status_byte,player_stand_on_obj,player_animation_id,player_mapping_frame,sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,sidekick_status_byte,sidekick_stand_on_obj,sidekick_animation_id,sidekick_mapping_frame
+            0000,0008,0100,0200,0007,0010,0020,0001,1,0060,0290,000C,0000,000C,00,0,0,0,0C00,0000,02,00,04,05,23,1,0050,0288,0010,FFF0,0010,08,1,0,0,8000,4000,02,0A,03,11,42
+            """);
+
+        TraceData data = TraceData.load(dir);
+        TraceCharacterState player = data.characterState(0, "sonic");
+        TraceCharacterState sidekick = data.characterState(0, "tails");
+
+        assertTrue(data.metadata().hasPerFrameCharacterAnimation());
+        assertEquals(0x05, data.getFrame(0).animationId());
+        assertEquals(0x23, data.getFrame(0).mappingFrame());
+        assertEquals(0x05, player.animationId());
+        assertEquals(0x23, player.mappingFrame());
+        assertEquals(0x11, sidekick.animationId());
+        assertEquals(0x42, sidekick.mappingFrame());
+
+        String recordedRow = Files.readAllLines(dir.resolve("physics.csv")).get(1);
+        TraceFrame animationOnlyChange = TraceFrame.parseCsvRow(
+                recordedRow.replace(",05,23,1,", ",07,24,1,")
+                        .replace(",11,42", ",12,43"),
+                7);
+        assertTrue(data.getFrame(0).stateEquals(animationOnlyChange),
+                "animation observations must not alter physics replay pacing");
     }
 
     @Test
@@ -1366,4 +1415,3 @@ public class TestTraceDataParsing {
         }
     }
 }
-
