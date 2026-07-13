@@ -1,5 +1,21 @@
 # Trace Frontier Log
 
+### 2026-07-13 -- S1 running-disc attachment animation ownership
+
+SBZ2 complete-run frame 170 lands inside Obj67's running-disc radius. The
+native `Disc_MoveSonic` first-attachment path runs later in the object list,
+after Sonic has rendered the landing frame: when Sonic is no longer rolling it
+clears `obAnim` to Walk, then writes Run to `obPrevAni` so the next player slot
+restarts Walk from mapping `$08`. The engine previously treated ordinary
+walking selection as an implicit substitute, leaving the landing mapping live.
+
+Obj67 now publishes both native animation bytes at first grounded attachment.
+This is the object's routine state, not a zone, route, frame, or trace
+exception; trace data and comparison tolerances are unchanged. The focused
+Obj67 tests pass, and with the local REV01 Sonic 1 ROM SBZ2 advances from frame
+171 / 49 animation errors to frame 3377 / 1 animation error with zero physics
+errors.
+
 ### 2026-07-13 -- S1 frame-start push pairing advances MZ1
 
 MZ1 complete-run frame 2404 began with both Sonic and Obj30's native
