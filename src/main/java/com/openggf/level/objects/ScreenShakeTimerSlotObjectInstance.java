@@ -19,13 +19,17 @@ public final class ScreenShakeTimerSlotObjectInstance extends AbstractObjectInst
         this.remainingFrames = Math.max(0, remainingFrames);
     }
 
+    ScreenShakeTimerSlotObjectInstance(ObjectSpawn spawn) {
+        this(0);
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (remainingFrames > 0) {
             remainingFrames--;
         }
         if (remainingFrames == 0) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
         }
     }
 

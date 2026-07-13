@@ -4,6 +4,7 @@ import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.rules.GameRules;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Isolated
 public class TestSolidObjectManager {
 
     @BeforeEach
@@ -1242,6 +1244,9 @@ public class TestSolidObjectManager {
         sonic.setCentreX((short) floor.getX());
         int exactBoundaryY = floor.getY() - 4 - params.airHalfHeight() - sonic.getYRadius();
         sonic.setCentreY((short) exactBoundaryY);
+        // The trace-backed high fixed-point phase consumes 20 zero-distance passes;
+        // the low phase consumes 21 (697588939, sonic3k.asm:104777-104790,41642-42015).
+        sonic.setSubpixelRaw(0, 0xF700);
 
         TestPlayableSprite sidekick = new TestPlayableSprite((short) 0, (short) 0);
         sidekick.useGameRules(GameRules.SONIC_3K);

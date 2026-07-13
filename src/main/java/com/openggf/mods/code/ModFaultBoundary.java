@@ -16,7 +16,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /** Owner-aware boundary for callbacks that run after a registration plan is published. */
-public final class ModFaultBoundary {
+public final class ModFaultBoundary implements com.openggf.level.objects.ObjectCallbackBoundary {
     private static final Logger LOG = Logger.getLogger(ModFaultBoundary.class.getName());
     private final Map<String, Set<String>> dependents;
     private final ModRuntimeFindingStore findings;
@@ -154,7 +154,8 @@ public final class ModFaultBoundary {
         if (failure instanceof ThreadDeath death) throw death;
     }
 
-    public static final class CallbackAborted extends RuntimeException {
+    public static final class CallbackAborted
+            extends com.openggf.level.objects.ObjectCallbackAbortException {
         private final String owner;
         private final Set<String> disabledOwners;
         CallbackAborted(String owner, Set<String> disabledOwners, Throwable cause) {

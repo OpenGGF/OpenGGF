@@ -101,7 +101,7 @@ public final class ModBackedGamePatch implements GamePatch {
                 return registrations.isEmpty()
                         ? stockOrDecorated
                         : new ModDecoratedObjectRegistry(stockOrDecorated, objectKeys,
-                                plan.objectPreviewArtKeys());
+                                plan.objectPreviewArtKeys(), faultBoundary);
             }
 
             @Override

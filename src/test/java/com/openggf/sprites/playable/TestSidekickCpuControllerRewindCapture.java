@@ -10,6 +10,7 @@ import com.openggf.level.objects.PerObjectRewindSnapshot;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 import java.lang.reflect.Field;
 import java.lang.reflect.RecordComponent;
 import java.util.LinkedHashMap;
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Focused round-trip coverage for {@link SidekickCpuController}'s mutable
  * scalar state through {@link AbstractPlayableSprite#captureRewindState()}.
  */
+@Isolated
 class TestSidekickCpuControllerRewindCapture {
 
     @BeforeEach
@@ -47,6 +49,10 @@ class TestSidekickCpuControllerRewindCapture {
         for (var entry : sentinels.entrySet()) {
             writeField(controller, entry.getKey(), entry.getValue());
         }
+        TailsCarryController.Snapshot expectedCarry = new TailsCarryController.Snapshot(
+                (short) 0x1234, (short) -0x2345, true, true, 0x2A,
+                TailsCarryController.CarryContext.MANUAL);
+        tails.getTailsCarryController().restore(expectedCarry);
 
         PerObjectRewindSnapshot snap1 = tails.captureRewindState();
         Object cpuExtra1 = readRecordComponent(snap1.playerExtra(), "sidekickCpuExtra");
@@ -55,11 +61,11 @@ class TestSidekickCpuControllerRewindCapture {
         assertNoRecordComponent(cpuExtra1, "leader");
         assertNoRecordComponent(cpuExtra1, "respawnStrategy");
         assertNoRecordComponent(cpuExtra1, "carryTrigger");
-        assertNoRecordComponent(cpuExtra1, "carryLatchX");
-        assertNoRecordComponent(cpuExtra1, "carryLatchY");
-        assertNoRecordComponent(cpuExtra1, "flyingCarryingFlag");
-        assertNoRecordComponent(cpuExtra1, "carryParentagePending");
-        assertNoRecordComponent(cpuExtra1, "releaseCooldown");
+        assertEquals(expectedCarry.latchX(), readRecordComponent(cpuExtra1, "carryLatchX"));
+        assertEquals(expectedCarry.latchY(), readRecordComponent(cpuExtra1, "carryLatchY"));
+        assertEquals(expectedCarry.carrying(), readRecordComponent(cpuExtra1, "flyingCarryingFlag"));
+        assertEquals(expectedCarry.parentagePending(), readRecordComponent(cpuExtra1, "carryParentagePending"));
+        assertEquals(expectedCarry.cooldown(), readRecordComponent(cpuExtra1, "releaseCooldown"));
         assertNoRawParticipantReference(cpuExtra1);
         for (var entry : sentinels.entrySet()) {
             assertEquals(entry.getValue(), readRecordComponent(cpuExtra1, entry.getKey()),
@@ -67,12 +73,15 @@ class TestSidekickCpuControllerRewindCapture {
         }
 
         tails.setCpuController(new SidekickCpuController(tails, leader));
+        tails.getTailsCarryController().clearState();
         tails.restoreRewindState(snap1);
 
         SidekickCpuController restored = tails.getCpuController();
         PerObjectRewindSnapshot snap2 = tails.captureRewindState();
         Object cpuExtra2 = readRecordComponent(snap2.playerExtra(), "sidekickCpuExtra");
         assertEquals(cpuExtra1, cpuExtra2, "Sidekick CPU snapshot did not round-trip");
+        assertEquals(expectedCarry, tails.getTailsCarryController().capture(),
+                "the full v1.2 carry snapshot remains authoritative, including MANUAL context");
         for (var entry : sentinels.entrySet()) {
             assertEquals(entry.getValue(), readField(restored, entry.getKey()),
                     entry.getKey() + " not restored to controller");

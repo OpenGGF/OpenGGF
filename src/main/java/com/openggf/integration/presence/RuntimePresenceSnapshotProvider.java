@@ -2,8 +2,8 @@ package com.openggf.integration.presence;
 
 import com.openggf.GameLoop;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.game.GameId;
 import com.openggf.game.GameModule;
+import com.openggf.game.GameModuleRouting;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelState;
@@ -84,12 +84,7 @@ public final class RuntimePresenceSnapshotProvider implements PresenceSnapshotPr
     }
 
     private static String displayGameName(GameModule module) {
-        return switch (module.getGameId()) {
-            case S1 -> "Sonic the Hedgehog";
-            case S2 -> "Sonic 2";
-            case S3K -> "Sonic 3 & Knuckles";
-            case STANDALONE -> module.getGameCode();
-        };
+        return GameModuleRouting.presenceDisplayName(module);
     }
 
     private String displayTeamName() {

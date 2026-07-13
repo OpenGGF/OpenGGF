@@ -4,6 +4,7 @@ import com.openggf.game.session.EngineServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 import com.openggf.control.GamepadInputManager;
 import com.openggf.control.GamepadStateSource;
 import com.openggf.control.InputHandler;
@@ -70,6 +71,7 @@ import static org.lwjgl.glfw.GLFW.*;
  * These tests verify game state transitions and mode switching
  * without requiring an OpenGL context.
  */
+@Isolated
 public class TestGameLoop {
 
     private GameLoop gameLoop;

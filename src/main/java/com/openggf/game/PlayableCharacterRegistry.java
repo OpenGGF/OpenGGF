@@ -7,7 +7,14 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-/** Immutable module-owned snapshot of playable-character definitions. */
+/**
+ * Immutable module-owned snapshot of playable-character definitions.
+ *
+ * <p>{@link #register(CharacterKey, CharacterDefinition)} returns a new snapshot;
+ * it never mutates the active module registry. Resolution distinguishes an unknown
+ * key from a known key whose owner is disabled and uses the caller's explicit
+ * fallback for either case.</p>
+ */
 @ModApi
 public final class PlayableCharacterRegistry {
     private static final PlayableCharacterRegistry EMPTY = new PlayableCharacterRegistry(Map.of());
@@ -17,8 +24,10 @@ public final class PlayableCharacterRegistry {
         this.definitions = Collections.unmodifiableMap(new LinkedHashMap<>(definitions));
     }
 
+    /** Returns the canonical empty registry. */
     public static PlayableCharacterRegistry empty() { return EMPTY; }
 
+    /** Returns a new snapshot containing one definition whose key must match. */
     public PlayableCharacterRegistry register(CharacterKey key, CharacterDefinition definition) {
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(definition, "definition");
@@ -30,12 +39,15 @@ public final class PlayableCharacterRegistry {
         return new PlayableCharacterRegistry(copy);
     }
 
+    /** Finds an exact built-in or owner-scoped identity without applying fallback. */
     public Optional<CharacterDefinition> find(CharacterKey key) {
         return Optional.ofNullable(definitions.get(Objects.requireNonNull(key, "key")));
     }
 
+    /** Returns the immutable insertion-ordered definition view. */
     public Map<CharacterKey, CharacterDefinition> definitions() { return definitions; }
 
+    /** Resolves an identity against the currently enabled owner set and explicit fallback. */
     public Resolution resolve(CharacterKey requested, Set<String> enabledOwners, CharacterKey fallback) {
         Objects.requireNonNull(requested, "requested");
         Objects.requireNonNull(enabledOwners, "enabledOwners");

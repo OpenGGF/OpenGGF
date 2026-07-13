@@ -16,6 +16,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * any level that registers a Tails sidekick is enough.
  */
 @RequiresRom(SonicGame.SONIC_3K)
+@Isolated
 class TestSidekickCpuControllerCarry {
 
     private static final int ZONE_AIZ = 0;
@@ -856,6 +858,11 @@ class TestSidekickCpuControllerCarry {
                 source.lastNormalAutoJumpPressFrameCounter(),
                 source.controller2SignedLocked(),
                 source.latestNormalStepDiagnostics(),
+                source.carryLatchX(),
+                source.carryLatchY(),
+                source.flyingCarryingFlag(),
+                source.carryParentagePending(),
+                source.releaseCooldown(),
                 mgzCarryIntroAscend,
                 mgzCarryFlapTimer,
                 mgzReleasedChaseLatched,

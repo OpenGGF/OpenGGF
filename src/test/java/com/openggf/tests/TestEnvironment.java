@@ -63,8 +63,8 @@ public final class TestEnvironment {
 
         resetAll();
         GameModuleRegistry.detectAndSetModule(rom);
-        recreateGameplayMode();
         RomManager.getInstance().setRom(rom);
+        recreateGameplayMode();
     }
 
     /**
@@ -173,5 +173,4 @@ public final class TestEnvironment {
         };
     }
 }
-
 

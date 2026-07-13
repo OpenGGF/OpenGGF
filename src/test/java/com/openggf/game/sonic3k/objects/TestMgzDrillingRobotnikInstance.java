@@ -43,6 +43,7 @@ import com.openggf.tests.SingletonResetExtension;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
+import com.openggf.sprites.playable.TailsCarryController;
 import org.mockito.MockedStatic;
 import org.mockito.InOrder;
 import org.junit.jupiter.api.AfterEach;
@@ -698,7 +699,7 @@ class TestMgzDrillingRobotnikInstance {
         Tails tails = new Tails("tails", (short) 0x3D00, (short) 0x0630);
         SidekickCpuController controller = new SidekickCpuController(tails, player);
         tails.setCpuController(controller);
-        setPrivateBoolean(controller, "flyingCarryingFlag", true);
+        restoreMgzCarryState(tails);
         services.withSidekicks(java.util.List.of(tails));
 
         capsule.update(1, player);
@@ -734,7 +735,7 @@ class TestMgzDrillingRobotnikInstance {
         Tails tails = new Tails("tails", (short) 0x3D00, (short) 0x0630);
         SidekickCpuController controller = new SidekickCpuController(tails, player);
         tails.setCpuController(controller);
-        setPrivateBoolean(controller, "flyingCarryingFlag", true);
+        restoreMgzCarryState(tails);
         services.withQueryOnlyPlayers(player, List.of(tails));
 
         capsule.update(1, player);
@@ -813,7 +814,7 @@ class TestMgzDrillingRobotnikInstance {
         tails.setObjectControlled(true);
         SidekickCpuController controller = new SidekickCpuController(tails, player);
         tails.setCpuController(controller);
-        setPrivateBoolean(controller, "flyingCarryingFlag", true);
+        restoreMgzCarryState(tails);
         services.withSidekicks(java.util.List.of(tails));
         Mgz2EndEggCapsuleInstance capsule = Mgz2EndEggCapsuleInstance.createForCamera(0x3C80, 0x0600);
         capsule.setServices(services);
@@ -1215,6 +1216,12 @@ class TestMgzDrillingRobotnikInstance {
         Field field = findField(target.getClass(), fieldName);
         field.setAccessible(true);
         field.setBoolean(target, value);
+    }
+
+    private static void restoreMgzCarryState(Tails tails) {
+        tails.getTailsCarryController().restore(new TailsCarryController.Snapshot(
+                (short) 0, (short) 0, true, false, 0,
+                TailsCarryController.CarryContext.MGZ_BOSS));
     }
 
     private static void setPrivateObject(Object target, String fieldName, Object value) throws Exception {

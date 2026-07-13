@@ -2,6 +2,7 @@ package com.openggf.tools.modsdk;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -19,6 +20,7 @@ import java.util.jar.JarOutputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Isolated
 class TestModJarValidator {
     private static final String MANIFEST = "META-INF/openggf-mod.yaml";
     @TempDir Path temp;

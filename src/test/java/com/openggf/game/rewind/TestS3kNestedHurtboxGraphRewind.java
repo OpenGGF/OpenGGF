@@ -554,7 +554,7 @@ class TestS3kNestedHurtboxGraphRewind {
             };
             ObjectManager objectManager = new ObjectManager(
                     spawns,
-                    new Sonic3kObjectRegistry(),
+                    new S3klGraphTestRegistry(),
                     0,
                     null,
                     null,
@@ -562,8 +562,15 @@ class TestS3kNestedHurtboxGraphRewind {
                     camera,
                     services);
             holder[0] = objectManager;
-            objectManager.reset(0);
+            objectManager.reset(S3kGraphRewindTestSupport.cameraXFor(spawns));
             return new Harness(objectManager, services);
+        }
+    }
+
+    private static final class S3klGraphTestRegistry extends Sonic3kObjectRegistry {
+        @Override
+        protected int currentRomZoneId() {
+            return com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_AIZ;
         }
     }
 

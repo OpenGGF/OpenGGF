@@ -167,7 +167,7 @@ class TestS3kMhzMinibossFlameGraphRewind {
                     spawns, new MhzTestRegistry(), 0, null, null,
                     GraphicsManager.getInstance(), camera, services);
             holder[0] = objectManager;
-            objectManager.reset(0);
+            objectManager.reset(com.openggf.game.rewind.S3kGraphRewindTestSupport.cameraXFor(spawns));
             return new Harness(objectManager, services);
         }
     }

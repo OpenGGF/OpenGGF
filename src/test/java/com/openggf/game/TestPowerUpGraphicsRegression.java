@@ -116,10 +116,10 @@ class TestPowerUpGraphicsRegression {
         SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        TestEnvironment.activeGameplayMode();
 
         Rom primaryRom = openRom(resolveSonic2RomFile());
         RomManager.getInstance().setRom(primaryRom);
+        TestEnvironment.activeGameplayMode();
 
         if (crossGame) {
             File s3kRom = resolveSonic3kRomFile();

@@ -914,6 +914,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public PerObjectRewindSnapshot captureRewindState(boolean includeFollowHistory) {
                 SidekickCpuRewindExtra sidekickCpuExtra =
                         cpuController != null ? cpuController.captureRewindState() : null;
+                PlayableSpriteController.RewindState controllerState = controller.captureRewindState();
                 PlayerRewindExtra extra = new PlayerRewindExtra(
                         // AbstractSprite base fields
                         xPixel, yPixel,
@@ -985,7 +986,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         animationFrameIndex,
                         animationTick,
                         debugMode,
-                        controller.captureRewindState(),
+                        controllerState.movementState(),
+                        controllerState.spindashDustState(),
+                        controllerState.animationState(),
+                        controllerState.drowningState(),
+                        controllerState.tailsCarryState(),
                         sidekickCpuExtra,
                         includeFollowHistory ? xHistory : null,
                         includeFollowHistory ? yHistory : null,
@@ -1160,39 +1165,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.animationFrameIndex = extra.animationFrameIndex();
                 this.animationTick = extra.animationTick();
                 this.debugMode = extra.debugMode();
-                // Carry is shared player state. Restore it before CPU sequencing,
-                // whose restored routine may consume the carry context immediately.
-                controller.restoreRewindState(extra.controllerState());
-                if (extra.sidekickCpuExtra() != null) {
-                        if (cpuController == null) {
-                                throw new IllegalStateException(
-                                        "Cannot restore SidekickCpuController state without a live controller");
-                        }
-                        cpuController.restoreRewindState(extra.sidekickCpuExtra());
-                }
-                // Sidekick follow-history circular buffers. Without restoring these,
-                // the follower reads stale leader-position history and diverges on
-                // the very first replay step.
-                if (extra.xHistory() != null) {
-                        System.arraycopy(extra.xHistory(), 0, this.xHistory, 0,
-                                Math.min(extra.xHistory().length, this.xHistory.length));
-                }
-                if (extra.yHistory() != null) {
-                        System.arraycopy(extra.yHistory(), 0, this.yHistory, 0,
-                                Math.min(extra.yHistory().length, this.yHistory.length));
-                }
-                if (extra.inputHistory() != null) {
-                        System.arraycopy(extra.inputHistory(), 0, this.inputHistory, 0,
-                                Math.min(extra.inputHistory().length, this.inputHistory.length));
-                }
-                if (extra.jumpPressHistory() != null) {
-                        System.arraycopy(extra.jumpPressHistory(), 0, this.jumpPressHistory, 0,
-                                Math.min(extra.jumpPressHistory().length, this.jumpPressHistory.length));
-                }
-                if (extra.statusHistory() != null) {
-                        System.arraycopy(extra.statusHistory(), 0, this.statusHistory, 0,
-                                Math.min(extra.statusHistory().length, this.statusHistory.length));
-                }
+                controller.restoreRewindState(extra, cpuController, xHistory, yHistory,
+                        inputHistory, jumpPressHistory, statusHistory);
                 // Sensor offsets are derived from restored radii plus air/angle/running mode.
                 // Recompute after direct field hydration so rewind does not keep offsets from
                 // the pre-restore sprite state.
@@ -1573,7 +1547,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         /**
          * Pre-dispatch hook for a valid airborne ability-button activation.
-         * Returning true consumes the press before the built-in ability dispatch.
+         * Returning true consumes the press before the built-in
+         * {@link #getSecondaryAbility()} dispatch; false preserves normal dispatch.
+         * This hook is owner-fault-bounded for registered mod characters and is not
+         * called for general ground movement or arbitrary button presses.
          */
         protected boolean onAbilityActivate(boolean up, boolean down, boolean left, boolean right) {
                 return false;
@@ -3651,7 +3628,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 controller = new PlayableSpriteController(this);
         }
 
-        /** Returns the stable persisted identity for this playable character. */
+        /**
+         * Returns the stable identity persisted in launch profiles, saves, and rewind
+         * state. Registered mod subclasses must return the same owner-scoped key as
+         * their {@code CharacterDefinition}; the construction boundary validates it.
+         */
         public CharacterKey characterKey() {
                 return PlayableCharacterIdentity.defaultFor(this);
         }

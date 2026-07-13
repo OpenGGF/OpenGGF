@@ -10,7 +10,17 @@ import com.openggf.sprites.playable.SonicRespawnStrategy;
 import java.io.IOException;
 import java.util.Objects;
 
-/** Immutable creator contribution describing one playable character. */
+/**
+ * Immutable creator contribution describing one playable character.
+ *
+ * <p>The {@code key} must be the owner-scoped key supplied to
+ * {@code ModContext.registerCharacter}. The factories and suppliers are invoked
+ * through that owner's fault boundary. A null respawn factory selects
+ * {@link SonicRespawnStrategy}; a null palette supplier retains the host-game
+ * palette fallback. Mod characters must set {@code supportsSuperForm} to false in
+ * playable format v2, and the {@link PlayerCharacter#KNUCKLES} archetype requires
+ * {@link SecondaryAbility#GLIDE}.</p>
+ */
 @ModApi
 public record CharacterDefinition(
         CharacterKey key,
@@ -23,7 +33,7 @@ public record CharacterDefinition(
         ArtSupplier artSupplier,
         PaletteSupplier paletteSupplier) {
 
-    /** Compatibility constructor for definitions that rely on the host-game palette. */
+    /** Creates a definition that relies on the host-game palette fallback. */
     public CharacterDefinition(CharacterKey key, String displayName,
                                PlayableFactory spriteFactory,
                                RespawnStrategyFactory respawnStrategyFactory,
@@ -55,18 +65,21 @@ public record CharacterDefinition(
     @ModApi
     @FunctionalInterface
     public interface PlayableFactory {
+        /** Creates a playable at ROM-style centre coordinates for the persisted key. */
         AbstractPlayableSprite create(String persistedCode, int x, int y);
     }
 
     @ModApi
     @FunctionalInterface
     public interface RespawnStrategyFactory {
+        /** Creates the strategy owned by one sidekick controller. */
         SidekickRespawnStrategy create(SidekickCpuController controller);
     }
 
     @ModApi
     @FunctionalInterface
     public interface ArtSupplier {
+        /** Loads the complete playable art set for the canonical persisted key. */
         SpriteArtSet load(String persistedCode) throws IOException;
     }
 
@@ -74,6 +87,7 @@ public record CharacterDefinition(
     @ModApi
     @FunctionalInterface
     public interface PaletteSupplier {
+        /** Loads the 16-colour playable palette for the canonical persisted key. */
         com.openggf.level.Palette load(String persistedCode) throws IOException;
     }
 }

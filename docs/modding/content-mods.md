@@ -1,11 +1,24 @@
 # Content mods
 
-Phase 2 content mods can add code-backed objects, baked art, and complete Sonic 2
-zones. They can also replace stock art without code. Mods are discovered from the
+OpenGGF Mod API 1.2 supports restart-loaded music packs, code-backed objects,
+baked art, complete Sonic 2 zones, playable characters, and no-ROM standalone
+games. Mods are discovered from the
 process `mods/` directory at restart; executable mods must be enabled and granted
 trust in the Mod Manager before they run.
 
-The public mod API is version `1.1.0`. A creator build needs both release artifacts:
+The public mod API is version `1.2.0`. Start with the guide for the contribution
+you are building:
+
+- [Music packs](music-packs.md) — data-only WAV/Ogg replacements for stock music.
+- This guide — Phase 2 objects, art reskins, and complete Sonic 2 zones.
+- [Playable characters](characters.md) — owner-tagged character identity, physics,
+  playable art, archetypes, abilities, saves, and rewind.
+- [Standalone games](standalone-games.md) — a complete `GameModule`, levels,
+  characters, music, and SFX that launch without a ROM.
+- [The `ggfmod` CLI](ggfmod.md) — launcher syntax, project scaffolding, and all
+  converters.
+
+A creator build needs both release artifacts:
 
 - the engine jar, which contains the public API and runtime dependencies; and
 - the `openggf-mod-sdk` classifier jar, which contains `ggfmod`, converters, and
@@ -22,9 +35,12 @@ ggfmod init my-mod --id my-mod --package example.mymod
 ```
 
 The generated Maven project is a working reference mod, not pseudocode. It contains
-a strict manifest, a namespaced patrol badnik, an 8-by-8 Genesis sheet source, and a
-minimal full-level editor export. The entrypoint registers the object, its baked art
-and preview, and a zone inserted after `mtz3`.
+a strict API 1.2 manifest, a namespaced patrol badnik, a Phase 3 character stub, an
+8-by-8 Genesis sheet source, and a minimal full-level editor export. The character
+stub deliberately has no playable art or terrain sensors; use the
+[character guide](characters.md) and checked-in acceptance sample before enabling it
+for gameplay. The entrypoint also registers the object, its baked art and preview,
+and a zone inserted after `mtz3`.
 
 Build the generated Java code against the engine jar, convert its source assets, and
 package the resulting classes and resources:

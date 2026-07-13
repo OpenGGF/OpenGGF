@@ -119,9 +119,9 @@ class TestS3kAizIntroGraphRewind {
                 "generic recreate should rebuild an AIZ intro glow child when a live plane is present");
         assertSame(plane, readObjectField(result, "parent"),
                 "glow child must relink to the restore-time live plane");
-        assertEquals(0x38, readObjectField(result, "xOffset"),
+        assertEquals(plane.getX() + 0x38, result.getX(),
                 "variant 0 must restore the first ChildObjDat_67A62 X offset");
-        assertEquals(0x04, readObjectField(result, "yOffset"),
+        assertEquals(plane.getY() + 0x04, result.getY(),
                 "variant 0 must restore the first ChildObjDat_67A62 Y offset");
     }
 

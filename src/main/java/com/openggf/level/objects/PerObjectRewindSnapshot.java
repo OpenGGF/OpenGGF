@@ -324,6 +324,11 @@ public record PerObjectRewindSnapshot(
             int lastNormalAutoJumpPressFrameCounter,
             boolean controller2SignedLocked,
             com.openggf.sprites.playable.SidekickCpuController.NormalStepDiagnostics latestNormalStepDiagnostics,
+            short carryLatchX,
+            short carryLatchY,
+            boolean flyingCarryingFlag,
+            boolean carryParentagePending,
+            int releaseCooldown,
             boolean mgzCarryIntroAscend,
             int mgzCarryFlapTimer,
             boolean mgzReleasedChaseLatched,
@@ -436,7 +441,11 @@ public record PerObjectRewindSnapshot(
             int animationFrameIndex,
             int animationTick,
             boolean debugMode,
-            com.openggf.sprites.playable.PlayableSpriteController.RewindState controllerState,
+            com.openggf.sprites.managers.PlayableSpriteMovement.RewindState movementState,
+            com.openggf.sprites.managers.SpindashDustController.RewindState spindashDustState,
+            com.openggf.sprites.managers.PlayableSpriteAnimation.RewindState animationState,
+            com.openggf.sprites.playable.DrowningController.RewindState drowningState,
+            com.openggf.sprites.playable.TailsCarryController.Snapshot tailsCarryState,
             SidekickCpuRewindExtra sidekickCpuExtra,
             // Sidekick follow-history circular buffers (read by SidekickCpuController
             // each frame to position the follower; the leader writes new entries every
@@ -454,6 +463,92 @@ public record PerObjectRewindSnapshot(
             inputHistory = inputHistory == null ? null : inputHistory.clone();
             jumpPressHistory = jumpPressHistory == null ? null : jumpPressHistory.clone();
             statusHistory = statusHistory == null ? null : statusHistory.clone();
+        }
+
+        /** Compatibility constructor for the API 1.1 snapshot shape. */
+        public PlayerRewindExtra(
+                short xPixel, short yPixel, short xSubpixel, short ySubpixel, int width, int height,
+                com.openggf.physics.Direction direction, byte layer, com.openggf.game.GroundMode runningMode,
+                short xRadius, short yRadius, short gSpeed, short xSpeed, short ySpeed, short jump,
+                byte angle, byte statusTertiary, boolean loopLowPlane, byte topSolidBit, byte lrbSolidBit,
+                boolean prePhysicsAir, byte prePhysicsAngle, short prePhysicsGSpeed, short prePhysicsXSpeed,
+                short prePhysicsYSpeed, short prePhysicsCentreX, short prePhysicsCentreY, boolean air,
+                boolean rolling, boolean jumping, boolean rollingJump, boolean pinballMode, boolean pinballSpeedLock,
+                boolean preserveRollingOnNextLanding, boolean preserveRollingOnNextRollStop,
+                boolean objectPreservedRollBoostFollowup, boolean objectPreservedRollWallProbe,
+                boolean objectPreservedRollVelocityCarry, boolean tunnelMode, boolean onObject,
+                boolean onObjectAtFrameStart, boolean pushingAtFrameStart, boolean hurtAtFrameStart,
+                boolean hurtRecoveryCompletedThisFrame, int latchedSolidObjectId, int interactSlotIndex,
+                boolean slopeRepelJustSlipped, boolean stickToConvex, boolean sliding, boolean pushing,
+                boolean skidding, int skidDustTimer, boolean fixedSkidDustActive, int lastFixedSkidDustTickFrame,
+                short wallClimbX, int rightWallPenetrationTimer, int balanceState, boolean springing,
+                int springingFrames, boolean dead, boolean drowningDeath, int drownPreDeathTimer, boolean hurt,
+                int deathCountdown, int invulnerableFrames, boolean suppressNextInvulnerabilityDecrement,
+                int invincibleFrames, boolean spindash, short spindashCounter, boolean crouching,
+                boolean lookingUp, short lookDelayCounter, int doubleJumpFlag, byte doubleJumpProperty,
+                boolean shield, com.openggf.game.ShieldType shieldType, boolean instaShieldRegistered,
+                boolean speedShoes, int speedShoesRemainingTicks, boolean superSonic, boolean forceInputRight,
+                int forcedInputMask, boolean forcedJumpPress, boolean suppressNextJumpPress,
+                boolean deferredObjectControlRelease, boolean controlLocked, boolean hasQueuedControlLockedState,
+                boolean queuedControlLocked, boolean hasQueuedForceInputRightState, boolean queuedForceInputRight,
+                int moveLockTimer, boolean objectControlled, boolean objectControlAllowsCpu,
+                boolean objectControlSuppressesMovement, int objectControlReleasedFrame, boolean suppressAirCollision,
+                boolean suppressGroundWallCollision, boolean forceFloorCheck, int suppressedObjectMoveAndFallAxes,
+                boolean hidden, boolean renderFlagOnScreen, boolean renderFlagOnScreenValid, boolean renderHFlip,
+                boolean renderVFlip, boolean mgzTopPlatformSpringHandoffPending, int mgzTopPlatformSpringHandoffXVel,
+                int mgzTopPlatformSpringHandoffYVel, boolean jumpInputPressed, boolean jumpInputJustPressed,
+                boolean jumpInputPressedPreviousFrame, boolean upInputPressed, boolean downInputPressed,
+                boolean leftInputPressed, boolean rightInputPressed, boolean movementInputActive,
+                short logicalInputState, boolean logicalJumpPressState, boolean cpuControlled, byte historyPos,
+                boolean followerHistoryRecordedThisTick, int spiralActiveFrame, byte flipAngle, byte flipType,
+                byte flipSpeed, byte flipsRemaining, boolean flipTurned, boolean inWater,
+                boolean waterPhysicsActive, boolean wasInWater, boolean waterSkimActive, boolean preventTailsRespawn,
+                int badnikChainCounter, int bubbleAnimId, boolean initPhysicsActive,
+                boolean objectMappingFrameControl, int mappingFrame, int animationId, int forcedAnimationId,
+                int animationFrameIndex, int animationTick, boolean debugMode,
+                com.openggf.sprites.managers.PlayableSpriteMovement.RewindState movementState,
+                com.openggf.sprites.managers.SpindashDustController.RewindState spindashDustState,
+                com.openggf.sprites.managers.PlayableSpriteAnimation.RewindState animationState,
+                com.openggf.sprites.playable.DrowningController.RewindState drowningState,
+                SidekickCpuRewindExtra sidekickCpuExtra, short[] xHistory, short[] yHistory, short[] inputHistory,
+                byte[] jumpPressHistory, byte[] statusHistory) {
+            this(xPixel, yPixel, xSubpixel, ySubpixel, width, height, direction, layer, runningMode, xRadius, yRadius,
+                    gSpeed, xSpeed, ySpeed, jump, angle, statusTertiary, loopLowPlane, topSolidBit, lrbSolidBit,
+                    prePhysicsAir, prePhysicsAngle, prePhysicsGSpeed, prePhysicsXSpeed, prePhysicsYSpeed,
+                    prePhysicsCentreX, prePhysicsCentreY, air, rolling, jumping, rollingJump, pinballMode,
+                    pinballSpeedLock, preserveRollingOnNextLanding, preserveRollingOnNextRollStop,
+                    objectPreservedRollBoostFollowup, objectPreservedRollWallProbe, objectPreservedRollVelocityCarry,
+                    tunnelMode, onObject, onObjectAtFrameStart, pushingAtFrameStart, hurtAtFrameStart,
+                    hurtRecoveryCompletedThisFrame, latchedSolidObjectId, interactSlotIndex, slopeRepelJustSlipped,
+                    stickToConvex, sliding, pushing, skidding, skidDustTimer, fixedSkidDustActive,
+                    lastFixedSkidDustTickFrame, wallClimbX, rightWallPenetrationTimer, balanceState, springing,
+                    springingFrames, dead, drowningDeath, drownPreDeathTimer, hurt, deathCountdown,
+                    invulnerableFrames, suppressNextInvulnerabilityDecrement, invincibleFrames, spindash,
+                    spindashCounter, crouching, lookingUp, lookDelayCounter, doubleJumpFlag, doubleJumpProperty,
+                    shield, shieldType, instaShieldRegistered, speedShoes, speedShoesRemainingTicks, superSonic,
+                    forceInputRight, forcedInputMask, forcedJumpPress, suppressNextJumpPress,
+                    deferredObjectControlRelease, controlLocked, hasQueuedControlLockedState, queuedControlLocked,
+                    hasQueuedForceInputRightState, queuedForceInputRight, moveLockTimer, objectControlled,
+                    objectControlAllowsCpu, objectControlSuppressesMovement, objectControlReleasedFrame,
+                    suppressAirCollision, suppressGroundWallCollision, forceFloorCheck,
+                    suppressedObjectMoveAndFallAxes, hidden, renderFlagOnScreen, renderFlagOnScreenValid,
+                    renderHFlip, renderVFlip, mgzTopPlatformSpringHandoffPending,
+                    mgzTopPlatformSpringHandoffXVel, mgzTopPlatformSpringHandoffYVel, jumpInputPressed,
+                    jumpInputJustPressed, jumpInputPressedPreviousFrame, upInputPressed, downInputPressed,
+                    leftInputPressed, rightInputPressed, movementInputActive, logicalInputState,
+                    logicalJumpPressState, cpuControlled, historyPos, followerHistoryRecordedThisTick,
+                    spiralActiveFrame, flipAngle, flipType, flipSpeed, flipsRemaining, flipTurned, inWater,
+                    waterPhysicsActive, wasInWater, waterSkimActive, preventTailsRespawn, badnikChainCounter,
+                    bubbleAnimId, initPhysicsActive, objectMappingFrameControl, mappingFrame, animationId,
+                    forcedAnimationId, animationFrameIndex, animationTick, debugMode, movementState,
+                    spindashDustState, animationState, drowningState, null, sidekickCpuExtra, xHistory, yHistory,
+                    inputHistory, jumpPressHistory, statusHistory);
+        }
+
+        /** Reassembles the controller-owned rewind state introduced in API 1.2. */
+        public com.openggf.sprites.playable.PlayableSpriteController.RewindState controllerState() {
+            return new com.openggf.sprites.playable.PlayableSpriteController.RewindState(
+                    movementState, spindashDustState, animationState, drowningState, tailsCarryState);
         }
     }
 

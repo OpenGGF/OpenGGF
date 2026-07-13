@@ -8,7 +8,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** Minimal no-ROM game base; creators provide level and music loading only. */
+/**
+ * Minimal no-ROM game base for a standalone module.
+ *
+ * <p>Creators provide level and music loading while neutral defaults disable ROM
+ * relocation, ROM saving, title cards, and native sound maps. {@link #getRom()}
+ * intentionally returns null; open authored assets through {@link #dataSource()}.</p>
+ */
 @ModApi
 public abstract class ModGame extends Game {
     private final String identifier;
@@ -19,6 +25,7 @@ public abstract class ModGame extends Game {
         this.source = Objects.requireNonNull(source, "source");
     }
 
+    /** Returns the durable bounded source supplied by the owning standalone launch. */
     protected final GameDataSource dataSource() { return source; }
     @Override public final Rom getRom() { return null; }
     @Override public boolean isCompatible() { return true; }

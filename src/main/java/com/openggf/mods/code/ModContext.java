@@ -3,6 +3,7 @@ package com.openggf.mods.code;
 import com.openggf.game.patch.GamePatch;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.game.ModKeySyntax;
+import com.openggf.game.GameModuleRouting;
 import com.openggf.level.objects.ObjectFactory;
 
 import java.util.ArrayList;
@@ -11,7 +12,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** Creator-facing, owner-scoped transaction. Nothing is visible until {@link #freeze()}. */
+/**
+ * Creator-facing, owner-scoped registration transaction.
+ *
+ * <p>Nothing becomes visible until the engine freezes the complete transaction.
+ * The first invalid or duplicate contribution poisons it, so a creator cannot
+ * publish a partial character, object, patch, zone, or standalone module graph.</p>
+ */
 @com.openggf.game.ModApi
 public final class ModContext {
     private final String owner;
@@ -52,16 +59,22 @@ public final class ModContext {
         this.defaultInsertAfter = defaultInsertAfter;
     }
 
+    /** Returns the manifest id that namespaces every local registration. */
     public String ownerModId() { return owner; }
+    /** Returns the stock game id for a patch, or null for a standalone owner. */
     public String baseGameId() { return baseGame; }
+    /** Returns the immutable bounded asset snapshot while registration is open. */
     public ModAssetRoot modAssets() { requireOpen(); return assets; }
 
-    /** Stages the single no-ROM module owned by a standalone manifest. */
+    /**
+     * Stages the single no-ROM module owned by a standalone manifest.
+     * Its identifier and game code must both equal {@link #ownerModId()}.
+     */
     public void registerGameModule(com.openggf.game.GameModule module) {
         mutate(() -> {
             if (!standalone) throw failure("Only standalone manifests may register a game module");
             Objects.requireNonNull(module, "module");
-            if (module.getGameId() != com.openggf.game.GameId.STANDALONE) {
+            if (!GameModuleRouting.isStandalone(module)) {
                 throw failure("Standalone module must report GameId.STANDALONE");
             }
             if (!owner.equals(module.getGameCode()) || !owner.equals(module.getIdentifier())) {
@@ -96,7 +109,11 @@ public final class ModContext {
         });
     }
 
-    /** Stages one owner-tagged playable character in this registration transaction. */
+    /**
+     * Stages one owner-tagged playable character in this transaction.
+     * {@code localName} is combined with {@link #ownerModId()}, and the resulting
+     * key must exactly equal {@link com.openggf.game.CharacterDefinition#key()}.
+     */
     public void registerCharacter(String localName, com.openggf.game.CharacterDefinition definition) {
         mutate(() -> {
             com.openggf.game.CharacterKey expected = com.openggf.game.CharacterKey.mod(owner, localName);

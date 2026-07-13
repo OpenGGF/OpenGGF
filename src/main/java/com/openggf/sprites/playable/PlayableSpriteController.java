@@ -1,5 +1,6 @@
 package com.openggf.sprites.playable;
 
+import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
 import com.openggf.sprites.managers.PlayableSpriteAnimation;
 import com.openggf.sprites.managers.PlayableSpriteMovement;
 import com.openggf.sprites.managers.SpindashDustController;
@@ -79,11 +80,56 @@ public class PlayableSpriteController {
     }
 
     public void restoreRewindState(RewindState state) {
+        restoreRewindParticipants(state);
+        TailsCarryController.Snapshot carryState = state != null ? state.tailsCarryState() : null;
+        if (tailsCarry != null) {
+            if (carryState != null) {
+                tailsCarry.restore(carryState);
+            } else {
+                tailsCarry.clearAndReleaseMain();
+            }
+        }
+    }
+
+    void restoreRewindStateWithoutCarry(RewindState state) {
+        restoreRewindParticipants(state);
+    }
+
+    void restoreRewindState(PlayerRewindExtra extra, SidekickCpuController cpuController,
+            short[] xHistory, short[] yHistory, short[] inputHistory,
+            byte[] jumpPressHistory, byte[] statusHistory) {
+        boolean hasFullCarrySnapshot = extra.tailsCarryState() != null;
+        if (hasFullCarrySnapshot) restoreRewindState(extra.controllerState());
+        else restoreRewindStateWithoutCarry(extra.controllerState());
+
+        if (extra.sidekickCpuExtra() != null) {
+            if (cpuController == null) {
+                throw new IllegalStateException(
+                        "Cannot restore SidekickCpuController state without a live controller");
+            }
+            if (hasFullCarrySnapshot) cpuController.restoreRewindScalars(extra.sidekickCpuExtra());
+            else cpuController.restoreRewindState(extra.sidekickCpuExtra());
+        }
+        copyHistory(extra.xHistory(), xHistory);
+        copyHistory(extra.yHistory(), yHistory);
+        copyHistory(extra.inputHistory(), inputHistory);
+        copyHistory(extra.jumpPressHistory(), jumpPressHistory);
+        copyHistory(extra.statusHistory(), statusHistory);
+    }
+
+    private static void copyHistory(short[] source, short[] target) {
+        if (source != null) System.arraycopy(source, 0, target, 0, Math.min(source.length, target.length));
+    }
+
+    private static void copyHistory(byte[] source, byte[] target) {
+        if (source != null) System.arraycopy(source, 0, target, 0, Math.min(source.length, target.length));
+    }
+
+    private void restoreRewindParticipants(RewindState state) {
         PlayableSpriteMovement.RewindState movementState = state != null ? state.movementState() : null;
         SpindashDustController.RewindState spindashState = state != null ? state.spindashDustState() : null;
         PlayableSpriteAnimation.RewindState animationState = state != null ? state.animationState() : null;
         DrowningController.RewindState drowningState = state != null ? state.drowningState() : null;
-        TailsCarryController.Snapshot carryState = state != null ? state.tailsCarryState() : null;
         if (movement != null) {
             movement.restoreRewindState(movementState);
         }
@@ -95,13 +141,6 @@ public class PlayableSpriteController {
         }
         if (drowning != null) {
             drowning.restoreRewindState(drowningState);
-        }
-        if (tailsCarry != null) {
-            if (carryState != null) {
-                tailsCarry.restore(carryState);
-            } else {
-                tailsCarry.clearAndReleaseMain();
-            }
         }
     }
 

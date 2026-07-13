@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.Optional;
 import java.util.Set;
 import java.lang.reflect.Modifier;
@@ -20,6 +21,62 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TestOwnerAwareStandaloneModule {
+    @Test
+    void characterContributionsPreserveRegistrationOrder() {
+        ModFaultBoundary boundary = new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
+                owners -> new ModStateSaveResult.Saved(), owners -> { });
+        GameModule delegate = mock(GameModule.class);
+        when(delegate.getPlayableCharacterRegistry())
+                .thenReturn(com.openggf.game.PlayableCharacterRegistry.empty());
+        com.openggf.game.CharacterKey runner = com.openggf.game.CharacterKey.mod("owner", "runner");
+        com.openggf.game.CharacterKey friend = com.openggf.game.CharacterKey.mod("owner", "friend");
+        Map<com.openggf.game.CharacterKey, com.openggf.game.CharacterDefinition> characters =
+                new LinkedHashMap<>();
+        characters.put(runner, characterDefinition(runner));
+        characters.put(friend, characterDefinition(friend));
+
+        GameModule wrapped = OwnerAwareStandaloneModule.wrap("owner", delegate, boundary, characters);
+
+        assertEquals(List.of(runner, friend),
+                wrapped.getPlayableCharacterRegistry().definitions().keySet().stream().toList());
+    }
+
+    @Test
+    void dynamicCreatorObjectRetainsOwnerThroughRewindRecreation() {
+        ModFaultBoundary boundary = new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
+                owners -> new ModStateSaveResult.Saved(), owners -> { });
+        GameModule delegate = mock(GameModule.class);
+        ObjectRegistry registry = mock(ObjectRegistry.class);
+        ObjectSpawn spawn = ownedSpawn();
+        when(delegate.createObjectRegistry()).thenReturn(registry);
+        when(registry.objectSlotLayout()).thenReturn(ObjectSlotLayout.SONIC_1);
+        when(registry.create(spawn)).thenAnswer(ignored -> new RewindableOwnedObject(spawn));
+        GameModule wrapped = OwnerAwareStandaloneModule.wrap("owner", delegate, boundary, Map.of());
+        ObjectRegistry wrappedRegistry = wrapped.createObjectRegistry();
+        ObjectManager manager = new ObjectManager(List.of(), wrappedRegistry,
+                0, null, null, null, null, new StubObjectServices());
+        manager.setRewindClassResolver(new RewindClassResolver() {
+            @Override public Optional<Class<?>> resolve(String owner, String binaryName) {
+                return "owner".equals(owner) && RewindableOwnedObject.class.getName().equals(binaryName)
+                        ? Optional.of(RewindableOwnedObject.class) : Optional.empty();
+            }
+            @Override public Optional<String> ownerOf(Class<?> type) {
+                return type == RewindableOwnedObject.class ? Optional.of("owner") : Optional.empty();
+            }
+        });
+        RewindableOwnedObject original = manager.createDynamicObject(
+                () -> (RewindableOwnedObject) wrappedRegistry.create(spawn));
+
+        var snapshot = manager.rewindSnapshottable().capture();
+        assertEquals("owner", snapshot.dynamicObjects().getFirst().ownerModId());
+        manager.removeDynamicObject(original);
+        manager.rewindSnapshottable().restore(snapshot);
+
+        ObjectInstance restored = manager.getActiveObjects().stream()
+                .filter(RewindableOwnedObject.class::isInstance).findFirst().orElseThrow();
+        assertNotSame(original, restored);
+    }
+
     @Test
     void concreteStandaloneObjectUpdateRunsInsideOwnerBoundary() {
         BoundaryFixture fixture = objectFixture(Callback.UPDATE, false);
@@ -320,6 +377,13 @@ class TestOwnerAwareStandaloneModule {
         return OwnerAwareStandaloneModule.wrap("owner", delegate, boundary, Map.of());
     }
 
+    private static com.openggf.game.CharacterDefinition characterDefinition(
+            com.openggf.game.CharacterKey key) {
+        return new com.openggf.game.CharacterDefinition(key, key.persisted(),
+                (code, x, y) -> null, null, com.openggf.game.PlayerCharacter.SONIC_ALONE,
+                com.openggf.sprites.playable.SecondaryAbility.NONE, false, code -> null);
+    }
+
     private interface DynamicService { void invoke(); }
 
     private static ObjectSpawn ownedSpawn() {
@@ -471,6 +535,15 @@ class TestOwnerAwareStandaloneModule {
         private HostileUpdateChild() { super(null, "hostile-update-child"); }
         @Override public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
             throw new IllegalStateException("provider-child");
+        }
+        @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
+    public static final class RewindableOwnedObject extends AbstractObjectInstance
+            implements RewindRecreatable {
+        public RewindableOwnedObject(ObjectSpawn spawn) { super(spawn, "rewindable-owned"); }
+        @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+            return new RewindableOwnedObject(context.spawn());
         }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
     }

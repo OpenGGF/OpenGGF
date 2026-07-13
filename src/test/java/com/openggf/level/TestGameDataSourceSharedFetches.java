@@ -29,6 +29,7 @@ import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.level.objects.TouchResponseTable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.mockito.ArgumentCaptor;
 
 import java.io.IOException;
@@ -41,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@Isolated
 class TestGameDataSourceSharedFetches {
     @AfterEach void clearSession() { SessionManager.clear(); }
 

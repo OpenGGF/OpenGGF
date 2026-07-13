@@ -18,6 +18,7 @@ import java.util.List;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class TestLevelDebugRenderer {
@@ -40,15 +41,13 @@ class TestLevelDebugRenderer {
 
         when(objectManager.getActiveSpawns()).thenReturn(List.of());
         when(objectManager.getActiveObjects()).thenReturn(List.of(spawnless));
-        when(spawnless.getSpawn()).thenReturn(null);
-
         LevelDebugContext context = new LevelDebugContext(null, 16, overlayManager, graphicsManager, 320, 224);
         LevelDebugRenderer renderer = new LevelDebugRenderer(context);
 
         renderer.renderDebugOverlays(true, objectManager, null, spriteManager, null,
                 SonicConfigurationService.getInstance(), 0);
 
-        verify(spawnless).getSpawn();
+        verifyNoInteractions(spawnless);
         verify(graphicsManager).enqueueDebugLineState();
         verify(graphicsManager, never()).registerCommand(org.mockito.ArgumentMatchers.any());
     }
@@ -78,5 +77,4 @@ class TestLevelDebugRenderer {
         }
     }
 }
-
 

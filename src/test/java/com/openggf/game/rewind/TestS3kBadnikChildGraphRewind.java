@@ -1722,7 +1722,7 @@ class TestS3kBadnikChildGraphRewind {
                     camera,
                     services);
             holder[0] = objectManager;
-            objectManager.reset(0);
+            objectManager.reset(S3kGraphRewindTestSupport.cameraXFor(spawns));
             return new Harness(objectManager);
         }
     }

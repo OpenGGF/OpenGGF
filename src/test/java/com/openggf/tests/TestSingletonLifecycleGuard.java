@@ -23,7 +23,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/TestTraceSessionLauncherRewindPresentation.java#setUp
             src/test/java/com/openggf/audio/AudioRegressionTest.java#setUpClass
             src/test/java/com/openggf/editor/TestEditorRenderingSmoke.java#setUp
-            src/test/java/com/openggf/editor/TestEditorToggleIntegration.java#setUp
             src/test/java/com/openggf/editor/TestLevelEditorController.java#setUp
             src/test/java/com/openggf/game/TestCrossGameFeatureProviderRefactor.java#setUp
             src/test/java/com/openggf/game/TestGameStateManager.java#setUp

@@ -41,7 +41,6 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F10;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F9;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
@@ -209,16 +208,17 @@ class TestUserRecordingControls {
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
         MasterTitleScreen screen = new MasterTitleScreen(config);
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
         screen.setUserRecordingMenuFactoryForTest((gameId, font) -> new UserRecordingMenu(
                 gameId, List.of(), font, (entry, options) -> { }));
         InputHandler input = new InputHandler();
 
         input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
-        input.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_F9, GLFW_PRESS);
         screen.update(input);
         assertFalse(screen.isUserRecordingMenuOpenForTest());
 
-        input.handleKeyEvent(GLFW_KEY_TAB, GLFW_RELEASE);
+        input.handleKeyEvent(GLFW_KEY_F9, GLFW_RELEASE);
         input.update();
         input.handleKeyEvent(GLFW_KEY_F10, GLFW_PRESS);
         screen.update(input);

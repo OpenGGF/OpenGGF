@@ -5,10 +5,12 @@ bounded WAV or Ogg/Vorbis assets. They do not contain executable code, and they
 never replace ROM data on disk.
 
 The Phase 1 music-pack path accepts packed, data-only patch JARs only. The current
-engine also supports Phase 2 code-backed objects, art reskins, Sonic 2 zones, and
-explicit development-directory runs through `ggfmod`; those use separate eligibility
-and trust rules documented in [Content mods](content-mods.md). Standalone games,
-characters, streamed SFX, MP3, and hot reload remain later phases.
+engine also supports API 1.2 code-backed objects, art reskins, Sonic 2 zones,
+playable characters, no-ROM standalone games, and explicit development-directory
+runs through `ggfmod`; those use separate eligibility and trust rules documented in
+[Content mods](content-mods.md). Standalone games may play declared streamed SFX
+through their own namespaced one-shot route. Base-game streamed SFX overrides, MP3,
+and hot reload remain unsupported.
 
 ## Source and packaged layout
 
@@ -65,10 +67,11 @@ artOverrides: {}
 - `engineApiRange` and dependency `versionRange` accept `*`, one exact version,
   or at most four whitespace-separated `<`, `<=`, `=`, `>=`, or `>`
   comparators. Ranges must not be empty or contradictory. The current mod API is
-  `1.1.0`.
-- The schema parses `type: patch` or `standalone`, but Phase 1 eligibility accepts
-  only `patch`. A patch requires `baseGame: s1`, `s2`, or `s3k`; standalone games
-  are future work.
+  `1.2.0`; the canonical Phase 1 range `>=1.0.0 <2.0.0` remains compatible.
+- The schema accepts `type: patch` or `standalone`. A music pack uses `patch` and
+  requires `baseGame: s1`, `s2`, or `s3k`; a standalone manifest omits `baseGame`,
+  requires a trusted entrypoint, and follows the separate
+  [standalone-game contract](standalone-games.md).
 - Each dependency is `{id, versionRange}`. Dependency ids must be unique.
 - `audioOverrides` is an explicit mapping from a canonical nonnegative decimal
   stock music id to a track's mod-local `id`. Use decimal keys (`129`), not YAML
@@ -102,8 +105,10 @@ sfx: []
 The root fields are exactly `formatVersion`, `tracks`, and optional `sfx`.
 `formatVersion` is exactly `1`. Every track requires exactly `id`, `assetPath`,
 `loop`, `loopStartFrame`, `gain`, and `tempoEffects`; `loopEndFrame` is optional.
-Every SFX entry requires exactly `id`, `assetPath`, and `gain`. Streamed SFX are
-parsed for format stability but are unsupported in Phase 1, so use `sfx: []`.
+Every SFX entry requires exactly `id`, `assetPath`, and `gain`. Patch music packs
+still use `sfx: []`: base-game SFX override routing is not implemented. A standalone
+game may declare SFX; each becomes a namespaced `SfxKey` and is decoded into bounded
+PCM for the standalone one-shot pool.
 
 - A local `id` matches `[a-z0-9][a-z0-9._/-]{0,127}` with no empty, `.` or
   `..` path segment. At runtime it becomes the namespaced `TrackKey`
@@ -168,6 +173,12 @@ and perform no new scan before deterministic stepping. Returning to the title
 keeps the process catalog visible but does not hot-restore content into the old
 session; the next normal launch prepares a fresh audio session at the negotiated
 device rate.
+
+Standalone one-shots are presentation-only. They use a bounded 16-voice pool, are
+not recorded in the SMPS rewind command timeline, and are suppressed during rewind.
+They do not allocate numeric stock ids and cannot replace a stock game's sound
+effect. See [Standalone games](standalone-games.md) for the launch and ownership
+rules.
 
 ## Checked-in sample
 

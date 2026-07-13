@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestModApiSignatureSurface {
     private static final String BASELINE = "mods/mod-api-signatures-1.1.txt";
+    private static final String PUBLISHED = "mods/mod-api-signatures-1.2.txt";
     private static final String PLATFORM_ALLOWLIST = "mods/mod-api-platform-allowlist.txt";
     private static final SemanticVersion BASELINE_VERSION = new SemanticVersion(1, 1, 0);
 
@@ -80,21 +81,19 @@ class TestModApiSignatureSurface {
     }
 
     @Test
-    void phaseThreeCandidateSurfaceIsPinnedWithoutPublishingIt() throws Exception {
+    void versionOneTwoPublishedSurfaceExactlyMatchesRuntime() throws Exception {
         List<String> candidate;
-        try (var input = getClass().getClassLoader().getResourceAsStream(
-                "mods/mod-api-signatures-1.2-candidate.txt")) {
-            assertNotNull(input, "Missing canonical Phase 3 candidate API snapshot");
+        try (var input = getClass().getClassLoader().getResourceAsStream(PUBLISHED)) {
+            assertNotNull(input, "Missing canonical published 1.2 API snapshot");
             try (var reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
                 candidate = reader.lines().toList();
             }
         }
         assertEquals(new ArrayList<>(new TreeSet<>(candidate)), candidate,
-                "Candidate API baseline must be unique, sorted canonical UTF-8 text");
+                "Published API baseline must be unique, sorted canonical UTF-8 text");
         assertEquals(new ArrayList<>(ModApiSignatureSurface.snapshotLines()), candidate,
-                "Review additive Phase 3 API changes and refresh the full candidate snapshot");
-        assertEquals(new SemanticVersion(1, 1, 0), ModApiVersion.CURRENT,
-                "Task 0 must not publish API 1.2");
+                "Review additive Phase 3 API changes and refresh the published snapshot");
+        assertEquals(new SemanticVersion(1, 2, 0), ModApiVersion.CURRENT);
     }
 
     @Test
@@ -110,11 +109,8 @@ class TestModApiSignatureSurface {
         assertEquals(sorted, baseline, "Baseline must be unique, sorted canonical UTF-8 text");
 
         Set<String> current = ModApiSignatureSurface.snapshotLines();
-        assertFalse(ModApiSignatureSurface.baselineViolations(
-                BASELINE_VERSION, Set.copyOf(baseline), ModApiVersion.CURRENT, current).isEmpty(),
-                "The still-published 1.1 version must reject the additive Phase 3 surface");
         List<String> violations = ModApiSignatureSurface.baselineViolations(
-                BASELINE_VERSION, Set.copyOf(baseline), ModApiVersion.PHASE3_CANDIDATE, current);
+                BASELINE_VERSION, Set.copyOf(baseline), ModApiVersion.CURRENT, current);
         assertTrue(violations.isEmpty(), () -> String.join("\n", violations));
     }
 

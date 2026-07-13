@@ -38,7 +38,8 @@ final class OwnerAwareStandaloneModule {
             this.owner = com.openggf.game.ModKeySyntax.requireManifestId(owner);
             this.delegate = Objects.requireNonNull(delegate, "delegate");
             this.boundary = Objects.requireNonNull(boundary, "boundary");
-            this.characters = java.util.Map.copyOf(Objects.requireNonNull(characters, "characters"));
+            this.characters = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
+                    Objects.requireNonNull(characters, "characters")));
         }
 
         @Override public Object invoke(Object proxy, Method method, Object[] args) {
@@ -122,6 +123,7 @@ final class OwnerAwareStandaloneModule {
         private final String owner;
         private final com.openggf.level.objects.ObjectRegistry delegate;
         private final ModFaultBoundary boundary;
+        private final ObjectCallbackOwnerLookup ownerLookup = new ObjectCallbackOwnerLookup();
 
         private OwnerAwareStandaloneObjectRegistry(String owner,
                 com.openggf.level.objects.ObjectRegistry delegate, ModFaultBoundary boundary) {
@@ -136,7 +138,7 @@ final class OwnerAwareStandaloneModule {
                 if (!owner.equals(spawn.ownerModId())) {
                     throw new IllegalArgumentException("Standalone object spawn owner mismatch");
                 }
-                return delegate.create(spawn);
+                return ownerLookup.remember(owner, delegate.create(spawn));
             });
         }
         @Override public void reportCoverage(java.util.List<com.openggf.level.objects.ObjectSpawn> spawns) {
@@ -167,8 +169,7 @@ final class OwnerAwareStandaloneModule {
             return boundary.callStandalone(owner, () -> delegate.editorPreviewArtKey(objectKey));
         }
         @Override public Object get() {
-            return java.util.Map.entry(boundary,
-                    (java.util.function.Supplier<String>) OwnerCallbackScope::current);
+            return java.util.Map.entry(boundary, ownerLookup);
         }
     }
 

@@ -13,12 +13,14 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Isolated
 class TestS3kDataSelectProfile {
 
     @BeforeAll

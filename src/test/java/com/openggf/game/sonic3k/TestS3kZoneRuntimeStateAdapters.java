@@ -58,6 +58,29 @@ class TestS3kZoneRuntimeStateAdapters {
     }
 
     @Test
+    void aizAdapterRewindsPostBossObjectDispatchLatches() {
+        Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        events.init(1);
+        AizZoneRuntimeState state = new AizZoneRuntimeState(
+                1, PlayerCharacter.SONIC_AND_TAILS, events);
+        state.setButtonBeforeBridgeDispatch(true);
+        state.scheduleTailsControlRelease(2);
+
+        byte[] snapshot = state.captureBytes();
+        state.setButtonBeforeBridgeDispatch(false);
+        assertFalse(state.tickTailsControlRelease());
+        assertFalse(state.tickTailsControlRelease());
+        assertTrue(state.tickTailsControlRelease());
+
+        state.restoreBytes(snapshot);
+
+        assertTrue(state.isButtonBeforeBridgeDispatch());
+        assertFalse(state.tickTailsControlRelease());
+        assertFalse(state.tickTailsControlRelease());
+        assertTrue(state.tickTailsControlRelease());
+    }
+
+    @Test
     void hczAdapterMirrorsTransitionFlagAndRoutine() {
         Sonic3kHCZEvents events = new Sonic3kHCZEvents();
         events.init(0);

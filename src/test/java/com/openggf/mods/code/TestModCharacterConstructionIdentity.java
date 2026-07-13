@@ -16,6 +16,7 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.patch.PatchContext;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.GameplayTeamBootstrap;
+import com.openggf.game.session.SessionManager;
 import com.openggf.mods.ModRuntimeFindingStore;
 import com.openggf.mods.ModStateSaveResult;
 import com.openggf.sprites.art.SpriteArtSet;
@@ -23,8 +24,11 @@ import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.sprites.playable.SonicRespawnStrategy;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,13 +44,24 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@Isolated
 class TestModCharacterConstructionIdentity {
     private static final CharacterKey EXPECTED = CharacterKey.mod("owner-a", "runner");
     private static final CharacterKey SPOOFED = CharacterKey.mod("owner-b", "runner");
 
+    @BeforeEach
+    void setUp() {
+        SessionManager.clear();
+        GameModuleRegistry.reset();
+        TestEnvironment.resetAll();
+        SessionManager.clear();
+    }
+
     @AfterEach
     void tearDown() {
+        SessionManager.clear();
         GameModuleRegistry.reset();
+        TestEnvironment.resetAll();
     }
 
     @Test

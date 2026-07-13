@@ -2,12 +2,14 @@ package com.openggf.data;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.events.Sonic2ZoneEvents;
 import com.openggf.level.ParallaxManager;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -21,16 +23,22 @@ import java.util.logging.Logger;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Isolated
 class TestRomManagerMissingRomLogging {
+    @BeforeEach
+    void setUp() {
+        RomManager.getInstance().close();
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+    }
+
     @AfterEach
     void tearDown() {
         RomManager.getInstance().close();
-        SonicConfigurationService.getInstance().resetToDefaults();
+        TestEnvironment.resetAll();
     }
 
     @Test
     void missingConfiguredRomDoesNotLogSevereFromRomOpen() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
         config.setConfigValue(SonicConfiguration.DEFAULT_ROM, "s2");
@@ -53,7 +61,6 @@ class TestRomManagerMissingRomLogging {
 
     @Test
     void missingConfiguredRomDoesNotWarnFromScrollOrPaletteProbes() throws Exception {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
         config.setConfigValue(SonicConfiguration.DEFAULT_ROM, "s2");

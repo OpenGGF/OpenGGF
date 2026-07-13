@@ -762,8 +762,8 @@ public class LevelDebugRenderer {
                 && ctx.overlayManager().isEnabled(DebugOverlayToggle.OBJECT_DEBUG)) {
             reusableDebugCtx.clear();
             for (ObjectInstance instance : objectManager.getActiveObjects()) {
-                ObjectSpawn spawn = com.openggf.level.objects.ObjectCallbackDispatch.call(
-                        objectManager, instance, instance::getSpawn);
+                ObjectSpawn spawn = com.openggf.level.objects.ObjectCallbackDispatch.managedSpawn(
+                        objectManager, instance);
                 if (spawn == null) {
                     continue;
                 }

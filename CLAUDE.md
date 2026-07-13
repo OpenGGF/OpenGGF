@@ -98,7 +98,7 @@ Objects receive `ObjectServices` via injection at construction time (ThreadLocal
 
 Gameplay state is split by lifetime across three layers in `com.openggf.game.session`:
 
-- **`WorldSession`** — durable across editor mode swaps. Owns the active `GameModule`, loaded `Level`, and zone/act metadata.
+- **`WorldSession`** — durable across editor mode swaps. Owns the active `GameModule`, its `GameDataSource` (ROM or bounded standalone assets), loaded `Level`, and zone/act metadata.
 - **`GameplayModeContext`** — disposable, rebuilt on each gameplay session entry. Owns all gameplay-scoped managers (camera, timers, game state, fade, RNG, water, parallax, collision, sprites, level, ...) plus the runtime-shared registries below. Provides `initializeFreshGameplayState()` for editor-exit counter reset.
 - **`SessionManager`** — manages lifecycle (`openGameplaySession`, `enterEditorMode`, `resumeGameplayFromEditor`).
 
@@ -108,7 +108,7 @@ Editor entry/exit uses teardown+rebuild (no parking): the mode context is destro
 
 The in-engine level editor lives in the `com.openggf.editor` package: `LevelEditorController`, `EditorInputHandler`, `EditorMouseTransform`, `EditorHistory` (+ `commands.*` undoable strokes), `persistence.EditorSaveManager` / `EditorSaveEnvelope` / per-version payload DTOs, and the `render` overlays. With `debug.flags.editor` enabled, it paints chunks; places, moves, and deletes stock object/ring spawns; edits block-cell collision modes and chunk solid-tile indices; and persists v2 sidecars with historical v1 terrain-only migration. Keep edits on tracked `MutableLevel` APIs so undo/redo, rewind isolation, redraw dirtiness, and runtime spawn resync stay coherent. S3K sidecars save but do not runtime-apply yet, and trace-owned sessions refuse editor entry. Editor enter/exit rides the teardown+rebuild session path above. See [CONFIGURATION.md](CONFIGURATION.md) and `docs/superpowers/specs/2026-07-09-mod-support-phase0-design.md`.
 
-Phase 2 full-level exports feed the versioned `@ModApi` 1.1.0 and two-artifact `ggfmod` toolchain. Code-bearing content must use namespaced keys, injected object services, and rewind recreation; complete new zones currently target Sonic 2 and persist tagged zone identities. See `docs/modding/content-mods.md` before changing creator APIs, converters, object validation, or mod-zone persistence.
+Creator content uses the versioned `@ModApi` 1.2.0 surface and two-artifact `ggfmod` toolchain. Code-bearing content must use namespaced identities, injected object services, rewind recreation, `ModContext` transactions, and engine-authoritative owner fault boundaries. Phase 2 complete new zones still target Sonic 2 and persist tagged identities; Phase 3 adds owner-tagged playable characters plus no-ROM standalone modules over durable bounded `GameDataSource` assets, game-agnostic levels, dynamic master-title entries, and namespaced slot-1 saves/audio. Patch stacking onto standalone games, standalone roster UI, special/bonus stages, donation, trace recording, and full data-select presentation remain out of scope. See `docs/modding/content-mods.md`, `docs/modding/characters.md`, `docs/modding/standalone-games.md`, and `docs/architecture/mod-api-compatibility.md` before changing creator APIs, converters, callback ownership, or persistence.
 
 ### Runtime-Shared Framework Stack
 

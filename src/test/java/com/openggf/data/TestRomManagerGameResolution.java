@@ -7,11 +7,13 @@ import com.openggf.game.session.EngineServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Isolated
 class TestRomManagerGameResolution {
     @TempDir Path temp;
     private EngineContext previous;

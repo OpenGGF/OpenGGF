@@ -19,9 +19,13 @@ import com.openggf.game.recording.UserRecordingPlaybackOptions;
 import com.openggf.game.recording.UserRecordingSidecarMetadata;
 import com.openggf.game.recording.UserRecordingStopReason;
 import com.openggf.game.recording.UserRecordingWriter;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.version.BuildIdentity;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,9 +44,20 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
+@Isolated
 class TestUserRecordingMenu {
     @TempDir
     Path tempDir;
+
+    @BeforeEach
+    void setUp() {
+        TestEnvironment.resetAll();
+    }
+
+    @AfterEach
+    void tearDown() {
+        TestEnvironment.resetAll();
+    }
 
     @Test
     void masterTitleOpensRecordingsMenuForSelectedGameWhenTestModeIsDisabled() {
@@ -51,6 +66,7 @@ class TestUserRecordingMenu {
         MasterTitleScreen screen = new MasterTitleScreen(config);
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
         screen.setSelectedIndexForTest(MasterTitleScreen.GameEntry.SONIC_3K.ordinal());
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_3K, true);
         screen.setUserRecordingMenuFactoryForTest((gameId, font) -> {
             openedGameIds.add(gameId);
             return new UserRecordingMenu(gameId, List.of(entry("s3k", 90)), null, (recording, options) -> { });
@@ -88,6 +104,7 @@ class TestUserRecordingMenu {
         MasterTitleScreen screen = new MasterTitleScreen(config);
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
         screen.setSelectedIndexForTest(MasterTitleScreen.GameEntry.SONIC_1.ordinal());
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_1, true);
         screen.setUserRecordingMenuFactoryForTest((gameId, font) -> {
             openedGameIds.add(gameId);
             return new UserRecordingMenu(gameId, List.of(entry("s1", 90)), null, (recording, options) -> { });
@@ -124,6 +141,7 @@ class TestUserRecordingMenu {
         MasterTitleScreen screen = new MasterTitleScreen(config);
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
         screen.setSelectedIndexForTest(MasterTitleScreen.GameEntry.SONIC_3K.ordinal());
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_3K, true);
         screen.setUserRecordingMenuFactoryForTest((gameId, font) -> {
             openedGameIds.add(gameId);
             return new UserRecordingMenu(gameId, List.of(entry("s3k", 90)), null, (recording, options) -> { });
@@ -150,6 +168,7 @@ class TestUserRecordingMenu {
             MasterTitleScreen screen = new MasterTitleScreen(config);
             screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
             screen.setSelectedIndexForTest(MasterTitleScreen.GameEntry.SONIC_3K.ordinal());
+            screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_3K, true);
             InputHandler input = new InputHandler();
             GameLoop loop = new GameLoop(input);
             loop.setUserRecordingPlaybackStarter((entry, options) -> {

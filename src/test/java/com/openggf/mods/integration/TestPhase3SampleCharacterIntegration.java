@@ -14,6 +14,7 @@ import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
@@ -23,9 +24,12 @@ import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Isolated
 class TestPhase3SampleCharacterIntegration {
     private static final String CODE = "phase3-character:runner";
     @TempDir Path temp;
+
+    @BeforeEach void resetState() { TestEnvironment.resetAll(); }
 
     @AfterEach void cleanup() { TestEnvironment.resetAll(); }
 
@@ -68,8 +72,7 @@ class TestPhase3SampleCharacterIntegration {
             assertNotEquals(PhysicsProfile.SONIC_2_SONIC,
                     resolved.getPhysicsProvider().getProfile(CODE));
 
-            GameModuleRegistry.setCurrent(resolved);
-            TestEnvironment.activeGameplayMode();
+            TestEnvironment.configureGameModuleFixture(resolved);
             SpriteManager sprites = new SpriteManager(config);
             var team = com.openggf.game.session.GameplayTeamBootstrap.registerActiveTeam(
                     resolved, sprites, config);

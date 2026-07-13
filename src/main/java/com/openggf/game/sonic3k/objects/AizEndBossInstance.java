@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.Palette;
@@ -773,6 +774,10 @@ public class AizEndBossInstance extends AbstractBossInstance
 
         if (getPlayerCharacter() != PlayerCharacter.KNUCKLES) {
             Aiz2BossEndSequenceState.reset();
+            AizZoneRuntimeState aizState = aizRuntimeStateOrNull();
+            if (aizState != null) {
+                aizState.resetBossEndSequenceDispatchState();
+            }
             // ROM loc_694AA creates the route-8 capsule through
             // CreateChild6_Simple, which allocates after the current boss
             // slot (sonic3k.asm:138247-138255, 177114-177129).
@@ -787,10 +792,12 @@ public class AizEndBossInstance extends AbstractBossInstance
             // replacement's ordinary pass.
             AizDrawBridgeObjectInstance cutsceneBridge = spawnFreeChild(
                     AizDrawBridgeObjectInstance::createCutsceneOverride);
-            Aiz2BossEndSequenceState.setButtonBeforeBridgeDispatch(
-                    mainPlayer instanceof AbstractPlayableSprite sprite
-                            && sprite.getInteractSlotIndex() >= 0
-                            && sprite.getInteractSlotIndex() < cutsceneBridge.getSlotIndex());
+            if (aizState != null) {
+                aizState.setButtonBeforeBridgeDispatch(
+                        mainPlayer instanceof AbstractPlayableSprite sprite
+                                && sprite.getInteractSlotIndex() >= 0
+                                && sprite.getInteractSlotIndex() < cutsceneBridge.getSlotIndex());
+            }
             spawnFreeChild(S3kCutsceneButtonObjectInstance::createCutsceneOverride);
             spawnFreeChild(() -> new Aiz2BossEndSequenceController(targetMaxX, yBase));
         } else {
@@ -1115,5 +1122,11 @@ public class AizEndBossInstance extends AbstractBossInstance
         return S3kRuntimeStates.resolvePlayerCharacter(
                 services().zoneRuntimeRegistry(),
                 services().configuration());
+    }
+
+    private AizZoneRuntimeState aizRuntimeStateOrNull() {
+        var registry = services().zoneRuntimeRegistry();
+        return registry == null ? null
+                : registry.currentAs(AizZoneRuntimeState.class).orElse(null);
     }
 }

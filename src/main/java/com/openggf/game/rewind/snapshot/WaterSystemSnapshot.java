@@ -34,5 +34,11 @@ public record WaterSystemSnapshot(
             boolean enabled,
             boolean locked,
             int shakeTimer
-    ) {}
+    ) {
+        /** Compatibility constructor for the API 1.1 snapshot shape. */
+        public DynamicWaterEntry(int currentLevel, int targetLevel, int meanLevel,
+                                 boolean rising, int speed, boolean locked, int shakeTimer) {
+            this(currentLevel, targetLevel, meanLevel, rising, speed, true, locked, shakeTimer);
+        }
+    }
 }

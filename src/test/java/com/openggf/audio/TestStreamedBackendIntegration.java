@@ -6,6 +6,7 @@ import com.openggf.audio.synth.Ym2612Chip;
 import com.openggf.audio.runtime.DeterministicAudioRuntime;
 import com.openggf.audio.runtime.FrameAudioMode;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.util.Optional;
 import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
@@ -17,6 +18,7 @@ import com.openggf.audio.rewind.AudioKeyframeStore;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Isolated
 class TestStreamedBackendIntegration {
     @Test
     void namespacedOneShotsQueueAtOwnerBoundaryAndSeventeenthVoiceStealsOldest() {

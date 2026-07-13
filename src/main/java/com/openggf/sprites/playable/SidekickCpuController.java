@@ -5327,6 +5327,7 @@ public class SidekickCpuController {
     }
 
     public SidekickCpuRewindExtra captureRewindState() {
+        TailsCarryController.Snapshot carrySnapshot = carryController().capture();
         return new SidekickCpuRewindExtra(
                 state,
                 deadFallingRomCpuRoutine,
@@ -5373,6 +5374,11 @@ public class SidekickCpuController {
                 lastNormalAutoJumpPressFrameCounter,
                 controller2SignedLocked,
                 latestNormalStepDiagnostics,
+                carrySnapshot.latchX(),
+                carrySnapshot.latchY(),
+                carrySnapshot.carrying(),
+                carrySnapshot.parentagePending(),
+                carrySnapshot.cooldown(),
                 mgzCarryIntroAscend,
                 mgzCarryFlapTimer,
                 mgzReleasedChaseLatched,
@@ -5384,6 +5390,11 @@ public class SidekickCpuController {
     }
 
     public void restoreRewindState(SidekickCpuRewindExtra snapshot) {
+        restoreRewindScalars(snapshot);
+        restoreLegacyCarryRewindState(snapshot);
+    }
+
+    void restoreRewindScalars(SidekickCpuRewindExtra snapshot) {
         manualInputAppliedThisTick = false;
         state = snapshot.state();
         deadFallingRomCpuRoutine = snapshot.deadFallingRomCpuRoutine();
@@ -5438,6 +5449,17 @@ public class SidekickCpuController {
         flightTimer = snapshot.flightTimer();
         catchUpTargetX = snapshot.catchUpTargetX();
         catchUpTargetY = snapshot.catchUpTargetY();
+    }
+
+    private void restoreLegacyCarryRewindState(SidekickCpuRewindExtra snapshot) {
+        TailsCarryController.CarryContext restoredCarryContext = snapshot.flyingCarryingFlag()
+                ? (carryTrigger != null && carryTrigger.usesMgzBossTransitionControl()
+                    ? TailsCarryController.CarryContext.MGZ_BOSS
+                    : TailsCarryController.CarryContext.CNZ)
+                : TailsCarryController.CarryContext.NONE;
+        carryController().restore(new TailsCarryController.Snapshot(
+                snapshot.carryLatchX(), snapshot.carryLatchY(), snapshot.flyingCarryingFlag(),
+                snapshot.carryParentagePending(), snapshot.releaseCooldown(), restoredCarryContext));
     }
 
     public void applyFlyingCarryVerticalVelocity() {

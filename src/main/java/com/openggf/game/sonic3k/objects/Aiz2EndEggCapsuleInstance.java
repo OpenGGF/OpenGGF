@@ -8,6 +8,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -54,7 +55,8 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
 
     @Override
     protected void onBeforeCapsuleUpdate() {
-        if (Aiz2BossEndSequenceState.tickTailsControlRelease()) {
+        AizZoneRuntimeState aizState = aizRuntimeStateOrNull();
+        if (aizState != null && aizState.tickTailsControlRelease()) {
             releaseTailsControlNow();
         }
         if (tailsOpenControllerLockDelay <= 0) {
@@ -201,7 +203,17 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
             // This later results slot clears _unkFAA8 after the capsule owner
             // has already run. Publish Restore_PlayerControl2 here so the next
             // Player_2 CPU pass sees the released state.
-            Aiz2BossEndSequenceState.scheduleTailsControlRelease(4);
+            var registry = services().zoneRuntimeRegistry();
+            if (registry != null) {
+                registry.currentAs(AizZoneRuntimeState.class)
+                        .ifPresent(state -> state.scheduleTailsControlRelease(4));
+            }
         }
+    }
+
+    private AizZoneRuntimeState aizRuntimeStateOrNull() {
+        var registry = services().zoneRuntimeRegistry();
+        return registry == null ? null
+                : registry.currentAs(AizZoneRuntimeState.class).orElse(null);
     }
 }

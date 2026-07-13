@@ -27,18 +27,21 @@ class TestEffectiveCatalogBuilder {
     }
 
     @Test
-    void apiRangeUsesPinnedOneOneCompatibilityWithoutImplicitLowerMajorAcceptance() {
+    void apiRangeAcceptsPhaseOneAndTwoButRejectsFutureMinorAndMajor() {
         List<ModDescriptor> mods = List.of(
-                patch("canonical", "s1", "1.0.0", ">=1.0.0 <2.0.0"),
-                patch("exact-current", "s2", "1.0.0", "1.1.0"),
-                patch("future", "s1", "1.0.0", ">=1.2.0 <2.0.0"),
+                patch("phase-one", "s1", "1.0.0", ">=1.0.0 <2.0.0"),
+                patch("phase-two", "s2", "1.0.0", ">=1.1.0 <2.0.0"),
+                patch("exact-current", "s2", "1.0.0", "1.2.0"),
+                patch("future", "s1", "1.0.0", ">=1.3.0 <2.0.0"),
+                patch("next-major", "s3k", "1.0.0", ">=2.0.0"),
                 patch("old-major", "s3k", "1.0.0", "<1.0.0"));
 
         ModCatalog result = new EffectiveCatalogBuilder().build(
-                mods, enabledState("canonical", "exact-current", "future", "old-major"));
+                mods, enabledState("phase-one", "phase-two", "exact-current", "future", "next-major", "old-major"));
 
-        assertEquals(List.of("canonical", "exact-current"), effectiveIds(result));
+        assertEquals(List.of("phase-one", "phase-two", "exact-current"), effectiveIds(result));
         assertReason(result, "future", "ENGINE_API_INCOMPATIBLE");
+        assertReason(result, "next-major", "ENGINE_API_INCOMPATIBLE");
         assertReason(result, "old-major", "ENGINE_API_INCOMPATIBLE");
     }
 

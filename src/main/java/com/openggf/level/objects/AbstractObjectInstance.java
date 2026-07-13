@@ -214,8 +214,10 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
 
     @Override
     public ObjectSpawn getSpawn() {
-        return dynamicSpawn != null ? dynamicSpawn : spawn;
+        return managedSpawn();
     }
+
+    final ObjectSpawn managedSpawn() { return dynamicSpawn != null ? dynamicSpawn : spawn; }
 
     /**
      * Lazily updates the dynamic spawn to track the object's current position.

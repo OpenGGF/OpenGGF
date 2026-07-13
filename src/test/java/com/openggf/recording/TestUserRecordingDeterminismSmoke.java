@@ -5,6 +5,7 @@ import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.nio.file.Path;
 
@@ -12,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @FullReset
 @ExtendWith(SingletonResetExtension.class)
+@Isolated
 class TestUserRecordingDeterminismSmoke {
 
     @TempDir

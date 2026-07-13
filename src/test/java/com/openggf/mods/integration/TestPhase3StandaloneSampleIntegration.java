@@ -35,9 +35,12 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -53,6 +56,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Isolated
 class TestPhase3StandaloneSampleIntegration {
     private static final String OWNER = "phase3-standalone";
     private static final String RUNNER = OWNER + ":runner";
@@ -60,6 +64,8 @@ class TestPhase3StandaloneSampleIntegration {
     @TempDir Path temp;
     private String previousSaveRoot;
     private EngineContext previousEngineContext;
+
+    @BeforeEach void resetState() { TestEnvironment.resetAll(); }
 
     @AfterEach void cleanup() {
         SessionManager.clear();
@@ -72,6 +78,7 @@ class TestPhase3StandaloneSampleIntegration {
         }
         if (previousSaveRoot == null) System.clearProperty("openggf.saveRoot");
         else System.setProperty("openggf.saveRoot", previousSaveRoot);
+        TestEnvironment.resetAll();
     }
 
     @Test

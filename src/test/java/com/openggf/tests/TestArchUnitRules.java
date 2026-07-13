@@ -194,6 +194,12 @@ class TestArchUnitRules {
             // the canonical ObjectFactory vocabulary instead of defining a parallel
             // mod-only object abstraction that would drift from engine behavior.
             "mods -> level",
+            // Phase 3's prepared one-shot SFX cursor implements the audio-owned
+            // StreamedMusicPort boundary used by standalone and patched games.
+            "mods -> audio",
+            // Phase 3's standalone fault boundary wraps the legacy Game/Rom return
+            // surface so creator callbacks stay bounded and ROM exposure is rejected.
+            "mods -> data",
             "physics -> camera",
             "physics -> game",
             "physics -> level",

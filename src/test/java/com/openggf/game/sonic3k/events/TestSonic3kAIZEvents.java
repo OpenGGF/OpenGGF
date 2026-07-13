@@ -55,6 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static com.openggf.game.sonic3k.events.AizEventTestFixtures.newFireTransitionEvents;
 
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestSonic3kAIZEvents {
@@ -121,7 +122,7 @@ public class TestSonic3kAIZEvents {
             camera.setX((short) 0x2F10);
             camera.setY((short) 0x0200);
 
-            var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+            var events = newFireTransitionEvents();
             events.init(0);
             events.setEventsFg5(true);
 
@@ -338,7 +339,7 @@ public class TestSonic3kAIZEvents {
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
 
-        var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        var events = newFireTransitionEvents();
         events.init(0);
         events.setEventsFg5(true);
 
@@ -386,7 +387,7 @@ public class TestSonic3kAIZEvents {
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
 
-        var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        var events = newFireTransitionEvents();
         events.init(0);
         events.setEventsFg5(true);
 
@@ -459,7 +460,7 @@ public class TestSonic3kAIZEvents {
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
 
-        var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        var events = newFireTransitionEvents();
         events.init(0);
         assertFalse(events.isPostFireHazeActive());
 
@@ -490,7 +491,7 @@ public class TestSonic3kAIZEvents {
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
 
-        var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        var events = newFireTransitionEvents();
         events.init(0);
         events.setEventsFg5(true);
 
@@ -657,7 +658,7 @@ public class TestSonic3kAIZEvents {
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
 
-        var act1Events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        var act1Events = newFireTransitionEvents();
         act1Events.init(0);
         act1Events.setEventsFg5(true);
         for (int i = 0; i < 320 && !act1Events.isAct2TransitionRequested(); i++) {
@@ -706,7 +707,7 @@ public class TestSonic3kAIZEvents {
         // Simulate arrival from AIZ1 fire transition: run act 1 fire sequence
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
-        var act1Events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        var act1Events = newFireTransitionEvents();
         act1Events.init(0);
         act1Events.setEventsFg5(true);
         for (int i = 0; i < 320 && !act1Events.isAct2TransitionRequested(); i++) {

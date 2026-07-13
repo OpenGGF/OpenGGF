@@ -31,6 +31,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.Isolated;
 import com.openggf.physics.Direction;
 import com.openggf.physics.GroundSensor;
 import com.openggf.physics.Sensor;
@@ -54,6 +55,7 @@ import static org.mockito.Mockito.mock;
 
 @ExtendWith(SingletonResetExtension.class)
 @FullReset
+@Isolated
 public class TestPlayableSpriteMovement {
 
         private static final class HookSprite extends AbstractPlayableSprite {
@@ -82,9 +84,7 @@ public class TestPlayableSpriteMovement {
         @BeforeEach
         public void setUp() {
                 previousModule = GameModuleRegistry.getCurrent();
-                GameModuleRegistry.setCurrent(new Sonic2GameModule());
-                SessionManager.clear();
-                TestEnvironment.activeGameplayMode();
+                TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
                 mockSprite = new AbstractPlayableSprite("sonic", (short) 0, (short) 0) {
                         @Override
                         protected void defineSpeeds() {

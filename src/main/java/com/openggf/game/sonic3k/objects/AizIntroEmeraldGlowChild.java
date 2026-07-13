@@ -5,6 +5,7 @@ import com.openggf.camera.Camera;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -26,9 +27,7 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
 
     private static final Logger LOG = Logger.getLogger(AizIntroEmeraldGlowChild.class.getName());
     private final AizIntroPlaneChild parent;
-    private final int variant;
-    private final int xOffset;
-    private final int yOffset;
+    private int variant;
 
     private static final int[][] ANIM_SEQUENCES = {
             {1, 2, 3, 4, 3, 2},
@@ -51,8 +50,6 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
         super(spawn, "AIZEmeraldGlow");
         this.parent = parent;
         this.variant = Math.clamp(variant, 0, 1);
-        this.xOffset = X_OFFSETS[this.variant];
-        this.yOffset = Y_OFFSETS[this.variant];
     }
 
     @Override
@@ -64,12 +61,12 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
 
     @Override
     public int getX() {
-        return parent.getX() + xOffset;
+        return parent.getX() + X_OFFSETS[variant];
     }
 
     @Override
     public int getY() {
-        return parent.getY() + yOffset;
+        return parent.getY() + Y_OFFSETS[variant];
     }
 
     @Override
@@ -80,7 +77,7 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (parent.isDestroyed()) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
             return;
         }
         animTimer++;

@@ -21,6 +21,7 @@ import com.openggf.sprites.managers.SpindashDustController;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 import java.lang.reflect.Field;
 import java.lang.reflect.RecordComponent;
 import static org.junit.jupiter.api.Assertions.*;
@@ -34,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * {@code AbstractPlayableSprite} are verified indirectly through the snapshot
  * record fields (and then confirmed via a second capture after restore).
  */
+@Isolated
 class TestAbstractPlayableSpriteRewindCapture {
 
     @BeforeEach
@@ -749,6 +751,52 @@ class TestAbstractPlayableSpriteRewindCapture {
         }
 
         assertNoRawParticipantReference(PlayerRewindExtra.class);
+    }
+
+    @Test
+    void api11PlayerExtraFallbackRestoresLegacySidekickCarryFields() throws Exception {
+        Tails tails = new Tails("tails_p2", (short) 0x180, (short) 0x240);
+        tails.setCpuControlled(true);
+        tails.setCpuController(new SidekickCpuController(tails,
+                new Sonic("sonic", (short) 0x100, (short) 0x200)));
+        TailsCarryController.Snapshot expectedCarry = new TailsCarryController.Snapshot(
+                (short) 0x1357, (short) -0x2468, true, true, 0x2A,
+                TailsCarryController.CarryContext.CNZ);
+        tails.getTailsCarryController().restore(expectedCarry);
+
+        PerObjectRewindSnapshot currentSnapshot = tails.captureRewindState();
+        PlayerRewindExtra currentExtra = currentSnapshot.playerExtra();
+        var legacyCarry = currentExtra.sidekickCpuExtra();
+        assertEquals(expectedCarry.latchX(), legacyCarry.carryLatchX());
+        assertEquals(expectedCarry.latchY(), legacyCarry.carryLatchY());
+        assertTrue(legacyCarry.flyingCarryingFlag());
+        assertTrue(legacyCarry.carryParentagePending());
+        assertEquals(expectedCarry.cooldown(), legacyCarry.releaseCooldown());
+
+        RecordComponent[] components = PlayerRewindExtra.class.getRecordComponents();
+        Object[] api11Arguments = java.util.Arrays.stream(components)
+                .filter(component -> !component.getName().equals("tailsCarryState"))
+                .map(component -> {
+                    try {
+                        return component.getAccessor().invoke(currentExtra);
+                    } catch (ReflectiveOperationException ex) {
+                        throw new IllegalStateException(ex);
+                    }
+                })
+                .toArray();
+        var api11Constructor = java.util.Arrays.stream(PlayerRewindExtra.class.getConstructors())
+                .filter(constructor -> constructor.getParameterCount() == api11Arguments.length)
+                .findFirst()
+                .orElseThrow();
+        PlayerRewindExtra api11Extra = (PlayerRewindExtra) api11Constructor.newInstance(api11Arguments);
+        assertNull(api11Extra.tailsCarryState(),
+                "the API 1.1 compatibility constructor has no full carry snapshot");
+
+        tails.getTailsCarryController().clearState();
+        tails.restoreRewindState(currentSnapshot.withPlayerExtra(api11Extra));
+
+        assertEquals(expectedCarry, tails.getTailsCarryController().capture(),
+                "API 1.1 snapshots fall back to their five legacy carry fields");
     }
 
     @Test

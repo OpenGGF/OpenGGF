@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -98,7 +99,8 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
         if (dx >= RANGE_LEFT && dx < RANGE_RIGHT && dy >= RANGE_TOP && dy < RANGE_BOTTOM) {
             pressed = true;
             Aiz2BossEndSequenceState.pressButton();
-            if (Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
+            if (services().zoneRuntimeState() instanceof AizZoneRuntimeState aizState
+                    && aizState.isButtonBeforeBridgeDispatch()) {
                 services().objectManager().activeObjectsOfType(AizDrawBridgeObjectInstance.class)
                         .forEach(AizDrawBridgeObjectInstance::beginCollapseFromEarlierButtonSlot);
             }

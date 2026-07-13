@@ -40,6 +40,7 @@ import com.openggf.graphics.TilemapGpuRenderer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.mockito.MockedStatic;
 
 import java.lang.reflect.Field;
@@ -71,6 +72,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 
+@Isolated
 class TestEngine {
     @TempDir
     Path tempDir;
@@ -596,6 +598,7 @@ class TestEngine {
         RomManager romManager = mock(RomManager.class);
         Rom rom = mock(Rom.class);
         when(romManager.getRom()).thenReturn(rom);
+        when(romManager.isRomAvailable()).thenReturn(true);
         when(rom.readAllBytes()).thenReturn(new byte[] { 0 });
         AudioManager audioManager = mock(AudioManager.class);
         PerformanceProfiler profiler = mock(PerformanceProfiler.class);

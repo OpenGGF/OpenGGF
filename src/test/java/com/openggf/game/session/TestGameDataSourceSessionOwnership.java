@@ -3,14 +3,23 @@ package com.openggf.game.session;
 import com.openggf.game.GameDataSource;
 import com.openggf.game.GameModule;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@Isolated
 class TestGameDataSourceSessionOwnership {
-    @AfterEach void clear() { SessionManager.clear(); }
+    @BeforeEach void resetState() { com.openggf.tests.TestEnvironment.resetAll(); }
+
+    @AfterEach void clear() {
+        SessionManager.clear();
+        com.openggf.game.GameModuleRegistry.reset();
+        com.openggf.tests.TestEnvironment.resetAll();
+    }
 
     @Test
     void sourceIsDurableAcrossEditorModeRebuild() {

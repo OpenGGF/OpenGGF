@@ -10,6 +10,7 @@ public final class ModApiSurfaceInventory {
     private static final List<String> TYPE_NAMES = List.of(
             "com.openggf.mods.code.GgfMod",
             "com.openggf.mods.code.ModContext",
+            "com.openggf.mods.SfxKey",
             "com.openggf.mods.code.BakedSheetRef",
             "com.openggf.mods.code.BakedLevelRef",
             "com.openggf.mods.code.ModLevelDefinition",

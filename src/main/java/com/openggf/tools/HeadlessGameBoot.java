@@ -8,6 +8,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.data.Rom;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
+import com.openggf.game.GameModuleRouting;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.configuration.SonicConfiguration;
@@ -309,7 +310,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
         java.util.Objects.requireNonNull(services, "services");
         java.util.Objects.requireNonNull(module, "module");
         java.util.Objects.requireNonNull(dataSource, "dataSource");
-        if (module.getGameId() != com.openggf.game.GameId.STANDALONE
+        if (!GameModuleRouting.isStandalone(module)
                 || !module.getGameCode().equals(module.getIdentifier())
                 || dataSource.rom().isPresent()
                 || saveContext != null && !module.getGameCode().equals(saveContext.gameCode())) {

@@ -46,21 +46,21 @@ class TestS3kMhzCutsceneGraphRewind {
             "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild";
 
     private static final ObjectSpawn BUTTON_NEAR_DOOR =
-            new ObjectSpawn(0x0380, 0x05B0, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0x31);
+            new ObjectSpawn(0x0180, 0x05B0, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0x31);
     private static final ObjectSpawn BUTTON_CAPTURED =
-            new ObjectSpawn(0x0600, 0x05B0, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0x32);
+            new ObjectSpawn(0x0260, 0x05B0, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0x32);
     private static final ObjectSpawn CUTSCENE_KNUCKLES_CAPTURED =
-            new ObjectSpawn(0x0608, 0x066C, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x1C, 0, false, 0x37);
+            new ObjectSpawn(0x0268, 0x066C, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x1C, 0, false, 0x37);
     private static final ObjectSpawn CUTSCENE_KNUCKLES_PEER_CAPTURED =
-            new ObjectSpawn(0x0610, 0x066C, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0, 0, false, 0x38);
+            new ObjectSpawn(0x0270, 0x066C, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0, 0, false, 0x38);
     private static final ObjectSpawn OWNER_NEAR_STOPPER =
             new ObjectSpawn(0x0100, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0x33);
     private static final ObjectSpawn OWNER_CAPTURED =
-            new ObjectSpawn(0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0x34);
+            new ObjectSpawn(0x01E0, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0x34);
     private static final ObjectSpawn MHZ2_PARENT_DISTRACTOR =
-            new ObjectSpawn(0x0200, 0x0680, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0x35);
+            new ObjectSpawn(0x0140, 0x0680, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0x35);
     private static final ObjectSpawn MHZ2_PARENT_CAPTURED =
-            new ObjectSpawn(0x03D8, 0x0680, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0x36);
+            new ObjectSpawn(0x0220, 0x0680, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0x36);
 
     @BeforeEach
     void initHeadlessGraphics() {
@@ -421,7 +421,7 @@ class TestS3kMhzCutsceneGraphRewind {
                     spawns, new MhzTestRegistry(), 0, null, null,
                     GraphicsManager.getInstance(), camera, services);
             holder[0] = objectManager;
-            objectManager.reset(0);
+            objectManager.reset(com.openggf.game.rewind.S3kGraphRewindTestSupport.cameraXFor(spawns));
             objectManager.setRewindInPlaceRestoreEnabledForTest(false);
             return new Harness(objectManager, services, camera);
         }

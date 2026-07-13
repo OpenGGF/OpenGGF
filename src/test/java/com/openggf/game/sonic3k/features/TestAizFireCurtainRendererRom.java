@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.openggf.game.sonic3k.events.AizEventTestFixtures.newFireTransitionEvents;
 
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestAizFireCurtainRendererRom {
@@ -53,7 +54,7 @@ public class TestAizFireCurtainRendererRom {
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
 
-        Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        Sonic3kAIZEvents events = newFireTransitionEvents();
         events.init(0);
         events.setEventsFg5(true);
 
@@ -96,7 +97,7 @@ public class TestAizFireCurtainRendererRom {
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
 
-        Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        Sonic3kAIZEvents events = newFireTransitionEvents();
         events.init(0);
         events.setEventsFg5(true);
 
@@ -156,7 +157,7 @@ public class TestAizFireCurtainRendererRom {
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
 
-        Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        Sonic3kAIZEvents events = newFireTransitionEvents();
         events.init(0);
         events.setEventsFg5(true);
 
@@ -216,7 +217,7 @@ public class TestAizFireCurtainRendererRom {
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
 
-        Sonic3kAIZEvents act1Events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        Sonic3kAIZEvents act1Events = newFireTransitionEvents();
         act1Events.init(0);
         act1Events.setEventsFg5(true);
 
@@ -293,5 +294,3 @@ public class TestAizFireCurtainRendererRom {
         }
     }
 }
-
-

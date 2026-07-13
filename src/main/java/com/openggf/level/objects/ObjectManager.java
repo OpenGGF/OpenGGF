@@ -119,13 +119,6 @@ public class ObjectManager {
     @SuppressWarnings("unchecked")
     private final List<ObjectInstance>[] highPriorityBuckets = new ArrayList[BUCKET_COUNT];
     private boolean bucketsDirty = true;
-    // Render-input snapshot from the last bucket rebuild, used by
-    // refreshRenderBucketsIfChanged() to detect priority/membership changes
-    // without rebuilding every frame.
-    private ObjectInstance[] bucketSnapshotInstances = new ObjectInstance[64];
-    private long[] bucketSnapshotKeys = new long[64];
-    private int bucketSnapshotCount;
-
     // Cached combined active objects list to avoid allocation in getActiveObjects()
     private final List<ObjectInstance> cachedActiveObjects = new ArrayList<>();
     private final List<ObjectInstance> cachedSolidProviderObjects = new ArrayList<>();
@@ -211,8 +204,6 @@ public class ObjectManager {
     private final java.util.Map<PlayableEntity, Integer> execStartPlayerCentreY =
             new java.util.IdentityHashMap<>(2);
 
-    private final Comparator<ObjectInstance> renderSlotDescending;
-
     public ObjectManager(List<ObjectSpawn> spawns, ObjectRegistry registry,
             int planeSwitcherObjectId, PlaneSwitcherConfig planeSwitcherConfig,
             TouchResponseTable touchResponseTable, GraphicsManager graphicsManager,
@@ -222,11 +213,6 @@ public class ObjectManager {
         this.camera = camera;
         this.objectServices = objectServices;
         this.objectCallbacks = new ObjectCallbackRouter(registry);
-        this.renderSlotDescending = (a, b) -> Integer.compare(
-                b instanceof AbstractObjectInstance bAoi
-                        ? objectCallbacks.call(b, bAoi::getSlotIndex) : Integer.MAX_VALUE,
-                a instanceof AbstractObjectInstance aAoi
-                        ? objectCallbacks.call(a, aAoi::getSlotIndex) : Integer.MAX_VALUE);
         this.slotLayout = registry != null ? registry.objectSlotLayout() : ObjectSlotLayout.SONIC_1;
         this.windowingStrategy = registry != null
                 ? registry.objectWindowingStrategy()
@@ -294,6 +280,20 @@ public class ObjectManager {
     }
 
     ObjectCallbackRouter objectCallbacks() { return objectCallbacks; }
+
+    ObjectSpawn managedSpawn(ObjectInstance instance) {
+        ObjectSpawn placed = instanceToSpawn.get(instance);
+        return placed != null ? placed
+                : instance instanceof AbstractObjectInstance object ? object.managedSpawn() : null;
+    }
+
+    private void registerInheritedCallbackOwner(ObjectInstance instance) {
+        objectCallbacks.registerInherited(instance);
+        if (objectCallbacks.owner(instance) == null) {
+            rewindClassResolver.ownerOf(instance.getClass())
+                    .ifPresent(owner -> objectCallbacks.registerOwnerIfAbsent(instance, owner));
+        }
+    }
 
     private int execIndexForSlot(int slotIndex) {
         return slotLayout.toExecIndex(slotIndex);
@@ -417,69 +417,8 @@ public class ObjectManager {
         if (bucketsDirty) {
             return;
         }
-        if (renderBucketInputsChanged()) {
+        if (objectCallbacks.renderBucketInputsChanged(activeObjects.values(), dynamicObjects)) {
             bucketsDirty = true;
-        }
-    }
-
-    private boolean renderBucketInputsChanged() {
-        // Early-out for the common membership-change case; the per-index
-        // identity comparison below would also catch it.
-        if (activeObjects.size() + dynamicObjects.size() != bucketSnapshotCount) {
-            return true;
-        }
-        int position = 0;
-        for (ObjectInstance instance : activeObjects.values()) {
-            if (position >= bucketSnapshotCount
-                    || bucketSnapshotInstances[position] != instance
-                    || bucketSnapshotKeys[position] != objectCallbacks.renderBucketKey(instance)) {
-                return true;
-            }
-            position++;
-        }
-        for (ObjectInstance instance : dynamicObjects) {
-            if (position >= bucketSnapshotCount
-                    || bucketSnapshotInstances[position] != instance
-                    || bucketSnapshotKeys[position] != objectCallbacks.renderBucketKey(instance)) {
-                return true;
-            }
-            position++;
-        }
-        return position != bucketSnapshotCount;
-    }
-
-    private void captureRenderBucketSnapshot() {
-        int required = activeObjects.size() + dynamicObjects.size();
-        if (bucketSnapshotInstances.length < required) {
-            int newLength = Math.max(required, bucketSnapshotInstances.length * 2);
-            bucketSnapshotInstances = new ObjectInstance[newLength];
-            bucketSnapshotKeys = new long[newLength];
-        }
-        int position = 0;
-        for (ObjectInstance instance : activeObjects.values()) {
-            bucketSnapshotInstances[position] = instance;
-            bucketSnapshotKeys[position] = objectCallbacks.renderBucketKey(instance);
-            position++;
-        }
-        for (ObjectInstance instance : dynamicObjects) {
-            bucketSnapshotInstances[position] = instance;
-            bucketSnapshotKeys[position] = objectCallbacks.renderBucketKey(instance);
-            position++;
-        }
-        // Release stale references beyond the live range so removed objects
-        // are not retained by the snapshot.
-        for (int i = position; i < bucketSnapshotCount; i++) {
-            bucketSnapshotInstances[i] = null;
-        }
-        bucketSnapshotCount = position;
-    }
-
-    // Packed-key layout: bit 0 = highPriority, bits 1-3 = bucket index,
-    // bits 8+ = slot index. The shifted bucket index must stay below bit 8 or
-    // it would bleed into the slot field and silently corrupt change detection.
-    static {
-        if (RenderPriority.MAX - RenderPriority.MIN >= 8) {
-            throw new AssertionError("renderBucketKey bucket bits overflow");
         }
     }
 
@@ -1212,44 +1151,8 @@ public class ObjectManager {
         }
         bucketsDirty = false;
 
-        // Clear all buckets
-        for (int i = 0; i < BUCKET_COUNT; i++) {
-            lowPriorityBuckets[i].clear();
-            highPriorityBuckets[i].clear();
-        }
-
-        // Bucket active objects
-        for (ObjectInstance instance : activeObjects.values()) {
-            int bucket = RenderPriority.clamp(objectCallbacks.call(instance, instance::getPriorityBucket));
-            int idx = bucket - RenderPriority.MIN;
-            if (objectCallbacks.call(instance, instance::isHighPriority)) {
-                highPriorityBuckets[idx].add(instance);
-            } else {
-                lowPriorityBuckets[idx].add(instance);
-            }
-        }
-
-        // Bucket dynamic objects
-        for (ObjectInstance instance : dynamicObjects) {
-            int bucket = RenderPriority.clamp(objectCallbacks.call(instance, instance::getPriorityBucket));
-            int idx = bucket - RenderPriority.MIN;
-            if (objectCallbacks.call(instance, instance::isHighPriority)) {
-                highPriorityBuckets[idx].add(instance);
-            } else {
-                lowPriorityBuckets[idx].add(instance);
-            }
-        }
-
-        // ROM parity: lower sprite-table indices render in front. Objects execute and
-        // call Draw_Sprite in slot order, so lower SST slots must be drawn later in
-        // painter's-algorithm order. Sort each bucket descending by slot so lower
-        // slot indices appear on top.
-        for (int i = 0; i < BUCKET_COUNT; i++) {
-            lowPriorityBuckets[i].sort(renderSlotDescending);
-            highPriorityBuckets[i].sort(renderSlotDescending);
-        }
-
-        captureRenderBucketSnapshot();
+        objectCallbacks.populateRenderBuckets(activeObjects.values(), dynamicObjects,
+                lowPriorityBuckets, highPriorityBuckets);
     }
 
     public void drawPriorityBucket(int bucket, boolean highPriority) {
@@ -1687,7 +1590,7 @@ public class ObjectManager {
                 throw new IllegalArgumentException(
                         "Fixed-slot dynamic objects must extend AbstractObjectInstance");
             }
-            objectCallbacks.registerInherited(object);
+            registerInheritedCallbackOwner(object);
             objectCallbacks.run(aoi, () -> aoi.setSlotIndex(slotIndex));
             addDynamicObject(object);
             return object;
@@ -1719,7 +1622,7 @@ public class ObjectManager {
                 releaseSlot(reservedSlot);
                 return null;
             }
-            objectCallbacks.registerInherited(object);
+            registerInheritedCallbackOwner(object);
             if (object instanceof AbstractObjectInstance aoi
                     && objectCallbacks.call(object, aoi::getSlotIndex) < 0) {
                 objectCallbacks.run(object, () -> aoi.setSlotIndex(reservedSlot));
@@ -1812,7 +1715,7 @@ public class ObjectManager {
         if (object == null) {
             return;
         }
-        objectCallbacks.registerInherited(object);
+        registerInheritedCallbackOwner(object);
         if (object instanceof AbstractObjectInstance aoi) {
             objectCallbacks.run(object, () -> aoi.setServices(objectServices));
             objectCallbacks.run(object, () -> aoi.setSlotIndex(-1));
@@ -1833,7 +1736,7 @@ public class ObjectManager {
             boolean allocateAfterCurrent,
             boolean allowSameFrameExec,
             int explicitParentSlot) {
-        objectCallbacks.registerInherited(object);
+        registerInheritedCallbackOwner(object);
         if (object instanceof AbstractObjectInstance aoi) {
             objectCallbacks.run(object, () -> aoi.setServices(objectServices));
             // ROM parity: FindFreeObj allocates an SST slot for EVERY object,
@@ -1906,7 +1809,7 @@ public class ObjectManager {
      * ROM parity: badnik destruction changes obID in-place, keeping the SST slot.
      */
     public void addDynamicObjectAtSlot(ObjectInstance object, int slotIndex) {
-        objectCallbacks.registerInherited(object);
+        registerInheritedCallbackOwner(object);
         if (object instanceof AbstractObjectInstance aoi) {
             objectCallbacks.run(object, () -> aoi.setServices(objectServices));
             objectCallbacks.run(object, () -> aoi.setSlotIndex(slotIndex));
@@ -1989,7 +1892,7 @@ public class ObjectManager {
         if (ring == null) {
             return;
         }
-        objectCallbacks.registerInherited(ring);
+        registerInheritedCallbackOwner(ring);
         objectCallbacks.run(ring, () -> ring.setServices(objectServices));
         // Slot is already reserved by RingManager — do NOT re-allocate.
         objectCallbacks.run(ring, () -> ring.setSlotIndex(reservedSlot));
@@ -2245,7 +2148,7 @@ public class ObjectManager {
         if (childSlots != null && childIndex >= 0 && childIndex < childSlots.length) {
             int reservedSlot = childSlots[childIndex];
             if (isManagedDynamicSlot(reservedSlot)) {
-                objectCallbacks.registerInherited(object);
+                registerInheritedCallbackOwner(object);
                 if (object instanceof AbstractObjectInstance aoi) {
                     objectCallbacks.run(aoi, () -> aoi.setServices(objectServices));
                     objectCallbacks.run(aoi, () -> aoi.setSlotIndex(reservedSlot));
@@ -4310,7 +4213,7 @@ public class ObjectManager {
      */
     public void registerRewindReconstructionChild(AbstractObjectInstance child) {
         if (child != null && rewindReconstructionChildCapture) {
-            objectCallbacks.registerInherited(child);
+            registerInheritedCallbackOwner(child);
             rewindReconstructionChildren.add(child);
         }
     }

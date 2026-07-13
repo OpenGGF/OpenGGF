@@ -5,7 +5,7 @@ version: 1.0.0
 authors:
   - OpenGGF Sample Authors
 description: Minimal no-ROM standalone game acceptance sample.
-engineApiRange: ">=1.1.0 <2.0.0"
+engineApiRange: ">=1.2.0 <2.0.0"
 type: standalone
 entrypoint: example.phase3standalone.Phase3StandaloneMod
 dependencies: []

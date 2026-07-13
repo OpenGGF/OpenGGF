@@ -5,12 +5,15 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.FireCurtainRenderState;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 
+import java.nio.ByteBuffer;
 import java.util.Objects;
 
 public final class AizZoneRuntimeState implements S3kZoneRuntimeState {
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
     private final Sonic3kAIZEvents events;
+    private boolean buttonBeforeBridgeDispatch;
+    private int tailsControlReleaseDelay = -1;
 
     public AizZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter, Sonic3kAIZEvents events) {
         this.actIndex = actIndex;
@@ -40,4 +43,53 @@ public final class AizZoneRuntimeState implements S3kZoneRuntimeState {
     public int getBattleshipBgYOffset() { return events.getBattleshipBgYOffset(); }
     public int getBattleshipSmoothScrollX() { return events.getBattleshipSmoothScrollX(); }
     public int getScreenShakeOffsetY() { return events.getScreenShakeOffsetY(); }
+
+    public boolean isButtonBeforeBridgeDispatch() {
+        return buttonBeforeBridgeDispatch;
+    }
+
+    public void setButtonBeforeBridgeDispatch(boolean value) {
+        buttonBeforeBridgeDispatch = value;
+    }
+
+    public void scheduleTailsControlRelease(int delay) {
+        if (tailsControlReleaseDelay < 0) {
+            tailsControlReleaseDelay = delay;
+        }
+    }
+
+    public boolean tickTailsControlRelease() {
+        if (tailsControlReleaseDelay < 0) {
+            return false;
+        }
+        if (tailsControlReleaseDelay == 0) {
+            tailsControlReleaseDelay = -1;
+            return true;
+        }
+        tailsControlReleaseDelay--;
+        return false;
+    }
+
+    public void resetBossEndSequenceDispatchState() {
+        buttonBeforeBridgeDispatch = false;
+        tailsControlReleaseDelay = -1;
+    }
+
+    @Override
+    public byte[] captureBytes() {
+        return ByteBuffer.allocate(1 + Integer.BYTES)
+                .put((byte) (buttonBeforeBridgeDispatch ? 1 : 0))
+                .putInt(tailsControlReleaseDelay)
+                .array();
+    }
+
+    @Override
+    public void restoreBytes(byte[] bytes) {
+        if (bytes == null || bytes.length < 1 + Integer.BYTES) {
+            return;
+        }
+        ByteBuffer buffer = ByteBuffer.wrap(bytes);
+        buttonBeforeBridgeDispatch = buffer.get() != 0;
+        tailsControlReleaseDelay = buffer.getInt();
+    }
 }

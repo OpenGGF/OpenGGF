@@ -7,8 +7,8 @@ protected constructors, methods, fields, generic bounds, annotations, nested
 types, supertypes, interfaces, record components, and sealed permits clauses is
 part of the same contract and must also be annotated.
 
-At Mod API 1.1.0 the recursive surface contains **789 engine types** and
-**15,910 canonical signature entries**. The breadth is intentional. In
+At the published Mod API 1.2.0 baseline, the recursive surface contains **871
+engine types** and **17,067 canonical signature entries**. The breadth is intentional. In
 particular, the legacy-wide signatures of `GameModule`, `ObjectServices`, and
 the object base classes expose substantial runtime infrastructure; silently
 treating those transitive types as unsupported would make creator binaries depend
@@ -28,11 +28,18 @@ that ownership across recreation. Legacy `DynamicObjectEntry` constructors are
 retained and produce ownerless engine entries, so existing 1.1 binaries remain
 source- and binary-compatible.
 
-The checked-in baseline is
-`src/test/resources/mods/mod-api-signatures-1.1.txt`. The guard requires the
-baseline to remain a subset of the current canonical surface, so removals and
-changes fail while reviewed compatible additions can be published with an
-appropriate semantic API version increase. Before updating the baseline:
+The published 1.2 baseline is
+`src/test/resources/mods/mod-api-signatures-1.2.txt`. The previous
+`src/test/resources/mods/mod-api-signatures-1.1.txt` baseline is retained and still
+checked as a subset; it contains 831 engine types and 16,483 canonical entries.
+This proves a Phase 2 mod whose range begins at `1.1.0` remains source/binary
+compatible, while the semantic-range tests separately retain Phase 1's canonical
+`>=1.0.0 <2.0.0` compatibility.
+
+The guards require each published baseline to remain a subset of the current
+canonical surface, so removals and changes fail while reviewed compatible additions
+can be published with an appropriate semantic API version increase. Before updating
+a baseline:
 
 1. run `TestModApiSignatureSurface` and inspect every added line;
 2. annotate every newly reachable engine type;
@@ -41,6 +48,12 @@ appropriate semantic API version increase. Before updating the baseline:
 4. add a JDK type only to the explicit platform allowlist after compatibility
    review; package-prefix exemptions are forbidden;
 5. regenerate the sorted LF baseline and re-run the Javadoc/SDK packaging tests.
+
+The 1.2 roots add the character and standalone creator path: owner-tagged
+`CharacterKey`/`CharacterDefinition` registration and playable construction, plus
+`GameDataSource`, `AbstractStandaloneGameModule`, `ModGame`, and
+`StandaloneLevelLoader`. These are additive to the 1.1 object/zone surface; the old
+baseline is not overwritten or renamed.
 
 Release packaging generates exact-inventory Javadoc and attaches
 `openggf-mod-sdk` and `openggf-mod-sdk-javadoc` classifier jars beside the

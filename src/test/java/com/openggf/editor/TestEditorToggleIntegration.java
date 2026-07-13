@@ -8,13 +8,10 @@ import com.openggf.control.InputHandler;
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.editor.persistence.EditorSaveManager;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameMode;
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.session.EditorCursorState;
 import com.openggf.game.session.EditorPlaytestStash;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
@@ -39,6 +36,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -71,6 +69,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
+@Isolated
 class TestEditorToggleIntegration {
     private static final Path S2_ROM = Path.of("s2.gen");
 
@@ -129,15 +128,14 @@ class TestEditorToggleIntegration {
 
     @BeforeEach
     void setUp() {
-        SonicConfigurationService.getInstance().resetToDefaults();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        RomManager.getInstance().setRom(null);
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
     }
 
     @AfterEach
     void tearDown() {
-        SonicConfigurationService.getInstance().resetToDefaults();
-        SessionManager.clear();
-        GameModuleRegistry.reset();
+        RomManager.getInstance().setRom(null);
+        TestEnvironment.resetAll();
     }
 
     @Test
@@ -503,6 +501,7 @@ class TestEditorToggleIntegration {
 
     @Test
     void gameLoop_f5InEditorModeUsesEngineFreshStartHandlerByDefault() {
+        assumeS2RomAvailableForResumeReload();
         enableEditor();
         Engine engine = new Engine();
         GameplayModeContext gameplayMode = createGameplayMode(engine);
@@ -522,10 +521,11 @@ class TestEditorToggleIntegration {
     }
 
     @Test
-    void gameLoop_f5InEditorModeIgnoresLeakedGarbageRomState() throws Exception {
+    void gameLoop_f5InEditorModeUsesExplicitFixtureAfterLeakedGarbageRomState() throws Exception {
+        injectLeakedGarbageRom();
+        assumeS2RomAvailableForResumeReload();
         enableEditor();
         Engine engine = new Engine();
-        injectLeakedGarbageRom();
         GameplayModeContext gameplayMode = createGameplayMode(engine);
         InputHandler inputHandler = new InputHandler();
         engine.setInputHandler(inputHandler);
@@ -743,6 +743,7 @@ class TestEditorToggleIntegration {
 
     @Test
     void startGameplayFromBeginning_discardsResumeStashAndReturnsToCanonicalSpawn() throws Exception {
+        assumeS2RomAvailableForResumeReload();
         enableEditor();
         Engine engine = new Engine();
         createGameplayMode(engine);
@@ -946,7 +947,6 @@ class TestEditorToggleIntegration {
 
     private GameplayModeContext createGameplayMode(Engine engine, short playerX, short playerY) {
         installTempEditorSaveManager(engine);
-        RomManager.getInstance().setRom(null);
         GameplayModeContext gameplayMode = SessionManager.openGameplaySession(new Sonic2GameModule());
         TestEnvironment.activeGameplayMode();
         SpriteManager spriteManager = gameplayMode.getSpriteManager();
@@ -967,6 +967,9 @@ class TestEditorToggleIntegration {
 
     private static void assumeS2RomAvailableForResumeReload() {
         assumeTrue(Files.exists(S2_ROM), "S2 ROM is not available in this environment");
+        Rom rom = new Rom();
+        assumeTrue(rom.open(S2_ROM.toString()), "S2 ROM could not be opened in this environment");
+        TestEnvironment.configureRomFixture(rom);
     }
 
     private static void injectLeakedGarbageRom() throws IOException {

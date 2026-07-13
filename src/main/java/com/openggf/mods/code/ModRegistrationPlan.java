@@ -3,6 +3,7 @@ package com.openggf.mods.code;
 import com.openggf.game.patch.GamePatch;
 import com.openggf.game.CharacterDefinition;
 import com.openggf.game.CharacterKey;
+import com.openggf.game.GameModuleRouting;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.level.objects.BakedSheetReader;
 import com.openggf.level.objects.ObjectFactory;
@@ -29,7 +30,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                     "Exactly one of baseGameId or standaloneModule must be present");
         }
         if (standaloneModule != null
-                && (standaloneModule.getGameId() != com.openggf.game.GameId.STANDALONE
+                && (!GameModuleRouting.isStandalone(standaloneModule)
                 || !ownerModId.equals(standaloneModule.getIdentifier())
                 || !ownerModId.equals(standaloneModule.getGameCode()))) {
             throw new IllegalArgumentException("Standalone module owner/identity mismatch");

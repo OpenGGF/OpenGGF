@@ -5,9 +5,11 @@ import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.game.MusicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Isolated
 class TestNamespacedMusicRouting {
     private final AudioManager audio = AudioManager.getInstance();
 

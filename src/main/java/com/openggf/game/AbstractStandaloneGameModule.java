@@ -12,9 +12,12 @@ import com.openggf.level.objects.TouchResponseTable;
 /**
  * Creator base for a no-ROM standalone module.
  *
- * <p>Required creator surface: identifier/game id, source-based game and touch-table
- * creation, object registry/placement encoding, audio profile, zone registry, and
- * physics provider. All other providers have no-ROM-safe neutral defaults.</p>
+ * <p>{@link #getGameId()} is fixed to {@link GameId#STANDALONE};
+ * {@link #getIdentifier()} is also the title/save game code and must equal the
+ * manifest owner. Creators implement source-based game and touch-table creation,
+ * object registry/placement encoding, audio profile, zone registry, and physics
+ * provider. All other providers have no-ROM-safe neutral defaults. ROM-shaped
+ * creation methods deliberately throw.</p>
  */
 @ModApi
 public abstract class AbstractStandaloneGameModule implements GameModule {

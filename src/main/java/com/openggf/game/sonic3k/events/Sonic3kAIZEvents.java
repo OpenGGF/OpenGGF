@@ -46,6 +46,7 @@ import com.openggf.sprites.playable.SidekickCpuController;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.function.IntSupplier;
 import java.util.logging.Logger;
 
 /**
@@ -212,6 +213,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
     @RewindTransient(reason = "level-load bootstrap configuration is structural; mutable transition state is captured separately")
     private final Sonic3kLoadBootstrap bootstrap;
+    @RewindTransient(reason = "read-only timing source; production resolves the rewind-captured ObjectManager VBlank counter")
+    private final IntSupplier vblankCounterSource;
     private boolean introSpawned;
     /** One-shot guard: once AIZ intro minX is locked at $1308, stop rewriting minX each frame. */
     private boolean introMinXLocked;
@@ -452,7 +455,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     public Sonic3kAIZEvents(Sonic3kLoadBootstrap bootstrap) {
+        this(bootstrap, null);
+    }
+
+    Sonic3kAIZEvents(Sonic3kLoadBootstrap bootstrap, IntSupplier vblankCounterSource) {
         this.bootstrap = bootstrap;
+        this.vblankCounterSource = vblankCounterSource;
     }
 
     @Override
@@ -2211,8 +2219,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                             S3kSeamlessMutationExecutor.MUTATION_AIZ1_FIRE_TERRAIN_READY);
                     fireTerrainTablesLoaded = true;
                 }
-                int vblankPhase = levelManager().getObjectManager().getVblaCounter()
-                        & KOS_MODULE_DMA_PHASE_MASK;
+                int vblankPhase = currentVblankCounter() & KOS_MODULE_DMA_PHASE_MASK;
                 if (firePhaseFrames >= FIRE_LINGER_MIN_FRAMES
                         && vblankPhase == KOS_MODULE_DMA_READY_PHASE
                         && !act2TransitionRequested) {
@@ -2223,6 +2230,13 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 // Act 2 continuation is advanced by updateAct2Continuation().
             }
         }
+    }
+
+    private int currentVblankCounter() {
+        if (vblankCounterSource != null) {
+            return vblankCounterSource.getAsInt();
+        }
+        return levelManager().getObjectManager().getVblaCounter();
     }
 
     private void updateIntroNormalRefreshFlag(int cameraX) {

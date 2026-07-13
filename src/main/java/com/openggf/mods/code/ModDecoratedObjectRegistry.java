@@ -1,6 +1,7 @@
 package com.openggf.mods.code;
 
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectFactory;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
@@ -10,19 +11,29 @@ import java.util.List;
 import java.util.Objects;
 
 /** Routes tagged mod spawns by namespaced key while leaving stock registry behavior untouched. */
-public final class ModDecoratedObjectRegistry implements ObjectRegistry {
+public final class ModDecoratedObjectRegistry implements ObjectRegistry,
+        java.util.function.Supplier<Object> {
     private final ObjectRegistry base;
     private final ModObjectKeyRegistry modKeys;
     private final java.util.Map<String,String> previewArtKeys;
+    private final ModFaultBoundary boundary;
+    private final ObjectCallbackOwnerLookup ownerLookup = new ObjectCallbackOwnerLookup();
 
     public ModDecoratedObjectRegistry(ObjectRegistry base, ModObjectKeyRegistry modKeys) {
-        this(base, modKeys, java.util.Map.of());
+        this(base, modKeys, java.util.Map.of(), null);
     }
 
     public ModDecoratedObjectRegistry(ObjectRegistry base, ModObjectKeyRegistry modKeys,
                                       java.util.Map<String,String> previewArtKeys) {
+        this(base, modKeys, previewArtKeys, null);
+    }
+
+    ModDecoratedObjectRegistry(ObjectRegistry base, ModObjectKeyRegistry modKeys,
+                               java.util.Map<String,String> previewArtKeys,
+                               ModFaultBoundary boundary) {
         Objects.requireNonNull(base, "base");
         Objects.requireNonNull(modKeys, "modKeys");
+        this.boundary = boundary;
         if (base instanceof ModDecoratedObjectRegistry decorated) {
             this.base = decorated.base;
             this.modKeys = decorated.modKeys.mergedWith(modKeys);
@@ -41,7 +52,10 @@ public final class ModDecoratedObjectRegistry implements ObjectRegistry {
         if (spawn.objectKey() == null) {
             return base.create(spawn);
         }
-        return modKeys.requireFactory(spawn.ownerModId(), spawn.objectKey()).create(spawn, this);
+        String owner = spawn.ownerModId();
+        ObjectFactory factory = modKeys.requireFactory(owner, spawn.objectKey());
+        if (boundary == null) return factory.create(spawn, this);
+        return boundary.call(owner, () -> ownerLookup.remember(owner, factory.create(spawn, this)));
     }
 
     @Override public void reportCoverage(List<ObjectSpawn> spawns) { base.reportCoverage(spawns); }
@@ -56,5 +70,9 @@ public final class ModDecoratedObjectRegistry implements ObjectRegistry {
     }
     @Override public java.util.Optional<String> editorPreviewArtKey(String objectKey) {
         return java.util.Optional.ofNullable(previewArtKeys.get(objectKey));
+    }
+
+    @Override public Object get() {
+        return boundary == null ? null : java.util.Map.entry(boundary, ownerLookup);
     }
 }

@@ -17,6 +17,7 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.io.File;
 
@@ -64,6 +65,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * keeps the three games in one class so each can be enabled or skipped
  * independently.
  */
+@Isolated
 class TestTitleCardObjectExecution {
 
     private static final int FRAMES_TO_STEP = 5;

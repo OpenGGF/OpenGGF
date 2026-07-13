@@ -5,20 +5,27 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelManager;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.lang.reflect.Field;
 
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+@Isolated
 class TestStandaloneEngineLevelLoad {
     private EngineContext previous;
+
+    @BeforeEach void resetState() { TestEnvironment.resetAll(); }
 
     @AfterEach void restoreServices() {
         SessionManager.clear();
         if (previous != null) EngineServices.configure(previous);
+        TestEnvironment.resetAll();
     }
 
     @Test
