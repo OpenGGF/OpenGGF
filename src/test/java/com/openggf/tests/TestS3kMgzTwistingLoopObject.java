@@ -167,7 +167,7 @@ class TestS3kMgzTwistingLoopObject {
     }
 
     @Test
-    void mgzTwistingLoopUsesNativeP2QueryWithoutPromotingExtraSidekicks() {
+    void mgzTwistingLoopPreservesNativeP2ThenProcessesExtraSidekicks() {
         MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
                 new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
         TestablePlayableSprite main = createDirectEntryPlayer();
@@ -180,8 +180,44 @@ class TestS3kMgzTwistingLoopObject {
 
         assertTrue(nativeP2.isObjectControlled(),
                 "MGZ loop player2 slot should use only the first native sidekick from ObjectPlayerQuery");
-        assertFalse(extraSidekick.isObjectControlled(),
-                "MGZ loop must not promote extra engine sidekicks into the native player2 slot");
+        assertTrue(extraSidekick.isObjectControlled(),
+                "MGZ loop should process extension sidekicks after its native player2 slot");
+    }
+
+    @Test
+    void mgzTwistingLoopUnloadReleasesCapturedExtensionPlayer() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite main = createDirectEntryPlayer("sonic", LOOP_X + 0x100);
+        TestablePlayableSprite nativeP2 = createDirectEntryPlayer("tails", LOOP_X + 0x100);
+        TestablePlayableSprite extension = createDirectEntryPlayer("knuckles", LOOP_X + 2);
+        loop.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extension)));
+        loop.update(0, main);
+        assertTrue(extension.isObjectControlled());
+
+        loop.onUnload();
+
+        assertFalse(extension.isObjectControlled());
+        assertFalse(extension.isObjectMappingFrameControl());
+        assertFalse(extension.isControlLocked());
+    }
+
+    @Test
+    void mgzTwistingLoopUnloadDoesNotClearReplacementControl() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite main = createDirectEntryPlayer("sonic", LOOP_X + 0x100);
+        TestablePlayableSprite extension = createDirectEntryPlayer("knuckles", LOOP_X + 2);
+        loop.setServices(new QueryOnlyPlayerServices(main, List.of(extension)));
+        loop.update(0, main);
+        extension.setObjectMappingFrameControl(false);
+        extension.setControlLocked(false);
+        extension.setAnimationId(5);
+
+        loop.onUnload();
+
+        assertTrue(extension.isObjectControlled(),
+                "stale loop cleanup must not release unrelated replacement control");
     }
 
     @Test

@@ -116,7 +116,7 @@ class TestS3kMgzPulleyAndMantis {
     }
 
     @Test
-    void mgzPulleyExcludesExtraSidekicksBeyondNativeP2() throws Exception {
+    void mgzPulleyExtendsNativeP2HandlingToAdditionalSidekicks() throws Exception {
         TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
         TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0100, (short) 0x0100);
         TestablePlayableSprite extraSidekick = new TestablePlayableSprite("knuckles", (short) 0x01DA, (short) 0x012E);
@@ -129,8 +129,27 @@ class TestS3kMgzPulleyAndMantis {
 
         pulley.update(0, main);
 
-        assertFalse(extraSidekick.isObjectControlled(),
-                "Additional engine sidekicks must not consume the pulley's native P2 slot");
+        assertTrue(extraSidekick.isObjectControlled(),
+                "Additional engine sidekicks need independent pulley ownership after the native P1/P2 prefix");
+    }
+
+    @Test
+    void mgzPulleyUnloadDoesNotClearReplacementControlOnExtensionPlayer() throws Exception {
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite extension = new TestablePlayableSprite("knuckles", (short) 0x01DA, (short) 0x012E);
+        extension.setXSpeed((short) -0x100);
+        RecordingServices services = new QueryOnlyPlayerServices(main, List.of(nativeP2, extension));
+        MGZPulleyObjectInstance pulley = createPulley(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.MGZ_PULLEY, 0, 0, false, 0));
+        pulley.setServices(services);
+        pulley.update(0, main);
+        extension.setAnimationId(Sonic3kAnimationIds.WALK.id());
+
+        pulley.onUnload();
+
+        assertTrue(extension.isObjectControlled(),
+                "stale pulley cleanup must not release control replaced by another object");
     }
 
     @Test
