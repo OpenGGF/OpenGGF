@@ -221,6 +221,15 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
                 return null;
             }
             if (sprite.getRolling() && sprite.getFlipAngle() == 0) {
+                // A jump that begins with Status_Roll already set takes the
+                // native .rolljump tail: it sets the Roll-Jump bit but does not
+                // write obAnim. Preserve whatever explicit owner was active
+                // (normally Roll, but LZWaterSlides may have published Slide)
+                // throughout that airborne arc (S1 01 Sonic.asm:1203-1274;
+                // S2 s2.asm:37318-37397; S3K sonic3k.asm:23303-23363).
+                if (sprite.getRollingJump()) {
+                    return null;
+                }
                 if (!sprite.isSliding() && !sprite.getRollingJump() && sprite.getAnimationId() != rollAnimId) {
                     return null;
                 }

@@ -73,6 +73,35 @@ for exact fields and values.
 
 ## 2026-07-13 - Player and Sidekick animation verification
 
+### Rolling-jump animation ownership
+
+Branch `bugfix/ai-s1-slide-roll-owner`, based exactly on `58f18adb5`, restores
+the native animation contract when a jump begins with Status_Roll already set.
+At LZ3 f2004, `LZWaterSlides` has published Slide `$1B` while Sonic remains in
+the rolling ground mode. The jump press then sets InAir, Jumping, and
+Roll-Jump, but the ROM retains Slide while the engine previously inferred Roll
+`$02` from the final status bits.
+
+`Sonic_Jump` writes Roll only on its non-rolling entry. If Status_Roll is
+already set, the `.rolljump` tail sets the Roll-Jump bit and returns without
+touching `obAnim`. The same branch ownership is present in S1
+(`docs/s1disasm/_incObj/01 Sonic.asm:1203-1274`), S2
+(`docs/s2disasm/s2.asm:37318-37397`), and S3K
+(`docs/skdisasm/sonic3k.asm:23303-23363`). The shared profile now preserves
+the explicit incoming animation throughout a rolling-jump arc; an ordinary
+non-rolling jump still selects Roll.
+
+Comparison-only results with the verified REV01 ROM, with zero physics errors:
+
+- LZ3 complete run: 23 animation errors at f2004 -> 21 errors at f2235
+  (`player_mapping_frame`, expected `$08`, actual `$09`).
+- LZ2 complete run: unchanged at 9 animation errors, first red f2293
+  (Bubble `$0F` expected, Walk `$00` actual).
+
+The later LZ3 frontier is a separate mapping-cadence issue. The combined
+movement/profile unit suite passes 133/133, including focused coverage that a
+rolling jump preserves a pre-dispatch Slide byte.
+
 ### Released-input Stop animation ownership
 
 Branch `bugfix/ai-s1-skid-publication`, based exactly on `075b9fd03`, restores

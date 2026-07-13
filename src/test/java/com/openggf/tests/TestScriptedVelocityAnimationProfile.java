@@ -69,6 +69,23 @@ public class TestScriptedVelocityAnimationProfile {
     }
 
     @Test
+    public void rollingJumpPreservesSlideWrittenBeforeJumpDispatch() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setAnimationId(profile.getSlideAnimId());
+        sprite.setSliding(true);
+        sprite.setRolling(true);
+        sprite.setRollingJump(true);
+        sprite.setJumping(true);
+        sprite.setAir(true);
+
+        Integer animId = profile.resolveAnimationId(sprite, 0, 32);
+
+        assertNull(animId,
+                "Sonic_Jump .rolljump sets only the Roll-Jump bit and leaves Slide active");
+    }
+
+    @Test
     public void preservesAnimationWhenFinalMoveLockTickExpiresAfterMoveDispatch() {
         ScriptedVelocityAnimationProfile profile = createProfile();
         TestSprite sprite = new TestSprite();
