@@ -39171,3 +39171,34 @@ Verification with the local REV01 Sonic 1 ROM:
 - `TestS1Sbz1CompleteRunTraceReplay` advanced from frame 280 to frame 581
   (`player_animation_id`, expected `0x001A`, actual `0x0005`), with 133 errors
   and 0 warnings.
+
+### 2026-07-13 -- Shared hurt-animation publication
+
+On branch `bugfix/ai-trace-s1-hurt-publication` at composed baseline
+`ea530e3c7`, the S1 GHZ1 standalone trace reached a damage frame after its
+ordinary animation pass had already selected Roll mapping `$31`. The later
+`ReactToItem` call entered `HurtSonic`, installed routine 4 and knockback state,
+then wrote `obAnim=id_Hurt` without running animation again. Thus the damage
+frame exposes animation id `$1A` while retaining mapping `$31`
+(`docs/s1disasm/_incObj/01 Sonic.asm:78-100`;
+`docs/s1disasm/_incObj/Sonic ReactToItem.asm:375-410`).
+
+S2 and S3K use the same ordering and immediate write in `HurtCharacter`
+(`docs/s2disasm/s2.asm:85471-85519`;
+`docs/skdisasm/sonic3k.asm:21065-21110`). The shared damage owner now resolves
+canonical Hurt when it applies knockback; it does not touch the already-latched
+mapping. No route, zone, or frame gate was added, and no trace state was
+modified, hydrated into the engine, or tolerated.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `mvn -Dmse=off "-Dtest=TestHurtAnimationPublication" test` exited 0: all
+  three parameterized S1/S2/S3K publication cases passed.
+- `mvn "-Dtest=TestS1Ghz1TraceReplay" "-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen" test`
+  retained the expected-red route but advanced the first error from frame 387
+  to frame 437 (`player_animation_id`, expected `0x0000`, actual `0x0005`) and
+  reduced the report from 157 to 156 errors, with 0 warnings.
+- `mvn "-Dtest=TestS1Mz2CompleteRunTraceReplay" "-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen" test`
+  retained the expected-red route but advanced the first error from frame 308
+  to frame 354 (`player_animation_id`, expected `0x0000`, actual `0x0005`) and
+  reduced the report from 179 to 168 errors, with 0 warnings.

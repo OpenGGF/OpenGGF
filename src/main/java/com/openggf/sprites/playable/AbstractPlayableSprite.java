@@ -2637,6 +2637,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         setXSpeed((short) (0x200 * dir));
                         setYSpeed((short) -0x400);
                 }
+                // HurtCharacter runs from the touch-response tail after the
+                // normal animation pass, then writes anim=$1A immediately. The
+                // raw animation byte therefore changes on the damage frame while
+                // the already-selected mapping remains displayed until next tick
+                // (S1 Sonic ReactToItem.asm:390-410; S2 s2.asm:85497-85519;
+                // S3K sonic3k.asm:21090-21110).
+                int hurtAnimationId = resolveAnimationId(CanonicalAnimation.HURT);
+                if (hurtAnimationId >= 0) {
+                        setAnimationId(hurtAnimationId);
+                }
                 currentAudioManager().playSfx(resolveDamageSound(cause));
                 return true;
         }
