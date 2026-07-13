@@ -709,3 +709,35 @@ recorded as `unknown/not previously run` rather than inferred.
   pass 26/26. Rewind coverage and constructor guards still report only inherited
   AIZ findings: three emerald-glow final scalars and two inline miniboss camera
   controller spawns. No Task 9 key appears in either failure.
+- Task 10 planning review RED found that the short plan compressed 63 placed
+  badniks into subtype-only behavior, incorrectly described TechnoSqueek as a
+  firing family, omitted Blaster's placement-orientation magnetic split, and
+  left the `$CF` subtype-2 falling badnik ownership boundary ambiguous. The
+  disassembly oracle fixes the executable boundary at 24 Blasters plus 39
+  TechnoSqueeks, so Task 10 alone must move completeness exactly `101 -> 38`.
+- Task 10 planning GREEN now freezes the independent Y/render orientation bits:
+  exactly 12 Blasters are ceiling/magnetic consumers and 12 are ordinary. It
+  records P1-only initial facing versus closest-native-P1/P2 attack acquisition,
+  the same-frame magnetic interrupt/resume of routines 2/4/6/8, one-shot
+  after-current allocation order and independent-versus-parent-owned lifetime,
+  exact fixed-point motion/culls, and the absence of attack/detach/impact SFX.
+  Required evidence includes the MHZ SKL negative remap, more-than-two-sidekick
+  targeting, exact mapping shapes, real-slot rewind reconstruction, allocation
+  failure, and the `101 -> 38` ratchet. Task 10 owns concrete `89F16/89F24`
+  falling entry forms; Task 17 only integrates them into `$CF` subtype 2. This
+  was a planning/oracle correction only: no production code, tests, trace, or
+  commit ran.
+- Residual Task 10 planning review RED found three frame-order/lifetime errors:
+  `89726` was incorrectly described as parent-deleting, TechnoSqueek's `$2E=$10`
+  write was incorrectly treated as the child-freeze timer, and the plan omitted
+  the offscreen-shim and same-frame after-current first-tick behavior. GREEN now
+  records `89726` as parent-relative but independently `$F4`-terminating; bit 5
+  clears only at the raw-animation `$F4`, leaving `89B24` frozen through 92
+  movement updates and refreshing on the 93rd. The visibility frame only
+  restores real object code, init occurs next frame, and successful after-current
+  slots execute later in their creation frame: `89726` initializes without a
+  draw; `8972E/89746` initialize then move, apply gravity, animate to frames 6/8,
+  cull, and touch; `89B24` initializes and draws frame 2. Velocity wording is
+  corrected to signed 8.8 values integrated into 16.16 positions. This remained
+  a documentation-only correction; no production code, tests, trace, or commit
+  ran.

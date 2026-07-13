@@ -309,28 +309,104 @@ mvn "-Dtest=TestFbzMagneticObjects,TestFbzMine,TestFbzTrapSpring,TestFbzFlamethr
 
 - Create: `src/main/java/com/openggf/game/sonic3k/objects/badniks/BlasterBadnikInstance.java`
 - Create: `src/main/java/com/openggf/game/sonic3k/objects/badniks/TechnoSqueekBadnikInstance.java`
-- Create concrete projectile/attached child classes from `ChildObjDat_89726`, `8972E`, `89746`, and `89B24`
+- Create concrete real-slot classes for the attached Blaster attack effect
+  (`ChildObjDat_89726`), both independent Blaster projectiles/effects
+  (`8972E`, `89746`), and the persistent parent-owned TechnoSqueek child
+  (`89B24`). Task 10 also owns reusable detached/falling Blaster and
+  TechnoSqueek entry forms for `$CF` subtype 2; Task 17 only integrates those
+  completed forms into the prison release table.
 - Modify: `src/main/java/com/openggf/game/sonic3k/constants/Sonic3kObjectIds.java`
-- Modify: `src/main/java/com/openggf/game/sonic3k/constants/Sonic3kConstants.java`
 - Modify: `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`
-- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtKeys.java`
-- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArt.java`
-- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtProvider.java`
-- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kPlcArtRegistry.java`
 - Modify: `src/main/java/com/openggf/tools/Sonic3kObjectProfile.java`
 - Create: `src/test/java/com/openggf/game/sonic3k/objects/badniks/TestFbzBlaster.java`
 - Create: `src/test/java/com/openggf/game/sonic3k/objects/badniks/TestFbzTechnoSqueek.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/objects/badniks/TestFbzBadnikGraphRewind.java`
+- Create or extend focused PLC/mapping coverage in
+  `src/test/java/com/openggf/game/sonic3k/TestSonic3kPlcArtRegistry.java`
+
+`Sonic3kConstants`, `Sonic3kObjectArtKeys`, and `Sonic3kPlcArtRegistry`
+already contain the verified S&K-side art/mapping addresses and both standalone
+FBZ registrations. Change them only if the mandatory exact-shape tests expose
+a real defect; do not duplicate the existing art path.
 
 **Steps:**
 
-1. RED-test all placed `$A8` subtypes `08,20,30` and `$A9` subtypes `00,02,04`, explicitly resolving the S3KL names instead of the existing SKL remaps.
-2. Port patrol/attach/fire cadence, child allocation, projectile physics, continuous ENEMY touch polling, destruction/animal/score, and offscreen respawn behavior.
-3. Register S3KL factories without regressing the MHZ SKL implementations.
+1. Freeze the exact placement boundary: `$A8` has 24 records (Act 1: 10;
+   Act 2: 14), `$A9` has 39 (Act 1: 13; Act 2: 26), so the executable
+   placeholder count must move exactly `101 -> 38`. RED-test `$A8` subtypes
+   `08,20,30`, `$A9` subtypes `00,02,04`, and their independent placement
+   orientation flags. Twelve Blasters have Y/render flag bit 1 and are magnetic
+   ceiling consumers; subtype alone never selects floor versus ceiling.
+2. Port Blaster initialization and targeting exactly: initial `$80` X velocity
+   tracks native P1, while attack acquisition chooses the closest native P1/P2
+   by signed 16-bit X distance (P1 wins ties), requires the target at or above
+   the badnik, within `$80`, and on its facing side. Extend the native-P2 role
+   safely to additional engine sidekicks without changing native two-player
+   results.
+3. Port Blaster patrol/wait underflow, ledge probes, attack timing, and the
+   magnetic interrupt before any ordinary routine work. On an active same-frame
+   `_unkF7C1` edge it saves the exact current routine and X velocity, rises with
+   `$20` acceleration to the ceiling, waits while active, falls with `$20`
+   acceleration, then restores routines 2/4/6/8 and their in-progress state.
+   Use the shared `FbzZoneRuntimeState`; do not create a family-local magnetic
+   clock or defer a palette-fade-suppressed edge.
+4. Preserve activation and after-current execution order before testing
+   cadence. On the first visible `Obj_WaitOffscreen` update, the shim only
+   restores the real object code; initialization occurs on the next frame.
+   Successful after-current allocations execute later in their creation frame.
+   `89726` performs init only and does not draw that frame. `8972E/89746` fall
+   through projectile init into movement, gravity, animation, cull, and touch in
+   the creation frame, changing mapping 5 to 6 and 7 to 8 respectively.
+   `89B24` initializes and draws mapping 2 in its creation frame.
+5. Preserve after-current allocation semantics and one-shot failure behavior.
+   After 17 attack-wait updates Blaster attempts `89726` first and `8972E`
+   second; `89746` is attempted later only on the attack-animation
+   `anim_frame==6` edge. `89726` refreshes relative to its parent slot but does
+   not check or delete with the parent; it is an independent short-lived slot
+   that terminates only through its raw-animation `$F4` callback.
+   `8972E/89746` are independent siblings. Port their exact adjusted offsets,
+   signed 8.8 velocities integrated into 16.16 positions, gravity, collision
+   (`$98` versus zero), shield-reaction, animation, priority, and XY culls.
+   Allocation failures do not retry or advance success-only state.
+6. Port TechnoSqueek without invented fire behavior or audio. Subtypes `$00`
+   and `$02` use the horizontal `$400`/`$20` swing (with `$02` forcing render
+   bit 1); `$04` uses its vertical counterpart. Preserve exact zero-velocity
+   turn transitions, raw animation/flip scripts, and bit-1 child offsets. The
+   `$2E=$10` write is not the child-freeze release timer: bit 5 clears only when
+   the selected raw animation reaches `$F4`. From animation reset the attached
+   child remains frozen through 92 movement updates and refreshes on the 93rd.
+   `89B24` gets one after-current allocation attempt, no retry, and parent-status
+   deletion.
+7. Implement the two detached/falling entry routines now: Blaster launches at
+   `+/-$200,-$200`; TechnoSqueek at `+/-$200,-$300`, uses light gravity `$20`,
+   allocates its own `89B24`, and converts in-place to the normal patrol on
+   landing. Task 17 must call these concrete entry points for `$CF` subtype 2
+   rather than reimplementing them.
+8. Keep all ROM `x_pos/y_pos` work on centre-coordinate APIs. Main badniks use
+   current-position unsigned coarse-X `$280` deletion with placement-respawn
+   release; projectiles use current-position XY deletion. Preserve continuous
+   ENEMY touch polling, standard chain score, animal/explosion/Break SFX, and
+   assert that neither family emits a patrol, attack, detach, or impact SFX.
+9. Recreate every separate slot under rewind. Parent-relative effects and
+   parent-owned attached children relink by exact rewind identity and role,
+   including two parents at identical coordinates; the `89726` lifetime and
+   both projectiles remain independent. Test
+   in-place and forced reconstruction, allocation failure, exact slots, no
+   duplicate post-restore allocation, parent deletion, and more than two
+   configured sidekicks.
+10. Register S3KL factories while retaining the existing SKL `$A8/$A9` MHZ
+   cutscene implementations. Add an explicit MHZ negative/remap regression,
+   not merely an FBZ name assertion.
+11. Pin existing art data: Blaster has 11 mapping frames with piece counts
+    `4,4,4,1,1,1,1,1,1,1,1` and maximum tile `$27`; TechnoSqueek has 10
+    one-piece frames and maximum base tile `$22`. Both use palette 1, high
+    plane priority, priority `$280`, and the existing `PLCKosM_FBZ` entries.
+    Run the global mapping crawler and renderer corruption guard.
 
 **Verify:**
 
 ```powershell
-mvn "-Dtest=TestFbzBlaster,TestFbzTechnoSqueek,TestFbzObjectRegistryCompleteness,TestObjectServicesMigrationGuard" test "-Ds3k.rom.path=s3k.gen"
+mvn "-Dtest=TestFbzBlaster,TestFbzTechnoSqueek,TestFbzBadnikGraphRewind,TestFbzObjectRegistryCompleteness,TestSonic3kPlcArtRegistry,TestPatternSpriteRendererCorruptionGuard,TestObjectServicesMigrationGuard,TestRewindCoverageGuard" test "-Ds3k.rom.path=s3k.gen"
 ```
 
 ### Task 11: Implement the Act 1 miniboss graph
@@ -467,11 +543,11 @@ mvn "-Dtest=TestFbzEndBoss,TestFbzEndBossChildren,TestFbzEndBossAudioAndPlc,Test
 
 **Skills:** `s3k-implement-object`, `s3k-plc-system`, `s3k-zone-events`
 
-**Files:** create `FbzExitDoorInstance`, `FbzExitHallInstance`, `FbzEggPrisonInstance`, `FbzSpringPlungerInstance`, and their real children; configure the generic `Obj_EggCapsule` path without conflating it with `$CF`; modify `src/main/java/com/openggf/level/LevelTransitionCoordinator.java`, `src/main/java/com/openggf/game/sonic3k/constants/Sonic3kObjectIds.java`, `Sonic3kConstants.java`, `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`, `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtKeys.java`, `Sonic3kObjectArt.java`, `Sonic3kObjectArtProvider.java`, `Sonic3kPlcArtRegistry.java`, `Sonic3kPlcLoader.java`, and `src/main/java/com/openggf/tools/Sonic3kObjectProfile.java`; create `TestFbzExitDoor`, `TestFbzExitHall`, `TestFbzEggPrison`, `TestFbzFinalEggCapsule`, `TestFbzToSandopolisTransition`, and `src/test/java/com/openggf/tests/TestFbzAct2RouteHeadless.java`.
+**Files:** create `FbzExitDoorInstance`, `FbzExitHallInstance`, `FbzEggPrisonInstance`, `FbzSpringPlungerInstance`, and their real prison/capsule children; integrate Task 10's already-concrete detached/falling Blaster and TechnoSqueek entry forms for `$CF` subtype 2; configure the generic `Obj_EggCapsule` path without conflating it with `$CF`; modify `src/main/java/com/openggf/level/LevelTransitionCoordinator.java`, `src/main/java/com/openggf/game/sonic3k/constants/Sonic3kObjectIds.java`, `Sonic3kConstants.java`, `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`, `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtKeys.java`, `Sonic3kObjectArt.java`, `Sonic3kObjectArtProvider.java`, `Sonic3kPlcArtRegistry.java`, `Sonic3kPlcLoader.java`, and `src/main/java/com/openggf/tools/Sonic3kObjectProfile.java`; create `TestFbzExitDoor`, `TestFbzExitHall`, `TestFbzEggPrison`, `TestFbzFinalEggCapsule`, `TestFbzToSandopolisTransition`, and `src/test/java/com/openggf/tests/TestFbzAct2RouteHeadless.java`.
 
 **Steps:**
 
-1. RED-test `$CE`, `$8A` subtypes `00,04`, `$CF` subtypes `00,01,02`, `$D0`, their child tables, animals/explosions, art readiness, collision, animation, and lifecycle.
+1. RED-test `$CE`, `$8A` subtypes `00,04`, `$CF` subtypes `00,01,02`, `$D0`, their child tables, animals/explosions, art readiness, collision, animation, and lifecycle. For `$CF` subtype 2, assert exact allocation/order and integration of Task 10's `ChildObjDat_89F16/89F24` falling badnik forms; Task 17 must not create a second compressed implementation of either badnik.
 2. Keep placed `Obj_FBZEggPrison` behavior distinct from the dynamically spawned generic final `Obj_EggCapsule`.
 3. Enforce exit PLC completion before consumers. Port the door/hall/capsule sequence and wait for camera Y `$720` before requesting `StartNewLevel #$0800` (Sandopolis Act 1).
 4. GREEN the inventory/registry gate at zero live FBZ placeholder placements and prove both acts complete.

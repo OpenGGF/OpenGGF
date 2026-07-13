@@ -138,6 +138,32 @@ Act 1 table sum: **420**.
 
 Act 2 table sum: **440**.
 
+### Task 10 badnik orientation matrix
+
+Subtype and placement orientation are independent inputs. The two Y-word
+orientation bits become initial render/status bits; they must not be folded into
+the subtype decode.
+
+| Act | Family/subtype | flags 0 | bit 0 | bit 1 | Total |
+|---|---|---:|---:|---:|---:|
+| 1 | Blaster `$08` | 1 | 0 | 0 | 1 |
+| 1 | Blaster `$20` | 3 | 0 | 6 | 9 |
+| 2 | Blaster `$20` | 8 | 0 | 4 | 12 |
+| 2 | Blaster `$30` | 0 | 0 | 2 | 2 |
+| 1 | TechnoSqueek `$00` | 2 | 1 | 0 | 3 |
+| 1 | TechnoSqueek `$02` | 5 | 1 | 0 | 6 |
+| 1 | TechnoSqueek `$04` | 3 | 1 | 0 | 4 |
+| 2 | TechnoSqueek `$00` | 5 | 0 | 0 | 5 |
+| 2 | TechnoSqueek `$02` | 14 | 0 | 0 | 14 |
+| 2 | TechnoSqueek `$04` | 1 | 6 | 0 | 7 |
+
+Blaster init clears render bit 1 after recording it as the magnetic-ceiling
+capability. Therefore the 6+4+2 bit-1 placements are the exact 12 consumers of
+the shared FBZ `_unkF7C1` state; the other 12 Blasters never enter that path.
+TechnoSqueek subtype `$02` additionally sets render bit 1 during its own init,
+but that is its horizontal inverted presentation and is unrelated to Blaster's
+magnetic-capability latch.
+
 ## Dynamic-spawn graph from the disassembly
 
 These objects are absent from placement counts and must be included in object
@@ -160,10 +186,28 @@ family implementation/tests. Line references are to `docs/skdisasm/sonic3k.asm`.
   (`ChildObjDat_703C8`), two controller/Robotnik children (`703D0`), a sprite
   mask (`703DE`), two repeated secondary pieces (`703E4`), another child
   (`703EC`), boss explosions, and music/palette/PLC helpers.
-- `Obj_Blaster` (`186411`) creates an attack-effect child plus two badnik
-  projectile forms (`ChildObjDat_89726`, `8972E`, `89746`).
-- `Obj_TechnoSqueek` (`186710`) creates a persistent attached child
-  (`ChildObjDat_89B24`); detached/falling routines create the same child.
+- `Obj_Blaster` (`186411`) creates a parent-relative attack-effect slot
+  (`ChildObjDat_89726`) and two independent projectile/effect siblings
+  (`8972E`, `89746`). The first two allocation attempts occur in that order
+  after the 17-update attack wait; `89746` is attempted later only at attack
+  `anim_frame==6`. `89726` refreshes from the parent slot but never checks or
+  deletes with it; its `$F4` animation callback is its only terminator. Every
+  attempt is one-shot with no retry.
+- `Obj_TechnoSqueek` (`186710`) makes one one-shot attempt to create its
+  persistent parent-owned attached child (`ChildObjDat_89B24`). `$CF` subtype 2
+  later creates the detached/falling Blaster and TechnoSqueek entry routines
+  through `ChildObjDat_89F16/89F24`; those bodies are independent, and each
+  falling TechnoSqueek creates its own `89B24` child before converting in-place
+  to normal patrol on landing.
+- Both placed families begin behind `Obj_WaitOffscreen`: the first visible
+  update only restores their real code, and initialization occurs next frame.
+  After-current slots execute later in their creation frame. `89726` initializes
+  without drawing; `8972E/89746` initialize, move with signed 8.8 velocities
+  integrated into 16.16 positions, apply gravity, animate from frames 5 to 6 and
+  7 to 8, then cull/touch that same frame. `89B24` initializes and draws frame 2
+  that same frame. Its parent bit-5 freeze is not released by `$2E=$10`: only
+  the raw-animation `$F4` clears it, so a reset child remains frozen for 92
+  movement updates and refreshes on update 93.
 - `Obj_FBZEggPrison` (`187035`) creates its top/door child
   (`ChildObjDat_89EA8`), five freed-animal children (`89EB0`), and boss
   explosions. `Obj_FBZSpringPlunger` is a separate, placed-only family: the
@@ -207,7 +251,8 @@ global `FindFreeObj` policy. Directly replacing `(a0)` reuses the parent slot.
 | End-boss event control -> end boss | `AllocateObject` = `FindFreeObj` |
 | Magnetic platform companion; snake segments; rotating-platform group | `AllocateObjectAfterCurrent` = `FindNextFreeObj` |
 | Missile companion/projectiles/explosions; wall missiles; elevator cars; independent flames; independent spider visual; pendulum endpoint then chain owner | `AllocateObjectAfterCurrent` = `FindNextFreeObj`; mine and impact missiles replace `(a0)` with `Obj_Explosion` = in-place parent-slot reuse. Pendulum is a three-slot cascade; flames and spider visual are independent siblings. |
-| Blaster effect/projectiles and TechnoSqueek attached/detached child | `CreateChild1/5` = `FindNextFreeObj`; routine changes to `_2` replace `(a0)` = in-place parent-slot reuse |
+| Blaster attack effect/projectiles; TechnoSqueek attached child | `CreateChild1/5` = `FindNextFreeObj`; `89726` refreshes from its parent but self-terminates only at `$F4`, `89B24` parent-checks, and `8972E/89746` are independent siblings; all failures are one-shot/no-retry |
+| `$CF` subtype-2 `89F16/89F24` falling badnik entries | prison uses `CreateChild1` = `FindNextFreeObj`; falling bodies are independent, TechnoSqueek makes its own `89B24` with `FindNextFreeObj`, and landing changes `(a0)` to the normal `_2` routine in-place |
 | FBZ miniboss child tables `6FA76`, `6FAA8`, `6FAB0`, `89ED0`, `86B7A` | `CreateChild1/6` = `FindNextFreeObj`; song fade uses `AllocateObject` = `FindFreeObj` |
 | FBZ2 subboss tables `703C8`, `703D0`, `703DE`, `703E4`, `703EC` | `CreateChild1/3/6` = `FindNextFreeObj`; song fade uses `AllocateObject` = `FindFreeObj` |
 | End-boss tables `70EE0`, `70EF4`, `70EFC`, `70F04`, `70F0A`, `70F24`, ship/head/flame, debris | `CreateChild1/3/6` = `FindNextFreeObj`; object-specific transitions that overwrite `(a0)` use parent-slot reuse |
@@ -258,12 +303,12 @@ changing native ordering.
 | `$80` HiddenMonitor | concrete | reward | shared monitor PLC/map | native pair/shared policy | placement | `TestFbzSharedPlacedObjects` | concrete; subtype validation pending |
 | `$85` SSEntryRing | concrete | bonus entry | shared ring art | main/native pair per shared contract | placement | `TestFbzSharedPlacedObjects` | concrete; subtype validation pending |
 | `$8A` ExitHall | placeholder | finale traversal | `Map_FBZExitHall`, exit handoff | none/solid scenery | placement | `TestFbzExitHall` | pending |
-| `$A8` Blaster | S3KL placeholder (SKL factory exists) | badnik | `Map_Blaster`, `ArtKosM_Blaster`, raw anim tables | nearest native P1/P2; touch all eligible | placement + children FNFO | `TestFbzBadniks` | pending; remap guarded |
-| `$A9` TechnoSqueek | S3KL placeholder (SKL factory exists) | badnik | `Map_TechnoSqueek`, `ArtKosM_Technosqueek`, raw anim tables | native target/contact rules | placement + attached child FNFO; detach slot reuse | `TestFbzBadniks` | pending; remap guarded |
+| `$A8` Blaster | S3KL placeholder (SKL factory exists) | badnik; 24 placements, 12 magnetic ceiling consumers | `Map_Blaster` (11 frames; pieces `4,4,4,1,1,1,1,1,1,1,1`, max tile `$27`), `ArtKosM_Blaster`, raw anim tables | initial velocity tracks P1; attack selects closest native P1/P2 with P1 tie, safely extended to extra sidekicks; continuous ENEMY touch | placement + parent-relative but independently terminating `89726` FNFO + independent `8972E/89746` FNFO; `$CF` falling form owned by Task 10 | `TestFbzBlaster`, `TestFbzBadnikGraphRewind` | pending; exact `101->38` wave and MHZ remap guarded |
+| `$A9` TechnoSqueek | S3KL placeholder (SKL factory exists) | badnik; 39 placements; horizontal `$00/$02`, vertical `$04` | `Map_TechnoSqueek` (10 one-piece frames, max base tile `$22`), `ArtKosM_Technosqueek`, raw anim tables | no target/fire routine; continuous ENEMY touch | placement + one parent-owned `89B24` FNFO; `$CF` falling form and its child owned by Task 10 | `TestFbzTechnoSqueek`, `TestFbzBadnikGraphRewind` | pending; exact `101->38` wave and MHZ remap guarded |
 | `$AA` Act1 miniboss | placeholder | mandatory boss | `Map_FBZMiniboss`, `ArtKosM_FBZMiniboss`, boss PLC/palette | native pair touch/arena | placement + child tables FNFO + fade FFO | `TestFbzAct1Miniboss` | pending |
 | `$AB` Act2 subboss | placeholder | mandatory boss | `Map_FBZ2Subboss`, character PLCs/palette | native pair; character-id branch | placement + child tables FNFO + fade FFO | `TestFbzAct2Subboss` | pending |
 | `$CE` ExitDoor | placeholder | finale gate | `Map_FBZExitDoor`, exit handoff | native pair solids | placement | `TestFbzExitDoor` | pending |
-| `$CF` FBZEggPrison | placeholder | destructible/reward | `Map_FBZEggCapsule`, `ArtNem_FBZEggCapsule` | native pair attack/touch | placement + top/animals FNFO; explosion slot reuse | `TestFbzEggPrison` | pending |
+| `$CF` FBZEggPrison | placeholder | destructible/reward; subtype 2 releases falling badnik forms | `Map_FBZEggCapsule`, `ArtNem_FBZEggCapsule` | native pair attack/touch | placement + top/animals FNFO; subtype-2 `89F16/89F24` integrates Task 10 concrete falling forms; explosion slot reuse | `TestFbzEggPrison` plus Task 10 badnik tests | pending; badnik behavior must not be reimplemented here |
 | `$D0` SpringPlunger | placeholder | miniboss/finale traversal | `ObjDat_FBZSpringPlunger` mapping/art attributes | native pair riders | placement only; no child allocation | `TestFbzEggPrison` | pending |
 | `$E0` WallMissile | concrete | projectile hazard | `Map_FBZWallMissile` | native touch | placement + parentless missiles FNFO | `TestFbzMissileObjects` | concrete; on-screen cadence/muzzle lockout covered |
 | `$E1` Mine | concrete | ordered proximity/blink/hurt/explosion hazard | `Map_FBZMine` | ordered all-engine extension of native P1/P2 | placement; explosion in-place | `TestFbzMine` | concrete; all 60 placements and same-slot lifecycle covered |
@@ -316,8 +361,6 @@ and destruction sounds retain their shared-family test ownership.
 | Act 2 subboss (`148071-148222`, `148438`, `148458`, `148573`) | `mus_Miniboss`, fade-to-level, `sfx_Charging`, `sfx_BossLaser`, `sfx_BossHit` | transition or one-shot attack/hit edge | `TestFbzAct2Subboss` |
 | End boss init (`148703-148708`) | `cmd_FadeOut`, `mus_EndBoss` | one-shot transition | `TestFbzEndBossAudioAndPlc` |
 | End boss (`149196`, `149248`, `149264`, `149470`) | `sfx_FlamethrowerQuiet`, `sfx_FloorThump`, `sfx_SpikeBalls`, `sfx_BossHit` | routine-timed one-shots; quiet flame follows attack cadence | `TestFbzEndBossAudioAndPlc` |
-| Blaster (`182320`) | `sfx_Projectile` | one-shot fire | `TestFbzBadniks` |
-| TechnoSqueek (`182496`, `182596`) | `sfx_Blast` | one-shot detach/impact edges | `TestFbzBadniks` |
 | Egg Prison (`187219`) | `sfx_RingLoss` | one-shot prison break/release edge | `TestFbzEggPrison` |
 
 ## Mapping, animation, art, and PLC address manifest
@@ -341,8 +384,8 @@ recorded as `included-binary` rather than substituting an S3-half address.
 | End boss/exit | `Map_FBZEndBoss` `$70FB4`; `Map_FBZEndBossFlame` `$71090`; `Map_FBZExitDoor` `$70F7E`; `Map_FBZExitHall` `$86D2A` | `PLC_6F`; `PLCKosM_FBZEndBoss_Exit`; `ArtKosM_FBZExitDoor` / `ArtKosM_FBZExitHall` S&K included-binary at `sonic3k.asm:201670/201658` |
 | Egg prison/capsule | `Map_FBZEggCapsule` `$1871E8` | `ArtNem_FBZEggCapsule`, included-binary, PLC `$1A-$1D` |
 | AniPLC channels | `AniPLC_FBZ1` / `AniPLC_FBZ2` at `sonic3k.asm:55812-55882` | `ArtUnc_AniFBZ__0..4`, included-binary; destinations `$210`, `$230`, `$238`, `$200`, `$208` |
-| Blaster | `Map_Blaster`, S&K include at `sonic3k.asm:186706`; raw animations `byte_8975E`, `89763`, `89768`, `89771`, `89775`; finder could not calculate an offset | `ArtKosM_Blaster`, S&K included-binary at `sonic3k.asm:201024`; `PLCKosM_FBZ` entry at `64387` |
-| TechnoSqueek | `Map_TechnoSqueek`, S&K include at `sonic3k.asm:187031`; raw animation tables `byte_89B2C` and `byte_89B52`; finder could not calculate an offset | `ArtKosM_Technosqueek`, S&K included-binary at `sonic3k.asm:201027`; `PLCKosM_FBZ` entry at `64388` |
+| Blaster | `Map_Blaster` `$8977C`, S&K include at `sonic3k.asm:186706`; 11 frames, piece counts `4,4,4,1,1,1,1,1,1,1,1`, max tile `$27`; raw animations `byte_8975E`, `89763`, `89768`, `89771`, `89775` | `ArtKosM_Blaster` `$DC6C2`, S&K included-binary at `sonic3k.asm:201024`; palette 1/high plane priority; `PLCKosM_FBZ` entry at `64387`, `ArtTile_Blaster=$506` |
+| TechnoSqueek | `Map_TechnoSqueek` `$89B78`, S&K include at `sonic3k.asm:187031`; 10 one-piece frames, max base tile `$22`; raw animation tables `byte_89B2C`, `89B37`, `89B42`, `89B4D`, `89B52`, `89B5D`, `89B68`, `89B73` | `ArtKosM_Technosqueek` `$DC9C4`, S&K included-binary at `sonic3k.asm:201027`; palette 1/high plane priority; `PLCKosM_FBZ` entry at `64388`, `ArtTile_Technosqueek=$52E` |
 | Wire cages | no standalone mapping: `Obj_FBZWireCage` uses player mappings/DPLC plus `RawAni_3A220`; stationary form builds inline child sprites (`sonic3k.asm:77585-78154`) | player art banks; no independent PLC label |
 | Button | mapping comes from the FBZ misc object routine/level-art bank | `ArtKosM_FBZButton`, S&K included-binary at `sonic3k.asm:201676`; `PLCKosM_FBZ` entry at `64389` |
 | Robotnik/EggRobo character art | Robotnik run `$6837E`, head `$68454`, stand `$6847C`; shared EggRobo mappings resolved by their generic labels | `ArtNem_FBZRobotnikStand`, `ArtNem_FBZRobotnikRun`, `ArtNem_EggRoboStand`, `ArtNem_EggRoboRun`; S&K included-binary PLC entries `148683-148695` |
