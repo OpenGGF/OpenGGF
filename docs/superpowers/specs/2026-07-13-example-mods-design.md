@@ -60,8 +60,9 @@ A registration-time `@ModApi` capability reached through `ModContext` —
 working name `ModRomArtIntake`.
 
 - **Input**: ROM art address + compression (Nemesis/Kosinski/uncompressed),
-  S2 mapping address, optional DPLC address, palette line (0-3), optional
-  frame selection.
+  S2 mapping address, optional DPLC address, palette line (0-3). (Frame
+  selection was considered and dropped — consumers pick frames at render
+  time via `drawFrameIndex`.)
 - **Output**: art registered under the calling mod's **namespaced art key**,
   consumable by mod objects via the normal `getRenderer(artKey)` path.
 - **Implementation**: thin adapter over the engine's existing
