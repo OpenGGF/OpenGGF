@@ -39062,3 +39062,27 @@ Sonic 1 ROM and comparison-only replay path:
   frame 33 (`player_mapping_frame`, expected `0x000A`, actual `0x0020`), with
   149 errors and 0 warnings. The new frontier is the next animation-cadence
   mismatch; no trace state was hydrated or tolerated.
+### 2026-07-13 -- S1 credits stable-retro schema compatibility (8 traces green)
+
+On branch `bugfix/ai-trace-s1-bootstrap-schema` at feature baseline
+`e00abcd8d`, all eight Sonic 1 credits fixtures stopped during trace loading:
+their metadata reports `csv_version: 4`, but the historical stable-retro
+recorder emitted the 20-column v2.2 row shape rather than BizHawk's later
+22-column v3 shape. Treating every version 4 row as v3 incorrectly rejected
+valid preserved traces before comparison began.
+
+Pre-v5 rows now select the already-supported v1/v2/v2.1/v2.2/v3 parser from
+their validated column count. The structurally distinct v5/v6/v7 layouts keep
+their existing strict version/width checks. A focused regression fixture locks
+the overloaded version-4, 20-column case without changing trace data or feeding
+recorded state back into the engine.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `mvn -Dmse=off "-Dtest=TestTraceDataParsing" test` exited 0: 44 tests passed.
+- `mvn -Dmse=off "-Dtest=TestS1Credits*TraceReplay" "-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen" test`
+  exited 0: 8 tests passed, 0 failures, 0 errors, 0 skips.
+
+The newly green fixtures are `Credits00Ghz1`, `Credits01Mz2`,
+`Credits02Syz3`, `Credits03Lz3`, `Credits04Slz3`, `Credits05Sbz1`,
+`Credits06Sbz2`, and `Credits07Ghz1b`.

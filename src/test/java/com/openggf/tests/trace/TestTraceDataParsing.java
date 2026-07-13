@@ -35,6 +35,39 @@ public class TestTraceDataParsing {
     }
 
     @Test
+    void csvVersionFourAcceptsStableRetroV22TwentyColumnRows() throws IOException {
+        Path dir = Files.createTempDirectory("trace-stable-retro-v22");
+        Files.writeString(dir.resolve("metadata.json"), """
+            {
+              "game": "s1",
+              "zone": "ghz",
+              "zone_id": 0,
+              "act": 1,
+              "bk2_frame_offset": 0,
+              "trace_frame_count": 1,
+              "start_x": "0x0050",
+              "start_y": "0x03B0",
+              "lua_script_version": "credits-retro-1.4",
+              "csv_version": 4
+            }
+            """);
+        Files.writeString(dir.resolve("physics.csv"), """
+            frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,v_framecount,stand_on_obj
+            0000,0008,0050,03B0,000B,FFFE,000C,FC,0,0,0,0B00,FE00,02,0000,0300,0000,00,0000,03
+            """);
+
+        TraceFrame frame = TraceData.load(dir).getFrame(0);
+
+        assertEquals(0, frame.frame());
+        assertEquals(0x0008, frame.input());
+        assertEquals((short) 0x0050, frame.x());
+        assertEquals((short) 0x03B0, frame.y());
+        assertEquals(0x03, frame.standOnObj());
+        assertEquals(-1, frame.vblankCounter());
+        assertEquals(-1, frame.lagCounter());
+    }
+
+    @Test
     void metadataParsesRecordedTeamWhenPresent() throws IOException {
         Path dir = Files.createTempDirectory("trace-meta-team");
         Files.writeString(dir.resolve("metadata.json"), """

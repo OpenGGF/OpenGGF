@@ -270,12 +270,12 @@ public record TraceFrame(
         if (parts.length >= V22_COLUMNS) {
             standOnObj = Integer.parseInt(parts[19].trim(), 16);
         }
-        if ((csvVersion != null && csvVersion >= 3) || parts.length >= V3_COLUMNS) {
-            if (parts.length < V3_COLUMNS) {
-                throw new IllegalArgumentException(
-                    "Schema v3 requires " + V3_COLUMNS + " CSV columns, got " + parts.length
-                        + ": " + line);
-            }
+        // csv_version 4 is historically overloaded: the stable-retro S1
+        // recorder emits the v2.2 20-column layout with that value, while the
+        // BizHawk recorder uses it for the 22-column v3 layout. Pre-v5 rows are
+        // therefore identified by their column count. The structurally unique
+        // v5/v6/v7 layouts above and below remain version-strict.
+        if (parts.length >= V3_COLUMNS) {
             vblankCounter = Integer.parseInt(parts[20].trim(), 16);
             lagCounter = Integer.parseInt(parts[21].trim(), 16);
         }
