@@ -81,6 +81,14 @@ import static org.mockito.Mockito.when;
 @Isolated
 @Execution(ExecutionMode.SAME_THREAD)
 class TestMgzDrillingRobotnikInstance {
+    @Test
+    void airZoomCueEntryTracksSupportedViewportWidths() {
+        assertEquals(0x140, MgzDrillingRobotnikInstance.airZoomCueCameraOffsetForTesting(320));
+        assertEquals(0x160, MgzDrillingRobotnikInstance.airZoomCueCameraOffsetForTesting(352));
+        assertEquals(0x190, MgzDrillingRobotnikInstance.airZoomCueCameraOffsetForTesting(400));
+        assertEquals(0x210, MgzDrillingRobotnikInstance.airZoomCueCameraOffsetForTesting(528));
+        assertEquals(0x320, MgzDrillingRobotnikInstance.airZoomCueCameraOffsetForTesting(800));
+    }
 
     private Camera camera;
 

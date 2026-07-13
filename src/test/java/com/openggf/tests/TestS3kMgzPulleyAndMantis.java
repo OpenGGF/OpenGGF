@@ -1,6 +1,9 @@
 package com.openggf.tests;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
@@ -16,6 +19,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.sprites.playable.ObjectControlState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -116,7 +120,7 @@ class TestS3kMgzPulleyAndMantis {
     }
 
     @Test
-    void mgzPulleyExcludesExtraSidekicksBeyondNativeP2() throws Exception {
+    void mgzPulleyExtendsNativeP2HandlingToAdditionalSidekicks() throws Exception {
         TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
         TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0100, (short) 0x0100);
         TestablePlayableSprite extraSidekick = new TestablePlayableSprite("knuckles", (short) 0x01DA, (short) 0x012E);
@@ -129,8 +133,135 @@ class TestS3kMgzPulleyAndMantis {
 
         pulley.update(0, main);
 
-        assertFalse(extraSidekick.isObjectControlled(),
-                "Additional engine sidekicks must not consume the pulley's native P2 slot");
+        assertTrue(extraSidekick.isObjectControlled(),
+                "Additional engine sidekicks need independent pulley ownership after the native P1/P2 prefix");
+    }
+
+    @Test
+    void mgzPulleyUnloadDoesNotClearReplacementControlOnExtensionPlayer() throws Exception {
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite extension = new TestablePlayableSprite("knuckles", (short) 0x01DA, (short) 0x012E);
+        extension.setXSpeed((short) -0x100);
+        RecordingServices services = new QueryOnlyPlayerServices(main, List.of(nativeP2, extension));
+        MGZPulleyObjectInstance pulley = createPulley(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.MGZ_PULLEY, 0, 0, false, 0));
+        pulley.setServices(services);
+        pulley.update(0, main);
+        extension.setAnimationId(Sonic3kAnimationIds.WALK.id());
+
+        pulley.onUnload();
+
+        assertTrue(extension.isObjectControlled(),
+                "stale pulley cleanup must not release control replaced by another object");
+    }
+
+    @Test
+    void mgzPulleyKeepsGrabStateWithActorsWhenNativeP2RosterReorders() throws Exception {
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite capturedP2 = new TestablePlayableSprite("tails", (short) 0x01DA, (short) 0x012E);
+        capturedP2.setXSpeed((short) -0x100);
+        TestablePlayableSprite replacementP2 = new TestablePlayableSprite("knuckles", (short) 0x01DA, (short) 0x012E);
+        replacementP2.setXSpeed((short) -0x100);
+        List<PlayableEntity> sidekicks = new ArrayList<>(List.of(capturedP2, replacementP2));
+        RecordingServices services = new QueryOnlyPlayerServices(main, sidekicks);
+        MGZPulleyObjectInstance pulley = createPulley(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.MGZ_PULLEY, 0, 0, false, 0));
+        pulley.setServices(services);
+        pulley.update(0, main);
+
+        sidekicks.clear();
+        sidekicks.add(replacementP2);
+        sidekicks.add(capturedP2);
+        pulley.update(1, main);
+
+        assertTrue(capturedP2.isObjectControlled(), "demoted native P2 must retain its own pulley grab");
+        assertTrue(replacementP2.isObjectControlled(),
+                "new native P2 must receive its own grab after the prior actor is demoted to extension state");
+    }
+
+    @Test
+    void mgzPulleyKeepsExtensionGrabWhenPromotedAndReleasesOmittedNativeP2() throws Exception {
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x01DA, (short) 0x012E);
+        nativeP2.setXSpeed((short) -0x100);
+        TestablePlayableSprite promoted = new TestablePlayableSprite("knuckles", (short) 0x01DA, (short) 0x012E);
+        promoted.setXSpeed((short) -0x100);
+        List<PlayableEntity> sidekicks = new ArrayList<>(List.of(nativeP2, promoted));
+        RecordingServices services = new QueryOnlyPlayerServices(main, sidekicks);
+        MGZPulleyObjectInstance pulley = createPulley(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.MGZ_PULLEY, 0, 0, false, 0));
+        pulley.setServices(services);
+        pulley.update(0, main);
+
+        sidekicks.clear();
+        sidekicks.add(promoted);
+        pulley.update(1, main);
+
+        assertFalse(nativeP2.isObjectControlled(), "omitted native P2 must be released immediately");
+        assertTrue(promoted.isObjectControlled(), "promoted extension must retain its own pulley grab");
+        pulley.onUnload();
+        assertFalse(promoted.isObjectControlled(), "unload after promotion must release the actual owner");
+    }
+
+    @Test
+    void mgzPulleyPromotedCooldownStaysWithActorAndDeathCleansOwnership() throws Exception {
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite promoted = new TestablePlayableSprite("knuckles", (short) 0x01DA, (short) 0x012E);
+        promoted.setXSpeed((short) -0x100);
+        List<PlayableEntity> sidekicks = new ArrayList<>(List.of(nativeP2, promoted));
+        RecordingServices services = new QueryOnlyPlayerServices(main, sidekicks);
+        MGZPulleyObjectInstance pulley = createPulley(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.MGZ_PULLEY, 0, 0, false, 0));
+        pulley.setServices(services);
+        pulley.update(0, main);
+        promoted.setJumpInputPressed(true);
+        pulley.update(1, main);
+        promoted.setJumpInputPressed(false);
+        promoted.setCentreX((short) 0x01DA);
+        promoted.setCentreY((short) 0x012E);
+        promoted.setXSpeed((short) -0x100);
+        sidekicks.clear();
+        sidekicks.add(promoted);
+
+        pulley.update(2, main);
+
+        assertFalse(promoted.isObjectControlled(), "promotion must retain the actor's regrab cooldown");
+        promoted.setDead(true);
+        pulley.update(3, main);
+        assertFalse(promoted.isObjectControlled(), "death must not leave promoted cooldown/control state behind");
+    }
+
+    @Test
+    void mgzPulleyRewindRelinksNativeP2OwnerAndGrabReference() throws Exception {
+        TestablePlayableSprite capturedMain = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite capturedP2 = new TestablePlayableSprite("tails", (short) 0x01DA, (short) 0x012E);
+        capturedP2.setXSpeed((short) -0x100);
+        RecordingServices services = new QueryOnlyPlayerServices(capturedMain, new ArrayList<>(List.of(capturedP2)));
+        MGZPulleyObjectInstance pulley = createPulley(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.MGZ_PULLEY, 0, 0, false, 0));
+        pulley.setServices(services);
+        pulley.update(0, capturedMain);
+        RewindIdentityTable capturedIds = new RewindIdentityTable();
+        capturedIds.registerPlayer(capturedMain, PlayerRefId.mainPlayer());
+        capturedIds.registerPlayer(capturedP2, PlayerRefId.sidekick(0));
+        var snapshot = pulley.captureRewindState(RewindCaptureContext.withIdentityTable(capturedIds));
+
+        TestablePlayableSprite replacementMain = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite replacementP2 = new TestablePlayableSprite("tails", (short) 0x01DA, (short) 0x012E);
+        RewindIdentityTable replacementIds = new RewindIdentityTable();
+        replacementIds.registerPlayer(replacementMain, PlayerRefId.mainPlayer());
+        replacementIds.registerPlayer(replacementP2, PlayerRefId.sidekick(0));
+        pulley.setServices(new QueryOnlyPlayerServices(replacementMain, new ArrayList<>(List.of(replacementP2))));
+        pulley.restoreRewindState(snapshot, RewindCaptureContext.withIdentityTable(replacementIds));
+        ObjectControlState.nativeBit7FullControl().applyTo(replacementP2);
+        replacementP2.setAnimationId(Sonic3kAnimationIds.GET_UP.id());
+
+        pulley.onUnload();
+
+        assertFalse(replacementP2.isObjectControlled(), "rewind must relink pulley ownership to replacement native P2");
+        assertTrue(capturedP2.isObjectControlled(), "rewind cleanup must not target stale captured P2");
     }
 
     @Test
@@ -346,7 +477,7 @@ class TestS3kMgzPulleyAndMantis {
 
         private QueryOnlyPlayerServices(PlayableEntity main, List<? extends PlayableEntity> queriedSidekicks) {
             this.main = main;
-            this.queriedSidekicks = List.copyOf(queriedSidekicks);
+            this.queriedSidekicks = queriedSidekicks;
         }
 
         @Override

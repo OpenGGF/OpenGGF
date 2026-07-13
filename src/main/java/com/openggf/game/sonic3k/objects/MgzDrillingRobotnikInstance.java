@@ -258,7 +258,6 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
             {-0x200, 0x08},
     };
     /** ROM: loc_6CFF4 initializes the zoom child at Camera_X+$140, Camera_Y+$50. */
-    private static final int AIR_ZOOM_CUE_CAMERA_OFFSET_X = 0x140;
     private static final int AIR_ZOOM_CUE_CAMERA_OFFSET_Y = 0x50;
     private static final int AIR_ZOOM_CUE_INITIAL_X_VEL = -0x400;
     private static final int AIR_ZOOM_CUE_MIN_X_VEL = -0x100;
@@ -818,7 +817,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         int cameraY = camera != null ? camera.getY() & 0xFFFF : 0;
         int[] yMotion = airZoomCueYMotion(patternOffset);
         airZoomCueActive = true;
-        airZoomCueX = (cameraX + AIR_ZOOM_CUE_CAMERA_OFFSET_X) & 0xFFFF;
+        airZoomCueX = (cameraX + airZoomCueCameraOffsetForTesting(viewportWidth())) & 0xFFFF;
         airZoomCueY = (cameraY + AIR_ZOOM_CUE_CAMERA_OFFSET_Y) & 0xFFFF;
         airZoomCueXSubpixel = 0;
         airZoomCueYSubpixel = 0;
@@ -828,6 +827,10 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         airZoomCueScaleStep = AIR_ZOOM_CUE_INITIAL_SCALE_STEP;
         airZoomCueFrameCounter = 0;
         airZoomCueGeneratedFrame = -1;
+    }
+
+    public static int airZoomCueCameraOffsetForTesting(int viewportWidth) {
+        return Math.max(0x140, viewportWidth);
     }
 
     private int[] airZoomCueYMotion(int patternOffset) {

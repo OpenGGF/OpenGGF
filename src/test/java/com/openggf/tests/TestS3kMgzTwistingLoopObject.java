@@ -3,16 +3,21 @@ package com.openggf.tests;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.sprites.playable.ObjectControlState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -167,7 +172,7 @@ class TestS3kMgzTwistingLoopObject {
     }
 
     @Test
-    void mgzTwistingLoopUsesNativeP2QueryWithoutPromotingExtraSidekicks() {
+    void mgzTwistingLoopPreservesNativeP2ThenProcessesExtraSidekicks() {
         MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
                 new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
         TestablePlayableSprite main = createDirectEntryPlayer();
@@ -180,8 +185,177 @@ class TestS3kMgzTwistingLoopObject {
 
         assertTrue(nativeP2.isObjectControlled(),
                 "MGZ loop player2 slot should use only the first native sidekick from ObjectPlayerQuery");
-        assertFalse(extraSidekick.isObjectControlled(),
-                "MGZ loop must not promote extra engine sidekicks into the native player2 slot");
+        assertTrue(extraSidekick.isObjectControlled(),
+                "MGZ loop should process extension sidekicks after its native player2 slot");
+    }
+
+    @Test
+    void mgzTwistingLoopUnloadReleasesCapturedExtensionPlayer() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite main = createDirectEntryPlayer("sonic", LOOP_X + 0x100);
+        TestablePlayableSprite nativeP2 = createDirectEntryPlayer("tails", LOOP_X + 0x100);
+        TestablePlayableSprite extension = createDirectEntryPlayer("knuckles", LOOP_X + 2);
+        loop.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extension)));
+        loop.update(0, main);
+        assertTrue(extension.isObjectControlled());
+
+        loop.onUnload();
+
+        assertFalse(extension.isObjectControlled());
+        assertFalse(extension.isObjectMappingFrameControl());
+        assertFalse(extension.isControlLocked());
+    }
+
+    @Test
+    void mgzTwistingLoopUnloadDoesNotClearReplacementControl() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite main = createDirectEntryPlayer("sonic", LOOP_X + 0x100);
+        TestablePlayableSprite extension = createDirectEntryPlayer("knuckles", LOOP_X + 2);
+        loop.setServices(new QueryOnlyPlayerServices(main, List.of(extension)));
+        loop.update(0, main);
+        extension.setObjectMappingFrameControl(false);
+        extension.setControlLocked(false);
+        extension.setAnimationId(5);
+
+        loop.onUnload();
+
+        assertTrue(extension.isObjectControlled(),
+                "stale loop cleanup must not release unrelated replacement control");
+    }
+
+    @Test
+    void mgzTwistingLoopKeepsActiveStateWithActorsWhenNativeP2RosterReorders() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite main = createDirectEntryPlayer("sonic", LOOP_X + 0x100);
+        TestablePlayableSprite capturedP2 = createDirectEntryPlayer("tails", LOOP_X + 1);
+        TestablePlayableSprite replacementP2 = createDirectEntryPlayer("knuckles", LOOP_X + 0x100);
+        List<TestablePlayableSprite> sidekicks = new ArrayList<>(List.of(capturedP2, replacementP2));
+        loop.setServices(new QueryOnlyPlayerServices(main, sidekicks));
+        loop.update(0, main);
+        int capturedY = capturedP2.getCentreY();
+
+        sidekicks.clear();
+        sidekicks.add(replacementP2);
+        sidekicks.add(capturedP2);
+        loop.update(1, main);
+
+        assertTrue(capturedP2.isObjectControlled(), "demoted native P2 must retain its own active loop state");
+        assertTrue(capturedP2.getCentreY() > capturedY, "demoted native P2 must continue its own progress");
+        assertFalse(replacementP2.isObjectControlled(), "new native P2 must not inherit the prior actor's loop state");
+    }
+
+    @Test
+    void mgzTwistingLoopKeepsActiveExtensionStateWhenPromotedToNativeP2() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite main = createDirectEntryPlayer("sonic", LOOP_X + 0x100);
+        TestablePlayableSprite oldP2 = createDirectEntryPlayer("tails", LOOP_X + 0x100);
+        TestablePlayableSprite promoted = createDirectEntryPlayer("knuckles", LOOP_X + 1);
+        List<TestablePlayableSprite> sidekicks = new ArrayList<>(List.of(oldP2, promoted));
+        loop.setServices(new QueryOnlyPlayerServices(main, sidekicks));
+        loop.update(0, main);
+        int capturedY = promoted.getCentreY();
+
+        sidekicks.clear();
+        sidekicks.add(promoted);
+        sidekicks.add(oldP2);
+        loop.update(1, main);
+
+        assertTrue(promoted.isObjectControlled(), "promotion must preserve the extension actor's active state");
+        assertTrue(promoted.getCentreY() > capturedY, "promoted actor must continue its own loop progress");
+    }
+
+    @Test
+    void mgzTwistingLoopReleasesOmittedNativeP2AndUnloadStillTargetsDemotedOwner() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite main = createDirectEntryPlayer("sonic", LOOP_X + 0x100);
+        TestablePlayableSprite capturedP2 = createDirectEntryPlayer("tails", LOOP_X + 1);
+        TestablePlayableSprite replacementP2 = createDirectEntryPlayer("knuckles", LOOP_X + 0x100);
+        List<TestablePlayableSprite> sidekicks = new ArrayList<>(List.of(capturedP2, replacementP2));
+        loop.setServices(new QueryOnlyPlayerServices(main, sidekicks));
+        loop.update(0, main);
+
+        sidekicks.clear();
+        sidekicks.add(replacementP2);
+        loop.update(1, main);
+
+        assertFalse(capturedP2.isObjectControlled(), "omitted native P2 must be released immediately");
+        loop.onUnload();
+        assertFalse(replacementP2.isObjectControlled(), "unload must not manufacture ownership for replacement P2");
+    }
+
+    @Test
+    void mgzTwistingLoopUnloadAfterDemotionReleasesOriginalOwnerOnly() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite main = createDirectEntryPlayer("sonic", LOOP_X + 0x100);
+        TestablePlayableSprite capturedP2 = createDirectEntryPlayer("tails", LOOP_X + 1);
+        TestablePlayableSprite replacementP2 = createDirectEntryPlayer("knuckles", LOOP_X + 0x100);
+        List<TestablePlayableSprite> sidekicks = new ArrayList<>(List.of(capturedP2, replacementP2));
+        loop.setServices(new QueryOnlyPlayerServices(main, sidekicks));
+        loop.update(0, main);
+        sidekicks.clear();
+        sidekicks.add(replacementP2);
+        sidekicks.add(capturedP2);
+        loop.update(1, main);
+
+        loop.onUnload();
+
+        assertFalse(capturedP2.isObjectControlled(), "unload must release the demoted actor that owns loop state");
+        assertFalse(replacementP2.isObjectControlled(), "unload must leave the unrelated current P2 untouched");
+    }
+
+    @Test
+    void mgzTwistingLoopDeathReleasesPromotedExtensionOwner() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite main = createDirectEntryPlayer("sonic", LOOP_X + 0x100);
+        TestablePlayableSprite oldP2 = createDirectEntryPlayer("tails", LOOP_X + 0x100);
+        TestablePlayableSprite promoted = createDirectEntryPlayer("knuckles", LOOP_X + 1);
+        List<TestablePlayableSprite> sidekicks = new ArrayList<>(List.of(oldP2, promoted));
+        loop.setServices(new QueryOnlyPlayerServices(main, sidekicks));
+        loop.update(0, main);
+        sidekicks.clear();
+        sidekicks.add(promoted);
+        promoted.setDead(true);
+
+        loop.update(1, main);
+
+        assertFalse(promoted.isObjectControlled(), "death cleanup must follow the promoted actor's state");
+    }
+
+    @Test
+    void mgzTwistingLoopRewindRelinksNativeP2OwnerToReplacementActor() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite capturedMain = createDirectEntryPlayer("sonic", LOOP_X + 0x100);
+        TestablePlayableSprite capturedP2 = createDirectEntryPlayer("tails", LOOP_X + 1);
+        loop.setServices(new QueryOnlyPlayerServices(capturedMain, new ArrayList<>(List.of(capturedP2))));
+        loop.update(0, capturedMain);
+        RewindIdentityTable capturedIds = new RewindIdentityTable();
+        capturedIds.registerPlayer(capturedMain, PlayerRefId.mainPlayer());
+        capturedIds.registerPlayer(capturedP2, PlayerRefId.sidekick(0));
+        var snapshot = loop.captureRewindState(RewindCaptureContext.withIdentityTable(capturedIds));
+
+        TestablePlayableSprite replacementMain = createDirectEntryPlayer("sonic", LOOP_X + 0x100);
+        TestablePlayableSprite replacementP2 = createDirectEntryPlayer("tails", LOOP_X + 1);
+        RewindIdentityTable replacementIds = new RewindIdentityTable();
+        replacementIds.registerPlayer(replacementMain, PlayerRefId.mainPlayer());
+        replacementIds.registerPlayer(replacementP2, PlayerRefId.sidekick(0));
+        loop.setServices(new QueryOnlyPlayerServices(replacementMain, new ArrayList<>(List.of(replacementP2))));
+        loop.restoreRewindState(snapshot, RewindCaptureContext.withIdentityTable(replacementIds));
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(replacementP2);
+        replacementP2.setObjectMappingFrameControl(true);
+        replacementP2.setControlLocked(true);
+
+        loop.onUnload();
+
+        assertFalse(replacementP2.isObjectControlled(), "rewind must relink native P2 ownership to the replacement actor");
+        assertTrue(capturedP2.isObjectControlled(), "rewind cleanup must not target the stale captured actor instance");
     }
 
     @Test

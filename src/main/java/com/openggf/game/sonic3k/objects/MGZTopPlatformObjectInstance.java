@@ -35,7 +35,9 @@ import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.NativePositionOps;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -320,6 +322,8 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
 
         AbstractPlayableSprite primary = (playerEntity instanceof AbstractPlayableSprite p) ? p : null;
         AbstractPlayableSprite sidekick = resolveSidekick();
+        List<AbstractPlayableSprite> extensions = resolveExtensionPlayers(primary, sidekick);
+        reconcilePlayerRoster(primary, sidekick, extensions);
 
         // ROM loc_34C54: sub_34EEC is invoked for P1 then P2 BEFORE platform motion.
         if (primary != null) {
@@ -327,6 +331,9 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         }
         if (sidekick != null) {
             runPlayerStateMachine(sidekick, false);
+        }
+        for (AbstractPlayableSprite extension : extensions) {
+            runPlayerStateMachine(extension, false);
         }
 
         // A P1 jump-launch inside the state machine may have flipped the platform to
@@ -351,6 +358,9 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         nextCarryLatched = false;
         if (primary != null) snapGrabbedPlayer(primary);
         if (sidekick != null) snapGrabbedPlayer(sidekick);
+        for (AbstractPlayableSprite extension : extensions) {
+            snapGrabbedPlayer(extension);
+        }
         carryLatched = nextCarryLatched;
 
         // Reset per-frame standing flags; SolidContacts will re-assert next tick.
@@ -1493,6 +1503,46 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             }
         }
         return null;
+    }
+
+    private List<AbstractPlayableSprite> resolveExtensionPlayers(AbstractPlayableSprite primary,
+                                                                  AbstractPlayableSprite nativeP2) {
+        ObjectServices svc = tryServices();
+        if (svc == null) {
+            return List.of();
+        }
+        List<AbstractPlayableSprite> extensions = new ArrayList<>();
+        PlayableEntity queryMain = svc.playerQuery().mainPlayerOrNull();
+        for (PlayableEntity participant : svc.playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+            if (participant != primary && participant != queryMain && participant != nativeP2
+                    && participant instanceof AbstractPlayableSprite extension) {
+                extensions.add(extension);
+            }
+        }
+        return List.copyOf(extensions);
+    }
+
+    private void reconcilePlayerRoster(AbstractPlayableSprite primary,
+                                       AbstractPlayableSprite nativeP2,
+                                       List<AbstractPlayableSprite> extensions) {
+        IdentityHashMap<PlayableEntity, Boolean> live = new IdentityHashMap<>();
+        if (primary != null) live.put(primary, Boolean.TRUE);
+        if (nativeP2 != null) live.put(nativeP2, Boolean.TRUE);
+        for (AbstractPlayableSprite extension : extensions) live.put(extension, Boolean.TRUE);
+
+        Iterator<Map.Entry<PlayableEntity, PlayerGrabState>> iterator = playerStates.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<PlayableEntity, PlayerGrabState> entry = iterator.next();
+            if (live.containsKey(entry.getKey())) {
+                continue;
+            }
+            if (entry.getKey() instanceof AbstractPlayableSprite player
+                    && player.isMgzTopPlatformCarryOwnedBy(this)) {
+                releasePlayer(player, entry.getValue(), false);
+            }
+            iterator.remove();
+        }
     }
 
     private void playSfx(Sonic3kSfx sfx) {
