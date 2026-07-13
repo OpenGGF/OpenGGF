@@ -186,6 +186,12 @@ class TestArchUnitRules {
             "level -> tools",
             "level -> trace",
             "level -> util",
+            // Standalone mod audio (PreparedSfxCursor) plays through the audio-owned
+            // StreamedMusicPort.SfxRef seam; audio never depends back on mods.
+            "mods -> audio",
+            // OwnerAwareStandaloneModule reads engine ROM/data (com.openggf.data) to
+            // build bounded creator asset roots; data never depends back on mods.
+            "mods -> data",
             // Phase 2's creator-facing ModContext intentionally accepts GamePatch;
             // the engine-owned ModRuntime then freezes PatchOwner/RegisteredPatch
             // plans for ModuleResolutionService without exposing mutable state.

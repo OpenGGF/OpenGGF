@@ -691,7 +691,6 @@ CF-ANNOTATION TYPE com.openggf.level.rings.RingSpriteSheet visible @com.openggf.
 CF-ANNOTATION TYPE com.openggf.level.rings.SpillAnimationState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.scroll.ZoneScrollHandler visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.spawn.SpawnPoint visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.mods.SfxKey visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.TrackKey visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.BakedLevelRef visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.BakedSheetRef visible @com.openggf.game.ModApi
@@ -1394,7 +1393,6 @@ CONSTRUCTOR com.openggf.level.rings.RingSpawn public  <init>(int,int,int)
 CONSTRUCTOR com.openggf.level.rings.RingSpriteSheet public  <init>(com.openggf.level.Pattern[],java.util.List<com.openggf.level.rings.RingFrame>,int,int,int,int)
 CONSTRUCTOR com.openggf.level.rings.RingSpriteSheet public  <init>(com.openggf.level.Pattern[],java.util.List<com.openggf.level.rings.RingFrame>,int,int,int,int,int)
 CONSTRUCTOR com.openggf.level.rings.SpillAnimationState public  <init>()
-CONSTRUCTOR com.openggf.mods.SfxKey public  <init>(java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.mods.TrackKey public  <init>(java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.mods.code.BakedLevelRef public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.mods.code.BakedSheetRef public  <init>(java.lang.String)
@@ -8736,7 +8734,7 @@ METHOD com.openggf.level.objects.ObjectRenderManager public  java.util.List<java
 METHOD com.openggf.level.objects.ObjectRenderManager$SpringVariant public,static  com.openggf.level.objects.ObjectRenderManager$SpringVariant valueOf(java.lang.String)
 METHOD com.openggf.level.objects.ObjectRenderManager$SpringVariant public,static  com.openggf.level.objects.ObjectRenderManager$SpringVariant[] values()
 METHOD com.openggf.level.objects.ObjectServices public  boolean playMusic(com.openggf.audio.GameMusic)
-METHOD com.openggf.level.objects.ObjectServices public  boolean playSfx(com.openggf.mods.SfxKey)
+METHOD com.openggf.level.objects.ObjectServices public  boolean playSfx(com.openggf.audio.StreamedMusicPort$SfxRef)
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.BonusStageProvider bonusStageProviderOrNull()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.LevelEventProvider levelEventProvider()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.TitleCardProvider titleCardProvider()
@@ -9669,11 +9667,6 @@ METHOD com.openggf.level.scroll.ZoneScrollHandler public,abstract  short getVscr
 METHOD com.openggf.level.scroll.ZoneScrollHandler public,abstract  void update(int[],int,int,int,int)
 METHOD com.openggf.level.spawn.SpawnPoint public,abstract  int x()
 METHOD com.openggf.level.spawn.SpawnPoint public,abstract  int y()
-METHOD com.openggf.mods.SfxKey public  java.lang.String localName()
-METHOD com.openggf.mods.SfxKey public  java.lang.String modId()
-METHOD com.openggf.mods.SfxKey public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.mods.SfxKey public,final  int hashCode()
-METHOD com.openggf.mods.SfxKey public,final  java.lang.String toString()
 METHOD com.openggf.mods.TrackKey public  java.lang.String localName()
 METHOD com.openggf.mods.TrackKey public  java.lang.String modId()
 METHOD com.openggf.mods.TrackKey public,final  boolean equals(java.lang.Object)
@@ -14287,8 +14280,6 @@ RECORD-COMPONENT com.openggf.level.rings.RingFramePiece yOffset int
 RECORD-COMPONENT com.openggf.level.rings.RingSpawn placementId int
 RECORD-COMPONENT com.openggf.level.rings.RingSpawn x int
 RECORD-COMPONENT com.openggf.level.rings.RingSpawn y int
-RECORD-COMPONENT com.openggf.mods.SfxKey localName java.lang.String
-RECORD-COMPONENT com.openggf.mods.SfxKey modId java.lang.String
 RECORD-COMPONENT com.openggf.mods.TrackKey localName java.lang.String
 RECORD-COMPONENT com.openggf.mods.TrackKey modId java.lang.String
 RECORD-COMPONENT com.openggf.mods.code.BakedLevelRef levelJsonEntry java.lang.String
@@ -15796,7 +15787,6 @@ TYPE record public,final com.openggf.level.render.TileLoadRequest SUPER java.lan
 TYPE record public,final com.openggf.level.rings.RingFrame SUPER java.lang.Record
 TYPE record public,final com.openggf.level.rings.RingFramePiece SUPER java.lang.Record
 TYPE record public,final com.openggf.level.rings.RingSpawn SUPER java.lang.Record
-TYPE record public,final com.openggf.mods.SfxKey SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.TrackKey SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.code.BakedLevelRef SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.code.BakedSheetRef SUPER java.lang.Record
@@ -16738,7 +16728,6 @@ TYPE-ANNOTATION com.openggf.level.rings.RingSpriteSheet @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.rings.SpillAnimationState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.scroll.ZoneScrollHandler @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.spawn.SpawnPoint @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.mods.SfxKey @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.TrackKey @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.BakedLevelRef @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.BakedSheetRef @com.openggf.game.ModApi
