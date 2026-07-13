@@ -1452,6 +1452,7 @@ public class TestSolidObjectManager {
             player.setAir(true);
             player.setYSpeed((short) 0x100);
             player.setRolling(true);
+            player.setAnimationId(2);
 
             // Within top landing window while rolling in air.
             player.setCentreX((short) 100);
@@ -1465,6 +1466,8 @@ public class TestSolidObjectManager {
             assertTrue(player.isOnObject());
             assertFalse(player.getAir());
             assertFalse(player.getRolling());
+            assertEquals(0, player.getAnimationId(),
+                    "Object landing must publish Sonic_ResetOnFloor's id_Walk write after clearing roll");
 
             int expectedStandingCenterY = 100 - params.groundHalfHeight() - 19 - 1;
             assertEquals(expectedStandingCenterY, player.getCentreY());

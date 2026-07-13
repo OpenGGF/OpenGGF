@@ -2,6 +2,7 @@ package com.openggf.level.objects;
 
 
 import com.openggf.camera.Camera;
+import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.rules.CollisionRules;
@@ -4359,6 +4360,12 @@ final class ObjectSolidContactController {
             } else {
                 player.setRolling(false);
                 player.setY((short) (player.getY() - player.getRollHeightAdjustment()));
+            }
+            if (player instanceof AbstractPlayableSprite sprite) {
+                int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+                if (walkAnimationId >= 0) {
+                    sprite.setAnimationId(walkAnimationId);
+                }
             }
         } else if (player instanceof AbstractPlayableSprite sprite
                 && (sprite.getYRadius() != sprite.getStandYRadius()

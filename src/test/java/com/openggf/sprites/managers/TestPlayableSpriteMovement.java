@@ -2777,6 +2777,22 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void testS1RollingLandingWritesWalkAnimationLikeResetOnFloor() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_1);
+                mockSprite.setAnimationId(2);
+                mockSprite.setRolling(true);
+                mockSprite.setAir(true);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("resetOnFloor");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertFalse(mockSprite.getRolling());
+                assertEquals(0, mockSprite.getAnimationId(),
+                                "S1 Sonic_ResetOnFloor writes id_Walk when it clears Status_Roll");
+        }
+
+        @Test
         public void testLandingClearingRollStillLiftsFromRollingRadius() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setGroundMode(GroundMode.GROUND);

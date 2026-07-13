@@ -39137,3 +39137,37 @@ verification with the local REV01 Sonic 1 ROM:
   advanced the first animation error from frame 33 to frame 47 and reduced the
   report from 133 to 125 errors. The new frontier is the distinct engine Run-id
   publication mismatch; no trace state was hydrated or tolerated.
+
+### 2026-07-13 -- S1 rolling-landing animation publication
+
+On branch `bugfix/ai-trace-s1-landing-anim` at composed baseline `8811c088d`,
+the animation comparator exposed four landings where the engine cleared
+`Status_Roll` but retained the Roll animation id. Retail S1 calls
+`Sonic_ResetOnFloor` from both terrain and solid-object landing paths; when it
+clears `Status_Roll`, that routine restores the standing radii and writes
+`id_Walk`. Solid objects execute after `Sonic_Animate`, so that frame publishes
+the Walk animation byte while retaining the already-rendered ball mapping
+(`docs/s1disasm/_incObj/01 Sonic.asm:1481-1561,1839-1864`;
+`docs/s1disasm/_incObj/sub SolidObject.asm:357-388`).
+
+The shared terrain and object-contact owners now resolve the canonical Walk id
+only when landing actually clears rolling. Pinball and object-requested
+roll-preservation paths retain their existing behavior. No trace data was
+modified, hydrated into engine state, or tolerated.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `mvn -Dmse=off "-Dtest=TestPlayableSpriteMovement#testS1RollingLandingWritesWalkAnimationLikeResetOnFloor,TestSolidObjectManager#testLandingFromAirRollOnObjectAdjustsYWhenUnrolling" test`
+  exited 0: 2 tests passed.
+- `TestS1Ghz2CompleteRunTraceReplay` advanced from frame 100 to frame 112
+  (`player_mapping_frame`, expected `0x0008`, actual `0x0009`), with 102 errors
+  and 0 warnings.
+- `TestS1Mz1CompleteRunTraceReplay` advanced from frame 417 to frame 756
+  (`player_animation_id`, expected `0x001A`, actual `0x0002`), with 85 errors
+  and 0 warnings.
+- `TestS1Mz3CompleteRunTraceReplay` advanced from frame 189 to frame 631
+  (`player_mapping_frame`, expected `0x001D`, actual `0x0011`), with 145 errors
+  and 0 warnings.
+- `TestS1Sbz1CompleteRunTraceReplay` advanced from frame 280 to frame 581
+  (`player_animation_id`, expected `0x001A`, actual `0x0005`), with 133 errors
+  and 0 warnings.

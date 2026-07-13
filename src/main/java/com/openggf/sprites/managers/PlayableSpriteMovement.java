@@ -1,5 +1,6 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
@@ -3113,8 +3114,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		boolean preservePinballMode = movementRules != null && movementRules.pinballLandingPreservesPinballMode();
 		boolean preserveObjectLandingRoll = sprite.consumePreserveRollingOnNextLanding();
 		boolean skipLandingRollClear = sprite.getRolling()
-				&& ((sprite.getPinballMode() && preservePinballRoll) || preserveObjectLandingRoll);
-		if (sprite.getRolling() && !skipLandingRollClear) {
+					&& ((sprite.getPinballMode() && preservePinballRoll) || preserveObjectLandingRoll);
+		boolean clearsRolling = sprite.getRolling() && !skipLandingRollClear;
+		if (clearsRolling) {
 			if (movementRules != null && movementRules.landingRollClearUsesCurrentYRadiusDelta()) {
 				int oldCentreY = sprite.getCentreY();
 				int oldYRadius = sprite.getYRadius();
@@ -3128,6 +3130,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setRolling(false);
 				sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
 			}
+			// Retail S1 writes id_Walk inside Sonic_ResetOnFloor's Status_Roll
+			// branch before the word-only Y lift. Object/platform landings call
+			// the same routine after Sonic_Animate, so the raw anim byte changes
+			// immediately while the ball mapping remains for that frame
+			// (01 Sonic.asm:1839-1864; SolidObject.asm:378-383).
+			setWalkAnimationAfterRollingLanding(sprite);
 		} else if (movementRules != null
 				&& movementRules.landingRollClearUsesCurrentYRadiusDelta()
 				&& !skipLandingRollClear
@@ -3164,6 +3172,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setFlipsRemaining(0);
 		// ROM: s2.asm:37772 - reset look delay counter on landing
 		sprite.setLookDelayCounter((short) 0);
+	}
+
+	private static void setWalkAnimationAfterRollingLanding(AbstractPlayableSprite sprite) {
+		int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+		if (walkAnimationId >= 0) {
+			sprite.setAnimationId(walkAnimationId);
+		}
 	}
 
 	/** Landing gSpeed calculation (s2.asm:37584) */
