@@ -266,6 +266,14 @@ public class Sonic1LargeGrassyPlatformObjectInstance extends AbstractObjectInsta
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // LGrass_Main publishes the table's platform width as obActWid. The
+        // extra $B is added only to SolidObject_Heightmap's collision input;
+        // Sonic_Move reads the unpadded SST byte for its edge window.
+        return platformWidth;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         // SolidObject2F falls through to loc_FB0E (the standard solid resolution code),
         // which handles top landing, side pushout, AND bottom collision. These platforms

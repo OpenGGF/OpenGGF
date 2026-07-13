@@ -39847,3 +39847,42 @@ Command:
 `mvn -Dmse=relaxed "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dtest=com.openggf.game.sonic1.objects.TestSonic1SpringObjectInstance,com.openggf.tests.trace.s1.TestS1Syz1CompleteRunTraceReplay" test`
 
 ROM reference: `docs/s1disasm/_incObj/41 Springs.asm:146-149`.
+
+### 2026-07-13 -- S1 native edge-balance owner cluster
+
+At composed baseline `f16d5dfce`, four animation-only frontiers selected
+Balance `$06` where the REV01 ROM retained Wait `$05`: FZ complete-run frame
+2040, MZ1 standalone frame 749, SBZ1 complete-run frame 3948, and SYZ2
+complete-run frame 5696. All four physics streams were byte-green.
+
+Three stood-on objects exposed collision geometry instead of the SST byte read
+by `Sonic_Move`. Obj2F grassy platforms publish their subtype width in
+`obActWid`, Obj6B stomper/doors publish the selected `Sto_Var` width, and Obj84
+FZ cylinders publish `64/2`; each solid routine adds Sonic's `$B` width only to
+the separate `SolidObject` argument. Those objects now return the raw value
+through `getBalanceWidthPixels()`. The terrain case had the same ownership
+error in time rather than width: after `ObjFloorDist`, retail S1 compares the
+previously copied `angleright`/`angleleft` bytes to the empty-tile sentinel 3.
+The engine now consumes its existing angle latches instead of recomputing the
+edge from fresh side distances. S2/S3K retain their existing extended-balance
+branch. No zone, route, frame, trace hydration, or tolerance was added.
+
+ROM references:
+
+- `docs/s1disasm/_incObj/01 Sonic.asm:405-460`
+- `docs/s1disasm/_incObj/2F, 35 MZ Large Grassy Platforms and Burning Grass.asm:23-99`
+- `docs/s1disasm/_incObj/6B SBZ Stomper and Sliding Door.asm:25-42,111-131`
+- `docs/s1disasm/_incObj/85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:660-723`
+
+Verification with the root-level REV01 Sonic 1 ROM:
+
+- The eight focused object-width and terrain-angle unit tests passed.
+- FZ complete-run advanced from frame 2040 / 2 errors to fully green.
+- SBZ1 complete-run advanced from frame 3948 / 2 errors to fully green.
+- SYZ2 complete-run advanced from frame 5696 / 2 errors to fully green.
+- MZ1 standalone advanced from frame 749 / 15 errors to frame 2596 / 7
+  errors. Its new frontier is a separate movement-publication mismatch (ROM
+  Walk `$00`, engine Duck `$08`); physics remains green.
+- Four existing GHZ1 headless balance checks stayed green: true object-edge
+  balance, center non-balance, wide-platform non-balance, and terrain-center
+  gating.

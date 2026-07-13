@@ -541,3 +541,31 @@ or object facing unless the disassembly separately assigns it with `bset`,
 **Originating commit.** S1 SYZ1 animation frontier frame 690 → 1742: the
 horizontal spring's rightward launch now toggles the prior right-facing state
 to left, restoring mappings `$2B-$2D` on the following steep curve.
+
+## P30 — Player edge balance reads the object's raw `obActWid`, not the padded `SolidObject` collision width
+
+**Symptom.** Sonic stands still safely inboard on a wide full-solid object, but
+the engine selects Balance while the ROM retains Wait. Physics and standing
+contact remain exact; only animation/facing diverge.
+
+**Root cause.** S1 `Sonic_Move` resolves the stood-on SST slot and reads its
+raw `obActWid` to form the edge window. Many full-solid callers separately add
+Sonic's `$B` collision width before calling `SolidObject`; that padded value is
+not written back to `obActWid`. Falling back to a generic 16-pixel render width
+or reusing the padded collision width therefore moves the balance edge.
+
+**What to check.** Every solid object with a ROM `obActWid` other than the
+shared 16-pixel default must override `getBalanceWidthPixels()` with that exact
+byte or subtype-backed field. Keep `getSolidParams().halfWidth()` faithful to
+the caller's distinct `SolidObject` argument. Do not infer either from render
+dimensions.
+
+**ROM citation.** `docs/s1disasm/_incObj/01 Sonic.asm:409-430`;
+Obj2F `LGrass_Data`/`LGrass_Main` at `2F, 35 MZ Large Grassy Platforms and
+Burning Grass.asm:23-53`; Obj6B `Sto_Var`/`Sto_Main` at `6B SBZ Stomper and
+Sliding Door.asm:25-42`; Obj84 `EggmanCylinder_Main` at `85,84,86 Boss - FZ
+Main, Cylinders, and Plasma Balls.asm:660-723`.
+
+**Originating commit.** `bugfix/ai-s1-balance-owner` (FZ, SBZ1, and SYZ2
+animation traces green; MZ1 f749 → f2596). Earlier examples: Obj56 floating
+block (`ab3112b73`) and Obj61 Labyrinth block (`fc5d5e922`).

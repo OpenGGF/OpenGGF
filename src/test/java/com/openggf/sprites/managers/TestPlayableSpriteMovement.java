@@ -1225,6 +1225,49 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void s1TerrainBalanceUsesLatchedAngleSentinelNotFreshSideGap() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_1);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setAngle((byte) 0xF0);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setOnObject(false);
+
+                Sensor left = new Sensor(mockSprite, Direction.DOWN, (byte) -9, (byte) 19, true) {
+                        @Override
+                        protected SensorResult doScan(short dx, short dy) {
+                                // Both the fresh left probe and ObjFloorDist's centre
+                                // probe see the gap at this post-movement position.
+                                return new SensorResult((byte) 3, (byte) 25, 0, Direction.DOWN);
+                        }
+                };
+                Sensor right = new Sensor(mockSprite, Direction.DOWN, (byte) 9, (byte) 19, true) {
+                        @Override
+                        protected SensorResult doScan(short dx, short dy) {
+                                return new SensorResult((byte) 0xF0, (byte) 0, 0x9A, Direction.DOWN);
+                        }
+                };
+                mockSprite.setGroundSensors(new Sensor[]{left, right});
+
+                // Native angleright/angleleft still describe the preceding
+                // AnglePos result, where neither probe had the empty-tile value 3.
+                setMovementField("latchedNextTilt", 0xF0);
+                setMovementField("latchedTilt", 0x00);
+                Method updateBalance = PlayableSpriteMovement.class.getDeclaredMethod("updateBalanceState");
+                updateBalance.setAccessible(true);
+                updateBalance.invoke(manager);
+
+                assertEquals(0, mockSprite.getBalanceState(),
+                                "fresh missing-side geometry must not expose Balance one dispatch early");
+
+                setMovementField("latchedTilt", 3);
+                updateBalance.invoke(manager);
+                assertEquals(1, mockSprite.getBalanceState(),
+                                "S1 balances once the copied angleleft byte is the empty-tile sentinel");
+                assertEquals(Direction.LEFT, mockSprite.getDirection());
+        }
+
+        @Test
         public void s2FixedSkidDustTicksWhileAirborneStopAnimationPersists() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);
                 Field objectManagerField = GameServices.level().getClass().getDeclaredField("objectManager");

@@ -340,6 +340,14 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // EggmanCylinder_Main writes obActWid=64/2. The $B in SolidObject's
+        // d1 is Sonic's collision padding and is not part of Sonic_Move's
+        // stood-on-object balance calculation.
+        return TOP_LANDING_HALF_WIDTH;
+    }
+
+    @Override
     public int getTopLandingHalfWidth(PlayableEntity playerEntity, int collisionHalfWidth) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return TOP_LANDING_HALF_WIDTH;

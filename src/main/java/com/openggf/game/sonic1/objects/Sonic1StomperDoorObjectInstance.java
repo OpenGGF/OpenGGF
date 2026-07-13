@@ -622,6 +622,14 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Sto_Main stores the selected Sto_Var width in obActWid. Sto_Action
+        // adds Sonic's collision width only when calling SolidObject, while
+        // Sonic_Move consumes the original object width for edge balancing.
+        return actWidth;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // The object is always solid when visible/active

@@ -4336,24 +4336,21 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				return; // Center still has ground — not on edge yet
 			}
 
-			// Center is over edge (distance >= 12). Determine which side using
-			// the ±9 sensor angles — ROM checks objoff_36/objoff_37 == 3
-			// (FLAGGED_ANGLE for empty tile, set during AnglePos).
-			// We approximate: whichever side sensor still has ground indicates
-			// the opposite side is the edge.
-			if (leftDist < EDGE_THRESHOLD && rightDist >= EDGE_THRESHOLD) {
-				// Left sensor on ground, right sensor off → right edge → face right
-				// ROM s1.asm:358-362: objoff_36 == 3 → bclr #0,obStatus
+			// Center is over the edge. Sonic_Move reads the angle bytes copied
+			// from the preceding AnglePos dispatch, not fresh side distances from
+			// this position. A fresh scan can already report an empty side while
+			// the native angleright/angleleft bytes still describe the prior
+			// supported position (S1 01 Sonic.asm:434-455).
+			if (latchedNextTilt == 3) {
+				// angleright == 3 → right edge → face right
 				sprite.setBalanceState(1);
 				sprite.setDirection(Direction.RIGHT);
-			} else if (rightDist < EDGE_THRESHOLD && leftDist >= EDGE_THRESHOLD) {
-				// Right sensor on ground, left sensor off → left edge → face left
-				// ROM s1.asm:367-371: objoff_37 == 3 → bset #0,obStatus
+			} else if (latchedTilt == 3) {
+				// angleleft == 3 → left edge → face left
 				sprite.setBalanceState(1);
 				sprite.setDirection(Direction.LEFT);
 			}
-			// If both or neither sensor has ground, don't balance
-			// (ROM: neither objoff_36 nor objoff_37 == 3 → branch to Sonic_LookUp)
+			// Neither latched angle is the empty-tile sentinel: retain Wait.
 			return;
 		}
 
