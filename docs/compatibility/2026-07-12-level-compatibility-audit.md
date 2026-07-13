@@ -332,7 +332,7 @@ These trace reds were reproduced exactly and did not move during the compatibili
 
 ### Maven-suite evidence
 
-An exclusive `mvn clean "-Dsurefire.argLine=-Xshare:off -Xmx3g" test` run executed 13,066 tests. Before the final S1 helper-boundary repair it reported 12 failures, 14 errors, and 22 skipped. The one compatibility-owned failure was `TestZoneEventRuntimeAccessGuard`; the focused post-fix run passed all 24 relevant tests.
+The final exclusive `mvn clean "-Dsurefire.argLine=-Xshare:off -Xmx3g" test` run executed 13,066 tests: 11 failures, 14 errors, and 22 skipped. `TestZoneEventRuntimeAccessGuard` was green in this fresh run, confirming that the sole compatibility-owned failure from the preceding run was repaired. The focused S1 post-fix run also passed all 24 relevant event/guard tests.
 
 The remaining failures were independently isolated to known-red work outside this branch's compatibility ownership: immutable/pinned game-data-source fixtures affecting editor, recording, title-card, and power-up tests; missing WorldSession setup; mod API/wiring snapshots; GameId/package-cycle architecture ratchets; engine warmup expectations; the StockGameDataSources scanner false positive; and the pre-existing playable-movement lifecycle ratchet. Per the project direction, these are left for the mod/runtime design workstream rather than being papered over here.
 
