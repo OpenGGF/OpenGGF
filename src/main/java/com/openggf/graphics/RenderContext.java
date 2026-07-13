@@ -96,29 +96,24 @@ public class RenderContext {
      * Covers both shared donor contexts and per-sidekick contexts so every
      * cross-game sprite can receive a derived underwater row.
      */
-    public static Palette getPaletteForEffectiveLine(int effectiveLine) {
-        Palette palette = getPaletteForEffectiveLine(donorContexts.values(), effectiveLine, false);
-        return palette != null
-                ? palette
-                : getPaletteForEffectiveLine(sidekickContexts, effectiveLine, false);
+    public static Collection<RenderContext> getSidekickContexts() {
+        return Collections.unmodifiableList(sidekickContexts);
     }
 
     /** Returns a donor-supplied native underwater palette for an expanded row. */
-    public static Palette getUnderwaterPaletteForEffectiveLine(int effectiveLine) {
-        Palette palette = getPaletteForEffectiveLine(donorContexts.values(), effectiveLine, true);
+    public static PaletteView getUnderwaterPaletteForEffectiveLine(int effectiveLine) {
+        PaletteView palette = getUnderwaterPaletteForEffectiveLine(donorContexts.values(), effectiveLine);
         return palette != null
                 ? palette
-                : getPaletteForEffectiveLine(sidekickContexts, effectiveLine, true);
+                : getUnderwaterPaletteForEffectiveLine(sidekickContexts, effectiveLine);
     }
 
-    private static Palette getPaletteForEffectiveLine(
-            Collection<RenderContext> contexts, int effectiveLine, boolean underwater) {
+    private static PaletteView getUnderwaterPaletteForEffectiveLine(
+            Collection<RenderContext> contexts, int effectiveLine) {
         for (RenderContext ctx : contexts) {
             int logicalLine = effectiveLine - ctx.paletteLineBase;
             if (logicalLine >= 0 && logicalLine < LINES_PER_CONTEXT) {
-                return underwater
-                        ? ctx.underwaterPalettes[logicalLine]
-                        : ctx.palettes[logicalLine];
+                return ctx.underwaterPalettes[logicalLine];
             }
         }
         return null;
@@ -217,7 +212,7 @@ public class RenderContext {
     private final GameId gameId;
     private final int paletteLineBase;
     private final Palette[] palettes = new Palette[LINES_PER_CONTEXT];
-    private final Palette[] underwaterPalettes = new Palette[LINES_PER_CONTEXT];
+    private final PaletteView[] underwaterPalettes = new PaletteView[LINES_PER_CONTEXT];
 
     private RenderContext(GameId gameId, int paletteLineBase) {
         this.gameId = gameId;
@@ -248,11 +243,11 @@ public class RenderContext {
         return palettes[line];
     }
 
-    public void setUnderwaterPalette(int line, Palette palette) {
+    public void setUnderwaterPalette(int line, PaletteView palette) {
         underwaterPalettes[line] = palette;
     }
 
-    public Palette getUnderwaterPalette(int line) {
+    public PaletteView getUnderwaterPalette(int line) {
         return underwaterPalettes[line];
     }
 }
