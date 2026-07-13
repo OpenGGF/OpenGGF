@@ -91,7 +91,8 @@ public class AizEndBossDebrisChild extends AbstractObjectInstance
         flickerCounter++;
 
         // ROM: Sprite_CheckDeleteXY — delete when off-screen
-        if (Math.abs(posX - services().camera().getX() - 160) > 320
+        int viewportWidth = Math.max(320, services().camera().getWidth());
+        if (Math.abs(posX - services().camera().getX() - viewportWidth / 2) > viewportWidth
                 || Math.abs(posY - services().camera().getY() - 112) > 256) {
             setDestroyed(true);
         }

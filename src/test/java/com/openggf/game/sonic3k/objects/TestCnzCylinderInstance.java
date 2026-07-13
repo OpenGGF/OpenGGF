@@ -1,14 +1,23 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic1.objects.TestPlayableSprite;
 import com.openggf.game.rules.GameRules;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -27,6 +36,71 @@ class TestCnzCylinderInstance {
 
         int expected = 0x1BDF + (TrigLookupTable.sinHex(0x03) >> 3);
         assertEquals(expected, cylinder.getX());
+    }
+
+    @Test
+    void additionalSidekicksReceiveIndependentCylinderRiderSlots() {
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(spawn());
+        TestPlayableSprite main = new TestPlayableSprite();
+        TestPlayableSprite nativeP2 = new TestPlayableSprite();
+        TestPlayableSprite extra = new TestPlayableSprite();
+        List<PlayableEntity> sidekicks = new ArrayList<>(List.of(nativeP2, extra));
+        cylinder.setServices(new StubObjectServices().withPlayerQuery(
+                new ObjectPlayerQuery(() -> main, () -> sidekicks)));
+        cylinder.update(1, main);
+        extra.setCentreX((short) 0x1BC6);
+        extra.setCentreY((short) 0x07AC);
+
+        cylinder.onSolidContact(extra, new SolidContact(true, false, false, true, false), 2);
+        cylinder.update(3, main);
+
+        assertTrue(extra.isObjectControlled(), "third sidekick must not be dropped when native rider slots are occupied");
+        extra.setDead(true);
+        cylinder.update(4, main);
+        assertFalse(extra.isObjectControlled(), "dead extension rider must be released");
+    }
+
+    @Test
+    void rewindRelinksExtensionCylinderRiderToReplacementPlayer() {
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(spawn());
+        TestPlayableSprite oldMain = new TestPlayableSprite();
+        TestPlayableSprite oldP2 = new TestPlayableSprite();
+        TestPlayableSprite oldExtra = new TestPlayableSprite();
+        List<PlayableEntity> oldSidekicks = List.of(oldP2, oldExtra);
+        cylinder.setServices(new StubObjectServices().withPlayerQuery(
+                new ObjectPlayerQuery(() -> oldMain, () -> oldSidekicks)));
+        cylinder.update(1, oldMain);
+        oldExtra.setCentreX((short) 0x1BC6);
+        oldExtra.setCentreY((short) 0x07AC);
+        cylinder.onSolidContact(oldExtra, new SolidContact(true, false, false, true, false), 2);
+        cylinder.update(3, oldMain);
+        var snapshot = cylinder.captureRewindState(RewindCaptureContext.withIdentityTable(
+                identities(oldMain, oldP2, oldExtra)));
+
+        TestPlayableSprite newMain = new TestPlayableSprite();
+        TestPlayableSprite newP2 = new TestPlayableSprite();
+        TestPlayableSprite newExtra = new TestPlayableSprite();
+        cylinder.setServices(new StubObjectServices().withPlayerQuery(
+                new ObjectPlayerQuery(() -> newMain, () -> List.of(newP2, newExtra))));
+        cylinder.restoreRewindState(snapshot, RewindCaptureContext.withIdentityTable(
+                identities(newMain, newP2, newExtra)));
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(newExtra);
+        newExtra.setObjectMappingFrameControl(true);
+        cylinder.update(4, newMain);
+        cylinder.onUnload();
+
+        assertFalse(newExtra.isObjectControlled());
+        assertTrue(oldExtra.isObjectControlled(), "rewind unload must not target the stale captured rider");
+    }
+
+    private static RewindIdentityTable identities(TestPlayableSprite main,
+                                                   TestPlayableSprite p2,
+                                                   TestPlayableSprite extra) {
+        RewindIdentityTable table = new RewindIdentityTable();
+        table.registerPlayer(main, PlayerRefId.mainPlayer());
+        table.registerPlayer(p2, PlayerRefId.sidekick(0));
+        table.registerPlayer(extra, PlayerRefId.sidekick(1));
+        return table;
     }
 
     @Test
