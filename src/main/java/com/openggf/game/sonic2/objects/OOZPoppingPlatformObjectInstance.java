@@ -228,6 +228,9 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
             PlayableEntity previous, PlayableEntity current, boolean mainSlot) {
         if (previous == current) return current;
         boolean locked = mainSlot ? mainCharLocked : sidekickLocked;
+        if (previous == null && current != null && !extensionLockedPlayers.contains(current)) {
+            return current;
+        }
         if (previous != null && locked) extensionLockedPlayers.add(previous);
         boolean restored = current != null && extensionLockedPlayers.remove(current);
         if (mainSlot) mainCharLocked = restored;
@@ -386,11 +389,18 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         mode = Mode.IDLE;
         ObjectManager objectManager = services().objectManager();
 
+        for (PlayableEntity participant : participants) {
+            if (participant instanceof AbstractPlayableSprite rider
+                    && objectManager.isRidingObject(rider, this)) {
+                launchPlayer(rider, frameCounter);
+                clearLocked(rider);
+            }
+        }
         for (AbstractPlayableSprite locked : lockedPlayersInNativeOrder(participants)) {
-            if (objectManager.isRidingObject(locked, this)) {
-                launchPlayer(locked, frameCounter);
-            } else {
+            if (!objectManager.isRidingObject(locked, this)) {
                 ObjectControlState.none().applyTo(locked);
+            } else {
+                launchPlayer(locked, frameCounter);
             }
         }
         clearLockState();
