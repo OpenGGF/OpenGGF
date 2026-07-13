@@ -1,5 +1,21 @@
 # Trace Frontier Log
 
+### 2026-07-13 -- S1 button inclusive-edge push ownership
+
+SBZ3 complete-run frame 49 placed Sonic exactly at the right edge of Obj32's
+`SolidObject` width while he continued pushing. The ROM horizontal range check
+uses `bhi`, so equality remains a side collision and the object's push bit stays
+set. The button's default engine profile used an exclusive right edge, causing
+its push latch to clear intermittently and the S1 retail push-release animation
+word to restart Walk before the expected push mapping appeared.
+
+Obj32 now exposes the inclusive edge encoded by its native `SolidObject` call.
+This is object/routine geometry, not a route or frame exception; trace data and
+comparison tolerances are unchanged. With the local REV01 Sonic 1 ROM,
+`TestS1Sbz3CompleteRunTraceReplay` advances from frame 49 / 5 animation errors
+to frame 3491 / 3 animation errors, with zero physics errors and warnings. The
+focused button contract test also covers the inclusive edge.
+
 ## Agent Quick State
 
 Read this section first. Treat it as the current routing table for trace work;
