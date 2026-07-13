@@ -49,17 +49,26 @@ public final class FlappyPipe extends AbstractObjectInstance implements RewindRe
         PatternSpriteRenderer renderer = getRenderer("sample-flappy:pipe");
         if (renderer == null) return;
         int x = spawn.x();
-        // Top pipe stack: tile the 32x32 body frame downward from the level top band
-        // (y=16) up to the gap, then cap it with the lip frame flipped so its flange
-        // faces down into the gap.
-        for (int y = 16; y + 32 <= gapTop(); y += 32) {
+        // Both piece definitions in pipe-sheet.yaml center-anchor on the (x, y) passed to
+        // drawFrameIndex (xOffset/yOffset == -halfWidth/-halfHeight, the same convention
+        // sample-sheet.yaml uses), so a tile drawn at y covers [y-halfHeight, y+halfHeight).
+        // Anchor each stack's lip flush against its gap boundary first, then tile the body
+        // frame outward from the lip so consecutive 32px tiles are contiguous by
+        // construction; the outermost tile is allowed to overdraw past the level's top/
+        // floor band, which is harmless offscreen overdraw.
+        //
+        // Top pipe stack: lip at the gap edge (flange faces down into the gap), then body
+        // tiles walking upward past y=0.
+        renderer.drawFrameIndex(1, x, gapTop(), false, true);
+        for (int y = gapTop() - 16; y > -16; y -= 32) {
             renderer.drawFrameIndex(0, x, y, false, false);
         }
-        renderer.drawFrameIndex(1, x, gapTop() - 16, false, true);
-        // Bottom pipe stack: lip frame at the gap (flange faces up into the gap), then
-        // tile the body frame downward to the level floor band (y=240).
+        // Bottom pipe stack: lip at the gap edge (flange faces up into the gap), then body
+        // tiles walking downward past y=240. The bound is the tile's leading (top) edge
+        // (y - 16 < 240), not its center (y < 240) -- using the center under-covers the
+        // floor by up to 16px whenever gapBottom() isn't a multiple of 32 away from 240.
         renderer.drawFrameIndex(1, x, gapBottom(), false, false);
-        for (int y = gapBottom() + 16; y < 240; y += 32) {
+        for (int y = gapBottom() + 16; y - 16 < 240; y += 32) {
             renderer.drawFrameIndex(0, x, y, false, false);
         }
     }
