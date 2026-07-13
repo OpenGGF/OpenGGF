@@ -25,8 +25,12 @@ public final class ModContext {
     private final String baseGame;
     private final boolean standalone;
     private final ModAssetRoot assets;
+    /** Static Sonic 2 World REV01 ROM length; registration-time bound (no ROM open here). */
+    private static final int SONIC2_ROM_LENGTH = 0x100000;
+
     private final Map<String, ObjectFactory> objects = new LinkedHashMap<>();
     private final Map<String, BakedSheetRef> art = new LinkedHashMap<>();
+    private final Map<String, RomArtRequest> romArt = new LinkedHashMap<>();
     private final Map<String, String> objectPreviewArtKeys = new LinkedHashMap<>();
     private final List<GamePatch> patches = new ArrayList<>();
     private final List<ModZoneContribution> zones = new ArrayList<>();
@@ -130,8 +134,33 @@ public final class ModContext {
     public void registerObjectArt(String key, BakedSheetRef sheet) {
         mutate(() -> {
             String owned = ModKeySyntax.requireOwnedKey(owner, key);
-            if (art.putIfAbsent(owned, Objects.requireNonNull(sheet, "sheet")) != null) {
+            if (romArt.containsKey(owned)
+                    || art.putIfAbsent(owned, Objects.requireNonNull(sheet, "sheet")) != null) {
                 throw failure("Duplicate object-art key: " + owned);
+            }
+        });
+    }
+
+    /**
+     * Stages object art to be materialized from the user's Sonic 2 ROM at gameplay launch.
+     * Only available to Sonic 2 patch mods; the art is served under the owner-namespaced key
+     * through the same overlay as {@link #registerObjectArt}.
+     */
+    public void registerRomObjectArt(String key, RomArtRequest request) {
+        mutate(() -> {
+            if (standalone) throw failure("ROM art intake is not available to standalone modules");
+            if (!"s2".equals(baseGame)) {
+                throw failure("ROM art intake is supported only for Sonic 2 patch mods");
+            }
+            Objects.requireNonNull(request, "request");
+            if (request.artAddress() >= SONIC2_ROM_LENGTH
+                    || request.mappingAddress() >= SONIC2_ROM_LENGTH
+                    || request.dplcAddress() >= SONIC2_ROM_LENGTH) {
+                throw failure("ROM art request address beyond Sonic 2 ROM bounds: " + key);
+            }
+            String owned = ModKeySyntax.requireOwnedKey(owner, key);
+            if (art.containsKey(owned) || romArt.putIfAbsent(owned, request) != null) {
+                throw failure("Duplicate object art key: " + owned);
             }
         });
     }
@@ -197,7 +226,7 @@ public final class ModContext {
             }
             frozen = true;
             return new ModRegistrationPlan(owner, baseGame, objects, art, Map.of(), patches,
-                    zones, prepared,objectPreviewArtKeys,characters,gameModule);
+                    zones, prepared,objectPreviewArtKeys,characters,gameModule,romArt);
         } catch (java.io.IOException | RuntimeException rejected) {
             if (rejected instanceof ModRegistrationException registration) poison = registration;
             else poison = new ModRegistrationException(owner, "MOD_LEVEL_ASSET_INVALID",
