@@ -243,8 +243,15 @@ class TestGameDataSourceSharedFetches {
                 levelManager.indexOf("initializeZoneFeatureProvider")));
         assertTrue(water.indexOf("if (waterProvider != null)")
                 < water.indexOf("levelManager.worldDataSource().rom().orElse(null)"));
+        // The scroll provider still resolves ROM bytes through the world-session
+        // data source, but must do so null-safely: a lazy scroll probe can run
+        // with no active WorldSession (e.g. the missing-ROM logging test), where
+        // the throwing GameServices.worldSession() accessor would break it.
         assertTrue(parallax.contains(
-                "GameServices.worldSession().getDataSource().rom().orElse(null)"));
+                "worldSession.getDataSource().rom().orElse(null)"));
+        assertTrue(parallax.contains("SessionManager.getCurrentWorldSession()"),
+                "scroll provider must resolve the world session null-safely so a "
+                        + "probe with no active session does not throw");
         assertFalse(engine.contains(
                 "SessionManager.openGameplaySession(rootModule, module, null)"));
         assertTrue(engine.contains("StockGameDataSources.pinned(rom, rootModule)"));
