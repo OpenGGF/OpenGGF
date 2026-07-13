@@ -80,6 +80,15 @@ For carriers, grabs, chains, and forced movement, keep participant state keyed b
 
 For parent/child families, encode every child role, phase, radius, delay, and special flag in captured recreation metadata. A shared parent `ObjectSpawn` is not sufficient. Verify the real `ObjectManager` graph with capture -> remove/diverge -> restore: exact child count/config, settled parent relink despite recreation order, no duplicate respawn, and child lifetime following the restored parent. Constructor-only rewind probes do not pass this gate.
 
+### Signed S3K Mapping-Offset Gate
+
+Treat every relative `dc.w` in an S3K mapping frame-pointer table as a signed 16-bit displacement from the table base. Audit negative/backward pointers and shared-frame references explicitly; Java zero-extension can turn a valid backward reference into a runaway address and allocation/OOM failure. When the first frame pointer cannot prove the pointer-table length, require a disassembly-verified explicit frame count instead of inferring one from that pointer.
+
+Before accepting any new or changed mapping registration:
+
+- Add a real-ROM table-shape regression covering exact frame count and representative piece count, dimensions, and tile indices, including a backward/shared reference when present. Fix the generic decoder or verified table metadata; do not add heap/memory workarounds or object-specific address special cases.
+- Run the complete ROM-conditional S3K art crawler and `TestPatternSpriteRendererCorruptionGuard`, not only the focused object test. The crawler must fail boundedly on malformed offsets rather than running away or exhausting memory.
+
 ### AnPal Gameplay-State Gate
 
 Do not assume an `AnPal` entry point writes palette colors. Trace every write and the complete consumer graph first; if it mutates gameplay state, place that state with its actual runtime owner rather than forcing it through `PaletteOwnershipRegistry` or hiding it in the palette cycler.

@@ -78,6 +78,10 @@ If the object has a known small mapping shape from the disassembly, add or updat
 
 The engine also has a runtime guard in `PatternSpriteRenderer`; keep `TestPatternSpriteRendererCorruptionGuard` passing whenever changing sprite rendering, `ObjectSpriteSheet`, mapping parsers, or art registration code.
 
+S3K mapping frame tables store relative `dc.w` offsets. Decode each word as a **signed 16-bit displacement from the table base**, and audit negative/backward pointers and shared-frame references. Do not zero-extend the word. When the first frame pointer cannot prove the offset-table length, pass a disassembly-verified explicit frame count to the loader rather than guessing from that pointer.
+
+Add a real-ROM table-shape regression for each affected table: assert exact frame count plus representative piece count, dimensions, and tile indices, including a backward/shared frame when present. A runaway address, oversized allocation, or OOM is a decoder/metadata failure; fix the generic signed decoder or verified table metadata, never heap limits, memory workarounds, or object-specific address exceptions. Run both the full ROM-conditional art crawler and `TestPatternSpriteRendererCorruptionGuard` after the focused regression.
+
 ### Phase 1: Research & Discovery
 
 **Important — Zone-Set-Aware Object IDs:** S3K uses **two object pointer tables** that remap many IDs by zone:
@@ -88,7 +92,7 @@ The same ID can mean different objects depending on the zone set. For example, 0
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s3k-disasm-guide skill (`.agents/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the **s3k-disasm-guide** skill for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 Agents should:
 
@@ -274,7 +278,7 @@ public class ObjectNameBadnikInstance extends AbstractBadnikInstance {
 ```
 
 ##### Pattern 3: Boss
-**Use the dedicated `/s3k-implement-boss` skill** (`.agents/skills/s3k-implement-boss/SKILL.md`) for boss implementations.
+**Use the dedicated s3k-implement-boss skill** for boss implementations.
 
 **Detect a boss when:**
 - Object label contains `Miniboss` or `EndBoss`
@@ -498,7 +502,7 @@ Ensure the implementation:
 
 Delegate to a review agent to cross-validate against the disassembly. **Include this instruction in the agent prompt:**
 
-> Use the s3k-disasm-guide skill (`.agents/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, and object system patterns.
+> Use the **s3k-disasm-guide** skill for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 ```
 Review the implementation of [ObjectName] against the Sonic 3&K disassembly.
@@ -576,8 +580,8 @@ Once cross-validation is confirmed bug-free:
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.agents/skills/s3k-disasm-guide/SKILL.md` |
-| **Boss skill** | `.agents/skills/s3k-implement-boss/SKILL.md` |
+| **Disassembly guide** | `s3k-disasm-guide` skill |
+| **Boss skill** | `s3k-implement-boss` skill |
 | Zone set enum | `src/.../game/sonic3k/constants/S3kZoneSet.java` |
 | Object IDs | `src/.../game/sonic3k/constants/Sonic3kObjectIds.java` |
 | ROM offsets | `src/.../game/sonic3k/constants/Sonic3kConstants.java` |

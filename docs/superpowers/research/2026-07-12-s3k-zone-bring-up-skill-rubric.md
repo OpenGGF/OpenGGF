@@ -40,10 +40,15 @@ Use only the skill and resources it explicitly requires. Do not infer additional
 | R24 | AnPal entry-point gates | Workflow audits `Palette_fade_timer` and every other entry guard, then proves whether a suppressed qualifying edge is skipped or deferred rather than assuming catch-up. |
 | R25 | Gated pipeline validation | A real integrated counter-increment -> gated AnPal -> object-consumer test covers two qualifying edges, one suppressed edge, and the native catch-up/no-catch-up result after the gate clears. |
 | R26 | Shared future-consumer API | The consumer graph includes present and planned object families (for example Blaster), and shared state/API lives at the runtime owner rather than inside the first consuming family. |
+| R27 | Signed mapping offsets | S3K mapping-table relative `dc.w` frame pointers are decoded as signed 16-bit displacements from the table base; zero-extension is explicitly forbidden. |
+| R28 | Backward/shared frame audit | Mapping intake explicitly audits negative/backward pointers and shared-frame references. |
+| R29 | Explicit mapping frame count | When the first frame pointer cannot delimit the pointer table, a disassembly-verified explicit frame count is required instead of inferred length. |
+| R30 | Real-ROM mapping-shape regression | A real-ROM test asserts exact table shape and catches runaway/oversized/OOM behavior; fixes must target the generic decoder or verified metadata, not heap workarounds or object-specific address cases. |
+| R31 | Complete art corruption suite | New or changed mappings require both the complete ROM-conditional S3K art crawler and `TestPatternSpriteRendererCorruptionGuard`, in addition to focused table-shape coverage. |
 
 ## Verdict
 
-- **GREEN:** R1-R26 all PASS.
+- **GREEN:** R1-R31 all PASS.
 - **RED:** Any assertion fails or is only optional/implied.
 
 Record the exact prompt, raw agent output, per-assertion PASS/FAIL result, and overall verdict in both baseline and forward-test artifacts.
