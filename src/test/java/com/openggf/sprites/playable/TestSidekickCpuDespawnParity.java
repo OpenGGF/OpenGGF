@@ -1811,7 +1811,7 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void normalRoutineClearsRepeatedDelayedJumpPressHistoryAfterFirstS3kSample() {
+    void normalRoutinePreservesRepeatedDelayedJumpPressBytesForS3k() {
         TestableSprite sonic = new TestableSprite("sonic");
         sonic.useGameRules(GameRules.SONIC_3K);
         sonic.setCentreX((short) 0x1200);
@@ -1837,10 +1837,10 @@ class TestSidekickCpuDespawnParity {
 
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
                 controller.getDiagnosticGeneratedHeldInput());
-        assertEquals(0,
+        assertEquals(AbstractPlayableSprite.INPUT_JUMP,
                 controller.getDiagnosticGeneratedPressedInput() & AbstractPlayableSprite.INPUT_JUMP,
-                "S3K keeps the delayed held A/B/C bit visible but clears the repeated low-byte "
-                        + "jump press after the first follower-history sample.");
+                "S3K Stat_table stores the real low-byte Ctrl_1_Press_Logical value; "
+                        + "a consecutive action press must not be reconstructed from the aggregate held edge.");
     }
 
     @Test

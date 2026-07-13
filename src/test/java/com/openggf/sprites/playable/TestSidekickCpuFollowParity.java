@@ -353,7 +353,6 @@ class TestSidekickCpuFollowParity {
                         GameRules.SONIC_2.sidekickCpu().sidekickDespawnX(),
                         0,
                         false,
-                        false,
                         true,
                         true,
                         GameRules.SONIC_2.sidekickCpu().sidekickFlyLandStatusBlockerMask(),
@@ -1198,7 +1197,7 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
-    void s3kDelayedJumpPressClearsAfterOneHistorySampleWhileHeldJumpRemains() throws Exception {
+    void s3kDelayedJumpPressUsesRecordedLowByteWhileHeldJumpRemains() throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
@@ -1222,7 +1221,7 @@ class TestSidekickCpuFollowParity {
         inputHistory[delayedSlot] = AbstractPlayableSprite.INPUT_UP | AbstractPlayableSprite.INPUT_JUMP;
         inputHistory[previousDelayedSlot] = AbstractPlayableSprite.INPUT_UP | AbstractPlayableSprite.INPUT_JUMP;
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
-        setJumpPressHistorySlot(sonic, delayedSlot, true);
+        setJumpPressHistorySlot(sonic, delayedSlot, false);
         setJumpPressHistorySlot(sonic, previousDelayedSlot, true);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
@@ -3409,7 +3408,7 @@ class TestSidekickCpuFollowParity {
         Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_JUMP);
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
         int delayedSlot = sonic.getHistorySlotIndex(SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES);
-        setJumpPressHistorySlot(sonic, delayedSlot, true);
+        setJumpPressHistorySlot(sonic, delayedSlot, false);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
