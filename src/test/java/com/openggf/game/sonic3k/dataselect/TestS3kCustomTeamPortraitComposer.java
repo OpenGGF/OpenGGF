@@ -85,6 +85,18 @@ class TestS3kCustomTeamPortraitComposer {
     }
 
     @Test
+    void compose_unknownOwnerQualifiedCharacterUsesDocumentedSonicFallback() {
+        S3kCustomTeamPortraitComposer composer = new S3kCustomTeamPortraitComposer(stubFrames());
+
+        SpriteMappingFrame frame = composer.compose(
+                new SelectedTeam("phase3-character:runner", List.of()));
+
+        assertEquals(1, frame.pieces().size());
+        assertEquals(100, frame.pieces().getFirst().tileIndex());
+        assertFalse(frame.pieces().getFirst().hFlip());
+    }
+
+    @Test
     void layoutLayers_soloCustomCompositionWouldNotMirrorCenteredCharacter() {
         S3kCustomTeamPortraitComposer composer = new S3kCustomTeamPortraitComposer(stubFrames());
 

@@ -116,6 +116,17 @@ class TestS3kDataSelectProfile {
     }
 
     @Test
+    void extraCombos_preserveOwnerQualifiedCharacterKeys() {
+        S3kDataSelectProfile profile = new S3kDataSelectProfile();
+
+        var teams = profile.parseExtraTeams("owner-a:modchar,owner-b:modchar");
+
+        assertEquals(1, teams.size());
+        assertEquals("owner-a:modchar", teams.getFirst().mainCharacter());
+        assertEquals(List.of("owner-b:modchar"), teams.getFirst().sidekicks());
+    }
+
+    @Test
     void clearRestartDestinations_sonicWithoutAllEmeralds_stopsAtDez() {
         S3kDataSelectProfile profile = new S3kDataSelectProfile();
 

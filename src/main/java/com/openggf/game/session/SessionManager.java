@@ -3,6 +3,7 @@ package com.openggf.game.session;
 import com.openggf.architecture.CompositionRoot;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameDataSource;
+import com.openggf.game.StockGameDataSources;
 import com.openggf.game.save.SaveSessionContext;
 
 import java.util.Objects;
@@ -30,6 +31,16 @@ public final class SessionManager {
             GameModule resolvedModule, SaveSessionContext saveSessionContext) {
         Objects.requireNonNull(rootModule, "rootModule");
         Objects.requireNonNull(resolvedModule, "resolvedModule");
+        try {
+            if (EngineServices.current().roms().isRomAvailable()) {
+                return openGameplaySession(rootModule, resolvedModule,
+                        StockGameDataSources.pinned(
+                                EngineServices.current().roms().getRom(), rootModule),
+                        saveSessionContext);
+            }
+        } catch (java.io.IOException sourceFailure) {
+            throw new IllegalStateException("Failed to pin active ROM data source", sourceFailure);
+        }
         destroyCurrentMode();
         currentWorldSession = new WorldSession(rootModule, resolvedModule, saveSessionContext);
         currentGameplayMode = new GameplayModeContext(currentWorldSession);

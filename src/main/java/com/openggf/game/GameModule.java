@@ -30,7 +30,10 @@ public interface GameModule {
                 new IllegalStateException("Game module requires a ROM data source")));
     }
 
-    /** Creates touch-response data from the session capability; stock modules require a ROM. */
+    /**
+     * Creates touch-response data from the session capability. The default is stock-only and
+     * requires a ROM; standalone modules must override this method and decode bounded assets.
+     */
     default TouchResponseTable createTouchResponseTable(GameDataSource source) throws java.io.IOException {
         return createTouchResponseTable(RomByteReader.fromRom(source.rom().orElseThrow(() ->
                 new IllegalStateException("Game module requires a ROM data source"))));
@@ -568,6 +571,9 @@ public interface GameModule {
 
     /** Returns the GameId for this module. */
     GameId getGameId();
+
+    /** Stable save/launch namespace; standalone modules override with their mod id. */
+    default String getGameCode() { return getGameId().code(); }
 
     /**
      * Initial {@code anim_frame_duration} loaded by the badnik-death explosion

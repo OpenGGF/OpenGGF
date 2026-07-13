@@ -1168,6 +1168,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 			// Shield ability: re-press jump after release while airborne (docs/skdisasm/sonic3k.asm:23397).
 			if (jumpReleasedSinceJump && inputJumpPress && sprite.getDoubleJumpFlag() == 0) {
+				if (com.openggf.sprites.playable.CharacterRuntimeHooks.activateAbility(
+						sprite, inputUp, inputDown, inputLeft, inputRight)) {
+					jumpReleasedSinceJump = false;
+					inputJumpPress = false;
+					return;
+				}
 				if (tryActivateTailsFlight()) {
 					jumpReleasedSinceJump = false;
 					inputJumpPress = false;

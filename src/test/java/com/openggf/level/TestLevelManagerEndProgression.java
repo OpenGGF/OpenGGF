@@ -31,6 +31,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 class TestLevelManagerEndProgression {
 
@@ -180,6 +182,27 @@ class TestLevelManagerEndProgression {
 
         assertEquals(topology.zoneCount(), worldSession.getCurrentZone());
         assertTrue(levelManager.consumeCreditsRequest());
+    }
+
+    @Test
+    void linearStandaloneTopologyStopsAtFinalDeclaredActWithoutLoadingPastRegistry() throws Exception {
+        WorldSession worldSession = new WorldSession(mock(GameModule.class));
+        LevelManager levelManager = spy(new LevelManager(mock(Camera.class), mock(SpriteManager.class),
+                mock(ParallaxManager.class), mock(CollisionSystem.class), mock(WaterSystem.class),
+                new GameStateManager(), engineContext(), worldSession));
+        levelManager.levels.add(List.of(LevelData.DEATH_EGG, LevelData.DEATH_EGG));
+        levelManager.levels.add(List.of(LevelData.DEATH_EGG));
+        levelManager.currentZone = 1;
+        levelManager.currentAct = 0;
+        ZoneProgressionPlan.ZoneTopology topology = ZoneProgressionPlan.ZoneTopology.linear(2, 1);
+        levelManager.setZoneProgressionPlan(ZoneProgressionPlan.LINEAR, topology);
+
+        levelManager.advanceToNextLevel();
+
+        verify(levelManager, never()).loadCurrentLevel();
+        assertTrue(levelManager.consumeCreditsRequest());
+        assertEquals(2, worldSession.getCurrentZone());
+        assertEquals(0, worldSession.getCurrentAct());
     }
 
     private static ZoneProgressionPlan.ZoneTopology topologyWithAppendedMod() {

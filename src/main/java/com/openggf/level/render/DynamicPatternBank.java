@@ -59,6 +59,9 @@ public class DynamicPatternBank {
             for (TileLoadRequest request : requests) {
                 int count = Math.max(0, request.count());
                 int startTile = Math.max(0, request.startTile());
+                if (request.destinationOffset() >= 0) {
+                    dstIndex = request.destinationOffset();
+                }
                 for (int i = 0; i < count; i++) {
                     if (dstIndex >= patterns.length) {
                         return;

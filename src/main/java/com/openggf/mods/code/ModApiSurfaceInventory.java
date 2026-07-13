@@ -37,6 +37,7 @@ public final class ModApiSurfaceInventory {
             "com.openggf.game.ModGame",
             "com.openggf.game.RomDataSource",
             "com.openggf.level.objects.PlayableSheetReader",
+            "com.openggf.level.objects.PlayableSheetMaterializer",
             "com.openggf.level.objects.ObjectFactory",
             "com.openggf.level.objects.RewindRecreatable",
             "com.openggf.level.spawn.SpawnPoint");

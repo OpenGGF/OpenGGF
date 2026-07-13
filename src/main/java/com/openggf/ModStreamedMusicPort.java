@@ -9,6 +9,9 @@ import com.openggf.mods.StreamedFadeSnapshot;
 import com.openggf.mods.StreamedMusicPlayer;
 import com.openggf.mods.StreamedPlaybackSnapshot;
 import com.openggf.mods.TrackKey;
+import com.openggf.mods.PreparedSfx;
+import com.openggf.mods.PreparedSfxCursor;
+import com.openggf.mods.SfxKey;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -77,6 +80,22 @@ public final class ModStreamedMusicPort implements StreamedMusicPort {
         player.play(prepared);
     }
 
+    @Override
+    public boolean hasSfx(SfxRef sfx) {
+        requireOpen();
+        Objects.requireNonNull(sfx, "sfx");
+        return music.resolveSfx(new SfxKey(sfx.owner(), sfx.name())).isPresent();
+    }
+
+    @Override
+    public OneShot openSfx(SfxRef sfx) {
+        requireOpen();
+        Objects.requireNonNull(sfx, "sfx");
+        PreparedSfx prepared = music.resolveSfx(new SfxKey(sfx.owner(), sfx.name())).orElseThrow(() ->
+                new IllegalArgumentException("Unknown namespaced streamed SFX: " + sfx));
+        return new PreparedSfxCursor(prepared);
+    }
+
     @Override public boolean hasSource() { requireOpen(); return player.playing(); }
     @Override public int mixInto(short[] output, int frames) { requireOpen(); return player.mixInto(output, frames); }
     @Override public void pause(int reason) { requireOpen(); player.pause(reason); }
@@ -136,10 +155,7 @@ public final class ModStreamedMusicPort implements StreamedMusicPort {
     }
 
     private static String requireGameCode(String gameCode) {
-        if (!"s1".equals(gameCode) && !"s2".equals(gameCode) && !"s3k".equals(gameCode)) {
-            throw new IllegalArgumentException("Game code must be exactly s1, s2, or s3k");
-        }
-        return gameCode;
+        return com.openggf.game.ModKeySyntax.requireManifestId(gameCode);
     }
 
     private void requireOpen() {

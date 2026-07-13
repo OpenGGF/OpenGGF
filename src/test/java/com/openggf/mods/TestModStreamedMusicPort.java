@@ -111,6 +111,42 @@ class TestModStreamedMusicPort {
     }
 
     @Test
+    void standaloneViewExposesOnlyItsOwnersPreparedTracksAndSfx() {
+        PreparedTrack firstTrack = prepared("first", "shared", (short) 1);
+        PreparedTrack secondTrack = prepared("second", "shared", (short) 2);
+        PreparedSfx firstSfx = new PreparedSfx(new SfxKey("first", "hit"),
+                PcmData.takeOwnership(8_000, 1, new short[] { 2_000 }), 0.5f, "c".repeat(64));
+        PreparedSfx secondSfx = new PreparedSfx(new SfxKey("second", "hit"),
+                PcmData.takeOwnership(8_000, 1, new short[] { 9_000 }), 1, "d".repeat(64));
+        List<ModDescriptor> descriptors = List.of(
+                standaloneDescriptor("first"), standaloneDescriptor("second"));
+        ModTrackRegistry tracks = new ModTrackRegistry(List.of(
+                audioTrack(firstTrack.key()), audioTrack(secondTrack.key())));
+        ModSfxRegistry sfx = new ModSfxRegistry(List.of(
+                new ModAudioSfx(firstSfx.key(), "audio/hit.wav", 0.5f),
+                new ModAudioSfx(secondSfx.key(), "audio/hit.wav", 1)));
+        PreparedAudioSession session = new PreparedAudioSession(
+                List.of(firstTrack, secondTrack), List.of(firstSfx, secondSfx), List.of(), Set.of());
+        PreparedModMusic music = PreparedModMusic.build(new EffectiveModCatalog(descriptors),
+                tracks, sfx, session, 8_000, "first");
+
+        try (ModStreamedMusicPort port = new ModStreamedMusicPort(
+                music, new StreamedMusicPlayer(8_000), "first")) {
+            assertTrue(port.hasTrack(new StreamedMusicPort.TrackRef("first", "shared")));
+            assertFalse(port.hasTrack(new StreamedMusicPort.TrackRef("second", "shared")));
+            assertTrue(port.hasSfx(new StreamedMusicPort.SfxRef("first", "hit")));
+            assertFalse(port.hasSfx(new StreamedMusicPort.SfxRef("second", "hit")));
+            try (StreamedMusicPort.OneShot cursor = port.openSfx(
+                    new StreamedMusicPort.SfxRef("first", "hit"))) {
+                short[] output = new short[2];
+                cursor.mixInto(output, 1);
+                assertArrayEquals(new short[] { 1_000, 1_000 }, output);
+                assertTrue(cursor.complete());
+            }
+        }
+    }
+
+    @Test
     void closeClosesPlayerBeforeReleasingOwnedPreparedMusicExactlyOnce() {
         AtomicInteger releases = new AtomicInteger();
         AtomicBoolean playerWasClosedAtRelease = new AtomicBoolean();
@@ -157,6 +193,14 @@ class TestModStreamedMusicPort {
     private static ModDescriptor descriptor(String owner, String gameCode) {
         ModManifest manifest = new ModManifest(1, owner, owner, SemanticVersion.parse("1.0.0"),
                 List.of("Author"), "Description", VersionRange.parse("*"), ModType.PATCH, gameCode,
+                null, List.of(), Map.of(), Map.of(), null, OptionalInt.empty());
+        return new ModDescriptor(Path.of(owner + ".jar"), manifest,
+                "b".repeat(64), false, List.of());
+    }
+
+    private static ModDescriptor standaloneDescriptor(String owner) {
+        ModManifest manifest = new ModManifest(1, owner, owner, SemanticVersion.parse("1.0.0"),
+                List.of("Author"), "Description", VersionRange.parse("*"), ModType.STANDALONE, null,
                 null, List.of(), Map.of(), Map.of(), null, OptionalInt.empty());
         return new ModDescriptor(Path.of(owner + ".jar"), manifest,
                 "b".repeat(64), false, List.of());

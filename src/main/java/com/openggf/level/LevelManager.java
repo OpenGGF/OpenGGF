@@ -11,7 +11,6 @@ import com.openggf.data.Game;
 import com.openggf.data.AnimatedPaletteProvider;
 import com.openggf.data.AnimatedPatternProvider;
 import com.openggf.data.Rom;
-import com.openggf.data.RomByteReader;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.DynamicStartPositionProvider;
 import com.openggf.debug.DebugObjectArtViewer;
@@ -124,6 +123,14 @@ public class LevelManager {
             return world.getGameModule();
         }
         return GameServices.currentOrBootstrapGameModule();
+    }
+
+    PlayableCharacterRegistry playableCharacterRegistry() {
+        return worldSession.getPlayableCharacterRegistry();
+    }
+
+    GameDataSource worldDataSource() {
+        return worldSession.getDataSource();
     }
 
     /** Collision model metadata only; frame scheduling may still use inline checkpoints. */
@@ -417,11 +424,12 @@ public class LevelManager {
      * Phase A: Initialize ROM access, parallax, game module, and zone registry.
      */
     public void initGameModule(int levelIndex) throws IOException {
-        Rom rom = GameServices.rom().getRom();
+        GameDataSource source = worldSession.getDataSource();
+        Rom rom = source.rom().orElse(null);
         parallaxManager.load(rom);
         gameModule = GameServices.module();
         refreshZoneList();
-        game = gameModule.createGame(rom);
+        game = gameModule.createGame(source);
     }
 
     /**
@@ -429,7 +437,7 @@ public class LevelManager {
      */
     public void initAudio(int levelIndex) throws IOException {
         audioManager.setAudioProfile(gameModule.getAudioProfile());
-        audioManager.setRom(GameServices.rom().getRom());
+        audioManager.setRom(worldSession.getDataSource().rom().orElse(null));
         audioManager.setSoundMap(game.getSoundMap());
         audioManager.resetRingSound();
         if (!transitions.isSuppressNextMusicChange()) {
@@ -583,9 +591,7 @@ public class LevelManager {
      * Phase G: Create ObjectManager, TouchResponseTable, and wire CollisionSystem.
      */
     public void initObjectManager() throws IOException {
-        Rom rom = GameServices.rom().getRom();
-        RomByteReader romReader = RomByteReader.fromRom(rom);
-        touchResponseTable = gameModule.createTouchResponseTable(romReader);
+        touchResponseTable = gameModule.createTouchResponseTable(worldSession.getDataSource());
         objectManager = new ObjectManager(level.getObjects(),
                 gameModule.createObjectRegistry(),
                 gameModule.getPlaneSwitcherObjectId(),
@@ -743,11 +749,11 @@ public class LevelManager {
         }
     }
 
-    private void initializeZoneFeatureProvider(ZoneFeatureProvider zoneFeatureProvider) throws IOException {
-        Rom rom = GameServices.rom().getRom();
+    void initializeZoneFeatureProvider(ZoneFeatureProvider zoneFeatureProvider) throws IOException {
         SpecialRenderEffectRegistry specialRenderEffectRegistry = GameServices.specialRenderEffectRegistryOrNull();
         AdvancedRenderModeController advancedRenderModeController = GameServices.advancedRenderModeControllerOrNull();
         if (zoneFeatureProvider != null) {
+            Rom rom = worldSession.getDataSource().rom().orElse(null);
             zoneFeatureProvider.reset();
             zoneFeatureProvider.initZoneFeatures(rom, getFeatureZoneId(), getFeatureActId(), camera.getX());
             // Cache zone feature patterns (water surface, etc.)

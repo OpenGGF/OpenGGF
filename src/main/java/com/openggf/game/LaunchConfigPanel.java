@@ -261,7 +261,7 @@ public final class LaunchConfigPanel {
         if (row == LaunchProfile.Row.WIDESCREEN && "global".equals(profile.aspect())) {
             return "Global (" + aspectLabel(configService.getString(SonicConfiguration.DISPLAY_ASPECT)) + ")";
         }
-        return profile.displayValue(row, entry);
+        return store.displayValue(profile, row, entry);
     }
 
     private static String aspectLabel(String value) {

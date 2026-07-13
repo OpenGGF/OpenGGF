@@ -8,6 +8,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.Objects;
 
 /** Shared ROM-accurate vertical flight/swim routine for Tails. */
+@com.openggf.game.ModApi
 public final class TailsFlightController {
     public static final int FLIGHT_TIME = (8 * 60) / 2;
 

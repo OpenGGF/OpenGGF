@@ -21,6 +21,35 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestModContextAndFaultBoundary {
     @Test
+    void standaloneModuleRegistrationIsExclusiveExactlyOnceAndAtomic() {
+        GameModule module = org.mockito.Mockito.mock(GameModule.class);
+        org.mockito.Mockito.when(module.getGameId()).thenReturn(com.openggf.game.GameId.STANDALONE);
+        org.mockito.Mockito.when(module.getIdentifier()).thenReturn("owner");
+        org.mockito.Mockito.when(module.getGameCode()).thenReturn("owner");
+
+        ModContext missing = new ModContext(
+                "owner", null, ModAssetRoot.forTests("owner"), null, true);
+        assertThrows(ModRegistrationException.class, missing::freeze);
+
+        ModContext valid = new ModContext(
+                "owner", null, ModAssetRoot.forTests("owner"), null, true);
+        valid.registerGameModule(module);
+        ModRegistrationPlan plan = valid.freeze();
+        assertSame(module, plan.standaloneModule());
+        assertNull(plan.baseGameId());
+
+        ModContext duplicate = new ModContext(
+                "owner", null, ModAssetRoot.forTests("owner"), null, true);
+        duplicate.registerGameModule(module);
+        ModRegistrationException collision = assertThrows(ModRegistrationException.class,
+                () -> duplicate.registerGameModule(module));
+        assertSame(collision, assertThrows(ModRegistrationException.class, duplicate::freeze));
+
+        ModContext patch = new ModContext("owner", "s2", ModAssetRoot.forTests("owner"));
+        assertThrows(ModRegistrationException.class, () -> patch.registerGameModule(module));
+    }
+
+    @Test
     void transactionNamespacesContentRejectsDuplicatesAndFreezesAtomically() {
         ModContext context = new ModContext("owner", "s2", ModAssetRoot.forTests("owner"));
         context.registerObject("buzzer", (spawn, registry) -> null);

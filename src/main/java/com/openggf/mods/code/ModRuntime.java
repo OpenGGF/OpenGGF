@@ -27,6 +27,7 @@ public final class ModRuntime implements AutoCloseable {
     private final Set<String> availableOwners;
     private final Map<String, Rejection> rejectedOwners;
     private Map<String, Throwable> registrationFailures = Map.of();
+    private Map<String, com.openggf.game.GameModule> standaloneModules = Map.of();
     private final Set<String> runtimeDisabledOwners = new java.util.LinkedHashSet<>();
     private boolean closed;
     private ModFaultBoundary faultBoundary;
@@ -71,6 +72,7 @@ public final class ModRuntime implements AutoCloseable {
         Map<String, Throwable> currentFailures = new LinkedHashMap<>();
         Set<Integer> aggregateZoneIds = new java.util.HashSet<>();
         Set<Integer> aggregateLevelIds = new java.util.HashSet<>();
+        Map<String, com.openggf.game.GameModule> currentStandaloneModules = new LinkedHashMap<>();
         for (String owner : owners) {
             ModDescriptor descriptor = descriptors.get(owner);
             if (descriptor == null) continue;
@@ -94,7 +96,8 @@ public final class ModRuntime implements AutoCloseable {
                 try (ModAssetRoot assets = ModAssetRoot.nonClosingView(Objects.requireNonNull(
                         snapshots.get(owner), "owner assets"))) {
                     ModContext context = new ModContext(owner, descriptor.manifest().baseGame(), assets,
-                            descriptor.manifest().insertAfter());
+                            descriptor.manifest().insertAfter(),
+                            descriptor.manifest().type() == com.openggf.mods.ModType.STANDALONE);
                     descriptor.manifest().artOverrides().forEach((key, path) ->
                             context.registerManifestArtOverride(key, new BakedSheetRef(path)));
                     if (descriptor.manifest().entrypoint() != null && loaders.containsKey(owner)) {
@@ -124,7 +127,17 @@ public final class ModRuntime implements AutoCloseable {
                     }
                 }
                 List<RegisteredPatch> ownerRegistrations;
-                if (plan.hasContent()) {
+                com.openggf.game.GameModule standalone = null;
+                if (plan.standaloneModule() != null) {
+                    if (faultBoundary == null) {
+                        throw new ModRegistrationException(owner,
+                                "Standalone module requires an installed fault boundary");
+                    }
+                    standalone = OwnerAwareStandaloneModule.wrap(
+                            owner, plan.standaloneModule(), faultBoundary, plan.characters());
+                    standalone.getPlayableCharacterRegistry();
+                    ownerRegistrations = List.of();
+                } else if (plan.hasContent()) {
                     ModBackedGamePatch backing = new ModBackedGamePatch(plan, faultBoundary, saveFindingSink);
                     ownerRegistrations = ModPatchPlanAssembler.backingFirst(patchOwner, backing,
                             plan.explicitPatches());
@@ -150,6 +163,7 @@ public final class ModRuntime implements AutoCloseable {
                 aggregateLevelIds.addAll(ownerLevelIds);
                 registrations.addAll(ownerRegistrations);
                 dependencies.put(patchOwner, Set.copyOf(required));
+                if (standalone != null) currentStandaloneModules.put(owner, standalone);
             } catch (Throwable failure) {
                 rethrowIfFatal(failure);
                 failed.add(owner);
@@ -158,7 +172,39 @@ public final class ModRuntime implements AutoCloseable {
             }
         }
         registrationFailures = Map.copyOf(currentFailures);
+        standaloneModules = Map.copyOf(currentStandaloneModules);
         return new ModuleResolutionService.PatchPlan(registrations, dependencies);
+    }
+
+    /** Runs one fresh registration pass and returns the atomically published standalone module. */
+    public synchronized Optional<com.openggf.game.GameModule> prepareStandaloneModule(String ownerModId) {
+        String owner = com.openggf.game.ModKeySyntax.requireManifestId(ownerModId);
+        newRegistrationPlan();
+        return Optional.ofNullable(standaloneModules.get(owner));
+    }
+
+    /** Retained immutable asset snapshot owned by this runtime for a standalone session. */
+    public synchronized SnapshotModAssetRoot standaloneAssetSnapshot(String ownerModId) {
+        String owner = com.openggf.game.ModKeySyntax.requireManifestId(ownerModId);
+        ModDescriptor descriptor = descriptors.get(owner);
+        if (descriptor == null || descriptor.manifest().type() != com.openggf.mods.ModType.STANDALONE
+                || runtimeDisabledOwners.contains(owner)) {
+            throw new IllegalArgumentException("Standalone owner is unavailable: " + owner);
+        }
+        return Objects.requireNonNull(snapshots.get(owner), "standalone asset snapshot");
+    }
+
+    public synchronized ModDescriptor standaloneDescriptor(String ownerModId) {
+        String owner = com.openggf.game.ModKeySyntax.requireManifestId(ownerModId);
+        ModDescriptor descriptor = descriptors.get(owner);
+        if (descriptor == null || descriptor.manifest().type() != com.openggf.mods.ModType.STANDALONE) {
+            throw new IllegalArgumentException("Standalone owner is unavailable: " + owner);
+        }
+        return descriptor;
+    }
+
+    public synchronized Map<String, com.openggf.game.GameModule> standaloneModules() {
+        return standaloneModules;
     }
 
     public synchronized Map<String, Throwable> registrationFailures() {

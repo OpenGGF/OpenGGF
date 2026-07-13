@@ -34,12 +34,12 @@ final class LevelWaterCoordinator {
      * which enables water in cases that a direct load would disable.
      */
     void initialize(boolean seamlessTransition) throws IOException {
-        Rom rom = GameServices.rom().getRom();
         GameModule gameModule = levelManager.gameModule;
         WaterDataProvider waterProvider = gameModule != null ? gameModule.getWaterDataProvider() : null;
         int featureZone = levelManager.getFeatureZoneId();
         int featureAct = levelManager.getFeatureActId();
         if (waterProvider != null) {
+            Rom rom = levelManager.worldDataSource().rom().orElse(null);
             PlayerCharacter character = PlayerCharacter.SONIC_AND_TAILS;
             LevelEventProvider lep = gameModule.getLevelEventProvider();
             if (lep instanceof AbstractLevelEventManager alem) {
@@ -49,6 +49,7 @@ final class LevelWaterCoordinator {
                     featureZone, featureAct, character, seamlessTransition);
         } else if (levelManager.zoneFeatureProvider != null
                 && levelManager.zoneFeatureProvider.hasWater(featureZone)) {
+            Rom rom = levelManager.worldDataSource().rom().orElse(null);
             @SuppressWarnings("deprecation")
             Runnable fallback = () -> levelManager.waterSystem.loadForLevel(
                     rom, featureZone, featureAct, levelManager.level.getObjects());

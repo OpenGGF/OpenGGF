@@ -54,8 +54,15 @@ public final class ModAudioPreparer {
 
     public synchronized PreparedAudioSession prepare(EffectiveModCatalog effective,
                                                      ModTrackRegistry registry, int outputRate) {
+        return prepare(effective, registry, ModSfxRegistry.EMPTY, outputRate);
+    }
+
+    public synchronized PreparedAudioSession prepare(EffectiveModCatalog effective,
+                                                     ModTrackRegistry registry,
+                                                     ModSfxRegistry sfxRegistry, int outputRate) {
         Objects.requireNonNull(effective, "effective");
         Objects.requireNonNull(registry, "registry");
+        Objects.requireNonNull(sfxRegistry, "sfxRegistry");
         if (!activeReferences.isEmpty()) {
             throw new IllegalStateException("Close the active prepared audio session before preparing another");
         }
@@ -64,8 +71,14 @@ public final class ModAudioPreparer {
         }
         requireDependencyFirstOrder(effective);
         Map<String, List<ModAudioTrack>> tracksByOwner = new LinkedHashMap<>();
+        Map<String, List<ModAudioSfx>> sfxByOwner = new LinkedHashMap<>();
         for (ModDescriptor descriptor : effective.orderedEnabled()) {
             tracksByOwner.put(descriptor.manifest().id(), new ArrayList<>());
+            sfxByOwner.put(descriptor.manifest().id(), new ArrayList<>());
+        }
+        for (ModAudioSfx value : sfxRegistry.sfx()) {
+            List<ModAudioSfx> ownerSfx = sfxByOwner.get(value.key().modId());
+            if (ownerSfx != null) ownerSfx.add(value);
         }
         for (ModAudioTrack track : registry.tracks()) {
             List<ModAudioTrack> ownerTracks = tracksByOwner.get(track.key().modId());
@@ -75,6 +88,7 @@ public final class ModAudioPreparer {
         LinkedHashSet<String> failed = new LinkedHashSet<>();
         Map<String, List<ModFinding>> ownerFindings = new LinkedHashMap<>();
         Map<String, List<PreparedTrack>> preparedByOwner = new LinkedHashMap<>();
+        Map<String, List<PreparedSfx>> preparedSfxByOwner = new LinkedHashMap<>();
         Map<String, Set<CacheKey>> keysByOwner = new LinkedHashMap<>();
         LinkedHashMap<CacheKey, CachedPcm> nextCache = new LinkedHashMap<>();
         LinkedHashMap<PrimaryKey, CacheKey> nextPrimaryCache = new LinkedHashMap<>();
@@ -82,6 +96,7 @@ public final class ModAudioPreparer {
         for (ModDescriptor descriptor : effective.orderedEnabled()) {
             String owner = descriptor.manifest().id();
             List<ModAudioTrack> ownerTracks = tracksByOwner.get(owner);
+            List<ModAudioSfx> ownerSfx = sfxByOwner.get(owner);
             String failedDependencyBeforeIo = descriptor.manifest().dependencies().stream()
                     .map(ModDependency::id).filter(failed::contains).findFirst().orElse(null);
             if (failedDependencyBeforeIo != null) {
@@ -90,11 +105,12 @@ public final class ModAudioPreparer {
                         "Dependency failed audio preparation: " + failedDependencyBeforeIo)));
                 continue;
             }
-            if (ownerTracks == null || ownerTracks.isEmpty()) {
+            if ((ownerTracks == null || ownerTracks.isEmpty()) && (ownerSfx == null || ownerSfx.isEmpty())) {
                 ownerFindings.put(owner, List.of());
                 continue;
             }
             List<PreparedTrack> ownerPrepared = new ArrayList<>();
+            List<PreparedSfx> ownerPreparedSfx = new ArrayList<>();
             LinkedHashMap<CacheKey, CachedPcm> ownerCache = new LinkedHashMap<>();
             LinkedHashMap<PrimaryKey, CacheKey> ownerPrimaryCache = new LinkedHashMap<>();
             long provisionalBytes = 0;
@@ -106,9 +122,13 @@ public final class ModAudioPreparer {
                 if (!sourceAssets.immutableSha256().equals(descriptor.sha256())) {
                     throw new ChangedJar("Packed mod digest changed after eligibility freeze");
                 }
-                for (ModAudioTrack track : ownerTracks) {
-                    String codec = codec(track.assetPath());
-                    PrimaryKey primaryKey = new PrimaryKey(descriptor.sha256(), track.assetPath(), codec, outputRate);
+                record Declaration(String assetPath, ModAudioTrack track, ModAudioSfx sfx) { }
+                List<Declaration> declarations = new ArrayList<>();
+                if (ownerTracks != null) ownerTracks.forEach(track -> declarations.add(new Declaration(track.assetPath(), track, null)));
+                if (ownerSfx != null) ownerSfx.forEach(sfx -> declarations.add(new Declaration(sfx.assetPath(), null, sfx)));
+                for (Declaration declaration : declarations) {
+                    String codec = codec(declaration.assetPath());
+                    PrimaryKey primaryKey = new PrimaryKey(descriptor.sha256(), declaration.assetPath(), codec, outputRate);
                     CacheKey cacheKey = primaryCache.get(primaryKey);
                     if (cacheKey == null) cacheKey = nextPrimaryCache.get(primaryKey);
                     if (cacheKey == null) cacheKey = ownerPrimaryCache.get(primaryKey);
@@ -123,7 +143,7 @@ public final class ModAudioPreparer {
                         long remainingBeforeRead = limits.maxAudioCacheBytes() - retainedBytes - provisionalBytes;
                         long encodedCap = Math.min(limits.maxAssetBytes(), remainingBeforeRead / 2L);
                         if (encodedCap <= 0) throw new IOException("No working budget remains for encoded audio");
-                        encoded = assets.readBounded(track.assetPath(), encodedCap);
+                        encoded = assets.readBounded(declaration.assetPath(), encodedCap);
                         sourceSha = sha256(encoded);
                         cacheKey = new CacheKey(sourceSha, outputRate, codec);
                         cached = cache.get(cacheKey);
@@ -133,11 +153,16 @@ public final class ModAudioPreparer {
                     } else {
                         sourceSha = cacheKey.sourceSha256();
                     }
+                    if (declaration.sfx() != null && cached != null) {
+                        validateCachedSfx(cached);
+                    }
                     boolean firstOwnerUse = !ownerCache.containsKey(cacheKey);
                     if (cached == null) {
                         long remaining = limits.maxAudioCacheBytes() - retainedBytes - provisionalBytes;
                         ModInputLimits workingLimits = limits.withMaxAudioCacheBytes(remaining);
-                        PcmData source = decoder.decode(track.assetPath(), encoded, workingLimits);
+                        PcmData source = declaration.sfx() == null
+                                ? decoder.decode(declaration.assetPath(), encoded, workingLimits)
+                                : decoder.decodeSfx(declaration.assetPath(), encoded, workingLimits);
                         int sourceRate = source.sampleRate();
                         int sourceFrames = source.frameCount();
                         long resampleRemaining = remaining - encoded.length;
@@ -154,15 +179,21 @@ public final class ModAudioPreparer {
                     }
                     long start = 0;
                     long end = 0;
-                    if (track.loop()) {
+                    ModAudioTrack track = declaration.track();
+                    if (track != null && track.loop()) {
                         ModAudioAssetValidation.validateLoop(track, cached.sourceFrames());
                         long sourceEnd = track.loopEndFrame().orElse(cached.sourceFrames());
                         start = resampler.convertFrame(track.loopStartFrame(), cached.sourceRate(), outputRate);
                         end = sourceEnd == cached.sourceFrames() ? cached.pcm().frameCount()
                                 : resampler.convertFrame(sourceEnd, cached.sourceRate(), outputRate);
                     }
-                    ownerPrepared.add(new PreparedTrack(track.key(), cached.pcm(), start, end,
-                            track.gain(), track.tempoEffects(), sourceSha));
+                    if (track != null) {
+                        ownerPrepared.add(new PreparedTrack(track.key(), cached.pcm(), start, end,
+                                track.gain(), track.tempoEffects(), sourceSha));
+                    } else {
+                        ModAudioSfx sfx = declaration.sfx();
+                        ownerPreparedSfx.add(new PreparedSfx(sfx.key(), cached.pcm(), sfx.gain(), sourceSha));
+                    }
                 }
                 long ownerNewBytes = provisionalBytes;
                 if (Math.addExact(retainedBytes, ownerNewBytes) > limits.maxAudioCacheBytes()) {
@@ -172,6 +203,7 @@ public final class ModAudioPreparer {
                 nextCache.putAll(ownerCache);
                 nextPrimaryCache.putAll(ownerPrimaryCache);
                 preparedByOwner.put(owner, List.copyOf(ownerPrepared));
+                preparedSfxByOwner.put(owner, List.copyOf(ownerPreparedSfx));
                 keysByOwner.put(owner, Set.copyOf(ownerCache.keySet()));
                 ownerFindings.put(owner, List.of());
             }} catch (ChangedJar error) {
@@ -207,17 +239,19 @@ public final class ModAudioPreparer {
             }
         }
         List<PreparedTrack> prepared = new ArrayList<>();
+        List<PreparedSfx> preparedSfx = new ArrayList<>();
         LinkedHashSet<CacheKey> leaseKeys = new LinkedHashSet<>();
         for (ModDescriptor descriptor : effective.orderedEnabled()) {
             if (!failed.contains(descriptor.manifest().id())) {
                 prepared.addAll(preparedByOwner.getOrDefault(descriptor.manifest().id(), List.of()));
+                preparedSfx.addAll(preparedSfxByOwner.getOrDefault(descriptor.manifest().id(), List.of()));
                 leaseKeys.addAll(keysByOwner.getOrDefault(descriptor.manifest().id(), Set.of()));
             }
         }
         cache = Collections.unmodifiableMap(new LinkedHashMap<>(nextCache));
         primaryCache = Collections.unmodifiableMap(new LinkedHashMap<>(nextPrimaryCache));
         registerActive(leaseKeys);
-        return new PreparedAudioSession(prepared, sessionFindings, failed,
+        return new PreparedAudioSession(prepared, preparedSfx, sessionFindings, failed,
                 () -> releaseActive(leaseKeys));
     }
 
@@ -234,6 +268,18 @@ public final class ModAudioPreparer {
     private static String safeMessage(Throwable error) {
         String message = error.getMessage();
         return message == null || message.isBlank() ? error.getClass().getSimpleName() : message;
+    }
+
+    private void validateCachedSfx(CachedPcm cached) throws IOException {
+        long sourceBytes = Math.multiplyExact(
+                Math.multiplyExact((long) cached.sourceFrames(), cached.pcm().channels()), Short.BYTES);
+        if (sourceBytes > limits.maxSfxPcmBytes()) {
+            throw new IOException("Decoded PCM exceeds SFX limit");
+        }
+        if (cached.sourceFrames() > Math.multiplyExact(
+                (long) cached.sourceRate(), limits.maxSfxSeconds())) {
+            throw new IOException("Decoded audio exceeds SFX duration limit");
+        }
     }
 
     private static String sha256(byte[] bytes) {

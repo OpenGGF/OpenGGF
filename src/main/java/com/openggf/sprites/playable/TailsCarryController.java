@@ -11,9 +11,12 @@ import com.openggf.game.rules.GameRules;
 import java.util.Objects;
 
 /** ROM-accurate shared owner for manual and scripted Tails carry state. */
+@com.openggf.game.ModApi
 public final class TailsCarryController {
+    @com.openggf.game.ModApi
     public enum CarryContext { NONE, MANUAL, CNZ, MGZ_BOSS }
 
+    @com.openggf.game.ModApi
     public record Snapshot(short latchX, short latchY, boolean carrying,
                            boolean parentagePending, int cooldown, CarryContext context) { }
 

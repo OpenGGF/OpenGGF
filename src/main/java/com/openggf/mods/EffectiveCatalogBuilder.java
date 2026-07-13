@@ -140,8 +140,6 @@ public final class EffectiveCatalogBuilder {
                     "Requires engine API " + manifest.engineApiRange() + "; available " + ModApiVersion.CURRENT,
                     List.of());
         }
-        if (manifest.type() == ModType.STANDALONE) return blocked(id, "PHASE1_STANDALONE_UNSUPPORTED",
-                "Standalone mods are not supported in Phase 1", List.of());
         if (descriptor.containsCode()
                 && (state == null || !state.trustsSha256(descriptor.sha256()))) {
             return blocked(id, "CODE_TRUST_REQUIRED",

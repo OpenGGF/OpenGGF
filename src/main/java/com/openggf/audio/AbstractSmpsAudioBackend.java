@@ -134,6 +134,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private record InstallStreamedPort(StreamedMusicPort port) implements StreamedTransition { }
     private record PlayStreamedOrElse(int musicId, Runnable fallback) implements StreamedTransition { }
     private record PlayNamespacedTrack(StreamedMusicPort.TrackRef track) implements StreamedTransition { }
+    private record PlayNamespacedSfx(StreamedMusicPort.SfxRef sfx) implements StreamedTransition { }
     private record SetStreamedPause(int reason, boolean paused) implements StreamedTransition { }
     private record FadeForeground(int steps, int delay) implements StreamedTransition { }
     private record SetStreamedSpeed(int multiplier) implements StreamedTransition { }
@@ -146,6 +147,10 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private volatile boolean streamedOverrideReplayBypass;
     private boolean streamedRestoreFadeUnblocksSfx;
     private int streamedGlobalPauseMask;
+    private static final int MAX_STREAMED_ONE_SHOTS =
+            com.openggf.io.ModInputLimits.DEFAULT_MAX_SFX_VOICES;
+    private final Object streamedOneShotLock = new Object();
+    private final Deque<StreamedMusicPort.OneShot> streamedOneShots = new ArrayDeque<>();
 
     protected AbstractSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler) {
         this.configService = Objects.requireNonNull(configService, "configService");
@@ -308,6 +313,16 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     }
 
     @Override
+    public boolean tryPlayStreamedSfx(StreamedMusicPort.SfxRef sfx) {
+        Objects.requireNonNull(sfx, "sfx");
+        synchronized (streamedPortTransitionLock) {
+            if (!streamedMusicPreflightPort.hasSfx(sfx)) return false;
+            pendingStreamedTransitions.addLast(new PlayNamespacedSfx(sfx));
+            return true;
+        }
+    }
+
+    @Override
     public void beginStreamedOverrideReplayBypass() {
         streamedOverrideReplayBypass = true;
     }
@@ -330,6 +345,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 StreamedMusicPort replacement = install.port();
                 StreamedMusicPort previous = streamedMusicPort;
                 streamedMusicPort = replacement;
+                clearStreamedOneShots();
                 applyGlobalPausesToPort();
                 if (previous != StreamedMusicPort.EMPTY && previous != replacement) {
                     previous.stop();
@@ -364,6 +380,17 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 currentMusicId = -1;
                 currentMusicDescriptor = null;
                 pendingMusicDescriptor = null;
+            } else if (transition instanceof PlayNamespacedSfx play) {
+                if (!sfxBlocked && streamedMusicPort.hasSfx(play.sfx())) {
+                    StreamedMusicPort.OneShot cursor = streamedMusicPort.openSfx(play.sfx());
+                    synchronized (streamedOneShotLock) {
+                        if (streamedOneShots.size() == MAX_STREAMED_ONE_SHOTS) {
+                            streamedOneShots.removeFirst().close();
+                        }
+                        streamedOneShots.addLast(cursor);
+                    }
+                    hookRestartStreamIfDry();
+                }
             } else if (transition instanceof SetStreamedPause pause) {
                 if (pause.reason() == StreamedMusicPort.PAUSE_APP
                         || pause.reason() == StreamedMusicPort.PAUSE_REWIND) {
@@ -407,6 +434,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         }
         StreamedMusicPort active = streamedMusicPort;
         streamedMusicPort = StreamedMusicPort.EMPTY;
+        clearStreamedOneShots();
         streamedGlobalPauseMask = 0;
         if (active != StreamedMusicPort.EMPTY) {
             active.stop();
@@ -947,6 +975,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         // processed buffer in updateStream); PerformanceProfiler accumulates section time.
         int sampleRate;
         boolean mixStreamed;
+        boolean mixOneShots;
         synchronized (streamLock) {
             beginProfileSection("audio.music_stream");
             try {
@@ -1002,10 +1031,13 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 sampleRate = currentStream == null && streamedActive
                         ? streamedRate
                         : (int) Math.round(getStreamSampleRate());
+                mixOneShots = !runtimePresentation && reverseCursor == null;
             } finally {
                 endProfileSection("audio.sfx_stream");
             }
         }
+
+        if (mixOneShots) mixStreamedOneShots(streamData, STREAM_BUFFER_SIZE);
 
         // Keep DirectBuffer/OpenAL operations outside lock to minimize contention
         beginProfileSection("audio.upload");
@@ -1035,6 +1067,9 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     /** True when the device pump has presentation PCM to queue or refill. */
     protected boolean hasPresentationWork() {
         boolean streamedWork = streamedMusicPort.hasSource();
+        synchronized (streamedOneShotLock) {
+            streamedWork |= !streamedOneShots.isEmpty();
+        }
         synchronized (streamLock) {
             return reverseCursor != null || currentStream != null || sfxStream != null
                     || runtimeProvidesPresentationPcm() || streamedWork;
@@ -1373,7 +1408,12 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
     @Override
     public void beginReversePresentation() {
-        enqueueStreamedPause(StreamedMusicPort.PAUSE_REWIND, true);
+        synchronized (streamedPortTransitionLock) {
+            pendingStreamedTransitions.removeIf(PlayNamespacedSfx.class::isInstance);
+            pendingStreamedTransitions.addLast(
+                    new SetStreamedPause(StreamedMusicPort.PAUSE_REWIND, true));
+        }
+        clearStreamedOneShots();
         synchronized (streamLock) {
             reverseCursor = pcmHistory != null ? pcmHistory.createReverseCursor() : null;
             if (reverseCursor != null) {
@@ -1473,6 +1513,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         }
         // Stop and cleanup WAV-based SFX sources
         hookStopAndDeleteWavSfxSources();
+        clearStreamedOneShots();
     }
 
     @Override
@@ -1703,6 +1744,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
     @Override
     public void stopAllSfx() {
+        clearStreamedOneShots();
         // Stop SFX sequencers in the active music driver (mixed into currentStream)
         if (smpsDriver != null) {
             smpsDriver.stopAllSfx();
@@ -1716,6 +1758,27 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             if (runtimeProvidesPresentationPcm()) {
                 deterministicAudioRuntime.clearSfxStream();
             }
+        }
+    }
+
+    private void mixStreamedOneShots(short[] output, int frames) {
+        synchronized (streamedOneShotLock) {
+            var iterator = streamedOneShots.iterator();
+            while (iterator.hasNext()) {
+                StreamedMusicPort.OneShot cursor = iterator.next();
+                cursor.mixInto(output, frames);
+                if (cursor.complete()) {
+                    iterator.remove();
+                    cursor.close();
+                }
+            }
+        }
+    }
+
+    private void clearStreamedOneShots() {
+        synchronized (streamedOneShotLock) {
+            StreamedMusicPort.OneShot cursor;
+            while ((cursor = streamedOneShots.pollFirst()) != null) cursor.close();
         }
     }
 

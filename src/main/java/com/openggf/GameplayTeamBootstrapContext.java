@@ -3,6 +3,7 @@ package com.openggf;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.CharacterAvailability;
 import com.openggf.game.GameModule;
+import com.openggf.game.StockGameDataSources;
 import com.openggf.game.PlayableCharacterRegistry;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplaySessionFactory;
@@ -41,7 +42,8 @@ final class GameplayTeamBootstrapContext {
                                     Consumer<GameplayModeContext> publishMode) throws java.io.IOException {
         Objects.requireNonNull(publishMode, "publishMode");
         GameplayModeContext gameplayMode = SessionManager.openGameplaySession(
-                rootModule, module, null);
+                rootModule, module,
+                StockGameDataSources.pinned(engineServices.roms().getRom(), rootModule), null);
         GameplaySessionFactory.attachManagers(gameplayMode, engineServices);
         SpriteManager sprites = gameplayMode.getSpriteManager();
         PlayableCharacterRegistry characters = gameplayMode.getWorldSession()

@@ -71,7 +71,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         private static final Logger LOGGER = Logger.getLogger(AbstractPlayableSprite.class.getName());
 
         @RewindTransient(reason = "character registry identity is immutable structural state")
-        private final CharacterKey boundCharacterKey;
+        final CharacterKey boundCharacterKey;
+
+        @RewindTransient(reason = "character callback boundary is immutable structural state")
+        private final com.openggf.game.CharacterConstructionScope.CallbackInvoker characterCallbackInvoker;
 
         @RewindTransient(reason = "playable controller is structural; mutable controller state is captured explicitly")
         protected final PlayableSpriteController controller;
@@ -1558,6 +1561,19 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public SecondaryAbility getSecondaryAbility() {
                 return SecondaryAbility.NONE;
+        }
+
+        /**
+         * Pre-dispatch hook for a valid airborne ability-button activation.
+         * Returning true consumes the press before the built-in ability dispatch.
+         */
+        protected boolean onAbilityActivate(boolean up, boolean down, boolean left, boolean right) {
+                return false;
+        }
+
+        final boolean dispatchAbilityActivate(boolean up, boolean down, boolean left, boolean right) {
+                return com.openggf.game.CharacterConstructionScope.invoke(characterCallbackInvoker,
+                        () -> onAbilityActivate(up, down, left, right));
         }
 
         public void setSuperSonic(boolean superSonic) {
@@ -3604,6 +3620,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected AbstractPlayableSprite(String code, short x, short y) {
                 super(code, x, y);
                 boundCharacterKey = PlayableCharacterIdentity.bindForConstruction(this);
+                characterCallbackInvoker = com.openggf.game.CharacterConstructionScope
+                        .captureCallbackInvoker();
                 // Must define speeds before creating Manager (it will read speeds upon
                 // instantiation).
                 defineSpeeds();

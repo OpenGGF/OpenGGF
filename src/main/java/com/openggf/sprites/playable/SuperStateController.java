@@ -50,7 +50,7 @@ public abstract class SuperStateController {
     }
 
     public void debugActivate() {
-        if (state != SuperState.NORMAL) return;
+        if (state != SuperState.NORMAL || !transformationSupported()) return;
         player.addRings(50);
         startTransformation();
         LOGGER.info("Debug: Super Sonic transformation started");
@@ -62,7 +62,7 @@ public abstract class SuperStateController {
      * emerald checks; this entry point deliberately does not add rings.
      */
     public boolean activateFromMonitor() {
-        if (state != SuperState.NORMAL || player.isSuperSonic()
+        if (!transformationSupported() || state != SuperState.NORMAL || player.isSuperSonic()
                 || player.getDead() || player.isHurt() || player.isDebugMode()) {
             return false;
         }
@@ -175,6 +175,18 @@ public abstract class SuperStateController {
         return 0x1F;
     }
 
+    /** Character-roster eligibility gate shared by every transformation entry point. */
+    private boolean transformationSupported() {
+        com.openggf.game.CharacterKey key = player.boundCharacterKey;
+        if (key == null) return false;
+        if (key.isBuiltin()) return true;
+        com.openggf.game.session.WorldSession world =
+                com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        return world != null && world.getPlayableCharacterRegistry().find(key)
+                .map(com.openggf.game.CharacterDefinition::supportsSuperForm)
+                .orElse(false);
+    }
+
     // --- Core logic ---
     private void checkTransformationTrigger() {
         if (!canTransform()) return;
@@ -184,6 +196,7 @@ public abstract class SuperStateController {
     }
 
     private boolean canTransform() {
+        if (!transformationSupported()) return false;
         if (player.isSuperSonic()) return false;
         if (!player.currentGameState().hasAllEmeralds()) return false;
         if (player.getRingCount() < getMinRingsToTransform()) return false;

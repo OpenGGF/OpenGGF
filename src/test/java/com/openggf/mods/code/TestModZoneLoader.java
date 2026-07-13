@@ -139,6 +139,7 @@ class TestModZoneLoader {
                 new com.openggf.level.Pattern[0], List.of(), 1, 8, 0, 0);
 
         var level = ModZoneLoader.load(prepared, sheet);
+        assertInstanceOf(com.openggf.game.sonic2.Sonic2Level.class, level);
         assertEquals(0x40, level.getZoneIndex());
         assertEquals(1, level.getPatternCount());
         assertEquals(2, level.getObjects().size());
@@ -146,6 +147,51 @@ class TestModZoneLoader {
         assertEquals("alpha:badnik", level.getObjects().getLast().objectKey());
         assertEquals("alpha", level.getObjects().getLast().ownerModId());
         assertEquals(7, level.getRings().getFirst().placementId());
+    }
+
+    @Test
+    void standaloneLoaderBuildsRomFreeGenericLevelsAndRejectsStockObjectIds() throws Exception {
+        ModLevelDefinition base = minimalDefinition();
+        ModLevelDefinition.Music namespaced = new ModLevelDefinition.TrackMusic(
+                new com.openggf.mods.TrackKey("alpha", "zone-theme"));
+        ModLevelDefinition keyedOnly = copyWith(base, 8, base.blockBytes(),
+                List.of(base.objects().getLast()), namespaced);
+        PreparedModZone preparedEight = PreparedModZone.prepared("alpha",
+                new ModZoneContribution("eight", new BakedLevelRef("level.json"), "mtz3", null),
+                keyedOnly);
+        var sheet = new com.openggf.level.rings.RingSpriteSheet(
+                new com.openggf.level.Pattern[0], List.of(), 1, 8, 0, 0);
+
+        var eight = ModZoneLoader.loadStandalone(preparedEight, sheet);
+        assertInstanceOf(com.openggf.level.ModLevel.class, eight);
+        assertEquals(8, eight.getChunksPerBlockSide());
+        assertEquals(128, eight.getBlockPixelSize());
+        assertEquals("alpha:badnik", eight.getObjects().getFirst().objectKey());
+
+        ModLevelDefinition sixteen = copyWith(base, 16, new byte[512],
+                List.of(base.objects().getLast()), namespaced);
+        PreparedModZone preparedSixteen = PreparedModZone.prepared("alpha",
+                new ModZoneContribution("sixteen", new BakedLevelRef("level.json"), "mtz3", null),
+                sixteen);
+        var loadedSixteen = ModZoneLoader.loadStandalone(preparedSixteen, sheet);
+        assertEquals(16, loadedSixteen.getChunksPerBlockSide());
+        assertEquals(256, loadedSixteen.getBlockPixelSize());
+        assertEquals(16, loadedSixteen.getBlock(0).getGridSide());
+
+        ModLevelDefinition withStockObject = copyWith(base, 8, base.blockBytes(),
+                base.objects(), namespaced);
+        PreparedModZone withStock = PreparedModZone.prepared("alpha",
+                new ModZoneContribution("stock", new BakedLevelRef("level.json"), "mtz3", null),
+                withStockObject);
+        assertThrows(java.io.IOException.class,
+                () -> ModZoneLoader.loadStandalone(withStock, sheet));
+        ModLevelDefinition withStockMusic = copyWith(base, 8, base.blockBytes(),
+                List.of(base.objects().getLast()), base.music());
+        PreparedModZone stockMusic = PreparedModZone.prepared("alpha",
+                new ModZoneContribution("music", new BakedLevelRef("level.json"), "mtz3", null),
+                withStockMusic);
+        assertThrows(java.io.IOException.class,
+                () -> ModZoneLoader.loadStandalone(stockMusic, sheet));
     }
 
     @Test
@@ -163,6 +209,20 @@ class TestModZoneLoader {
         var sheet = new com.openggf.level.rings.RingSpriteSheet(
                 new com.openggf.level.Pattern[0], List.of(), 1, 8, 0, 0);
         assertThrows(java.io.IOException.class, () -> ModZoneLoader.load(prepared, sheet));
+    }
+
+    private static ModLevelDefinition copyWith(ModLevelDefinition base, int blockGridSide,
+                                               byte[] blocks,
+                                               List<ModLevelDefinition.ObjectEntry> objects,
+                                               ModLevelDefinition.Music music) {
+        return new ModLevelDefinition(base.formatVersion(), base.zoneName(), base.zoneIndex(),
+                base.levelIndex(), blockGridSide, base.width(), base.height(), base.bounds(),
+                base.start(), music, objects, base.rings(), base.patternBytes(),
+                base.chunkBytes(), blocks, base.foregroundMap(), base.backgroundMap().orElse(null),
+                base.solidHeights(), base.solidWidths(), base.solidAngles(),
+                base.primaryCollisionIndices(), base.secondaryCollisionIndices(),
+                base.paletteLines(), base.patternCount(), base.chunkCount(), base.blockCount(),
+                base.solidProfileCount());
     }
 
     @Test

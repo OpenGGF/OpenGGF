@@ -5,7 +5,6 @@ import java.nio.file.Path;
 import java.nio.file.InvalidPathException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -74,10 +73,33 @@ public final class GgfModCli {
 
     private static int convert(String[] args, PrintStream output) throws IOException {
         if (args.length < 2) return usage(output);
-        Map<String,String> flags = flags(args, 2);
+        int playableCount = 0;
+        int playableIndex = -1;
+        for (int i = 2; i < args.length; i++) {
+            if ("--playable".equals(args[i])) {
+                playableCount++;
+                playableIndex = i;
+            }
+        }
+        boolean playable = "art".equals(args[1]) && playableCount == 1 && playableIndex == 2;
+        if (playableCount > 0 && !playable) {
+            throw new IllegalArgumentException(
+                    "Invalid --playable placement; use it once immediately after 'convert art'");
+        }
+        String[] normalized = playable ? removeArgument(args, 2) : args;
+        Map<String,String> flags = flags(normalized, 2);
         switch (args[1]) {
-            case "art" -> new ArtConverter().convert(path(flags, "--image"), path(flags, "--sheet"),
-                    path(flags, "--out"));
+            case "art" -> {
+                if (playable) {
+                    var result = new PlayableArtConverter().convert(path(flags, "--image"),
+                            path(flags, "--sheet"), path(flags, "--out"));
+                    output.println("WARNING generated trivial full-frame DPLC runs; bank cost="
+                            + result.bankSize() + " patterns");
+                } else {
+                    new ArtConverter().convert(path(flags, "--image"), path(flags, "--sheet"),
+                            path(flags, "--out"));
+                }
+            }
             case "level" -> new LevelConverter().convert(path(flags, "--from-export"), path(flags, "--out"));
             case "audio" -> new AudioConverter().convert(required(flags, "--owner"),
                     path(flags, "--manifest"), path(flags, "--root"), path(flags, "--out"));
@@ -85,6 +107,13 @@ public final class GgfModCli {
         }
         output.println("Conversion completed");
         return 0;
+    }
+
+    private static String[] removeArgument(String[] args, int index) {
+        String[] result = new String[args.length - 1];
+        System.arraycopy(args, 0, result, 0, index);
+        System.arraycopy(args, index + 1, result, index, args.length - index - 1);
+        return result;
     }
 
     private static int init(String[] args, PrintStream output) throws IOException {
@@ -145,7 +174,7 @@ public final class GgfModCli {
 
     private static int usage(PrintStream output) {
         output.println("Usage: ggfmod validate <mod.jar> | init <dir> --id <id> --package <java.pkg>");
-        output.println("       ggfmod convert art --image <png> --sheet <yaml> --out <ggfs>");
+        output.println("       ggfmod convert art [--playable] --image <png> --sheet <yaml> --out <ggfs|ggfp>");
         output.println("       ggfmod convert level --from-export <dir> --out <dir>");
         output.println("       ggfmod convert audio --owner <id> --manifest <yaml> --root <dir> --out <dir>");
         output.println("       ggfmod package --input <classes/resources> --out <jar> | run <build-output>");

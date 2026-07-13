@@ -4,6 +4,7 @@ import com.openggf.io.ModInputLimits;
 import com.openggf.mods.ModAudioAssetValidation;
 import com.openggf.mods.ModAudioManifest;
 import com.openggf.mods.ModAudioManifestParser;
+import com.openggf.mods.ModAudioSfx;
 import com.openggf.mods.ModAudioTrack;
 import com.openggf.mods.ModManifestException;
 
@@ -37,13 +38,18 @@ public final class AudioConverter {
         } catch (ModManifestException error) {
             throw new IOException("Invalid audio manifest: " + error.getMessage(), error);
         }
-        if (!parsed.sfx().isEmpty()) throw new IllegalArgumentException("Streamed SFX are not supported");
         LinkedHashMap<Path,byte[]> assets = new LinkedHashMap<>();
         for (ModAudioTrack track : parsed.tracks()) {
             Path asset = requireContainedFile(root, root.resolve(track.assetPath()));
             byte[] encoded = readBounded(asset, limits.maxAssetBytes());
             ModAudioAssetValidation.decodeAndValidate(track, encoded, limits);
             assets.put(asset,encoded);
+        }
+        for (ModAudioSfx sfx : parsed.sfx()) {
+            Path asset = requireContainedFile(root, root.resolve(sfx.assetPath()));
+            byte[] encoded = readBounded(asset, limits.maxAssetBytes());
+            ModAudioAssetValidation.decodeAndValidate(sfx, encoded, limits);
+            assets.put(asset, encoded);
         }
 
         Path target = Objects.requireNonNull(outputRoot, "outputRoot").toAbsolutePath().normalize();
@@ -62,7 +68,7 @@ public final class AudioConverter {
             Path canonical=staging.resolve("audio/audio-manifest.yaml");Files.createDirectories(canonical.getParent());
             Files.write(canonical,new ModAudioManifestParser(ownerId,limits).writeCanonical(parsed));
             Files.move(staging, target);
-            return new Result(target, parsed.tracks().size());
+            return new Result(target, parsed.tracks().size(), parsed.sfx().size());
         } catch (IOException | RuntimeException failure) {
             deleteTree(staging, failure); throw failure;
         }
@@ -93,5 +99,9 @@ public final class AudioConverter {
         if(!Files.exists(root))return;try(var paths=Files.walk(root)){for(Path path:paths.sorted(Comparator.reverseOrder()).toList())Files.deleteIfExists(path);}
         catch(IOException cleanup){failure.addSuppressed(cleanup);}
     }
-    public record Result(Path output,int trackCount){}
+    public record Result(Path output,int trackCount,int sfxCount){
+        public Result(Path output, int trackCount) {
+            this(output, trackCount, 0);
+        }
+    }
 }

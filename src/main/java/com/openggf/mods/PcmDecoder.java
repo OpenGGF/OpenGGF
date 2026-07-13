@@ -19,17 +19,30 @@ public class PcmDecoder {
     PcmDecoder(AllocationProbe probe) { this.probe = Objects.requireNonNull(probe, "probe"); }
 
     public PcmData decode(String assetPath, byte[] encoded, ModInputLimits limits) throws IOException {
+        return decode(assetPath, encoded, limits, limits.maxAudioTrackPcmBytes(),
+                limits.maxAudioTrackSeconds(), "track");
+    }
+
+    public PcmData decodeSfx(String assetPath, byte[] encoded, ModInputLimits limits) throws IOException {
+        Objects.requireNonNull(limits, "limits");
+        return decode(assetPath, encoded, limits, limits.maxSfxPcmBytes(),
+                limits.maxSfxSeconds(), "SFX");
+    }
+
+    private PcmData decode(String assetPath, byte[] encoded, ModInputLimits limits,
+                           long maxPcmBytes, int maxSeconds, String limitName) throws IOException {
         Objects.requireNonNull(assetPath, "assetPath");
         Objects.requireNonNull(encoded, "encoded");
         Objects.requireNonNull(limits, "limits");
         String lower = assetPath.toLowerCase(Locale.ROOT);
-        if (lower.endsWith(".ogg")) return ogg.decode(encoded, limits);
+        if (lower.endsWith(".ogg")) return ogg.decode(encoded, limits, maxPcmBytes, maxSeconds, limitName);
         if (!lower.endsWith(".wav")) throw new IOException("Unsupported audio asset extension");
-        WavPcmDecoder.Result wav = WavPcmDecoder.decode(encoded, limits.maxAudioTrackPcmBytes(),
-                limits.maxAudioTrackSeconds(), limits.maxAudioCacheBytes());
+        WavPcmDecoder.Result wav = WavPcmDecoder.decode(encoded, maxPcmBytes,
+                maxSeconds, limits.maxAudioCacheBytes());
         int samples = wav.data().length / (wav.bitsPerSample() / 8);
         long normalizedBytes = Math.multiplyExact((long) samples, Short.BYTES);
-        validateMetadata(wav.sampleRate(), wav.channels(), normalizedBytes, encoded.length, limits);
+        validateMetadata(wav.sampleRate(), wav.channels(), normalizedBytes, encoded.length, limits,
+                maxPcmBytes, maxSeconds, limitName);
         probe.beforeJavaPcmAllocation(normalizedBytes);
         short[] normalized = new short[samples];
         if (wav.bitsPerSample() == 8) {
@@ -48,16 +61,23 @@ public class PcmDecoder {
 
     static void validateMetadata(int rate, int channels, long pcmBytes, long encodedBytes,
                                  ModInputLimits limits) throws IOException {
+        validateMetadata(rate, channels, pcmBytes, encodedBytes, limits,
+                limits.maxAudioTrackPcmBytes(), limits.maxAudioTrackSeconds(), "track");
+    }
+
+    static void validateMetadata(int rate, int channels, long pcmBytes, long encodedBytes,
+                                 ModInputLimits limits, long maxPcmBytes, int maxSeconds,
+                                 String limitName) throws IOException {
         if (rate < limits.minAudioSampleRate() || rate > limits.maxAudioSampleRate()) {
             throw new IOException("Audio sample rate is outside configured limits");
         }
         if (channels < limits.minAudioChannels() || channels > limits.maxAudioChannels()) {
             throw new IOException("Audio channels are outside configured limits");
         }
-        if (pcmBytes <= 0 || pcmBytes > limits.maxAudioTrackPcmBytes()) throw new IOException("Decoded PCM exceeds track limit");
+        if (pcmBytes <= 0 || pcmBytes > maxPcmBytes) throw new IOException("Decoded PCM exceeds " + limitName + " limit");
         long frames = pcmBytes / (channels * (long) Short.BYTES);
-        if (frames > Math.multiplyExact((long) rate, limits.maxAudioTrackSeconds())) {
-            throw new IOException("Decoded audio exceeds duration limit");
+        if (frames > Math.multiplyExact((long) rate, maxSeconds)) {
+            throw new IOException("Decoded audio exceeds " + limitName + " duration limit");
         }
         long javaPcmBytes = pcmBytes;
         long encodedHeapAndDirect = Math.multiplyExact(encodedBytes, 2L);

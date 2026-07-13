@@ -362,6 +362,11 @@ public class DelegatingGameModule implements GameModule {
     }
 
     @Override
+    public String getGameCode() {
+        return base.getGameCode();
+    }
+
+    @Override
     public int explosionInitialAnimDuration() {
         return base.explosionInitialAnimDuration();
     }

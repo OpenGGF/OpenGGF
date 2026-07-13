@@ -790,6 +790,7 @@ public class Engine {
 	 */
 	public void initializeGame() {
 		GameModule rootModule;
+		GameDataSource dataSource;
 		try {
 			Rom rom = romManager.getRom();
 			var detectedModule = romDetectionService.detectAndCreateModule(rom);
@@ -798,6 +799,7 @@ public class Engine {
 				return;
 			}
 			rootModule = detectedModule.orElseThrow();
+			dataSource = StockGameDataSources.pinned(rom, rootModule);
 		} catch (IOException e) {
 			showStartupRomError("Failed to load ROM during game initialization: " + e.getMessage());
 			return;
@@ -809,7 +811,8 @@ public class Engine {
 		if (!preparePresentationForLaunch(module)) {
 			return;
 		}
-		GameplayModeContext gameplayMode = SessionManager.openGameplaySession(rootModule, module, null);
+		GameplayModeContext gameplayMode = SessionManager.openGameplaySession(
+				rootModule, module, dataSource, null);
 		initializeGameplayRuntime(gameplayMode, true);
 		boolean generationRan = maybeGenerateDonatedDataSelectImagesBeforeStartupMode(module);
 		if (generationRan) {
@@ -819,12 +822,70 @@ public class Engine {
 			// Reset GPU state (pattern atlas + palette textures) and rebuild
 			// the gameplay mode so everything starts from a clean slate.
 			graphicsManager.resetPatternAndPaletteState();
-			gameplayMode = SessionManager.openGameplaySession(rootModule, module, null);
+			gameplayMode = SessionManager.openGameplaySession(
+					rootModule, module, dataSource, null);
 			initializeGameplayRuntime(gameplayMode, false);
 		} else {
 			graphicsManager.runPendingRenderThreadTasks();
 		}
 		enterConfiguredStartupMode();
+	}
+
+	/** Detection-free boot for one effective standalone descriptor. */
+	void initializeStandaloneGame(com.openggf.mods.ModDescriptor descriptor) {
+		Objects.requireNonNull(descriptor, "descriptor");
+		try {
+			GameplayModeContext gameplay = openStandaloneSession(descriptor);
+			GameModule module = gameplay.getWorldSession().getGameModule();
+			pinStandaloneDefaultTeam(module);
+			if (!preparePresentationForLaunch(module, true)) return;
+			initializeGameplayRuntime(gameplay, true);
+			loadDefaultStartingLevel(false);
+			gameLoop.setGameMode(GameMode.LEVEL);
+		} catch (com.openggf.mods.code.ModFaultBoundary.CallbackAborted aborted) {
+			LOGGER.log(java.util.logging.Level.SEVERE,
+					"Standalone mod callback aborted launch", aborted);
+			showStandaloneLaunchError();
+		} catch (IOException | RuntimeException failure) {
+			LOGGER.log(java.util.logging.Level.SEVERE, "Standalone mod launch failed", failure);
+			showStandaloneLaunchError();
+		}
+	}
+
+	/** Package-visible no-render standalone session seam for headless integration tests. */
+	GameplayModeContext openStandaloneSession(com.openggf.mods.ModDescriptor descriptor)
+			throws IOException {
+		Objects.requireNonNull(descriptor, "descriptor");
+		if (descriptor.manifest().type() != com.openggf.mods.ModType.STANDALONE) {
+			throw new IllegalArgumentException("Descriptor is not standalone");
+		}
+		String owner = descriptor.manifest().id();
+		com.openggf.mods.ModDescriptor retained = modRuntime.standaloneDescriptor(owner);
+		if (!retained.sha256().equals(descriptor.sha256())
+				|| !retained.manifest().equals(descriptor.manifest())) {
+			throw new IllegalArgumentException("Standalone descriptor does not match runtime snapshot");
+		}
+		GameModule module = modRuntime.prepareStandaloneModule(owner).orElseThrow(() ->
+				new com.openggf.mods.code.ModRegistrationException(owner,
+						"Standalone registration did not publish a module"));
+		ModSubsystem.current().recordRegistrationFailures(modRuntime.registrationFailures());
+		GameDataSource source = new ModAssetDataSource(
+				owner, modRuntime.standaloneAssetSnapshot(owner));
+		return com.openggf.tools.HeadlessGameBoot.openStandaloneSessionForBoot(
+				EngineServices.current(), module, source);
+	}
+
+	private void pinStandaloneDefaultTeam(GameModule module) {
+		PlayableCharacterRegistry registry = module.getPlayableCharacterRegistry();
+		configService.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,
+				standaloneDefaultCharacter(registry).persisted());
+		configService.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+	}
+
+	static CharacterKey standaloneDefaultCharacter(PlayableCharacterRegistry registry) {
+		return Objects.requireNonNull(registry, "registry").definitions().keySet().stream()
+				.findFirst().orElseThrow(() ->
+						new IllegalStateException("Standalone module has no playable character"));
 	}
 
 	GameModule resolveInitialModuleForLaunch(GameModule rootModule) {
@@ -908,6 +969,11 @@ public class Engine {
 		masterTitleScreen.showModLaunchError(
 				configService.getString(SonicConfiguration.DEFAULT_ROM));
 		gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+	}
+
+	void showStandaloneLaunchError() {
+		SessionManager.closeGameplaySession();
+		showModLaunchError();
 	}
 
 	private void showStartupRomError(String message) {
@@ -1244,7 +1310,15 @@ public class Engine {
 	}
 
 	private MasterTitleScreen createMasterTitleScreen() {
-		MasterTitleScreen screen = new MasterTitleScreen(configService);
+		ModuleResolutionService.LaunchPolicy policy =
+				configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
+						? ModuleResolutionService.LaunchPolicy.DETERMINISTIC
+						: ModuleResolutionService.LaunchPolicy.STANDARD;
+		ModuleResolutionService.PreparedLaunch preparedLaunch =
+				moduleResolutionService.prepareLaunch(policy);
+		MasterTitleScreen screen = new MasterTitleScreen(configService,
+				new com.openggf.game.launch.LaunchProfileStore(
+						configService, moduleResolutionService, preparedLaunch));
 		if (ModSubsystem.current().policy().mayScanAtBoot()) {
 			screen.setModManagerScreenFactory(font -> ModSubsystem.current().createManager(font));
 		}
@@ -1252,6 +1326,10 @@ public class Engine {
 	}
 
 	private boolean preparePresentationForLaunch(GameModule module) {
+		return preparePresentationForLaunch(module, false);
+	}
+
+	private boolean preparePresentationForLaunch(GameModule module, boolean standalone) {
 		try {
 			if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
 				audioManager.setBackendForLaunch(new LWJGLAudioBackend(configService, profiler));
@@ -1259,15 +1337,15 @@ public class Engine {
 			ModSubsystem subsystem = ModSubsystem.current();
 			if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)
 					&& subsystem.policy().mayUseInSession()) {
-				subsystem.beginNormalSession(audioManager.outputSampleRate(),
-						module.getGameId().code());
+				subsystem.beginNormalSession(audioManager.outputSampleRate(), module.getGameCode());
 			}
 			return true;
 		} catch (RuntimeException error) {
 			LOGGER.severe("Failed to prepare external presentation content: " + error.getMessage());
 			ModSubsystem.current().returnToTitle();
 			audioManager.resetState();
-			showStartupRomError("Failed to initialize audio or mod presentation content.");
+			if (standalone) showStandaloneLaunchError();
+			else showStartupRomError("Failed to initialize audio or mod presentation content.");
 			return false;
 		}
 	}
@@ -1312,8 +1390,8 @@ public class Engine {
 		}
 	}
 
-	private void loadDefaultStartingLevel(boolean requireRom) {
-		if (!requireRom && !romManager.isRomAvailable()) {
+	void loadDefaultStartingLevel(boolean requireRom) {
+		if (requireRom && !romManager.isRomAvailable()) {
 			return;
 		}
 		try {
@@ -1357,6 +1435,7 @@ public class Engine {
 			List<String> availableCharacters,
 			ModuleResolutionService.PreparedLaunch preparedLaunch) {
 		GameModule rootModule = SessionManager.getCurrentWorldSession().rootGameModule();
+		GameDataSource dataSource = SessionManager.getCurrentWorldSession().getDataSource();
 		String gameId = rootModule.getGameId().code();
 		com.openggf.game.save.SaveSessionContext sanitized =
 				GameplayTeamAvailability.sanitizeForLaunch(
@@ -1369,7 +1448,8 @@ public class Engine {
 		if (resolvedModule == null) {
 			return null;
 		}
-		return SessionManager.openGameplaySession(rootModule, resolvedModule, sanitized);
+		return SessionManager.openGameplaySession(
+				rootModule, resolvedModule, dataSource, sanitized);
 	}
 
 	/**
@@ -1397,6 +1477,7 @@ public class Engine {
 		resetForGameplayFromMasterTitle();
 
 		GameModule rootModule;
+		GameDataSource dataSource;
 		try {
 			Rom rom = romManager.getRom();
 			var detectedModule = romDetectionService.detectAndCreateModule(rom);
@@ -1405,6 +1486,7 @@ public class Engine {
 				return;
 			}
 			rootModule = detectedModule.orElseThrow();
+			dataSource = StockGameDataSources.pinned(rom, rootModule);
 		} catch (IOException e) {
 			showStartupRomError("Failed to load ROM for time attack launch: " + e.getMessage());
 			return;
@@ -1420,7 +1502,7 @@ public class Engine {
 			return;
 		}
 		GameplayModeContext gameplay = SessionManager.openGameplaySession(
-				rootModule, module, saveContext);
+				rootModule, module, dataSource, saveContext);
 		initializeGameplayRuntime(gameplay, false);
 		loadLevelFromDataSelect(request.zone(), request.act());
 		gameLoop.setGameMode(GameMode.LEVEL);
@@ -1831,11 +1913,7 @@ public class Engine {
 			GameModule module,
 			com.openggf.game.dataselect.DataSelectAction action,
 			SaveManager saveManager) {
-		String gameCode = switch (module.getGameId()) {
-			case S1 -> "s1";
-			case S2 -> "s2";
-			case S3K -> "s3k";
-		};
+		String gameCode = module.getGameCode();
 		Map<String, Object> payload = loadDataSelectPayload(module, action, saveManager);
 		SelectedTeam team = payload == null ? action.team() : teamFromPayload(payload, action.team());
 		com.openggf.game.save.SaveSessionContext context =
@@ -1860,11 +1938,7 @@ public class Engine {
 		return switch (action.type()) {
 			case LOAD_SLOT, CLEAR_RESTART -> {
 				try {
-					String gameCode = switch (module.getGameId()) {
-						case S1 -> "s1";
-						case S2 -> "s2";
-						case S3K -> "s3k";
-					};
+					String gameCode = module.getGameCode();
 					SaveSlotSummary summary = saveManager.readSlotSummary(gameCode, action.slot());
 					yield summary.isLoadable() ? summary.payload() : null;
 				} catch (IOException e) {

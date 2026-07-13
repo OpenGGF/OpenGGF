@@ -127,7 +127,9 @@ class TestModEngineWiringSeams {
     void engineInstallsRealManagerFactoryAndClearsSessionBeforeAudioReset() throws IOException {
         String source = source("Engine.java");
         assertMethodOrder(source, "private MasterTitleScreen createMasterTitleScreen()",
-                "new MasterTitleScreen(configService)", "setModManagerScreenFactory(");
+                "moduleResolutionService.prepareLaunch(", "new MasterTitleScreen(configService,");
+        assertMethodOrder(source, "private MasterTitleScreen createMasterTitleScreen()",
+                "new MasterTitleScreen(configService,", "setModManagerScreenFactory(");
         assertMethodOrder(source, "private void resetForGameplayFromMasterTitle()",
                 "ModSubsystem.current().returnToTitle()", "audioManager.resetState()");
     }

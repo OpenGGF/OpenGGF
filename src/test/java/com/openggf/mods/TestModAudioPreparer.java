@@ -142,6 +142,27 @@ class TestModAudioPreparer {
     }
 
     @Test
+    void sharedTrackCacheCannotBypassOneShotDurationLimit() throws Exception {
+        ModDescriptor owner = descriptor("shared-limit", List.of(), Map.of(
+                "audio/shared.wav", wav(8_000, new short[8_001])));
+        ModTrackRegistry tracks = new ModTrackRegistry(List.of(
+                track("shared-limit", "music", "audio/shared.wav", false, 0, OptionalLong.empty())));
+        ModSfxRegistry sfx = new ModSfxRegistry(List.of(new ModAudioSfx(
+                new SfxKey("shared-limit", "effect"), "audio/shared.wav", 1)));
+        ModInputLimits limits = ModInputLimits.loweringBuilder().maxSfxSeconds(1).build();
+        ModAudioPreparer preparer = new ModAudioPreparer(root(), limits,
+                new ModRuntimeFindingStore(), new RecordingSink(new ModStateSaveResult.Saved()));
+
+        PreparedAudioSession session = preparer.prepare(
+                new EffectiveModCatalog(List.of(owner)), tracks, sfx, 8_000);
+
+        assertEquals(Set.of("shared-limit"), session.failedOwners());
+        assertTrue(session.tracks().isEmpty(), "owner-atomic failure removes the cached track too");
+        assertTrue(session.sfx().isEmpty());
+        assertTrue(session.findings().stream().anyMatch(f -> f.message().contains("SFX duration")));
+    }
+
+    @Test
     void multipleDirectFailuresCloseDiamondDeterministicallyWithOneDisableSaveCall() throws Exception {
         ModDescriptor brokenA = descriptor("broken-a", List.of(), Map.of("audio/a.ogg", new byte[] {1}));
         ModDescriptor brokenB = descriptor("broken-b", List.of(), Map.of("audio/b.ogg", new byte[] {2}));

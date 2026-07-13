@@ -38,7 +38,7 @@ public final class RuntimePresenceSnapshotProvider implements PresenceSnapshotPr
             return PresenceSnapshot.menu();
         }
 
-        String gameName = displayGameName(world.getGameModule().getGameId());
+        String gameName = displayGameName(world.getGameModule());
         String zoneName = world.getGameModule().getZoneRegistry()
                 .getZoneName(world.getCurrentZone());
         int actNumber = world.getApparentAct() + 1;
@@ -80,14 +80,15 @@ public final class RuntimePresenceSnapshotProvider implements PresenceSnapshotPr
             return null;
         }
         GameModule module = GameServices.currentOrBootstrapGameModule();
-        return module != null ? displayGameName(module.getGameId()) : null;
+        return module != null ? displayGameName(module) : null;
     }
 
-    private static String displayGameName(GameId gameId) {
-        return switch (gameId) {
+    private static String displayGameName(GameModule module) {
+        return switch (module.getGameId()) {
             case S1 -> "Sonic the Hedgehog";
             case S2 -> "Sonic 2";
             case S3K -> "Sonic 3 & Knuckles";
+            case STANDALONE -> module.getGameCode();
         };
     }
 

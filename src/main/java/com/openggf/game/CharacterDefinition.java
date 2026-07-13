@@ -20,7 +20,20 @@ public record CharacterDefinition(
         PlayerCharacter behavesLike,
         SecondaryAbility secondaryAbility,
         boolean supportsSuperForm,
-        ArtSupplier artSupplier) {
+        ArtSupplier artSupplier,
+        PaletteSupplier paletteSupplier) {
+
+    /** Compatibility constructor for definitions that rely on the host-game palette. */
+    public CharacterDefinition(CharacterKey key, String displayName,
+                               PlayableFactory spriteFactory,
+                               RespawnStrategyFactory respawnStrategyFactory,
+                               PlayerCharacter behavesLike,
+                               SecondaryAbility secondaryAbility,
+                               boolean supportsSuperForm,
+                               ArtSupplier artSupplier) {
+        this(key, displayName, spriteFactory, respawnStrategyFactory, behavesLike,
+                secondaryAbility, supportsSuperForm, artSupplier, null);
+    }
 
     public CharacterDefinition {
         Objects.requireNonNull(key, "key");
@@ -55,5 +68,12 @@ public record CharacterDefinition(
     @FunctionalInterface
     public interface ArtSupplier {
         SpriteArtSet load(String persistedCode) throws IOException;
+    }
+
+    /** Optional character palette source; null retains the host-game fallback. */
+    @ModApi
+    @FunctionalInterface
+    public interface PaletteSupplier {
+        com.openggf.level.Palette load(String persistedCode) throws IOException;
     }
 }

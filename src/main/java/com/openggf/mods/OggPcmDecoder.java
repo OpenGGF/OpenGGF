@@ -25,6 +25,12 @@ public final class OggPcmDecoder {
     }
 
     public PcmData decode(byte[] encoded, ModInputLimits limits) throws IOException {
+        return decode(encoded, limits, limits.maxAudioTrackPcmBytes(),
+                limits.maxAudioTrackSeconds(), "track");
+    }
+
+    PcmData decode(byte[] encoded, ModInputLimits limits, long maxPcmBytes,
+                   int maxSeconds, String limitName) throws IOException {
         Objects.requireNonNull(encoded, "encoded");
         Objects.requireNonNull(limits, "limits");
         if (encoded.length == 0 || encoded.length > limits.maxAssetBytes()) throw new IOException("OGG asset is empty or oversized");
@@ -47,7 +53,8 @@ public final class OggPcmDecoder {
             if (frames <= 0) throw new IOException("OGG stream has no decodable frames");
             long sampleCount = Math.multiplyExact((long) frames, channels);
             long pcmBytes = Math.multiplyExact(sampleCount, Short.BYTES);
-            PcmDecoder.validateMetadata(rate, channels, pcmBytes, encoded.length, limits);
+            PcmDecoder.validateMetadata(rate, channels, pcmBytes, encoded.length, limits,
+                    maxPcmBytes, maxSeconds, limitName);
             if (sampleCount > Integer.MAX_VALUE) throw new IOException("OGG sample count exceeds Java array limit");
             probe.beforeNativePcmAllocation(pcmBytes);
             nativePcm = api.allocatePcm((int) sampleCount);

@@ -18,23 +18,26 @@ public final class PreparedModMusic implements AutoCloseable {
     private final int outputRate;
     private PreparedAudioSession session;
     private Map<TrackKey, Integer> trackIndices;
+    private Map<SfxKey, Integer> sfxIndices;
     private Map<String, Map<Integer, TrackKey>> overrides;
     private final boolean permanentEmpty;
     private boolean closed;
 
     private PreparedModMusic(int outputRate, PreparedAudioSession session,
                              Map<TrackKey, Integer> trackIndices,
+                             Map<SfxKey, Integer> sfxIndices,
                              Map<String, Map<Integer, TrackKey>> overrides,
                              boolean permanentEmpty) {
         this.outputRate = outputRate;
         this.session = session;
         this.trackIndices = trackIndices;
+        this.sfxIndices = sfxIndices;
         this.overrides = overrides;
         this.permanentEmpty = permanentEmpty;
     }
 
     static PreparedModMusic permanentEmpty() {
-        return new PreparedModMusic(0, null, Map.of(), Map.of(), true);
+        return new PreparedModMusic(0, null, Map.of(), Map.of(), Map.of(), true);
     }
 
     /**
@@ -43,8 +46,15 @@ public final class PreparedModMusic implements AutoCloseable {
      */
     public static PreparedModMusic build(EffectiveModCatalog effective, ModTrackRegistry registry,
                                          PreparedAudioSession session, int outputRate) {
+        return build(effective, registry, ModSfxRegistry.EMPTY, session, outputRate, null);
+    }
+
+    public static PreparedModMusic build(EffectiveModCatalog effective, ModTrackRegistry registry,
+                                         ModSfxRegistry sfxRegistry, PreparedAudioSession session,
+                                         int outputRate, String exposedOwner) {
         Objects.requireNonNull(effective, "effective");
         Objects.requireNonNull(registry, "registry");
+        Objects.requireNonNull(sfxRegistry, "sfxRegistry");
         Objects.requireNonNull(session, "session");
         if (outputRate < 8_000 || outputRate > 192_000) {
             throw new IllegalArgumentException("Output rate must be in 8000..192000");
@@ -52,6 +62,7 @@ public final class PreparedModMusic implements AutoCloseable {
         synchronized (session) {
             if (session.isClosed()) throw new IllegalStateException("Prepared audio session is closed");
             List<PreparedTrack> preparedTracks = session.tracks();
+            List<PreparedSfx> preparedSfx = session.sfx();
             List<ModDescriptor> descriptors = effective.orderedEnabled();
             LinkedHashSet<String> owners = validateEffectiveOrder(descriptors);
             for (String failed : session.failedOwners()) {
@@ -76,16 +87,43 @@ public final class PreparedModMusic implements AutoCloseable {
                 if (registry.find(track.key()).isEmpty()) {
                     throw new IllegalArgumentException("Prepared track is absent from the validated registry: " + track.key());
                 }
-                if (localIndices.putIfAbsent(track.key(), index) != null) {
+                if (exposedOwner == null || exposedOwner.equals(owner)) localIndices.putIfAbsent(track.key(), index);
+                if (localIndices.get(track.key()) != null && !localIndices.get(track.key()).equals(index)) {
                     throw new IllegalArgumentException("Duplicate prepared track key: " + track.key());
                 }
             }
             for (ModAudioTrack declaredTrack : registry.tracks()) {
                 String owner = declaredTrack.key().modId();
                 if (owners.contains(owner) && !session.failedOwners().contains(owner)
+                        && (exposedOwner == null || exposedOwner.equals(owner))
                         && !localIndices.containsKey(declaredTrack.key())) {
                     throw new IllegalArgumentException(
                             "Effective registry track was not prepared: " + declaredTrack.key());
+                }
+            }
+
+            LinkedHashMap<SfxKey, Integer> localSfxIndices = new LinkedHashMap<>();
+            for (int index = 0; index < preparedSfx.size(); index++) {
+                PreparedSfx value = preparedSfx.get(index);
+                String owner = value.key().modId();
+                if (!owners.contains(owner) || session.failedOwners().contains(owner)) {
+                    throw new IllegalArgumentException("Prepared SFX belongs to ineligible owner: " + owner);
+                }
+                if (value.pcm().sampleRate() != outputRate || sfxRegistry.find(value.key()).isEmpty()) {
+                    throw new IllegalArgumentException("Prepared SFX is inconsistent with the validated registry: " + value.key());
+                }
+                if (exposedOwner == null || exposedOwner.equals(owner)) {
+                    if (localSfxIndices.putIfAbsent(value.key(), index) != null) {
+                        throw new IllegalArgumentException("Duplicate prepared SFX key: " + value.key());
+                    }
+                }
+            }
+            for (ModAudioSfx declared : sfxRegistry.sfx()) {
+                String owner = declared.key().modId();
+                if (owners.contains(owner) && !session.failedOwners().contains(owner)
+                        && (exposedOwner == null || exposedOwner.equals(owner))
+                        && !localSfxIndices.containsKey(declared.key())) {
+                    throw new IllegalArgumentException("Effective registry SFX was not prepared: " + declared.key());
                 }
             }
 
@@ -123,6 +161,7 @@ public final class PreparedModMusic implements AutoCloseable {
             mutableOverrides.forEach((game, values) -> frozenOverrides.put(game, immutableLinkedMap(values)));
             if (session.isClosed()) throw new IllegalStateException("Prepared audio session closed during build");
             return new PreparedModMusic(outputRate, session, frozenIndices,
+                    immutableLinkedMap(localSfxIndices),
                     immutableLinkedMap(frozenOverrides), false);
         }
     }
@@ -153,6 +192,17 @@ public final class PreparedModMusic implements AutoCloseable {
         return new ResolvedMusic(musicId, track);
     }
 
+    public synchronized java.util.Optional<PreparedSfx> resolveSfx(SfxKey key) {
+        requireOpen();
+        Integer index = sfxIndices.get(key);
+        if (index == null) return java.util.Optional.empty();
+        List<PreparedSfx> live = session.sfx();
+        if (index < 0 || index >= live.size()) throw new IllegalStateException("Prepared SFX index is stale");
+        PreparedSfx resolved = live.get(index);
+        if (!resolved.key().equals(key)) throw new IllegalStateException("Prepared SFX index/key mismatch");
+        return java.util.Optional.of(resolved);
+    }
+
     synchronized Map<TrackKey, Integer> trackIndexSnapshot() {
         requireOpen();
         return trackIndices;
@@ -170,6 +220,7 @@ public final class PreparedModMusic implements AutoCloseable {
         if (permanentEmpty || closed) return;
         closed = true;
         trackIndices = Map.of();
+        sfxIndices = Map.of();
         overrides = Map.of();
         PreparedAudioSession owned = session;
         session = null;

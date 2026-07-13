@@ -42,6 +42,27 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-13 - Mod-support Phase 3 standalone audio verification
+
+Workstream B5 added exact namespaced standalone music and prepared one-shot SFX
+without changing any stock trace fixture, tolerance, comparator, or replay state.
+One-shots remain presentation-only: they do not enter the deterministic command
+timeline or rewind PCM history, and rewind entry clears both active and queued
+one-shot work.
+
+- Focused catalog, preparation, resolver, routing, backend-pool, rewind, and SDK
+  verification passed 102 tests with 0 failures/errors and 1 skipped test.
+- The post-review security/ownership suite passed 94 tests with 0 failures/errors
+  and 1 skipped test. It covers the 16-voice/17th-steal contract, dedicated
+  30-second/32-MiB SFX decode limits, cross-owner isolation, numeric-route
+  rejection, and shared track/SFX cache revalidation.
+- Broad audio snapshot/runtime parity passed 63 tests with 0 failures/errors and
+  7 benchmark/environment skips.
+- Mods-off trace spot command:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" "-Ds3k.rom.path=s3k.gen" test`.
+  S1 GHZ1 passed 1/1, S2 EHZ1 passed 1/1, and S3K AIZ passed 16/16
+  (18 tests total, 0 failures/errors/skips).
+
 ## 2026-07-11 - Mod-support Phase 0 final verification
 
 Final Phase-0 verification ran from `next` commit
@@ -37765,3 +37786,96 @@ Representative serial timing used clean baseline (`a3ad53f4a`) and guarded
 The performance threshold (guarded median both more than one second and more
 than 10% slower) was false for both targets. Timing evidence is preserved in
 `target/rewind-closure-timing.json` and `target/rewind-closure-timing/`.
+
+### 2026-07-12 -- Phase 3 A4 registry-first playable-art parity sweep
+
+Measured on `next` at `ad2f022c2` with the reviewed, uncommitted Phase 3 A4
+GGFP v2 materialization, playable-art registry, and allocation-preflight changes:
+
+- Command:
+  `mvn "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test -Dmse=off`
+- S1 GHZ1, S2 EHZ1, and S3K AIZ all passed (3/3).
+- The first candidate refactor exposed provider/publication ordering as part of
+  the stock bootstrap contract (S2 f153 and S3K f1722). Keeping the established
+  built-in initialization order while reserving atomic two-pass preflight for
+  mod-containing teams restored exact stock parity.
+- No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
+  engine state was changed.
+
+### 2026-07-12 -- Phase 3 A5 ability-hook and super-gate parity sweep
+
+Measured on `next` at `7ac365dc1` with the reviewed, uncommitted Phase 3 A5
+owner-bound ability hook and registry-authoritative super-form gate:
+
+- Command:
+  `mvn "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test -Dmse=off`
+- S1 GHZ1, S2 EHZ1, and S3K AIZ all passed (3/3).
+- The new hook runs only at the valid airborne release/re-press edge; built-in
+  characters retain the default-false path into the existing ability dispatch.
+- No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
+  engine state was changed.
+
+### 2026-07-12 -- Phase 3 A6 character-surfacing parity sweep
+
+Measured on `next` at `65bffb6e7` with the reviewed, uncommitted Phase 3 A6
+launch-label, owner-qualified data-select, and packaged sample-character changes:
+
+- Command:
+  `mvn "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test -Dmse=off`
+- S1 GHZ1, S2 EHZ1, and S3K AIZ all passed (3/3).
+- Mod character labels and registries are frozen at prepared-launch time; stock
+  character identity, physics, art, and trace execution remain unchanged.
+- No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
+  engine state was changed.
+
+### 2026-07-12 -- Phase 3 B1 GameDataSource parity sweep
+
+Measured on `next` at `df0508e73` with the reviewed, uncommitted Phase 3 B1
+session-owned data-source routing and stock-ROM pinning changes:
+
+- Command:
+  `mvn "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test -Dmse=off`
+- S1 GHZ1, S2 EHZ1, and S3K AIZ all passed (3/3).
+- Stock sessions pin the exact opened ROM behind one durable `GameDataSource`;
+  the five shared consumers therefore receive the same ROM values as before.
+- No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
+  engine state was changed.
+
+### 2026-07-12 -- Phase 3 B2 standalone-identity parity sweep
+
+Measured on `next` at `6d605b211` with the reviewed, uncommitted Phase 3 B2
+standalone `GameId` and module-owned game-code routing changes:
+
+- Command:
+  `mvn "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test -Dmse=off`
+- S1 GHZ1, S2 EHZ1, and S3K AIZ all passed (3/3).
+- Built-in modules derive the same `s1`/`s2`/`s3k` codes from their existing
+  `GameId`; the new standalone identity has no stock runtime branch effect.
+- No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
+  engine state was changed.
+
+### 2026-07-13 -- Phase 3 B3 detection-free standalone-boot parity sweep
+
+Measured on `next` at `4e39a187b` with the reviewed, uncommitted Phase 3 B3
+standalone registration, owner-bound callback, and no-ROM session changes:
+
+- Command:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test`
+- S1 GHZ1, S2 EHZ1, and S3K AIZ all passed (3/3).
+- Stock boot remains ROM-detected and patch-resolved; only the explicit standalone
+  route joins a ROM-empty `ModAssetDataSource` session and loads its first level.
+- No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
+  engine state was changed.
+
+### 2026-07-13 -- Phase 3 B4 game-agnostic ModLevel parity sweep
+
+Measured on `next` at `108b7aff2` with the reviewed, uncommitted Phase 3 B4
+ROM-free `ModLevel` decoder and Sonic 2 compatibility-facade changes:
+
+- Command:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test`
+- S1 GHZ1, S2 EHZ1, and S3K AIZ all passed (3/3).
+- The stock Sonic 2 in-memory API now delegates to the shared fixed-grid decoder;
+  stock ROM constructors and HTZ overlay/dynamic-art paths remain unchanged.
+- No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
+  engine state was changed.

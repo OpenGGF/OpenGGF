@@ -24,6 +24,10 @@ public interface StreamedMusicPort extends AutoCloseable {
         @Override public void playTrack(TrackRef track) {
             throw new IllegalArgumentException("No streamed track is installed: " + track);
         }
+        @Override public boolean hasSfx(SfxRef sfx) { Objects.requireNonNull(sfx, "sfx"); return false; }
+        @Override public OneShot openSfx(SfxRef sfx) {
+            throw new IllegalArgumentException("No streamed SFX is installed: " + sfx);
+        }
         @Override public boolean hasSource() { return false; }
         @Override public int mixInto(short[] output, int frames) {
             validateOutput(output, frames);
@@ -55,6 +59,23 @@ public interface StreamedMusicPort extends AutoCloseable {
             if (owner == null || owner.isBlank()) throw new IllegalArgumentException("Track owner is required");
             if (name == null || name.isBlank()) throw new IllegalArgumentException("Track name is required");
         }
+    }
+
+    @com.openggf.game.ModApi
+    record SfxRef(String owner, String name) {
+        public SfxRef {
+            if (owner == null || owner.isBlank()) throw new IllegalArgumentException("SFX owner is required");
+            if (name == null || name.isBlank()) throw new IllegalArgumentException("SFX name is required");
+        }
+    }
+
+    /** Presentation-thread cursor over one launch-prepared one-shot. */
+    @com.openggf.game.ModApi
+    interface OneShot extends AutoCloseable {
+        /** Saturating-adds up to {@code frames} into interleaved stereo output. */
+        void mixInto(short[] output, int frames);
+        boolean complete();
+        @Override void close();
     }
 
     @com.openggf.game.ModApi
@@ -122,6 +143,14 @@ public interface StreamedMusicPort extends AutoCloseable {
     default void playTrack(TrackRef track) {
         throw new IllegalArgumentException("Unknown namespaced streamed track: "
                 + Objects.requireNonNull(track, "track"));
+    }
+    default boolean hasSfx(SfxRef sfx) {
+        Objects.requireNonNull(sfx, "sfx");
+        return false;
+    }
+    default OneShot openSfx(SfxRef sfx) {
+        throw new IllegalArgumentException("Unknown namespaced streamed SFX: "
+                + Objects.requireNonNull(sfx, "sfx"));
     }
     boolean hasSource();
     int mixInto(short[] output, int frames);

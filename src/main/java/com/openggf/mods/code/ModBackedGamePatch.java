@@ -62,6 +62,10 @@ public final class ModBackedGamePatch implements GamePatch {
         return plan.characters().keySet().stream()
                 .map(com.openggf.game.CharacterKey::persisted).toList();
     }
+    @Override public java.util.Map<com.openggf.game.CharacterKey,
+            com.openggf.game.CharacterDefinition> providedCharacterDefinitions() {
+        return plan.characters();
+    }
     @Override public GameModule apply(GameModule base, PatchContext context) {
         List<ModObjectKeyRegistry.Registration> registrations = plan.objectFactories().entrySet().stream()
                 .map(entry -> new ModObjectKeyRegistry.Registration(
@@ -83,28 +87,12 @@ public final class ModBackedGamePatch implements GamePatch {
                             super.getPlayableCharacterRegistry();
                     for (var entry : plan.characters().entrySet()) {
                         registry = registry.register(entry.getKey(),
-                                faultBoundCharacter(entry.getKey(), entry.getValue()));
+                                OwnerAwareCharacterDefinition.wrap(
+                                        entry.getKey(), entry.getValue(), faultBoundary));
                     }
                     playableCharacters = registry;
                 }
                 return playableCharacters;
-            }
-
-            private com.openggf.game.CharacterDefinition faultBoundCharacter(
-                    com.openggf.game.CharacterKey key,
-                    com.openggf.game.CharacterDefinition definition) {
-                return new com.openggf.game.CharacterDefinition(key, definition.displayName(),
-                        (code, x, y) -> faultBoundary.callCharacter(key,
-                                () -> com.openggf.game.CharacterConstructionScope.call(key,
-                                        () -> com.openggf.game.CharacterConstructionScope
-                                                .validateFactoryResult(key,
-                                                        definition.spriteFactory().create(code, x, y)))),
-                        controller -> faultBoundary.callCharacter(key,
-                                () -> Objects.requireNonNull(
-                                        definition.respawnStrategyFactory().create(controller),
-                                        "Mod respawn factory returned null for " + key.persisted())),
-                        definition.behavesLike(), definition.secondaryAbility(),
-                        definition.supportsSuperForm(), definition.artSupplier());
             }
 
             @Override

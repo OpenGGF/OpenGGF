@@ -6,6 +6,7 @@ import com.openggf.game.GameModule;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -48,6 +49,15 @@ public final class ModuleResolutionService {
 
         public static PatchPlan empty() {
             return new PatchPlan(List.of(), Map.of());
+        }
+    }
+
+    @com.openggf.game.ModApi
+    public record MainCharacterAvailability(List<String> characters,
+            com.openggf.game.PlayableCharacterRegistry registry) {
+        public MainCharacterAvailability {
+            characters = List.copyOf(characters);
+            Objects.requireNonNull(registry, "registry");
         }
     }
 
@@ -209,6 +219,34 @@ public final class ModuleResolutionService {
         return availableMainCharacters(launch.context, gameId);
     }
 
+    public com.openggf.game.PlayableCharacterRegistry availableMainCharacterRegistry(
+            PreparedLaunch launch, String gameId) {
+        Objects.requireNonNull(launch, "launch");
+        requireOwnedLaunch(launch);
+        return availableMainCharacterRegistry(launch.context, gameId);
+    }
+
+    /** Atomically freezes launch-screen character metadata after owner failures settle. */
+    public Map<String, MainCharacterAvailability> snapshotMainCharacterAvailability(
+            PreparedLaunch launch, List<String> gameIds) {
+        Objects.requireNonNull(launch, "launch");
+        requireOwnedLaunch(launch);
+        List<String> ids = List.copyOf(gameIds);
+        Map<String, MainCharacterAvailability> snapshot;
+        int failuresBefore;
+        do {
+            failuresBefore = launch.context.failedOwners().size();
+            LinkedHashMap<String, MainCharacterAvailability> current = new LinkedHashMap<>();
+            for (String gameId : ids) {
+                current.put(gameId, new MainCharacterAvailability(
+                        availableMainCharacters(launch.context, gameId),
+                        availableMainCharacterRegistry(launch.context, gameId)));
+            }
+            snapshot = Map.copyOf(current);
+        } while (launch.context.failedOwners().size() != failuresBefore);
+        return snapshot;
+    }
+
     private void requireOwnedLaunch(PreparedLaunch launch) {
         if (launch.owner != this) {
             throw new IllegalArgumentException("Prepared launch belongs to a different resolver");
@@ -313,6 +351,46 @@ public final class ModuleResolutionService {
         return List.copyOf(result);
     }
 
+    /** Registry metadata for currently eligible patch-backed main characters. */
+    public com.openggf.game.PlayableCharacterRegistry availableMainCharacterRegistry(
+            ResolutionContext context, String gameId) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(gameId, "gameId");
+        com.openggf.game.PlayableCharacterRegistry registry =
+                com.openggf.game.PlayableCharacterRegistry.empty();
+        for (RegisteredPatch registration : context.registrations()) {
+            if (!context.ownerEligible(registration.owner())) continue;
+            try {
+                GamePatch patch = registration.patch();
+                if (!patch.baseGameId().equals(gameId) || !prerequisitesMet(patch)) continue;
+                List<String> available = validatedMainCharacters(registration, patch);
+                Map<com.openggf.game.CharacterKey, com.openggf.game.CharacterDefinition> definitions =
+                        Map.copyOf(Objects.requireNonNull(patch.providedCharacterDefinitions(),
+                                "providedCharacterDefinitions"));
+                for (var entry : definitions.entrySet()) {
+                    com.openggf.game.CharacterKey key = Objects.requireNonNull(
+                            entry.getKey(), "provided character key");
+                    com.openggf.game.CharacterDefinition definition = Objects.requireNonNull(
+                            entry.getValue(), "provided character definition");
+                    if (!available.contains(key.persisted()) || !key.equals(definition.key())) {
+                        throw new IllegalArgumentException("Patch " + registration.namespacedId()
+                                + " provided inconsistent character metadata for " + key.persisted());
+                    }
+                    if (registration.owner() instanceof PatchOwner.Mod mod
+                            && !key.ownerModId().filter(mod.modId()::equals).isPresent()) {
+                        throw new IllegalArgumentException("Patch " + registration.namespacedId()
+                                + " cannot publish character metadata owned by " + key);
+                    }
+                    if (registry.find(key).isEmpty()) registry = registry.register(key, definition);
+                }
+            } catch (Throwable failure) {
+                rethrowIfFatal(failure);
+                context.failOwnerAndDependents(registration.owner(), failure);
+            }
+        }
+        return registry;
+    }
+
     private static List<String> validatedMainCharacters(
             RegisteredPatch registration, GamePatch patch) {
         List<String> characters = List.copyOf(Objects.requireNonNull(
@@ -323,6 +401,19 @@ public final class ModuleResolutionService {
                     || !character.equals(character.toLowerCase(Locale.ROOT))) {
                 throw new IllegalArgumentException("Patch " + registration.namespacedId()
                         + " provided invalid main-character code: '" + character + "'");
+            }
+            try {
+                com.openggf.game.CharacterKey key =
+                        com.openggf.game.CharacterKey.parsePersisted(character);
+                if (registration.owner() instanceof PatchOwner.Mod mod
+                        && key.ownerModId().isPresent()
+                        && !key.ownerModId().orElseThrow().equals(mod.modId())) {
+                    throw new IllegalArgumentException("Patch " + registration.namespacedId()
+                            + " cannot publish main-character code owned by " + key);
+                }
+            } catch (IllegalArgumentException invalidKey) {
+                // Legacy built-in patches may still contribute unqualified codes such as "amy".
+                if (character.indexOf(':') >= 0) throw invalidKey;
             }
         }
         return characters;

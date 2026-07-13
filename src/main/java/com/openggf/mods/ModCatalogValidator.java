@@ -71,14 +71,19 @@ public final class ModCatalogValidator {
         }
         addOverrideCollisions(entries);
         List<ModAudioTrack> tracks = new ArrayList<>();
+        List<ModAudioSfx> sfx = new ArrayList<>();
         for (int index = 0; index < entries.size(); index++) {
             if (entries.get(index) instanceof ModDescriptor descriptor
                     && !descriptor.hasErrors() && parsed.get(index) != null) {
                 tracks.addAll(parsed.get(index).tracks());
+                if (descriptor.manifest().type() == ModType.STANDALONE) {
+                    sfx.addAll(parsed.get(index).sfx());
+                }
             }
         }
         return new ValidationResult(entries, tracks.isEmpty()
-                ? ModTrackRegistry.EMPTY : new ModTrackRegistry(tracks));
+                ? ModTrackRegistry.EMPTY : new ModTrackRegistry(tracks), sfx.isEmpty()
+                ? ModSfxRegistry.EMPTY : new ModSfxRegistry(sfx));
     }
 
     /** Validates one descriptor against an already-retained immutable packed snapshot. */
@@ -99,9 +104,13 @@ public final class ModCatalogValidator {
         }
         ModDescriptor validated = copy(descriptor, findings);
         List<ModAudioTrack> tracks = !validated.hasErrors() && audio != null ? audio.tracks() : List.of();
+        List<ModAudioSfx> sfx = !validated.hasErrors() && audio != null
+                && descriptor.manifest().type() == ModType.STANDALONE ? audio.sfx() : List.of();
         ValidationResult eligible = new ValidationResult(List.of(validated), tracks.isEmpty()
-                ? ModTrackRegistry.EMPTY : new ModTrackRegistry(tracks));
-        return new PackedValidation(eligible, audio == null ? List.of() : audio.tracks());
+                ? ModTrackRegistry.EMPTY : new ModTrackRegistry(tracks), sfx.isEmpty()
+                ? ModSfxRegistry.EMPTY : new ModSfxRegistry(sfx));
+        return new PackedValidation(eligible, audio == null ? List.of() : audio.tracks(),
+                audio == null ? List.of() : audio.sfx());
     }
 
     private ValidationResult globalFailure(List<ModCatalogEntry> entries, ModFinding failure) {
@@ -172,7 +181,7 @@ public final class ModCatalogValidator {
                         "Missing audio asset: " + sfx.assetPath(), sfx.assetPath()));
             }
         }
-        if (!audio.sfx().isEmpty()) {
+        if (!audio.sfx().isEmpty() && descriptor.manifest().type() != ModType.STANDALONE) {
             findings.add(error("SFX_UNSUPPORTED_PHASE1",
                     "Streamed SFX are parsed but unsupported in Phase 1", AUDIO_MANIFEST_PATH));
         }
@@ -302,18 +311,28 @@ public final class ModCatalogValidator {
         void afterPreflight(Map<Path, Long> expectedSizes) throws IOException;
     }
 
-    public record ValidationResult(List<ModCatalogEntry> entries, ModTrackRegistry registry) {
+    public record ValidationResult(List<ModCatalogEntry> entries, ModTrackRegistry registry,
+                                   ModSfxRegistry sfxRegistry) {
+        public ValidationResult(List<ModCatalogEntry> entries, ModTrackRegistry registry) {
+            this(entries, registry, ModSfxRegistry.EMPTY);
+        }
         public ValidationResult {
             entries = List.copyOf(Objects.requireNonNull(entries, "entries"));
             Objects.requireNonNull(registry, "registry");
+            Objects.requireNonNull(sfxRegistry, "sfxRegistry");
         }
     }
 
     /** CLI-facing packed result: parsed declarations remain available even when eligibility has errors. */
-    public record PackedValidation(ValidationResult eligibility, List<ModAudioTrack> declaredTracks) {
+    public record PackedValidation(ValidationResult eligibility, List<ModAudioTrack> declaredTracks,
+                                   List<ModAudioSfx> declaredSfx) {
+        public PackedValidation(ValidationResult eligibility, List<ModAudioTrack> declaredTracks) {
+            this(eligibility, declaredTracks, List.of());
+        }
         public PackedValidation {
             Objects.requireNonNull(eligibility, "eligibility");
             declaredTracks = List.copyOf(Objects.requireNonNull(declaredTracks, "declaredTracks"));
+            declaredSfx = List.copyOf(Objects.requireNonNull(declaredSfx, "declaredSfx"));
         }
     }
 }

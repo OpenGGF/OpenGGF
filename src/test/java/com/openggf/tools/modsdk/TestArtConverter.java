@@ -98,6 +98,60 @@ class TestArtConverter {
         try(var files=Files.list(temp)){assertFalse(files.anyMatch(p->p.getFileName().toString().startsWith(".ggfmod-art-")));}
     }
 
+    @Test
+    void playableConversionEmitsPositionedMultiFrameDplcsAndCostWarning() throws Exception {
+        BufferedImage image = new BufferedImage(16, 8, BufferedImage.TYPE_INT_ARGB);
+        Path png = temp.resolve("playable.png");
+        ImageIO.write(image, "png", png.toFile());
+        Path yaml = temp.resolve("playable.yaml");
+        String secondFrame = """
+                  - delay: 7
+                    pieces:
+                      - sourceX: 8
+                        sourceY: 0
+                        widthPixels: 8
+                        heightPixels: 8
+                        xOffset: 0
+                        yOffset: 0
+                        hFlip: false
+                        vFlip: false
+                        paletteIndex: 0
+                        priority: false
+                """;
+        Files.writeString(yaml, manifest(0, 0, 8, 8) + secondFrame);
+        Path output = temp.resolve("playable.ggfp");
+        java.io.ByteArrayOutputStream message = new java.io.ByteArrayOutputStream();
+
+        assertEquals(0, GgfModCli.run(new String[]{"convert", "art", "--playable",
+                "--image", png.toString(), "--sheet", yaml.toString(),
+                "--out", output.toString()}, new java.io.PrintStream(message)));
+
+        var materialized = com.openggf.level.objects.PlayableSheetMaterializer.read(
+                Files.readAllBytes(output));
+        assertEquals(0, materialized.art().basePatternIndex(),
+                "GGFP remains position-independent; runtime rebases mod main art");
+        assertEquals(2, materialized.art().bankSize());
+        assertEquals(0, materialized.art().dplcFrames().get(0).requests().getFirst().destinationOffset());
+        assertEquals(1, materialized.art().dplcFrames().get(1).requests().getFirst().destinationOffset());
+        assertTrue(message.toString().contains("bank cost=2 patterns"), message.toString());
+    }
+
+    @Test
+    void playableFlagIsAcceptedOnlyOnceImmediatelyAfterArtSubcommand() {
+        assertInvalidPlayableFlag("convert", "art", "--image", "--playable",
+                "--sheet", "sheet", "--out", "out");
+        assertInvalidPlayableFlag("convert", "art", "--playable", "--playable",
+                "--image", "image", "--sheet", "sheet", "--out", "out");
+        assertInvalidPlayableFlag("convert", "art", "--image", "image",
+                "--playable", "true", "--sheet", "sheet", "--out", "out");
+    }
+
+    private static void assertInvalidPlayableFlag(String... args) {
+        java.io.ByteArrayOutputStream message = new java.io.ByteArrayOutputStream();
+        assertEquals(1, GgfModCli.run(args, new java.io.PrintStream(message)));
+        assertTrue(message.toString().contains("Invalid --playable placement"), message.toString());
+    }
+
     private static String manifest(int sourceX, int sourceY, int width, int height) {
         return """
                 formatVersion: 1

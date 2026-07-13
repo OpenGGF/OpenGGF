@@ -123,6 +123,7 @@ public class PlayableSpriteController {
         }
     }
 
+    @com.openggf.game.ModApi
     public record RewindState(
             PlayableSpriteMovement.RewindState movementState,
             SpindashDustController.RewindState spindashDustState,

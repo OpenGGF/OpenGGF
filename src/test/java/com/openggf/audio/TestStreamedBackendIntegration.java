@@ -19,6 +19,42 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestStreamedBackendIntegration {
     @Test
+    void namespacedOneShotsQueueAtOwnerBoundaryAndSeventeenthVoiceStealsOldest() {
+        InstrumentedBackend backend = new InstrumentedBackend();
+        RecordingPort port = new RecordingPort(8_000, true);
+        port.sfxSample = 5_000;
+        backend.installStreamedMusicPort(port);
+        backend.update();
+        StreamedMusicPort.SfxRef key = new StreamedMusicPort.SfxRef("owner", "effect");
+        assertFalse(backend.tryPlayStreamedSfx(new StreamedMusicPort.SfxRef("other", "effect")));
+        for (int i = 0; i < 17; i++) assertTrue(backend.tryPlayStreamedSfx(key));
+        assertEquals(0, port.openSfxCount, "gameplay callers must not open PCM cursors");
+
+        backend.update();
+
+        assertEquals(17, port.openSfxCount);
+        assertEquals(Short.MAX_VALUE, backend.uploaded[0], "sixteen active voices saturate deterministically");
+        assertEquals(17, port.closedSfxCount, "stolen and completed voices each close exactly once");
+        backend.destroy();
+    }
+
+    @Test
+    void rewindEntryDropsPendingOneShotsBeforeThePresentationOwnerCanOpenThem() {
+        InstrumentedBackend backend = new InstrumentedBackend();
+        RecordingPort port = new RecordingPort(8_000, true);
+        backend.installStreamedMusicPort(port);
+        backend.update();
+        assertTrue(backend.tryPlayStreamedSfx(new StreamedMusicPort.SfxRef("owner", "effect")));
+
+        backend.beginReversePresentation();
+        backend.update();
+
+        assertEquals(0, port.openSfxCount);
+        backend.endReversePresentation();
+        backend.destroy();
+    }
+
+    @Test
     void namespacedPreflightSeesPendingInstallAndExactKeyBeforeTimelineAcceptance() {
         InstrumentedBackend backend = new InstrumentedBackend();
         RecordingPort port = new RecordingPort(8_000, true);
@@ -618,6 +654,9 @@ class TestStreamedBackendIntegration {
         private Object forbiddenLock;
         private boolean calledUnderForbiddenLock;
         private boolean throwRateAfterClose;
+        private int openSfxCount;
+        private int closedSfxCount;
+        private short sfxSample;
 
         private RecordingPort(int rate, boolean resolves) {
             this.rate = rate;
@@ -645,6 +684,27 @@ class TestStreamedBackendIntegration {
             if (!hasTrack(track)) throw new IllegalArgumentException("missing: " + track);
             playCount++;
             source = true; logicalMusicId = -1; position = 0;
+        }
+        @Override public boolean hasSfx(SfxRef sfx) {
+            return resolves && new SfxRef("owner", "effect").equals(sfx);
+        }
+        @Override public OneShot openSfx(SfxRef sfx) {
+            if (!hasSfx(sfx)) throw new IllegalArgumentException("missing: " + sfx);
+            openSfxCount++;
+            return new OneShot() {
+                private boolean complete;
+                private boolean closed;
+                @Override public void mixInto(short[] output, int frames) {
+                    if (closed) throw new IllegalStateException("closed");
+                    int left = Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, output[0] + sfxSample));
+                    int right = Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, output[1] + sfxSample));
+                    output[0] = (short) left;
+                    output[1] = (short) right;
+                    complete = true;
+                }
+                @Override public boolean complete() { return complete; }
+                @Override public void close() { if (!closed) { closed = true; closedSfxCount++; } }
+            };
         }
         @Override public boolean hasSource() { checkLock(); return source; }
         @Override public int mixInto(short[] output, int frames) {

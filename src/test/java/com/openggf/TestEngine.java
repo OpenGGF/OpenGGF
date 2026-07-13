@@ -280,6 +280,7 @@ class TestEngine {
         RomManager romManager = mock(RomManager.class);
         Rom rom = mock(Rom.class);
         when(romManager.getRom()).thenReturn(rom);
+        when(rom.readAllBytes()).thenReturn(new byte[] { 0 });
         RomDetectionService romDetection = mock(RomDetectionService.class);
         when(romDetection.detectAndCreateModule(rom)).thenReturn(Optional.empty());
         Engine engine = new Engine(new EngineContext(
@@ -416,6 +417,7 @@ class TestEngine {
 
         GameModule module = mock(GameModule.class);
         when(module.getGameId()).thenReturn(GameId.S3K);
+        when(module.getGameCode()).thenReturn("s3k");
 
         DataSelectAction action = new DataSelectAction(
                 DataSelectActionType.CLEAR_RESTART,
@@ -451,6 +453,7 @@ class TestEngine {
 
         GameModule module = mock(GameModule.class);
         when(module.getGameId()).thenReturn(GameId.S3K);
+        when(module.getGameCode()).thenReturn("s3k");
         DataSelectAction action = new DataSelectAction(
                 DataSelectActionType.LOAD_SLOT,
                 1,
@@ -467,6 +470,22 @@ class TestEngine {
                 "non-loadable save payloads must not override the action destination");
         assertFalse(context.isClear(),
                 "non-loadable save payloads must not preserve clear-state metadata");
+    }
+
+    @Test
+    void createDataSelectSaveContext_usesStandaloneModuleNamespace() throws Exception {
+        SaveManager saveManager = new SaveManager(Files.createTempDirectory("standalone-save"));
+        GameModule module = mock(GameModule.class);
+        when(module.getGameId()).thenReturn(GameId.STANDALONE);
+        when(module.getGameCode()).thenReturn("owner-game");
+        DataSelectAction action = new DataSelectAction(
+                DataSelectActionType.NO_SAVE_START, 0, 2, 1,
+                new SelectedTeam("hero", List.of()));
+
+        SaveSessionContext context = Engine.createDataSelectSaveContext(module, action, saveManager);
+
+        assertEquals("owner-game", context.gameCode());
+        assertTrue(context.activeSlot().isEmpty());
     }
 
     @Test
@@ -577,6 +596,7 @@ class TestEngine {
         RomManager romManager = mock(RomManager.class);
         Rom rom = mock(Rom.class);
         when(romManager.getRom()).thenReturn(rom);
+        when(rom.readAllBytes()).thenReturn(new byte[] { 0 });
         AudioManager audioManager = mock(AudioManager.class);
         PerformanceProfiler profiler = mock(PerformanceProfiler.class);
         DebugOverlayManager debugOverlayManager = mock(DebugOverlayManager.class);
