@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -79,22 +78,9 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
     private static final int PLAYER_SLOT_COUNT = 2;
     private static final int PLAYER_HANG_ANIM = Sonic3kAnimationIds.GET_UP.id();
 
-    private static final class ExtensionGrabState implements RewindStateful<ExtensionGrabState.Snapshot> {
+    private static final class ExtensionGrabState {
         boolean grabbed;
         int releaseCooldown;
-
-        @Override
-        public Snapshot captureRewindStateValue() {
-            return new Snapshot(grabbed, releaseCooldown);
-        }
-
-        @Override
-        public void restoreRewindStateValue(Snapshot snapshot) {
-            grabbed = snapshot.grabbed();
-            releaseCooldown = snapshot.releaseCooldown();
-        }
-
-        private record Snapshot(boolean grabbed, int releaseCooldown) {}
     }
 
     private int anchorX;
@@ -105,6 +91,7 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
     private final AbstractPlayableSprite[] grabbedPlayers = new AbstractPlayableSprite[PLAYER_SLOT_COUNT];
     private final boolean[] grabbed = new boolean[PLAYER_SLOT_COUNT];
     private final int[] releaseCooldown = new int[PLAYER_SLOT_COUNT];
+    private AbstractPlayableSprite nativeP2Owner;
     private final Map<PlayableEntity, ExtensionGrabState> extensionGrabStates = new IdentityHashMap<>();
 
     private int currentExtension;
@@ -143,9 +130,10 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        NativePlayerSlots slots = nativePlayerSlots(playerEntity);
+        reconcileNativeP2(slots.player(1), frameCounter);
         tickReleaseCooldowns();
         updateExtensionAndFrame();
-        NativePlayerSlots slots = nativePlayerSlots(playerEntity);
         updatePlayerSlot(slots.player(0), 0, frameCounter);
         updatePlayerSlot(slots.player(1), 1, frameCounter);
         updateExtensionPlayers(slots, frameCounter);
@@ -290,6 +278,53 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         });
     }
 
+    private void reconcileNativeP2(AbstractPlayableSprite currentNativeP2, int frameCounter) {
+        if (nativeP2Owner == currentNativeP2) {
+            return;
+        }
+
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (nativeP2Owner != null) {
+            ExtensionGrabState demotedState = new ExtensionGrabState();
+            demotedState.grabbed = grabbed[1];
+            demotedState.releaseCooldown = releaseCooldown[1];
+            clearNativeP2State();
+            if (containsIdentity(participants, nativeP2Owner)) {
+                extensionGrabStates.put(nativeP2Owner, demotedState);
+            } else if (demotedState.grabbed) {
+                releaseExtensionPlayer(nativeP2Owner, demotedState, frameCounter, false);
+            }
+        } else {
+            clearNativeP2State();
+        }
+
+        ExtensionGrabState promotedState = currentNativeP2 == null
+                ? null
+                : extensionGrabStates.remove(currentNativeP2);
+        if (promotedState != null) {
+            grabbed[1] = promotedState.grabbed;
+            releaseCooldown[1] = promotedState.releaseCooldown;
+            grabbedPlayers[1] = promotedState.grabbed ? currentNativeP2 : null;
+        }
+        nativeP2Owner = currentNativeP2;
+    }
+
+    private void clearNativeP2State() {
+        grabbed[1] = false;
+        grabbedPlayers[1] = null;
+        releaseCooldown[1] = 0;
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity candidate) {
+        for (PlayableEntity participant : participants) {
+            if (participant == candidate) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void tryCaptureExtensionPlayer(AbstractPlayableSprite player, ExtensionGrabState state) {
         if (player.isObjectControlled() || player.isControlLocked() || player.getDead() || player.isDebugMode()) {
             return;
@@ -323,10 +358,7 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
                                         int frameCounter, boolean launch) {
         state.grabbed = false;
         state.releaseCooldown = REGRAB_COOLDOWN_FRAMES;
-        boolean stillOwned = player.isObjectControlled()
-                && player.isObjectControlSuppressesMovement()
-                && !player.isObjectControlAllowsCpu()
-                && player.getAnimationId() == PLAYER_HANG_ANIM;
+        boolean stillOwned = ownsPulleyControl(player);
         if (stillOwned) {
             player.releaseFromObjectControl(frameCounter);
             player.setOnObject(false);
@@ -427,19 +459,26 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        player.setOnObject(false);
-        player.setControlLocked(false);
-        if (player.isObjectControlled()) {
+        boolean stillOwned = ownsPulleyControl(player);
+        if (stillOwned) {
+            player.setOnObject(false);
+            player.setControlLocked(false);
             player.releaseFromObjectControl(frameCounter);
-        } else {
-            ObjectControlState.none().applyTo(player);
+            clearRidingObject(player);
         }
-        clearRidingObject(player);
 
-        if (!launch) {
+        if (!launch || !stillOwned) {
             return;
         }
         applyLaunch(player);
+    }
+
+    private boolean ownsPulleyControl(AbstractPlayableSprite player) {
+        return player.isObjectControlled()
+                && player.isObjectControlSuppressesMovement()
+                && !player.isObjectControlAllowsCpu()
+                && (player.getAnimationId() == PLAYER_HANG_ANIM
+                    || player.getDead() || player.isHurt() || player.isDebugMode());
     }
 
     private void applyLaunch(AbstractPlayableSprite player) {

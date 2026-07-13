@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindStateful;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
@@ -48,7 +47,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
             0x70, 0x70, 0x71, 0x71, 0x72, 0x72, 0x73, 0x73, 0x74, 0x74, 0x75, 0x75
     };
 
-    private static final class PlayerState implements RewindStateful<PlayerState.Snapshot> {
+    private static final class PlayerState {
         boolean active;
         int progressFixed;
         int sidePhaseOffset;
@@ -57,25 +56,25 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         int convexReleaseFrames;
         boolean compensateReleaseHandoff;
 
-        @Override
-        public Snapshot captureRewindStateValue() {
-            return new Snapshot(active, progressFixed, sidePhaseOffset, releaseFrames, cooldownFrames,
-                    convexReleaseFrames, compensateReleaseHandoff);
+        void copyFrom(PlayerState state) {
+            active = state.active;
+            progressFixed = state.progressFixed;
+            sidePhaseOffset = state.sidePhaseOffset;
+            releaseFrames = state.releaseFrames;
+            cooldownFrames = state.cooldownFrames;
+            convexReleaseFrames = state.convexReleaseFrames;
+            compensateReleaseHandoff = state.compensateReleaseHandoff;
         }
 
-        @Override
-        public void restoreRewindStateValue(Snapshot state) {
-            active = state.active();
-            progressFixed = state.progressFixed();
-            sidePhaseOffset = state.sidePhaseOffset();
-            releaseFrames = state.releaseFrames();
-            cooldownFrames = state.cooldownFrames();
-            convexReleaseFrames = state.convexReleaseFrames();
-            compensateReleaseHandoff = state.compensateReleaseHandoff();
+        void reset() {
+            active = false;
+            progressFixed = 0;
+            sidePhaseOffset = 0;
+            releaseFrames = 0;
+            cooldownFrames = 0;
+            convexReleaseFrames = 0;
+            compensateReleaseHandoff = false;
         }
-
-        private record Snapshot(boolean active, int progressFixed, int sidePhaseOffset, int releaseFrames,
-                                int cooldownFrames, int convexReleaseFrames, boolean compensateReleaseHandoff) {}
     }
 
     private int centerX;
@@ -84,6 +83,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     private boolean flipped;
     private final PlayerState player1 = new PlayerState();
     private final PlayerState player2 = new PlayerState();
+    private AbstractPlayableSprite nativeP2Owner;
     private final Map<PlayableEntity, PlayerState> extensionPlayerStates = new IdentityHashMap<>();
 
     public MGZTwistingLoopObjectInstance(ObjectSpawn spawn) {
@@ -109,16 +109,48 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
             return;
         }
         AbstractPlayableSprite nativeP2 = nativeP2FromQuery(svc, playerEntity);
+        reconcileNativeP2(frameCounter, svc, nativeP2);
         if (nativeP2 != null) {
             processPlayer(frameCounter, nativeP2, player2);
-        } else {
-            player2.active = false;
-            player2.releaseFrames = 0;
-            player2.cooldownFrames = 0;
-            player2.convexReleaseFrames = 0;
-            player2.compensateReleaseHandoff = false;
         }
         updateExtensionPlayers(frameCounter, svc, playerEntity, nativeP2);
+    }
+
+    private void reconcileNativeP2(int frameCounter, ObjectServices services,
+                                   AbstractPlayableSprite currentNativeP2) {
+        if (nativeP2Owner == currentNativeP2) {
+            return;
+        }
+
+        List<PlayableEntity> participants = services.playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (nativeP2Owner != null) {
+            if (containsIdentity(participants, nativeP2Owner)) {
+                PlayerState demotedState = new PlayerState();
+                demotedState.copyFrom(player2);
+                extensionPlayerStates.put(nativeP2Owner, demotedState);
+            } else {
+                releaseExtensionOwnership(frameCounter, nativeP2Owner, player2);
+            }
+        }
+
+        PlayerState promotedState = currentNativeP2 == null
+                ? null
+                : extensionPlayerStates.remove(currentNativeP2);
+        player2.reset();
+        if (promotedState != null) {
+            player2.copyFrom(promotedState);
+        }
+        nativeP2Owner = currentNativeP2;
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity candidate) {
+        for (PlayableEntity participant : participants) {
+            if (participant == candidate) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void updateExtensionPlayers(int frameCounter, ObjectServices services,
@@ -167,15 +199,17 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
 
     @Override
     public void onUnload() {
-        releaseNativeOwnership(0, player1);
-        releaseNativeOwnership(1, player2);
+        releaseMainOwnership(player1);
+        releaseExtensionOwnership(0, nativeP2Owner, player2);
+        nativeP2Owner = null;
+        player2.reset();
         for (Map.Entry<PlayableEntity, PlayerState> entry : extensionPlayerStates.entrySet()) {
             releaseExtensionOwnership(0, entry.getKey(), entry.getValue());
         }
         extensionPlayerStates.clear();
     }
 
-    private void releaseNativeOwnership(int slot, PlayerState state) {
+    private void releaseMainOwnership(PlayerState state) {
         if (!state.active && state.releaseFrames == 0) {
             return;
         }
@@ -183,9 +217,8 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         if (services == null) {
             return;
         }
-        AbstractPlayableSprite player = slot == 0
-                ? services.playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite sprite ? sprite : null
-                : nativeP2FromQuery(services, services.playerQuery().mainPlayerOrNull());
+        AbstractPlayableSprite player = services.playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite sprite
+                ? sprite : null;
         releaseExtensionOwnership(0, player, state);
     }
 
