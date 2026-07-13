@@ -7,6 +7,7 @@ import com.openggf.game.CollisionModel;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.solid.ContactKind;
@@ -336,6 +337,31 @@ final class ObjectSolidContactController {
             objectPushingBitSet.remove(player);
         }
         return true;
+    }
+
+    private void publishSolidPushReleaseAnimationWord(PlayableEntity player) {
+        ObjectInteractionRules rules = objectInteractionRulesOrNull(player);
+        if (rules == null
+                || !rules.solidPushReleaseWritesWalkRunAnimationWord()
+                || !(player instanceof AbstractPlayableSprite sprite)
+                || !sprite.getPushing()) {
+            return;
+        }
+        // Retail S1's FixBugs=0 Solid_NoCollision path executes
+        // `move.w #id_Run,obAnim(a1)` before Solid_NotPushing. Because anim and
+        // prev_anim are adjacent bytes, this publishes anim=Walk ($00) and
+        // prev_anim=Run ($01), restarting Walk on the next player slot without
+        // changing the mapping already rendered this frame. Require the paired
+        // player Status_Push bit as well as this object's push latch: both are
+        // set together by Solid_AlignToSide, while the engine's per-object latch
+        // can otherwise outlive an already-cleared player bit until a much later
+        // placement cleanup.
+        // (_incObj/sub SolidObject.asm:251-263; sub SolidWall.asm:36-51).
+        int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+        if (walkAnimationId >= 0) {
+            sprite.setAnimationId(walkAnimationId);
+        }
+        sprite.publishRunAsPreviousAnimation();
     }
 
     private void clearObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
@@ -1364,6 +1390,9 @@ final class ObjectSolidContactController {
                 setObjectPushingBit(player, instance);
                 provider.setPlayerPushing(player, true);
             } else if (clearObjectPushingBit(player, instance)) {
+                if (result.aggregateContact() == null) {
+                    publishSolidPushReleaseAnimationWord(player);
+                }
                 player.setPushing(false);
                 provider.setPlayerPushing(player, false);
             }
@@ -1520,6 +1549,7 @@ final class ObjectSolidContactController {
 
         if (contact == null) {
             if (clearObjectPushingBit(player, instance)) {
+                publishSolidPushReleaseAnimationWord(player);
                 player.setPushing(false);
                 provider.setPlayerPushing(player, false);
             }
@@ -2471,6 +2501,9 @@ final class ObjectSolidContactController {
                     setObjectPushingBit(player, instance);
                     provider.setPlayerPushing(player, true);
                 } else if (clearObjectPushingBit(player, instance)) {
+                    if (result.aggregateContact() == null) {
+                        publishSolidPushReleaseAnimationWord(player);
+                    }
                     player.setPushing(false);
                     provider.setPlayerPushing(player, false);
                 }
@@ -4409,6 +4442,14 @@ final class ObjectSolidContactController {
             return rules.playerMovement();
         }
         return null;
+    }
+
+    private static ObjectInteractionRules objectInteractionRulesOrNull(PlayableEntity player) {
+        if (player == null) {
+            return null;
+        }
+        GameRules rules = player.getGameRules();
+        return rules != null ? rules.objectInteraction() : null;
     }
 
     private void applyObjectLandingState(PlayableEntity player) {

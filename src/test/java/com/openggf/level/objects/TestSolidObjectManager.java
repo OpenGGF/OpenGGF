@@ -9,6 +9,7 @@ import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.sonic1.Sonic1GameModule;
+import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.objects.EggPrisonObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance;
@@ -16,6 +17,9 @@ import com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzTrapDoorInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.physics.Sensor;
+import com.openggf.sprites.animation.SpriteAnimationEndAction;
+import com.openggf.sprites.animation.SpriteAnimationScript;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
 import com.openggf.tests.TestEnvironment;
@@ -612,6 +616,110 @@ public class TestSolidObjectManager {
                 "Clearing the owning SolidObject contact must release its pushing latch");
         assertFalse(object.lastPushingState);
         assertEquals(2, object.pushingStateChanges);
+    }
+
+    @Test
+    public void sonic1SolidPushReleasePublishesWalkWithRunPreviousAnimation() {
+        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        TestMultiPieceSolidObject object = new TestMultiPieceSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_1);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setCentreX((short) 85);
+        player.setCentreY((short) 81);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0,
+                List.of(0x08, 0x09), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(5, new SpriteAnimationScript(0,
+                List.of(0x01), SpriteAnimationEndAction.LOOP, 0));
+        player.setAnimationSet(animations);
+        player.setAnimationId(5);
+        player.getAnimationManager().update(0);
+
+        manager.updateSolidContacts(player);
+        assertTrue(player.getPushing(), "Fixture should establish the object's native push latch");
+
+        player.setCentreX((short) 40);
+        manager.updateSolidContacts(player);
+
+        assertFalse(player.getPushing());
+        assertEquals(0, player.getAnimationId(),
+                "S1 Solid_NoCollision writes Walk to the raw animation byte");
+        assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "The adjacent prev_anim byte must receive canonical Run");
+        player.getAnimationManager().update(1);
+        assertEquals(0x08, player.getMappingFrame(),
+                "Walk must restart at its first mapping on the next player animation pass");
+    }
+
+    @Test
+    public void sonic2SolidPushReleaseDoesNotPublishSonic1AnimationWord() {
+        GameModuleRegistry.setCurrent(new Sonic2GameModule());
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        TestMultiPieceSolidObject object = new TestMultiPieceSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_2);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setCentreX((short) 85);
+        player.setCentreY((short) 81);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(5, new SpriteAnimationScript(0,
+                List.of(0x01), SpriteAnimationEndAction.LOOP, 0));
+        player.setAnimationSet(animations);
+        player.setAnimationId(5);
+        player.getAnimationManager().update(0);
+
+        manager.updateSolidContacts(player);
+        player.setCentreX((short) 40);
+        manager.updateSolidContacts(player);
+
+        assertEquals(5, player.getAnimationId(),
+                "S2 SolidObject_TestClearPush clears status without S1's animation-word bug");
+        assertEquals(5, player.getAnimationManager().captureRewindState().lastAnimationId());
+    }
+
+    @Test
+    public void sonic1StaleObjectPushLatchDoesNotPublishAfterPlayerPushWasCleared() {
+        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        TestMultiPieceSolidObject object = new TestMultiPieceSolidObject(
+                100, 100, new SolidObjectParams(16, 8, 8));
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_1);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setCentreX((short) 85);
+        player.setCentreY((short) 81);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(5, new SpriteAnimationScript(0,
+                List.of(0x01), SpriteAnimationEndAction.LOOP, 0));
+        player.setAnimationSet(animations);
+        player.setAnimationId(5);
+        player.getAnimationManager().update(0);
+
+        manager.updateSolidContacts(player);
+        assertTrue(player.getPushing());
+        player.setPushing(false);
+        player.setCentreX((short) 40);
+        manager.updateSolidContacts(player);
+
+        assertEquals(5, player.getAnimationId(),
+                "An unpaired stale object latch is not a native S1 push release");
+        assertEquals(5, player.getAnimationManager().captureRewindState().lastAnimationId());
     }
 
     @Test

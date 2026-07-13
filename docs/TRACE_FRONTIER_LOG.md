@@ -39536,3 +39536,46 @@ Verification with the local REV01 Sonic 1 ROM:
   reduces from 31 to 17 errors. The new frontier is a separate Walk mapping
   cadence mismatch (ROM map `$08`, engine map `$09`).
 - Both replay reports retain zero warnings and green physics streams.
+### 2026-07-13 -- Sonic 1 solid push-release animation word
+
+On branch `bugfix/ai-trace-s1-walk-frame-nine` at baseline `36b886faf`, five
+Sonic 1 routes reached the same Walk mapping mismatch after releasing a solid:
+the ROM still displayed mapping `$08`, while the engine had advanced to `$09`.
+Retail S1's `Solid_NoCollision` checks the object's push bit and executes
+`move.w #id_Run,obAnim(a1)` before `Solid_NotPushing`. Because `anim` and
+`prev_anim` are adjacent big-endian bytes, that word publishes raw Walk `$00`
+and previous Run `$01`, restarting Walk on the next player animation pass
+(`docs/s1disasm/_incObj/sub SolidObject.asm:251-263`;
+`docs/s1disasm/_incObj/sub SolidWall.asm:36-51`). S2 and S3K do not carry this
+retail S1 write.
+
+The shared solid-contact controller now reproduces the word under a typed S1
+object-interaction rule. Publication requires the live paired player
+`Status_Push` state as well as the per-object latch: native side contact owns
+those together, whereas an engine object latch can survive an unrelated push
+clear until later placement cleanup. This prevents an old latch from restarting
+Roll or another animation hundreds of frames later. No route, zone, or frame
+gate was added, and no trace data was modified, hydrated into engine state, or
+tolerated.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `mvn -q "-Dtest=TestSolidObjectManager#sonic1SolidPushReleasePublishesWalkWithRunPreviousAnimation+sonic2SolidPushReleaseDoesNotPublishSonic1AnimationWord+sonic1StaleObjectPushLatchDoesNotPublishAfterPlayerPushWasCleared" test`
+  exited 0; the focused S1 publication, stale-latch rejection, and S2
+  non-publication cases passed.
+- A combined comparison-only run of `TestS1FzCompleteRunTraceReplay`,
+  `TestS1Ghz1TraceReplay`, `TestS1Mz1TraceReplay`,
+  `TestS1Mz1CompleteRunTraceReplay`, and
+  `TestS1Mz2CompleteRunTraceReplay` used
+  `-Dmaven.test.failure.ignore=true` only to collect every report. The targeted
+  shared occurrence advanced on four routes:
+    - FZ complete-run: frame 312 to frame 924, 14 to 10 errors.
+    - GHZ1 standalone: frame 1772 to frame 2240, ending at 4 errors.
+    - MZ1 complete-run: frame 1465 to frame 2369, 22 to 21 errors.
+    - MZ2 complete-run: frame 1021 to frame 1552, ending at 43 errors.
+  MZ1 standalone retained frame 587 and 23 errors because its large grassy
+  platform contact does not currently publish the native player/object push
+  pair in the engine; FZ's later frame-924 cylinder occurrence exposes the same
+  upstream push-lifetime gap. Those remaining expected-red frontiers were not
+  hidden by broadening the animation rule. All five reports contained 0
+  warnings.
