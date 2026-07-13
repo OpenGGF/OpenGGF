@@ -33,31 +33,35 @@ class TestSampleModsPackage {
     private static final Path CHARACTER = Path.of("src/test/resources/mods/sample-character-src/project");
     private static final Path STANDALONE = Path.of("src/test/resources/mods/sample-standalone-src/project");
     private static final Path FLAPPY = Path.of("src/test/resources/mods/sample-flappy-src/project");
+    private static final Path PLATFORMER = Path.of("src/test/resources/mods/sample-platformer-src/project");
     private static final Set<String> EXPECTED_IDS = Set.of(
             "openggf-gallery-music-sample", "phase2-reskin", "phase2-sample",
-            "phase3-character", "phase3-standalone", "sample-flappy");
+            "phase3-character", "phase3-standalone", "sample-flappy", "sample-platformer");
     private static final Map<String, String> EXPECTED_API_RANGES = Map.of(
             "openggf-gallery-music-sample", ">=2.0.0 <3.0.0",
             "phase2-reskin", ">=2.0.0 <3.0.0",
             "phase2-sample", ">=2.0.0 <3.0.0",
             "phase3-character", ">=2.0.0 <3.0.0",
             "phase3-standalone", ">=2.0.0 <3.0.0",
-            "sample-flappy", ">=2.1.0 <3.0.0");
+            "sample-flappy", ">=2.1.0 <3.0.0",
+            "sample-platformer", ">=2.0.0 <3.0.0");
     private static final Set<String> TRUSTED_CODE_SAMPLES = Set.of(
-            "phase2-sample", "phase3-character", "phase3-standalone", "sample-flappy");
+            "phase2-sample", "phase3-character", "phase3-standalone", "sample-flappy", "sample-platformer");
+    private static final Set<String> STANDALONE_IDS = Set.of("phase3-standalone", "sample-platformer");
 
     @TempDir Path temp;
 
     @Test
-    void exactlySixMaintainedSourcesBuildThroughRealPackageAndValidateAsOneRepository() throws Exception {
+    void exactlySevenMaintainedSourcesBuildThroughRealPackageAndValidateAsOneRepository() throws Exception {
         List<Sample> samples = List.of(
                 new Sample("music", this::materializeMusic),
                 new Sample("reskin", this::materializeReskin),
                 new Sample("badnik-zone", this::materializeBadnikZone),
                 new Sample("character", this::materializeCharacter),
                 new Sample("standalone", this::materializeStandalone),
-                new Sample("flappy", this::materializeFlappy));
-        assertEquals(6, samples.size(), "The Phase 4 gallery contract is exactly six source mods");
+                new Sample("flappy", this::materializeFlappy),
+                new Sample("platformer", this::materializePlatformer));
+        assertEquals(7, samples.size(), "The Phase 4 gallery contract is exactly seven source mods");
 
         Path repository = temp.resolve("repository");
         Files.createDirectory(repository);
@@ -72,10 +76,10 @@ class TestSampleModsPackage {
         }
 
         var scanned = new DefaultModRepositoryScanner().scan(repository.toAbsolutePath().normalize());
-        assertEquals(6, scanned.size());
+        assertEquals(7, scanned.size());
         var validated = new ModCatalogValidator(repository.toAbsolutePath().normalize(),
                 ModInputLimits.production(), (game, stockId) -> true).validate(scanned);
-        assertEquals(6, validated.entries().size());
+        assertEquals(7, validated.entries().size());
         Set<String> ids = new java.util.LinkedHashSet<>();
         for (var entry : validated.entries()) {
             ModDescriptor descriptor = assertInstanceOf(ModDescriptor.class, entry);
@@ -86,7 +90,7 @@ class TestSampleModsPackage {
             boolean trustedCode = TRUSTED_CODE_SAMPLES.contains(id);
             assertEquals(trustedCode, descriptor.containsCode(), id + " code inventory");
             assertEquals(trustedCode, descriptor.manifest().entrypoint() != null, id + " entrypoint");
-            boolean standalone = "phase3-standalone".equals(id);
+            boolean standalone = STANDALONE_IDS.contains(id);
             assertEquals(standalone ? ModType.STANDALONE : ModType.PATCH,
                     descriptor.manifest().type(), id + " type");
             assertEquals(standalone ? null : "s2", descriptor.manifest().baseGame(), id + " base game");
@@ -164,6 +168,26 @@ class TestSampleModsPackage {
         Path level = materializeLevel(FLAPPY.resolve("src/main/mod/level-source"), "flappy-level");
         assertCli("convert", "level", "--from-export", level.toString(),
                 "--out", output.resolve("levels/flappy").toString());
+    }
+
+    private void materializePlatformer(Path output) throws Exception {
+        copyTree(PLATFORMER.resolve("src/main/resources"), output);
+        compileJava(PLATFORMER.resolve("src/main/java"), output);
+        assertCli("convert", "art", "--image", PLATFORMER.resolve("src/main/mod/zapbug.png").toString(),
+                "--sheet", PLATFORMER.resolve("src/main/mod/zapbug-sheet.yaml").toString(),
+                "--out", output.resolve("art/zapbug.ggfs").toString());
+        assertCli("convert", "art", "--image", PLATFORMER.resolve("src/main/mod/springpad.png").toString(),
+                "--sheet", PLATFORMER.resolve("src/main/mod/springpad-sheet.yaml").toString(),
+                "--out", output.resolve("art/springpad.ggfs").toString());
+        assertCli("convert", "art", "--image", PLATFORMER.resolve("src/main/mod/ring.png").toString(),
+                "--sheet", PLATFORMER.resolve("src/main/mod/ring-sheet.yaml").toString(),
+                "--out", output.resolve("art/ring.ggfs").toString());
+        assertCli("convert", "art", "--playable", "--image", PLATFORMER.resolve("src/main/mod/bolt.png").toString(),
+                "--sheet", PLATFORMER.resolve("src/main/mod/bolt-sheet.yaml").toString(),
+                "--out", output.resolve("art/bolt.ggfp").toString());
+        assertCli("convert", "level", "--from-tmx", PLATFORMER.resolve("src/main/mod/level.tmx").toString(),
+                "--palette", PLATFORMER.resolve("src/main/mod/palette.gpal").toString(),
+                "--out", output.resolve("levels/act1").toString());
     }
 
     private Path materializeLevel(Path source, String name) throws Exception {
