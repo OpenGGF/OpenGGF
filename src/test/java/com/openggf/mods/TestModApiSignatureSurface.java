@@ -27,8 +27,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestModApiSignatureSurface {
     private static final String BASELINE = "mods/mod-api-signatures-1.1.txt";
+    private static final String PUBLISHED_BASELINE = "mods/mod-api-signatures-2.0.txt";
     private static final String PLATFORM_ALLOWLIST = "mods/mod-api-platform-allowlist.txt";
     private static final SemanticVersion BASELINE_VERSION = new SemanticVersion(1, 1, 0);
+    private static final SemanticVersion PUBLISHED_VERSION = new SemanticVersion(2, 0, 0);
 
     @Retention(RetentionPolicy.CLASS)
     @Target(ElementType.TYPE_USE)
@@ -80,42 +82,60 @@ class TestModApiSignatureSurface {
     }
 
     @Test
-    void phaseThreeCandidateSurfaceIsPinnedWithoutPublishingIt() throws Exception {
-        List<String> candidate;
-        try (var input = getClass().getClassLoader().getResourceAsStream(
-                "mods/mod-api-signatures-1.2-candidate.txt")) {
-            assertNotNull(input, "Missing canonical Phase 3 candidate API snapshot");
+    void publishedTwoZeroSurfaceIsPinnedToTheCurrentSurface() throws Exception {
+        List<String> published;
+        try (var input = getClass().getClassLoader().getResourceAsStream(PUBLISHED_BASELINE)) {
+            assertNotNull(input, "Missing published 2.0 API snapshot");
             try (var reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
-                candidate = reader.lines().toList();
+                published = reader.lines().toList();
             }
         }
-        assertEquals(new ArrayList<>(new TreeSet<>(candidate)), candidate,
-                "Candidate API baseline must be unique, sorted canonical UTF-8 text");
-        assertEquals(new ArrayList<>(ModApiSignatureSurface.snapshotLines()), candidate,
-                "Review additive Phase 3 API changes and refresh the full candidate snapshot");
-        assertEquals(new SemanticVersion(1, 1, 0), ModApiVersion.CURRENT,
-                "Task 0 must not publish API 1.2");
+        assertEquals(new ArrayList<>(new TreeSet<>(published)), published,
+                "Published API baseline must be unique, sorted canonical UTF-8 text");
+        assertEquals(new ArrayList<>(ModApiSignatureSurface.snapshotLines()), published,
+                "Review 2.0 API changes and refresh the full published snapshot (mod-api-signatures-2.0.txt)");
+        assertEquals(PUBLISHED_VERSION, ModApiVersion.CURRENT,
+                "The published Mod API version must match the frozen 2.0 baseline");
     }
 
     @Test
-    void versionOneOneBaselineRemainsAnAdditiveSubset() throws IOException {
-        List<String> baseline;
-        try (var input = getClass().getClassLoader().getResourceAsStream(BASELINE)) {
-            if (input == null) throw new IOException("Missing " + BASELINE);
-            try (var reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
-                baseline = reader.lines().toList();
-            }
-        }
-        List<String> sorted = new ArrayList<>(new TreeSet<>(baseline));
-        assertEquals(sorted, baseline, "Baseline must be unique, sorted canonical UTF-8 text");
+    void oneOneToTwoZeroIsADeclaredBreakingTransition() throws IOException {
+        List<String> historical = readBaseline(BASELINE);
+        assertEquals(new ArrayList<>(new TreeSet<>(historical)), historical,
+                "Historical 1.1 baseline must remain unique, sorted canonical UTF-8 text");
+        List<String> published = readBaseline(PUBLISHED_BASELINE);
+        assertEquals(new ArrayList<>(new TreeSet<>(published)), published,
+                "Published 2.0 baseline must be unique, sorted canonical UTF-8 text");
 
         Set<String> current = ModApiSignatureSurface.snapshotLines();
-        assertFalse(ModApiSignatureSurface.baselineViolations(
-                BASELINE_VERSION, Set.copyOf(baseline), ModApiVersion.CURRENT, current).isEmpty(),
-                "The still-published 1.1 version must reject the additive Phase 3 surface");
-        List<String> violations = ModApiSignatureSurface.baselineViolations(
-                BASELINE_VERSION, Set.copyOf(baseline), ModApiVersion.PHASE3_CANDIDATE, current);
-        assertTrue(violations.isEmpty(), () -> String.join("\n", violations));
+
+        // 1.1 -> current is a genuine break: the frozen 1.1 surface has removed/changed
+        // signatures (rewind-state closure consolidation, per-game rules records,
+        // SpriteManager.drawUnifiedBucketWithPriority), so 1.1 is a closed historical
+        // baseline, not an additive subset of the current surface. Even at the new major
+        // version these removals are reported, which is why the transition is major.
+        List<String> historicalViolations = ModApiSignatureSurface.baselineViolations(
+                BASELINE_VERSION, Set.copyOf(historical), PUBLISHED_VERSION, current);
+        assertFalse(historicalViolations.isEmpty(),
+                "1.1 -> 2.0 must be a declared breaking transition with removed/changed signatures");
+        assertTrue(historicalViolations.stream().anyMatch(v -> v.startsWith("Breaking Mod API signature removals")),
+                () -> "Expected breaking removals in the 1.1 -> 2.0 transition:\n" + String.join("\n", historicalViolations));
+
+        // The published 2.0 baseline is frozen against the current surface: no removals,
+        // no unreviewed additions. Any drift from here fails and must be reviewed and
+        // refrozen (a same-major minor bump for additions, a new major for removals).
+        List<String> publishedViolations = ModApiSignatureSurface.baselineViolations(
+                PUBLISHED_VERSION, Set.copyOf(published), ModApiVersion.CURRENT, current);
+        assertTrue(publishedViolations.isEmpty(), () -> String.join("\n", publishedViolations));
+    }
+
+    private List<String> readBaseline(String resource) throws IOException {
+        try (var input = getClass().getClassLoader().getResourceAsStream(resource)) {
+            if (input == null) throw new IOException("Missing " + resource);
+            try (var reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
+                return reader.lines().toList();
+            }
+        }
     }
 
     @Test

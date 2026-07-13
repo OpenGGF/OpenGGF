@@ -432,7 +432,7 @@ class TestModManagerScreen {
     void trustPromptDoesNotMaskStructuralBlockerBehindTrustGate() {
         ModManifest manifest = new ModManifest(1, "invalid-code", "Invalid Code",
                 SemanticVersion.parse("1.2.3"), List.of("Alice"), "Compiled mod",
-                VersionRange.parse(">=1.0.0 <2.0.0"), ModType.PATCH, "s2", "example.Code",
+                VersionRange.parse(">=2.0.0 <3.0.0"), ModType.PATCH, "s2", "example.Code",
                 List.of(), Map.of(), Map.of(), "not-a-stock-anchor", OptionalInt.empty());
         ModDescriptor code = new ModDescriptor(Path.of("invalid-code.jar"), manifest,
                 "2".repeat(64), true, List.of());
@@ -664,7 +664,7 @@ class TestModManagerScreen {
 
     private static ModDescriptor descriptorWithWindows(String id, String name, int windows) {
         ModManifest manifest = new ModManifest(1, id, name, SemanticVersion.parse("1.2.3"),
-                List.of("Alice"), "Pattern owner", VersionRange.parse(">=1.0.0 <2.0.0"),
+                List.of("Alice"), "Pattern owner", VersionRange.parse(">=2.0.0 <3.0.0"),
                 ModType.PATCH, "s2", null, List.of(), Map.of(), Map.of(), null,
                 OptionalInt.of(windows));
         return new ModDescriptor(Path.of(id + ".jar"), manifest, "a".repeat(64), false, List.of());
@@ -674,7 +674,7 @@ class TestModManagerScreen {
                                               List<ModDependency> dependencies,
                                               List<ModFinding> findings) {
         ModManifest manifest = new ModManifest(1, id, name, SemanticVersion.parse("1.2.3"),
-                List.of("Alice", "Bob"), "A detailed music pack", VersionRange.parse(">=1.0.0 <2.0.0"),
+                List.of("Alice", "Bob"), "A detailed music pack", VersionRange.parse(">=2.0.0 <3.0.0"),
                 ModType.PATCH, "s2", null, dependencies, Map.of(), Map.of(), null, OptionalInt.empty());
         return new ModDescriptor(path, manifest, "a".repeat(64), false, findings);
     }
@@ -686,7 +686,7 @@ class TestModManagerScreen {
     private static ModDescriptor codeDescriptor(String id, String name, String hash,
                                                 List<ModDependency> dependencies) {
         ModManifest manifest = new ModManifest(1, id, name, SemanticVersion.parse("1.2.3"),
-                List.of("Alice"), "Compiled mod", VersionRange.parse(">=1.0.0 <2.0.0"),
+                List.of("Alice"), "Compiled mod", VersionRange.parse(">=2.0.0 <3.0.0"),
                 ModType.PATCH, "s2", "example.Code", dependencies, Map.of(), Map.of(), null,
                 OptionalInt.empty());
         return new ModDescriptor(Path.of(id + ".jar"), manifest, hash, true, List.of());

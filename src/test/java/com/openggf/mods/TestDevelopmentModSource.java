@@ -64,7 +64,7 @@ class TestDevelopmentModSource {
             version: 1.0.0
             authors: [Dev]
             description: %s
-            engineApiRange: ">=1.0.0 <2.0.0"
+            engineApiRange: ">=1.0.0 <3.0.0"
             type: patch
             baseGame: s2
             dependencies: []
