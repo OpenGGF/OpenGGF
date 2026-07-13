@@ -273,6 +273,8 @@ class TestS3kNestedHurtboxGraphRewind {
         setIntField(sourceBubble, "phase", 1);
         setIntField(sourceBubble, "timer", 0x16);
         setShortField(sourceBubble, "xVel", (short) 0x0120);
+        setIntField(sourceBubble, "xSub", 0x4000);
+        setIntField(sourceBubble, "ySub", 0x8000);
         setBooleanField(sourceBubble, "vortexEnded", true);
 
         ObjectRefId bubbleId = objectId(objectManager, sourceBubble);
@@ -300,6 +302,8 @@ class TestS3kNestedHurtboxGraphRewind {
         assertEquals(1, readIntField(restoredBubble, "phase"));
         assertEquals(0x16, readIntField(restoredBubble, "timer"));
         assertEquals(0x0120, readShortField(restoredBubble, "xVel"));
+        assertEquals(0x4000, readIntField(restoredBubble, "xSub"));
+        assertEquals(0x8000, readIntField(restoredBubble, "ySub"));
         assertTrue(readBooleanField(restoredBubble, "vortexEnded"));
     }
 
