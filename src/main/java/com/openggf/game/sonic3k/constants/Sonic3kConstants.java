@@ -212,6 +212,8 @@ public class Sonic3kConstants {
     public static final int MAP_FBZ_CORK_FLOOR_ADDR = 0x2A920;    // Map_FBZCorkFloor (2 frames, 2/4 pieces, in sonic3k.asm)
     public static final int MAP_FBZ_FLOATING_PLATFORM_ADDR = 0x03A742;
     public static final int MAP_FBZ_CHAIN_LINK_ADDR = 0x03AD8A;
+    public static final int MAP_FBZ_MAGNETIC_SPIKE_BALL_ADDR = 0x03B25C;
+    public static final int MAP_FBZ_MAGNETIC_PLATFORM_ADDR = 0x03B4DE;
     public static final int MAP_FBZ_SNAKE_PLATFORM_ADDR = 0x03B6CE;
     public static final int MAP_FBZ_BENT_PIPE_ADDR = 0x03B73C;
     public static final int MAP_FBZ_ROTATING_PLATFORM_ADDR = 0x03B91A;
@@ -223,7 +225,13 @@ public class Sonic3kConstants {
     public static final int MAP_FBZ_PLATFORM_BLOCKS_ADDR = 0x03C416;
     public static final int MAP_FBZ_MISSILE_LAUNCHER_ADDR = 0x03C78E;
     public static final int MAP_FBZ_WALL_MISSILE_ADDR = 0x03C906;
+    public static final int MAP_FBZ_MINE_ADDR = 0x03CA06;
+    public static final int MAP_FBZ_TRAP_SPRING_ADDR = 0x03CC5A;
+    public static final int MAP_FBZ_FLAMETHROWER_ADDR = 0x03CFD0;
+    public static final int MAP_FBZ_SPIDER_CRANE_ADDR = 0x03D2FC;
+    public static final int MAP_FBZ_MAGNETIC_PENDULUM_ADDR = 0x03D9AE;
     public static final int ARTTILE_FBZ_OUTDOORS = 0x02E5;
+    public static final int ARTTILE_FBZ_MISC2 = 0x02D2;
     public static final int MAP_FBZ_DEZ_PLAYER_LAUNCHER_ADDR = 0x03BA8A;
 
     // ===== Breakable Wall mappings (Obj_BreakableWall, ID 0x0D) =====

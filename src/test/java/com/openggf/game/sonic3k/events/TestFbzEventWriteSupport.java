@@ -13,7 +13,7 @@ class TestFbzEventWriteSupport {
         RecordingBridge bridge = new RecordingBridge();
         Services services = new Services(bridge);
 
-        S3kFbzEventWriteSupport.setMagneticState(services, Sonic3kFBZEvents.MagneticPolarity.ATTRACT, 9);
+        S3kFbzEventWriteSupport.setMagneticState(services, Sonic3kFBZEvents.MagneticPolarity.ACTIVE, 9);
         S3kFbzEventWriteSupport.setCloudRewindId(services, 2, ObjectRefId.dynamic(1, 2, 3));
         S3kFbzEventWriteSupport.setBossLoadPositionAdjustmentPending(services, true);
         S3kFbzEventWriteSupport.setBossBackgroundOffsets(services, 12, -14);
@@ -22,7 +22,7 @@ class TestFbzEventWriteSupport {
                 Sonic3kFBZEvents.CollisionMode.FOREGROUND_AND_BACKGROUND, 4, 5);
         S3kFbzEventWriteSupport.setScreenShakeState(services, true, -2, 7);
 
-        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ATTRACT, bridge.polarity);
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, bridge.polarity);
         assertEquals(9, bridge.phase);
         assertEquals(ObjectRefId.dynamic(1, 2, 3), bridge.cloudId);
         assertTrue(bridge.adjustmentPending);

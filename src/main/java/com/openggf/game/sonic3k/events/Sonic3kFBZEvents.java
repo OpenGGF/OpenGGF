@@ -16,6 +16,7 @@ import com.openggf.level.StagedBackgroundPlaneRedrawController;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -31,7 +32,8 @@ import java.util.logging.Logger;
 public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     private static final Logger LOG = Logger.getLogger(Sonic3kFBZEvents.class.getName());
     public enum RedrawDirection { NONE, TOP_DOWN, BOTTOM_UP, LEFT_TO_RIGHT, RIGHT_TO_LEFT }
-    public enum MagneticPolarity { NEUTRAL, ATTRACT, REPEL }
+    /** ROM {@code _unkF7C1}: a single inactive/active bit. */
+    public enum MagneticPolarity { INACTIVE, ACTIVE }
     public enum PlaneAssignmentMode { NORMAL, REVERSED }
     public enum CollisionMode { FOREGROUND_ONLY, FOREGROUND_AND_BACKGROUND }
     public enum DeformMode { INDOOR, OUTDOOR }
@@ -76,10 +78,12 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     private boolean hScrollAccumulatorSampled;
     private int hScrollAccumulatorLastFrame;
     private int hScrollAccumulatorLastRead;
-    private MagneticPolarity magneticPolarity = MagneticPolarity.NEUTRAL;
+    private MagneticPolarity magneticPolarity = MagneticPolarity.INACTIVE;
     private int magneticTimerPhase;
     private boolean magneticEdgeObserved;
     private int magneticLastEdgeFrame;
+    /** FBZ-owned bytes in the S3K Object_respawn_table, keyed by layout index. */
+    private final BitSet pendulumOrientationBits = new BitSet(512);
     private int act2ForegroundStage;
     private int bossBackgroundStage;
     private int bossBackgroundOffsetX;
@@ -135,10 +139,11 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         hScrollAccumulatorSampled = false;
         hScrollAccumulatorLastFrame = 0;
         hScrollAccumulatorLastRead = 0;
-        magneticPolarity = MagneticPolarity.NEUTRAL;
+        magneticPolarity = MagneticPolarity.INACTIVE;
         magneticTimerPhase = 0;
         magneticEdgeObserved = false;
         magneticLastEdgeFrame = 0;
+        pendulumOrientationBits.clear();
         act2ForegroundStage = 0;
         bossBackgroundStage = 0;
         bossBackgroundOffsetX = 0;
@@ -648,10 +653,19 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
 
     /** ROM AnPal_FBZ, guarded so a recompute of one frame cannot toggle twice. */
     public void advanceMagneticPhase(int frameCounter) {
+        advanceMagneticPhase(frameCounter, false);
+    }
+
+    /**
+     * ROM {@code Animate_Palette}: a nonzero {@code Palette_fade_timer} skips
+     * AnPal entirely, so a qualifying edge is lost rather than deferred.
+     */
+    public void advanceMagneticPhase(int frameCounter, boolean paletteFadeActive) {
         int phase = frameCounter & 0xFF;
-        if (phase == 0 && (!magneticEdgeObserved || magneticLastEdgeFrame != frameCounter)) {
-            magneticPolarity = magneticPolarity == MagneticPolarity.ATTRACT
-                    ? MagneticPolarity.REPEL : MagneticPolarity.ATTRACT;
+        if (!paletteFadeActive && phase == 0
+                && (!magneticEdgeObserved || magneticLastEdgeFrame != frameCounter)) {
+            magneticPolarity = magneticPolarity == MagneticPolarity.ACTIVE
+                    ? MagneticPolarity.INACTIVE : MagneticPolarity.ACTIVE;
             magneticEdgeObserved = true;
             magneticLastEdgeFrame = frameCounter;
         }
@@ -663,6 +677,21 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         setMagneticState(polarity, phase);
         magneticEdgeObserved = edgeObserved;
         magneticLastEdgeFrame = lastEdgeFrame;
+    }
+    public boolean getPendulumOrientationBit(int layoutIndex) {
+        return layoutIndex >= 0 && pendulumOrientationBits.get(layoutIndex);
+    }
+    public void setPendulumOrientationBit(int layoutIndex, boolean value) {
+        if (layoutIndex < 0 || layoutIndex >= 512) return;
+        pendulumOrientationBits.set(layoutIndex, value);
+    }
+    public long[] capturePendulumOrientationBits() {
+        return Arrays.copyOf(pendulumOrientationBits.toLongArray(), 8);
+    }
+    public void restorePendulumOrientationBits(long[] words) {
+        if (words == null || words.length != 8) throw new IllegalArgumentException("FBZ pendulum orientation words");
+        pendulumOrientationBits.clear();
+        pendulumOrientationBits.or(BitSet.valueOf(words));
     }
     public int getAct2ForegroundStage() { return act2ForegroundStage; }
     public void setAct2ForegroundStage(int stage) {

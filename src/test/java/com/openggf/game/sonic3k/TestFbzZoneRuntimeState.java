@@ -57,7 +57,7 @@ class TestFbzZoneRuntimeState {
         events.setBackgroundRedraw(12, Sonic3kFBZEvents.RedrawDirection.LEFT_TO_RIGHT);
         events.setOutdoorBobOffset(-7);
         assertEquals(0, events.sampleOutdoorHScrollAccumulator(0x1234));
-        events.setMagneticState(Sonic3kFBZEvents.MagneticPolarity.REPEL, 0x5A);
+        events.setMagneticState(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, 0x5A);
         events.setAct2ForegroundStage(8);
         events.setBossBackgroundState(16, 0x1234, -0x234);
         events.setBossLoadPositionAdjustmentPending(true);
@@ -81,7 +81,7 @@ class TestFbzZoneRuntimeState {
         assertEquals(Sonic3kFBZEvents.RedrawDirection.LEFT_TO_RIGHT, state.backgroundRedrawDirection());
         assertEquals(-7, state.outdoorBobOffset());
         assertEquals(0xE00, state.hScrollAccumulator());
-        assertEquals(Sonic3kFBZEvents.MagneticPolarity.REPEL, state.magneticPolarity());
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, state.magneticPolarity());
         assertEquals(0x5A, state.magneticTimerPhase());
         assertEquals(8, state.act2ForegroundStage());
         assertEquals(16, state.bossBackgroundStage());
@@ -119,13 +119,13 @@ class TestFbzZoneRuntimeState {
                 "recomputing a captured frame must return its original read-old sample");
         assertEquals(0xE00, state.hScrollAccumulator(), "duplicate recompute must not advance twice");
         events.advanceMagneticPhase(0x100);
-        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ATTRACT, state.magneticPolarity(),
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, state.magneticPolarity(),
                 "restored edge metadata must suppress a duplicate toggle");
 
         assertEquals(0xE00 >> 3, events.sampleBossHScrollAccumulator(0x41));
         assertEquals(0x8E00, state.hScrollAccumulator());
         events.advanceMagneticPhase(0x200);
-        assertEquals(Sonic3kFBZEvents.MagneticPolarity.REPEL, state.magneticPolarity());
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, state.magneticPolarity());
     }
 
     @Test
@@ -240,6 +240,22 @@ class TestFbzZoneRuntimeState {
 
         assertFalse(state.cloudCleanupTerminal());
         assertEquals(stable, state.cloudRewindId(4));
+    }
+
+    @Test
+    void pendulumRespawnOrientationBitsRoundTripWithoutAliasingPlacements() {
+        Sonic3kFBZEvents events = new Sonic3kFBZEvents();
+        events.init(1);
+        FbzZoneRuntimeState state = new FbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, events);
+        state.setPendulumOrientationBit(137, true);
+        byte[] captured = state.captureBytes();
+        state.setPendulumOrientationBit(137, false);
+        state.setPendulumOrientationBit(138, true);
+
+        state.restoreBytes(captured);
+
+        assertTrue(state.pendulumOrientationBit(137));
+        assertFalse(state.pendulumOrientationBit(138));
     }
 
     private static int firstChangedByte(byte[] before, byte[] after) {

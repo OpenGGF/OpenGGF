@@ -18,7 +18,7 @@ import java.util.Objects;
 /** Event-backed FBZ runtime adapter and sole rewind serializer for FBZ event RAM. */
 public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
     private static final int MAGIC = 0x46425A31;
-    private static final int VERSION = 6;
+    private static final int VERSION = 7;
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
     private final Sonic3kFBZEvents events;
@@ -56,6 +56,10 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
     public Sonic3kFBZEvents.MagneticPolarity magneticPolarity() { return events.getMagneticPolarity(); }
     public int magneticTimerPhase() { return events.getMagneticTimerPhase(); }
     public void advanceMagneticPhase(int frameCounter) { events.advanceMagneticPhase(frameCounter); }
+    public boolean pendulumOrientationBit(int layoutIndex) { return events.getPendulumOrientationBit(layoutIndex); }
+    public void setPendulumOrientationBit(int layoutIndex, boolean value) {
+        events.setPendulumOrientationBit(layoutIndex, value);
+    }
     public int act2ForegroundStage() { return events.getAct2ForegroundStage(); }
     public int bossBackgroundStage() { return events.getBossBackgroundStage(); }
     public int bossBackgroundOffsetX() { return events.getBossBackgroundOffsetX(); }
@@ -80,7 +84,7 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
         List<ObjectRefId> clouds = events.getCloudRewindIds();
         byte[] retainedPlane = actIndex == 0 ? events.captureRetainedPlaneSnapshot() : new byte[0];
         int cloudBytes = clouds.stream().mapToInt(id -> 1 + (id == null ? 0 : 20)).sum();
-        ByteBuffer out = ByteBuffer.allocate(136 + retainedPlane.length + cloudBytes);
+        ByteBuffer out = ByteBuffer.allocate(200 + retainedPlane.length + cloudBytes);
         out.putInt(MAGIC).putInt(VERSION).putInt(events.getForegroundLayoutRegion());
         out.put(bool(events.isForegroundOutdoor())).put(bool(events.isBackgroundOutdoor()));
         out.putInt(events.getBackgroundRedrawStage()).putInt(events.getBackgroundRedrawDirection().ordinal());
@@ -98,6 +102,7 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
         out.putInt(events.getHScrollAccumulatorLastFrame()).putInt(events.getHScrollAccumulatorLastRead());
         out.putInt(events.getMagneticPolarity().ordinal()).putInt(events.getMagneticTimerPhase());
         out.put(bool(events.isMagneticEdgeObserved())).putInt(events.getMagneticLastEdgeFrame());
+        for (long word : events.capturePendulumOrientationBits()) out.putLong(word);
         out.putInt(events.getAct2ForegroundStage()).putInt(events.getBossBackgroundStage());
         out.putInt(events.getBossBackgroundOffsetX()).putInt(events.getBossBackgroundOffsetY());
         out.put(bool(events.isBossLoadPositionAdjustmentPending()));
@@ -149,6 +154,8 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
             int magneticPhase = in.getInt();
             boolean magneticEdgeObserved = readBool(in, "magnetic edge observed");
             int magneticLastEdgeFrame = in.getInt();
+            long[] pendulumOrientationBits = new long[8];
+            for (int i = 0; i < pendulumOrientationBits.length; i++) pendulumOrientationBits[i] = in.getLong();
             int foregroundStage = in.getInt(), bossStage = in.getInt();
             int bossX = in.getInt(), bossY = in.getInt();
             boolean adjustment = readBool(in, "boss adjustment");
@@ -168,7 +175,7 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
                     screenInitialized, backgroundInitialized, motionAllocationAttempted, motionSpawned,
                     retainedPlane, bob,
                     hScrollAccumulator, hScrollSampled, hScrollLastFrame, hScrollLastRead,
-                    polarity, magneticPhase, magneticEdgeObserved, magneticLastEdgeFrame,
+                    polarity, magneticPhase, magneticEdgeObserved, magneticLastEdgeFrame, pendulumOrientationBits,
                     foregroundStage, bossStage, bossX, bossY, adjustment,
                     Collections.unmodifiableList(clouds), cleanupTerminal, plane, collision, diffX, diffY,
                     shakeActive, shakeOffset, shakePhase, eventsFg5);
@@ -193,6 +200,7 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
                 s.hScrollLastFrame(), s.hScrollLastRead());
         target.restoreMagneticState(s.polarity(), s.magneticPhase(),
                 s.magneticEdgeObserved(), s.magneticLastEdgeFrame());
+        target.restorePendulumOrientationBits(s.pendulumOrientationBits());
         if (target.getAct() == 1) {
             if (s.cleanupTerminal() && s.clouds().stream().anyMatch(Objects::nonNull)) {
                 throw new IllegalArgumentException("terminal FBZ cloud snapshot contains live identities");
@@ -250,6 +258,7 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
                             int hScrollLastFrame, int hScrollLastRead,
                             Sonic3kFBZEvents.MagneticPolarity polarity, int magneticPhase,
                             boolean magneticEdgeObserved, int magneticLastEdgeFrame,
+                            long[] pendulumOrientationBits,
                             int foregroundStage, int bossStage, int bossX, int bossY, boolean adjustment,
                             List<ObjectRefId> clouds, boolean cleanupTerminal, Sonic3kFBZEvents.PlaneAssignmentMode plane,
                             Sonic3kFBZEvents.CollisionMode collision, int diffX, int diffY,

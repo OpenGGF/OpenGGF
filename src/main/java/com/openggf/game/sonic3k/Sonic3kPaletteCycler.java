@@ -76,13 +76,9 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 cycle.tick(level, paletteRegistry);
             }
         }
-        if (zoneIndex == 0x04 && GameServices.hasRuntime()) {
-            var state = S3kRuntimeStates.currentFbz(GameServices.zoneRuntimeRegistry()).orElse(null);
-            var levelManager = GameServices.levelOrNull();
-            if (state != null && levelManager != null) {
-                dispatchFbzMagneticPhase(state, levelManager.getFrameCounter());
-            }
-        }
+        // AnPal_FBZ changes gameplay state before Process_Sprites in the ROM.
+        // Sonic3kLevelEventManager advances it in the fixed-object prelude so
+        // dynamic objects observe the new bit on the exact $0100/$0200 edges.
         paletteRegistry.resolveInto(levelPalettes(), resolveUnderwaterPalettes(),
                 GameServices.graphics(), level.getPalette(0));
     }

@@ -93,6 +93,12 @@ public final class RewindRoundTripHarness {
 
     private static final Map<String, String> GRAPH_COVERED_ISOLATED_PROBE_CLASSES = Map.ofEntries(
             Map.entry(
+                    "com.openggf.game.sonic3k.objects.FbzMissileLauncherCompanionObjectInstance",
+                    "com.openggf.game.sonic3k.objects.TestFbzMissileFamilyGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.FbzMissileLauncherProjectileObjectInstance",
+                    "com.openggf.game.sonic3k.objects.TestFbzMissileFamilyGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance",
                     "TestS1BadnikChildGraphRewind"),
             Map.entry(

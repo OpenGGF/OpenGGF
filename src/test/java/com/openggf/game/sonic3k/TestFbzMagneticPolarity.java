@@ -15,15 +15,15 @@ class TestFbzMagneticPolarity {
 
         FbzZoneRuntimeState state = state(events);
         Sonic3kPaletteCycler.dispatchFbzMagneticPhase(state, 1);
-        assertEquals(Sonic3kFBZEvents.MagneticPolarity.NEUTRAL, events.getMagneticPolarity());
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, events.getMagneticPolarity());
         assertEquals(1, events.getMagneticTimerPhase());
 
         Sonic3kPaletteCycler.dispatchFbzMagneticPhase(state, 0x100);
-        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ATTRACT, events.getMagneticPolarity());
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, events.getMagneticPolarity());
         assertEquals(0, events.getMagneticTimerPhase());
 
         Sonic3kPaletteCycler.dispatchFbzMagneticPhase(state, 0x200);
-        assertEquals(Sonic3kFBZEvents.MagneticPolarity.REPEL, events.getMagneticPolarity());
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, events.getMagneticPolarity());
         assertEquals(0, events.getMagneticTimerPhase());
     }
 
@@ -35,8 +35,36 @@ class TestFbzMagneticPolarity {
         Sonic3kPaletteCycler.dispatchFbzMagneticPhase(state, 0x100);
         Sonic3kPaletteCycler.dispatchFbzMagneticPhase(state, 0x100);
 
-        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ATTRACT, events.getMagneticPolarity());
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, events.getMagneticPolarity());
         assertEquals(0, events.getMagneticTimerPhase());
+    }
+
+    @Test void surroundingFramesExposeTwoConsecutiveEdgesWithoutAnInitialFrameZeroToggle() {
+        Sonic3kFBZEvents events = new Sonic3kFBZEvents();
+        events.init(0);
+        events.advanceMagneticPhase(0x00FF);
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, events.getMagneticPolarity());
+        events.advanceMagneticPhase(0x0100);
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, events.getMagneticPolarity());
+        events.advanceMagneticPhase(0x0101);
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, events.getMagneticPolarity());
+        events.advanceMagneticPhase(0x01FF);
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, events.getMagneticPolarity());
+        events.advanceMagneticPhase(0x0200);
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, events.getMagneticPolarity());
+        events.advanceMagneticPhase(0x0201);
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, events.getMagneticPolarity());
+    }
+
+    @Test void paletteFadeSkipsTheQualifyingEdgeWithoutLaterCatchup() {
+        Sonic3kFBZEvents events = new Sonic3kFBZEvents();
+        events.init(0);
+        events.advanceMagneticPhase(0x0100, true);
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, events.getMagneticPolarity());
+        events.advanceMagneticPhase(0x0101, false);
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, events.getMagneticPolarity());
+        events.advanceMagneticPhase(0x0200, false);
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, events.getMagneticPolarity());
     }
 
     @Test void distinctLowByteEdgesRemainDistinctAcrossFrameCounterWrap() {
@@ -46,11 +74,11 @@ class TestFbzMagneticPolarity {
         FbzZoneRuntimeState state = state(events);
         Sonic3kPaletteCycler.dispatchFbzMagneticPhase(state, 0xFFFF_FF00);
         Sonic3kPaletteCycler.dispatchFbzMagneticPhase(state, 0xFFFF_FF00);
-        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ATTRACT, events.getMagneticPolarity());
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, events.getMagneticPolarity());
 
         Sonic3kPaletteCycler.dispatchFbzMagneticPhase(state, 0x0000_0000);
         Sonic3kPaletteCycler.dispatchFbzMagneticPhase(state, 0x0000_0000);
-        assertEquals(Sonic3kFBZEvents.MagneticPolarity.REPEL, events.getMagneticPolarity());
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, events.getMagneticPolarity());
     }
 
     @Test void eventPaletteFoundationOwnsLineFourColorsTwoThroughNineAndBossColorOne() {

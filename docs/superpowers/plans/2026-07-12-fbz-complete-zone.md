@@ -290,6 +290,8 @@ mvn "-Dtest=TestFbzDisappearingPlatformAndScrewDoor,TestFbzPolePropellerPistonAn
 
 1. RED-test `$73,$74,$E1,$E3-$E5,$FF` across every used subtype, the exact 256-frame polarity edge, field/chain construction, damage cadence, claw/grab policies, and child allocation/deletion.
 2. Read polarity only from `FbzZoneRuntimeState`; objects do not own competing timers.
+   Only `$73/$74` consume the bit. `$FF` is a strict-P1 three-slot pendulum
+   grab/swing/launcher and must not be coupled to magnetic polarity.
 3. Test death/restart/rewind around the polarity edge and three-or-more-character contact with hazards/grabbers.
 4. Ratchet completeness and rerun animation/palette/rewind coverage.
 

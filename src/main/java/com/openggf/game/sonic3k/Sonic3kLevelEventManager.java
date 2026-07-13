@@ -264,6 +264,22 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public void updateFixedInLevelObjectsBeforeDynamicObjects() {
+        if (fbzEvents == null) {
+            return;
+        }
+        var levelManager = GameServices.levelOrNull();
+        if (levelManager != null) {
+            // ROM LevelLoop increments Level_frame_counter, runs AnPal_FBZ,
+            // then Process_Sprites. ObjectManager receives this same +1 frame.
+            var fade = GameServices.fadeOrNull();
+            fbzEvents.advanceMagneticPhase(
+                    levelManager.getFrameCounter() + 1,
+                    fade != null && fade.isActive());
+        }
+    }
+
+    @Override
     public boolean ownsFixedDrowningBubbleCadence() {
         return true;
     }

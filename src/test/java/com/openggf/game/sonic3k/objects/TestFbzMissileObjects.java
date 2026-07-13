@@ -1,4 +1,6 @@
 package com.openggf.game.sonic3k.objects;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.Sonic3kPlcArtRegistry;
 import com.openggf.level.objects.*;
 import com.openggf.physics.*;
 import org.junit.jupiter.api.*;
@@ -34,6 +36,15 @@ class TestFbzMissileObjects {
       assertEquals(s << 2, o.launchInterval());
       assertEquals(5, o.getPriorityBucket());
     }
+  }
+  @Test
+  void wallMissileArtUsesEightExplicitFramesBecauseItsFirstOffsetsPointBackward() {
+    var entry = Sonic3kPlcArtRegistry.getPlan(4, 0).levelArt().stream()
+        .filter(candidate -> candidate.key().equals(Sonic3kObjectArtKeys.FBZ_WALL_MISSILE))
+        .findFirst()
+        .orElseThrow();
+
+    assertEquals(8, entry.mappingFrameCount());
   }
   @Test
   void launcherTrajectoryTableAndExplosionOffsetsAreExact() {

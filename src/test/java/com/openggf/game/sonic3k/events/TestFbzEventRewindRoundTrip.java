@@ -16,18 +16,18 @@ class TestFbzEventRewindRoundTrip {
         manager.initLevel(Sonic3kZoneIds.ZONE_FBZ, 1);
         Sonic3kFBZEvents events = manager.getFbzEvents();
         FbzZoneRuntimeState runtime = new FbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, events);
-        events.setMagneticState(Sonic3kFBZEvents.MagneticPolarity.REPEL, 33);
+        events.setMagneticState(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, 33);
         byte[] runtimeBytes = runtime.captureBytes();
         LevelEventSnapshot managerSnapshot = manager.capture();
 
-        events.setMagneticState(Sonic3kFBZEvents.MagneticPolarity.ATTRACT, 2);
+        events.setMagneticState(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, 2);
         manager.restore(managerSnapshot);
-        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ATTRACT, events.getMagneticPolarity(),
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, events.getMagneticPolarity(),
                 "level-event sidecar must not restore FBZ authoritative runtime fields");
 
         runtime.restoreBytes(runtimeBytes);
         manager.reconcileAfterRewindRestore();
-        assertEquals(Sonic3kFBZEvents.MagneticPolarity.REPEL, events.getMagneticPolarity());
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, events.getMagneticPolarity());
         assertArrayEquals(runtimeBytes, runtime.captureBytes());
     }
 }

@@ -911,6 +911,47 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void fbzWallMissileMappingResolvesSignedBackwardFrameOffsets() throws IOException {
+        assertEquals(0x3C7CE,
+                S3kSpriteDataLoader.resolveMappingFrameAddress(0x3C906, 0xFEC8));
+
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            var frames = S3kSpriteDataLoader.loadMappingFrames(
+                    RomByteReader.fromRom(rom), Sonic3kConstants.MAP_FBZ_WALL_MISSILE_ADDR, 8);
+
+            assertEquals(8, frames.size());
+            assertEquals(List.of(1, 1, 1, 1, 1, 1, 1, 1),
+                    frames.stream().map(frame -> frame.pieces().size()).toList());
+        }
+    }
+
+    @Test
+    public void fbzTaskNineMappingTablesMatchDisassemblyShapes() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+
+            assertMappingPieceCounts(reader, Sonic3kConstants.MAP_FBZ_MAGNETIC_SPIKE_BALL_ADDR,
+                    2, 4, 4, 4, 4, 3, 0);
+            assertMappingPieceCounts(reader, Sonic3kConstants.MAP_FBZ_MAGNETIC_PLATFORM_ADDR,
+                    2, 1, 2, 2, 4);
+            assertMappingPieceCounts(reader, Sonic3kConstants.MAP_FBZ_MINE_ADDR, 1, 1);
+            assertMappingPieceCounts(reader, Sonic3kConstants.MAP_FBZ_TRAP_SPRING_ADDR, 2, 2, 2);
+            assertMappingPieceCounts(reader, Sonic3kConstants.MAP_FBZ_FLAMETHROWER_ADDR,
+                    1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+            assertMappingPieceCounts(reader, Sonic3kConstants.MAP_FBZ_SPIDER_CRANE_ADDR,
+                    0, 1, 2, 3, 4, 5, 6, 7, 8, 3, 4, 1, 1, 1);
+            assertMappingPieceCounts(reader, Sonic3kConstants.MAP_FBZ_MAGNETIC_PENDULUM_ADDR,
+                    4, 4, 1, 2);
+        }
+    }
+
+    @Test
     public void sklObjectArtRegistryDoesNotUseStandaloneSonic3Addresses() {
         List<String> violations = new ArrayList<>();
         for (int zone = FIRST_SKL_ZONE; zone <= 0x0D; zone++) {
@@ -1582,6 +1623,17 @@ public class TestSonic3kPlcArtRegistry {
                 assertTrue(width <= MAX_SANE_FRAME_SPAN_PIXELS && height <= MAX_SANE_FRAME_SPAN_PIXELS,
                         context + " frame " + frameIndex + " bounds span " + width + "x" + height);
             }
+        }
+    }
+
+    private static void assertMappingPieceCounts(
+            RomByteReader reader, int mappingAddress, int... expectedPieceCounts) {
+        List<SpriteMappingFrame> frames = S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddress);
+        assertEquals(expectedPieceCounts.length, frames.size());
+        for (int frameIndex = 0; frameIndex < expectedPieceCounts.length; frameIndex++) {
+            assertEquals(expectedPieceCounts[frameIndex], frames.get(frameIndex).pieces().size(),
+                    "piece count for mapping 0x" + Integer.toHexString(mappingAddress)
+                            + " frame " + frameIndex);
         }
     }
 

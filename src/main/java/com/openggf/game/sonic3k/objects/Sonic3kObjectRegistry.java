@@ -1283,6 +1283,12 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factories.put(Sonic3kObjectIds.FBZ_CHAIN_LINK,
                 (spawn, registry) -> isFbzS3kl() ? new FbzChainLinkObjectInstance(spawn)
                         : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_MAGNETIC_SPIKE_BALL,
+                (spawn, registry) -> isFbzS3kl() ? new FbzMagneticSpikeBallObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM,
+                (spawn, registry) -> isFbzS3kl() ? new FbzMagneticPlatformObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
         factories.put(Sonic3kObjectIds.FBZ_SNAKE_PLATFORM,
                 (spawn, registry) -> isFbzS3kl() ? new FbzSnakePlatformObjectInstance(spawn)
                         : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
@@ -1303,6 +1309,26 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factories.put(Sonic3kObjectIds.FBZ_PLATFORM_BLOCKS,(spawn,registry)->isFbzS3kl()?new FbzPlatformBlocksObjectInstance(spawn):new PlaceholderObjectInstance(spawn,getPrimaryName(spawn.objectId(),getCurrentZoneSet())));
         factories.put(Sonic3kObjectIds.FBZ_MISSILE_LAUNCHER,(spawn,registry)->isFbzS3kl()?new FbzMissileLauncherObjectInstance(spawn):new PlaceholderObjectInstance(spawn,getPrimaryName(spawn.objectId(),getCurrentZoneSet())));
         factories.put(Sonic3kObjectIds.FBZ_WALL_MISSILE,(spawn,registry)->isFbzS3kl()?new FbzWallMissileObjectInstance(spawn):new PlaceholderObjectInstance(spawn,getPrimaryName(spawn.objectId(),getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_MINE,
+                (spawn, registry) -> isFbzS3kl() ? new FbzMineObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn,
+                                getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_TRAP_SPRING,
+                (spawn, registry) -> isFbzS3kl() ? new FbzTrapSpringObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn,
+                                getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_FLAMETHROWER,
+                (spawn, registry) -> isFbzS3kl() ? new FbzFlamethrowerObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn,
+                                getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_SPIDER_CRANE,
+                (spawn, registry) -> isFbzS3kl() ? new FbzSpiderCraneObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn,
+                                getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM,
+                (spawn, registry) -> isFbzS3kl() ? new FbzMagneticPendulumObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn,
+                                getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
     }
 
     private boolean isFbzS3kl() {

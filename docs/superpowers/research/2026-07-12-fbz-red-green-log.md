@@ -634,3 +634,78 @@ recorded as `unknown/not previously run` rather than inferred.
   array. The direct suite passed 9/9 and the complete Task 8 focused matrix
   passed 43/43 after this change; `git diff --check` remains clean. No trace or
   commit ran.
+- Task 9 behavior RED began with five planned test owners failing compilation
+  on 22 missing family symbols. The first implementation pass then made the
+  focused object/polarity suite GREEN 9/9. Registry completeness independently
+  failed at the exact expected boundary, proving the seven promoted IDs reduce
+  live FBZ placeholders from 330 to 101 across 229 placed records.
+- Task 9 oracle-review RED corrected the initial three-state magnetic model to
+  the ROM's one-bit INACTIVE/ACTIVE state, moved AnPal ownership before dynamic
+  objects, and added the fade-suppressed/lost-edge rule. Tests cover `$00FF`,
+  `$0100`, `$0101`, `$01FF`, `$0200`, `$0201`, idempotent recomputation, and
+  same-frame consumer visibility. The phase/completeness/object matrix reached
+  GREEN 16/16 before the subsequent object-oracle hardening pass.
+- Task 9 object-oracle REDs then tightened native 16:16 magnetic motion, exact
+  `$73` subtype art/culls, `$74` chain shape, `$E3` terminal scripts, `$E4`
+  independent 17-update flames/nozzle multisprites, `$E5` strict-P1 companion
+  ownership, and `$FF` strict-P1 three-slot 8.8 pendulum geometry. The direct
+  post-correction slice is GREEN 15/15. Guard failures remain the inherited AIZ
+  emerald-glow scalars and AIZ miniboss camera-controller construction findings;
+  Task 9 introduced no new reported guard key. No trace or commit ran.
+- Task 9 rewind-graph validation exercises the real three-slot magnetic
+  pendulum graph in both in-place and forced-reconstruction restore modes.
+  Pivot, endpoint, and chain preserve their exact slots and bidirectional
+  ownership links without duplicate allocation on the following update; the
+  graph suite is GREEN 2/2. The FBZ runtime/event matrix is GREEN 19/19.
+- Final art validation first RED-lined on the Task 8 wall-missile table. Its
+  first two `dc.w` offsets point backward to shared projectile frames, exposing
+  that `S3kSpriteDataLoader` treated relative mapping offsets as unsigned and
+  that the registry lacked the disassembly-defined eight-frame count. A focused
+  metadata regression failed with `expected 8, actual -1`, and the generic
+  signed-address regression initially failed compilation. GREEN sign-extends
+  every mapping frame offset, records the explicit eight-frame table length,
+  and proves `$3C906 + (short)$FEC8 == $3C7CE`; both regressions pass 2/2.
+  Exact ROM shape coverage for all seven Task 9 mapping tables passes 1/1, and
+  the full all-zone mapping crawler plus renderer corruption guard passes 3/3.
+  The final Task 9 object/event/runtime/completeness matrix passes 55/55. The
+  environmental graph and architecture slice passes 18/18; the rewind inventory
+  then RED-lined on the two Task 8 missile graph members and is GREEN after
+  classifying both as graph-covered isolated probes backed by the existing
+  in-place/forced-reconstruction `TestFbzMissileFamilyGraphRewind` evidence.
+  The exhausted parent-dependent baseline remains empty. `git diff --check` is clean. No
+  trace or commit ran.
+- Final Task 9 spec-review RED corrected four frame/coordinate seams. The `$FF`
+  attached-player position now reproduces the ROM's sequential signed longword
+  shifts, yielding radii 148 standing and 143 rolling with correct negative
+  diagonal rounding. `$74` probes its first landing with `y_radius=$0F`, changes
+  to `$10` only on floor contact, and retains that radius for later floor and
+  ceiling probes. `$E4` now executes a manual solid checkpoint immediately
+  before its standing-trap routine, so landing, leave/reset, frame 2, and the
+  60-update launch all consume current-frame contact bits. Parent, inline
+  nozzles, and independent flames preserve the placement H-flip for rendering;
+  lateral flame position and velocity use the same copied bit. The direct
+  correction slice passes 11/11.
+- Task 9 quality RED expanded executable evidence beyond decode assertions.
+  Real `ObjectManager` rewind tests now cover `$74` chain and `$E5` companion
+  links, exact slots, and no post-restore duplicate allocation in both in-place
+  and forced-reconstruction modes alongside `$FF` (4/4). Mine coverage executes
+  exact unsigned proximity/debug gates, the detection frame, 31 blinking
+  updates, one armed collision frame, and next-update same-slot explosion/SFX.
+  Trap-spring coverage launches three identity-distinct riders from prior-frame
+  standing bits with exact `$00/$02` impulses and flip facing. Flamethrower
+  coverage executes subtype/cadence/allocation-failure/current-contact behavior;
+  Spider Crane executes capture through release while `$E5/$FF` leave three
+  configured sidekicks untouched. The complete expanded Task 9 matrix passes
+  69/69. No trace or commit ran.
+- Final rewind-inventory integrity RED started at expected
+  `836 total / 660 passed / 176 graph-covered` versus the aggregate FBZ branch's
+  `872 / 693 / 178`, with `ScreenShakeTimerSlotObjectInstance` as the sole
+  no-probe-constructor tail. That timer predates FBZ work (`fe0625c6c`); the
+  missing `ObjectSpawn` probe constructor already has an established fix in
+  separate commit `0dfda47b7`. Applying only that constructor moves it to the
+  passing bucket, producing the transparent aggregate ratchet
+  `872 / 694 / 178` with every tail bucket still zero. The inventory,
+  parent-dependent guard, recreate-link guard, and graph-classification suite
+  pass 26/26. Rewind coverage and constructor guards still report only inherited
+  AIZ findings: three emerald-glow final scalars and two inline miniboss camera
+  controller spawns. No Task 9 key appears in either failure.

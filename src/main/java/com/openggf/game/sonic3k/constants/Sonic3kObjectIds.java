@@ -13,6 +13,8 @@ public final class Sonic3kObjectIds {
     public static final int FBZ_WIRE_CAGE_STATIONARY = 0x70;
     public static final int FBZ_FLOATING_PLATFORM = 0x71;
     public static final int FBZ_CHAIN_LINK = 0x72;
+    public static final int FBZ_MAGNETIC_SPIKE_BALL = 0x73;
+    public static final int FBZ_MAGNETIC_PLATFORM = 0x74;
     public static final int FBZ_SNAKE_PLATFORM = 0x75;
     public static final int FBZ_BENT_PIPE = 0x76;
     public static final int FBZ_ROTATING_PLATFORM = 0x77;
@@ -25,6 +27,11 @@ public final class Sonic3kObjectIds {
     public static final int FBZ_PLATFORM_BLOCKS = 0x7E;
     public static final int FBZ_MISSILE_LAUNCHER = 0x7F;
     public static final int FBZ_WALL_MISSILE = 0xE0;
+    public static final int FBZ_MINE = 0xE1;
+    public static final int FBZ_TRAP_SPRING = 0xE3;
+    public static final int FBZ_FLAMETHROWER = 0xE4;
+    public static final int FBZ_SPIDER_CRANE = 0xE5;
+    public static final int FBZ_MAGNETIC_PENDULUM = 0xFF;
     public static final int RING = 0x00;
     public static final int MONITOR = 0x01;
     public static final int PATH_SWAP = 0x02;

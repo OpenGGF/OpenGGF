@@ -95,7 +95,8 @@ public final class S3kSpriteDataLoader {
             RomByteReader reader, int mappingAddr, int frameCount, MappingFormat format) {
         List<SpriteMappingFrame> frames = new ArrayList<>(frameCount);
         for (int i = 0; i < frameCount; i++) {
-            int frameAddr = mappingAddr + reader.readU16BE(mappingAddr + i * 2);
+            int frameAddr = resolveMappingFrameAddress(
+                    mappingAddr, reader.readU16BE(mappingAddr + i * 2));
             int pieceCount;
             if (format == MappingFormat.LEGACY_BYTE_X) {
                 pieceCount = reader.readU8(frameAddr);
@@ -137,6 +138,10 @@ public final class S3kSpriteDataLoader {
             frames.add(new SpriteMappingFrame(pieces));
         }
         return frames;
+    }
+
+    static int resolveMappingFrameAddress(int mappingAddr, int relativeOffsetWord) {
+        return mappingAddr + (short) relativeOffsetWord;
     }
 
     /**

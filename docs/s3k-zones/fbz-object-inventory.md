@@ -179,12 +179,16 @@ family implementation/tests. Line references are to `docs/skdisasm/sonic3k.asm`.
   children; `Obj_FBZMine` transitions itself to `Obj_Explosion`.
 - `Obj_FBZElevator` (`80507`) periodically allocates elevator-car objects.
   `Obj_FBZFlamethrower` (`80659`) allocates damaging flame objects while also
-  using inline child sprites. `Obj_FBZSpiderCrane` (`80940`) allocates its
-  grabbing/claw companion. `Obj_FBZMagneticPendulum` (`81111`) allocates its
-  linked pendulum companion.
+  using inline child sprites. Its flames are independent after-current siblings.
+  `Obj_FBZSpiderCrane` (`80940`) allocates one independent visual companion only
+  after P1 is grabbed. `Obj_FBZMagneticPendulum` (`81111`) allocates a true
+  three-slot cascade: placed pivot, endpoint/interactor, then five-link inline
+  chain owner. Despite its name, the pendulum never reads the FBZ magnetic bit.
 
-Implementation should use `spawnChild`/shared lifetime ownership for these
-relationships and add rewind recreation/link coverage for every separate slot.
+Implementation must preserve each relationship's actual lifetime: structural
+children use shared lifetime ownership; launcher missiles, flames, and the
+spider visual are independent after-current siblings. Every separate slot needs
+rewind recreation/link coverage.
 
 ### Dynamic allocation contract
 
@@ -202,7 +206,7 @@ global `FindFreeObj` policy. Directly replacing `(a0)` reuses the parent slot.
 | Boss pillar and ten clouds | `CreateNewSprite4` = `FindNextFreeObj`; cloud address slots retain exact identities |
 | End-boss event control -> end boss | `AllocateObject` = `FindFreeObj` |
 | Magnetic platform companion; snake segments; rotating-platform group | `AllocateObjectAfterCurrent` = `FindNextFreeObj` |
-| Missile companion/projectiles/explosions; wall missiles; elevator cars; spider companion; pendulum companion | `AllocateObjectAfterCurrent` = `FindNextFreeObj`; mine and impact missiles replace `(a0)` with `Obj_Explosion` = in-place parent-slot reuse |
+| Missile companion/projectiles/explosions; wall missiles; elevator cars; independent flames; independent spider visual; pendulum endpoint then chain owner | `AllocateObjectAfterCurrent` = `FindNextFreeObj`; mine and impact missiles replace `(a0)` with `Obj_Explosion` = in-place parent-slot reuse. Pendulum is a three-slot cascade; flames and spider visual are independent siblings. |
 | Blaster effect/projectiles and TechnoSqueek attached/detached child | `CreateChild1/5` = `FindNextFreeObj`; routine changes to `_2` replace `(a0)` = in-place parent-slot reuse |
 | FBZ miniboss child tables `6FA76`, `6FAA8`, `6FAB0`, `89ED0`, `86B7A` | `CreateChild1/6` = `FindNextFreeObj`; song fade uses `AllocateObject` = `FindFreeObj` |
 | FBZ2 subboss tables `703C8`, `703D0`, `703DE`, `703E4`, `703EC` | `CreateChild1/3/6` = `FindNextFreeObj`; song fade uses `AllocateObject` = `FindFreeObj` |
@@ -238,8 +242,8 @@ changing native ordering.
 | `$70` StationaryWireCage | concrete | solid/trap | inline multi-sprite frames from player mappings; no standalone FBZ map | native pair | placement | `TestFbzWireCages` | concrete; counted subtypes and per-player 16:16 track state covered |
 | `$71` FloatingPlatform | concrete | traversal | `Map_FBZFloatingPlatform` | native pair | placement | `TestFbzRailAndChainPlatforms` | concrete; all counted movement modes covered |
 | `$72` ChainLink | concrete | grab/carrier | `Map_FBZChainLink` | native pair; one owner per ROM contact | placement | `TestFbzRailAndChainPlatforms` | concrete; vertical/horizontal decode and isolated participant state covered |
-| `$73` MagneticSpikeBall | placeholder | polarity hazard | `Map_FBZMagneticSpikeBall` | native pair touch | placement | `TestFbzMagneticObjects` | pending |
-| `$74` MagneticPlatform | placeholder | polarity traversal | `Map_FBZMagneticPlatform` | native pair riders | placement + companion FNFO | `TestFbzMagneticObjects` | pending |
+| `$73` MagneticSpikeBall | concrete | magnetic-bit mover/static hazard/active field | `Map_FBZMagneticSpikeBall`; narrow field uses tile `$C9`, other forms `$CA` | native P1/P2 extended safely to all | placement | `TestFbzMagneticObjects` | concrete; all 114 placements/subtypes, exact 256-frame bit edges and culls covered |
+| `$74` MagneticPlatform | concrete | magnetic-bit traversal + `$8D` hurt | `Map_FBZMagneticPlatform` | native P1/P2 extended safely to all | placement + one companion FNFO with up to eight inline sprites | `TestFbzMagneticObjects` | concrete; all 20 placements/subtypes, 16:16 motion, solid/hurt and chain shape covered |
 | `$75` SnakePlatform | concrete | traversal | `Map_FBZSnakePlatform` | native pair riders | placement + 3 segments FNFO | `TestFbzSnakeAndRotatingPlatforms` | concrete; eight routes/four-slot delay train covered |
 | `$76` BentPipe | concrete | static full-solid | `Map_FBZBentPipe` | all solid participants | placement | `TestFbzPlayerTransportObjects` | concrete; three exact solid shapes covered |
 | `$77` RotatingPlatform | concrete | traversal | `Map_FBZRotatingPlatform` | native pair riders | placement + 1-6 group FNFO | `TestFbzSnakeAndRotatingPlatforms` | concrete; used 6/2 member tables and special first form covered |
@@ -262,12 +266,12 @@ changing native ordering.
 | `$CF` FBZEggPrison | placeholder | destructible/reward | `Map_FBZEggCapsule`, `ArtNem_FBZEggCapsule` | native pair attack/touch | placement + top/animals FNFO; explosion slot reuse | `TestFbzEggPrison` | pending |
 | `$D0` SpringPlunger | placeholder | miniboss/finale traversal | `ObjDat_FBZSpringPlunger` mapping/art attributes | native pair riders | placement only; no child allocation | `TestFbzEggPrison` | pending |
 | `$E0` WallMissile | concrete | projectile hazard | `Map_FBZWallMissile` | native touch | placement + parentless missiles FNFO | `TestFbzMissileObjects` | concrete; on-screen cadence/muzzle lockout covered |
-| `$E1` Mine | placeholder | hazard | `Map_FBZMine` | native pair proximity/touch | placement; explosion in-place | `TestFbzMine` | pending |
+| `$E1` Mine | concrete | ordered proximity/blink/hurt/explosion hazard | `Map_FBZMine` | ordered all-engine extension of native P1/P2 | placement; explosion in-place | `TestFbzMine` | concrete; all 60 placements and same-slot lifecycle covered |
 | `$E2` Elevator | placeholder | traversal | `Map_FBZElevator` | native pair riders | placement + car FNFO | `TestFbzElevator` | pending |
-| `$E3` TrapSpring | placeholder | forced launch | `Map_FBZTrapSpring` / `Ani_FBZTrapSpring` | native pair | placement | `TestFbzTrapSpring` | pending |
-| `$E4` Flamethrower | placeholder | hazard | `Map_FBZFlameThrower` | native pair touch | placement + flame FNFO/inline sprites | `TestFbzFlamethrower` | pending |
-| `$E5` SpiderCrane | placeholder | grab/carrier | `Map_FBZSpiderCrane` | native pair; exclusive grabbed player | placement + claw FNFO | `TestFbzSpiderCraneAndPendulum` | pending |
-| `$FF` MagneticPendulum | placeholder | polarity traversal/hazard | `Map_FBZMagneticPendulum` | native pair riders/touch | placement + linked companion FNFO | `TestFbzSpiderCraneAndPendulum` | pending |
+| `$E3` TrapSpring | concrete | forced launch | `Map_FBZTrapSpring` / `Ani_FBZTrapSpring` | P1 visual selector; native P1/P2 launch extended safely to all riders | placement | `TestFbzTrapSpring` | concrete; all 7 placements, both subtypes and exact terminal animation scripts covered |
+| `$E4` Flamethrower | concrete | solid trap + independent fire hazards | `Map_FBZFlameThrower`; `ArtTile_FBZMisc+$A4` | scalable rider set | placement + independent flames FNFO + inline nozzles | `TestFbzFlamethrower` | concrete; all 20 placements/subtypes, 17-update flames and fire-shield reaction covered |
+| `$E5` SpiderCrane | concrete | strict-P1 grab/carrier | `Map_FBZSpiderCrane` | `MAIN_ONLY_NATIVE` | placement + independent visual companion FNFO after grab | `TestFbzSpiderCraneAndPendulum` | concrete; both placements, single allocation attempt and release path covered |
+| `$FF` MagneticPendulum | concrete | strict-P1 three-slot grab/swing/launcher; does not consume magnetic bit | `Map_FBZMagneticPendulum` | `MAIN_ONLY_NATIVE` / Ctrl1 | pivot + endpoint + five-link inline chain owner FNFO | `TestFbzSpiderCraneAndPendulum` | concrete; all 6 placements, 8.8 swing phase, cascade and Clank/Jump cues covered |
 
 ## Reproduction
 
@@ -306,6 +310,7 @@ and destruction sounds retain their shared-family test ownership.
 | Mine (`80499`) | `sfx_Explode` | one-shot detonation | `TestFbzMine` |
 | Trap Spring (`80648`) | `sfx_Spring` | one-shot launch | `TestFbzTrapSpring` |
 | Flamethrower (`80723`, `80762`) | `sfx_FlamethrowerLoud` | retriggered by active flame cadence; stop on inactive routine | `TestFbzFlamethrower` |
+| Magnetic Pendulum endpoint/release (`81248`, `81379`) | `sfx_Clank`, `sfx_Jump` | one-shot at clamped endpoint / manual P1 release | `TestFbzSpiderCraneAndPendulum` |
 | Act 1 miniboss init/defeat (`146833-146871`) | `cmd_FadeOut`, `mus_Miniboss`, fade-to-level controller | one-shot transitions | `TestFbzAct1Miniboss` |
 | Act 1 miniboss (`147548`, `147902`) | `sfx_MechaLand`, `sfx_BossHit` | one-shot landing/hit | `TestFbzAct1Miniboss` |
 | Act 2 subboss (`148071-148222`, `148438`, `148458`, `148573`) | `mus_Miniboss`, fade-to-level, `sfx_Charging`, `sfx_BossLaser`, `sfx_BossHit` | transition or one-shot attack/hit edge | `TestFbzAct2Subboss` |
@@ -329,7 +334,7 @@ recorded as `included-binary` rather than substituting an S3-half address.
 | Snake/bent/rotating/launcher | `Map_FBZSnakePlatform` `$3B6CE`; `Map_FBZBentPipe` `$3B73C`; `Map_FBZRotatingPlatform` `$3B91A`; `Map_FBZDEZPlayerLauncher` `$3BA8A` | `ArtNem_FBZMisc`, included-binary, PLC `$1A-$1D` |
 | Disappearing/screw/pole/propeller | `Ani_FBZDisappearingPlatform` `$3BB9A`; `Map_FBZDisappearingPlatform` `$3BBBE`; `Ani_FBZScrewDoor` `$3BD5E`; `Map_FBZScrewDoor` `$3BD8E`; `Map_FBZSpinningPole` `$3C19C`; `Map_FBZPropeller` `$3C20C` | `ArtNem_FBZMisc`, S&K included-binary at `sonic3k.asm:201450`, PLC `$1A/$1B` and `$1C/$1D` |
 | Piston/blocks/missiles/mine | `Map_FBZPiston` `$3C328`; `Map_FBZPlatformBlocks` `$3C416`; `Map_FBZMissileLauncher` `$3C78E`; `Map_FBZWallMissile` `$3C906`; `Map_FBZMine` `$3CA06` | `ArtNem_FBZMisc` / `ArtNem_FBZMisc2`, S&K included-binary at `sonic3k.asm:201450/201456`, level PLC `$1A-$1D` |
-| Elevator/trap/flame/spider | `Map_FBZElevator` `$3CB0C`; `Ani_FBZTrapSpring` `$3CC4C`; `Map_FBZTrapSpring` `$3CC5A`; `Map_FBZFlameThrower` `$3CFD0`; `Map_FBZSpiderCrane` `$3D2FC` | `ArtNem_FBZMisc2`, S&K included-binary at `sonic3k.asm:201456`, PLC `$1C/$1D` |
+| Elevator/trap/flame/spider | `Map_FBZElevator` `$3CB0C`; `Ani_FBZTrapSpring` `$3CC4C`; `Map_FBZTrapSpring` `$3CC5A`; `Map_FBZFlameThrower` `$3CFD0`; `Map_FBZSpiderCrane` `$3D2FC` | trap/spider use `ArtNem_FBZMisc2`; flamethrower uses `ArtNem_FBZMisc` (`ArtTile_FBZMisc+$A4`); S&K included binaries at `sonic3k.asm:201450/201456`, PLC `$1C/$1D` |
 | Act 1 miniboss | `Map_FBZMiniboss` `$6FAF8` | `ArtKosM_FBZMiniboss`, included-binary; queued at spawn |
 | Act 2 subboss | `Map_FBZ2Subboss` `$70440`; `Map_FBZRobotnikRun` `$6837E`; `Map_FBZRobotnikHead` `$68454`; `Map_FBZRobotnikStand` `$6847C` | `PLC_FBZ2Subboss_SonicTails` / `PLC_FBZ2Subboss_Knuckles`; `ArtNem_FBZ2Subboss` and character art, S&K included-binary |
 | Boss-event scenery | `Map_FBZ2Preboss` `$53518` | `ArtKosM_FBZCloud`, `ArtKosM_FBZBossPillar`, included-binary; `PLCKosM_FBZ2Subboss` |

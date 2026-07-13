@@ -120,7 +120,7 @@ class TestFbzRuntimeStateRegistration {
         var currentHandler = manager.getFbzEvents();
         var staleEvents = new com.openggf.game.sonic3k.events.Sonic3kFBZEvents();
         staleEvents.init(1);
-        staleEvents.setMagneticState(com.openggf.game.sonic3k.events.Sonic3kFBZEvents.MagneticPolarity.REPEL, 77);
+        staleEvents.setMagneticState(com.openggf.game.sonic3k.events.Sonic3kFBZEvents.MagneticPolarity.ACTIVE, 77);
         staleEvents.setBossBackgroundState(16, 123, -456);
         staleEvents.setBossLoadPositionAdjustmentPending(true);
         staleEvents.setCloudRewindId(3, com.openggf.game.rewind.identity.ObjectRefId.dynamic(3, 4, 5));

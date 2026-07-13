@@ -1321,7 +1321,47 @@ public final class Sonic3kPlcArtRegistry {
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_PLATFORM_BLOCKS,Sonic3kConstants.MAP_FBZ_PLATFORM_BLOCKS_ADDR,Sonic3kConstants.ARTTILE_FBZ_MISC+0x94,2,null));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_MISSILE_LAUNCHER,Sonic3kConstants.MAP_FBZ_MISSILE_LAUNCHER_ADDR,Sonic3kConstants.ARTTILE_FBZ_OUTDOORS+0x46,1,null));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_MISSILE_LAUNCHER_COMPANION,Sonic3kConstants.MAP_FBZ_MISSILE_LAUNCHER_ADDR,Sonic3kConstants.ARTTILE_FBZ_OUTDOORS+0x46,2,null));
-        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_WALL_MISSILE,Sonic3kConstants.MAP_FBZ_WALL_MISSILE_ADDR,Sonic3kConstants.ARTTILE_FBZ_OUTDOORS+0x46,1,null));
+        // The first two entries point backward to shared launcher-missile frames,
+        // so the first offset cannot be used to infer this table's length.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_WALL_MISSILE,
+                Sonic3kConstants.MAP_FBZ_WALL_MISSILE_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_OUTDOORS + 0x46,
+                1,
+                null,
+                8));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_MAGNETIC_SPIKE_BALL,
+                Sonic3kConstants.MAP_FBZ_MAGNETIC_SPIKE_BALL_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0xCA, 1, null));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_MAGNETIC_SPIKE_FIELD_NARROW,
+                Sonic3kConstants.MAP_FBZ_MAGNETIC_SPIKE_BALL_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0xC9, 1, null));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_MAGNETIC_PLATFORM,
+                Sonic3kConstants.MAP_FBZ_MAGNETIC_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0xCA, 1, null));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_MINE,
+                Sonic3kConstants.MAP_FBZ_MINE_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0x91, 0, null));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_TRAP_SPRING,
+                Sonic3kConstants.MAP_FBZ_TRAP_SPRING_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC2 + 0x3D, 0, null));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_FLAMETHROWER,
+                Sonic3kConstants.MAP_FBZ_FLAMETHROWER_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0xA4, 0, null));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_SPIDER_CRANE,
+                Sonic3kConstants.MAP_FBZ_SPIDER_CRANE_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC2 + 0x67, 1, null));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_MAGNETIC_PENDULUM,
+                Sonic3kConstants.MAP_FBZ_MAGNETIC_PENDULUM_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC2 + 0x51, 1, null));
 
         // Override shared spikes to FBZ tile address
         levelArt.removeIf(e -> e.key().equals(Sonic3kObjectArtKeys.SPIKES));

@@ -22,6 +22,8 @@ class TestFbzFramePhaseOrdering {
         var camera = mock(com.openggf.camera.Camera.class);
         LevelEventProvider events = mock(LevelEventProvider.class);
         when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(false);
+        doAnswer(i -> { log.add("anpal-fixed-pre"); return null; })
+                .when(events).updateFixedInLevelObjectsBeforeDynamicObjects();
         doAnswer(i -> { log.add("objects"); return null; }).when(level).updateObjectPositionsWithoutTouches();
         doAnswer(i -> { log.add("camera"); return null; }).when(camera).updatePosition();
         doAnswer(i -> { log.add("event"); return null; }).when(events).update();
@@ -32,7 +34,26 @@ class TestFbzFramePhaseOrdering {
 
         LevelFrameStep.execute(context(events), level, camera, () -> { });
 
-        assertEquals(List.of("objects", "camera", "event", "flush", "boundary", "placement", "level"), log);
+        assertEquals(List.of("anpal-fixed-pre", "objects", "camera", "event", "flush", "boundary", "placement", "level"), log);
+    }
+
+    @Test
+    void magneticEdgeWrittenInFixedPreludeIsVisibleToSameFrameObjects() {
+        Sonic3kFBZEvents workspace = new Sonic3kFBZEvents();
+        workspace.init(0);
+        var level = mock(com.openggf.level.LevelManager.class);
+        var camera = mock(com.openggf.camera.Camera.class);
+        when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(false);
+        LevelEventProvider provider = mock(LevelEventProvider.class);
+        doAnswer(i -> { workspace.advanceMagneticPhase(0x100); return null; })
+                .when(provider).updateFixedInLevelObjectsBeforeDynamicObjects();
+        List<Sonic3kFBZEvents.MagneticPolarity> observed = new ArrayList<>();
+        doAnswer(i -> { observed.add(workspace.getMagneticPolarity()); return null; })
+                .when(level).updateObjectPositionsWithoutTouches();
+
+        LevelFrameStep.execute(context(provider), level, camera, () -> { });
+
+        assertEquals(List.of(Sonic3kFBZEvents.MagneticPolarity.ACTIVE), observed);
     }
 
     @Test
