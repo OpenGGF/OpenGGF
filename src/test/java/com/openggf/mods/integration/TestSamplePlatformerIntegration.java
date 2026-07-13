@@ -19,12 +19,19 @@ import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.MasterTitleEntry;
 import com.openggf.game.MusicReference;
+import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.PhysicsProfile;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.FieldKey;
 import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.rewind.snapshot.GenericObjectSnapshot;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.io.ModInputLimits;
+import com.openggf.level.Level;
 import com.openggf.level.ModLevel;
+import com.openggf.level.Pattern;
+import com.openggf.level.objects.*;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.mods.*;
 import com.openggf.mods.code.ModClassLoaderFactory;
 import com.openggf.mods.code.ModFaultBoundary;
@@ -32,6 +39,7 @@ import com.openggf.mods.code.ModRuntime;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
@@ -118,7 +126,14 @@ class TestSamplePlatformerIntegration {
             };
             var game = module.createGame(source);
             assertNull(game.getRom());
-            assertInstanceOf(ModLevel.class, game.loadLevel(0x400));
+            var acceptanceLevel = game.loadLevel(0x400);
+            assertInstanceOf(ModLevel.class, acceptanceLevel);
+            List<String> placedObjectKeys = acceptanceLevel.getObjects().stream()
+                    .map(ObjectSpawn::objectKey).toList();
+            assertTrue(placedObjectKeys.contains("sample-platformer:zapbug"),
+                    "Loaded level must place the namespaced zapbug gimmick spawn");
+            assertTrue(placedObjectKeys.contains("sample-platformer:springpad"),
+                    "Loaded level must place the namespaced springpad gimmick spawn");
             assertEquals(0x400, module.getZoneRegistry().getLevelDataForZone(0).getFirst().levelIndex(),
                     "Every declared descriptor must route through ModGame.loadLevel by its exact index");
             // game.loadLevel routes through OwnerAwareStandaloneModule's fault boundary, which wraps
@@ -174,6 +189,163 @@ class TestSamplePlatformerIntegration {
 
             exerciseMasterTitleNewCompleteAndContinue(fixture, module, backend);
         }
+    }
+
+    /**
+     * Exercises {@code ZapBug} and {@code SpringPad} directly against a hand-built
+     * {@code ObjectManager}/{@code StubObjectServices} pair -- mirroring
+     * {@code TestPhase2SampleModIntegration}'s {@code AbstractBadnikInstance} unit-test
+     * pattern -- rather than driving a full live gameplay session. {@code PlatformerModule}
+     * (like {@code AbstractStandaloneGameModule} generally) has no wired
+     * {@code getObjectArtProvider()}, so {@code sample-platformer:zapbug}/{@code springpad}
+     * art never reaches a live {@code ObjectRenderManager} through the normal gameplay path
+     * today (a pre-existing standalone-module gap, not something this task's object logic
+     * can fix); the renderer-resolution assertion below instead proves the packaged
+     * {@code .ggfs} sheets convert into real {@link PatternSpriteRenderer}s through the same
+     * {@link BakedSheetReader} + {@link ObjectSpriteSheet} machinery {@code ModArtOverlayProvider}
+     * uses for patch mods, wired into a manually-built {@link ObjectRenderManager} so
+     * {@code appendRenderCommands} also exercises the real {@code getRenderer(...)} call.
+     */
+    @Test
+    void zapBugPatrolsSpringPadLaunchesAndBothRecreateForRewind() throws Exception {
+        Path jar = buildSample();
+        try (Fixture fixture = load(jar)) {
+            GameModule module = fixture.runtime.prepareStandaloneModule(OWNER).orElseThrow();
+            var assets = fixture.runtime.standaloneAssetSnapshot(OWNER);
+            GameDataSource source = new GameDataSource() {
+                @Override public Optional<com.openggf.data.Rom> rom() { return Optional.empty(); }
+                @Override public java.io.InputStream openAsset(String path) throws java.io.IOException {
+                    return new ByteArrayInputStream(assets.readBounded(path, assets.limits().maxAssetBytes()));
+                }
+                @Override public String identity() { return "standalone:" + OWNER + ":gameplay"; }
+            };
+            var game = module.createGame(source);
+            Level level = game.loadLevel(0x400);
+            ObjectSpawn zapSpawn = level.getObjects().stream()
+                    .filter(spawn -> "sample-platformer:zapbug".equals(spawn.objectKey()))
+                    .findFirst().orElseThrow();
+            ObjectSpawn springSpawn = level.getObjects().stream()
+                    .filter(spawn -> "sample-platformer:springpad".equals(spawn.objectKey()))
+                    .findFirst().orElseThrow();
+
+            Map<String, ObjectSpriteSheet> sheets = new LinkedHashMap<>();
+            sheets.put("sample-platformer:zapbug", BakedSheetReader.read(
+                    assets.readBounded("art/zapbug.ggfs", assets.limits().maxAssetBytes())).toObjectSpriteSheet());
+            sheets.put("sample-platformer:springpad", BakedSheetReader.read(
+                    assets.readBounded("art/springpad.ggfs", assets.limits().maxAssetBytes())).toObjectSpriteSheet());
+            ObjectRenderManager renderManager = new ObjectRenderManager(new BakedArtProvider(sheets));
+            assertNotNull(renderManager.getRenderer("sample-platformer:zapbug"),
+                    "zapbug renderer must resolve from the packaged art sheet");
+            assertNotNull(renderManager.getRenderer("sample-platformer:springpad"),
+                    "springpad renderer must resolve from the packaged art sheet");
+
+            RecordingBackend backend = new RecordingBackend();
+            AudioManager audio = AudioManager.getInstance();
+            audio.resetState();
+            audio.setBackend(backend);
+
+            ObjectRegistry registry = module.createObjectRegistry();
+            ObjectManager[] holder = new ObjectManager[1];
+            PlayableEntity[] mainPlayer = new PlayableEntity[1];
+            StubObjectServices services = new StubObjectServices() {
+                @Override public ObjectManager objectManager() { return holder[0]; }
+                @Override public ObjectRenderManager renderManager() { return renderManager; }
+                @Override public AudioManager audioManager() { return audio; }
+            };
+            services.withPlayerQuery(new ObjectPlayerQuery(() -> mainPlayer[0], List::of));
+            holder[0] = new ObjectManager(List.of(), registry, 0, null, null, null, null, services);
+
+            // --- ZapBug: patrol via PatrolMovementHelper, reverse at its bounds, render, rewind ---
+            AbstractBadnikInstance zapBug = (AbstractBadnikInstance) holder[0].createDynamicObject(
+                    () -> registry.create(zapSpawn));
+            int startX = badnikCurrentX(zapBug);
+            zapBug.update(1, null);
+            assertNotEquals(startX, badnikCurrentX(zapBug), "ZapBug must move on every patrol frame");
+
+            int previousX = badnikCurrentX(zapBug);
+            int direction = Integer.signum(previousX - startX);
+            boolean reversed = false;
+            for (int frame = 2; frame < 60 && !reversed; frame++) {
+                zapBug.update(frame, null);
+                int x = badnikCurrentX(zapBug);
+                int step = Integer.signum(x - previousX);
+                if (step != 0 && step != direction) {
+                    reversed = true;
+                } else if (step != 0) {
+                    direction = step;
+                }
+                previousX = x;
+            }
+            assertTrue(reversed, "ZapBug must reverse direction once it reaches a patrol bound");
+            assertDoesNotThrow(() -> zapBug.appendRenderCommands(new ArrayList<>()),
+                    "ZapBug must render through the resolved zapbug PatternSpriteRenderer without throwing");
+
+            AbstractObjectInstance recreatedZapBug = ((RewindRecreatable) zapBug)
+                    .recreateForRewind(new RewindRecreateContext(zapSpawn, null, services));
+            assertNotSame(zapBug, recreatedZapBug, "recreateForRewind must build a fresh instance");
+            assertEquals(zapBug.getClass(), recreatedZapBug.getClass(),
+                    "recreateForRewind must return the same concrete class");
+
+            // --- SpringPad: proximity + velocity launch, namespaced SFX, extended frame, rewind ---
+            AbstractObjectInstance springPad = (AbstractObjectInstance) holder[0].createDynamicObject(
+                    () -> registry.create(springSpawn));
+            var definition = module.getPlayableCharacterRegistry()
+                    .find(CharacterKey.parsePersisted(RUNNER)).orElseThrow();
+            GameModuleRegistry.setCurrent(module);
+            AbstractPlayableSprite faller = definition.spriteFactory().create(RUNNER, 0, 0);
+            // The constructor takes top-left xPixel/yPixel, not the ROM centre -- use the
+            // centre-preserving setters so getCentreX()/getCentreY() land exactly on the
+            // spring's spawn point regardless of the player's half-width/half-height.
+            faller.setCentreX((short) springSpawn.x());
+            faller.setCentreYPreserveSubpixel((short) springSpawn.y());
+            faller.setYSpeed((short) 0x100); // falling (positive = downward)
+            mainPlayer[0] = faller;
+
+            springPad.update(1, faller);
+            assertEquals((short) SpringBounceHelper.STRENGTH_YELLOW, faller.getYSpeed(),
+                    "SpringPad must apply the yellow spring strength verbatim (already negative = upward)");
+            assertEquals(new StreamedMusicPort.SfxRef(OWNER, "spring"), backend.sfx,
+                    "SpringPad must fire its namespaced spring SFX on contact");
+            assertDoesNotThrow(() -> springPad.appendRenderCommands(new ArrayList<>()),
+                    "SpringPad must render through the resolved springpad PatternSpriteRenderer without throwing");
+
+            AbstractObjectInstance recreatedSpringPad = ((RewindRecreatable) springPad)
+                    .recreateForRewind(new RewindRecreateContext(springSpawn, null, services));
+            assertNotSame(springPad, recreatedSpringPad, "recreateForRewind must build a fresh instance");
+            assertEquals(springPad.getClass(), recreatedSpringPad.getClass(),
+                    "recreateForRewind must return the same concrete class");
+        }
+    }
+
+    private static int badnikCurrentX(AbstractBadnikInstance value) throws Exception {
+        Field field = AbstractBadnikInstance.class.getDeclaredField("currentX");
+        field.setAccessible(true);
+        return field.getInt(value);
+    }
+
+    /** Minimal {@link ObjectArtProvider} backed directly by pre-converted baked sheets (no zone/HUD data). */
+    private static final class BakedArtProvider implements ObjectArtProvider {
+        private final Map<String, ObjectSpriteSheet> sheets;
+        private final Map<String, PatternSpriteRenderer> renderers = new LinkedHashMap<>();
+
+        private BakedArtProvider(Map<String, ObjectSpriteSheet> sheets) { this.sheets = sheets; }
+
+        @Override public void loadArtForZone(int zoneIndex) { }
+        @Override public PatternSpriteRenderer getRenderer(String key) {
+            ObjectSpriteSheet sheet = sheets.get(key);
+            if (sheet == null) return null;
+            return renderers.computeIfAbsent(key, ignored -> new PatternSpriteRenderer(sheet));
+        }
+        @Override public ObjectSpriteSheet getSheet(String key) { return sheets.get(key); }
+        @Override public SpriteAnimationSet getAnimations(String key) { return null; }
+        @Override public int getZoneData(String key, int zoneIndex) { return -1; }
+        @Override public Pattern[] getHudDigitPatterns() { return new Pattern[0]; }
+        @Override public Pattern[] getHudTextPatterns() { return new Pattern[0]; }
+        @Override public Pattern[] getHudLivesPatterns() { return new Pattern[0]; }
+        @Override public Pattern[] getHudLivesNumbers() { return new Pattern[0]; }
+        @Override public List<String> getRendererKeys() { return List.copyOf(sheets.keySet()); }
+        @Override public int ensurePatternsCached(GraphicsManager graphicsManager, int baseIndex) { return baseIndex; }
+        @Override public boolean isReady() { return true; }
     }
 
     /**
