@@ -442,6 +442,41 @@ public class TestPlayableSpriteAnimation {
                 "Crossing into run speed must not replace the latched walk frame before obTimeFrame expires");
     }
 
+    @Test
+    public void s1WalkAtAngle18UsesNativeFlippedFourthSlopeBank() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_1);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0xFF,
+                List.of(0x08, 0x09, 0x0A, 0x0B, 0x06, 0x07),
+                SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(1, new SpriteAnimationScript(0xFF,
+                List.of(0x1E, 0x1F, 0x20, 0x21),
+                SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0);
+        sprite.getAnimationManager().restoreRewindState(
+                new PlayableSpriteAnimation.RewindState(0, 0));
+        sprite.setAnimationFrameIndex(2);
+        sprite.setAnimationTick(0);
+        sprite.setMovementInputActive(true);
+        sprite.setGSpeed((short) 0x0100);
+        sprite.setAngle((byte) 0x18);
+        sprite.setDirection(Direction.RIGHT);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0, sprite.getAnimationId(),
+                "S1 retains raw id_Walk while its special handler selects slope mappings");
+        assertEquals(3, sprite.getAnimationFrameIndex(),
+                "Sonic_Animate increments obAniFrame after loading script frame $0A");
+        assertEquals(0x1C, sprite.getMappingFrame(),
+                "not($18)+$10 quantizes to octant 6; Walk adds 6*3 to frame $0A");
+        assertTrue(sprite.getRenderHFlip(),
+                "The negative transformed angle sets the native X flip");
+        assertTrue(sprite.getRenderVFlip(),
+                "The negative transformed angle sets the native Y flip");
+    }
+
     private static TestablePlayableSprite createSprite(GameRules featureSet) {
         TestablePlayableSprite sprite = new TestablePlayableSprite("tails", (short) 0, (short) 0);
         sprite.setGameRulesForTest(featureSet);
