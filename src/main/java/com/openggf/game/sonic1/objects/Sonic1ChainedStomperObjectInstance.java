@@ -658,6 +658,15 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Sonic_Balance reads the SST obActWid byte, while the SolidObject call
+        // extends its horizontal collision check by $B (CStom_MainBlock,
+        // _incObj/31 MZ Chained Stompers.asm). Feeding that extension back into
+        // balance makes the player appear to stand at an edge while centered.
+        return blockActiveWidth;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Crush check from disassembly:

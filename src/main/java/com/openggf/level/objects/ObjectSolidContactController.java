@@ -344,36 +344,23 @@ final class ObjectSolidContactController {
         ObjectInteractionRules rules = objectInteractionRulesOrNull(player);
         if (rules == null
                 || !rules.solidPushReleaseWritesWalkRunAnimationWord()
-                || !(player instanceof AbstractPlayableSprite sprite)) {
+                || !(player instanceof AbstractPlayableSprite sprite)
+                || sprite.getAir()) {
             return;
         }
         int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
-        boolean persistentNativeLatch = instance instanceof SolidObjectProvider provider
-                && provider.preservesNativePushLatchAcrossSkippedSolidCheckpoints();
-        boolean previousCheckpointStillOwnsWalk = checkpointPushingLastFrame
-                && sprite.getPushingAtFrameStart();
-        boolean persistentLatchStillOwnsWalk = persistentNativeLatch
-                && sprite.getAnimationId() == walkAnimationId;
-        if (!sprite.getPushing()
-                && !previousCheckpointStillOwnsWalk
-                && !persistentLatchStillOwnsWalk) {
-            return;
-        }
         // Retail S1's FixBugs=0 Solid_NoCollision path executes
         // `move.w #id_Run,obAnim(a1)` before Solid_NotPushing. Because anim and
         // prev_anim are adjacent bytes, this publishes anim=Walk ($00) and
         // prev_anim=Run ($01), restarting Walk on the next player slot without
-        // changing the mapping already rendered this frame. Require either the
-        // live paired player Status_Push bit, or this exact object's immediately
-        // previous checkpoint paired with the player's frame-start Status_Push.
-        // MoveLeft/MoveRight can clear the player bit and publish Wait before the
-        // later object slot reaches Solid_NoCollision, while the object's own
-        // status bit still owns the native Walk/Run write. Both snapshots are
-        // replaced every frame, so an old global latch cannot overwrite Roll
-        // after an unrelated later cleanup.
-        // Push-block states 4/6 deliberately skip Solid_ChkEnter; their provider
-        // opts the live SST latch into the same raw-Walk fallback until the next
-        // state-0 checkpoint consumes it.
+        // changing the mapping already rendered this frame. Every caller reaches
+        // this method only after clearObjectPushingBit removed this exact object's
+        // native Status_Push latch. That object-side bit remains authoritative even
+        // when Sonic_Move has already cleared the paired player bit earlier in the
+        // frame; Solid_NoCollision tests the object's bit first and still performs
+        // the word write in that case. Airborne side/top grazes instead reach
+        // Solid_SideAir/Solid_NotPushing directly and clear the bit without the
+        // retail word write; the early air guard preserves that classification.
         // (_incObj/sub SolidObject.asm:251-263; sub SolidWall.asm:36-51).
         if (walkAnimationId >= 0) {
             sprite.setAnimationId(walkAnimationId);
@@ -1590,13 +1577,6 @@ final class ObjectSolidContactController {
             player.setPushing(true);
             setObjectPushingBit(player, instance);
             provider.setPlayerPushing(player, true);
-        } else if (contact.touchSide() && clearObjectPushingBit(player, instance)) {
-            // Solid_SideAir calls Solid_NotPushing directly when the player is
-            // airborne or within four pixels of the top/bottom edge. Unlike
-            // Solid_NoCollision, that entry does not execute retail S1's
-            // walk-jump-bug animation-word write.
-            player.setPushing(false);
-            provider.setPlayerPushing(player, false);
         }
         if (contact.standing()) {
             int newRideBaselineX = provider.seedsNewRideCarryFromPreUpdateX()
@@ -2613,12 +2593,6 @@ final class ObjectSolidContactController {
                 // ROM: s2.asm:35220-35226 — also set pushing bit on the object
                 setObjectPushingBit(player, instance);
                 provider.setPlayerPushing(player, true);
-            } else if (contact.touchSide() && clearObjectPushingBit(player, instance)) {
-                // Non-pushing contacts (notably Solid_SideAir) enter
-                // Solid_NotPushing below Solid_NoCollision's S1-only animation
-                // write, so only the object/player status pair is cleared.
-                player.setPushing(false);
-                provider.setPlayerPushing(player, false);
             }
             if (contact.standing()) {
                 nextRidingObject = instance;

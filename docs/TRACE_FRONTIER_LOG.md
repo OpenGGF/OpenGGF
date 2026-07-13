@@ -1,5 +1,41 @@
 # Trace Frontier Log
 
+### 2026-07-13 -- S1 MZ1 native solid/standing animation owners
+
+After the native edge-balance cluster, MZ1 standalone had seven
+animation-only errors with green physics. The first two isolated frames were
+the retail S1 `FixBugs=0` behavior in `Solid_NoCollision`: the object-side
+`Status_Push` bit was still set even though player movement had already cleared
+Sonic's paired bit, so the ROM still executed `move.w #id_Run,obAnim(a1)` and
+published raw Walk with `prev_anim=Run`. The engine incorrectly required an
+additional live-player or one-frame checkpoint predicate after it had already
+consumed that exact object's push latch.
+
+The next edge frame came from opposite-direction braking reaching inertia zero
+while Left remained held. `Sonic_MoveLeft` returns to the enclosing routine,
+which then continues through the ordinary zero-inertia Wait/Balance tail; held
+direction is not a separate balance veto. The longer frame-5807 window exposed
+another P29 width case: Obj31 sets `obActWid` from `CStom_Var2` but adds `$B`
+only to the `SolidObject` argument. Its balance width is therefore raw
+`$38/$30/$10`, not the generic 16-pixel fallback or padded collision width.
+
+All changes are driven by native object push latches, inertia/input state, and
+subtype-backed SST width. No route, zone, frame, trace hydration, or tolerance
+was added. ROM references:
+
+- `docs/s1disasm/_incObj/sub SolidObject.asm:251-263`
+- `docs/s1disasm/_incObj/01 Sonic.asm:395-460,634-757`
+- `docs/s1disasm/_incObj/31 MZ Chained Stompers.asm:112-135,184-190`
+
+The three new focused contracts pass: object-side push ownership after the
+paired player bit clears, held-direction zero-inertia balance, and all three
+Obj31 native balance widths. With the root-level REV01 ROM, MZ1 standalone
+improves from 7 to 6 animation-only errors with zero warnings and fully green
+physics. The 37-frame Obj31 false-Balance window at frames 5807-5843 and the
+frame-6092 push-release mismatch are gone. The first remaining frontier stays
+at frame 2596 (ROM Walk, engine Duck); frame 4114 and later mapping cadence are
+separate remaining animation-owner work.
+
 ### 2026-07-13 -- S1 moving-solid animation release ownership
 
 Three remaining mapping mismatches shared one native state-ownership theme.

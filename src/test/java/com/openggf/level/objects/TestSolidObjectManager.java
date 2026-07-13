@@ -773,7 +773,7 @@ public class TestSolidObjectManager {
     }
 
     @Test
-    public void sonic1StaleObjectPushLatchDoesNotPublishAfterPlayerPushWasCleared() {
+    public void sonic1ObjectPushLatchPublishesAfterPlayerPushWasCleared() {
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
         TestMultiPieceSolidObject object = new TestMultiPieceSolidObject(
                 100, 100, new SolidObjectParams(16, 8, 8));
@@ -800,9 +800,9 @@ public class TestSolidObjectManager {
         player.setCentreX((short) 40);
         manager.updateSolidContacts(player);
 
-        assertEquals(5, player.getAnimationId(),
-                "An unpaired stale object latch is not a native S1 push release");
-        assertEquals(5, player.getAnimationManager().captureRewindState().lastAnimationId());
+        assertEquals(0, player.getAnimationId(),
+                "The object's still-set Status_Push bit owns S1 Solid_NoCollision even after Sonic clears its bit");
+        assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId());
     }
 
     @Test

@@ -3737,7 +3737,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Update balance state (checks for ledge edges)
 		// ROM: Balance check happens before crouch/lookup in Obj01_LookUpDown
-		if (standingStill && !inputLeft && !inputRight) {
+		if (standingStill) {
 			if (preMoveBalanceEvaluated) {
 				// doGroundMove evaluated the ROM balance branch before SpeedToPos
 				// and AnglePos. Reuse that result even when it was "not balancing":
@@ -4058,7 +4058,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * Balance is checked when:
 	 * - Sprite is standing still (gSpeed == 0)
 	 * - Sprite is on flat ground (angle near 0)
-	 * - Sprite is not pressing any direction keys
+	 * - Directional acceleration/braking has left inertia at zero
 	 *
 	 * Two types of edge detection:
 	 * 1. Standing on object edge (status.player.on_object set)
@@ -4075,14 +4075,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * This preserves the ROM's pre-movement decision point without exposing the
 	 * temporary state before updateCrouchState() applies it.
 	 *
-	 * <p>Returns false when left/right is held (ROM reaches the look/duck/balance
-	 * block only when not steering, s1.asm Sonic_CheckDpadLetGo). Callers gate on
-	 * the standing-still-on-flat-ground precondition before invoking.
+	 * <p>Callers gate on the standing-still-on-flat-ground precondition. Held
+	 * left/right does not independently suppress this block: an opposite-direction
+	 * MoveLeft/MoveRight call can decelerate inertia to exactly zero, after which
+	 * the enclosing Move routine continues into Wait/Balance with the button still
+	 * held (S1 01 Sonic.asm:395-414,634-757).
 	 */
 	private boolean computeCurrentFrameBalancing() {
-		if (inputLeft || inputRight) {
-			return false;
-		}
 		Direction savedDirection = sprite.getDirection();
 		int savedBalanceState = sprite.getBalanceState();
 		updateBalanceState();

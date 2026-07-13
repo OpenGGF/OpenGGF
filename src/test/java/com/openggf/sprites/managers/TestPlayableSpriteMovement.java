@@ -1268,6 +1268,40 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void heldOppositeDirectionStillAllowsBalanceWhenBrakingReachesZero() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_1);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setOnObject(false);
+                setInputState(true, false, false, false, false);
+
+                Sensor left = new Sensor(mockSprite, Direction.DOWN, (byte) -9, (byte) 19, true) {
+                        @Override
+                        protected SensorResult doScan(short dx, short dy) {
+                                return new SensorResult((byte) 0, (byte) 25, 0, Direction.DOWN);
+                        }
+                };
+                Sensor right = new Sensor(mockSprite, Direction.DOWN, (byte) 9, (byte) 19, true) {
+                        @Override
+                        protected SensorResult doScan(short dx, short dy) {
+                                return new SensorResult((byte) 3, (byte) 25, 0, Direction.DOWN);
+                        }
+                };
+                mockSprite.setGroundSensors(new Sensor[]{left, right});
+                setMovementField("latchedNextTilt", 3);
+                setMovementField("latchedTilt", 0);
+
+                Method computeBalance = PlayableSpriteMovement.class
+                                .getDeclaredMethod("computeCurrentFrameBalancing");
+                computeBalance.setAccessible(true);
+
+                assertTrue((boolean) computeBalance.invoke(manager),
+                                "MoveLeft can brake inertia to zero before Sonic_Move enters its balance tail");
+        }
+
+        @Test
         public void s2FixedSkidDustTicksWhileAirborneStopAnimationPersists() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);
                 Field objectManagerField = GameServices.level().getClass().getDeclaredField("objectManager");

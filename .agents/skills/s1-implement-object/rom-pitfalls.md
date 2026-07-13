@@ -564,8 +564,11 @@ dimensions.
 Obj2F `LGrass_Data`/`LGrass_Main` at `2F, 35 MZ Large Grassy Platforms and
 Burning Grass.asm:23-53`; Obj6B `Sto_Var`/`Sto_Main` at `6B SBZ Stomper and
 Sliding Door.asm:25-42`; Obj84 `EggmanCylinder_Main` at `85,84,86 Boss - FZ
-Main, Cylinders, and Plasma Balls.asm:660-723`.
+Main, Cylinders, and Plasma Balls.asm:660-723`; Obj31 `CStom_Var2` and
+`CStom_MainBlock` at `31 MZ Chained Stompers.asm:112-135,184-190`.
 
 **Originating commit.** `bugfix/ai-s1-balance-owner` (FZ, SBZ1, and SYZ2
 animation traces green; MZ1 f749 → f2596). Earlier examples: Obj56 floating
-block (`ab3112b73`) and Obj61 Labyrinth block (`fc5d5e922`).
+block (`ab3112b73`) and Obj61 Labyrinth block (`fc5d5e922`). Obj31 chained
+stomper was the next exposed instance: raw `$38/$30/$10`, not the collision
+argument extended by `$B`.
