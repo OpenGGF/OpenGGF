@@ -173,21 +173,17 @@ public class TestScriptedVelocityAnimationProfile {
     }
 
     @Test
-    void oppositeDirectionPreservesStopBelowSkidThresholdUntilFacingChanges() {
+    void effectiveSameDirectionPublishesWalkDespiteOppositeRawInput() {
         ScriptedVelocityAnimationProfile profile = createProfile();
         TestSprite sprite = new TestSprite();
         sprite.setAnimationId(profile.getSkidAnimId());
         sprite.setMovementInputActive(true);
         sprite.setDirectionalInputPressed(false, false, false, true);
-        sprite.setDirection(Direction.LEFT);
-        sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) -0x0200);
-
-        assertNull(profile.resolveAnimationId(sprite, 0, 32),
-                "opposite-direction braking does not replace the existing Stop byte below the trigger threshold");
-
         sprite.setDirection(Direction.RIGHT);
+        sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) 0x0080);
+
         assertEquals(1, profile.resolveAnimationId(sprite, 1, 32).intValue(),
-                "the same-direction acceleration branch publishes Walk after facing changes");
+                "animation resolution follows the effective movement path, not raw input hidden by a forced direction");
     }
 
     @Test

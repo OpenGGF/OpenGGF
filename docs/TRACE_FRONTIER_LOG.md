@@ -1,5 +1,22 @@
 # Trace Frontier Log
 
+### 2026-07-13 -- Forced logical direction greens S1 SLZ2
+
+SLZ2 remained byte-exact through signpost walk-off frame 5289, where forced
+Right carried inertia from `-$58` to `+$80` without writing `obAnim`, so Stop
+correctly remained visible. On frame 5290 the native same-direction helper
+wrote Walk. The engine movement dispatch did the same, but the later animation
+profile reclassified the frame from the raw Left button hidden by the signpost's
+locked logical Right input and preserved Stop.
+
+Opposite-direction no-write ownership now stays in the movement dispatcher,
+which receives the effective logical pad. The animation profile therefore
+honors its published result rather than re-reading raw inputs. This is a
+controller-state rule, not a zone, route, frame, or trace exception; no trace
+data or tolerance changed. Focused profile/movement tests pass,
+`TestS1Slz2CompleteRunTraceReplay` is fully green with zero warnings and
+physics errors, and the previously green LZ3 complete run remains green.
+
 ### 2026-07-13 -- S1 Labyrinth-block balance width
 
 SBZ3 complete-run frame 3491 placed Sonic on Obj61 subtype `$13`, whose

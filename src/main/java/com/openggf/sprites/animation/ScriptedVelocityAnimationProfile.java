@@ -351,18 +351,6 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             return null;
         }
 
-        // Once braking has published Stop, later opposite-direction ticks below
-        // the skid threshold do not write Walk. Keep Stop until inertia crosses
-        // through zero and the facing direction changes; then the same-direction
-        // acceleration branch publishes Walk (S1 01 Sonic.asm:634-757; S2
-        // s2.asm:36880-36999; S3K sonic3k.asm:22792-22918).
-        boolean brakingAgainstFacing = (sprite.isLeftPressed() && sprite.getDirection() == Direction.RIGHT)
-                || (sprite.isRightPressed() && sprite.getDirection() == Direction.LEFT);
-        if (speed > 0 && brakingAgainstFacing
-                && skidAnimId >= 0 && sprite.getAnimationId() == skidAnimId) {
-            return null;
-        }
-
         // S1 MoveLeft/MoveRight always write id_Walk to obAnim; Sonic_Animate
         // selects SonAni_Run from inertia >= $600 instead
         // (docs/s1disasm/_incObj/01 Sonic.asm:634-658,704-722,2253-2315).
