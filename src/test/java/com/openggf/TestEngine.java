@@ -596,6 +596,7 @@ class TestEngine {
         RomManager romManager = mock(RomManager.class);
         Rom rom = mock(Rom.class);
         when(romManager.getRom()).thenReturn(rom);
+        when(romManager.isRomAvailable()).thenReturn(true);
         when(rom.readAllBytes()).thenReturn(new byte[] { 0 });
         AudioManager audioManager = mock(AudioManager.class);
         PerformanceProfiler profiler = mock(PerformanceProfiler.class);
