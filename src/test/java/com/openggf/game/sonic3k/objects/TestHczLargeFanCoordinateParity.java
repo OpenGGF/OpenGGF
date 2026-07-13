@@ -42,12 +42,15 @@ class TestHczLargeFanCoordinateParity {
     }
 
     @Test
-    void laterFanConsumesAlreadyPrimedModuleQueueOneDispatchSooner() {
-        HczZoneRuntimeState state = new HczZoneRuntimeState(
+    void laterActFanConsumesSessionPrimedModuleQueueOneDispatchSooner() {
+        HczZoneRuntimeState actOneState = new HczZoneRuntimeState(
                 0, PlayerCharacter.SONIC_AND_TAILS, new Sonic3kHCZEvents());
+        HCZBreakableBarState.reset();
 
-        assertEquals(3, state.claimLargeFanModuleWaitFrames());
-        assertEquals(2, state.claimLargeFanModuleWaitFrames());
+        assertEquals(3, HCZBreakableBarState.claimLargeFanModuleWaitFrames());
+        new HczZoneRuntimeState(1, actOneState.playerCharacter(), new Sonic3kHCZEvents());
+        assertEquals(2, HCZBreakableBarState.claimLargeFanModuleWaitFrames(),
+                "the shared KosM queue remains primed across HCZ's seamless act runtime replacement");
     }
 
     private static TestablePlayableSprite standingPlayer() {

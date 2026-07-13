@@ -3,7 +3,6 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
-import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -76,9 +75,7 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements
                 return;
             }
             phase = PHASE_LOADING_ART;
-            artWaitFramesRemaining = S3kRuntimeStates.currentHcz(services().zoneRuntimeRegistry())
-                    .map(state -> state.claimLargeFanModuleWaitFrames())
-                    .orElse(3);
+            artWaitFramesRemaining = HCZBreakableBarState.claimLargeFanModuleWaitFrames();
             return;
         }
 

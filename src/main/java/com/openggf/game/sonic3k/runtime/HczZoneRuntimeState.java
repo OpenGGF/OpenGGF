@@ -10,7 +10,6 @@ public final class HczZoneRuntimeState implements S3kZoneRuntimeState {
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
     private final Sonic3kHCZEvents events;
-    private boolean largeFanModulePrimed;
 
     public HczZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter, Sonic3kHCZEvents events) {
         this.actIndex = actIndex;
@@ -38,23 +37,4 @@ public final class HczZoneRuntimeState implements S3kZoneRuntimeState {
         return actIndex == 1 && events.isAct2NormalBackgroundPlaneActive();
     }
 
-    /** Claims the shared Obj39 KosM queue delay for this HCZ gameplay session. */
-    public int claimLargeFanModuleWaitFrames() {
-        int waitFrames = largeFanModulePrimed ? 2 : 3;
-        largeFanModulePrimed = true;
-        return waitFrames;
-    }
-
-    @Override
-    public byte[] captureBytes() {
-        return new byte[]{(byte) (largeFanModulePrimed ? 1 : 0)};
-    }
-
-    @Override
-    public void restoreBytes(byte[] bytes) {
-        if (bytes == null || bytes.length != 1) {
-            throw new IllegalArgumentException("HCZ runtime snapshot must contain exactly one byte");
-        }
-        largeFanModulePrimed = bytes[0] != 0;
-    }
 }

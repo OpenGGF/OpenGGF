@@ -92,20 +92,6 @@ class TestS3kZoneRuntimeStateAdapters {
     }
 
     @Test
-    void hczAdapterRewindsLargeFanModuleQueueOwnership() {
-        HczZoneRuntimeState state = new HczZoneRuntimeState(
-                0, PlayerCharacter.SONIC_AND_TAILS, new Sonic3kHCZEvents());
-        byte[] beforeFirstFan = state.captureBytes();
-
-        assertEquals(3, state.claimLargeFanModuleWaitFrames());
-        assertEquals(2, state.claimLargeFanModuleWaitFrames());
-
-        state.restoreBytes(beforeFirstFan);
-        assertEquals(3, state.claimLargeFanModuleWaitFrames());
-        assertThrows(IllegalArgumentException.class, () -> state.restoreBytes(new byte[0]));
-    }
-
-    @Test
     void cnzAdapterCarriesPlayerCharacterAndBossBackgroundMode() {
         Sonic3kCNZEvents events = new Sonic3kCNZEvents();
         events.init(0);
