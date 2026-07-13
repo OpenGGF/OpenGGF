@@ -224,6 +224,7 @@ final class DefaultObjectRewindPolicies {
             // Extra sidekicks extend Obj8B beyond its native P2 byte; keep each crossing
             // latch keyed by the stable rewind player id rather than live object identity.
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance", "extraPlayerPastTrigger"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance", "extensionStates"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance", "mainStateOwner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance", "sidekickStateOwner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.BridgeObjectInstance", "extensionLogIndices"), RewindFieldPolicy.CAPTURED),
@@ -243,8 +244,11 @@ final class DefaultObjectRewindPolicies {
             // serializes them as PlayerRefId values so recreated player instances replace,
             // rather than coexist with, stale pre-rewind references.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance", "nativeP2EndingPoseOwner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance", "extensionEndingPoseStates"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance", "mainOwner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance", "nativeP2Owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance", "extensionRideStates"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance", "lastDecision"), RewindFieldPolicy.TRANSIENT),
             // AIZ collapsing log bridge: once collapsing it stops being a solid surface (onSolidContact no longer
             // fires), so an empty standingPlayers cannot self-heal and the collapse/final loops never knock the
             // stranded rider off; ejectedPlayers guards a knocked-off rider from re-standing/double-ejecting.

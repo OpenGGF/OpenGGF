@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -523,7 +524,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             if (capturedPlayer != null && capturedPlayer.getDead()) {
                 releaseOwnedControl(frameCounter);
                 capturedPlayer = null;
-                setDestroyed(true);
+                ObjectLifetimeOps.destroyLatched(this);
                 return;
             }
             if (!landedOnTerrain) {

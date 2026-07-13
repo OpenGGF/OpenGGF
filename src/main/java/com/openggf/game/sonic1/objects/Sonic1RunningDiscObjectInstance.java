@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -173,8 +174,9 @@ public class Sonic1RunningDiscObjectInstance extends AbstractObjectInstance impl
         // Disc_Action: bsr.w Disc_MoveSonic / bsr.w Disc_MoveSpot / bra.w Disc_ChkDel
         nativeOwner = bindNativeOwner(player);
         updateSonicAttachment(player, nativeState);
-        List<PlayableEntity> sidekicks = services().sidekicks();
-        for (PlayableEntity participant : sidekicks) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        for (PlayableEntity participant : participants) {
             if (participant instanceof AbstractPlayableSprite sidekick && participant != nativeOwner) {
                 updateSonicAttachment(sidekick,
                         extensionStates.computeIfAbsent(participant, ignored -> new PlayerState()));
@@ -182,13 +184,13 @@ public class Sonic1RunningDiscObjectInstance extends AbstractObjectInstance impl
         }
         for (Map.Entry<PlayableEntity, PlayerState> entry : extensionStates.entrySet()) {
             if (entry.getValue().attached
-                    && !containsIdentity(sidekicks, entry.getKey())
+                    && !containsIdentity(participants, entry.getKey())
                     && entry.getKey() instanceof AbstractPlayableSprite omitted) {
                 updateSonicAttachment(omitted, entry.getValue());
             }
         }
         extensionStates.entrySet().removeIf(entry -> !entry.getValue().attached
-                && !containsIdentity(sidekicks, entry.getKey()));
+                && !containsIdentity(participants, entry.getKey()));
         updateSpotPosition();
         updateDynamicSpawn(x, y);
     }

@@ -141,7 +141,6 @@ class TestRewindInPlaceObjectRestore {
             "com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance$ZoneConfig",
             "com.openggf.game.sonic3k.objects.BreakableWallObjectInstance$ZoneConfig",
             "com.openggf.game.sonic3k.objects.FloatingPlatformObjectInstance$ZoneConfig",
-            "com.openggf.game.sonic3k.objects.HCZTwistingLoopObjectInstance$LoopDef",
             "com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$ZoneConfig",
             "com.openggf.level.objects.SolidObjectParams",
             // Shared runtime-owned managers/controllers/workspaces: both paths

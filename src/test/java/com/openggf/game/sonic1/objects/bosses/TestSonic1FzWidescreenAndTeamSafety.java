@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 class TestSonic1FzWidescreenAndTeamSafety {
     @BeforeEach
     void setUp() {
+        TestEnvironment.resetAll();
         TestEnvironment.activeGameplayMode();
         com.openggf.game.GameServices.camera().setX((short) 0);
     }

@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindStateful;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -55,7 +54,6 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
     private int treeX;
     private int treeY;
     private final RideState[] nativeRideStates = {new RideState(), new RideState()};
-    @RewindTransient(reason = "debug-only trace labels; no gameplay decisions read this array")
     private final String[] lastDecision = {"init", "init"};
     private final Map<AbstractPlayableSprite, RideState> extensionRideStates = new IdentityHashMap<>();
     private AbstractPlayableSprite mainOwner;

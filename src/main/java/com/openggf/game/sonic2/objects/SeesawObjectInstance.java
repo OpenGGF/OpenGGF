@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
@@ -420,7 +421,8 @@ public class SeesawObjectInstance extends BoxObjectInstance
         if (standingPlayer2 != null && standingPlayer2 != standingPlayer1) {
             players.add(standingPlayer2);
         }
-        for (PlayableEntity sidekick : services().playerQuery().sidekicks()) {
+        for (PlayableEntity sidekick : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
             if (sidekick instanceof AbstractPlayableSprite player
                     && extensionStandingPlayers.contains(sidekick)
                     && !players.contains(player)) {

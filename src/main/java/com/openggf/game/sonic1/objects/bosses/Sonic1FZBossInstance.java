@@ -12,6 +12,7 @@ import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -748,7 +749,8 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     private List<AbstractPlayableSprite> finalFlightParticipants(AbstractPlayableSprite main) {
         ArrayList<AbstractPlayableSprite> players = new ArrayList<>();
         if (main != null) players.add(main);
-        for (PlayableEntity sidekick : services().sidekicks()) {
+        for (PlayableEntity sidekick : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
             if (sidekick instanceof AbstractPlayableSprite playable && playable != main) {
                 players.add(playable);
             }
