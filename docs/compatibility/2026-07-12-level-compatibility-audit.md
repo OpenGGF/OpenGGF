@@ -5,11 +5,11 @@
 **Scope:** Sonic 1 main stages, Final Zone, and Ending; Sonic 2 main stages through Death Egg; Sonic 3K Angel Island, Hydrocity, Marble Garden, Carnival Night, IceCap, and Launch Base.
 
 **Excluded:** Flying Battery Zone, because it is being changed in a separate workstream; special stages, bonus stages, competition stages, menus, and credits demos except where they provide trace evidence for a main stage.
-**Method:** Read-only static audit of event handlers, traversal objects, player-participation policies, camera/viewport calculations, donation capability composition, and committed tests/traces. No production code was changed and the full trace fleet was not executed.
+**Method:** Static audit followed by concurrent, test-driven remediation in isolated worktrees. The implementation pass covered event handlers, traversal objects, player-participation policies, camera/viewport calculations, donation capability composition, rewind persistence, focused regression tests, selected exact traces, and a clean Maven-suite verification.
 
-## Executive conclusion
+## Executive conclusion (initial audit)
 
-The engine-wide foundations are compatible with the requested features, but zone-level adoption is incomplete.
+The initial audit found compatible engine-wide foundations but incomplete zone-level adoption. The implemented outcome in the next section supersedes these baseline risk statements.
 
 - **Multi-sidekicks:** The core sprite, collision, touch-response, rewind, and player-query layers support arbitrary sidekick lists. Many scripted traversal objects still use native P1/P2 slots, a single shared “P2” state, or only the focused/main player. This is the broadest compatibility gap.
 - **Widescreen:** Rendering, camera width, general visibility, and level-wall safety have shared support. There is almost no zone-level alternate-width route coverage. Boss/event thresholds, native-screen object scans, and scripted camera choreography remain high risk. Camera thresholds must not be “fixed” by moving the maximum camera position left; that can make native world-coordinate event thresholds unreachable.
@@ -23,6 +23,18 @@ The highest-risk areas are:
 3. S3K LBZ forced carriers/launchers, followed by HCZ/MGZ/CNZ native-P1/P2 traversal objects.
 4. Widescreen boss/event entry safety in every game.
 5. MGZ S1-donor route reproduction and, if required, a fallback for the dash-trigger/platform pair.
+
+## Implemented outcome
+
+The risks above describe the pre-remediation baseline. This branch implements the audited compatibility behavior across the in-scope zones while preserving native-only paths and update order where trace accuracy depends on them.
+
+- **Multi-sidekicks:** scripted captures, transports, carriers, triggers, releases, team transitions, and boss cleanup now use explicit participation policies and identity-keyed extension state. This includes the S1 LZ/SBZ/Ending/FZ paths, the S2 bridge/vine/seesaw/tube/nut/Tornado/WFZ/Death Egg families, and S3K traversal from AIZ through LBZ. Persistent extension state is declared to the rewind schema.
+- **Widescreen:** S2 placement/unload windows use the live viewport; custom visibility and culling paths were corrected; GHZ parallax and AIZ background-tree residuals were repaired; and focused camera, arena, object-availability, and team-safety tests cover the changed mechanics. Authored level walls continue to use native geometry rather than viewport width.
+- **Cross-game donation:** the confirmed MGZ dash-trigger blocker now has a capability-driven no-spin-dash activation path, clearly isolated from native spin-dash behavior. The audited S1/S2 routes and the other implemented S3K zones did not reveal another mandatory spin-dash gate.
+- **Accuracy and trace isolation:** trace bootstrap now preserves the comparison-only invariant while isolating native width/team/donation configuration. Existing trace data was not regenerated or used to hydrate engine state.
+- **Flying Battery:** no Flying Battery production or test file was changed.
+
+This is strong mechanic-level coverage, not a claim that every permutation of every complete route has been automated. The remaining route-matrix and visual-capture gaps are recorded below.
 
 ## Status vocabulary
 
@@ -89,7 +101,7 @@ Three independent read-only passes covered Sonic 1, Sonic 2, and the in-scope So
 - Existing widescreen tests focus on camera/configuration/UI foundations. No in-scope zone has a complete alternate-width route and boss/event matrix.
 - Trace replay bootstrap forces the recorded team and donation off, but it does **not** currently snapshot/force/restore display aspect or viewport width. Native-width isolation is therefore a prerequisite before trace replay can be relied on as an automatic 320-pixel guard. Compatibility tests must be additive, not replacements for trace replay.
 
-## Per-zone audit
+## Per-zone audit (pre-remediation findings)
 
 ### Sonic 1
 
@@ -299,20 +311,40 @@ This is an audit backlog, not authorization to implement all items in one branch
 
 ## Integration report
 
-- Changed files: this audit document only.
-- Production behavior: unchanged.
-- Tests run: none; evidence is static inspection and committed test/fixture inventory.
-- Existing user changes in the worktree were not modified.
-- Unresolved risks: runtime reproduction is still required; a fixture's existence is not evidence that it currently passes.
+- Integration branch: `feature/ai-level-compatibility`, created from `next` after merging `develop` into `next` so the existing rewind fixes were present before compatibility work.
+- Production scope: S1 and S2 implemented levels, and S3K AIZ through LBZ. Flying Battery remained excluded.
+- Focused coverage: multi-player object/event tests, viewport/windowing tests, donation tests, rewind graph/coverage tests, source guards, and selected exact trace replays were added or extended across all three games.
+- Final guard repair: the S1 event helper boundary passed `TestZoneEventRuntimeAccessGuard`, Ending/SBZ team tests, and SBZ event tests (24/24). The isolated compatibility guard batch passed 89/89.
+- Claude sidecar: the unusable personal `claude-sidecar` skill had no `SKILL.md`; its remaining directory was removed from the local Codex skill installation.
+
+### Trace evidence
+
+- AIZ complete-run trace: pass.
+- S1 GHZ1/2/3 and the scoped S1/S2 trace replays used during remediation: pass.
+- S2 EHZ1, WFZ, and DEZ scoped traces: pass. No EHZ2 replay fixture exists, so EHZ2 cannot be claimed trace-covered.
+- CNZ complete-run known-red: 7,130 errors, first divergence at frame 1,846 (`tails_x_speed`).
+- MGZ complete-run known-red: 10,308 errors, first divergence at frame 866 (`tails` status); the short input-alignment trace diverges at frame 33,271.
+- HCZ controlled base/post known-red: 4,234 errors, first divergence at frame 3,318 (`tails_y_speed`).
+- ICZ complete-run known-red: 3,206 errors, first divergence at frame 3,139.
+- LBZ complete-run known-red: 5,881 errors, first divergence at frame 2,270 (`tails_x`, expected `0x04E1`, actual `0x04E0`).
+
+These trace reds were reproduced exactly and did not move during the compatibility changes. They remain accuracy work, not compatibility exceptions.
+
+### Maven-suite evidence
+
+An exclusive `mvn clean "-Dsurefire.argLine=-Xshare:off -Xmx3g" test` run executed 13,066 tests. Before the final S1 helper-boundary repair it reported 12 failures, 14 errors, and 22 skipped. The one compatibility-owned failure was `TestZoneEventRuntimeAccessGuard`; the focused post-fix run passed all 24 relevant tests.
+
+The remaining failures were independently isolated to known-red work outside this branch's compatibility ownership: immutable/pinned game-data-source fixtures affecting editor, recording, title-card, and power-up tests; missing WorldSession setup; mod API/wiring snapshots; GameId/package-cycle architecture ratchets; engine warmup expectations; the StockGameDataSources scanner false positive; and the pre-existing playable-movement lifecycle ratchet. Per the project direction, these are left for the mod/runtime design workstream rather than being papered over here.
 
 ## End-to-end review
 
-### Blockers before claiming compatibility
+### Remaining evidence gaps
 
-1. No complete multi-sidekick route matrix exists.
-2. No complete alternate-width zone/boss matrix exists.
-3. MGZ's dash-trigger/platform mechanic is incompatible with an S1 donor; mandatory-route impact has not yet been reproduced.
-4. S1 SBZ, S2 SCZ/WFZ, and S3K LBZ contain global-transition or forced-control paths that do not safely cover arbitrary sidekicks.
+1. No complete automated all-team/all-width/all-donor route matrix exists; current evidence is focused mechanic coverage plus selected traces.
+2. No complete alternate-width visual-capture matrix exists for every boss and scripted scene.
+3. EHZ2 has no committed trace replay fixture.
+4. CNZ, MGZ, HCZ, ICZ, and LBZ retain the exact known-red trace frontiers listed above.
+5. The unrelated mod/runtime suite failures listed in the integration report keep the repository-wide Maven suite red.
 
 ### Residual risks after the planned work
 
@@ -323,8 +355,8 @@ This is an audit backlog, not authorization to implement all items in one branch
 
 ### Human-review checklist
 
-- Confirm the zone scope and risk ordering.
-- Confirm that native P1/P2 behavior may remain ROM-accurate while extension-only state supports additional sidekicks.
-- Confirm the intended MGZ no-spin-dash activation behavior before implementation.
-- Confirm whether 800-pixel `SUPER_32_9` remains exposed after the audit; while exposed, it remains in compatibility test scope even if labeled experimental.
-- Approve separate implementation branches/workstreams rather than a single cross-game compatibility mega-change.
+- Review extension-only participation state against the native P1/P2 ordering contract.
+- Review the MGZ no-spin-dash activation threshold and comments from a mod-design perspective.
+- Confirm whether 800-pixel `SUPER_32_9` remains exposed; while exposed, it remains in compatibility scope even if labeled experimental.
+- Review the accepted known-red boundary before integrating this branch; do not conflate mod/runtime fixture repair with level compatibility.
+- Keep Flying Battery owned by its separate workstream when merging or rebasing.
