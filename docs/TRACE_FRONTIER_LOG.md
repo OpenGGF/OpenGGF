@@ -39380,3 +39380,38 @@ Verification with the local REV01 Sonic 1 ROM:
   report but advanced from frame 813 to frame 2585
   (`player_mapping_frame`, expected `0x0045`, actual `0x0008`) and reduced from
   40 to 16 errors, with 0 warnings and its physics stream still green.
+
+### 2026-07-13 -- S1 SBZ3 fresh-player native bootstrap
+
+On branch `bugfix/ai-trace-s1-sbz3-bootstrap` at composed baseline `c9d3b77ca`,
+the SBZ3 complete-run replay began with green physics but selected Walk/map 8
+instead of the ROM's Wait/map 1. The SBZ2-to-SBZ3 transition sets `f_restart`
+and changes `v_zone` to the LZ4 alias; `GM_Level` then clears object RAM, creates
+the fresh Sonic slot, runs `ObjPosLoad` plus one `ExecuteObjects` pass, and only
+afterwards clears `v_frame_counter` and enters `Level_MainLoop`. Sonic therefore
+starts that native pass grounded with zero input: `Sonic_Move` writes Wait,
+`Sonic_AnglePos` finds no floor at `y_pos=0` and sets `Status_InAir`, and
+`Sonic_Animate` publishes map 1. No player state survives the act transition.
+
+The ROM-derived `LevelInitProfile` now owns the count of fresh-player prelude
+dispatches (one for S1, zero by default). Production title-card entry and trace
+replay both invoke the same main-player-only canonical physics/animation pass,
+restoring the gameplay frame counter afterward. The shared scripted animation
+resolver also preserves a ground animation chosen earlier in a frame when
+`AnglePos` subsequently detaches the player. This is driven by fresh object-RAM
+state and native runtime execution; it does not read a trace player row or add a
+zone, route, act, or frame exception.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `TestScriptedVelocityAnimationProfile#groundMovementWaitSurvivesAnglePosDetachFrame`
+  and `TestSonic1LevelInitProfile#freshPlayerRunsOneNativePreludeDispatch` pass.
+- `TestS1Sbz3CompleteRunTraceReplay` advances from frame 0 to frame 243 and
+  reduces its animation report from 129 to 102 errors, with physics still at
+  zero errors. The new frame-243 mapping mismatch (expected `$2E`, actual `$32`)
+  is a separate later animation-cadence frontier.
+- A 29-class S1 `frontierOnly` sweep was run both at detached baseline
+  `c9d3b77ca` and with the fix. All eight existing greens stayed green and the
+  other 20 expected-red first errors were byte-identical; SBZ3 was the sole
+  changed frontier (frame 0 to frame 243). Both sweeps had zero skips and zero
+  infrastructure errors.

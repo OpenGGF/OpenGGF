@@ -282,6 +282,18 @@ public final class TraceReplaySessionBootstrap {
             List<AbstractPlayableSprite> sidekicks = gameplayMode.getSpriteManager() != null
                     ? gameplayMode.getSpriteManager().getSidekicks()
                     : List.of();
+            int mainPlayablePreludeFrames = Math.min(
+                    objectPreludeFrames,
+                    GameServices.module().getLevelInitProfile().freshMainPlayablePreludeFrames());
+            if (mainPlayablePreludeFrames > 0 && gameplayMode.getSpriteManager() != null) {
+                // S1 GM_Level creates the fresh Sonic slot, then executes it
+                // once in the same native pass as these level objects before
+                // Level_MainLoop begins. The fixture's generic ground snap has
+                // already run, so the helper restores fresh object-RAM status
+                // and lets player physics/animation derive the live state.
+                gameplayMode.getSpriteManager().warmUpFreshMainPlayableOnly(
+                        mainPlayablePreludeFrames, levelManager, player);
+            }
             boolean interleaveSidekickPrelude =
                     shouldInterleaveS2TitleCardPrelude(trace, sidekickPreludeFrames, objectPreludeFrames)
                             && gameplayMode.getSpriteManager() != null;

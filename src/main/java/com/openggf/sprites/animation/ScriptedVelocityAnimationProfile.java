@@ -208,6 +208,17 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
                 }
                 return rollAnimId;
             }
+            // A frame that began grounded can run the complete Move routine,
+            // which writes Walk/Wait, before AnglePos discovers there is no
+            // floor and sets Status_InAir. Preserve that already-written
+            // ground animation byte on the detach frame; the following frame
+            // enters MdAir and no longer has a ground-movement snapshot.
+            // S1 GM_Level's fresh-player ExecuteObjects pass in SBZ3 is the
+            // canonical case: Sonic_Move writes Wait, then AnglePos sets air.
+            PlayableSpriteAnimation animation = sprite.getAnimationManager();
+            if (animation != null && animation.hasGroundMovementAnimSpeed()) {
+                return resolveGroundMovementAnimId(sprite);
+            }
             if (!sprite.isJumping() && !sprite.getRollingJump() && !sprite.isSliding()) {
                 return null;
             }

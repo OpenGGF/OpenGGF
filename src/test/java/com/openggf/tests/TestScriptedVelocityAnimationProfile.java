@@ -83,6 +83,20 @@ public class TestScriptedVelocityAnimationProfile {
     }
 
     @Test
+    void groundMovementWaitSurvivesAnglePosDetachFrame() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setAnimationId(1);
+        sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) 0);
+        sprite.setAir(true);
+
+        Integer animId = profile.resolveAnimationId(sprite, 0, 32);
+
+        assertEquals(0, animId.intValue(),
+                "Move writes Wait before AnglePos sets Status_InAir on a ground-to-air detach frame");
+    }
+
+    @Test
     void hurtLandingPublishesWalkForRecoveryFrameBeforeReturningToWait() {
         ScriptedVelocityAnimationProfile profile = createProfile();
         TestSprite sprite = new TestSprite();

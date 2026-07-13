@@ -662,6 +662,62 @@ public class SpriteManager {
 	}
 
 	/**
+	 * Runs only the freshly created main playable through the native object
+	 * dispatch that precedes the first counted gameplay frame.
+	 *
+	 * <p>The player slot has just been cleared in the ROM, so status starts on
+	 * the ground with angle zero even when no floor exists at the spawn point.
+	 * The normal movement code discovers that condition during this pass (for
+	 * example S1 SBZ3 at {@code y_pos=0}), while the normal animation code
+	 * publishes the corresponding Wait mapping. The gameplay frame counter is
+	 * restored because this pass occurs before the ROM clears/starts its level
+	 * counter.
+	 */
+	public void warmUpFreshMainPlayableOnly(int frames,
+			LevelManager levelManager,
+			AbstractPlayableSprite mainPlayable) {
+		if (frames <= 0 || levelManager == null || mainPlayable == null) {
+			return;
+		}
+		int savedFrameCounter = frameCounter;
+		try {
+			mainPlayable.setAir(false);
+			mainPlayable.setAngle((byte) 0);
+			mainPlayable.setGroundMode(GroundMode.GROUND);
+			mainPlayable.setOnObject(false);
+			mainPlayable.setPushing(false);
+			// The ROM cleared both anim and prev_anim with the object slot.
+			// Reused engine sprite instances must likewise force the first
+			// native animation dispatch to initialize its script even when the
+			// prior level happened to end on the same animation id.
+			mainPlayable.forceAnimationRestart();
+			for (int i = 0; i < frames; i++) {
+				frameCounter++;
+				List<AbstractPlayableSprite> mainOnly = List.of(mainPlayable);
+				beginPlayableFrame(mainOnly);
+				try {
+					activePlayableUpdate = mainPlayable;
+					mainPlayable.applyQueuedControlStateForFrameStart();
+					publishInputState(mainPlayable,
+							false, false, false, false, false,
+							false, false, false, false, false,
+							false, false);
+					tickPlayablePhysics(mainPlayable,
+							false, false, false, false, false, false, false, false,
+							levelManager, frameCounter);
+					levelManager.updateZoneFeaturesAfterPlayablePhysics(mainPlayable);
+				} finally {
+					runDeferredPostTickMutations(mainPlayable);
+					activePlayableUpdate = null;
+					endPlayableFrame();
+				}
+			}
+		} finally {
+			frameCounter = savedFrameCounter;
+		}
+	}
+
+	/**
 	 * Runs the CPU-controlled sidekicks through the short object prelude that
 	 * happens while the ROM title card still holds the main player. The main
 	 * player and BK2 cursor are intentionally untouched; callers restore
