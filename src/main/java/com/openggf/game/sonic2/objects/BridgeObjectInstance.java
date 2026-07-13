@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -21,7 +22,9 @@ import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Bridge object (0x11) - EHZ/HPZ log bridge.
@@ -96,6 +99,7 @@ public class BridgeObjectInstance extends BoxObjectInstance
     private int sidekickLogIndex;
     private boolean mainStanding;
     private boolean sidekickStanding;
+    private final Map<PlayableEntity, Integer> extensionLogIndices = new IdentityHashMap<>();
 
     public BridgeObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name, 32, LOG_HALF_HEIGHT, 0.6f, 0.4f, 0.2f, false);
@@ -180,18 +184,16 @@ public class BridgeObjectInstance extends BoxObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        updateDepressionState();
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        updateDepressionState(participants);
         rebuildBridgeShape();
         updateSlopeData();
-
-        AbstractPlayableSprite mainPlayer = playerEntity instanceof AbstractPlayableSprite playable
-                ? playable
-                : null;
-        latchStandingState(mainPlayer, checkpointAll());
+        latchStandingState(participants, checkpointAll());
     }
 
-    private void updateDepressionState() {
-        if (!mainStanding && !sidekickStanding) {
+    private void updateDepressionState(List<PlayableEntity> participants) {
+        if (!mainStanding && !sidekickStanding && extensionLogIndices.isEmpty()) {
             depressionAngle = Math.max(0, depressionAngle - DEPRESSION_RATE);
             return;
         }
@@ -202,6 +204,11 @@ public class BridgeObjectInstance extends BoxObjectInstance
             } else {
                 mainLogIndex--;
             }
+        }
+        for (int i = 2; i < participants.size(); i++) {
+            Integer extensionIndex = extensionLogIndices.get(participants.get(i));
+            if (extensionIndex == null || mainLogIndex == extensionIndex) continue;
+            mainLogIndex += mainLogIndex < extensionIndex ? 1 : -1;
         }
 
         depressionAngle = Math.min(MAX_DEPRESSION_ANGLE, depressionAngle + DEPRESSION_RATE);
@@ -253,28 +260,34 @@ public class BridgeObjectInstance extends BoxObjectInstance
         }
     }
 
-    private void latchStandingState(AbstractPlayableSprite mainPlayer, SolidCheckpointBatch batch) {
+    private void latchStandingState(List<PlayableEntity> participants, SolidCheckpointBatch batch) {
         mainStanding = false;
         sidekickStanding = false;
+        extensionLogIndices.clear();
 
+        AbstractPlayableSprite mainPlayer = participants.isEmpty() ? null
+                : participants.getFirst() instanceof AbstractPlayableSprite sprite ? sprite : null;
         PlayerSolidContactResult mainResult = mainPlayer != null ? batch.perPlayer().get(mainPlayer) : null;
         if (mainResult != null && mainResult.standingNow()) {
             mainStanding = true;
             mainLogIndex = computeLogIndex(mainPlayer);
         }
 
-        AbstractPlayableSprite sidekick = firstTrackedSidekick();
+        AbstractPlayableSprite sidekick = participants.size() > 1
+                && participants.get(1) instanceof AbstractPlayableSprite sprite ? sprite : null;
         PlayerSolidContactResult sidekickResult = sidekick != null ? batch.perPlayer().get(sidekick) : null;
         if (sidekickResult != null && sidekickResult.standingNow()) {
             sidekickStanding = true;
             sidekickLogIndex = computeLogIndex(sidekick);
         }
-    }
-
-    private AbstractPlayableSprite firstTrackedSidekick() {
-        return services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
-                ? sidekick
-                : null;
+        for (int i = 2; i < participants.size(); i++) {
+            if (participants.get(i) instanceof AbstractPlayableSprite extension) {
+                PlayerSolidContactResult result = batch.perPlayer().get(extension);
+                if (result != null && result.standingNow()) {
+                    extensionLogIndices.put(extension, computeLogIndex(extension));
+                }
+            }
+        }
     }
 
     private int computeLogIndex(AbstractPlayableSprite player) {

@@ -798,11 +798,12 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         // frame, not the current frame (s2.asm:57490-57530, 57630-57686).
         updateSpringPosition();
 
-        // Process all tracked native players (ROM objoff_36 for P1, objoff_37 for P2).
+        // Process native P1 first, then the native P2 prefix and identity-owned
+        // novelty extensions through the existing per-player state map.
         processPlayer(player, camera);
 
         for (PlayableEntity candidate : services().playerQuery()
-                .playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+                .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
             if (candidate != player && candidate instanceof AbstractPlayableSprite sprite) {
                 processPlayer(sprite, camera);
             }
