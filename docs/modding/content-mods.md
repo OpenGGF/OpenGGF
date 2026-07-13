@@ -5,7 +5,9 @@ zones. They can also replace stock art without code. Mods are discovered from th
 process `mods/` directory at restart; executable mods must be enabled and granted
 trust in the Mod Manager before they run.
 
-The public mod API is version `1.1.0`. A creator build needs both release artifacts:
+The public mod API is version `2.0.0` (a deliberate breaking bump from `1.1.0`;
+see `docs/architecture/mod-api-compatibility.md`). Mods must declare a `2.x`
+engine range such as `>=2.0.0 <3.0.0`. A creator build needs both release artifacts:
 
 - the engine jar, which contains the public API and runtime dependencies; and
 - the `openggf-mod-sdk` classifier jar, which contains `ggfmod`, converters, and

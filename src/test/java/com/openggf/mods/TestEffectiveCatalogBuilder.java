@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestEffectiveCatalogBuilder {
     @Test
     void compatibleEnabledPatchBecomesEffective() {
-        ModDescriptor mod = descriptor("music", "s1", "1.0.0", ">=1.0.0 <2.0.0",
+        ModDescriptor mod = descriptor("music", "s1", "1.0.0", ">=2.0.0 <3.0.0",
                 List.of(), false, null, Map.of(), null, OptionalInt.empty(), List.of());
         ModState state = state(entry("music", true, 0));
 
@@ -27,12 +27,12 @@ class TestEffectiveCatalogBuilder {
     }
 
     @Test
-    void apiRangeUsesPinnedOneOneCompatibilityWithoutImplicitLowerMajorAcceptance() {
+    void apiRangeUsesPinnedCurrentCompatibilityWithoutImplicitLowerMajorAcceptance() {
         List<ModDescriptor> mods = List.of(
-                patch("canonical", "s1", "1.0.0", ">=1.0.0 <2.0.0"),
-                patch("exact-current", "s2", "1.0.0", "1.1.0"),
-                patch("future", "s1", "1.0.0", ">=1.2.0 <2.0.0"),
-                patch("old-major", "s3k", "1.0.0", "<1.0.0"));
+                patch("canonical", "s1", "1.0.0", ">=2.0.0 <3.0.0"),
+                patch("exact-current", "s2", "1.0.0", "2.0.0"),
+                patch("future", "s1", "1.0.0", ">=2.1.0 <3.0.0"),
+                patch("old-major", "s3k", "1.0.0", "<2.0.0"));
 
         ModCatalog result = new EffectiveCatalogBuilder().build(
                 mods, enabledState("canonical", "exact-current", "future", "old-major"));
