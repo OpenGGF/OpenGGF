@@ -1663,6 +1663,19 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
         }
 
+        /** Publishes the ROM's {@code prev_anim=Run} sentinel. */
+        public void publishRunAsPreviousAnimation() {
+                PlayableSpriteAnimation anim = getAnimationManager();
+                if (anim != null) {
+                        int runAnimationId = resolveAnimationId(CanonicalAnimation.RUN);
+                        if (runAnimationId >= 0) {
+                                anim.publishPreviousAnimationId(runAnimationId);
+                        } else {
+                                anim.resetLastAnimationId();
+                        }
+                }
+        }
+
         public void setAnimationId(int animationId) {
                 this.animationId = Math.max(0, animationId);
         }

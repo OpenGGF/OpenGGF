@@ -32,6 +32,15 @@ public class PlayableSpriteAnimation {
         lastAnimationId = -1;
     }
 
+    /**
+     * Publishes a native {@code prev_anim} value without changing the selected
+     * animation or its current script state. The next update restarts only when
+     * the selected animation differs from this exact ROM-visible value.
+     */
+    public void publishPreviousAnimationId(int nativePrevAnimId) {
+        lastAnimationId = nativePrevAnimId;
+    }
+
     public PlayableSpriteAnimation(AbstractPlayableSprite sprite) {
         this.sprite = sprite;
     }

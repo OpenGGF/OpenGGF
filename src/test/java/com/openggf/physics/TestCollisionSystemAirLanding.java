@@ -166,6 +166,30 @@ class TestCollisionSystemAirLanding {
     }
 
     @Test
+    void groundedRunWalkOffPreservesUnchangedRunAnimationCadence() {
+        AbstractPlayableSprite sprite = newTestSprite();
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(1, new SpriteAnimationScript(0,
+                List.of(0x10, 0x11, 0x12, 0x13), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(1);
+        sprite.setAir(false);
+
+        sprite.getAnimationManager().update(0);
+        sprite.getAnimationManager().update(1);
+        assertEquals(0x11, sprite.getMappingFrame(), "Fixture should begin partway through Run");
+
+        CollisionSystem collisionSystem = new CollisionSystem(new StubTerrainCollisionManager(null, null));
+        collisionSystem.resolveGroundAttachment(sprite, 14, () -> false);
+        sprite.getAnimationManager().update(2);
+
+        assertTrue(sprite.getAir(), "Missing terrain support should put the player in the air");
+        assertEquals(1, sprite.getAnimationId(), "Walk-off should keep the selected Run animation");
+        assertEquals(0x12, sprite.getMappingFrame(),
+                "prev_anim=Run must preserve cadence when the selected raw animation is already Run");
+    }
+
+    @Test
     void staleStatusOnObjectDoesNotSuppressTerrainWalkOffWhenObjectSupportIsGone() {
         AbstractPlayableSprite sprite = newTestSprite();
         sprite.setAir(false);

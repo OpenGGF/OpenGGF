@@ -67,14 +67,15 @@ restarts at mapping `$2E` and the engine previously continued to `$31`.
 
 This is not an animation-id change or a zone rule. Every orientation of S1
 `Sonic_AnglePos` sets InAir, clears Push, and writes Run to `prev_anim`
-(`docs/s1disasm/_incObj/01 Sonic.asm:1840-1846,1986-1992,2053-2059,
-2120-2126`). The later `Sonic_Animate` comparison sees the unchanged raw Roll2
-id differ from that sentinel and resets `anim_frame` and `anim_time`. S2 and
-S3K carry the same write in all four terrain-detach branches
+(`docs/s1disasm/_incObj/Sonic AnglePos.asm:113-115,276-278,349-351,
+422-424`). The later `Sonic_Animate` comparison sees the unchanged raw Roll2
+id differ from that sentinel and resets `anim_frame` and `anim_time`, while an
+unchanged raw Run id compares equal and preserves its cadence. S2 and S3K carry
+the same write in all four terrain-detach branches
 (`docs/s2disasm/s2.asm:43108-43110,43216-43218,43283-43285,43350-43352`;
 `docs/skdisasm/sonic3k.asm:18840-18842,18965-18967,19037-19039,
-19109-19111`). `CollisionSystem` now owns this generic terrain-detach restart
-beside the existing InAir and Push transitions.
+19109-19111`). `CollisionSystem` now publishes that exact canonical Run
+previous-animation value beside the existing InAir and Push transitions.
 
 Comparison-only results with the verified REV01 ROM, with zero physics errors:
 
@@ -87,9 +88,9 @@ Comparison-only results with the verified REV01 ROM, with zero physics errors:
 
 The new frontiers are independent animation-selection or object-controlled
 state mismatches and are not part of this terrain-detach script-phase fix. The
-focused collision/animation suite passes 25/25, including a regression that
-starts partway through Roll2, loses terrain support with raw animation id 2
-unchanged, and verifies that the same frame publishes mapping `$2E`.
+focused collision/animation suite passes 26/26, including regressions proving
+that terrain loss restarts an unchanged Roll2 at mapping `$2E` but advances an
+unchanged raw Run to its next frame.
 
 ### Sonic 1 zero-inertia Wait selection
 

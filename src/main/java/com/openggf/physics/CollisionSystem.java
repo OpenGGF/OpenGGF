@@ -638,11 +638,12 @@ public class CollisionSystem {
         sprite.setPushing(false);
         // AnglePos writes Run to prev_anim when terrain support is lost. If the
         // selected animation stays Roll, that deliberate mismatch still restarts
-        // its script on this frame. This is shared by S1 (Sonic.asm:1840-1846,
-        // 1986-1992, 2053-2059, 2120-2126), S2 (s2.asm:43108-43110,
+        // its script on this frame; an unchanged raw Run correctly keeps its
+        // cadence. This is shared by S1 (_incObj/Sonic AnglePos.asm:113-115,
+        // 276-278,349-351,422-424), S2 (s2.asm:43108-43110,
         // 43216-43218, 43283-43285, 43350-43352), and S3K
         // (sonic3k.asm:18840-18842, 18965-18967, 19037-19039, 19109-19111).
-        sprite.forceAnimationRestart();
+        sprite.publishRunAsPreviousAnimation();
     }
 
     private boolean hasPendingStaleObjectSupportLoss(AbstractPlayableSprite sprite) {
