@@ -83,6 +83,23 @@ public class TestScriptedVelocityAnimationProfile {
     }
 
     @Test
+    void hurtLandingPublishesWalkForRecoveryFrameBeforeReturningToWait() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setHurt(true);
+        sprite.captureOnObjectAtFrameStart();
+        sprite.setHurt(false);
+
+        assertEquals(1, profile.resolveAnimationId(sprite, 0, 32).intValue(),
+                "ROM hurt-stop writes Walk before running animation with zero inertia");
+
+        sprite.captureOnObjectAtFrameStart();
+
+        assertEquals(0, profile.resolveAnimationId(sprite, 1, 32).intValue(),
+                "the following normal-control frame may select Wait at zero inertia");
+    }
+
+    @Test
     public void s3kBalanceUsesSingleFacingSetForAwayStates() {
         ScriptedVelocityAnimationProfile profile = createProfile()
                 .setBalanceAnimId(20)

@@ -246,6 +246,17 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
      * {@code resolveAnimationId(..., false)} rather than calling this directly.
      */
     public Integer resolveGroundMovementAnimId(AbstractPlayableSprite sprite) {
+        // Hurt-stop owns the whole frame: after collision clears InAir it zeroes
+        // velocity, writes Walk, and only then calls the ordinary animation
+        // routine. Do not reinterpret that explicit write as Wait merely because
+        // the recovered player now has zero inertia. The frame-start snapshot
+        // clears this semantic marker before the next normal-control frame
+        // (S1 01 Sonic.asm:1901-1908,1941-1951; S2 s2.asm:38187-38226,
+        // 41074-41114; S3K sonic3k.asm:24463-24506,29208-29251).
+        if (sprite.getHurtRecoveryCompletedThisFrame()
+                || (sprite.getHurtAtFrameStart() && !sprite.isHurt())) {
+            return walkAnimId;
+        }
         // ROM-accurate: Skidding state (braking at speed >= 0x400)
         if (sprite.getSkidding() && skidAnimId >= 0) {
             return skidAnimId;

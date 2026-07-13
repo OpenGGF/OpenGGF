@@ -39232,3 +39232,43 @@ Verification with the local REV01 Sonic 1 ROM:
   retained the expected-red route but advanced the first error from frame 308
   to frame 354 (`player_animation_id`, expected `0x0000`, actual `0x0005`) and
   reduced the report from 179 to 168 errors, with 0 warnings.
+
+### 2026-07-13 -- Hurt-landing Walk publication
+
+On branch `bugfix/ai-trace-s1-hurt-landing-walk` at composed baseline
+`fe3fdf7ac`, five S1 traces exposed the same recovery-frame mismatch: the ROM
+published raw Walk `$00`, while the engine replaced it with Wait `$05` because
+the recovered player had zero inertia. S1 `Sonic_HurtStop` clears velocity,
+writes `id_Walk`, returns to the hurt routine, and then calls `Sonic_Animate` in
+that same frame (`docs/s1disasm/_incObj/01 Sonic.asm:1901-1951`). S2 Sonic and
+Tails, and S3K Sonic/Knuckles and Tails, use the same ordering
+(`docs/s2disasm/s2.asm:38187-38226,41074-41114`;
+`docs/skdisasm/sonic3k.asm:24463-24506,29208-29251`).
+
+The shared velocity-animation profile now consumes the existing semantic
+frame-state: either hurt recovery completed explicitly, or the player began
+the frame hurt and terrain landing cleared that state before animation. It
+returns Walk only for that recovery-owned frame; the next normal-control frame
+still selects Wait at zero inertia. No route, zone, or frame gate was added,
+and no trace data was modified, hydrated into engine state, or tolerated.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `mvn -Dmse=off "-Dtest=TestScriptedVelocityAnimationProfile#hurtLandingPublishesWalkForRecoveryFrameBeforeReturningToWait" test`
+  exited 0: 1 test passed.
+- A combined run of `TestS1Ghz1TraceReplay`,
+  `TestS1Mz2CompleteRunTraceReplay`, `TestS1Mz1CompleteRunTraceReplay`,
+  `TestS1Sbz1CompleteRunTraceReplay`, and
+  `TestS1Slz1CompleteRunTraceReplay` retained all five expected-red routes and
+  advanced every frontier:
+    - GHZ1 standalone: frame 437 to 810 (`player_mapping_frame`, expected
+      `0x0014`, actual `0x0012`), errors 19 to 17.
+    - MZ2 complete-run: frame 354 to 1021 (`player_mapping_frame`, expected
+      `0x0008`, actual `0x0009`), errors 111 to 89.
+    - MZ1 complete-run: frame 808 to 1144 (`player_mapping_frame`, expected
+      `0x0037`, actual `0x0038`), errors 69 to 65.
+    - SBZ1 complete-run: frame 625 to 737 (`player_mapping_frame`, expected
+      `0x0008`, actual `0x0009`), errors 83 to 71.
+    - SLZ1 complete-run: frame 319 to 1423 (`player_mapping_frame`, expected
+      `0x002E`, actual `0x0032`), errors 30 to 22.
+  All reports contained 0 warnings.
