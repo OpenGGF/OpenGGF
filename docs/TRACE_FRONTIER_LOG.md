@@ -46,6 +46,99 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-13 - HCZ branch repair, rewind closure, and final verification
+
+This repair pass used the existing checkout only (no auxiliary worktrees).
+The starting branch was `bugfix/ai-hcz-trace-replays` at
+`482d347a4d07265b647c2ffab49671d20bbb0e63`; local and remote-tracking
+`develop` were `4a39499949c9c4e66edf62db267a2b0c35d6901f` when the repair began.
+The runtime/test repair head before this log update is
+`a365ff3e4f0e8011d1faf16f7ddf08fec75393be`. The only unrelated worktree
+changes throughout the pass were the user's unstaged `.gitignore` and
+`.idea/vcs.xml` edits; they were neither changed nor staged by this work.
+
+The root ROM inventory used by every ROM-backed final gate was:
+
+- `Sonic The Hedgehog (W) (REV01) [!].gen`: CRC32 `AFE05EEE`, SHA-1
+  `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`.
+- `Sonic The Hedgehog 2 (W) (REV01) [!].gen`: CRC32 `7B905383`, SHA-1
+  `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`.
+- `Sonic and Knuckles & Sonic 3 (W) [!].gen`: CRC32 `0C06AA82`, SHA-1
+  `B711A909CCE238CA4AF3E517A2EDCA306228EFA5`.
+
+The clean pre-edit replay baseline completed 92 tests: 71 passed, 18 failed,
+2 errored, and 1 skipped. HCZ reached f14211 and then errored because a live
+Turbo Spiker parent retained a launched shell whose rewind identity had left
+the captured object set. The fix transfers shell lifetime ownership on launch
+and preserves the shell/trail recreate metadata; closure validation remains
+enabled. The other rewind-closure repairs capture result-element state and the
+capsule-button/impact-boss object graph through the central schema. Two later
+integration regressions were found with controlled RED tests: the merged
+sidekick rule reconstructed the S3K Stat-table press byte as an edge (HCZ first
+divergence f15377), and the large-fan module-queue latch had been placed in an
+act-local runtime that is replaced at the seamless transition (f27695). The
+final implementation copies the recorded low-byte press directly and keeps the
+fan queue latch in the already-registered `HCZBreakableBarStaticAdapter`, so it
+survives the act replacement and remains reset/rewind owned.
+
+Granular repair commits after the starting head are:
+
+- `15027dc86` Turbo Spiker shell ownership;
+- `17ee6a3dd`, corrected by `0abd71c4b`, typed runtime rules and the native
+  follower press byte;
+- `e2cc1858b`, `bf718f601`, and `5ad52dfc5` independent runtime/HCZ/graphics
+  extractions;
+- `932dc799b`, corrected by `ee070771f`, HCZ fan queue rewind and cross-act
+  lifetime ownership;
+- `7cf99e4d5` HCZ result/boss rewind graph closure;
+- `7e65a510c`, `fd4151b20`, `a68d49ba7`, and `2548e919f` focused fixture and
+  lifecycle-guard repairs;
+- `a365ff3e4` reviewed static-session inventory for the registered fan adapter.
+
+Focused verification included 173/173 follower-input/fan/static-adapter tests,
+7/7 final fan ownership/debt-ratchet tests, 7/7 result/boss graph rewind tests,
+and 51/51 S3K must-keep-green tests (`TestS3kAiz1SkipHeadless`, both
+`TestSonic3kLevelLoading` classes, `TestSonic3kBootstrapResolver`, and
+`TestSonic3kDecodingUtils`). The final clean non-trace command was:
+
+```text
+mvn clean test -Dmaven.test.failure.ignore=true -Dsurefire.argLine='-Xmx4g -Dnet.bytebuddy.experimental=true' -Dsurefire.forkCount=1 -DreuseForks=false '-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen' '-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen' '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+```
+
+It completed 11,752 tests: 11,677 passed, 2 failed, 2 errored, and 71 skipped.
+The two failures are unchanged on `develop`: the MHZ mushroom-parachute carry
+position (`expected=5378`, `actual=5391`) and the S2 donated lives-frame index
+(`expected=0`, `actual=1`). The two environmental errors are also unchanged:
+`TestCrossGameFeatureProviderRefactor.S3kTailsDonationIntegration` hard-codes
+the absent filename `s3k.gen` for its S1/S2 host cases instead of consuming the
+supplied S3K ROM property. No branch-caused non-trace failure remains.
+
+The final replay command (one fork, 4 GiB heap, all three discovered ROM
+properties) was:
+
+```text
+mvn -Dmse=off test -Dmaven.test.failure.ignore=true -Dsurefire.argLine='-Xmx4g -Dnet.bytebuddy.experimental=true' -Dsurefire.forkCount=1 -DreuseForks=false '-Dtest=*TraceReplay' -DfailIfNoTests=false '-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen' '-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen' '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+```
+
+It completed all 92 checks: 72 passed, 18 failed, 1 errored, and 1 skipped.
+HCZ is green (2/2), including the full route and rewind-reference closure. Both
+S3K AIZ routes, all 29 S1 checks, and all 20 S2 classes remain green. The
+remaining S3K results exactly preserve the established comparison frontiers:
+
+- CNZ complete: f1846, `tails_x_speed`, 7,184 errors; CNZ level-select input
+  alignment stops at f39672. Its 11 auxiliary assertion failures and one
+  miniboss-parent NPE are pre-existing engine/fixture debt.
+- MGZ complete: f1072, `rings`, 10,221 errors; MGZ level-select input alignment
+  stops at f33271.
+- MHZ complete: f2920, `tails_status_byte`, 2,452 errors.
+- ICZ complete: f3174, `rings`, 3,205 errors (the branch retains its improvement
+  from the older f3139 frontier).
+- LBZ complete: f2270, `tails_x`, 5,881 errors.
+
+Thus every branch-caused replay regression and the HCZ closure error are fixed;
+the remaining reds classify as pre-existing engine/fixture debt or trace-data
+input alignment, not newly accepted exceptions.
+
 ## 2026-07-12 - S2 OOZ1 deferred-death oil-support release green
 
 After merging `origin/develop` into `bugfix/ai-hcz-trace-replays`, OOZ1
