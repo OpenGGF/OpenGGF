@@ -87,8 +87,10 @@ public class TestScriptedVelocityAnimationProfile {
         ScriptedVelocityAnimationProfile profile = createProfile();
         TestSprite sprite = new TestSprite();
         sprite.setHurt(true);
+        sprite.setAirRaw(true);
         sprite.captureOnObjectAtFrameStart();
         sprite.setHurt(false);
+        sprite.setAirRaw(false);
 
         assertEquals(1, profile.resolveAnimationId(sprite, 0, 32).intValue(),
                 "ROM hurt-stop writes Walk before running animation with zero inertia");
@@ -97,6 +99,20 @@ public class TestScriptedVelocityAnimationProfile {
 
         assertEquals(0, profile.resolveAnimationId(sprite, 1, 32).intValue(),
                 "the following normal-control frame may select Wait at zero inertia");
+    }
+
+    @Test
+    void ordinaryAirRoutineLandingPreservesItsIncomingAnimationForThatFrame() {
+        TestSprite sprite = new TestSprite();
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        sprite.setAirRaw(true);
+        sprite.setAnimationId(profile.getWalkAnimId());
+        sprite.captureOnObjectAtFrameStart();
+
+        sprite.setAirRaw(false);
+
+        assertNull(profile.resolveGroundMovementAnimId(sprite),
+                "an airborne routine that lands does not run grounded animation selection in the same frame");
     }
 
     @Test
@@ -163,6 +179,10 @@ public class TestScriptedVelocityAnimationProfile {
 
         void useGameRules(GameRules fs) {
             super.setGameRulesForTest(fs);
+        }
+
+        void setAirRaw(boolean air) {
+            this.air = air;
         }
     }
 }

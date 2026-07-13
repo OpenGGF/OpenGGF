@@ -315,6 +315,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         private boolean onObjectAtFrameStart = false;
         private boolean pushingAtFrameStart = false;
+        private boolean airAtFrameStart = false;
         private boolean hurtAtFrameStart = false;
         private boolean hurtRecoveryCompletedThisFrame = false;
 
@@ -1917,6 +1918,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void captureOnObjectAtFrameStart() {
                 this.onObjectAtFrameStart = this.onObject;
                 this.pushingAtFrameStart = this.pushing;
+                this.airAtFrameStart = this.air;
                 this.hurtAtFrameStart = this.hurt;
                 this.hurtRecoveryCompletedThisFrame = false;
         }
@@ -1935,6 +1937,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public boolean getPushingAtFrameStart() {
                 return pushingAtFrameStart;
+        }
+
+        public boolean getAirAtFrameStart() {
+                return airAtFrameStart;
         }
 
         public boolean getHurtAtFrameStart() {

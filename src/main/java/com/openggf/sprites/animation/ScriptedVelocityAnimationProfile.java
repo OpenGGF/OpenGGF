@@ -257,6 +257,18 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
                 || (sprite.getHurtAtFrameStart() && !sprite.isHurt())) {
             return walkAnimId;
         }
+        // The player routine is selected from Status_InAir at the start of the
+        // frame. If its ordinary airborne collision pass lands, that frame never
+        // runs Sonic_Move/Tails_Move and therefore never writes a grounded Wait,
+        // Balance, or Walk value before Animate. Keep the animation byte that
+        // the air routine carried into the landing; normal ground selection
+        // resumes on the next frame. HurtStop and rolling landings publish Walk
+        // explicitly and therefore take priority over this ordinary path (S1
+        // 01 Sonic.asm:1527-1547,1839-1864,1901-1908; S2 s2.asm:
+        // 37464-37504,37744-37774; S3K sonic3k.asm:24046-24103,24325-24359).
+        if (sprite.getAirAtFrameStart() && !sprite.getAir()) {
+            return null;
+        }
         // ROM-accurate: Skidding state (braking at speed >= 0x400)
         if (sprite.getSkidding() && skidAnimId >= 0) {
             return skidAnimId;

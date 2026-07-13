@@ -3203,6 +3203,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// ROM (s3.asm:21849-21859) tests the flag before clearing.
 		int savedDoubleJumpFlag = sprite.getDoubleJumpFlag();
 		resetOnFloor();
+		// Sonic_Floor writes id_Walk immediately after ResetOnFloor on every
+		// accepted floor landing, including a non-rolling fall that carried Wait
+		// through the air. Object/platform landings do not pass through this
+		// terrain owner and retain their separate post-animation timing (S1
+		// 01 Sonic.asm:1527-1602).
+		setWalkAnimationAfterRollingLanding(sprite);
 		if (wasHurt) {
 			sprite.setGSpeed((short) 0);
 			sprite.setXSpeed((short) 0);
@@ -3284,6 +3290,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
         boolean wasHurt = sprite.isHurt();
         int savedDoubleJumpFlag = sprite.getDoubleJumpFlag();
         resetOnFloor();
+        setWalkAnimationAfterRollingLanding(sprite);
         if (wasHurt) {
             // ROM Sonic_HurtStop / Tails hurt-stop zeroes all velocity when the
             // hurt routine touches floor before returning to normal control

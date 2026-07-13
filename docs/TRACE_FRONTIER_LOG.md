@@ -39352,3 +39352,31 @@ exceptions: `AnglePos` terrain-detach `prev_anim=Run` restarts (GHZ2/LZ1/LZ2
 and SLZ2/SLZ3), post-slope facing changes (MZ1 standalone), and hurt-recovery
 Walk publication (GHZ1 standalone/MZ1/MZ2/SBZ1/SLZ1). SBZ3 frame 0 remained a
 separate act-transition bootstrap question and was not hydrated from its trace.
+
+### 2026-07-13 -- Air-routine landing animation ownership
+
+At composed baseline `36b886faf`, the MZ3 complete-run replay first diverged at
+frame 813 when an airborne movement dispatch landed with zero inertia. The ROM
+kept the incoming Walk animation and mapping for that landing frame because the
+already-selected air routine never called the grounded Move routine; grounded
+Wait selection began on the next frame. The engine instead selected animation
+from the post-collision grounded status and exposed Wait one frame early.
+
+The shared velocity-animation profile now records `Status_InAir` at the same
+frame-start boundary as the other playable snapshots. When that frame's air
+routine lands, it defers unrelated grounded Wait/Balance selection until the
+following ground dispatch. The terrain landing owner also publishes the ROM's
+explicit Walk write after `ResetOnFloor`, including non-rolling falls that had
+carried Wait through the air. Object/platform landings keep their separate
+post-animation timing. No trace data was modified or hydrated, and no zone,
+route, or frame gate or comparison tolerance was added.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `mvn -Dmse=off "-Dtest=com.openggf.tests.TestScriptedVelocityAnimationProfile" test`
+  exited 0: all 8 focused profile tests passed.
+- The focused S1 ordinary and rolling terrain-landing tests both passed.
+- `TestS1Mz3CompleteRunTraceReplay` retained its expected-red animation-only
+  report but advanced from frame 813 to frame 2585
+  (`player_mapping_frame`, expected `0x0045`, actual `0x0008`) and reduced from
+  40 to 16 errors, with 0 warnings and its physics stream still green.
