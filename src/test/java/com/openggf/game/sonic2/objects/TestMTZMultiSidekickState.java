@@ -37,7 +37,7 @@ class TestMTZMultiSidekickState {
     }
 
     @Test
-    void tubeAndNutExtensionMapsRestoreToReplacementPlayerRefs() throws Exception {
+    void nutExtensionMapRestoresToReplacementPlayerRefs() throws Exception {
         Roster oldRoster = rosterAt(0x1000, 0x1000);
         NutObjectInstance nut = new NutObjectInstance(
                 new ObjectSpawn(0x1000, 0x1020, Sonic2ObjectIds.NUT, 0, 0, false, 0), "Nut");
@@ -52,6 +52,26 @@ class TestMTZMultiSidekickState {
         CompactFieldCapturer.restore(nut, blob, context(replacement));
 
         Map<?, ?> states = stateMap(nut, "extensionPlayerStates");
+        assertTrue(states.containsKey(replacement.second));
+        assertTrue(states.containsKey(replacement.third));
+        assertFalse(states.containsKey(oldRoster.second));
+        assertFalse(states.containsKey(oldRoster.third));
+    }
+
+    @Test
+    void tubeExtensionMapRestoresToReplacementPlayerRefs() throws Exception {
+        Roster oldRoster = rosterAt(0x7A8, 0x270);
+        MTZSpinTubeObjectInstance tube = new MTZSpinTubeObjectInstance(
+                new ObjectSpawn(0x7A8, 0x270, Sonic2ObjectIds.MTZ_SPIN_TUBE, 0, 0, false, 0));
+        tube.setServices(oldRoster.services);
+        tube.update(0, oldRoster.main);
+        var blob = CompactFieldCapturer.capture(tube, context(oldRoster));
+
+        Roster replacement = rosterAt(0x7A8, 0x270);
+        tube.setServices(replacement.services);
+        CompactFieldCapturer.restore(tube, blob, context(replacement));
+
+        Map<?, ?> states = stateMap(tube, "extensionStates");
         assertTrue(states.containsKey(replacement.second));
         assertTrue(states.containsKey(replacement.third));
         assertFalse(states.containsKey(oldRoster.second));

@@ -197,6 +197,7 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = participants.isEmpty() ? null
                 : (AbstractPlayableSprite) participants.get(0);
         bindNativeLockOwners(participants);
+        releaseOmittedLockedPlayers(participants);
         switch (mode) {
             case TIMER_COUNTDOWN -> updateTimerCountdown();
             case POP_PHYSICS -> updatePopPhysics();
@@ -236,6 +237,18 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         if (mainSlot) mainCharLocked = restored;
         else sidekickLocked = restored;
         return current;
+    }
+
+    private void releaseOmittedLockedPlayers(List<PlayableEntity> participants) {
+        for (PlayableEntity locked : List.copyOf(extensionLockedPlayers)) {
+            if (participants.stream().noneMatch(live -> live == locked)) {
+                if (locked instanceof AbstractPlayableSprite player) {
+                    ObjectControlState.none().applyTo(player);
+                    player.setControlLocked(false);
+                }
+                extensionLockedPlayers.remove(locked);
+            }
+        }
     }
 
     // ========================================================================

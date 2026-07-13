@@ -60,6 +60,8 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
     private boolean horizontalLaunchRequiresCurrentPush;
     private boolean mainFreshOrderedCarry;
     private boolean sidekickFreshOrderedCarry;
+    private PlayableEntity mainHorizontalStateOwner;
+    private PlayableEntity sidekickHorizontalStateOwner;
     private final Set<PlayableEntity> extensionPendingHorizontalLaunch =
             Collections.newSetFromMap(new IdentityHashMap<>());
     private final Set<PlayableEntity> extensionHorizontalPushingThisFrame =
@@ -114,6 +116,8 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         extensionHorizontalPushingThisFrame.clear();
         horizontalLaunchRequiresCurrentPush = !solidExecutionIsInert();
         List<PlayableEntity> participants = playerParticipants(playerEntity);
+        bindHorizontalStateOwners(participants);
+        pruneOmittedHorizontalState(participants);
         if (horizontalLaunchRequiresCurrentPush) {
             SolidCheckpointBatch batch = checkpointAll();
             for (int i = 0; i < participants.size(); i++) {
@@ -173,6 +177,12 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
             return;
         }
         if (horizontal) {
+            List<PlayableEntity> participants = playerParticipants(null);
+            bindHorizontalStateOwners(participants);
+            pruneOmittedHorizontalState(participants);
+            if (!containsIdentity(participants, player)) {
+                return;
+            }
             if (contact.pushing()) {
                 handleHorizontalPush(player, contact.sideDistX(), true);
             }
@@ -325,6 +335,49 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
                 launchHorizontal(player);
             }
         }
+    }
+
+    private void bindHorizontalStateOwners(List<PlayableEntity> participants) {
+        mainHorizontalStateOwner = bindHorizontalStateOwner(mainHorizontalStateOwner,
+                participants.isEmpty() ? null : participants.get(0), true);
+        sidekickHorizontalStateOwner = bindHorizontalStateOwner(sidekickHorizontalStateOwner,
+                participants.size() > 1 ? participants.get(1) : null, false);
+    }
+
+    private PlayableEntity bindHorizontalStateOwner(
+            PlayableEntity previous, PlayableEntity current, boolean mainSlot) {
+        if (previous == current) return current;
+        boolean pending = mainSlot ? pendingMainHorizontalLaunch : pendingSidekickHorizontalLaunch;
+        boolean freshCarry = mainSlot ? mainFreshOrderedCarry : sidekickFreshOrderedCarry;
+        if (previous == null && current != null
+                && !extensionPendingHorizontalLaunch.contains(current)
+                && !extensionFreshOrderedCarry.contains(current)) {
+            return current;
+        }
+        if (previous != null) {
+            if (pending) extensionPendingHorizontalLaunch.add(previous);
+            if (freshCarry) extensionFreshOrderedCarry.add(previous);
+        }
+        boolean restoredPending = current != null && extensionPendingHorizontalLaunch.remove(current);
+        boolean restoredFreshCarry = current != null && extensionFreshOrderedCarry.remove(current);
+        if (mainSlot) {
+            pendingMainHorizontalLaunch = restoredPending;
+            mainFreshOrderedCarry = restoredFreshCarry;
+        } else {
+            pendingSidekickHorizontalLaunch = restoredPending;
+            sidekickFreshOrderedCarry = restoredFreshCarry;
+        }
+        return current;
+    }
+
+    private void pruneOmittedHorizontalState(List<PlayableEntity> participants) {
+        extensionPendingHorizontalLaunch.removeIf(player -> !containsIdentity(participants, player));
+        extensionFreshOrderedCarry.removeIf(player -> !containsIdentity(participants, player));
+        extensionHorizontalPushingThisFrame.removeIf(player -> !containsIdentity(participants, player));
+    }
+
+    private boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity player) {
+        return participants.stream().anyMatch(live -> live == player);
     }
 
     private boolean shouldLaunchHorizontalDuringRelease(AbstractPlayableSprite player) {
@@ -543,17 +596,16 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
     }
 
     private boolean isNativeSidekick(AbstractPlayableSprite player) {
+        if (sidekickHorizontalStateOwner != null) return sidekickHorizontalStateOwner == player;
         ObjectServices services = tryServices();
-        if (services == null) {
-            return false;
-        }
-        List<PlayableEntity> nativePlayers = services.playerQuery().playersFor(PLAYER_PARTICIPATION);
-        return nativePlayers.size() > 1 && nativePlayers.get(1) == player;
+        return services != null && services.playerQuery().nativeP2OrNull() == player;
     }
 
     private boolean isExtensionPlayer(AbstractPlayableSprite player) {
-        PlayableEntity main = services().playerQuery().mainPlayerOrNull();
-        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
+        PlayableEntity main = mainHorizontalStateOwner != null
+                ? mainHorizontalStateOwner : services().playerQuery().mainPlayerOrNull();
+        PlayableEntity nativeP2 = sidekickHorizontalStateOwner != null
+                ? sidekickHorizontalStateOwner : services().playerQuery().nativeP2OrNull();
         return player != main && player != nativeP2;
     }
 
