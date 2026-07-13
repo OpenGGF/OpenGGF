@@ -13,6 +13,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SpawnRomZoneRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -619,6 +620,20 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return solidParams;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        // Sto_Solid calls the retail S1 SolidObject helper. Its initial
+        // horizontal bounds use `bhi`, so equality remains a side contact.
+        return SolidRoutineProfile.fullSolid(false, true, false);
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // The door/stomper moves and rebuilds its dynamic engine spawn, but
+        // SolidObject's standing/pushing bits remain in the same Obj6B SST.
+        return true;
     }
 
     @Override

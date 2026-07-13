@@ -1,5 +1,21 @@
 # Trace Frontier Log
 
+### 2026-07-13 -- S1 SBZ2 greens on Obj6B solid state
+
+SBZ2's final mismatch at frames 3377-3378 occurred as Sonic reversed along
+the moving Obj6B stomper door. Native `Sto_Solid` calls retail S1
+`SolidObject`: its initial horizontal `bhi` bound retains equality as a side
+contact, and its standing/pushing bits remain in the live Obj6B SST while the
+door moves. The engine used an exclusive inherited edge and keyed persistent
+status to the dynamic placement rebuilt during movement, shifting Walk's frame
+cadence by one step.
+
+Obj6B now exposes the inclusive bound and live-instance latch ownership. These
+are object routine/lifetime rules, not zone, route, frame, or trace exceptions;
+trace data and comparison tolerances are unchanged. The focused solid-profile
+test passes, and `TestS1Sbz2CompleteRunTraceReplay` is fully green with the
+local REV01 Sonic 1 ROM, with zero animation, physics, or warning divergences.
+
 ### 2026-07-13 -- S1 floating-block solid status uses the live SST
 
 SYZ1 frame 1741 ended Obj56 side contact while Sonic remained standing on a
