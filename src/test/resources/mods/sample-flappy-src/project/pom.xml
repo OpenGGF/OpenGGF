@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>example.flappysample</groupId><artifactId>sample-flappy</artifactId><version>1.0.0</version>
+  <properties><maven.compiler.release>21</maven.compiler.release></properties>
+  <profiles>
+    <profile><id>published-openggf</id><activation><activeByDefault>true</activeByDefault></activation><dependencies>
+      <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF</artifactId><version>0.6.prerelease</version><scope>provided</scope></dependency>
+      <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF</artifactId><version>0.6.prerelease</version><classifier>openggf-mod-sdk</classifier><scope>provided</scope></dependency>
+    </dependencies></profile>
+    <!-- CI/golden seam; creators normally use the published profile above. -->
+    <profile><id>local-openggf</id><activation><property><name>openggf.engine.jar</name></property></activation><dependencies>
+      <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF-local</artifactId><version>0</version><scope>system</scope><systemPath>${openggf.engine.jar}</systemPath></dependency>
+      <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF-sdk-local</artifactId><version>0</version><scope>system</scope><systemPath>${openggf.sdk.jar}</systemPath></dependency>
+      <dependency><groupId>com.fasterxml.jackson.dataformat</groupId><artifactId>jackson-dataformat-yaml</artifactId><version>2.22.0</version></dependency>
+      <dependency><groupId>org.ow2.asm</groupId><artifactId>asm</artifactId><version>9.9.1</version></dependency>
+    </dependencies></profile>
+  </profiles>
+  <build><plugins>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-antrun-plugin</artifactId><version>3.1.0</version><executions>
+      <execution><id>remove-stale-generated-mod-outputs</id><phase>initialize</phase><goals><goal>run</goal></goals><configuration><target>
+        <delete file="${project.build.outputDirectory}/art/pipe.ggfs" quiet="true"/>
+        <delete dir="${project.build.outputDirectory}/levels/flappy" quiet="true"/>
+        <delete file="${project.build.directory}/sample-flappy-mod.jar" quiet="true"/>
+      </target></configuration></execution>
+    </executions></plugin>
+    <plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.1.0</version><executions>
+      <execution><id>convert-pipe-art</id><phase>generate-resources</phase><goals><goal>exec</goal></goals><configuration>
+        <executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>
+          <argument>convert</argument><argument>art</argument><argument>--image</argument><argument>${project.basedir}/src/main/mod/pipe.png</argument>
+          <argument>--sheet</argument><argument>${project.basedir}/src/main/mod/pipe-sheet.yaml</argument><argument>--out</argument><argument>${project.build.outputDirectory}/art/pipe.ggfs</argument>
+        </arguments></configuration></execution>
+      <execution><id>convert-flappy-level</id><phase>generate-resources</phase><goals><goal>exec</goal></goals><configuration>
+        <executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>
+          <argument>convert</argument><argument>level</argument><argument>--from-export</argument><argument>${project.basedir}/src/main/mod/level-source</argument>
+          <argument>--out</argument><argument>${project.build.outputDirectory}/levels/flappy</argument>
+        </arguments></configuration></execution>
+      <execution><id>package-validated-mod</id><phase>prepare-package</phase><goals><goal>exec</goal></goals><configuration>
+        <executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>
+          <argument>package</argument><argument>--input</argument><argument>${project.build.outputDirectory}</argument>
+          <argument>--out</argument><argument>${project.build.directory}/sample-flappy-mod.jar</argument>
+        </arguments></configuration></execution>
+    </executions></plugin>
+  </plugins></build>
+</project>
