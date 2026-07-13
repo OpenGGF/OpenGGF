@@ -1,0 +1,10 @@
+formatVersion: 1
+paletteLine: 1
+palette: ["#000000", "#242424", "#6D6D6D", "#B6B6B6", "#FFFF00", "#929200", "#FF0000", "#00FF00", "#0000FF", "#FFFFFF", "#494949", "#DB6D00", "#6D00DB", "#00DBDB", "#DBDB6D", "#6DDB6D"]
+frames:
+  - delay: 4
+    pieces:
+      - { sourceX: 0, sourceY: 0, widthPixels: 32, heightPixels: 16, xOffset: -16, yOffset: -8, hFlip: false, vFlip: false, paletteIndex: 1, priority: false }
+  - delay: 8
+    pieces:
+      - { sourceX: 0, sourceY: 16, widthPixels: 32, heightPixels: 16, xOffset: -16, yOffset: -8, hFlip: false, vFlip: false, paletteIndex: 1, priority: false }
