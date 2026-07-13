@@ -37889,3 +37889,13 @@ ROM-free `ModLevel` decoder and Sonic 2 compatibility-facade changes:
   remained frame 2,270, `tails_x`, expected `0x04E1`, actual `0x04E0`.
 - The comparison-only trace was not regenerated or used to hydrate engine state.
   Flying Battery was excluded from this compatibility wave.
+
+### 2026-07-13 -- GHZ/AIZ widescreen residual trace preservation
+
+- Branch base: integration commit `177b1ba53`.
+- GHZ static background-cache coverage now includes the active viewport before
+  power-of-two rounding; AIZ2 background trees enter from the active right edge.
+- `TestS1Ghz1TraceReplay`, all three GHZ complete-run traces,
+  `TestS3kAizTraceReplay`, and `TestS3kAizCompleteRunTraceReplay` passed with
+  native 320-pixel configuration (76 focused checks total with the related unit
+  suites). No frontier, fixture, comparator, or trace hydration changed.

@@ -1,10 +1,20 @@
 package com.openggf.game.sonic1.scroll;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SwScrlGhzTest {
+
+    @ParameterizedTest
+    @CsvSource({"320,512", "352,512", "400,512", "528,1024", "800,1024"})
+    public void bgPeriodCoversTheActiveViewportAtNativeAndWideWidths(
+            int viewportWidth, int expectedPeriodWidth) {
+        assertEquals(expectedPeriodWidth,
+                SwScrlGhz.requiredBgPeriodWidth(0x400, 0x400, 0, 0, 0, viewportWidth));
+    }
 
     @Test
     public void cloudsAutoScrollAtDifferentSpeedsWhenCameraIsStationary() {
@@ -117,5 +127,4 @@ public class SwScrlGhzTest {
         return (short) (end - start);
     }
 }
-
 
