@@ -86,7 +86,15 @@ Before dispatching a boss, require its analysis to classify the damage source an
 
 Expand repeated and nested child tables once per actual owner, and report direct, steady, transient, and peak live counts. Inventory every forward, reverse, cyclic, terminal, and cross-link. For each allocation site, distinguish primitive/search direction, partial-prefix behavior, rollback, retry, independence from sibling tables, and same-sweep first-tick eligibility. Require allocation-failure tests at every ordinal plus a real `ObjectManager` rewind round trip proving exact cyclic topology, no missing-suffix healing, and no duplicate reconstruction.
 
+Treat every installed callback/routine pointer as a separate update state. Record whether the installing routine returns, falls through, tail-jumps to movement/wait, or invokes the callback in the same sweep. Test signed byte/word timers at the last non-firing and exact firing calls, including asymmetric sibling initial timers. Port byte-angle comparisons as unsigned 8-bit operations and preserve endpoint-visible reflection. Audit movement axes against the called helper's register contract instead of assuming conventional sine/cosine screen axes.
+
+Render priority, collision flags, solidity, and visibility are routine-owned mutable state. Test their transition callback, defeat clear, and converted-slot behavior; hiding a boss render frame does not remove its solid provider. Defeat flicker must execute the native move/gravity/delete helper and toggle actual draw eligibility, not just retain a cosmetic boolean.
+
+For graph-linked `RewindRecreatable` objects, provide a parent-free probe/recreate shell when the generic probe builder cannot construct the live signature. Do not resolve parent/sibling references in phase 1. Restore role/family scalars first, then relink in `afterRewindRestoreSettled`; clear stale links before rebuilding only the captured contiguous prefix, and close a cycle only when its real terminal role exists.
+
 Trace defeat publication through the complete reachable chain -- boss, sign/controller, results, global/event write, and transition consumer. Never assign an event flag to the boss merely because defeat eventually causes it. Classify participant policy separately for activation, targeting, contact/hazard, damage authority, forced movement, and completion. Trace standing/status/control-bit activation gates to their exact native slot rather than inheriting the participation of a shared solid routine; preserve P1-only, nearest-native-P1/P2, and all-player operations distinctly under multi-sidekicks.
+
+For `Obj_EndSignControl` families, distinguish the immediate end-of-level-in-effect write from the later sign allocation and still later results/act-complete publication. Preserve the exact allocation primitive (`AllocateObject`, after-current `CreateChild6`, etc.), check allocation success before publishing child existence, and keep the converted boss slot alive/non-solid only as long as the native controller remains alive. The route test must execute the real sign/results handoff; a synthetic boss-local event flag or substitute sign controller fails this gate.
 
 ### Signed S3K Mapping-Offset Gate
 
@@ -352,6 +360,8 @@ After native parity and late trace/visual polish, run mandatory final audits:
 Rerun the strict locked-on native suite after compatibility work with donation and extension modes disabled.
 
 The compatibility report is invalid unless it explicitly records multi-sidekick shared-state results and, for every widescreen width, world-coordinate event-threshold results, boss-arena containment, premature event/object activation, unsafe falls/deaths, and camera-lock/release behavior. Do not collapse these into a generic “route passed” result.
+
+Compatibility claims must be executable at the owning feature boundary. Boss coverage, for example, should prove that extra sidekicks cannot acquire native-only activation authority, camera locks remain world-coordinate constants at wide viewports, donation-neutral traversal does not assume Spindash, and an object-manager/session reset recreates a pristine family with no static control-bit or graph leakage. Rerun the exact native route after these extension cases.
 
 ### Complete Definition of Done
 

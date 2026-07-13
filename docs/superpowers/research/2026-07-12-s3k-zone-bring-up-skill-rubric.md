@@ -58,10 +58,15 @@ Use only the skill and resources it explicitly requires. Do not infer additional
 | R42 | Completion publication chain | Workflow follows boss defeat through sign/controller and results to the actual global/event writer and transition consumer; it forbids assuming the boss writes the event flag. |
 | R43 | Per-phase participant policy | Activation, targeting, contact/hazard, damage authority, forced movement, and completion each receive an explicit policy; activation status/control bits are traced to their exact native slot rather than inheriting a shared solid routine's policy, preserving P1-only, nearest native P1/P2, and all-player distinctions under extension sidekicks. |
 | R44 | Real cyclic graph restoration | A real `ObjectManager` capture -> remove/diverge -> restore test proves exact peak count/topology, cyclic/cross-link reconstruction, partial-prefix preservation without healing, and no duplicate reconstruction. |
+| R45 | Callback execution and movement oracle | Each installed routine pointer is a distinct update state whose installer control transfer is recorded; signed byte/word and asymmetric timer boundaries, unsigned byte-angle endpoints/reflection, and the called helper's actual register-to-axis contract receive focused tests. |
+| R46 | Routine-owned render/collision state | Priority, collision flags, solidity, and draw eligibility are tested at every owning transition, including defeat and converted-slot states; render suppression cannot silently suppress collision, and flicker retains native movement/gravity/delete behavior. |
+| R47 | Two-phase rewind graph recreation | Parent-required graph members use a parent-free recreate shell when needed, restore role/family scalars without object references in phase 1, and clear/rebuild only the captured prefix in settled phase 2, closing cycles only when the captured terminal exists. |
+| R48 | Native end-control lifecycle | End-of-level-in-effect, delayed sign allocation, and later results/event publication remain distinct; exact allocation primitive/order/success, converted-slot non-solid lifetime, and the real sign/results route handoff are tested without a substitute controller or boss-local flag. |
+| R49 | Executable compatibility boundary | Multi-sidekick authority, widescreen world-coordinate locks, donation-neutral traversal, and object-manager/session reset leakage are executable tests at the owning feature boundary, followed by the exact native route with extensions disabled. |
 
 ## Verdict
 
-- **GREEN:** R1-R44 all PASS.
+- **GREEN:** R1-R49 all PASS.
 - **RED:** Any assertion fails or is only optional/implied.
 
 Record the exact prompt, raw agent output, per-assertion PASS/FAIL result, and overall verdict in both baseline and forward-test artifacts.
