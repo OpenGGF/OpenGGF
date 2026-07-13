@@ -1,6 +1,7 @@
 package com.openggf.sprites.animation;
 
 import com.openggf.game.AnimationId;
+import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.managers.PlayableSpriteAnimation;
 import com.openggf.sprites.playable.SecondaryAbility;
@@ -333,14 +334,22 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
                 : sprite.getGSpeed();
         int speed = Math.abs(animSpeed);
 
-        // Releasing the opposite direction while inertia remains non-zero does
-        // not execute either directional helper, so Move reaches ResetScr
-        // without replacing an already-published Stop byte. Preserve it until
-        // the Stop script's $FD command writes Walk; the engine-only skidding
-        // flag controls dust/trigger refresh, not native obAnim ownership (S1
-        // 01 Sonic.asm:385-407,634-757; S2 s2.asm:36880-36999; S3K
-        // sonic3k.asm:22792-22918).
-        if (!pressingDirection && speed > 0
+        // With neither direction held, Move reaches ResetScr without writing
+        // anim while inertia remains non-zero. Preserve the byte owned by the
+        // preceding routine (normally Walk, but it can be Stop, WaterSlide, or
+        // another explicit owner) until the zero-speed tail writes Wait.
+        if (!pressingDirection && speed > 0) {
+            return null;
+        }
+
+        // Once braking has published Stop, later opposite-direction ticks below
+        // the skid threshold do not write Walk. Keep Stop until inertia crosses
+        // through zero and the facing direction changes; then the same-direction
+        // acceleration branch publishes Walk (S1 01 Sonic.asm:634-757; S2
+        // s2.asm:36880-36999; S3K sonic3k.asm:22792-22918).
+        boolean brakingAgainstFacing = (sprite.isLeftPressed() && sprite.getDirection() == Direction.RIGHT)
+                || (sprite.isRightPressed() && sprite.getDirection() == Direction.LEFT);
+        if (speed > 0 && brakingAgainstFacing
                 && skidAnimId >= 0 && sprite.getAnimationId() == skidAnimId) {
             return null;
         }

@@ -1,5 +1,25 @@
 # Trace Frontier Log
 
+### 2026-07-13 -- Coasting animation ownership greens S1 LZ3
+
+After the full-solid edge fixes, LZ3 retained four animation errors. At frame
+13792, WaterSlide had been carried through the airborne arc and landing, but
+the first unlocked no-input ground tick replaced it with Walk while inertia
+was still nonzero. Native `Sonic_Move` reaches `ResetScr` without an animation
+write on that path; only the following zero-speed tail writes Wait. The later
+frame-13894 mismatch was the same ownership rule during braking: once Stop is
+published, opposite-direction ticks below the skid threshold leave it intact
+until inertia crosses zero, facing changes, and the same-direction helper
+writes Walk.
+
+The shared scripted velocity profile now preserves the current animation for
+nonzero no-direction coasting, and preserves Stop while effective input remains
+opposite the current facing direction. These are input/inertia/status branches,
+not trace, zone, route, or frame gates. No trace data or comparison tolerance
+changed. With the local REV01 Sonic 1 ROM, the focused profile tests pass and
+`TestS1Lz3CompleteRunTraceReplay` is fully green with zero warnings and physics
+errors.
+
 ### 2026-07-13 -- S1 full-solid caller inclusive edges
 
 GHZ2 frame 829 and LZ3 frame 2894 both reached the same false animation

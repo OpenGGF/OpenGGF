@@ -2,6 +2,7 @@ package com.openggf.tests;
 
 import org.junit.jupiter.api.Test;
 import com.openggf.game.rules.GameRules;
+import com.openggf.physics.Direction;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -143,6 +144,36 @@ public class TestScriptedVelocityAnimationProfile {
 
         assertNull(animId,
                 "no-input Sonic_Move reaches ResetScr without replacing the existing Stop byte");
+    }
+
+    @Test
+    void coastingWithoutDirectionPreservesExplicitAnimationOwner() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setAnimationId(profile.getSlideAnimId());
+        sprite.setMovementInputActive(false);
+        sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) 0x0700);
+
+        assertNull(profile.resolveAnimationId(sprite, 0, 32),
+                "no-input Sonic_Move does not replace an explicit animation while inertia remains non-zero");
+    }
+
+    @Test
+    void oppositeDirectionPreservesStopBelowSkidThresholdUntilFacingChanges() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setAnimationId(profile.getSkidAnimId());
+        sprite.setMovementInputActive(true);
+        sprite.setDirectionalInputPressed(false, false, false, true);
+        sprite.setDirection(Direction.LEFT);
+        sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) -0x0200);
+
+        assertNull(profile.resolveAnimationId(sprite, 0, 32),
+                "opposite-direction braking does not replace the existing Stop byte below the trigger threshold");
+
+        sprite.setDirection(Direction.RIGHT);
+        assertEquals(1, profile.resolveAnimationId(sprite, 1, 32).intValue(),
+                "the same-direction acceleration branch publishes Walk after facing changes");
     }
 
     @Test
