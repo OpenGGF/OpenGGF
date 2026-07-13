@@ -4,6 +4,7 @@ import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.tools.Sonic3kObjectProfile;
@@ -61,6 +62,24 @@ class TestS3kIczSnowPileObject {
         player.setXSpeed((short) 0x0600);
 
         instance.update(1, player);
+
+        assertTrue(((AbstractObjectInstance) instance).isDestroyed());
+        verify(objectManager, times(6)).addDynamicObjectAfterCurrent(any(AbstractObjectInstance.class));
+    }
+
+    @Test
+    void subtypeZeroBreaksForThirdGroundedPlayerAtRomSpeedThreshold() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectInstance instance = new Sonic3kObjectRegistry().create(spawn(0x1000, 0x1000, 0));
+        TestablePlayableSprite main = playerAt(0x1200, 0x1000);
+        TestablePlayableSprite nativeP2 = playerAt(0x1200, 0x1000);
+        TestablePlayableSprite extension = playerAt(0x1000, 0x1000);
+        extension.setXSpeed((short) 0x0600);
+        ObjectManagerServices services = new ObjectManagerServices(objectManager);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> main, () -> List.of(nativeP2, extension)));
+        setServices(instance, services);
+
+        instance.update(1, main);
 
         assertTrue(((AbstractObjectInstance) instance).isDestroyed());
         verify(objectManager, times(6)).addDynamicObjectAfterCurrent(any(AbstractObjectInstance.class));

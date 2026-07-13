@@ -4,7 +4,7 @@ name: Phase 3 Character Sample
 version: 1.0.0
 authors: [OpenGGF]
 description: Owner-tagged playable character acceptance sample.
-engineApiRange: ">=1.2.0 <2.0.0"
+engineApiRange: ">=2.0.0 <3.0.0"
 type: patch
 baseGame: s2
 entrypoint: example.phase3character.Phase3CharacterMod

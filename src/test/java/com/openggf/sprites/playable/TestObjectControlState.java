@@ -5,9 +5,22 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestObjectControlState {
+
+    @Test
+    void eachControlAcquisitionHasADistinctGeneration() {
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+        int firstOwner = player.getObjectControlGeneration();
+
+        player.applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+
+        assertNotEquals(firstOwner, player.getObjectControlGeneration(),
+                "a later owner must invalidate an earlier matching control lease");
+    }
 
     @Test
     void noneAppliesNoObjectControl() {

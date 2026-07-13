@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.debug.DebugColor;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
@@ -13,7 +14,10 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Object 0x3E &mdash; HCZ Conveyor Belt (Sonic 3 &amp; Knuckles, Hydrocity Zone).
@@ -148,6 +152,9 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
     //                    phase(1), unused(1), animCounter(1), unused(1), frameSetOffset(1)
     private final PlayerBeltState p1State = new PlayerBeltState();
     private final PlayerBeltState p2State = new PlayerBeltState();
+    private final Map<AbstractPlayableSprite, PlayerBeltState> extensionStates = new IdentityHashMap<>();
+    private AbstractPlayableSprite p1Owner;
+    private AbstractPlayableSprite p2Owner;
 
     // ===== Instance fields =====
     private int objY;                     // Object Y position
@@ -209,6 +216,10 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
         }
 
         NativePlayerSlots slots = nativePlayerSlots(playerEntity);
+        bindNativeState(p1State, p1Owner, slots.p1);
+        p1Owner = slots.p1;
+        bindNativeState(p2State, p2Owner, slots.p2);
+        p2Owner = slots.p2;
 
         // ROM: loc_311C4 (sonic3k.asm:66344-66365)
         // Process Player 1
@@ -216,17 +227,30 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
             processPlayer(slots.p1, p1State, frameCounter);
         }
 
-        // Process native Player 2 only. Extended engine sidekicks need their own
-        // per-sidekick state before they can safely participate in this object.
+        // Preserve the native Player 2 slot before processing identity-owned
+        // novelty extensions below.
         if (slots.p2 != null) {
             processPlayer(slots.p2, p2State, frameCounter);
         }
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        for (PlayableEntity candidate : participants) {
+            if (candidate instanceof AbstractPlayableSprite extension
+                    && extension != slots.p1 && extension != slots.p2) {
+                processPlayer(extension, extensionStates.computeIfAbsent(
+                        extension, ignored -> new PlayerBeltState()), frameCounter);
+            }
+        }
+        releaseMissingExtensions(participants);
 
         // Camera culling (sonic3k.asm:66355-66364)
         // ROM reads Camera_X_pos_coarse_back, which Load_Sprites recomputes as
         // (Camera_X_pos - $80) & $FF80 before Process_Sprites.
         int cameraX = ((services().camera().getX() & 0xFFFF) - 0x80) & 0xFF80;
-        int leftCheck = (leftBound & 0xFF80) - CAMERA_MARGIN;
+        // Extend only the forward (right-side) visibility margin. Camera X is
+        // the left edge, so the trailing/right-edge test remains ROM-native.
+        int widescreenExtension = Math.max(0, viewportWidth() - 320);
+        int leftCheck = (leftBound & 0xFF80) - CAMERA_MARGIN - widescreenExtension;
         if (cameraX < leftCheck) {
             unloadBelt();
             return;
@@ -467,7 +491,6 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
 
         // ROM: Initialize per-player state bytes (sonic3k.asm:66500-66503, 66538-66541)
         state.active = true;
-        state.capturedPlayer = player;
         state.phase = initialPhase;
         state.animCounter = 0;
         state.frameSetOffset = 0;
@@ -485,7 +508,6 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
         // between top/bottom surfaces is driven by external forces (the HCZ fan)
         // setting ground_vel=1 each frame while the player is in its push column.
         state.active = false;
-        state.capturedPlayer = null;
 
         // ROM: move.b #60,2(a2) / btst #Status_Underwater / move.b #90,2(a2)
         state.cooldownTimer = player.isInWater() ? COOLDOWN_UNDERWATER : COOLDOWN_NORMAL;
@@ -682,21 +704,53 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
      * {@link #setDestroyed} to ensure players are never left stuck.
      */
     private void releaseAllCapturedPlayers() {
-        safeReleaseCapturedPlayer(p1State);
-        safeReleaseCapturedPlayer(p2State);
+        safeReleaseCapturedPlayer(p1Owner, p1State);
+        safeReleaseCapturedPlayer(p2Owner, p2State);
+        for (Map.Entry<AbstractPlayableSprite, PlayerBeltState> entry : extensionStates.entrySet()) {
+            safeReleaseCapturedPlayer(entry.getKey(), entry.getValue());
+        }
+        extensionStates.clear();
+    }
+
+    private void bindNativeState(PlayerBeltState nativeState,
+            AbstractPlayableSprite previousOwner, AbstractPlayableSprite currentOwner) {
+        if (previousOwner == currentOwner) return;
+        if (previousOwner != null && nativeState.isLive()) {
+            PlayerBeltState transferred = extensionStates.computeIfAbsent(
+                    previousOwner, ignored -> new PlayerBeltState());
+            transferred.copyFrom(nativeState);
+        }
+        nativeState.clear();
+        if (currentOwner != null) {
+            PlayerBeltState restored = extensionStates.remove(currentOwner);
+            if (restored != null) nativeState.copyFrom(restored);
+        }
+    }
+
+    private void releaseMissingExtensions(List<PlayableEntity> participants) {
+        for (Map.Entry<AbstractPlayableSprite, PlayerBeltState> entry
+                : new ArrayList<>(extensionStates.entrySet())) {
+            if (containsIdentity(participants, entry.getKey())) continue;
+            safeReleaseCapturedPlayer(entry.getKey(), entry.getValue());
+            extensionStates.remove(entry.getKey());
+        }
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity target) {
+        for (PlayableEntity participant : participants) if (participant == target) return true;
+        return false;
     }
 
     /**
      * Safely releases a captured player if this belt is being removed.
      * Restores the player to a valid airborne state so physics can resume.
      */
-    private void safeReleaseCapturedPlayer(PlayerBeltState state) {
-        if (state.active && state.capturedPlayer != null) {
-            ObjectControlState.none().applyTo(state.capturedPlayer);
-            state.capturedPlayer.setObjectMappingFrameControl(false);
-            state.capturedPlayer.setAir(true);
+    private void safeReleaseCapturedPlayer(AbstractPlayableSprite owner, PlayerBeltState state) {
+        if (state.active && owner != null) {
+            ObjectControlState.none().applyTo(owner);
+            owner.setObjectMappingFrameControl(false);
+            owner.setAir(true);
             state.active = false;
-            state.capturedPlayer = null;
         }
     }
 
@@ -763,12 +817,46 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
      * Offset 8: frame set offset (0 or $10, toggles between two frame sets)
      * </pre>
      */
-    private static class PlayerBeltState {
+    private static class PlayerBeltState implements RewindStateful<PlayerBeltState.Snapshot> {
         boolean active;       // byte 0(a2): on belt flag
         int cooldownTimer;    // byte 2(a2): re-capture cooldown
         int phase;            // byte 4(a2): animation phase (0-255)
         int animCounter;      // byte 6(a2): frame animation counter
         int frameSetOffset;   // byte 8(a2): 0 or $10
-        AbstractPlayableSprite capturedPlayer;  // reference for safe cleanup
+
+        boolean isLive() {
+            return active || cooldownTimer != 0;
+        }
+
+        void clear() {
+            active = false;
+            cooldownTimer = phase = animCounter = frameSetOffset = 0;
+        }
+
+        void copyFrom(PlayerBeltState other) {
+            active = other.active;
+            cooldownTimer = other.cooldownTimer;
+            phase = other.phase;
+            animCounter = other.animCounter;
+            frameSetOffset = other.frameSetOffset;
+        }
+
+        @Override
+        public Snapshot captureRewindStateValue() {
+            return new Snapshot(active, cooldownTimer, phase, animCounter, frameSetOffset);
+        }
+
+        @Override
+        public void restoreRewindStateValue(Snapshot state) {
+            active = state.active();
+            cooldownTimer = state.cooldownTimer();
+            phase = state.phase();
+            animCounter = state.animCounter();
+            frameSetOffset = state.frameSetOffset();
+        }
+
+        private record Snapshot(boolean active, int cooldownTimer, int phase,
+                                int animCounter, int frameSetOffset) {
+        }
     }
 }

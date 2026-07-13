@@ -8,7 +8,7 @@ import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.mods.SfxKey;
+import com.openggf.audio.StreamedMusicPort.SfxRef;
 
 import java.util.List;
 
@@ -22,7 +22,7 @@ public final class SampleBadnik extends AbstractBadnikInstance implements Rewind
         subpixel += 0x80;
         if (subpixel >= 0x100) { currentX++; subpixel -= 0x100; }
         if (!announced) {
-            announced = services().playSfx(new SfxKey("phase3-standalone", "hit"));
+            announced = services().playSfx(new SfxRef("phase3-standalone", "hit"));
         }
     }
 

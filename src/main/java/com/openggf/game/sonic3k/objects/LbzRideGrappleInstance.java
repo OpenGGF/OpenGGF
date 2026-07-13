@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -16,7 +17,9 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * S3K S3KL object $17 - Launch Base ride grapple.
@@ -72,6 +75,9 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
     private boolean ejectAtPathEnd;
     private final PlayerState p1 = new PlayerState();
     private final PlayerState p2 = new PlayerState();
+    private PlayableEntity p1Owner;
+    private PlayableEntity p2Owner;
+    private final Map<PlayableEntity, PlayerState> extensionStates = new IdentityHashMap<>();
     private final int[] chainX = new int[CHAIN_POINT_COUNT];
     private final int[] chainY = new int[CHAIN_POINT_COUNT];
 
@@ -99,14 +105,21 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player1 = playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
         AbstractPlayableSprite player2 = nativeP2OrNull();
+        List<PlayableEntity> participants = allParticipantsOrNull();
+
+        p2Owner = bindNativeState(p2, p2Owner, player2);
+        p1Owner = bindNativeState(p1, p1Owner, player1);
 
         if (moving) {
-            updateMovement(player1, player2);
+            updateMovement();
         }
         updateChainState();
 
-        updateHeldOrCapture(p2, player2);
-        updateHeldOrCapture(p1, player1);
+        // Extension players run first so the native ROM order remains P2 then
+        // P1, with P1 retaining final authority over shared direction/motion.
+        updateExtensionPlayers(participants);
+        updateHeldOrCapture(p2, activeNativePlayer(p2, p2Owner, player2));
+        updateHeldOrCapture(p1, activeNativePlayer(p1, p1Owner, player1));
 
         if (!moving && anyGrabbed() && chainExtension == CHAIN_EXTENSION_MAX) {
             moving = true;
@@ -148,7 +161,7 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
         return stateFor(nativePlayerIndex).releaseCooldown;
     }
 
-    private void updateMovement(AbstractPlayableSprite player1, AbstractPlayableSprite player2) {
+    private void updateMovement() {
         SubpixelMotion.moveSprite2(motion);
         if (facing == Direction.LEFT) {
             motion.xVel = signWord(motion.xVel - X_ACCEL);
@@ -164,14 +177,14 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
 
         if ((motion.x & 0xFFFF) <= pathLeft) {
             motion.x = pathLeft;
-            ejectGrabbedAtPathEnd(player1, player2);
+            ejectGrabbedAtPathEnd();
             if (motion.xVel < 0) {
                 motion.xVel = 0;
             }
         }
         if ((motion.x & 0xFFFF) >= pathRight) {
             motion.x = pathRight;
-            ejectGrabbedAtPathEnd(player1, player2);
+            ejectGrabbedAtPathEnd();
             if (motion.xVel > 0) {
                 motion.xVel = 0;
             }
@@ -346,12 +359,15 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
         clearHeldState(state, player, cooldown);
     }
 
-    private void ejectGrabbedAtPathEnd(AbstractPlayableSprite player1, AbstractPlayableSprite player2) {
+    private void ejectGrabbedAtPathEnd() {
         if (!ejectAtPathEnd) {
             return;
         }
-        ejectPlayerAtPathEnd(p1, player1);
-        ejectPlayerAtPathEnd(p2, player2);
+        for (Map.Entry<PlayableEntity, PlayerState> entry : extensionStates.entrySet()) {
+            ejectPlayerAtPathEnd(entry.getValue(), playableSprite(entry.getKey()));
+        }
+        ejectPlayerAtPathEnd(p2, playableSprite(p2Owner));
+        ejectPlayerAtPathEnd(p1, playableSprite(p1Owner));
     }
 
     private void ejectPlayerAtPathEnd(PlayerState state, AbstractPlayableSprite player) {
@@ -375,7 +391,101 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
     }
 
     private boolean anyGrabbed() {
-        return p1.grabbed || p2.grabbed;
+        if (p1.grabbed || p2.grabbed) {
+            return true;
+        }
+        return extensionStates.values().stream().anyMatch(state -> state.grabbed);
+    }
+
+    private PlayableEntity bindNativeState(
+            PlayerState nativeState,
+            PlayableEntity previousOwner,
+            AbstractPlayableSprite currentPlayer) {
+        if (previousOwner == currentPlayer) {
+            return previousOwner;
+        }
+        if (previousOwner != null && nativeState.hasState()) {
+            extensionStates.computeIfAbsent(previousOwner, ignored -> new PlayerState())
+                    .copyFrom(nativeState);
+        }
+        nativeState.reset();
+        if (currentPlayer != null) {
+            PlayerState restored = extensionStates.remove(currentPlayer);
+            if (restored != null) {
+                nativeState.copyFrom(restored);
+            }
+        }
+        return currentPlayer;
+    }
+
+    private AbstractPlayableSprite activeNativePlayer(
+            PlayerState state,
+            PlayableEntity owner,
+            AbstractPlayableSprite currentPlayer) {
+        return state.grabbed ? playableSprite(owner) : currentPlayer;
+    }
+
+    private void updateExtensionPlayers(List<PlayableEntity> participants) {
+        if (participants != null) {
+            for (PlayableEntity participant : participants) {
+                if (participant == p1Owner || participant == p2Owner) {
+                    continue;
+                }
+                AbstractPlayableSprite player = playableSprite(participant);
+                if (player != null) {
+                    updateHeldOrCapture(
+                            extensionStates.computeIfAbsent(participant, ignored -> new PlayerState()),
+                            player);
+                }
+            }
+        }
+        // A held player remains this object's cleanup owner even if the live
+        // roster is reordered or temporarily omits that player.
+        for (Map.Entry<PlayableEntity, PlayerState> entry : extensionStates.entrySet()) {
+            if (entry.getValue().grabbed && !containsIdentity(participants, entry.getKey())) {
+                updateHeldOrCapture(entry.getValue(), playableSprite(entry.getKey()));
+            }
+        }
+    }
+
+    private List<PlayableEntity> allParticipantsOrNull() {
+        try {
+            return services().playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        } catch (IllegalStateException ignored) {
+            return null;
+        }
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> players, PlayableEntity target) {
+        if (players == null) {
+            return false;
+        }
+        for (PlayableEntity player : players) {
+            if (player == target) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static AbstractPlayableSprite playableSprite(PlayableEntity player) {
+        return player instanceof AbstractPlayableSprite sprite ? sprite : null;
+    }
+
+    @Override
+    public void onUnload() {
+        for (Map.Entry<PlayableEntity, PlayerState> entry : extensionStates.entrySet()) {
+            if (entry.getValue().grabbed) {
+                releaseWithoutLaunch(entry.getValue(), playableSprite(entry.getKey()), RELEASE_LONG_COOLDOWN);
+            }
+        }
+        if (p2.grabbed) {
+            releaseWithoutLaunch(p2, playableSprite(p2Owner), RELEASE_LONG_COOLDOWN);
+        }
+        if (p1.grabbed) {
+            releaseWithoutLaunch(p1, playableSprite(p1Owner), RELEASE_LONG_COOLDOWN);
+        }
     }
 
     private AbstractPlayableSprite nativeP2OrNull() {
@@ -407,6 +517,20 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
     private static final class PlayerState implements RewindStateful<PlayerState.Snapshot> {
         boolean grabbed;
         int releaseCooldown;
+
+        boolean hasState() {
+            return grabbed || releaseCooldown != 0;
+        }
+
+        void reset() {
+            grabbed = false;
+            releaseCooldown = 0;
+        }
+
+        void copyFrom(PlayerState other) {
+            grabbed = other.grabbed;
+            releaseCooldown = other.releaseCooldown;
+        }
 
         @Override
         public Snapshot captureRewindStateValue() {

@@ -25,13 +25,21 @@ import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static com.openggf.game.sonic3k.events.AizEventTestFixtures.newFireTransitionEvents;
 
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestAizFireCurtainRendererRom {
+    private static final Sonic3kLoadBootstrap FIRE_TRANSITION_BOOTSTRAP =
+            new Sonic3kLoadBootstrap(Sonic3kLoadBootstrap.Mode.SKIP_INTRO, null);
     private static SharedLevel sharedLevel;
+
+    private static Sonic3kAIZEvents newFireTransitionEvents() {
+        AtomicInteger vblankCounter = new AtomicInteger();
+        return new Sonic3kAIZEvents(FIRE_TRANSITION_BOOTSTRAP, vblankCounter::getAndIncrement);
+    }
 
     @BeforeAll
     public static void loadLevel() throws Exception {

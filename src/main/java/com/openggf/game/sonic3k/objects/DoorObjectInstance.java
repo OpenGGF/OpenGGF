@@ -221,7 +221,7 @@ public class DoorObjectInstance extends AbstractObjectInstance
         boolean sawQueryParticipant = false;
         try {
             for (PlayableEntity candidate : services().playerQuery().playersFor(
-                    ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
                 sawQueryParticipant = true;
                 if (isPlayerInTrigger(candidate, left, right, top, bottom)) {
                     return true;

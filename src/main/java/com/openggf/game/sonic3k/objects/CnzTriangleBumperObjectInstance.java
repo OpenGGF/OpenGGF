@@ -56,7 +56,8 @@ public class CnzTriangleBumperObjectInstance extends AbstractObjectInstance impl
         if (svc == null) {
             return;
         }
-        for (PlayableEntity candidate : svc.playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+        for (PlayableEntity candidate : svc.playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
             if (candidate instanceof AbstractPlayableSprite sprite && candidate != playerEntity) {
                 checkPlayer(sprite);
             }

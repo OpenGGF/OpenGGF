@@ -23,7 +23,9 @@ import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Object 0x5A - MGZ Pulley.
@@ -76,6 +78,11 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
     private static final int PLAYER_SLOT_COUNT = 2;
     private static final int PLAYER_HANG_ANIM = Sonic3kAnimationIds.GET_UP.id();
 
+    private static final class ExtensionGrabState {
+        boolean grabbed;
+        int releaseCooldown;
+    }
+
     private int anchorX;
     private int anchorY;
     private boolean flipped;
@@ -84,6 +91,8 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
     private final AbstractPlayableSprite[] grabbedPlayers = new AbstractPlayableSprite[PLAYER_SLOT_COUNT];
     private final boolean[] grabbed = new boolean[PLAYER_SLOT_COUNT];
     private final int[] releaseCooldown = new int[PLAYER_SLOT_COUNT];
+    private AbstractPlayableSprite nativeP2Owner;
+    private final Map<PlayableEntity, ExtensionGrabState> extensionGrabStates = new IdentityHashMap<>();
 
     private int currentExtension;
     private int launchRecovery;
@@ -121,11 +130,13 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        NativePlayerSlots slots = nativePlayerSlots(playerEntity);
+        reconcileNativeP2(slots.player(1), frameCounter);
         tickReleaseCooldowns();
         updateExtensionAndFrame();
-        NativePlayerSlots slots = nativePlayerSlots(playerEntity);
         updatePlayerSlot(slots.player(0), 0, frameCounter);
         updatePlayerSlot(slots.player(1), 1, frameCounter);
+        updateExtensionPlayers(slots, frameCounter);
         updateDynamicSpawn(anchorX, anchorY);
     }
 
@@ -160,6 +171,11 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
                 releaseCooldown[i]--;
             }
         }
+        for (ExtensionGrabState state : extensionGrabStates.values()) {
+            if (state.releaseCooldown > 0) {
+                state.releaseCooldown--;
+            }
+        }
     }
 
     private void releaseAllGrabbedPlayers() {
@@ -168,11 +184,18 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
                 releasePlayer(grabbedPlayers[i], i, 0, false);
             }
         }
+        for (Map.Entry<PlayableEntity, ExtensionGrabState> entry : extensionGrabStates.entrySet()) {
+            if (entry.getKey() instanceof AbstractPlayableSprite player && entry.getValue().grabbed) {
+                releaseExtensionPlayer(player, entry.getValue(), 0, false);
+            }
+        }
+        extensionGrabStates.clear();
     }
 
     private void updateExtensionAndFrame() {
         int motionDirection = 0;
-        boolean anyGrabbed = grabbed[0] || grabbed[1];
+        boolean anyGrabbed = grabbed[0] || grabbed[1]
+                || extensionGrabStates.values().stream().anyMatch(state -> state.grabbed);
 
         if (!anyGrabbed) {
             if (currentExtension < targetExtension) {
@@ -227,6 +250,126 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         tryCapturePlayer(player, slot);
     }
 
+    private void updateExtensionPlayers(NativePlayerSlots nativeSlots, int frameCounter) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        IdentityHashMap<PlayableEntity, Boolean> liveExtensions = new IdentityHashMap<>();
+        for (PlayableEntity participant : participants) {
+            if (participant == nativeSlots.p1() || participant == nativeSlots.p2()
+                    || !(participant instanceof AbstractPlayableSprite player)) {
+                continue;
+            }
+            liveExtensions.put(player, Boolean.TRUE);
+            ExtensionGrabState state = extensionGrabStates.computeIfAbsent(player, ignored -> new ExtensionGrabState());
+            if (state.grabbed) {
+                updateGrabbedExtensionPlayer(player, state, frameCounter);
+            } else if (state.releaseCooldown == 0) {
+                tryCaptureExtensionPlayer(player, state);
+            }
+        }
+        extensionGrabStates.entrySet().removeIf(entry -> {
+            if (liveExtensions.containsKey(entry.getKey())) {
+                return false;
+            }
+            if (entry.getKey() instanceof AbstractPlayableSprite player && entry.getValue().grabbed) {
+                releaseExtensionPlayer(player, entry.getValue(), frameCounter, false);
+            }
+            return true;
+        });
+    }
+
+    private void reconcileNativeP2(AbstractPlayableSprite currentNativeP2, int frameCounter) {
+        if (nativeP2Owner == currentNativeP2) {
+            return;
+        }
+
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (nativeP2Owner != null) {
+            ExtensionGrabState demotedState = new ExtensionGrabState();
+            demotedState.grabbed = grabbed[1];
+            demotedState.releaseCooldown = releaseCooldown[1];
+            clearNativeP2State();
+            if (containsIdentity(participants, nativeP2Owner)) {
+                extensionGrabStates.put(nativeP2Owner, demotedState);
+            } else if (demotedState.grabbed) {
+                releaseExtensionPlayer(nativeP2Owner, demotedState, frameCounter, false);
+            }
+        } else {
+            clearNativeP2State();
+        }
+
+        ExtensionGrabState promotedState = currentNativeP2 == null
+                ? null
+                : extensionGrabStates.remove(currentNativeP2);
+        if (promotedState != null) {
+            grabbed[1] = promotedState.grabbed;
+            releaseCooldown[1] = promotedState.releaseCooldown;
+            grabbedPlayers[1] = promotedState.grabbed ? currentNativeP2 : null;
+        }
+        nativeP2Owner = currentNativeP2;
+    }
+
+    private void clearNativeP2State() {
+        grabbed[1] = false;
+        grabbedPlayers[1] = null;
+        releaseCooldown[1] = 0;
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity candidate) {
+        for (PlayableEntity participant : participants) {
+            if (participant == candidate) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void tryCaptureExtensionPlayer(AbstractPlayableSprite player, ExtensionGrabState state) {
+        if (player.isObjectControlled() || player.isControlLocked() || player.getDead() || player.isDebugMode()) {
+            return;
+        }
+        int handleX = computeHandleX();
+        int handleY = computeHandleY();
+        int dx = player.getCentreX() - handleX;
+        int dy = player.getCentreY() - handleY;
+        int approachSpeed = flipped ? -player.getXSpeed() : player.getXSpeed();
+        if (dx < -HANDLE_HALF_RANGE || dx >= HANDLE_HALF_RANGE
+                || dy < -HANDLE_HALF_RANGE || dy >= HANDLE_HALF_RANGE || approachSpeed >= 0) {
+            return;
+        }
+        state.grabbed = true;
+        applyCapturedPlayerState(player, handleX, handleY);
+        launchRecovery = LAUNCH_RECOVERY_FRAMES;
+        services().playSfx(Sonic3kSfx.PULLEY_GRAB.id);
+    }
+
+    private void updateGrabbedExtensionPlayer(AbstractPlayableSprite player, ExtensionGrabState state, int frameCounter) {
+        if (player.getDead() || player.isDebugMode() || player.isHurt() || isPlayerOffScreen(player)) {
+            releaseExtensionPlayer(player, state, frameCounter, false);
+        } else if (player.isJumpPressed()) {
+            releaseExtensionPlayer(player, state, frameCounter, true);
+        } else {
+            applyCapturedPlayerState(player, computeHandleX(), computeHandleY());
+        }
+    }
+
+    private void releaseExtensionPlayer(AbstractPlayableSprite player, ExtensionGrabState state,
+                                        int frameCounter, boolean launch) {
+        state.grabbed = false;
+        state.releaseCooldown = REGRAB_COOLDOWN_FRAMES;
+        boolean stillOwned = ownsPulleyControl(player);
+        if (stillOwned) {
+            player.releaseFromObjectControl(frameCounter);
+            player.setOnObject(false);
+            player.setControlLocked(false);
+            clearRidingObject(player);
+        }
+        if (launch && stillOwned) {
+            applyLaunch(player);
+        }
+    }
+
     private void tryCapturePlayer(AbstractPlayableSprite player, int slot) {
         if (player.isObjectControlled() || player.isControlLocked()) {
             return;
@@ -261,6 +404,13 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         grabbed[slot] = true;
         grabbedPlayers[slot] = player;
 
+        applyCapturedPlayerState(player, handleX, handleY);
+
+        launchRecovery = LAUNCH_RECOVERY_FRAMES;
+        services().playSfx(Sonic3kSfx.PULLEY_GRAB.id);
+    }
+
+    private void applyCapturedPlayerState(AbstractPlayableSprite player, int handleX, int handleY) {
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
@@ -273,8 +423,6 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         player.setDirection(flipped ? Direction.LEFT : Direction.RIGHT);
         clearRidingObject(player);
 
-        launchRecovery = LAUNCH_RECOVERY_FRAMES;
-        services().playSfx(Sonic3kSfx.PULLEY_GRAB.id);
     }
 
     private void updateGrabbedPlayer(AbstractPlayableSprite player, int slot, int frameCounter) {
@@ -311,19 +459,29 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        player.setOnObject(false);
-        player.setControlLocked(false);
-        if (player.isObjectControlled()) {
+        boolean stillOwned = ownsPulleyControl(player);
+        if (stillOwned) {
+            player.setOnObject(false);
+            player.setControlLocked(false);
             player.releaseFromObjectControl(frameCounter);
-        } else {
-            ObjectControlState.none().applyTo(player);
+            clearRidingObject(player);
         }
-        clearRidingObject(player);
 
-        if (!launch) {
+        if (!launch || !stillOwned) {
             return;
         }
+        applyLaunch(player);
+    }
 
+    private boolean ownsPulleyControl(AbstractPlayableSprite player) {
+        return player.isObjectControlled()
+                && player.isObjectControlSuppressesMovement()
+                && !player.isObjectControlAllowsCpu()
+                && (player.getAnimationId() == PLAYER_HANG_ANIM
+                    || player.getDead() || player.isHurt() || player.isDebugMode());
+    }
+
+    private void applyLaunch(AbstractPlayableSprite player) {
         player.setXSpeed((short) (flipped ? LAUNCH_X_SPEED : -LAUNCH_X_SPEED));
         player.setYSpeed((short) -LAUNCH_Y_SPEED);
         player.setGSpeed((short) 0);

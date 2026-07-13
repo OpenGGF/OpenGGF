@@ -5,7 +5,7 @@ version: 1.0.0
 authors:
   - OpenGGF contributors
 description: Original generated tone replacing Sonic 2 Emerald Hill for gallery CI.
-engineApiRange: ">=1.0.0 <2.0.0"
+engineApiRange: ">=2.0.0 <3.0.0"
 type: patch
 baseGame: s2
 dependencies: []

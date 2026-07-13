@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -33,6 +34,7 @@ class TraceReplaySessionBootstrapConfigTest {
     private Object savedSidekick;
     private Object savedCrossGame;
     private Object savedSkipIntros;
+    private Object savedDisplayAspect;
 
     @BeforeEach
     void setUp() {
@@ -42,6 +44,7 @@ class TraceReplaySessionBootstrapConfigTest {
         savedSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
         savedCrossGame = config.getConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED);
         savedSkipIntros = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
+        savedDisplayAspect = config.getConfigValue(SonicConfiguration.DISPLAY_ASPECT);
     }
 
     @AfterEach
@@ -57,6 +60,10 @@ class TraceReplaySessionBootstrapConfigTest {
         }
         if (savedSkipIntros != null) {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, savedSkipIntros);
+        }
+        if (savedDisplayAspect != null) {
+            config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, savedDisplayAspect);
+            config.resolveDisplayAspect();
         }
     }
 
@@ -117,6 +124,38 @@ class TraceReplaySessionBootstrapConfigTest {
                 config.getConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
         assertEquals(true,
                 config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS));
+    }
+
+    @Test
+    void traceConfigurationUsesNativeViewportAndRecordedTeamThenRestoresAspect() throws Exception {
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "WIDE_16_9");
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, true);
+        config.resolveDisplayAspect();
+        assertEquals(400, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+
+        TraceReplaySessionBootstrap.ConfigSnapshot snapshot =
+                TraceReplaySessionBootstrap.snapshotGameplayConfig();
+        TraceMetadata metadata = TraceMetadata.load(
+                Path.of("src/test/resources/traces/s2/arz/metadata.json"));
+        TraceData trace = TraceFixtures.trace(metadata, List.of());
+
+        TraceReplaySessionBootstrap.prepareConfiguration(trace, metadata);
+
+        assertEquals("NATIVE_4_3", config.getString(SonicConfiguration.DISPLAY_ASPECT));
+        assertEquals(320, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+        assertEquals("sonic", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("tails", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+        assertEquals(false, config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
+
+        TraceReplaySessionBootstrap.restoreGameplayConfig(snapshot);
+
+        assertEquals("WIDE_16_9", config.getString(SonicConfiguration.DISPLAY_ASPECT));
+        assertEquals(400, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+        assertEquals("knuckles", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+        assertEquals(true, config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
     }
 
     @Test

@@ -131,6 +131,21 @@ class TestS3kIczIceSpikesObject {
                 "Obj_ICZIceSpikes calls Find_SonicTails, so a nearby sidekick should arm the nonzero subtype");
     }
 
+    @Test
+    void subtypeTwoCanArmFromThirdPlayerWithoutChangingNativePrefix() {
+        IczIceSpikesObjectInstance spikes = new IczIceSpikesObjectInstance(
+                new ObjectSpawn(0x2400, 0x0500, Sonic3kObjectIds.ICZ_ICE_SPIKES, 0x02, 0, false, 0));
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x2300, (short) 0x0500);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x2300, (short) 0x0500);
+        TestablePlayableSprite extension = new TestablePlayableSprite("knuckles", (short) 0x23C2, (short) 0x0500);
+        spikes.setServices(new SidekickServices(List.of(nativeP2, extension)));
+
+        spikes.update(1, main);
+
+        assertTrue(spikes.isShakeActiveForTesting(),
+                "engine sidekicks after native P2 must remain valid Find_SonicTails extension participants");
+    }
+
     private static final class ObjectManagerServices extends StubObjectServices {
         private final ObjectManager objectManager;
 

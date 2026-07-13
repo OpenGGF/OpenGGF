@@ -39,9 +39,9 @@ public class TestZoneEventRewindSchemaGuard {
             Sonic3kICZEvents.class);
     private static final Set<String> AIZ_ALLOWED_TRANSIENT_FIELDS = Set.of(
             "bootstrap",
-            // Package-private test timing seam only. The public production constructor always
-            // resolves ObjectManager's rewind-captured VBlank counter; this supplier is structural
-            // and cannot contribute mutable gameplay state to a rewind snapshot.
+            // Test timing seam only. The production constructors resolve ObjectManager's
+            // rewind-captured VBlank counter; this supplier is structural and cannot contribute
+            // mutable gameplay state to a rewind snapshot.
             "vblankCounterSource");
     private static final Set<String> HCZ_ALLOWED_TRANSIENT_FIELDS = Set.of("wallObject");
     private static final Set<String> CNZ_ALLOWED_TRANSIENT_FIELDS = Set.of();

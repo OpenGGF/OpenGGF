@@ -17,6 +17,8 @@ import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -76,6 +78,8 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
     // Per-character crossing state (matches objoff_34/objoff_35 in disassembly)
     private boolean sonicPastTrigger;
     private boolean sidekickPastTrigger;
+    private AbstractPlayableSprite nativeP2Owner;
+    private final Map<PlayableEntity, Boolean> extensionPastTrigger = new IdentityHashMap<>();
 
     private boolean initialized;
     private String lastTraceEvent = "init";
@@ -110,41 +114,79 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
             return;
         }
 
-        if (!initialized) {
-            initializeCrossingState(player);
-            initialized = true;
-        }
-
-        checkPlayerCrossing(player, true);
-
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
         AbstractPlayableSprite nativeP2 = nativeP2OrNull(player);
-        if (nativeP2 != null) {
-            checkPlayerCrossing(nativeP2, false);
+        if (!initialized) {
+            initializeCrossingState(player, nativeP2, participants);
+            initialized = true;
+        } else {
+            reconcileNativeP2(nativeP2, participants);
         }
+
+        sonicPastTrigger = checkPlayerCrossing(player, sonicPastTrigger);
+
+        if (nativeP2 != null) {
+            sidekickPastTrigger = checkPlayerCrossing(nativeP2, sidekickPastTrigger);
+        }
+        updateExtensionPlayers(player, nativeP2, participants);
     }
 
     /**
      * Sets initial crossing state based on player position relative to trigger.
      * From disassembly init routine (sonic3k.asm lines 42329-42348).
      */
-    private void initializeCrossingState(AbstractPlayableSprite player) {
-        int objX = spawn.x();
-        int objY = spawn.y();
-
-        if (verticalMode) {
-            sonicPastTrigger = player.getCentreY() > objY;
-        } else {
-            sonicPastTrigger = player.getCentreX() > objX;
-        }
-
-        AbstractPlayableSprite sidekick = nativeP2OrNull(player);
-        if (sidekick != null) {
-            if (verticalMode) {
-                sidekickPastTrigger = sidekick.getCentreY() > objY;
-            } else {
-                sidekickPastTrigger = sidekick.getCentreX() > objX;
+    private void initializeCrossingState(AbstractPlayableSprite player, AbstractPlayableSprite nativeP2,
+                                         List<PlayableEntity> participants) {
+        sonicPastTrigger = isPastTrigger(player);
+        nativeP2Owner = nativeP2;
+        sidekickPastTrigger = nativeP2 != null && isPastTrigger(nativeP2);
+        for (PlayableEntity participant : participants) {
+            if (participant != player && participant != nativeP2
+                    && participant instanceof AbstractPlayableSprite extension) {
+                extensionPastTrigger.put(extension, isPastTrigger(extension));
             }
         }
+    }
+
+    private boolean isPastTrigger(AbstractPlayableSprite player) {
+        return verticalMode ? player.getCentreY() > spawn.y() : player.getCentreX() > spawn.x();
+    }
+
+    private void reconcileNativeP2(AbstractPlayableSprite currentNativeP2, List<PlayableEntity> participants) {
+        if (nativeP2Owner == currentNativeP2) {
+            return;
+        }
+        if (nativeP2Owner != null && containsIdentity(participants, nativeP2Owner)) {
+            extensionPastTrigger.put(nativeP2Owner, sidekickPastTrigger);
+        }
+        Boolean promotedState = currentNativeP2 == null ? null : extensionPastTrigger.remove(currentNativeP2);
+        sidekickPastTrigger = promotedState != null
+                ? promotedState
+                : currentNativeP2 != null && isPastTrigger(currentNativeP2);
+        nativeP2Owner = currentNativeP2;
+    }
+
+    private void updateExtensionPlayers(AbstractPlayableSprite main, AbstractPlayableSprite nativeP2,
+                                        List<PlayableEntity> participants) {
+        IdentityHashMap<PlayableEntity, Boolean> live = new IdentityHashMap<>();
+        for (PlayableEntity participant : participants) {
+            if (participant == main || participant == nativeP2
+                    || !(participant instanceof AbstractPlayableSprite extension)) {
+                continue;
+            }
+            live.put(extension, Boolean.TRUE);
+            boolean past = extensionPastTrigger.computeIfAbsent(extension, ignored -> isPastTrigger(extension));
+            extensionPastTrigger.put(extension, checkPlayerCrossing(extension, past));
+        }
+        extensionPastTrigger.keySet().removeIf(player -> !live.containsKey(player));
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> players, PlayableEntity candidate) {
+        for (PlayableEntity player : players) {
+            if (player == candidate) return true;
+        }
+        return false;
     }
 
     private AbstractPlayableSprite nativeP2OrNull(AbstractPlayableSprite nativeP1) {
@@ -161,17 +203,15 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
      * Horizontal: sub_1E8C6 (sonic3k.asm lines 42372-42473)
      * Vertical: sub_1EA14 (sonic3k.asm lines 42499-42594)
      */
-    private void checkPlayerCrossing(AbstractPlayableSprite player, boolean isSonic) {
+    private boolean checkPlayerCrossing(AbstractPlayableSprite player, boolean pastTrigger) {
         int objX = spawn.x();
         int objY = spawn.y();
         int playerX = player.getCentreX();
         int playerY = player.getCentreY();
-        boolean pastTrigger = isSonic ? sonicPastTrigger : sidekickPastTrigger;
-
         if (verticalMode) {
-            checkVerticalCrossing(player, isSonic, objX, objY, playerX, playerY, pastTrigger);
+            return checkVerticalCrossing(player, objX, objY, playerX, playerY, pastTrigger);
         } else {
-            checkHorizontalCrossing(player, isSonic, objX, objY, playerX, playerY, pastTrigger);
+            return checkHorizontalCrossing(player, objX, objY, playerX, playerY, pastTrigger);
         }
     }
 
@@ -179,15 +219,15 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
      * Horizontal trigger logic (sub_1E8C6).
      * Trigger line is vertical at objX; range check on Y axis.
      */
-    private void checkHorizontalCrossing(AbstractPlayableSprite player, boolean isSonic,
+    private boolean checkHorizontalCrossing(AbstractPlayableSprite player,
                                           int objX, int objY, int playerX, int playerY,
                                           boolean pastTrigger) {
         if (!pastTrigger) {
             // Player was to the left - check if crossed rightward
             if (playerX >= objX) {
-                setCrossingState(isSonic, true);
-                if (!isWithinRange(playerY, objY)) return;
-                if (groundOnly && player.getAir()) return;
+                pastTrigger = true;
+                if (!isWithinRange(playerY, objY)) return pastTrigger;
+                if (groundOnly && player.getAir()) return pastTrigger;
 
                 if (!xFlipped) {
                     // Crossing L→R, not flipped: enable spin with positive speed
@@ -200,9 +240,9 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
         } else {
             // Player was to the right - check if crossed leftward
             if (playerX < objX) {
-                setCrossingState(isSonic, false);
-                if (!isWithinRange(playerY, objY)) return;
-                if (groundOnly && player.getAir()) return;
+                pastTrigger = false;
+                if (!isWithinRange(playerY, objY)) return pastTrigger;
+                if (groundOnly && player.getAir()) return pastTrigger;
 
                 if (xFlipped) {
                     // Crossing R→L, flipped: enable spin with negative speed
@@ -213,21 +253,22 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
                 }
             }
         }
+        return pastTrigger;
     }
 
     /**
      * Vertical trigger logic (sub_1EA14).
      * Trigger line is horizontal at objY; range check on X axis.
      */
-    private void checkVerticalCrossing(AbstractPlayableSprite player, boolean isSonic,
+    private boolean checkVerticalCrossing(AbstractPlayableSprite player,
                                         int objX, int objY, int playerX, int playerY,
                                         boolean pastTrigger) {
         if (!pastTrigger) {
             // Player was above - check if crossed downward
             if (playerY >= objY) {
-                setCrossingState(isSonic, true);
-                if (!isWithinRange(playerX, objX)) return;
-                if (groundOnly && player.getAir()) return;
+                pastTrigger = true;
+                if (!isWithinRange(playerX, objX)) return pastTrigger;
+                if (groundOnly && player.getAir()) return pastTrigger;
 
                 if (!xFlipped) {
                     // Crossing top→bottom, not flipped: enable spin
@@ -240,9 +281,9 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
         } else {
             // Player was below - check if crossed upward
             if (playerY < objY) {
-                setCrossingState(isSonic, false);
-                if (!isWithinRange(playerX, objX)) return;
-                if (groundOnly && player.getAir()) return;
+                pastTrigger = false;
+                if (!isWithinRange(playerX, objX)) return pastTrigger;
+                if (groundOnly && player.getAir()) return pastTrigger;
 
                 if (xFlipped) {
                     // Crossing bottom→top, flipped: enable spin
@@ -253,14 +294,7 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
                 }
             }
         }
-    }
-
-    private void setCrossingState(boolean isSonic, boolean crossed) {
-        if (isSonic) {
-            sonicPastTrigger = crossed;
-        } else {
-            sidekickPastTrigger = crossed;
-        }
+        return pastTrigger;
     }
 
     @Override

@@ -14,6 +14,8 @@ import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -34,6 +36,7 @@ class TestAizGiantRideVineObjectInstance {
     @AfterEach
     void tearDown() {
         GraphicsManager.getInstance().resetState();
+        AbstractObjectInstance.resetCameraBoundsForTests();
     }
 
     @Test
@@ -102,6 +105,65 @@ class TestAizGiantRideVineObjectInstance {
         assertFalse(vine.isCustomOutOfRange(0x1D80));
         assertTrue(vine.isCustomOutOfRange(0x2280),
                 "a vine more than $280 behind Camera_X_pos_coarse_back must cull even in widescreen");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {320, 352, 400, 528, 800})
+    void ordinaryVineStillSpriteRetainsVisibleIncomingFrameAtEveryViewportWidth(int width)
+            throws Exception {
+        AizRideVineObjectInstance vine = stillSpriteVine(width, width + 7, 100);
+
+        vine.update(0, null);
+
+        assertEquals(width + 15, vine.getX(),
+                "a still sprite whose left edge remains inside the active viewport must survive MoveSprite");
+    }
+
+    @Test
+    void ordinaryVineStillSpriteNativeViewportEdgesRemainExact() throws Exception {
+        AizRideVineObjectInstance rightInside = stillSpriteVine(320, 327, 235);
+        AizRideVineObjectInstance rightOutside = stillSpriteVine(320, 328, 100);
+        AizRideVineObjectInstance leftInside = stillSpriteVine(320, 92, 88, 100, 100);
+        AizRideVineObjectInstance leftOutside = stillSpriteVine(320, 91, 100, 100, 0);
+        AizRideVineObjectInstance bottomOutside = stillSpriteVine(320, 100, 236);
+
+        rightInside.update(0, null);
+        rightOutside.update(0, null);
+        leftInside.update(0, null);
+        leftOutside.update(0, null);
+        bottomOutside.update(0, null);
+
+        assertEquals(335, rightInside.getX());
+        assertEquals(100, leftInside.getX());
+        assertEquals(0x7FF0, rightOutside.getX());
+        assertEquals(0x7FF0, leftOutside.getX());
+        assertEquals(0x7FF0, bottomOutside.getX());
+    }
+
+    private static AizRideVineObjectInstance stillSpriteVine(int width, int x, int y) throws Exception {
+        return stillSpriteVine(width, x, y, 0, 0);
+    }
+
+    private static AizRideVineObjectInstance stillSpriteVine(
+            int width, int x, int y, int cameraX, int cameraY) throws Exception {
+        AizRideVineObjectInstance vine = new AizRideVineObjectInstance(
+                new ObjectSpawn(x, y, 0x06, 0x00, 0, false, 0));
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) cameraX);
+        when(camera.getY()).thenReturn((short) cameraY);
+        when(camera.getWidth()).thenReturn((short) width);
+        when(camera.getHeight()).thenReturn((short) 224);
+        AbstractObjectInstance.updateCameraBounds(cameraX, cameraY,
+                cameraX + width, cameraY + 224, 0);
+        StubObjectServices services = new StubObjectServices() {
+            @Override
+            public Camera camera() {
+                return camera;
+            }
+        }.withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
+        vine.setServices(services);
+        setEnumField(vine, "state", "STILL_SPRITE");
+        return vine;
     }
 
     @Test
@@ -225,6 +287,13 @@ class TestAizGiantRideVineObjectInstance {
         Field modeField = handle.getClass().getDeclaredField("mode");
         modeField.setAccessible(true);
         return modeField.getInt(handle);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void setEnumField(Object target, String fieldName, String constant) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, Enum.valueOf((Class<? extends Enum>) field.getType(), constant));
     }
 
     private static void setHandleGrabFlag(AizGiantRideVineObjectInstance vine,

@@ -88,7 +88,7 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     // Proximity detection speed: addi.w #$10,objoff_3A(a0) / subi.w #$10
     private static final int PROXIMITY_SPEED = 0x10;
     private static final ObjectPlayerParticipationPolicy PROXIMITY_PARTICIPANTS =
-            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     // Proximity detection offsets when NOT x-flipped (s2.asm lines 52606-52607)
     private static final int PROX_LEFT_NORMAL = -0x20;

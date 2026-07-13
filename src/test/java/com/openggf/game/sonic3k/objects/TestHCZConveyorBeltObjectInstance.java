@@ -15,6 +15,8 @@ import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -33,6 +35,7 @@ class TestHCZConveyorBeltObjectInstance {
     @BeforeEach
     void setUp() {
         HCZConveyorBeltObjectInstance.resetLoadArray();
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
     }
 
     @AfterEach
@@ -159,6 +162,21 @@ class TestHCZConveyorBeltObjectInstance {
         assertEquals(0x031F, nativeP2.getCentreY() & 0xFFFF);
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {320, 352, 400, 528, 800})
+    void forwardCullMarginTracksConfiguredViewportWidth(int viewportWidth) throws Exception {
+        AbstractObjectInstance.updateCameraBounds(0, 0, viewportWidth, 224, 0);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestObjectServices services = servicesFor(camera, player);
+        HCZConveyorBeltObjectInstance belt = buildBelt(services, 0x1200, 0x0200, 0x00, 0);
+        int viewportExtension = viewportWidth - 320;
+        camera.setX((short) (belt.getX() - 0x280 - viewportExtension + 0x100));
+
+        belt.update(1, player);
+
+        assertFalse(belt.isDestroyed(), "belt must stay loaded while its forward span can be visible");
+    }
+
     @Test
     void capturePreservesStatusRollLikeRom() throws Exception {
         camera.setX((short) 0x0C00);
@@ -236,21 +254,23 @@ class TestHCZConveyorBeltObjectInstance {
     }
 
     @Test
-    void extendedSidekickDoesNotShareNativeP2ConveyorState() throws Exception {
+    void extensionSidekicksCaptureWithIndependentConveyorState() throws Exception {
         camera.setX((short) 0x0C00);
         TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0800, (short) 0x0200);
         TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0800, (short) 0x0221);
         TestablePlayableSprite extendedSidekick = new TestablePlayableSprite("knuckles", (short) 0x0C00, (short) 0x0221);
+        TestablePlayableSprite thirdSidekick = new TestablePlayableSprite("sonic-extra", (short) 0x0C00, (short) 0x0221);
         nativeP2.setYSpeed((short) 0);
         extendedSidekick.setYSpeed((short) 0);
-        List<PlayableEntity> sidekicks = List.of(nativeP2, extendedSidekick);
+        thirdSidekick.setYSpeed((short) 0);
+        List<PlayableEntity> sidekicks = List.of(nativeP2, extendedSidekick, thirdSidekick);
         ObjectServices services = new QueryOnlyPlayerServices(camera, main, sidekicks, sidekicks);
         HCZConveyorBeltObjectInstance belt = buildBelt(services, 0x0B28, 0x0200, 0x00, 0);
 
         belt.update(10, main);
 
-        assertFalse(extendedSidekick.isObjectControlled(),
-                "Additional engine sidekicks need separate state before they can participate in the conveyor");
+        assertTrue(extendedSidekick.isObjectControlled());
+        assertTrue(thirdSidekick.isObjectControlled());
     }
 
     private static HCZConveyorBeltObjectInstance buildBelt(
@@ -319,5 +339,3 @@ class TestHCZConveyorBeltObjectInstance {
         }
     }
 }
-
-

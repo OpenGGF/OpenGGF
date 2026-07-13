@@ -614,6 +614,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * asserted preserves existing engine semantics for legacy callers.
          */
         protected boolean objectControlSuppressesMovement = false;
+        /** Monotonic discriminator for object-control acquisition/replacement. */
+        protected int objectControlGeneration = 0;
         /**
          * Narrow seam for MGZ top-platform carry. That object uses object control for
          * ownership but still needs SolidObject side/top feedback from its controlling
@@ -855,6 +857,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.objectControlled = false;
                 this.objectControlAllowsCpu = false;
                 this.objectControlSuppressesMovement = false;
+                this.objectControlGeneration = 0;
                 this.suppressedObjectMoveAndFallAxes = 0;
                 this.mgzTopPlatformCarrySolidContactObject = null;
                 this.hidden = false;
@@ -957,6 +960,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         hasQueuedForceInputRightState, queuedForceInputRight,
                         moveLockTimer,
                         objectControlled, objectControlAllowsCpu, objectControlSuppressesMovement,
+                        objectControlGeneration,
                         objectControlReleasedFrame,
                         suppressAirCollision, suppressGroundWallCollision, forceFloorCheck,
                         suppressedObjectMoveAndFallAxes,
@@ -1118,6 +1122,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.objectControlled = extra.objectControlled();
                 this.objectControlAllowsCpu = extra.objectControlAllowsCpu();
                 this.objectControlSuppressesMovement = extra.objectControlSuppressesMovement();
+                this.objectControlGeneration = extra.objectControlGeneration();
                 this.objectControlReleasedFrame = extra.objectControlReleasedFrame();
                 this.suppressAirCollision = extra.suppressAirCollision();
                 this.suppressGroundWallCollision = extra.suppressGroundWallCollision();
@@ -2607,10 +2612,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // yPixel produces the same centreY shift as the ROM's radius-based subtraction.
                 boolean wasRolling = getRolling();
                 setRolling(false);
-                PlayerMovementRules movementRules = playerMovementRulesOrNull();
+                GameRules currentRules = getGameRules();
                 boolean restoresSplitSidekickRadii = !(this instanceof Tails)
-                                || movementRules == null
-                                || movementRules.sidekickHurtRestoresRadiiWithoutRoll();
+                                || currentRules == null || currentRules.sidekickCpu() == null
+                                || currentRules.sidekickCpu().sidekickHurtRestoresRadiiWithoutRoll();
                 // S3K HurtCharacter calls Player_TouchFloor, whose Tails branch
                 // restores default radii before testing Status_Roll. S2's 1P sidekick
                 // hurt path instead branches to Hurt_Sidekick and preserves a split
@@ -2962,21 +2967,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.moveLockTimer = Math.max(0, moveLockTimer);
         }
 
-        public boolean isHidden() {
-                return hidden;
-        }
+        public boolean isHidden() { return hidden; }
 
-        public void setHidden(boolean hidden) {
-                this.hidden = hidden;
-        }
+        public void setHidden(boolean hidden) { this.hidden = hidden; }
 
         /**
          * Returns whether an object has full control of the player (physics disabled).
          * When true, the movement manager skips all physics processing.
          */
-        public boolean isObjectControlled() {
-                return objectControlled;
-        }
+        public boolean isObjectControlled() { return objectControlled; }
 
         /**
          * Sets whether an object has full control of the player.
@@ -2984,6 +2983,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * The controlling object is responsible for updating the player's position.
          */
         public void setObjectControlled(boolean objectControlled) {
+                this.objectControlGeneration++;
                 this.objectControlled = objectControlled;
                 if (objectControlled) {
                         controller.clearTailsFlightIf(getSecondaryAbility() == SecondaryAbility.FLY);
@@ -2996,6 +2996,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         this.objectControlSuppressesMovement = false;
                 }
         }
+
+        /** Identifies the most recent object-control acquisition or replacement. */
+        public int getObjectControlGeneration() { return objectControlGeneration; }
 
         /**
          * ROM-bit-7 ({@code bmi.w}) test for {@link SidekickCpuController#updateNormal}'s
@@ -3011,13 +3014,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * {@code false}; the controlling object must re-assert the flag every time it
          * re-asserts {@link #setObjectControlled}{@code (true)}.
          */
-        public boolean isObjectControlAllowsCpu() {
-                return objectControlAllowsCpu;
-        }
+        public boolean isObjectControlAllowsCpu() { return objectControlAllowsCpu; }
 
-        public void setObjectControlAllowsCpu(boolean objectControlAllowsCpu) {
-                this.objectControlAllowsCpu = objectControlAllowsCpu;
-        }
+        public void setObjectControlAllowsCpu(boolean objectControlAllowsCpu) { this.objectControlAllowsCpu = objectControlAllowsCpu; }
 
         /**
          * Returns true when normal movement, gravity, boundary checks, and terrain
@@ -3025,13 +3024,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Some object routines set only this movement gate while still allowing
          * TouchResponse and later SolidObject checks in the same ExecuteObjects pass.
          */
-        public boolean isObjectControlSuppressesMovement() {
-                return objectControlSuppressesMovement;
-        }
+        public boolean isObjectControlSuppressesMovement() { return objectControlSuppressesMovement; }
 
-        public void setObjectControlSuppressesMovement(boolean objectControlSuppressesMovement) {
-                this.objectControlSuppressesMovement = objectControlSuppressesMovement;
-        }
+        public void setObjectControlSuppressesMovement(boolean objectControlSuppressesMovement) { this.objectControlSuppressesMovement = objectControlSuppressesMovement; }
 
         public void applyObjectControlState(ObjectControlState state) {
                 Objects.requireNonNull(state, "state");
@@ -3755,7 +3750,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         /**
          * Returns the resolved per-character physics profile, or {@code null} if
          * none has been bound yet (early bootstrap before
-         * {@link #resolvePhysicsProfile()}).
+         * {@link #resolvePhysicsProfile(GameModule)}).
          */
         public PhysicsProfile getPhysicsProfile() {
                 return physicsProfile;

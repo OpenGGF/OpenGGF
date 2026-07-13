@@ -7,6 +7,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
@@ -17,7 +18,10 @@ import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * ForcedSpin / Pinball Mode object (Object 0x84).
@@ -73,6 +77,9 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance implements Rewin
     // Matches objoff_34 (Sonic) and objoff_35 (Tails) from disassembly
     private boolean sonicPastTrigger;
     private boolean tailsPastTrigger;
+    private PlayableEntity sonicStateOwner;
+    private PlayableEntity tailsStateOwner;
+    private final Map<PlayableEntity, CrossingState> extensionStates = new IdentityHashMap<>();
 
     // Track initialization state
     private boolean initialized;
@@ -100,24 +107,98 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance implements Rewin
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        AbstractPlayableSprite player = resolveMain(playerEntity);
         if (player == null) {
             return;
         }
 
+        List<PlayableEntity> participants = interactionParticipants(player);
+        bindNativeOwners(participants);
+
         // Initialize crossing state based on player's current position
         if (!initialized) {
-            initializeCrossingState(player);
+            initializeCrossingStates(participants);
             initialized = true;
         }
 
         // Check for Sonic (main player)
         checkPlayerCrossing(player, true);
 
-        AbstractPlayableSprite nativeP2 = nativeP2OrNull(player);
+        AbstractPlayableSprite nativeP2 = participants.size() > 1
+                && participants.get(1) instanceof AbstractPlayableSprite sprite ? sprite : null;
         if (nativeP2 != null && !isHorizontalSidekickFlightAutoRecovery(nativeP2)) {
             checkPlayerCrossing(nativeP2, false);
         }
+        for (int index = 2; index < participants.size(); index++) {
+            if (participants.get(index) instanceof AbstractPlayableSprite extension) {
+                if (extension.getDead() || extension.isHurt() || extension.isDebugMode()) {
+                    extensionStates.remove(extension);
+                    continue;
+                }
+                if (isHorizontalSidekickFlightAutoRecovery(extension)) {
+                    continue;
+                }
+                CrossingState state = extensionStates.computeIfAbsent(extension,
+                        ignored -> new CrossingState(isPastTrigger(extension)));
+                boolean nativeP2State = tailsPastTrigger;
+                tailsPastTrigger = state.pastTrigger;
+                checkPlayerCrossing(extension, false);
+                state.pastTrigger = tailsPastTrigger;
+                tailsPastTrigger = nativeP2State;
+            }
+        }
+        pruneOmittedExtensions(participants);
+    }
+
+    private AbstractPlayableSprite resolveMain(PlayableEntity fallback) {
+        PlayableEntity main = services().playerQuery().mainPlayerOrNull();
+        if (main instanceof AbstractPlayableSprite sprite) {
+            return sprite;
+        }
+        return fallback instanceof AbstractPlayableSprite sprite ? sprite : null;
+    }
+
+    private List<PlayableEntity> interactionParticipants(AbstractPlayableSprite main) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (participants.contains(main)) {
+            return participants;
+        }
+        ArrayList<PlayableEntity> withMain = new ArrayList<>(participants.size() + 1);
+        withMain.add(main);
+        withMain.addAll(participants);
+        return withMain;
+    }
+
+    private void bindNativeOwners(List<PlayableEntity> participants) {
+        PlayableEntity main = participants.isEmpty() ? null : participants.get(0);
+        PlayableEntity nativeP2 = participants.size() > 1 ? participants.get(1) : null;
+        sonicStateOwner = bindNativeOwner(sonicStateOwner, main, true);
+        tailsStateOwner = bindNativeOwner(tailsStateOwner, nativeP2, false);
+    }
+
+    private PlayableEntity bindNativeOwner(
+            PlayableEntity previous, PlayableEntity current, boolean sonicSlot) {
+        if (previous == current) {
+            return current;
+        }
+        if (previous != null) {
+            extensionStates.put(previous,
+                    new CrossingState(sonicSlot ? sonicPastTrigger : tailsPastTrigger));
+        }
+        CrossingState restored = current != null ? extensionStates.remove(current) : null;
+        boolean state = restored != null ? restored.pastTrigger
+                : current instanceof AbstractPlayableSprite playable && initialized && isPastTrigger(playable);
+        if (sonicSlot) {
+            sonicPastTrigger = state;
+        } else {
+            tailsPastTrigger = state;
+        }
+        return current;
+    }
+
+    private void pruneOmittedExtensions(List<PlayableEntity> participants) {
+        extensionStates.keySet().removeIf(player -> participants.stream().noneMatch(live -> live == player));
     }
 
     /**
@@ -125,9 +206,10 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance implements Rewin
      * to the trigger line. This ensures correct behavior if player is already past
      * the trigger when the object loads.
      */
-    private void initializeCrossingState(AbstractPlayableSprite player) {
+    private void initializeCrossingStates(List<PlayableEntity> participants) {
         int objX = spawn.x();
         int objY = spawn.y();
+        AbstractPlayableSprite player = (AbstractPlayableSprite) participants.get(0);
         int playerX = player.getCentreX();
         int playerY = player.getCentreY();
 
@@ -141,7 +223,8 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance implements Rewin
             sonicPastTrigger = playerX > objX;
         }
 
-        AbstractPlayableSprite nativeP2 = nativeP2OrNull(player);
+        AbstractPlayableSprite nativeP2 = participants.size() > 1
+                && participants.get(1) instanceof AbstractPlayableSprite sprite ? sprite : null;
         if (nativeP2 != null) {
             int sidekickX = nativeP2.getCentreX();
             int sidekickY = nativeP2.getCentreY();
@@ -151,15 +234,15 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance implements Rewin
                 tailsPastTrigger = sidekickX > objX;
             }
         }
-    }
-
-    private AbstractPlayableSprite nativeP2OrNull(AbstractPlayableSprite nativeP1) {
-        for (PlayableEntity candidate : services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
-            if (candidate != nativeP1 && candidate instanceof AbstractPlayableSprite sprite) {
-                return sprite;
+        for (int index = 2; index < participants.size(); index++) {
+            if (participants.get(index) instanceof AbstractPlayableSprite extension) {
+                extensionStates.put(extension, new CrossingState(isPastTrigger(extension)));
             }
         }
-        return null;
+    }
+
+    private boolean isPastTrigger(AbstractPlayableSprite player) {
+        return verticalMode ? player.getCentreY() > spawn.y() : player.getCentreX() > spawn.x();
     }
 
     private boolean isHorizontalSidekickFlightAutoRecovery(AbstractPlayableSprite player) {
@@ -168,6 +251,27 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance implements Rewin
                 && player.isCpuControlled()
                 && controller != null
                 && controller.getDiagnosticRomCpuRoutine() == 0x04;
+    }
+
+    private static final class CrossingState implements RewindStateful<Boolean> {
+        private boolean pastTrigger;
+
+        private CrossingState() {
+        }
+
+        private CrossingState(boolean pastTrigger) {
+            this.pastTrigger = pastTrigger;
+        }
+
+        @Override
+        public Boolean captureRewindStateValue() {
+            return pastTrigger;
+        }
+
+        @Override
+        public void restoreRewindStateValue(Boolean state) {
+            pastTrigger = Boolean.TRUE.equals(state);
+        }
     }
 
     /**

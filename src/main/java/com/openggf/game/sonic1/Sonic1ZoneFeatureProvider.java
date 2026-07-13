@@ -2,17 +2,20 @@ package com.openggf.game.sonic1;
 
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.events.Sonic1LZWaterEvents;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.WaterSystem;
 import com.openggf.physics.SensorResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.openggf.game.GameServices;
@@ -100,27 +103,56 @@ public class Sonic1ZoneFeatureProvider implements ZoneFeatureProvider {
             return;
         }
 
-        boolean playerAlive = player != null && !player.getDead();
+        if (waterEvents == null) {
+            return;
+        }
 
-        if (waterEvents != null && playerAlive) {
-            // 1. Wind tunnels (horizontal underwater currents)
+        // Preserve the exact native path first. In particular, the wind routine
+        // historically resolves v_player through camera focus while the layout
+        // sample uses the provider's configured main; credits/demo bootstraps
+        // intentionally exercise that distinction.
+        if (player != null && !player.getDead()) {
             if (isSBZ3) {
                 waterEvents.updateWindTunnelsSBZ3();
             } else {
                 waterEvents.updateWindTunnels();
             }
-
-            // 2. Water slides (chunk-based slide mechanic)
-            // ROM LZWaterSlides samples v_lvllayout from obX/obY only
-            // (docs/s1disasm/_inc/LZWaterFeatures.asm:392-406). In this engine
-            // those ROM fields map to centre coordinates, not sprite bounds.
-            int chunkIdAtPlayer = -1;
-            LevelManager levelManager = GameServices.levelOrNull();
-            if (levelManager != null) {
-                chunkIdAtPlayer = levelManager.getBlockIdAt(player.getCentreX(), player.getCentreY());
-            }
+            int chunkIdAtPlayer = blockIdAt(player);
             waterEvents.checkWaterSlide(chunkIdAtPlayer);
         }
+
+        // Engine extension: replay the same transport independently for every
+        // configured sidekick after native main processing has completed.
+        for (PlayableEntity participant : playerQueryFromRuntime(player).sidekicks()) {
+            if (!(participant instanceof AbstractPlayableSprite playable)
+                    || playable == player || playable.getDead()) {
+                continue;
+            }
+            if (isSBZ3) {
+                waterEvents.updateWindTunnelsSBZ3(playable, false);
+            } else {
+                waterEvents.updateWindTunnels(playable, false);
+            }
+            waterEvents.checkWaterSlide(playable, blockIdAt(playable), false);
+        }
+    }
+
+    private int blockIdAt(AbstractPlayableSprite player) {
+        // ROM LZWaterSlides samples v_lvllayout from obX/obY only
+        // (docs/s1disasm/_inc/LZWaterFeatures.asm:392-406). In this engine
+        // those ROM fields map to centre coordinates, not sprite bounds.
+        LevelManager levelManager = GameServices.levelOrNull();
+        return levelManager != null
+                ? levelManager.getBlockIdAt(player.getCentreX(), player.getCentreY())
+                : -1;
+    }
+
+    private ObjectPlayerQuery playerQueryFromRuntime(AbstractPlayableSprite mainPlayer) {
+        var spriteManager = GameServices.spritesOrNull();
+        List<AbstractPlayableSprite> sidekicks = spriteManager != null
+                ? List.copyOf(spriteManager.getSidekicks())
+                : List.of();
+        return new ObjectPlayerQuery(() -> mainPlayer, () -> sidekicks);
     }
 
     @Override

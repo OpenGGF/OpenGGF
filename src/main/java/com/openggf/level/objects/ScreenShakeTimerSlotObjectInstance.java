@@ -19,8 +19,9 @@ public final class ScreenShakeTimerSlotObjectInstance extends AbstractObjectInst
         this.remainingFrames = Math.max(0, remainingFrames);
     }
 
+    /** Headless rewind-probe constructor; live timers use the duration constructor. */
     ScreenShakeTimerSlotObjectInstance(ObjectSpawn spawn) {
-        this(0);
+        super(spawn, "ScreenShakeTimer");
     }
 
     @Override

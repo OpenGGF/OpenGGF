@@ -10,7 +10,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
-import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
@@ -148,11 +148,12 @@ class TestS3kUtilityMotionRewind {
         static Harness create() {
             ObjectManager[] holder = new ObjectManager[1];
             Camera camera = mockCamera();
-            ObjectServices services = new StubObjectServices() {
+            StubObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
                 @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
             };
+            services.withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
             ObjectManager objectManager = new ObjectManager(
                     List.of(),
                     new Sonic3kObjectRegistry(),

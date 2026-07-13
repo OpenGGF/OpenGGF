@@ -197,6 +197,25 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void wfzPaletteSwitcherDoesNotCollapseExtraSidekickCrossingStateIntoNativeP2() {
+        TestablePlayableSprite main = player("sonic", 0x0800, 0x1000);
+        TestablePlayableSprite nativeP2 = player("tails", 0x0FF0, 0x1000);
+        TestablePlayableSprite extra = player("knuckles", 0x0FF0, 0x1000);
+        GameStateManager gameState = new GameStateManager();
+        WFZPalSwitcherObjectInstance switcher = new WFZPalSwitcherObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0x8B, 0, 0, false, 0),
+                "WFZPalSwitcher");
+        switcher.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extra)).withGameState(gameState));
+
+        switcher.update(0, main);
+        nativeP2.setCentreX((short) 0x1010);
+        switcher.update(1, main);
+
+        assertTrue(gameState.isWfzFireToggle(),
+                "native P2's crossing must not be overwritten by stationary extra-sidekick aliasing");
+    }
+
+    @Test
     void springAppliesCheckpointContactToQueryOnlySidekick() {
         TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
         TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
@@ -431,6 +450,48 @@ class TestSonic2TriggerParticipation {
         assertEquals(Sonic2AnimationIds.HANG2.id(), tails.getAnimationId());
         assertTrue((boolean) field(vine, "player2Grabbed"),
                 "Obj80 native P2 grab byte must be driven by sidekick participants");
+    }
+
+    @Test
+    void movingVineTracksExtraSidekickGrabStateByIdentity() {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite nativeP2 = player("tails", 0x1000, 0x1088);
+        TestablePlayableSprite extra = player("knuckles", 0x1000, 0x1088);
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(main, List.of(nativeP2, extra));
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, services);
+        services.withObjectManager(objectManager);
+        MovingVineObjectInstance vine = objectManager.createDynamicObject(
+                () -> new MovingVineObjectInstance(
+                        new ObjectSpawn(0x1000, 0x1000, 0x80, 0, 0, false, 0),
+                        "MovingVine"));
+
+        vine.update(0, main);
+
+        assertTrue(nativeP2.isObjectControlled());
+        assertTrue(extra.isObjectControlled(),
+                "an extra sidekick must not inherit native P2's grabbed flag without running its own grab path");
+    }
+
+    @Test
+    void movingVineExtensionRespondsToExtraSidekickGrab() throws Exception {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite nativeP2 = player("tails", 0x1400, 0x1000);
+        TestablePlayableSprite extra = player("knuckles", 0x1000, 0x1088);
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(main, List.of(nativeP2, extra));
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, services);
+        services.withObjectManager(objectManager);
+        MovingVineObjectInstance vine = objectManager.createDynamicObject(
+                () -> new MovingVineObjectInstance(
+                        new ObjectSpawn(0x1000, 0x1000, 0x80, 0, 0, false, 0),
+                        "MovingVine"));
+
+        vine.update(0, main);
+        vine.update(1, main);
+
+        assertEquals(2, intField(vine, "currentExtension"),
+                "an independently grabbed extra sidekick should count as an active rider");
     }
 
     @Test

@@ -8,6 +8,8 @@ import com.openggf.game.GameModule;
 import com.openggf.game.ScrollHandlerProvider;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.ParallaxSnapshot;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.WorldSession;
 import com.openggf.level.scroll.CameraDrivenScrollHandler;
 import com.openggf.level.scroll.ZoneScrollHandler;
 
@@ -359,9 +361,12 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
      */
     public boolean advanceCameraDrivenScroll(int zoneId, int actId, Camera cam, int frameCounter) {
         if (!providerLoaded) {
-            Rom rom = GameServices.worldSession().getDataSource().rom().orElse(null);
-            if (rom != null) {
-                load(rom);
+            WorldSession worldSession = SessionManager.getCurrentWorldSession();
+            if (worldSession != null) {
+                Rom rom = worldSession.getDataSource().rom().orElse(null);
+                if (rom != null) {
+                    load(rom);
+                }
             }
         }
         if (scrollProvider == null || cam == null) {

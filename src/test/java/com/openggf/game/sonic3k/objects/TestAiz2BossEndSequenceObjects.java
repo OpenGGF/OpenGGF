@@ -8,11 +8,20 @@ import com.openggf.camera.Camera;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.CompactFieldCapturer;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.rewind.schema.RewindObjectStateBlob;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
@@ -28,6 +37,7 @@ import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
@@ -41,7 +51,9 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAiz2BossEndSequenceObjects {
@@ -617,6 +629,126 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void aizCapsuleEndingPoseExtendsToEverySidekickAfterNativeP2() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        GameStateManager gameState = new GameStateManager();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        TestablePlayableSprite extension1 = new TestablePlayableSprite("tails-extra", (short) 0, (short) 0);
+        TestablePlayableSprite extension2 = new TestablePlayableSprite("knuckles-extra", (short) 0, (short) 0);
+        SidekickCpuController nativeCpu = new SidekickCpuController(nativeP2, sonic);
+        nativeCpu.setController2SignedLocked(true);
+        nativeP2.setCpuController(nativeCpu);
+
+        Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49E9, 0x0163);
+        capsule.setServices(new QueryOnlyServices(camera, sonic,
+                List.of(nativeP2, extension1, extension2)).withGameState(gameState));
+        setField(capsule, "opened", 1);
+        setField(capsule, "resultsStarted", 1);
+        setField(capsule, "resultsActiveWaitEntries", 5);
+
+        capsule.update(0, sonic);
+
+        assertFalse(nativeCpu.isController2SignedLocked(),
+                "native P2 must retain Check_TailsEndPose timing and controller-2 cleanup");
+        for (TestablePlayableSprite sidekick : List.of(nativeP2, extension1, extension2)) {
+            assertTrue(sidekick.isObjectControlled(),
+                    "third-plus sidekicks must receive independent ending-pose ownership");
+            assertEquals(Sonic3kAnimationIds.VICTORY.id(), sidekick.getAnimationId());
+        }
+    }
+
+    @Test
+    void aizCapsuleExtensionCleanupHandlesDeathOmissionReorderAndRelease() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        GameStateManager gameState = new GameStateManager();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        TestablePlayableSprite extension = new TestablePlayableSprite("tails-extra", (short) 0, (short) 0);
+        TestablePlayableSprite omitted = new TestablePlayableSprite("sonic-extra", (short) 0, (short) 0);
+        TestablePlayableSprite replacement = new TestablePlayableSprite("replacement", (short) 0, (short) 0);
+        TestablePlayableSprite unrelated = new TestablePlayableSprite("unrelated", (short) 0, (short) 0);
+        replacement.setAir(true);
+        SidekickCpuController nativeCpu = new SidekickCpuController(nativeP2, sonic);
+        nativeP2.setCpuController(nativeCpu);
+        QueryOnlyServices services = new QueryOnlyServices(
+                camera, sonic, List.of(nativeP2, extension, omitted));
+        services.withGameState(gameState);
+        AizZoneRuntimeState aizState = new AizZoneRuntimeState(
+                0, PlayerCharacter.SONIC_AND_TAILS, new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL));
+        services.zoneRuntimeRegistry().install(aizState);
+        Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49E9, 0x0163);
+        capsule.setServices(services);
+        setField(capsule, "opened", 1);
+        setField(capsule, "resultsStarted", 1);
+        setField(capsule, "resultsActiveWaitEntries", 5);
+        capsule.update(0, sonic);
+        ObjectControlState.nativeBit7FullControl().applyTo(unrelated);
+
+        services.setSidekicks(List.of(extension, nativeP2, replacement));
+        extension.setDead(true);
+        capsule.update(1, sonic);
+
+        assertFalse(extension.isObjectControlled(), "dead extension must release after reorder");
+        assertFalse(omitted.isObjectControlled(), "omitted extension must release");
+        assertFalse(replacement.isObjectControlled(), "replacement must not inherit omitted state");
+        assertTrue(nativeP2.isObjectControlled(), "live identity must retain ending-pose ownership after reorder");
+        assertTrue(unrelated.isObjectControlled(), "cleanup must not clear unrelated control");
+
+        extension.setDead(false);
+        extension.setAir(false);
+        aizState.scheduleTailsControlRelease(0);
+        capsule.update(2, sonic);
+
+        assertFalse(nativeP2.isObjectControlled());
+        assertFalse(extension.isObjectControlled());
+        assertTrue(unrelated.isObjectControlled());
+    }
+
+    @Test
+    void aizCapsuleNonEmptyExtensionPoseMapRewindsThroughPlayerRefs() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        TestablePlayableSprite oldMain = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestablePlayableSprite oldP2 = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        TestablePlayableSprite oldExtension = new TestablePlayableSprite("extra", (short) 0, (short) 0);
+        oldP2.setCpuController(new SidekickCpuController(oldP2, oldMain));
+        Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49E9, 0x0163);
+        capsule.setServices(new QueryOnlyServices(camera, oldMain, List.of(oldP2, oldExtension))
+                .withGameState(new GameStateManager()));
+        setField(capsule, "opened", 1);
+        setField(capsule, "resultsStarted", 1);
+        setField(capsule, "resultsActiveWaitEntries", 5);
+        capsule.update(0, oldMain);
+        RewindObjectStateBlob snapshot = CompactFieldCapturer.capture(
+                capsule, rewindContext(oldMain, oldP2, oldExtension));
+
+        TestablePlayableSprite newMain = new TestablePlayableSprite("sonic-new", (short) 0, (short) 0);
+        TestablePlayableSprite newP2 = new TestablePlayableSprite("tails-new", (short) 0, (short) 0);
+        TestablePlayableSprite newExtension = new TestablePlayableSprite("extra-new", (short) 0, (short) 0);
+        newP2.setCpuController(new SidekickCpuController(newP2, newMain));
+        capsule.setServices(new QueryOnlyServices(camera, newMain, List.of(newP2, newExtension))
+                .withGameState(new GameStateManager()));
+        CompactFieldCapturer.restore(capsule, snapshot, rewindContext(newMain, newP2, newExtension));
+        Object restoredNativeP2Owner = getObjectField(capsule, "nativeP2EndingPoseOwner");
+        assertSame(newP2, restoredNativeP2Owner,
+                "captured capsule owner must relink through PlayerRefId.sidekick(0)");
+        assertNotSame(oldP2, restoredNativeP2Owner,
+                "stale pre-rewind native P2 instance must be absent after compact restore");
+        ObjectControlState.nativeBit7FullControl().applyTo(newExtension);
+        newExtension.setControlLocked(true);
+        newExtension.setDead(true);
+
+        capsule.update(1, newMain);
+
+        assertFalse(newExtension.isObjectControlled(),
+                "restored extension pose key must resolve to the replacement PlayerRef identity");
+        assertFalse(newExtension.isControlLocked());
+    }
+
+    @Test
     void aizCapsuleResultsActiveWaitRequiresEligibleGroundedSidekick() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
@@ -1124,6 +1256,23 @@ class TestAiz2BossEndSequenceObjects {
         return field.getInt(target);
     }
 
+    private static Object getObjectField(Object target, String fieldName) throws Exception {
+        Field field = findField(target.getClass(), fieldName);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
+    private static RewindCaptureContext rewindContext(
+            AbstractPlayableSprite main,
+            AbstractPlayableSprite nativeP2,
+            AbstractPlayableSprite extension) {
+        RewindIdentityTable identities = new RewindIdentityTable();
+        identities.registerPlayer(main, PlayerRefId.mainPlayer());
+        identities.registerPlayer(nativeP2, PlayerRefId.sidekick(0));
+        identities.registerPlayer(extension, PlayerRefId.sidekick(1));
+        return RewindCaptureContext.withIdentityTable(identities);
+    }
+
     private static final class NeutralFloatingCapsuleForTest extends AbstractS3kFloatingEndEggCapsuleInstance {
         NeutralFloatingCapsuleForTest() {
             super(0, 0, "NeutralFloatingCapsuleForTest");
@@ -1199,10 +1348,16 @@ class TestAiz2BossEndSequenceObjects {
     private static class QueryOnlyServices extends TestObjectServices {
         private final Camera camera;
         private final ObjectPlayerQuery playerQuery;
+        private List<TestablePlayableSprite> sidekicks;
 
         QueryOnlyServices(Camera camera, TestablePlayableSprite main, List<TestablePlayableSprite> sidekicks) {
             this.camera = camera;
-            this.playerQuery = new ObjectPlayerQuery(() -> main, () -> sidekicks);
+            this.sidekicks = sidekicks;
+            this.playerQuery = new ObjectPlayerQuery(() -> main, () -> this.sidekicks);
+        }
+
+        void setSidekicks(List<TestablePlayableSprite> sidekicks) {
+            this.sidekicks = sidekicks;
         }
 
         @Override

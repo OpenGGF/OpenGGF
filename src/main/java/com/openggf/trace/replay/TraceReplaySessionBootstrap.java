@@ -96,14 +96,15 @@ public final class TraceReplaySessionBootstrap {
     }
 
     /**
-     * Prepare configuration state that must be set before the level is
-     * loaded. Call before the caller loads the level.
+     * Prepare configuration state that must be set before replay gameplay is
+     * initialized. Non-level sessions pass {@code null} for {@code trace} and
+     * skip the level-only S3K intro rule.
      *
      * <p>Isolates trace playback from any gameplay-altering settings
      * the user may have configured for their own game (team,
-     * cross-game donation, skip-intros). Live callers should snapshot
-     * the affected keys via {@link #snapshotGameplayConfig()} before
-     * calling this, and restore them via
+     * cross-game donation, skip-intros, display aspect). Live callers
+     * should snapshot the affected keys via
+     * {@link #snapshotGameplayConfig()} before calling this, and restore them via
      * {@link #restoreGameplayConfig(ConfigSnapshot)} when the trace
      * session tears down.
      */
@@ -123,7 +124,12 @@ public final class TraceReplaySessionBootstrap {
         // trace physics/visuals match the base ROM.
         config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
 
-        if (TraceReplayBootstrap.requiresFreshLevelLoadForTraceReplay(trace)
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        config.resolveDisplayAspect();
+
+        // Non-level sessions pass no TraceData and skip the level-only S3K rule.
+        if (trace != null
+                && TraceReplayBootstrap.requiresFreshLevelLoadForTraceReplay(trace)
                 && "s3k".equals(meta.game())) {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
         }
@@ -139,7 +145,8 @@ public final class TraceReplaySessionBootstrap {
             Object mainCharacterCode,
             Object sidekickCharacterCode,
             Object crossGameFeaturesEnabled,
-            Object s3kSkipIntros) {
+            Object s3kSkipIntros,
+            Object displayAspect) {
     }
 
     public static ConfigSnapshot snapshotGameplayConfig() {
@@ -148,7 +155,8 @@ public final class TraceReplaySessionBootstrap {
                 config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE),
                 config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE),
                 config.getConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED),
-                config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS));
+                config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS),
+                config.getConfigValue(SonicConfiguration.DISPLAY_ASPECT));
     }
 
     public static void restoreGameplayConfig(ConfigSnapshot snapshot) {
@@ -160,6 +168,8 @@ public final class TraceReplaySessionBootstrap {
         restore(config, SonicConfiguration.SIDEKICK_CHARACTER_CODE, snapshot.sidekickCharacterCode());
         restore(config, SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, snapshot.crossGameFeaturesEnabled());
         restore(config, SonicConfiguration.S3K_SKIP_INTROS, snapshot.s3kSkipIntros());
+        restore(config, SonicConfiguration.DISPLAY_ASPECT, snapshot.displayAspect());
+        config.resolveDisplayAspect();
     }
 
     private static void restore(SonicConfigurationService config,

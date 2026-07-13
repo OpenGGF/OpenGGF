@@ -36,11 +36,11 @@ class TestSampleModsPackage {
             "openggf-gallery-music-sample", "phase2-reskin", "phase2-sample",
             "phase3-character", "phase3-standalone");
     private static final Map<String, String> EXPECTED_API_RANGES = Map.of(
-            "openggf-gallery-music-sample", ">=1.0.0 <2.0.0",
-            "phase2-reskin", ">=1.1.0 <2.0.0",
-            "phase2-sample", ">=1.1.0 <2.0.0",
-            "phase3-character", ">=1.2.0 <2.0.0",
-            "phase3-standalone", ">=1.2.0 <2.0.0");
+            "openggf-gallery-music-sample", ">=2.0.0 <3.0.0",
+            "phase2-reskin", ">=2.0.0 <3.0.0",
+            "phase2-sample", ">=2.0.0 <3.0.0",
+            "phase3-character", ">=2.0.0 <3.0.0",
+            "phase3-standalone", ">=2.0.0 <3.0.0");
     private static final Set<String> TRUSTED_CODE_SAMPLES = Set.of(
             "phase2-sample", "phase3-character", "phase3-standalone");
 

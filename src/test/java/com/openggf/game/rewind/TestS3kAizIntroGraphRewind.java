@@ -37,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS3kAizIntroGraphRewind {
@@ -123,6 +124,53 @@ class TestS3kAizIntroGraphRewind {
                 "variant 0 must restore the first ChildObjDat_67A62 X offset");
         assertEquals(plane.getY() + 0x04, result.getY(),
                 "variant 0 must restore the first ChildObjDat_67A62 Y offset");
+    }
+
+    @Test
+    void aizIntroEmeraldGlowSubtypeRecreatesImmutableOffsetsFromCapturedSpawn() {
+        Harness harness = Harness.create();
+        ObjectManager objectManager = harness.objectManager();
+        AizPlaneIntroInstance parent = only(objectManager, AizPlaneIntroInstance.class);
+        AizIntroPlaneChild originalPlane = objectManager.createDynamicObject(
+                () -> new AizIntroPlaneChild(spawn(0x0080, 0x005C, 421), parent));
+        ObjectSpawn glowSpawn = spawn(0x0098, 0x0074, 1, 422);
+        AizIntroEmeraldGlowChild originalGlow = objectManager.createDynamicObject(
+                () -> new AizIntroEmeraldGlowChild(glowSpawn, originalPlane, glowSpawn.subtype() & 1));
+
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+        objectManager.removeDynamicObject(originalGlow);
+        objectManager.removeDynamicObject(originalPlane);
+
+        rewindRegistry.restore(snapshot);
+
+        AizIntroPlaneChild restoredPlane = only(objectManager, AizIntroPlaneChild.class);
+        AizIntroEmeraldGlowChild restoredGlow = only(objectManager, AizIntroEmeraldGlowChild.class);
+        assertNotSame(originalGlow, restoredGlow, "rewind must recreate the glow child");
+        assertSame(restoredPlane, readObjectField(restoredGlow, "parent"),
+                "recreated glow must relink to the restore-time plane");
+        assertEquals(1, readObjectField(restoredGlow, "variant"),
+                "captured subtype 1 must recreate animation variant 1");
+        assertEquals(0x18, restoredGlow.getX() - restoredPlane.getX(),
+                "captured subtype 1 must recreate the second ChildObjDat_67A62 X offset");
+        assertEquals(0x18, restoredGlow.getY() - restoredPlane.getY(),
+                "captured subtype 1 must recreate the second ChildObjDat_67A62 Y offset");
+    }
+
+    @Test
+    void aizIntroEmeraldGlowRejectsVariantThatDisagreesWithCapturedSpawnSubtype() {
+        Harness harness = Harness.create();
+        ObjectManager objectManager = harness.objectManager();
+        AizPlaneIntroInstance parent = only(objectManager, AizPlaneIntroInstance.class);
+        AizIntroPlaneChild plane = objectManager.createDynamicObject(
+                () -> new AizIntroPlaneChild(spawn(0x0080, 0x005C, 431), parent));
+        ObjectSpawn subtypeOneSpawn = spawn(0x0098, 0x0074, 1, 432);
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> new AizIntroEmeraldGlowChild(subtypeOneSpawn, plane, 0));
+
+        assertEquals("AIZ intro glow variant 0 disagrees with captured spawn subtype variant 1",
+                error.getMessage());
     }
 
     @Test
@@ -307,7 +355,11 @@ class TestS3kAizIntroGraphRewind {
     }
 
     private static ObjectSpawn spawn(int x, int y, int layoutIndex) {
-        return new ObjectSpawn(x, y, 0, 0, 0, false, layoutIndex);
+        return spawn(x, y, 0, layoutIndex);
+    }
+
+    private static ObjectSpawn spawn(int x, int y, int subtype, int layoutIndex) {
+        return new ObjectSpawn(x, y, 0, subtype, 0, false, layoutIndex);
     }
 
     private static Map<Class<?>, Integer> familyCounts(ObjectManager objectManager) {

@@ -99,7 +99,7 @@ public class TestDoorObjectInstance {
     }
 
     @Test
-    public void verticalDoorIgnoresExtraEngineSidekickForNativeP1P2Trigger() {
+    public void verticalDoorOpensForAdditionalEngineSidekick() {
         DoorObjectInstance door = new DoorObjectInstance(
                 new ObjectSpawn(0x200, 0x180, 0x3C, 0x00, 0, false, 0));
         TestPlayableSprite main = createPlayerAtCentre(0x200, 0x100);
@@ -110,8 +110,8 @@ public class TestDoorObjectInstance {
 
         door.update(0, main);
 
-        assertEquals(0x180, door.getY(),
-                "Additional engine sidekicks must not open native P1/P2 doors");
+        assertEquals(0x178, door.getY(),
+                "Additional engine sidekicks must not be trapped behind native P1/P2-only doors");
     }
 
     @Test
@@ -210,5 +210,4 @@ public class TestDoorObjectInstance {
         }
     }
 }
-
 

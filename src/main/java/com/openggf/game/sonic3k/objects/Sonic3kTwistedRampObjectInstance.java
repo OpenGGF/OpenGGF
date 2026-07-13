@@ -85,7 +85,8 @@ public class Sonic3kTwistedRampObjectInstance extends AbstractObjectInstance imp
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ObjectServices ctx = tryServices();
         if (ctx != null) {
-            List<PlayableEntity> players = ctx.playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+            List<PlayableEntity> players = ctx.playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
             if (players.isEmpty() && playerEntity == null && !isOnScreenX()) {
                 setDestroyedByOffscreen();
                 return;

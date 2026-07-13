@@ -186,6 +186,16 @@ class TestArchUnitRules {
             "level -> tools",
             "level -> trace",
             "level -> util",
+            // Standalone mod audio (PreparedSfxCursor) plays through the audio-owned
+            // StreamedMusicPort.SfxRef seam; audio never depends back on mods. Phase 3's
+            // prepared one-shot SFX cursor implements the same audio-owned boundary used
+            // by standalone and patched games.
+            "mods -> audio",
+            // OwnerAwareStandaloneModule reads engine ROM/data (com.openggf.data) to
+            // build bounded creator asset roots; data never depends back on mods. Phase 3's
+            // standalone fault boundary wraps the legacy Game/Rom return surface so creator
+            // callbacks stay bounded and ROM exposure is rejected.
+            "mods -> data",
             // Phase 2's creator-facing ModContext intentionally accepts GamePatch;
             // the engine-owned ModRuntime then freezes PatchOwner/RegisteredPatch
             // plans for ModuleResolutionService without exposing mutable state.
@@ -194,12 +204,6 @@ class TestArchUnitRules {
             // the canonical ObjectFactory vocabulary instead of defining a parallel
             // mod-only object abstraction that would drift from engine behavior.
             "mods -> level",
-            // Phase 3's prepared one-shot SFX cursor implements the audio-owned
-            // StreamedMusicPort boundary used by standalone and patched games.
-            "mods -> audio",
-            // Phase 3's standalone fault boundary wraps the legacy Game/Rom return
-            // surface so creator callbacks stay bounded and ROM exposure is rejected.
-            "mods -> data",
             "physics -> camera",
             "physics -> game",
             "physics -> level",

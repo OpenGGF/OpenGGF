@@ -7,6 +7,7 @@ import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RewindRecreatable;
@@ -110,6 +111,29 @@ class TestSonic1FragmentGraphRewind {
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
                         Sonic1SmashBlockObjectInstance.SmashBlockFragmentInstance.class.getName()),
                 "smash-block fragments must not use an explicit dynamic rewind codec");
+    }
+
+    @Test
+    void destructionFragmentsRemainAliveWhileVisibleInAnEightHundredPixelViewport() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 800, 224, 0);
+        Camera camera = mockCamera(800);
+        ObjectServices services = new StubObjectServices() {
+            @Override public Camera camera() { return camera; }
+        };
+        Sonic1BreakableWallObjectInstance.WallFragmentInstance wall =
+                new Sonic1BreakableWallObjectInstance.WallFragmentInstance(
+                        700, 100, 0, 0, 0, 0, null, null);
+        Sonic1SmashBlockObjectInstance.SmashBlockFragmentInstance smash =
+                new Sonic1SmashBlockObjectInstance.SmashBlockFragmentInstance(
+                        700, 100, 0, 0, 0, null, null);
+        wall.setServices(services);
+        smash.setServices(services);
+
+        wall.update(1, null);
+        smash.update(1, null);
+
+        assertFalse(wall.isDestroyed(), "visible GHZ/SLZ wall debris must survive beyond native x=320");
+        assertFalse(smash.isDestroyed(), "visible MZ smash-block debris must survive beyond native x=320");
     }
 
     private record Harness(ObjectManager objectManager) {
@@ -229,10 +253,14 @@ class TestSonic1FragmentGraphRewind {
     }
 
     private static Camera mockCamera() {
+        return mockCamera(320);
+    }
+
+    private static Camera mockCamera(int width) {
         return new Camera() {
             @Override public short getX() { return 0; }
             @Override public short getY() { return 0; }
-            @Override public short getWidth() { return 320; }
+            @Override public short getWidth() { return (short) width; }
             @Override public short getHeight() { return 224; }
         };
     }

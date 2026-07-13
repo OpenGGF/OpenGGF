@@ -2760,6 +2760,7 @@ public class ObjectManager {
     private boolean isObjectOutOfRange(ObjectInstance instance, ObjectSpawn spawn, int cameraX) {
         int referenceX = outOfRangeReferenceX(instance, spawn);
         if (windowingStrategy.overridesUnloadWindow()) {
+            if (windowingStrategy instanceof ViewportAwareObjectWindowingStrategy viewportAware) return viewportAware.isOutsideUnloadWindow(referenceX, cameraX, camera.getWidth());
             return windowingStrategy.isOutsideUnloadWindow(referenceX, cameraX);
         }
         return isOutOfRangeS1(referenceX, cameraX);
@@ -4019,6 +4020,16 @@ public class ObjectManager {
      */
     public com.openggf.game.rewind.schema.RewindCaptureContext captureIdentityContext() {
         return rewindCaptureContext();
+    }
+
+    /**
+     * Verifies that every identity-bearing field captured by the compact default
+     * object path points at an object or player registered in the current rewind
+     * identity context.
+     */
+    public void validateRewindReferenceClosure() {
+        ObjectRewindReferenceClosureValidator.validate(
+                activeObjects.values(), dynamicObjects, auxiliaryDynamicObjects, rewindCaptureContext());
     }
 
     private com.openggf.game.rewind.schema.RewindCaptureContext rewindCaptureContext() {

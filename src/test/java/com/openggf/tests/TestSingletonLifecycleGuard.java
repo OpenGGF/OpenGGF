@@ -350,9 +350,33 @@ class TestSingletonLifecycleGuard {
     }
 
     private static boolean hasSingletonResetExtensionOnEnclosingClass(List<String> lines, int beforeMethodLine) {
+        // Scan upward, reverse-matching braces so fully-closed nested/inner or
+        // sibling classes that sit textually between the method and its real
+        // enclosing class are skipped. Going up, each `}` is a pending close for
+        // a block that lives below us (and cannot enclose the method); a `{` that
+        // has no pending close to match is the opening of a scope that DOES
+        // enclose the method. A `class` declaration line carrying such an
+        // unmatched `{` is a true enclosing class; every enclosing class up to
+        // the top level is checked, matching the @ExtendWith scope JUnit applies.
+        int pending = 0;
         for (int i = beforeMethodLine; i >= 0; i--) {
-            if (CLASS_DECLARATION.matcher(lines.get(i)).find()) {
-                return hasSingletonResetExtensionInAnnotationBlock(lines, i, i);
+            String stripped = stripStringsAndLineComment(lines.get(i));
+            boolean enclosingOpenOnThisLine = false;
+            for (int j = stripped.length() - 1; j >= 0; j--) {
+                char c = stripped.charAt(j);
+                if (c == '}') {
+                    pending++;
+                } else if (c == '{') {
+                    if (pending > 0) {
+                        pending--;
+                    } else {
+                        enclosingOpenOnThisLine = true;
+                    }
+                }
+            }
+            if (enclosingOpenOnThisLine && CLASS_DECLARATION.matcher(lines.get(i)).find()
+                    && hasSingletonResetExtensionInAnnotationBlock(lines, i, i)) {
+                return true;
             }
         }
         return false;

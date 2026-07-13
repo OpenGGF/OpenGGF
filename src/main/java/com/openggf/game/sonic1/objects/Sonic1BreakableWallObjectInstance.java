@@ -410,8 +410,8 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
             var cam = services().camera();
             int cameraX = cam.getX();
             int cameraY = cam.getY();
-            if (posX < cameraX - 64 || posX > cameraX + 320 + 64
-                    || posY > cameraY + 224 + 64) {
+            if (posX < cameraX - 64 || posX > cameraX + viewportWidth() + 64
+                    || posY > cameraY + viewportHeight() + 64) {
                 setDestroyed(true);
             }
         }

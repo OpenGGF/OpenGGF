@@ -63,7 +63,7 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
     private static final int SHAKE_STEP = 2;
     private static final int FALL_COLLISION_FLAGS = 0x82;
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
-            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
     private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
             TouchCategoryDecodeMode.NORMAL,
             false,

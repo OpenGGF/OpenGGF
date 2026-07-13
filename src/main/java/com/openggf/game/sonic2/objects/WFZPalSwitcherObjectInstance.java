@@ -12,6 +12,7 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
 
 /**
@@ -60,7 +61,7 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
     private static final float FLIPPED_G = 0.0f;
     private static final float FLIPPED_B = 0.8f;
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
-            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     private int triggerHalfHeight;       // Y range (half-height) from WIDTH_TABLE
     private boolean xFlipped;            // x_flip from render_flags (determines toggle direction)
@@ -68,6 +69,9 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
     // Per-character crossing state (ROM: objoff_34 for Sonic, objoff_35 for Tails)
     private boolean sonicPastTrigger;
     private boolean tailsPastTrigger;
+    private IdentityHashMap<PlayableEntity, Boolean> extraPlayerPastTrigger = new IdentityHashMap<>();
+    private PlayableEntity mainStateOwner;
+    private PlayableEntity sidekickStateOwner;
 
     private boolean initialized;
 
@@ -95,10 +99,14 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
             return;
         }
 
+        List<PlayableEntity> participants = participants(playerEntity);
+        bindStateOwners(participants);
+        extraPlayerPastTrigger.keySet().removeIf(player -> !containsIdentity(participants, player));
+
         // Initialize crossing state based on current player positions
         // ROM: Obj8B_Init checks MainCharacter and Sidekick against x_pos (s2.asm:46554-46564)
         if (!initialized) {
-            initializeCrossingState(participants(playerEntity));
+            initializeCrossingState(participants);
             initialized = true;
         }
 
@@ -109,10 +117,34 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
 
         // Check Sonic (main character)
         // ROM: lea objoff_34(a0),a2 / lea (MainCharacter).w,a1 / bsr.s loc_2142A
-        List<PlayableEntity> participants = participants(playerEntity);
         for (int i = 0; i < participants.size(); i++) {
-            checkPlayerCrossing((AbstractPlayableSprite) participants.get(i), i == 0);
+            if (participants.get(i) instanceof AbstractPlayableSprite player) {
+                checkPlayerCrossing(player, i);
+            }
         }
+    }
+
+    private void bindStateOwners(List<PlayableEntity> participants) {
+        mainStateOwner = bindStateOwner(mainStateOwner,
+                participants.isEmpty() ? null : participants.getFirst(), true);
+        sidekickStateOwner = bindStateOwner(sidekickStateOwner,
+                participants.size() > 1 ? participants.get(1) : null, false);
+    }
+
+    private PlayableEntity bindStateOwner(PlayableEntity previous, PlayableEntity current, boolean mainSlot) {
+        if (previous == current) return current;
+        boolean past = mainSlot ? sonicPastTrigger : tailsPastTrigger;
+        if (previous == null && current != null && !extraPlayerPastTrigger.containsKey(current)) return current;
+        if (previous != null) extraPlayerPastTrigger.put(previous, past);
+        boolean restored = current != null && Boolean.TRUE.equals(extraPlayerPastTrigger.remove(current));
+        if (mainSlot) sonicPastTrigger = restored;
+        else tailsPastTrigger = restored;
+        return current;
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity target) {
+        for (PlayableEntity participant : participants) if (participant == target) return true;
+        return false;
     }
 
     private List<PlayableEntity> participants(PlayableEntity updatePlayer) {
@@ -144,7 +176,7 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
         // Same check for sidekick(s)
         for (int i = 1; i < participants.size(); i++) {
             // ROM: cmp.w x_pos(a1),d1 / bhs.s Obj8B_Main (s2.asm:46562-46563)
-            tailsPastTrigger = participants.get(i).getCentreX() > objX;
+            setPastTrigger(participants.get(i), i, participants.get(i).getCentreX() > objX);
         }
     }
 
@@ -169,13 +201,13 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
      *   ; ... Y range check, then apply OPPOSITE toggle based on x_flip
      * </pre>
      */
-    private void checkPlayerCrossing(AbstractPlayableSprite player, boolean isSonic) {
+    private void checkPlayerCrossing(AbstractPlayableSprite player, int playerIndex) {
         int objX = spawn.x();
         int objY = spawn.y();
         int playerX = player.getCentreX();
         int playerY = player.getCentreY();
 
-        boolean pastTrigger = isSonic ? sonicPastTrigger : tailsPastTrigger;
+        boolean pastTrigger = pastTrigger(player, playerIndex);
 
         if (!pastTrigger) {
             // Player was to the left of trigger line
@@ -186,11 +218,7 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
             }
             // Player has crossed to the right - set flag
             // ROM: move.b #1,-1(a2) (s2.asm:46580)
-            if (isSonic) {
-                sonicPastTrigger = true;
-            } else {
-                tailsPastTrigger = true;
-            }
+            setPastTrigger(player, playerIndex, true);
 
             // Check Y range
             // ROM: sub.w d4,d2 / add.w d4,d3 where d2=objY, d3=objY, d4=triggerHalfHeight
@@ -214,11 +242,7 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
             }
             // Player has crossed back to the left - clear flag
             // ROM: move.b #0,-1(a2) (s2.asm:46605)
-            if (isSonic) {
-                sonicPastTrigger = false;
-            } else {
-                tailsPastTrigger = false;
-            }
+            setPastTrigger(player, playerIndex, false);
 
             // Check Y range
             if (!isWithinYRange(playerY, objY, triggerHalfHeight)) {
@@ -231,6 +255,22 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
             // move.b #1,(WFZ_SCZ_Fire_Toggle).w (flipped: set to 1)
             // + move.b #0,(WFZ_SCZ_Fire_Toggle).w (unflipped: set to 0)
             applyReverseToggle();
+        }
+    }
+
+    private boolean pastTrigger(PlayableEntity player, int playerIndex) {
+        return switch (playerIndex) {
+            case 0 -> sonicPastTrigger;
+            case 1 -> tailsPastTrigger;
+            default -> extraPlayerPastTrigger.getOrDefault(player, false);
+        };
+    }
+
+    private void setPastTrigger(PlayableEntity player, int playerIndex, boolean pastTrigger) {
+        switch (playerIndex) {
+            case 0 -> sonicPastTrigger = pastTrigger;
+            case 1 -> tailsPastTrigger = pastTrigger;
+            default -> extraPlayerPastTrigger.put(player, pastTrigger);
         }
     }
 

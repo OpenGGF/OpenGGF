@@ -24,7 +24,9 @@ import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Object 0x59 - MGZ Dash Trigger.
@@ -67,6 +69,12 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
     // ROM: cmpi.b #9,anim(a1) -- player must be in the spindash animation
     private static final int SPINDASH_ANIM_ID = Sonic3kAnimationIds.SPINDASH.id();
 
+    /**
+     * Missing-capability fallback threshold. Twelve grounded frames (one fifth
+     * of a second) separates deliberate run/push intent from incidental contact.
+     */
+    private static final int NO_SPINDASH_INTENT_THRESHOLD = 12;
+
     // ROM: move.w #$1B,d1 / move.w #$10,d2 / sub_1DD0E (sloped solid 27 px wide, 16 tall)
     private static final int SOLID_HALF_WIDTH = 0x1B;
     private static final int SOLID_HALF_HEIGHT = 0x10;
@@ -99,6 +107,9 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
     private int childFrameStep = 1;
     // ROM: anim_frame_timer(a0) -- child sprite delay counter.
     private int childAnimFrameTimer;
+
+    /** Per-player missing-capability intent, captured through stable PlayerRefId map keys. */
+    private final Map<AbstractPlayableSprite, Integer> noSpindashIntentFrames = new IdentityHashMap<>();
 
     public MGZDashTriggerObjectInstance(ObjectSpawn spawn) {
         super(spawn, "MGZDashTrigger");
@@ -133,6 +144,8 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
             mappingFrame = FRAME_REST;
             return;
         }
+
+        noSpindashIntentFrames.clear();
 
         // ROM: subq.w #1,$30(a0); bne.s loc_25E4A
         armTimer--;
@@ -173,10 +186,50 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
     private void tryArmFromPlayer(AbstractPlayableSprite player) {
         if (player == null) return;
         boolean animationMatches = player.getAnimationId() == SPINDASH_ANIM_ID;
-        boolean spindashFlag = player.getSpindash();
-        if (!animationMatches && !spindashFlag) return;
-        if (!isAdjacent(player)) return;
+        if (animationMatches) {
+            noSpindashIntentFrames.remove(player);
+            if (isAdjacent(player)) {
+                arm(player);
+            }
+            return;
+        }
 
+        if (!hasSustainedNoSpindashIntent(player)) {
+            noSpindashIntentFrames.remove(player);
+            return;
+        }
+
+        int frames = noSpindashIntentFrames.merge(player, 1, Integer::sum);
+        if (frames < NO_SPINDASH_INTENT_THRESHOLD) {
+            return;
+        }
+
+        // The native path above remains animation-9 exact. This extension is
+        // capability-driven only: no donor, zone, route, character, or frame carve-out.
+        noSpindashIntentFrames.clear();
+        arm(player);
+    }
+
+    private boolean hasSustainedNoSpindashIntent(AbstractPlayableSprite player) {
+        var rules = player.getGameRules();
+        if (rules == null || rules.playerCapability() == null
+                || rules.playerCapability().spindashEnabled()
+                || player.getAir()
+                || !isAdjacent(player)) {
+            return false;
+        }
+
+        int playerX = player.getCentreX();
+        if (playerX < spawn.x()) {
+            return player.isRightPressed();
+        }
+        if (playerX > spawn.x()) {
+            return player.isLeftPressed();
+        }
+        return player.isLeftPressed() || player.isRightPressed();
+    }
+
+    private void arm(AbstractPlayableSprite player) {
         armTimer = TIMER_DURATION;
         boolean playerFacingLeft = player.getDirection() == Direction.LEFT;
         childFrameStep = (playerFacingLeft == facingLeft) ? -1 : 1;

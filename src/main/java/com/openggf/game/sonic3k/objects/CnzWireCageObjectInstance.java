@@ -14,6 +14,7 @@ import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -139,6 +140,24 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
         if (nativeP2 != null) {
             processPlayer(frameCounter, nativeP2, true, leaderDplcClobberedD6);
         }
+        PlayableEntity queryMain = services.playerQuery().mainPlayerOrNull();
+        List<PlayableEntity> participants = new ArrayList<>(services.playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED));
+        if (leader != null && !containsIdentity(participants, leader)) {
+            participants.add(0, leader);
+        }
+        for (PlayableEntity candidate : participants) {
+            if (candidate instanceof AbstractPlayableSprite extension
+                    && extension != leader
+                    && extension != nativeP2
+                    && extension != queryMain) {
+                // Engine extension: native P1/P2 execute first. Third-plus riders
+                // use the clean P2 standing-bit path with identity-owned CageState;
+                // the ROM's dirty-d6 quirk remains exclusive to native P2 above.
+                processPlayer(frameCounter, extension, true, false);
+            }
+        }
+        releaseMissingRiders(participants);
     }
 
     @Override
@@ -512,6 +531,26 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
             }
         }
         return null;
+    }
+
+    private void releaseMissingRiders(List<PlayableEntity> participants) {
+        for (Map.Entry<AbstractPlayableSprite, CageState> entry : new ArrayList<>(riders.entrySet())) {
+            if (containsIdentity(participants, entry.getKey())) {
+                continue;
+            }
+            CageState state = entry.getValue();
+            if (state.latched || state.cooldown > 0) {
+                release(entry.getKey(), state, 0);
+            }
+            riders.remove(entry.getKey());
+        }
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity target) {
+        for (PlayableEntity participant : participants) {
+            if (participant == target) return true;
+        }
+        return false;
     }
 
     private void updateReleaseRide(AbstractPlayableSprite player, CageState state) {

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.scroll;
 
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.game.GameServices;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
@@ -275,17 +277,24 @@ public class SwScrlGhz extends AbstractZoneScrollHandler {
     @Override
     public int getBgPeriodWidth() {
         int bg3X = (int) (bg3XPos >> 16);
-        // Camera spread: water band interpolates up to cameraX + 320
-        int cameraSpread = lastCameraX + 320 - bg3X;
+        return requiredBgPeriodWidth(lastCameraX, bg3X,
+                cloudLayer1Counter, cloudLayer2Counter, cloudLayer3Counter, viewportWidth());
+    }
+
+    static int requiredBgPeriodWidth(int cameraX, int bg3X,
+            int cloud1Counter, int cloud2Counter, int cloud3Counter, int viewportWidth) {
+        int coverageWidth = Math.max(320, viewportWidth);
+        // Camera spread: water band interpolates through the active right edge.
+        int cameraSpread = cameraX + coverageWidth - bg3X;
 
         // Cloud bands scroll at bg3X + cloudOffset. The fastest layer (cloud1)
         // advances 1 pixel/frame. Include the maximum absolute cloud offset so
         // the tilemap covers the full visible cloud range without a mid-screen
         // wrap seam.
-        int c1 = Math.abs((short) (cloudLayer1Counter >> 16));
-        int c2 = Math.abs((short) (cloudLayer2Counter >> 16));
-        int c3 = Math.abs((short) (cloudLayer3Counter >> 16));
-        int cloudSpread = Math.max(c1, Math.max(c2, c3)) + 320;
+        int c1 = Math.abs((short) (cloud1Counter >> 16));
+        int c2 = Math.abs((short) (cloud2Counter >> 16));
+        int c3 = Math.abs((short) (cloud3Counter >> 16));
+        int cloudSpread = Math.max(c1, Math.max(c2, c3)) + coverageWidth;
 
         int spread = Math.max(cameraSpread, cloudSpread);
 
@@ -298,5 +307,13 @@ public class SwScrlGhz extends AbstractZoneScrollHandler {
         // is at the BG map's natural wrap point — the same boundary the VDP
         // encounters when the nametable cycles through the full map.
         return Math.min(width, 8192);
+    }
+
+    private int viewportWidth() {
+        try {
+            return GameServices.configuration().getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
+        } catch (RuntimeException ignored) {
+            return 320;
+        }
     }
 }

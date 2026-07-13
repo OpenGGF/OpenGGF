@@ -239,7 +239,7 @@ class Sonic1SBZEvents extends Sonic1ZoneEvents {
         fzTransitionRequested = true;
 
         // ROM: move.b #1,(f_playerctrl).w - lock player controls
-        camera().getFocusedSprite().setControlLocked(true);
+        lockPlayersForTransition(camera().getFocusedSprite());
 
         // ROM: clr.b (v_lastlamp).w - checkpoint cleared by requestZoneAndAct
         // ROM: move.w #(id_SBZ<<8)+2,(v_zone).w - FZ is zone 6 act 0 in our engine

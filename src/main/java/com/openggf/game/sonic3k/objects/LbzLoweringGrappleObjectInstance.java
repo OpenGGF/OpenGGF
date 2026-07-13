@@ -16,7 +16,10 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * S3K S3KL object $1F - Launch Base Zone Act 2 lowering grapple.
@@ -54,6 +57,9 @@ public final class LbzLoweringGrappleObjectInstance extends AbstractObjectInstan
     private final boolean startLoweredMode;
     private final boolean[] grabbed = new boolean[PLAYER_SLOT_COUNT];
     private final int[] cooldown = new int[PLAYER_SLOT_COUNT];
+    private PlayableEntity player1Owner;
+    private PlayableEntity player2Owner;
+    private final Map<PlayableEntity, PlayerState> extensionStates = new IdentityHashMap<>();
 
     private int currentExtension;
     private int currentY;
@@ -75,11 +81,89 @@ public final class LbzLoweringGrappleObjectInstance extends AbstractObjectInstan
             return;
         }
 
+        List<PlayableEntity> participants = participants(playerEntity);
+        bindNativeOwners(participants);
+        releaseOmittedExtensions(participants, frameCounter);
         updateExtension();
-        NativePlayerSlots slots = nativePlayerSlots(playerEntity);
-        updatePlayerSlot(slots.player(0), 0, frameCounter);
-        updatePlayerSlot(slots.player(1), 1, frameCounter);
+        updatePlayerSlot(asSprite(participants, 0), 0, frameCounter);
+        updatePlayerSlot(asSprite(participants, 1), 1, frameCounter);
+        for (int i = 2; i < participants.size(); i++) {
+            if (participants.get(i) instanceof AbstractPlayableSprite player) {
+                updateExtensionPlayer(player, frameCounter);
+            }
+        }
         updateDynamicSpawn(anchorX, currentY);
+    }
+
+    private void updateExtensionPlayer(AbstractPlayableSprite player, int frameCounter) {
+        PlayerState state = extensionStates.computeIfAbsent(player, ignored -> new PlayerState());
+        boolean savedGrabbed = grabbed[1]; int savedCooldown = cooldown[1];
+        grabbed[1] = state.grabbed; cooldown[1] = state.cooldown;
+        updatePlayerSlot(player, 1, frameCounter);
+        state.grabbed = grabbed[1]; state.cooldown = cooldown[1];
+        grabbed[1] = savedGrabbed; cooldown[1] = savedCooldown;
+    }
+
+    private List<PlayableEntity> participants(PlayableEntity fallback) {
+        List<PlayableEntity> players = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (fallback == null || players.contains(fallback)) return players;
+        ArrayList<PlayableEntity> result = new ArrayList<>(players.size() + 1);
+        result.add(fallback); result.addAll(players); return result;
+    }
+
+    private AbstractPlayableSprite asSprite(List<PlayableEntity> players, int index) {
+        return index < players.size() && players.get(index) instanceof AbstractPlayableSprite sprite ? sprite : null;
+    }
+
+    private void bindNativeOwners(List<PlayableEntity> players) {
+        player1Owner = bindOwner(player1Owner, players.isEmpty() ? null : players.get(0), 0);
+        player2Owner = bindOwner(player2Owner, players.size() > 1 ? players.get(1) : null, 1);
+    }
+
+    private PlayableEntity bindOwner(PlayableEntity previous, PlayableEntity current, int slot) {
+        if (previous == current) return current;
+        if (previous == null && current != null && !extensionStates.containsKey(current)) return current;
+        if (previous != null) extensionStates.put(previous, new PlayerState(grabbed[slot], cooldown[slot]));
+        PlayerState restored = current == null ? null : extensionStates.remove(current);
+        grabbed[slot] = restored != null && restored.grabbed;
+        cooldown[slot] = restored == null ? 0 : restored.cooldown;
+        return current;
+    }
+
+    private void releaseOmittedExtensions(List<PlayableEntity> players, int frameCounter) {
+        for (PlayableEntity omitted : List.copyOf(extensionStates.keySet())) {
+            if (players.stream().noneMatch(live -> live == omitted)) {
+                PlayerState state = extensionStates.remove(omitted);
+                if (state.grabbed && omitted instanceof AbstractPlayableSprite player) {
+                    releaseOwnedControl(player, frameCounter);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onUnload() {
+        releaseOwner(player1Owner, grabbed[0]);
+        releaseOwner(player2Owner, grabbed[1]);
+        extensionStates.forEach((player, state) -> releaseOwner(player, state.grabbed));
+        extensionStates.clear(); grabbed[0] = grabbed[1] = false;
+    }
+
+    private void releaseOwner(PlayableEntity owner, boolean isGrabbed) {
+        if (isGrabbed && owner instanceof AbstractPlayableSprite player) releaseOwnedControl(player, 0);
+    }
+
+    private void releaseOwnedControl(AbstractPlayableSprite player, int frameCounter) {
+        if (player.isObjectControlled() && player.getAnimationId() == Sonic3kAnimationIds.HANG2.id()) {
+            player.releaseFromObjectControl(frameCounter);
+        }
+    }
+
+    private static final class PlayerState {
+        boolean grabbed; int cooldown;
+        PlayerState() { }
+        PlayerState(boolean grabbed, int cooldown) { this.grabbed = grabbed; this.cooldown = cooldown; }
     }
 
     @Override

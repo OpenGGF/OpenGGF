@@ -895,6 +895,43 @@ class TestS3kIczEndBossObject {
     }
 
     @Test
+    void frostPuffsFreezeThirdPlayerWithoutDisplacingNativeP1P2Prefix() throws Exception {
+        ObjectInstance instance = new Sonic3kObjectRegistry().create(
+                new ObjectSpawn(0x4490, 0x05B8, ICZ_END_BOSS_ID, 0, 0, false, 0));
+        AbstractObjectInstance object = (AbstractObjectInstance) instance;
+        RecordingServices services = new RecordingServices();
+        AbstractPlayableSprite main = mock(AbstractPlayableSprite.class);
+        AbstractPlayableSprite nativeP2 = mock(AbstractPlayableSprite.class);
+        AbstractPlayableSprite extension = mock(AbstractPlayableSprite.class);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> main, () -> List.of(nativeP2, extension)));
+        services.camera.setX((short) 0x4390);
+        services.camera.setY((short) 0x05F8);
+        object.setServices(services);
+
+        int activePuff = -1;
+        int nextFrame = 1;
+        for (; nextFrame <= 720 && activePuff < 0; nextFrame++) {
+            instance.update(nextFrame, main);
+            int puffCount = invokeInt(instance, "getFrostPuffCountForTesting");
+            for (int i = 0; i < puffCount; i++) {
+                if ((Boolean) instance.getClass().getMethod("isFrostPuffCaptureActiveForTesting", int.class)
+                        .invoke(instance, i)) {
+                    activePuff = i;
+                    break;
+                }
+            }
+        }
+        assertTrue(activePuff >= 0);
+        bindPlayerToFrostPuff(instance, extension, activePuff);
+
+        instance.update(nextFrame, main);
+
+        org.mockito.Mockito.verify(extension, org.mockito.Mockito.atLeastOnce()).setAnimationId(0x1A);
+        org.mockito.Mockito.verify(main, org.mockito.Mockito.never()).setAnimationId(0x1A);
+        org.mockito.Mockito.verify(nativeP2, org.mockito.Mockito.never()).setAnimationId(0x1A);
+    }
+
+    @Test
     void robotnikShipChildIsVisibleAndTracksBossCentre() throws Exception {
         ObjectInstance instance = createTriggeredBoss();
 

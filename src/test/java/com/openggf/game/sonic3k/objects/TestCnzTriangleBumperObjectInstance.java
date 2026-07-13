@@ -89,7 +89,7 @@ class TestCnzTriangleBumperObjectInstance {
     }
 
     @Test
-    void nativeP2QuerySidekickBouncesButExtraEngineSidekickDoesNot() {
+    void nativeP2PrefixAndExtraEngineSidekicksAllBounceIndependently() {
         CnzTriangleBumperObjectInstance bumper = new CnzTriangleBumperObjectInstance(
                 new ObjectSpawn(0x0200, 0x0300, Sonic3kObjectIds.CNZ_TRIANGLE_BUMPER, 0x40, 0, false, 0));
         AbstractPlayableSprite main = newPlayer();
@@ -110,9 +110,9 @@ class TestCnzTriangleBumperObjectInstance {
         assertEquals((short) 0x0800, nativeP2.getXSpeed(),
                 "CNZ triangle bumper native P2 participation should come from ObjectPlayerQuery");
         assertEquals((short) -0x0800, nativeP2.getYSpeed());
-        assertEquals((short) 0x0123, extraSidekick.getXSpeed(),
-                "Only native P1/P2 should participate; extra engine sidekicks must not be promoted");
-        assertEquals((short) -0x0456, extraSidekick.getYSpeed());
+        assertEquals((short) 0x0800, extraSidekick.getXSpeed(),
+                "additional engine sidekicks must receive the same local bumper interaction after native P2");
+        assertEquals((short) -0x0800, extraSidekick.getYSpeed());
     }
 
     private static AbstractPlayableSprite newPlayer() {

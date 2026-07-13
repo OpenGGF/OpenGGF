@@ -458,7 +458,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         this(bootstrap, null);
     }
 
-    Sonic3kAIZEvents(Sonic3kLoadBootstrap bootstrap, IntSupplier vblankCounterSource) {
+    public Sonic3kAIZEvents(Sonic3kLoadBootstrap bootstrap, IntSupplier vblankCounterSource) {
         this.bootstrap = bootstrap;
         this.vblankCounterSource = vblankCounterSource;
     }

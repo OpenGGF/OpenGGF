@@ -3,12 +3,14 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
@@ -23,7 +25,9 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * S3K S3KL object $10 - Launch Base tube elevator.
@@ -76,6 +80,9 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
 
     private final PlayerTubeState p1 = new PlayerTubeState();
     private final PlayerTubeState p2 = new PlayerTubeState();
+    private PlayableEntity p1Owner;
+    private PlayableEntity p2Owner;
+    private final Map<PlayableEntity, PlayerTubeState> extensionStates = new IdentityHashMap<>();
     private boolean closedOnly;
 
     private int x;
@@ -120,11 +127,18 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureOverlayChild();
+        AbstractPlayableSprite player1 = playableSprite(playerEntity);
+        AbstractPlayableSprite player2 = nativeP2OrNull();
+        List<PlayableEntity> participants = allParticipantsOrNull();
         if (!closedOnly) {
-            updateAction(playerEntity);
-            processPlayers(playerEntity);
+            // Preserve the ROM's Player_1 then Player_2 state prefix. Identity
+            // migration only moves ownership when the configured roster changes.
+            p1Owner = bindNativeState(p1, p1Owner, player1);
+            p2Owner = bindNativeState(p2, p2Owner, player2);
+            updateAction();
+            processPlayers(player1, player2, participants);
         } else {
-            suppressClosedDestinationIfEnteringFromActiveElevator(playerEntity);
+            suppressClosedDestinationIfAnyPlayerIsEntering(playerEntity, participants);
             updateClosedBob();
         }
         updateDynamicSpawn(x, y);
@@ -176,13 +190,13 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         overlayChild = child;
     }
 
-    private void updateAction(PlayableEntity playerEntity) {
+    private void updateAction() {
         switch (state) {
             case STATE_WAIT_PLAYER -> updateWaitPlayer();
             case STATE_START_SPIN -> updateStartSpin();
             case STATE_MOVE_PATH -> updateMovePath();
             case STATE_SLOW_SPIN -> updateSlowSpin();
-            case STATE_WAIT_EXIT -> updateWaitExit(playerEntity);
+            case STATE_WAIT_EXIT -> updateWaitExit();
             case STATE_END_SPIN -> updateEndSpin();
             case STATE_CLOSED -> updateClosedBob();
             default -> state = STATE_CLOSED;
@@ -190,7 +204,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
     }
 
     private void updateWaitPlayer() {
-        if (p1.phase == 2 || p2.phase == 2) {
+        if (anyStateInPhase(2)) {
             state = STATE_START_SPIN;
             playRollingSfx();
             updateStartSpin();
@@ -251,7 +265,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         spinShell();
         if (spinSpeed == MIN_SPIN_SPEED && mappingFrame == 2) {
             state = STATE_WAIT_EXIT;
-            updateWaitExit(null);
+            updateWaitExit();
             return;
         }
         if (spinSpeed != MIN_SPIN_SPEED) {
@@ -260,12 +274,12 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
                 spinSpeed = MIN_SPIN_SPEED;
             }
         }
-        updateWaitExit(null);
+        updateWaitExit();
     }
 
-    private void updateWaitExit(PlayableEntity playerEntity) {
+    private void updateWaitExit() {
         applyBobOpen();
-        if (p1.phase != 2 && p2.phase != 2 && !hasReleasedPlayerStillStanding(playerEntity)) {
+        if (!anyStateInPhase(2) && !hasReleasedPlayerStillStanding()) {
             state = STATE_END_SPIN;
             endSpinTimer = 0;
         }
@@ -293,10 +307,24 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         applyBobFull();
     }
 
-    private void suppressClosedDestinationIfEnteringFromActiveElevator(PlayableEntity player) {
-        if (!isPlayerEnteringFromActiveElevator(player)) {
+    private void suppressClosedDestinationIfAnyPlayerIsEntering(
+            PlayableEntity mainPlayer,
+            List<PlayableEntity> participants) {
+        if (isPlayerEnteringFromActiveElevator(mainPlayer)) {
+            suppressClosedDestination();
             return;
         }
+        if (participants != null) {
+            for (PlayableEntity participant : participants) {
+                if (participant != mainPlayer && isPlayerEnteringFromActiveElevator(participant)) {
+                    suppressClosedDestination();
+                    return;
+                }
+            }
+        }
+    }
+
+    private void suppressClosedDestination() {
         x = CLOSED_SUPPRESSED_X;
         fixedX = (long) x << 16;
     }
@@ -322,11 +350,32 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
                 && !elevator.closedOnly;
     }
 
-    private void processPlayers(PlayableEntity playerEntity) {
-        AbstractPlayableSprite player1 = playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
-        AbstractPlayableSprite player2 = nativeP2OrNull();
+    private void processPlayers(
+            AbstractPlayableSprite player1,
+            AbstractPlayableSprite player2,
+            List<PlayableEntity> participants) {
         processPlayer(player1, p1, false);
         processPlayer(player2, p2, p1.phase != 0);
+        if (participants != null) {
+            for (PlayableEntity participant : participants) {
+                if (participant == p1Owner || participant == p2Owner) {
+                    continue;
+                }
+                AbstractPlayableSprite player = playableSprite(participant);
+                if (player != null) {
+                    PlayerTubeState tubeState = extensionStates.computeIfAbsent(
+                            participant, ignored -> new PlayerTubeState());
+                    processExtensionPlayer(player, tubeState, anyOtherStateInPhase(tubeState, 2));
+                }
+            }
+        }
+        // A captured player stays owned for carrying and cleanup even while a
+        // live roster temporarily omits that identity.
+        for (Map.Entry<PlayableEntity, PlayerTubeState> entry : extensionStates.entrySet()) {
+            if (entry.getValue().phase == 2 && !containsIdentity(participants, entry.getKey())) {
+                processPlayer(playableSprite(entry.getKey()), entry.getValue(), true);
+            }
+        }
     }
 
     private AbstractPlayableSprite nativeP2OrNull() {
@@ -340,6 +389,10 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
 
     private void processPlayer(AbstractPlayableSprite player, PlayerTubeState tubeState, boolean otherPlayerInside) {
         if (player == null) {
+            return;
+        }
+        if (tubeState.phase == 2 && (player.getDead() || player.isHurt() || player.isDebugMode())) {
+            releaseForCleanup(player, tubeState);
             return;
         }
         if (tubeState.phase == 0) {
@@ -364,8 +417,27 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         }
     }
 
+    private void processExtensionPlayer(
+            AbstractPlayableSprite player,
+            PlayerTubeState tubeState,
+            boolean otherPlayerInside) {
+        if (tubeState.phase == 0 && isUnavailableExtensionEntry(player)) {
+            return;
+        }
+        processPlayer(player, tubeState, otherPlayerInside);
+    }
+
+    private static boolean isUnavailableExtensionEntry(AbstractPlayableSprite player) {
+        return player.getDead()
+                || player.isHurt()
+                || player.isDebugMode()
+                || player.isObjectControlled()
+                || player.isControlLocked();
+    }
+
     private boolean canCapture(AbstractPlayableSprite player) {
-        if (player.isDebugMode() || player.isObjectControlled() || player.getAir()) {
+        if (player.getDead() || player.isHurt() || player.isDebugMode()
+                || player.isObjectControlled() || player.getAir()) {
             return false;
         }
         int dx = player.getCentreX() - x + PLAYER_X_BIAS;
@@ -410,8 +482,16 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         player.setRenderFlips(PLAYER_H_FLIP[index], player.getRenderVFlip());
     }
 
-    private boolean hasReleasedPlayerStillStanding(PlayableEntity playerEntity) {
-        return isReleasedPlayerStanding(playerEntity, p1) || isReleasedPlayerStanding(nativeP2OrNull(), p2);
+    private boolean hasReleasedPlayerStillStanding() {
+        if (isReleasedPlayerStanding(p1Owner, p1) || isReleasedPlayerStanding(p2Owner, p2)) {
+            return true;
+        }
+        for (Map.Entry<PlayableEntity, PlayerTubeState> entry : extensionStates.entrySet()) {
+            if (isReleasedPlayerStanding(entry.getKey(), entry.getValue())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isReleasedPlayerStanding(PlayableEntity player, PlayerTubeState tubeState) {
@@ -540,8 +620,116 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         return x + CHILD_X_OFFSETS[frame];
     }
 
-    private static final class PlayerTubeState {
+    private PlayableEntity bindNativeState(
+            PlayerTubeState nativeState,
+            PlayableEntity previousOwner,
+            AbstractPlayableSprite currentPlayer) {
+        if (previousOwner == currentPlayer) {
+            return previousOwner;
+        }
+        // Compatibility for native state captured before owner references were
+        // introduced, and for focused fixtures that seed the ROM phase directly.
+        if (previousOwner == null && currentPlayer != null && nativeState.phase != 0) {
+            return currentPlayer;
+        }
+        if (previousOwner != null && nativeState.phase != 0) {
+            extensionStates.computeIfAbsent(previousOwner, ignored -> new PlayerTubeState())
+                    .copyFrom(nativeState);
+        }
+        nativeState.phase = 0;
+        if (currentPlayer != null) {
+            PlayerTubeState restored = extensionStates.remove(currentPlayer);
+            if (restored != null) {
+                nativeState.copyFrom(restored);
+            }
+        }
+        return currentPlayer;
+    }
+
+    private boolean anyStateInPhase(int phase) {
+        if (p1.phase == phase || p2.phase == phase) {
+            return true;
+        }
+        return extensionStates.values().stream().anyMatch(state -> state.phase == phase);
+    }
+
+    private boolean anyOtherStateInPhase(PlayerTubeState excluded, int phase) {
+        if ((p1 != excluded && p1.phase == phase) || (p2 != excluded && p2.phase == phase)) {
+            return true;
+        }
+        return extensionStates.values().stream()
+                .anyMatch(state -> state != excluded && state.phase == phase);
+    }
+
+    private List<PlayableEntity> allParticipantsOrNull() {
+        try {
+            return services().playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        } catch (IllegalStateException ignored) {
+            return null;
+        }
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> players, PlayableEntity target) {
+        if (players == null) {
+            return false;
+        }
+        for (PlayableEntity player : players) {
+            if (player == target) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static AbstractPlayableSprite playableSprite(PlayableEntity player) {
+        return player instanceof AbstractPlayableSprite sprite ? sprite : null;
+    }
+
+    private void releaseForCleanup(AbstractPlayableSprite player, PlayerTubeState tubeState) {
+        tubeState.phase = 0;
+        ObjectControlState.none().applyTo(player);
+        player.setControlLocked(false);
+        player.setObjectMappingFrameControl(false);
+        player.setOnObject(false);
+        player.setLatchedSolidObjectId(0);
+    }
+
+    @Override
+    public void onUnload() {
+        releaseOwnedPlayerForUnload(p1Owner, p1);
+        releaseOwnedPlayerForUnload(p2Owner, p2);
+        for (Map.Entry<PlayableEntity, PlayerTubeState> entry : extensionStates.entrySet()) {
+            releaseOwnedPlayerForUnload(entry.getKey(), entry.getValue());
+        }
+    }
+
+    private void releaseOwnedPlayerForUnload(PlayableEntity owner, PlayerTubeState tubeState) {
+        AbstractPlayableSprite player = playableSprite(owner);
+        if (player != null && tubeState.phase != 0) {
+            releaseForCleanup(player, tubeState);
+        }
+    }
+
+    private static final class PlayerTubeState implements RewindStateful<PlayerTubeState.Snapshot> {
         int phase;
+
+        void copyFrom(PlayerTubeState other) {
+            phase = other.phase;
+        }
+
+        @Override
+        public Snapshot captureRewindStateValue() {
+            return new Snapshot(phase);
+        }
+
+        @Override
+        public void restoreRewindStateValue(Snapshot state) {
+            phase = state.phase();
+        }
+
+        private record Snapshot(int phase) {
+        }
     }
 
     private static final class OverlayChild extends AbstractObjectInstance implements RewindRecreatable {

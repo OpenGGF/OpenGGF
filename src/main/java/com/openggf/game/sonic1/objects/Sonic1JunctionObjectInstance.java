@@ -1,6 +1,5 @@
 package com.openggf.game.sonic1.objects;
 
-import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugOverlayManager;
@@ -11,11 +10,11 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
-import com.openggf.game.GameServices;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -169,6 +168,9 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
     /** Child display object. */
     private Sonic1JunctionChildInstance childInstance;
 
+    /** Single player currently owned by the native one-rider junction state machine. */
+    private AbstractPlayableSprite controlledPlayer;
+
     public Sonic1JunctionObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Junction");
 
@@ -193,6 +195,11 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        if (controlledPlayer != null && controlledPlayer.getDead()) {
+            cancelGrab();
+            return;
+        }
+
         // Lazily create child display object on first update
         if (childInstance == null) {
             childInstance = spawnFreeChild(() -> new Sonic1JunctionChildInstance(spawn));
@@ -200,7 +207,7 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
 
         switch (routine) {
             case ACTION -> updateAction(player);
-            case RELEASE -> updateRelease(player);
+            case RELEASE -> updateRelease(controlledPlayer != null ? controlledPlayer : player);
         }
     }
 
@@ -227,14 +234,31 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
     private void updateAction(AbstractPlayableSprite player) {
         checkSwitch();
         SolidCheckpointBatch batch = checkpointAll();
-        PlayerSolidContactResult mainResult = player != null ? batch.perPlayer().get(player) : null;
-        if (player != null && mainResult != null
-                && (mainResult.pushingNow() || mainResult.pushingLastFrame())) {
-            int gapCheckFrame = player.getCentreX() < getX() ? GAP_FRAME_LEFT : GAP_FRAME_RIGHT;
-            if (mappingFrame == gapCheckFrame) {
-                beginGrab(player, gapCheckFrame);
+        if (tryBeginGrab(player, batch)) {
+            return;
+        }
+        for (PlayableEntity participant : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+            if (participant == player) {
+                continue;
+            }
+            if (participant instanceof AbstractPlayableSprite sidekick && tryBeginGrab(sidekick, batch)) {
+                return;
             }
         }
+    }
+
+    private boolean tryBeginGrab(AbstractPlayableSprite player, SolidCheckpointBatch batch) {
+        PlayerSolidContactResult result = player != null ? batch.perPlayer().get(player) : null;
+        if (player == null || result == null || (!result.pushingNow() && !result.pushingLastFrame())) {
+            return false;
+        }
+        int gapCheckFrame = player.getCentreX() < getX() ? GAP_FRAME_LEFT : GAP_FRAME_RIGHT;
+        if (mappingFrame != gapCheckFrame) {
+            return false;
+        }
+        beginGrab(player, gapCheckFrame);
+        return true;
     }
 
     // ========================================================================
@@ -259,6 +283,7 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
         if (player == null) {
             // Lost player reference — revert to action mode
             routine = Routine.ACTION;
+            controlledPlayer = null;
             return;
         }
 
@@ -294,6 +319,7 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
 
             // subq.b #4,obRoutine(a0) — back to Jun_Action
             routine = Routine.ACTION;
+            controlledPlayer = null;
         }
 
         // .dontrelease:
@@ -454,6 +480,7 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
     private void beginGrab(AbstractPlayableSprite player, int gapFrame) {
         grabFrame = gapFrame;
         routine = Routine.RELEASE;
+        controlledPlayer = player;
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
         player.setRolling(false);
@@ -479,6 +506,16 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
         // fraction (obSubpixelX/Y) untouched. Use *PreserveSubpixel to mirror.
         player.setCentreXPreserveSubpixel((short) ((targetX + savedX) >> 1));
         player.setCentreYPreserveSubpixel((short) ((targetY + savedY) >> 1));
+    }
+
+    private void cancelGrab() {
+        if (controlledPlayer != null) {
+            ObjectControlState.none().applyTo(controlledPlayer);
+            controlledPlayer.setControlLocked(false);
+            controlledPlayer.setForcedAnimationId(-1);
+        }
+        routine = Routine.ACTION;
+        controlledPlayer = null;
     }
 
     // ========================================================================
@@ -517,21 +554,8 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
     public void onUnload() {
         // If we're unloading while Sonic is grabbed, release him
         if (routine == Routine.RELEASE) {
-            AbstractPlayableSprite player = getPlayer();
-            if (player != null) {
-                ObjectControlState.none().applyTo(player);
-                player.setControlLocked(false);
-            }
-            routine = Routine.ACTION;
+            cancelGrab();
         }
-    }
-
-    private AbstractPlayableSprite getPlayer() {
-        Camera camera = services().camera();
-        if (camera != null) {
-            return (AbstractPlayableSprite) camera.getFocusedSprite();
-        }
-        return null;
     }
 
     // ========================================================================

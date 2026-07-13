@@ -1,15 +1,15 @@
 # Rewind Round-Trip Probe
 
-Generated: 2026-07-06
+Generated: 2026-07-13
 
 ## Summary
 
 | Metric | Value |
 |--------|-------|
-| Total classes discovered | 836 |
-| Probed: | 725 |
-| Skipped/Unprobed: | 111 |
-| Probe coverage | 86.7% |
+| Total classes discovered | 838 |
+| Probed: | 695 |
+| Skipped/Unprobed: | 143 |
+| Probe coverage | 82.9% |
 | REAL gaps found | 0 |
 
 ## Real Gaps (fields that differ after capture → restore)
@@ -24,8 +24,12 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 |-------|-------------|
 | FZPlasmaBall | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic1.objects.bosses.FZPlasmaBall (tri... |
 | GHZBossWreckingBall | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBa... |
+| Sonic1BumperObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | Sonic1EggPrisonObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| Sonic1JunctionObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | Sonic1PointsObjectInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic1.objects.Sonic1PointsObjectInstan... |
+| Sonic1PoleThatBreaksObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| Sonic1RunningDiscObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | Sonic1TeleporterObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | ARZRotPformsObjectInstance$Obj83SlotChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic2.objects.ARZRotPformsObjectInstan... |
 | CrawlBadnikInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
@@ -41,11 +45,21 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 | CheckpointDongleInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic2.objects.CheckpointDongleInstance... |
 | CheckpointStarInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic2.objects.CheckpointStarInstance (... |
 | CogObjectInstance$CogSlotChildInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic2.objects.CogObjectInstance$CogSlo... |
+| ForcedSpinObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | MCZBrickObjectInstance$MCZBrickDisplayChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic2.objects.MCZBrickObjectInstance$M... |
+| MovingVineObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| MTZSpinTubeObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| NutObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | OOZBurnerFlameObjectInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic2.objects.OOZBurnerFlameObjectInst... |
+| OOZPoppingPlatformObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| OOZSpringObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | PointsObjectInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic2.objects.PointsObjectInstance (tr... |
+| SeesawObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | SpringboardObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | SwingingPlatformObjectInstance$SwingingPlatformDisplayChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic2.objects.SwingingPlatformObjectIn... |
+| VineSwitchObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| WFZPalSwitcherObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| Aiz2EndEggCapsuleInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | Aiz2EndEggCapsuleInstance$Aiz2ResultsScreenObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | AizEndBossArmChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.AizEndBossArmChild (tri... |
 | AizEndBossBombChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.AizEndBossBombChild (tr... |
@@ -56,9 +70,14 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 | AizEndBossShipChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.AizEndBossShipChild (tr... |
 | AizEndBossSmokeChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.AizEndBossSmokeChild (t... |
 | AizFallingLogObjectInstance$SplashChild | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| AizGiantRideVineObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| AizHollowTreeObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | AizIntroEmeraldGlowChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChil... |
+| AizRideVineObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | AizShipBombInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.AizShipBombInstance (tr... |
 | AizSpikedLogObjectInstance$SpikedLogCollisionChild | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| AutomaticTunnelObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| AutoSpinObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | DragonflyBadnikInstance$LinkedBodyChild | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | DragonflyBadnikInstance$WingChild | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | MadmoleBadnikInstance$SideDrillChild | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
@@ -97,6 +116,7 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 | CnzBumperObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | CnzCannonInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | CnzCylinderInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| CnzSpiralTubeInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | CorkFloorObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | CutsceneKnucklesLbz2Instance$SwingChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Ins... |
 | CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
@@ -104,17 +124,30 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 | CutsceneKnucklesRockChild | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | CutsceneKnuxCnz2WallInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallIns... |
 | FireShieldObjectInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.FireShieldObjectInstanc... |
+| HCZBreakableBarObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | HCZCGZFanObjectInstance$FanPlatformChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance... |
 | HCZConveyorBeltObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| HCZHandLauncherObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | HCZSpinningColumnObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| HCZTwistingLoopObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | IczCrushingColumnObjectInstance$BottomDecoration | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | IczFreezerObjectInstance$FrozenPlayerBlock | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | InstaShieldObjectInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.InstaShieldObjectInstan... |
 | Lbz2RobotnikShipInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| LbzCupElevatorInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| LbzExplodingTriggerInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | LbzGateLaserBeamInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.LbzGateLaserBeamInstanc... |
+| LbzLoweringGrappleObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | LbzPipePlugShardInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.LbzPipePlugShardInstanc... |
+| LbzPlayerLauncherInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| LbzPlayerLauncherInstance$LauncherArmChild | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| LbzRideGrappleInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| LbzRollingDrumInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| LbzTubeElevatorInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | LightningShieldObjectInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.LightningShieldObjectIn... |
 | Mgz2ResultsScreenObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| MGZPulleyObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| MGZTwistingLoopObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | Mhz1CutsceneDoorInstance | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | MhzMinibossEscapeShardInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.MhzMinibossEscapeShardI... |
@@ -129,7 +162,6 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 | PachinkoFlipperObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | S3kResultsScreenObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | Sonic3kPointsObjectInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInst... |
-| Sonic3kSSEntryFlashObjectInstance | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | TensionBridgeObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | TunnelExhaustControlObjectInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.TunnelExhaustControlObj... |
 | ShieldObjectInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.level.objects.ShieldObjectInstance (tried ze... |

@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -65,7 +66,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
     private static final int FROST_PUFF_INTERVAL = 1;
     private static final int CAPTURE_CLOUD_OFFSET = 0x30;
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
-            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     private int x;
     private int y;
@@ -150,6 +151,12 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         int cloudY = y + (verticalFlip ? -CAPTURE_CLOUD_OFFSET : CAPTURE_CLOUD_OFFSET);
         lastCaptureCloud = spawnChild(() -> new CaptureCloud(x, cloudY, hFlip, this));
         captureCloudsSpawned++;
+    }
+
+    private void detachCaptureCloud(CaptureCloud candidate) {
+        if (lastCaptureCloud == candidate) {
+            lastCaptureCloud = null;
+        }
     }
 
     private void spawnFrostPuff() {
@@ -439,6 +446,13 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             return true;
         }
 
+        @Override
+        public void onUnload() {
+            if (parent != null) {
+                parent.detachCaptureCloud(this);
+            }
+        }
+
         public FrozenPlayerBlock frozenBlockForTesting() {
             return frozenBlock;
         }
@@ -507,6 +521,12 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
                 return;
             }
 
+            if (capturedPlayer != null && capturedPlayer.getDead()) {
+                releaseOwnedControl(frameCounter);
+                capturedPlayer = null;
+                ObjectLifetimeOps.destroyLatched(this);
+                return;
+            }
             if (!landedOnTerrain) {
                 applyCameraSideVelocityClamp();
                 SubpixelMotion.moveSprite(motion, GRAVITY);
@@ -525,11 +545,15 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
                 return;
             }
             int cameraX = services.camera().getX() & 0xFFFF;
-            int threshold = (cameraX + (motion.xVel < 0 ? 0x20 : 0x128)) & 0xFFFF;
+            int threshold = (cameraX + cameraClampOffsetForTesting(motion.xVel < 0, viewportWidth())) & 0xFFFF;
             if (Integer.compareUnsigned(threshold, motion.x & 0xFFFF) >= 0) {
                 motion.xVel = 0;
                 motion.xSub = 0;
             }
+        }
+
+        public static int cameraClampOffsetForTesting(boolean movingLeft, int viewportWidth) {
+            return movingLeft ? 0x20 : Math.max(0x20, viewportWidth - 0x18);
         }
 
         private void snapToTerrainIfColliding() {
@@ -558,9 +582,30 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
                 applyBreakDamage(frameCounter);
                 capturedPlayer.releaseFromObjectControl(frameCounter);
                 capturedPlayer.setInvulnerableFrames(POST_BREAK_INVULNERABILITY);
+                capturedPlayer = null;
             }
             spawnDebris();
             setDestroyed(true);
+        }
+
+        private boolean stillOwnsCapturedControl() {
+            return capturedPlayer != null
+                    && capturedPlayer.isObjectControlled()
+                    && capturedPlayer.isObjectControlSuppressesMovement()
+                    && !capturedPlayer.isObjectControlAllowsCpu()
+                    && capturedPlayer.getAnimationId() == 0x1A;
+        }
+
+        private void releaseOwnedControl(int frameCounter) {
+            if (stillOwnsCapturedControl()) {
+                capturedPlayer.releaseFromObjectControl(frameCounter);
+            }
+        }
+
+        @Override
+        public void onUnload() {
+            releaseOwnedControl(0);
+            capturedPlayer = null;
         }
 
         private void applyBreakDamage(int frameCounter) {

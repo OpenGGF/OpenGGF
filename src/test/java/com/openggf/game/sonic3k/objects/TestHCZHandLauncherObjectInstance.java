@@ -94,21 +94,76 @@ class TestHCZHandLauncherObjectInstance {
     }
 
     @Test
-    void extendedSidekickDoesNotShareNativeP2GrabSlot() {
+    void extensionSidekicksCaptureWithIndependentGrabState() {
         TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
         TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0100, (short) 0x0100);
-        TestablePlayableSprite extendedSidekick = new TestablePlayableSprite("knuckles", (short) 0x0200, (short) 0x0100);
+        TestablePlayableSprite firstExtension = new TestablePlayableSprite("knuckles", (short) 0x0200, (short) 0x0100);
+        TestablePlayableSprite secondExtension = new TestablePlayableSprite("sonic", (short) 0x0200, (short) 0x0100);
         ProbeHandLauncher launcher = new ProbeHandLauncher(
                 new ObjectSpawn(0x0208, 0x0100, 0x3A, 0, 0, false, 0));
-        launcher.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extendedSidekick)));
-        launcher.setCheckpointBatch(standingBatch(launcher, extendedSidekick));
+        launcher.setServices(new QueryOnlyPlayerServices(
+                main, List.of(nativeP2, firstExtension, secondExtension)));
+        launcher.setCheckpointBatch(standingBatch(launcher, firstExtension, secondExtension));
 
-        for (int frame = 0; frame < 16 && !extendedSidekick.isObjectControlled(); frame++) {
+        for (int frame = 0; frame < 16
+                && (!firstExtension.isObjectControlled() || !secondExtension.isObjectControlled()); frame++) {
             launcher.update(frame, main);
         }
 
-        assertFalse(extendedSidekick.isObjectControlled(),
-                "Additional engine sidekicks need separate grab state before they can participate");
+        assertTrue(firstExtension.isObjectControlled());
+        assertTrue(secondExtension.isObjectControlled());
+    }
+
+    @Test
+    void omittedCapturedExtensionIsReleasedByIdentity() {
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite extension = new TestablePlayableSprite("knuckles", (short) 0x0200, (short) 0x0100);
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(main, List.of(nativeP2, extension));
+        ProbeHandLauncher launcher = new ProbeHandLauncher(
+                new ObjectSpawn(0x0208, 0x0100, 0x3A, 0, 0, false, 0));
+        launcher.setServices(services);
+        launcher.setCheckpointBatch(standingBatch(launcher, extension));
+        updateUntilGrabbed(launcher, main, extension);
+
+        services.setSidekicks(List.of(nativeP2));
+        launcher.update(20, main);
+
+        assertFalse(extension.isObjectControlled());
+    }
+
+    @Test
+    void capturedExtensionKeepsOwnershipWhenPromotedToNativeP2() {
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite originalP2 = new TestablePlayableSprite("tails", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite extension = new TestablePlayableSprite("knuckles", (short) 0x0200, (short) 0x0100);
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(main, List.of(originalP2, extension));
+        ProbeHandLauncher launcher = new ProbeHandLauncher(
+                new ObjectSpawn(0x0208, 0x0100, 0x3A, 0, 0, false, 0));
+        launcher.setServices(services);
+        launcher.setCheckpointBatch(standingBatch(launcher, extension));
+        updateUntilGrabbed(launcher, main, extension);
+
+        services.setSidekicks(List.of(extension, originalP2));
+        launcher.update(20, main);
+
+        assertTrue(extension.isObjectControlled());
+    }
+
+    @Test
+    void unloadReleasesEveryCapturedExtension() {
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite extension = new TestablePlayableSprite("knuckles", (short) 0x0200, (short) 0x0100);
+        ProbeHandLauncher launcher = new ProbeHandLauncher(
+                new ObjectSpawn(0x0208, 0x0100, 0x3A, 0, 0, false, 0));
+        launcher.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extension)));
+        launcher.setCheckpointBatch(standingBatch(launcher, extension));
+        updateUntilGrabbed(launcher, main, extension);
+
+        launcher.onUnload();
+
+        assertFalse(extension.isObjectControlled());
     }
 
     private static ProbeHandLauncher buildLauncher(TestablePlayableSprite player) {
@@ -138,7 +193,7 @@ class TestHCZHandLauncherObjectInstance {
 
     private static SolidCheckpointBatch standingBatch(
             HCZHandLauncherObjectInstance launcher,
-            TestablePlayableSprite player) {
+            TestablePlayableSprite... players) {
         PlayerSolidContactResult result = new PlayerSolidContactResult(
                 ContactKind.TOP,
                 true,
@@ -148,7 +203,11 @@ class TestHCZHandLauncherObjectInstance {
                 PreContactState.ZERO,
                 new PostContactState((short) 0, (short) 0, false, true, false),
                 0);
-        return new SolidCheckpointBatch(launcher, Map.of(player, result));
+        Map<PlayableEntity, PlayerSolidContactResult> contacts = new java.util.IdentityHashMap<>();
+        for (TestablePlayableSprite player : players) {
+            contacts.put(player, result);
+        }
+        return new SolidCheckpointBatch(launcher, contacts);
     }
 
     private static final class ProbeHandLauncher extends HCZHandLauncherObjectInstance {
@@ -170,11 +229,15 @@ class TestHCZHandLauncherObjectInstance {
 
     private static final class QueryOnlyPlayerServices extends TestObjectServices {
         private final PlayableEntity main;
-        private final List<? extends PlayableEntity> queriedSidekicks;
+        private List<? extends PlayableEntity> queriedSidekicks;
 
         private QueryOnlyPlayerServices(PlayableEntity main, List<? extends PlayableEntity> queriedSidekicks) {
             this.main = main;
             this.queriedSidekicks = List.copyOf(queriedSidekicks);
+        }
+
+        private void setSidekicks(List<? extends PlayableEntity> sidekicks) {
+            this.queriedSidekicks = List.copyOf(sidekicks);
         }
 
         @Override

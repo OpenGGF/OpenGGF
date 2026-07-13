@@ -1,6 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -391,7 +394,8 @@ class TestLbzRollingDrumInstance {
         drum.update(0, sonic);
         drum.update(1, sonic);
 
-        PerObjectRewindSnapshot snapshot = drum.captureRewindState();
+        RewindCaptureContext rewindContext = rewindContext(sonic, tails);
+        PerObjectRewindSnapshot snapshot = drum.captureRewindState(rewindContext);
 
         sonic.setCentreXPreserveSubpixel((short) 0x1840);
         tails.setCentreXPreserveSubpixel((short) 0x1840);
@@ -399,7 +403,7 @@ class TestLbzRollingDrumInstance {
         assertFalse(drum.isNativeRidingForTest(0));
         assertFalse(drum.isNativeRidingForTest(1));
 
-        drum.restoreRewindState(snapshot);
+        drum.restoreRewindState(snapshot, rewindContext);
 
         assertTrue(drum.isNativeRidingForTest(0));
         assertTrue(drum.isNativeRidingForTest(1));
@@ -436,6 +440,16 @@ class TestLbzRollingDrumInstance {
         ZoneRuntimeRegistry registry = new ZoneRuntimeRegistry();
         registry.install(new LbzZoneRuntimeState(0, PlayerCharacter.SONIC_ALONE));
         return registry;
+    }
+
+    private static RewindCaptureContext rewindContext(
+            TestablePlayableSprite main, TestablePlayableSprite... sidekicks) {
+        RewindIdentityTable identities = new RewindIdentityTable();
+        identities.registerPlayer(main, PlayerRefId.mainPlayer());
+        for (int i = 0; i < sidekicks.length; i++) {
+            identities.registerPlayer(sidekicks[i], PlayerRefId.sidekick(i));
+        }
+        return RewindCaptureContext.withIdentityTable(identities);
     }
 
     private static final class UnitPlayableSprite extends TestablePlayableSprite {

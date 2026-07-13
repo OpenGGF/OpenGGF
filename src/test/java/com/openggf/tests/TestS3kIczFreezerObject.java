@@ -29,6 +29,7 @@ import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.tools.Sonic3kObjectProfile;
+import com.openggf.sprites.playable.ObjectControlState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -199,6 +200,89 @@ class TestS3kIczFreezerObject {
         assertEquals(0, tails.getYSpeed());
         assertEquals(0, tails.getGSpeed());
         assertSame(tails, block.capturedPlayerForTesting());
+    }
+
+    @Test
+    void captureCloudFreezesThirdPlayerWhenNativePrefixIsOutOfRange() {
+        RecordingServices services = new RecordingServices();
+        IczFreezerObjectInstance freezer = createFreezer(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0400, (short) 0x0134);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0400, (short) 0x0134);
+        TestablePlayableSprite extension = new TestablePlayableSprite("knuckles", (short) 0x0204, (short) 0x0134);
+        nativeP2.setCpuControlled(true);
+        extension.setCpuControlled(true);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> main, () -> List.of(nativeP2, extension)));
+
+        IczFreezerObjectInstance.CaptureCloud cloud =
+                freezer.createCaptureCloudForTesting(0x0200, 0x0130, false);
+        cloud.setServices(services);
+        for (int frame = 0; frame <= 32; frame++) {
+            cloud.update(frame, main);
+        }
+
+        assertSame(extension, cloud.frozenBlockForTesting().capturedPlayerForTesting());
+        assertFalse(main.isObjectControlled());
+        assertFalse(nativeP2.isObjectControlled());
+    }
+
+    @Test
+    void frozenBlockRightClampTracksLogicalViewportWidth() {
+        assertEquals(0x128,
+                IczFreezerObjectInstance.FrozenPlayerBlock.cameraClampOffsetForTesting(false, 320));
+        assertEquals(0x148,
+                IczFreezerObjectInstance.FrozenPlayerBlock.cameraClampOffsetForTesting(false, 352));
+        assertEquals(0x178,
+                IczFreezerObjectInstance.FrozenPlayerBlock.cameraClampOffsetForTesting(false, 400));
+        assertEquals(0x1F8,
+                IczFreezerObjectInstance.FrozenPlayerBlock.cameraClampOffsetForTesting(false, 528));
+        assertEquals(0x308,
+                IczFreezerObjectInstance.FrozenPlayerBlock.cameraClampOffsetForTesting(false, 800));
+        assertEquals(0x20,
+                IczFreezerObjectInstance.FrozenPlayerBlock.cameraClampOffsetForTesting(true, 800));
+    }
+
+    @Test
+    void frozenBlockUnloadReleasesOnlyTheControlStateItStillOwns() {
+        TestablePlayableSprite player = new TestablePlayableSprite("knuckles", (short) 0x0204, (short) 0x0134);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        player.setAnimationId(0x1A);
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(player, 0x0204, 0x0134, 0x0200, false);
+
+        block.onUnload();
+
+        assertFalse(player.isObjectControlled(), "removing a live frost block must not strand its player in control lock");
+    }
+
+    @Test
+    void frozenBlockUnloadDoesNotClearAReplacementObjectsControl() {
+        TestablePlayableSprite player = new TestablePlayableSprite("knuckles", (short) 0x0204, (short) 0x0134);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        player.setAnimationId(0x1A);
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(player, 0x0204, 0x0134, 0x0200, false);
+        ObjectControlState.engineScriptedTouchSuppressedMovementActive().applyTo(player);
+        player.setAnimationId(0x05);
+
+        block.onUnload();
+
+        assertTrue(player.isObjectControlled(), "stale frost cleanup must not release unrelated replacement control");
+    }
+
+    @Test
+    void frozenBlockDropsDeadCapturedPlayerWithoutKeepingAStaleLock() {
+        TestablePlayableSprite player = new TestablePlayableSprite("knuckles", (short) 0x0204, (short) 0x0134);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        player.setAnimationId(0x1A);
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(player, 0x0204, 0x0134, 0x0200, false);
+        player.setDead(true);
+
+        block.update(1, player);
+
+        assertTrue(block.isDestroyed());
+        assertFalse(player.isObjectControlled());
     }
 
     @Test

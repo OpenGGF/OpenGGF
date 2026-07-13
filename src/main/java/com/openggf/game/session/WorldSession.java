@@ -1,5 +1,6 @@
 package com.openggf.game.session;
 
+import com.openggf.data.RomManager;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameDataSource;
 import com.openggf.game.PlayableCharacterRegistry;
@@ -125,7 +126,16 @@ public final class WorldSession {
         this.currentLevel = currentLevel;
     }
 
-    /** Internal placeholder for legacy callers that have not reached the B1 boot seam yet. */
+    /**
+     * Internal placeholder for legacy callers that have not reached the B1 boot seam yet.
+     *
+     * <p>Unlike the pinned {@link com.openggf.game.RomDataSource}, this placeholder does
+     * <em>not</em> freeze ROM identity: it live-resolves the active {@link RomManager}
+     * each time {@link #rom()} is queried. A world session is frequently opened before the
+     * ROM is registered (tests wire {@code openGameplaySession} then {@code setRom}; the
+     * boot path opens the session ahead of the ROM), so a frozen-empty snapshot here would
+     * leave every ROM-backed load permanently blind to a ROM that arrives afterwards.
+     */
     private record MissingDataSource(String identity) implements GameDataSource {
         private MissingDataSource {
             Objects.requireNonNull(identity, "identity");
@@ -133,7 +143,21 @@ public final class WorldSession {
         }
 
         @Override public java.util.Optional<com.openggf.data.Rom> rom() {
-            return java.util.Optional.empty();
+            RomManager roms = EngineServices.current().roms();
+            if (roms == null) {
+                return java.util.Optional.empty();
+            }
+            try {
+                // getRom() lazily opens the configured stock ROM when one has not
+                // been injected yet, matching the pre-abstraction call sites that
+                // resolved via GameServices.rom().getRom() on every load.
+                return java.util.Optional.ofNullable(roms.getRom());
+            } catch (java.io.IOException missingRom) {
+                // A configured-but-absent ROM surfaces as IOException; treat it as
+                // "no ROM yet" rather than propagating, matching the pre-abstraction
+                // RomManager.isConfiguredRomMissing swallow.
+                return java.util.Optional.empty();
+            }
         }
 
         @Override public java.io.InputStream openAsset(String normalizedPath) throws java.io.IOException {

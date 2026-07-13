@@ -143,8 +143,9 @@ class TestObjectPhysicsStandardizationGuard {
     // 2026-07-02: re-ratcheted 577 -> 584 for the post-45270bed9 S2 boss/prize
     // batch (bb69af121 merge); new implementations must still prefer
     // ObjectLifetimeOps.destroyLatched(...)/destroyRespawnableOffscreen(...).
-    // 2026-07-13: tightened 583 -> 582 after the merged AIZ transient workers
-    // were routed through ObjectLifetimeOps instead of raw destruction writes.
+    // 2026-07-13: tightened 583 -> 582 after the AIZ control/glow and
+    // screen-shake timer objects moved to the shared ObjectLifetimeOps
+    // dynamic-expiry path instead of raw destruction writes.
     private static final int RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET = 582;
 // 2026-07-02: 10 -> 11 for the CPZ2 Obj7A trace-frontier fix (fca42ed8d),
     // whose direct addDynamicObject insert is part of the trace-validated slot

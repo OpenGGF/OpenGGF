@@ -227,12 +227,16 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         if (sbz3TransitionRequested) {
             return true; // Already requested; suppress death until fade completes
         }
+        AbstractPlayableSprite progressionOwner = camera().getFocusedSprite();
+        if (player == null || player != progressionOwner) {
+            return false;
+        }
         if (currentZone == Sonic1ZoneConstants.ZONE_SBZ && currentAct == 1) {
             int playerX = player.getCentreX() & 0xFFFF;
             if (playerX >= 0x2000) {
                 // Transition to SBZ3 (our engine: zone SBZ, act 2)
                 sbz3TransitionRequested = true;
-                player.setControlLocked(true);
+                Sonic1ZoneEvents.lockPlayersForTransition(progressionOwner);
                 levelManager().requestZoneAndAct(
                         Sonic1ZoneConstants.ZONE_SBZ, 2);
                 return true;

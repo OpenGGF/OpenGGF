@@ -121,10 +121,40 @@ class TestS2SidewaysPformGraphRewind {
                 "Sideways platforms must not use an explicit S2 dynamic codec");
     }
 
+    @Test
+    void sidewaysPlatformEndpointLifetimePinsNativeUltraAndSuperWideCoarseBuckets() {
+        int cameraX = 0x1500;
+        int base = S2ObjectWindowing.unloadCoarse(cameraX);
+        int[] widths = {320, 528, 800};
+        int[] lastSurvivingBucket = {0x280, 0x300, 0x400};
+        int[] firstDeletingBucket = {0x300, 0x380, 0x480};
+
+        for (int i = 0; i < widths.length; i++) {
+            Harness harness = Harness.create(List.of(), cameraX, widths[i]);
+            SidewaysPformObjectInstance survivor = harness.objectManager().createDynamicObject(
+                    () -> new SidewaysPformObjectInstance(PARENT_SPAWN, "SidewaysPform"));
+            setIntField(survivor, "minX", base + lastSurvivingBucket[i]);
+            setIntField(survivor, "maxX", base + lastSurvivingBucket[i]);
+            assertFalse(survivor.isCustomOutOfRange(cameraX),
+                    "Obj7A's last endpoint bucket must survive at width " + widths[i]);
+
+            SidewaysPformObjectInstance deleted = harness.objectManager().createDynamicObject(
+                    () -> new SidewaysPformObjectInstance(PARENT_SPAWN, "SidewaysPform"));
+            setIntField(deleted, "minX", base + firstDeletingBucket[i]);
+            setIntField(deleted, "maxX", base + firstDeletingBucket[i]);
+            assertTrue(deleted.isCustomOutOfRange(cameraX),
+                    "Obj7A's first endpoint bucket beyond the compare must delete at width " + widths[i]);
+        }
+    }
+
     private record Harness(ObjectManager objectManager) {
         static Harness create(List<ObjectSpawn> spawns) {
+            return create(spawns, 0, 320);
+        }
+
+        static Harness create(List<ObjectSpawn> spawns, int cameraX, int viewportWidth) {
             ObjectManager[] holder = new ObjectManager[1];
-            Camera camera = mockCamera();
+            Camera camera = mockCamera(cameraX, viewportWidth);
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
@@ -263,10 +293,14 @@ class TestS2SidewaysPformGraphRewind {
     }
 
     private static Camera mockCamera() {
+        return mockCamera(0, 320);
+    }
+
+    private static Camera mockCamera(int cameraX, int viewportWidth) {
         return new Camera() {
-            @Override public short getX() { return 0; }
+            @Override public short getX() { return (short) cameraX; }
             @Override public short getY() { return 0; }
-            @Override public short getWidth() { return 320; }
+            @Override public short getWidth() { return (short) viewportWidth; }
             @Override public short getHeight() { return 224; }
             @Override public boolean isVerticalWrapEnabled() { return false; }
         };

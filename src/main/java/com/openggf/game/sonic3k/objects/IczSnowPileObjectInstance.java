@@ -11,6 +11,7 @@ import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -249,13 +250,15 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
     }
 
     private List<PlayableEntity> nativePlayersP2ThenP1(PlayableEntity mainPlayer) {
-        List<PlayableEntity> players = new ArrayList<>(2);
+        List<PlayableEntity> players = new ArrayList<>();
         ObjectServices services = tryServices();
-        if (services != null) {
+        ObjectPlayerQuery query = playerQueryOrFallback(services, mainPlayer);
+        PlayableEntity queryMain = query != null ? query.mainPlayerOrNull() : null;
+        PlayableEntity nativeP2 = query != null ? query.nativeP2OrNull() : null;
+        if (query != null) {
             // Native P2 (sidekick) is processed before P1, matching the ROM's
             // player loop order. Routed through the shared ObjectPlayerQuery
             // contract instead of a raw services.sidekicks() iteration.
-            PlayableEntity nativeP2 = ObjectPlayerQuery.from(services).nativeP2OrNull();
             if (nativeP2 != null && !nativeP2.getDead()) {
                 players.add(nativeP2);
             }
@@ -263,7 +266,31 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
         if (mainPlayer != null && !mainPlayer.getDead()) {
             players.add(mainPlayer);
         }
+        if (query != null) {
+            List<PlayableEntity> participants = query.playersFor(
+                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+            for (PlayableEntity extension : participants) {
+                if (extension != null
+                        && extension != mainPlayer
+                        && extension != queryMain
+                        && extension != nativeP2
+                        && !extension.getDead()) {
+                    players.add(extension);
+                }
+            }
+        }
         return players;
+    }
+
+    private static ObjectPlayerQuery playerQueryOrFallback(ObjectServices services, PlayableEntity mainPlayer) {
+        if (services == null) {
+            return null;
+        }
+        try {
+            return services.playerQuery();
+        } catch (UnsupportedOperationException ignored) {
+            return new ObjectPlayerQuery(() -> mainPlayer, List::of);
+        }
     }
 
     private boolean isInRange(PlayableEntity player, int[] box) {

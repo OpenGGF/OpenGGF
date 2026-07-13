@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
@@ -20,7 +21,11 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Seesaw (Object 0x14) from Hill Top Zone.
@@ -83,6 +88,8 @@ public class SeesawObjectInstance extends BoxObjectInstance
     // ROM uses object-specific status bits to track which player is standing on THIS seesaw
     private AbstractPlayableSprite standingPlayer1;
     private AbstractPlayableSprite standingPlayer2;
+    private final Set<PlayableEntity> extensionStandingPlayers =
+            Collections.newSetFromMap(new IdentityHashMap<>());
 
     public SeesawObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name, COLLISION_HALF_WIDTH, COLLISION_HEIGHT, 1.0f, 0.85f, 0.1f, false);
@@ -175,22 +182,23 @@ public class SeesawObjectInstance extends BoxObjectInstance
      * ROM: loc_21A28 through loc_21A4C
      */
     private int calculateCombinedTargetAngle() {
-        if (standingPlayer1 != null && standingPlayer2 != null) {
+        List<AbstractPlayableSprite> standingPlayers = getStandingPlayersInNativeOrder();
+        AbstractPlayableSprite first = standingPlayers.isEmpty() ? null : standingPlayers.get(0);
+        AbstractPlayableSprite second = standingPlayers.size() < 2 ? null : standingPlayers.get(1);
+        if (first != null && second != null) {
             // Both players standing - average their angles
             // ROM: move.b d2,d1 / add.b d0,d1 (combine angles)
             // ROM: cmpi.b #3,d1 / blo.s + / addq.b #1,d1 (if sum == 3, make it 4 before dividing)
             // ROM: lsr.b #1,d1 (divide by 2)
-            int angle1 = calculateTargetAngle(standingPlayer1);
-            int angle2 = calculateTargetAngle(standingPlayer2);
+            int angle1 = calculateTargetAngle(first);
+            int angle2 = calculateTargetAngle(second);
             int sum = angle1 + angle2;
             if (sum == 3) {
                 sum = 4; // Special case: 1+2 or 2+1 = 3 -> 4 before division = 2
             }
             return sum / 2;
-        } else if (standingPlayer1 != null) {
-            return calculateTargetAngle(standingPlayer1);
-        } else if (standingPlayer2 != null) {
-            return calculateTargetAngle(standingPlayer2);
+        } else if (first != null) {
+            return calculateTargetAngle(first);
         }
         return 1; // Neither standing - return balanced
     }
@@ -273,7 +281,7 @@ public class SeesawObjectInstance extends BoxObjectInstance
         // transitioned mapping_frame 2 -> 1 and sampled SLOPE_FLAT (5),
         // landing Sonic at y=0x03D0; the engine sampled mapping_frame=2
         // SLOPE_TILTED xFlip (sample 2), landing him at y=0x03D3.
-        int targetAngle = (standingPlayer1 != null || standingPlayer2 != null)
+        int targetAngle = !getStandingPlayersInNativeOrder().isEmpty()
                 ? calculateCombinedTargetAngle()
                 : currentAngle;
         updateAngle(targetAngle);
@@ -285,6 +293,16 @@ public class SeesawObjectInstance extends BoxObjectInstance
         AbstractPlayableSprite sidekickSprite = nativeP2SpriteOrNull();
         PlayerSolidContactResult sidekickResult = sidekickSprite != null ? batch.perPlayer().get(sidekickSprite) : null;
         standingPlayer2 = sidekickResult != null && sidekickResult.standingNow() ? sidekickSprite : null;
+        extensionStandingPlayers.clear();
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                com.openggf.level.objects.ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
+        for (int index = 2; index < participants.size(); index++) {
+            PlayableEntity extension = participants.get(index);
+            PlayerSolidContactResult result = batch.perPlayer().get(extension);
+            if (result != null && result.standingNow()) {
+                extensionStandingPlayers.add(extension);
+            }
+        }
 
         // ROM: SlopedPlatform_SingleCharacter runs every frame to validate standing players.
         // Checks in_air status and X bounds, clearing standing bit if either fails.
@@ -293,14 +311,22 @@ public class SeesawObjectInstance extends BoxObjectInstance
 
         // ROM: loc_21A38 - Store max Y velocity when NEITHER player is standing
         // This prepares for heavy landing detection before the player actually lands
-        if (standingPlayer1 == null && standingPlayer2 == null) {
+        if (standingPlayer1 == null && standingPlayer2 == null && extensionStandingPlayers.isEmpty()) {
             int p1Vel = mainResult != null ? mainResult.preContact().ySpeed() : 0;
             int p2Vel = sidekickResult != null ? sidekickResult.preContact().ySpeed() : 0;
+            int extensionVel = 0;
+            for (int index = 2; index < participants.size(); index++) {
+                PlayableEntity extension = participants.get(index);
+                PlayerSolidContactResult result = batch.perPlayer().get(extension);
+                if (result != null) {
+                    extensionVel = Math.max(extensionVel, result.preContact().ySpeed());
+                }
+            }
 
             // Bug fix #4: ROM always overwrites with max of both players.
             // Java incorrectly only updated if new value was higher.
             // ROM: cmp.w d0,d2 / blt.s + / move.w d2,d0 then move.w d0,objoff_38(a1)
-            storedPlayerYVel = Math.max(p1Vel, p2Vel);
+            storedPlayerYVel = Math.max(Math.max(p1Vel, p2Vel), extensionVel);
         }
     }
 
@@ -387,6 +413,31 @@ public class SeesawObjectInstance extends BoxObjectInstance
         this.standingPlayer2 = null;
     }
 
+    List<AbstractPlayableSprite> getStandingPlayersInNativeOrder() {
+        ArrayList<AbstractPlayableSprite> players = new ArrayList<>();
+        if (standingPlayer1 != null) {
+            players.add(standingPlayer1);
+        }
+        if (standingPlayer2 != null && standingPlayer2 != standingPlayer1) {
+            players.add(standingPlayer2);
+        }
+        for (PlayableEntity sidekick : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+            if (sidekick instanceof AbstractPlayableSprite player
+                    && extensionStandingPlayers.contains(sidekick)
+                    && !players.contains(player)) {
+                players.add(player);
+            }
+        }
+        return List.copyOf(players);
+    }
+
+    void clearAllStandingPlayers() {
+        standingPlayer1 = null;
+        standingPlayer2 = null;
+        extensionStandingPlayers.clear();
+    }
+
     public boolean isFlippedHorizontal() {
         return (spawn.renderFlags() & 0x1) != 0;
     }
@@ -423,6 +474,8 @@ public class SeesawObjectInstance extends BoxObjectInstance
                 standingPlayer2 = null;
             }
         }
+        extensionStandingPlayers.removeIf(player -> !(player instanceof AbstractPlayableSprite playable)
+                || playable.getAir() || !isPlayerInXRange(playable));
     }
 
     /**

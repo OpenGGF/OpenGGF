@@ -12,6 +12,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -23,7 +24,11 @@ import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Supplier;
 
 /**
@@ -415,6 +420,8 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
     private int defeatFrameCounter; // Frame counter for setup-ending rumble timing
     private int defeatWalkFrameCounter; // Frames since loc_3D922 locked control before loc_3D93C force-right
     private int fadeTimer;          // Countdown for fade-to-white before credits
+    private final Set<PlayableEntity> endingControlledPlayers =
+            Collections.newSetFromMap(new IdentityHashMap<>());
 
     // Child references (10 permanent)
     private ArticulatedChild shoulder;
@@ -1038,6 +1045,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
             // so force the player to stay at ground height.
             clampPlayerToGround(player);
         }
+        updateEndingSidekicks(player);
         defeatWalkFrameCounter++;
 
         Camera camera = services().camera();
@@ -1075,6 +1083,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
             // on flat ground through to the credits trigger).
             clampPlayerToGround(player);
         }
+        updateEndingSidekicks(player);
 
         defeatFrameCounter++;
 
@@ -1115,6 +1124,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
      * ROM: Fade palette to white over ~22 frames, then set game mode to ending.
      */
     private void updateDefeatFade() {
+        releaseAllEndingSidekicks();
         fadeTimer--;
         if (fadeTimer < 0) {
             // ROM: move.b #id_Ending,(v_gamemode).w
@@ -1483,6 +1493,51 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
         // 72978-72986). Keeping the sensor above the body slot preserves the
         // body-before-sensor report handoff in loc_3D784/loc_3DE62.
         sensorChild = spawnChild(() -> new SensorChild(this, playerX, playerY, playerXVel, playerYVel));
+    }
+
+    private void updateEndingSidekicks(AbstractPlayableSprite mainPlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        for (PlayableEntity owned : new ArrayList<>(endingControlledPlayers)) {
+            if (!containsIdentity(participants, owned)) releaseEndingSidekick(owned);
+        }
+        for (PlayableEntity participant : participants) {
+            if (participant == mainPlayer || !(participant instanceof AbstractPlayableSprite player)) continue;
+            if (player.getDead() || player.isHurt() || player.isDebugMode()) {
+                releaseEndingSidekick(player);
+                continue;
+            }
+            if (!endingControlledPlayers.contains(player)) {
+                if (player.isControlLocked() || player.getForcedInputMask() != 0 || player.isObjectControlled()) {
+                    continue;
+                }
+                endingControlledPlayers.add(player);
+            }
+            player.setControlLocked(true);
+            player.setForceInputRight(true);
+            clampPlayerToGround(player);
+        }
+    }
+
+    private void releaseEndingSidekick(PlayableEntity entity) {
+        if (!endingControlledPlayers.remove(entity) || !(entity instanceof AbstractPlayableSprite player)) return;
+        player.clearForcedInputMask();
+        player.setControlLocked(false);
+    }
+
+    private void releaseAllEndingSidekicks() {
+        for (PlayableEntity player : new ArrayList<>(endingControlledPlayers)) releaseEndingSidekick(player);
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity target) {
+        for (PlayableEntity participant : participants) if (participant == target) return true;
+        return false;
+    }
+
+    @Override
+    public void onUnload() {
+        releaseAllEndingSidekicks();
+        super.onUnload();
     }
 
     /** Report player X from targeting sensor */

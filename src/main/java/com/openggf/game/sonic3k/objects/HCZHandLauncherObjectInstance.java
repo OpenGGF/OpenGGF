@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.debug.DebugColor;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -29,7 +30,10 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.Tails;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -85,7 +89,10 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     private int yOffset;
     private int timer;
     private boolean anyGrabbed;
-    private final boolean[] playerGrabbed = new boolean[2];
+    private final GrabState[] nativeStates = {new GrabState(), new GrabState()};
+    private final Map<AbstractPlayableSprite, GrabState> extensionStates = new IdentityHashMap<>();
+    private AbstractPlayableSprite p1Owner;
+    private AbstractPlayableSprite p2Owner;
     private int currentY;
     private int mappingFrame = FRAME_ARM_EXTENDED;
     private int priority = PRIORITY_NORMAL;
@@ -118,6 +125,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
 
         AbstractPlayableSprite player = (playerEntity instanceof AbstractPlayableSprite sprite)
                 ? sprite : null;
+        syncPlayerBindings(player);
 
         int prevY = currentY;
         switch (state) {
@@ -134,21 +142,23 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     }
 
     private void repositionGrabbedPlayers(AbstractPlayableSprite player, int deltaY) {
-        NativePlayerSlots slots = nativePlayerSlots(player);
-        for (int pi = 0; pi < playerGrabbed.length; pi++) {
-            AbstractPlayableSprite grabbedPlayer = slots.player(pi);
-            if (playerGrabbed[pi] && grabbedPlayer != null) {
-                grabbedPlayer.setY((short) (grabbedPlayer.getY() + deltaY));
-            }
+        repositionGrabbedPlayer(p1Owner, nativeStates[0], deltaY);
+        repositionGrabbedPlayer(p2Owner, nativeStates[1], deltaY);
+        for (Map.Entry<AbstractPlayableSprite, GrabState> entry : extensionStates.entrySet()) {
+            repositionGrabbedPlayer(entry.getKey(), entry.getValue(), deltaY);
+        }
+    }
+
+    private void repositionGrabbedPlayer(AbstractPlayableSprite player, GrabState state, int deltaY) {
+        if (state.grabbed && player != null) {
+            player.setY((short) (player.getY() + deltaY));
         }
     }
 
     private void updateIdle(AbstractPlayableSprite player) {
         boolean playerInRange = false;
-        NativePlayerSlots slots = nativePlayerSlots(player);
-        for (int pi = 0; pi < playerGrabbed.length; pi++) {
-            AbstractPlayableSprite candidate = slots.player(pi);
-            if (candidate != null && isPlayerInHorizontalRange(candidate)) {
+        for (AbstractPlayableSprite candidate : participatingPlayers(player)) {
+            if (isPlayerInHorizontalRange(candidate)) {
                 playerInRange = true;
                 break;
             }
@@ -211,25 +221,28 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     private void processButtonCheckAllPlayers(AbstractPlayableSprite player) {
         SolidCheckpointBatch batch = checkpointAll();
         NativePlayerSlots slots = nativePlayerSlots(player);
-        for (int pi = 0; pi < playerGrabbed.length; pi++) {
-            AbstractPlayableSprite candidate = slots.player(pi);
-            if (candidate != null) {
-                processButtonCheckForPlayer(candidate, pi, batch.perPlayer().get(candidate));
-            }
+        if (slots.p1() != null) {
+            processButtonCheckForPlayer(slots.p1(), nativeStates[0], batch.perPlayer().get(slots.p1()));
         }
+        if (slots.p2() != null) {
+            processButtonCheckForPlayer(slots.p2(), nativeStates[1], batch.perPlayer().get(slots.p2()));
+        }
+        for (AbstractPlayableSprite candidate : participatingPlayers(player)) {
+            if (candidate == slots.p1() || candidate == slots.p2()) continue;
+            processButtonCheckForPlayer(candidate,
+                    extensionStates.computeIfAbsent(candidate, ignored -> new GrabState()),
+                    batch.perPlayer().get(candidate));
+        }
+        anyGrabbed = hasAnyGrabbedPlayer();
     }
 
     private void processButtonCheckForPlayer(
             AbstractPlayableSprite player,
-            int pi,
+            GrabState grabState,
             PlayerSolidContactResult result) {
-        if (pi >= playerGrabbed.length) {
-            return;
-        }
-
-        if (playerGrabbed[pi]) {
+        if (grabState.grabbed) {
             if (player.isJumpPressed()) {
-                escapePlayer(player, pi);
+                escapePlayer(player, grabState);
             }
             return;
         }
@@ -249,11 +262,11 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        grabPlayer(player, pi);
+        grabPlayer(player, grabState);
     }
 
-    private void grabPlayer(AbstractPlayableSprite player, int pi) {
-        playerGrabbed[pi] = true;
+    private void grabPlayer(AbstractPlayableSprite player, GrabState grabState) {
+        grabState.grabbed = true;
         anyGrabbed = true;
 
         playSfx(Sonic3kSfx.ROLL.id);
@@ -275,8 +288,8 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
         player.setDirection(facingLeft ? Direction.LEFT : Direction.RIGHT);
     }
 
-    private void escapePlayer(AbstractPlayableSprite player, int pi) {
-        playerGrabbed[pi] = false;
+    private void escapePlayer(AbstractPlayableSprite player, GrabState grabState) {
+        grabState.grabbed = false;
 
         int xDir = facingLeft ? -1 : 1;
         player.setGSpeed((short) (ESCAPE_GROUND_VEL * xDir));
@@ -286,32 +299,30 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
         player.setOnObject(false);
         player.setAir(true);
 
-        if (!playerGrabbed[0] && !playerGrabbed[1]) {
-            anyGrabbed = false;
-        }
+        anyGrabbed = hasAnyGrabbedPlayer();
     }
 
     private void launchReleaseAllPlayers(AbstractPlayableSprite player) {
         SolidCheckpointBatch batch = checkpointAll();
         NativePlayerSlots slots = nativePlayerSlots(player);
-        for (int pi = 0; pi < playerGrabbed.length; pi++) {
-            AbstractPlayableSprite candidate = slots.player(pi);
-            if (candidate != null) {
-                launchReleasePlayer(candidate, pi, batch.perPlayer().get(candidate));
-            }
+        if (slots.p1() != null) {
+            launchReleasePlayer(slots.p1(), nativeStates[0], batch.perPlayer().get(slots.p1()));
         }
+        if (slots.p2() != null) {
+            launchReleasePlayer(slots.p2(), nativeStates[1], batch.perPlayer().get(slots.p2()));
+        }
+        for (Map.Entry<AbstractPlayableSprite, GrabState> entry : extensionStates.entrySet()) {
+            launchReleasePlayer(entry.getKey(), entry.getValue(), batch.perPlayer().get(entry.getKey()));
+        }
+        anyGrabbed = hasAnyGrabbedPlayer();
     }
 
     private void launchReleasePlayer(
             AbstractPlayableSprite player,
-            int pi,
+            GrabState grabState,
             PlayerSolidContactResult result) {
-        if (pi >= playerGrabbed.length) {
-            return;
-        }
-
-        if (playerGrabbed[pi]) {
-            playerGrabbed[pi] = false;
+        if (grabState.grabbed) {
+            grabState.grabbed = false;
 
             int xDir = facingLeft ? -1 : 1;
             player.setGSpeed((short) (LAUNCH_GROUND_VEL * xDir));
@@ -361,6 +372,104 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
                 case 1 -> p2;
                 default -> null;
             };
+        }
+    }
+
+    private void syncPlayerBindings(AbstractPlayableSprite updatePlayer) {
+        NativePlayerSlots slots = nativePlayerSlots(updatePlayer);
+        bindNativeState(nativeStates[0], p1Owner, slots.p1());
+        p1Owner = slots.p1();
+        bindNativeState(nativeStates[1], p2Owner, slots.p2());
+        p2Owner = slots.p2();
+
+        List<AbstractPlayableSprite> participants = participatingPlayers(updatePlayer);
+        for (Map.Entry<AbstractPlayableSprite, GrabState> entry
+                : new ArrayList<>(extensionStates.entrySet())) {
+            AbstractPlayableSprite owner = entry.getKey();
+            if (owner == p1Owner || owner == p2Owner || containsIdentity(participants, owner)) continue;
+            releaseWithoutLaunch(owner, entry.getValue());
+            extensionStates.remove(owner);
+        }
+        anyGrabbed = hasAnyGrabbedPlayer();
+    }
+
+    private void bindNativeState(GrabState nativeState,
+            AbstractPlayableSprite previousOwner, AbstractPlayableSprite currentOwner) {
+        if (previousOwner == currentOwner) return;
+        if (previousOwner != null && nativeState.grabbed) {
+            extensionStates.computeIfAbsent(previousOwner, ignored -> new GrabState()).copyFrom(nativeState);
+        }
+        nativeState.clear();
+        if (currentOwner != null) {
+            GrabState restored = extensionStates.remove(currentOwner);
+            if (restored != null) nativeState.copyFrom(restored);
+        }
+    }
+
+    private List<AbstractPlayableSprite> participatingPlayers(AbstractPlayableSprite updatePlayer) {
+        List<AbstractPlayableSprite> result = new ArrayList<>();
+        for (PlayableEntity candidate : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+            if (candidate instanceof AbstractPlayableSprite sprite && !containsIdentity(result, sprite)) {
+                result.add(sprite);
+            }
+        }
+        if (result.isEmpty() && updatePlayer != null) result.add(updatePlayer);
+        return result;
+    }
+
+    private boolean hasAnyGrabbedPlayer() {
+        return nativeStates[0].grabbed || nativeStates[1].grabbed
+                || extensionStates.values().stream().anyMatch(state -> state.grabbed);
+    }
+
+    private void releaseWithoutLaunch(AbstractPlayableSprite player, GrabState grabState) {
+        if (!grabState.grabbed) return;
+        grabState.grabbed = false;
+        if (player != null) {
+            ObjectControlState.none().applyTo(player);
+            player.setOnObject(false);
+        }
+    }
+
+    private static boolean containsIdentity(List<? extends PlayableEntity> players, PlayableEntity target) {
+        for (PlayableEntity player : players) if (player == target) return true;
+        return false;
+    }
+
+    @Override
+    public void onUnload() {
+        releaseWithoutLaunch(p1Owner, nativeStates[0]);
+        releaseWithoutLaunch(p2Owner, nativeStates[1]);
+        for (Map.Entry<AbstractPlayableSprite, GrabState> entry : extensionStates.entrySet()) {
+            releaseWithoutLaunch(entry.getKey(), entry.getValue());
+        }
+        extensionStates.clear();
+        anyGrabbed = false;
+    }
+
+    private static final class GrabState implements RewindStateful<GrabState.Snapshot> {
+        private boolean grabbed;
+
+        private void clear() {
+            grabbed = false;
+        }
+
+        private void copyFrom(GrabState other) {
+            grabbed = other.grabbed;
+        }
+
+        @Override
+        public Snapshot captureRewindStateValue() {
+            return new Snapshot(grabbed);
+        }
+
+        @Override
+        public void restoreRewindStateValue(Snapshot state) {
+            grabbed = state.grabbed();
+        }
+
+        private record Snapshot(boolean grabbed) {
         }
     }
 

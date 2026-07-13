@@ -2,16 +2,21 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.GroundMode;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -130,7 +135,7 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
      * Tracks one player's state within the twisting loop.
      * ROM: 6-byte block at objoff_34 (P1) / objoff_3A (P2).
      */
-    private static class PlayerState {
+    private static class PlayerState implements RewindStateful<PlayerState.Snapshot> {
         /** Current phase ID: 0=detection, 2/4/6/8/A/C/E = active */
         int phase;
         /**
@@ -143,6 +148,14 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         int getProgressPixels() {
             return progressFixed >> 16;
         }
+
+        void clear() { phase = 0; progressFixed = 0; }
+        void copyFrom(PlayerState other) { phase = other.phase; progressFixed = other.progressFixed; }
+        @Override public Snapshot captureRewindStateValue() { return new Snapshot(phase, progressFixed); }
+        @Override public void restoreRewindStateValue(Snapshot state) {
+            phase = state.phase(); progressFixed = state.progressFixed();
+        }
+        private record Snapshot(int phase, int progressFixed) { }
     }
 
     // =========================================================================
@@ -155,6 +168,9 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     private final LoopDef loopDef;
     private final PlayerState p1State = new PlayerState();
     private final PlayerState p2State = new PlayerState();
+    private final Map<AbstractPlayableSprite, PlayerState> extensionStates = new IdentityHashMap<>();
+    private AbstractPlayableSprite p1Owner;
+    private AbstractPlayableSprite p2Owner;
 
     public HCZTwistingLoopObjectInstance(ObjectSpawn spawn) {
         super(spawn, "HCZTwistingLoop");
@@ -191,14 +207,28 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
             player1 = sprite;
         }
         if (player1 != null) {
+            bindNativeState(p1State, p1Owner, player1);
+            p1Owner = player1;
             processPlayer(player1, p1State);
         }
 
         // Process Player 2 (sidekick)
         PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
         if (nativeP2 instanceof AbstractPlayableSprite sidekick && sidekick != player1) {
+            bindNativeState(p2State, p2Owner, sidekick);
+            p2Owner = sidekick;
             processPlayer(sidekick, p2State);
         }
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        for (PlayableEntity candidate : participants) {
+            if (candidate instanceof AbstractPlayableSprite extension
+                    && extension != player1 && extension != nativeP2) {
+                processPlayer(extension, extensionStates.computeIfAbsent(
+                        extension, ignored -> new PlayerState()));
+            }
+        }
+        releaseMissingExtensions(participants);
 
         // ROM: loc_3909C — if both players are in phase 0 (not captured),
         // call Delete_Sprite_If_Not_In_Range. In the ROM this frees the slot
@@ -213,6 +243,11 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     // =========================================================================
 
     private void processPlayer(AbstractPlayableSprite player, PlayerState state) {
+        if (state.phase != 0 && player.getDead()) {
+            releasePlayer(player);
+            state.clear();
+            return;
+        }
         // Dispatch to current phase handler
         switch (state.phase) {
             case 0x00 -> phaseDetect(player, state);
@@ -370,6 +405,48 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     private void releasePlayer(AbstractPlayableSprite player) {
         ObjectControlState.none().applyTo(player);
         LOG.fine("HCZTwistingLoop: released player");
+    }
+
+    @Override
+    public void onUnload() {
+        releaseOwnedPlayer(p1Owner, p1State);
+        releaseOwnedPlayer(p2Owner, p2State);
+        for (Map.Entry<AbstractPlayableSprite, PlayerState> entry : extensionStates.entrySet()) {
+            releaseOwnedPlayer(entry.getKey(), entry.getValue());
+        }
+        extensionStates.clear();
+    }
+
+    private void bindNativeState(PlayerState nativeState,
+            AbstractPlayableSprite previousOwner, AbstractPlayableSprite currentOwner) {
+        if (previousOwner == currentOwner) return;
+        if (previousOwner != null && nativeState.phase != 0) {
+            extensionStates.computeIfAbsent(previousOwner, ignored -> new PlayerState()).copyFrom(nativeState);
+        }
+        nativeState.clear();
+        if (currentOwner != null) {
+            PlayerState restored = extensionStates.remove(currentOwner);
+            if (restored != null) nativeState.copyFrom(restored);
+        }
+    }
+
+    private void releaseMissingExtensions(List<PlayableEntity> participants) {
+        for (Map.Entry<AbstractPlayableSprite, PlayerState> entry
+                : new ArrayList<>(extensionStates.entrySet())) {
+            if (containsIdentity(participants, entry.getKey())) continue;
+            releaseOwnedPlayer(entry.getKey(), entry.getValue());
+            extensionStates.remove(entry.getKey());
+        }
+    }
+
+    private void releaseOwnedPlayer(AbstractPlayableSprite player, PlayerState state) {
+        if (player != null && state.phase != 0) releasePlayer(player);
+        state.clear();
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity target) {
+        for (PlayableEntity participant : participants) if (participant == target) return true;
+        return false;
     }
 
     // =========================================================================

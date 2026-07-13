@@ -345,13 +345,15 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
     }
 
     private void updateStillSprite() {
+        int renderedX = currentX;
+        int renderedY = currentY;
         currentX += stillXVel >> 8;
         currentY += stillYVel >> 8;
         // loc_21DF2 tests the render_flags bit produced by the preceding
         // Render_Sprites pass after MoveSprite. Once the 8x12 still-sprite
         // bounds were wholly off-screen, it writes x_pos=$7FF0 so loc_21F38
         // deletes the root and its child chain in this same object pass.
-        if (!wasStillSpriteRenderedOnScreen()) {
+        if (!wasStillSpriteRenderedOnScreen(renderedX, renderedY)) {
             currentX = 0x7FF0;
         }
 
@@ -372,28 +374,31 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private boolean wasStillSpriteRenderedOnScreen() {
+    private boolean wasStillSpriteRenderedOnScreen(int renderedX, int renderedY) {
         ObjectServices svc = tryServices();
         if (svc == null || svc.camera() == null) {
             return true;
         }
         // Object execution sees the camera position completed by the preceding
         // frame, the same position whose copy Render_Sprites used to produce
-        // this frame's incoming render_flags bit. Keep the ROM's fixed 320x224
-        // viewport here; the $7FF0 self-delete gate is not widescreen-scaled.
-        int relativeX = currentX - svc.camera().getX();
-        int relativeY = currentY - svc.camera().getY();
-        return relativeX + 8 >= 0 && relativeX - 8 < 320
-                && relativeY + 12 >= 0 && relativeY - 12 < 224;
+        // this frame's incoming render_flags bit. The engine's render viewport
+        // extends that native 320x224 rectangle in widescreen; at native width
+        // these bounds collapse exactly to the ROM result.
+        int relativeX = renderedX - svc.camera().getX();
+        int relativeY = renderedY - svc.camera().getY();
+        return overlapsActiveViewport(relativeX, relativeY, 8, 12);
+    }
+
+    private boolean overlapsActiveViewport(
+            int relativeX, int relativeY, int halfWidth, int halfHeight) {
+        return relativeX + halfWidth >= 0 && relativeX - halfWidth < viewportWidth()
+                && relativeY + halfHeight >= 0 && relativeY - halfHeight < viewportHeight();
     }
 
     private void clearGrabbedPlayers() {
-        AbstractPlayableSprite player = resolveMainPlayer();
-        AbstractPlayableSprite sidekick = firstTrackedSidekick();
-        clearControlFor(player, handle.p1.grabFlag != 0);
-        clearControlFor(sidekick, handle.p2.grabFlag != 0);
-        handle.p1.grabFlag = 0;
-        handle.p2.grabFlag = 0;
+        AbstractPlayableSprite player = handle.p1.grabFlag != 0 ? resolveMainPlayer() : null;
+        AbstractPlayableSprite sidekick = handle.p2.grabFlag != 0 ? firstTrackedSidekick() : null;
+        AizVineHandleLogic.clearGrabbedPlayers(handle, player, sidekick);
     }
 
     private AbstractPlayableSprite firstTrackedSidekick() {
@@ -406,13 +411,6 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
         var sprite = services().spriteManager().getSprite(
                 ActiveGameplayTeamResolver.resolveMainCharacterCode(config()));
         return sprite instanceof AbstractPlayableSprite playable ? playable : null;
-    }
-
-    private static void clearControlFor(AbstractPlayableSprite player, boolean wasGrabbed) {
-        if (player == null || !wasGrabbed) {
-            return;
-        }
-        AizVineHandleLogic.clearPlayerControl(player);
     }
 
     @Override

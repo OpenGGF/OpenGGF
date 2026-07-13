@@ -16,13 +16,12 @@ class TestSemanticVersionAndRange {
         assertTrue(SemanticVersion.parse("1.2.4").compareTo(SemanticVersion.parse("1.2.3")) > 0);
         assertTrue(SemanticVersion.parse("2.0.0").compareTo(SemanticVersion.parse("1.999.999")) > 0);
         assertEquals("1.2.3", SemanticVersion.parse("1.2.3").toString());
-        assertEquals(new SemanticVersion(1, 2, 0), ModApiVersion.CURRENT);
+        assertEquals(new SemanticVersion(2, 0, 0), ModApiVersion.CURRENT);
         VersionRange phaseOneCompatibility = VersionRange.parse(">=1.0.0 <2.0.0");
-        VersionRange phaseTwoCompatibility = VersionRange.parse(">=1.1.0 <2.0.0");
-        assertTrue(phaseOneCompatibility.contains(ModApiVersion.CURRENT));
-        assertTrue(phaseTwoCompatibility.contains(ModApiVersion.CURRENT));
-        assertFalse(VersionRange.parse(">=1.3.0 <2.0.0").contains(ModApiVersion.CURRENT));
-        assertFalse(VersionRange.parse(">=2.0.0").contains(ModApiVersion.CURRENT));
+        assertTrue(phaseOneCompatibility.contains(SemanticVersion.parse("1.1.0")));
+        // The published API is now a new major, deliberately outside the 1.x compatibility band.
+        assertFalse(phaseOneCompatibility.contains(ModApiVersion.CURRENT));
+        assertTrue(VersionRange.parse(">=2.0.0 <3.0.0").contains(ModApiVersion.CURRENT));
     }
 
     @Test

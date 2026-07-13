@@ -28,6 +28,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonic3kSpringObjectInstance {
@@ -294,7 +295,7 @@ class TestSonic3kSpringObjectInstance {
     }
 
     @Test
-    void horizontalApproachUsesNativeP2FromPlayerQueryWithoutPromotingExtraSidekicks() {
+    void horizontalApproachProcessesNativeP2ThenAdditionalSidekicks() {
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
 
@@ -321,9 +322,9 @@ class TestSonic3kSpringObjectInstance {
         assertEquals(0x0218, nativeP2.getCentreX() & 0xFFFF,
                 "ROM Player_2 approach block should resolve native P2 through ObjectPlayerQuery");
         assertEquals(0x1000, nativeP2.getXSpeed() & 0xFFFF);
-        assertEquals(0x0218, extraSidekick.getCentreX() & 0xFFFF,
-                "Extra engine sidekicks must not be promoted into the native Player_2 approach block");
-        assertEquals(0, extraSidekick.getXSpeed());
+        assertNotEquals(0x0218, extraSidekick.getCentreX() & 0xFFFF,
+                "Extra sidekicks must receive the horizontal spring safety launch after native P2");
+        assertNotEquals(0, extraSidekick.getXSpeed());
     }
 
     @Test

@@ -421,21 +421,12 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
      * p1_standing_bit/p2_standing_bit on the seesaw object tracks who is standing.
      */
     private void launchStandingPlayers() {
-        // ROM: bclr #p1_standing_bit,status(a1) / beq.s + / bsr.s Obj14_LaunchCharacter
-        // Check and launch player 1
-        AbstractPlayableSprite player1 = parent.getStandingPlayer1();
-        if (player1 != null) {
-            launchPlayer(player1);
-            parent.clearStandingPlayer1();
+        // Preserve the native P1/P2 launch prefix, then apply the P2 launch
+        // behavior to engine extension sidekicks in configured roster order.
+        for (AbstractPlayableSprite player : parent.getStandingPlayersInNativeOrder()) {
+            launchPlayer(player);
         }
-
-        // ROM: bclr #p2_standing_bit,status(a1) / beq.s + / bsr.s Obj14_LaunchCharacter
-        // Check and launch player 2
-        AbstractPlayableSprite player2 = parent.getStandingPlayer2();
-        if (player2 != null) {
-            launchPlayer(player2);
-            parent.clearStandingPlayer2();
-        }
+        parent.clearAllStandingPlayers();
     }
 
     /**

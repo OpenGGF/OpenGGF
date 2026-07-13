@@ -265,5 +265,28 @@ public class TestObjectPlacementManager {
         assertEquals(0x0600, manager.getLastCameraChunk(),
                 "Post-camera gap creation must not advance the primary placement cursor");
     }
-}
 
+    @Test
+    public void s2LoadWindowStrictExclusiveEdgeMatchesEveryExposedViewportWidth() {
+        int cameraX = 0x1000;
+        int[] widths = {320, 352, 400, 528, 800};
+
+        for (int width : widths) {
+            int edge = S2ObjectWindowing.forwardLoadEdge(cameraX, width);
+            ObjectSpawn edgeMinusOne =
+                    new ObjectSpawn(edge - 1, 0, 0x65, 0, 0, false, 0);
+            ObjectSpawn exactlyAtEdge =
+                    new ObjectSpawn(edge, 0, 0x66, 0, 0, false, 0);
+            ObjectPlacementController manager =
+                    new ObjectPlacementController(List.of(edgeMinusOne, exactlyAtEdge), () -> width);
+            manager.setWindowingStrategy(S2ObjectWindowing.INSTANCE);
+
+            manager.reset(cameraX);
+
+            assertTrue(manager.getActiveSpawns().contains(edgeMinusOne),
+                    "spawn at edge-1 must load for viewport width " + width);
+            assertFalse(manager.getActiveSpawns().contains(exactlyAtEdge),
+                    "spawn exactly at the exclusive edge must not load for viewport width " + width);
+        }
+    }
+}

@@ -13,6 +13,7 @@ import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -117,6 +118,7 @@ class TestOOZPlacedObjectGaps {
     void horizontalOozPressureSpringCompressesOnePixelBeforeReleaseLaunch() throws Exception {
         ObjectInstance spring = newOOZSpring(0x1000, 0x0500, 0x10);
         TestablePlayableSprite player = playerAt(0x101C, 0x0500);
+        ((AbstractObjectInstance) spring).setServices(servicesFor(player));
         player.setDirection(Direction.LEFT);
         player.setGSpeed((short) -0x40);
 
@@ -196,6 +198,7 @@ class TestOOZPlacedObjectGaps {
     void horizontalOozPressureSpringAppliesFlipSubtypeAfterReleaseLaunch() throws Exception {
         ObjectInstance spring = newOOZSpring(0x1000, 0x0500, 0x11);
         TestablePlayableSprite player = playerAt(0x101C, 0x0500);
+        ((AbstractObjectInstance) spring).setServices(servicesFor(player));
         player.setDirection(Direction.LEFT);
         player.setGSpeed((short) -0x40);
 
@@ -215,6 +218,7 @@ class TestOOZPlacedObjectGaps {
     void flippedHorizontalOozPressureSpringLaunchesLeftAndCanClearYSpeedAndSwitchPlane() throws Exception {
         ObjectInstance spring = newOOZSpring(0x1000, 0x0500, 0x99, 1);
         TestablePlayableSprite player = playerAt(0x0FE4, 0x0500);
+        ((AbstractObjectInstance) spring).setServices(servicesFor(player));
         player.setDirection(Direction.RIGHT);
         player.setGSpeed((short) 0x40);
         player.setYSpeed((short) 0x0340);
@@ -531,6 +535,18 @@ class TestOOZPlacedObjectGaps {
         player.setCentreY((short) y);
         player.setAir(false);
         return player;
+    }
+
+    private static TestObjectServices servicesFor(PlayableEntity mainPlayer) {
+        return new TestObjectServices() {
+            private final ObjectPlayerQuery playerQuery =
+                    new ObjectPlayerQuery(() -> mainPlayer, List::of);
+
+            @Override
+            public ObjectPlayerQuery playerQuery() {
+                return playerQuery;
+            }
+        };
     }
 
     private static int intField(Object target, String fieldName) throws Exception {

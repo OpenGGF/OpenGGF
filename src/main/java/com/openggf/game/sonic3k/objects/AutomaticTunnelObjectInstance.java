@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -15,6 +16,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -240,6 +243,28 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         int[] path;
         /** Traversing path backwards */
         boolean reverse;
+        /** Generation of the exact object-control lease acquired by this tunnel. */
+        int controlGeneration;
+
+        void copyFrom(CharState state) {
+            phase = state.phase;
+            duration = state.duration;
+            pathRemaining = state.pathRemaining;
+            pathIndex = state.pathIndex;
+            path = state.path;
+            reverse = state.reverse;
+            controlGeneration = state.controlGeneration;
+        }
+
+        void reset() {
+            phase = 0;
+            duration = 0;
+            pathRemaining = 0;
+            pathIndex = 0;
+            path = null;
+            reverse = false;
+            controlGeneration = 0;
+        }
     }
 
     // =========================================================================
@@ -254,6 +279,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
 
     private final CharState p1State = new CharState();
     private final CharState p2State = new CharState();
+    private AbstractPlayableSprite nativeP2Owner;
+    private final Map<PlayableEntity, CharState> extensionStates = new IdentityHashMap<>();
 
     public AutomaticTunnelObjectInstance(ObjectSpawn spawn) {
         super(spawn, "AutomaticTunnel");
@@ -277,12 +304,65 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
             processCharacter(player1, p1State);
         }
 
-        // Process native Player 2 only. Extra engine sidekicks are intentionally
-        // outside the ROM tunnel state block.
-        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
-        if (nativeP2 instanceof AbstractPlayableSprite sidekick) {
-            processCharacter(sidekick, p2State);
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        AbstractPlayableSprite nativeP2 = services().playerQuery().nativeP2OrNull()
+                instanceof AbstractPlayableSprite sidekick ? sidekick : null;
+        reconcileNativeP2(nativeP2, participants);
+        if (nativeP2 != null) {
+            processCharacter(nativeP2, p2State);
         }
+        processExtensions(player1, nativeP2, participants);
+    }
+
+    private void reconcileNativeP2(AbstractPlayableSprite currentNativeP2, List<PlayableEntity> participants) {
+        if (nativeP2Owner == currentNativeP2) return;
+        if (nativeP2Owner != null) {
+            if (containsIdentity(participants, nativeP2Owner)) {
+                CharState demoted = new CharState();
+                demoted.copyFrom(p2State);
+                extensionStates.put(nativeP2Owner, demoted);
+            } else {
+                releasePlayer(nativeP2Owner, p2State);
+            }
+        }
+        CharState promoted = currentNativeP2 == null ? null : extensionStates.remove(currentNativeP2);
+        p2State.reset();
+        if (promoted != null) p2State.copyFrom(promoted);
+        nativeP2Owner = currentNativeP2;
+    }
+
+    private void processExtensions(AbstractPlayableSprite main, AbstractPlayableSprite nativeP2,
+                                   List<PlayableEntity> participants) {
+        IdentityHashMap<PlayableEntity, Boolean> live = new IdentityHashMap<>();
+        for (PlayableEntity participant : participants) {
+            if (participant == main || participant == nativeP2
+                    || !(participant instanceof AbstractPlayableSprite extension)) continue;
+            live.put(extension, Boolean.TRUE);
+            processCharacter(extension, extensionStates.computeIfAbsent(extension, ignored -> new CharState()));
+        }
+        extensionStates.entrySet().removeIf(entry -> {
+            if (live.containsKey(entry.getKey())) return false;
+            if (entry.getKey() instanceof AbstractPlayableSprite player) releasePlayer(player, entry.getValue());
+            return true;
+        });
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> players, PlayableEntity candidate) {
+        for (PlayableEntity player : players) if (player == candidate) return true;
+        return false;
+    }
+
+    @Override
+    public void onUnload() {
+        PlayableEntity main = services().playerQuery().mainPlayerOrNull();
+        if (main instanceof AbstractPlayableSprite player) releasePlayer(player, p1State);
+        if (nativeP2Owner != null) releasePlayer(nativeP2Owner, p2State);
+        nativeP2Owner = null;
+        for (Map.Entry<PlayableEntity, CharState> entry : extensionStates.entrySet()) {
+            if (entry.getKey() instanceof AbstractPlayableSprite player) releasePlayer(player, entry.getValue());
+        }
+        extensionStates.clear();
     }
 
     // =========================================================================
@@ -290,6 +370,10 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
     // =========================================================================
 
     private void processCharacter(AbstractPlayableSprite player, CharState state) {
+        if (state.phase != 0 && (player.getDead() || player.isHurt() || player.isDebugMode())) {
+            releasePlayer(player, state);
+            return;
+        }
         switch (state.phase) {
             case 0 -> checkCapture(player, state);
             case 2 -> updatePathFollow(player, state);
@@ -323,6 +407,7 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         // ROM: move.b #$81,object_control(a1)
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
+        state.controlGeneration = player.getObjectControlGeneration();
 
         // ROM: move.b #2,anim(a1)
         player.setRolling(true);
@@ -629,10 +714,19 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
     // =========================================================================
 
     private void releasePlayer(AbstractPlayableSprite player, CharState state) {
-        ObjectControlState.none().applyTo(player);
-        player.setControlLocked(false);
-        state.phase = 0;
-        state.path = null;
+        if (state.phase != 0 && ownsTunnelControl(player, state)) {
+            ObjectControlState.none().applyTo(player);
+            player.setControlLocked(false);
+        }
+        state.reset();
+    }
+
+    private boolean ownsTunnelControl(AbstractPlayableSprite player, CharState state) {
+        return player.isObjectControlled()
+                && player.isObjectControlSuppressesMovement()
+                && !player.isObjectControlAllowsCpu()
+                && player.isControlLocked()
+                && player.getObjectControlGeneration() == state.controlGeneration;
     }
 
     // =========================================================================
@@ -673,7 +767,7 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
 
     @Override
     public boolean isPersistent() {
-        // Keep alive while either character is captured
-        return p1State.phase != 0 || p2State.phase != 0;
+        return p1State.phase != 0 || p2State.phase != 0
+                || extensionStates.values().stream().anyMatch(state -> state.phase != 0);
     }
 }

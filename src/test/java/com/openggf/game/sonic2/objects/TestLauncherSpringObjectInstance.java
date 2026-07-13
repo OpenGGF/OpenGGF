@@ -65,6 +65,26 @@ class TestLauncherSpringObjectInstance {
     }
 
     @Test
+    void extensionSidekickCompressesAndLaunchesIndependently() {
+        LauncherSpringObjectInstance spring = new LauncherSpringObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.LAUNCHER_SPRING, 0, 0, false, 0),
+                "LauncherSpring");
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x1200, (short) 0x1000);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x1200, (short) 0x1000);
+        TestablePlayableSprite extension = new TestablePlayableSprite("knuckles", (short) 0x1000, (short) 0x1000);
+        spring.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extension)));
+
+        spring.onSolidContact(extension, new SolidContact(true, false, false, true, false), 0);
+        extension.setJumpInputPressed(true);
+        spring.update(0, main);
+        extension.setJumpInputPressed(false);
+        spring.update(1, main);
+        spring.update(2, main);
+
+        assertTrue(extension.getYSpeed() < 0);
+    }
+
+    @Test
     void traceDebugDetailsUsesNativeP2QueryWhenRawSidekickListIsEmpty() {
         LauncherSpringObjectInstance spring = new LauncherSpringObjectInstance(
                 new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.LAUNCHER_SPRING, 0, 0, false, 0),

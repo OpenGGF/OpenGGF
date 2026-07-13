@@ -48,6 +48,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -59,7 +60,14 @@ import static com.openggf.game.sonic3k.events.AizEventTestFixtures.newFireTransi
 
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestSonic3kAIZEvents {
+    private static final Sonic3kLoadBootstrap FIRE_TRANSITION_BOOTSTRAP =
+            new Sonic3kLoadBootstrap(Sonic3kLoadBootstrap.Mode.SKIP_INTRO, null);
     private HeadlessTestFixture fixture;
+
+    private static Sonic3kAIZEvents newFireTransitionEvents() {
+        AtomicInteger vblankCounter = new AtomicInteger();
+        return new Sonic3kAIZEvents(FIRE_TRANSITION_BOOTSTRAP, vblankCounter::getAndIncrement);
+    }
 
     @BeforeEach
     public void setUp() {

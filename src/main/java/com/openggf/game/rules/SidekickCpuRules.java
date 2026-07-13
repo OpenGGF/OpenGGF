@@ -19,5 +19,6 @@ public record SidekickCpuRules(
         int sidekickFlightLeadSuppressGSpeed,
         boolean sidekickRespawnEntersCatchUpFlight,
         boolean sidekickCpuUsesLevelFrameCounter,
-        boolean sidekickDeathUsesDeferredDespawn) {
+        boolean sidekickDeathUsesDeferredDespawn,
+        boolean sidekickHurtRestoresRadiiWithoutRoll) {
 }

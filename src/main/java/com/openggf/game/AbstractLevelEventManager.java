@@ -5,7 +5,10 @@ import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelEventSnapshot;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+
+import java.util.List;
 
 /**
  * Abstract base class for game-specific level event managers.
@@ -36,6 +39,15 @@ public abstract class AbstractLevelEventManager
      */
     protected LevelManager levelManager() {
         return GameServices.level();
+    }
+
+    /**
+     * Returns an ordered main-then-sidekicks query for event choreography.
+     */
+    protected ObjectPlayerQuery playerQuery() {
+        return new ObjectPlayerQuery(
+                () -> camera().getFocusedSprite(),
+                () -> List.copyOf(GameServices.sprites().getRegisteredSidekicks()));
     }
 
     // Current zone and act

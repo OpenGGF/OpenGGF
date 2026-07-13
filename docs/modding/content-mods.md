@@ -4,14 +4,16 @@ This page is the detailed additive-content reference. New creators should start 
 the [handbook index](index.md), which orders the six quickstarts by effort and links
 the format, trust, identity, troubleshooting, and sample references.
 
-OpenGGF Mod API 1.2 supports restart-loaded music packs, code-backed objects,
+OpenGGF Mod API 2.0 supports restart-loaded music packs, code-backed objects,
 baked art, complete Sonic 2 zones, playable characters, and no-ROM standalone
 games. Mods are discovered from the
 process `mods/` directory at restart; executable mods must be enabled and granted
 trust in the Mod Manager before they run.
 
-The public mod API is version `1.2.0`. Start with the guide for the contribution
-you are building:
+The public mod API is version `2.0.0` (a deliberate breaking bump from `1.1.0` via
+the additive `1.2.0` step; see `docs/architecture/mod-api-compatibility.md`). Mods
+must declare a `2.x` engine range such as `>=2.0.0 <3.0.0`. Start with the guide
+for the contribution you are building:
 
 - [Music packs](music-packs.md) — data-only WAV/Ogg replacements for stock music.
 - This guide — Phase 2 objects, art reskins, and complete Sonic 2 zones.

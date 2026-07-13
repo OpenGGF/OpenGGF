@@ -35,10 +35,10 @@ class TestPerGameRuleArchitectureGuard {
     private static final Pattern LINE_COMMENT = Pattern.compile("//.*$", Pattern.MULTILINE);
     private static final int MAX_RULE_COMPONENTS = 20;
     // Existing migration surface: keep it frozen until the next split, and do not let other groups grow this large.
-    // July 2026 merge audit: the ROM-wide sidekick hurt-radius restore gate belongs in movement
-    // rules and is the reviewed 23rd component; it is not a zone/route carve-out.
+    // July 2026 merge audit: the ROM-wide sidekick hurt-radius restore gate was relocated out of
+    // movement rules and into SidekickCpuRules (its more accurate owner), so this stays at 22.
     private static final Map<Class<? extends Record>, Integer> FROZEN_RULE_COMPONENT_LIMITS = Map.of(
-            PlayerMovementRules.class, 23
+            PlayerMovementRules.class, 22
     );
 
     private static final List<Class<? extends Record>> RULE_RECORDS = List.of(

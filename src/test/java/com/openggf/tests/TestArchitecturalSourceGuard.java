@@ -34,7 +34,9 @@ class TestArchitecturalSourceGuard {
     // touch-response, or solid-contact logic owned by extracted collaborators.
     // Rewind child reconstruction adds a narrowly scoped lifecycle hook at the
     // existing restore orchestration boundary; it does not move collaborator logic back here.
-    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2880;
+    // 2026-07-12: ratchet inherited develop growth to 2910, plus a four-line public
+    // delegate into ObjectRewindReferenceClosureValidator. Traversal stays extracted.
+    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2914;
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
             "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
             // 2026-07-02: 3065 -> 3115 after S2 trace fixes + the GameRules typed-rule
@@ -237,7 +239,18 @@ class TestArchitecturalSourceGuard {
             "com/openggf/GameLoop.java",
             "com/openggf/game/CrossGameFeatureProvider.java",
             "com/openggf/game/session/GameplayTeamBootstrap.java",
-            "com/openggf/game/startup/DataSelectPresentationResolution.java"
+            "com/openggf/game/startup/DataSelectPresentationResolution.java",
+            // Presentation routing: maps GameId -> human-readable rich-presence title.
+            // No gameplay behavior branches; there is no per-game display-name owner to
+            // route through, so this is the same enum->text routing surface as the sibling
+            // menuName(GameMode) switch in the same class.
+            "com/openggf/integration/presence/RuntimePresenceSnapshotProvider.java",
+            // Composition-root precondition guards: validate that a module registered/booted
+            // on the standalone (no-ROM mod) join point actually reports GameId.STANDALONE.
+            // These are wiring-time invariant checks, not per-game runtime behavior branches.
+            "com/openggf/mods/code/ModContext.java",
+            "com/openggf/mods/code/ModRegistrationPlan.java",
+            "com/openggf/tools/HeadlessGameBoot.java"
     );
     private static final List<String> GAME_ID_BRANCH_APPROVED_PREFIXES = List.of(
             "com/openggf/game/dataselect/"

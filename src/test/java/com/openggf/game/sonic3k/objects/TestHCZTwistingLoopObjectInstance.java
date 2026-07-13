@@ -12,12 +12,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestHCZTwistingLoopObjectInstance {
     @Test
-    void sidekickProcessingUsesNativeP2QueryOnly() {
+    void sidekickProcessingExtendsNativeP2SemanticsIndependently() {
         HCZTwistingLoopObjectInstance loop = new HCZTwistingLoopObjectInstance(
                 new ObjectSpawn(0x0840, 0x0120, 0x2A, 0x00, 0, false, 0));
         TestPlayableSprite nativeP2 = playerAtLoopEntry();
         TestPlayableSprite extraSidekick = playerAtLoopEntry();
-        loop.setServices(new TestObjectServices().withSidekicks(List.of(nativeP2, extraSidekick)));
+        TestPlayableSprite thirdSidekick = playerAtLoopEntry();
+        loop.setServices(new TestObjectServices().withSidekicks(
+                List.of(nativeP2, extraSidekick, thirdSidekick)));
 
         TestPlayableSprite main = playerAtLoopEntry();
 
@@ -26,8 +28,8 @@ class TestHCZTwistingLoopObjectInstance {
         assertTrue(main.isObjectControlled(),
                 "The direct update player should remain the P1 fallback when services cannot resolve main");
         assertNativeBits0To6Control(nativeP2);
-        assertFalse(extraSidekick.isObjectControlled(),
-                "HCZ Twisting Loop has one ROM Player_2 state block and must not process extra engine sidekicks");
+        assertNativeBits0To6Control(extraSidekick);
+        assertNativeBits0To6Control(thirdSidekick);
     }
 
     private static TestPlayableSprite playerAtLoopEntry() {
