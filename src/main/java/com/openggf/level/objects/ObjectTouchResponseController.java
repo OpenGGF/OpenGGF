@@ -54,6 +54,7 @@ import java.util.logging.Logger;
 final class ObjectTouchResponseController {
     private static final Logger LOGGER = Logger.getLogger(ObjectTouchResponseController.class.getName());
     private final ObjectManager objectManager;
+    private final ObjectCallbackRouter objectCallbacks;
     private final TouchResponseTable table;
     // Double-buffer pattern: swap buffers instead of allocating new sets each frame
     private final Set<ObjectInstance> bufferA = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -98,6 +99,7 @@ final class ObjectTouchResponseController {
 
     ObjectTouchResponseController(ObjectManager objectManager, TouchResponseTable table) {
         this.objectManager = objectManager;
+        this.objectCallbacks = objectManager == null ? null : objectManager.objectCallbacks();
         this.table = table;
     }
 
@@ -190,12 +192,13 @@ final class ObjectTouchResponseController {
         }
     }
 
-    private static int[] collectSlotIndices(Set<ObjectInstance> set) {
+    private int[] collectSlotIndices(Set<ObjectInstance> set) {
         int[] result = new int[set.size()];
         int n = 0;
         for (ObjectInstance inst : set) {
-            if (inst instanceof AbstractObjectInstance aoi && aoi.getSlotIndex() >= 0) {
-                result[n++] = aoi.getSlotIndex();
+            if (inst instanceof AbstractObjectInstance aoi
+                    && objectCallbacks.call(inst, aoi::getSlotIndex) >= 0) {
+                result[n++] = objectCallbacks.call(inst, aoi::getSlotIndex);
             }
         }
         return n == result.length ? result : Arrays.copyOf(result, n);
@@ -207,8 +210,9 @@ final class ObjectTouchResponseController {
         // multiple slots to resolve.
         Map<Integer, ObjectInstance> bySlot = new java.util.HashMap<>();
         for (ObjectInstance inst : objectManager.getActiveObjects()) {
-            if (inst instanceof AbstractObjectInstance aoi && aoi.getSlotIndex() >= 0) {
-                bySlot.put(aoi.getSlotIndex(), inst);
+            if (inst instanceof AbstractObjectInstance aoi
+                    && objectCallbacks.call(inst, aoi::getSlotIndex) >= 0) {
+                bySlot.put(objectCallbacks.call(inst, aoi::getSlotIndex), inst);
             }
         }
         for (int slot : slotIndices) {
@@ -383,15 +387,17 @@ final class ObjectTouchResponseController {
 
         for (ObjectInstance instance : touchObjects) {
             TouchResponseProvider provider = (TouchResponseProvider) instance;
-            if (instance.isSkipTouchThisFrame()) {
+            if (objectCallbacks.call(instance, instance::isSkipTouchThisFrame)) {
                 continue;
             }
 
             // Multi-region providers (e.g., spiked pole helix) check each region independently
-            TouchResponseProvider.TouchRegion[] regions = provider.getMultiTouchRegions();
+            TouchResponseProvider.TouchRegion[] regions = objectCallbacks.call(
+                    instance, provider::getMultiTouchRegions);
             TouchResponseProfile touchProfile = regions != null
-                    ? provider.getTouchResponseProfile(true)
-                    : provider.getTouchResponseProfile();
+                    ? objectCallbacks.call(instance,
+                            () -> provider.getTouchResponseProfile(true))
+                    : objectCallbacks.call(instance, provider::getTouchResponseProfile);
             if (!isCandidateForActor(isSidekick, touchProfile)) {
                 continue;
             }
@@ -423,7 +429,7 @@ final class ObjectTouchResponseController {
             if (!usePreviousCollisionResponseList
                     && touchProfile.requiresRenderFlagForTouch()
                     && instance instanceof AbstractObjectInstance aoi
-                    && !aoi.isOnScreenForTouch()) {
+                    && !objectCallbacks.call(instance, aoi::isOnScreenForTouch)) {
                 continue;
             }
             if (regions != null) {
@@ -437,10 +443,11 @@ final class ObjectTouchResponseController {
             }
             int flags;
             if (usePreUpdateState && !usePreviousCollisionResponseList) {
-                int preFlags = instance.getPreUpdateCollisionFlags();
-                flags = (preFlags >= 0) ? preFlags : provider.getCollisionFlags();
+                int preFlags = objectCallbacks.call(instance, instance::getPreUpdateCollisionFlags);
+                flags = (preFlags >= 0) ? preFlags
+                        : objectCallbacks.call(instance, provider::getCollisionFlags);
             } else {
-                flags = provider.getCollisionFlags();
+                flags = objectCallbacks.call(instance, provider::getCollisionFlags);
             }
             if (flags == 0) {
                 continue; // Skip collision for objects with no collision flags
@@ -455,21 +462,26 @@ final class ObjectTouchResponseController {
             // list stores object RAM pointers, but those pointers still hold
             // frame-start x/y at this phase.
             boolean useCurrentTouchState = usesCurrentTouchState(instance);
-            int objX = usePreUpdateState && !useCurrentTouchState ? instance.getPreUpdateX() : instance.getX();
-            int objY = usePreUpdateState && !useCurrentTouchState ? instance.getPreUpdateY() : instance.getY();
+            int objX = objectCallbacks.call(instance,
+                    usePreUpdateState && !useCurrentTouchState ? instance::getPreUpdateX : instance::getX);
+            int objY = objectCallbacks.call(instance,
+                    usePreUpdateState && !useCurrentTouchState ? instance::getPreUpdateY : instance::getY);
             if (category == TouchCategory.HURT
-                    && tryShieldDeflect(player, provider, touchProfile, objX, objY, width, height)) {
+                    && tryShieldDeflect(player, instance, provider, touchProfile,
+                            objX, objY, width, height)) {
                 continue;
             }
             boolean overlap = isOverlapping(playerX, playerY, playerHeight, objX, objY, width, height, playerWidth);
             int slotIndex = instance instanceof AbstractObjectInstance aoi
-                    ? aoi.getSlotIndex()
+                    ? objectCallbacks.call(instance, aoi::getSlotIndex)
                     : -1;
             if (debugState.isEnabled()) {
                 debugState.addHit(
-                        new TouchResponseDebugHit(slotIndex, instance.getSpawn(), objX, objY, flags, sizeIndex,
-                                width, height, category, overlap,
-                                instance instanceof AbstractObjectInstance aoi ? aoi.traceDebugDetails() : ""));
+                        new TouchResponseDebugHit(slotIndex,
+                                objectCallbacks.call(instance, instance::getSpawn), objX, objY, flags, sizeIndex,
+                                 width, height, category, overlap,
+                                instance instanceof AbstractObjectInstance aoi
+                                        ? objectCallbacks.call(instance, aoi::traceDebugDetails) : ""));
             }
             if (!overlap) {
                 continue;
@@ -566,14 +578,14 @@ final class ObjectTouchResponseController {
         return toucher.getInvulnerableFrames(); // AbstractPlayableSprite.java:2117
     }
 
-    private static boolean usesCurrentTouchState(ObjectInstance instance) {
+    private boolean usesCurrentTouchState(ObjectInstance instance) {
         // S3K Obj_Bouncing_Ring calls Add_SpriteToCollisionResponseList after
         // Obj37_Main moves and applies gravity (docs/skdisasm/sonic3k.asm:
         // 35616-35626). The collision-response list therefore contains the
         // live post-movement Obj37 position, even on inline player-touch frames
         // where generic object touch uses the frame-start snapshot.
         return instance instanceof LostRingObjectInstance
-                || instance.usesCurrentTouchResponseState();
+                || objectCallbacks.call(instance, instance::usesCurrentTouchResponseState);
     }
 
     /**
@@ -605,12 +617,14 @@ final class ObjectTouchResponseController {
                     region.x(), region.y(), width, height, playerWidth);
             if (debugState.isEnabled()) {
                 int slotIndex = instance instanceof AbstractObjectInstance aoi
-                        ? aoi.getSlotIndex()
+                        ? objectCallbacks.call(instance, aoi::getSlotIndex)
                         : -1;
                 debugState.addHit(
-                        new TouchResponseDebugHit(slotIndex, instance.getSpawn(), region.x(), region.y(),
-                                flags, sizeIndex, width, height, category, overlap,
-                                instance instanceof AbstractObjectInstance aoi ? aoi.traceDebugDetails() : ""));
+                        new TouchResponseDebugHit(slotIndex,
+                                objectCallbacks.call(instance, instance::getSpawn), region.x(), region.y(),
+                                 flags, sizeIndex, width, height, category, overlap,
+                                instance instanceof AbstractObjectInstance aoi
+                                        ? objectCallbacks.call(instance, aoi::traceDebugDetails) : ""));
             }
             if (!overlap) {
                 continue;
@@ -650,7 +664,7 @@ final class ObjectTouchResponseController {
                 || profile.actorContextPolicy() != TouchActorContextPolicy.MAIN_ONLY;
     }
 
-    private boolean tryShieldDeflect(PlayableEntity player,
+    private boolean tryShieldDeflect(PlayableEntity player, ObjectInstance instance,
             TouchResponseProvider provider, TouchResponseProfile profile,
             int objectX, int objectY, int objectWidth, int objectHeight) {
         if (player == null || !canDeflectShieldReactiveProjectile(player)) {
@@ -668,7 +682,7 @@ final class ObjectTouchResponseController {
         if (!overlap) {
             return false;
         }
-        return provider.onShieldDeflect(player);
+        return objectCallbacks.call(instance, () -> provider.onShieldDeflect(player));
     }
 
     private boolean canDeflectShieldReactiveProjectile(PlayableEntity player) {
@@ -693,7 +707,8 @@ final class ObjectTouchResponseController {
             return;
         }
         if (listener != null) {
-            listener.onTouchResponse(sidekick, result, currentFrameCounter);
+            objectCallbacks.run(instance,
+                    () -> listener.onTouchResponse(sidekick, result, currentFrameCounter));
         }
         if (result.category() == TouchCategory.SPECIAL
                 && profile.enablesPostSpecialTouchAirborneSideVelocityPreservation()) {
@@ -707,7 +722,8 @@ final class ObjectTouchResponseController {
                     // ROM: Touch_Enemy_Part2 checks collision_property BEFORE decrementing HP.
                     int hpBeforeHit = 0;
                     if (instance instanceof TouchResponseProvider provider2) {
-                        hpBeforeHit = provider2.getCollisionProperty();
+                        hpBeforeHit = objectCallbacks.call(
+                                instance, provider2::getCollisionProperty);
                     }
                     // ROM parity (sonic3k.asm:20945-20990): Touch_EnemyNormal sets
                     // status bit 7 on the badnik AND applies +/-$100 bounce to the
@@ -721,7 +737,8 @@ final class ObjectTouchResponseController {
                     boolean wasAlreadyDestroyed = instance instanceof AbstractObjectInstance preAoi
                             && preAoi.isDestroyed();
                     if (instance instanceof TouchResponseAttackable attackable) {
-                        attackable.onPlayerAttack(sidekick, result);
+                        objectCallbacks.run(instance,
+                                () -> attackable.onPlayerAttack(sidekick, result));
                     }
                     // ROM byte zero-test gate, not signed compare (see player path
                     // above): S2 s2.asm:85282-85290 Touch_Enemy_Part2 tst.b
@@ -751,7 +768,8 @@ final class ObjectTouchResponseController {
             case BOSS -> {
                 if (isPlayerAttacking(sidekick, instance)) {
                     if (instance instanceof TouchResponseAttackable attackable) {
-                        attackable.onPlayerAttack(sidekick, result);
+                        objectCallbacks.run(instance,
+                                () -> attackable.onPlayerAttack(sidekick, result));
                     }
                     applyBossBounce(sidekick);
                 } else {
@@ -770,7 +788,7 @@ final class ObjectTouchResponseController {
             TouchResponseResult result) {
         int sourceX = (result != null && result.hasRegionX())
                 ? result.regionX()
-                : instance != null ? instance.getX() : sidekick.getCentreX();
+                : instance != null ? objectCallbacks.call(instance, instance::getX) : sidekick.getCentreX();
         // ROM: Hurt_Sidekick in 1P mode - just apply hurt knockback, no ring scatter
         sidekick.applyHurt(sourceX);
     }
@@ -907,7 +925,8 @@ final class ObjectTouchResponseController {
             return;
         }
         if (listener != null) {
-            listener.onTouchResponse(player, result, currentFrameCounter);
+            objectCallbacks.run(instance,
+                    () -> listener.onTouchResponse(player, result, currentFrameCounter));
         }
         if (result.category() == TouchCategory.SPECIAL
                 && profile.enablesPostSpecialTouchAirborneSideVelocityPreservation()) {
@@ -922,7 +941,8 @@ final class ObjectTouchResponseController {
                     // Capture HP before onPlayerAttack (which may decrement it).
                     int hpBeforeHit = 0;
                     if (instance instanceof TouchResponseProvider provider2) {
-                        hpBeforeHit = provider2.getCollisionProperty();
+                        hpBeforeHit = objectCallbacks.call(
+                                instance, provider2::getCollisionProperty);
                     }
                     // ROM parity (s2.asm:84842-84863): Touch_KillEnemy rewrites
                     // the badnik slot to ObjID_Explosion before applying the
@@ -931,7 +951,8 @@ final class ObjectTouchResponseController {
                     boolean wasAlreadyDestroyed = instance instanceof AbstractObjectInstance preAoi
                             && preAoi.isDestroyed();
                     if (instance instanceof TouchResponseAttackable attackable) {
-                        attackable.onPlayerAttack(player, result);
+                        objectCallbacks.run(instance,
+                                () -> attackable.onPlayerAttack(player, result));
                     }
                     // ROM gates the boss-rebound on a BYTE zero-test, not a signed
                     // compare. All three games tst.b the gated byte and beq to the
@@ -974,7 +995,8 @@ final class ObjectTouchResponseController {
             case BOSS -> {
                 if (isPlayerAttacking(player, instance)) {
                     if (instance instanceof TouchResponseAttackable attackable) {
-                        attackable.onPlayerAttack(player, result);
+                        objectCallbacks.run(instance,
+                                () -> attackable.onPlayerAttack(player, result));
                     }
                     applyBossBounce(player);
                 } else {
@@ -1061,7 +1083,7 @@ final class ObjectTouchResponseController {
         // Use center coordinates to match ROM y_pos behavior
         int playerY = player.getCentreY();
         // ROM: cmp.w y_pos(a1),d0 — use current position, not spawn
-        int enemyY = instance != null ? instance.getY() : playerY;
+        int enemyY = instance != null ? objectCallbacks.call(instance, instance::getY) : playerY;
         if (playerY < enemyY) {
             player.setYSpeed((short) -ySpeed);
         } else {
@@ -1124,7 +1146,7 @@ final class ObjectTouchResponseController {
 
         if (instance != null) {
             String className = instance.getClass().getSimpleName();
-            int objectId = instance.getSpawn().objectId();
+            int objectId = objectCallbacks.call(instance, instance::getSpawn).objectId();
             LOGGER.fine(() -> "Touch hurt by: " + className + " (ID: 0x" + Integer.toHexString(objectId) + ")");
         }
 
@@ -1133,8 +1155,9 @@ final class ObjectTouchResponseController {
         // for the hurt-direction comparison (docs/s1disasm/_incObj/Sonic ReactToItem.asm:402-405).
         int sourceX = (result != null && result.hasRegionX())
                 ? result.regionX()
-                : instance != null ? instance.getX() : player.getCentreX();
-        boolean spikeHit = instance != null && instance.getSpawn().objectId() == 0x36;
+                : instance != null ? objectCallbacks.call(instance, instance::getX) : player.getCentreX();
+        boolean spikeHit = instance != null
+                && objectCallbacks.call(instance, instance::getSpawn).objectId() == 0x36;
 
         // S3K shield_reaction bit 4: fire shield blocks fire damage
         boolean fireHit = !spikeHit && result != null

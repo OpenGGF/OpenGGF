@@ -41,7 +41,9 @@ public final class ModFaultBoundary {
         Objects.requireNonNull(owner, "owner");
         Objects.requireNonNull(callback, "callback");
         try {
-            return callback.get();
+            return OwnerCallbackScope.call(owner, callback);
+        } catch (CallbackAborted aborted) {
+            throw aborted;
         } catch (Throwable failure) {
             rethrowIfFatal(failure);
             Set<String> disabled = ownerAndDependents(owner);

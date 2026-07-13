@@ -253,6 +253,49 @@ class TestMasterTitleScreenLayout {
     }
 
     @Test
+    void stockMenuKeepsAllEntriesWhenTheyFitNativeWidth() {
+        List<MasterTitleScreen.MenuItemLayout> layout = MasterTitleScreen.menuItemLayouts(
+                List.of("Sonic 1", "Sonic 2", "Sonic 3K"), 1, 320);
+
+        assertEquals(List.of(0, 1, 2), layout.stream()
+                .map(MasterTitleScreen.MenuItemLayout::entryIndex).toList());
+        assertTrue(layout.stream().allMatch(item -> item.x() >= 0
+                && item.x() + item.width() <= 320));
+    }
+
+    @Test
+    void overflowingSampleMenuBecomesSelectedVisibleCarouselAtNativeWidth() {
+        List<MasterTitleScreen.MenuItemLayout> layout = MasterTitleScreen.menuItemLayouts(
+                List.of("Sonic 1", "Sonic 2", "Sonic 3K", "Phase 3 Standalone Sample"), 3, 320);
+
+        assertEquals(1, layout.size());
+        assertEquals(3, layout.getFirst().entryIndex());
+        assertEquals("Phase 3 Standalone Sample", layout.getFirst().text());
+        assertTrue(layout.getFirst().x() >= 0);
+        assertTrue(layout.getFirst().x() + layout.getFirst().width() <= 320);
+    }
+
+    @Test
+    void carouselElidesSeveralMaximumLengthNamesWithinNativeAndWidescreenBounds() {
+        String longName = "Standalone ".repeat(300);
+        List<String> labels = List.of("Sonic 1", "Sonic 2", "Sonic 3K",
+                longName + "A", longName + "B", longName + "C");
+
+        for (int width : List.of(320, 400, 528)) {
+            for (int selected = 3; selected < labels.size(); selected++) {
+                List<MasterTitleScreen.MenuItemLayout> layout =
+                        MasterTitleScreen.menuItemLayouts(labels, selected, width);
+                assertEquals(1, layout.size());
+                MasterTitleScreen.MenuItemLayout item = layout.getFirst();
+                assertEquals(selected, item.entryIndex());
+                assertTrue(item.text().endsWith("..."));
+                assertTrue(item.x() >= 0);
+                assertTrue(item.x() + item.width() <= width);
+            }
+        }
+    }
+
+    @Test
     void previewAnimationFrame_advancesUntilSelectionChanges() {
         MasterTitleScreen screen = new MasterTitleScreen(SonicConfigurationService.createStandalone());
 

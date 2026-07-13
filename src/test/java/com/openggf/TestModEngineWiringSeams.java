@@ -107,11 +107,20 @@ class TestModEngineWiringSeams {
                 "preparePresentationForLaunch(module)");
         assertMethodOrder(source, "public void initializeGame()",
                 "preparePresentationForLaunch(module)",
-                "SessionManager.openGameplaySession(rootModule, module, null)");
+                "rootModule, module, dataSource, null");
         assertMethodOrder(source, "private boolean preparePresentationForLaunch(GameModule module)",
                 "audioManager.setBackendForLaunch(", "audioManager.outputSampleRate()");
         assertMethodOrder(source, "private boolean preparePresentationForLaunch(GameModule module)",
                 "subsystem.beginNormalSession(", "return true");
+    }
+
+    @Test
+    void standalonePresentationFailureKeepsOwnerSpecificErrorSelection() throws IOException {
+        String source = source("Engine.java");
+        assertTrue(source.contains(
+                "preparePresentationForLaunch(module, descriptor.manifest().id())"));
+        assertTrue(source.contains(
+                "if (standaloneOwner != null) showStandaloneLaunchError(standaloneOwner)"));
     }
 
     @Test

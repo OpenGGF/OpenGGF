@@ -2,6 +2,7 @@ package com.openggf.level.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
+import com.openggf.mods.code.ModFaultBoundary.CallbackAborted;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.lang.reflect.Constructor;
@@ -93,6 +94,8 @@ public final class ObjectRewindDynamicCodecs {
         }
         try {
             return registry.create(entry.spawn());
+        } catch (CallbackAborted aborted) {
+            throw aborted;
         } catch (Exception e) {
             LOG.fine("genericRecreate: registry.create threw for " + className + ": " + e);
             return null;

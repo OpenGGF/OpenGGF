@@ -35,6 +35,7 @@ public final class ModApiSurfaceInventory {
             "com.openggf.game.GameModule",
             "com.openggf.game.AbstractStandaloneGameModule",
             "com.openggf.game.ModGame",
+            "com.openggf.mods.code.StandaloneLevelLoader",
             "com.openggf.game.RomDataSource",
             "com.openggf.level.objects.PlayableSheetReader",
             "com.openggf.level.objects.PlayableSheetMaterializer",

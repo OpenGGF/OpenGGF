@@ -3,7 +3,6 @@ package com.openggf.game.save;
 import com.openggf.game.session.SessionManager;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.logging.Logger;
 
 /**
@@ -12,8 +11,6 @@ import java.util.logging.Logger;
  */
 public final class SessionSaveRequests {
     private static final Logger LOGGER = Logger.getLogger(SessionSaveRequests.class.getName());
-    private static final SaveManager SAVE_MANAGER = new SaveManager(Path.of("saves"));
-
     private SessionSaveRequests() {
     }
 
@@ -29,7 +26,7 @@ public final class SessionSaveRequests {
                             SessionManager.getCurrentGameplayMode(),
                             worldSession.getSaveSessionContext()),
                     worldSession.getGameModule().getSaveSnapshotProvider(),
-                    SAVE_MANAGER);
+                    new SaveManager(SavePaths.root()));
         } catch (IOException e) {
             LOGGER.warning("Failed to write save: " + e.getMessage());
         }

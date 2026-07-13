@@ -38,6 +38,10 @@ public class MasterTitleLaunchCoordinator {
         configService.resolveDisplayAspect();
     }
 
+    public void prepareStandaloneExit() {
+        resetOverrides();
+    }
+
     public void returnToMasterTitle() {
         resetOverrides();
         if (returnToMasterTitleHandler != null) {

@@ -96,6 +96,16 @@ final class OwnerAwareStandaloneModule {
                 return wrapped.computeIfAbsent(value,
                         ignored -> new OwnerAwareStandaloneGame(owner, game, boundary));
             }
+            if (value instanceof com.openggf.level.objects.ObjectRegistry registry) {
+                return wrapped.computeIfAbsent(value, ignored ->
+                        new OwnerAwareStandaloneObjectRegistry(owner, registry, boundary));
+            }
+            // ObjectManager must retain the concrete AbstractObjectInstance so it can
+            // inject ObjectServices and apply the normal lifecycle/rewind contracts.
+            // The registry factory invocation itself has already crossed this owner boundary.
+            if (value instanceof com.openggf.level.objects.ObjectInstance) {
+                return value;
+            }
             if (!declaredType.isInterface() || declaredType.isSealed()
                     || !declaredType.getPackageName().startsWith("com.openggf")) {
                 return value;
@@ -103,6 +113,62 @@ final class OwnerAwareStandaloneModule {
             return wrapped.computeIfAbsent(value, ignored -> Proxy.newProxyInstance(
                     declaredType.getClassLoader(), new Class<?>[] { declaredType },
                     new BoundaryHandler(owner, value, boundary, java.util.Map.of())));
+        }
+    }
+
+    private static final class OwnerAwareStandaloneObjectRegistry
+            implements com.openggf.level.objects.ObjectRegistry,
+            java.util.function.Supplier<Object> {
+        private final String owner;
+        private final com.openggf.level.objects.ObjectRegistry delegate;
+        private final ModFaultBoundary boundary;
+
+        private OwnerAwareStandaloneObjectRegistry(String owner,
+                com.openggf.level.objects.ObjectRegistry delegate, ModFaultBoundary boundary) {
+            this.owner = owner;
+            this.delegate = delegate;
+            this.boundary = boundary;
+        }
+
+        @Override public com.openggf.level.objects.ObjectInstance create(
+                com.openggf.level.objects.ObjectSpawn spawn) {
+            return boundary.callStandalone(owner, () -> {
+                if (!owner.equals(spawn.ownerModId())) {
+                    throw new IllegalArgumentException("Standalone object spawn owner mismatch");
+                }
+                return delegate.create(spawn);
+            });
+        }
+        @Override public void reportCoverage(java.util.List<com.openggf.level.objects.ObjectSpawn> spawns) {
+            boundary.runStandalone(owner, () -> delegate.reportCoverage(spawns));
+        }
+        @Override public String getPrimaryName(int objectId) {
+            return boundary.callStandalone(owner, () -> delegate.getPrimaryName(objectId));
+        }
+        @Override public com.openggf.level.objects.ObjectSlotLayout objectSlotLayout() {
+            return boundary.callStandalone(owner, delegate::objectSlotLayout);
+        }
+        @Override public com.openggf.level.objects.ObjectWindowingStrategy objectWindowingStrategy() {
+            return boundary.callStandalone(owner, delegate::objectWindowingStrategy);
+        }
+        @Override public java.util.List<String> getAliases(int objectId) {
+            return boundary.callStandalone(owner, () -> delegate.getAliases(objectId));
+        }
+        @Override public boolean hasObjectKey(String objectKey) {
+            return boundary.callStandalone(owner, () -> delegate.hasObjectKey(objectKey));
+        }
+        @Override public java.util.List<String> browsableObjectKeys() {
+            return boundary.callStandalone(owner, delegate::browsableObjectKeys);
+        }
+        @Override public java.util.Optional<String> editorPreviewArtKey(int stockObjectId) {
+            return boundary.callStandalone(owner, () -> delegate.editorPreviewArtKey(stockObjectId));
+        }
+        @Override public java.util.Optional<String> editorPreviewArtKey(String objectKey) {
+            return boundary.callStandalone(owner, () -> delegate.editorPreviewArtKey(objectKey));
+        }
+        @Override public Object get() {
+            return java.util.Map.entry(boundary,
+                    (java.util.function.Supplier<String>) OwnerCallbackScope::current);
         }
     }
 

@@ -762,14 +762,16 @@ public class LevelDebugRenderer {
                 && ctx.overlayManager().isEnabled(DebugOverlayToggle.OBJECT_DEBUG)) {
             reusableDebugCtx.clear();
             for (ObjectInstance instance : objectManager.getActiveObjects()) {
-                ObjectSpawn spawn = instance.getSpawn();
+                ObjectSpawn spawn = com.openggf.level.objects.ObjectCallbackDispatch.call(
+                        objectManager, instance, instance::getSpawn);
                 if (spawn == null) {
                     continue;
                 }
                 if (!isInCameraFrustum(spawn.x(), spawn.y(), 64)) {
                     continue;
                 }
-                instance.appendDebugRenderCommands(reusableDebugCtx);
+                com.openggf.level.objects.ObjectCallbackDispatch.run(objectManager, instance,
+                        () -> instance.appendDebugRenderCommands(reusableDebugCtx));
             }
             if (reusableDebugCtx.hasGeometry()) {
                 graphicsManager.enqueueDebugLineState();

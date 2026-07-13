@@ -2970,8 +2970,10 @@ public class LevelManager {
             return;
         }
         for (ObjectInstance instance : carried) {
-            if (instance != null && !instance.isDestroyed()) {
-                instance.onCarriedAcrossSeamlessTransition(offsetX, offsetY);
+            if (instance != null && !com.openggf.level.objects.ObjectCallbackDispatch.call(
+                    objectManager, instance, instance::isDestroyed)) {
+                com.openggf.level.objects.ObjectCallbackDispatch.run(objectManager, instance,
+                        () -> instance.onCarriedAcrossSeamlessTransition(offsetX, offsetY));
             }
         }
     }
@@ -3036,6 +3038,7 @@ public class LevelManager {
      */
     void rebuildManagersForActTransition(Camera cam, List<ObjectInstance> persistentDynamicObjects) {
         int cameraX = cam.getX();
+        ObjectManager previousObjectManager = objectManager;
 
         // Rebuild ObjectManager with the new act's object spawns
         objectManager = new ObjectManager(level.getObjects(),
@@ -3063,6 +3066,10 @@ public class LevelManager {
         }
         collisionSystem.setObjectManager(objectManager);
         objectManager.reset(cameraX);
+        if (previousObjectManager != null && persistentDynamicObjects != null) {
+            com.openggf.level.objects.ObjectCallbackDispatch.inheritOwners(
+                    objectManager, previousObjectManager, persistentDynamicObjects);
+        }
 
         // Rebuild RingManager with the new act's ring spawns
         RingSpriteSheet ringSpriteSheet = level.getRingSpriteSheet();
@@ -3079,7 +3086,8 @@ public class LevelManager {
         }
         if (persistentDynamicObjects != null) {
             for (ObjectInstance object : persistentDynamicObjects) {
-                if (object != null && !object.isDestroyed()) {
+                if (object != null && !com.openggf.level.objects.ObjectCallbackDispatch.call(
+                        objectManager, object, object::isDestroyed)) {
                     objectManager.addDynamicObject(object);
                 }
             }

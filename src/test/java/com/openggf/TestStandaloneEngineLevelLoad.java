@@ -76,6 +76,24 @@ class TestStandaloneEngineLevelLoad {
                 com.openggf.game.PlayableCharacterRegistry.empty()));
     }
 
+    @Test
+    void standaloneContinuePinsEverySavedSidekick() throws Exception {
+        previous = EngineServices.current();
+        Engine engine = new Engine(previous);
+        var team = new com.openggf.game.save.SelectedTeam(
+                "owner:runner", java.util.List.of("owner:friend", "owner:friend-two"));
+        var method = Engine.class.getDeclaredMethod("pinStandaloneTeam",
+                com.openggf.game.save.SelectedTeam.class);
+        method.setAccessible(true);
+
+        method.invoke(engine, team);
+
+        assertEquals("owner:runner", previous.configuration().getString(
+                com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("owner:friend,owner:friend-two", previous.configuration().getString(
+                com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+    }
+
     private static com.openggf.game.CharacterDefinition definition(
             com.openggf.game.CharacterKey key) {
         return new com.openggf.game.CharacterDefinition(key, key.persisted(),

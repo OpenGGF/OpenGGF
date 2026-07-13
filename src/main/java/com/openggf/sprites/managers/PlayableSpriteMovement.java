@@ -347,6 +347,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	private boolean applyStaleRidingLogicalHorizontalInput(boolean left, boolean right) {
 		boolean horizontal = left || right;
+		LevelManager level = levelManager();
+		var objectManager = level != null ? level.getObjectManager() : null;
 		ObjectInstance ridingObject = currentRidingSolidForStaleHorizontalInput();
 		if (ridingObject == null || !(ridingObject instanceof SolidObjectProvider provider)) {
 			staleHorizontalInputRideSlotIndex = -1;
@@ -355,15 +357,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			staleHorizontalInputPreviousHorizontal = horizontal;
 			return false;
 		}
-		if (sprite.getGSpeed() != 0
-				&& !provider.preservesStaleHorizontalInputEdgeWhileMoving(sprite)) {
+		boolean preservesMovingEdge = objectManager == null
+				? provider.preservesStaleHorizontalInputEdgeWhileMoving(sprite)
+				: com.openggf.level.objects.ObjectCallbackDispatch.call(objectManager, ridingObject,
+						() -> provider.preservesStaleHorizontalInputEdgeWhileMoving(sprite));
+		if (sprite.getGSpeed() != 0 && !preservesMovingEdge) {
 			staleHorizontalInputRideSlotIndex = -1;
 			staleHorizontalInputSuppressFrames = 0;
 			staleHorizontalInputRideFrames = 0;
 			staleHorizontalInputPreviousHorizontal = horizontal;
 			return false;
 		}
-		int ridingSlotIndex = slotIndexForStaleHorizontalInput(ridingObject);
+		int ridingSlotIndex = slotIndexForStaleHorizontalInput(objectManager, ridingObject);
 		if (ridingSlotIndex < 0 || ridingSlotIndex != staleHorizontalInputRideSlotIndex) {
 			staleHorizontalInputRideSlotIndex = ridingSlotIndex;
 			staleHorizontalInputSuppressFrames = 0;
@@ -380,8 +385,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (sprite.getGSpeed() == 0
 				&& horizontal
 				&& !staleHorizontalInputPreviousHorizontal) {
-			staleHorizontalInputSuppressFrames =
-					provider.staleHorizontalLogicalInputFramesWhileRiding(sprite, staleHorizontalInputRideFrames, left, right);
+			staleHorizontalInputSuppressFrames = objectManager == null
+					? provider.staleHorizontalLogicalInputFramesWhileRiding(
+							sprite, staleHorizontalInputRideFrames, left, right)
+					: com.openggf.level.objects.ObjectCallbackDispatch.call(objectManager, ridingObject,
+							() -> provider.staleHorizontalLogicalInputFramesWhileRiding(
+									sprite, staleHorizontalInputRideFrames, left, right));
 		}
 		staleHorizontalInputPreviousHorizontal = horizontal;
 
@@ -392,8 +401,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return true;
 	}
 
-	private static int slotIndexForStaleHorizontalInput(ObjectInstance object) {
-		return object instanceof AbstractObjectInstance aoi ? aoi.getSlotIndex() : -1;
+	private static int slotIndexForStaleHorizontalInput(
+			com.openggf.level.objects.ObjectManager objectManager, ObjectInstance object) {
+		return object instanceof AbstractObjectInstance aoi && objectManager != null
+				? com.openggf.level.objects.ObjectCallbackDispatch.call(
+						objectManager, object, aoi::getSlotIndex) : -1;
 	}
 
 	private ObjectInstance currentRidingSolidForStaleHorizontalInput() {
@@ -4075,12 +4087,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int ridingPieceIndex = objectManager.getRidingPieceIndex(sprite);
 		boolean useMultiPieceWidth = false;
 		if (ridingPieceIndex >= 0 && ridingObject instanceof MultiPieceSolidProvider multiPiece) {
-			objectX = multiPiece.getPieceX(ridingPieceIndex);
-			params = multiPiece.getPieceParams(ridingPieceIndex);
+			objectX = com.openggf.level.objects.ObjectCallbackDispatch.call(
+					objectManager, ridingObject, () -> multiPiece.getPieceX(ridingPieceIndex));
+			params = com.openggf.level.objects.ObjectCallbackDispatch.call(
+					objectManager, ridingObject, () -> multiPiece.getPieceParams(ridingPieceIndex));
 			useMultiPieceWidth = true;
 		} else {
-			objectX = ridingObject.getX();
-			params = provider.getSolidParams();
+			objectX = com.openggf.level.objects.ObjectCallbackDispatch.call(
+					objectManager, ridingObject, ridingObject::getX);
+			params = com.openggf.level.objects.ObjectCallbackDispatch.call(
+					objectManager, ridingObject, provider::getSolidParams);
 		}
 		if (params == null) {
 			return;

@@ -45,6 +45,37 @@ public final class ModZoneLoader {
         if (definition.music() instanceof ModLevelDefinition.StockMusic) {
             throw new IOException("Standalone levels require a namespaced music track");
         }
+        return buildStandalone(definition, ringSheet);
+    }
+
+    /** Creator-facing standalone path from one bounded baked export. */
+    static ModLevel loadStandalone(com.openggf.io.ModAssetRoot assets,
+                                          BakedLevelRef level,
+                                          String ownerModId,
+                                          RingSpriteSheet ringSheet) throws IOException {
+        Objects.requireNonNull(assets, "assets");
+        Objects.requireNonNull(level, "level");
+        ownerModId = com.openggf.game.ModKeySyntax.requireManifestId(ownerModId);
+        ModLevelDefinition definition = ModLevelDefinitionParser.read(assets, level);
+        if (!(definition.music() instanceof ModLevelDefinition.TrackMusic track)
+                || !ownerModId.equals(track.trackKey().modId())) {
+            throw new IOException("Standalone level music must belong to " + ownerModId);
+        }
+        for (ModLevelDefinition.ObjectEntry entry : definition.objects()) {
+            if (entry instanceof ModLevelDefinition.StockObjectSpawn) {
+                throw new IOException("Standalone levels cannot reference stock object ids");
+            }
+            ModLevelDefinition.KeyedObjectSpawn keyed = (ModLevelDefinition.KeyedObjectSpawn) entry;
+            String display = com.openggf.game.ModKeySyntax.requireDisplayKey(keyed.objectKey());
+            if (!display.startsWith(ownerModId + ":")) {
+                throw new IOException("Standalone object key must belong to " + ownerModId);
+            }
+        }
+        return buildStandalone(definition, ringSheet);
+    }
+
+    private static ModLevel buildStandalone(ModLevelDefinition definition,
+                                            RingSpriteSheet ringSheet) throws IOException {
         List<ObjectSpawn> objects = decodeObjects(definition, false);
         List<RingSpawn> rings = decodeRings(definition);
         return ModLevel.builder(definition.zoneIndex(), definition.blockGridSide(),

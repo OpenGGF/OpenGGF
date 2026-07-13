@@ -299,6 +299,7 @@ public class Engine {
 		this.gameLoop.setEditorStateSyncHandler(this::syncEditorState);
 		this.gameLoop.setMasterTitleScreenSupplier(() -> masterTitleScreen);
 		this.gameLoop.setMasterTitleExitHandler(this::exitMasterTitleScreen);
+		this.gameLoop.setStandaloneMasterTitleExitHandler(this::exitStandaloneMasterTitle);
 		this.gameLoop.setLegalDisclaimerScreenSupplier(() -> legalDisclaimerScreen);
 		this.gameLoop.setLegalDisclaimerExitHandler(this::exitLegalDisclaimer);
 		this.gameLoop.setDataSelectActionHandler(this::launchGameplayFromDataSelect);
@@ -833,27 +834,67 @@ public class Engine {
 
 	/** Detection-free boot for one effective standalone descriptor. */
 	void initializeStandaloneGame(com.openggf.mods.ModDescriptor descriptor) {
+		initializeStandaloneGame(descriptor, com.openggf.game.MasterTitleEntry.Action.NEW_GAME);
+	}
+
+	void initializeStandaloneGame(com.openggf.mods.ModDescriptor descriptor,
+			com.openggf.game.MasterTitleEntry.Action action) {
 		Objects.requireNonNull(descriptor, "descriptor");
+		Objects.requireNonNull(action, "action");
 		try {
-			GameplayModeContext gameplay = openStandaloneSession(descriptor);
+			StandaloneSessionLaunch launch = openStandaloneSession(descriptor, action);
+			GameplayModeContext gameplay = launch.gameplay();
 			GameModule module = gameplay.getWorldSession().getGameModule();
-			pinStandaloneDefaultTeam(module);
-			if (!preparePresentationForLaunch(module, true)) return;
+			pinStandaloneTeam(launch.team());
+			if (!preparePresentationForLaunch(module, descriptor.manifest().id())) return;
 			initializeGameplayRuntime(gameplay, true);
-			loadDefaultStartingLevel(false);
+			loadLevelFromDataSelect(launch.zone(), launch.act());
+			restoreGameplayModeFromDataSelectPayload(gameplay, launch.payload());
 			gameLoop.setGameMode(GameMode.LEVEL);
+			if (action == com.openggf.game.MasterTitleEntry.Action.NEW_GAME) {
+				gameLoop.requestSaveForCurrentSession(com.openggf.game.save.SaveReason.NEW_SLOT_START);
+			}
 		} catch (com.openggf.mods.code.ModFaultBoundary.CallbackAborted aborted) {
 			LOGGER.log(java.util.logging.Level.SEVERE,
 					"Standalone mod callback aborted launch", aborted);
-			showStandaloneLaunchError();
+			showStandaloneLaunchError(descriptor.manifest().id());
 		} catch (IOException | RuntimeException failure) {
 			LOGGER.log(java.util.logging.Level.SEVERE, "Standalone mod launch failed", failure);
-			showStandaloneLaunchError();
+			showStandaloneLaunchError(descriptor.manifest().id());
 		}
 	}
 
 	/** Package-visible no-render standalone session seam for headless integration tests. */
 	GameplayModeContext openStandaloneSession(com.openggf.mods.ModDescriptor descriptor)
+			throws IOException {
+		StandalonePrepared prepared = prepareStandalone(descriptor);
+		return com.openggf.tools.HeadlessGameBoot.openStandaloneSessionForBoot(
+				EngineServices.current(), prepared.module(), prepared.source());
+	}
+
+	private StandaloneSessionLaunch openStandaloneSession(
+			com.openggf.mods.ModDescriptor descriptor,
+			com.openggf.game.MasterTitleEntry.Action action) throws IOException {
+		StandalonePrepared prepared = prepareStandalone(descriptor);
+		GameModule module = prepared.module();
+		SelectedTeam fallback = new SelectedTeam(
+				standaloneDefaultCharacter(module.getPlayableCharacterRegistry()).persisted(), List.of());
+		Map<String, Object> payload = action == com.openggf.game.MasterTitleEntry.Action.CONTINUE
+				? requireStandaloneSlotPayload(module) : null;
+		StandaloneSavePayload parsed = payload == null ? null : parseStandalonePayload(payload);
+		SelectedTeam team = parsed == null ? fallback : parsed.team();
+		validateStandaloneTeam(module, team);
+		int zone = parsed == null ? 0 : parsed.zone();
+		int act = parsed == null ? 0 : parsed.act();
+		validateStandaloneLocation(module, zone, act);
+		var saveContext = com.openggf.game.save.SaveSessionContext.forSlot(
+				module.getGameCode(), 1, team, zone, act);
+		GameplayModeContext gameplay = com.openggf.tools.HeadlessGameBoot.openStandaloneSessionForBoot(
+				EngineServices.current(), module, prepared.source(), saveContext);
+		return new StandaloneSessionLaunch(gameplay, team, zone, act, payload);
+	}
+
+	private StandalonePrepared prepareStandalone(com.openggf.mods.ModDescriptor descriptor)
 			throws IOException {
 		Objects.requireNonNull(descriptor, "descriptor");
 		if (descriptor.manifest().type() != com.openggf.mods.ModType.STANDALONE) {
@@ -871,15 +912,66 @@ public class Engine {
 		ModSubsystem.current().recordRegistrationFailures(modRuntime.registrationFailures());
 		GameDataSource source = new ModAssetDataSource(
 				owner, modRuntime.standaloneAssetSnapshot(owner));
-		return com.openggf.tools.HeadlessGameBoot.openStandaloneSessionForBoot(
-				EngineServices.current(), module, source);
+		return new StandalonePrepared(module, source);
 	}
 
-	private void pinStandaloneDefaultTeam(GameModule module) {
-		PlayableCharacterRegistry registry = module.getPlayableCharacterRegistry();
-		configService.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,
-				standaloneDefaultCharacter(registry).persisted());
-		configService.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+	private void pinStandaloneTeam(SelectedTeam team) {
+		configService.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, team.mainCharacter());
+		configService.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE,
+				String.join(",", team.sidekicks()));
+	}
+
+	private Map<String, Object> requireStandaloneSlotPayload(GameModule module) throws IOException {
+		SaveSlotSummary summary = new SaveManager(com.openggf.game.save.SavePaths.root())
+				.readSlotSummary(module.getGameCode(), 1);
+		if (!summary.isLoadable()) throw new IOException("Standalone Continue slot is unavailable");
+		Map<String, Object> payload = summary.payload();
+		parseStandalonePayload(payload);
+		return payload;
+	}
+
+	private static void validateStandaloneTeam(GameModule module, SelectedTeam team) throws IOException {
+		var definitions = module.getPlayableCharacterRegistry().definitions();
+		boolean mainKnown = definitions.keySet().stream()
+				.anyMatch(key -> key.persisted().equals(team.mainCharacter()));
+		boolean sidekicksKnown = team.sidekicks().stream().allMatch(value -> definitions.keySet().stream()
+				.anyMatch(key -> key.persisted().equals(value)));
+		if (!mainKnown || !sidekicksKnown) throw new IOException("Standalone Continue slot names unknown characters");
+	}
+
+	private static void validateStandaloneLocation(GameModule module, int zone, int act) throws IOException {
+		if (zone < 0 || zone >= module.getZoneRegistry().getZoneCount()
+				|| act < 0 || act >= module.getZoneRegistry().getActCount(zone)) {
+			throw new IOException("Standalone Continue slot names an unknown zone/act");
+		}
+	}
+
+	private record StandalonePrepared(GameModule module, GameDataSource source) { }
+	private record StandaloneSessionLaunch(GameplayModeContext gameplay, SelectedTeam team,
+			int zone, int act, Map<String, Object> payload) { }
+	private record StandaloneSavePayload(SelectedTeam team, int zone, int act) { }
+
+	private static StandaloneSavePayload parseStandalonePayload(Map<String, Object> payload)
+			throws IOException {
+		if (!(payload.get("mainCharacter") instanceof String main) || main.isBlank()
+				|| !(payload.get("sidekicks") instanceof List<?> rawSidekicks)
+				|| rawSidekicks.stream().anyMatch(value -> !(value instanceof String))) {
+			throw new IOException("Standalone Continue slot has invalid launch data");
+		}
+		int zone = exactStandaloneSaveIndex(payload.get("zone"), "zone");
+		int act = exactStandaloneSaveIndex(payload.get("act"), "act");
+		if (zone < 0 || act < 0) throw new IOException("Standalone Continue location is negative");
+		List<String> sidekicks = rawSidekicks.stream().map(String.class::cast).toList();
+		return new StandaloneSavePayload(new SelectedTeam(main, sidekicks), zone, act);
+	}
+
+	private static int exactStandaloneSaveIndex(Object value, String field) throws IOException {
+		if (value instanceof Integer integer) return integer;
+		if (value instanceof Long longValue
+				&& longValue >= Integer.MIN_VALUE && longValue <= Integer.MAX_VALUE) {
+			return longValue.intValue();
+		}
+		throw new IOException("Standalone Continue " + field + " must be an exact 32-bit integer");
 	}
 
 	static CharacterKey standaloneDefaultCharacter(PlayableCharacterRegistry registry) {
@@ -957,6 +1049,10 @@ public class Engine {
 	}
 
 	private void showModLaunchError() {
+		showModLaunchError(configService.getString(SonicConfiguration.DEFAULT_ROM));
+	}
+
+	private void showModLaunchError(String selectedGameId) {
 		gameplayMode = null;
 		gameLoop.setGameplayMode(null);
 		if (masterTitleScreen != null) {
@@ -966,14 +1062,17 @@ public class Engine {
 		if (graphicsManager.isGlInitialized()) {
 			masterTitleScreen.initialize();
 		}
-		masterTitleScreen.showModLaunchError(
-				configService.getString(SonicConfiguration.DEFAULT_ROM));
+		masterTitleScreen.showModLaunchError(selectedGameId);
 		gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
 	}
 
 	void showStandaloneLaunchError() {
+		showStandaloneLaunchError(configService.getString(SonicConfiguration.DEFAULT_ROM));
+	}
+
+	void showStandaloneLaunchError(String owner) {
 		SessionManager.closeGameplaySession();
-		showModLaunchError();
+		showModLaunchError(owner);
 	}
 
 	private void showStartupRomError(String message) {
@@ -1026,6 +1125,26 @@ public class Engine {
 
 		// Phase 2: load ROM, sprites, audio, level
 		initializeGame();
+	}
+
+	private void exitStandaloneMasterTitle(com.openggf.game.MasterTitleEntry.Launch launch) {
+		if (!(launch.entry() instanceof com.openggf.game.MasterTitleEntry.Standalone standalone)) {
+			throw new IllegalArgumentException("Standalone launch requires a standalone entry");
+		}
+		com.openggf.mods.ModDescriptor descriptor = ModSubsystem.current().processCatalog().effective()
+				.orderedEnabled().stream()
+				.filter(value -> value.manifest().type() == com.openggf.mods.ModType.STANDALONE
+						&& value.manifest().id().equals(standalone.owner()))
+				.findFirst().orElseThrow(() -> new IllegalArgumentException(
+						"Standalone entry is no longer effective: " + standalone.owner()));
+		refreshLaunchSessionCachedConfig();
+		applyResolvedDisplayDimensions();
+		if (masterTitleScreen != null) {
+			masterTitleScreen.cleanup();
+			masterTitleScreen = null;
+		}
+		resetForGameplayFromMasterTitle();
+		initializeStandaloneGame(descriptor, launch.action());
 	}
 
 	private void requestApplicationExit() {
@@ -1318,18 +1437,57 @@ public class Engine {
 				moduleResolutionService.prepareLaunch(policy);
 		MasterTitleScreen screen = new MasterTitleScreen(configService,
 				new com.openggf.game.launch.LaunchProfileStore(
-						configService, moduleResolutionService, preparedLaunch));
+						configService, moduleResolutionService, preparedLaunch),
+				masterTitleEntries());
 		if (ModSubsystem.current().policy().mayScanAtBoot()) {
 			screen.setModManagerScreenFactory(font -> ModSubsystem.current().createManager(font));
 		}
 		return screen;
 	}
 
-	private boolean preparePresentationForLaunch(GameModule module) {
-		return preparePresentationForLaunch(module, false);
+	private List<com.openggf.game.MasterTitleEntry> masterTitleEntries() {
+		List<com.openggf.game.MasterTitleEntry> entries = new ArrayList<>();
+		entries.add(new com.openggf.game.MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_1));
+		entries.add(new com.openggf.game.MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2));
+		entries.add(new com.openggf.game.MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_3K));
+		SaveManager saves = new SaveManager(com.openggf.game.save.SavePaths.root());
+		for (com.openggf.mods.ModDescriptor descriptor
+				: ModSubsystem.current().processCatalog().effective().orderedEnabled()) {
+			if (descriptor.manifest().type() != com.openggf.mods.ModType.STANDALONE) continue;
+			String owner = descriptor.manifest().id();
+			boolean canContinue = false;
+			try {
+				SaveSlotSummary summary = saves.readSlotSummary(owner, 1);
+				canContinue = summary.isLoadable()
+						&& validStandaloneTitlePayload(owner, summary.payload());
+			} catch (IOException failure) {
+				LOGGER.log(java.util.logging.Level.WARNING,
+						"Failed to inspect standalone Continue slot for " + owner, failure);
+			}
+			entries.add(new com.openggf.game.MasterTitleEntry.Standalone(
+					owner, descriptor.manifest().name(), canContinue));
+		}
+		return List.copyOf(entries);
 	}
 
-	private boolean preparePresentationForLaunch(GameModule module, boolean standalone) {
+	private boolean validStandaloneTitlePayload(String owner, Map<String, Object> payload) {
+		try {
+			StandaloneSavePayload parsed = parseStandalonePayload(payload);
+			GameModule module = modRuntime.prepareStandaloneModule(owner).orElseThrow(() ->
+					new IOException("Standalone module is unavailable"));
+			validateStandaloneTeam(module, parsed.team());
+			validateStandaloneLocation(module, parsed.zone(), parsed.act());
+			return true;
+		} catch (IOException | RuntimeException invalid) {
+			return false;
+		}
+	}
+
+	private boolean preparePresentationForLaunch(GameModule module) {
+		return preparePresentationForLaunch(module, null);
+	}
+
+	private boolean preparePresentationForLaunch(GameModule module, String standaloneOwner) {
 		try {
 			if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
 				audioManager.setBackendForLaunch(new LWJGLAudioBackend(configService, profiler));
@@ -1344,7 +1502,7 @@ public class Engine {
 			LOGGER.severe("Failed to prepare external presentation content: " + error.getMessage());
 			ModSubsystem.current().returnToTitle();
 			audioManager.resetState();
-			if (standalone) showStandaloneLaunchError();
+			if (standaloneOwner != null) showStandaloneLaunchError(standaloneOwner);
 			else showStartupRomError("Failed to initialize audio or mod presentation content.");
 			return false;
 		}
@@ -1403,7 +1561,7 @@ public class Engine {
 
 	private void launchGameplayFromDataSelect(com.openggf.game.dataselect.DataSelectAction action) {
 		GameModule module = SessionManager.requireCurrentGameModule();
-		SaveManager saveManager = new SaveManager(Path.of("saves"));
+		SaveManager saveManager = new SaveManager(com.openggf.game.save.SavePaths.root());
 		Map<String, Object> loadedPayload = loadDataSelectPayload(module, action, saveManager);
 		com.openggf.game.save.SaveSessionContext saveContext = createDataSelectSaveContext(module, action, saveManager);
 		String gameId = SessionManager.getCurrentWorldSession().rootGameModule().getGameId().code();

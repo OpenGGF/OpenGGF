@@ -1307,7 +1307,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         private PowerUpObject resolveLiveShieldObjectAfterRewindRestore() {
                 ObjectManager objectManager = currentObjectManagerIfAvailable();
-                if (isMatchingLiveShield(shieldObject)
+                if (isMatchingLiveShield(objectManager, shieldObject)
                                 && (objectManager == null || isObjectManagerLivePowerUp(objectManager, shieldObject))) {
                         return shieldObject;
                 }
@@ -1315,7 +1315,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         return null;
                 }
                 for (ObjectInstance object : objectManager.getActiveObjects()) {
-                        if (object instanceof PowerUpObject candidate && isMatchingLiveShield(candidate)) {
+                        if (object instanceof PowerUpObject candidate
+                                        && isMatchingLiveShield(objectManager, candidate)) {
                                 return candidate;
                         }
                 }
@@ -1325,7 +1326,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         private PowerUpObject resolveLiveInvincibilityObjectAfterRewindRestore() {
                 ObjectManager objectManager = currentObjectManagerIfAvailable();
                 if (invincibilityObject != null
-                                && !invincibilityObject.isDestroyed()
+                                && (invincibilityObject instanceof ObjectInstance instance
+                                                && objectManager != null
+                                        ? !com.openggf.level.objects.ObjectCallbackDispatch.call(
+                                                        objectManager, instance, instance::isDestroyed)
+                                        : !invincibilityObject.isDestroyed())
                                 && (objectManager == null
                                                 || isObjectManagerLivePowerUp(objectManager, invincibilityObject))) {
                         return invincibilityObject;
@@ -1333,10 +1338,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return null;
         }
 
-        private boolean isMatchingLiveShield(PowerUpObject candidate) {
-                return candidate != null
-                                && !candidate.isDestroyed()
-                                && candidate.isShieldFor(this, shieldType);
+        private boolean isMatchingLiveShield(ObjectManager objectManager, PowerUpObject candidate) {
+                if (!(candidate instanceof ObjectInstance object) || objectManager == null) {
+                        return candidate != null && !candidate.isDestroyed()
+                                        && candidate.isShieldFor(this, shieldType);
+                }
+                return com.openggf.level.objects.ObjectCallbackDispatch.call(objectManager, object,
+                                () -> !candidate.isDestroyed() && candidate.isShieldFor(this, shieldType));
         }
 
         private boolean isObjectManagerLivePowerUp(ObjectManager objectManager, PowerUpObject candidate) {

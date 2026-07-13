@@ -1,0 +1,13 @@
+formatVersion: 1
+tracks:
+  - id: zone-theme
+    assetPath: audio/sample-tone.wav
+    loop: true
+    loopStartFrame: 0
+    loopEndFrame: 8
+    gain: 0.2
+    tempoEffects: false
+sfx:
+  - id: hit
+    assetPath: audio/sample-tone.wav
+    gain: 0.5

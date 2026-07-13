@@ -17,6 +17,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -612,7 +613,7 @@ public class SidekickCpuController {
             return null;
         }
         if (instance instanceof RomObjectCodePointerProvider provider) {
-            return provider.romObjectCodePointerHighWord() & 0xFFFF;
+            return callObject(instance, provider::romObjectCodePointerHighWord) & 0xFFFF;
         }
         return null;
     }
@@ -2835,17 +2836,22 @@ public class SidekickCpuController {
         if (levelManager == null || levelManager.getObjectManager() == null) {
             return sidekick.getLatchedSolidObjectInstance();
         }
-        for (ObjectInstance instance : levelManager.getObjectManager().getActiveObjects()) {
+        ObjectManager objectManager = levelManager.getObjectManager();
+        for (ObjectInstance instance : objectManager.getActiveObjects()) {
             if (instance instanceof AbstractObjectInstance aoi
-                    && aoi.getSlotIndex() == slot
-                    && !instance.isDestroyed()) {
+                    && com.openggf.level.objects.ObjectCallbackDispatch.call(
+                            objectManager, instance, aoi::getSlotIndex) == slot
+                    && !com.openggf.level.objects.ObjectCallbackDispatch.call(
+                            objectManager, instance, instance::isDestroyed)) {
                 return instance;
             }
         }
         ObjectInstance latched = sidekick.getLatchedSolidObjectInstance();
         if (latched instanceof AbstractObjectInstance aoi
-                && aoi.getSlotIndex() == slot
-                && !latched.isDestroyed()) {
+                && com.openggf.level.objects.ObjectCallbackDispatch.call(
+                        objectManager, latched, aoi::getSlotIndex) == slot
+                && !com.openggf.level.objects.ObjectCallbackDispatch.call(
+                        objectManager, latched, latched::isDestroyed)) {
             return latched;
         }
         return null;
@@ -2897,14 +2903,17 @@ public class SidekickCpuController {
     }
 
     private boolean hasLiveRidingObject(ObjectInstance ridingObject) {
-        if (ridingObject == null || ridingObject.isDestroyed()) {
+        if (ridingObject == null) {
             return false;
         }
         LevelManager levelManager = sidekick.currentLevelManager();
         if (levelManager == null || levelManager.getObjectManager() == null) {
-            return true;
+            return !ridingObject.isDestroyed();
         }
-        return levelManager.getObjectManager().isActiveObjectInstance(ridingObject);
+        ObjectManager objectManager = levelManager.getObjectManager();
+        return !com.openggf.level.objects.ObjectCallbackDispatch.call(
+                objectManager, ridingObject, ridingObject::isDestroyed)
+                && objectManager.isActiveObjectInstance(ridingObject);
     }
 
     private boolean hasLiveInteractSlotObject(ObjectInstance interactObject) {
@@ -2926,7 +2935,9 @@ public class SidekickCpuController {
             return false;
         }
         if (ridingObject instanceof SolidObjectProvider provider) {
-            return provider.preservesSidekickCpuPushGraceWhileRiding(sidekick);
+            ObjectManager manager = sidekick.currentLevelManager().getObjectManager();
+            return com.openggf.level.objects.ObjectCallbackDispatch.call(manager, ridingObject,
+                    () -> provider.preservesSidekickCpuPushGraceWhileRiding(sidekick));
         }
         return false;
     }
@@ -2937,7 +2948,9 @@ public class SidekickCpuController {
             return false;
         }
         if (interactObject instanceof SolidObjectProvider provider) {
-            return provider.preservesSidekickCpuPushGraceFromInteractSlot(sidekick);
+            ObjectManager manager = sidekick.currentLevelManager().getObjectManager();
+            return com.openggf.level.objects.ObjectCallbackDispatch.call(manager, interactObject,
+                    () -> provider.preservesSidekickCpuPushGraceFromInteractSlot(sidekick));
         }
         return false;
     }
@@ -2948,18 +2961,28 @@ public class SidekickCpuController {
             return false;
         }
         if (interactObject instanceof SolidObjectProvider provider) {
-            return provider.preservesSidekickDelayedLeaderPushFromInteractSlot(sidekick);
+            ObjectManager manager = sidekick.currentLevelManager().getObjectManager();
+            return com.openggf.level.objects.ObjectCallbackDispatch.call(manager, interactObject,
+                    () -> provider.preservesSidekickDelayedLeaderPushFromInteractSlot(sidekick));
         }
         return false;
     }
 
     private boolean preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot() {
         ObjectInstance interactObject = currentInteractSlotObject();
-        if (interactObject == null || interactObject.isDestroyed()) {
+        LevelManager levelManager = sidekick.currentLevelManager();
+        ObjectManager manager = levelManager != null ? levelManager.getObjectManager() : null;
+        if (interactObject == null || (manager == null
+                ? interactObject.isDestroyed()
+                : com.openggf.level.objects.ObjectCallbackDispatch.call(
+                        manager, interactObject, interactObject::isDestroyed))) {
             return false;
         }
         if (interactObject instanceof SolidObjectProvider provider) {
-            return provider.preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(sidekick);
+            return manager == null
+                    ? provider.preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(sidekick)
+                    : com.openggf.level.objects.ObjectCallbackDispatch.call(manager, interactObject,
+                            () -> provider.preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(sidekick));
         }
         return false;
     }
@@ -2969,12 +2992,15 @@ public class SidekickCpuController {
         if (levelManager == null || levelManager.getObjectManager() == null) {
             return false;
         }
-        for (ObjectInstance instance : levelManager.getObjectManager().getActiveObjects()) {
-            if (instance == null || instance.isDestroyed()) {
+        ObjectManager objectManager = levelManager.getObjectManager();
+        for (ObjectInstance instance : objectManager.getActiveObjects()) {
+            if (instance == null || com.openggf.level.objects.ObjectCallbackDispatch.call(
+                    objectManager, instance, instance::isDestroyed)) {
                 continue;
             }
             if (instance instanceof SolidObjectProvider provider
-                    && provider.preservesSidekickCpuPushGraceAfterRideClears(sidekick)) {
+                    && com.openggf.level.objects.ObjectCallbackDispatch.call(objectManager, instance,
+                            () -> provider.preservesSidekickCpuPushGraceAfterRideClears(sidekick))) {
                 return true;
             }
         }
@@ -2987,7 +3013,8 @@ public class SidekickCpuController {
             return Integer.MAX_VALUE;
         }
         if (interactObject instanceof SolidObjectProvider provider) {
-            return provider.sidekickCpuPushGraceMinimumFramesFromInteractSlot(sidekick);
+            return callObject(interactObject,
+                    () -> provider.sidekickCpuPushGraceMinimumFramesFromInteractSlot(sidekick));
         }
         return Integer.MAX_VALUE;
     }
@@ -2998,7 +3025,8 @@ public class SidekickCpuController {
             return Integer.MIN_VALUE;
         }
         if (interactObject instanceof SolidObjectProvider provider) {
-            return provider.sidekickCpuPushGraceMaximumFramesFromInteractSlot(sidekick);
+            return callObject(interactObject,
+                    () -> provider.sidekickCpuPushGraceMaximumFramesFromInteractSlot(sidekick));
         }
         return Integer.MIN_VALUE;
     }
@@ -3008,11 +3036,13 @@ public class SidekickCpuController {
             return Integer.MAX_VALUE;
         }
         if (ridingObject instanceof SolidObjectProvider provider) {
-            int providerMinimum = provider.sidekickCpuPushGraceMinimumFramesWhileRiding(sidekick);
+            int providerMinimum = callObject(ridingObject,
+                    () -> provider.sidekickCpuPushGraceMinimumFramesWhileRiding(sidekick));
             if (providerMinimum != Integer.MAX_VALUE) {
                 return providerMinimum;
             }
-            if (provider.preservesSidekickCpuPushGraceWhileRiding(sidekick)) {
+            if (callObject(ridingObject,
+                    () -> provider.preservesSidekickCpuPushGraceWhileRiding(sidekick))) {
                 return RIDING_OBJECT_PUSH_BRIDGE_MIN_GRACE;
             }
         }
@@ -3024,7 +3054,8 @@ public class SidekickCpuController {
             return Integer.MIN_VALUE;
         }
         if (ridingObject instanceof SolidObjectProvider provider) {
-            return provider.sidekickCpuPushGraceMaximumFramesWhileRiding(sidekick);
+            return callObject(ridingObject,
+                    () -> provider.sidekickCpuPushGraceMaximumFramesWhileRiding(sidekick));
         }
         return Integer.MAX_VALUE;
     }
@@ -3034,7 +3065,8 @@ public class SidekickCpuController {
             return false;
         }
         if (ridingObject instanceof SolidObjectProvider provider) {
-            return provider.usesSidekickCpuCurrentPushObjectOrderInputDelay(sidekick);
+            return callObject(ridingObject,
+                    () -> provider.usesSidekickCpuCurrentPushObjectOrderInputDelay(sidekick));
         }
         return false;
     }
@@ -3044,7 +3076,8 @@ public class SidekickCpuController {
             return false;
         }
         if (ridingObject instanceof SolidObjectProvider provider) {
-            return provider.usesSidekickCpuPushBypassObjectOrderStatusDelay(sidekick);
+            return callObject(ridingObject,
+                    () -> provider.usesSidekickCpuPushBypassObjectOrderStatusDelay(sidekick));
         }
         return false;
     }
@@ -3054,7 +3087,8 @@ public class SidekickCpuController {
             return false;
         }
         if (ridingObject instanceof SolidObjectProvider provider) {
-            return provider.preservesSidekickDelayedLeaderPushWhileRiding(sidekick);
+            return callObject(ridingObject,
+                    () -> provider.preservesSidekickDelayedLeaderPushWhileRiding(sidekick));
         }
         return false;
     }
@@ -3063,6 +3097,13 @@ public class SidekickCpuController {
         LevelEventProvider provider = levelEventProvider();
         return provider != null
                 && provider.usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge(sidekick);
+    }
+
+    private <T> T callObject(ObjectInstance instance, java.util.function.Supplier<T> callback) {
+        LevelManager levelManager = sidekick.currentLevelManagerIfAvailable();
+        ObjectManager manager = levelManager != null ? levelManager.getObjectManager() : null;
+        return manager == null ? callback.get()
+                : com.openggf.level.objects.ObjectCallbackDispatch.call(manager, instance, callback);
     }
 
     public boolean hasLevelEventDormantMarkerReleasePending() {
@@ -4391,14 +4432,15 @@ public class SidekickCpuController {
     }
 
     private boolean isLatchedRideSlotFreed(ObjectInstance instance) {
-        if (instance.isDestroyed()) {
+        if (callObject(instance, instance::isDestroyed)) {
             return true;
         }
         LevelManager levelManager = sidekick.currentLevelManagerIfAvailable();
         if (levelManager == null || levelManager.getObjectManager() == null) {
             return false;
         }
-        return !levelManager.getObjectManager().getActiveObjects().contains(instance);
+        ObjectManager objectManager = levelManager.getObjectManager();
+        return !objectManager.getActiveObjects().contains(instance);
     }
 
     private boolean isCurrentlyVisible() {

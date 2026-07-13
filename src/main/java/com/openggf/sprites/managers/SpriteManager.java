@@ -1282,7 +1282,8 @@ public class SpriteManager {
 			ObjectInstance owner = null;
 			for (ObjectInstance object : activeObjects) {
 				if (object instanceof com.openggf.level.objects.ObjectControlledSolidContactController controller
-						&& controller.ownsCarriedPlayerForRewind(playable)) {
+						&& com.openggf.level.objects.ObjectCallbackDispatch.call(objectManager, object,
+								() -> controller.ownsCarriedPlayerForRewind(playable))) {
 					owner = object;
 					break;
 				}
@@ -1304,28 +1305,28 @@ public class SpriteManager {
 					continue;
 				}
 				ObjectInstance current = playable.getLatchedSolidObjectInstance();
-				if (isActiveObjectWithId(current, activeObjects, objectId)) {
+				if (isActiveObjectWithId(objectManager, current, activeObjects, objectId)) {
 					continue;
 				}
-				ObjectInstance restored = activeObjectAtInteractSlot(playable, activeObjects, objectId);
+				ObjectInstance restored = activeObjectAtInteractSlot(objectManager, playable, activeObjects, objectId);
 				if (restored == null) {
-					restored = nearestActiveObjectWithId(playable, activeObjects, objectId);
+					restored = nearestActiveObjectWithId(objectManager, playable, activeObjects, objectId);
 				}
 				playable.setLatchedSolidObjectInstance(restored);
 			}
 		}
 	}
 
-	private boolean isActiveObjectWithId(ObjectInstance object,
+	private boolean isActiveObjectWithId(ObjectManager objectManager, ObjectInstance object,
 			Collection<ObjectInstance> activeObjects,
 			int objectId) {
-		return object != null
-				&& object.getSpawn() != null
-				&& (object.getSpawn().objectId() & 0xFF) == objectId
-				&& activeObjects.contains(object);
+		if (object == null || !activeObjects.contains(object)) return false;
+		ObjectSpawn spawn = com.openggf.level.objects.ObjectCallbackDispatch.call(
+				objectManager, object, object::getSpawn);
+		return spawn != null && (spawn.objectId() & 0xFF) == objectId;
 	}
 
-	private ObjectInstance activeObjectAtInteractSlot(AbstractPlayableSprite playable,
+	private ObjectInstance activeObjectAtInteractSlot(ObjectManager objectManager, AbstractPlayableSprite playable,
 			Collection<ObjectInstance> activeObjects,
 			int objectId) {
 		int slotIndex = playable.getInteractSlotIndex();
@@ -1333,10 +1334,12 @@ public class SpriteManager {
 			return null;
 		}
 		for (ObjectInstance object : activeObjects) {
-			if (!(object instanceof AbstractObjectInstance aoi)
-					|| aoi.getSlotIndex() != slotIndex
-					|| object.getSpawn() == null
-					|| (object.getSpawn().objectId() & 0xFF) != objectId) {
+			if (!(object instanceof AbstractObjectInstance aoi)) continue;
+			int candidateSlot = com.openggf.level.objects.ObjectCallbackDispatch.call(
+					objectManager, object, aoi::getSlotIndex);
+			ObjectSpawn spawn = com.openggf.level.objects.ObjectCallbackDispatch.call(
+					objectManager, object, object::getSpawn);
+			if (candidateSlot != slotIndex || spawn == null || (spawn.objectId() & 0xFF) != objectId) {
 				continue;
 			}
 			return object;
@@ -1344,13 +1347,14 @@ public class SpriteManager {
 		return null;
 	}
 
-	private ObjectInstance nearestActiveObjectWithId(AbstractPlayableSprite playable,
+	private ObjectInstance nearestActiveObjectWithId(ObjectManager objectManager, AbstractPlayableSprite playable,
 			Collection<ObjectInstance> activeObjects,
 			int objectId) {
 		ObjectInstance best = null;
 		long bestDistance = Long.MAX_VALUE;
 		for (ObjectInstance object : activeObjects) {
-			ObjectSpawn spawn = object.getSpawn();
+			ObjectSpawn spawn = com.openggf.level.objects.ObjectCallbackDispatch.call(
+					objectManager, object, object::getSpawn);
 			if (spawn == null || (spawn.objectId() & 0xFF) != objectId) {
 				continue;
 			}

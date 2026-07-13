@@ -225,11 +225,12 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
             // the interface getX()/getY() default would NPE on them. They
             // also have no meaningful placement coordinate to show in a
             // "nearby objects" summary, so skip them.
-            if (aoi.getSpawn() == null) {
+            var spawn = com.openggf.level.objects.ObjectCallbackDispatch.call(om, inst, aoi::getSpawn);
+            if (spawn == null) {
                 continue;
             }
-            int ox = aoi.getX() & 0xFFFF;
-            int oy = aoi.getY() & 0xFFFF;
+            int ox = com.openggf.level.objects.ObjectCallbackDispatch.call(om, inst, aoi::getX) & 0xFFFF;
+            int oy = com.openggf.level.objects.ObjectCallbackDispatch.call(om, inst, aoi::getY) & 0xFFFF;
             int dx = Math.abs(ox - px);
             int dy = Math.abs(oy - py);
             // Include anything within a ~screen-width horizontal box —
@@ -238,10 +239,10 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
             if (dx > 0x180 || dy > 0x100) {
                 continue;
             }
-            int id = aoi.getSpawn().objectId();
+            int id = spawn.objectId();
             sb.append(String.format(
                     "    slot=%3d id=0x%02X %s @%04X,%04X (dx=%d dy=%d)%n",
-                    aoi.getSlotIndex(),
+                    com.openggf.level.objects.ObjectCallbackDispatch.call(om, inst, aoi::getSlotIndex),
                     id & 0xFF,
                     aoi.getClass().getSimpleName(),
                     ox, oy,

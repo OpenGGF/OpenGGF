@@ -37810,3 +37810,18 @@ ROM-free `ModLevel` decoder and Sonic 2 compatibility-facade changes:
   stock ROM constructors and HTZ overlay/dynamic-art paths remain unchanged.
 - No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
   engine state was changed.
+
+### 2026-07-13 -- Phase 3 B5-B6 standalone audio/title/acceptance parity sweep
+
+Measured on `next` at `a4f0aade4` with the reviewed, uncommitted Phase 3 B5-B6
+streamed-audio, dynamic master-title, no-ROM standalone acceptance, save/Continue,
+and owner-bounded object-callback changes:
+
+- Command:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test`
+- S1 GHZ1, S2 EHZ1, and S3K AIZ all passed (3/3).
+- The packaged standalone acceptance separately enabled and launched the sample
+  mod without ROMs; the stock trace launch path retained its existing module,
+  audio, object, and gameplay behavior.
+- No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
+  engine state was changed.

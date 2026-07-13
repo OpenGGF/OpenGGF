@@ -19,6 +19,7 @@ import com.openggf.game.GameMode;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameModule;
 import com.openggf.game.MasterTitleScreen;
+import com.openggf.game.MasterTitleEntry;
 import com.openggf.game.BonusStageState;
 import com.openggf.game.EndingPhase;
 import com.openggf.game.EndingProvider;
@@ -700,6 +701,26 @@ public class TestGameLoop {
                 new Class<?>[] {String.class, boolean.class}, "s3k", true);
 
         assertNull(store.loadedEntry, "programmatic launch must not load/apply a launch profile");
+    }
+
+    @Test
+    void standaloneMasterTitleExitUsesTypedHandlerAndNeverStockHandler() throws Exception {
+        SonicConfigurationService config = EngineServices.current().configuration();
+        String baseMain = config.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        MasterTitleEntry.Launch launch = new MasterTitleEntry.Launch(
+                new MasterTitleEntry.Standalone("sample-game", "Sample Game", true),
+                MasterTitleEntry.Action.CONTINUE);
+        AtomicReference<MasterTitleEntry.Launch> handled = new AtomicReference<>();
+        gameLoop.setMasterTitleExitHandler(gameId -> fail("standalone must not use the stock string handler"));
+        gameLoop.setStandaloneMasterTitleExitHandler(handled::set);
+
+        invokePrivateMethod(gameLoop, "doExitStandaloneMasterTitle",
+                new Class<?>[] {MasterTitleEntry.Launch.class}, launch);
+
+        assertSame(launch, handled.get());
+        assertEquals(baseMain, config.getString(SonicConfiguration.MAIN_CHARACTER_CODE),
+                "standalone launch clears prior session overrides");
     }
 
     @Test

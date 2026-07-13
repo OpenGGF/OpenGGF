@@ -39,6 +39,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
 import com.openggf.game.mode.BootScreenModeController;
 import com.openggf.game.launch.MasterTitleLaunchCoordinator;
+import com.openggf.game.launch.MasterTitleExitCoordinator;
 import com.openggf.game.mode.MenuScreenModeController;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rewind.LiveRewindManager;
@@ -155,6 +156,7 @@ public class GameLoop {
     private final PresenceManager presenceManager;
     private final EscapeToMasterTitleController escapeToMasterTitleController;
     private MasterTitleLaunchCoordinator masterTitleLaunchCoordinator;
+    private final MasterTitleExitCoordinator masterTitleExitCoordinator;
 
     // The active session-owned gameplay mode. Cached fields above are sourced from this context.
     private GameplayModeContext gameplayMode;
@@ -171,7 +173,6 @@ public class GameLoop {
     private GameMode currentGameMode = GameMode.LEVEL;
     private Runnable editorStateSyncHandler;
     private Supplier<MasterTitleScreen> masterTitleScreenSupplier;
-    private Consumer<String> masterTitleExitHandler;
     private Supplier<LegalDisclaimerScreen> legalDisclaimerSupplier;
     private Runnable legalDisclaimerExitHandler;
     private Consumer<com.openggf.game.dataselect.DataSelectAction> dataSelectActionHandler;
@@ -372,6 +373,12 @@ public class GameLoop {
         this.multiplayerHudRenderer = new MultiplayerHudRenderer(configService);
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
         this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
+        this.masterTitleExitCoordinator = new MasterTitleExitCoordinator(
+                () -> masterTitleLaunchCoordinator,
+                () -> currentGameMode == GameMode.MASTER_TITLE_SCREEN, this::hasReadyGameplayRuntime,
+                () -> changeGameModeForBoundary(GameMode.LEVEL), () -> resolveFadeManager().startFadeFromBlack(null),
+                () -> requestSessionSave(SaveReason.PROGRESSION_SAVE), pending -> endingTransitionPending = pending,
+                audioManager::fadeOutMusic, callback -> fadeManager.startFadeToBlack(callback));
         this.escapeToMasterTitleController = new EscapeToMasterTitleController(
                 () -> resolveFadeManager().isActive(),
                 this::startEscapeToMasterTitleTransition,
@@ -566,7 +573,11 @@ public class GameLoop {
     }
 
     public void setMasterTitleExitHandler(Consumer<String> masterTitleExitHandler) {
-        this.masterTitleExitHandler = masterTitleExitHandler;
+        masterTitleExitCoordinator.setStockExitHandler(masterTitleExitHandler);
+    }
+
+    public void setStandaloneMasterTitleExitHandler(Consumer<MasterTitleEntry.Launch> standaloneMasterTitleExitHandler) {
+        masterTitleExitCoordinator.setStandaloneExitHandler(standaloneMasterTitleExitHandler);
     }
 
     public void setLegalDisclaimerScreenSupplier(Supplier<LegalDisclaimerScreen> legalDisclaimerSupplier) {
@@ -1530,6 +1541,8 @@ public class GameLoop {
                 if (TimeAttackLevelEndRouting.returnsToMenuOnLevelEnd(timeAttackRuntime.isActive())) {
                     timeAttackRuntime.deactivate();
                     startTimeAttackReturnToMenuFade();
+                } else if (GameServices.module().getGameId() == GameId.STANDALONE) {
+                    masterTitleExitCoordinator.startStandaloneCompletion();
                 } else {
                     startEndingFade();
                 }
@@ -3366,11 +3379,14 @@ public class GameLoop {
             return;
         }
 
+        MasterTitleEntry.Launch launch = masterScreen.getSelectedLaunch();
         String selectedGameId = masterScreen.getSelectedGameId();
         boolean programmaticSelection = masterScreen.isProgrammaticSelection();
 
         fadeManager.startFadeToBlack(() -> {
-            doExitMasterTitleScreen(selectedGameId, programmaticSelection);
+            if (launch != null && launch.entry() instanceof MasterTitleEntry.Standalone)
+                masterTitleExitCoordinator.exitStandalone(launch);
+            else masterTitleExitCoordinator.exitStock(selectedGameId, programmaticSelection);
         });
 
         LOGGER.info("Starting fade-to-black for master title screen exit (game: " + selectedGameId + ")");
@@ -3379,35 +3395,9 @@ public class GameLoop {
     /**
      * Actually performs the master title screen exit after fade-to-black completes.
      */
-    private void doExitMasterTitleScreen(String selectedGameId, boolean programmaticSelection) {
-        masterTitleLaunchCoordinator.prepareExit(selectedGameId, programmaticSelection);
-        if (masterTitleExitHandler != null) {
-            masterTitleExitHandler.accept(selectedGameId);
-        }
-        if (currentGameMode == GameMode.MASTER_TITLE_SCREEN && !hasReadyGameplayRuntime()) {
-            masterTitleLaunchCoordinator.restoreAfterFailedExit(selectedGameId,
-                    () -> resolveFadeManager().startFadeFromBlack(null));
-            return;
-        }
-        // Stage the programmatic launch callback (if any) to fire at the
-        // end of the next step() rather than inline, so trace bootstrap
-        // code can call gameLoop.step() without reentering master-title
-        // logic.
-        masterTitleLaunchCoordinator.stagePendingLaunchCallback();
+    private void doExitMasterTitleScreen(String selectedGameId, boolean programmaticSelection) { masterTitleExitCoordinator.exitStock(selectedGameId, programmaticSelection); }
 
-        // When TITLE_SCREEN_ON_STARTUP or LEVEL_SELECT_ON_STARTUP is true,
-        // initializeGame() sets currentGameMode via initializeTitleScreenMode/
-        // initializeLevelSelectMode. Otherwise, loadZoneAndAct() does NOT set
-        // currentGameMode directly (it fires a title card request for the next
-        // frame). Force mode to LEVEL so step() can process the pending request.
-        if (currentGameMode == GameMode.MASTER_TITLE_SCREEN) {
-            changeGameModeForBoundary(GameMode.LEVEL);
-        }
-
-        resolveFadeManager().startFadeFromBlack(null);
-
-        LOGGER.info("Exited master title screen, now in mode: " + currentGameMode);
-    }
+    private void doExitStandaloneMasterTitle(MasterTitleEntry.Launch launch) { masterTitleExitCoordinator.exitStandalone(launch); }
 
     private boolean hasReadyGameplayRuntime() {
         if (gameplayMode != null && gameplayMode.isGameplayRuntimeReady()) {

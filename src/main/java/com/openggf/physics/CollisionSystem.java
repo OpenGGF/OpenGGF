@@ -363,8 +363,9 @@ public class CollisionSystem {
         // 49674-49676). Plain PlatformObjectD5 does not call DropOnFloor
         // after MvSonicOnPtfm, so deferring here would apply CalcRoomInFront's
         // wall response twice (docs/s2disasm/s2.asm:35860-35894, 58905-58915).
-        return provider.dropOnFloor()
-                && isRiderOnGroundWallProbeSide(sprite, ridingObject, mode);
+        return com.openggf.level.objects.ObjectCallbackDispatch.call(
+                objectManager, ridingObject, provider::dropOnFloor)
+                && isRiderOnGroundWallProbeSideBounded(sprite, ridingObject, mode);
     }
 
     private boolean shouldDeferFlushWallResponseForRiddenDropOnFloor(
@@ -379,7 +380,8 @@ public class CollisionSystem {
         }
         ObjectInstance ridingObject = objectManager.getRidingObject(sprite);
         if (!(ridingObject instanceof SolidObjectProvider provider)
-                || !provider.dropOnFloor()) {
+                || !com.openggf.level.objects.ObjectCallbackDispatch.call(
+                        objectManager, ridingObject, provider::dropOnFloor)) {
             return false;
         }
         // S2 Obj30 routes its SolidObject_Always/SlopedSolid helper through
@@ -388,7 +390,7 @@ public class CollisionSystem {
         // probed wall side of the object. HTZ2 f3317 (Obj30 x=$1760, Tails left
         // of centre) reaches d1=-1 in CalcRoomInFront; f4422 (Obj30 x=$1920,
         // Tails right of centre) returns d1=0 and must not synthesize the push.
-        return isRiderOnGroundWallProbeSide(sprite, ridingObject, mode)
+        return isRiderOnGroundWallProbeSideBounded(sprite, ridingObject, mode)
                 && ((mode == 0x40 && gSpeed <= -0x18)
                 || (mode == 0xC0 && gSpeed >= 0x18));
     }
@@ -404,6 +406,12 @@ public class CollisionSystem {
             case 0xC0 -> dx >= 0;
             default -> false;
         };
+    }
+
+    private boolean isRiderOnGroundWallProbeSideBounded(
+            AbstractPlayableSprite sprite, ObjectInstance ridingObject, int mode) {
+        return com.openggf.level.objects.ObjectCallbackDispatch.call(objectManager, ridingObject,
+                () -> isRiderOnGroundWallProbeSide(sprite, ridingObject, mode));
     }
 
     public void applyDeferredGroundWallVelocityResponse(AbstractPlayableSprite sprite) {

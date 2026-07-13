@@ -27,15 +27,16 @@ final class ObjectCollisionResponseList {
         return usePrevious ? previousObjects : currentObjects;
     }
 
-    void captureForNextFrame(int cameraX, List<ObjectInstance> currentObjects) {
+    void captureForNextFrame(int cameraX, List<ObjectInstance> currentObjects,
+            ObjectCallbackRouter callbacks) {
         previousObjects.clear();
         int cameraCoarseBack = ((cameraX & 0xFFFF) - S3K_CAMERA_BACK_OFFSET) & 0xFF80;
         for (ObjectInstance instance : currentObjects) {
-            if (instance == null || instance.isDestroyed()
-                    || !instance.publishesTouchResponseListEntryThisFrame()) {
+            if (instance == null || callbacks.call(instance, instance::isDestroyed)
+                    || !callbacks.call(instance, instance::publishesTouchResponseListEntryThisFrame)) {
                 continue;
             }
-            int objectCoarse = instance.getOutOfRangeReferenceX() & 0xFF80;
+            int objectCoarse = callbacks.call(instance, instance::getOutOfRangeReferenceX) & 0xFF80;
             int delta = (objectCoarse - cameraCoarseBack) & 0xFFFF;
             if (delta > S3K_WINDOW) {
                 continue;

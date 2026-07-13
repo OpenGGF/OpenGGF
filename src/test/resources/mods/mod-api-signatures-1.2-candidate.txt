@@ -210,6 +210,11 @@ CF-ANNOTATION TYPE com.openggf.game.LevelLoadMode visible @com.openggf.game.ModA
 CF-ANNOTATION TYPE com.openggf.game.LevelSelectProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LevelSelectProvider$State visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LevelState visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.MasterTitleEntry visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.MasterTitleEntry$Action visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.MasterTitleEntry$Launch visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.MasterTitleEntry$Standalone visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.MasterTitleEntry$Stock visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.MasterTitleScreen visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.MasterTitleScreen$GameEntry visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.MasterTitleScreen$ModManagerScreenFactory visible @com.openggf.game.ModApi
@@ -709,6 +714,7 @@ CF-ANNOTATION TYPE com.openggf.mods.code.ModLevelDefinition$StockMusic visible @
 CF-ANNOTATION TYPE com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.ModLevelDefinition$TrackMusic visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.ModZoneContribution visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.code.StandaloneLevelLoader visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.ZoneEventFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.ZoneEventFactory visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.net.client.ClientRaceSession visible @com.openggf.game.ModApi
@@ -1032,9 +1038,13 @@ CONSTRUCTOR com.openggf.game.GameStateManager public  <init>()
 CONSTRUCTOR com.openggf.game.InitStep public  <init>(java.lang.String,java.lang.String,java.lang.Runnable)
 CONSTRUCTOR com.openggf.game.LegalDisclaimerScreen public  <init>(com.openggf.graphics.FadeManager)
 CONSTRUCTOR com.openggf.game.LevelLoadContext public  <init>()
+CONSTRUCTOR com.openggf.game.MasterTitleEntry$Launch public  <init>(com.openggf.game.MasterTitleEntry,com.openggf.game.MasterTitleEntry$Action)
+CONSTRUCTOR com.openggf.game.MasterTitleEntry$Standalone public  <init>(java.lang.String,java.lang.String,boolean)
+CONSTRUCTOR com.openggf.game.MasterTitleEntry$Stock public  <init>(com.openggf.game.MasterTitleScreen$GameEntry)
 CONSTRUCTOR com.openggf.game.MasterTitleScreen public  <init>()
 CONSTRUCTOR com.openggf.game.MasterTitleScreen public  <init>(com.openggf.configuration.SonicConfigurationService)
 CONSTRUCTOR com.openggf.game.MasterTitleScreen public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.game.launch.LaunchProfileStore)
+CONSTRUCTOR com.openggf.game.MasterTitleScreen public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.game.launch.LaunchProfileStore,java.util.List<com.openggf.game.MasterTitleEntry>)
 CONSTRUCTOR com.openggf.game.ModGame protected  <init>(java.lang.String,com.openggf.game.GameDataSource)
 CONSTRUCTOR com.openggf.game.MusicReference$Namespaced public  <init>(java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.game.MusicReference$Stock public  <init>(int)
@@ -2172,10 +2182,13 @@ FIELD com.openggf.game.LevelSelectProvider$State public,static,final com.openggf
 FIELD com.openggf.game.LevelSelectProvider$State public,static,final com.openggf.game.LevelSelectProvider$State EXITING
 FIELD com.openggf.game.LevelSelectProvider$State public,static,final com.openggf.game.LevelSelectProvider$State FADE_IN
 FIELD com.openggf.game.LevelSelectProvider$State public,static,final com.openggf.game.LevelSelectProvider$State INACTIVE
+FIELD com.openggf.game.MasterTitleEntry$Action public,static,final com.openggf.game.MasterTitleEntry$Action CONTINUE
+FIELD com.openggf.game.MasterTitleEntry$Action public,static,final com.openggf.game.MasterTitleEntry$Action NEW_GAME
 FIELD com.openggf.game.MasterTitleScreen$GameEntry public,final com.openggf.configuration.SonicConfiguration romConfigKey
 FIELD com.openggf.game.MasterTitleScreen$GameEntry public,final java.lang.String displayName
 FIELD com.openggf.game.MasterTitleScreen$GameEntry public,final java.lang.String expectedRomFilename
 FIELD com.openggf.game.MasterTitleScreen$GameEntry public,final java.lang.String gameId
+FIELD com.openggf.game.MasterTitleScreen$GameEntry public,final java.lang.String menuLabel
 FIELD com.openggf.game.MasterTitleScreen$GameEntry public,static,final com.openggf.game.MasterTitleScreen$GameEntry SONIC_1
 FIELD com.openggf.game.MasterTitleScreen$GameEntry public,static,final com.openggf.game.MasterTitleScreen$GameEntry SONIC_2
 FIELD com.openggf.game.MasterTitleScreen$GameEntry public,static,final com.openggf.game.MasterTitleScreen$GameEntry SONIC_3K
@@ -2858,6 +2871,8 @@ INTERFACE com.openggf.game.CrossGameFeatureProvider com.openggf.data.SpindashDus
 INTERFACE com.openggf.game.GameRng com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.GameRngSnapshot>
 INTERFACE com.openggf.game.GameStateManager com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.GameStateSnapshot>
 INTERFACE com.openggf.game.InstaShieldHandle com.openggf.game.PowerUpObject
+INTERFACE com.openggf.game.MasterTitleEntry$Standalone com.openggf.game.MasterTitleEntry
+INTERFACE com.openggf.game.MasterTitleEntry$Stock com.openggf.game.MasterTitleEntry
 INTERFACE com.openggf.game.ModApi java.lang.annotation.Annotation
 INTERFACE com.openggf.game.MusicReference$Namespaced com.openggf.game.MusicReference
 INTERFACE com.openggf.game.MusicReference$Stock com.openggf.game.MusicReference
@@ -3090,6 +3105,7 @@ METHOD com.openggf.GameLoop public  void setLegalDisclaimerScreenSupplier(java.u
 METHOD com.openggf.GameLoop public  void setMasterTitleExitHandler(java.util.function.Consumer<java.lang.String>)
 METHOD com.openggf.GameLoop public  void setMasterTitleScreenSupplier(java.util.function.Supplier<com.openggf.game.MasterTitleScreen>)
 METHOD com.openggf.GameLoop public  void setMultiplayerRaceCoordinator(com.openggf.game.timeattack.mp.MultiplayerRaceCoordinator)
+METHOD com.openggf.GameLoop public  void setStandaloneMasterTitleExitHandler(java.util.function.Consumer<com.openggf.game.MasterTitleEntry$Launch>)
 METHOD com.openggf.GameLoop public  void setTimeAttackLaunchHandler(com.openggf.game.timeattack.TimeAttackMenu$LaunchStarter)
 METHOD com.openggf.GameLoop public  void setTimeAttackNetworkHandler(com.openggf.game.timeattack.TimeAttackMenu$NetworkStarter)
 METHOD com.openggf.GameLoop public  void setTraceCameraFocusController(com.openggf.testmode.TraceCameraFocusController)
@@ -5049,6 +5065,32 @@ METHOD com.openggf.game.LevelState public,abstract  void resumeTimer()
 METHOD com.openggf.game.LevelState public,abstract  void setRings(int)
 METHOD com.openggf.game.LevelState public,abstract  void setTimerFrames(long)
 METHOD com.openggf.game.LevelState public,abstract  void update()
+METHOD com.openggf.game.MasterTitleEntry public  boolean standalone()
+METHOD com.openggf.game.MasterTitleEntry public,abstract  java.lang.String displayName()
+METHOD com.openggf.game.MasterTitleEntry public,abstract  java.lang.String gameId()
+METHOD com.openggf.game.MasterTitleEntry public,abstract  java.lang.String menuLabel()
+METHOD com.openggf.game.MasterTitleEntry$Action public,static  com.openggf.game.MasterTitleEntry$Action valueOf(java.lang.String)
+METHOD com.openggf.game.MasterTitleEntry$Action public,static  com.openggf.game.MasterTitleEntry$Action[] values()
+METHOD com.openggf.game.MasterTitleEntry$Launch public  com.openggf.game.MasterTitleEntry entry()
+METHOD com.openggf.game.MasterTitleEntry$Launch public  com.openggf.game.MasterTitleEntry$Action action()
+METHOD com.openggf.game.MasterTitleEntry$Launch public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.MasterTitleEntry$Launch public,final  int hashCode()
+METHOD com.openggf.game.MasterTitleEntry$Launch public,final  java.lang.String toString()
+METHOD com.openggf.game.MasterTitleEntry$Standalone public  boolean continueAvailable()
+METHOD com.openggf.game.MasterTitleEntry$Standalone public  java.lang.String displayName()
+METHOD com.openggf.game.MasterTitleEntry$Standalone public  java.lang.String gameId()
+METHOD com.openggf.game.MasterTitleEntry$Standalone public  java.lang.String menuLabel()
+METHOD com.openggf.game.MasterTitleEntry$Standalone public  java.lang.String owner()
+METHOD com.openggf.game.MasterTitleEntry$Standalone public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.MasterTitleEntry$Standalone public,final  int hashCode()
+METHOD com.openggf.game.MasterTitleEntry$Standalone public,final  java.lang.String toString()
+METHOD com.openggf.game.MasterTitleEntry$Stock public  com.openggf.game.MasterTitleScreen$GameEntry game()
+METHOD com.openggf.game.MasterTitleEntry$Stock public  java.lang.String displayName()
+METHOD com.openggf.game.MasterTitleEntry$Stock public  java.lang.String gameId()
+METHOD com.openggf.game.MasterTitleEntry$Stock public  java.lang.String menuLabel()
+METHOD com.openggf.game.MasterTitleEntry$Stock public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.MasterTitleEntry$Stock public,final  int hashCode()
+METHOD com.openggf.game.MasterTitleEntry$Stock public,final  java.lang.String toString()
 METHOD com.openggf.game.MasterTitleScreen public  boolean handleTimeAttackMenuRequest(boolean)
 METHOD com.openggf.game.MasterTitleScreen public  boolean handleUserRecordingMenuRequest(boolean)
 METHOD com.openggf.game.MasterTitleScreen public  boolean isGameSelected()
@@ -5059,6 +5101,7 @@ METHOD com.openggf.game.MasterTitleScreen public  boolean isTimeAttackMenuOpenFo
 METHOD com.openggf.game.MasterTitleScreen public  boolean isUserRecordingMenuOpenForTest()
 METHOD com.openggf.game.MasterTitleScreen public  boolean tryOpenTimeAttackMenu()
 METHOD com.openggf.game.MasterTitleScreen public  boolean tryOpenUserRecordingMenuForSelectedGame()
+METHOD com.openggf.game.MasterTitleScreen public  com.openggf.game.MasterTitleEntry$Launch getSelectedLaunch()
 METHOD com.openggf.game.MasterTitleScreen public  com.openggf.game.recording.menu.UserRecordingMenuState userRecordingMenuStateForTest()
 METHOD com.openggf.game.MasterTitleScreen public  com.openggf.game.timeattack.TimeAttackMenuState timeAttackMenuStateForTest()
 METHOD com.openggf.game.MasterTitleScreen public  com.openggf.graphics.PixelFont pixelFont()
@@ -9788,6 +9831,7 @@ METHOD com.openggf.mods.code.ModZoneContribution public  java.util.Optional<com.
 METHOD com.openggf.mods.code.ModZoneContribution public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.code.ModZoneContribution public,final  int hashCode()
 METHOD com.openggf.mods.code.ModZoneContribution public,final  java.lang.String toString()
+METHOD com.openggf.mods.code.StandaloneLevelLoader public,static  com.openggf.level.Level load(com.openggf.io.ModAssetRoot,com.openggf.mods.code.BakedLevelRef,java.lang.String,com.openggf.level.rings.RingSpriteSheet) THROWS java.io.IOException
 METHOD com.openggf.mods.code.ZoneEventFactory public,abstract  com.openggf.game.LevelEventProvider create()
 METHOD com.openggf.net.client.ClientRaceSession public  boolean isWindowOpen()
 METHOD com.openggf.net.client.ClientRaceSession public  boolean needsMoreClockSamples()
@@ -12265,6 +12309,10 @@ NESTED com.openggf.game.DebugOverlayProvider com.openggf.game.DebugOverlayProvid
 NESTED com.openggf.game.DebugOverlayProvider com.openggf.game.DebugOverlayProvider$TouchResponseDebugInfo
 NESTED com.openggf.game.GameRng com.openggf.game.GameRng$Flavour
 NESTED com.openggf.game.LevelSelectProvider com.openggf.game.LevelSelectProvider$State
+NESTED com.openggf.game.MasterTitleEntry com.openggf.game.MasterTitleEntry$Action
+NESTED com.openggf.game.MasterTitleEntry com.openggf.game.MasterTitleEntry$Launch
+NESTED com.openggf.game.MasterTitleEntry com.openggf.game.MasterTitleEntry$Standalone
+NESTED com.openggf.game.MasterTitleEntry com.openggf.game.MasterTitleEntry$Stock
 NESTED com.openggf.game.MasterTitleScreen com.openggf.game.MasterTitleScreen$GameEntry
 NESTED com.openggf.game.MasterTitleScreen com.openggf.game.MasterTitleScreen$ModManagerScreenFactory
 NESTED com.openggf.game.MasterTitleScreen com.openggf.game.MasterTitleScreen$ModManagerView
@@ -12537,6 +12585,8 @@ PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioComm
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopMusic
 PERMITS com.openggf.editor.persistence.FullLevelExporter$ExportMusic com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Stock
 PERMITS com.openggf.editor.persistence.FullLevelExporter$ExportMusic com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Track
+PERMITS com.openggf.game.MasterTitleEntry com.openggf.game.MasterTitleEntry$Standalone
+PERMITS com.openggf.game.MasterTitleEntry com.openggf.game.MasterTitleEntry$Stock
 PERMITS com.openggf.game.MusicReference com.openggf.game.MusicReference$Namespaced
 PERMITS com.openggf.game.MusicReference com.openggf.game.MusicReference$Stock
 PERMITS com.openggf.game.ZoneKey com.openggf.game.ZoneKey$Mod
@@ -13145,6 +13195,12 @@ RECORD-COMPONENT com.openggf.game.DemoLamppostState waterRoutine int
 RECORD-COMPONENT com.openggf.game.InitStep action java.lang.Runnable
 RECORD-COMPONENT com.openggf.game.InitStep name java.lang.String
 RECORD-COMPONENT com.openggf.game.InitStep romRoutine java.lang.String
+RECORD-COMPONENT com.openggf.game.MasterTitleEntry$Launch action com.openggf.game.MasterTitleEntry$Action
+RECORD-COMPONENT com.openggf.game.MasterTitleEntry$Launch entry com.openggf.game.MasterTitleEntry
+RECORD-COMPONENT com.openggf.game.MasterTitleEntry$Standalone continueAvailable boolean
+RECORD-COMPONENT com.openggf.game.MasterTitleEntry$Standalone displayName java.lang.String
+RECORD-COMPONENT com.openggf.game.MasterTitleEntry$Standalone owner java.lang.String
+RECORD-COMPONENT com.openggf.game.MasterTitleEntry$Stock game com.openggf.game.MasterTitleScreen$GameEntry
 RECORD-COMPONENT com.openggf.game.MusicReference$Namespaced localName java.lang.String
 RECORD-COMPONENT com.openggf.game.MusicReference$Namespaced owner java.lang.String
 RECORD-COMPONENT com.openggf.game.MusicReference$Stock musicId int
@@ -15371,6 +15427,7 @@ TYPE class public,final com.openggf.level.objects.SubpixelMotion SUPER java.lang
 TYPE class public,final com.openggf.level.rings.SpillAnimationState SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.ModContext SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.ModLevelDefinition SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.code.StandaloneLevelLoader SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.ClientRaceSession SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.MasterClient SUPER java.lang.Object
 TYPE class public,final com.openggf.net.host.HostMasterLink SUPER java.lang.Object
@@ -15492,6 +15549,7 @@ TYPE enum public,static,final com.openggf.editor.render.EditorLibraryBrowserPane
 TYPE enum public,static,final com.openggf.game.DataSelectProvider$State SUPER java.lang.Enum<com.openggf.game.DataSelectProvider$State>
 TYPE enum public,static,final com.openggf.game.GameRng$Flavour SUPER java.lang.Enum<com.openggf.game.GameRng$Flavour>
 TYPE enum public,static,final com.openggf.game.LevelSelectProvider$State SUPER java.lang.Enum<com.openggf.game.LevelSelectProvider$State>
+TYPE enum public,static,final com.openggf.game.MasterTitleEntry$Action SUPER java.lang.Enum<com.openggf.game.MasterTitleEntry$Action>
 TYPE enum public,static,final com.openggf.game.MasterTitleScreen$GameEntry SUPER java.lang.Enum<com.openggf.game.MasterTitleScreen$GameEntry>
 TYPE enum public,static,final com.openggf.game.MasterTitleScreen$State SUPER java.lang.Enum<com.openggf.game.MasterTitleScreen$State>
 TYPE enum public,static,final com.openggf.game.PlayableCharacterRegistry$FallbackReason SUPER java.lang.Enum<com.openggf.game.PlayableCharacterRegistry$FallbackReason>
@@ -15634,6 +15692,7 @@ TYPE interface public,abstract com.openggf.util.IntIndexedView SUPER <none>
 TYPE interface public,abstract com.openggf.util.ShortIndexedView SUPER <none>
 TYPE interface public,abstract,non-sealed com.openggf.io.SnapshotModAssetRoot SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.audio.rewind.AudioCommand SUPER <none>
+TYPE interface public,abstract,sealed com.openggf.game.MasterTitleEntry SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.game.MusicReference SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.game.ZoneKey SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.game.patch.PatchOwner SUPER <none>
@@ -15859,6 +15918,9 @@ TYPE record public,static,final com.openggf.game.BonusStageProvider$BonusStageRe
 TYPE record public,static,final com.openggf.game.CheckpointState$RewindState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.DebugOverlayProvider$ArtViewerTarget SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.DebugOverlayProvider$ObjectDebugLabel SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.MasterTitleEntry$Launch SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.MasterTitleEntry$Standalone SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.MasterTitleEntry$Stock SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.MusicReference$Namespaced SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.MusicReference$Stock SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.PlayableCharacterRegistry$Resolution SUPER java.lang.Record
@@ -16257,6 +16319,11 @@ TYPE-ANNOTATION com.openggf.game.LevelLoadMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelSelectProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelSelectProvider$State @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelState @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.MasterTitleEntry @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.MasterTitleEntry$Action @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.MasterTitleEntry$Launch @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.MasterTitleEntry$Standalone @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.MasterTitleEntry$Stock @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.MasterTitleScreen @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.MasterTitleScreen$GameEntry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.MasterTitleScreen$ModManagerScreenFactory @com.openggf.game.ModApi
@@ -16756,6 +16823,7 @@ TYPE-ANNOTATION com.openggf.mods.code.ModLevelDefinition$StockMusic @com.openggf
 TYPE-ANNOTATION com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.ModLevelDefinition$TrackMusic @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.ModZoneContribution @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.code.StandaloneLevelLoader @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.ZoneEventFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.ZoneEventFactory @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.net.client.ClientRaceSession @com.openggf.game.ModApi
