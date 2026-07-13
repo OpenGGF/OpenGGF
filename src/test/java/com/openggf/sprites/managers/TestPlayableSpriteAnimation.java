@@ -189,8 +189,47 @@ public class TestPlayableSpriteAnimation {
 
         assertTrue(sprite.getPushing(),
                 "S1 keeps the existing FixBugs-gated behavior for animation-change push clears");
-        assertEquals(4, sprite.getAnimationId(),
-                "S1 should still select the push animation when Status_Push is set");
+        assertEquals(0, sprite.getAnimationId(),
+                "S1 push rendering must preserve the ROM's movement-selected Walk animation byte");
+    }
+
+    @Test
+    public void s1PushWaitsForWalkAnimationTickBeforeChangingMappingFrame() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_1);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0xFF,
+                List.of(0x08), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(1, new SpriteAnimationScript(0xFF,
+                List.of(0x1E), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(4, new SpriteAnimationScript(0xFD,
+                List.of(0x45), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0);
+        sprite.getAnimationManager().restoreRewindState(
+                new PlayableSpriteAnimation.RewindState(0, 0));
+        sprite.setAnimationFrameIndex(1);
+        sprite.setAnimationTick(2);
+        sprite.setMappingFrame(0x08);
+        sprite.setMovementInputActive(true);
+        sprite.setGSpeed((short) 0x00BB);
+        sprite.setPushing(true);
+
+        sprite.getAnimationManager().update(0);
+        assertEquals(0, sprite.getAnimationId());
+        assertEquals(0x08, sprite.getMappingFrame());
+
+        sprite.getAnimationManager().update(1);
+        assertEquals(0, sprite.getAnimationId());
+        assertEquals(0x08, sprite.getMappingFrame());
+
+        sprite.getAnimationManager().update(2);
+        assertEquals(0, sprite.getAnimationId());
+        assertEquals(0x45, sprite.getMappingFrame());
+
+        sprite.getAnimationManager().update(3);
+        assertEquals(0, sprite.getAnimationId());
+        assertEquals(0x45, sprite.getMappingFrame(),
+                "The push frame must persist while the ROM animation delay remains live");
     }
 
     @Test

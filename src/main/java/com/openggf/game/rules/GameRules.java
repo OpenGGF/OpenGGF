@@ -72,7 +72,8 @@ public record GameRules(
             new PlayerAnimationRules(
                     false,
                     false,
-                    false
+                    false,
+                    true
             ),
             new CameraRules(
                     (short) 0,
@@ -202,7 +203,8 @@ public record GameRules(
             new PlayerAnimationRules(
                     true,
                     false,
-                    true
+                    true,
+                    false
             ),
             new CameraRules(
                     (short) 120,
@@ -332,7 +334,8 @@ public record GameRules(
             new PlayerAnimationRules(
                     true,
                     true,
-                    true
+                    true,
+                    false
             ),
             new CameraRules(
                     (short) 120,

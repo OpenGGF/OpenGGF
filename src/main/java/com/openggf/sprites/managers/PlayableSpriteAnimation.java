@@ -113,9 +113,7 @@ public class PlayableSpriteAnimation {
             // doesn't trigger auto-unboxing NPE via JLS ternary type inference.
             Integer desiredAnimId = forced >= 0
                     ? Integer.valueOf(forced)
-                    : (profile != null
-                        ? profile.resolveAnimationId(sprite, frameCounter, sprite.getAnimationSet().getScriptCount())
-                        : null);
+                    : resolveDesiredAnimationId(profile, frameCounter);
             if (desiredAnimId != null && desiredAnimId != sprite.getAnimationId()) {
                 sprite.setAnimationId(desiredAnimId);
                 resetScriptState();
@@ -187,6 +185,27 @@ public class PlayableSpriteAnimation {
         SpriteAnimationScript active = speed >= runThreshold ? runScript : walkScript;
         if (active == null) {
             active = baseScript;
+        }
+
+        // S1 Sonic_Animate keeps obAnim at id_Walk while Status_Push selects
+        // SonAni_Push inside the $FF walk/run special handler. Crucially, the
+        // handler decrements obTimeFrame and returns while it is non-negative;
+        // the push bit is only tested when the animation step expires
+        // (01 Sonic.asm:2253-2282,2353-2376). Do not replace the raw animation
+        // id or reset the shared special-animation frame index when push begins.
+        if (pushUsesWalkSpecialHandler() && sprite.getPushing()) {
+            int remaining = sprite.getAnimationTick();
+            if (remaining > 0) {
+                // ROM .delay is a bare rts: retain whichever walk/push mapping
+                // frame was selected at the preceding animation-step boundary.
+                sprite.setAnimationTick(remaining - 1);
+                return;
+            }
+            SpriteAnimationScript pushScript = resolveScript(
+                    profile != null ? profile.getPushAnimId() : -1, baseScript);
+            int pushDelay = computeSpeedDelay(speed, 0x800, 6);
+            updateScriptWithDelay(pushScript, pushDelay, 0);
+            return;
         }
 
         int slopeOffset = resolveSlopeOffset(active);
@@ -425,6 +444,23 @@ public class PlayableSpriteAnimation {
             return velocityProfile;
         }
         return null;
+    }
+
+    private Integer resolveDesiredAnimationId(SpriteAnimationProfile profile, int frameCounter) {
+        if (profile == null) {
+            return null;
+        }
+        int scriptCount = sprite.getAnimationSet().getScriptCount();
+        if (pushUsesWalkSpecialHandler()
+                && profile instanceof ScriptedVelocityAnimationProfile velocityProfile) {
+            return velocityProfile.resolveAnimationId(sprite, frameCounter, scriptCount, false);
+        }
+        return profile.resolveAnimationId(sprite, frameCounter, scriptCount);
+    }
+
+    private boolean pushUsesWalkSpecialHandler() {
+        PlayerAnimationRules rules = playerAnimationRulesOrNull();
+        return rules != null && rules.pushUsesWalkSpecialHandler();
     }
 
     private int resolveRunThreshold(ScriptedVelocityAnimationProfile profile) {

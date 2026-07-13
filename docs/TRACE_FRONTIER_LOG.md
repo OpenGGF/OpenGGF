@@ -38999,6 +38999,30 @@ The performance threshold (guarded median both more than one second and more
 than 10% slower) was false for both targets. Timing evidence is preserved in
 `target/rewind-closure-timing.json` and `target/rewind-closure-timing/`.
 
+### 2026-07-13 -- S1 GHZ1 push special-handler timing (f188 -> f551)
+
+On `bugfix/ai-trace-s1-ghz1-anim`, the newly enabled animation comparison first
+failed `TestS1Ghz1CompleteRunTraceReplay` at frame 188. S1 keeps `obAnim` at
+Walk while `Sonic_Animate` selects `SonAni_Push` only after the shared special
+animation timer expires; the engine had instead substituted the Push animation
+id immediately and reset its script state. The typed S1 animation rule now
+preserves the raw Walk id, retains the current mapping during the delay, and
+selects a push mapping at the native timer boundary
+(`docs/s1disasm/_incObj/01 Sonic.asm:2174-2193,2253-2282,2353-2376`).
+
+Verification with local uncommitted implementation changes:
+
+- `mvn "-Dtest=TestPlayableSpriteAnimation" test` exited 0; all 15 focused
+  animation tests passed.
+- `mvn "-Dtest=TestS1Ghz1CompleteRunTraceReplay" "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" test`
+  retained the expected-red route but advanced its first animation error from
+  frame 188 to frame 551, with 115 errors and 0 warnings; the new field is
+  `player_animation_id` (expected `$05`, actual `$00`).
+- `mvn "-Dtest=TestS1Ghz1TraceReplay" "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" test`
+  retained the pre-existing frame-387 `player_animation_id` frontier and
+  reduced errors from 169 on detached clean feature HEAD `e00abcd8d` to 162 on
+  the fix branch. No same-game frontier regression was introduced.
+
 ### 2026-07-12 -- HCZ background-wall rendering regression sweep
 
 The HCZ Act 2 background-wall rendering fix was checked on branch
