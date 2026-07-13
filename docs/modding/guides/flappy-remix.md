@@ -44,7 +44,10 @@ manifest for this sample. From the engine's release directory:
 ggfmod.ps1 OpenGGF-0.6.prerelease-jar-with-dependencies.jar OpenGGF-0.6.prerelease-openggf-mod-sdk.jar init sample-flappy --id sample-flappy --package example.flappysample
 ```
 
-(POSIX shells use `docs/modding/ggfmod` instead of `ggfmod.ps1`.) This produces a
+(POSIX shells use `docs/modding/ggfmod` instead of `ggfmod.ps1`.) Every `ggfmod`
+command in the rest of this guide takes the same two leading jar arguments; they're
+dropped from later examples for readability, the same abbreviation
+[the `ggfmod` reference](../ggfmod.md) itself uses. This produces a
 working Maven project with a canonical manifest, a sample badnik, a character stub,
 and a minimal level export — the same starting point as every other quickstart. The
 checked-in sample's `project/` directory is that scaffold hand-adapted into this
