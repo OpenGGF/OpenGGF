@@ -28,7 +28,10 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 
 /**
  * OOZSpring (Obj45) - pressure spring from Oil Ocean Zone.
@@ -41,7 +44,7 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
     private static final int VERTICAL_MAX_FRAME = 9;
     private static final int HORIZONTAL_COMPRESS_LIMIT = 0x12;
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
-            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     private int originalX;
     private int currentX;
@@ -57,6 +60,12 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
     private boolean horizontalLaunchRequiresCurrentPush;
     private boolean mainFreshOrderedCarry;
     private boolean sidekickFreshOrderedCarry;
+    private final Set<PlayableEntity> extensionPendingHorizontalLaunch =
+            Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<PlayableEntity> extensionHorizontalPushingThisFrame =
+            Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<PlayableEntity> extensionFreshOrderedCarry =
+            Collections.newSetFromMap(new IdentityHashMap<>());
 
     public OOZSpringObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -102,6 +111,7 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         compressedThisFrame = false;
         mainHorizontalPushingThisFrame = false;
         sidekickHorizontalPushingThisFrame = false;
+        extensionHorizontalPushingThisFrame.clear();
         horizontalLaunchRequiresCurrentPush = !solidExecutionIsInert();
         List<PlayableEntity> participants = playerParticipants(playerEntity);
         if (horizontalLaunchRequiresCurrentPush) {
@@ -262,6 +272,9 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
     }
 
     private boolean consumeFreshOrderedCarry(AbstractPlayableSprite rider) {
+        if (isExtensionPlayer(rider)) {
+            return extensionFreshOrderedCarry.remove(rider);
+        }
         if (isNativeSidekick(rider)) {
             boolean pending = sidekickFreshOrderedCarry;
             sidekickFreshOrderedCarry = false;
@@ -273,6 +286,10 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
     }
 
     private void markFreshOrderedCarry(AbstractPlayableSprite rider) {
+        if (isExtensionPlayer(rider)) {
+            extensionFreshOrderedCarry.add(rider);
+            return;
+        }
         if (isNativeSidekick(rider)) {
             sidekickFreshOrderedCarry = true;
         } else {
@@ -476,6 +493,10 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
     }
 
     private void setPendingHorizontalLaunch(AbstractPlayableSprite player) {
+        if (isExtensionPlayer(player)) {
+            extensionPendingHorizontalLaunch.add(player);
+            return;
+        }
         if (isNativeSidekick(player)) {
             pendingSidekickHorizontalLaunch = true;
         } else {
@@ -484,6 +505,10 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
     }
 
     private void markHorizontalPushingThisFrame(AbstractPlayableSprite player) {
+        if (isExtensionPlayer(player)) {
+            extensionHorizontalPushingThisFrame.add(player);
+            return;
+        }
         if (isNativeSidekick(player)) {
             sidekickHorizontalPushingThisFrame = true;
         } else {
@@ -492,14 +517,24 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
     }
 
     private boolean isHorizontalPushingThisFrame(AbstractPlayableSprite player) {
+        if (isExtensionPlayer(player)) {
+            return extensionHorizontalPushingThisFrame.contains(player);
+        }
         return isNativeSidekick(player) ? sidekickHorizontalPushingThisFrame : mainHorizontalPushingThisFrame;
     }
 
     private boolean hasPendingHorizontalLaunch(AbstractPlayableSprite player) {
+        if (isExtensionPlayer(player)) {
+            return extensionPendingHorizontalLaunch.contains(player);
+        }
         return isNativeSidekick(player) ? pendingSidekickHorizontalLaunch : pendingMainHorizontalLaunch;
     }
 
     private void clearPendingHorizontalLaunch(AbstractPlayableSprite player) {
+        if (isExtensionPlayer(player)) {
+            extensionPendingHorizontalLaunch.remove(player);
+            return;
+        }
         if (isNativeSidekick(player)) {
             pendingSidekickHorizontalLaunch = false;
         } else {
@@ -514,6 +549,12 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         }
         List<PlayableEntity> nativePlayers = services.playerQuery().playersFor(PLAYER_PARTICIPATION);
         return nativePlayers.size() > 1 && nativePlayers.get(1) == player;
+    }
+
+    private boolean isExtensionPlayer(AbstractPlayableSprite player) {
+        PlayableEntity main = services().playerQuery().mainPlayerOrNull();
+        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
+        return player != main && player != nativeP2;
     }
 
     private static boolean horizontalModeForSubtype(int subtype) {
