@@ -147,7 +147,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
 
     public boolean hasContent() {
         return !objectFactories.isEmpty() || !objectArt.isEmpty() || !zones.isEmpty()
-                || !characters.isEmpty();
+                || !characters.isEmpty() || !romObjectArt.isEmpty();
     }
 
     /** Resolves and validates all declared sheets before the contribution is published. */

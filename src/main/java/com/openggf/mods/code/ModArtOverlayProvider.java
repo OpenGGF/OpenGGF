@@ -14,7 +14,16 @@ public final class ModArtOverlayProvider {
 
     public static ObjectArtProvider decorate(ObjectArtProvider base,
                                              Map<String, BakedSheetReader.BakedSheet> overlays) {
-        return new com.openggf.game.ObjectArtOverlayProvider(base, convert(overlays));
+        return decorate(base, overlays, Map.of());
+    }
+
+    /** Overload that also merges in already-materialized sheets (e.g. from ROM art intake). */
+    static ObjectArtProvider decorate(ObjectArtProvider base,
+                                      Map<String, BakedSheetReader.BakedSheet> prepared,
+                                      Map<String, ObjectSpriteSheet> extraSheets) {
+        Map<String, ObjectSpriteSheet> converted = convert(prepared);
+        converted.putAll(Objects.requireNonNull(extraSheets, "extraSheets"));
+        return new com.openggf.game.ObjectArtOverlayProvider(base, converted);
     }
 
     private static Map<String, ObjectSpriteSheet> convert(
