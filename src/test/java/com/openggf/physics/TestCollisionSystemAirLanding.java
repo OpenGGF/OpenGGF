@@ -6,6 +6,9 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GroundMode;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.sprites.animation.SpriteAnimationEndAction;
+import com.openggf.sprites.animation.SpriteAnimationScript;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.FullReset;
@@ -15,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -134,6 +138,31 @@ class TestCollisionSystemAirLanding {
         assertFalse(sprite.getPushing(), "Walk-off should clear pushing just like the normal terrain path");
         assertEquals(0, sprite.getAngle() & 0xFF,
                 "Player_Angle rounds an empty-floor flagged angle to the current cardinal quadrant");
+    }
+
+    @Test
+    void groundedRollingWalkOffRestartsUnchangedRollAnimation() {
+        AbstractPlayableSprite sprite = newTestSprite();
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(2, new SpriteAnimationScript(0,
+                List.of(0x2E, 0x2F, 0x30, 0x31), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(2);
+        sprite.setRolling(true);
+        sprite.setAir(false);
+
+        sprite.getAnimationManager().update(0);
+        sprite.getAnimationManager().update(1);
+        assertEquals(0x2F, sprite.getMappingFrame(), "Fixture should begin partway through Roll2");
+
+        CollisionSystem collisionSystem = new CollisionSystem(new StubTerrainCollisionManager(null, null));
+        collisionSystem.resolveGroundAttachment(sprite, 14, () -> false);
+        sprite.getAnimationManager().update(2);
+
+        assertTrue(sprite.getAir(), "Missing terrain support should put the player in the air");
+        assertEquals(2, sprite.getAnimationId(), "Walk-off should keep the selected rolling animation");
+        assertEquals(0x2E, sprite.getMappingFrame(),
+                "AnglePos must restart Roll2 by forcing a prev_anim mismatch");
     }
 
     @Test
