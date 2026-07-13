@@ -69,6 +69,7 @@ public class TestProductionSingletonClosureGuard {
     // scan below.
     private static final List<String> RAW_GET_INSTANCE_JDK_CRYPTO_ALLOWLIST = List.of(
             "com/openggf/Engine.java",
+            "com/openggf/game/StockGameDataSources.java",
             "com/openggf/game/timeattack/AttemptInputRecording.java",
             "com/openggf/game/timeattack/AttemptReplayHarness.java",
             "com/openggf/game/timeattack/mp/RecordingUploader.java",
