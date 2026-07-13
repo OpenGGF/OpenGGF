@@ -49,6 +49,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -1194,6 +1195,33 @@ public class TestPlayableSpriteMovement {
                 assertEquals((short) -0x0300, mockSprite.getGSpeed());
                 assertEquals(Direction.RIGHT, mockSprite.getDirection(),
                         "0xFD00 is still above the ROM cmpi.w #-$400 skid threshold");
+        }
+
+        @Test
+        public void oppositeDirectionCrossingZeroDoesNotPublishWalk() throws Exception {
+                ScriptedVelocityAnimationProfile profile = new ScriptedVelocityAnimationProfile()
+                                .setIdleAnimId(5)
+                                .setWalkAnimId(0)
+                                .setRunAnimId(1)
+                                .setSpringAnimId(0x10)
+                                .setSkidAnimId(0x0D)
+                                .setRunSpeedThreshold(0x600);
+                mockSprite.setAnimationProfile(profile);
+                mockSprite.setAnimationId(0x10);
+                mockSprite.setGSpeed((short) 0x001C);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setMovementInputActive(true);
+                setInputState(true, false, false, false, false);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doGroundMove");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertNull(profile.resolveAnimationId(mockSprite, 0, 32),
+                                "MoveLeft's opposite-direction deceleration tail returns without writing anim, "
+                                                + "including the frame inertia crosses zero");
         }
 
         @Test
@@ -2978,6 +3006,9 @@ public class TestPlayableSpriteMovement {
                 updatePush.setAccessible(true);
                 updatePush.invoke(manager, true, false);
                 mockSprite.setDirection(Direction.LEFT);
+
+                assertEquals(1, mockSprite.getAnimationManager().captureRewindState().lastAnimationId(),
+                                "MoveLeft publishes the native prev_anim=Run sentinel, not an anonymous restart");
 
                 mockSprite.getAnimationManager().update(1);
 

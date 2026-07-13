@@ -191,6 +191,20 @@ public class TestScriptedVelocityAnimationProfile {
     }
 
     @Test
+    void releasedDirectionPreservesPublishedSpringWhileCoasting() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setAnimationId(profile.getSpringAnimId());
+        sprite.setMovementInputActive(false);
+        sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) 0x0230);
+
+        Integer animId = profile.resolveAnimationId(sprite, 0, 32);
+
+        assertNull(animId,
+                "the friction-only tail does not replace an object-published Spring byte with Walk");
+    }
+
+    @Test
     void groundMovementWaitSurvivesAnglePosDetachFrame() {
         ScriptedVelocityAnimationProfile profile = createProfile();
         TestSprite sprite = new TestSprite();

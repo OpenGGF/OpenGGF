@@ -39754,3 +39754,43 @@ Verification with the local REV01 Sonic 1 ROM:
   - MZ2 complete-run: frame 1552 / 21 errors to frame 3634 / 19 errors.
   - SLZ2 complete-run: frame 2609 / 1 error to fully green.
   - SYZ3 complete-run: frame 1911 / 12 errors to frame 1946 / 6 errors.
+
+### 2026-07-13 -- S1 object-owned Spring / wind-tunnel animation publication
+
+On branch `bugfix/ai-trace-s1-spring-publication` at baseline `58f18adb5`,
+LZ2 first diverged at frame 2293 (ROM Float2 `$0F` / map `$53`, engine Walk
+`$00` / map `$08`) and SYZ2 first diverged at frame 4012 (ROM Spring `$10` /
+map `$40`, engine Walk `$00` / map `$08`). Both traces had byte-green physics.
+
+The failures shared a missing raw-animation ownership boundary. Native
+`Sonic_Move` reaches `Sonic_AngleSpeed` without writing `obAnim` during the
+no-input friction tail and during opposite-direction braking, including the
+frame braking carries inertia across zero. The shared profile now preserves a
+published Spring byte while coasting, and the movement dispatcher marks the
+opposite-direction no-write path so animation resolution cannot synthesize
+Walk. Grounded facing flips now publish the exact `prev_anim=Run` value rather
+than an anonymous restart. Finally, the shared animator consumes the existing
+runtime `isWaterTunnelActive()` predicate to reproduce S1 `Sonic_Control`'s
+`anim=Walk -> anim=prev_anim` repair while Obj64 temporarily disables tunnel
+push without clearing `f_wtunnelmode`. No game name, zone, route, frame, trace
+hydration, or tolerance was added.
+
+ROM references: `docs/s1disasm/_incObj/01 Sonic.asm:385-407,634-757,2174-2182`
+and `docs/s1disasm/_inc/LZWaterFeatures.asm:279-373`.
+
+Verification with the root-level REV01 Sonic 1 ROM:
+
+- Focused unit selection passed 15/15:
+  `TestScriptedVelocityAnimationProfile` plus
+  `TestPlayableSpriteMovement#oppositeDirectionCrossingZeroDoesNotPublishWalk`
+  and `#groundedFacingFlipRestartsWalkScriptLikeRomPrevAnimSentinel`.
+- `TestS1Lz2CompleteRunTraceReplay` advances from frame 2293 / 9 errors to
+  frame 6477 / 5 errors. The new frontier is a separate Walk mapping-cadence
+  mismatch (expected `$08`, actual `$09`); physics remains green.
+- `TestS1Syz2CompleteRunTraceReplay` advances from frame 4012 / 4 errors to
+  frame 5696 / 2 errors. The new frontier is a separate standing
+  Wait-vs-Balance selection (expected `$05`, actual `$06`); physics remains
+  green.
+- The shared-path checks also remain green: S2 EHZ1 physics-only trace replay
+  passed 1/1, and `TestS3kAiz1SkipHeadless` passed 8/8 with their respective
+  root-level ROMs.

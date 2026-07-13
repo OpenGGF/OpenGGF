@@ -2165,6 +2165,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// ROM: When move_lock is active, branches to Obj01_ResetScr which continues
 		// to friction check. It does NOT return early and skip friction.
 		boolean moveLockActive = sprite.getMoveLockTimer() > 0;
+		boolean directionalHelperPublishedAnimation = false;
 
 		if (moveLockActive) {
 			// Sonic_Move tests locktime before any direction or animation write,
@@ -2183,6 +2184,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					if (shouldTriggerGroundSkid(gSpeed, false)) {
 						sprite.setDirection(Direction.RIGHT);
 						handleSkid();
+						directionalHelperPublishedAnimation = true;
 					} else if (sprite.getSkidding()) {
 						advanceSkidDustTimer();
 					}
@@ -2190,6 +2192,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					sprite.setSkidding(false);
 					sprite.setDirection(Direction.LEFT);
 					gSpeed = accelerateLeft(gSpeed, runAccel, max);
+					directionalHelperPublishedAnimation = true;
 				}
 			}
 
@@ -2206,6 +2209,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					if (shouldTriggerGroundSkid(gSpeed, true)) {
 						sprite.setDirection(Direction.LEFT);
 						handleSkid();
+						directionalHelperPublishedAnimation = true;
 					} else if (sprite.getSkidding()) {
 						advanceSkidDustTimer();
 					}
@@ -2213,11 +2217,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					sprite.setSkidding(false);
 					sprite.setDirection(Direction.RIGHT);
 					gSpeed = accelerateRight(gSpeed, runAccel, max);
+					directionalHelperPublishedAnimation = true;
 				}
 			}
 
 			if (!inputLeft && !inputRight) {
 				sprite.setSkidding(false);
+			}
+			if ((inputLeft || inputRight) && !directionalHelperPublishedAnimation
+					&& gSpeed != 0) {
+				// The opposite-direction deceleration tail returns without writing
+				// anim, including the frame it carries inertia across zero.
+				sprite.getAnimationManager().suppressGroundMovementAnimationForFrame();
 			}
 
 			// Standing still handling (ROM: Sonic_Lookup, Sonic_Duck, Obj01_ResetScr)
@@ -3560,7 +3571,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// it does not omit MoveLeft/MoveRight's prev_anim write or the subsequent
 		// obAniFrame/obTimeFrame reset
 		// (docs/s1disasm/_incObj/01 Sonic.asm:634-659,704-723,2174-2182).
-		sprite.forceAnimationRestart();
+		sprite.publishRunAsPreviousAnimation();
 	}
 
 	private void clearFacingFlipPushAfterGroundWallCollision() {

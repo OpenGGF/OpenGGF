@@ -1,5 +1,6 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerAnimationRules;
 import com.openggf.physics.Direction;
@@ -7,6 +8,9 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationScript;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
 /**
  * Updates a playable sprite's mapping frame based on its animation profile.
@@ -111,6 +115,18 @@ public class PlayableSpriteAnimation {
         if (sprite == null) {
             return;
         }
+        if (Boolean.getBoolean("openggf.debug.animation") && frameCounter >= 650 && frameCounter <= 750) {
+            try {
+                Files.writeString(Path.of("/tmp/animation-debug.log"),
+                        "before fc=" + frameCounter + " x=" + sprite.getCentreX() + " y=" + sprite.getCentreY()
+                                + " dir=" + sprite.getDirection() + " ang=" + (sprite.getAngle() & 0xFF)
+                                + " g=" + sprite.getGSpeed() + " lock=" + sprite.getMoveLockTimer()
+                                + " anim=" + sprite.getAnimationId() + " map=" + sprite.getMappingFrame()
+                                + " tick=" + sprite.getAnimationTick() + " idx=" + sprite.getAnimationFrameIndex()
+                                + System.lineSeparator(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            } catch (Exception ignored) {
+            }
+        }
         updateFlipAngle(frameCounter);
         boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
         sprite.setRenderFlips(facingLeft, false);
@@ -136,6 +152,7 @@ public class PlayableSpriteAnimation {
             if (desiredAnimId != null && desiredAnimId != sprite.getAnimationId()) {
                 sprite.setAnimationId(desiredAnimId);
             }
+            restoreWaterTunnelPreviousAnimation(profile);
             if (sprite.isObjectMappingFrameControl()) {
                 return;
             }
@@ -155,6 +172,29 @@ public class PlayableSpriteAnimation {
         }
         int frame = profile.resolveFrame(sprite, frameCounter, frameCount);
         sprite.setMappingFrame(frame);
+    }
+
+    /**
+     * S1's player slot repairs the wind-tunnel animation immediately before
+     * Animate: while {@code f_wtunnelmode} is set, a movement-written Walk byte
+     * is replaced with {@code prev_anim}. This matters while Obj64 temporarily
+     * disables the tunnel push but leaves the mode flag active. The provider
+     * predicate keeps the shared animation code driven by native runtime state,
+     * without a game or zone branch.
+     */
+    private void restoreWaterTunnelPreviousAnimation(SpriteAnimationProfile profile) {
+        if (!(profile instanceof ScriptedVelocityAnimationProfile velocityProfile)
+                || sprite.getAnimationId() != velocityProfile.getWalkAnimId()
+                || lastAnimationId < 0) {
+            return;
+        }
+        var levelManager = sprite.currentLevelManagerIfAvailable();
+        ZoneFeatureProvider zoneFeatures = levelManager != null
+                ? levelManager.getZoneFeatureProvider()
+                : null;
+        if (zoneFeatures != null && zoneFeatures.isWaterTunnelActive()) {
+            sprite.setAnimationId(lastAnimationId);
+        }
     }
 
     private void updateScriptedAnimation(int frameCounter) {
