@@ -723,6 +723,67 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void sonic1PreviousObjectCheckpointPublishesWalkAfterMovementClearsLivePush() {
+        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        ManualPushCheckpointObject object = new ManualPushCheckpointObject(100, 100, false);
+        ObjectManager manager = buildManager(object);
+        TestPlayableSprite player = createSonic1WalkPushPlayer();
+
+        manager.update(0, player, List.of(), 0, false, true, false);
+        assertTrue(player.getPushing());
+
+        // S1 MoveLeft/MoveRight can clear Status_Push before the later object
+        // slot runs Solid_NoCollision. The immediately previous checkpoint is
+        // the bounded owner of that object's still-set status bit.
+        player.setPushing(false);
+        player.setCentreX((short) 40);
+        manager.update(0, player, List.of(), 1, false, true, false);
+
+        assertEquals(0, player.getAnimationId());
+        assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId());
+    }
+
+    @Test
+    public void sonic1PersistentNativeLatchPublishesAfterSkippedSolidCheckpoint() {
+        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        ManualPushCheckpointObject object = new ManualPushCheckpointObject(100, 100, true);
+        ObjectManager manager = buildManager(object);
+        TestPlayableSprite player = createSonic1WalkPushPlayer();
+
+        manager.update(0, player, List.of(), 0, false, true, false);
+        assertTrue(player.getPushing());
+
+        player.setPushing(false);
+        player.setCentreX((short) 40);
+        object.skipNextCheckpoint();
+        manager.update(0, player, List.of(), 1, false, true, false);
+        manager.update(0, player, List.of(), 2, false, true, false);
+
+        assertEquals(0, player.getAnimationId());
+        assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId());
+    }
+
+    private static TestPlayableSprite createSonic1WalkPushPlayer() {
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_1);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setCentreX((short) 85);
+        player.setCentreY((short) 81);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0,
+                List.of(0x08, 0x09), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(1, new SpriteAnimationScript(0,
+                List.of(0x0A), SpriteAnimationEndAction.LOOP, 0));
+        player.setAnimationSet(animations);
+        player.setAnimationId(0);
+        player.getAnimationManager().update(0);
+        return player;
+    }
+
+    @Test
     public void earlierSlotMultiPiecePushSurvivesRiddenPieceShortcut() {
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);
         SlotOrderedMultiPieceSolidObject object =
@@ -2090,6 +2151,71 @@ public class TestSolidObjectManager {
         @Override
         public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
             compatibilityCallbackCount++;
+        }
+    }
+
+    private static final class ManualPushCheckpointObject extends AbstractObjectInstance
+            implements SolidObjectProvider {
+        private final SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        private final boolean persistentNativeLatch;
+        private boolean skipNextCheckpoint;
+
+        private ManualPushCheckpointObject(int x, int y, boolean persistentNativeLatch) {
+            super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "ManualPushCheckpoint");
+            this.persistentNativeLatch = persistentNativeLatch;
+        }
+
+        private void skipNextCheckpoint() {
+            skipNextCheckpoint = true;
+        }
+
+        @Override
+        public SolidExecutionMode solidExecutionMode() {
+            return SolidExecutionMode.MANUAL_CHECKPOINT;
+        }
+
+        @Override
+        public SolidObjectParams getSolidParams() {
+            return params;
+        }
+
+        @Override
+        public boolean usesInstanceSolidStateLatchKey() {
+            return true;
+        }
+
+        @Override
+        public boolean preservesNativePushLatchAcrossSkippedSolidCheckpoints() {
+            return persistentNativeLatch;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            if (skipNextCheckpoint) {
+                skipNextCheckpoint = false;
+                return;
+            }
+            services().solidExecution().resolveSolidNow(player);
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // No-op for tests.
+        }
+
+        @Override
+        public boolean isHighPriority() {
+            return false;
+        }
+
+        @Override
+        public boolean isDestroyed() {
+            return false;
+        }
+
+        @Override
+        public boolean isSkipSolidContactThisFrame() {
+            return false;
         }
     }
 

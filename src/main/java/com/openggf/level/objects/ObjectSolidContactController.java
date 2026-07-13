@@ -61,6 +61,7 @@ final class ObjectSolidContactController {
     private static final int OBJ85_ID = 0x85;
     private final ObjectManager objectManager;
     private int frameCounter;
+    private boolean checkpointPushingLastFrame;
 
     // Per-player riding state (ROM: each player object has its own SST interact field $3E).
     // Mutable holder reused in place via putRidingState() so the steady "standing on an
@@ -339,25 +340,40 @@ final class ObjectSolidContactController {
         return true;
     }
 
-    private void publishSolidPushReleaseAnimationWord(PlayableEntity player) {
+    private void publishSolidPushReleaseAnimationWord(PlayableEntity player, ObjectInstance instance) {
         ObjectInteractionRules rules = objectInteractionRulesOrNull(player);
         if (rules == null
                 || !rules.solidPushReleaseWritesWalkRunAnimationWord()
-                || !(player instanceof AbstractPlayableSprite sprite)
-                || !sprite.getPushing()) {
+                || !(player instanceof AbstractPlayableSprite sprite)) {
+            return;
+        }
+        int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+        boolean persistentNativeLatch = instance instanceof SolidObjectProvider provider
+                && provider.preservesNativePushLatchAcrossSkippedSolidCheckpoints();
+        boolean previousCheckpointStillOwnsWalk = checkpointPushingLastFrame
+                && sprite.getAnimationId() == walkAnimationId;
+        boolean persistentLatchStillOwnsWalk = persistentNativeLatch
+                && sprite.getAnimationId() == walkAnimationId;
+        if (!sprite.getPushing()
+                && !previousCheckpointStillOwnsWalk
+                && !persistentLatchStillOwnsWalk) {
             return;
         }
         // Retail S1's FixBugs=0 Solid_NoCollision path executes
         // `move.w #id_Run,obAnim(a1)` before Solid_NotPushing. Because anim and
         // prev_anim are adjacent bytes, this publishes anim=Walk ($00) and
         // prev_anim=Run ($01), restarting Walk on the next player slot without
-        // changing the mapping already rendered this frame. Require the paired
-        // player Status_Push bit as well as this object's push latch: both are
-        // set together by Solid_AlignToSide, while the engine's per-object latch
-        // can otherwise outlive an already-cleared player bit until a much later
-        // placement cleanup.
+        // changing the mapping already rendered this frame. Require either the
+        // live paired player Status_Push bit, or raw Walk plus this exact object's
+        // immediately previous checkpoint push state. MoveLeft/MoveRight can
+        // clear the player bit before the later object slot reaches
+        // Solid_NoCollision, while the object's own status bit still owns the
+        // native write. The checkpoint value is replaced every frame, so an old
+        // global latch cannot overwrite Roll after an unrelated later cleanup.
+        // Push-block states 4/6 deliberately skip Solid_ChkEnter; their provider
+        // opts the live SST latch into the same raw-Walk fallback until the next
+        // state-0 checkpoint consumes it.
         // (_incObj/sub SolidObject.asm:251-263; sub SolidWall.asm:36-51).
-        int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
         if (walkAnimationId >= 0) {
             sprite.setAnimationId(walkAnimationId);
         }
@@ -1089,12 +1105,19 @@ final class ObjectSolidContactController {
 
         PreContactState preContact = new PreContactState(
                 preContactXSpeed, preContactYSpeed, preContactRolling, player.getAir(), preContactAnimationId);
-        SolidContact contact = processInlineObjectForPlayer(instance, player);
+        PlayerStandingState previousStanding =
+                objectManager.services().solidExecutionRegistry().previousStanding(instance, player);
+        boolean outerCheckpointPushingLastFrame = checkpointPushingLastFrame;
+        checkpointPushingLastFrame = previousStanding.pushing();
+        SolidContact contact;
+        try {
+            contact = processInlineObjectForPlayer(instance, player);
+        } finally {
+            checkpointPushingLastFrame = outerCheckpointPushingLastFrame;
+        }
         PostContactState postContact = new PostContactState(
                 player.getXSpeed(), player.getYSpeed(), player.getAir(),
                 player.isOnObject(), currentPushingState(player));
-        PlayerStandingState previousStanding =
-                objectManager.services().solidExecutionRegistry().previousStanding(instance, player);
 
         if (contact == null) {
             PlayerSolidContactResult result =
@@ -1391,7 +1414,7 @@ final class ObjectSolidContactController {
                 provider.setPlayerPushing(player, true);
             } else if (clearObjectPushingBit(player, instance)) {
                 if (result.aggregateContact() == null) {
-                    publishSolidPushReleaseAnimationWord(player);
+                    publishSolidPushReleaseAnimationWord(player, instance);
                 }
                 player.setPushing(false);
                 provider.setPlayerPushing(player, false);
@@ -1549,7 +1572,7 @@ final class ObjectSolidContactController {
 
         if (contact == null) {
             if (clearObjectPushingBit(player, instance)) {
-                publishSolidPushReleaseAnimationWord(player);
+                publishSolidPushReleaseAnimationWord(player, instance);
                 player.setPushing(false);
                 provider.setPlayerPushing(player, false);
             }
@@ -2502,7 +2525,7 @@ final class ObjectSolidContactController {
                     provider.setPlayerPushing(player, true);
                 } else if (clearObjectPushingBit(player, instance)) {
                     if (result.aggregateContact() == null) {
-                        publishSolidPushReleaseAnimationWord(player);
+                        publishSolidPushReleaseAnimationWord(player, instance);
                     }
                     player.setPushing(false);
                     provider.setPlayerPushing(player, false);

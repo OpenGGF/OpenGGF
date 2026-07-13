@@ -39716,3 +39716,41 @@ Verification with the local REV01 Sonic 1 ROM:
   upstream push-lifetime gap. Those remaining expected-red frontiers were not
   hidden by broadening the animation rule. All five reports contained 0
   warnings.
+
+### 2026-07-13 -- Sonic 1 moving-solid push-release ownership
+
+At composed baseline `58f18adb5`, five remaining routes reached the same Walk
+cadence mismatch after native `Solid_NoCollision` had written
+`anim=Walk/prev_anim=Run`: FZ frame 924, MZ1 standalone frame 587, MZ2 frame
+1552, SLZ2 frame 2609, and SYZ3 frame 1911 all expected mapping `$08` while the
+engine had advanced to `$09`.
+
+The shared publication rule itself was already correct; three pieces of its
+object-owned input state were not. S1 `SolidObject` and
+`SolidObject_Heightmap` reject the right edge with unsigned `bhi`, so
+`relX == width*2` remains a contact. The MZ large grassy platform and FZ
+cylinder now expose that inclusive boundary. Their movement, plus the SLZ
+staircase and MZ push block, rebuilds `dynamicSpawn` as position changes, but
+the ROM pushing bit stays in the same live SST `status(a0)` byte; those objects
+therefore key standing/pushing state by instance. Finally, the controller now
+uses the immediately previous per-object checkpoint when MoveLeft/MoveRight
+has cleared the player's `Status_Push` before the later object slot runs. That
+fallback is bounded to raw Walk, so an unrelated old latch cannot overwrite
+Roll. Obj33's states 4/6 deliberately return without calling
+`Solid_ChkEnter`; a provider contract keeps that exact live-SST latch until the
+next state-0 checkpoint consumes it (`docs/s1disasm/_incObj/sub
+SolidObject.asm:123-166,251-263`; `docs/s1disasm/_incObj/33 Pushable
+Blocks.asm:207-252`). No zone, route, object-id, or frame gate was added, and no
+trace data was changed, hydrated, or tolerated.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- The focused `TestSolidObjectManager` publication, stale-latch rejection,
+  previous-checkpoint ownership, and skipped-checkpoint persistence tests pass.
+- Comparison-only representative replays moved as follows, with zero warnings
+  and green physics in every report:
+  - FZ complete-run: frame 924 / 8 errors to frame 2040 / 2 errors.
+  - MZ1 standalone: frame 587 / 17 errors to frame 749 / 15 errors.
+  - MZ2 complete-run: frame 1552 / 21 errors to frame 3634 / 19 errors.
+  - SLZ2 complete-run: frame 2609 / 1 error to fully green.
+  - SYZ3 complete-run: frame 1911 / 12 errors to frame 1946 / 6 errors.

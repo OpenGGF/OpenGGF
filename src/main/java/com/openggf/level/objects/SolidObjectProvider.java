@@ -392,6 +392,19 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether this object's native pushing bit remains authoritative while its
+     * state machine deliberately skips solid checkpoints.
+     * <p>
+     * Use only when the ROM stores the bit in the live SST status byte and has
+     * intervening states that return without calling the solid helper. The next
+     * checkpoint then owns the delayed no-contact release even though the
+     * player's live push bit and one-frame checkpoint history have expired.
+     */
+    default boolean preservesNativePushLatchAcrossSkippedSolidCheckpoints() {
+        return false;
+    }
+
+    /**
      * Whether CPU sidekick follow steering should treat this still-ridden object
      * as preserving the previous frame's push bit until the ROM CPU slot reads
      * it.

@@ -299,6 +299,20 @@ public class Sonic1LargeGrassyPlatformObjectInstance extends AbstractObjectInsta
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // SolidObject_Heightmap rejects with `bhi`, so relX == width*2 is inside.
+        // docs/s1disasm/_incObj/sub SolidObject.asm:123-131
+        return true;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // The oscillating platform rebuilds dynamicSpawn as y_pos changes, but
+        // the native push bit remains in this same Obj2F SST status byte.
+        return true;
+    }
+
+    @Override
     public int getSlopeBaseline() {
         // SolidObject2F uses relative slope samples:
         //   slopeOffset = slopeSample - slopeData[0]

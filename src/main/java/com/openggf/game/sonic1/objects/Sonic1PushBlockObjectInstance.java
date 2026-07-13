@@ -629,6 +629,22 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
         return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // Push/fall movement rebuilds dynamicSpawn, but obStatus belongs to the
+        // same live Obj33 SST until its next Solid_ChkEnter call.
+        return true;
+    }
+
+    @Override
+    public boolean preservesNativePushLatchAcrossSkippedSolidCheckpoints() {
+        // loc_C1AA/loc_C1F2 return without Solid_ChkEnter. The pre-fall object
+        // push bit therefore survives states 4/6 and is consumed only after the
+        // block returns to state 0.
+        // docs/s1disasm/_incObj/33 Pushable Blocks.asm:207-252
+        return true;
+    }
+
     /**
      * Custom push handler (loc_C230 in loc_C186/Solid_ChkEnter).
      * <p>
