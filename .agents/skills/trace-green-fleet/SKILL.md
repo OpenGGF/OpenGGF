@@ -42,7 +42,7 @@ If no failing list is supplied, run one discovery sweep from the main checkout.
 - Branch: `bugfix/ai-trace-<game>-<zone>`
 - Max parallel traces when explicitly authorized: 4
 - Diagnose/fix iterations per trace before verification review: 3
-- ROM aliases in repo root: `s1.gen`, `s2.gen`, `s3k.gen`
+- ROMs: search the repo root for `.gen` files, select each game sensibly by filename/hash, and use the paths actually present; never create aliases or symlinks just to match an example
 - S3K fallback green guards: `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`
 
 ROM property names:
@@ -190,7 +190,7 @@ Rerun the targeted trace and same-game green guard. Apply the genuineness gate. 
 If the caller supplied `failing`, use it. Otherwise run one sweep from the repo root:
 
 ```powershell
-cmd /c "mvn.cmd -q -Dmse=relaxed ""-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen"" ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Ds3k.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen"" ""-Dtest=*TraceReplay"" test"
+cmd /c "mvn.cmd -q -Dmse=relaxed ""-Ds1.rom.path=%S1_ROM%"" ""-Ds2.rom.path=%S2_ROM%"" ""-Ds3k.rom.path=%S3K_ROM%"" ""-Dtest=*TraceReplay"" test"
 ```
 
 Then read `target/surefire-reports/*TraceReplay*.txt`.

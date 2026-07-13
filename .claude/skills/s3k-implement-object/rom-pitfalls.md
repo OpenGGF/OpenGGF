@@ -958,6 +958,213 @@ see `s2-implement-object/rom-pitfalls.md` P79.
 
 ---
 
+## P26 -- Obj_WaitOffscreen consumes retained Render_Sprites state
+
+**S3K-specific.**
+
+**Symptom.** A dormant badnik begins its patrol one object dispatch early or
+late, so its touch box misses an exact-edge player contact much later even
+though its velocity and collision size are correct.
+
+**Root cause.** `Obj_WaitOffscreen` replaces the operation pointer with
+`loc_85AD2`. That routine reads render bit 7 left by the preceding
+`Render_Sprites` pass, restores the saved pointer on its own dispatch, and
+only runs the original object's setup on the following dispatch. Recomputing
+visibility inside `update()` collapses the render/restore boundary and can also
+sample the pre-scroll camera instead of the render-visible camera.
+
+**What to check.** For every object that calls `Obj_WaitOffscreen`:
+
+1. Keep the placeholder, pointer-restore, and object-setup dispatches separate.
+2. Retain visibility from the post-camera render phase; do not infer render bit
+   7 from a fresh camera query inside the next object update.
+3. Use the placeholder's authored render extent and include any camera motion
+   between object execution and the render pass.
+4. Keep collision disabled until the setup dispatch writes the object's real
+   collision flags.
+
+**ROM citation.** `Obj_WaitOffscreen` and `Render_Sprites` at
+`docs/skdisasm/sonic3k.asm:180266-180298,36318-36365`; Jawz caller at
+`183518-183570`.
+
+**Originating commit.** `<pending: HCZ milestone 46>`.
+
+---
+
+---
+
+## P27 -- Animation callbacks own child allocation and routine handoff
+
+**Symptom.** A child object becomes visible or interactive dozens of frames
+early even though its parent has entered the apparently correct routine. Later
+player movement diverges when the premature child first overlaps or applies a
+force.
+
+**Root cause.** The parent routine starts an `Animate_Raw*` script and stores a
+callback in `$34`; the callback performs the child allocation and routine
+advance only after the animation command/counter completes. Spawning the child
+on routine entry collapses the animation-owned boundary. Accelerating scripts
+such as `Animate_RawGetFaster` can make this error much larger than one frame.
+
+**What to check.**
+
+1. Read the complete animation data, including delay, loop/end command, and any
+   extra counter byte consumed by the animation helper.
+2. Keep routine entry, animation completion, callback dispatch, child
+   initialization, and first active child dispatch as distinct boundaries.
+3. If a consolidated engine object folds the child into its parent, determine
+   whether allocation lands above or below the current SST slot. An above-slot
+   child can consume routine 0 in the callback's same ExecuteObjects pass, so
+   the callback itself may already represent its initialization boundary.
+4. Allocate from the callback's native slot/order path, not merely when the
+   parent first appears active.
+5. When a parent callback mutates its routine, retain any later child-slot work
+   from that same ExecuteObjects pass; do not re-gate folded child behavior on
+   the parent's post-callback routine.
+
+**ROM citation.** HCZ end-boss turbine `loc_6B1E6` installs
+`byte_6BDF4` and callback `loc_6B212`; that callback alone creates the water
+column. The column later creates spray child `loc_6B3DE`, whose
+`loc_6B3FC` setup returns before `loc_6B410` begins suction
+(`docs/skdisasm/sonic3k.asm:141030-141069,141205-141229,142241-142247,
+177749-177792`).
+
+**Originating commit.** `<pending: HCZ milestone 51>`.
+
+---
+
+## P28 -- Preserve mutable data registers across sequential P1/P2 helper calls
+
+**Symptom.** Player 1 matches an object force or carry routine while Player 2
+moves in the wrong direction or by the wrong amount, despite both calls using
+the same helper and apparently identical geometry.
+
+**Root cause.** The parent routine initializes a data register once and invokes
+the helper for P1 and P2 without restoring it. If the helper negates,
+increments, shifts, or otherwise mutates that register, P2 consumes the value
+left by P1. Recomputing an absolute result independently per player changes the
+native behavior.
+
+**What to check.** Trace every input/output register across the full caller,
+not only inside the helper. Port native player order and thread every mutated
+value through eligibility early returns as well as the active branch.
+
+**ROM citation.** HCZ `sub_6B9AC` initializes `d2=+$20000` once, then calls
+`sub_6B9C8` for P1 and P2. A player right of the column negates `d2`, so the
+second player's direction depends on the first call. Its sibling `sub_6B9E2`
+likewise shares `a1`; P1 carry consumes `(a1)+`, shifting P2's grab-zone table
+view by one word (`docs/skdisasm/sonic3k.asm:141757-141881,141925-141930`).
+
+**Originating commit.** `<pending: HCZ milestone 53>`.
+
+---
+
+## P29 -- Touch-list coordinates follow the add-to-list call site
+
+**Symptom.** A moving hazard hurts one frame early or late at an exact vertical
+or horizontal edge even though its final rendered position matches ROM.
+
+**Root cause.** Collision-response membership and coordinate timing are
+separate facts. A routine can move or refresh a child immediately before
+`Add_SpriteToCollisionResponseList`; that entry must expose the refreshed live
+coordinate, while objects that add before movement retain their earlier sample.
+
+**What to check.** Read the entire operation tail and locate movement/child
+refresh relative to the exact list-add helper. Opt the specific object into
+current touch state only when the ROM adds after movement; do not globally
+change previous-list snapshot semantics.
+
+**ROM citation.** HCZ turbine `loc_6B1A8` dispatches its routine, calls
+`Refresh_ChildPosition`, then tail-calls
+`Child_DrawTouch_Sprite2_FlickerMove`, which adds the refreshed child
+(`docs/skdisasm/sonic3k.asm:141019-141033,178139-178153`).
+
+**Originating commit.** `<pending: HCZ milestone 56>`.
+
+---
+
+## P30 -- Controller persistence must follow the ROM's active-state gate
+
+**Symptom.** A distant controller no longer affects players, yet its SST slot
+remains occupied for the rest of the act. A much later boss child or lost-ring
+spill then allocates into a different slot and observes a different object-loop
+countdown phase.
+
+**Root cause.** Invisible controller objects are often persistent only while a
+player-owned phase/capture byte is nonzero. If the idle tail explicitly calls
+`Delete_Sprite_If_Not_In_Range`, unconditional engine persistence converts a
+temporary capture safeguard into a permanent slot leak.
+
+**What to check.** Trace every per-player state byte tested immediately before
+the range-delete helper. Make persistence depend on those active states, and
+let ordinary off-screen deletion clear placement-loaded state so the controller
+can respawn if the camera returns.
+
+**ROM citation.** HCZ twisting loop `loc_3909C` tests both player phase bytes
+and calls `Delete_Sprite_If_Not_In_Range` only when both are zero
+(`docs/skdisasm/sonic3k.asm:76482-76505,37262-37277`).
+
+**Originating commit.** `<pending: HCZ milestone 57>`.
+
+---
+
+## P31 -- Routine handoff does not imply immediate collision disable
+
+**Symptom.** A spinning or animated hazard becomes harmless as soon as its
+parent clears an activation flag, while ROM still permits one or more contacts
+during the visible slowdown/retraction animation.
+
+**Root cause.** The routine handoff installs an `Animate_Raw*` script but does
+not write `collision_flags`. Collision remains owned by the later animation
+callback, so clearing it on routine entry shortens the native touch lifetime.
+
+**What to check.** Track the collision byte separately from the routine and
+animation speed. Locate the exact instruction that clears it and preserve the
+old value through every intermediate animation dispatch.
+
+**ROM citation.** HCZ end-boss turbine `loc_6B244` selects routine 8 and
+`byte_6BE01`; `loc_6B262` alone clears collision after
+`Animate_RawGetSlower` completes (`docs/skdisasm/sonic3k.asm:141084-141106,
+142249-142257,177749-177792`).
+
+**Originating commit.** `<pending: HCZ milestone 59>`.
+
+---
+
+## P32 -- Operation-pointer handoff can transfer reference ownership
+
+**Symptom.** Rewind capture reports a stale reference after a former parent
+unloads, or an independently launched child disappears early because it still
+uses the generic lifetime of its attached phase. A downstream effect can also
+outlive the launched child it still reads.
+
+**Root cause.** A child can read `parent3` while attached, then replace its
+operation pointer with a launched routine that never reads the former parent
+again. Retaining that Java reference invents an ownership edge after the ROM
+handoff. Conversely, a separately allocated trail that still reads the
+launched child's status remains owned by that child until its native delete
+marker becomes visible.
+
+**What to check.** Trace every parent-pointer read before and after the
+operation-pointer write. Sever both directions only when the new operation no
+longer consumes the old parent; keep downstream children attached to the
+object whose state they still read. Reproduce the exact
+`Sprite_CheckDeleteTouchXY` bounds and one-entry delete-marker timing, and opt
+only the independent operation out of generic culling. Rewind recreation must
+use the captured `RewindObjectContext.spawn()` metadata rather than probe
+constructor defaults.
+
+**ROM citation.** Turbo Spiker's attached shell reads `parent3`; `loc_87D72`
+installs independent `loc_87DA4`, while the separately allocated trail at
+`loc_87DC0` continues reading the shell's status bit 7
+(`docs/skdisasm/sonic3k.asm:184034-184083`). The range helper installs the
+delete operation and sets that marker before the slot is freed on its next
+entry (`docs/skdisasm/sonic3k.asm:179032-179047,179136-179139`).
+
+**Originating commit.** `<pending: Turbo Spiker HCZ closure repair>`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

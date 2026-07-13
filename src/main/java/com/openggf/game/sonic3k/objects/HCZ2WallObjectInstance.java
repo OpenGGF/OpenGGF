@@ -5,7 +5,10 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.ZeroArgRewindRecreatable;
 
 import java.util.List;
@@ -27,7 +30,7 @@ import java.util.List;
  * (Events_routine_bg != 4, i.e. wall-chase state ended).
  */
 public class HCZ2WallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, ZeroArgRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, ZeroArgRewindRecreatable {
 
     /** ROM: d1 = $4B (75 pixels half-width for SolidObjectFull2). */
     private static final int HALF_WIDTH = 0x4B;
@@ -101,9 +104,55 @@ public class HCZ2WallObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
+        if (player == null || player.getDead() || contact == null || !contact.touchSide()) {
+            return;
+        }
+
+        // ROM FindFreeObj gives this wall an earlier SST slot than the placed
+        // vertical hurt blocks in the chase corridor. The engine can load those
+        // placements before the background event allocates the wall, reversing
+        // just these solid checkpoints even though both objects retain valid
+        // native slots. Re-run only earlier engine-slot hurt blocks after the
+        // wall has applied its side separation, restoring the ROM's wall-then-
+        // hazard order (Obj_HCZ2Wall / loc_1F66C, sonic3k.asm:106226-106244,
+        // 43507-43535). The block's own face selector remains the authority for
+        // whether the corrected position is lethal.
+        int wallSlot = getSlotIndex();
+        var objectManager = services().objectManager();
+        for (Sonic3kInvisibleHurtBlockVObjectInstance block :
+                objectManager.activeObjectsOfType(Sonic3kInvisibleHurtBlockVObjectInstance.class)) {
+            if (block.getSlotIndex() >= wallSlot) {
+                break;
+            }
+            objectManager.processImmediateInlineSolidCheckpoint(block, player, List.of());
+            if (player.getDead()) {
+                break;
+            }
+        }
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         // SolidObjectFull2: full solidity on all sides
         return false;
+    }
+
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // Obj_HCZ2Wall jumps directly to SolidObjectFull2, whose _1P entry
+        // bypasses loc_1DF88's render_flags bit-7 gate. Its $4B collision box
+        // can therefore push a player before the smaller $40 render bounds
+        // enter the viewport (sonic3k.asm:106226-106244,41065-41067).
+        return true;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.fullSolid(
+                usesStickyContactBuffer(),
+                usesInclusiveRightEdge(),
+                bypassesOffscreenSolidGate());
     }
 
     @Override

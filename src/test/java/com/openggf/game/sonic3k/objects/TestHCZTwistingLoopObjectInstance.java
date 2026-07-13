@@ -12,6 +12,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestHCZTwistingLoopObjectInstance {
     @Test
+    void persistenceMatchesPerPlayerCapturePhases() {
+        HCZTwistingLoopObjectInstance loop = new HCZTwistingLoopObjectInstance(
+                new ObjectSpawn(0x0840, 0x0120, 0x2A, 0x00, 0, false, 0));
+        TestPlayableSprite main = playerAtLoopEntry();
+        loop.setServices(new TestObjectServices());
+
+        assertFalse(loop.isPersistent(),
+                "loc_3909C sends an idle loop through Delete_Sprite_If_Not_In_Range");
+
+        loop.update(0, main);
+
+        assertTrue(loop.isPersistent(),
+                "an active per-player phase must keep the controller alive while carrying the player");
+    }
+
+    @Test
     void sidekickProcessingUsesNativeP2QueryOnly() {
         HCZTwistingLoopObjectInstance loop = new HCZTwistingLoopObjectInstance(
                 new ObjectSpawn(0x0840, 0x0120, 0x2A, 0x00, 0, false, 0));

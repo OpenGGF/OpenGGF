@@ -15,11 +15,16 @@ import com.openggf.graphics.TilemapGpuRenderer;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.render.BackgroundRenderer;
 import java.util.ArrayDeque;
+import java.util.Arrays;
 
 /**
  * Shared HCZ BG-high replay used when hardware BG priority must appear above
- * lower-priority foreground pixels.
+ * lower-priority foreground pixels. HCZ deformation varies by scanline, so the
+ * replay must consume the same full HScroll table as the main background pass;
+ * flattening it to one scanline reintroduces the opening wall during normal
+ * HCZ2 parallax.
  */
 final class HczBgHighPriorityTileRenderer {
     private static final ArrayDeque<OverlayCommand> COMMAND_POOL = new ArrayDeque<>();
@@ -32,7 +37,8 @@ final class HczBgHighPriorityTileRenderer {
             return;
         }
         TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
-        if (renderer == null) {
+        BackgroundRenderer backgroundRenderer = graphicsManager.getBackgroundRenderer();
+        if (renderer == null || backgroundRenderer == null) {
             return;
         }
 
@@ -48,8 +54,6 @@ final class HczBgHighPriorityTileRenderer {
             return;
         }
 
-        short bgScroll = (short) (hScrollData[hScrollData.length - 1] & 0xFFFF);
-        float bgWorldOffsetX = -bgScroll;
         float bgWorldOffsetY = parallaxManager.getVscrollFactorBG();
 
         SonicConfigurationService configService = GameServices.configuration();
@@ -73,8 +77,8 @@ final class HczBgHighPriorityTileRenderer {
 
         OverlayCommand command = COMMAND_POOL.pollFirst();
         if (command == null) command = new OverlayCommand();
-        graphicsManager.registerCommand(command.configure(renderer, screenW, screenH,
-                bgWorldOffsetX, bgWorldOffsetY, graphicsManager.getPatternAtlasWidth(),
+        graphicsManager.registerCommand(command.configure(renderer, backgroundRenderer, screenW, screenH,
+                hScrollData, bgWorldOffsetY, graphicsManager.getPatternAtlasWidth(),
                 graphicsManager.getPatternAtlasHeight(), atlasId, paletteId, uwPalId,
                 useUnderwaterPalette, waterlineScreenY));
     }
@@ -82,19 +86,23 @@ final class HczBgHighPriorityTileRenderer {
     static OverlayCommand acquireCaptured(TilemapGpuRenderer renderer, int[] viewport, int marker) {
         OverlayCommand command = COMMAND_POOL.pollFirst();
         if (command == null) command = new OverlayCommand();
-        return command.configureCaptured(renderer, 320, 224, marker, 0, 1, 1,
-                2, 3, 0, false, 0, viewport);
+        int[] hScroll = new int[224];
+        hScroll[0] = marker;
+        return command.configureCaptured(renderer, new BackgroundRenderer(), 320, 224,
+                hScroll, 0, 1, 1, 2, 3, 0, false, 0, viewport);
     }
 
     static final class OverlayCommand implements GLCommandable {
         private final int[] viewport = new int[4];
+        private final int[] hScroll = new int[224];
         private TilemapGpuRenderer renderer;
+        private BackgroundRenderer backgroundRenderer;
         private int screenW, screenH, atlasWidth, atlasHeight, atlasId, paletteId, underwaterPaletteId;
-        private float offsetX, offsetY, waterlineY;
+        private float offsetY, waterlineY;
         private boolean underwater, leased;
 
-        OverlayCommand configure(TilemapGpuRenderer renderer, int screenW, int screenH,
-                float offsetX, float offsetY, int atlasWidth, int atlasHeight,
+        OverlayCommand configure(TilemapGpuRenderer renderer, BackgroundRenderer backgroundRenderer,
+                int screenW, int screenH, int[] hScroll, float offsetY, int atlasWidth, int atlasHeight,
                 int atlasId, int paletteId, int underwaterPaletteId,
                 boolean underwater, float waterlineY) {
             try {
@@ -103,28 +111,38 @@ final class HczBgHighPriorityTileRenderer {
                 COMMAND_POOL.addFirst(this);
                 throw failure;
             }
-            return configureCaptured(renderer, screenW, screenH, offsetX, offsetY, atlasWidth, atlasHeight,
-                    atlasId, paletteId, underwaterPaletteId, underwater, waterlineY, viewport);
+            return configureCaptured(renderer, backgroundRenderer, screenW, screenH, hScroll, offsetY,
+                    atlasWidth, atlasHeight, atlasId, paletteId, underwaterPaletteId,
+                    underwater, waterlineY, viewport);
         }
 
-        OverlayCommand configureCaptured(TilemapGpuRenderer renderer, int screenW, int screenH,
-                float offsetX, float offsetY, int atlasWidth, int atlasHeight,
+        OverlayCommand configureCaptured(TilemapGpuRenderer renderer, BackgroundRenderer backgroundRenderer,
+                int screenW, int screenH, int[] hScroll, float offsetY, int atlasWidth, int atlasHeight,
                 int atlasId, int paletteId, int underwaterPaletteId,
                 boolean underwater, float waterlineY, int[] capturedViewport) {
-            this.renderer = renderer; this.screenW = screenW; this.screenH = screenH;
-            this.offsetX = offsetX; this.offsetY = offsetY; this.atlasId = atlasId;
+            this.renderer = renderer; this.backgroundRenderer = backgroundRenderer;
+            this.screenW = screenW; this.screenH = screenH;
+            this.offsetY = offsetY; this.atlasId = atlasId;
             this.atlasWidth = atlasWidth; this.atlasHeight = atlasHeight;
             this.paletteId = paletteId; this.underwaterPaletteId = underwaterPaletteId;
             System.arraycopy(capturedViewport, 0, viewport, 0, 4);
+            int copyLength = Math.min(this.hScroll.length, hScroll != null ? hScroll.length : 0);
+            if (copyLength > 0) {
+                System.arraycopy(hScroll, 0, this.hScroll, 0, copyLength);
+            }
+            Arrays.fill(this.hScroll, copyLength, this.hScroll.length, 0);
             this.underwater = underwater; this.waterlineY = waterlineY; leased = true;
             return this;
         }
 
         @Override public void execute(int cx, int cy, int cw, int ch) {
             try {
-                if (renderer == null) return;
+                if (renderer == null || backgroundRenderer == null) return;
+                backgroundRenderer.uploadHScroll(hScroll);
+                renderer.enablePerLineScroll(backgroundRenderer.getHScrollTextureId(),
+                        hScroll.length, 0.0f, 0.0f, 0.0f);
                 renderer.render(TilemapGpuRenderer.Layer.BACKGROUND, screenW, screenH,
-                        viewport[0], viewport[1], viewport[2], viewport[3], offsetX, offsetY,
+                        viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, offsetY,
                         atlasWidth, atlasHeight, atlasId,
                         paletteId, underwaterPaletteId, 1, false, false, underwater, waterlineY);
             } finally { release(); }
@@ -133,7 +151,7 @@ final class HczBgHighPriorityTileRenderer {
         @Override public void discard() { release(); }
         private void release() {
             if (!leased) return;
-            leased = false; renderer = null; COMMAND_POOL.addFirst(this);
+            leased = false; renderer = null; backgroundRenderer = null; COMMAND_POOL.addFirst(this);
         }
     }
 }

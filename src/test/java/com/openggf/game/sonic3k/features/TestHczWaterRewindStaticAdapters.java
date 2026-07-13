@@ -69,10 +69,14 @@ class TestHczWaterRewindStaticAdapters {
 
         HCZBreakableBarState.setBit(0);
         assertTrue(HCZBreakableBarState.testBit(0));
+        assertEquals(3, HCZBreakableBarState.claimLargeFanModuleWaitFrames());
+        assertEquals(2, HCZBreakableBarState.claimLargeFanModuleWaitFrames());
 
         adapter.restore(clean);
         assertFalse(HCZBreakableBarState.testBit(0),
                 "Restoring a pre-latch snapshot must clear the player bit");
+        assertEquals(3, HCZBreakableBarState.claimLargeFanModuleWaitFrames(),
+                "restoring pre-activation state must restore the first-fan queue workload");
     }
 
     @Test

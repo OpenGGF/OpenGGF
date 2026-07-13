@@ -235,6 +235,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -6743,6 +6744,10 @@ public class TestScalarOnlyCodecDeletion {
         setIntField(source, "exitQueueCounter", 7);
         setBooleanField(source, "musicPlayed", true);
         setBooleanField(source, "actTransitionSignaled", true);
+        Object sourceFirstElement = ((Object[]) readObjectField(source, "elements"))[0];
+        setIntField(sourceFirstElement, "currentX", 0x0123);
+        setBooleanField(sourceFirstElement, "exitStarted", true);
+        setBooleanField(sourceFirstElement, "offScreen", true);
         TestablePlayableSprite capturedPlayer =
                 new TestablePlayableSprite("tails", (short) 0x200, (short) 0x160);
         setObjectField(source, "playerRef", capturedPlayer);
@@ -6790,6 +6795,15 @@ public class TestScalarOnlyCodecDeletion {
                 "standard restore must reapply actTransitionSignaled");
         assertSame(restoredPlayer, readObjectField(recreated, "playerRef"),
                 "compact restore must resolve playerRef through the restore identity table");
+        Object restoredFirstElement = ((Object[]) readObjectField(recreated, "elements"))[0];
+        assertNotSame(sourceFirstElement, restoredFirstElement,
+                "results element state must be reconstructed rather than retaining a stale object");
+        assertEquals(0x0123, readIntField(restoredFirstElement, "currentX"),
+                "compact restore must preserve the element's live slide coordinate");
+        assertTrue(readBooleanField(restoredFirstElement, "exitStarted"),
+                "compact restore must preserve the element's exit latch");
+        assertTrue(readBooleanField(restoredFirstElement, "offScreen"),
+                "compact restore must preserve the element's retirement state");
     }
 
     @Test

@@ -35,6 +35,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -43,6 +44,7 @@ class TestSonic3kHCZEvents {
 
     @BeforeEach
     void setUp() {
+        TestEnvironment.resetAll();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         TestEnvironment.activeGameplayMode();
@@ -80,7 +82,9 @@ class TestSonic3kHCZEvents {
         GameServices.gameState().setEndOfLevelFlag(true);
 
         events.update(0, 0);
-        events.update(0, 1);
+        for (int frame = 1; frame <= 131; frame++) {
+            events.update(0, frame);
+        }
 
         assertTrue(Files.exists(saveDir.resolve("slot1.json")));
     }
@@ -99,19 +103,19 @@ class TestSonic3kHCZEvents {
 
         tickAct2(events, 0);
         assertEquals(SwScrlHcz.Hcz2BgPhase.WALL_CHASE, handler.getHcz2BgPhase());
-        assertEquals(0x0600, handler.getBgCameraX(),
-                "init should expose Camera_X_pos_BG_copy = cameraX - $200");
+        assertEquals(0x05FE, handler.getBgCameraX(),
+                "wall init should fall through and subtract its first fast movement step");
 
         tickAct2(events, 1);
         assertTrue(GameServices.gameState().isBackgroundCollisionFlag(),
                 "state 4 should gate Background_collision_flag on before physics");
-        assertEquals(0x0600, handler.getBgCameraX(),
-                "the first moving-state frame arms the chase before the offset advances");
+        assertEquals(0x05FD, handler.getBgCameraX(),
+                "the armed wall should continue its 16.16 movement on the next dispatch");
 
         player.setCentreX((short) 0x0B20);
         tickAct2(events, 2);
-        assertEquals(0x05FE, handler.getBgCameraX(),
-                "after one fast-speed advance, BG camera X should be cameraX - $200 + Events_bg+$00");
+        assertEquals(0x05FC, handler.getBgCameraX(),
+                "BG camera X should publish the current Events_bg+$00 high word");
         assertEquals((short) 0x0100, handler.getVscrollFactorBG(),
                 "HCZ2 wall-chase BG camera Y should stay at cameraY - $500");
     }
@@ -143,41 +147,70 @@ class TestSonic3kHCZEvents {
     }
 
     @Test
-    void postTransitionCutsceneUsesAllEnginePlayersOnceThenPlainRelease() {
+    void act2WallChaseUsesFastSpeedAtNativeThreshold() throws Exception {
+        SwScrlHcz handler = new SwScrlHcz();
+        installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, handler);
+
+        placePlayer(0x0A88, 0x0700);
+        GameServices.camera().setX((short) 0x0800);
+        GameServices.camera().setY((short) 0x0600);
+
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents();
+        events.init(1);
+        tickAct2(events, 0);
+
+        assertEquals(-0x14000, events.getWallOffsetFixed(),
+                "ROM cmpi/blo selects the fast wall speed when Player_1 x_pos equals $A88");
+    }
+
+    @Test
+    void postTransitionCarrierUsesNativePlayersAndFollowsRomArc() {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x07F0);
         GameServices.camera().setFocusedSprite(player);
-        player.setCpuControlled(true);
+        GameServices.camera().setX((short) 0x0080);
+        player.setCpuControlled(false);
+        player.setInWater(true);
         GameServices.sprites().addSprite(player, "sonic");
         TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0x0100, (short) 0x07F8);
         sidekick.setCpuControlled(true);
+        sidekick.setInWater(true);
         GameServices.sprites().addSprite(sidekick, "tails");
         TestablePlayableSprite secondSidekick = new TestablePlayableSprite("knuckles", (short) 0x0100, (short) 0x07F8);
         secondSidekick.setCpuControlled(true);
+        secondSidekick.setInWater(true);
         GameServices.sprites().addSprite(secondSidekick, "knuckles");
 
         Sonic3kHCZEvents events = new Sonic3kHCZEvents();
         events.init(1);
+        GameServices.water().setDynamicWaterLocked(Sonic3kZoneIds.ZONE_HCZ, 1, true);
 
         events.startPostTransitionCutscene();
 
-        assertFullObjectControlCutsceneLock(player);
-        assertFullObjectControlCutsceneLock(sidekick);
-        assertFullObjectControlCutsceneLock(secondSidekick);
+        assertFalse(GameServices.water().isDynamicWaterLocked(Sonic3kZoneIds.ZONE_HCZ, 1),
+                "loc_6A7C4 clears the miniboss water lock when a carrier initializes");
+        assertCarrierControl(player);
+        assertCarrierControl(sidekick);
+        assertFalse(secondSidekick.isObjectControlled(),
+                "ROM creates carriers only for the native P1/P2 slots");
 
+        int playerStartX = player.getCentreX();
+        int playerStartY = player.getCentreY();
         events.update(1, 0);
+        assertEquals(playerStartX, player.getCentreX(),
+                "loc_6A7C4 installs loc_6A872 without moving on its init dispatch");
+        assertEquals(playerStartY, player.getCentreY());
 
-        assertEquals((short) 0x07F4, player.getY(),
-                "focused player should not be mutated again through duplicate sidekick traversal");
-        assertEquals((short) 0x0804, sidekick.getY());
-        assertEquals((short) 0x0804, secondSidekick.getY());
+        events.updateRetainedCarrierObjectPass(1);
+        assertNotEquals(playerStartX, player.getCentreX());
+        assertEquals(playerStartY + 2, player.getCentreY());
 
-        events.update(1, 1);
-        events.update(1, 2);
-        events.update(1, 3);
-
-        assertPlainCutsceneRelease(player);
-        assertPlainCutsceneRelease(sidekick);
-        assertPlainCutsceneRelease(secondSidekick);
+        for (int i = 0; i < 64 && events.isCutsceneActive(); i++) {
+            events.updateRetainedCarrierObjectPass(1);
+        }
+        assertFalse(events.isCutsceneActive());
+        assertPlainCarrierRelease(player);
+        assertPlainCarrierRelease(sidekick);
+        assertFalse(secondSidekick.isObjectControlled());
     }
 
     private static void tickAct2(Sonic3kHCZEvents events, int frame) {
@@ -191,11 +224,11 @@ class TestSonic3kHCZEvents {
         return player;
     }
 
-    private static void assertFullObjectControlCutsceneLock(AbstractPlayableSprite sprite) {
+    private static void assertCarrierControl(AbstractPlayableSprite sprite) {
         assertTrue(sprite.isObjectControlled());
-        assertFalse(sprite.isObjectControlAllowsCpu());
+        assertTrue(sprite.isObjectControlAllowsCpu());
         assertTrue(sprite.isObjectControlSuppressesMovement());
-        assertTrue(sprite.isControlLocked());
+        assertFalse(sprite.isControlLocked());
         assertTrue(sprite.getAir());
         assertEquals(Sonic3kAnimationIds.FLOAT2.id(), sprite.getForcedAnimationId());
         assertEquals((short) 0, sprite.getXSpeed());
@@ -203,13 +236,16 @@ class TestSonic3kHCZEvents {
         assertEquals((short) 0, sprite.getGSpeed());
     }
 
-    private static void assertPlainCutsceneRelease(AbstractPlayableSprite sprite) {
+    private static void assertPlainCarrierRelease(AbstractPlayableSprite sprite) {
         assertFalse(sprite.isObjectControlled());
         assertFalse(sprite.isObjectControlAllowsCpu());
         assertFalse(sprite.isObjectControlSuppressesMovement());
         assertFalse(sprite.isControlLocked());
-        assertTrue(sprite.getAir());
+        assertFalse(sprite.getAir());
         assertEquals(-1, sprite.getForcedAnimationId());
+        assertEquals(5, sprite.getAnimationId());
+        assertEquals(0, sprite.getAnimationFrameIndex());
+        assertEquals(0, sprite.getAnimationTick());
         assertEquals((short) 0, sprite.getXSpeed());
         assertEquals((short) 0, sprite.getYSpeed());
     }

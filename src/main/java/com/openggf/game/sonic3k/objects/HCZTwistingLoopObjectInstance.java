@@ -8,6 +8,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -201,11 +202,10 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         }
 
         // ROM: loc_3909C — if both players are in phase 0 (not captured),
-        // call Delete_Sprite_If_Not_In_Range. In the ROM this frees the slot
-        // but clears the "loaded" bit so the object respawns when the camera
-        // returns. Our engine doesn't support respawning, so we keep the
-        // object alive — isPersistent() already returns true, and the per-frame
-        // cost of idle detection checks is negligible for an invisible object.
+        // call Delete_Sprite_If_Not_In_Range. ObjectManager's ordinary
+        // off-screen path now clears the placement-loaded state and permits a
+        // later respawn, so only an actively captured player needs to make the
+        // controller persistent.
     }
 
     // =========================================================================
@@ -332,6 +332,13 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     private void capturePlayer(AbstractPlayableSprite player, PlayerState state) {
         state.phase = 2;  // ROM: addq.b #2,(a4)
 
+        // The native routine changes status/radius fields without writing x_pos
+        // or y_pos. Engine rolling setup can move the centre while it swaps the
+        // collision box, so retain the native position words (and their packed
+        // subpixels) across that representation change.
+        short captureX = player.getCentreX();
+        short captureY = player.getCentreY();
+
         // ROM: move.b #1,object_control(a1) — bits 0-6, movement suppressed but CPU/touch remain allowed.
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
 
@@ -355,6 +362,8 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         player.setAngle(CAPTURE_ANGLE);
         player.setGroundMode(GroundMode.GROUND);
         player.setAir(false);
+        NativePositionOps.writeXPosPreserveSubpixel(player, captureX);
+        NativePositionOps.writeYPosPreserveSubpixel(player, captureY);
 
         // Initial vertical progress = player Y - topY
         // ROM: move.w d1,2(a4) — stores as word in upper half of the 16.16 long
@@ -495,8 +504,8 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         int y = loopDef.topY + progress;
 
         // ROM: move.w d0,x_pos(a1); move.w d0,y_pos(a1) — center coordinates
-        player.setCentreX((short) x);
-        player.setCentreY((short) y);
+        NativePositionOps.writeXPosPreserveSubpixel(player, x);
+        NativePositionOps.writeYPosPreserveSubpixel(player, y);
 
         advanceProgress(player, state);
     }
@@ -526,8 +535,8 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         int y = loopDef.topY + state.getProgressPixels();
 
         // ROM: move.w d0,x_pos(a1); move.w d0,y_pos(a1) — center coordinates
-        player.setCentreX((short) x);
-        player.setCentreY((short) y);
+        NativePositionOps.writeXPosPreserveSubpixel(player, x);
+        NativePositionOps.writeYPosPreserveSubpixel(player, y);
 
         advanceProgress(player, state);
     }
@@ -552,6 +561,10 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
 
     @Override
     public boolean isPersistent() {
-        return true;  // Must survive while player is captured
+        // sonic3k.asm loc_3909C tests both per-player phase bytes before
+        // Delete_Sprite_If_Not_In_Range. A captured player can carry the
+        // invisible controller beyond its placement window, but an idle loop
+        // must release its SST slot just like any other placed object.
+        return p1State.phase != 0 || p2State.phase != 0;
     }
 }

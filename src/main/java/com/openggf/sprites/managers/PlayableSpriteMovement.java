@@ -749,6 +749,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		applyMissedDetachSlopeResist();
 		doSlopeRepel();
+		collisionSystem().resolvePostMovementBackgroundWallClamp(
+				FrameCollisionPlan.terrainOnly(), sprite);
 		updateCrouchState();
 	}
 
@@ -772,6 +774,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		doSlopeRepel();
+		collisionSystem().resolvePostMovementBackgroundWallClamp(
+				FrameCollisionPlan.terrainOnly(), sprite);
 	}
 
 	private boolean romPinballModeBlocksRollingJump() {
@@ -982,7 +986,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		int duckAnimId = getDuckAnimId();
-		if (duckAnimId < 0 || sprite.getAnimationId() != duckAnimId) {
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		// S3K SonicKnux_Roll/Tails_Roll writes Duck after the move_lock-gated
+		// Move routine, so the following frame's CheckSpindash sees Duck before
+		// Sonic_Jump (sonic3k.asm:22434,23223-23240). The engine deliberately
+		// preserves the visible animation byte during move_lock, but its prior-frame
+		// crouch state records that ROM-owned write and is the native gate here.
+		boolean nativeMovingCrouch = movementRules != null
+				&& movementRules.movingCrouchThreshold() > 0
+				&& wasCrouching
+				&& inputDown;
+		if (duckAnimId < 0
+				|| (sprite.getAnimationId() != duckAnimId && !nativeMovingCrouch)) {
 			return false;
 		}
 		if (!inputJumpPress) {
@@ -3905,9 +3920,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void setSpindashAnimation() {
 		SpriteAnimationProfile profile = sprite.getAnimationProfile();
 		if (profile instanceof ScriptedVelocityAnimationProfile velocityProfile) {
-			sprite.setAnimationId(velocityProfile.getSpindashAnimId());
+			int spindashAnimationId = velocityProfile.getSpindashAnimId();
+			sprite.setAnimationId(spindashAnimationId);
 			sprite.setAnimationFrameIndex(0);
 			sprite.setAnimationTick(0);
+			PlayerAnimationRules rules = playerAnimationRulesOrNull();
+			if (rules != null && rules.animationChangeClearsPush()) {
+				// Every charge writes anim/prev_anim as the word $0900, forcing
+				// Animate_Tails/Animate_Sonic to observe a change and clear
+				// Status_Push. Trace state is sampled before the engine's later
+				// animation pass, so publish that native clear here.
+				sprite.setPushing(false);
+			}
 		}
 	}
 

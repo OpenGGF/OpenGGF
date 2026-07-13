@@ -5,7 +5,6 @@ public record SidekickCpuRules(
         int sidekickDespawnX,
         int sidekickFollowLeadOffset,
         boolean sidekickFollowNudgeBlockedByObjectControlBit0,
-        boolean sidekickDelayedJumpPressUsesHistoryEdge,
         boolean sidekickPanicTreatsPinballModeAsSpindashFlag,
         boolean sidekickSpawningRequiresGroundedLeader,
         int sidekickFlyLandStatusBlockerMask,

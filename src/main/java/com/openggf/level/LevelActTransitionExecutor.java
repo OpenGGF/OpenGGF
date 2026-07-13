@@ -2,6 +2,7 @@ package com.openggf.level;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -27,7 +28,14 @@ final class LevelActTransitionExecutor {
 
         Camera cam = levelManager.camera;
 
-        GameServices.gameState().resetForLevel();
+        GameStateManager gameState = GameServices.gameState();
+        boolean endOfLevelActive = gameState.isEndOfLevelActive();
+        boolean endOfLevelFlag = gameState.isEndOfLevelFlag();
+        gameState.resetForLevel();
+        if (request.preserveEndOfLevelState()) {
+            gameState.setEndOfLevelActive(endOfLevelActive);
+            gameState.setEndOfLevelFlag(endOfLevelFlag);
+        }
 
         if (request.preserveMusic()) {
             levelManager.setSuppressNextMusicChange(true);
@@ -95,8 +103,14 @@ final class LevelActTransitionExecutor {
             levelManager.audioManager.playMusic(request.musicOverrideId());
         }
 
-        if (request.showInLevelTitleCard() && !levelManager.graphicsManager.isHeadlessMode()) {
-            levelManager.requestInLevelTitleCard(levelManager.currentZone, levelManager.currentAct);
+        if (request.showInLevelTitleCard()) {
+            levelManager.requestInLevelTitleCard(
+                    levelManager.currentZone,
+                    levelManager.currentAct,
+                    request.resetLevelGamestateAtInLevelTitleCardDisplay(),
+                    request.inLevelTitleCardResetAdditionalDispatches(),
+                    request.lockPlayerControlForInLevelTitleCard(),
+                    request.inLevelTitleCardExitAdditionalDispatches());
         }
     }
 

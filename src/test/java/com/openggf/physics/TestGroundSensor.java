@@ -308,6 +308,31 @@ public class TestGroundSensor {
     }
 
     @Test
+    public void backgroundVerticalScanUsesNativeFullTileRegression() throws Exception {
+        // FindFloor selects Find_Tile_BG but otherwise keeps the same full-height
+        // regression state machine as the foreground path. A full BG tile at the
+        // probe regresses into the half-height tile above, returning -9 rather
+        // than the simplified current-tile result -1.
+        setTileAt((byte) 1, 100, 112, 1);
+        setTileAt((byte) 1, 100, 96, 2);
+
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 112);
+        GameServices.camera().setX((short) 0);
+        GameServices.camera().setY((short) 0);
+        setParallaxField("cachedBgCameraX", Integer.MIN_VALUE);
+        setParallaxField("vscrollFactorBG", (short) 0);
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.DOWN, (byte) 0, (byte) 0, true);
+        SensorResult result = invokeBackgroundScan(sensor, (short) 100, (short) 112,
+                mockSprite.getTopSolidBit(), Direction.DOWN, true);
+
+        assertNotNull(result, "background scan should find the regressed tile");
+        assertEquals(-9, result.distance());
+        assertEquals(2, result.tileId());
+    }
+
+    @Test
     public void testRightWallSensorRotation() {
         // Mode: RIGHTWALL.
         // Sensor: (x=0, y=10) [Relative to Sprite in GROUND mode].
@@ -640,6 +665,34 @@ public class TestGroundSensor {
         assertNotNull(result, "background wall scan should extend into the next BG tile");
         assertEquals(11, result.distance(),
                 "BG wall extension should mirror the foreground wall-scan distance");
+    }
+
+    @Test
+    public void explicitWorldScanHonorsBackgroundCollisionForCalcRoomInFront() throws Exception {
+        setTileAt((byte) 0, 100, 100, 0, CollisionMode.NO_COLLISION);
+        setTileAt((byte) 0, 116, 100, 0, CollisionMode.NO_COLLISION);
+        setTileAt((byte) 1, 100, 100, 0, CollisionMode.NO_COLLISION);
+        setTileAt((byte) 1, 116, 100, 1);
+
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 100);
+
+        GameServices.gameState().setBackgroundCollisionFlag(true);
+        GameServices.camera().setX((short) 0);
+        GameServices.camera().setY((short) 0);
+        setParallaxField("cachedBgCameraX", Integer.MIN_VALUE);
+        setParallaxField("vscrollFactorBG", (short) 0);
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.RIGHT, (byte) 0, (byte) 0, true);
+        SensorResult result = sensor.scanWorld(
+                Direction.RIGHT, (short) 0, (short) 0, (short) 0, (short) 0,
+                mockSprite.getLrbSolidBit());
+
+        assertNotNull(result, "CalcRoomInFront's world-space scan should consult BG collision");
+        assertEquals(11, result.distance(),
+                "world-space scan should return the extended BG wall result");
+        assertEquals(1, result.tileId(),
+                "world-space scan result should come from the background collision layer");
     }
 
     @Test

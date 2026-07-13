@@ -52,6 +52,7 @@ public class LevelTilemapManager {
     private int backgroundTilemapHeightTiles;
     private boolean backgroundTilemapDirty = true;
     private Boolean lastRequiresFullWidthBgTilemap;
+    private Boolean lastBackgroundWrap;
     private int backgroundVdpWrapHeightTiles = 0; // 0 = disabled
     // X offset (in pixels, 512-aligned) for BG tilemap building.
     // Wide BG maps (> 512px) need tiles from the correct region, not always from position 0.
@@ -198,13 +199,21 @@ public class LevelTilemapManager {
                                             ParallaxManager parallaxManager,
                                             boolean verticalWrapEnabled) {
         boolean requiresFullWidthBgTilemap = zoneRuntimeRequiresFullWidthBgTilemap();
+        boolean backgroundWrap = zoneFeatureProvider != null
+                && zoneFeatureProvider.bgWrapsHorizontally()
+                && !requiresFullWidthBgTilemap;
         if (lastRequiresFullWidthBgTilemap != null
                 && lastRequiresFullWidthBgTilemap != requiresFullWidthBgTilemap) {
             backgroundTilemapDirty = true;
             bgWindowShiftCandidate = false;
         }
+        if (lastBackgroundWrap != null && lastBackgroundWrap != backgroundWrap) {
+            backgroundTilemapDirty = true;
+            bgWindowShiftCandidate = false;
+        }
         if (!backgroundTilemapDirty && backgroundTilemapData != null) {
             lastRequiresFullWidthBgTilemap = requiresFullWidthBgTilemap;
+            lastBackgroundWrap = backgroundWrap;
             ensurePatternLookupData();
             // Tilemap data already up to date — but still push VDP wrap height
             // to the renderer in case it was null during the initial build.
@@ -240,6 +249,7 @@ public class LevelTilemapManager {
                     parallaxManager, verticalWrapEnabled);
         }
         lastRequiresFullWidthBgTilemap = requiresFullWidthBgTilemap;
+        lastBackgroundWrap = backgroundWrap;
         backgroundTilemapDirty = false;
 
         ensurePatternLookupData();
@@ -1325,6 +1335,7 @@ public class LevelTilemapManager {
         prebuiltBgTilemap = null;
         backgroundTilemapDirty = true;
         lastRequiresFullWidthBgTilemap = null;
+        lastBackgroundWrap = null;
         lastForegroundWrap = null;
         foregroundRingSeeded = false;
         foregroundRingCameraX = 0;

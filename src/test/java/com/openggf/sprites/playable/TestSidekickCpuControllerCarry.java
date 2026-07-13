@@ -855,6 +855,7 @@ class TestSidekickCpuControllerCarry {
                 source.catchUpFrameCounterOverride(),
                 source.lastNormalAutoJumpPressFrameCounter(),
                 source.controller2SignedLocked(),
+                source.nativeEndingPosePending(),
                 source.latestNormalStepDiagnostics(),
                 mgzCarryIntroAscend,
                 mgzCarryFlapTimer,

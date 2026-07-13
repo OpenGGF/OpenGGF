@@ -2,6 +2,10 @@ package com.openggf.game.rewind.schema;
 
 import com.openggf.game.rewind.FieldKey;
 import com.openggf.game.rewind.GenericRewindEligibility;
+import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
+import com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeImpactExplosion;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleButton;
 import com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -15,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Guards the compact-schema reachability of explicit {@code CAPTURED} collection
@@ -25,6 +31,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * rewind exactly this way.
  */
 class TestCapturedPolicyCompactReachabilityGuard {
+
+    @Test
+    void hczResultAndBossReferencesUseExactCapturedPolicies() {
+        Map<FieldKey, RewindFieldPolicy> policies =
+                DefaultObjectRewindPolicies.exactFieldPoliciesForAudit();
+
+        assertEquals(RewindFieldPolicy.CAPTURED, policies.get(new FieldKey(
+                S3kResultsScreenObjectInstance.class.getName(), "elements")));
+        assertEquals(RewindFieldPolicy.CAPTURED, policies.get(new FieldKey(
+                HczEndBossEggCapsuleButton.class.getName(), "parent")));
+        assertEquals(RewindFieldPolicy.CAPTURED, policies.get(new FieldKey(
+                HczEndBossBladeImpactExplosion.class.getName(), "boss")));
+        assertFalse(policies.containsKey(new FieldKey(
+                TensionBridgeObjectInstance.class.getName(), "playerAtCollapse")),
+                "deleted bridge fields must not leave unreachable exact policies behind");
+    }
 
     @Test
     void mgzTopPlatformUsesCompactCapture() {

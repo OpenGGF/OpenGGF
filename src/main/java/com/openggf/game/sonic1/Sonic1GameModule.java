@@ -502,10 +502,35 @@ public class Sonic1GameModule implements GameModule {
 
         @Override
         public Palette loadCharacterPalette(RomByteReader reader, String characterCode) {
-            byte[] data = reader.slice(Sonic1Constants.SONIC_PALETTE_ADDR, Palette.PALETTE_SIZE_IN_ROM);
+            int paletteAddr = resolveSonicPaletteAddress(reader);
+            byte[] data = reader.slice(paletteAddr, Palette.PALETTE_SIZE_IN_ROM);
             Palette palette = new Palette();
             palette.fromSegaFormat(data);
             return palette;
+        }
+
+        @Override
+        public Palette loadUnderwaterCharacterPalette(RomByteReader reader, String characterCode) {
+            byte[] data = reader.slice(Sonic1Constants.PAL_LZ_SONIC_UNDERWATER_ADDR,
+                    Palette.PALETTE_SIZE_IN_ROM);
+            Palette palette = new Palette();
+            palette.fromSegaFormat(data);
+            return palette;
+        }
+
+        private int resolveSonicPaletteAddress(RomByteReader reader) {
+            // PalPointers differs between REV00 and REV01. Identify Pal_Sonic by
+            // the same destination/size contract used by the native level loader
+            // instead of treating the REV00 data address as revision-independent.
+            for (int paletteId = 2; paletteId < 10; paletteId++) {
+                int entryAddr = Sonic1Constants.PALETTE_TABLE_ADDR + paletteId * 8;
+                int destination = reader.readU16BE(entryAddr + 4);
+                int byteCount = (reader.readU16BE(entryAddr + 6) + 1) * 4;
+                if (destination == 0xFB00 && byteCount == Palette.PALETTE_SIZE_IN_ROM) {
+                    return reader.readU32BE(entryAddr);
+                }
+            }
+            return Sonic1Constants.SONIC_PALETTE_ADDR;
         }
     }
 }

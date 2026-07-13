@@ -16,21 +16,55 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 class TestHCZHandLauncherObjectInstance {
 
     @Test
-    void grabbedPlayerUsesFullObjectControlPolicy() {
+    void landingCheckpointIsConsumedOnFollowingObjectDispatch() {
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x0200, (short) 0x0100);
+        ProbeHandLauncher launcher = buildLauncher(player);
+
+        while (launcher.getYOffset() > 0x18) {
+            launcher.update(0, player);
+        }
+        assertFalse(player.isObjectControlled(),
+                "sub_30CE0 runs before the current SolidObjectTop landing pass");
+
+        launcher.update(1, player);
+        assertTrue(player.isObjectControlled(),
+                "the following object dispatch consumes the retained standing bit");
+    }
+
+    @Test
+    void topSolidUsesLiteralRomD3Height() {
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x0200, (short) 0x0100);
+        ProbeHandLauncher launcher = buildLauncher(player);
+
+        assertEquals(0x11, launcher.getSolidParams().airHalfHeight());
+        assertEquals(0x11, launcher.getSolidParams().groundHalfHeight());
+        assertTrue(launcher.rejectsZeroDistanceTopSolidLanding(),
+                "SolidObjectTop accepts negative overlap but rejects the exact d0=0 boundary");
+        assertFalse(launcher.usesPlatformObjectLandingSnap(),
+                "SolidObjectTop keeps its relative landing result instead of PlatformObject's absolute snap");
+    }
+
+    @Test
+    void grabbedPlayerUsesNativeBitZeroObjectControlPolicy() {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0200, (short) 0x0100);
+        player.setSubpixelRaw(0xF700, 0);
         ProbeHandLauncher launcher = buildLauncher(player);
 
         updateUntilGrabbed(launcher, player);
 
         assertTrue(player.isObjectControlled());
-        assertFalse(player.isObjectControlAllowsCpu());
+        assertTrue(player.isObjectControlAllowsCpu());
         assertTrue(player.isObjectControlSuppressesMovement());
+        assertEquals(0xF700, player.getXSubpixelRaw());
     }
 
     @Test
