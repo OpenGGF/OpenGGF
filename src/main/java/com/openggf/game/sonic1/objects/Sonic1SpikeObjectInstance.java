@@ -252,6 +252,15 @@ public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
         // with the right face therefore remains a side contact.
         return SolidRoutineProfile.fullSolid(usesStickyContactBuffer(), true, false);
     }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // SolidObject stores its standing/pushing bits in the live Obj36 SST.
+        // Moving spike variants rebuild their engine spawn as displacement
+        // changes, but that transient placement is not a new native object.
+        return true;
+    }
+
     @Override
     public int getX() {
         return currentX;

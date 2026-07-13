@@ -58,6 +58,8 @@ public class TestSonic1SpikeObjectInstance {
                 new ObjectSpawn(160, 112, 0x36, 0x01, 0, false, 0));
         assertFalse(spikes.usesStickyContactBuffer());
         assertTrue(spikes.getSolidRoutineProfile().inclusiveRightEdge());
+        assertTrue(spikes.usesInstanceSolidStateLatchKey(),
+                "Moving Obj36 variants retain SolidObject bits in their live SST");
     }
 
     @Test
@@ -232,4 +234,3 @@ public class TestSonic1SpikeObjectInstance {
         }
     }
 }
-

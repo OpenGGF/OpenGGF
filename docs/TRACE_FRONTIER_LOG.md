@@ -39935,3 +39935,20 @@ Verification with the root-level REV01 Sonic 1 ROM:
 - Four existing GHZ1 headless balance checks stayed green: true object-edge
   balance, center non-balance, wide-platform non-balance, and terrain-center
   gating.
+
+### 2026-07-13 -- S1 MZ1 moving-spike solid-state ownership
+
+At the composed animation-verification baseline, MZ1 complete-run reached frame
+2815 with byte-green physics but kept push mapping `$45` for twelve frames after
+the REV01 ROM returned to Walk mapping `$08`. The nearby Obj36 moving spike had
+previously established its native object-side pushing bit. Its movement calls
+`updateDynamicSpawn()`, and the shared latch default therefore looked for a new
+placement key when the no-contact checkpoint attempted to clear the bit. Retail
+keeps both bits in the same live Obj36 SST status byte. Obj36 now uses its live
+instance as that latch key, exactly as its single native slot does; no trace,
+zone, route, frame, or tolerance condition is involved.
+
+With the root-level REV01 ROM, the Obj36 unit suite passed 9/9 and MZ1
+complete-run advanced from frame 2815 / 5 reported animation errors to frame
+3969 / 4, with zero physics divergences. The new frontier is separate: ROM Wait
+`$05` versus engine Walk `$00`.
