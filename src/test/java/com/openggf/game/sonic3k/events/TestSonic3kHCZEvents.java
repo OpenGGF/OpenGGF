@@ -44,6 +44,7 @@ class TestSonic3kHCZEvents {
 
     @BeforeEach
     void setUp() {
+        TestEnvironment.resetAll();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         TestEnvironment.activeGameplayMode();
