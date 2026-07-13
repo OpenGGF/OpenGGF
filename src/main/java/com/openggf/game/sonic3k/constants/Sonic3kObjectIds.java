@@ -187,6 +187,9 @@ public final class Sonic3kObjectIds {
     public static final int MGZ_END_BOSS_KNUX = 0xA2;
     public static final int MHZ1_CUTSCENE_KNUCKLES = 0xA8;
     public static final int MHZ1_CUTSCENE_BUTTON = 0xA9;
+    // S3KL pointer-table meanings for the same numeric slots.
+    public static final int BLASTER = 0xA8;
+    public static final int TECHNOSQUEEK = 0xA9;
     public static final int STILL_SPRITE = 0x2F;
     public static final int ANIMATED_STILL_SPRITE = 0x30;
     public static final int HIDDEN_MONITOR = 0x80;

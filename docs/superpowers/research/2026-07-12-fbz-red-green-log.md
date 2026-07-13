@@ -741,3 +741,33 @@ recorded as `unknown/not previously run` rather than inferred.
   corrected to signed 8.8 values integrated into 16.16 positions. This remained
   a documentation-only correction; no production code, tests, trace, or commit
   ran.
+- Task 10 implementation adjudication corrected that residual planning claim
+  against the locked-on call graph. `loc_89940` writes `$2E=$10` and
+  `$34=loc_89926`; every nonzero-velocity movement update tail-calls `Obj_Wait`,
+  whose word predecrement reaches zero after 16 updates and underflows on update
+  17. Therefore bit 5 clears before `89B24` runs on resumed-moving update 17;
+  raw `$F4` reaches the same callback on update 93 but is redundant. RED tests
+  also exposed a compressed 13-update turn versus the exact 33-update raw turn,
+  ignored vertical-placement X flip, one-way parent/child rewind relinking,
+  Blaster's secondary projectile two updates late, and an extra active frame in
+  `89726`. The corrections pass Blaster cadence 2/2, TechnoSqueek 7/7, and both
+  real-graph rewind modes 4/4; the rewind coverage guard retains only the three
+  inherited AIZ emerald-glow scalar findings. No trace or commit ran.
+- Task 10's final evidence-gap pass adds real slot-127 exhaustion for one-shot
+  `89726/8972E/89746` and `89B24` failures, full setup-only/fixed-point/floor
+  snap/in-place falling conversions for both badniks, and a Blaster rewind
+  snapshot containing the attack effect plus both independent projectile roles
+  in both restore modes. Magnetic coverage now interrupts and resumes exact
+  phase signatures from routines 2/4/6/8 (`PATROL`, `WAIT_TURN`, `ATTACK_WAIT`,
+  and `ATTACK`) and restores a compact-rewind `MAGNET_WAIT` snapshot before
+  landing. The focused totals are Blaster 12/12, TechnoSqueek 8/8, and real
+  graph/allocation rewind 5/5. No trace or commit ran.
+- Final Task 10 spec RED corrected three remaining dispatcher details:
+  `89746` now allocates at raw `anim_frame` offset 6 only after mapping 0's
+  `$1F` delay loads; vertical TechnoSqueek raw FlipY commands mutate live render
+  bit 1 at movement offset 6 and turn steps 3/7 without changing placement X
+  flip, with `89B24` consuming those live axes; and both placed parents suppress
+  rendering in the wait-offscreen and restored-code dispatches until their
+  initialization update. The same pass removes per-animation-update array
+  allocation from Blaster projectiles and the TechnoSqueek attachment. Focused
+  parent/graph coverage passes 28/28. No trace or commit ran.

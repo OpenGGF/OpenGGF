@@ -1379,7 +1379,8 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 Sonic3kConstants.MAP_BLASTER_ADDR,
                 1,
-                -1
+                -1,
+                11
         ));
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.FBZ_TECHNOSQUEEK,
@@ -1388,7 +1389,8 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 Sonic3kConstants.MAP_TECHNOSQUEEK_ADDR,
                 1,
-                -1
+                -1,
+                10
         ));
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.FBZ_BUTTON,

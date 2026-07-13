@@ -372,9 +372,12 @@ a real defect; do not duplicate the existing art path.
    and `$02` use the horizontal `$400`/`$20` swing (with `$02` forcing render
    bit 1); `$04` uses its vertical counterpart. Preserve exact zero-velocity
    turn transitions, raw animation/flip scripts, and bit-1 child offsets. The
-   `$2E=$10` write is not the child-freeze release timer: bit 5 clears only when
-   the selected raw animation reaches `$F4`. From animation reset the attached
-   child remains frozen through 92 movement updates and refreshes on the 93rd.
+   `$2E=$10` word is consumed by the moving routine's tail-call to `Obj_Wait`:
+   it reaches zero after 16 moving updates and underflows on update 17, invoking
+   `loc_89926` before the after-current child runs and clearing bit 5. The same
+   callback is also selected by raw-animation `$F4` on update 93, but that later
+   call is redundant. Preserve the full 33-update turn animation before the
+   resumed moving phase.
    `89B24` gets one after-current allocation attempt, no retry, and parent-status
    deletion.
 7. Implement the two detached/falling entry routines now: Blaster launches at

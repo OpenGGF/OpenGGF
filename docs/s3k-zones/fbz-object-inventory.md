@@ -205,9 +205,11 @@ family implementation/tests. Line references are to `docs/skdisasm/sonic3k.asm`.
   without drawing; `8972E/89746` initialize, move with signed 8.8 velocities
   integrated into 16.16 positions, apply gravity, animate from frames 5 to 6 and
   7 to 8, then cull/touch that same frame. `89B24` initializes and draws frame 2
-  that same frame. Its parent bit-5 freeze is not released by `$2E=$10`: only
-  the raw-animation `$F4` clears it, so a reset child remains frozen for 92
-  movement updates and refreshes on update 93.
+  that same frame. After the 33-update turn animation, the parent writes
+  `$2E=$10`; the moving routine's `Obj_Wait` reaches zero after 16 updates and
+  underflows on update 17, invoking `loc_89926` before the child runs and
+  clearing bit 5. Raw-animation `$F4` reaches the same callback on update 93,
+  but is redundant because the child already resumed on update 17.
 - `Obj_FBZEggPrison` (`187035`) creates its top/door child
   (`ChildObjDat_89EA8`), five freed-animal children (`89EB0`), and boss
   explosions. `Obj_FBZSpringPlunger` is a separate, placed-only family: the

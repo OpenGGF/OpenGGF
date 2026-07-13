@@ -952,6 +952,42 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void fbzBlasterAndTechnoSqueekMappingsMatchDisassemblyShapes() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            List<SpriteMappingFrame> blaster = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_BLASTER_ADDR, 11);
+            assertEquals(List.of(4,4,4,1,1,1,1,1,1,1,1),
+                    blaster.stream().map(frame -> frame.pieces().size()).toList());
+            assertEquals(0x27, maximumOccupiedTile(blaster));
+
+            List<SpriteMappingFrame> techno = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_TECHNOSQUEEK_ADDR, 10);
+            assertEquals(List.of(1,1,1,1,1,1,1,1,1,1),
+                    techno.stream().map(frame -> frame.pieces().size()).toList());
+            assertEquals(0x22, techno.stream().flatMap(frame -> frame.pieces().stream())
+                    .mapToInt(SpriteMappingPiece::tileIndex).max().orElse(-1));
+
+            var plan = Sonic3kPlcArtRegistry.getPlan(0x04, 0);
+            assertEquals(11, plan.standaloneArt().stream()
+                    .filter(entry -> entry.key().equals(Sonic3kObjectArtKeys.FBZ_BLASTER))
+                    .findFirst().orElseThrow().mappingFrameCount());
+            assertEquals(10, plan.standaloneArt().stream()
+                    .filter(entry -> entry.key().equals(Sonic3kObjectArtKeys.FBZ_TECHNOSQUEEK))
+                    .findFirst().orElseThrow().mappingFrameCount());
+        }
+    }
+
+    private static int maximumOccupiedTile(List<SpriteMappingFrame> frames) {
+        return frames.stream().flatMap(frame -> frame.pieces().stream())
+                .mapToInt(piece -> piece.tileIndex() + piece.widthTiles() * piece.heightTiles() - 1)
+                .max().orElse(-1);
+    }
+
+    @Test
     public void sklObjectArtRegistryDoesNotUseStandaloneSonic3Addresses() {
         List<String> violations = new ArrayList<>();
         for (int zone = FIRST_SKL_ZONE; zone <= 0x0D; zone++) {

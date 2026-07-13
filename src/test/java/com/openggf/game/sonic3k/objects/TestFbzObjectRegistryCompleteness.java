@@ -15,6 +15,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 class TestFbzObjectRegistryCompleteness {
     private static final Set<Integer> CONCRETE_FBZ_IDS = Set.of(
@@ -23,7 +24,7 @@ class TestFbzObjectRegistryCompleteness {
             0x6F, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78,
             0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F, 0xE0, 0xE1,
             0xE3, 0xE4, 0xE5, 0xFF,
-            0x80, 0x85);
+            0x80, 0x85, 0xA8, 0xA9);
 
     @Test
     void fbzProfileAllowlistMatchesTheCheckedConcreteFactoryInventory() {
@@ -33,14 +34,11 @@ class TestFbzObjectRegistryCompleteness {
                 .findFirst().orElseThrow();
 
         assertEquals(CONCRETE_FBZ_IDS, profile.getImplementedIds(fbz1));
-        assertFalse(profile.getImplementedIds(fbz1).contains(0xA8),
-                "S3KL Blaster must not be accepted through its SKL remap factory");
-        assertFalse(profile.getImplementedIds(fbz1).contains(0xA9),
-                "S3KL TechnoSqueek must not be accepted through its SKL remap factory");
+        assertEquals(true, profile.getImplementedIds(fbz1).containsAll(Set.of(0xA8, 0xA9)));
     }
 
     @Test
-    void checkedLayoutsContainExactly101CurrentPlaceholderPlacements() throws IOException {
+    void checkedLayoutsContainExactly38CurrentPlaceholderPlacements() throws IOException {
         Sonic3kObjectRegistry registry = new FbzTestRegistry();
         List<ObjectSpawn> placements = new java.util.ArrayList<>();
         placements.addAll(TestFbzObjectInventory.load("1.bin"));
@@ -50,7 +48,7 @@ class TestFbzObjectRegistryCompleteness {
                 .map(registry::create)
                 .filter(PlaceholderObjectInstance.class::isInstance)
                 .count();
-        assertEquals(101, placeholders);
+        assertEquals(38, placeholders);
 
         for (ObjectSpawn spawn : placements) {
             ObjectInstance instance = registry.create(spawn);
@@ -60,10 +58,23 @@ class TestFbzObjectRegistryCompleteness {
         }
     }
 
+    @Test
+    void mhzZoneSetRetainsTheCutsceneRemapsForA8AndA9() {
+        Sonic3kObjectRegistry registry = new MhzTestRegistry();
+        assertInstanceOf(Mhz1CutsceneKnucklesInstance.class,
+                registry.create(new ObjectSpawn(0, 0, 0xA8, 0, 0, false, 0)));
+        assertInstanceOf(Mhz1CutsceneButtonInstance.class,
+                registry.create(new ObjectSpawn(0, 0, 0xA9, 0, 0, false, 0)));
+    }
+
     private static final class FbzTestRegistry extends Sonic3kObjectRegistry {
         @Override
         protected int currentRomZoneId() {
             return Sonic3kZoneIds.ZONE_FBZ;
         }
+    }
+
+    private static final class MhzTestRegistry extends Sonic3kObjectRegistry {
+        @Override protected int currentRomZoneId() { return Sonic3kZoneIds.ZONE_MHZ; }
     }
 }

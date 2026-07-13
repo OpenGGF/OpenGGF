@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.BlasterBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrBodyInstance;
@@ -33,6 +34,7 @@ import com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.TechnoSqueekBadnikInstance;
 import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
@@ -1157,7 +1159,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     if (zoneSet == S3kZoneSet.SKL) {
                         return new Mhz1CutsceneKnucklesInstance(spawn);
                     }
-                    return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    return new BlasterBadnikInstance(spawn);
                 });
         factories.put(Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON,
                 (spawn, registry) -> {
@@ -1165,7 +1167,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     if (zoneSet == S3kZoneSet.SKL) {
                         return new Mhz1CutsceneButtonInstance(spawn);
                     }
-                    return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    return new TechnoSqueekBadnikInstance(spawn);
                 });
         factories.put(Sonic3kObjectIds.CUTSCENE_KNUCKLES,
                 (spawn, registry) -> {
