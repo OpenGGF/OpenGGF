@@ -275,6 +275,15 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Sonic_Move reads the stood-on object's obActWid for edge balancing.
+        // FBlock_Main loads that byte directly from FBlock_Var, while
+        // FBlock_Solid adds $B only to the d1 passed to SolidObject. Keep that
+        // collision padding out of the player's balance window.
+        return halfWidth;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         // SolidObject provides all-sides solidity
         return false;

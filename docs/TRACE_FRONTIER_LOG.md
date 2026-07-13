@@ -39504,3 +39504,35 @@ Verification with the local REV01 Sonic 1 ROM:
 - `TestS1Sbz3CompleteRunTraceReplay` advanced from frame 3178 / 21 errors to
   frame 3491 / 3 errors (`player_animation_id`, expected Wait `$05`, actual
   Balance `$06`). Both reports retained zero warnings and green physics.
+
+### 2026-07-13 -- S1 Obj56 balance width (SYZ2 f2549 -> f4012; SYZ3 f1656 -> f1911)
+
+At composed baseline `075b9fd03`, SYZ2 frame 2549 and SYZ3 frame 1656 had the
+same animation-only mismatch while Sonic stood still on a 2x2 Obj56 floating
+block: the ROM selected Wait `$05`, while the engine selected Balance `$06`.
+Player position, velocity, status, platform contact, camera, and gameplay frame
+counter all matched. In both cases Sonic was 21 pixels right of the block's
+center.
+
+`FBlock_Main` loads `obActWid=$20` for that subtype from `FBlock_Var`.
+`FBlock_Solid` separately adds `$B` to the width passed in `d1` to
+`SolidObject`; it does not change `obActWid`. S1 `Sonic_Move` reads the stood-on
+object's `obActWid` for its balance window. The engine's shared fallback used a
+fixed 16-pixel rendered width for full-solid objects, so it falsely classified
+the +21 position as beyond the right edge. Obj56 now returns its subtype-backed
+`halfWidth` from `getBalanceWidthPixels()` while retaining `halfWidth+$B` in
+`getSolidParams()`. The rule is object-state-driven and applies to every Obj56
+subtype; no zone, route, or frame gate was added, and no trace data was changed,
+hydrated, or tolerated.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `TestSonic1FloatingBlockObjectInstance` passes all six tests, including the
+  focused `$20` balance-width / `$2B` collision-width contract.
+- `TestS1Syz2CompleteRunTraceReplay` advances from frame 2549 to frame 4012 and
+  reduces from 10 to 8 errors. The new frontier is a separate spring-owned
+  animation mismatch (ROM Spring `$10`/map `$40`, engine Walk `$00`/map `$08`).
+- `TestS1Syz3CompleteRunTraceReplay` advances from frame 1656 to frame 1911 and
+  reduces from 31 to 17 errors. The new frontier is a separate Walk mapping
+  cadence mismatch (ROM map `$08`, engine map `$09`).
+- Both replay reports retain zero warnings and green physics streams.

@@ -86,6 +86,26 @@ public class TestSonic1FloatingBlockObjectInstance {
     }
 
     @Test
+    public void balanceUsesRomActiveWidthWithoutSolidObjectPadding() {
+        ObjectSpawn spawn = new ObjectSpawn(
+                ORIG_X,
+                ORIG_Y,
+                Sonic1ObjectIds.FLOATING_BLOCK,
+                0x10,
+                0,
+                false,
+                0
+        );
+        Sonic1FloatingBlockObjectInstance block = new Sonic1FloatingBlockObjectInstance(
+                spawn, Sonic1Constants.ZONE_SYZ);
+
+        assertEquals(0x20, block.getBalanceWidthPixels(),
+                "Sonic_Move reads Obj56 obActWid from FBlock_Var");
+        assertEquals(0x2B, block.getSolidParams().halfWidth(),
+                "FBlock_Solid adds $B only to the SolidObject collision width");
+    }
+
+    @Test
     public void lz1SwitchThreeDoorDisablesWindTunnelWhilePlayerIsLeftOfClosedDoor() throws java.io.IOException {
         // ROM: "56 SYZ, SLZ Floating Blocks and LZ Doors.asm" type05 (lines 219-243) -
         // for the LZ1 switch-3 door specifically, f_wtunnelallow is cleared every
@@ -190,5 +210,4 @@ public class TestSonic1FloatingBlockObjectInstance {
         return door;
     }
 }
-
 
