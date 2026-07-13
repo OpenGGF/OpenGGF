@@ -224,6 +224,10 @@ final class DefaultObjectRewindPolicies {
             // Extra sidekicks extend Obj8B beyond its native P2 byte; keep each crossing
             // latch keyed by the stable rewind player id rather than live object identity.
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance", "extraPlayerPastTrigger"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance", "mainStateOwner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance", "sidekickStateOwner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.BridgeObjectInstance", "extensionLogIndices"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance", "endingControlledPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractS3kFloatingEndEggCapsuleInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractS3kUprightEggCapsuleInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
             // Compatibility owner references are live player identities. Compact capture
