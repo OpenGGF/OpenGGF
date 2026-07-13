@@ -8,9 +8,6 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationScript;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 
 /**
  * Updates a playable sprite's mapping frame based on its animation profile.
@@ -114,18 +111,6 @@ public class PlayableSpriteAnimation {
     public void update(int frameCounter) {
         if (sprite == null) {
             return;
-        }
-        if (Boolean.getBoolean("openggf.debug.animation") && frameCounter >= 650 && frameCounter <= 750) {
-            try {
-                Files.writeString(Path.of("/tmp/animation-debug.log"),
-                        "before fc=" + frameCounter + " x=" + sprite.getCentreX() + " y=" + sprite.getCentreY()
-                                + " dir=" + sprite.getDirection() + " ang=" + (sprite.getAngle() & 0xFF)
-                                + " g=" + sprite.getGSpeed() + " lock=" + sprite.getMoveLockTimer()
-                                + " anim=" + sprite.getAnimationId() + " map=" + sprite.getMappingFrame()
-                                + " tick=" + sprite.getAnimationTick() + " idx=" + sprite.getAnimationFrameIndex()
-                                + System.lineSeparator(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-            } catch (Exception ignored) {
-            }
         }
         updateFlipAngle(frameCounter);
         boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
