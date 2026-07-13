@@ -90,8 +90,8 @@ class TestSidekickCpuFollowParity {
         controller.setController2Input(AbstractPlayableSprite.INPUT_DOWN, 0);
         tails.setDirectionalInputPressed(true, false, false, false);
 
-        assertTrue(tails.isRawControllerInputHeld(AbstractPlayableSprite.INPUT_DOWN));
-        assertFalse(tails.isRawControllerInputHeld(AbstractPlayableSprite.INPUT_UP),
+        assertTrue(RawControllerInput.isHeld(tails, AbstractPlayableSprite.INPUT_DOWN));
+        assertFalse(RawControllerInput.isHeld(tails, AbstractPlayableSprite.INPUT_UP),
                 "CPU follow UP must remain in Ctrl_2_logical and not leak into raw Ctrl_2");
     }
 
