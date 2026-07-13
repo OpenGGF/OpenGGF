@@ -1,5 +1,22 @@
 # Trace Frontier Log
 
+### 2026-07-13 -- S1 full-solid SideAir push-latch cleanup
+
+SYZ1's remaining frame-5761 mapping restart came from conflating two native
+`SolidObject` exits. As Sonic moved across the top-left corner of an adjacent
+Obj56, the contact became `Solid_SideAir`: ROM calls `Solid_NotPushing`
+directly, clearing the object/player push pair without passing through
+`Solid_NoCollision`'s retail S1 Walk/Run word write. The single-piece engine
+paths retained the old push latch through this non-pushing contact, then later
+cleared it as no-contact and emitted the wrong animation word.
+
+Single-piece inline and batched contacts now clear a native latch whenever the
+resolved contact is non-pushing, while reserving the animation-word publication
+for a null/no-collision result. This is the shared `SolidObject` control-flow
+distinction, not a zone, route, frame, or trace exception; trace data and
+comparison tolerances are unchanged. The focused full-solid SideAir test is
+green. Composed SYZ1 trace verification is pending the coordinated Maven run.
+
 ### 2026-07-13 -- S1 SBZ2 greens on Obj6B solid state
 
 SBZ2's final mismatch at frames 3377-3378 occurred as Sonic reversed along

@@ -589,6 +589,44 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void fullSolidSideAirClearsPushWithoutPublishingSonic1NoCollisionWord() {
+        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        TestSolidObject object = new TestSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_1);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setCentreX((short) 85);
+        player.setCentreY((short) 81);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(5, new SpriteAnimationScript(0,
+                List.of(0x01), SpriteAnimationEndAction.LOOP, 0));
+        player.setAnimationSet(animations);
+        player.setAnimationId(5);
+        player.getAnimationManager().update(0);
+
+        manager.updateSolidContacts(player);
+        assertTrue(player.getPushing());
+        assertTrue(manager.hasObjectPushingBit(player));
+
+        // Same horizontal side, but within four pixels of the top edge:
+        // Solid_SideAir calls Solid_NotPushing rather than Solid_NoCollision.
+        player.setCentreY((short) 71);
+        manager.updateSolidContacts(player);
+
+        assertFalse(player.getPushing());
+        assertFalse(manager.hasObjectPushingBit(player));
+        assertEquals(5, player.getAnimationId(),
+                "Solid_NotPushing must bypass the retail S1 Solid_NoCollision word write");
+        assertEquals(5, player.getAnimationManager().captureRewindState().lastAnimationId());
+    }
+
+    @Test
     public void multiPieceSideContactClearsPushingWhenThisObjectNoLongerPushes() {
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);
         TestMultiPieceSolidObject object = new TestMultiPieceSolidObject(100, 100, params);
