@@ -283,6 +283,14 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // SolidObject stores its standing/pushing bits in the live Obj56 SST.
+        // updateDynamicSpawn() rebuilds the engine placement as an oscillating
+        // block moves, so that transient spawn cannot own persistent status.
+        return true;
+    }
+
+    @Override
     public int getBalanceWidthPixels() {
         // Sonic_Move reads the stood-on object's obActWid for edge balancing.
         // FBlock_Main loads that byte directly from FBlock_Var, while

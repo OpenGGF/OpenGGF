@@ -1,5 +1,22 @@
 # Trace Frontier Log
 
+### 2026-07-13 -- S1 floating-block solid status uses the live SST
+
+SYZ1 frame 1741 ended Obj56 side contact while Sonic remained standing on a
+different floating block. ROM stores each block's standing/pushing bits in its
+live SST status byte, so the former side-contact slot cleared `Status_Push` and
+the push mapping released on the native cadence. The engine rebuilt Obj56's
+dynamic spawn every movement tick and keyed the persistent solid latch to that
+transient placement, leaving the old push owner unreachable.
+
+Obj56 now keys standing/pushing state to its live object instance, matching the
+SST lifetime while retaining dynamic placement updates. This is object-lifetime
+state shared by all floating blocks and doors, not a zone, route, frame, or
+trace exception; trace data and comparison tolerances are unchanged. The
+focused Obj56 contract passes, and with the local REV01 Sonic 1 ROM SYZ1
+advances from frame 1742 / 4 animation errors to frame 5761 / 3 animation
+errors with zero physics errors.
+
 ### 2026-07-13 -- S1 running-disc attachment animation ownership
 
 SBZ2 complete-run frame 170 lands inside Obj67's running-disc radius. The

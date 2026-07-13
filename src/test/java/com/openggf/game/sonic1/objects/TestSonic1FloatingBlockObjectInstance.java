@@ -105,6 +105,8 @@ public class TestSonic1FloatingBlockObjectInstance {
                 "FBlock_Solid adds $B only to the SolidObject collision width");
         assertTrue(block.getSolidRoutineProfile().inclusiveRightEdge(),
                 "FBlock_Solid retains SolidObject's inclusive right edge");
+        assertTrue(block.usesInstanceSolidStateLatchKey(),
+                "Obj56 status bits belong to its live SST while its dynamic spawn moves");
     }
 
     @Test
