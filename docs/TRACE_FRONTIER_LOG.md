@@ -39014,3 +39014,27 @@ status and failure/error message was empty: zero status changes and zero
 first-frontier changes. The retained errors were the existing CNZ miniboss
 null-parent assertion and HCZ TurboSpiker rewind reference-closure failure at
 frame 14211. No trace regression was introduced by the rendering fix.
+
+### 2026-07-13 -- S1 grounded facing-flip animation restart (SYZ2 f11 -> f33)
+
+On branch `bugfix/ai-trace-s1-syz2-map` at feature baseline `e00abcd8d`, the
+animation comparator exposed that S1 retained the current walk-script position
+when Sonic reversed direction on the ground. The retail ROM unconditionally
+writes `prev_anim=Run` from both grounded direction-change paths; the later
+`Sonic_Animate` anim/prev-anim mismatch resets `obAniFrame` and `obTimeFrame`.
+Only the optional `FixBugs` push-bit clear is absent from retail S1, so using
+that rule to suppress the animation restart was too broad
+(`docs/s1disasm/_incObj/01 Sonic.asm:634-659,704-723,2174-2182`).
+
+The shared grounded-facing-flip path now always requests the native animation
+restart, while the existing typed player-animation rule continues to own only
+the distinct push-clear behavior. Focused verification used the local REV01
+Sonic 1 ROM and comparison-only replay path:
+
+- `mvn -Dmse=off "-Dtest=TestPlayableSpriteMovement#groundedFacingFlipRestartsWalkScriptLikeRomPrevAnimSentinel" test`
+  exited 0: 1 test passed.
+- `mvn "-Dtest=TestS1Syz2CompleteRunTraceReplay" "-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen" test`
+  retained the expected-red trace but advanced its first error from frame 11 to
+  frame 33 (`player_mapping_frame`, expected `0x000A`, actual `0x0020`), with
+  149 errors and 0 warnings. The new frontier is the next animation-cadence
+  mismatch; no trace state was hydrated or tolerated.

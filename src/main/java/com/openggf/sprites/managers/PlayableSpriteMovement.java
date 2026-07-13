@@ -3454,7 +3454,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// from the opposite direction.
 		//
 		// On the facing flip these routines also set prev_anim=Run/1
-		// (sonic3k.asm:28041 sub_14C20, 28109 sub_14CAC; s2 equivalents), which
+		// (docs/s1disasm/_incObj/01 Sonic.asm:641-645,707-710;
+		// sonic3k.asm:28041 sub_14C20,
+		// 28109 sub_14CAC; s2 equivalents), which
 		// makes the SAME frame's Animate_Sonic/Animate_Tails clear Status_Push
 		// when anim != prev_anim (sonic3k.asm:29359-29364,29681-29686). That
 		// frame-end animation clear is independent of whether the character was
@@ -3511,10 +3513,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private void forceGroundFacingFlipAnimationRestart() {
-		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
-		if (animationRules == null || !animationRules.animationChangeClearsPush()) {
-			return;
-		}
+		// The prev_anim=Run sentinel restarts the walk script in every retail
+		// game. S1's FixBugs guard only omits Animate_Sonic's Status_Push clear;
+		// it does not omit MoveLeft/MoveRight's prev_anim write or the subsequent
+		// obAniFrame/obTimeFrame reset
+		// (docs/s1disasm/_incObj/01 Sonic.asm:634-659,704-723,2174-2182).
 		sprite.forceAnimationRestart();
 	}
 

@@ -2887,7 +2887,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void groundedFacingFlipRestartsWalkScriptLikeRomPrevAnimSentinel() throws Exception {
-                setGameRulesForTest(GameRules.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_1);
                 SpriteAnimationSet animations = new SpriteAnimationSet();
                 animations.addScript(0, new SpriteAnimationScript(0xFF,
                                 List.of(10, 11, 12, 13), SpriteAnimationEndAction.LOOP, 0));
@@ -2921,7 +2921,7 @@ public class TestPlayableSpriteMovement {
                 mockSprite.getAnimationManager().update(1);
 
                 assertEquals(10, mockSprite.getMappingFrame(),
-                                "S2/S3K MoveLeft/MoveRight force prev_anim=Run on a grounded facing flip, "
+                                "S1/S2/S3K MoveLeft/MoveRight force prev_anim=Run on a grounded facing flip, "
                                                 + "so Animate_* must restart the walk script from frame 0");
         }
 
