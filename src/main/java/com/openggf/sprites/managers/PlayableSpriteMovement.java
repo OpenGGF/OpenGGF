@@ -2505,6 +2505,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 		int idleAnimId = velocityProfile.getIdleAnimId();
+		// A frame that began in rolling ground mode has no normal-ground Move
+		// snapshot. Preserve RollSpeed's explicit Wait write so held input cannot
+		// replace it. Do not apply this to an air-start frame that lands: the ROM
+		// dispatches that through air mode and ResetOnFloor writes Walk instead.
+		if (!sprite.wasPrePhysicsAir()) {
+			sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) 0);
+		}
 		if (sprite.getAnimationId() == idleAnimId) {
 			return;
 		}

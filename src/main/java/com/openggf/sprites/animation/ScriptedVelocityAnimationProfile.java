@@ -251,11 +251,14 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             return skidAnimId;
         }
 
-        // ROM-accurate animation selection (s2.asm:36558-36577, 36945-36962):
-        // - Sonic_MoveLeft/MoveRight set anim = Walk unconditionally when direction pressed
-        // - No-input coasting with non-zero inertia branches to Obj01_ResetScr without
-        //   writing anim, so a prior Stop/skid animation persists until its script switches
-        // - Idle animation only set when inertia == 0 AND no direction pressed
+        // ROM-accurate animation selection. The directional acceleration branches
+        // write Walk, but opposite-direction braking does not. If braking reaches
+        // zero, the enclosing Move routine then writes Wait even though the button
+        // remains held (S1 Objects/Sonic.asm:284-310,480-567; S2 s2.asm:
+        // 36558-36577,36880-36999; S3K sonic3k.asm:22787-22918).
+        // Roll-stop likewise writes Wait directly before Animate runs (S1
+        // Objects/Sonic.asm:573-623; S2 s2.asm:37009-37062; S3K sonic3k.asm:
+        // 22924-22994,28169-28239).
         // Use isMovementInputActive() which reflects EFFECTIVE input (after control lock filtering),
         // not raw button state, to match ROM behavior where animation is only set in movement routines.
         boolean pressingDirection = sprite.isMovementInputActive();
@@ -263,7 +266,8 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // ground-wall probe can zero inertia (S2 Tails_Move s2.asm:39689-39693,
         // Obj02_UpdateSpeedOnGround/Obj02_CheckWallsOnGround s2.asm:39789-39865).
         PlayableSpriteAnimation animation = sprite.getAnimationManager();
-        int animSpeed = animation != null && animation.hasGroundMovementAnimSpeed()
+        boolean hasMovementSpeedSnapshot = animation != null && animation.hasGroundMovementAnimSpeed();
+        int animSpeed = hasMovementSpeedSnapshot
                 ? animation.getGroundMovementAnimSpeed()
                 : sprite.getGSpeed();
         int speed = Math.abs(animSpeed);
@@ -278,10 +282,43 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             return runFramesUseWalkAnimationId ? walkAnimId : runAnimId;
         }
 
-        // Walk animation when pressing direction. If no direction is pressed and
-        // inertia is non-zero, preserve Stop only while the fixed Obj08 dust
-        // routine is active; Obj08_CheckSkid keys its allocation cadence from the
-        // parent's Stop anim byte (s2.asm:42813-42841).
+        // At zero inertia, Move has reached its standing-state tail. That tail
+        // chooses balance or Wait after the directional braking helper returns.
+        if (speed == 0) {
+            // With no Move/RollSpeed snapshot, zero is an already-stationary
+            // state (not the result of this frame's braking). A held direction
+            // therefore entered MoveLeft/MoveRight and selected Walk. This also
+            // covers ResetOnFloor's explicit Walk write on a landing frame.
+            if (pressingDirection && !hasMovementSpeedSnapshot) {
+                return walkAnimId;
+            }
+            int balanceState = sprite.getBalanceState();
+            if (balanceState > 0 && balanceAnimId >= 0) {
+                var rules = sprite.getGameRules();
+                if (rules != null
+                        && rules.playerAnimation() != null
+                        && rules.playerAnimation().singleFacingBalanceAnimationSet()) {
+                    balanceState = switch (balanceState) {
+                        case 3 -> 1;
+                        case 4 -> 2;
+                        default -> balanceState;
+                    };
+                }
+                return switch (balanceState) {
+                    case 1 -> balanceAnimId;
+                    case 2 -> balance2AnimId >= 0 ? balance2AnimId : balanceAnimId;
+                    case 3 -> balance3AnimId >= 0 ? balance3AnimId : balanceAnimId;
+                    case 4 -> balance4AnimId >= 0 ? balance4AnimId
+                            : (balance3AnimId >= 0 ? balance3AnimId : balanceAnimId);
+                    default -> balanceAnimId;
+                };
+            }
+            return idleAnimId;
+        }
+
+        // If no direction is pressed and inertia is non-zero, preserve Stop only
+        // while the fixed Obj08 dust routine is active; Obj08_CheckSkid keys its
+        // allocation cadence from the parent's Stop anim byte (s2.asm:42813-42841).
         if (pressingDirection) {
             return walkAnimId;
         }
@@ -294,35 +331,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
                 && sprite.isFixedSkidDustActive()) {
             return null;
         }
-        if (speed > 0) {
-            return walkAnimId;
-        }
-
-        // Balance animation when standing at edge of ledge/platform (ROM s2.asm:36246-36373)
-        // Balance state is set by movement code based on terrain/object edge detection
-        int balanceState = sprite.getBalanceState();
-        if (balanceState > 0 && balanceAnimId >= 0) {
-            var rules = sprite.getGameRules();
-            if (rules != null
-                    && rules.playerAnimation() != null
-                    && rules.playerAnimation().singleFacingBalanceAnimationSet()) {
-                balanceState = switch (balanceState) {
-                    case 3 -> 1;
-                    case 4 -> 2;
-                    default -> balanceState;
-                };
-            }
-            return switch (balanceState) {
-                case 1 -> balanceAnimId;      // Balance - facing edge, safe distance
-                case 2 -> balance2AnimId >= 0 ? balance2AnimId : balanceAnimId;  // Balance2 - facing edge, closer
-                case 3 -> balance3AnimId >= 0 ? balance3AnimId : balanceAnimId;  // Balance3 - facing away, safe
-                case 4 -> balance4AnimId >= 0 ? balance4AnimId : (balance3AnimId >= 0 ? balance3AnimId : balanceAnimId); // Balance4 - facing away, closer
-                default -> balanceAnimId;
-            };
-        }
-
-        // Idle only when not pressing direction AND completely stopped (inertia == 0)
-        return idleAnimId;
+        return walkAnimId;
     }
 
     @Override

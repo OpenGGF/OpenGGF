@@ -70,6 +70,19 @@ public class TestScriptedVelocityAnimationProfile {
     }
 
     @Test
+    void zeroInertiaChoosesWaitEvenWhileOppositeDirectionRemainsHeld() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setMovementInputActive(true);
+        sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) 0);
+
+        Integer animId = profile.resolveAnimationId(sprite, 0, 32);
+
+        assertEquals(0, animId.intValue(),
+                "the enclosing ROM move routine writes WAIT after opposite-direction deceleration reaches zero");
+    }
+
+    @Test
     public void s3kBalanceUsesSingleFacingSetForAwayStates() {
         ScriptedVelocityAnimationProfile profile = createProfile()
                 .setBalanceAnimId(20)

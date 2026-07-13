@@ -57,6 +57,36 @@ for exact fields and values.
 
 ## 2026-07-13 - Player and Sidekick animation verification
 
+### Sonic 1 zero-inertia Wait selection
+
+The shared scripted-velocity animation resolver now distinguishes an explicit
+post-movement zero-speed snapshot from an already-stationary frame. This models
+the ROM control flow: opposite-direction braking can return to the enclosing
+Move routine at exactly zero and select Wait despite the held direction, while
+RollSpeed writes Wait directly when a grounded roll stops. Frames without that
+movement snapshot retain the existing held-direction Walk behavior, including
+air-mode landings whose ResetOnFloor path writes Walk. The same control shape is
+present in S1 `Objects/Sonic.asm:284-310,480-623`, S2
+`s2.asm:36558-36577,36880-37062`, and S3K
+`sonic3k.asm:22787-22994,28169-28239`.
+
+Focused comparison-only results with the verified REV01 ROM:
+
+- GHZ1 complete run: 100 animation errors, first red f551 (Wait expected,
+  Walk actual) -> 96 errors, first red f679 (Walk expected, Run actual).
+- SYZ1 complete run: 142 animation errors, first red f135 (Wait expected,
+  Walk actual) -> 139 errors, first red f433 (Walk expected, Run actual).
+- SBZ3/LZ4 complete run: unchanged at 197 animation errors, first red f0
+  (Wait expected, Walk actual). Its trace begins airborne immediately after an
+  internal act transition and records a rolling-to-standing mode change at f0;
+  direct replay bootstrap starts already unrolled with Walk. This is a distinct
+  transition/bootstrap frontier, not the grounded zero-inertia control path.
+
+Physics remained green (zero physics errors) in all three traces. The focused
+animation-profile unit suite passed 6/6; the combined replay run remained
+expected-red only at the later animation frontiers above (9 tests total, 6
+passing and 3 trace assertions failing).
+
 Branch `feature/ai-trace-animation-verification` extends the comparison-only
 trace path with Player and Sidekick animation ids and displayed mapping frames.
 The BizHawk recorders sample the native `anim` and `mapping_frame` bytes at the
