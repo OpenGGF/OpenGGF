@@ -33,9 +33,17 @@ v2: it adds playable animation, palette, bank metadata, and per-frame DPLC secti
 converter emits trivial full-frame DPLC runs and prints their pattern-bank cost, so
 the result is correct but may use more VRAM than a hand-authored DPLC layout.
 
-`convert level` accepts only the exact full-level export format. `convert audio`
-validates and copies WAV/OGG bytes without transcoding. `package` creates a
-deterministic jar and validates it before atomic publication.
+`convert level` accepts either the exact full-level export format or the finite Tiled
+domain documented by the level reference:
+
+```text
+ggfmod convert level --from-export <dir> --out <dir>
+ggfmod convert level --from-tmx <map.tmx> --palette <GPAL> [--solid-tiles <profile-dir>] --out <dir>
+```
+
+`convert audio` validates and copies WAV/OGG bytes without transcoding. `package`
+creates a deterministic jar and validates its staging jar before atomic publication.
+Use `ggfmod validate <mod.jar>` to print the sorted findings for an existing jar.
 
 `run <build-output>` is the only development-directory entry point. It launches the
 engine with `-Dggfmod.dev.modDir=<absolute-build-output>`. The engine snapshots that

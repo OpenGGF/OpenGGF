@@ -1,5 +1,9 @@
 # Content mods
 
+This page is the detailed additive-content reference. New creators should start at
+the [handbook index](index.md), which orders the six quickstarts by effort and links
+the format, trust, identity, troubleshooting, and sample references.
+
 OpenGGF Mod API 1.2 supports restart-loaded music packs, code-backed objects,
 baked art, complete Sonic 2 zones, playable characters, and no-ROM standalone
 games. Mods are discovered from the
@@ -54,8 +58,10 @@ ggfmod validate target/my-mod.jar
 ```
 
 `package` creates a deterministic jar and validates it before publishing the output.
-It does not overwrite an existing output path. Copy the jar into `mods/`, start the
-engine, enable it in the Mod Manager, confirm the code-trust warning, and restart.
+It does not overwrite an existing output path. The separate `validate` command shown
+above is useful for printing the sorted findings for an existing jar. Copy the jar
+into `mods/`, start the engine, enable it in the Mod Manager, confirm the code-trust
+warning, and restart.
 
 For an explicit local development launch, use `ggfmod run target/classes`. This is
 the only exploded-directory entry point. The engine snapshots that directory once;
@@ -94,7 +100,7 @@ whose dimensions, palette use, or piece bounds cannot be represented exactly.
 Phase 2 new-zone support is intentionally Sonic 2 only. In the editor, start from a
 level, make the desired changes, and use the full-level export into the mod project's
 source tree. A full export is different from the editor's sidecar/delta save: the
-export directory must contain exactly these files:
+export directory must contain these required files:
 
 ```text
 level.json
@@ -109,6 +115,9 @@ collision-primary.bin
 collision-secondary.bin
 palettes.bin
 ```
+
+`bg-map.bin` is the only optional inventory entry and is present when the level has a
+background layout.
 
 `level.json` carries boundaries, start position, music, tagged spawns, and references
 to the ten binary assets. The binaries contain the complete pattern/chunk/block,
@@ -149,9 +158,9 @@ artOverrides:
   EndSign: art/reskin.ggfs
 ```
 
-Package and validate the directory with the same commands. With the mod disabled,
-the engine retains the original provider instance and behavior; with it enabled,
-only the named art lookup is decorated.
+Package the directory and validate the resulting jar with the same commands. With the
+mod disabled, the engine retains the original provider instance and behavior; with it
+enabled, only the named art lookup is decorated.
 
 For the complete CLI invocation and launcher details, see [the `ggfmod` guide](ggfmod.md).
 For streamed stock-music replacement metadata, see [Music packs](music-packs.md).
