@@ -47,6 +47,7 @@ import java.util.List;
  * @see <a href="docs/plans/2026-02-27-rom-driven-init-profiles-design.md">
  *      ROM-Driven Init Profiles Design (full ROM step-by-step reference)</a>
  */
+@ModApi
 public abstract class AbstractLevelInitProfile implements LevelInitProfile {
 
     /** Game-specific level event manager reset (teardown index 1). */
@@ -68,6 +69,7 @@ public abstract class AbstractLevelInitProfile implements LevelInitProfile {
 
     /** Runnable that may throw {@link IOException}. */
     @FunctionalInterface
+    @ModApi
     protected interface IORunnable {
         void run() throws IOException;
     }

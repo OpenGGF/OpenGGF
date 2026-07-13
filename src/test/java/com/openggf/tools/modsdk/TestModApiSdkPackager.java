@@ -20,6 +20,11 @@ class TestModApiSdkPackager {
     @Test
     void copiesOnlySdkToolClassesTemplatesAndServiceResourcesAndGeneratesApiJavadocs() throws Exception {
         Class<?> packagePrivate = Class.forName("com.openggf.io.AbstractModAssetRoot");
+        Class<?> delegatingGameModule = com.openggf.game.patch.DelegatingGameModule.class;
+        Class<?> abstractLevelInitProfile = com.openggf.game.AbstractLevelInitProfile.class;
+        Class<?> initCallback = Class.forName(
+                "com.openggf.game.AbstractLevelInitProfile$IORunnable");
+        Class<?> groundSensor = com.openggf.physics.GroundSensor.class;
         Path compiled = temp.resolve("build/classes");
         copyCompiledPackage(compiled, Path.of("com/openggf/tools/modsdk"));
         copyCompiledPackage(compiled, Path.of("META-INF/openggf-mod-sdk"));
@@ -29,7 +34,9 @@ class TestModApiSdkPackager {
         Path docs = temp.resolve("build/sdk-javadocs");
 
         ModApiSdkPackager.prepare(compiled, Path.of("src/main/java"),
-                classes, docs, List.of(com.openggf.mods.code.GgfMod.class, packagePrivate));
+                classes, docs, List.of(com.openggf.mods.code.GgfMod.class,
+                        packagePrivate, delegatingGameModule, abstractLevelInitProfile,
+                        initCallback, groundSensor));
 
         Set<String> copied;
         try (var paths = Files.walk(classes)) {
@@ -51,6 +58,14 @@ class TestModApiSdkPackager {
         assertTrue(Files.isRegularFile(docs.resolve("index.html")));
         assertTrue(Files.isRegularFile(
                 docs.resolve("com/openggf/io/AbstractModAssetRoot.html")));
+        assertTrue(Files.isRegularFile(docs.resolve(
+                "com/openggf/game/patch/DelegatingGameModule.html")));
+        assertTrue(Files.isRegularFile(docs.resolve(
+                "com/openggf/game/AbstractLevelInitProfile.html")));
+        assertTrue(Files.isRegularFile(docs.resolve(
+                "com/openggf/game/AbstractLevelInitProfile.IORunnable.html")));
+        assertTrue(Files.isRegularFile(docs.resolve(
+                "com/openggf/physics/GroundSensor.html")));
         Set<String> typePages;
         try (var paths = Files.walk(docs.resolve("com/openggf"))) {
             typePages = paths.filter(Files::isRegularFile)
@@ -63,7 +78,11 @@ class TestModApiSdkPackager {
         }
         assertEquals(Set.of(
                 "com/openggf/mods/code/GgfMod.html",
-                "com/openggf/io/AbstractModAssetRoot.html"), typePages);
+                "com/openggf/io/AbstractModAssetRoot.html",
+                "com/openggf/game/patch/DelegatingGameModule.html",
+                "com/openggf/game/AbstractLevelInitProfile.html",
+                "com/openggf/game/AbstractLevelInitProfile.IORunnable.html",
+                "com/openggf/physics/GroundSensor.html"), typePages);
     }
 
     @Test

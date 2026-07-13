@@ -28,6 +28,7 @@ import java.util.function.Function;
  * Base decorator for patches. Every {@link GameModule} method is explicitly
  * forwarded so a newly added default method cannot silently bypass the base.
  */
+@ModApi
 public class DelegatingGameModule implements GameModule {
 
     private final GameModule base;

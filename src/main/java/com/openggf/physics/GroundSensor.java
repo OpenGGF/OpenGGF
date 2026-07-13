@@ -1,6 +1,7 @@
 package com.openggf.physics;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.ModApi;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
@@ -15,6 +16,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * Handles both vertical (floor/ceiling) and horizontal (wall) scanning
  * with ground mode rotation for slopes.
  */
+@ModApi
 public class GroundSensor extends Sensor {
 
     /**

@@ -1,8 +1,11 @@
 package com.openggf.mods;
 
 import com.openggf.game.ModApi;
+import com.openggf.game.AbstractLevelInitProfile;
+import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.mods.code.ModApiSignatureSurface;
 import com.openggf.mods.code.ModApiSurfaceInventory;
+import com.openggf.physics.GroundSensor;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.Test;
@@ -81,6 +84,17 @@ class TestModApiSignatureSurface {
     }
 
     @Test
+    void delegatingGameModuleIsAnExplicitPublishedRoot() {
+        assertTrue(ModApiSurfaceInventory.rootTypes().contains(DelegatingGameModule.class));
+    }
+
+    @Test
+    void prescribedStandaloneSupportTypesAreExplicitPublishedRoots() {
+        assertTrue(ModApiSurfaceInventory.rootTypes().contains(GroundSensor.class));
+        assertTrue(ModApiSurfaceInventory.rootTypes().contains(AbstractLevelInitProfile.class));
+    }
+
+    @Test
     void versionOneTwoPublishedSurfaceExactlyMatchesRuntime() throws Exception {
         List<String> candidate;
         try (var input = getClass().getClassLoader().getResourceAsStream(PUBLISHED)) {
@@ -91,6 +105,9 @@ class TestModApiSignatureSurface {
         }
         assertEquals(new ArrayList<>(new TreeSet<>(candidate)), candidate,
                 "Published API baseline must be unique, sorted canonical UTF-8 text");
+        assertEquals(17_178, candidate.size(), "Published API 1.2 signature count changed");
+        assertEquals(875, ModApiSignatureSurface.recursiveTypes().size(),
+                "Published API 1.2 recursive type count changed");
         assertEquals(new ArrayList<>(ModApiSignatureSurface.snapshotLines()), candidate,
                 "Review additive Phase 3 API changes and refresh the published snapshot");
         assertEquals(new SemanticVersion(1, 2, 0), ModApiVersion.CURRENT);
@@ -107,6 +124,7 @@ class TestModApiSignatureSurface {
         }
         List<String> sorted = new ArrayList<>(new TreeSet<>(baseline));
         assertEquals(sorted, baseline, "Baseline must be unique, sorted canonical UTF-8 text");
+        assertEquals(16_483, baseline.size(), "Published API 1.1 baseline is immutable");
 
         Set<String> current = ModApiSignatureSurface.snapshotLines();
         List<String> violations = ModApiSignatureSurface.baselineViolations(

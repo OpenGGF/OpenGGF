@@ -7,8 +7,8 @@ protected constructors, methods, fields, generic bounds, annotations, nested
 types, supertypes, interfaces, record components, and sealed permits clauses is
 part of the same contract and must also be annotated.
 
-At the published Mod API 1.2.0 baseline, the recursive surface contains **871
-engine types** and **17,067 canonical signature entries**. The breadth is intentional. In
+At the published Mod API 1.2.0 baseline, the recursive surface contains **875
+engine types** and **17,178 canonical signature entries**. The breadth is intentional. In
 particular, the legacy-wide signatures of `GameModule`, `ObjectServices`, and
 the object base classes expose substantial runtime infrastructure; silently
 treating those transitive types as unsupported would make creator binaries depend
@@ -52,8 +52,11 @@ a baseline:
 The 1.2 roots add the character and standalone creator path: owner-tagged
 `CharacterKey`/`CharacterDefinition` registration and playable construction, plus
 `GameDataSource`, `AbstractStandaloneGameModule`, `ModGame`, and
-`StandaloneLevelLoader`. These are additive to the 1.1 object/zone surface; the old
-baseline is not overwritten or renamed.
+`StandaloneLevelLoader`. It also publishes `DelegatingGameModule`, the forwarding
+decorator used by creator patches that wrap a stock module, plus `GroundSensor` and
+`AbstractLevelInitProfile` for the prescribed standalone character and level-lifecycle
+implementation. These are additive to the 1.1 object/zone surface; the old baseline is
+not overwritten or renamed.
 
 Release packaging generates exact-inventory Javadoc and attaches
 `openggf-mod-sdk` and `openggf-mod-sdk-javadoc` classifier jars beside the

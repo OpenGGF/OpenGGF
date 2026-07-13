@@ -30,6 +30,8 @@ class TestModApiJavadocTool {
                 "com.openggf.mods.code.ModContext",
                 "com.openggf.mods.code.BakedSheetRef",
                 "com.openggf.game.patch.GamePatch",
+                "com.openggf.game.patch.DelegatingGameModule",
+                "com.openggf.game.AbstractLevelInitProfile",
                 "com.openggf.game.patch.PatchContext",
                 "com.openggf.game.patch.GameplayLaunchRequest",
                 "com.openggf.level.objects.ObjectServices",
@@ -45,6 +47,7 @@ class TestModApiJavadocTool {
                 "com.openggf.level.objects.PlatformBobHelper",
                 "com.openggf.level.objects.SpringBounceHelper",
                 "com.openggf.level.objects.DestructionEffects")));
+        assertTrue(names.contains("com.openggf.physics.GroundSensor"));
         assertFalse(names.contains(BootstrapObjectServices.class.getName()));
         assertThrows(IllegalArgumentException.class,
                 () -> ModApiJavadocTool.requireAnnotatedInventory(
@@ -54,10 +57,16 @@ class TestModApiJavadocTool {
     @Test
     void documentationToolGeneratesOnlyTheExactRequestedAnnotatedInventory() throws Exception {
         Path output = temp.resolve("api-docs");
+        Class<?> initCallback = Class.forName(
+                "com.openggf.game.AbstractLevelInitProfile$IORunnable");
         List<Class<?>> exact = List.of(
                 com.openggf.mods.code.GgfMod.class,
                 com.openggf.mods.code.ModContext.class,
-                com.openggf.mods.code.BakedSheetRef.class);
+                com.openggf.mods.code.BakedSheetRef.class,
+                com.openggf.game.patch.DelegatingGameModule.class,
+                com.openggf.game.AbstractLevelInitProfile.class,
+                initCallback,
+                com.openggf.physics.GroundSensor.class);
 
         ModApiJavadocTool.generate(Path.of("src/main/java"), output, exact);
 
@@ -65,6 +74,10 @@ class TestModApiJavadocTool {
         assertTrue(allClasses.contains("GgfMod"));
         assertTrue(allClasses.contains("ModContext"));
         assertTrue(allClasses.contains("BakedSheetRef"));
+        assertTrue(allClasses.contains("DelegatingGameModule"));
+        assertTrue(allClasses.contains("AbstractLevelInitProfile"));
+        assertTrue(allClasses.contains("IORunnable"));
+        assertTrue(allClasses.contains("GroundSensor"));
         assertFalse(allClasses.contains("BootstrapObjectServices"));
         assertEquals(expectedTypePages(exact), generatedTypePages(output));
     }

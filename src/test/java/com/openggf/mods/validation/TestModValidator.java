@@ -31,6 +31,11 @@ class TestModValidator {
     private static final String OBJECT_REF_ID = "com/openggf/game/rewind/identity/ObjectRefId";
     private static final String RECREATE_CONTEXT = "com/openggf/level/objects/RewindRecreateContext";
     private static final String BADNIK_BASE = "com/openggf/level/objects/AbstractBadnikInstance";
+    private static final String DELEGATING_GAME_MODULE =
+            "com/openggf/game/patch/DelegatingGameModule";
+    private static final String GROUND_SENSOR = "com/openggf/physics/GroundSensor";
+    private static final String ABSTRACT_LEVEL_INIT_PROFILE =
+            "com/openggf/game/AbstractLevelInitProfile";
 
     @TempDir Path temp;
 
@@ -173,6 +178,37 @@ class TestModValidator {
         assertTrue(report.eligible());
         assertCode(report, "NON_API_ENGINE_REFERENCE", ModValidationFinding.Severity.WARNING);
         assertTrue(report.findings().stream().noneMatch(f -> f.message().contains("Stable")));
+    }
+
+    @Test
+    void delegatingGameModuleIsATrustedCreatorApiReference() throws Exception {
+        byte[] entry = entrypoint(true, true, writer -> writer.visitField(
+                Opcodes.ACC_PRIVATE, "module", "L" + DELEGATING_GAME_MODULE + ";", null, null).visitEnd());
+
+        ModValidationReport report = new ModValidator().validate(
+                jar(Map.of(ENTRY, entry)), "example.Entry");
+
+        assertTrue(report.findings().stream().noneMatch(f -> f.code().equals("NON_API_ENGINE_REFERENCE")
+                        && f.message().contains(DELEGATING_GAME_MODULE)),
+                report.findings()::toString);
+    }
+
+    @Test
+    void prescribedStandaloneSupportTypesAreTrustedCreatorApiReferences() throws Exception {
+        byte[] entry = entrypoint(true, true, writer -> {
+            writer.visitField(Opcodes.ACC_PRIVATE, "groundSensor",
+                    "L" + GROUND_SENSOR + ";", null, null).visitEnd();
+            writer.visitField(Opcodes.ACC_PRIVATE, "levelInitProfile",
+                    "L" + ABSTRACT_LEVEL_INIT_PROFILE + ";", null, null).visitEnd();
+        });
+
+        ModValidationReport report = new ModValidator().validate(
+                jar(Map.of(ENTRY, entry)), "example.Entry");
+
+        assertTrue(report.findings().stream().noneMatch(f -> f.code().equals(
+                        "NON_API_ENGINE_REFERENCE") && (f.message().contains(GROUND_SENSOR)
+                        || f.message().contains(ABSTRACT_LEVEL_INIT_PROFILE))),
+                report.findings()::toString);
     }
 
     @Test
