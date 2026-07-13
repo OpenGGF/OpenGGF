@@ -1,5 +1,6 @@
 package example.platformer;
 
+import com.openggf.audio.StreamedMusicPort;
 import com.openggf.game.CharacterDefinition;
 import com.openggf.game.CharacterKey;
 import com.openggf.game.PlayerCharacter;
@@ -16,13 +17,22 @@ import com.openggf.sprites.playable.SecondaryAbility;
  * literal -- author classes may not hold non-primitive static state, so the design-constants
  * values are duplicated in both places rather than shared through a static field, mirroring
  * how {@code SampleCharacter}'s {@code defineSpeeds()} duplicates
- * {@code SampleStandaloneModule}'s profile field). Double-jump ({@code onAbilityActivate}) is
- * added in a later task; this shape clones {@code SampleCharacter}'s ctor/
- * {@code characterKey()}/{@code draw()}/{@code defineSpeeds()}/{@code createSensorLines()}
- * structure from the standalone sample.
+ * {@code SampleStandaloneModule}'s profile field). This shape clones {@code SampleCharacter}'s
+ * ctor/{@code characterKey()}/{@code draw()}/{@code defineSpeeds()}/{@code createSensorLines()}
+ * structure from the standalone sample and adds a double-jump secondary ability via
+ * {@link #onAbilityActivate(boolean, boolean, boolean, boolean)}.
  */
 public final class BoltCharacter extends AbstractPlayableSprite {
     private final CharacterKey key;
+
+    /**
+     * Double-jump latch. Non-final so it round-trips through rewind capture/restore --
+     * a rewind seek across an in-air double jump must land back on the correct latch
+     * state rather than silently re-granting (or permanently denying) the ability.
+     * Reset to {@code false} on landing in {@link #draw()} (see that method's javadoc
+     * for why the per-frame {@code draw()} hook is the landing-reset seam).
+     */
+    private boolean doubleJumpUsed;
 
     public BoltCharacter(String code, int x, int y) {
         super(code, (short) x, (short) y);
@@ -44,7 +54,33 @@ public final class BoltCharacter extends AbstractPlayableSprite {
 
     @Override public SecondaryAbility getSecondaryAbility() { return SecondaryAbility.NONE; }
 
+    /**
+     * Fires once per airborne stretch. {@code AbstractPlayableSprite} only invokes this
+     * hook for a valid airborne ability-button activation (see its javadoc), so no
+     * additional {@code getAir()} gate is needed here -- just the one-shot latch.
+     */
+    @Override protected boolean onAbilityActivate(boolean up, boolean down, boolean left, boolean right) {
+        if (doubleJumpUsed) {
+            return false;
+        }
+        doubleJumpUsed = true;
+        setYSpeed((short) -0x600);
+        setJumping(false);
+        key.ownerModId().ifPresent(owner ->
+                currentAudioManager().playNamespacedSfx(new StreamedMusicPort.SfxRef(owner, "jump2")));
+        return true;
+    }
+
+    /**
+     * {@code AbstractPlayableSprite} has no dedicated landing hook, so the per-frame
+     * {@code draw()} override (already required for rendering) doubles as the landing-reset
+     * seam: once {@code getAir()} reports grounded, the double-jump latch is cleared and
+     * ready for the next airborne stretch.
+     */
     @Override public void draw() {
+        if (!getAir()) {
+            doubleJumpUsed = false;
+        }
         if (!isHidden() && getSpriteRenderer() != null) {
             getSpriteRenderer().drawFrame(getMappingFrame(), getRenderCentreX(), getRenderCentreY(),
                     getRenderHFlip(), getRenderVFlip());

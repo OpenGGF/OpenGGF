@@ -20,6 +20,9 @@ import com.openggf.game.GameServices;
 import com.openggf.game.MasterTitleEntry;
 import com.openggf.game.MusicReference;
 import com.openggf.game.PhysicsProfile;
+import com.openggf.game.rewind.FieldKey;
+import com.openggf.game.rewind.GenericFieldCapturer;
+import com.openggf.game.rewind.snapshot.GenericObjectSnapshot;
 import com.openggf.io.ModInputLimits;
 import com.openggf.level.ModLevel;
 import com.openggf.mods.*;
@@ -38,6 +41,8 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.parallel.Isolated;
 
 import java.io.ByteArrayInputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
@@ -142,6 +147,7 @@ class TestSamplePlatformerIntegration {
             assertEquals(0x480, player.getPhysicsProfile().max(),
                     "The sample's literal profile must drive the constructed player");
             assertEquals(0x780, player.getPhysicsProfile().jump());
+            exerciseDoubleJumpAndRewindLatch(player);
 
             RecordingBackend backend = new RecordingBackend();
             AudioManager audio = AudioManager.getInstance();
@@ -168,6 +174,67 @@ class TestSamplePlatformerIntegration {
 
             exerciseMasterTitleNewCompleteAndContinue(fixture, module, backend);
         }
+    }
+
+    /**
+     * Exercises {@code BoltCharacter}'s double-jump secondary ability in isolation, without a
+     * live gameplay session: {@code onAbilityActivate} fires once per airborne stretch, is
+     * latched against a second mid-air press, and re-arms after the {@code draw()}-based
+     * landing-reset seam runs. Air-state transitions use direct field reflection (mirroring
+     * the engine's own {@code TestablePlayableSprite#setAirForTest}) rather than the public
+     * {@code setAir(boolean)} setter, because the landing branch of {@code setAir} calls
+     * {@code currentGameState().resetItemBonus()}, which requires an active
+     * {@code GameplayModeContext} that this construction-only slice of the test does not set up.
+     *
+     * <p>The rewind assertion drives {@link GenericFieldCapturer#restore(Object, GenericObjectSnapshot)}
+     * -- the real production write path -- against a snapshot scoped to just the {@code doubleJumpUsed}
+     * key, per the task brief's "GenericFieldCapturer directly at test level is acceptable" allowance.
+     * {@link GenericFieldCapturer#capture(Object)} cannot be used unscoped here: it walks the full
+     * {@code AbstractPlayableSprite}/{@code AbstractSprite} field hierarchy and throws on pre-existing,
+     * unrelated structural fields (e.g. {@code AbstractSprite#ceilingSensors}, a {@code Sensor[]} with
+     * no {@code @RewindTransient} annotation) -- an engine-wide gap orthogonal to this task's scope.
+     * This is also not an assertion about the production {@code AbstractPlayableSprite#captureRewindState()}
+     * pipeline, which is a closed, hand-enumerated record and does not currently capture
+     * mod-subclass-declared fields at all.
+     */
+    private void exerciseDoubleJumpAndRewindLatch(AbstractPlayableSprite player) throws Exception {
+        setAirField(player, true);
+        assertTrue(invokeAbilityActivate(player), "First mid-air press must fire the double jump");
+        assertEquals((short) -0x600, player.getYSpeed(), "Double jump must apply the ROM impulse");
+
+        player.setYSpeed((short) 0x0111);
+        assertFalse(invokeAbilityActivate(player), "A second mid-air press before landing must be latched");
+        assertEquals((short) 0x0111, player.getYSpeed(), "A latched press must not re-apply the impulse");
+
+        setAirField(player, false);
+        player.draw();
+        setAirField(player, true);
+        assertTrue(invokeAbilityActivate(player), "After the landing-reset seam the ability must be available again");
+        assertEquals((short) -0x600, player.getYSpeed(), "The re-armed ability must apply the ROM impulse again");
+
+        Field doubleJumpUsedField = player.getClass().getDeclaredField("doubleJumpUsed");
+        doubleJumpUsedField.setAccessible(true);
+        assertEquals(true, doubleJumpUsedField.get(player), "Sanity: latch must be set after the ability just fired");
+
+        GenericObjectSnapshot snapshot = new GenericObjectSnapshot(player.getClass(),
+                List.of(FieldKey.of(doubleJumpUsedField)), new Object[] { true });
+        doubleJumpUsedField.set(player, false);
+        GenericFieldCapturer.restore(player, snapshot);
+        assertEquals(true, doubleJumpUsedField.get(player),
+                "Rewind restore must bring the double-jump latch back rather than leaving the stale live value");
+    }
+
+    private static void setAirField(AbstractPlayableSprite player, boolean value) throws Exception {
+        Field field = AbstractPlayableSprite.class.getDeclaredField("air");
+        field.setAccessible(true);
+        field.setBoolean(player, value);
+    }
+
+    private static boolean invokeAbilityActivate(AbstractPlayableSprite player) throws Exception {
+        Method method = AbstractPlayableSprite.class.getDeclaredMethod("dispatchAbilityActivate",
+                boolean.class, boolean.class, boolean.class, boolean.class);
+        method.setAccessible(true);
+        return (boolean) method.invoke(player, false, false, false, false);
     }
 
     /**
