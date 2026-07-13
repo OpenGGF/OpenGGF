@@ -2872,6 +2872,34 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void testSameDirectionRollInputPublishesRollButOppositeInputDoesNot() throws Exception {
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setIdleAnimId(5)
+                                .setWalkAnimId(0)
+                                .setRollAnimId(2));
+                mockSprite.setRolling(true);
+                mockSprite.setAir(false);
+                mockSprite.setGSpeed((short) 0x100);
+                mockSprite.setAnimationId(0);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doRollSpeed");
+                method.setAccessible(true);
+                setInputState(false, true, false, false, false);
+                method.invoke(manager);
+
+                assertEquals(2, mockSprite.getAnimationId(),
+                                "RollRight publishes Roll when inertia is already nonnegative");
+
+                mockSprite.setGSpeed((short) 0x100);
+                mockSprite.setAnimationId(0);
+                setInputState(true, false, false, false, false);
+                method.invoke(manager);
+
+                assertEquals(0, mockSprite.getAnimationId(),
+                                "RollLeft deceleration against positive inertia does not write obAnim");
+        }
+
+        @Test
         public void testS3kFacingFlipClearsLeftWallPushLatchLikeRom() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setAir(false);

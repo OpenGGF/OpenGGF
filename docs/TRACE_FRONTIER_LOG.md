@@ -50,20 +50,22 @@ animation profile instead reselected Roll `$02` every grounded rolling frame,
 overwriting the later object owner at frame 1433.
 
 Grounded rolling now preserves the existing animation byte. Roll entry remains
-the explicit Roll publisher, as in the S1, S2, and S3K movement routines. The
-fix is shared routine ownership, with no route, zone, frame, trace-data, or
-tolerance change.
+an explicit Roll publisher. `RollLeft` and `RollRight` also publish Roll only
+when held input points with the current inertia (including zero), while their
+opposite-direction braking branches leave the byte alone, matching the S1, S2,
+and S3K routines. The fix is shared routine ownership, with no route, zone,
+frame, trace-data, or tolerance change.
 
 Verification used the local REV01 Sonic 1 ROM:
 
 - `TestScriptedVelocityAnimationProfile#groundedRollPreservesAnimationWrittenByLaterObjectDispatch`
   passed.
-- `TestS1Sbz1CompleteRunTraceReplay` advanced from frame 1433 to frame 1453.
-  The new first error is a separate raw-animation owner transition (expected
-  Roll `$02`, actual Walk `$00`). The report has 1,208 animation errors because
-  preserving the native byte exposes later unmodelled owner transitions that
-  the old unconditional Roll selection had masked; physics remains at zero
-  errors and the report has zero warnings.
+- `TestPlayableSpriteMovement#testSameDirectionRollInputPublishesRollButOppositeInputDoesNot`
+  passed, covering both directional ownership branches.
+- `TestS1Sbz1CompleteRunTraceReplay` advanced from frame 1433 / 13 errors to
+  frame 1541 / 9 errors. The new first error is a separate Walk mapping cadence
+  mismatch (expected `$08`, actual `$09`); physics remains at zero errors and
+  the report has zero warnings.
 - `TestS1Mz1CompleteRunTraceReplay` retained its pre-existing frame-2404
   animation-only frontier (7 errors, 0 warnings, green physics). Its release
   occurs after the engine player push bit has already cleared and needs a

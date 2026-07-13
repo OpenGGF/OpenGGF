@@ -2453,6 +2453,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				if (gSpeed < 0) gSpeed = (short) -128;
 			} else {
 				sprite.setDirection(Direction.LEFT);
+				publishDirectionalRollAnimation();
 			}
 		}
 		if (inputAllowed && inputRight) {
@@ -2466,6 +2467,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				if (gSpeed >= 0) gSpeed = (short) 128;
 			} else {
 				sprite.setDirection(Direction.RIGHT);
+				publishDirectionalRollAnimation();
 			}
 		}
 
@@ -4001,6 +4003,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.updateSensors(originalX, originalY);
 		captureTiltAnglesForGroundDispatch();
 		doAnglePos();
+	}
+
+	private void publishDirectionalRollAnimation() {
+		SpriteAnimationProfile profile = sprite.getAnimationProfile();
+		if (profile instanceof ScriptedVelocityAnimationProfile velocityProfile) {
+			// RollLeft/RollRight write anim=Roll only when input points with the
+			// current inertia (including zero). Opposite-direction deceleration
+			// leaves a later object-owned anim byte untouched (S1 01 Sonic.asm:
+			// 881-928; S2 s2.asm:37108-37150; S3K sonic3k.asm:23047-23082).
+			sprite.setAnimationId(velocityProfile.getRollAnimId());
+		}
 	}
 
 	private void captureTiltAnglesForGroundDispatch() {
