@@ -24,6 +24,7 @@ effort.
 - [Namespaced identity semantics](concepts/id-semantics.md)
 - [`ggfmod validate` findings](troubleshooting.md)
 - [Maintained sample gallery](samples/index.md)
+- [Deferred-backlog decisions](BACKLOG.md)
 
 The five sample sources are built by the default test suite. Treat them as executable
 contracts rather than snippets copied out of context.
