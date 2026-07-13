@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.tests.FullReset;
@@ -24,10 +25,12 @@ import org.junit.jupiter.api.parallel.Isolated;
 import org.mockito.MockedStatic;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -174,10 +177,124 @@ public class TestTurboSpikerBadnikInstance {
         }
     }
 
+    @Test
+    public void launchedShellUsesRomCoarseAsymmetricDeleteBounds() throws Exception {
+        assertShellDeleteState(0x27F, 0x180, false,
+                "ROM keeps the final coarse X bucket and inclusive lower Y boundary");
+        assertShellDeleteState(0x280, 0, true,
+                "ROM rejects the first X bucket beyond the $280 unsigned window");
+        assertShellDeleteState(0, -0x80, false,
+                "ROM keeps the inclusive upper Y boundary");
+        assertShellDeleteState(0, -0x81, true,
+                "ROM rejects the first Y coordinate above the asymmetric window");
+        assertShellDeleteState(0, 0x181, true,
+                "ROM rejects the first Y coordinate below the inclusive $200 distance");
+    }
+
+    @Test
+    public void launchedShellAndTrailHoldRomDeleteMarkerForOneExecution() throws Exception {
+        LaunchedShellGraph graph = launchedShellAt(0x280, 0);
+
+        graph.shell().update(20, graph.player());
+
+        assertFalse(graph.shell().isDestroyed(),
+                "Go_Delete_Sprite installs a delete operation without freeing the shell slot immediately");
+        assertTrue(readBooleanField(graph.shell(), "deleteNextFrame"),
+                "shell must expose the ROM status-bit-7 delete marker");
+        assertEquals(0, ((TouchResponseProvider) graph.shell()).getCollisionFlags(),
+                "delete-marked shell must leave the collision response list");
+        assertTrue(graph.shell().isPersistent(),
+                "shell lifetime must be owned by Sprite_CheckDeleteTouchXY, not generic dynamic culling");
+        assertTrue(graph.trail().isPersistent(),
+                "loc_87DC0 trail lifetime must be owned by the shell status marker, not generic culling");
+
+        graph.trail().update(20, graph.player());
+        assertFalse(graph.trail().isDestroyed(),
+                "trail Go_Delete_Sprite marker must also retain its slot until the next execution");
+        assertTrue(readBooleanField(graph.trail(), "deleteNextFrame"),
+                "loc_87DC0 must observe the shell status marker in the same object pass");
+
+        graph.shell().update(21, graph.player());
+        graph.trail().update(21, graph.player());
+        assertTrue(graph.shell().isDestroyed(), "shell delete operation must free on its next execution");
+        assertTrue(graph.trail().isDestroyed(), "trail delete operation must free on its next execution");
+    }
+
+    @Test
+    public void attachedShellDoesNotClaimIndependentLifetime() {
+        RecordingServices services = new RecordingServices();
+        TurboSpikerBadnikInstance turboSpiker = new TurboSpikerBadnikInstance(
+                new ObjectSpawn(0x120, 0x100, Sonic3kObjectIds.TURBO_SPIKER, 0x20, 0, false, 0));
+        turboSpiker.setServices(services);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x300, (short) 0x100);
+        turboSpiker.update(0, player);
+        turboSpiker.update(1, player);
+
+        ObjectInstance attachedShell = services.spawnedChildren.getFirst();
+
+        assertFalse(attachedShell.isPersistent(),
+                "loc_87D5E attached shell must remain owned by the placed badnik and its load window");
+    }
+
+    private void assertShellDeleteState(int x, int y, boolean expectedDeletePending, String message)
+            throws Exception {
+        LaunchedShellGraph graph = launchedShellAt(x, y);
+
+        graph.shell().update(20, graph.player());
+
+        assertFalse(graph.shell().isDestroyed(), message + ": slot must not be freed in the marking frame");
+        assertEquals(expectedDeletePending, readBooleanField(graph.shell(), "deleteNextFrame"), message);
+    }
+
+    private LaunchedShellGraph launchedShellAt(int x, int y) throws Exception {
+        RecordingServices services = new RecordingServices();
+        TurboSpikerBadnikInstance turboSpiker = new TurboSpikerBadnikInstance(
+                new ObjectSpawn(0x120, 0x100, Sonic3kObjectIds.TURBO_SPIKER, 0x20, 0, false, 0));
+        turboSpiker.setServices(services);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x300, (short) 0x100);
+        turboSpiker.update(0, player);
+        turboSpiker.update(1, player);
+
+        ObjectInstance shell = services.spawnedChildren.getFirst();
+        invokeNoArg(shell, "launch");
+        ObjectInstance trail = services.spawnedChildren.getLast();
+        writeIntField(shell, "currentX", x);
+        writeIntField(shell, "currentY", y);
+        writeIntField(shell, "xVelocity", 0);
+        writeIntField(shell, "yVelocity", 0);
+        writeIntField(shell, "xSubpixel", 0);
+        writeIntField(shell, "ySubpixel", 0);
+        return new LaunchedShellGraph(shell, trail, player);
+    }
+
+    private record LaunchedShellGraph(
+            ObjectInstance shell,
+            ObjectInstance trail,
+            TestablePlayableSprite player) {
+    }
+
     private static String readState(TurboSpikerBadnikInstance turboSpiker) throws Exception {
         Field field = TurboSpikerBadnikInstance.class.getDeclaredField("state");
         field.setAccessible(true);
         return String.valueOf(field.get(turboSpiker));
+    }
+
+    private static boolean readBooleanField(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getBoolean(target);
+    }
+
+    private static void writeIntField(Object target, String fieldName, int value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setInt(target, value);
+    }
+
+    private static void invokeNoArg(Object target, String methodName) throws Exception {
+        Method method = target.getClass().getDeclaredMethod(methodName);
+        method.setAccessible(true);
+        method.invoke(target);
     }
 
     private static MockedStatic<ObjectTerrainUtils> mockWalkableFloor() {

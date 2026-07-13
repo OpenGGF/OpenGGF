@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -63,7 +64,6 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
     private static final int SHELL_FRAME = 3;
     private static final int SHELL_TRAIL_FRAME = 4;
     private static final int SHELL_PRIORITY_BUCKET = 5;
-    private static final int SHELL_OFF_SCREEN_MARGIN = 160;
 
     private static final int[] SHELL_DRIP_FRAMES = {5, 5, 5, 6, 7};
     private static final int[] WATER_SPLASH_FRAMES = {8, 9, 10, 11, 12, 13};
@@ -430,6 +430,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
         private int ySubpixel;
         private boolean attached = true;
         private boolean facingLeft;
+        private boolean deleteNextFrame;
         private TurboSpikerTrailEmitter trailEmitter;
 
         TurboSpikerShellChild(TurboSpikerBadnikInstance parent) {
@@ -440,25 +441,44 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
             this.currentY = parent.getY();
         }
 
+        private TurboSpikerShellChild(ObjectSpawn spawn) {
+            super(spawn, "TurboSpikerShell");
+            this.currentX = spawn.x();
+            this.currentY = spawn.y();
+            this.attached = false;
+        }
+
         @Override
         public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            TurboSpikerBadnikInstance liveParent = findLiveTurboSpikerParent(ctx);
-            return liveParent != null ? new TurboSpikerShellChild(liveParent) : null;
+            // Generic rewind invokes this hook on a zero-spawn probe. The
+            // captured spawn in the context is the only authoritative source
+            // for immutable object metadata; attached/parent are restored in
+            // the compact-state reference phase.
+            return ctx != null && ctx.spawn() != null
+                    ? new TurboSpikerShellChild(ctx.spawn())
+                    : null;
         }
 
         void launch() {
-            if (!attached || parent.isDestroyed()) {
+            TurboSpikerBadnikInstance launchParent = parent;
+            if (!attached || launchParent == null || launchParent.isDestroyed()) {
                 return;
             }
             attached = false;
-            facingLeft = parent.badnikFacingLeft();
-            currentX = parent.getX() + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
-            currentY = parent.getY();
+            facingLeft = launchParent.badnikFacingLeft();
+            currentX = launchParent.getX() + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
+            currentY = launchParent.getY();
             // Child loc_87D72 inherits the parent's post-retreat render bit.
             // The parent moves in that facing direction, while the detached
             // shell tests the same bit and launches in the opposite direction.
             xVelocity = facingLeft ? SHELL_LAUNCH_SPEED_X : -SHELL_LAUNCH_SPEED_X;
             yVelocity = SHELL_LAUNCH_SPEED_Y;
+            // loc_87D72 replaces the child operation with loc_87DA4, whose only
+            // work is MoveSprite2 + Sprite_CheckDeleteTouchXY. The launched
+            // shell no longer reads parent3 and can outlive an unloaded badnik
+            // (docs/skdisasm/sonic3k.asm:184042-184061).
+            launchParent.detachShell(this);
+            parent = null;
             trailEmitter = spawnChild(() -> new TurboSpikerTrailEmitter(this));
             services().playSfx(Sonic3kSfx.FLOOR_LAUNCHER.id);
         }
@@ -469,13 +489,24 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
 
         @Override
         public void onUnload() {
-            parent.detachShell(this);
+            if (trailEmitter != null) {
+                trailEmitter.detachFromShell(this);
+                trailEmitter = null;
+            }
+            if (parent != null) {
+                parent.detachShell(this);
+                parent = null;
+            }
         }
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (deleteNextFrame) {
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
             if (attached) {
-                if (parent.isDestroyed()) {
+                if (parent == null || parent.isDestroyed()) {
                     setDestroyed(true);
                     return;
                 }
@@ -494,14 +525,39 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
             xSubpixel = xPos24 & 0xFF;
             ySubpixel = yPos24 & 0xFF;
 
-            if (!isOnScreen(SHELL_OFF_SCREEN_MARGIN)) {
-                setDestroyed(true);
+            if (!spriteCheckDeleteTouchXYKeepsAlive()) {
+                // Go_Delete_Sprite installs Delete_Current_Sprite and sets
+                // status bit 7. The SST slot is cleared on its next execution,
+                // and loc_87DC0 can observe the marker in this object pass.
+                deleteNextFrame = true;
             }
+        }
+
+        private boolean spriteCheckDeleteTouchXYKeepsAlive() {
+            ObjectServices svc = tryServices();
+            int cameraX = svc != null && svc.camera() != null ? svc.camera().getX() : 0;
+            int cameraY = svc != null && svc.camera() != null ? svc.camera().getY() : 0;
+
+            // Sprite_CheckDeleteTouchXY uses Camera_X_pos_coarse_back and
+            // unsigned comparisons, not a symmetric screen-space margin
+            // (docs/skdisasm/sonic3k.asm:179032-179047).
+            int xAligned = currentX & 0xFF80;
+            int coarseBack = (cameraX - 0x80) & 0xFF80;
+            int xDistance = (xAligned - coarseBack) & 0xFFFF;
+            if (xDistance > 0x280) {
+                return false;
+            }
+            int yDistance = (currentY - cameraY + 0x80) & 0xFFFF;
+            return yDistance <= 0x200;
+        }
+
+        private boolean isDeletePending() {
+            return deleteNextFrame;
         }
 
         @Override
         public int getCollisionFlags() {
-            if (isDestroyed()) {
+            if (isDestroyed() || deleteNextFrame) {
                 return 0;
             }
             return SHELL_COLLISION_FLAGS;
@@ -533,8 +589,17 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         @Override
+        public boolean isPersistent() {
+            // loc_87DA4 owns lifetime through Sprite_CheckDeleteTouchXY. Do not
+            // let ObjectManager's generic dynamic-object window free the slot
+            // before that routine installs the ROM delete marker. The attached
+            // loc_87D5E shell remains owned by the placed parent/load window.
+            return !attached;
+        }
+
+        @Override
         public void appendRenderCommands(List<GLCommand> commands) {
-            if (attached) {
+            if (attached || deleteNextFrame || isDestroyed()) {
                 return;
             }
             ObjectRenderManager renderManager = services().renderManager();
@@ -557,10 +622,18 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
         private static final int OFFSET_Y = 0x14;
         private TurboSpikerShellChild shell;
         private int mappingFrame = SHELL_TRAIL_FRAME;
+        private boolean deleteNextFrame;
 
         TurboSpikerTrailEmitter(TurboSpikerShellChild shell) {
             super(shell.getSpawn(), "TurboSpikerTrailEmitter");
             this.shell = shell;
+        }
+
+        private void detachFromShell(TurboSpikerShellChild owner) {
+            if (shell == owner) {
+                shell = null;
+                ObjectLifetimeOps.expireDynamic(this);
+            }
         }
 
         @Override
@@ -571,8 +644,18 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
-            if (shell.isDestroyed()) {
-                setDestroyed(true);
+            if (deleteNextFrame) {
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
+            if (shell == null || shell.isDestroyed()) {
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
+            if (shell.isDeletePending()) {
+                // loc_87DC0 observes parent3 status bit 7 and installs its own
+                // Go_Delete_Sprite operation for the following execution.
+                deleteNextFrame = true;
                 return;
             }
 
@@ -595,12 +678,13 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
 
         @Override
         public int getX() {
-            return shell.getX() + adjustedOffsetX(OFFSET_X, shell.facingLeft);
+            return shell == null ? super.getSpawn().x()
+                    : shell.getX() + adjustedOffsetX(OFFSET_X, shell.facingLeft);
         }
 
         @Override
         public int getY() {
-            return shell.getY() + OFFSET_Y;
+            return shell == null ? super.getSpawn().y() : shell.getY() + OFFSET_Y;
         }
 
         @Override
@@ -609,8 +693,15 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         @Override
+        public boolean isPersistent() {
+            // loc_87DC0 has no independent out-of-range tail. It follows the
+            // launched shell until that shell sets status bit 7.
+            return true;
+        }
+
+        @Override
         public void appendRenderCommands(List<GLCommand> commands) {
-            if ((mappingFrame & 1) == 0) {
+            if (isDestroyed() || deleteNextFrame || shell == null || (mappingFrame & 1) == 0) {
                 return;
             }
             ObjectRenderManager renderManager = services().renderManager();

@@ -1131,6 +1131,40 @@ old value through every intermediate animation dispatch.
 
 ---
 
+## P32 -- Operation-pointer handoff can transfer reference ownership
+
+**Symptom.** Rewind capture reports a stale reference after a former parent
+unloads, or an independently launched child disappears early because it still
+uses the generic lifetime of its attached phase. A downstream effect can also
+outlive the launched child it still reads.
+
+**Root cause.** A child can read `parent3` while attached, then replace its
+operation pointer with a launched routine that never reads the former parent
+again. Retaining that Java reference invents an ownership edge after the ROM
+handoff. Conversely, a separately allocated trail that still reads the
+launched child's status remains owned by that child until its native delete
+marker becomes visible.
+
+**What to check.** Trace every parent-pointer read before and after the
+operation-pointer write. Sever both directions only when the new operation no
+longer consumes the old parent; keep downstream children attached to the
+object whose state they still read. Reproduce the exact
+`Sprite_CheckDeleteTouchXY` bounds and one-entry delete-marker timing, and opt
+only the independent operation out of generic culling. Rewind recreation must
+use the captured `RewindObjectContext.spawn()` metadata rather than probe
+constructor defaults.
+
+**ROM citation.** Turbo Spiker's attached shell reads `parent3`; `loc_87D72`
+installs independent `loc_87DA4`, while the separately allocated trail at
+`loc_87DC0` continues reading the shell's status bit 7
+(`docs/skdisasm/sonic3k.asm:184034-184083`). The range helper installs the
+delete operation and sets that marker before the slot is freed on its next
+entry (`docs/skdisasm/sonic3k.asm:179032-179047,179136-179139`).
+
+**Originating commit.** `<pending: Turbo Spiker HCZ closure repair>`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
