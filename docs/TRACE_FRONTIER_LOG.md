@@ -39300,3 +39300,20 @@ Verification with the local REV01 Sonic 1 ROM:
   frontier and 78-error report. Both were compared directly against the exact
   baseline in a detached worktree, confirming no representative-route
   regression.
+
+### 2026-07-13 -- Sonic 1 composed animation fleet sweep
+
+After composing the schema, push timing, grounded facing, delay-latch,
+raw-Walk/run-frame, landing, hurt-publication, zero-inertia Wait, and donor
+translation fixes, the full Sonic 1 replay fleet was run with the local REV01
+ROM:
+
+`mvn -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dtest=com.openggf.tests.trace.s1.*TraceReplay" test`
+
+All 29 fixtures loaded and compared. The eight legacy credits fixtures passed;
+the 21 gameplay fixtures retained animation-only failures with every physics
+stream green. The sweep exposed three reusable next roots rather than route
+exceptions: `AnglePos` terrain-detach `prev_anim=Run` restarts (GHZ2/LZ1/LZ2
+and SLZ2/SLZ3), post-slope facing changes (MZ1 standalone), and hurt-recovery
+Walk publication (GHZ1 standalone/MZ1/MZ2/SBZ1/SLZ1). SBZ3 frame 0 remained a
+separate act-transition bootstrap question and was not hydrated from its trace.
