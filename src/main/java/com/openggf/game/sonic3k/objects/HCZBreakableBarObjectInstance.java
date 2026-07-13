@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -22,7 +23,10 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -131,8 +135,10 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
     private boolean hasTimer;
 
     // Per-player capture state — ROM: $32/$33 (captured flag), $34/$35 (cooldown)
-    private final boolean[] captured = new boolean[2];   // $32(a0), $33(a0)
-    private final int[] releaseCooldown = new int[2];    // $34(a0), $35(a0)
+    private final CaptureState[] nativeStates = {new CaptureState(), new CaptureState()};
+    private final Map<AbstractPlayableSprite, CaptureState> extensionStates = new IdentityHashMap<>();
+    private AbstractPlayableSprite p1Owner;
+    private AbstractPlayableSprite p2Owner;
 
     // Destruction state — ROM: $3A(a0)
     private boolean triggerBreak;
@@ -188,10 +194,15 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
                 playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
         NativePlayerSlots players = nativePlayerSlots(updatePlayer);
         if (players.p1() == null && players.p2() == null) return;
+        bindNativeState(nativeStates[0], p1Owner, players.p1());
+        p1Owner = players.p1();
+        bindNativeState(nativeStates[1], p2Owner, players.p2());
+        p2Owner = players.p2();
 
         // ROM: loc_1EDB0 / loc_1EF64 — timer countdown while ANY player is captured.
         // tst.w (a2) tests the word at $32, which is nonzero if $32 or $33 is set.
-        boolean anyCaptured = captured[0] || captured[1];
+        boolean anyCaptured = nativeStates[0].captured || nativeStates[1].captured
+                || extensionStates.values().stream().anyMatch(state -> state.captured);
         if (hasTimer && anyCaptured) {
             breakTimer--;
             if (breakTimer <= 0) {
@@ -202,13 +213,23 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
 
         // ROM: calls sub_1EDEC/sub_1EFA0 for Player 1 (d2=0), then Player 2 (d2=1)
         if (players.p1() != null) {
-            processPlayerCapture(players.p1(), 0);
+            processPlayerCapture(players.p1(), nativeStates[0], 0);
         }
 
         // Process sidekick (Player 2)
         if (players.p2() != null) {
-            processPlayerCapture(players.p2(), 1);
+            processPlayerCapture(players.p2(), nativeStates[1], 1);
         }
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        for (PlayableEntity candidate : participants) {
+            if (candidate instanceof AbstractPlayableSprite extension
+                    && extension != players.p1() && extension != players.p2()) {
+                processPlayerCapture(extension, extensionStates.computeIfAbsent(
+                        extension, ignored -> new CaptureState()), -1);
+            }
+        }
+        releaseMissingExtensions(participants);
 
         // ROM: tst.b $3A(a0) / bne loc_1EEEC — break flag from ABC release
         if (triggerBreak) {
@@ -242,6 +263,65 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
     private record NativePlayerSlots(AbstractPlayableSprite p1, AbstractPlayableSprite p2) {
     }
 
+    @Override
+    public void onUnload() {
+        releaseOwnedPlayer(p1Owner, nativeStates[0], 0);
+        releaseOwnedPlayer(p2Owner, nativeStates[1], 1);
+        for (Map.Entry<AbstractPlayableSprite, CaptureState> entry : extensionStates.entrySet()) {
+            releaseOwnedPlayer(entry.getKey(), entry.getValue(), -1);
+        }
+        extensionStates.clear();
+    }
+
+    private void bindNativeState(CaptureState nativeState,
+            AbstractPlayableSprite previousOwner, AbstractPlayableSprite currentOwner) {
+        if (previousOwner == currentOwner) return;
+        if (previousOwner != null && nativeState.isLive()) {
+            extensionStates.computeIfAbsent(previousOwner, ignored -> new CaptureState()).copyFrom(nativeState);
+        }
+        nativeState.clear();
+        if (currentOwner != null) {
+            CaptureState restored = extensionStates.remove(currentOwner);
+            if (restored != null) nativeState.copyFrom(restored);
+        }
+    }
+
+    private void releaseMissingExtensions(List<PlayableEntity> participants) {
+        for (Map.Entry<AbstractPlayableSprite, CaptureState> entry
+                : new ArrayList<>(extensionStates.entrySet())) {
+            if (containsIdentity(participants, entry.getKey())) continue;
+            releaseOwnedPlayer(entry.getKey(), entry.getValue(), -1);
+            extensionStates.remove(entry.getKey());
+        }
+    }
+
+    private void releaseOwnedPlayer(AbstractPlayableSprite player, CaptureState state, int nativeIndex) {
+        if (player != null && state.captured) releasePlayer(player, state, nativeIndex);
+        state.clear();
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity target) {
+        for (PlayableEntity participant : participants) if (participant == target) return true;
+        return false;
+    }
+
+    private static final class CaptureState implements RewindStateful<CaptureState.Snapshot> {
+        private boolean captured;
+        private int releaseCooldown;
+        private boolean isLive() { return captured || releaseCooldown != 0; }
+        private void clear() { captured = false; releaseCooldown = 0; }
+        private void copyFrom(CaptureState other) {
+            captured = other.captured; releaseCooldown = other.releaseCooldown;
+        }
+        @Override public Snapshot captureRewindStateValue() {
+            return new Snapshot(captured, releaseCooldown);
+        }
+        @Override public void restoreRewindStateValue(Snapshot state) {
+            captured = state.captured(); releaseCooldown = state.releaseCooldown();
+        }
+        private record Snapshot(boolean captured, int releaseCooldown) { }
+    }
+
     /**
      * Processes capture/movement/release for a single player.
      * ROM: sub_1EDEC (vertical) or sub_1EFA0 (horizontal).
@@ -249,25 +329,29 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
      * @param player the player sprite to process
      * @param playerIndex 0 for P1, 1 for P2 (maps to $32/$33 and _unkF7C7 bit)
      */
-    private void processPlayerCapture(AbstractPlayableSprite player, int playerIndex) {
+    private void processPlayerCapture(AbstractPlayableSprite player, CaptureState state, int playerIndex) {
+        if (playerIndex < 0 && state.captured && player.getDead()) {
+            releasePlayer(player, state, playerIndex);
+            return;
+        }
         // Tick cooldown for this player
-        if (releaseCooldown[playerIndex] > 0) {
-            releaseCooldown[playerIndex]--;
+        if (state.releaseCooldown > 0) {
+            state.releaseCooldown--;
         }
 
         if (isHorizontal) {
-            updateHorizontalCaptureForPlayer(player, playerIndex);
+            updateHorizontalCaptureForPlayer(player, state, playerIndex);
         } else {
-            updateVerticalCaptureForPlayer(player, playerIndex);
+            updateVerticalCaptureForPlayer(player, state, playerIndex);
         }
     }
 
     // ===== Vertical capture logic (loc_1EDB0 / sub_1EDEC) =====
 
-    private void updateVerticalCaptureForPlayer(AbstractPlayableSprite player, int pi) {
-        if (!captured[pi]) {
+    private void updateVerticalCaptureForPlayer(AbstractPlayableSprite player, CaptureState state, int pi) {
+        if (!state.captured) {
             // ROM: tst.b 2(a2) / subq.b #1,2(a2) — cooldown active, skip
-            if (releaseCooldown[pi] > 0) return;
+            if (state.releaseCooldown > 0) return;
 
             int playerX = player.getCentreX();
             int playerY = player.getCentreY();
@@ -289,7 +373,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
             if (player.isObjectControlled()) return;
 
             // Capture — ROM: clamp Y, set x = x_pos + $14, anim $11, object_control = 1
-            capturePlayer(player, pi, HANG_ANIM_VERTICAL);
+            capturePlayer(player, state, pi, HANG_ANIM_VERTICAL);
             clampPlayerVertical(player);
             NativePositionOps.writeXPosPreserveSubpixel(player, x + PLAYER_HANG_OFFSET);
             // ROM: bclr #Status_Facing,status(a1) — face right
@@ -310,7 +394,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
 
             // ROM: andi.w #button_A|B|C,d1 / beq locret — ABC to release
             if (player.isJumpPressed()) {
-                releasePlayer(player, pi);
+                releasePlayer(player, state, pi);
                 // ROM: btst #6,subtype / bne locret — if non-destructive, don't break
                 if (!nonDestructiveRelease) {
                     triggerBreak = true;
@@ -321,9 +405,9 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
 
     // ===== Horizontal capture logic (loc_1EF64 / sub_1EFA0) =====
 
-    private void updateHorizontalCaptureForPlayer(AbstractPlayableSprite player, int pi) {
-        if (!captured[pi]) {
-            if (releaseCooldown[pi] > 0) return;
+    private void updateHorizontalCaptureForPlayer(AbstractPlayableSprite player, CaptureState state, int pi) {
+        if (!state.captured) {
+            if (state.releaseCooldown > 0) return;
 
             int playerX = player.getCentreX();
             int playerY = player.getCentreY();
@@ -341,7 +425,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
             if (player.isObjectControlled()) return;
 
             // Capture — ROM: clamp X, set y = y_pos - $14, anim $14, object_control = 1
-            capturePlayer(player, pi, HANG_ANIM_HORIZONTAL);
+            capturePlayer(player, state, pi, HANG_ANIM_HORIZONTAL);
             clampPlayerHorizontal(player);
             NativePositionOps.writeYPosPreserveSubpixel(player, y - PLAYER_HANG_OFFSET);
         } else {
@@ -358,7 +442,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
             player.setYSpeed((short) 0);
 
             if (player.isJumpPressed()) {
-                releasePlayer(player, pi);
+                releasePlayer(player, state, pi);
                 if (!nonDestructiveRelease) {
                     triggerBreak = true;
                 }
@@ -376,8 +460,8 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
      * @param pi     player index (0=P1, 1=P2) — maps to $32/$33 and _unkF7C7 bit
      * @param hangAnim animation ID ($11 vertical, $14 horizontal)
      */
-    private void capturePlayer(AbstractPlayableSprite player, int pi, int hangAnim) {
-        captured[pi] = true;
+    private void capturePlayer(AbstractPlayableSprite player, CaptureState state, int pi, int hangAnim) {
+        state.captured = true;
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         // ROM: move.b #1,object_control(a1)
@@ -386,7 +470,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
         player.setAnimationId(hangAnim);
         player.setForcedAnimationId(hangAnim);
         // ROM: bset d2,(_unkF7C7).w — blocks water tunnel capture while on bar
-        HCZWaterRushObjectInstance.HCZBreakableBarState.setBit(pi);
+        if (pi >= 0) HCZWaterRushObjectInstance.HCZBreakableBarState.setBit(pi);
     }
 
     /**
@@ -396,14 +480,14 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
      * @param player the sprite to release
      * @param pi     player index (0=P1, 1=P2)
      */
-    private void releasePlayer(AbstractPlayableSprite player, int pi) {
-        captured[pi] = false;
-        releaseCooldown[pi] = RELEASE_COOLDOWN;
+    private void releasePlayer(AbstractPlayableSprite player, CaptureState state, int pi) {
+        state.captured = false;
+        state.releaseCooldown = RELEASE_COOLDOWN;
         // ROM: andi.b #$FE,object_control(a1)
         ObjectControlState.none().applyTo(player);
         player.setForcedAnimationId(-1);
         // ROM: bclr d2,(_unkF7C7).w — re-enables water tunnel capture
-        HCZWaterRushObjectInstance.HCZBreakableBarState.clearBit(pi);
+        if (pi >= 0) HCZWaterRushObjectInstance.HCZBreakableBarState.clearBit(pi);
     }
 
     private void clampPlayerVertical(AbstractPlayableSprite player) {
@@ -435,17 +519,24 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
         broken = true;
 
         // ROM: loc_1EEEC / loc_1F09A — release both players if captured
-        if (captured[0] && players.p1() != null) {
+        if (nativeStates[0].captured && players.p1() != null) {
             ObjectControlState.none().applyTo(players.p1());
             players.p1().setForcedAnimationId(-1);
         }
         // Release P2 (sidekick)
-        if (captured[1] && players.p2() != null) {
+        if (nativeStates[1].captured && players.p2() != null) {
             ObjectControlState.none().applyTo(players.p2());
             players.p2().setForcedAnimationId(-1);
         }
-        captured[0] = false;
-        captured[1] = false;
+        nativeStates[0].captured = false;
+        nativeStates[1].captured = false;
+        for (Map.Entry<AbstractPlayableSprite, CaptureState> entry : extensionStates.entrySet()) {
+            if (entry.getValue().captured) {
+                ObjectControlState.none().applyTo(entry.getKey());
+                entry.getKey().setForcedAnimationId(-1);
+                entry.getValue().captured = false;
+            }
+        }
 
         // ROM: clr.b (_unkF7C7).w — clear all water tunnel blocks on bar break
         HCZWaterRushObjectInstance.HCZBreakableBarState.setState(0);
@@ -542,9 +633,11 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
         if (broken) return;
 
         // Draw bar extents
-        float r = (captured[0] || captured[1]) ? 0.0f : 0.3f;
-        float g = (captured[0] || captured[1]) ? 1.0f : 0.8f;
-        float b = (captured[0] || captured[1]) ? 0.0f : 1.0f;
+        boolean anyCaptured = nativeStates[0].captured || nativeStates[1].captured
+                || extensionStates.values().stream().anyMatch(state -> state.captured);
+        float r = anyCaptured ? 0.0f : 0.3f;
+        float g = anyCaptured ? 1.0f : 0.8f;
+        float b = anyCaptured ? 0.0f : 1.0f;
 
         if (isHorizontal) {
             int left = x - halfExtent;
@@ -573,7 +666,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
         if (hasTimer) {
             sb.append(" t").append(breakTimer);
         }
-        if ((captured[0] || captured[1])) {
+        if (anyCaptured) {
             sb.append(" [CAP]");
         }
         ctx.drawWorldLabel(x, y - 12, 0, sb.toString(), DebugColor.CYAN);

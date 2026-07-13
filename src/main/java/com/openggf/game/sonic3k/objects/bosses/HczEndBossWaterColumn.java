@@ -17,7 +17,10 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -240,6 +243,10 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
     private boolean player1Grabbed;
     /** ROM $43: per-player grab flag for player 2 / sidekick. */
     private boolean player2Grabbed;
+    /** Novelty extension state; native P1/P2 remain the fixed ROM prefix above. */
+    private final Map<AbstractPlayableSprite, Boolean> extensionGrabbed = new IdentityHashMap<>();
+    private AbstractPlayableSprite player1Owner;
+    private AbstractPlayableSprite player2Owner;
 
     // =========================================================================
     // Constructor
@@ -277,6 +284,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
+        syncPlayerBindings(player);
         if (!beginUpdate(frameCounter)) {
             return;
         }
@@ -630,15 +638,18 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         // Spray Y position for grab zone calculations
         int sprayY = getSprayY();
 
-        if (player instanceof AbstractPlayableSprite sprite) {
-            applyGrabAndCarry(sprite, true, sprayY);
-            applySuctionTo(sprite);
+        NativePlayerSlots slots = nativePlayerSlots(player);
+        if (slots.p1() != null) {
+            applyGrabAndCarry(slots.p1(), 0, sprayY);
+            applySuctionTo(slots.p1());
         }
-        for (PlayableEntity candidate : nativeParticipants(player)) {
-            if (candidate != player && candidate instanceof AbstractPlayableSprite sprite) {
-                applyGrabAndCarry(sprite, false, sprayY);
-                applySuctionTo(sprite);
-            }
+        if (slots.p2() != null) {
+            applyGrabAndCarry(slots.p2(), 1, sprayY);
+            applySuctionTo(slots.p2());
+        }
+        for (AbstractPlayableSprite extension : extendedParticipants(player, slots)) {
+            applyGrabAndCarry(extension, -1, sprayY);
+            applySuctionTo(extension);
         }
     }
 
@@ -689,13 +700,13 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      * @param isPlayer1 true for main player, false for sidekick
      * @param sprayY    precomputed spray Y position for this frame
      */
-    private void applyGrabAndCarry(AbstractPlayableSprite sprite, boolean isPlayer1, int sprayY) {
-        boolean isGrabbed = isPlayer1 ? player1Grabbed : player2Grabbed;
+    private void applyGrabAndCarry(AbstractPlayableSprite sprite, int playerIndex, int sprayY) {
+        boolean isGrabbed = isGrabbed(sprite, playerIndex);
 
         // ROM: btst #7,status(a3) — if boss defeated, release
         if (boss.isDefeatSignal()) {
             if (isGrabbed) {
-                releasePlayer(sprite, isPlayer1);
+                releasePlayer(sprite, playerIndex);
             }
             return;
         }
@@ -703,7 +714,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         // ROM: cmpi.b #6,routine(a2) — dead/dying → displace off
         if (sprite.getDead()) {
             if (isGrabbed) {
-                clearGrabFlag(isPlayer1);
+                clearGrabFlag(sprite, playerIndex);
                 ObjectControlState.none().applyTo(sprite);
             }
             return;
@@ -712,7 +723,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         // ROM: tst.b invulnerability_timer(a2) — invulnerable → displace off
         if (sprite.getInvulnerable()) {
             if (isGrabbed) {
-                clearGrabFlag(isPlayer1);
+                clearGrabFlag(sprite, playerIndex);
                 ObjectControlState.none().applyTo(sprite);
             }
             return;
@@ -728,7 +739,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
                 return;
             }
             // We own this player — go to carry logic (loc_6BA6C)
-            doCarry(sprite, isPlayer1, sprayY);
+            doCarry(sprite, playerIndex, sprayY);
             return;
         }
 
@@ -757,10 +768,10 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         }
 
         // In range — initial grab (sub_6BADA)
-        doInitialGrab(sprite, isPlayer1);
+        doInitialGrab(sprite, playerIndex);
 
         // Immediately enter carry logic this frame (ROM falls through to loc_6BA6C)
-        doCarry(sprite, isPlayer1, sprayY);
+        doCarry(sprite, playerIndex, sprayY);
     }
 
     /**
@@ -775,11 +786,11 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      * </pre>
      */
     private void doInitialGrab(AbstractPlayableSprite sprite, boolean isPlayer1) {
-        if (isPlayer1) {
-            player1Grabbed = true;
-        } else {
-            player2Grabbed = true;
-        }
+        doInitialGrab(sprite, isPlayer1 ? 0 : 1);
+    }
+
+    private void doInitialGrab(AbstractPlayableSprite sprite, int playerIndex) {
+        setGrabFlag(sprite, playerIndex, true);
         sprite.setAir(true);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
         // ROM: move.b #$18,anim(a2) — animation $18 = tumbling/death sprite pose.
@@ -810,7 +821,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      *   subq.w #2,y_pos(a2)
      * </pre>
      */
-    private void doCarry(AbstractPlayableSprite sprite, boolean isPlayer1, int sprayY) {
+    private void doCarry(AbstractPlayableSprite sprite, int playerIndex, int sprayY) {
         int idx = Math.min(segmentCount, GRAB_ZONES.length - 1);
         int[] zone = GRAB_ZONES[idx];
         int spriteY = sprite.getCentreY();
@@ -818,7 +829,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         // ROM: check if player has risen above the top of grab zone → release
         int yTop = sprayY + zone[0];
         if (spriteY < yTop) {
-            releasePlayer(sprite, isPlayer1);
+            releasePlayer(sprite, playerIndex);
             return;
         }
 
@@ -826,7 +837,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         int spriteX = sprite.getCentreX();
         int hDist = spriteX - currentX;  // ROM: sub.w x_pos(a0),d0
         if (hDist <= -CARRY_H_RANGE || hDist >= CARRY_H_RANGE) {
-            releasePlayer(sprite, isPlayer1);
+            releasePlayer(sprite, playerIndex);
             return;
         }
 
@@ -861,7 +872,11 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      * </pre>
      */
     private void releasePlayer(AbstractPlayableSprite sprite, boolean isPlayer1) {
-        clearGrabFlag(isPlayer1);
+        releasePlayer(sprite, isPlayer1 ? 0 : 1);
+    }
+
+    private void releasePlayer(AbstractPlayableSprite sprite, int playerIndex) {
+        clearGrabFlag(sprite, playerIndex);
         sprite.setAir(true);
         ObjectControlState.none().applyTo(sprite);
         // ROM: move.b #2,anim(a2) — roll animation
@@ -869,12 +884,8 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         sprite.setYSpeed((short) -0x200);
     }
 
-    private void clearGrabFlag(boolean isPlayer1) {
-        if (isPlayer1) {
-            player1Grabbed = false;
-        } else {
-            player2Grabbed = false;
-        }
+    private void clearGrabFlag(AbstractPlayableSprite sprite, int playerIndex) {
+        setGrabFlag(sprite, playerIndex, false);
     }
 
     /**
@@ -882,14 +893,15 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      * DESCEND transition and object destruction).
      */
     private void releaseAllGrabbedPlayers(PlayableEntity player) {
-        if (player1Grabbed && player instanceof AbstractPlayableSprite sprite) {
-            releasePlayer(sprite, true);
+        if (player1Grabbed && player1Owner != null) {
+            releasePlayer(player1Owner, 0);
         }
-        if (player2Grabbed) {
-            PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
-            if (nativeP2 instanceof AbstractPlayableSprite sprite) {
-                releasePlayer(sprite, false);
-            }
+        if (player2Grabbed && player2Owner != null) {
+            releasePlayer(player2Owner, 1);
+        }
+        for (Map.Entry<AbstractPlayableSprite, Boolean> entry
+                : new ArrayList<>(extensionGrabbed.entrySet())) {
+            if (Boolean.TRUE.equals(entry.getValue())) releasePlayer(entry.getKey(), -1);
         }
     }
 
@@ -899,16 +911,8 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
             return;
         }
 
-        if (player instanceof AbstractPlayableSprite sprite
-                && objectManager.isRidingObject(player, this)) {
-            objectManager.clearRidingObject(player);
-            sprite.setOnObject(false);
-            sprite.setAir(true);
-        }
-
-        for (PlayableEntity candidate : nativeParticipants(player)) {
-            if (candidate != player
-                    && candidate instanceof AbstractPlayableSprite sprite
+        for (PlayableEntity candidate : allParticipants(player)) {
+            if (candidate instanceof AbstractPlayableSprite sprite
                     && objectManager.isRidingObject(candidate, this)) {
                 objectManager.clearRidingObject(candidate);
                 sprite.setOnObject(false);
@@ -921,6 +925,95 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         ObjectPlayerQuery query = services().playerQuery();
         return new ObjectPlayerQuery(() -> player, query::sidekicks)
                 .playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+    }
+
+    private List<PlayableEntity> allParticipants(PlayableEntity player) {
+        ObjectPlayerQuery query = services().playerQuery();
+        return new ObjectPlayerQuery(() -> player, query::sidekicks)
+                .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+    }
+
+    private NativePlayerSlots nativePlayerSlots(PlayableEntity player) {
+        AbstractPlayableSprite p1 = player instanceof AbstractPlayableSprite sprite ? sprite : null;
+        AbstractPlayableSprite p2 = null;
+        for (PlayableEntity candidate : nativeParticipants(player)) {
+            if (candidate != player && candidate instanceof AbstractPlayableSprite sprite) {
+                p2 = sprite;
+                break;
+            }
+        }
+        return new NativePlayerSlots(p1, p2);
+    }
+
+    private List<AbstractPlayableSprite> extendedParticipants(
+            PlayableEntity player, NativePlayerSlots slots) {
+        List<AbstractPlayableSprite> extensions = new ArrayList<>();
+        for (PlayableEntity candidate : allParticipants(player)) {
+            if (candidate instanceof AbstractPlayableSprite sprite
+                    && sprite != slots.p1() && sprite != slots.p2()) {
+                extensions.add(sprite);
+            }
+        }
+        return extensions;
+    }
+
+    private void syncPlayerBindings(PlayableEntity player) {
+        NativePlayerSlots slots = nativePlayerSlots(player);
+        bindNativeOwner(0, player1Owner, slots.p1());
+        player1Owner = slots.p1();
+        bindNativeOwner(1, player2Owner, slots.p2());
+        player2Owner = slots.p2();
+
+        List<PlayableEntity> participants = allParticipants(player);
+        for (Map.Entry<AbstractPlayableSprite, Boolean> entry
+                : new ArrayList<>(extensionGrabbed.entrySet())) {
+            if (entry.getKey() == player1Owner || entry.getKey() == player2Owner
+                    || containsIdentity(participants, entry.getKey())) continue;
+            if (Boolean.TRUE.equals(entry.getValue())) releasePlayer(entry.getKey(), -1);
+            extensionGrabbed.remove(entry.getKey());
+        }
+    }
+
+    private void bindNativeOwner(int nativeIndex,
+            AbstractPlayableSprite previousOwner, AbstractPlayableSprite currentOwner) {
+        if (previousOwner == currentOwner) return;
+        boolean grabbed = nativeIndex == 0 ? player1Grabbed : player2Grabbed;
+        if (previousOwner != null && grabbed) extensionGrabbed.put(previousOwner, true);
+        if (nativeIndex == 0) player1Grabbed = false;
+        else player2Grabbed = false;
+        if (currentOwner != null && Boolean.TRUE.equals(extensionGrabbed.remove(currentOwner))) {
+            if (nativeIndex == 0) player1Grabbed = true;
+            else player2Grabbed = true;
+        }
+    }
+
+    private boolean isGrabbed(AbstractPlayableSprite sprite, int playerIndex) {
+        return switch (playerIndex) {
+            case 0 -> player1Grabbed;
+            case 1 -> player2Grabbed;
+            default -> Boolean.TRUE.equals(extensionGrabbed.get(sprite));
+        };
+    }
+
+    private void setGrabFlag(AbstractPlayableSprite sprite, int playerIndex, boolean grabbed) {
+        if (playerIndex == 0) player1Grabbed = grabbed;
+        else if (playerIndex == 1) player2Grabbed = grabbed;
+        else if (grabbed) extensionGrabbed.put(sprite, true);
+        else extensionGrabbed.remove(sprite);
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> participants, PlayableEntity target) {
+        for (PlayableEntity participant : participants) if (participant == target) return true;
+        return false;
+    }
+
+    @Override
+    public void onUnload() {
+        releaseAllGrabbedPlayers(player1Owner);
+        extensionGrabbed.clear();
+    }
+
+    private record NativePlayerSlots(AbstractPlayableSprite p1, AbstractPlayableSprite p2) {
     }
 
     /** Compute the spray child's Y position for this frame. */
