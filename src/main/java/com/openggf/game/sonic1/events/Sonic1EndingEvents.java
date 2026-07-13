@@ -5,10 +5,6 @@ import com.openggf.game.sonic1.objects.Sonic1EndingSonicObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.game.GameServices;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Sonic 1 ending sequence bootstrap events.
@@ -141,12 +137,4 @@ class Sonic1EndingEvents extends Sonic1ZoneEvents {
         }
     }
 
-    private static List<AbstractPlayableSprite> participants(AbstractPlayableSprite main) {
-        ArrayList<AbstractPlayableSprite> players = new ArrayList<>();
-        players.add(main);
-        for (AbstractPlayableSprite sidekick : GameServices.sprites().getRegisteredSidekicks()) {
-            if (sidekick != main) players.add(sidekick);
-        }
-        return players;
-    }
 }

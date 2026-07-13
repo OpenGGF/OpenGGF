@@ -9,6 +9,8 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -55,6 +57,25 @@ abstract class Sonic1ZoneEvents {
             return GameServices.camera().getFocusedSprite();
         } catch (IllegalStateException ex) {
             return null;
+        }
+    }
+
+    protected static List<AbstractPlayableSprite> participants(AbstractPlayableSprite main) {
+        ArrayList<AbstractPlayableSprite> players = new ArrayList<>();
+        if (main != null) {
+            players.add(main);
+        }
+        for (AbstractPlayableSprite sidekick : GameServices.sprites().getRegisteredSidekicks()) {
+            if (sidekick != main) {
+                players.add(sidekick);
+            }
+        }
+        return players;
+    }
+
+    static void lockPlayersForTransition(AbstractPlayableSprite progressionOwner) {
+        for (AbstractPlayableSprite participant : participants(progressionOwner)) {
+            participant.setControlLocked(true);
         }
     }
 
