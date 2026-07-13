@@ -60,8 +60,8 @@ A registration-time `@ModApi` capability reached through `ModContext` —
 working name `ModRomArtIntake`.
 
 - **Input**: ROM art address + compression (Nemesis/Kosinski/uncompressed),
-  S2 mapping address, optional DPLC address, palette source (ROM palette
-  address or explicit line), optional frame selection.
+  S2 mapping address, optional DPLC address, palette line (0-3), optional
+  frame selection.
 - **Output**: art registered under the calling mod's **namespaced art key**,
   consumable by mod objects via the normal `getRenderer(artKey)` path.
 - **Implementation**: thin adapter over the engine's existing
@@ -175,9 +175,10 @@ name "Tails' flying art" descriptively.
   seven. (Note: the music-pack sample lives under `docs/modding/samples/`, not
   `src/test/resources/mods/`; the two new samples go under
   `src/test/resources/mods/` like the other code-bearing four.)
-- Flappy's ROM-art runtime tests gate on a **new** `-Ds2.rom.path` property
-  (modeled on the existing `s3k.rom.path` precedent; skip when absent, like
-  `TestRomLogic`).
+- Flappy's ROM-art runtime tests gate on the existing S2 ROM availability check
+  in `RomTestUtils` (`sonic2.rom.path` system property / `SONIC_2_ROM_PATH` env
+  var / `s2.gen` in the working directory — no new property); skip when absent,
+  like `TestRomLogic`.
 - `ModRomArtIntake` unit tests: art/mapping/DPLC load against `s2.gen`;
   standalone-rejection validation finding.
 - Platformer integration test modeled on

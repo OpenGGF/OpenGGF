@@ -10,10 +10,10 @@ games. Mods are discovered from the
 process `mods/` directory at restart; executable mods must be enabled and granted
 trust in the Mod Manager before they run.
 
-The public mod API is version `2.0.0` (a deliberate breaking bump from `1.1.0` via
-the additive `1.2.0` step; see `docs/architecture/mod-api-compatibility.md`). Mods
-must declare a `2.x` engine range such as `>=2.0.0 <3.0.0`. Start with the guide
-for the contribution you are building:
+The public mod API is version `2.1.0` (a deliberate breaking bump from `1.1.0` via
+the additive `1.2.0` step, followed by the additive `2.1.0` ROM-art intake step; see
+`docs/architecture/mod-api-compatibility.md`). Mods must declare a `2.x` engine range
+such as `>=2.0.0 <3.0.0`. Start with the guide for the contribution you are building:
 
 - [Music packs](music-packs.md) — data-only WAV/Ogg replacements for stock music.
 - This guide — Phase 2 objects, art reskins, and complete Sonic 2 zones.
@@ -96,6 +96,65 @@ Art sheets are registered with `registerObjectArt` and a `BakedSheetRef`; editor
 previews use `registerObjectPreview`. The sheet YAML assigns each 8-by-8 tile to a
 Genesis palette line and describes bounded pieces. `convert art` rejects images
 whose dimensions, palette use, or piece bounds cannot be represented exactly.
+
+## ROM art intake (Sonic 2 patch mods)
+
+`ModContext.registerRomObjectArt(key, request)` materializes object art from the
+*player's own ROM* at gameplay launch, instead of shipping baked art in the mod jar.
+This is the supported way to remix a stock game's existing art (for example, Tails'
+flying frames) into a new mod object — the mod jar itself ships zero ROM bytes; the
+sheet is decoded into memory only after the engine opens the player's `s2.gen`.
+
+The request names a ROM art address, its compression, an S2 mapping table address, an
+optional DPLC table address, a palette line, and a bank size:
+
+```java
+context.registerRomObjectArt("bird", new RomArtRequest(
+        0x64320,                 // artAddress: Tails' flying-frame art
+        RomArtCompression.UNCOMPRESSED,
+        0xB8C0,                  // uncompressedByteSize (UNCOMPRESSED only)
+        0x739E2,                 // mappingAddress
+        0x7446C,                 // dplcAddress (0 = no DPLC flattening)
+        0,                       // paletteLine (0-3)
+        1));                     // bankSize (1 for a static sheet)
+```
+
+The literals above are `Sonic2Constants.ART_UNC_TAILS_ADDR` /
+`ART_UNC_TAILS_SIZE` / `MAP_UNC_TAILS_ADDR` / `MAP_R_UNC_TAILS_ADDR`, and palette
+line `0` matches `ART_TILE_TAILS`'s stock palette assignment. Use `RomOffsetFinder`
+(`--game s2`) to locate art/mapping/DPLC addresses for other stock objects; a label's
+compression is usually visible in its ROM offset finder result or the surrounding
+disassembly.
+
+**Gates.** ROM art intake is available only to additive Sonic 2 patch mods
+(`baseGame: s2`, `type: patch`); a standalone module (or any non-S2 `baseGame`) fails
+registration outright. Because registration happens before any ROM is open, addresses
+are checked only against a static Sonic 2 ROM-length bound at registration time; the
+real decompression, mapping, and DPLC parsing happen at gameplay launch once the
+player's ROM is available.
+
+**Palette.** `paletteLine` is a palette *line* index (0-3) into the active zone
+palette, not a ROM color address — the sheet's actual colors come from the mod
+zone's own `palettes.bin` (or the stock zone's palette, for objects placed in
+unmodified zones), matching whichever palette line the mod assigns.
+
+**DPLC.** An optional `dplcAddress` (S2 player-format DPLC table) flattens
+frame-by-frame VRAM tile swaps into one static sheet, the same technique the engine
+itself uses for objects such as the AIZ intro plane and the ICZ snowboard. Pass `0`
+when the mapping's pieces already reference art tiles directly.
+
+**Limits.** Materialized sheets are bounded by the same `ModInputLimits` sheet caps
+(`maxSheetPatterns`, `maxSheetFrames`, `maxSheetPieces`) enforced elsewhere in the mod
+pipeline, so a garbage or oversized request cannot allocate unboundedly.
+
+**Faults.** A bad address, a decompression failure, or a sheet that exceeds the
+`ModInputLimits` caps aborts launch with an owner-attributed `MOD_ROM_ART_INVALID`
+diagnostic naming the offending key and the hex ROM address — the same creator-apply
+fault contract as other launch-time mod failures.
+
+Once materialized, the sheet is served through the normal object-art path: call
+`getRenderer("<mod-id>:bird")` from object code exactly as you would for
+`registerObjectArt`.
 
 ## Add a Sonic 2 zone
 
