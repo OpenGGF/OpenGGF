@@ -4,6 +4,7 @@ import com.openggf.io.ModAssetRoot;
 import com.openggf.level.Level;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.BakedSheetReader;
+import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.PlayableSheetMaterializer;
 import com.openggf.level.rings.RingFrame;
 import com.openggf.level.rings.RingFramePiece;
@@ -16,7 +17,9 @@ import com.openggf.mods.code.StandaloneLevelLoader;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public final class PlatformerMod implements GgfMod {
     @Override
@@ -34,10 +37,31 @@ public final class PlatformerMod implements GgfMod {
             context.registerObjectArt("springpad", new BakedSheetRef("art/springpad.ggfs"));
             context.registerCharacter("bolt", BoltCharacter.definition(
                     context.ownerModId(), materialized));
-            context.registerGameModule(new PlatformerModule(context.ownerModId(), level));
+            context.registerGameModule(new PlatformerModule(context.ownerModId(), level,
+                    buildObjectSheets(context.ownerModId(), assets)));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    /**
+     * Reads the two gimmick sheets ({@code art/zapbug.ggfs}, {@code art/springpad.ggfs})
+     * into fully-namespaced {@link ObjectSpriteSheet}s for {@link PlatformerModule}'s
+     * {@code getObjectArtProvider()}. Standalone modules do not receive the engine-side
+     * {@code registerObjectArt} overlay decoration that patch mods get (the standalone
+     * module proxy is a passthrough), so the module must serve its own object art --
+     * the {@code registerObjectArt} calls above remain for editor preview/validation,
+     * while gameplay rendering resolves through the module's provider.
+     */
+    private static Map<String, ObjectSpriteSheet> buildObjectSheets(String owner,
+            ModAssetRoot assets) throws IOException {
+        Map<String, ObjectSpriteSheet> sheets = new LinkedHashMap<>();
+        for (String name : List.of("zapbug", "springpad")) {
+            sheets.put(owner + ":" + name, BakedSheetReader.read(
+                    assets.readBounded("art/" + name + ".ggfs", assets.limits().maxAssetBytes()))
+                    .toObjectSpriteSheet());
+        }
+        return sheets;
     }
 
     /**

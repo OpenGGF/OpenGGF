@@ -25,13 +25,10 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.FieldKey;
 import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.rewind.snapshot.GenericObjectSnapshot;
-import com.openggf.graphics.GraphicsManager;
 import com.openggf.io.ModInputLimits;
 import com.openggf.level.Level;
 import com.openggf.level.ModLevel;
-import com.openggf.level.Pattern;
 import com.openggf.level.objects.*;
-import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.mods.*;
 import com.openggf.mods.code.ModClassLoaderFactory;
 import com.openggf.mods.code.ModFaultBoundary;
@@ -39,7 +36,6 @@ import com.openggf.mods.code.ModRuntime;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
-import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
@@ -195,16 +191,14 @@ class TestSamplePlatformerIntegration {
      * Exercises {@code ZapBug} and {@code SpringPad} directly against a hand-built
      * {@code ObjectManager}/{@code StubObjectServices} pair -- mirroring
      * {@code TestPhase2SampleModIntegration}'s {@code AbstractBadnikInstance} unit-test
-     * pattern -- rather than driving a full live gameplay session. {@code PlatformerModule}
-     * (like {@code AbstractStandaloneGameModule} generally) has no wired
-     * {@code getObjectArtProvider()}, so {@code sample-platformer:zapbug}/{@code springpad}
-     * art never reaches a live {@code ObjectRenderManager} through the normal gameplay path
-     * today (a pre-existing standalone-module gap, not something this task's object logic
-     * can fix); the renderer-resolution assertion below instead proves the packaged
-     * {@code .ggfs} sheets convert into real {@link PatternSpriteRenderer}s through the same
-     * {@link BakedSheetReader} + {@link ObjectSpriteSheet} machinery {@code ModArtOverlayProvider}
-     * uses for patch mods, wired into a manually-built {@link ObjectRenderManager} so
-     * {@code appendRenderCommands} also exercises the real {@code getRenderer(...)} call.
+     * pattern -- rather than driving a full live gameplay session. The standalone module
+     * proxy is a passthrough for {@code getObjectArtProvider()} (only the PATCH side gets
+     * the engine's {@code registerObjectArt} overlay decoration), so a standalone module
+     * must serve its own object art -- {@code PlatformerModule} does exactly that via its
+     * sheet-backed provider override. The renderer-resolution assertions below go through
+     * the SHIPPED {@code module.getObjectArtProvider()} path, and the same provider backs
+     * the {@link ObjectRenderManager} wired into {@code StubObjectServices} so
+     * {@code appendRenderCommands} exercises the real {@code getRenderer(...)} call.
      */
     @Test
     void zapBugPatrolsSpringPadLaunchesAndBothRecreateForRewind() throws Exception {
@@ -228,16 +222,15 @@ class TestSamplePlatformerIntegration {
                     .filter(spawn -> "sample-platformer:springpad".equals(spawn.objectKey()))
                     .findFirst().orElseThrow();
 
-            Map<String, ObjectSpriteSheet> sheets = new LinkedHashMap<>();
-            sheets.put("sample-platformer:zapbug", BakedSheetReader.read(
-                    assets.readBounded("art/zapbug.ggfs", assets.limits().maxAssetBytes())).toObjectSpriteSheet());
-            sheets.put("sample-platformer:springpad", BakedSheetReader.read(
-                    assets.readBounded("art/springpad.ggfs", assets.limits().maxAssetBytes())).toObjectSpriteSheet());
-            ObjectRenderManager renderManager = new ObjectRenderManager(new BakedArtProvider(sheets));
+            ObjectArtProvider artProvider = module.getObjectArtProvider();
+            assertNotNull(artProvider,
+                    "The standalone module must serve its own object-art provider (the engine "
+                    + "only decorates registerObjectArt sheets onto patch modules)");
+            ObjectRenderManager renderManager = new ObjectRenderManager(artProvider);
             assertNotNull(renderManager.getRenderer("sample-platformer:zapbug"),
-                    "zapbug renderer must resolve from the packaged art sheet");
+                    "zapbug renderer must resolve through the shipped module art provider");
             assertNotNull(renderManager.getRenderer("sample-platformer:springpad"),
-                    "springpad renderer must resolve from the packaged art sheet");
+                    "springpad renderer must resolve through the shipped module art provider");
 
             RecordingBackend backend = new RecordingBackend();
             AudioManager audio = AudioManager.getInstance();
@@ -258,16 +251,16 @@ class TestSamplePlatformerIntegration {
             // --- ZapBug: patrol via PatrolMovementHelper, reverse at its bounds, render, rewind ---
             AbstractBadnikInstance zapBug = (AbstractBadnikInstance) holder[0].createDynamicObject(
                     () -> registry.create(zapSpawn));
-            int startX = badnikCurrentX(zapBug);
+            int startX = zapBug.getX();
             zapBug.update(1, null);
-            assertNotEquals(startX, badnikCurrentX(zapBug), "ZapBug must move on every patrol frame");
+            assertNotEquals(startX, zapBug.getX(), "ZapBug must move on every patrol frame");
 
-            int previousX = badnikCurrentX(zapBug);
+            int previousX = zapBug.getX();
             int direction = Integer.signum(previousX - startX);
             boolean reversed = false;
             for (int frame = 2; frame < 60 && !reversed; frame++) {
                 zapBug.update(frame, null);
-                int x = badnikCurrentX(zapBug);
+                int x = zapBug.getX();
                 int step = Integer.signum(x - previousX);
                 if (step != 0 && step != direction) {
                     reversed = true;
@@ -279,6 +272,26 @@ class TestSamplePlatformerIntegration {
             assertTrue(reversed, "ZapBug must reverse direction once it reaches a patrol bound");
             assertDoesNotThrow(() -> zapBug.appendRenderCommands(new ArrayList<>()),
                     "ZapBug must render through the resolved zapbug PatternSpriteRenderer without throwing");
+
+            // 2-frame walk animation: a FRESH instance (deterministic animTick=0) must hold
+            // frame 0 through the first 15 updates, show frame 1 after the 16th (one
+            // ANIM_PERIOD), and toggle back to frame 0 after the 32nd (a full cycle).
+            AbstractBadnikInstance animBug = (AbstractBadnikInstance) holder[0].createDynamicObject(
+                    () -> registry.create(zapSpawn));
+            assertEquals(0, badnikAnimFrame(animBug), "ZapBug must start on animation frame 0");
+            for (int frame = 1; frame <= 15; frame++) {
+                animBug.update(frame, null);
+                assertEquals(0, badnikAnimFrame(animBug),
+                        "ZapBug must hold frame 0 for the full 16-update animation period (update " + frame + ")");
+            }
+            animBug.update(16, null);
+            assertEquals(1, badnikAnimFrame(animBug),
+                    "ZapBug must switch to frame 1 after one full animation period");
+            for (int frame = 17; frame <= 32; frame++) {
+                animBug.update(frame, null);
+            }
+            assertEquals(0, badnikAnimFrame(animBug),
+                    "ZapBug must toggle back to frame 0 after a full 2-frame cycle");
 
             AbstractObjectInstance recreatedZapBug = ((RewindRecreatable) zapBug)
                     .recreateForRewind(new RewindRecreateContext(zapSpawn, null, services));
@@ -309,6 +322,21 @@ class TestSamplePlatformerIntegration {
             assertDoesNotThrow(() -> springPad.appendRenderCommands(new ArrayList<>()),
                     "SpringPad must render through the resolved springpad PatternSpriteRenderer without throwing");
 
+            // Extended pose: the contact frame shows the extended sprite, it persists for the
+            // next 7 update() calls (the launched player's yspeed is now negative, so no
+            // re-trigger), and the 8th post-contact update reverts to the idle frame --
+            // exactly 8 rendered extended frames in total.
+            assertTrue(springPadExtended(springPad),
+                    "SpringPad must show the extended frame on the contact frame");
+            for (int frame = 2; frame <= 8; frame++) {
+                springPad.update(frame, faller);
+                assertTrue(springPadExtended(springPad),
+                        "SpringPad must stay extended through post-contact update " + frame);
+            }
+            springPad.update(9, faller);
+            assertFalse(springPadExtended(springPad),
+                    "SpringPad must revert to the idle frame after 8 extended updates");
+
             AbstractObjectInstance recreatedSpringPad = ((RewindRecreatable) springPad)
                     .recreateForRewind(new RewindRecreateContext(springSpawn, null, services));
             assertNotSame(springPad, recreatedSpringPad, "recreateForRewind must build a fresh instance");
@@ -317,35 +345,21 @@ class TestSamplePlatformerIntegration {
         }
     }
 
-    private static int badnikCurrentX(AbstractBadnikInstance value) throws Exception {
-        Field field = AbstractBadnikInstance.class.getDeclaredField("currentX");
+    /** Reads the inherited protected {@code animFrame} animation cursor off a badnik instance. */
+    private static int badnikAnimFrame(AbstractBadnikInstance value) throws Exception {
+        Field field = AbstractBadnikInstance.class.getDeclaredField("animFrame");
         field.setAccessible(true);
         return field.getInt(value);
     }
 
-    /** Minimal {@link ObjectArtProvider} backed directly by pre-converted baked sheets (no zone/HUD data). */
-    private static final class BakedArtProvider implements ObjectArtProvider {
-        private final Map<String, ObjectSpriteSheet> sheets;
-        private final Map<String, PatternSpriteRenderer> renderers = new LinkedHashMap<>();
-
-        private BakedArtProvider(Map<String, ObjectSpriteSheet> sheets) { this.sheets = sheets; }
-
-        @Override public void loadArtForZone(int zoneIndex) { }
-        @Override public PatternSpriteRenderer getRenderer(String key) {
-            ObjectSpriteSheet sheet = sheets.get(key);
-            if (sheet == null) return null;
-            return renderers.computeIfAbsent(key, ignored -> new PatternSpriteRenderer(sheet));
-        }
-        @Override public ObjectSpriteSheet getSheet(String key) { return sheets.get(key); }
-        @Override public SpriteAnimationSet getAnimations(String key) { return null; }
-        @Override public int getZoneData(String key, int zoneIndex) { return -1; }
-        @Override public Pattern[] getHudDigitPatterns() { return new Pattern[0]; }
-        @Override public Pattern[] getHudTextPatterns() { return new Pattern[0]; }
-        @Override public Pattern[] getHudLivesPatterns() { return new Pattern[0]; }
-        @Override public Pattern[] getHudLivesNumbers() { return new Pattern[0]; }
-        @Override public List<String> getRendererKeys() { return List.copyOf(sheets.keySet()); }
-        @Override public int ensurePatternsCached(GraphicsManager graphicsManager, int baseIndex) { return baseIndex; }
-        @Override public boolean isReady() { return true; }
+    /**
+     * Reads {@code SpringPad}'s private {@code extendedFramesRemaining} counter (via the mod
+     * classloader's concrete class) -- {@code > 0} means the extended sprite frame is shown.
+     */
+    private static boolean springPadExtended(AbstractObjectInstance springPad) throws Exception {
+        Field field = springPad.getClass().getDeclaredField("extendedFramesRemaining");
+        field.setAccessible(true);
+        return field.getInt(springPad) > 0;
     }
 
     /**
