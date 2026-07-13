@@ -50,10 +50,18 @@ Use only the skill and resources it explicitly requires. Do not infer additional
 | R34 | Earliest reachable consumer | When raw animation `$F4` and `Obj_Wait` share a callback, the workflow compares both reachable paths and treats the earliest one as behavior-owning. |
 | R35 | Boundary-first RED test | A focused observed-RED test covers the last non-firing update, exact firing update, and the competing consumer's later boundary. |
 | R36 | Independent oracle adjudication | A code/comment/disassembly conflict pauses implementation for independent disassembly adjudication instead of weakening the expectation or choosing local behavior. |
+| R37 | Boss damage-source classification | Every phase identifies the actual damage publisher and collision-bearing object; scripted child/self-impact damage requires negative player-hit and no-invented-shield-branch tests. |
+| R38 | Repeated-table cardinality | Nested/repeated child tables are expanded with exact helper semantics and multiplied by every owner, with direct, steady, transient, and peak live counts reported separately. |
+| R39 | Complete boss graph topology | Inventory includes ordered forward/reverse links, terminal cycles, and cross-links, with stable role metadata and recreation-order-independent relink. |
+| R40 | Independent partial-prefix failures | Every child table is tested at each failure ordinal; successful prefixes persist exactly and missing suffixes do not heal, retry, roll back, duplicate, or suppress independent sibling tables unless the ROM does so. |
+| R41 | Allocation primitive and first tick | Every allocation site records primitive/search direction and whether the allocated child first executes later in the same object sweep or next frame; focused tests prove the boundary. |
+| R42 | Completion publication chain | Workflow follows boss defeat through sign/controller and results to the actual global/event writer and transition consumer; it forbids assuming the boss writes the event flag. |
+| R43 | Per-phase participant policy | Activation, targeting, contact/hazard, damage authority, forced movement, and completion each receive an explicit policy; activation status/control bits are traced to their exact native slot rather than inheriting a shared solid routine's policy, preserving P1-only, nearest native P1/P2, and all-player distinctions under extension sidekicks. |
+| R44 | Real cyclic graph restoration | A real `ObjectManager` capture -> remove/diverge -> restore test proves exact peak count/topology, cyclic/cross-link reconstruction, partial-prefix preservation without healing, and no duplicate reconstruction. |
 
 ## Verdict
 
-- **GREEN:** R1-R36 all PASS.
+- **GREEN:** R1-R44 all PASS.
 - **RED:** Any assertion fails or is only optional/implied.
 
 Record the exact prompt, raw agent output, per-assertion PASS/FAIL result, and overall verdict in both baseline and forward-test artifacts.

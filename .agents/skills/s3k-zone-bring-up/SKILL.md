@@ -80,6 +80,14 @@ For carriers, grabs, chains, and forced movement, keep participant state keyed b
 
 For parent/child families, encode every child role, phase, radius, delay, and special flag in captured recreation metadata. A shared parent `ObjectSpawn` is not sufficient. Verify the real `ObjectManager` graph with capture -> remove/diverge -> restore: exact child count/config, settled parent relink despite recreation order, no duplicate respawn, and child lifetime following the restored parent. Constructor-only rewind probes do not pass this gate.
 
+### Boss Oracle and Publication Gate
+
+Before dispatching a boss, require its analysis to classify the damage source and collision-bearing object for every phase. Scripted child/self-impact damage requires negative player-hit coverage proving player attacks do not change health or invoke an invented shield branch.
+
+Expand repeated and nested child tables once per actual owner, and report direct, steady, transient, and peak live counts. Inventory every forward, reverse, cyclic, terminal, and cross-link. For each allocation site, distinguish primitive/search direction, partial-prefix behavior, rollback, retry, independence from sibling tables, and same-sweep first-tick eligibility. Require allocation-failure tests at every ordinal plus a real `ObjectManager` rewind round trip proving exact cyclic topology, no missing-suffix healing, and no duplicate reconstruction.
+
+Trace defeat publication through the complete reachable chain -- boss, sign/controller, results, global/event write, and transition consumer. Never assign an event flag to the boss merely because defeat eventually causes it. Classify participant policy separately for activation, targeting, contact/hazard, damage authority, forced movement, and completion. Trace standing/status/control-bit activation gates to their exact native slot rather than inheriting the participation of a shared solid routine; preserve P1-only, nearest-native-P1/P2, and all-player operations distinctly under multi-sidekicks.
+
 ### Signed S3K Mapping-Offset Gate
 
 Treat every relative `dc.w` in an S3K mapping frame-pointer table as a signed 16-bit displacement from the table base. Audit negative/backward pointers and shared-frame references explicitly; Java zero-extension can turn a valid backward reference into a runaway address and allocation/OOM failure. When the first frame pointer cannot prove the pointer-table length, require a disassembly-verified explicit frame count instead of inferring one from that pointer.

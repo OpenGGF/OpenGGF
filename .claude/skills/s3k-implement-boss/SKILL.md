@@ -146,6 +146,19 @@ Delegate multiple agents to explore the disassembly. **Include this instruction 
 
 When porting boss object positions, ROM `x_pos` / `y_pos` are centre coordinates. Use `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()` for boss bodies, children, projectiles, and dynamic spawns; reserve `getX()` / `getY()` for top-left render bounds.
 
+### Boss Oracle and Object-Graph Gate
+
+Before planning implementation, build one reachable oracle graph for the whole encounter; do not infer a conventional player-hit boss, a flat child list, or a boss-owned completion flag from names.
+
+- Classify the actual damage publisher in every phase: player touch, scripted child, self-impact, hazard convergence, or another object. Identify the collision-bearing object and the field/bit consumed by the health routine. Require negative player-attack tests whenever damage is scripted; prove ordinary player hits cannot decrement health or trigger boss-specific shield behavior.
+- Expand every child table with exact helper semantics (`dbf`, repeated-link helpers, nested tables), then multiply it by every owner that invokes it. Record direct, steady-state, transient, and peak live counts separately. A table of five links invoked by two arms contributes ten objects, not five.
+- Record the complete topology, not only parent pointers: ordered forward links, reverse links, terminal-to-owner cycles, sibling/arm cross-links, and fields overwritten after creation. Give every role stable recreation metadata and verify settled relink independent of recreation order.
+- For each allocation call, record the exact primitive, search direction, first-failure behavior, rollback, retry policy, and whether a successful child receives its first tick later in the same object sweep. Test every independent table under partial-prefix failure; missing suffixes must not heal, retry, duplicate, or suppress a sibling table unless the ROM does so.
+- Trace completion publication through every downstream object and global write. Follow boss defeat into sign/controller, results, transition, and event consumers; do not claim the boss writes a zone/event flag unless the reachable disassembly does. Test the real publication chain and its exact frame owner.
+- Classify `ObjectPlayerParticipationPolicy` per phase and operation: activation, targeting, contact, damage authority, forced movement, and completion. Trace every tested standing/status/control bit back to the exact native player slot before assigning activation; a generic all-player solid routine does not make a P1 standing-bit trigger all-player. Preserve distinctions such as P1-only gates, nearest native P1/P2 targeting, and all-player solids/hazards; extension sidekicks must not silently change native authority.
+
+The focused gate must include a real `ObjectManager` graph test covering exact peak count/topology, cyclic and cross-link capture -> remove/diverge -> restore, every independent partial-prefix failure ordinal, no reconstruction healing/duplicates, allocation-primitive first-tick timing, scripted-damage negative player-hit cases, and boss -> sign -> results -> event publication. Constructor-only graph tests and root-only health tests do not pass.
+
 ### Phase 2: Arena & Level Event Setup
 
 S3K bosses use `Sonic3kLevelEventManager` (at `game/sonic3k/Sonic3kLevelEventManager.java`) for arena setup and boss spawning. This manager extends `AbstractLevelEventManager` and delegates to per-zone handler classes in `game/sonic3k/events/` (e.g. `Sonic3kAIZEvents`, `Sonic3kCNZEvents`, `Sonic3kHCZEvents`) — see `Sonic3kZoneEvents` for the shared `camera()`/`audio()`/`gameState()`/`spawnObject(...)` helpers. Zones without a handler class yet fall back to default/no-op behavior; add one following the existing pattern if the target zone doesn't have one.
