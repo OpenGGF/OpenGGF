@@ -1,5 +1,42 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S2 CNZ2 boss-slot animation completion milestone
+
+CNZ2's final 247 animation groups came from Obj51 parent/child SST publication
+across the player and object slots. The boss body now retains the post-trigger
+X used by `Touch_Boss`, while each allocated electric ball keeps the parent
+`x_pos` captured in its spawn record throughout `loc_31BA8`, where
+`Boss_MoveObject` no longer advances the parent. The attached child observes
+the countdown value that the ROM parent slot would have published and changes
+to fall only at exact zero. After the floor split, the
+`AllocateObjectAfterCurrent` positive half retains its pre-physics coordinate
+for the next ordinary player-slot touch scan; both halves otherwise use the
+normal frame-start single-region path, without stale projected collision
+regions. This restores the exact inclusive-edge Tails hurts at all three split
+passes. No zone, route, frame, trace hydration, or comparator tolerance was
+added
+(`docs/s2disasm/s2.asm:66513-66538,66581-66617,66689-66696,66955-67022,85078,85107-85192`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 247 -> 0 grouped errors
+Green: 18 -> 19 (newly CNZ2; Sonic 2 animation fleet complete)
+```
+
+Regression gate at this milestone:
+
+- all 21 animation-capable S1 traces remain green; the same eight legacy
+  credits traces still report that their pre-v7 CSVs lack animation fields;
+- the S3K animation baseline remains unchanged from milestone `1a32cb932`:
+  AIZ complete 257, CNZ 172/2673, HCZ 673, ICZ 1376, LBZ 375, MGZ
+  3923/4081, MHZ 98, and standalone AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 43 passes / 15 existing
+  failures with no new failure; CNZ2 improves to two respawn-counter groups;
+- the 15-test focused CNZ boss collision suite passes;
+- the ten-test comparison-only invariant guard, hydration-default guard, and
+  both rewind coverage guards remain green.
+
 ### 2026-07-14 -- S2 ARZ2 arrow-release and pillar-edge animation milestone
 
 ARZ2's last fourteen animation groups came from Obj89 state that crosses the
