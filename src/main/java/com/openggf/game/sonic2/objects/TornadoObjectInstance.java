@@ -6,6 +6,7 @@ import com.openggf.game.save.SaveReason;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.sonic2.Sonic2LevelEventManager;
+import com.openggf.game.sonic2.Sonic2ZoneFeatureProvider;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.Sonic2Rng;
@@ -681,7 +682,6 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     private void wfzJumpToShip(AbstractPlayableSprite player) {
-        applyWaitingAnimation(player);
         wfzJumpToShipCommon();
     }
 
@@ -802,9 +802,10 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         player.setAir(false);
         player.setRolling(false);
         player.setAnimationId(Sonic2AnimationIds.HANG);
-        player.setAnimationFrameIndex(0);
-        player.setAnimationTick(0);
         ObjectControlState.nativeBit7FullControl().applyTo(player);
+        if (services().zoneFeatureProvider() instanceof Sonic2ZoneFeatureProvider sonic2) {
+            sonic2.setWfzWindTunnelHolding(true);
+        }
         player.setControlLocked(true);
         ownsPlayerControl = true;
     }

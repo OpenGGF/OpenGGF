@@ -65,6 +65,7 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
     private int currentZone = -1;
     private int currentAct = -1;
     private boolean wfzWindTunnelActive;
+    private boolean wfzWindTunnelHolding;
 
     // Deferred slot machine renders (queued during object phase, rendered after tilemap)
     // Each entry: {worldX, worldY, offsetX, offsetY} - offset values are from cage to display
@@ -391,14 +392,19 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
 
         int x = player.getCentreX() & 0xFFFF;
         int y = player.getCentreY() & 0xFFFF;
-        if (player.isObjectControlled()
-                || player.isHurt()
-                || player.getDead()
-                || !isInsideWfzWindTunnel(x, y)) {
-            if (wfzWindTunnelActive) {
-                player.setAnimationId(Sonic2AnimationIds.WALK);
-            }
-            wfzWindTunnelActive = false;
+        if (!isInsideWfzWindTunnel(x, y)) {
+            leaveWfzWindTunnel(player);
+            return;
+        }
+        // ObjC1 sets WindTunnel_holding_flag while the player hangs from the
+        // plating. WindTunnel returns immediately at that gate: it neither
+        // reapplies Float2 nor runs the leave path's Walk/flag clear.
+        if (wfzWindTunnelHolding) {
+            return;
+        }
+        if (player.isHurt()
+                || player.getDead()) {
+            leaveWfzWindTunnel(player);
             return;
         }
 
@@ -417,6 +423,21 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
         if (player.isDownPressed()) {
             player.shiftY(1);
         }
+    }
+
+    private void leaveWfzWindTunnel(AbstractPlayableSprite player) {
+        if (wfzWindTunnelActive) {
+            player.setAnimationId(Sonic2AnimationIds.WALK);
+        }
+        wfzWindTunnelActive = false;
+    }
+
+    public void setWfzWindTunnelHolding(boolean holding) {
+        wfzWindTunnelHolding = holding;
+    }
+
+    public boolean isWfzWindTunnelHolding() {
+        return wfzWindTunnelHolding;
     }
 
     private boolean isInsideWfzWindTunnel(int x, int y) {
@@ -455,6 +476,7 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
         cpzPylon = null;
         waterSurfaceManager = null;
         wfzWindTunnelActive = false;
+        wfzWindTunnelHolding = false;
         currentZone = -1;
         currentAct = -1;
     }

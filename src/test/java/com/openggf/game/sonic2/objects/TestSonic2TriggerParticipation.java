@@ -14,6 +14,7 @@ import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.Sonic2ZoneFeatureProvider;
 import com.openggf.game.sonic2.objects.badniks.SlicerBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.SlicerPincerInstance;
 import com.openggf.game.sonic2.objects.badniks.SpinyBadnikInstance;
@@ -25,6 +26,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.LevelManager;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -547,10 +549,15 @@ class TestSonic2TriggerParticipation {
     @Test
     void wfzBreakablePlatingNativeMainTouchStillGrabs() {
         TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
+        Sonic2ZoneFeatureProvider zoneFeatures = new Sonic2ZoneFeatureProvider();
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getZoneFeatureProvider()).thenReturn(zoneFeatures);
         BreakablePlatingObjectInstance plating = new BreakablePlatingObjectInstance(
                 new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.BREAKABLE_PLATING, 0, 0, false, 0),
                 "BreakablePlating");
-        plating.setServices(new QueryOnlyPlayerServices(main, List.of()));
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(main, List.of());
+        services.withLevelManager(levelManager);
+        plating.setServices(services);
 
         plating.onTouchResponse(main, null, 0);
         plating.update(0, main);
@@ -558,6 +565,8 @@ class TestSonic2TriggerParticipation {
         assertRomObjControlBitOneState(main, "Breakable Plating native P1 grab");
         assertEquals(0x0FEC, main.getCentreX() & 0xFFFF);
         assertEquals(Sonic2AnimationIds.HANG.id(), main.getAnimationId());
+        assertTrue(zoneFeatures.isWfzWindTunnelHolding(),
+                "ObjC1 publishes WindTunnel_holding_flag with its Hang/object-control tuple");
     }
 
     @Test

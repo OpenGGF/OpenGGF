@@ -5,12 +5,14 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
+import com.openggf.game.sonic2.Sonic2ZoneFeatureProvider;
 import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -339,7 +341,7 @@ public class BreakablePlatingObjectInstance extends AbstractObjectInstance
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
 
         // ROM: move.b #1,(WindTunnel_holding_flag).w
-        // This prevents wind tunnel from interfering - handled by objectControlled in our engine
+        setWindTunnelHolding(true);
 
         // ROM: move.b #1,objoff_32(a0)
         playerGrabbed = true;
@@ -379,10 +381,18 @@ public class BreakablePlatingObjectInstance extends AbstractObjectInstance
             ObjectControlState.none().applyTo(player);
 
             // ROM: clr.b (WindTunnel_holding_flag).w
-            // Handled by clearing objectControlled
+            setWindTunnelHolding(false);
 
             // ROM: clr.b objoff_32(a0)
             playerGrabbed = false;
+        }
+    }
+
+    private void setWindTunnelHolding(boolean holding) {
+        ObjectServices objectServices = tryServices();
+        if (objectServices != null
+                && objectServices.zoneFeatureProvider() instanceof Sonic2ZoneFeatureProvider sonic2) {
+            sonic2.setWfzWindTunnelHolding(holding);
         }
     }
 

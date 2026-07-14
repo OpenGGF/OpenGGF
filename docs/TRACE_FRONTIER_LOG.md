@@ -1,5 +1,44 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S2 WFZ holding and grabber-cadence animation milestone
+
+WFZ's last seven animation groups were owned by two native state machines. The
+level-event `WindTunnel` now distinguishes its active flag from
+`WindTunnel_holding_flag`: once ObjC1 publishes the holding flag with Hang and
+object control, the tunnel returns without inventing its leave-path Walk write
+or clearing the active flag. ObjB2's approaching state remains the only docking
+state that publishes the waiting tuple; after it falls through to
+`ObjB2_Jump_to_ship`, player and invisible-grabber routines own the animation.
+Finally, each invisible-grabber catch writes only `anim=Hang`; its second
+routine-secondary catch no longer resets the already-live `anim_frame` and
+duration, preserving the retail two-frame Hang cadence. ObjC1 and the ObjB2
+grabber both publish the same explicit holding state. No route/frame exception,
+trace hydration, or comparator tolerance was added
+(`docs/s2disasm/s2.asm:5474-5524,79018-79164,80857-80916`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 273 -> 266 grouped errors
+Green: 14 -> 15 (newly WFZ)
+ARZ2: 14                     CNZ2: 247
+MCZ2: 3                      OOZ1: 2
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- the S3K animation baseline remains unchanged from milestone `2bf13428a`:
+  AIZ complete 257, CNZ 172/2673, HCZ 673, ICZ 1376, LBZ 375, MGZ
+  3923/4081, MHZ 98, and standalone AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 42 passes / 16 existing
+  failures, including WFZ's pre-existing absent-sidekick mismatch and no new
+  failure;
+- the focused Tornado, WFZ wind-tunnel, and Sonic 2 trigger-participation
+  suites pass 26 + 2 + 56 tests;
+- the ten-test comparison-only invariant guard and hydration-default guard
+  remain green.
+
 ### 2026-07-14 -- S2 MTZ2 exact-edge landing animation milestone
 
 MTZ2's final two animation groups came from one ordinary Obj47 landing spread
