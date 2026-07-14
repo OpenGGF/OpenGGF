@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S3K collapsing-platform multi-rider release milestone
+
+Branch `feature/ai-trace-animation-verification`, after the AIZ hollow-tree
+milestone. `Obj_CollapsingPlatform` runs `sub_205FC` first for Player 1 and
+then for Player 2 in the same object dispatch. Each recorded rider has
+`Status_OnObj`/`Status_Push` cleared, `Status_InAir` set, and
+`prev_anim=Run ($01)` published while the current Walk byte remains untouched.
+The engine's split solid callback omitted the previous-animation write, and
+its first callback also promoted the shared parent state before Player 2 could
+receive the same release. The release phase now remains eligible only for an
+already-recorded second rider through that solid pass; the falling parent
+retains its prior update cadence. No zone, route, frame, trace hydration, or
+tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 44844-44864 (`loc_205DE`
+and `sub_205FC`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestSonic3kCollapsingPlatformTransitionSolid` passes 4/4, covering the
+  release `prev_anim` byte, push clear, and second-rider-only eligibility.
+- AIZ complete-run advances from Act 2 frame 7443 / 64 grouped animation
+  errors to frame 11350 / 61. Both player phases restart at the native Walk
+  mapping after the platform release.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  HCZ and every previously green route retain their status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
 ### 2026-07-14 -- AIZ hollow-tree adjacent animation-word milestone
 
 Branch `feature/ai-trace-animation-verification`, after the stationary

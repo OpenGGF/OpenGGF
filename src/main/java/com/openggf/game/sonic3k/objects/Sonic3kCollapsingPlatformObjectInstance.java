@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GLCommand;
@@ -284,7 +285,11 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
 
     boolean solidForTransitionState(boolean alreadyRiding) {
         if (state >= 3) {
-            return false;
+            // sub_205FC runs for Player 1 and Player 2 in one object dispatch.
+            // Player 1 may promote the engine state before the separate P2
+            // solid callback, so retain solidity only for an already-recorded
+            // rider until the next object update consumes releasePending.
+            return releasePending && alreadyRiding;
         }
         // ObjPlatformCollapse_CreateFragments jumps to Play_SFX instead of
         // calling sub_205B6/SolidObjectTopSloped2 on the transition dispatch.
@@ -375,10 +380,10 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
             // releases the player. The engine's separate solid pass is the
             // matching point to clear ride state after the no-movement frame.
             state = 3;
-            releasePending = false;
             releaseSolidPassExposed = false;
             player.setAir(true);
             player.setOnObject(false);
+            publishReleaseAnimationState(player);
             services().objectManager().clearRidingObject(player);
             return;
         }
@@ -387,6 +392,14 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
             triggered = true;
             state = 1; // begin collapse countdown
         }
+    }
+
+    void publishReleaseAnimationState(AbstractPlayableSprite player) {
+        // sub_205FC clears Status_Push and writes only prev_anim=Run. The
+        // current Walk byte remains untouched, forcing Animate to restart it
+        // on the following player tick (sonic3k.asm:44860-44864).
+        player.setPushing(false);
+        player.getAnimationManager().publishPreviousAnimationId(Sonic3kAnimationIds.RUN.id());
     }
 
     // ===== Update =====
@@ -466,22 +479,29 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
                 }
             }
             case 3 -> {
-                // Post-fragment: parent falls with gravity, destroy when offscreen
-                velY += GRAVITY;
-                int y32 = (y << 16) | (yFrac & 0xFFFF);
-                y32 += ((int) (short) velY) << 8;
-                y = y32 >> 16;
-                yFrac = y32 & 0xFFFF;
-
-                if (!isOnScreen(128)) {
-                    // ROM ObjPlatformCollapse_CreateFragments clears the respawn
-                    // table bit before the falling parent reaches loc_20620
-                    // (sonic3k.asm:45435-45438). Route the final parent delete
-                    // through the respawnable/off-screen path so S3K's permanent
-                    // destroy latch does not suppress a later layout respawn.
-                    setDestroyedByOffscreen();
-                }
+                releasePending = false;
+                releaseSolidPassExposed = false;
+                advanceFallingParent();
             }
+        }
+    }
+
+    private void advanceFallingParent() {
+        // Post-fragment: parent falls with gravity, destroy when offscreen.
+        // When the release is finalized at the start of this update, run the
+        // first loc_20620 step immediately so keeping releasePending live for
+        // both player callbacks does not delay the parent by one frame.
+        velY += GRAVITY;
+        int y32 = (y << 16) | (yFrac & 0xFFFF);
+        y32 += ((int) (short) velY) << 8;
+        y = y32 >> 16;
+        yFrac = y32 & 0xFFFF;
+
+        if (!isOnScreen(128)) {
+            // ROM ObjPlatformCollapse_CreateFragments clears the respawn table
+            // bit before the falling parent reaches loc_20620
+            // (sonic3k.asm:45435-45438).
+            setDestroyedByOffscreen();
         }
     }
 
