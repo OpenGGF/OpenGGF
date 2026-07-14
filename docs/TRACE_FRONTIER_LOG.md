@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S3K post-Move crouch animation-owner milestone
+
+Branch `feature/ai-trace-animation-verification`, after the HCZ wind-tunnel
+landing milestone. HCZ's six Duck mismatches all occurred while a live object
+owner held `move_lock`: the engine returned before resolving any ground
+animation, while retail S3K gates `Sonic_Move` on `move_lock` and then runs
+`SonicKnux_Roll` separately. When Player 1 holds Down below the `$100` roll
+threshold, that later routine writes Duck `$08` even though the movement
+routine was skipped. The shared profile now permits that write through the
+existing S3K `movingCrouchThreshold` rule for a non-CPU player. CPU movement
+state remains excluded because it is not the `Ctrl_2_logical` byte consumed by
+`Tails_Roll`. No zone, route, frame, trace hydration, or tolerance condition
+was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 22434-22435,
+23223-23240, 27796-27797, and 28458-28475.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestScriptedVelocityAnimationProfile` passed, including focused S3K player,
+  S2 preservation, and S3K CPU-sidekick ownership regressions.
+- HCZ complete-run advances from frame 12727 / 9 grouped animation errors to
+  frame 12975 / 3; all six `move_lock` Duck mismatches are removed.
+- The full animation sweep reports 58 routes / 18 expected failures. Every
+  previously green S1/S2 route remains green, AIZ remains at frame 2980 / 78,
+  and the other expected S3K failures retain their prior status.
+- The full physics sweep reports 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
 ### 2026-07-14 -- HCZ wind-tunnel landing animation-owner milestone
 
 Branch `feature/ai-trace-animation-verification`, after the S3K

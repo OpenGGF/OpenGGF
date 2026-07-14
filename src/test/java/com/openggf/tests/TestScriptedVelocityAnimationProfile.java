@@ -141,6 +141,50 @@ public class TestScriptedVelocityAnimationProfile {
     }
 
     @Test
+    void s3kRollCheckPublishesDuckWhileMoveLockIsActive() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.useGameRules(GameRules.SONIC_3K);
+        sprite.setAnimationId(profile.getWalkAnimId());
+        sprite.setMoveLockTimer(22);
+        sprite.setCrouching(true);
+        sprite.getAnimationManager().suppressGroundMovementAnimationForFrame();
+
+        Integer animId = profile.resolveAnimationId(sprite, 0, 32);
+
+        assertEquals(profile.getDuckAnimId(), animId.intValue(),
+                "SonicKnux_Roll runs after the move_lock-gated Sonic_Move routine");
+    }
+
+    @Test
+    void s2MoveLockStillPreservesThePublishedAnimation() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.useGameRules(GameRules.SONIC_2);
+        sprite.setAnimationId(profile.getWalkAnimId());
+        sprite.setMoveLockTimer(22);
+        sprite.setCrouching(true);
+        sprite.getAnimationManager().suppressGroundMovementAnimationForFrame();
+
+        assertNull(profile.resolveAnimationId(sprite, 0, 32),
+                "S2 has no post-Move low-speed crouch write that bypasses move_lock");
+    }
+
+    @Test
+    void s3kCpuCrouchStateDoesNotSubstituteForCtrl2LogicalDuckWrite() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.useGameRules(GameRules.SONIC_3K);
+        sprite.setCpuControlled(true);
+        sprite.setAnimationId(profile.getWalkAnimId());
+        sprite.setMoveLockTimer(22);
+        sprite.setCrouching(true);
+
+        assertNull(profile.resolveAnimationId(sprite, 0, 32),
+                "CPU movement state is not the native Ctrl_2_logical byte consumed by Tails_Roll");
+    }
+
+    @Test
     public void preservesObjectAnimationForAirborneExternalReleaseWithRollingStatus() {
         ScriptedVelocityAnimationProfile profile = createProfile();
         TestSprite sprite = new TestSprite();

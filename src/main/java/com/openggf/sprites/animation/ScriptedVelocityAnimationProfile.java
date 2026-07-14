@@ -155,9 +155,16 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         }
         // ROM: when move_lock > 0, Sonic_Move doesn't run and doesn't overwrite obAnim.
         // This lets externally-set animations (e.g., bubble-breathing id_GetAir/id_Bubble)
-        // persist for the duration of the lock. Without this, resolveAnimationId would
-        // immediately override the animation with idle/walk based on current state.
-        if (sprite.getMoveLockTimer() > 0) {
+        // persist for the duration of the lock. S3K is the exception for Duck:
+        // SonicKnux_Roll/Tails_Roll runs after the move_lock-gated Move routine and
+        // writes anim=$08 independently when Down is held below the $100 roll
+        // threshold (sonic3k.asm:22434-22435,23223-23240,27796-27797,28458-28475).
+        boolean rollCrouchWriteAfterMoveLock = !sprite.isCpuControlled()
+                && sprite.getCrouching()
+                && sprite.getGameRules() != null
+                && sprite.getGameRules().playerMovement() != null
+                && sprite.getGameRules().playerMovement().movingCrouchThreshold() > 0;
+        if (sprite.getMoveLockTimer() > 0 && !rollCrouchWriteAfterMoveLock) {
             return null;
         }
         // The last locktime tick reaches Sonic_Move while still non-zero, so
@@ -168,7 +175,8 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // 1405-1434; S2 s2.asm:36423-36429,37458-37479; S3K
         // sonic3k.asm:21619-21623,23909-23948).
         if (sprite.getAnimationManager() != null
-                && sprite.getAnimationManager().isGroundMovementAnimationSuppressed()) {
+                && sprite.getAnimationManager().isGroundMovementAnimationSuppressed()
+                && !rollCrouchWriteAfterMoveLock) {
             return null;
         }
         // ROM S2 Obj01_MdNormal_Checks (s2.asm:36444-36468): while the
