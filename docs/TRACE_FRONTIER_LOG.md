@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- AIZ hollow-tree adjacent animation-word milestone
+
+Branch `feature/ai-trace-animation-verification`, after the stationary
+crouch-release milestone. At the AIZ1 hollow-tree release, retail executes
+`move.w #1,anim(a1)`. Because the 68000 stores that word big-endian across the
+adjacent `anim` and `prev_anim` bytes, the visible result is `anim=Walk ($00)`
+and `prev_anim=Run ($01)`. The port had interpreted the word as the engine's
+distinct Run animation ID. The hollow-tree release now publishes both native
+bytes, restoring the release animation and the following Walk/run script
+restart cadence. No zone, route, frame, trace hydration, or tolerance
+condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 43698-43725
+(`AIZTree_FallOff`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestAizHollowTreeObjectInstance` passes 3/3, including assertions for both
+  halves of the adjacent animation word.
+- AIZ complete-run advances from frame 5470 / 66 grouped animation errors to
+  Act 2 frame 7443 / 64. The four raw Run mismatches and the following
+  24-frame slope-bank cadence group are removed.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  HCZ and every previously green route retain their status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
 ### 2026-07-14 -- S3K stationary crouch-release animation milestone
 
 Branch `feature/ai-trace-animation-verification`, after HCZ animation

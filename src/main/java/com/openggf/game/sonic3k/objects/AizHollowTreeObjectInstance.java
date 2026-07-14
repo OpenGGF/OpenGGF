@@ -297,7 +297,10 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
         }
         player.setRolling(false);
         player.applyStandingRadii(false);
-        player.setAnimationId(Sonic3kAnimationIds.RUN);
+        // move.w #1,anim writes the adjacent big-endian bytes anim=Walk and
+        // prev_anim=Run; it does not select the engine's Run animation id.
+        player.setAnimationId(Sonic3kAnimationIds.WALK);
+        player.publishRunAsPreviousAnimation();
         player.setOnObject(false);
         player.setLatchedSolidObjectId(0);
         player.setFlipsRemaining(0);
