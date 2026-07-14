@@ -1318,6 +1318,16 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void mtzCogTeethSuppressNativeObjectEdgeBalance() {
+        CogObjectInstance cog = new CogObjectInstance(
+                new ObjectSpawn(0x0100, 0x0100, Sonic2ObjectIds.COG, 0x00, 0, false, 0),
+                "Cog");
+
+        assertTrue(cog.suppressesObjectEdgeBalance(),
+                "Obj70 copies status.npc.no_balancing to every cog tooth");
+    }
+
+    @Test
     void mtzCogFirstMainExecutionRotatesOnCurrentRomLowByteZero() {
         LevelManager levelManager = mock(LevelManager.class);
         CogObjectInstance cog = new CogObjectInstance(

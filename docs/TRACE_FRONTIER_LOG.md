@@ -1,5 +1,42 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S2 active-charge landing and exact-zero animation milestone
+
+MTZ3's remaining mismatches came from three independent native state owners.
+When opposite-direction braking subtracts exactly to zero, `MoveLeft` returns to
+the enclosing standing tail instead of entering the Stop branch; the engine now
+clears its semantic skid latch so that tail can publish Wait or Balance. When a
+CPU Panic spindash lands, the live Spindash animation together with S2's aliased
+`spindash_flag`/`pinball_mode` rule suppresses only the landing Walk write. This
+deliberately does not treat the bare Obj84 spindash mirror as a landing-wide
+pinball predicate: CNZ2's known post-despawn mirror can remain set after the
+native charge owner is gone. Finally, Obj70 exposes the `no_balancing` status
+that its initializer copies to every cog tooth
+(`docs/s2disasm/s2.asm:36880-36999,40464-40530,41013-41037,54607-54783`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 292 -> 286 grouped errors
+Green: 11 -> 12 (newly MTZ3)
+ARZ2: 14                     CNZ2: 247
+MCZ2: 3                      MTZ2: 2
+OOZ1: 2                      OOZ2: 11
+WFZ: 7
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- nine S3K animation results exactly retain milestone `8b53a74f8`'s known
+  counts, standalone AIZ retains its input-alignment failure, and AIZ
+  complete-run improves from 259 to 257 grouped errors;
+- the full 58-method cross-game physics sweep retains 42 passes / 16 existing
+  failures, with MTZ3 still physics-green and no new failure;
+- the focused Sonic 2 object and movement suites pass 72 + 132 tests;
+- the ten-test comparison-only invariant guard and hydration-default guard
+  remain green.
+
 ### 2026-07-14 -- S2 exact-edge push and deep-wait animation milestone
 
 HTZ2's remaining animation cluster came from live solid state that the engine

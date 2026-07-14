@@ -2231,6 +2231,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					gSpeed -= runDecel;
 					if (gSpeed < 0) gSpeed = (short) -128;
 					directionalBrakeReachedZero = gSpeed == 0;
+					if (directionalBrakeReachedZero) {
+						// MoveLeft has returned to the enclosing standing tail,
+						// which writes Wait/Balance after the Stop threshold test.
+						// The engine's skid flag represents that threshold branch,
+						// so it must not outlive an exact-zero deceleration.
+						sprite.setSkidding(false);
+					}
 					if (shouldTriggerGroundSkid(gSpeed, false)) {
 						sprite.setDirection(Direction.RIGHT);
 						handleSkid();
@@ -3256,7 +3263,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setLookDelayCounter((short) 0);
 	}
 
-	private static void setWalkAnimationAfterRollingLanding(AbstractPlayableSprite sprite) {
+	private void setWalkAnimationAfterRollingLanding(AbstractPlayableSprite sprite) {
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		if (movementRules != null
+				&& movementRules.rollingJumpPinballGateRequiresSpindashFlag()
+				&& sprite.getSpindash()
+				&& sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile velocityProfile
+				&& sprite.getAnimationId() == velocityProfile.getSpindashAnimId()) {
+			// S2 aliases pinball_mode to spindash_flag. The engine keeps Obj84's
+			// forced-roll guard separate, but an actively charging Spindash animation
+			// still proves that the native byte is live, so ResetOnFloor skips Walk.
+			return;
+		}
 		int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
 		if (walkAnimationId >= 0) {
 			sprite.setAnimationId(walkAnimationId);

@@ -1275,6 +1275,7 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setAir(false);
                 mockSprite.setRolling(false);
                 mockSprite.setOnObject(false);
+                mockSprite.setSkidding(true);
                 setInputState(true, false, false, false, false);
 
                 Sensor left = new Sensor(mockSprite, Direction.DOWN, (byte) -9, (byte) 19, true) {
@@ -1298,6 +1299,8 @@ public class TestPlayableSpriteMovement {
                 groundMove.invoke(manager);
                 assertEquals(0, mockSprite.getGSpeed(),
                                 "S1 MoveLeft must preserve the exact positive-deceleration zero result");
+                assertFalse(mockSprite.getSkidding(),
+                                "the exact-zero path reaches Move's Wait/Balance tail, not the Stop branch");
 
                 Method computeBalance = PlayableSpriteMovement.class
                                 .getDeclaredMethod("computeCurrentFrameBalancing");
@@ -3020,6 +3023,30 @@ public class TestPlayableSpriteMovement {
                                 "ROM Tails_ResetOnFloor never clears pinball_mode (bne.s *_Part3 skips the roll-clear block; s2.asm:40625-40626)");
                 assertEquals(2, mockSprite.getAnimationId(),
                                 "pinball_mode skips Sonic_ResetOnFloor's Walk write");
+        }
+
+        @Test
+        public void testS2LandingPreservesActiveSpindashAnimationThroughNativeAlias() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_2);
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setWalkAnimId(0)
+                                .setSpindashAnimId(9));
+                mockSprite.setAnimationId(9);
+                mockSprite.setSpindash(true);
+                mockSprite.setPinballMode(false);
+                mockSprite.setRolling(false);
+                mockSprite.setAir(true);
+                mockSprite.setXSpeed((short) 0x0200);
+                mockSprite.setYSpeed((short) 0x0200);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "calculateLanding", AbstractPlayableSprite.class);
+                method.setAccessible(true);
+                method.invoke(manager, mockSprite);
+
+                assertFalse(mockSprite.getAir());
+                assertEquals(9, mockSprite.getAnimationId(),
+                                "S2 ResetOnFloor sees the live spindash_flag/pinball_mode byte and skips Walk");
         }
 
         @Test
