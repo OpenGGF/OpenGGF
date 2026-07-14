@@ -80,6 +80,19 @@ public class TestScriptedVelocityAnimationProfile {
     }
 
     @Test
+    public void s3kAirborneSlidePreservesTerrainPublishedAnimationWhileRolling() {
+        ScriptedVelocityAnimationProfile profile = createProfile()
+                .setAirborneSlidePreservesPublishedAnimation(true);
+        TestSprite sprite = new TestSprite();
+        sprite.setAnimationId(profile.getSlideAnimId());
+        sprite.setSliding(true);
+        sprite.setRolling(true);
+        sprite.setAir(true);
+
+        assertNull(profile.resolveAnimationId(sprite, 0, 32));
+    }
+
+    @Test
     public void preservesSlideAnimationWhenTerrainDetachSetsAirAfterSlideDispatch() {
         ScriptedVelocityAnimationProfile profile = createProfile();
         TestSprite sprite = new TestSprite();
@@ -196,6 +209,32 @@ public class TestScriptedVelocityAnimationProfile {
 
         assertNull(profile.resolveAnimationId(sprite, 0, 32),
                 "no-input Sonic_Move does not replace an explicit animation while inertia remains non-zero");
+    }
+
+    @Test
+    void releasedDuckRemainsPublishedOnProfilesWithoutEarlyClear() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setAnimationId(profile.getDuckAnimId());
+        sprite.setCrouching(false);
+        sprite.setMovementInputActive(false);
+        sprite.setGSpeed((short) 0x0100);
+
+        assertNull(profile.resolveAnimationId(sprite, 0, 32),
+                "the shared no-input tail preserves Duck unless the character profile opts into an early clear");
+    }
+
+    @Test
+    void s3kReleasedDuckPublishesWalkBeforeNoInputTail() {
+        ScriptedVelocityAnimationProfile profile = createProfile()
+                .setDuckReleasePublishesWalk(true);
+        TestSprite sprite = new TestSprite();
+        sprite.setAnimationId(profile.getDuckAnimId());
+        sprite.setCrouching(false);
+        sprite.setMovementInputActive(false);
+        sprite.setGSpeed((short) 0x0100);
+
+        assertEquals(profile.getWalkAnimId(), profile.resolveAnimationId(sprite, 0, 32).intValue());
     }
 
     @Test

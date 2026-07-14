@@ -19,6 +19,15 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     private int rollAnimId;
     private int roll2AnimId = -1;
     private int pushAnimId = -1;
+    // Some character-specific $FF Walk handlers select the push script from
+    // Status_Push without replacing the public raw animation byte.
+    private boolean pushUsesWalkSpecialHandler;
+    // S3K's Player_ChkWalk clears Duck before its no-input preservation tail;
+    // earlier movement routines retain the previously published byte there.
+    private boolean duckReleasePublishesWalk;
+    // S3K slide terrain may publish its final airborne animation after the
+    // playable routine while Status_Roll is still set for that frame.
+    private boolean airborneSlidePreservesPublishedAnimation;
     private int duckAnimId = -1;
     private int lookUpAnimId = -1;
     private int spindashAnimId = -1;
@@ -79,6 +88,9 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     public ScriptedVelocityAnimationProfile setRoll2AnimId(AnimationId id) { return setRoll2AnimId(id.id()); }
     public ScriptedVelocityAnimationProfile setPushAnimId(int pushAnimId) { this.pushAnimId = pushAnimId; return this; }
     public ScriptedVelocityAnimationProfile setPushAnimId(AnimationId id) { return setPushAnimId(id.id()); }
+    public ScriptedVelocityAnimationProfile setPushUsesWalkSpecialHandler(boolean value) { this.pushUsesWalkSpecialHandler = value; return this; }
+    public ScriptedVelocityAnimationProfile setDuckReleasePublishesWalk(boolean value) { this.duckReleasePublishesWalk = value; return this; }
+    public ScriptedVelocityAnimationProfile setAirborneSlidePreservesPublishedAnimation(boolean value) { this.airborneSlidePreservesPublishedAnimation = value; return this; }
     public ScriptedVelocityAnimationProfile setDuckAnimId(int duckAnimId) { this.duckAnimId = duckAnimId; return this; }
     public ScriptedVelocityAnimationProfile setDuckAnimId(AnimationId id) { return setDuckAnimId(id.id()); }
     public ScriptedVelocityAnimationProfile setLookUpAnimId(int lookUpAnimId) { this.lookUpAnimId = lookUpAnimId; return this; }
@@ -249,8 +261,14 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             // but set flip_angle + an object-written walk/tumble anim, s3.asm
             // sub_31E96). Fall through to the object-anim / walk-tumble path so the
             // fan's frames persist instead of snapping back to the ball.
-            if (sprite.isSliding() && !sprite.getRolling()
-                    && !sprite.isJumping() && !sprite.getRollingJump()) {
+            if (sprite.isSliding() && (airborneSlidePreservesPublishedAnimation
+                    || !sprite.getRolling()
+                    || (sprite.isJumping() && sprite.getRollingJump()))) {
+                // Slide terrain runs after the playable slot. If terrain
+                // collision sets InAir this frame, its explicit slide/tumble
+                // anim byte survives even when Status_Roll is still set; the
+                // post-player slide handler clears the state for next frame.
+                // S3K sub_714E/sub_717C use this ordering.
                 return null;
             }
             if (sprite.getRolling() && sprite.getFlipAngle() == 0) {
@@ -378,6 +396,14 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
                 : sprite.getGSpeed();
         int speed = Math.abs(animSpeed);
 
+        // Player_ChkWalk clears the crouch pose as soon as Down is released,
+        // before the no-input/non-zero-inertia path leaves other animation
+        // bytes untouched (sonic3k.asm:23247-23265 and Tails equivalent).
+        if (duckReleasePublishesWalk && !sprite.getCrouching() && duckAnimId >= 0
+                && sprite.getAnimationId() == duckAnimId) {
+            return walkAnimId;
+        }
+
         // With neither direction held, Move reaches ResetScr without writing
         // anim while inertia remains non-zero. Preserve the byte owned by the
         // preceding routine (normally Walk, but it can be Stop, WaterSlide, or
@@ -475,6 +501,11 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     public int getPushAnimId() {
         return pushAnimId;
     }
+
+    public boolean isPushUsesWalkSpecialHandler() {
+        return pushUsesWalkSpecialHandler;
+    }
+
 
     public int getDuckAnimId() {
         return duckAnimId;
@@ -596,6 +627,9 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         copy.rollAnimId = this.rollAnimId;
         copy.roll2AnimId = this.roll2AnimId;
         copy.pushAnimId = this.pushAnimId;
+        copy.pushUsesWalkSpecialHandler = this.pushUsesWalkSpecialHandler;
+        copy.duckReleasePublishesWalk = this.duckReleasePublishesWalk;
+        copy.airborneSlidePreservesPublishedAnimation = this.airborneSlidePreservesPublishedAnimation;
         copy.duckAnimId = this.duckAnimId;
         copy.lookUpAnimId = this.lookUpAnimId;
         copy.spindashAnimId = this.spindashAnimId;

@@ -109,6 +109,12 @@ public class Sonic3kPlayerArt {
                 .setRollAnimId(Sonic3kAnimationIds.ROLL)
                 .setRoll2AnimId(Sonic3kAnimationIds.ROLL2)
                 .setPushAnimId(Sonic3kAnimationIds.PUSH)
+                // Animate_Sonic's Walk $FF handler selects AniSonic04 when
+                // Status_Push is set; it does not write raw anim=Push
+                // (sonic3k.asm:24819-24836,24913-24930).
+                .setPushUsesWalkSpecialHandler(true)
+                .setDuckReleasePublishesWalk(true)
+                .setAirborneSlidePreservesPublishedAnimation(true)
                 .setDuckAnimId(Sonic3kAnimationIds.DUCK)
                 .setLookUpAnimId(Sonic3kAnimationIds.LOOK_UP)
                 .setSpindashAnimId(Sonic3kAnimationIds.SPINDASH)
@@ -184,6 +190,12 @@ public class Sonic3kPlayerArt {
                 .setRollAnimId(Sonic3kAnimationIds.ROLL)
                 .setRoll2AnimId(Sonic3kAnimationIds.ROLL2)
                 .setPushAnimId(Sonic3kAnimationIds.PUSH)
+                // Animate_Tails' Walk $FF handler selects AniTails04 when
+                // Status_Push is set; it does not write raw anim=Push
+                // (sonic3k.asm:29420-29445,29540-29557).
+                .setPushUsesWalkSpecialHandler(true)
+                .setDuckReleasePublishesWalk(true)
+                .setAirborneSlidePreservesPublishedAnimation(true)
                 .setDuckAnimId(Sonic3kAnimationIds.DUCK)
                 .setLookUpAnimId(Sonic3kAnimationIds.LOOK_UP)
                 .setSpindashAnimId(Sonic3kAnimationIds.SPINDASH)

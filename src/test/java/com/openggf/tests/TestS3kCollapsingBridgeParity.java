@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -69,6 +70,17 @@ class TestS3kCollapsingBridgeParity {
                 "The rider that triggered the collapse should remain supported until the release wave reaches them");
     }
 
+    @Test
+    void collapseWaveRelease_publishesNativePreviousAnimationSentinel() throws Exception {
+        CollapsingBridgeObjectInstance bridge = newMgzBridge(0x00);
+        rider.getAnimationManager().publishPreviousAnimationId(2);
+
+        invokeReleaseCollapseRider(bridge, rider);
+
+        assertEquals(1, rider.getAnimationManager().captureRewindState().lastAnimationId(),
+                "Check_CollapsePlayerRelease writes prev_anim=1");
+    }
+
     private static CollapsingBridgeObjectInstance newMgzBridge(int subtype) throws Exception {
         CollapsingBridgeObjectInstance bridge = new CollapsingBridgeObjectInstance(
                 new ObjectSpawn(0, 0, 0x0F, subtype, 0x00, false, 0));
@@ -84,5 +96,14 @@ class TestS3kCollapsingBridgeParity {
                 com.openggf.sprites.playable.AbstractPlayableSprite.class);
         performCollapse.setAccessible(true);
         performCollapse.invoke(bridge, rider);
+    }
+
+    private static void invokeReleaseCollapseRider(CollapsingBridgeObjectInstance bridge, Sonic rider)
+            throws Exception {
+        Method release = CollapsingBridgeObjectInstance.class.getDeclaredMethod(
+                "releaseCollapseRider",
+                com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        release.setAccessible(true);
+        release.invoke(bridge, rider);
     }
 }

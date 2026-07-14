@@ -402,6 +402,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 exitRetireDispatchesInitialized = true;
             }
             if (carriedResultsRenderRetireDispatches > 0) {
+                onAdditionalChildRetireDispatch(carriedResultsRenderRetireDispatches);
                 carriedResultsRenderRetireDispatches--;
                 return;
             }
@@ -430,6 +431,14 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      */
     protected int additionalChildRetireDispatches() {
         return 0;
+    }
+
+    /**
+     * Hook for an event-owned results parent whose retained child slots have
+     * dispatch-visible work before the parent's final exit callback.
+     */
+    protected void onAdditionalChildRetireDispatch(int dispatchesRemaining) {
+        // Default results parents have no retained slot work.
     }
 
     @Override
@@ -620,6 +629,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         boolean isAct2OrSpecial = (act != 0) || (zone == 0x0A) || (zone == 0x16);
 
         services().gameState().setEndOfLevelActive(false);
+        // Obj_EndSignControlAwaitStart is a separate retained owner that runs
+        // later in this object pass once _unkFAA8 clears. Route the handoff
+        // through the transition bridge so only an armed native event consumes
+        // it; no zone or trace identity is consulted here.
+        S3kTransitionWriteSupport.restorePendingPostResultsPlayerControl(services());
 
         if (isAct2OrSpecial || hasSeamlessTransition) {
             // ROM loc_2DCF8 sets End_of_level_flag directly for Act 2/Sky

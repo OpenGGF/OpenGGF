@@ -193,10 +193,8 @@ public class PlayableSpriteAnimation {
                 // Animate_Sonic/Tails stores the raw anim byte into prev_anim
                 // even when the movement resolver is intentionally null (for
                 // example an object-landing Walk write on an airborne-start
-                // frame). S1/S2 expose push inside that same Walk handler; S3K
-                // owns a distinct raw Push byte and keeps the resolver tracker
-                // authoritative. Keep the walk-special tracker in step with
-                // the native comparison without collapsing S3K's raw state.
+                // frame). Keep the walk-special tracker in step with the
+                // native comparison without collapsing the raw state.
                 PlayerAnimationRules rules = playerAnimationRulesOrNull();
                 if (lastAnimationId >= 0
                         && rules != null
@@ -504,31 +502,27 @@ public class PlayableSpriteAnimation {
                     sprite.setAnimationFrameIndex(0);
                     return true;
                 }
-                // ROM ACCURACY: Check if the profile wants the CURRENT animation to continue.
-                // In the original game, $FD only sets 'anim' but not 'prev_anim'. If the
-                // movement code immediately sets 'anim' back to the current animation,
-                // the comparison 'anim == prev_anim' passes and no reset occurs.
-                // This allows animations like skid to HOLD on the last frame while the
-                // triggering condition (skidding) persists, rather than switching and
-                // then immediately switching back with a reset.
+                // $FD executes after the movement routine in the same player
+                // slot, so it always publishes the target raw anim byte even
+                // if braking refreshed Stop earlier in that slot. Native code
+                // does not update prev_anim, anim_frame, or the skid condition
+                // here: a continuing brake writes Stop again next frame and
+                // resumes at this same $FD command instead of restarting it.
                 SpriteAnimationProfile profile = sprite.getAnimationProfile();
-                if (profile != null) {
-                    boolean currentSkidAnimation = profile instanceof ScriptedVelocityAnimationProfile velocityProfile
-                            && velocityProfile.getSkidAnimId() == sprite.getAnimationId();
-                    boolean skidRefreshed = sprite.getMovementManager() instanceof PlayableSpriteMovement movement
-                            && movement.isSkidAnimationRefreshedThisFrame();
-                    if (currentSkidAnimation && !skidRefreshed) {
-                        sprite.setSkidding(false);
-                    }
-                    Integer desired = profile.resolveAnimationId(sprite, 0,
-                            sprite.getAnimationSet() != null ? sprite.getAnimationSet().getScriptCount() : 0);
-                    if (desired != null && desired == sprite.getAnimationId()) {
-                        // Profile wants current animation - HOLD on last frame instead of switching
-                        sprite.setAnimationFrameIndex(script.frames().size() - 1);
-                        return true;
-                    }
-                }
+                boolean switchingFromSkid = profile instanceof ScriptedVelocityAnimationProfile velocityProfile
+                        && velocityProfile.getSkidAnimId() == sprite.getAnimationId();
+                boolean skidRefreshed = switchingFromSkid
+                        && sprite.getMovementManager() instanceof PlayableSpriteMovement movement
+                        && movement.isSkidAnimationRefreshedThisFrame();
                 sprite.setAnimationId(nextAnimId);
+                if (skidRefreshed) {
+                    return false;
+                }
+                if (switchingFromSkid) {
+                    // Engine-only latch: once braking no longer selects Stop,
+                    // the native raw-animation switch ends the skid state.
+                    sprite.setSkidding(false);
+                }
                 resetScriptState();
                 return false;
             }
@@ -573,7 +567,9 @@ public class PlayableSpriteAnimation {
 
     private boolean pushUsesWalkSpecialHandler() {
         PlayerAnimationRules rules = playerAnimationRulesOrNull();
-        return rules != null && rules.pushUsesWalkSpecialHandler();
+        ScriptedVelocityAnimationProfile profile = resolveVelocityProfile();
+        return (rules != null && rules.pushUsesWalkSpecialHandler())
+                || (profile != null && profile.isPushUsesWalkSpecialHandler());
     }
 
     private int resolveRunThreshold(ScriptedVelocityAnimationProfile profile) {

@@ -1123,7 +1123,8 @@ final class ObjectSolidContactController {
         preContactAnimationId = player.getAnimationId();
 
         PreContactState preContact = new PreContactState(
-                preContactXSpeed, preContactYSpeed, preContactRolling, player.getAir(), preContactAnimationId);
+                preContactXSpeed, preContactYSpeed, preContactRolling, player.getAir(),
+                preContactAnimationId, currentPushingState(player));
         PlayerStandingState previousStanding =
                 objectManager.services().solidExecutionRegistry().previousStanding(instance, player);
         boolean outerCheckpointPushingLastFrame = checkpointPushingLastFrame;

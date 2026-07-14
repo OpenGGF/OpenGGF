@@ -951,6 +951,10 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         collapseWaveRiders.remove(player);
         player.setAir(true);
         player.setOnObject(false);
+        // Check_CollapsePlayerRelease writes prev_anim=1 after clearing the
+        // standing bits (sonic3k.asm:45349-45383). This intentionally restarts
+        // an unchanged Roll animation on the following player slot.
+        player.getAnimationManager().publishPreviousAnimationId(1);
         try {
             if (services().objectManager() != null) {
                 services().objectManager().clearRidingObject(player);

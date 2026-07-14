@@ -1055,6 +1055,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public void restorePendingPostResultsPlayerControl() {
+        if (hczPendingPostTransitionCutscene && hczEvents != null) {
+            hczEvents.restorePostResultsPlayerControl();
+        }
+    }
+
+    @Override
     public void requestMgzPostTransitionRelease() {
         this.mgzPendingPostTransitionRelease = true;
     }

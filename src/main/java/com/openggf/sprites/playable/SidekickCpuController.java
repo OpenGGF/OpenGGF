@@ -97,6 +97,9 @@ public class SidekickCpuController {
      */
     private static final int ROM_DELETED_INTERACT_SLOT_ID = 0x00;
     private final int flyAnimId;
+    private final int swimAnimId;
+    private final int swimAscendAnimId;
+    private final int swimTiredAnimId;
     private final int duckAnimId;
     private static final int INPUT_START = 0x20;
     private static final int DIRECTIONAL_INPUT_MASK = AbstractPlayableSprite.INPUT_UP
@@ -324,6 +327,9 @@ public class SidekickCpuController {
         }
         this.respawnStrategy = createDefaultRespawnStrategy();
         this.flyAnimId = sidekick.resolveAnimationId(CanonicalAnimation.FLY);
+        this.swimAnimId = sidekick.resolveAnimationId(CanonicalAnimation.TAILS_SWIM);
+        this.swimAscendAnimId = sidekick.resolveAnimationId(CanonicalAnimation.TAILS_SWIM_ASCEND);
+        this.swimTiredAnimId = sidekick.resolveAnimationId(CanonicalAnimation.TAILS_SWIM_TIRED);
         this.duckAnimId = sidekick.resolveAnimationId(CanonicalAnimation.DUCK);
     }
 
@@ -3814,8 +3820,11 @@ public class SidekickCpuController {
             flightTimer = 0;
             sidekick.setDoubleJumpProperty((byte) FLIGHT_FUEL);
             sidekick.setAir(true);
-            // Tails_Set_Flying_Animation is normally called here; the engine's
-            // animation is driven by the forced-anim slot already set at entry.
+            // loc_13C3A calls Tails_Set_Flying_Animation every on-screen
+            // recovery tick. That routine selects the underwater $25-$28
+            // family from live Status_Underwater rather than retaining the
+            // entry-time Fly byte (sonic3k.asm:26551-26555,27646-27717).
+            sidekick.setForcedAnimationId(resolveRecoveryFlightAnimation());
         }
 
         // 3. Target = Sonic's 16-frame-delayed position. ROM
@@ -3898,13 +3907,11 @@ public class SidekickCpuController {
             sidekick.setGSpeed((short) 0);
             sidekick.setMoveLockTimer(0);
             sidekick.setForcedAnimationId(-1);
-            if (suppressNextLevelEventNormalMovement) {
-                // loc_13CD2 clears the raw anim byte as part of the routine
-                // 4 -> 6 handoff (sonic3k.asm:26631-26648). Ordinary recovery
-                // reaches the normal movement animator on the following tick;
-                // the level-event marker bridge intentionally suppresses that
-                // first normal movement pulse, so publish the native write here
-                // instead of leaving the previous Fly byte visible.
+            if (usesS3kCatchUpMarker()) {
+                // loc_13CD2 falls through loc_13AF4 and writes raw anim=Walk
+                // during the routine 4 -> 6 handoff itself. The following
+                // normal movement pulse is not the owner of this byte
+                // (sonic3k.asm:26458-26472,26631-26648).
                 sidekick.setAnimationId(0);
             }
             sidekick.setAir(true);
@@ -3937,6 +3944,19 @@ public class SidekickCpuController {
 
         // 7. Otherwise keep object_control locked to keep flight AI active.
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+    }
+
+    private int resolveRecoveryFlightAnimation() {
+        if (!sidekick.isInWater() || swimAnimId < 0) {
+            return flyAnimId;
+        }
+        if ((sidekick.getDoubleJumpProperty() & 0xFF) == 0 && swimTiredAnimId >= 0) {
+            return swimTiredAnimId;
+        }
+        if (sidekick.getYSpeed() < 0 && swimAscendAnimId >= 0) {
+            return swimAscendAnimId;
+        }
+        return swimAnimId;
     }
 
     /**
@@ -4909,12 +4929,16 @@ public class SidekickCpuController {
         sidekick.setDead(false);
         sidekick.setDeathCountdown(0);
         clearRespawnAnimationState();
-        sidekick.setForcedAnimationId(flyAnimId);
+        if (!s3kCatchUpMarker) {
+            sidekick.setForcedAnimationId(flyAnimId);
+        }
         sidekick.setControlLocked(true);
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         // ROM sub_13ECA (sonic3k.asm:26800-26809) only writes x_pos,
         // y_pos, Tails_CPU_routine, object_control, status, and
-        // double_jump_flag - it does NOT touch x_vel/y_vel/ground_vel.
+        // double_jump_flag - it does NOT touch anim, mapping_frame,
+        // x_vel/y_vel/ground_vel. Preserve the displayed animation until
+        // loc_13B50 begins catch-up flight (sonic3k.asm:26478-26511).
         // Trace AIZ F2405 confirms this: ROM applies the marker warp
         // mid-trajectory and the recorded sidekick_x_speed/y_speed/g_speed
         // at F2405 retain the pre-warp values (0xFE07, 0x022D, 0xFD0D).

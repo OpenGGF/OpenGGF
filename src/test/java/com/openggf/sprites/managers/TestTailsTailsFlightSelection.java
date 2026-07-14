@@ -102,6 +102,7 @@ class TestTailsTailsFlightSelection {
         assertEquals(0x1F, profile.getHighSpeedWalkRunAnimId());
         assertEquals(0x700, profile.getHighSpeedWalkRunThreshold());
         assertEquals(1, profile.getHighSpeedSlopeFrameStride());
+        assertTrue(profile.isPushUsesWalkSpecialHandler());
         assertEquals(0xC3, (int) tails.animationSet().getScript(0x1F).frames().get(0));
     }
 }

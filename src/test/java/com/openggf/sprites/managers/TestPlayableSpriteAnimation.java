@@ -89,6 +89,23 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void characterProfileCanKeepPushInsideWalkHandler() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
+        ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile())
+                .setPushUsesWalkSpecialHandler(true);
+        sprite.setAnimationId(0);
+        sprite.setMovementInputActive(true);
+        sprite.setPushing(true);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0, sprite.getAnimationId(),
+                "the character's $FF Walk handler selects push mappings without rewriting raw anim");
+        assertEquals(0, sprite.getMappingFrame(),
+                "the profile-owned handler resolves the configured push script");
+    }
+
+    @Test
     public void heldSpindashPreservesObjectPublishedWalkByte() {
         TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
         ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile()).setSpindashAnimId(9);
@@ -515,6 +532,46 @@ public class TestPlayableSpriteAnimation {
                 "A one-frame $FD script must hold its frame for its delay before switching.");
         assertEquals(0x8E, sprite.getMappingFrame(),
                 "The first update should display the scripted frame, not immediately fall through.");
+    }
+
+    @Test
+    public void skidSwitchPublishesWalkEvenWhenBrakingRefreshedStopThisSlot() throws Exception {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
+        ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile()).setSkidAnimId(0x0D);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0,
+                List.of(7), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(0x0D, new SpriteAnimationScript(0,
+                List.of(0x8F), SpriteAnimationEndAction.SWITCH, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0x0D);
+        sprite.setSkidding(true);
+        sprite.forceAnimationRestart();
+
+        sprite.getAnimationManager().update(0);
+        Field refreshed = PlayableSpriteMovement.class
+                .getDeclaredField("skidAnimationRefreshedThisFrame");
+        refreshed.setAccessible(true);
+        refreshed.setBoolean(sprite.getMovementManager(), true);
+        sprite.getAnimationManager().update(1);
+
+        assertEquals(0, sprite.getAnimationId(),
+                "$FD runs after braking and must publish Walk in the same player slot");
+        assertTrue(sprite.getSkidding(),
+                "continuing braking must preserve the skid condition for the next movement slot");
+        assertEquals(0x0D, sprite.getAnimationManager().captureRewindState().lastAnimationId(),
+                "$FD must leave the native prev_anim byte on Stop");
+        assertEquals(1, sprite.getAnimationFrameIndex(),
+                "$FD must retain the Stop script command position");
+        assertEquals(0x8F, sprite.getMappingFrame(),
+                "$FD changes anim without replacing the mapping already displayed this frame");
+
+        refreshed.setBoolean(sprite.getMovementManager(), false);
+        sprite.getAnimationManager().update(2);
+
+        assertEquals(0, sprite.getAnimationId());
+        assertFalse(sprite.getSkidding(),
+                "the engine skid latch ends once braking no longer refreshes Stop");
     }
 
     @Test

@@ -235,8 +235,6 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
             // Prevent the same held button from re-triggering the normal jump path,
             // which would add the generic jump sound on the release frame.
             player.suppressNextJumpPress();
-        } else {
-            player.setAnimationId(Sonic3kAnimationIds.WALK);
         }
     }
 

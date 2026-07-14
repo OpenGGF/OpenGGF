@@ -400,6 +400,25 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         }
     }
 
+    /**
+     * Retained {@code Obj_EndSignControlAwaitStart}: once the results owner
+     * clears {@code _unkFAA8}, restore both native player slots. The controller
+     * executes after their slots, so this publishes the raw standing byte while
+     * leaving the previous victory mapping visible until the next frame.
+     */
+    public void restorePostResultsPlayerControl() {
+        for (AbstractPlayableSprite player : nativeCarrierParticipants()) {
+            ObjectControlState.none().applyTo(player);
+            player.setAir(false);
+            player.setForcedAnimationId(-1);
+            player.setAnimationId(Sonic3kAnimationIds.WAIT);
+            player.getAnimationManager().publishPreviousAnimationId(
+                    Sonic3kAnimationIds.WAIT.id());
+            player.setAnimationFrameIndex(0);
+            player.setAnimationTick(0);
+        }
+    }
+
     private void updateCutscene() {
         if (carrierMovementPending) {
             carrierMovementPending = false;
@@ -444,6 +463,8 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         player.setAir(true);
         player.setRolling(false);
         player.setSpindash(false);
+        // loc_6A7C4 publishes anim=$0F after the player slot has already run.
+        player.setAnimationId(Sonic3kAnimationIds.FLOAT2);
         player.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2.id());
         // Engine sprites store top-left bounds while the ROM stores x_pos/y_pos.
         // FLOAT2 changes the rendered bounds immediately; preserve the native

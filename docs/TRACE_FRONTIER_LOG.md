@@ -1,5 +1,42 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S3K runtime animation-owner milestone
+
+S3K player and CPU-sidekick animation ownership now follows the native routine
+that publishes each raw animation byte across push handling, crouch release,
+airborne slide release, skid-script `$FD` switches, object capture/release,
+catch-up recovery, and retained end-of-act owners. Solid contacts carry their
+pre-contact push state into the later object slot, while HCZ's boss/results
+handoff restores its native Wait tuple through the retained event owner. No
+zone, route, frame, trace hydration, or comparator tolerance was added.
+
+Authoritative locked-on S3K complete-run animation results before/after this
+milestone:
+
+```text
+AIZ complete: 246 groups at frame 2402 -> 89 groups at frame 2980
+HCZ complete: 660 groups at frame 104 -> 27 groups at frame 819
+```
+
+Regression gate at this milestone:
+
+- all 19 S2 animation routes and all 21 animation-capable S1 traces remain
+  green; the same eight legacy S1 credits traces reject their pre-v7 schema;
+- every previously green S3K animation trace retains its status, and the
+  already-red post-HCZ routes retain their existing first-error frontiers;
+- the full 58-method cross-game physics sweep retains 43 passes / 15 existing
+  failures, with AIZ complete and HCZ complete still green;
+- the 159-test focused object, animation-profile, comparison-only invariant,
+  hydration-default, and rewind-coverage suite passes.
+
+Commands executed from the project root:
+
+```text
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=animation "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=physics "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+mvn -Dmse=off "-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=<focused S3K object/animation tests>,com.openggf.tests.TestTraceReplayInvariantGuard,com.openggf.tests.trace.TestTraceHydrateSwitchDefault,com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.game.rewind.coverage.TestStaticStateRewindCoverageGuard" test
+```
+
 ### 2026-07-14 -- S3K Tails private high-speed animation-tier milestone
 
 S3K Tails' production animation profile now models `Animate_Tails`' private

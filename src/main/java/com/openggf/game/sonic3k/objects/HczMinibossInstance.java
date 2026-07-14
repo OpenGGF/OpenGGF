@@ -1071,6 +1071,9 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         if (firstContact) {
             ObjectControlState.nativeBit7FullControl().applyTo(sprite);
             sprite.setAir(true);
+            // sub_6AA00 writes the public anim byte; forced animation only
+            // represents this object's continuing ownership on later frames.
+            sprite.setAnimationId(Sonic3kAnimationIds.FLOAT2);
             sprite.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2.id());
             sprite.setXSpeed((short) 0);
             sprite.setYSpeed((short) 0);

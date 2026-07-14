@@ -816,6 +816,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
         // ROM: move.b #$18,anim(a2) — animation $18 = tumbling/death sprite pose.
         // In the vortex context this shows the player spinning in the water column.
+        sprite.setAnimationId(Sonic3kAnimationIds.DEATH);
         sprite.setForcedAnimationId(Sonic3kAnimationIds.DEATH.id());
         sprite.setSpindashCounter((short) 0);
         sprite.setXSpeed((short) 0);
@@ -897,6 +898,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         sprite.setAir(true);
         ObjectControlState.none().applyTo(sprite);
         // ROM: move.b #2,anim(a2) — roll animation
+        sprite.setAnimationId(Sonic3kAnimationIds.ROLL);
         sprite.setForcedAnimationId(Sonic3kAnimationIds.ROLL.id());
         sprite.setYSpeed((short) -0x200);
     }

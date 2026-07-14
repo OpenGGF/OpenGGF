@@ -107,6 +107,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
      * (the signpost's spawn is null, so the recreate hook uses a placeholder).
      */
     private int apparentAct;
+    private boolean mainEndingPosePending;
     private boolean sidekickEndingPoseApplied;
     private boolean sidekickEndingPoseCheckArmed;
 
@@ -411,7 +412,11 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
             return;
         }
 
-        applyMainPlayerEndingPose(player);
+        // The engine reaches the landed-to-results boundary one collapsed
+        // owner dispatch before the ROM's routine-6 Set_PlayerEndingPose call.
+        // Preserve that SST entry boundary so the current frame retains both
+        // its raw animation and mapping; routine 8 publishes Victory next frame.
+        mainEndingPosePending = true;
 
         // ROM Obj_EndSignLanded writes only Ctrl_2_locked before this routine;
         // Obj_EndSignResults calls Set_PlayerEndingPose with a1=Player_1 only
@@ -496,6 +501,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     // =========================================================================
 
     private void updateAfter(AbstractPlayableSprite player) {
+        if (mainEndingPosePending) {
+            mainEndingPosePending = false;
+            applyMainPlayerEndingPose(player);
+        }
         applyNativeSidekickEndingPose(player);
         if (isResultsScreenActive()) {
             return;
