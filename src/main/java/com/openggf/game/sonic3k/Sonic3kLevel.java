@@ -2,19 +2,25 @@ package com.openggf.game.sonic3k;
 
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.constants.S3kZoneSet;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.*;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.resources.LevelResourcePlan;
+import com.openggf.level.resources.ModLevelInputLimits;
 import com.openggf.level.resources.ResourceLoader;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
+import com.openggf.mods.code.ModPaletteClaim;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.logging.Logger;
 
 /**
@@ -36,6 +42,7 @@ public class Sonic3kLevel extends AbstractLevel {
     private byte[] primaryCollisionIndexTable = new byte[0];
     private byte[] secondaryCollisionIndexTable = new byte[0];
     private final Integer minXOverride;
+    private final S3kZoneSet objectZoneSet;
     private int fgLayoutWidthBlocks = Sonic3kConstants.MAP_WIDTH;
     private int fgLayoutHeightBlocks = Sonic3kConstants.MAP_HEIGHT;
     private int bgLayoutWidthBlocks = Sonic3kConstants.MAP_WIDTH;
@@ -79,6 +86,7 @@ public class Sonic3kLevel extends AbstractLevel {
         this.rings = rings != null ? rings : Collections.emptyList();
         this.ringSpriteSheet = ringSpriteSheet;
         this.minXOverride = minXOverride;
+        this.objectZoneSet = S3kZoneSet.forZone(zoneIndex);
 
         loadPalettes(rom, characterPaletteAddr, levelPaletteAddr);
         loadPatternsWithPlan(rom, resourcePlan);
@@ -89,6 +97,306 @@ public class Sonic3kLevel extends AbstractLevel {
         loadMap(rom, layoutAddr);
         loadBoundaries(rom, levelBoundariesAddr);
         validateResourceReferences();
+    }
+
+    /** Starts construction from already bounded, validated S3K v2 export payloads. */
+    public static InMemoryBuilder inMemoryBuilder(int zoneIndex,
+                                                   byte[] patterns,
+                                                   byte[] chunks,
+                                                   byte[] blocks) {
+        return new InMemoryBuilder(zoneIndex, patterns, chunks, blocks);
+    }
+
+    private Sonic3kLevel(InMemoryBuilder source) {
+        super(source.zoneIndex);
+        minXOverride = null;
+        source.requireComplete();
+        source.validateResourceReferences();
+        objectZoneSet = source.objectZoneSet;
+
+        decodePatterns(source.patternBytes, null);
+        decodeSolidProfiles(source.solidHeights, source.solidWidths, source.solidAngles);
+        decodeChunks(source.chunkBytes, source.primaryCollisionIndices, source.secondaryCollisionIndices);
+        decodeBlocks(source.blockBytes);
+        decodeInMemoryMap(source.mapWidth, source.mapHeight, source.foregroundMap, source.backgroundMap);
+        palettes = composeInMemoryPalettes(source.characterPalette, source.paletteClaims);
+        objects = source.objectSpawns;
+        rings = source.ringSpawns;
+        ringSpriteSheet = source.ringSpriteSheet;
+        minX = source.minX;
+        maxX = source.maxX;
+        minY = source.minY;
+        maxY = source.maxY;
+
+        primaryCollisionIndexTable = strideCollisionTable(source.primaryCollisionIndices);
+        secondaryCollisionIndexTable = strideCollisionTable(source.secondaryCollisionIndices);
+        validateResourceReferences();
+        publishGraphicsCaches();
+    }
+
+    /** Returns the explicit S3K object pointer-table family for this level. */
+    public S3kZoneSet getObjectZoneSet() {
+        return objectZoneSet;
+    }
+
+    /** Strict builder for the prepared format-v2 S3K level payload. */
+    public static final class InMemoryBuilder {
+        private final int zoneIndex;
+        private final byte[] patternBytes;
+        private final byte[] chunkBytes;
+        private final byte[] blockBytes;
+        private int mapWidth;
+        private int mapHeight;
+        private byte[] foregroundMap;
+        private byte[] backgroundMap;
+        private Palette characterPalette;
+        private List<ModPaletteClaim> paletteClaims;
+        private byte[] solidHeights;
+        private byte[] solidWidths;
+        private byte[] solidAngles;
+        private int[] primaryCollisionIndices;
+        private int[] secondaryCollisionIndices;
+        private int minX;
+        private int maxX;
+        private int minY;
+        private int maxY;
+        private boolean boundariesSet;
+        private S3kZoneSet objectZoneSet;
+        private List<ObjectSpawn> objectSpawns;
+        private List<RingSpawn> ringSpawns;
+        private RingSpriteSheet ringSpriteSheet;
+
+        private InMemoryBuilder(int zoneIndex, byte[] patterns, byte[] chunks, byte[] blocks) {
+            if (zoneIndex < 0) {
+                throw new IllegalArgumentException("Zone index must not be negative");
+            }
+            this.zoneIndex = zoneIndex;
+            patternBytes = exactPreparedRecords(patterns, Pattern.PATTERN_SIZE_IN_ROM,
+                    2048, "pattern");
+            chunkBytes = exactPreparedRecords(chunks, Chunk.CHUNK_SIZE_IN_ROM,
+                    1024, "chunk");
+            blockBytes = exactPreparedRecords(blocks, LevelConstants.BLOCK_SIZE_IN_ROM,
+                    256, "8x8 block");
+        }
+
+        public InMemoryBuilder layout(int width, int height, byte[] foreground, byte[] background) {
+            int cells = checkedMapCells(width, height);
+            requireExactLength(foreground, cells, "Foreground map");
+            if (background != null) {
+                requireExactLength(background, cells, "Background map");
+            }
+            mapWidth = width;
+            mapHeight = height;
+            foregroundMap = foreground.clone();
+            backgroundMap = background == null ? new byte[cells] : background.clone();
+            return this;
+        }
+
+        public InMemoryBuilder characterPalette(Palette palette) {
+            characterPalette = Objects.requireNonNull(palette, "palette");
+            return this;
+        }
+
+        public InMemoryBuilder paletteClaims(List<ModPaletteClaim> claims) {
+            Objects.requireNonNull(claims, "claims");
+            Set<Integer> cells = new HashSet<>();
+            for (ModPaletteClaim claim : claims) {
+                Objects.requireNonNull(claim, "claim");
+                int cell = claim.line() * Palette.PALETTE_SIZE + claim.color();
+                if (!cells.add(cell)) {
+                    throw new IllegalArgumentException("Duplicate creator palette claim for line "
+                            + claim.line() + ", color " + claim.color());
+                }
+            }
+            paletteClaims = List.copyOf(claims);
+            return this;
+        }
+
+        public InMemoryBuilder solidProfiles(byte[] heights, byte[] widths, byte[] angles) {
+            Objects.requireNonNull(heights, "heights");
+            Objects.requireNonNull(widths, "widths");
+            Objects.requireNonNull(angles, "angles");
+            if (heights.length == 0 || heights.length % SolidTile.TILE_SIZE_IN_ROM != 0) {
+                throw new IllegalArgumentException(
+                        "Solid heights require one exact 16-byte record per profile");
+            }
+            if (widths.length != heights.length) {
+                throw new IllegalArgumentException("Solid width and height profile counts must match");
+            }
+            int count = heights.length / SolidTile.TILE_SIZE_IN_ROM;
+            if (count > 256 || angles.length != count) {
+                throw new IllegalArgumentException("Solid angles must match the 1..256 profile count");
+            }
+            solidHeights = heights.clone();
+            solidWidths = widths.clone();
+            solidAngles = angles.clone();
+            return this;
+        }
+
+        public InMemoryBuilder collisionIndices(int[] primary, int[] secondary) {
+            validateUnsigned16(primary, "Primary collision indices");
+            validateUnsigned16(secondary, "Secondary collision indices");
+            primaryCollisionIndices = primary.clone();
+            secondaryCollisionIndices = secondary.clone();
+            return this;
+        }
+
+        public InMemoryBuilder boundaries(int minX, int maxX, int minY, int maxY) {
+            if (minX < 0 || maxX > 0xFFFF || minX > maxX) {
+                throw new IllegalArgumentException(
+                        "Horizontal boundaries must be ordered unsigned 16-bit values");
+            }
+            if (minY < Short.MIN_VALUE || maxY > Short.MAX_VALUE || minY > maxY) {
+                throw new IllegalArgumentException(
+                        "Vertical boundaries must be ordered signed 16-bit values");
+            }
+            this.minX = minX;
+            this.maxX = maxX;
+            this.minY = minY;
+            this.maxY = maxY;
+            boundariesSet = true;
+            return this;
+        }
+
+        public InMemoryBuilder objectZoneSet(S3kZoneSet zoneSet) {
+            objectZoneSet = Objects.requireNonNull(zoneSet, "zoneSet");
+            return this;
+        }
+
+        public InMemoryBuilder spawns(List<ObjectSpawn> objects, List<RingSpawn> rings,
+                                      RingSpriteSheet ringSheet) {
+            Objects.requireNonNull(objects, "objects");
+            Objects.requireNonNull(rings, "rings");
+            ModLevelInputLimits limits = ModLevelInputLimits.production();
+            if (objects.size() > limits.maxLevelObjects()) {
+                throw new IllegalArgumentException("Object count exceeds production mod limit "
+                        + limits.maxLevelObjects());
+            }
+            if (rings.size() > limits.maxLevelRings()) {
+                throw new IllegalArgumentException("Ring count exceeds production mod limit "
+                        + limits.maxLevelRings());
+            }
+            objectSpawns = List.copyOf(objects);
+            ringSpawns = List.copyOf(rings);
+            ringSpriteSheet = Objects.requireNonNull(ringSheet, "ringSheet");
+            return this;
+        }
+
+        public Sonic3kLevel build() {
+            return new Sonic3kLevel(this);
+        }
+
+        private void requireComplete() {
+            if (foregroundMap == null || characterPalette == null || paletteClaims == null
+                    || solidHeights == null || primaryCollisionIndices == null
+                    || !boundariesSet || objectZoneSet == null || objectSpawns == null) {
+                throw new IllegalStateException("In-memory S3K level builder is incomplete");
+            }
+        }
+
+        private void validateResourceReferences() {
+            int patternCount = patternBytes.length / Pattern.PATTERN_SIZE_IN_ROM;
+            int chunkCount = chunkBytes.length / Chunk.CHUNK_SIZE_IN_ROM;
+            int blockCount = blockBytes.length / LevelConstants.BLOCK_SIZE_IN_ROM;
+            for (int offset = 0; offset < chunkBytes.length; offset += Short.BYTES) {
+                int pattern = unsigned16(chunkBytes, offset) & 0x7FF;
+                if (pattern >= patternCount) {
+                    throw new IllegalArgumentException(
+                            "Chunk descriptor references missing pattern " + pattern);
+                }
+            }
+            for (int offset = 0; offset < blockBytes.length; offset += Short.BYTES) {
+                int chunk = unsigned16(blockBytes, offset) & 0x3FF;
+                if (chunk >= chunkCount) {
+                    int block = offset / LevelConstants.BLOCK_SIZE_IN_ROM;
+                    throw new IllegalArgumentException(
+                            "Block " + block + " references missing chunk " + chunk);
+                }
+            }
+            validateCollisionReferences(primaryCollisionIndices, chunkCount,
+                    solidAngles.length, "primary");
+            validateCollisionReferences(secondaryCollisionIndices, chunkCount,
+                    solidAngles.length, "secondary");
+            validateMapReferences(foregroundMap, blockCount, "foreground");
+            validateMapReferences(backgroundMap, blockCount, "background");
+        }
+
+        private static byte[] exactPreparedRecords(byte[] data, int recordSize,
+                                                   int maximum, String label) {
+            Objects.requireNonNull(data, label);
+            if (data.length == 0 || data.length % recordSize != 0) {
+                throw new IllegalArgumentException("S3K v2 " + label
+                        + " data must contain exact " + recordSize + "-byte records");
+            }
+            if (data.length / recordSize > maximum) {
+                throw new IllegalArgumentException("S3K v2 " + label
+                        + " count exceeds " + maximum);
+            }
+            return data.clone();
+        }
+
+        private static int checkedMapCells(int width, int height) {
+            ModLevelInputLimits limits = ModLevelInputLimits.production();
+            if (width <= 0 || width > limits.maxMapWidth()) {
+                throw new IllegalArgumentException("Map width must be in 1.." + limits.maxMapWidth());
+            }
+            if (height <= 0 || height > limits.maxMapHeight()) {
+                throw new IllegalArgumentException("Map height must be in 1.." + limits.maxMapHeight());
+            }
+            long cells = (long) width * height;
+            if (cells > limits.maxMapCells()) {
+                throw new IllegalArgumentException("Map cell count exceeds production mod limit "
+                        + limits.maxMapCells());
+            }
+            return (int) cells;
+        }
+
+        private static void requireExactLength(byte[] data, int expected, String label) {
+            Objects.requireNonNull(data, label);
+            if (data.length != expected) {
+                throw new IllegalArgumentException(label + " must contain exactly "
+                        + expected + " bytes");
+            }
+        }
+
+        private static void validateUnsigned16(int[] values, String label) {
+            Objects.requireNonNull(values, label);
+            for (int value : values) {
+                if (value < 0 || value > 0xFFFF) {
+                    throw new IllegalArgumentException(label
+                            + " contain a value outside unsigned 16-bit range");
+                }
+            }
+        }
+
+        private static void validateCollisionReferences(int[] values, int chunkCount,
+                                                        int solidCount, String label) {
+            if (values.length != chunkCount) {
+                throw new IllegalArgumentException(label
+                        + " collision count must exactly match chunk count " + chunkCount);
+            }
+            for (int value : values) {
+                if (value >= solidCount) {
+                    throw new IllegalArgumentException(label + " collision index " + value
+                            + " exceeds solid profile count " + solidCount);
+                }
+            }
+        }
+
+        private static void validateMapReferences(byte[] values, int blockCount, String label) {
+            for (byte value : values) {
+                int block = Byte.toUnsignedInt(value);
+                if (block >= blockCount) {
+                    throw new IllegalArgumentException(label
+                            + " map references missing block " + block);
+                }
+            }
+        }
+
+        private static int unsigned16(byte[] data, int offset) {
+            return (Byte.toUnsignedInt(data[offset]) << 8)
+                    | Byte.toUnsignedInt(data[offset + 1]);
+        }
     }
 
     // ===== Level interface overrides =====
@@ -159,20 +467,22 @@ public class Sonic3kLevel extends AbstractLevel {
             int alignedLength = (result.length / Pattern.PATTERN_SIZE_IN_ROM) * Pattern.PATTERN_SIZE_IN_ROM;
             result = Arrays.copyOf(result, alignedLength);
         }
-        patternCount = result.length / Pattern.PATTERN_SIZE_IN_ROM;
+        decodePatterns(result, graphicsMan.isGlInitialized() ? graphicsMan : null);
 
+        LOG.info("S3K pattern count: " + patternCount + " (" + result.length + " bytes)");
+    }
+
+    private void decodePatterns(byte[] data, GraphicsManager graphics) {
+        patternCount = data.length / Pattern.PATTERN_SIZE_IN_ROM;
         patterns = new Pattern[patternCount];
         for (int i = 0; i < patternCount; i++) {
             patterns[i] = new Pattern();
-            byte[] subArray = Arrays.copyOfRange(result, i * Pattern.PATTERN_SIZE_IN_ROM,
-                    (i + 1) * Pattern.PATTERN_SIZE_IN_ROM);
-            patterns[i].fromSegaFormat(subArray);
-            if (graphicsMan.isGlInitialized()) {
-                graphicsMan.cachePatternTexture(patterns[i], i);
+            patterns[i].fromSegaFormat(Arrays.copyOfRange(data,
+                    i * Pattern.PATTERN_SIZE_IN_ROM, (i + 1) * Pattern.PATTERN_SIZE_IN_ROM));
+            if (graphics != null) {
+                graphics.cachePatternTexture(patterns[i], i);
             }
         }
-
-        LOG.info("S3K pattern count: " + patternCount + " (" + result.length + " bytes)");
     }
 
     private void loadSolidTiles(Rom rom) throws IOException {
@@ -191,17 +501,25 @@ public class Sonic3kLevel extends AbstractLevel {
         byte[] heightsBuffer = rom.readBytes(heightsAddr, Sonic3kConstants.SOLID_TILE_MAP_SIZE);
         byte[] widthsBuffer = rom.readBytes(widthsAddr, Sonic3kConstants.SOLID_TILE_MAP_SIZE);
 
-        solidTiles = new SolidTile[solidTileCount];
+        byte[] angles = new byte[solidTileCount];
         for (int i = 0; i < solidTileCount; i++) {
-            byte angle = rom.readByte(anglesAddr + i);
-            byte[] heights = Arrays.copyOfRange(heightsBuffer,
-                    i * SolidTile.TILE_SIZE_IN_ROM, (i + 1) * SolidTile.TILE_SIZE_IN_ROM);
-            byte[] widths = Arrays.copyOfRange(widthsBuffer,
-                    i * SolidTile.TILE_SIZE_IN_ROM, (i + 1) * SolidTile.TILE_SIZE_IN_ROM);
-            solidTiles[i] = new SolidTile(i, heights, widths, angle);
+            angles[i] = rom.readByte(anglesAddr + i);
         }
+        decodeSolidProfiles(heightsBuffer, widthsBuffer, angles);
 
         LOG.fine("S3K SolidTiles loaded: " + solidTileCount);
+    }
+
+    private void decodeSolidProfiles(byte[] heights, byte[] widths, byte[] angles) {
+        solidTileCount = angles.length;
+        solidTiles = new SolidTile[solidTileCount];
+        for (int i = 0; i < solidTileCount; i++) {
+            solidTiles[i] = new SolidTile(i,
+                    Arrays.copyOfRange(heights, i * SolidTile.TILE_SIZE_IN_ROM,
+                            (i + 1) * SolidTile.TILE_SIZE_IN_ROM),
+                    Arrays.copyOfRange(widths, i * SolidTile.TILE_SIZE_IN_ROM,
+                            (i + 1) * SolidTile.TILE_SIZE_IN_ROM), angles[i]);
+        }
     }
 
     /**
@@ -242,17 +560,26 @@ public class Sonic3kLevel extends AbstractLevel {
         primaryCollisionIndexTable = Arrays.copyOf(primaryCollision, primaryCollision.length);
         secondaryCollisionIndexTable = Arrays.copyOf(secondaryCollision, secondaryCollision.length);
 
+        int[] primaryIndices = new int[chunkCount];
+        int[] secondaryIndices = new int[chunkCount];
+        for (int i = 0; i < chunkCount; i++) {
+            primaryIndices[i] = readCollisionIndex(primaryCollision, i);
+            secondaryIndices[i] = readCollisionIndex(secondaryCollision, i);
+        }
+        decodeChunks(chunkBuffer, primaryIndices, secondaryIndices);
+
+        LOG.info("S3K chunk count: " + chunkCount + " (" + chunkBuffer.length + " bytes)");
+    }
+
+    private void decodeChunks(byte[] data, int[] primary, int[] secondary) {
+        chunkCount = data.length / Chunk.CHUNK_SIZE_IN_ROM;
         chunks = new Chunk[chunkCount];
         for (int i = 0; i < chunkCount; i++) {
             chunks[i] = new Chunk();
-            byte[] subArray = Arrays.copyOfRange(chunkBuffer, i * Chunk.CHUNK_SIZE_IN_ROM,
-                    (i + 1) * Chunk.CHUNK_SIZE_IN_ROM);
-            int solidIndex = readCollisionIndex(primaryCollision, i);
-            int altSolidIndex = readCollisionIndex(secondaryCollision, i);
-            chunks[i].fromSegaFormat(subArray, solidIndex, altSolidIndex);
+            chunks[i].fromSegaFormat(Arrays.copyOfRange(data,
+                    i * Chunk.CHUNK_SIZE_IN_ROM, (i + 1) * Chunk.CHUNK_SIZE_IN_ROM),
+                    primary[i], secondary[i]);
         }
-
-        LOG.info("S3K chunk count: " + chunkCount + " (" + chunkBuffer.length + " bytes)");
     }
 
     /**
@@ -542,17 +869,20 @@ public class Sonic3kLevel extends AbstractLevel {
         byte[] blockBuffer = loader.loadWithOverlaysAligned(
                 plan.getBlockOps(), 0x10000, LevelConstants.BLOCK_SIZE_IN_ROM);
 
-        blockCount = blockBuffer.length / LevelConstants.BLOCK_SIZE_IN_ROM;
-
-        blocks = new Block[blockCount];
-        for (int i = 0; i < blockCount; i++) {
-            blocks[i] = new Block();
-            byte[] subArray = Arrays.copyOfRange(blockBuffer, i * LevelConstants.BLOCK_SIZE_IN_ROM,
-                    (i + 1) * LevelConstants.BLOCK_SIZE_IN_ROM);
-            blocks[i].fromSegaFormat(subArray);
-        }
+        decodeBlocks(blockBuffer);
 
         LOG.info("S3K block count: " + blockCount + " (" + blockBuffer.length + " bytes)");
+    }
+
+    private void decodeBlocks(byte[] data) {
+        blockCount = data.length / LevelConstants.BLOCK_SIZE_IN_ROM;
+        blocks = new Block[blockCount];
+        for (int i = 0; i < blockCount; i++) {
+            blocks[i] = new Block(BLOCK_GRID_SIDE);
+            blocks[i].fromSegaFormat(Arrays.copyOfRange(data,
+                    i * LevelConstants.BLOCK_SIZE_IN_ROM, (i + 1) * LevelConstants.BLOCK_SIZE_IN_ROM),
+                    BLOCK_GRID_SIDE * BLOCK_GRID_SIDE);
+        }
     }
 
     /**
@@ -607,6 +937,62 @@ public class Sonic3kLevel extends AbstractLevel {
         parseLayoutLayer(layoutData, Sonic3kConstants.LEVEL_LAYOUT_HEADER_SIZE + 2,
                 4, bgColsPerRow, bgRows, map, 1, mapWidth, mapHeight);
         LOG.info("S3K map loaded successfully");
+    }
+
+    private void decodeInMemoryMap(int width, int height, byte[] foreground, byte[] background) {
+        byte[] interleaved = new byte[Math.multiplyExact(Math.multiplyExact(width, height),
+                Sonic3kConstants.MAP_LAYERS)];
+        for (int y = 0; y < height; y++) {
+            int sourceRow = y * width;
+            int destinationRow = sourceRow * Sonic3kConstants.MAP_LAYERS;
+            System.arraycopy(foreground, sourceRow, interleaved, destinationRow, width);
+            System.arraycopy(background, sourceRow, interleaved, destinationRow + width, width);
+        }
+        map = new Map(Sonic3kConstants.MAP_LAYERS, width, height, interleaved);
+        fgLayoutWidthBlocks = width;
+        fgLayoutHeightBlocks = height;
+        bgLayoutWidthBlocks = width;
+        bgLayoutHeightBlocks = height;
+    }
+
+    private static Palette[] composeInMemoryPalettes(Palette character,
+                                                      List<ModPaletteClaim> claims) {
+        Palette[] result = new Palette[PALETTE_COUNT];
+        result[0] = character;
+        byte[][] creatorLines = new byte[PALETTE_COUNT - 1][Palette.PALETTE_SIZE_IN_ROM];
+        for (ModPaletteClaim claim : claims) {
+            int line = claim.line() - 1;
+            int offset = claim.color() * Palette.BYTES_PER_COLOR;
+            creatorLines[line][offset] = (byte) (claim.segaColor() >>> 8);
+            creatorLines[line][offset + 1] = (byte) claim.segaColor();
+        }
+        for (int i = 0; i < creatorLines.length; i++) {
+            result[i + 1] = new Palette();
+            result[i + 1].fromSegaFormat(creatorLines[i]);
+        }
+        return result;
+    }
+
+    private static byte[] strideCollisionTable(int[] indices) {
+        byte[] table = new byte[Math.multiplyExact(indices.length,
+                Sonic3kConstants.COLLISION_INDEX_STRIDE_BYTES)];
+        for (int i = 0; i < indices.length; i++) {
+            table[i * Sonic3kConstants.COLLISION_INDEX_STRIDE_BYTES] = (byte) indices[i];
+        }
+        return table;
+    }
+
+    private void publishGraphicsCaches() {
+        GraphicsManager graphics = GameServices.graphics();
+        if (!graphics.isGlInitialized()) {
+            return;
+        }
+        for (int i = 0; i < patternCount; i++) {
+            graphics.cachePatternTexture(patterns[i], i);
+        }
+        for (int i = 0; i < palettes.length; i++) {
+            graphics.cachePaletteTexture(palettes[i], i);
+        }
     }
 
     private static int clampLayoutDimension(int value, int fallback) {
