@@ -21,12 +21,19 @@ Make the two published-surface promises true in production:
   `OwnerAwareStandaloneModule.wrap(...)` (new parameter; plan is in scope at the
   call site, `ModRuntime.java:131-138`).
 - When the prepared map is **non-empty**, the proxy's `BoundaryHandler`
-  short-circuits `getObjectArtProvider()` (mirroring the existing
-  `getGameService` special-case) and returns a provider built once via
-  `ModArtOverlayProvider.decorate(nullObjectBase, prepared)` — engine-owned, not
-  re-proxied. When the map is **empty**, behavior is unchanged (delegate's value,
-  today `null`) so the phase-3 sample and empty modules keep their exact current
-  behavior.
+  intercepts `getObjectArtProvider()` (mirroring the existing `getGameService`
+  special-case) and returns a provider built once by **decorating the
+  delegate's own provider** — `ModArtOverlayProvider.decorate(base, prepared)`
+  where `base` is the delegate's `getObjectArtProvider()` result obtained
+  through the boundary, exactly the semantic `ModBackedGamePatch` uses for
+  patch mods (`ModBackedGamePatch.java:145-153` decorates `inherited`). The
+  null-object base is a **fallback only**, used when the delegate returns
+  `null` (today's `AbstractStandaloneGameModule` default). A future module
+  that both overrides `getObjectArtProvider()` (custom HUD/zone art) and calls
+  `registerObjectArt` therefore keeps its own provider with the registered
+  sheets layered on top — never silently replaced. When the map is **empty**,
+  behavior is unchanged (delegate's value passthrough) so the phase-3 sample
+  and empty modules keep their exact current behavior.
 - `ObjectArtOverlayProvider` requires a non-null base (ctor
   `Objects.requireNonNull`), so a new **engine-internal null-object base**
   (`EmptyObjectArtProvider` in `com.openggf.mods.code`, package-private, NOT
@@ -58,14 +65,17 @@ Make the two published-surface promises true in production:
     (invoked on every restore, including with `null`)
 - `PlayerRewindExtra` gains a `PlayableSubclassRewindExtra subclassExtra`
   component appended **last**, with the previous canonical constructor preserved
-  as an explicit compat overload (third use of the established trick — the old
-  canonical ctor is pinned at `mod-api-signatures-2.1.txt:1364`).
+  as an explicit compat overload (the established trick — `PerObjectRewindSnapshot`
+  already carries three such compat ctors; the old canonical ctor is pinned at
+  `mod-api-signatures-2.1.txt:1364`).
 - `captureRewindState(boolean)` (the single build site — the no-arg variant
   delegates) captures the hook's value; `restoreRewindState(...)` invokes the
   restore hook with the stored payload. Because keyframe-exact seeks,
   forward-replay seeks, and both cached-segment scrub paths all funnel through
-  `restoreRewindState` (verified: `RewindController.java:285, 352, 413` →
-  `SpriteManagerSnapshot.restore`), one hook pair fixes every path.
+  `restoreRewindState` (verified: `RewindController.java:285, 352, 413` → the
+  `RewindSnapshottable` adapter registered in `SpriteManager` (~L1651), whose
+  `restore` calls `aps.restoreRewindState` at `SpriteManager.java:1714`), one
+  hook pair fixes every path.
 - **Surface refreeze**: `ModApiVersion.CURRENT` → 2.2.0; new
   `mod-api-signatures-2.2.txt` baseline; `TestModApiSignatureSurface` pin test
   and additive-chain tests updated (2.1 counts freeze at 17,196; new 2.1→2.2
