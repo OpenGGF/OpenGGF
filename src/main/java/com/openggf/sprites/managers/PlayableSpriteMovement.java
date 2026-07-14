@@ -3794,8 +3794,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		short standingInertia = preFrictionGroundSpeed != NO_PRE_FRICTION_SNAPSHOT
 				? (short) preFrictionGroundSpeed
 				: sprite.getGSpeed();
+		boolean groundedMoveDispatchRan = preFrictionGroundSpeed != NO_PRE_FRICTION_SNAPSHOT;
+		boolean terrainMoveDispatchOwnsDetachAnimation = groundedMoveDispatchRan
+				&& !sprite.getOnObjectAtFrameStart()
+				&& !sprite.getOnObjectAtPreviousFrameStart();
 		boolean standingStill = standingInertia == 0 && isOnFlatGround()
-				&& !sprite.getAir() && !sprite.getRolling() && !sprite.getSpindash();
+				&& (terrainMoveDispatchOwnsDetachAnimation || !sprite.getAir())
+				&& !sprite.getRolling() && !sprite.getSpindash();
 
 		// Update balance state (checks for ledge edges)
 		// ROM: Balance check happens before crouch/lookup in Obj01_LookUpDown

@@ -201,6 +201,20 @@ public class StomperObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj2A passes width_pixels+$B to standard SolidObject. Its unsigned
+        // BHI rejection accepts the exact +$1B edge and reaches AtEdge.
+        return true;
+    }
+
+    @Override
+    public boolean preservesEdgeSubpixelMotion() {
+        // SolidObject_AtEdge has d0=0, sets Status_Push, and bypasses
+        // StopCharacter, leaving x_vel, inertia, and x_sub live.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();

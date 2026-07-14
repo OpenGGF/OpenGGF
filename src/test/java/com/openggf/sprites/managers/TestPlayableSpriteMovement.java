@@ -2140,6 +2140,52 @@ public class TestPlayableSpriteMovement {
                 assertTrue(!mockSprite.getRolling(), "Rolling should NOT start when down is locked from crouch transition");
         }
 
+        @Test
+        public void groundedBalanceSelectionSurvivesLaterSameDispatchTerrainDetach() throws Exception {
+                mockSprite.setAir(true);
+                mockSprite.setRolling(false);
+                mockSprite.setSpindash(false);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setGSpeed((short) 0);
+                setMovementField("preFrictionGroundSpeed", 0);
+                setMovementField("preMoveBalanceEvaluated", true);
+                setMovementField("preMoveBalanceState", 1);
+                setMovementField("preMoveBalanceDirection", Direction.RIGHT);
+
+                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod("updateCrouchState");
+                crouchMethod.setAccessible(true);
+                crouchMethod.invoke(manager);
+
+                assertTrue(mockSprite.getAir(), "AnglePos detach remains visible after the grounded Move dispatch");
+                assertEquals(1, mockSprite.getBalanceState(),
+                                "the earlier grounded Balance branch owns the animation byte for the detach frame");
+                assertEquals(Direction.RIGHT, mockSprite.getDirection());
+        }
+
+        @Test
+        public void releasedObjectSupportDoesNotReuseTerrainDetachBalanceSelection() throws Exception {
+                mockSprite.setOnObject(true);
+                mockSprite.captureOnObjectAtFrameStart();
+                mockSprite.setOnObject(false);
+                mockSprite.captureOnObjectAtFrameStart();
+                mockSprite.setAir(true);
+                mockSprite.setRolling(false);
+                mockSprite.setSpindash(false);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setGSpeed((short) 0);
+                setMovementField("preFrictionGroundSpeed", 0);
+                setMovementField("preMoveBalanceEvaluated", true);
+                setMovementField("preMoveBalanceState", 1);
+                setMovementField("preMoveBalanceDirection", Direction.RIGHT);
+
+                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod("updateCrouchState");
+                crouchMethod.setAccessible(true);
+                crouchMethod.invoke(manager);
+
+                assertEquals(0, mockSprite.getBalanceState(),
+                                "an object-release frame does not use the terrain AnglePos detach bridge");
+        }
+
         /**
          * Test that releasing and re-pressing down unlocks rolling.
          */

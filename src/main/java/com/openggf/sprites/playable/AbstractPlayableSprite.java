@@ -314,6 +314,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * the pre-tick (mid-frame, ROM-equivalent) view.
          */
         private boolean onObjectAtFrameStart = false;
+        private boolean onObjectAtPreviousFrameStart = false;
         private boolean pushingAtFrameStart = false;
         private boolean airAtFrameStart = false;
         private boolean hurtAtFrameStart = false;
@@ -925,7 +926,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         pinballMode, pinballSpeedLock, preserveRollingOnNextLanding,
                         preserveRollingOnNextRollStop, objectPreservedRollBoostFollowup,
                         objectPreservedRollWallProbe, objectPreservedRollVelocityCarry, tunnelMode,
-                        onObject, onObjectAtFrameStart, pushingAtFrameStart, hurtAtFrameStart,
+                        onObject, onObjectAtFrameStart, onObjectAtPreviousFrameStart,
+                        pushingAtFrameStart, hurtAtFrameStart,
                         hurtRecoveryCompletedThisFrame,
                         latchedSolidObjectId, interactSlotIndex, slopeRepelJustSlipped,
                         stickToConvex, sliding, pushing,
@@ -1052,6 +1054,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.tunnelMode = extra.tunnelMode();
                 this.onObject = extra.onObject();
                 this.onObjectAtFrameStart = extra.onObjectAtFrameStart();
+                this.onObjectAtPreviousFrameStart = extra.onObjectAtPreviousFrameStart();
                 this.pushingAtFrameStart = extra.pushingAtFrameStart();
                 this.hurtAtFrameStart = extra.hurtAtFrameStart();
                 this.hurtRecoveryCompletedThisFrame = extra.hurtRecoveryCompletedThisFrame();
@@ -1916,6 +1919,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * playable's logic reads another playable's status.
          */
         public void captureOnObjectAtFrameStart() {
+                this.onObjectAtPreviousFrameStart = this.onObjectAtFrameStart;
                 this.onObjectAtFrameStart = this.onObject;
                 this.pushingAtFrameStart = this.pushing;
                 this.airAtFrameStart = this.air;
@@ -1933,6 +1937,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public boolean getOnObjectAtFrameStart() {
                 return onObjectAtFrameStart;
+        }
+
+        /**
+         * Returns the {@code Status_OnObj} snapshot from the preceding playable
+         * frame. This distinguishes a just-released solid ride from a terrain
+         * AnglePos detach after grounded movement has already selected animation.
+         */
+        public boolean getOnObjectAtPreviousFrameStart() {
+                return onObjectAtPreviousFrameStart;
         }
 
         public boolean getPushingAtFrameStart() {

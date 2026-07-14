@@ -348,6 +348,10 @@ class TestSonic2ObjectBugFixes {
 
         assertTrue(stomper.usesInstanceSolidStateLatchKey(),
                 "Obj2A changes y_pos throughout its cycle while one SST slot owns its contact bits");
+        assertTrue(stomper.getSolidRoutineProfile().inclusiveRightEdge(),
+                "Obj2A's standard SolidObject BHI gate accepts relX == 2*d1");
+        assertTrue(stomper.preservesEdgeSubpixelMotion(),
+                "Obj2A exact-edge AtEdge contact must preserve velocity and x_sub");
     }
 
     @Test

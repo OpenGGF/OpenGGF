@@ -1,5 +1,43 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S2 MCZ2 grounded-detach and stomper-edge animation milestone
+
+MCZ2's last three animation groups came from two native grounded dispatches.
+S2 Tails' `Move` routine chooses its standing Balance byte before `SpeedToPos`
+and `AnglePos`; when the later terrain probe sets `Status_InAir`, that earlier
+animation choice remains visible for the frame. The engine now carries that
+choice across a terrain detach, while a rewind-captured prior-frame
+`Status_OnObj` snapshot distinguishes a just-released solid ride and preserves
+MCZ1's collapsing-platform cadence. Separately, Obj2A's standard `SolidObject`
+call accepts the exact +$1B right edge and reaches `AtEdge`, setting push while
+leaving velocity and subpixel motion untouched. These are generic live-status,
+dispatch-order, and object-profile rules; no zone, route, frame, trace
+hydration, or comparator tolerance was added
+(`docs/s2disasm/s2.asm:35338-35449,39681-39748`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 266 -> 263 grouped errors
+Green: 15 -> 16 (newly MCZ2)
+ARZ2: 14                     CNZ2: 247
+OOZ1: 2
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- the S3K animation baseline remains unchanged from milestone `7b3ed8f73`:
+  AIZ complete 257, CNZ 172/2673, HCZ 673, ICZ 1376, LBZ 375, MGZ
+  3923/4081, MHZ 98, and standalone AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 42 passes / 16 existing
+  failures, including MCZ2's pre-existing respawn-counter mismatch and no new
+  failure;
+- the focused playable-movement, Sonic 2 object, and playable rewind-capture
+  suites pass 134 + 73 + 11 tests;
+- the ten-test comparison-only invariant guard and hydration-default guard
+  remain green.
+
 ### 2026-07-14 -- S2 WFZ holding and grabber-cadence animation milestone
 
 WFZ's last seven animation groups were owned by two native state machines. The
