@@ -660,9 +660,12 @@ public class LevelTilemapManager {
                 continue;
             }
 
-            // xBlockBit uses the query position to select the correct chunk within the block.
-            int xBlockBit = (queryX % blockPixelSize) / chunkWidth;
-            int yBlockBit = (queryY % blockPixelSize) / chunkHeight;
+            // xBlockBit uses the query position to select the correct chunk within
+            // the block. floorMod: linear-overflow windows can query negative X
+            // (HCZ2's wall BG camera starts left of the layout), and the wrapped
+            // block lookup must pair with a wrapped chunk selection.
+            int xBlockBit = Math.floorMod(queryX, blockPixelSize) / chunkWidth;
+            int yBlockBit = Math.floorMod(queryY, blockPixelSize) / chunkHeight;
             ChunkDesc chunkDesc = block.getChunkDesc(xBlockBit, yBlockBit);
             int chunkIndex = chunkDesc.getChunkIndex();
 
@@ -853,7 +856,13 @@ public class LevelTilemapManager {
         int wrappedY = ((y % (layerHeightCells * blockPixelSize)) + layerHeightCells * blockPixelSize)
                 % (layerHeightCells * blockPixelSize);
         int linearCell = (wrappedY / blockPixelSize) * layerWidthCells + Math.floorDiv(x, blockPixelSize);
-        linearCell = ((linearCell % layerCellCount) + layerCellCount) % layerCellCount;
+        if (linearCell < 0) {
+            // Columns left of the layout's first row have no ROM row data behind
+            // them; wrapping would resurface the layout's tail cells. Render blank
+            // (HCZ2's wall BG camera starts left of the layout at act entry).
+            return null;
+        }
+        linearCell = linearCell % layerCellCount;
         int mapX = linearCell % layerWidthCells;
         int mapY = linearCell / layerWidthCells;
         int blockIndex = map.getValue(1, mapX, mapY) & 0xFF;

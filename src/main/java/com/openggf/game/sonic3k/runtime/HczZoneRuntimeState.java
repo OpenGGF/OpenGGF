@@ -32,9 +32,20 @@ public final class HczZoneRuntimeState implements S3kZoneRuntimeState {
         return events.isWallChaseBgOverlayActive();
     }
 
-    /** Whether HCZ2 is using the post-chase 512px Plane B nametable. */
-    public boolean normalBackgroundPlaneActive() {
-        return actIndex == 1 && events.isAct2NormalBackgroundPlaneActive();
+    /**
+     * Whether HCZ2 drives Plane B as a 512px VDP window over the BG layout.
+     *
+     * <p>ROM: every act-2 background state keeps the plane a windowed view —
+     * {@code HCZ2BGE_WallMove} refreshes it with {@code DrawBGAsYouMove} at the
+     * wall BG camera ({@code HCZ2_WallMove} writes
+     * {@code Camera_X_pos_BG_copy = camX - $200 + wall offset}), and the
+     * post-chase states rebuild it from source X={@code $000}
+     * ({@code HCZ2BGE_NormalRefresh}/{@code HCZ2BGE_Normal}). The engine window
+     * follows {@code getBgCameraX()} while the chase publishes it and anchors
+     * at X=0 otherwise.
+     */
+    public boolean backgroundPlaneWindowActive() {
+        return actIndex == 1;
     }
 
 }
