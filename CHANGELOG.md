@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **fix: SDK sprite conversion now emits Genesis column-major multi-tile pieces.**
+  `ggfmod convert art` previously wrote each piece row-major even though native
+  mappings and `SpritePieceRenderer` consume columns first, scrambling rectangular
+  gallery art and playable sheets. A non-square marker fixture now locks the shared
+  converter contract used by both ordinary and playable art.
 - **Mod API 2.2.0: playable-subclass rewind capture hooks.** `AbstractPlayableSprite`
   now publishes an overridable `captureSubclassRewindState()` /
   `restoreSubclassRewindState(PlayableSubclassRewindExtra)` pair, carried as a new
