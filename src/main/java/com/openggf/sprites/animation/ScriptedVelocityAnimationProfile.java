@@ -404,19 +404,20 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
                 : sprite.getGSpeed();
         int speed = Math.abs(animSpeed);
 
-        // Player_ChkWalk clears the crouch pose as soon as Down is released,
-        // before the no-input/non-zero-inertia path leaves other animation
-        // bytes untouched (sonic3k.asm:23247-23265 and Tails equivalent).
-        if (duckReleasePublishesWalk && !sprite.getCrouching() && duckAnimId >= 0
-                && sprite.getAnimationId() == duckAnimId) {
-            return walkAnimId;
-        }
-
         // With neither direction held, Move reaches ResetScr without writing
         // anim while inertia remains non-zero. Preserve the byte owned by the
         // preceding routine (normally Walk, but it can be Stop, WaterSlide, or
         // another explicit owner) until the zero-speed tail writes Wait.
         if (!pressingDirection && speed > 0) {
+            // Player_ChkWalk/Tails_Roll runs after Move. A coasting no-input
+            // frame leaves Duck intact, so releasing Down changes it to Walk.
+            // At zero inertia Move has already replaced Duck with Wait, and
+            // the later comparison therefore performs no write
+            // (sonic3k.asm:23247-23265,28458-28482).
+            if (duckReleasePublishesWalk && !sprite.getCrouching() && duckAnimId >= 0
+                    && sprite.getAnimationId() == duckAnimId) {
+                return walkAnimId;
+            }
             return null;
         }
 

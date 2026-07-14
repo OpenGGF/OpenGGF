@@ -185,6 +185,33 @@ public class TestScriptedVelocityAnimationProfile {
     }
 
     @Test
+    void s3kStationaryDuckReleaseKeepsTheMoveRoutineWaitWrite() {
+        ScriptedVelocityAnimationProfile profile = createProfile()
+                .setDuckReleasePublishesWalk(true);
+        TestSprite sprite = new TestSprite();
+        sprite.setAnimationId(profile.getDuckAnimId());
+        sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) 0);
+
+        assertEquals(profile.getIdleAnimId(),
+                profile.resolveAnimationId(sprite, 0, 32).intValue(),
+                "Move writes Wait before the later roll check compares the animation byte");
+    }
+
+    @Test
+    void s3kCoastingDuckReleasePublishesWalkAfterMoveLeavesDuckUntouched() {
+        ScriptedVelocityAnimationProfile profile = createProfile()
+                .setDuckReleasePublishesWalk(true);
+        TestSprite sprite = new TestSprite();
+        sprite.setAnimationId(profile.getDuckAnimId());
+        sprite.setGSpeed((short) 0x80);
+        sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) 0x80);
+
+        assertEquals(profile.getWalkAnimId(),
+                profile.resolveAnimationId(sprite, 0, 32).intValue(),
+                "the post-Move roll check replaces a surviving Duck byte while coasting");
+    }
+
+    @Test
     public void preservesObjectAnimationForAirborneExternalReleaseWithRollingStatus() {
         ScriptedVelocityAnimationProfile profile = createProfile();
         TestSprite sprite = new TestSprite();

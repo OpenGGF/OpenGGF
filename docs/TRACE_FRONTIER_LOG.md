@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S3K stationary crouch-release animation milestone
+
+Branch `feature/ai-trace-animation-verification`, after HCZ animation
+verification completed. AIZ's early isolated Wait-vs-Walk mismatches occurred
+when Sonic or CPU Tails released Down at zero inertia. Retail runs the ground
+Move routine before `SonicKnux_Roll`/`Tails_Roll`: the Move zero-speed tail
+first writes Wait, so the later roll check no longer sees Duck and performs no
+Walk write. The shared profile had applied its Duck-release Walk before
+resolving that Move tail. It now publishes Walk only when a no-input coasting
+frame leaves Duck intact; stationary releases retain Move's Wait. No zone,
+route, frame, trace hydration, or tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 23247-23265 and
+28458-28482 (`Player_ChkWalk` and the equivalent `Tails_Roll` tail).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestScriptedVelocityAnimationProfile` passes 27/27, including stationary
+  and coasting Duck-release ordering regressions.
+- AIZ complete-run advances from frame 2980 / 78 grouped animation errors to
+  frame 5470 / 66. The prior player and sidekick Wait-vs-Walk clusters are
+  removed.
+- The full animation sweep remains 41/58 green routes / 17 expected failures.
+  HCZ and every previously green S1/S2 route remain green; later S3K routes
+  retain their prior pass/fail status, with several mismatch totals improved by
+  the same shared ordering correction.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
 ### 2026-07-14 -- HCZ animation-verification completion milestone
 
 Branch `feature/ai-trace-animation-verification`, after the S3K post-Move
