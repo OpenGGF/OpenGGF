@@ -32,6 +32,7 @@ public final class ModPaletteUsageValidator {
         if (level.formatVersion() != 2) {
             throw invalid(ownerModId, "Palette usage validation requires level formatVersion 2");
         }
+        validateCanonicalDomains(ownerModId, level);
 
         byte[] patterns = level.patternBytes();
         byte[] chunks = level.chunkBytes();
@@ -97,6 +98,28 @@ public final class ModPaletteUsageValidator {
         if (usesBackdrop && !claims.contains(new Cell(BACKDROP_LINE, BACKDROP_COLOR))) {
             throw invalid(ownerModId, "Unclaimed indexed color line=" + BACKDROP_LINE
                     + " color=" + BACKDROP_COLOR + " (visible level backdrop)");
+        }
+    }
+
+    private static void validateCanonicalDomains(String ownerModId, ModLevelDefinition level) {
+        if (level.blockGridSide() != 8 && level.blockGridSide() != 16) {
+            throw invalid(ownerModId, "blockGridSide must be 8 or 16");
+        }
+        if (level.width() <= 0 || level.height() <= 0) {
+            throw invalid(ownerModId, "width and height must be positive");
+        }
+        long mapCells = (long) level.width() * level.height();
+        if (mapCells <= 0 || mapCells > Integer.MAX_VALUE) {
+            throw invalid(ownerModId, "map cell count must fit a positive int");
+        }
+        if (level.patternCount() < 1 || level.patternCount() > 2048) {
+            throw invalid(ownerModId, "patternCount must be in 1..2048");
+        }
+        if (level.chunkCount() < 1 || level.chunkCount() > 1024) {
+            throw invalid(ownerModId, "chunkCount must be in 1..1024");
+        }
+        if (level.blockCount() < 1 || level.blockCount() > 256) {
+            throw invalid(ownerModId, "blockCount must be in 1..256");
         }
     }
 

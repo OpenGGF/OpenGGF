@@ -219,6 +219,66 @@ class TestModPaletteUsageValidator {
                 () -> ModPaletteUsageValidator.validate(OWNER, null));
     }
 
+    @Test
+    void patternCountAboveGenesisDomainIsRejectedEvenWhenBytesMatch() {
+        ModRegistrationException failure = assertDomainInvalid(fixtureWithBlockPalette(2)
+                .patternCountWithMatchingBytes(2049)
+                .claims(new ModPaletteClaim(2, 5, 0x00E0))
+                .build());
+
+        assertTrue(failure.getMessage().contains("patternCount must be in 1..2048"));
+    }
+
+    @Test
+    void chunkCountAboveFormatDomainIsRejectedEvenWhenBytesMatch() {
+        ModRegistrationException failure = assertDomainInvalid(fixtureWithBlockPalette(2)
+                .chunkCountWithMatchingBytes(1025)
+                .claims(new ModPaletteClaim(2, 5, 0x00E0))
+                .build());
+
+        assertTrue(failure.getMessage().contains("chunkCount must be in 1..1024"));
+    }
+
+    @Test
+    void blockCountAboveMapDomainIsRejectedEvenWhenBytesMatch() {
+        ModRegistrationException failure = assertDomainInvalid(fixtureWithBlockPalette(2)
+                .blockCountWithMatchingBytes(257)
+                .claims(new ModPaletteClaim(2, 5, 0x00E0))
+                .build());
+
+        assertTrue(failure.getMessage().contains("blockCount must be in 1..256"));
+    }
+
+    @Test
+    void blockGridSideMustBeExactlyEightOrSixteen() {
+        ModRegistrationException negative = assertDomainInvalid(fixtureWithBlockPalette(2)
+                .blockGridSideWithMatchingBytes(-8)
+                .claims(new ModPaletteClaim(2, 5, 0x00E0))
+                .build());
+        assertTrue(negative.getMessage().contains("blockGridSide must be 8 or 16"));
+
+        ModRegistrationException positive = assertDomainInvalid(fixtureWithBlockPalette(2)
+                .blockGridSideWithMatchingBytes(4)
+                .claims(new ModPaletteClaim(2, 5, 0x00E0))
+                .build());
+        assertTrue(positive.getMessage().contains("blockGridSide must be 8 or 16"));
+    }
+
+    @Test
+    void dimensionsMustEachBePositiveBeforeTheirProductIsUsed() {
+        ModRegistrationException pairedNegative = assertDomainInvalid(fixtureWithBlockPalette(2)
+                .dimensions(-1, -1, new byte[]{0})
+                .claims(new ModPaletteClaim(2, 5, 0x00E0))
+                .build());
+        assertTrue(pairedNegative.getMessage().contains("width and height must be positive"));
+
+        ModRegistrationException zero = assertDomainInvalid(fixtureWithBlockPalette(2)
+                .dimensions(0, 1, new byte[0])
+                .claims(new ModPaletteClaim(2, 5, 0x00E0))
+                .build());
+        assertTrue(zero.getMessage().contains("width and height must be positive"));
+    }
+
     private static Fixture fixtureWithBlockPalette(int paletteLine) {
         return new Fixture().fillPattern(0, 5)
                 .fillChunk(0, 0, paletteLine, 0)
@@ -229,6 +289,13 @@ class TestModPaletteUsageValidator {
     private static ModRegistrationException assertInvalid(ModLevelDefinition definition) {
         return assertThrows(ModRegistrationException.class,
                 () -> ModPaletteUsageValidator.validate(OWNER, definition));
+    }
+
+    private static ModRegistrationException assertDomainInvalid(ModLevelDefinition definition) {
+        ModRegistrationException failure = assertInvalid(definition);
+        assertEquals(OWNER, failure.ownerModId());
+        assertEquals(FINDING_CODE, failure.findingCode());
+        return failure;
     }
 
     private static final class Fixture {
@@ -243,6 +310,9 @@ class TestModPaletteUsageValidator {
         private byte[] blocks = new byte[3 * BLOCK_RECORD_SIZE];
         private byte[] foreground = {0};
         private byte[] background;
+        private int blockGridSide = BLOCK_GRID_SIDE;
+        private int width = 1;
+        private int height = 1;
         private int patternCount = 3;
         private int chunkCount = 3;
         private int blockCount = 3;
@@ -261,6 +331,38 @@ class TestModPaletteUsageValidator {
         Fixture rawPatterns(byte[] values, int count) {
             patterns = values.clone();
             patternCount = count;
+            return this;
+        }
+
+        Fixture patternCountWithMatchingBytes(int count) {
+            patterns = Arrays.copyOf(patterns, count * PATTERN_RECORD_SIZE);
+            patternCount = count;
+            return this;
+        }
+
+        Fixture chunkCountWithMatchingBytes(int count) {
+            chunks = Arrays.copyOf(chunks, count * CHUNK_RECORD_SIZE);
+            chunkCount = count;
+            return this;
+        }
+
+        Fixture blockCountWithMatchingBytes(int count) {
+            blocks = Arrays.copyOf(blocks, count * blockRecordSize(blockGridSide));
+            blockCount = count;
+            return this;
+        }
+
+        Fixture blockGridSideWithMatchingBytes(int value) {
+            blockGridSide = value;
+            blocks = Arrays.copyOf(blocks, blockCount * blockRecordSize(value));
+            return this;
+        }
+
+        Fixture dimensions(int width, int height, byte[] map) {
+            this.width = width;
+            this.height = height;
+            foreground = map.clone();
+            background = null;
             return this;
         }
 
@@ -306,6 +408,8 @@ class TestModPaletteUsageValidator {
 
         Fixture foregroundBlocks(int... values) {
             foreground = bytes(values);
+            width = foreground.length;
+            height = 1;
             return this;
         }
 
@@ -315,9 +419,8 @@ class TestModPaletteUsageValidator {
         }
 
         ModLevelDefinition build() {
-            int width = foreground.length;
             return new ModLevelDefinition(formatVersion, "Palette Test", 0x40, 0x400,
-                    BLOCK_GRID_SIDE, width, 1,
+                    blockGridSide, width, height,
                     new ModLevelDefinition.Bounds(0, 1024, 0, 224),
                     new ModLevelDefinition.Start(32, 32),
                     new ModLevelDefinition.StockMusic(1), List.of(), List.of(),
@@ -327,6 +430,10 @@ class TestModPaletteUsageValidator {
                     patternCount, chunkCount, blockCount, 1,
                     new ModLevelDefinition.S3kMetadata(ModLevelDefinition.S3kObjectZoneSet.S3KL),
                     claims);
+        }
+
+        private static int blockRecordSize(int gridSide) {
+            return Math.abs(gridSide) * Math.abs(gridSide) * 2;
         }
 
         private static byte[] bytes(int[] values) {
