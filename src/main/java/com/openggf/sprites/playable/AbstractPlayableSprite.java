@@ -1179,7 +1179,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // the pre-restore sprite state.
                 updateSensorOffsetsFromRadii();
                 // Always invoked, even when extra.subclassExtra() is null (base sprites and
-                // pre-Task-3 snapshots): see restoreSubclassRewindState() Javadoc for the
+                // pre-2.2.0 snapshots): see restoreSubclassRewindState() Javadoc for the
                 // null contract subclasses must honor.
                 restoreSubclassRewindState(extra.subclassExtra());
         }
@@ -1230,7 +1230,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * the owning snapshot carries no subclass payload. This is the common
          * case for base playable sprites, for subclasses that do not override
          * {@link #captureSubclassRewindState()}, and for snapshots produced by a
-         * pre-Task-3 {@link PlayerRewindExtra} constructor overload (which has no
+         * pre-2.2.0 {@link PlayerRewindExtra} constructor overload (which has no
          * {@code subclassExtra} parameter and therefore always yields
          * {@code null} here). Overrides must tolerate a {@code null} argument —
          * typically by resetting subclass state to its default — rather than

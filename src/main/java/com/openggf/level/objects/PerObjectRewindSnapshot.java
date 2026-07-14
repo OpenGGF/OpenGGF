@@ -488,7 +488,7 @@ public record PerObjectRewindSnapshot(
         }
 
         /**
-         * Compatibility constructor for the API 2.0 snapshot shape (pre-Task-3),
+         * Compatibility constructor for the API 2.0 snapshot shape (pre-2.2.0),
          * preserved verbatim so callers built against the previous canonical
          * constructor still compile. {@code subclassExtra} is always {@code null}
          * for snapshots built through this overload.

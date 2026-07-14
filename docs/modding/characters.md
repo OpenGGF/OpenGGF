@@ -243,7 +243,7 @@ private record BoltRewindExtra(boolean doubleJumpUsed)
 }
 
 /**
- * Tolerates {@code null} (no subclass payload in the snapshot -- e.g. a pre-Task-3
+ * Tolerates {@code null} (no subclass payload in the snapshot -- e.g. a pre-2.2.0
  * snapshot shape) by resetting the latch to its fresh default of {@code false} rather
  * than assuming a payload is always present, per the hook's null contract.
  */

@@ -65,7 +65,7 @@ version: 1.0.0
 authors:
   - OpenGGF Sample Authors
 description: No-ROM standalone platformer sample with a TMX-authored act, an original character, a badnik, and a spring gimmick.
-engineApiRange: ">=2.0.0 <3.0.0"
+engineApiRange: ">=2.2.0 <3.0.0"
 type: standalone
 entrypoint: example.platformer.PlatformerMod
 dependencies: []
@@ -73,9 +73,13 @@ audioOverrides: {}
 artOverrides: {}
 ```
 
-Unlike the flappy sample, this manifest declares the plain `2.0.0` floor rather than
-`2.1.0`: nothing here calls `ModContext.registerRomObjectArt` (there's no ROM to
-borrow art from), so the sample doesn't need that later API surface. `type:
+Declare the floor of the newest API surface your code actually calls. This sample
+needs `2.2.0`: Bolt overrides the playable-subclass rewind hooks
+(`captureSubclassRewindState`/`restoreSubclassRewindState`, added in Mod API
+2.2.0 — see [Characters](../characters.md)). It never calls
+`ModContext.registerRomObjectArt` (there's no ROM to borrow art from), so the
+flappy sample's `2.1.0` reasoning doesn't apply here — the rewind hooks set the
+floor instead. `type:
 standalone` and the absent `baseGame` are what route this manifest through
 [Standalone games](../standalone-games.md)'s registration contract instead of the
 additive-patch one.
@@ -389,7 +393,7 @@ private record BoltRewindExtra(boolean doubleJumpUsed)
 }
 
 /**
- * Tolerates {@code null} (no subclass payload in the snapshot -- e.g. a pre-Task-3
+ * Tolerates {@code null} (no subclass payload in the snapshot -- e.g. a pre-2.2.0
  * snapshot shape) by resetting the latch to its fresh default of {@code false} rather
  * than assuming a payload is always present, per the hook's null contract.
  */
