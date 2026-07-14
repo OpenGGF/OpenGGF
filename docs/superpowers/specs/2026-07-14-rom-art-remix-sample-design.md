@@ -38,12 +38,14 @@ scalar and the object implements `RewindRecreatable`, so a rewind restores both
 identity and visible frame phase.
 
 ROM-art intake materializes patterns/mappings, not the corresponding palette bytes.
-The sample therefore tells the user to select Tails in Sonic 2 data select, and its
-ROM-backed integration test launches a Tails-main session. The ordinary S2 level
-loader then supplies Tails' host-owned line-0 character palette. The sample does not
-force a team through the new 2.3 launch policy, which keeps this contract genuinely
-usable at its declared 2.1 floor. The guide calls out that selecting Sonic would
-colour the borrowed Tails indices with Sonic's palette.
+The ordinary Sonic 2 level loader supplies the shared `Pal_SonicTails` character
+palette on host-owned line 0 for both the default Sonic team and Sonic+Tails. The
+sample and its ROM-backed integration test therefore use the default team; there is
+no select-Tails instruction or dependency on extra-team configuration. The sample
+does not force a team through the new 2.3 launch policy, which keeps this contract
+genuinely usable at its declared 2.1 floor. The real caveat documented by the guide
+is Knuckles-main cross-game lock-on: that presentation replaces line-0 indices 2-5,
+so it is outside the sample's supported palette setup.
 
 The small zone exists only because a registered object must be instantiated and
 rendered for the sample to be executable. It reuses the established bounded Sonic 2
@@ -87,12 +89,14 @@ Test-first delivery covers:
 1. packaging and zero-finding validation of the eighth maintained source project;
 2. rejection when used with a non-S2 or standalone manifest;
 3. ROM-gated materialization of the requested Tails sheet;
-4. namespaced renderer resolution and the two expected mapping frames;
-5. an actual rendered frame/pixel probe rather than registration-only assertions;
-6. rewind restoration of the object's animation phase;
-7. confirmation that the packed JAR contains no materialized ROM bytes;
-8. link/sample-count guards for the renamed guide and gallery index; and
-9. unchanged Mod API 2.1/2.2 compatibility snapshots and ROM-art unit tests.
+4. default-team use of the shared Sonic/Tails line-0 palette, plus the documented
+   Knuckles-main lock-on caveat;
+5. namespaced renderer resolution and the two expected mapping frames;
+6. an actual rendered frame/pixel probe rather than registration-only assertions;
+7. rewind restoration of the object's animation phase;
+8. confirmation that the packed JAR contains no materialized ROM bytes;
+9. link/sample-count guards for the renamed guide and gallery index; and
+10. unchanged Mod API 2.1/2.2 compatibility snapshots and ROM-art unit tests.
 
 This sample and guide land before, or atomically with, removal of the old Flappy
 consumer. The repository therefore never intentionally lacks a maintained executable

@@ -49,11 +49,15 @@ owner order; the last enabled contribution wins and produces a deterministic fin
 for every shadowed owner. Disabling the winner reveals the preceding contribution,
 or the stock destination when none remains.
 
-`DataSelectSessionController` uses that destination when constructing
-`NO_SAVE_START` and genuinely empty-slot `NEW_SLOT_START` actions. Existing saves,
-clear restarts, level select, time attack, and explicit direct launches retain their
-requested destinations. `ZoneProgressionPlan` remains a results-boundary successor
-plan and gains no prepend mechanism. Disabling Flappy restores AIZ1 automatically.
+Today `DataSelectSessionController` emits `DataSelectAction` values whose
+`DataSelectActionType.NO_SAVE_START` and genuinely empty-slot
+`DataSelectActionType.NEW_SLOT_START` branches both hardcode `(0,0)`. The feature
+therefore rewires those two controller branches to obtain
+`hostProfile.newGameDestination()`; adding the defaulted profile method alone is not
+sufficient. Existing `LOAD_SLOT` and `CLEAR_RESTART` branches, level select, time
+attack, and explicit direct launches retain their requested destinations.
+`ZoneProgressionPlan` remains a results-boundary successor plan and gains no prepend
+mechanism. Disabling Flappy restores AIZ1 automatically.
 
 ### Session team selection
 
@@ -72,6 +76,12 @@ A gameplay-scoped input filter receives effective player input and may suppress
 controls but cannot mutate raw controller state. Flappy removes left and right and
 passes jump unchanged. It is installed in `GameplayModeContext` and is absent from
 ordinary S3K sessions.
+
+The filter runs downstream of the live or recorded/replayed logical input snapshot
+and upstream of movement's effective-button decoding. Live rewind records the raw
+snapshot; trace replay and rewind re-simulation feed that same snapshot back through
+the deterministic filter, so they reproduce the suppression without a second input
+recording format.
 
 Horizontal position is sample-owned, not a generic engine policy. The Flappy
 controller captures Tails' initial centre X, zeros X speed and ground speed, and
@@ -124,11 +134,31 @@ activation and fatigue remain unchanged outside Flappy.
 
 ## Dynamic recycling pipe pool
 
-The controller creates a fixed live pool of namespaced pipe-pair objects with
-`spawnChild(...)`. Its compile-time size covers the engine's maximum supported
-viewport plus two lead positions, so resizing does not change object count or rewind
-state. Each pipe implements `RewindRecreatable`; reconstruction uses the captured
-`RewindRecreateContext.dynamicEntry()` path already exercised by gallery objects.
+On its first ordinary gameplay update, the controller creates a fixed live pool of
+namespaced pipe-pair objects with the creator-safe `spawnFreeChild(...)` helper. That
+helper supplies construction services and adds each pipe as a free dynamic object;
+it is never called from controller construction or `recreateForRewind(...)`. The
+pool's compile-time size covers the engine's maximum supported viewport width
+through `SUPER_32_9`, plus two lead positions; height remains pinned at 224. Resizing
+therefore does not change object count or rewind state.
+
+The pipes are independent `ObjectManager` dynamic entries, not layout placements or
+children that the controller re-creates for adoption during its own rewind
+reconstruction. Each captured entry carries the pipe class name, owning mod id,
+slot, and stable `ObjectRefId`. Each pipe implements `RewindRecreatable`, and restore
+resolves the mod-owned class through the installed `ModClassResolver` before
+`recreateDynamicObject(...)` delegates to the generic
+`RewindRecreateContext.dynamicEntry()` recreation path.
+
+This is the first maintained gallery consumer of mod-owned independent dynamic
+recreation; existing samples are layout-reconstructed and provide no proof for this
+path. The policy/foundation delivery therefore adds a dedicated engine-level test
+that loads a mod-owned class through its mod classloader, captures the dynamic entry,
+restores it with the same stable identity and scalar state, and proves no duplicate
+was adopted or spawned. The controller's `recreateForRewind(...)` never creates
+pipes. It restores a non-final pool-initialized flag, keeps no direct pipe references,
+and discovers its live owner/type-matched entries through the object manager; only a
+fresh controller whose flag is false creates the pool.
 
 After construction, pipe identity is stable. Each frame a pipe shifts left at the
 sample's fixed subpixel speed. Once its right edge is left of the viewport, the
@@ -163,11 +193,11 @@ The minimal mutable state is:
 - the ordinary ring-backed level score and native Tails state already captured by
   engine managers.
 
-These are non-final scalars handled by compact object snapshots. Dynamic children
-recreate from their dynamic entries with stable IDs, then restore those scalars.
-Because live pipes are repositioned rather than replaced, ordinary forward play does
-not churn rewind identity. Seeking before a crossing restores `gateConsumed=false`;
-seeking after it restores true.
+These are non-final scalars handled by compact object snapshots. Independent dynamic
+entries recreate through the generic path with their captured stable IDs, then
+restore those scalars. Because live pipes are repositioned rather than replaced,
+ordinary forward play does not churn rewind identity. Seeking before a crossing
+restores `gateConsumed=false`; seeking after it restores true.
 
 ## Art ordering and palette correctness
 
@@ -226,15 +256,17 @@ Test-first delivery covers:
 5. automatic native flight plus per-frame `0xF0` refill, native lift/animation/audio,
    and unchanged stock fatigue outside Flappy;
 6. HUD row visibility and ring-counter-to-`SCORE` mapping;
-7. controller-only layout and stable dynamic-pipe child construction;
+7. controller-only layout and stable independent dynamic-pipe construction;
 8. counter-derived gap order, live-instance recycling, and gate reset per cycle;
 9. exactly-once scoring for multiple cycles of the same pipe identity;
 10. unconditional pipe, top-boundary, and bottom-boundary death;
-11. rewind restoration before/after recycling and scoring crossings;
-12. corrected column-major pipe art and unchanged native ROM rendering;
-13. host character/HUD palette composition and hostile palette rejection;
-14. rendered pixel probes for Tails, life icon, HUD, sky, and pipe pieces; and
-15. sample packaging, zero-finding validation, API compatibility guards, and the
+11. engine-level mod-classloader recreation of an independent dynamic entry with its
+    captured owner, stable identity, and scalar state, without controller duplication;
+12. rewind restoration before/after recycling and scoring crossings;
+13. corrected column-major pipe art and unchanged native ROM rendering;
+14. host character/HUD palette composition and hostile palette rejection;
+15. rendered pixel probes for Tails, life icon, HUD, sky, and pipe pieces; and
+16. sample packaging, zero-finding validation, API compatibility guards, and the
     relevant S3K/mod regression suites.
 
 ## Sequenced delivery
@@ -243,7 +275,8 @@ The program is deliberately split into independently testable plans:
 
 1. column-major converter bugfix — already completed and verified;
 2. S3K original-data mod-zone adapter and palette bridge;
-3. game-start, launch-team, input-filter, and HUD-profile policy surfaces;
+3. game-start, launch-team, input-filter, and HUD-profile policy surfaces, including
+   the mod-owned independent-dynamic rewind proof;
 4. dedicated Sonic 2 ROM-art remix sample plus guide migration; and
 5. native-Tails Flappy rebuild using the landed foundation and policies, removing
    the old consumer only after its replacement contract is green.
