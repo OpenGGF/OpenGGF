@@ -3898,6 +3898,15 @@ public class SidekickCpuController {
             sidekick.setGSpeed((short) 0);
             sidekick.setMoveLockTimer(0);
             sidekick.setForcedAnimationId(-1);
+            if (suppressNextLevelEventNormalMovement) {
+                // loc_13CD2 clears the raw anim byte as part of the routine
+                // 4 -> 6 handoff (sonic3k.asm:26631-26648). Ordinary recovery
+                // reaches the normal movement animator on the following tick;
+                // the level-event marker bridge intentionally suppresses that
+                // first normal movement pulse, so publish the native write here
+                // instead of leaving the previous Fly byte visible.
+                sidekick.setAnimationId(0);
+            }
             sidekick.setAir(true);
             sidekick.setDirection(Direction.RIGHT);
             // ROM loc_1384A (sonic3k.asm:26213): while object_control bit 0 is

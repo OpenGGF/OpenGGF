@@ -1197,6 +1197,12 @@ release, or CPU routine changes collapse those native ownership boundaries.
 5. Do not clear an event-authored animation merely because a sidekick is being
    installed as an established follower; verify whether the native init path
    actually writes that byte.
+6. Treat an engine forced-animation value as an owner, not as the native byte
+   itself. If a level-start/event owner must release on landing, consume that
+   explicit owner from the landing path before the same player slot reaches
+   Animate and publish the native raw animation write there. Do not clear every
+   matching Hurt/Fall or Fly value globally: unrelated CPU recovery can carry
+   the same numeric animation through a different native routine.
 
 **ROM citation.** `Sonic_Control` and `Tails_Control` skip their animators for
 bit 1 (`docs/skdisasm/sonic3k.asm:22067-22076,26257-26272`). The AIZ plane
@@ -1205,9 +1211,11 @@ the player slot, and its CPU-sidekick dormant marker writes `$83` without an
 animation write; Fly begins only at the catch-up trigger
 (`docs/skdisasm/sonic3k.asm:26389-26397,26474-26534,
 135492-135495,135609-135619`). HCZ level-start setup writes `$1B` before the
-ordinary sidekick init path (`docs/skdisasm/sonic3k.asm:8111-8148`).
+ordinary sidekick init path; the landing routine writes Walk before Animate,
+and flight recovery writes Walk during its routine-4-to-6 handoff
+(`docs/skdisasm/sonic3k.asm:8111-8148,24325-24329,26631-26648`).
 
-**Originating commit.** `<pending: S3K AIZ/HCZ intro animation milestone>`.
+**Originating commits.** `b18c254e3`; `<pending: S3K intro landing milestone>`.
 
 ---
 

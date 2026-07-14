@@ -1,5 +1,47 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S3K intro landing and CPU-handoff animation milestone
+
+The forced animation used to represent a `SpawnLevelMainSprites` falling intro
+now has an explicit level-event owner at the landing boundary. When terrain
+clears `Status_InAir`, that owner publishes the ROM's raw `anim=Walk` write
+before the same player slot reaches Animate; ordinary Hurt/Fall and recovery
+flight animations do not take this path. AIZ's dormant-marker bridge likewise
+publishes the raw Walk byte during its routine-4-to-6 handoff because that
+event path intentionally suppresses the following normal movement pulse. No
+zone, route, frame, trace hydration, or comparator tolerance was added
+(`docs/skdisasm/sonic3k.asm:24325-24329,26631-26648`).
+
+Authoritative locked-on S3K complete-run animation results before/after this
+milestone:
+
+```text
+AIZ complete: 253 groups at frame 987 -> 251 groups at frame 1602
+HCZ complete: 672 groups at frame 94 -> 670 groups at frame 104
+```
+
+Regression gate at this milestone:
+
+- all 19 S2 animation routes and all 21 animation-capable S1 traces remain
+  green; the same eight legacy S1 credits traces reject their pre-v7 schema;
+- the other S3K animation counts do not regress: CNZ 172/2673, ICZ 1372
+  (improved from 1374), LBZ 375, MGZ 3920/4078 (improved from 3923/4081), and
+  MHZ 98; standalone AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 43 passes / 15 existing
+  failures, with AIZ complete and HCZ complete still green;
+- the 23-test focused HCZ intro, sidekick recovery, and AIZ marker-handoff
+  suite passes;
+- the 13-test comparison-only invariant, hydration-default, and both rewind
+  coverage guard suite passes.
+
+Commands executed from the project root:
+
+```text
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=animation "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=physics "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+mvn -Dmse=off "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.tests.TestTraceReplayInvariantGuard,com.openggf.tests.trace.TestTraceHydrateSwitchDefault,com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.game.rewind.coverage.TestStaticStateRewindCoverageGuard" test
+```
+
 ### 2026-07-14 -- S3K AIZ/HCZ intro animation-ownership milestone
 
 AIZ's plane intro now publishes the player's literal `mapping_frame=0` while

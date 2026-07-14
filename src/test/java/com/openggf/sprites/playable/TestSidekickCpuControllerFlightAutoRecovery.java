@@ -164,6 +164,8 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         tails.setObjectControlAllowsCpu(true);
         tails.setObjectControlSuppressesMovement(true);
         tails.setDirection(Direction.LEFT);
+        tails.setAnimationId(0x20);
+        tails.setForcedAnimationId(0x20);
         // On-screen so the off-screen timer doesn't fire.
         tails.setRenderFlagOnScreen(true);
 
@@ -182,6 +184,8 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                 "Transition clears the object-control movement suppression mirror");
         assertFalse(tails.isControlLocked(),
                 "Transition clears the engine control-lock mirror so NORMAL CPU input reaches movement");
+        assertEquals(-1, tails.getForcedAnimationId(),
+                "loc_13CD2 releases the recovery-flight animation owner");
         assertEquals(Direction.RIGHT, tails.getDirection(),
                 "ROM loc_13CD2 masks status down to Status_InAir plus underwater, clearing Status_Facing");
         assertEquals(0, tails.getDoubleJumpFlag(),

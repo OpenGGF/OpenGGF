@@ -436,6 +436,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
             if (player != null && !player.getAir()) {
                 player.setForcedAnimationId(-1);
+                player.setAnimationId(Sonic3kAnimationIds.WALK);
                 introFallActiveOnPlayer = false;
             }
         }
@@ -446,10 +447,41 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                     anySidekickStillFalling = true;
                 } else if (sidekick.getForcedAnimationId() >= 0) {
                     sidekick.setForcedAnimationId(-1);
+                    sidekick.setAnimationId(Sonic3kAnimationIds.WALK);
                 }
             }
             if (!anySidekickStillFalling) {
                 introFallActiveOnSidekick = false;
+            }
+        }
+    }
+
+    /**
+     * S3K {@code Player_TouchFloor_Check_Spindash} writes {@code anim=Walk}
+     * before the current player slot reaches Animate
+     * (sonic3k.asm:24325-24329). Only consume the write while the existing
+     * SpawnLevelMainSprites intro-fall state owns this sprite's forced
+     * animation; ordinary Hurt/Fall and recovery-flight landings are not level
+     * event state.
+     */
+    @Override
+    public void onPlayableLandingAnimationWrite(AbstractPlayableSprite playable) {
+        AbstractPlayableSprite focused = GameServices.camera().getFocusedSprite();
+        if (introFallActiveOnPlayer && playable == focused) {
+            playable.setForcedAnimationId(-1);
+            playable.setAnimationId(Sonic3kAnimationIds.WALK);
+            introFallActiveOnPlayer = false;
+            return;
+        }
+        if (!introFallActiveOnSidekick) {
+            return;
+        }
+        for (AbstractPlayableSprite sidekick :
+                sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (sidekick == playable) {
+                sidekick.setForcedAnimationId(-1);
+                sidekick.setAnimationId(Sonic3kAnimationIds.WALK);
+                return;
             }
         }
     }

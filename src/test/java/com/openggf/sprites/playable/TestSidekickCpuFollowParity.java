@@ -841,6 +841,8 @@ class TestSidekickCpuFollowParity {
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x138A);
         tails.setCentreY((short) 0x041F);
+        tails.setAnimationId(tails.resolveAnimationId(CanonicalAnimation.FLY));
+        tails.setForcedAnimationId(tails.resolveAnimationId(CanonicalAnimation.FLY));
         tails.setGSpeed((short) 0);
 
         short[] xHistory = new short[64];
@@ -910,6 +912,10 @@ class TestSidekickCpuFollowParity {
         Assertions.assertAll(
                 () -> assertFalse(controller.getInputRight(),
                         "flight recovery transition does not run normal follow AI on the handoff tick"),
+                () -> assertEquals(-1, tails.getForcedAnimationId(),
+                        "loc_13CD2 releases the forced flight owner"),
+                () -> assertEquals(0, tails.getAnimationId(),
+                        "the level-event handoff publishes loc_13CD2's raw anim=Walk write"),
                 () -> assertFalse(controller.consumeSkipPhysicsThisFrame(),
                         "ROM still runs the normal airborne gravity step on the flight-to-normal handoff"));
 

@@ -1782,6 +1782,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void setAir(boolean air) {
+                boolean landed = !air && this.air;
                 // If landing from hurt state, clear hurt flag and high-priority rendering
                 // (invulnerableFrames already set in applyHurt() per ROM behavior)
                 if (!air && this.air && hurt) {
@@ -1813,6 +1814,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         currentGameState().resetItemBonus();
                 }
                 this.air = air;
+                if (landed) {
+                        GameModule module = currentGameModule();
+                        if (module != null && module.getLevelEventProvider() != null) {
+                                module.getLevelEventProvider().onPlayableLandingAnimationWrite(this);
+                        }
+                }
                 // SPG: Push sensor Y offset changes based on air state
                 updatePushSensorYOffset();
                 if (air) {
