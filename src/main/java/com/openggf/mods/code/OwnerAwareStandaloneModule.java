@@ -42,7 +42,7 @@ final class OwnerAwareStandaloneModule {
                 com.openggf.game.CharacterDefinition> characters;
         private final java.util.Map<String, BakedSheetReader.BakedSheet> preparedObjectArt;
         private final IdentityHashMap<Object, Object> wrapped = new IdentityHashMap<>();
-        private ObjectArtProvider decoratedObjectArtProvider;
+        private volatile ObjectArtProvider decoratedObjectArtProvider;
 
         private BoundaryHandler(String owner, Object delegate, ModFaultBoundary boundary,
                 java.util.Map<com.openggf.game.CharacterKey,
@@ -71,6 +71,12 @@ final class OwnerAwareStandaloneModule {
                     case "equals" -> proxy == (args == null ? null : args[0]);
                     default -> throw new UnsupportedOperationException(method.toString());
                 };
+            }
+            if (method.getName().equals("getObjectArtProvider")) {
+                // Once the decorated provider is cached, skip re-invoking the delegate through the
+                // boundary entirely -- there is nothing left for it to contribute to the cached value.
+                ObjectArtProvider cached = decoratedObjectArtProvider;
+                if (cached != null) return cached;
             }
             Object value = boundary.callStandalone(owner,
                     () -> validateOwnedReturn(method, invokeCallback(delegate, method, args)));
@@ -102,12 +108,14 @@ final class OwnerAwareStandaloneModule {
             }
             if (method.getName().equals("getObjectArtProvider")) {
                 if (preparedObjectArt.isEmpty()) return value;
-                if (decoratedObjectArtProvider == null) {
-                    ObjectArtProvider base = value instanceof ObjectArtProvider provider
-                            ? provider : new EmptyObjectArtProvider();
-                    decoratedObjectArtProvider = ModArtOverlayProvider.decorate(base, preparedObjectArt);
+                synchronized (this) {
+                    if (decoratedObjectArtProvider == null) {
+                        ObjectArtProvider base = value instanceof ObjectArtProvider provider
+                                ? provider : new EmptyObjectArtProvider();
+                        decoratedObjectArtProvider = ModArtOverlayProvider.decorate(base, preparedObjectArt);
+                    }
+                    return decoratedObjectArtProvider;
                 }
-                return decoratedObjectArtProvider;
             }
             if (value == null) return null;
             if (value instanceof java.util.function.Function<?, ?> function) {
