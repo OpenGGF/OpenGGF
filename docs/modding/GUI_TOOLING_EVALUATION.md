@@ -2,14 +2,14 @@
 
 Phase 4 evaluates GUI direction; it does not commit to building one. No adopter
 feedback was checked into the repository at evaluation time, so the evidence is the
-five maintained sample sources and their CI build paths.
+seven maintained sample sources and their CI build paths.
 
 ## Observed creator friction
 
-The evidence corpus is the [five-source gallery](samples/index.md) and its
+The evidence corpus is the [maintained source gallery](samples/index.md) and its
 [real package/validation test](../../src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java).
 That test materializes each committed source, invokes the real converter/package
-commands, requires zero validator findings, then scans all five jars as one repository.
+commands, requires zero validator findings, then scans all sample jars as one repository.
 
 - The [music pack](samples/phase4-gallery-music-pack/README.md) needs strict audio
   YAML, generated WAV data, loop metadata, packaging, and validation. Its operations
@@ -42,7 +42,7 @@ scriptable converters with clearer previews and diagnostics.
 | Option | Strengths | Costs and risks | Rough effort |
 |---|---|---|---|
 | Extend in-engine panels | Reuses the live renderer, collision, editor history, playtest loop, mod manager, and runtime-owned registries. Best place to preview levels, collision profiles, sprite origins, palette lines, and pattern-window cost. | Engine UI/input code is specialized; project creation, Java builds, YAML editing, and jar packaging fit poorly. Loading hostile/incomplete projects into a gameplay process increases lifecycle and fault-boundary work. | Medium for one focused inspector (roughly 4–8 engineer-weeks); large for a general studio (multiple releases). |
-| Build an external studio | Can provide conventional project navigation, forms, source control integration, process isolation, and cross-game asset previews without entering gameplay. | Highest cost: duplicate renderer/asset semantics or embed the engine, ship another cross-platform application, keep format/API versions synchronized, and design extension/security/update models. The five samples do not yet justify this maintenance surface. | Large, plausibly 4–6 engineer-months for a trustworthy first release, then ongoing parallel maintenance. |
+| Build an external studio | Can provide conventional project navigation, forms, source control integration, process isolation, and cross-game asset previews without entering gameplay. | Highest cost: duplicate renderer/asset semantics or embed the engine, ship another cross-platform application, keep format/API versions synchronized, and design extension/security/update models. The maintained samples do not yet justify this maintenance surface. | Large, plausibly 4–6 engineer-months for a trustworthy first release, then ongoing parallel maintenance. |
 | Stay CLI-only | Existing commands are deterministic, headless, CI-friendly, composable with IDEs/Tiled, and already enforce the real runtime contracts. Lowest drift risk because the same code packages and validates samples. | YAML/binary error discovery can be slow; visual metadata and collision/profile authoring are awkward; multi-asset projects repeat output staging and converter/package wiring across build scripts. | Small, roughly 2–4 engineer-weeks of diagnostic, template, and documentation improvements spread over normal releases. |
 
 Effort ranges are unvalidated order-of-magnitude planning estimates derived only from
