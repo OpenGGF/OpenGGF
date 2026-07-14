@@ -254,8 +254,20 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         return withUpdatePlayer;
     }
 
-    private void recordStandingPlayer(PlayableEntity player, PlayerSolidContactResult result) {
-        if (player == null || result == null || !result.standingNow()) {
+    void recordStandingPlayer(PlayableEntity player, PlayerSolidContactResult result) {
+        if (player == null) {
+            return;
+        }
+        if (result == null || !result.standingNow()) {
+            // The native parent stores its current Player 1 / Player 2 standing
+            // bits directly in status(a0). SolidObjectTop clears those bits as
+            // soon as a rider leaves; a later fire-triggered collapse must not
+            // treat an old interact pointer as a current rider and run
+            // sub_2AF9C against it.
+            standingPlayers.remove(player);
+            if (state == STATE_IDLE && !isFireBridge) {
+                collapseArmedByStanding = !standingPlayers.isEmpty();
+            }
             return;
         }
         if (!standingPlayers.contains(player)) {
@@ -266,6 +278,10 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
             // SolidObjectTop call, so a new rider collapses the bridge next frame.
             collapseArmedByStanding = true;
         }
+    }
+
+    boolean isTrackingStandingPlayer(PlayableEntity player) {
+        return standingPlayers.contains(player);
     }
 
     private void startCollapse() {

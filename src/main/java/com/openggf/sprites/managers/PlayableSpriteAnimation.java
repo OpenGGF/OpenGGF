@@ -263,8 +263,8 @@ public class PlayableSpriteAnimation {
     private void updateSpecialScript(int startFlag, SpriteAnimationScript script, int remaining) {
         switch (startFlag & 0xFF) {
             case 0xFF -> updateWalkRun(script, remaining);
-            case 0xFE -> updateRoll(script);
-            case 0xFD -> updatePush(script);
+            case 0xFE -> updateRoll(script, remaining);
+            case 0xFD -> updatePush(script, remaining);
             default -> updateScriptWithDelay(script, 0, 0);
         }
     }
@@ -424,7 +424,15 @@ public class PlayableSpriteAnimation {
         sprite.setAnimationTick(0);
     }
 
-    private void updateRoll(SpriteAnimationScript baseScript) {
+    private void updateRoll(SpriteAnimationScript baseScript, int remaining) {
+        // S3K's walk/run handler publishes the current mapping before its timer
+        // gate, but loc_12A2A gates Roll before selecting a script frame. The
+        // profile flag therefore cannot be applied to every negative-delay
+        // script merely because they share the same outer dispatcher.
+        if (remaining >= 0) {
+            sprite.setAnimationTick(remaining);
+            return;
+        }
         int speed = Math.abs(sprite.getGSpeed());
         ScriptedVelocityAnimationProfile profile = resolveVelocityProfile();
         int runThreshold = resolveRunThreshold(profile);
@@ -441,7 +449,12 @@ public class PlayableSpriteAnimation {
         updateScriptWithDelay(active, delay, 0);
     }
 
-    private void updatePush(SpriteAnimationScript baseScript) {
+    private void updatePush(SpriteAnimationScript baseScript, int remaining) {
+        // Native loc_12A72 uses the same timer-first ordering for Push.
+        if (remaining >= 0) {
+            sprite.setAnimationTick(remaining);
+            return;
+        }
         int speed = Math.abs(sprite.getGSpeed());
         ScriptedVelocityAnimationProfile profile = resolveVelocityProfile();
 

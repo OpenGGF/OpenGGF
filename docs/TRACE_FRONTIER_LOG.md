@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- AIZ fire-bridge roll-cadence milestone
+
+Branch `feature/ai-trace-animation-verification`, after the battleship
+idle-release milestone. S3K Walk/Run publishes its current mapping before the
+timer gate, but Roll (`loc_12A2A`) and Push (`loc_12A72`) return on a live timer
+before selecting a mapping. The shared scripted animator now preserves that
+per-handler ordering. The AIZ fire bridge also mirrors its parent SST standing
+bits on every `SolidObjectTop` checkpoint, so a rider released long before the
+burn trigger cannot receive a stale `sub_2AF9C` `prev_anim` write when the
+bridge finally collapses. No route, trace-frame, hydration, or comparison-
+tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 25151-25202
+(`loc_12A2A` / `loc_12A72`) and 59331-59465
+(`loc_2AEE2`, `loc_2AF06`, and `sub_2AF9C`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestPlayableSpriteAnimation#s3kRollKeepsTimerFirstCadenceWhenWalkPublishesFirst`
+  and all three `TestAizCollapsingLogBridgeObjectInstance` tests pass.
+- AIZ complete-run advances from frame 23161 / 19 grouped animation errors to
+  frame 25590 / 18; the 14-frame airborne Roll cadence is exact.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  HCZ and every previously green route retain their status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
 ### 2026-07-14 -- AIZ battleship idle-release milestone
 
 Branch `feature/ai-trace-animation-verification`, after the collapsing-log

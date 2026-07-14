@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.solid.ContactKind;
+import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
@@ -34,6 +36,25 @@ class TestAizCollapsingLogBridgeObjectInstance {
         assertEquals(Sonic3kAnimationIds.RUN.id(),
                 player.getAnimationManager().captureRewindState().lastAnimationId(),
                 "sub_2AF9C writes prev_anim=Run after releasing the rider");
+    }
+
+    @Test
+    void fireBridgeDropsRiderTrackingWhenSolidTopClearsStanding() {
+        AizCollapsingLogBridgeObjectInstance bridge = bridge(0x88);
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0, (short) 0);
+        PlayerSolidContactResult standing = new PlayerSolidContactResult(
+                ContactKind.TOP, true, false, false, false, null, null, 0);
+        PlayerSolidContactResult released = new PlayerSolidContactResult(
+                ContactKind.NONE, false, true, false, false, null, null, 0);
+
+        bridge.recordStandingPlayer(player, standing);
+        assertTrue(bridge.isTrackingStandingPlayer(player));
+
+        bridge.recordStandingPlayer(player, released);
+
+        assertEquals(false, bridge.isTrackingStandingPlayer(player),
+                "SolidObjectTop's cleared parent standing bit must remove the stale fire-bridge rider");
     }
 
     private static AizCollapsingLogBridgeObjectInstance bridge(int subtype) {

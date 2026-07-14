@@ -654,6 +654,43 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void s3kRollKeepsTimerFirstCadenceWhenWalkPublishesFirst() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
+        ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile())
+                .setWalkRunPublishesFrameBeforeTimerAdvance(true)
+                .setRollAnimId(2)
+                .setRoll2AnimId(3)
+                .setRunSpeedThreshold(0x600);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(2, new SpriteAnimationScript(0xFE,
+                List.of(0x96, 0x97, 0x96, 0x98, 0x96, 0x99, 0x96, 0x9A),
+                SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(2);
+        sprite.getAnimationManager().restoreRewindState(
+                new PlayableSpriteAnimation.RewindState(2, 2));
+        sprite.setAnimationFrameIndex(7);
+        sprite.setAnimationTick(1);
+        sprite.setMappingFrame(0x96);
+        sprite.setAir(true);
+        sprite.setRolling(true);
+        sprite.setJumping(true);
+        sprite.setGSpeed((short) 0x218);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0x96, sprite.getMappingFrame(),
+                "loc_12A2A returns before publishing Roll while its timer remains live");
+        assertEquals(0, sprite.getAnimationTick());
+
+        sprite.getAnimationManager().update(1);
+
+        assertEquals(0x9A, sprite.getMappingFrame(),
+                "the expired Roll timer publishes the current native anim_frame");
+        assertEquals(1, sprite.getAnimationTick());
+    }
+
+    @Test
     public void s2TailsRunUsesNativeThreeFrameSlopeStride() {
         TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
         ScriptedVelocityAnimationProfile profile =
