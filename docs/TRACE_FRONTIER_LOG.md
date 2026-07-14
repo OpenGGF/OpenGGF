@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- AIZ battleship idle-release milestone
+
+Branch `feature/ai-trace-animation-verification`, after the collapsing-log
+rider-release milestone. AIZ2's `sub_50318` changes an idle player animation
+from Wait (`$05`) to Walk (`$00`) before checking either auto-scroll edge.
+The engine's shared Player 1 / sidekick battleship clamp now publishes that
+native animation write on every pass, including the multi-sidekick extension;
+no route, trace-frame, hydration, or comparison-tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 105229-105258
+(`AIZ2_DoShipLoop` and `sub_50318`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestSonic3kAIZEvents#aiz2PostBombingShipLoopUsesRomRepeatOffset` passes,
+  including native Player 1, native Player 2, and extended-sidekick Wait-to-Walk
+  publication.
+- AIZ complete-run advances from frame 22373 / 21 grouped animation errors to
+  frame 23161 / 19; the two-frame CPU Tails Wait/mapping block is exact.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  HCZ and every previously green route retain their status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
 ### 2026-07-14 -- AIZ collapsing-log rider-release milestone
 
 Branch `feature/ai-trace-animation-verification`, after the S3K post-balance

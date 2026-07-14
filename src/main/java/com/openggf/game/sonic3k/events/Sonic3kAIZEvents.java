@@ -15,6 +15,7 @@ import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
 import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -1931,6 +1932,13 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      */
     private static void clampPlayerDuringAutoScroll(AbstractPlayableSprite sprite, int camX,
                                                    boolean useCentreCoordinates) {
+        // ROM sub_50318 clears anim from Wait ($05) to Walk ($00) before its
+        // position clamps. This is independent of whether either edge clamp
+        // fires: the battleship scroll makes an idle player resume the walk
+        // script before normal movement applies the frame's friction.
+        if (sprite.getAnimationId() == Sonic3kAnimationIds.WAIT.id()) {
+            sprite.setAnimationId(Sonic3kAnimationIds.WALK);
+        }
         int minPlayerX = camX + PLAYER_LEFT_MARGIN;
         int maxPlayerX = camX + PLAYER_RIGHT_MARGIN;
         short playerX = useCentreCoordinates ? sprite.getCentreX() : sprite.getX();
