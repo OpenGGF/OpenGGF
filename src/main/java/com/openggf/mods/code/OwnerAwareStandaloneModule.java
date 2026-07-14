@@ -3,6 +3,8 @@ package com.openggf.mods.code;
 import com.openggf.data.Game;
 import com.openggf.data.Rom;
 import com.openggf.game.GameModule;
+import com.openggf.game.ObjectArtProvider;
+import com.openggf.level.objects.BakedSheetReader;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
@@ -18,8 +20,16 @@ final class OwnerAwareStandaloneModule {
     static GameModule wrap(String owner, GameModule delegate, ModFaultBoundary boundary,
                            java.util.Map<com.openggf.game.CharacterKey,
                                    com.openggf.game.CharacterDefinition> characters) {
+        return wrap(owner, delegate, boundary, characters, java.util.Map.of());
+    }
+
+    static GameModule wrap(String owner, GameModule delegate, ModFaultBoundary boundary,
+                           java.util.Map<com.openggf.game.CharacterKey,
+                                   com.openggf.game.CharacterDefinition> characters,
+                           java.util.Map<String, BakedSheetReader.BakedSheet> preparedObjectArt) {
         Objects.requireNonNull(delegate, "delegate");
-        InvocationHandler handler = new BoundaryHandler(owner, delegate, boundary, characters);
+        InvocationHandler handler = new BoundaryHandler(owner, delegate, boundary, characters,
+                preparedObjectArt);
         return (GameModule) Proxy.newProxyInstance(GameModule.class.getClassLoader(),
                 new Class<?>[] { GameModule.class }, handler);
     }
@@ -30,16 +40,27 @@ final class OwnerAwareStandaloneModule {
         private final ModFaultBoundary boundary;
         private final java.util.Map<com.openggf.game.CharacterKey,
                 com.openggf.game.CharacterDefinition> characters;
+        private final java.util.Map<String, BakedSheetReader.BakedSheet> preparedObjectArt;
         private final IdentityHashMap<Object, Object> wrapped = new IdentityHashMap<>();
+        private volatile ObjectArtProvider decoratedObjectArtProvider;
 
         private BoundaryHandler(String owner, Object delegate, ModFaultBoundary boundary,
                 java.util.Map<com.openggf.game.CharacterKey,
                         com.openggf.game.CharacterDefinition> characters) {
+            this(owner, delegate, boundary, characters, java.util.Map.of());
+        }
+
+        private BoundaryHandler(String owner, Object delegate, ModFaultBoundary boundary,
+                java.util.Map<com.openggf.game.CharacterKey,
+                        com.openggf.game.CharacterDefinition> characters,
+                java.util.Map<String, BakedSheetReader.BakedSheet> preparedObjectArt) {
             this.owner = com.openggf.game.ModKeySyntax.requireManifestId(owner);
             this.delegate = Objects.requireNonNull(delegate, "delegate");
             this.boundary = Objects.requireNonNull(boundary, "boundary");
             this.characters = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
                     Objects.requireNonNull(characters, "characters")));
+            this.preparedObjectArt = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
+                    Objects.requireNonNull(preparedObjectArt, "preparedObjectArt")));
         }
 
         @Override public Object invoke(Object proxy, Method method, Object[] args) {
@@ -50,6 +71,12 @@ final class OwnerAwareStandaloneModule {
                     case "equals" -> proxy == (args == null ? null : args[0]);
                     default -> throw new UnsupportedOperationException(method.toString());
                 };
+            }
+            if (method.getName().equals("getObjectArtProvider")) {
+                // Once the decorated provider is cached, skip re-invoking the delegate through the
+                // boundary entirely -- there is nothing left for it to contribute to the cached value.
+                ObjectArtProvider cached = decoratedObjectArtProvider;
+                if (cached != null) return cached;
             }
             Object value = boundary.callStandalone(owner,
                     () -> validateOwnedReturn(method, invokeCallback(delegate, method, args)));
@@ -78,6 +105,17 @@ final class OwnerAwareStandaloneModule {
                             entry.getKey(), entry.getValue(), boundary));
                 }
                 return registry;
+            }
+            if (method.getName().equals("getObjectArtProvider")) {
+                if (preparedObjectArt.isEmpty()) return value;
+                synchronized (this) {
+                    if (decoratedObjectArtProvider == null) {
+                        ObjectArtProvider base = value instanceof ObjectArtProvider provider
+                                ? provider : new EmptyObjectArtProvider();
+                        decoratedObjectArtProvider = ModArtOverlayProvider.decorate(base, preparedObjectArt);
+                    }
+                    return decoratedObjectArtProvider;
+                }
             }
             if (value == null) return null;
             if (value instanceof java.util.function.Function<?, ?> function) {

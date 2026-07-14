@@ -44,7 +44,7 @@ class TestSampleModsPackage {
             "phase3-character", ">=2.0.0 <3.0.0",
             "phase3-standalone", ">=2.0.0 <3.0.0",
             "sample-flappy", ">=2.1.0 <3.0.0",
-            "sample-platformer", ">=2.0.0 <3.0.0");
+            "sample-platformer", ">=2.2.0 <3.0.0");
     private static final Set<String> TRUSTED_CODE_SAMPLES = Set.of(
             "phase2-sample", "phase3-character", "phase3-standalone", "sample-flappy", "sample-platformer");
     private static final Set<String> STANDALONE_IDS = Set.of("phase3-standalone", "sample-platformer");

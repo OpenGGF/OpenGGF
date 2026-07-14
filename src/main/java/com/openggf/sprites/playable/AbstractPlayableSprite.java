@@ -39,6 +39,7 @@ import com.openggf.level.objects.ObjectControlledSolidContactController;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.PerObjectRewindSnapshot.PlayableSubclassRewindExtra;
 import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.physics.CollisionSystem;
@@ -1000,7 +1001,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         includeFollowHistory ? yHistory : null,
                         includeFollowHistory ? inputHistory : null,
                         includeFollowHistory ? jumpPressHistory : null,
-                        includeFollowHistory ? statusHistory : null);
+                        includeFollowHistory ? statusHistory : null,
+                        captureSubclassRewindState());
                 // Player snapshots use a stub PerObjectRewindSnapshot (no badnikExtra; playerExtra holds everything).
                 return new PerObjectRewindSnapshot(
                         false, false,       // destroyed, destroyedRespawnable
@@ -1176,6 +1178,84 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // Recompute after direct field hydration so rewind does not keep offsets from
                 // the pre-restore sprite state.
                 updateSensorOffsetsFromRadii();
+                // Always invoked, even when extra.subclassExtra() is null (base sprites and
+                // pre-2.2.0 snapshots): see restoreSubclassRewindState() Javadoc for the
+                // null contract subclasses must honor.
+                restoreSubclassRewindState(extra.subclassExtra());
+        }
+
+        /**
+         * Captures mod-character / playable-subclass rewind state not covered by
+         * the base {@link PlayerRewindExtra} surface. Runs on every keyframe
+         * capture — i.e. every {@link #captureRewindState(boolean)} call, which
+         * includes keyframe-exact seeks and cached-segment scrubs, not just the
+         * "live" forward-play capture path.
+         *
+         * <p><strong>Immutability contract:</strong> the returned payload is
+         * stored as-is in the snapshot's in-memory object graph — there is no
+         * serialization step and no defensive copy taken by the framework.
+         * Implementations must return an immutable value (a {@code record} is
+         * the expected shape) and must never return a payload that aliases
+         * mutable live sprite/controller state, or later mutation of that live
+         * state will silently corrupt the already-captured keyframe.
+         *
+         * <p>The default implementation returns {@code null}, meaning "no
+         * subclass state to capture" — this is the correct behavior for base
+         * playable sprites (Sonic/Tails/Knuckles) and any subclass that has not
+         * been updated to override this hook.
+         *
+         * <p>Example override:
+         * <pre>{@code
+         * record MyCharacterExtra(int comboCounter) implements PlayableSubclassRewindExtra {}
+         * protected PlayableSubclassRewindExtra captureSubclassRewindState() {
+         *     return new MyCharacterExtra(comboCounter);
+         * }
+         * }</pre>
+         *
+         * @return an immutable subclass payload, or {@code null} if the subclass
+         *         has no extra state to capture
+         */
+        protected PlayableSubclassRewindExtra captureSubclassRewindState() {
+                return null;
+        }
+
+        /**
+         * Restores mod-character / playable-subclass rewind state previously
+         * produced by {@link #captureSubclassRewindState()}. Runs on every
+         * {@link #restoreRewindState(PerObjectRewindSnapshot)} call — i.e. every
+         * rewind restore, including keyframe-exact seeks and cached-segment
+         * scrubs — and is <em>always</em> invoked, never skipped.
+         *
+         * <p><strong>Null contract:</strong> {@code extra} is {@code null} when
+         * the owning snapshot carries no subclass payload. This is the common
+         * case for base playable sprites, for subclasses that do not override
+         * {@link #captureSubclassRewindState()}, and for snapshots produced by a
+         * pre-2.2.0 {@link PlayerRewindExtra} constructor overload (which has no
+         * {@code subclassExtra} parameter and therefore always yields
+         * {@code null} here). Overrides must tolerate a {@code null} argument —
+         * typically by resetting subclass state to its default — rather than
+         * assuming a payload is always present.
+         *
+         * <p><strong>Ordering guarantee:</strong> this hook runs after all base
+         * {@link PlayerRewindExtra} fields, controller-owned state (movement,
+         * spindash dust, animation, drowning, Tails-carry, sidekick CPU), and
+         * sensor offsets have been restored, so overrides may safely read
+         * already-restored base sprite/controller state when reconstructing
+         * subclass-local state.
+         *
+         * <p>The default implementation is a no-op, matching the default
+         * {@link #captureSubclassRewindState()} returning {@code null}.
+         *
+         * <p>Example override:
+         * <pre>{@code
+         * protected void restoreSubclassRewindState(PlayableSubclassRewindExtra extra) {
+         *     comboCounter = extra == null ? 0 : ((MyCharacterExtra) extra).comboCounter();
+         * }
+         * }</pre>
+         *
+         * @param extra the previously captured subclass payload, or {@code null}
+         */
+        protected void restoreSubclassRewindState(PlayableSubclassRewindExtra extra) {
         }
 
         /**

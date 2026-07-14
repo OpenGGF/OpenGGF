@@ -46,7 +46,7 @@ verifies:
 - an owner-tagged `bolt` character with a distinct `PhysicsProfile`, a double-jump
   secondary ability, its landing-reset latch, and the latch's rewind restore path;
 - `ZapBug` patrol-and-reverse movement, its 2-frame walk-animation cadence, and namespaced
-  `hit` SFX on destruction, all resolved through the standalone module's own
+  `hit` SFX on destruction, all resolved through the engine's `registerObjectArt`-decorated
   `ObjectArtProvider`;
 - `SpringPad` proximity-launch physics, its namespaced `spring` SFX, and its 8-frame
   extended pose;

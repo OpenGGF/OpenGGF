@@ -109,6 +109,7 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/sprites/playable/TestLogicalInputControlLockLatch.java#setUp
             src/test/java/com/openggf/sprites/managers/TestSpriteManagerUpdateOrder.java#configureRuntime
             src/test/java/com/openggf/sprites/playable/TestOnObjectAtFrameStartSnapshot.java#configureRuntime
+            src/test/java/com/openggf/sprites/playable/TestPlayableSubclassRewind.java#setUp
             src/test/java/com/openggf/sprites/playable/TestRespawnStrategies.java#setUp
             src/test/java/com/openggf/sprites/playable/TestSidekickCpuControllerRewindCapture.java#setUp
             src/test/java/com/openggf/tests/TestHTZRisingLavaDisassemblyParity.java#setUp

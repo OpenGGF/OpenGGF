@@ -3,6 +3,24 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Mod API 2.2.0: playable-subclass rewind capture hooks.** `AbstractPlayableSprite`
+  now publishes an overridable `captureSubclassRewindState()` /
+  `restoreSubclassRewindState(PlayableSubclassRewindExtra)` pair, carried as a new
+  `PlayerRewindExtra.subclassExtra()` payload, so a mod character can capture and
+  restore its own rewind-relevant instance fields alongside the base snapshot on
+  every keyframe capture and restore — including keyframe-exact seeks and
+  cached-segment scrubs — instead of going stale. The `sample-platformer` Bolt
+  character migrated its double-jump latch to the production round trip. See
+  `docs/modding/characters.md` and `docs/architecture/mod-api-compatibility.md`.
+- **fix: standalone `registerObjectArt` sheets now serve through the module proxy.**
+  `OwnerAwareStandaloneModule.wrap` decorates the delegate's `getObjectArtProvider()`
+  result with the prepared `registerObjectArt` sheets (falling back to an empty base
+  provider when the delegate itself returns `null`), mirroring
+  `ModBackedGamePatch.getObjectArtProvider()`. The wrap used to be a passthrough that
+  silently dropped standalone owners' registered art, forcing every standalone
+  author to hand-roll a provider; `sample-platformer` migrated to the engine path
+  and its hand-rolled provider was deleted. See `TestStandaloneObjectArtWiring` and
+  `TestSamplePlatformerIntegration`.
 - Seventh gallery sample **`sample-platformer`** plus two narrated build-along guides
   (`docs/modding/guides/standalone-platformer.md`, `docs/modding/guides/ai-art.md`):
   a no-ROM standalone game with a level authored directly in Tiled and imported via

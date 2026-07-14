@@ -189,17 +189,75 @@ on the next launch, and returns the current session to the title where required.
 Keep mutable gameplay state in rewind-capturable instance fields, use injected
 services after construction, and never keep gameplay state in mutable statics.
 
-> **Known limitation (rewind, character subclass fields):** the production
-> player rewind snapshot (`AbstractPlayableSprite.captureRewindState()` /
-> `PlayerRewindExtra`) is a closed, hand-enumerated record with no extension
-> point for subclass-declared fields. A custom character's own instance fields
-> (for example a double-jump latch) are therefore **not** restored on a rewind
-> seek that lands exactly on a keyframe or replays a cached segment; only
-> seeks that re-simulate through live input re-derive them. Design ability
-> state to be self-correcting on landing/ground transitions where possible
-> (the `sample-platformer` Bolt character's latch clears on landing, which
-> bounds any staleness to a single airtime). A subclass capture hook is
-> tracked in the deferred backlog.
+**Rewind capture for character subclass fields (Mod API 2.2.0):** the closed,
+hand-enumerated `PlayerRewindExtra` base surface is no longer the whole story.
+`AbstractPlayableSprite` exposes an overridable
+`captureSubclassRewindState()` / `restoreSubclassRewindState(PlayableSubclassRewindExtra)`
+pair a character subclass can override to carry its own rewind-relevant fields
+alongside the base snapshot:
+
+- **`captureSubclassRewindState()`** runs on every keyframe capture — every
+  `captureRewindState(boolean)` call, which includes keyframe-exact seeks and
+  cached-segment scrubs, not just the "live" forward-play capture path. Return
+  an immutable payload implementing the empty marker interface
+  `PerObjectRewindSnapshot.PlayerRewindExtra.PlayableSubclassRewindExtra`
+  (typically a `record`), or `null` if there is no subclass state to capture.
+  The default implementation returns `null`, which is correct for the base
+  Sonic/Tails/Knuckles sprites and any subclass that has not overridden the
+  hook.
+- **`restoreSubclassRewindState(extra)`** runs on every rewind restore — every
+  `restoreRewindState(PerObjectRewindSnapshot)` call, again including
+  keyframe-exact seeks and cached-segment scrubs — and is **always** invoked,
+  never skipped. It runs *after* all base `PlayerRewindExtra` fields,
+  controller-owned state (movement, spindash dust, animation, drowning,
+  Tails-carry, sidekick CPU), and sensor offsets have already been restored,
+  so an override may safely read already-restored base sprite/controller
+  state when reconstructing subclass-local state.
+
+**Immutability contract:** the captured payload is stored as-is in the
+snapshot's in-memory object graph — there is no serialization step and no
+defensive copy. Implementations must be immutable (a `record` of primitives or
+other immutable types) and must never alias mutable live sprite/controller
+state.
+
+**Null contract:** `extra` is `null` when the owning snapshot carries no
+subclass payload — the common case for base playable sprites, for subclasses
+that do not override `captureSubclassRewindState()`, and for snapshots
+produced by a pre-2.2.0 `PlayerRewindExtra` constructor overload (which has no
+`subclassExtra` parameter and therefore always yields `null` here). Overrides
+must tolerate a `null` argument, typically by resetting subclass state to its
+default, rather than assuming a payload is always present.
+
+The `sample-platformer` Bolt character's double-jump latch is the executable
+reference, copied verbatim from
+[`BoltCharacter.java`](../../src/test/resources/mods/sample-platformer-src/project/src/main/java/example/platformer/BoltCharacter.java):
+
+```java
+/** Immutable payload carrying the double-jump latch through a rewind keyframe. */
+private record BoltRewindExtra(boolean doubleJumpUsed)
+        implements PerObjectRewindSnapshot.PlayableSubclassRewindExtra {
+}
+
+@Override protected PerObjectRewindSnapshot.PlayableSubclassRewindExtra captureSubclassRewindState() {
+    return new BoltRewindExtra(doubleJumpUsed);
+}
+
+/**
+ * Tolerates {@code null} (no subclass payload in the snapshot -- e.g. a pre-2.2.0
+ * snapshot shape) by resetting the latch to its fresh default of {@code false} rather
+ * than assuming a payload is always present, per the hook's null contract.
+ */
+@Override
+protected void restoreSubclassRewindState(PerObjectRewindSnapshot.PlayableSubclassRewindExtra extra) {
+    doubleJumpUsed = extra instanceof BoltRewindExtra bolt && bolt.doubleJumpUsed();
+}
+```
+
+A rewind seek that lands exactly on a keyframe or replays a cached segment now
+restores `doubleJumpUsed` byte-for-byte instead of depending on the landing
+reset (`draw()` clearing the latch on the next grounded frame) to eventually
+self-correct it — the landing reset remains a good defensive habit, but it is
+no longer load-bearing for this field.
 
 Before distributing a character mod:
 

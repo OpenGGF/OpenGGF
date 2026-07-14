@@ -65,7 +65,7 @@ version: 1.0.0
 authors:
   - OpenGGF Sample Authors
 description: No-ROM standalone platformer sample with a TMX-authored act, an original character, a badnik, and a spring gimmick.
-engineApiRange: ">=2.0.0 <3.0.0"
+engineApiRange: ">=2.2.0 <3.0.0"
 type: standalone
 entrypoint: example.platformer.PlatformerMod
 dependencies: []
@@ -73,9 +73,13 @@ audioOverrides: {}
 artOverrides: {}
 ```
 
-Unlike the flappy sample, this manifest declares the plain `2.0.0` floor rather than
-`2.1.0`: nothing here calls `ModContext.registerRomObjectArt` (there's no ROM to
-borrow art from), so the sample doesn't need that later API surface. `type:
+Declare the floor of the newest API surface your code actually calls. This sample
+needs `2.2.0`: Bolt overrides the playable-subclass rewind hooks
+(`captureSubclassRewindState`/`restoreSubclassRewindState`, added in Mod API
+2.2.0 — see [Characters](../characters.md)). It never calls
+`ModContext.registerRomObjectArt` (there's no ROM to borrow art from), so the
+flappy sample's `2.1.0` reasoning doesn't apply here — the rewind hooks set the
+floor instead. `type:
 standalone` and the absent `baseGame` are what route this manifest through
 [Standalone games](../standalone-games.md)'s registration contract instead of the
 additive-patch one.
@@ -98,17 +102,16 @@ public void register(ModContext context) {
     context.registerObjectArt("springpad", new BakedSheetRef("art/springpad.ggfs"));
     context.registerCharacter("bolt", BoltCharacter.definition(
             context.ownerModId(), materialized));
-    context.registerGameModule(new PlatformerModule(context.ownerModId(), level,
-            buildObjectSheets(context.ownerModId(), assets)));
+    context.registerGameModule(new PlatformerModule(context.ownerModId(), level));
 }
 ```
 
 Read bounded assets and register characters/objects first, then register exactly one
 module last — `registerGameModule` closes the transaction. The `registerObjectArt`
-calls here matter for editor preview/validation, but — as Chapter 8 covers in
-detail — they are **not** what makes `ZapBug`/`SpringPad` actually render in
-gameplay for a standalone module; `buildObjectSheets` builds a second, real art
-provider that `PlatformerModule` serves itself.
+calls here are the *only* object-art source this sample needs — as Chapter 8 covers
+in detail, the engine decorates `PlatformerModule`'s own (in this case absent)
+`getObjectArtProvider()` result with these registered sheets, so `ZapBug`/`SpringPad`
+render in gameplay without `PlatformerModule` serving any art itself.
 
 ## 3. Authoring the level in Tiled
 
@@ -373,31 +376,45 @@ coverage validator would want (`FINAL_SCALAR_REWIND_GAP` rejects uncaptured *fin
 scalar state; a mutable field like this one is exactly what it expects). But
 `BoltCharacter` is a **player-character sprite**, not a `RewindRecreatable` mod
 object, so it is governed by a different, closed pipeline —
-`AbstractPlayableSprite.captureRewindState()` / `PlayerRewindExtra` — and
-[`characters.md`](../characters.md#failure-rewind-and-acceptance-checklist)
-documents the resulting known limitation exactly:
+`AbstractPlayableSprite.captureRewindState()` / `PlayerRewindExtra` — and, since Mod
+API 2.2.0, that pipeline publishes an overridable subclass extension point exactly
+for fields like this one. `BoltCharacter` implements both hook halves, copied
+verbatim from
+[`BoltCharacter.java`](../../../src/test/resources/mods/sample-platformer-src/project/src/main/java/example/platformer/BoltCharacter.java):
 
-> **Known limitation (rewind, character subclass fields):** the production player
-> rewind snapshot (`AbstractPlayableSprite.captureRewindState()` /
-> `PlayerRewindExtra`) is a closed, hand-enumerated record with no extension point
-> for subclass-declared fields. A custom character's own instance fields (for
-> example a double-jump latch) are therefore **not** restored on a rewind seek that
-> lands exactly on a keyframe or replays a cached segment; only seeks that
-> re-simulate through live input re-derive them. Design ability state to be
-> self-correcting on landing/ground transitions where possible (the
-> `sample-platformer` Bolt character's latch clears on landing, which bounds any
-> staleness to a single airtime). A subclass capture hook is tracked in the
-> deferred backlog.
+```java
+/** Immutable payload carrying the double-jump latch through a rewind keyframe. */
+private record BoltRewindExtra(boolean doubleJumpUsed)
+        implements PerObjectRewindSnapshot.PlayableSubclassRewindExtra {
+}
 
-In practice: `doubleJumpUsed` can only ever be stale immediately after a
-keyframe-exact or cached-segment rewind seek that lands mid-air, and only for the
-remainder of that single airborne stretch — the very next landing clears it
-regardless of how it got set, so staleness can never accumulate or leak across
-multiple jumps. Engine-side rewind coverage tests exercise the production restore
-path (`GenericFieldCapturer.restore` against a scoped snapshot) to prove the field
-*would* round-trip correctly if the closed pipeline ever gained subclass capture —
-see `TestSamplePlatformerIntegration#exerciseDoubleJumpAndRewindLatch`. Follow-up
-work is tracked in [`BACKLOG.md`](../BACKLOG.md)'s "Rewind capture for
+@Override protected PerObjectRewindSnapshot.PlayableSubclassRewindExtra captureSubclassRewindState() {
+    return new BoltRewindExtra(doubleJumpUsed);
+}
+
+/**
+ * Tolerates {@code null} (no subclass payload in the snapshot -- e.g. a pre-2.2.0
+ * snapshot shape) by resetting the latch to its fresh default of {@code false} rather
+ * than assuming a payload is always present, per the hook's null contract.
+ */
+@Override
+protected void restoreSubclassRewindState(PerObjectRewindSnapshot.PlayableSubclassRewindExtra extra) {
+    doubleJumpUsed = extra instanceof BoltRewindExtra bolt && bolt.doubleJumpUsed();
+}
+```
+
+`captureSubclassRewindState()` runs on every keyframe capture and
+`restoreSubclassRewindState(...)` runs on every restore — both including
+keyframe-exact seeks and cached-segment scrubs, not just re-simulated seeks — so
+`doubleJumpUsed` now round-trips byte-for-byte across any rewind seek, mid-air or
+not. The landing reset in `draw()` (Chapter 5, above) is no longer load-bearing for
+this correctness — it still clears the latch every grounded frame, which is simply
+the right ability-reset behavior independent of rewind. See
+[`characters.md`'s rewind section](../characters.md#failure-rewind-and-acceptance-checklist)
+for the hooks' full contract (call cadence, ordering guarantee, immutability and
+null contracts). Engine-side rewind coverage tests exercise this exact restore path
+— see `TestSamplePlatformerIntegration#exerciseDoubleJumpAndRewindLatch`. This
+closes the engine gap tracked in [`BACKLOG.md`](../BACKLOG.md)'s "Rewind capture for
 mod-character subclass fields" row.
 
 ## 6. Badnik + gimmick
@@ -554,39 +571,34 @@ ggfmod package --input target/classes --out target/sample-platformer-mod.jar
 ggfmod validate target/sample-platformer-mod.jar
 ```
 
-**Why a standalone module has to serve its own object art.** `PlatformerModule`
-overrides `getObjectArtProvider()` with an explicit comment on exactly why:
+**`registerObjectArt` just works for standalone modules.** `PlatformerModule`
+declares no `getObjectArtProvider()` override at all — `PlatformerMod.register()`'s
+`context.registerObjectArt(...)` calls from Chapter 2 are the entire object-art
+story for `ZapBug` and `SpringPad`. Every standalone module is returned to the
+engine wrapped in `OwnerAwareStandaloneModule`'s proxy, and that proxy's
+`getObjectArtProvider()` handler decorates whatever the module's own delegate
+method returns with the prepared `registerObjectArt` sheets (falling back to an
+empty base provider when the delegate itself returns `null`, which is what
+`AbstractStandaloneGameModule`'s default does and what `PlatformerModule` inherits
+here). The decorated provider is cached after its first build, so later calls don't
+re-invoke the module's delegate through the fault boundary. `TestSamplePlatformerIntegration`
+asserts this by reflecting on the module's unwrapped delegate (the real
+`PlatformerModule` instance behind the proxy) and confirming
+`getDeclaredMethod("getObjectArtProvider")` throws `NoSuchMethodException` — the
+fixture can't silently regress back to hand-rolling.
 
-```java
-/**
- * Standalone modules must serve their own object art: the engine only decorates
- * {@code registerObjectArt} sheets onto PATCH modules ({@code ModBackedGamePatch}),
- * while the standalone module proxy passes {@code getObjectArtProvider()} straight
- * through -- and {@code AbstractStandaloneGameModule}'s default returns {@code null},
- * which makes {@code LevelManager.initObjectArt()} skip creating an
- * {@code ObjectRenderManager} entirely (no object would ever draw). This override is
- * what makes {@code ZapBug}/{@code SpringPad}'s {@code getRenderer(...)} calls resolve
- * in a real New Game session.
- */
-@Override public ObjectArtProvider getObjectArtProvider() { return objectArtProvider; }
-```
+A module is still free to override `getObjectArtProvider()` itself — for HUD art,
+zone-scoped art, or any provider logic beyond baked sheets — and any
+`registerObjectArt` sheets simply layer on top of it, same as they do for
+`ModBackedGamePatch` on the patch side.
 
-`PlatformerMod.register()`'s `context.registerObjectArt(...)` calls from Chapter 2
-still run — they matter for editor preview/validation — but for a standalone module
-they are currently a no-op for actual gameplay rendering: `ModContext.registerObjectArt`
-sheets are prepared but silently dropped for standalone owners, because
-`OwnerAwareStandaloneModule.wrap` passes `getObjectArtProvider()` straight through
-with no decoration (the engine only decorates patch modules this way). `PlatformerMod`
-works around it with its own `SheetBackedObjectArtProvider`
-(`buildObjectSheets(...)` in `PlatformerMod.java`, backing
-`PlatformerModule`'s override above) — a small, published-types-only
-`ObjectArtProvider` over the same baked `.ggfs` sheets, with its own
-`ensurePatternsCached` that accumulates each sheet's patterns at a running base
-index so no two sheets collide in the virtual pattern ID space. This is a real
-engine wiring gap, not a pattern to imitate blindly if it ever gets fixed — see
-[`BACKLOG.md`](../BACKLOG.md)'s "Standalone `registerObjectArt` engine wiring" row
-(**Scheduled**, with this sample as the regression fixture) before copying this
-workaround into a new project.
+*Historical note:* earlier revisions of this sample carried a hand-rolled
+`SheetBackedObjectArtProvider` because `OwnerAwareStandaloneModule.wrap` used to pass
+`getObjectArtProvider()` straight through with no decoration, silently dropping
+`registerObjectArt` sheets for standalone owners. That engine gap is fixed — see
+[`BACKLOG.md`](../BACKLOG.md)'s "Standalone `registerObjectArt` engine wiring" row —
+and this sample was migrated to the engine path as its regression fixture. There is
+no workaround left to imitate.
 
 **Trust.** Because this mod carries an entrypoint and therefore executes creator
 code, the Mod Manager shows a code-trust prompt naming the jar's exact SHA-256 hash

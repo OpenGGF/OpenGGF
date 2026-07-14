@@ -773,9 +773,19 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertTrue(legacyCarry.carryParentagePending());
         assertEquals(expectedCarry.cooldown(), legacyCarry.releaseCooldown());
 
-        RecordComponent[] components = PlayerRewindExtra.class.getRecordComponents();
-        Object[] api11Arguments = java.util.Arrays.stream(components)
-                .filter(component -> !component.getName().equals("tailsCarryState"))
+        // Excludes both "tailsCarryState" (added post-API-1.1) and "subclassExtra"
+        // (added in Mod API 2.2.0) to rebuild the API 1.1 compatibility
+        // constructor's argument list. The constructor is located by its exact
+        // parameter TYPE sequence (not arity): parameter-count matching broke
+        // once before, when the subclassExtra component made two compat
+        // constructors collide in arity, and would break again on the next
+        // component addition.
+        RecordComponent[] api11Components = java.util.Arrays.stream(
+                        PlayerRewindExtra.class.getRecordComponents())
+                .filter(component -> !component.getName().equals("tailsCarryState")
+                        && !component.getName().equals("subclassExtra"))
+                .toArray(RecordComponent[]::new);
+        Object[] api11Arguments = java.util.Arrays.stream(api11Components)
                 .map(component -> {
                     try {
                         return component.getAccessor().invoke(currentExtra);
@@ -784,8 +794,12 @@ class TestAbstractPlayableSpriteRewindCapture {
                     }
                 })
                 .toArray();
+        Class<?>[] api11ParameterTypes = java.util.Arrays.stream(api11Components)
+                .map(RecordComponent::getType)
+                .toArray(Class<?>[]::new);
         var api11Constructor = java.util.Arrays.stream(PlayerRewindExtra.class.getConstructors())
-                .filter(constructor -> constructor.getParameterCount() == api11Arguments.length)
+                .filter(constructor -> java.util.Arrays.equals(
+                        constructor.getParameterTypes(), api11ParameterTypes))
                 .findFirst()
                 .orElseThrow();
         PlayerRewindExtra api11Extra = (PlayerRewindExtra) api11Constructor.newInstance(api11Arguments);

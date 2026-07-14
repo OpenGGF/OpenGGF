@@ -22,9 +22,6 @@ import com.openggf.game.MusicReference;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.PhysicsProfile;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.FieldKey;
-import com.openggf.game.rewind.GenericFieldCapturer;
-import com.openggf.game.rewind.snapshot.GenericObjectSnapshot;
 import com.openggf.io.ModInputLimits;
 import com.openggf.level.Level;
 import com.openggf.level.ModLevel;
@@ -191,13 +188,17 @@ class TestSamplePlatformerIntegration {
      * Exercises {@code ZapBug} and {@code SpringPad} directly against a hand-built
      * {@code ObjectManager}/{@code StubObjectServices} pair -- mirroring
      * {@code TestPhase2SampleModIntegration}'s {@code AbstractBadnikInstance} unit-test
-     * pattern -- rather than driving a full live gameplay session. The standalone module
-     * proxy is a passthrough for {@code getObjectArtProvider()} (only the PATCH side gets
-     * the engine's {@code registerObjectArt} overlay decoration), so a standalone module
-     * must serve its own object art -- {@code PlatformerModule} does exactly that via its
-     * sheet-backed provider override. The renderer-resolution assertions below go through
-     * the SHIPPED {@code module.getObjectArtProvider()} path, and the same provider backs
-     * the {@link ObjectRenderManager} wired into {@code StubObjectServices} so
+     * pattern -- rather than driving a full live gameplay session. Standalone modules no
+     * longer need to hand-roll an {@code ObjectArtProvider}: the engine-owned
+     * {@code OwnerAwareStandaloneModule} proxy that every standalone module is wrapped in
+     * decorates whatever the delegate's {@code getObjectArtProvider()} returns with the
+     * {@code registerObjectArt} sheets prepared from the mod's manifest (falling back to an
+     * empty base provider when the delegate itself returns {@code null}). {@code PlatformerModule}
+     * therefore declares no {@code getObjectArtProvider()} override at all -- asserted below via
+     * reflection on the unwrapped delegate so this fixture can never silently regress back to
+     * hand-rolling. The renderer-resolution assertions below go through the proxy-decorated
+     * {@code module.getObjectArtProvider()}, and the same provider backs the
+     * {@link ObjectRenderManager} wired into {@code StubObjectServices} so
      * {@code appendRenderCommands} exercises the real {@code getRenderer(...)} call.
      */
     @Test
@@ -205,6 +206,13 @@ class TestSamplePlatformerIntegration {
         Path jar = buildSample();
         try (Fixture fixture = load(jar)) {
             GameModule module = fixture.runtime.prepareStandaloneModule(OWNER).orElseThrow();
+            Object boundaryHandler = java.lang.reflect.Proxy.getInvocationHandler(module);
+            Object delegate = getField(boundaryHandler, "delegate");
+            assertEquals("example.platformer.PlatformerModule", delegate.getClass().getName());
+            assertThrows(NoSuchMethodException.class,
+                    () -> delegate.getClass().getDeclaredMethod("getObjectArtProvider"),
+                    "PlatformerModule must not declare its own getObjectArtProvider() -- object "
+                    + "art must flow through the engine's registerObjectArt overlay decoration");
             var assets = fixture.runtime.standaloneAssetSnapshot(OWNER);
             GameDataSource source = new GameDataSource() {
                 @Override public Optional<com.openggf.data.Rom> rom() { return Optional.empty(); }
@@ -224,8 +232,16 @@ class TestSamplePlatformerIntegration {
 
             ObjectArtProvider artProvider = module.getObjectArtProvider();
             assertNotNull(artProvider,
-                    "The standalone module must serve its own object-art provider (the engine "
-                    + "only decorates registerObjectArt sheets onto patch modules)");
+                    "The engine's OwnerAwareStandaloneModule proxy must decorate the module with "
+                    + "the registerObjectArt sheets even though PlatformerModule serves no "
+                    + "provider of its own");
+            assertTrue(artProvider.getRendererKeys().containsAll(
+                    List.of("sample-platformer:zapbug", "sample-platformer:springpad")),
+                    "the registerObjectArt-decorated provider must serve both namespaced keys");
+            assertNotNull(artProvider.getRenderer("sample-platformer:zapbug"),
+                    "zapbug renderer must resolve through the registerObjectArt-decorated provider");
+            assertNotNull(artProvider.getRenderer("sample-platformer:springpad"),
+                    "springpad renderer must resolve through the registerObjectArt-decorated provider");
             ObjectRenderManager renderManager = new ObjectRenderManager(artProvider);
             assertNotNull(renderManager.getRenderer("sample-platformer:zapbug"),
                     "zapbug renderer must resolve through the shipped module art provider");
@@ -372,16 +388,18 @@ class TestSamplePlatformerIntegration {
      * {@code currentGameState().resetItemBonus()}, which requires an active
      * {@code GameplayModeContext} that this construction-only slice of the test does not set up.
      *
-     * <p>The rewind assertion drives {@link GenericFieldCapturer#restore(Object, GenericObjectSnapshot)}
-     * -- the real production write path -- against a snapshot scoped to just the {@code doubleJumpUsed}
-     * key, per the task brief's "GenericFieldCapturer directly at test level is acceptable" allowance.
-     * {@link GenericFieldCapturer#capture(Object)} cannot be used unscoped here: it walks the full
-     * {@code AbstractPlayableSprite}/{@code AbstractSprite} field hierarchy and throws on pre-existing,
-     * unrelated structural fields (e.g. {@code AbstractSprite#ceilingSensors}, a {@code Sensor[]} with
-     * no {@code @RewindTransient} annotation) -- an engine-wide gap orthogonal to this task's scope.
-     * This is also not an assertion about the production {@code AbstractPlayableSprite#captureRewindState()}
-     * pipeline, which is a closed, hand-enumerated record and does not currently capture
-     * mod-subclass-declared fields at all.
+     * <p>The rewind assertion now drives the real production round-trip -- {@code BoltCharacter}
+     * has migrated onto Mod API 2.2.0's {@code captureSubclassRewindState()} /
+     * {@code restoreSubclassRewindState(...)} hooks (see {@code BoltCharacter}), so
+     * {@link AbstractPlayableSprite#captureRewindState()} now packs the armed latch into a
+     * mod-declared {@link PerObjectRewindSnapshot.PlayableSubclassRewindExtra} payload, and
+     * {@link AbstractPlayableSprite#restoreRewindState(PerObjectRewindSnapshot)} unpacks it back
+     * onto the live field just like any other engine-owned scalar -- no test-level
+     * {@code GenericFieldCapturer} scaffold is needed any more. The live latch is cleared through
+     * the real landing-reset seam ({@code draw()}) between capture and restore so the restore
+     * assertion can only pass if the value actually round-tripped through the snapshot, and a
+     * final behavioral assertion confirms the restored latch still gates a fresh mid-air press
+     * rather than merely matching on the reflected field.
      */
     private void exerciseDoubleJumpAndRewindLatch(AbstractPlayableSprite player) throws Exception {
         setAirField(player, true);
@@ -392,22 +410,38 @@ class TestSamplePlatformerIntegration {
         assertFalse(invokeAbilityActivate(player), "A second mid-air press before landing must be latched");
         assertEquals((short) 0x0111, player.getYSpeed(), "A latched press must not re-apply the impulse");
 
-        setAirField(player, false);
-        player.draw();
-        setAirField(player, true);
-        assertTrue(invokeAbilityActivate(player), "After the landing-reset seam the ability must be available again");
-        assertEquals((short) -0x600, player.getYSpeed(), "The re-armed ability must apply the ROM impulse again");
-
         Field doubleJumpUsedField = player.getClass().getDeclaredField("doubleJumpUsed");
         doubleJumpUsedField.setAccessible(true);
         assertEquals(true, doubleJumpUsedField.get(player), "Sanity: latch must be set after the ability just fired");
 
-        GenericObjectSnapshot snapshot = new GenericObjectSnapshot(player.getClass(),
-                List.of(FieldKey.of(doubleJumpUsedField)), new Object[] { true });
-        doubleJumpUsedField.set(player, false);
-        GenericFieldCapturer.restore(player, snapshot);
+        // Capture a keyframe while the latch is armed -- the same production write path every
+        // gameplay rewind keyframe goes through.
+        PerObjectRewindSnapshot snapshot = player.captureRewindState();
+        PerObjectRewindSnapshot.PlayableSubclassRewindExtra subclassExtra =
+                snapshot.playerExtra().subclassExtra();
+        assertNotNull(subclassExtra,
+                "capture must produce a subclass payload for a character overriding captureSubclassRewindState()");
+        assertEquals("BoltRewindExtra", subclassExtra.getClass().getSimpleName(),
+                "the captured payload must be Bolt's own mod-declared record, resolved through the mod "
+                + "classloader (the concrete type cannot be referenced directly from this engine-side test)");
+
+        // Clear the live latch through the real landing-reset seam so the restore assertion
+        // below can only pass if the value actually round-tripped through the snapshot rather
+        // than observing incidental unchanged live state.
+        setAirField(player, false);
+        player.draw();
+        assertEquals(false, doubleJumpUsedField.get(player),
+                "Sanity: the landing-reset seam must have cleared the live latch before restore");
+
+        player.restoreRewindState(snapshot);
         assertEquals(true, doubleJumpUsedField.get(player),
                 "Rewind restore must bring the double-jump latch back rather than leaving the stale live value");
+
+        // Behavioral assertion: the restored latch must actually gate gameplay, not just the
+        // reflected field -- a fresh mid-air press right after restore must still be denied.
+        setAirField(player, true);
+        assertFalse(invokeAbilityActivate(player),
+                "After restore the ability must remain latched, matching the captured mid-jump state");
     }
 
     private static void setAirField(AbstractPlayableSprite player, boolean value) throws Exception {

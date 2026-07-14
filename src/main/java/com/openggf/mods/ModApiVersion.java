@@ -5,7 +5,7 @@ public final class ModApiVersion {
      * Published compiled-mod compatibility version.
      *
      * <p>The reconciled surface lineage is a single chain 1.1.0 -&gt; 1.2.0 -&gt;
-     * 2.0.0 -&gt; 2.1.0:
+     * 2.0.0 -&gt; 2.1.0 -&gt; 2.2.0:
      *
      * <ul>
      *   <li><b>1.1.0</b> ({@code mod-api-signatures-1.1.txt}) — closed historical
@@ -25,18 +25,29 @@ public final class ModApiVersion {
      *       bump over 2.0.0 that publishes the ROM-art intake surface for Sonic 2
      *       patch mods: {@code ModContext.registerRomObjectArt}, the
      *       {@code RomArtRequest} and {@code RomArtCompression} value types. No
-     *       existing 2.0 signature was removed or changed. This is the currently
-     *       published surface.</li>
+     *       existing 2.0 signature was removed or changed. Retained as a closed
+     *       historical baseline.</li>
+     *   <li><b>2.2.0</b> ({@code mod-api-signatures-2.2.txt}) — an additive minor
+     *       bump over 2.1.0 that publishes the playable-subclass rewind hooks:
+     *       the {@code PlayerRewindExtra.PlayableSubclassRewindExtra} marker
+     *       interface, the {@code subclassExtra} record component/accessor, the
+     *       new canonical {@code PlayerRewindExtra} constructor carrying it, and
+     *       the {@code AbstractPlayableSprite} {@code captureSubclassRewindState}/
+     *       {@code restoreSubclassRewindState} protected hooks. The prior 2.1
+     *       canonical {@code PlayerRewindExtra} constructor is preserved verbatim
+     *       as a compatibility overload. No existing 2.1 signature was removed or
+     *       changed. This is the currently published surface.</li>
      * </ul>
      *
      * <p>The compatibility checks verify the full chain rather than collapsing it:
      * 1.1 -&gt; 1.2 is asserted additive, 1.2 -&gt; 2.0 is asserted to be a
-     * declared breaking transition, and 2.0 -&gt; 2.1 is asserted additive, so each
-     * step's changes are never silently absorbed into an undocumented jump. See
-     * {@code docs/architecture/mod-api-compatibility.md} ("Mod API 2.0.0 breaking
-     * transition" and "Mod API 2.1.0 additive bump") for the migration notes.
+     * declared breaking transition, and 2.0 -&gt; 2.1 -&gt; 2.2 is asserted additive
+     * at each step, so each step's changes are never silently absorbed into an
+     * undocumented jump. See {@code docs/architecture/mod-api-compatibility.md}
+     * ("Mod API 2.0.0 breaking transition", "Mod API 2.1.0 additive bump", and
+     * "Mod API 2.2.0 additive bump") for the migration notes.
      */
-    public static final SemanticVersion CURRENT = new SemanticVersion(2, 1, 0);
+    public static final SemanticVersion CURRENT = new SemanticVersion(2, 2, 0);
 
     private ModApiVersion() {
     }
