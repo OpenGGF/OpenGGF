@@ -11,17 +11,12 @@ import com.openggf.data.RomByteReader;
 import com.openggf.game.*;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.save.SaveReason;
-import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.LevelDescriptor;
 import com.openggf.level.ModLevel;
-import com.openggf.level.Pattern;
 import com.openggf.level.objects.*;
-import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.sprites.animation.SpriteAnimationSet;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -44,13 +39,10 @@ public final class PlatformerModule extends AbstractStandaloneGameModule {
             (short) 0x80, (short) 0x80, (short) 0x1000, (short) 28, (short) 38,
             (short) 9, (short) 19, (short) 7, (short) 14, false, (short) 2);
     private final LevelInitProfile levelInitProfile = new PlatformerInitProfile();
-    private final ObjectArtProvider objectArtProvider;
 
-    public PlatformerModule(String owner, Level level, Map<String, ObjectSpriteSheet> objectSheets) {
+    public PlatformerModule(String owner, Level level) {
         this.owner = Objects.requireNonNull(owner, "owner");
         this.level = Objects.requireNonNull(level, "level");
-        this.objectArtProvider = new SheetBackedObjectArtProvider(
-                Objects.requireNonNull(objectSheets, "objectSheets"));
     }
 
     @Override public String getIdentifier() { return owner; }
@@ -68,17 +60,6 @@ public final class PlatformerModule extends AbstractStandaloneGameModule {
     @Override public GameAudioProfile getAudioProfile() { return new SilentNativeAudioProfile(); }
     @Override public ZoneRegistry getZoneRegistry() { return new PlatformerZones(owner); }
 
-    /**
-     * Standalone modules must serve their own object art: the engine only decorates
-     * {@code registerObjectArt} sheets onto PATCH modules ({@code ModBackedGamePatch}),
-     * while the standalone module proxy passes {@code getObjectArtProvider()} straight
-     * through -- and {@code AbstractStandaloneGameModule}'s default returns {@code null},
-     * which makes {@code LevelManager.initObjectArt()} skip creating an
-     * {@code ObjectRenderManager} entirely (no object would ever draw). This override is
-     * what makes {@code ZapBug}/{@code SpringPad}'s {@code getRenderer(...)} calls resolve
-     * in a real New Game session.
-     */
-    @Override public ObjectArtProvider getObjectArtProvider() { return objectArtProvider; }
     @Override public PhysicsProvider getPhysicsProvider() {
         return new PhysicsProvider() {
             @Override public PhysicsProfile getProfile(String characterType) { return profile; }
@@ -183,48 +164,6 @@ public final class PlatformerModule extends AbstractStandaloneGameModule {
         @Override protected InitStep perTestLeadStep() {
             return new InitStep("ResetPlatformerLevelEvents", "standalone", () -> { });
         }
-    }
-
-    /**
-     * Minimal {@link ObjectArtProvider} over pre-converted baked sheets. Uses only
-     * published types ({@link ObjectSpriteSheet}, {@link PatternSpriteRenderer},
-     * {@link GraphicsManager}); {@code ensurePatternsCached} mirrors the engine
-     * overlay provider's accumulation semantics -- each sheet's renderer caches its
-     * patterns at the running base index, which then advances by that sheet's
-     * pattern count so no two sheets collide in the virtual pattern ID space.
-     */
-    private static final class SheetBackedObjectArtProvider implements ObjectArtProvider {
-        private final Map<String, ObjectSpriteSheet> sheets;
-        private final Map<String, PatternSpriteRenderer> renderers = new LinkedHashMap<>();
-
-        private SheetBackedObjectArtProvider(Map<String, ObjectSpriteSheet> sheets) {
-            this.sheets = new LinkedHashMap<>(sheets);
-        }
-
-        @Override public void loadArtForZone(int zoneIndex) { }
-        @Override public synchronized PatternSpriteRenderer getRenderer(String key) {
-            ObjectSpriteSheet sheet = sheets.get(key);
-            if (sheet == null) return null;
-            return renderers.computeIfAbsent(key, ignored -> new PatternSpriteRenderer(sheet));
-        }
-        @Override public ObjectSpriteSheet getSheet(String key) { return sheets.get(key); }
-        @Override public SpriteAnimationSet getAnimations(String key) { return null; }
-        @Override public int getZoneData(String key, int zoneIndex) { return -1; }
-        @Override public Pattern[] getHudDigitPatterns() { return new Pattern[0]; }
-        @Override public Pattern[] getHudTextPatterns() { return new Pattern[0]; }
-        @Override public Pattern[] getHudLivesPatterns() { return new Pattern[0]; }
-        @Override public Pattern[] getHudLivesNumbers() { return new Pattern[0]; }
-        @Override public List<String> getRendererKeys() { return List.copyOf(sheets.keySet()); }
-        @Override public synchronized int ensurePatternsCached(GraphicsManager graphicsManager,
-                int baseIndex) {
-            int next = baseIndex;
-            for (Map.Entry<String, ObjectSpriteSheet> entry : sheets.entrySet()) {
-                getRenderer(entry.getKey()).ensurePatternsCached(graphicsManager, next);
-                next = Math.addExact(next, entry.getValue().getPatterns().length);
-            }
-            return next;
-        }
-        @Override public boolean isReady() { return true; }
     }
 
     private static final class SilentNativeAudioProfile implements GameAudioProfile {

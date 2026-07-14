@@ -98,17 +98,16 @@ public void register(ModContext context) {
     context.registerObjectArt("springpad", new BakedSheetRef("art/springpad.ggfs"));
     context.registerCharacter("bolt", BoltCharacter.definition(
             context.ownerModId(), materialized));
-    context.registerGameModule(new PlatformerModule(context.ownerModId(), level,
-            buildObjectSheets(context.ownerModId(), assets)));
+    context.registerGameModule(new PlatformerModule(context.ownerModId(), level));
 }
 ```
 
 Read bounded assets and register characters/objects first, then register exactly one
 module last — `registerGameModule` closes the transaction. The `registerObjectArt`
-calls here matter for editor preview/validation, but — as Chapter 8 covers in
-detail — they are **not** what makes `ZapBug`/`SpringPad` actually render in
-gameplay for a standalone module; `buildObjectSheets` builds a second, real art
-provider that `PlatformerModule` serves itself.
+calls here are the *only* object-art source this sample needs — as Chapter 8 covers
+in detail, the engine decorates `PlatformerModule`'s own (in this case absent)
+`getObjectArtProvider()` result with these registered sheets, so `ZapBug`/`SpringPad`
+render in gameplay without `PlatformerModule` serving any art itself.
 
 ## 3. Authoring the level in Tiled
 
@@ -554,39 +553,34 @@ ggfmod package --input target/classes --out target/sample-platformer-mod.jar
 ggfmod validate target/sample-platformer-mod.jar
 ```
 
-**Why a standalone module has to serve its own object art.** `PlatformerModule`
-overrides `getObjectArtProvider()` with an explicit comment on exactly why:
+**`registerObjectArt` just works for standalone modules.** `PlatformerModule`
+declares no `getObjectArtProvider()` override at all — `PlatformerMod.register()`'s
+`context.registerObjectArt(...)` calls from Chapter 2 are the entire object-art
+story for `ZapBug` and `SpringPad`. Every standalone module is returned to the
+engine wrapped in `OwnerAwareStandaloneModule`'s proxy, and that proxy's
+`getObjectArtProvider()` handler decorates whatever the module's own delegate
+method returns with the prepared `registerObjectArt` sheets (falling back to an
+empty base provider when the delegate itself returns `null`, which is what
+`AbstractStandaloneGameModule`'s default does and what `PlatformerModule` inherits
+here). The decorated provider is cached after its first build, so later calls don't
+re-invoke the module's delegate through the fault boundary. `TestSamplePlatformerIntegration`
+asserts this by reflecting on the module's unwrapped delegate (the real
+`PlatformerModule` instance behind the proxy) and confirming
+`getDeclaredMethod("getObjectArtProvider")` throws `NoSuchMethodException` — the
+fixture can't silently regress back to hand-rolling.
 
-```java
-/**
- * Standalone modules must serve their own object art: the engine only decorates
- * {@code registerObjectArt} sheets onto PATCH modules ({@code ModBackedGamePatch}),
- * while the standalone module proxy passes {@code getObjectArtProvider()} straight
- * through -- and {@code AbstractStandaloneGameModule}'s default returns {@code null},
- * which makes {@code LevelManager.initObjectArt()} skip creating an
- * {@code ObjectRenderManager} entirely (no object would ever draw). This override is
- * what makes {@code ZapBug}/{@code SpringPad}'s {@code getRenderer(...)} calls resolve
- * in a real New Game session.
- */
-@Override public ObjectArtProvider getObjectArtProvider() { return objectArtProvider; }
-```
+A module is still free to override `getObjectArtProvider()` itself — for HUD art,
+zone-scoped art, or any provider logic beyond baked sheets — and any
+`registerObjectArt` sheets simply layer on top of it, same as they do for
+`ModBackedGamePatch` on the patch side.
 
-`PlatformerMod.register()`'s `context.registerObjectArt(...)` calls from Chapter 2
-still run — they matter for editor preview/validation — but for a standalone module
-they are currently a no-op for actual gameplay rendering: `ModContext.registerObjectArt`
-sheets are prepared but silently dropped for standalone owners, because
-`OwnerAwareStandaloneModule.wrap` passes `getObjectArtProvider()` straight through
-with no decoration (the engine only decorates patch modules this way). `PlatformerMod`
-works around it with its own `SheetBackedObjectArtProvider`
-(`buildObjectSheets(...)` in `PlatformerMod.java`, backing
-`PlatformerModule`'s override above) — a small, published-types-only
-`ObjectArtProvider` over the same baked `.ggfs` sheets, with its own
-`ensurePatternsCached` that accumulates each sheet's patterns at a running base
-index so no two sheets collide in the virtual pattern ID space. This is a real
-engine wiring gap, not a pattern to imitate blindly if it ever gets fixed — see
-[`BACKLOG.md`](../BACKLOG.md)'s "Standalone `registerObjectArt` engine wiring" row
-(**Scheduled**, with this sample as the regression fixture) before copying this
-workaround into a new project.
+*Historical note:* earlier revisions of this sample carried a hand-rolled
+`SheetBackedObjectArtProvider` because `OwnerAwareStandaloneModule.wrap` used to pass
+`getObjectArtProvider()` straight through with no decoration, silently dropping
+`registerObjectArt` sheets for standalone owners. That engine gap is fixed — see
+[`BACKLOG.md`](../BACKLOG.md)'s "Standalone `registerObjectArt` engine wiring" row —
+and this sample was migrated to the engine path as its regression fixture. There is
+no workaround left to imitate.
 
 **Trust.** Because this mod carries an entrypoint and therefore executes creator
 code, the Mod Manager shows a code-trust prompt naming the jar's exact SHA-256 hash

@@ -191,13 +191,17 @@ class TestSamplePlatformerIntegration {
      * Exercises {@code ZapBug} and {@code SpringPad} directly against a hand-built
      * {@code ObjectManager}/{@code StubObjectServices} pair -- mirroring
      * {@code TestPhase2SampleModIntegration}'s {@code AbstractBadnikInstance} unit-test
-     * pattern -- rather than driving a full live gameplay session. The standalone module
-     * proxy is a passthrough for {@code getObjectArtProvider()} (only the PATCH side gets
-     * the engine's {@code registerObjectArt} overlay decoration), so a standalone module
-     * must serve its own object art -- {@code PlatformerModule} does exactly that via its
-     * sheet-backed provider override. The renderer-resolution assertions below go through
-     * the SHIPPED {@code module.getObjectArtProvider()} path, and the same provider backs
-     * the {@link ObjectRenderManager} wired into {@code StubObjectServices} so
+     * pattern -- rather than driving a full live gameplay session. Standalone modules no
+     * longer need to hand-roll an {@code ObjectArtProvider}: the engine-owned
+     * {@code OwnerAwareStandaloneModule} proxy that every standalone module is wrapped in
+     * decorates whatever the delegate's {@code getObjectArtProvider()} returns with the
+     * {@code registerObjectArt} sheets prepared from the mod's manifest (falling back to an
+     * empty base provider when the delegate itself returns {@code null}). {@code PlatformerModule}
+     * therefore declares no {@code getObjectArtProvider()} override at all -- asserted below via
+     * reflection on the unwrapped delegate so this fixture can never silently regress back to
+     * hand-rolling. The renderer-resolution assertions below go through the proxy-decorated
+     * {@code module.getObjectArtProvider()}, and the same provider backs the
+     * {@link ObjectRenderManager} wired into {@code StubObjectServices} so
      * {@code appendRenderCommands} exercises the real {@code getRenderer(...)} call.
      */
     @Test
@@ -205,6 +209,13 @@ class TestSamplePlatformerIntegration {
         Path jar = buildSample();
         try (Fixture fixture = load(jar)) {
             GameModule module = fixture.runtime.prepareStandaloneModule(OWNER).orElseThrow();
+            Object boundaryHandler = java.lang.reflect.Proxy.getInvocationHandler(module);
+            Object delegate = getField(boundaryHandler, "delegate");
+            assertEquals("example.platformer.PlatformerModule", delegate.getClass().getName());
+            assertThrows(NoSuchMethodException.class,
+                    () -> delegate.getClass().getDeclaredMethod("getObjectArtProvider"),
+                    "PlatformerModule must not declare its own getObjectArtProvider() -- object "
+                    + "art must flow through the engine's registerObjectArt overlay decoration");
             var assets = fixture.runtime.standaloneAssetSnapshot(OWNER);
             GameDataSource source = new GameDataSource() {
                 @Override public Optional<com.openggf.data.Rom> rom() { return Optional.empty(); }
@@ -224,8 +235,16 @@ class TestSamplePlatformerIntegration {
 
             ObjectArtProvider artProvider = module.getObjectArtProvider();
             assertNotNull(artProvider,
-                    "The standalone module must serve its own object-art provider (the engine "
-                    + "only decorates registerObjectArt sheets onto patch modules)");
+                    "The engine's OwnerAwareStandaloneModule proxy must decorate the module with "
+                    + "the registerObjectArt sheets even though PlatformerModule serves no "
+                    + "provider of its own");
+            assertTrue(artProvider.getRendererKeys().containsAll(
+                    List.of("sample-platformer:zapbug", "sample-platformer:springpad")),
+                    "the registerObjectArt-decorated provider must serve both namespaced keys");
+            assertNotNull(artProvider.getRenderer("sample-platformer:zapbug"),
+                    "zapbug renderer must resolve through the registerObjectArt-decorated provider");
+            assertNotNull(artProvider.getRenderer("sample-platformer:springpad"),
+                    "springpad renderer must resolve through the registerObjectArt-decorated provider");
             ObjectRenderManager renderManager = new ObjectRenderManager(artProvider);
             assertNotNull(renderManager.getRenderer("sample-platformer:zapbug"),
                     "zapbug renderer must resolve through the shipped module art provider");
