@@ -1,5 +1,41 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S3K SolidObject release-word milestone
+
+The typed S3K object-interaction rules now model `SolidObjectFull`'s
+`loc_1E0A2` push-release write: when an object's native push bit is consumed,
+the adjacent player-slot `anim/prev_anim` bytes receive Walk/Run unless the
+current animation is Roll or Spindash. This is shared solid-contact state, not
+a zone or route exception, and it restores both player and CPU-sidekick release
+ownership. No trace state is hydrated and no comparator tolerance was changed
+(`docs/skdisasm/sonic3k.asm:41503-41520`).
+
+Authoritative locked-on S3K complete-run animation results before/after this
+milestone:
+
+```text
+AIZ complete: 89 groups at frame 2980 -> 78 groups at frame 2980
+HCZ complete: 27 groups at frame 819 -> 16 groups at frame 1222
+```
+
+Regression gate at this milestone:
+
+- all 19 S2 animation routes and all 21 animation-capable S1 traces remain
+  green; the same eight legacy S1 credits traces reject their pre-v7 schema;
+- every previously green S3K animation trace retains its status, while the
+  already-red post-HCZ routes retain or advance their first-error frontiers;
+- the full 58-method cross-game physics sweep remains 43 passes / 15 existing
+  failures, with AIZ complete and HCZ complete green;
+- the 63-test shared solid-contact suite and five-test game-rules suite pass.
+
+Commands executed from the project root:
+
+```text
+mvn -q "-Dtest=com.openggf.level.objects.TestSolidObjectManager,com.openggf.tests.game.TestGameRulesConstants" test
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=animation "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=physics "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+```
+
 ### 2026-07-14 -- S3K runtime animation-owner milestone
 
 S3K player and CPU-sidekick animation ownership now follows the native routine

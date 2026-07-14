@@ -870,6 +870,65 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void sonic3kSolidPushReleasePublishesNativeWalkRunAnimationWord() {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        TestMultiPieceSolidObject object = new TestMultiPieceSolidObject(
+                100, 100, new SolidObjectParams(16, 8, 8));
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setCentreX((short) 85);
+        player.setCentreY((short) 81);
+        player.setAnimationId(5);
+        player.getAnimationManager().update(0);
+
+        manager.updateSolidContacts(player);
+        player.setCentreX((short) 40);
+        manager.updateSolidContacts(player);
+
+        assertEquals(0, player.getAnimationId(),
+                "S3K SolidObjectFull loc_1E0A2 writes Walk to anim");
+        assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "S3K writes Run to the adjacent prev_anim byte");
+    }
+
+    @Test
+    public void sonic3kSolidPushReleasePreservesSpindashAnimation() {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        TestMultiPieceSolidObject object = new TestMultiPieceSolidObject(
+                100, 100, new SolidObjectParams(16, 8, 8));
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setCentreX((short) 85);
+        player.setCentreY((short) 81);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(9, new SpriteAnimationScript(0,
+                List.of(0x09), SpriteAnimationEndAction.LOOP, 0));
+        player.setAnimationSet(animations);
+        player.setAnimationId(9);
+        player.getAnimationManager().update(0);
+
+        manager.updateSolidContacts(player);
+        player.setCentreX((short) 40);
+        manager.updateSolidContacts(player);
+
+        assertEquals(9, player.getAnimationId(),
+                "S3K loc_1E0A2 branches around the word write for Spindash");
+        assertEquals(9, player.getAnimationManager().captureRewindState().lastAnimationId());
+    }
+
+    @Test
     public void sonic1ObjectPushLatchPublishesWhilePlayerPushIsPaired() {
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
         TestMultiPieceSolidObject object = new TestMultiPieceSolidObject(

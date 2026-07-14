@@ -365,8 +365,15 @@ final class ObjectSolidContactController {
         if (rules.solidPushReleaseSkipsWalkRunWhenRolling()
                 && rollAnimationId >= 0
                 && sprite.getAnimationId() == rollAnimationId) {
-            // S2 SolidObject_TestClearPush skips the adjacent Walk/Run word
-            // write while anim is Roll (docs/s2disasm/s2.asm:35464-35476).
+            // S2 SolidObject_TestClearPush and S3K loc_1E0A2 both skip Roll.
+            return;
+        }
+        int spindashAnimationId = sprite.resolveAnimationId(CanonicalAnimation.SPINDASH);
+        if (rules.solidPushReleaseSkipsWalkRunWhenSpindashing()
+                && spindashAnimationId >= 0
+                && sprite.getAnimationId() == spindashAnimationId) {
+            // S3K loc_1E0A2 also skips Spindash ($09) before the adjacent
+            // Walk/Run word write (sonic3k.asm:41503-41515).
             return;
         }
         int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);

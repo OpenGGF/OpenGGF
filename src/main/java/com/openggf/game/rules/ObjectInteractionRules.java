@@ -15,5 +15,6 @@ public record ObjectInteractionRules(
         boolean animalObjectPreservesObjectMoveXSubpixel,
         boolean animalObjectUsesRenderFlagDeleteBounds,
         boolean solidPushReleaseWritesWalkRunAnimationWord,
-        boolean solidPushReleaseSkipsWalkRunWhenRolling) {
+        boolean solidPushReleaseSkipsWalkRunWhenRolling,
+        boolean solidPushReleaseSkipsWalkRunWhenSpindashing) {
 }
