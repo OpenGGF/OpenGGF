@@ -1,0 +1,35 @@
+# paletteLine is a BASE, not the final CRAM line: SpritePieceRenderer.preparePiece
+# computes the rendered line as (paletteLine + piece.paletteIndex) & 0x3 (Genesis
+# art_tile-addition semantics -- see per-game-rule-placement / SpritePieceRenderer).
+# Both frames below declare paletteIndex: 1, so the pipe actually renders on CRAM
+# line (1 + 1) & 3 = 2, which is SampleFlappyAssetGenerator.palettes()'s dedicated
+# "pipe greens" GPAL line (line 1 there is unrelated sky-blue level-tile color data
+# that this sheet must NOT land on). Do not "simplify" paletteIndex back to 0 to
+# match paletteLine -- that would drop the render line to 1 and collide with the
+# sky tiles' colors.
+formatVersion: 1
+paletteLine: 1
+palette:
+  - "#000000"
+  - "#002400"
+  - "#004900"
+  - "#006D00"
+  - "#009200"
+  - "#00B600"
+  - "#00DB00"
+  - "#00FF00"
+  - "#242400"
+  - "#494900"
+  - "#6D6D00"
+  - "#929200"
+  - "#B6B600"
+  - "#DBDB00"
+  - "#FFFF00"
+  - "#FFFFFF"
+frames:
+  - delay: 8
+    pieces:
+      - { sourceX: 0, sourceY: 0, widthPixels: 32, heightPixels: 32, xOffset: -16, yOffset: -16, hFlip: false, vFlip: false, paletteIndex: 1, priority: false }
+  - delay: 8
+    pieces:
+      - { sourceX: 0, sourceY: 32, widthPixels: 32, heightPixels: 16, xOffset: -16, yOffset: -8, hFlip: false, vFlip: false, paletteIndex: 1, priority: false }

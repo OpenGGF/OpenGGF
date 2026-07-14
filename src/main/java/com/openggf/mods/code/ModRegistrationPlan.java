@@ -22,7 +22,8 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                                   List<PreparedModZone> preparedZones,
                                   Map<String, String> objectPreviewArtKeys,
                                   Map<CharacterKey, CharacterDefinition> characters,
-                                  com.openggf.game.GameModule standaloneModule) {
+                                  com.openggf.game.GameModule standaloneModule,
+                                  Map<String, RomArtRequest> romObjectArt) {
     public ModRegistrationPlan {
         Objects.requireNonNull(ownerModId, "ownerModId");
         if ((standaloneModule == null) == (baseGameId == null)) {
@@ -45,6 +46,8 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 Objects.requireNonNull(objectPreviewArtKeys, "objectPreviewArtKeys")));
         characters = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
                 Objects.requireNonNull(characters, "characters")));
+        romObjectArt = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
+                Objects.requireNonNull(romObjectArt, "romObjectArt")));
         characters.forEach((key, definition) -> {
             if (!key.equals(definition.key()) || !ownerModId.equals(key.ownerModId().orElse(null))) {
                 throw new IllegalArgumentException("Character contribution owner/key mismatch");
@@ -68,6 +71,21 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 throw new IllegalArgumentException("Prepared zones must exactly match declarations");
             }
         }
+    }
+
+    /** Compatibility constructor for the pre-ROM-art-intake canonical shape. */
+    public ModRegistrationPlan(String ownerModId, String baseGameId,
+                               Map<String, ObjectFactory> objectFactories,
+                               Map<String, BakedSheetRef> objectArt,
+                               Map<String, BakedSheetReader.BakedSheet> preparedObjectArt,
+                               List<GamePatch> explicitPatches, List<ModZoneContribution> zones,
+                               List<PreparedModZone> preparedZones,
+                               Map<String, String> objectPreviewArtKeys,
+                               Map<CharacterKey, CharacterDefinition> characters,
+                               com.openggf.game.GameModule standaloneModule) {
+        this(ownerModId, baseGameId, objectFactories, objectArt, preparedObjectArt,
+                explicitPatches, zones, preparedZones, objectPreviewArtKeys, characters,
+                standaloneModule, Map.of());
     }
 
     /** Compatibility constructor for the pre-standalone canonical shape. */
@@ -129,7 +147,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
 
     public boolean hasContent() {
         return !objectFactories.isEmpty() || !objectArt.isEmpty() || !zones.isEmpty()
-                || !characters.isEmpty();
+                || !characters.isEmpty() || !romObjectArt.isEmpty();
     }
 
     /** Resolves and validates all declared sheets before the contribution is published. */
@@ -149,7 +167,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
         }
         return new ModRegistrationPlan(ownerModId, baseGameId, objectFactories, objectArt,
                 prepared, explicitPatches, zones, preparedZones,objectPreviewArtKeys,characters,
-                standaloneModule);
+                standaloneModule, romObjectArt);
     }
 
     /** Resolves all level exports while the bounded creator view is still alive. */

@@ -7,18 +7,21 @@ protected constructors, methods, fields, generic bounds, annotations, nested
 types, supertypes, interfaces, record components, and sealed permits clauses is
 part of the same contract and must also be annotated.
 
-The published version is Mod API 2.0.0. Its recursive surface spans many hundreds
-of engine types and is pinned exactly by `mod-api-signatures-2.0.txt` (the
+The published version is Mod API 2.1.0. Its recursive surface spans many hundreds
+of engine types and is pinned exactly by `mod-api-signatures-2.1.txt` (the
 `TestModApiSignatureSurface` guard is the authoritative count). The surface has a
-single reconciled lineage, 1.1.0 -> 1.2.0 -> 2.0.0: 1.1.0 is the original closed
-baseline; 1.2.0 was an additive minor bump (its frozen historical baseline
+single reconciled lineage, 1.1.0 -> 1.2.0 -> 2.0.0 -> 2.1.0: 1.1.0 is the original
+closed baseline; 1.2.0 was an additive minor bump (its frozen historical baseline
 `mod-api-signatures-1.2.txt` contains **875 engine types** and **17,178 canonical
-signature entries**, a strict superset of 1.1.0); and 2.0.0 is the current
-breaking bump published on top of 1.2.0. The breadth is intentional. In
-particular, the legacy-wide signatures of `GameModule`, `ObjectServices`, and
-the object base classes expose substantial runtime infrastructure; silently
-treating those transitive types as unsupported would make creator binaries depend
-on an undocumented, unstable ABI.
+signature entries**, a strict superset of 1.1.0); 2.0.0 was a deliberate breaking
+bump published on top of 1.2.0 (now itself a closed historical baseline,
+`mod-api-signatures-2.0.txt`, **873 engine types** and **17,165 canonical signature
+entries**); and 2.1.0 is the current additive minor bump published on top of 2.0.0
+(**875 engine types** and **17,196 canonical signature entries**). The breadth is
+intentional. In particular, the legacy-wide signatures of `GameModule`,
+`ObjectServices`, and the object base classes expose substantial runtime
+infrastructure; silently treating those transitive types as unsupported would make
+creator binaries depend on an undocumented, unstable ABI.
 
 The Phase 2 zone seam replaces the fixed `LevelData` enum in creator-facing
 signatures with `LevelDescriptor`. `LevelData` remains the stock implementation
@@ -35,20 +38,22 @@ retained and produce ownerless engine entries, so existing 1.1 binaries remain
 source- and binary-compatible.
 
 The published baseline is
-`src/test/resources/mods/mod-api-signatures-2.0.txt`, pinned exactly to the
+`src/test/resources/mods/mod-api-signatures-2.1.txt`, pinned exactly to the
 current canonical surface by `TestModApiSignatureSurface`. The prior
-`mod-api-signatures-1.1.txt` (831 engine types, 16,483 canonical entries) and
-`mod-api-signatures-1.2.txt` (875 engine types, 17,178 canonical entries) are
-retained as closed historical records: 1.1 is the original contract and 1.2 is
-its additive successor. `TestModApiSignatureSurface` verifies the full lineage —
-1.1 -> 1.2 is asserted additive (1.2 is a strict superset of 1.1), and 1.2 -> 2.0
-is asserted to be a declared breaking transition (see the 2.0.0
-breaking-transition section below) — so 1.2's additions are never silently
-absorbed into an undocumented 1.1 -> 2.0 jump. The guard requires the published
-baseline to remain a subset of the current canonical surface, so removals and
-changes fail while reviewed compatible additions can be published with an
-appropriate semantic API version increase. Before updating the published
-baseline:
+`mod-api-signatures-1.1.txt` (831 engine types, 16,483 canonical entries),
+`mod-api-signatures-1.2.txt` (875 engine types, 17,178 canonical entries), and
+`mod-api-signatures-2.0.txt` (873 engine types, 17,165 canonical entries) are
+retained as closed historical records: 1.1 is the original contract, 1.2 is its
+additive successor, and 2.0 is the deliberate breaking bump that 2.1 extends.
+`TestModApiSignatureSurface` verifies the full lineage — 1.1 -> 1.2 is asserted
+additive (1.2 is a strict superset of 1.1), 1.2 -> 2.0 is asserted to be a
+declared breaking transition (see the 2.0.0 breaking-transition section below),
+and 2.0 -> 2.1 is asserted additive (2.1 is a strict superset of 2.0; see the
+2.1.0 additive-bump section below) — so each step's changes are never silently
+absorbed into an undocumented jump. The guard requires the published baseline to
+remain a subset of the current canonical surface, so removals and changes fail
+while reviewed compatible additions can be published with an appropriate
+semantic API version increase. Before updating the published baseline:
 
 1. run `TestModApiSignatureSurface` and inspect every added line;
 2. annotate every newly reachable engine type;
@@ -120,6 +125,43 @@ Signatures removed or changed between 1.1 and 2.0 (the reason for the major bump
   `(int, GraphicsManager, Runnable, Runnable)` overload was removed in favor of
   the `(int, GraphicsManager)` form.
 
-When the current surface next drifts, refreeze `mod-api-signatures-2.0.txt`
+## Mod API 2.1.0 additive bump
+
+`ModApiVersion.CURRENT` is `2.1.0`. This is a same-major additive minor bump
+above `2.0.0`: it publishes the ROM-art intake surface that lets Sonic 2 patch
+mods stage object art materialized from the user's ROM at gameplay launch
+instead of shipping baked art assets.
+
+Added signatures:
+
+- **`ModContext.registerRomObjectArt(String, RomArtRequest)`.** Stages a ROM-art
+  request under an owner-namespaced key, served through the same overlay as
+  `registerObjectArt`. Only available to Sonic 2 patch mods (`baseGame` `"s2"`);
+  standalone modules and other base games are rejected at registration time.
+- **`RomArtRequest`** (record) — the staged request: ROM art/mapping/DPLC
+  addresses, `RomArtCompression`, palette line, and bank size. Registration
+  validates static address bounds with no ROM open; the real ROM is read only
+  during gameplay-launch materialization, and ROM-derived bytes are never
+  persisted to disk.
+- **`RomArtCompression`** (enum) — `NEMESIS`, `KOSINSKI`, `UNCOMPRESSED`.
+
+`ModRegistrationPlan` gained a `romObjectArt` component and a new 12-component
+canonical constructor to carry staged ROM-art requests through the freeze/apply
+pipeline; the pre-existing 11-component constructor is preserved as a
+compatibility overload, matching the pattern used by the earlier standalone and
+Phase-2 canonical-shape additions. `ModRegistrationPlan` is not itself part of
+the published `@ModApi` surface (it is returned only from the package-private
+`ModContext.freeze()`), so this constructor addition does not appear in the
+signature diff between 2.0 and 2.1; the diff is limited to the three items
+above. The engine-internal `RomArtMaterializer` (real ROM decompression/parsing)
+and `ModBackedGamePatch.RomArtSheetSource` remain package-private and are not
+part of the creator ABI.
+
+No existing 2.0 signature was removed, narrowed, or changed. `mod-api-signatures-2.0.txt`
+is retained as a closed historical baseline; `mod-api-signatures-2.1.txt` is the
+current published baseline and is a strict superset of it.
+
+When the current surface next drifts, refreeze `mod-api-signatures-2.1.txt`
 (additions only, published with a same-major minor bump) or, for further
-removals/changes, repeat this deliberate breaking-version transition.
+removals/changes, repeat a deliberate breaking-version transition like the 2.0.0
+one above.

@@ -189,6 +189,18 @@ on the next launch, and returns the current session to the title where required.
 Keep mutable gameplay state in rewind-capturable instance fields, use injected
 services after construction, and never keep gameplay state in mutable statics.
 
+> **Known limitation (rewind, character subclass fields):** the production
+> player rewind snapshot (`AbstractPlayableSprite.captureRewindState()` /
+> `PlayerRewindExtra`) is a closed, hand-enumerated record with no extension
+> point for subclass-declared fields. A custom character's own instance fields
+> (for example a double-jump latch) are therefore **not** restored on a rewind
+> seek that lands exactly on a keyframe or replays a cached segment; only
+> seeks that re-simulate through live input re-derive them. Design ability
+> state to be self-correcting on landing/ground transitions where possible
+> (the `sample-platformer` Bolt character's latch clears on landing, which
+> bounds any staleness to a single airtime). A subclass capture hook is
+> tracked in the deferred backlog.
+
 Before distributing a character mod:
 
 1. build and validate the packed jar;

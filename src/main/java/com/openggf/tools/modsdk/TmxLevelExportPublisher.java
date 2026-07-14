@@ -1,5 +1,6 @@
 package com.openggf.tools.modsdk;
 
+import com.openggf.mods.TrackKey;
 import com.openggf.mods.code.ModLevelExportStagingValidator;
 
 import java.io.IOException;
@@ -12,14 +13,15 @@ import java.util.Objects;
 /** No-clobber private-staging publication for a validated TMX compilation. */
 final class TmxLevelExportPublisher {
     Path publish(Path requested, TmxLevelImporter.Parsed source, TmxLevelImporter.Palette palette,
-                 TmxLevelImporter.Profiles profiles, TmxLevelImporter.Compiled compiled) throws IOException {
+                 TmxLevelImporter.Profiles profiles, TmxLevelImporter.Compiled compiled,
+                 TrackKey music) throws IOException {
         Path output = requested.toAbsolutePath().normalize();
         if (Files.exists(output, LinkOption.NOFOLLOW_LINKS)) throw new IOException("TMX output already exists: " + output);
         Path parent = Objects.requireNonNull(output.getParent(), "TMX output parent");
         Files.createDirectories(parent);
         Path staging = Files.createTempDirectory(parent, output.getFileName() + ".tmp-");
         try {
-            new TmxLevelExportWriter().write(staging, source, palette, profiles, compiled);
+            new TmxLevelExportWriter().write(staging, source, palette, profiles, compiled, music);
             new ModLevelExportStagingValidator().validate(staging);
             Files.move(staging, output);
             return output;

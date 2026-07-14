@@ -38,8 +38,13 @@ domain documented by the level reference:
 
 ```text
 ggfmod convert level --from-export <dir> --out <dir>
-ggfmod convert level --from-tmx <map.tmx> --palette <GPAL> [--solid-tiles <profile-dir>] --out <dir>
+ggfmod convert level --from-tmx <map.tmx> --palette <GPAL> [--solid-tiles <profile-dir>] [--music <owner:localName>] --out <dir>
 ```
+
+`--music <owner:localName>` declares a namespaced streamed track (the `TrackMusic` shape) instead
+of the default `StockMusic(0)` placeholder. Standalone levels must carry a namespaced track owned
+by the declaring mod (see `ModZoneLoader#loadStandalone`), so any `--from-tmx` level feeding a
+standalone module needs this flag.
 
 `convert audio` validates and copies WAV/OGG bytes without transcoding. `package`
 creates a deterministic jar and validates its staging jar before atomic publication.

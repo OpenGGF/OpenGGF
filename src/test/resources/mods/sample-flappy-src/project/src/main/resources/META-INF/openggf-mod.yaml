@@ -1,0 +1,14 @@
+formatVersion: 1
+id: sample-flappy
+name: Sample Flappy
+version: 1.0.0
+authors:
+  - Mod Author
+description: Generated OpenGGF sample mod.
+engineApiRange: ">=2.1.0 <3.0.0"
+type: patch
+baseGame: s2
+entrypoint: example.flappysample.FlappySampleMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

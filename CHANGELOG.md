@@ -3,6 +3,31 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Seventh gallery sample **`sample-platformer`** plus two narrated build-along guides
+  (`docs/modding/guides/standalone-platformer.md`, `docs/modding/guides/ai-art.md`):
+  a no-ROM standalone game with a level authored directly in Tiled and imported via
+  `ggfmod convert level --from-tmx`, an original double-jumping character ("Bolt")
+  with a distinct `PhysicsProfile`, a patrolling badnik ("ZapBug"), a spring gimmick
+  ("SpringPad"), namespaced streamed OGG music, and WAV SFX. `TestSamplePlatformerIntegration`
+  adds no-ROM master-title/save/rewind/gimmick coverage; `TestSampleModsPackage` now
+  builds and validates seven sources as one repository. The AI-art guide covers
+  prompting, exact 16-color Genesis-palette quantization, and 8-aligned sheet layout
+  for original sprite art. See `docs/modding/samples/index.md`.
+- **`ggfmod convert level --from-tmx` gained a `--music <owner:localName>` flag**,
+  declaring a namespaced streamed `TrackMusic` for the imported level instead of the
+  default `StockMusic(0)` placeholder — required for any TMX level feeding a
+  standalone module (`ModZoneLoader#loadStandalone` requires a namespaced owned
+  track). See `docs/modding/ggfmod.md`.
+- Sixth gallery sample **`sample-flappy`** plus a narrated build-along guide
+  (`docs/modding/guides/flappy-remix.md`): an additive Sonic 2 patch demonstrating
+  object-controlled minigame gameplay (full player seize/hide/release), ROM-art
+  intake of Tails' flying frames via `registerRomObjectArt`, per-frame forced camera
+  scroll, and a layout-object obstacle course. `TestSampleFlappyIntegration` adds
+  ROM-gated frame-driven coverage; `TestSampleModsPackage` now builds and validates
+  six sources as one repository. See `docs/modding/samples/index.md`.
+- Mod API 2.1.0: ROM art intake for Sonic 2 patch mods — `ModContext.registerRomObjectArt`
+  materializes object art (Nemesis/Kosinski/uncompressed + S2 mappings + optional DPLC)
+  from the player's ROM at launch under the mod's namespaced art key.
 - **Mod support Phase 4 completes the creator-facing polish pass.** `ggfmod convert level --from-tmx` now imports a hardened, deterministic orthogonal Tiled subset into the exact baked-level format, including external TSX, palette conversion, dual collision layers/profiles, tagged objects, limits, and no-clobber publication. A source-first handbook, direct validator-finding reference, link guard, and five-project CI gallery keep music, reskin, object/zone, character, and standalone workflows executable. The additive Mod API 1.2 surface now includes the prescribed delegation, collision-sensor, and level-init helpers used by those maintained examples. An exhaustive 12-document deferred-scope audit schedules base-game streamed SFX plus separate S1/S3K zone adapters, while the GUI evaluation keeps the CLI authoritative and requires measured evidence before any targeted panel or studio proposal. See `docs/modding/index.md`.
 - **Mod support Phase 3 adds playable characters and no-ROM standalone games.** The additive Mod API 1.2 surface introduces owner-tagged character identity, registry-driven factories/physics/art/archetypes, a bounded playable-v2 `.ggfp` converter, one airborne ability hook, and explicit super-form gating. Standalone mods now register a detection-free `GameModule` over durable bounded assets, load game-agnostic levels, appear as dynamic master-title entries, stream namespaced music and bounded one-shot SFX, and use validated namespaced slot-1 New Game/Continue flow. Creator callbacks retain engine-authoritative owner boundaries across objects, solids/touch, rewind, and act transitions; checked-in character and standalone source projects exercise real convert/package/scan/validate/classload paths. See `docs/modding/characters.md` and `docs/modding/standalone-games.md`.
 - **fix: ROM-backed level loads no longer break when the ROM is registered after the session opens.** The `GameDataSource` snapshot for a session opened before its ROM was available (tests wiring `openGameplaySession` then `setRom`, and the editor fresh-start reload) is no longer frozen empty: the placeholder source now live-resolves the active `RomManager`, lazily opening the configured stock ROM as the pre-abstraction call sites did, so `createGame`, parallax/scroll, audio, touch-response, and water loads see the ROM. The lazy scroll probe also resolves the world session null-safely, so a missing-ROM probe with no active session degrades gracefully instead of throwing. The pinned `RomDataSource` identity snapshot is unchanged.

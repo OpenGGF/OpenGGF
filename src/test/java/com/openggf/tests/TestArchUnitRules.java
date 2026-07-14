@@ -204,6 +204,11 @@ class TestArchUnitRules {
             // the canonical ObjectFactory vocabulary instead of defining a parallel
             // mod-only object abstraction that would drift from engine behavior.
             "mods -> level",
+            // Mod API 2.1's ROM-art intake (RomArtMaterializer) deliberately reuses the
+            // engine's existing decompression pipeline (util.PatternDecompressor,
+            // util.DplcStaticFlattener) instead of duplicating parsers; util is a leaf
+            // utility package and never depends back on mods.
+            "mods -> util",
             "physics -> camera",
             "physics -> game",
             "physics -> level",

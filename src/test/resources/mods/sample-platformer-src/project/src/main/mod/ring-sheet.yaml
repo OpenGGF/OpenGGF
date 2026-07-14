@@ -1,0 +1,26 @@
+# paletteLine is a BASE, not the final CRAM line: SpritePieceRenderer.preparePiece
+# computes the rendered line as (paletteLine + piece.paletteIndex) & 0x3 (Genesis
+# art_tile-addition semantics). Every piece below declares paletteIndex: 0, so this
+# sheet renders on CRAM line (2 + 0) & 3 = 2 -- which this mod's palette.gpal
+# DELIBERATELY populates with the shared 16-color object palette (ring golds,
+# zapbug reds, springpad grays/yellow), mirroring the sample-flappy pipe-sheet
+# approach. The declared palette list below is byte-for-byte that GPAL line, so
+# convert-time quantization and runtime colors agree. Keep the three in sync:
+# this list, the PNG's pixels, and the generator's LINE2 GPAL data. Do not bump
+# paletteIndex: (2 + 1) & 3 = 3 is zero-filled in the GPAL (solid black).
+formatVersion: 1
+paletteLine: 2
+palette: ["#000000", "#242424", "#FFDB00", "#B69200", "#FF0000", "#920000", "#240000", "#494949", "#B6B6B6", "#FFFF00", "#929200", "#6D6D6D", "#FFFFFF", "#FF9200", "#6D4900", "#DBDBDB"]
+frames:
+  - delay: 6
+    pieces:
+      - { sourceX: 0, sourceY: 0, widthPixels: 16, heightPixels: 16, xOffset: -8, yOffset: -8, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }
+  - delay: 6
+    pieces:
+      - { sourceX: 0, sourceY: 16, widthPixels: 16, heightPixels: 16, xOffset: -8, yOffset: -8, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }
+  - delay: 6
+    pieces:
+      - { sourceX: 0, sourceY: 32, widthPixels: 16, heightPixels: 16, xOffset: -8, yOffset: -8, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }
+  - delay: 6
+    pieces:
+      - { sourceX: 0, sourceY: 48, widthPixels: 16, heightPixels: 16, xOffset: -8, yOffset: -8, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }

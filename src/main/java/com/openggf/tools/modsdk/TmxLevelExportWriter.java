@@ -2,6 +2,7 @@ package com.openggf.tools.modsdk;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.openggf.mods.TrackKey;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -15,7 +16,8 @@ final class TmxLevelExportWriter {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     void write(Path output, TmxLevelImporter.Parsed source, TmxLevelImporter.Palette palette,
-               TmxLevelImporter.Profiles profiles, TmxLevelImporter.Compiled level) throws IOException {
+               TmxLevelImporter.Profiles profiles, TmxLevelImporter.Compiled level,
+               TrackKey music) throws IOException {
         Files.write(output.resolve("patterns.bin"), binary(out -> {
             out.writeBytes("GPTN"); out.writeShort(1); out.writeShort(32); out.writeInt(level.patterns().size());
             for (byte[] pattern : level.patterns()) out.write(pattern);
@@ -38,10 +40,10 @@ final class TmxLevelExportWriter {
         Files.write(output.resolve("collision-primary.bin"), collisions(level.chunks(), 0));
         Files.write(output.resolve("collision-secondary.bin"), collisions(level.chunks(), 1));
         Files.write(output.resolve("palettes.bin"), palette.bytes());
-        Files.write(output.resolve("level.json"), JSON.writeValueAsBytes(metadata(source, level)));
+        Files.write(output.resolve("level.json"), JSON.writeValueAsBytes(metadata(source, level, music)));
     }
 
-    private ObjectNode metadata(TmxLevelImporter.Parsed source, TmxLevelImporter.Compiled level) {
+    private ObjectNode metadata(TmxLevelImporter.Parsed source, TmxLevelImporter.Compiled level, TrackKey music) {
         ObjectNode root = JSON.createObjectNode();
         root.put("formatVersion", 1); root.put("zoneName", "Tiled Level"); root.put("zoneIndex", 0x40);
         root.put("levelIndex", 0x400); root.put("blockGridSide", 8);
@@ -50,7 +52,12 @@ final class TmxLevelExportWriter {
         bounds.put("minY", 0); bounds.put("maxY", source.height() * 16);
         TmxLevelImporter.Point position = source.start() == null ? new TmxLevelImporter.Point(128, 128) : source.start();
         ObjectNode start = root.putObject("start"); start.put("x", position.x()); start.put("y", position.y());
-        root.putObject("music").put("stockId", 0);
+        ObjectNode musicNode = root.putObject("music");
+        if (music == null) musicNode.put("stockId", 0);
+        else {
+            ObjectNode trackKey = musicNode.putObject("trackKey");
+            trackKey.put("modId", music.modId()); trackKey.put("name", music.localName());
+        }
         ObjectNode assets = root.putObject("assets");
         assets.put("patterns", "patterns.bin"); assets.put("chunks", "chunks.bin"); assets.put("blocks", "blocks.bin");
         assets.put("foregroundMap", "fg-map.bin"); if (level.bgMap() != null) assets.put("backgroundMap", "bg-map.bin");

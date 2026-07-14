@@ -1,0 +1,15 @@
+# Character sheet: paletteLine 0 + piece paletteIndex 0 => rendered CRAM line
+# (0 + 0) & 3 = 0. Bolt's runtime colors come from this sheet's own 16-color
+# palette below, carried into the .ggfp BASE palette and loaded over CRAM
+# line 0 by CharacterDefinition's palette supplier -- NOT from the level
+# GPAL's line 0 (which is placeholder data).
+formatVersion: 1
+paletteLine: 0
+palette: ["#000000", "#242424", "#494949", "#929292", "#DBDBDB", "#006DDB", "#49B6FF", "#FF0000", "#6D0000", "#FFFF00", "#00FF00", "#FF9200", "#9200FF", "#00FFFF", "#B66D24", "#FFFFFF"]
+frames:
+  - delay: 30
+    pieces:
+      - { sourceX: 0, sourceY: 0, widthPixels: 24, heightPixels: 32, xOffset: -12, yOffset: -16, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }
+  - delay: 30
+    pieces:
+      - { sourceX: 0, sourceY: 32, widthPixels: 24, heightPixels: 32, xOffset: -12, yOffset: -16, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }

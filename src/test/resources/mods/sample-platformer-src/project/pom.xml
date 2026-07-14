@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>example.platformer</groupId><artifactId>sample-platformer</artifactId><version>1.0.0</version>
+  <properties><maven.compiler.release>21</maven.compiler.release><lwjgl.version>3.3.3</lwjgl.version></properties>
+  <profiles>
+    <profile><id>published-openggf</id><activation><activeByDefault>true</activeByDefault></activation><dependencies>
+      <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF</artifactId><version>0.6.prerelease</version><scope>provided</scope></dependency>
+      <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF</artifactId><version>0.6.prerelease</version><classifier>openggf-mod-sdk</classifier><scope>provided</scope></dependency>
+    </dependencies></profile>
+    <!--
+      LWJGL native-classifier profiles, mirroring the engine's own pom.xml. Needed only by the
+      local-openggf dev/test profile below: ModJarValidator's package-time audio validation
+      decodes the packaged zone-theme.ogg streamed track through OggPcmDecoder (LWJGL/STB
+      Vorbis), so the local (system-scope, dependency-free) engine/sdk jars used by
+      TestSamplePlatformerIntegration's subprocess build need a real LWJGL+STB classpath that
+      those system-scope jars cannot supply transitively. The published-openggf profile above
+      does not need this: OpenGGF's real Maven artifact already pulls LWJGL transitively.
+    -->
+    <profile>
+      <id>lwjgl-natives-linux</id>
+      <activation><os><family>unix</family><name>!Mac OS X</name></os></activation>
+      <properties><lwjgl.natives>natives-linux</lwjgl.natives></properties>
+    </profile>
+    <profile>
+      <id>lwjgl-natives-macos</id>
+      <activation><os><family>mac</family></os></activation>
+      <properties><lwjgl.natives>natives-macos</lwjgl.natives></properties>
+    </profile>
+    <profile>
+      <id>lwjgl-natives-macos-arm64</id>
+      <activation><os><family>mac</family><arch>aarch64</arch></os></activation>
+      <properties><lwjgl.natives>natives-macos-arm64</lwjgl.natives></properties>
+    </profile>
+    <profile>
+      <id>lwjgl-natives-windows</id>
+      <activation><os><family>windows</family></os></activation>
+      <properties><lwjgl.natives>natives-windows</lwjgl.natives></properties>
+    </profile>
+    <profile><id>local-openggf</id><activation><property><name>openggf.engine.jar</name></property></activation><dependencies>
+      <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF-local</artifactId><version>0</version><scope>system</scope><systemPath>${openggf.engine.jar}</systemPath></dependency>
+      <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF-sdk-local</artifactId><version>0</version><scope>system</scope><systemPath>${openggf.sdk.jar}</systemPath></dependency>
+      <dependency><groupId>com.fasterxml.jackson.dataformat</groupId><artifactId>jackson-dataformat-yaml</artifactId><version>2.22.0</version></dependency>
+      <dependency><groupId>org.ow2.asm</groupId><artifactId>asm</artifactId><version>9.9.1</version></dependency>
+      <dependency><groupId>org.lwjgl</groupId><artifactId>lwjgl</artifactId><version>${lwjgl.version}</version></dependency>
+      <dependency><groupId>org.lwjgl</groupId><artifactId>lwjgl</artifactId><version>${lwjgl.version}</version><classifier>${lwjgl.natives}</classifier></dependency>
+      <dependency><groupId>org.lwjgl</groupId><artifactId>lwjgl-stb</artifactId><version>${lwjgl.version}</version></dependency>
+      <dependency><groupId>org.lwjgl</groupId><artifactId>lwjgl-stb</artifactId><version>${lwjgl.version}</version><classifier>${lwjgl.natives}</classifier></dependency>
+    </dependencies></profile>
+  </profiles>
+  <build><plugins>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-antrun-plugin</artifactId><version>3.1.0</version><executions>
+      <execution><id>remove-stale-generated-mod-outputs</id><phase>initialize</phase><goals><goal>run</goal></goals><configuration><target>
+        <delete file="${project.build.outputDirectory}/art/zapbug.ggfs" quiet="true"/>
+        <delete file="${project.build.outputDirectory}/art/springpad.ggfs" quiet="true"/>
+        <delete file="${project.build.outputDirectory}/art/ring.ggfs" quiet="true"/>
+        <delete file="${project.build.outputDirectory}/art/bolt.ggfp" quiet="true"/>
+        <delete dir="${project.build.outputDirectory}/levels/act1" quiet="true"/>
+        <delete file="${project.build.directory}/sample-platformer-mod.jar" quiet="true"/>
+      </target></configuration></execution>
+    </executions></plugin>
+    <plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.1.0</version><executions>
+      <execution><id>convert-zapbug-art</id><phase>generate-resources</phase><goals><goal>exec</goal></goals><configuration>
+        <executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>
+          <argument>convert</argument><argument>art</argument><argument>--image</argument><argument>${project.basedir}/src/main/mod/zapbug.png</argument>
+          <argument>--sheet</argument><argument>${project.basedir}/src/main/mod/zapbug-sheet.yaml</argument><argument>--out</argument><argument>${project.build.outputDirectory}/art/zapbug.ggfs</argument>
+        </arguments></configuration></execution>
+      <execution><id>convert-springpad-art</id><phase>generate-resources</phase><goals><goal>exec</goal></goals><configuration>
+        <executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>
+          <argument>convert</argument><argument>art</argument><argument>--image</argument><argument>${project.basedir}/src/main/mod/springpad.png</argument>
+          <argument>--sheet</argument><argument>${project.basedir}/src/main/mod/springpad-sheet.yaml</argument><argument>--out</argument><argument>${project.build.outputDirectory}/art/springpad.ggfs</argument>
+        </arguments></configuration></execution>
+      <execution><id>convert-ring-art</id><phase>generate-resources</phase><goals><goal>exec</goal></goals><configuration>
+        <executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>
+          <argument>convert</argument><argument>art</argument><argument>--image</argument><argument>${project.basedir}/src/main/mod/ring.png</argument>
+          <argument>--sheet</argument><argument>${project.basedir}/src/main/mod/ring-sheet.yaml</argument><argument>--out</argument><argument>${project.build.outputDirectory}/art/ring.ggfs</argument>
+        </arguments></configuration></execution>
+      <execution><id>convert-bolt-playable-art</id><phase>generate-resources</phase><goals><goal>exec</goal></goals><configuration>
+        <executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>
+          <argument>convert</argument><argument>art</argument><argument>--playable</argument><argument>--image</argument><argument>${project.basedir}/src/main/mod/bolt.png</argument>
+          <argument>--sheet</argument><argument>${project.basedir}/src/main/mod/bolt-sheet.yaml</argument><argument>--out</argument><argument>${project.build.outputDirectory}/art/bolt.ggfp</argument>
+        </arguments></configuration></execution>
+      <execution><id>convert-level</id><phase>generate-resources</phase><goals><goal>exec</goal></goals><configuration>
+        <executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>
+          <argument>convert</argument><argument>level</argument><argument>--from-tmx</argument><argument>${project.basedir}/src/main/mod/level.tmx</argument>
+          <argument>--palette</argument><argument>${project.basedir}/src/main/mod/palette.gpal</argument>
+          <argument>--music</argument><argument>sample-platformer:zone-theme</argument>
+          <argument>--out</argument><argument>${project.build.outputDirectory}/levels/act1</argument>
+        </arguments></configuration></execution>
+      <execution><id>package-validated-mod</id><phase>prepare-package</phase><goals><goal>exec</goal></goals><configuration>
+        <executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>
+          <argument>package</argument><argument>--input</argument><argument>${project.build.outputDirectory}</argument>
+          <argument>--out</argument><argument>${project.build.directory}/sample-platformer-mod.jar</argument>
+        </arguments></configuration></execution>
+    </executions></plugin>
+  </plugins></build>
+</project>

@@ -1,0 +1,18 @@
+formatVersion: 1
+tracks:
+  - id: zone-theme
+    assetPath: audio/zone-theme.ogg
+    loop: true
+    loopStartFrame: 0
+    gain: 1.0
+    tempoEffects: false
+sfx:
+  - id: jump2
+    assetPath: audio/jump2.wav
+    gain: 1.0
+  - id: hit
+    assetPath: audio/hit.wav
+    gain: 1.0
+  - id: spring
+    assetPath: audio/spring.wav
+    gain: 1.0

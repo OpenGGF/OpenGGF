@@ -1,14 +1,19 @@
 package com.openggf.mods.code;
 
 import com.openggf.game.GameModule;
+import com.openggf.game.GameServices;
 import com.openggf.game.patch.GamePatch;
 import com.openggf.game.patch.GameplayLaunchRequest;
 import com.openggf.game.patch.LogicalRom;
 import com.openggf.game.patch.PatchContext;
 import com.openggf.game.patch.DelegatingGameModule;
+import com.openggf.io.ModInputLimits;
 import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.level.objects.ObjectSpriteSheet;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -18,6 +23,27 @@ public final class ModBackedGamePatch implements GamePatch {
     private final ModFaultBoundary faultBoundary;
     private final java.util.function.BiConsumer<String,
             com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink;
+    private final RomArtSheetSource romArtSource;
+
+    /**
+     * Source of materialized ROM-art sheets; injectable for tests. Engine-internal — must never
+     * enter the {@code @ModApi} surface.
+     */
+    interface RomArtSheetSource {
+        Map<String, ObjectSpriteSheet> materialize(String owner, Map<String, RomArtRequest> requests);
+    }
+
+    static RomArtSheetSource productionRomArtSource() {
+        return (owner, requests) -> {
+            try {
+                return RomArtMaterializer.materialize(owner, requests,
+                        GameServices.rom().getRom(), ModInputLimits.production());
+            } catch (IOException e) {
+                throw new ModRegistrationException(owner, "MOD_ROM_ART_INVALID",
+                        "ROM unavailable during art materialization", null, e);
+            }
+        };
+    }
 
     public ModBackedGamePatch(ModRegistrationPlan plan) {
         this(plan, null, (owner, finding) -> {});
@@ -30,9 +56,17 @@ public final class ModBackedGamePatch implements GamePatch {
     public ModBackedGamePatch(ModRegistrationPlan plan, ModFaultBoundary faultBoundary,
                               java.util.function.BiConsumer<String,
                                       com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink) {
+        this(plan, faultBoundary, saveFindingSink, productionRomArtSource());
+    }
+
+    ModBackedGamePatch(ModRegistrationPlan plan, ModFaultBoundary faultBoundary,
+                       java.util.function.BiConsumer<String,
+                               com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink,
+                       RomArtSheetSource romArtSource) {
         this.plan = Objects.requireNonNull(plan, "plan");
         this.faultBoundary = faultBoundary;
         this.saveFindingSink = Objects.requireNonNull(saveFindingSink, "saveFindingSink");
+        this.romArtSource = Objects.requireNonNull(romArtSource, "romArtSource");
         if (!plan.hasContent()) throw new IllegalArgumentException("Backing patch requires content");
         if (!plan.objectArt().isEmpty()
                 && !plan.preparedObjectArt().keySet().equals(plan.objectArt().keySet())) {
@@ -72,6 +106,9 @@ public final class ModBackedGamePatch implements GamePatch {
                         plan.ownerModId(), entry.getKey(), entry.getValue()))
                 .toList();
         ModObjectKeyRegistry objectKeys = new ModObjectKeyRegistry(registrations);
+        Map<String, ObjectSpriteSheet> romSheets = plan.romObjectArt().isEmpty()
+                ? Map.of()
+                : romArtSource.materialize(plan.ownerModId(), plan.romObjectArt());
         return new DelegatingGameModule(base, id()) {
             private com.openggf.game.PlayableCharacterRegistry playableCharacters;
             private com.openggf.game.ObjectArtProvider objectArtProvider;
@@ -108,9 +145,9 @@ public final class ModBackedGamePatch implements GamePatch {
             public synchronized com.openggf.game.ObjectArtProvider getObjectArtProvider() {
                 if (objectArtProvider == null) {
                     com.openggf.game.ObjectArtProvider inherited = super.getObjectArtProvider();
-                    objectArtProvider = plan.preparedObjectArt().isEmpty()
+                    objectArtProvider = (plan.preparedObjectArt().isEmpty() && romSheets.isEmpty())
                             ? inherited
-                            : ModArtOverlayProvider.decorate(inherited, plan.preparedObjectArt());
+                            : ModArtOverlayProvider.decorate(inherited, plan.preparedObjectArt(), romSheets);
                 }
                 return objectArtProvider;
             }

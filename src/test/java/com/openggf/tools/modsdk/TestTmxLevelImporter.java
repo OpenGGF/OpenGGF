@@ -3,6 +3,7 @@ package com.openggf.tools.modsdk;
 import com.openggf.io.ModInputLimits;
 import com.openggf.io.DirectoryAccess;
 import com.openggf.io.ModAssetRoot;
+import com.openggf.mods.TrackKey;
 import com.openggf.mods.code.BakedLevelRef;
 import com.openggf.mods.code.ModLevelDefinitionParser;
 import org.junit.jupiter.api.Test;
@@ -353,6 +354,25 @@ class TestTmxLevelImporter {
         assertEquals(0, json.path("rings").get(0).path("placementId").asInt());
         assertEquals(48, json.path("rings").get(0).path("x").asInt());
         assertEquals(64, json.path("rings").get(0).path("y").asInt());
+    }
+
+    @Test
+    void namespacedMusicKeyImportsAsTrackMusicInsteadOfStockPlaceholder() throws Exception {
+        writeSolidChunk(temp.resolve("chunks.png"), 0xFF0000FF);
+        Path palette = temp.resolve("palette.bin");
+        writePaletteWithBlueAtIndexOne(palette);
+        Path tmx = temp.resolve("music.tmx");
+        Files.writeString(tmx, completeMap(cells(1)));
+
+        new TmxLevelImporter().importLevel(tmx, palette, null, temp.resolve("music-out"),
+                new TrackKey("sample-platformer", "zone-theme"));
+
+        var json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(
+                Files.readAllBytes(temp.resolve("music-out/level.json")));
+        assertEquals("sample-platformer", json.path("music").path("trackKey").path("modId").asText());
+        assertEquals("zone-theme", json.path("music").path("trackKey").path("name").asText());
+        assertTrue(json.path("music").path("stockId").isMissingNode(),
+                "A namespaced track must replace, not accompany, the stock-id placeholder");
     }
 
     @Test
