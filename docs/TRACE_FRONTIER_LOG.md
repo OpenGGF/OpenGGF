@@ -1,5 +1,37 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- AIZ1 signpost results-lifetime milestone
+
+Branch `feature/ai-trace-animation-verification`, after the collapsing-platform
+multi-rider release milestone. The AIZ miniboss collision bridge intentionally
+keeps the parent interactive after the fatal touch, which makes the engine's
+visual signpost land later than the native SST. The signpost now carries that
+already-elapsed state into its results countdown without moving the interactive
+object earlier. Its retained results owner separately publishes
+`Restore_PlayerControl`'s Wait animation word, preserves the current Victory
+mapping for that object entry, and waits through the remaining results-handoff
+dispatches before starting the Act 2 title-card path. These are object-local
+entry counts carried through constructors and rewind state; no zone, route,
+trace frame, trace hydration, or comparison tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 176198-176272
+(`Obj_EndSignLanded` through `Obj_EndSignAfter`), 180360-180419
+(`Restore_PlayerControl` / `Obj_EndSignControl`), and 62679-62720
+(`Obj_LevelResultsWait2`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestS3kSignpostInstance` and `TestS3kBossDefeatSignpostFlow` pass; the
+  focused AIZ physics replay remains green.
+- AIZ complete-run advances from frame 11350 / 61 grouped animation errors to
+  frame 12091 / 25. The full AIZ1 Victory animation and mapping cadence now
+  matches through the post-results control release.
+- `TestS3kHczCompleteRunTraceReplay` remains animation-green.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  every previously green route retains its status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
 ### 2026-07-14 -- S3K collapsing-platform multi-rider release milestone
 
 Branch `feature/ai-trace-animation-verification`, after the AIZ hollow-tree

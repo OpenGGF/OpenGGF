@@ -107,6 +107,9 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
      * (the signpost's spawn is null, so the recreate hook uses a placeholder).
      */
     private int apparentAct;
+    private int resultsTimerCatchUpEntries;
+    private int resultsWaitDurationAdjustment;
+    private int resultsPostControlHandoffDelayEntries;
     private boolean mainEndingPosePending;
     private boolean sidekickEndingPoseApplied;
     private boolean sidekickEndingPoseCheckArmed;
@@ -119,10 +122,18 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
      * @param apparentAct ROM's Apparent_act (0 = act 1 display, 1 = act 2 display)
      */
     public S3kSignpostInstance(int spawnX, int apparentAct) {
+        this(spawnX, apparentAct, 0, 0, 0);
+    }
+
+    S3kSignpostInstance(int spawnX, int apparentAct, int resultsTimerCatchUpEntries,
+            int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries) {
         super(null, "S3kSignpost");
         this.worldX = spawnX;
         this.worldY = 0; // Set properly in INIT
         this.apparentAct = apparentAct;
+        this.resultsTimerCatchUpEntries = Math.max(0, resultsTimerCatchUpEntries);
+        this.resultsWaitDurationAdjustment = Math.max(0, resultsWaitDurationAdjustment);
+        this.resultsPostControlHandoffDelayEntries = Math.max(0, resultsPostControlHandoffDelayEntries);
     }
 
     private S3kSignpostInstance() {
@@ -281,7 +292,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                 return; // No floor contact yet — keep falling
             }
             landed = true;
-            postLandTimer = POST_LAND_TIMER;
+            postLandTimer = Math.max(0, POST_LAND_TIMER - resultsTimerCatchUpEntries);
             yVel = 0;
             xVel = 0;
             subX = 0;
@@ -439,7 +450,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
             services().gameState().setEndOfLevelActive(true);
         }
         spawnFreeChild(() -> new S3kResultsScreenObjectInstance(
-                getPlayerCharacter(), apparentAct));
+                getPlayerCharacter(), apparentAct, resultsWaitDurationAdjustment,
+                resultsPostControlHandoffDelayEntries));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
     }
