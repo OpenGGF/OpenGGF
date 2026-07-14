@@ -52,7 +52,11 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         sidekick.setCentreYPreserveSubpixel((short) (leader.getCentreY() - RESPAWN_Y_OFFSET));
         SidekickCpuRules rules = sidekickCpuRulesOrNull(sidekick);
         boolean catchUpMarker = rules != null && rules.sidekickRespawnEntersCatchUpFlight();
-        approachRunsObjectPhysics = false;
+        // Obj02 continues through its normal movement dispatcher after
+        // TailsCPU_Respawn returns. S2 therefore runs the spawn-frame physics
+        // whenever inherited object_control bit 0 is clear; S3K's catch-up
+        // marker writes $81 and remains fully scripted.
+        approachRunsObjectPhysics = !catchUpMarker && !sidekick.isObjectControlSuppressesMovement();
         if (catchUpMarker) {
             // S3K Tails_Catch_Up_Flying loc_13B50 (sonic3k.asm:26503-26506)
             // zeroes x_vel, y_vel, and ground_vel immediately after teleporting.
@@ -63,22 +67,39 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
             sidekick.setYSpeed((short) 0);
             sidekick.setGSpeed((short) 0);
         }
-        sidekick.setAir(true);
         sidekick.setDead(false);
         sidekick.setHurt(false);
         sidekick.setSpindash(false);
         sidekick.setSpindashCounter((short) 0);
-        sidekick.setForcedAnimationId(flyAnimId);
         if (catchUpMarker) {
+            // S3K's catch-up teleport explicitly calls
+            // Tails_Set_Flying_Animation (docs/skdisasm/sonic3k.asm:26474-26500).
+            // S2 TailsCPU_Respawn has no animation write at all: it preserves
+            // anim/prev_anim while changing routine and position
+            // (docs/s2disasm/s2.asm:39122-39140). This distinction is visible
+            // when an off-screen Wait Tails respawns: S2 keeps Wait throughout
+            // the approach until another native owner changes it.
+            sidekick.setForcedAnimationId(flyAnimId);
+            sidekick.setAir(true);
             sidekick.setControlLocked(true);
             ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         } else {
             // S2 TailsCPU_Respawn does not write obj_control (s2.asm:
-            // 39122-39140), and ordinary TailsCPU_Flying only writes $81 on
-            // the off-screen timeout path (s2.asm:39142-39159). Preserve the
-            // inherited object-control byte; when it is already clear, Obj02's
-            // normal airborne movement path remains active after the manual
-            // +/-1 TailsCPU_Flying nudge.
+            // 39122-39140), status, or anim, and ordinary TailsCPU_Flying only
+            // writes $81/status=InAir/Fly on the off-screen timeout path
+            // (s2.asm:39142-39159). Preserve those native bytes. When bit 0 is
+            // clear, Obj02's same-frame ground dispatcher can run AnglePos;
+            // losing support publishes prev_anim=Run before Tails_Animate
+            // (s2.asm:38973-39003,43108-43110), restarting a preserved Wait
+            // script without a synthetic animation write here.
+            //
+            // The timeout's Fly write is also one-shot ROM state, not a
+            // continuous animation owner. Drop the engine-only forced latch
+            // when TailsCPU_Respawn re-enters routine 4, but leave anim itself
+            // untouched. That lets later native movement writes replace Fly;
+            // CNZ1, for example, enters Status_Roll during this approach and
+            // publishes TailsAni_Roll while TailsCPU_Flying remains active.
+            sidekick.setForcedAnimationId(-1);
         }
         return true;
     }
@@ -109,9 +130,14 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     @Override
     public boolean updateApproaching(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader,
                                      int frameCounter) {
-        sidekick.setForcedAnimationId(flyAnimId);
         SidekickCpuRules rules = sidekickCpuRulesOrNull(sidekick);
         boolean catchUpMarker = rules != null && rules.sidekickRespawnEntersCatchUpFlight();
+        if (catchUpMarker) {
+            // S3K routine 4 owns the flight animation after the catch-up entry;
+            // S2 TailsCPU_Flying does not write anim on its ordinary homing path
+            // (docs/s2disasm/s2.asm:39142-39228).
+            sidekick.setForcedAnimationId(flyAnimId);
+        }
         approachRunsObjectPhysics = !catchUpMarker && !sidekick.isObjectControlSuppressesMovement();
         if (catchUpMarker) {
             sidekick.setControlLocked(true);

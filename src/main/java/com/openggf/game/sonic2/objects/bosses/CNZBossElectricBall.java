@@ -191,15 +191,16 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
 
     /**
      * ROM: loc_31FDC - Ball falling.
-     * Uses ObjCheckFloorDist, triggers split when d1 (distance) is negative or zero.
+     * Uses ObjCheckFloorDist and splits only when d1 is negative.
      */
     private void updateBallFall() {
         applyBallPhysics();
 
-        // ROM: jsr (ObjCheckFloorDist).l / tst.w d1 / bpl.w DisplaySprite
-        // Triggers when d1 <= 0 (at or below floor)
+        // ROM: jsr (ObjCheckFloorDist).l / tst.w d1 / bpl.w DisplaySprite.
+        // bpl includes zero, so exact surface contact remains in BALL_FALL;
+        // only a negative penetration reaches loc_32030 and splits the ball.
         TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(x, y, Y_RADIUS);
-        if (floor.hasCollision() && floor.distance() <= 0) {
+        if (floor.foundSurface() && floor.distance() < 0) {
             y += floor.distance();
             yFixed = y << 16;
             explodeAndSplit();

@@ -280,6 +280,16 @@ public class ARZBossPillar extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // The pillar changes y_pos every raising/lowering frame, but its
+        // standing/pushing bits remain in the same Obj89 SST slot. Keying the
+        // folded engine latch by the rewritten dynamic spawn prevents the old
+        // side-push owner from becoming unreachable when the pillar moves.
+        // docs/s2disasm/s2.asm:65330-65374,65531-65539
+        return true;
+    }
+
+    @Override
     public boolean preservesMovingSideContactVelocity(PlayableEntity player) {
         // Obj89_Pillar_Sub0/Sub2 run Obj89_Pillar_SolidObject before the pillar
         // body update, and the helper calls ordinary SolidObject at the temporary

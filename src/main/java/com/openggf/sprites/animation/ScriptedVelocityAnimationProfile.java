@@ -197,12 +197,17 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // launch. Reasserting Spring for the whole synthetic lock overwrites
         // those later/native bytes (S2 Obj41: s2.asm:33732-33752,
         // 33867-33915,34023-34043).
-        // S2 Obj84 mirrors forced-spin pinball mode into the same ROM byte the
-        // player spindash uses, but it also writes Status_Roll/anim=Roll. Keep
-        // the tunnel visual curled instead of showing the spindash charge pose.
+        // The spindash flag is state, not a continuous animation owner. CheckSpindash
+        // writes Spindash on entry, and UpdateSpindash writes it again only on a
+        // fresh charge press (S2 Tails: s2.asm:40470-40483,40568-40587). Between
+        // those writes, SolidObject_TestClearPush may legally publish Walk while
+        // the flag remains set (s2.asm:35462-35487); that byte must survive until
+        // another native routine changes it. S2 Obj84's forced-spin pinball mode
+        // mirrors the same flag but also writes Status_Roll/anim=Roll, so let the
+        // ordinary rolling branch below keep that explicit Roll byte.
         if (sprite.getSpindash() && spindashAnimId >= 0
                 && !(sprite.getPinballMode() && sprite.getRolling())) {
-            return spindashAnimId;
+            return null;
         }
         // LZWaterSlides writes Slide only while grounded. A jump/roll dispatch
         // later overwrites it with Roll, but AnglePos terrain detach only changes

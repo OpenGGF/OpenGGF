@@ -53,6 +53,21 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void movingSpikeConsumesInitFrameBeforeFirstPositionStep() {
+        SpikeObjectInstance spike = new SpikeObjectInstance(
+                new ObjectSpawn(0x1548, 0x06B8, Sonic2ObjectIds.SPIKES, 0x01, 0, false, 0),
+                "Spikes");
+
+        spike.update(0, null);
+        assertEquals(0x06B8, spike.getY(),
+                "Obj36_Init returns before MoveSpikes changes the placement position");
+
+        spike.update(1, null);
+        assertEquals(0x06C0, spike.getY(),
+                "the first Obj36_Upright execution applies the initial +8px retract step");
+    }
+
+    @Test
     void arrowShooterDetectsQueryOnlySidekick() throws Exception {
         TestablePlayableSprite main = player("sonic", 0x1800, 0x1000);
         TestablePlayableSprite tails = player("tails", 0x1010, 0x1000);
@@ -923,6 +938,16 @@ class TestSonic2TriggerParticipation {
         assertTrue(block.isDestroyed(),
                 "Obj32 snapshots player anim before SolidObject and breaks on anim==Roll");
         assertEquals(0xFD00, main.getYSpeed() & 0xFFFF);
+    }
+
+    @Test
+    void breakableBlockKeepsSolidObjectExactRightEdgeContact() {
+        BreakableBlockObjectInstance block = new BreakableBlockObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.BREAKABLE_BLOCK, 0, 0, false, 0),
+                "BreakableBlock");
+
+        assertTrue(block.getSolidRoutineProfile().inclusiveRightEdge(),
+                "Obj32's SolidObject bhi gate accepts relX == 2*d1");
     }
 
     @Test

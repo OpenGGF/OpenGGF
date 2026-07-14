@@ -14,6 +14,7 @@ import com.openggf.physics.Direction;
 import java.util.List;
 
 public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements RewindRecreatable {
+    private boolean mainRoutineReached;
 
     public SpikeObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -22,6 +23,19 @@ public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements 
     @Override
     public SpikeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new SpikeObjectInstance(ctx.spawn(), getName());
+    }
+
+    @Override
+    public void update(int frameCounter, PlayableEntity player) {
+        if (!mainRoutineReached) {
+            // Obj36_Init initializes the routine, dimensions, and saved origin,
+            // then returns through Adjust2PArtPointer without calling MoveSpikes
+            // (docs/s2disasm/s2.asm:29362-29389). The first +8/-8 movement step
+            // belongs to the next object execution in Obj36_Upright/Sideways.
+            mainRoutineReached = true;
+            return;
+        }
+        super.update(frameCounter, player);
     }
 
     @Override

@@ -165,6 +165,17 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Each Obj78 child calls the standard S2 SolidObject helper with
+        // d1=width_pixels+$B=$1B (s2.asm:56006-56021). SolidObject_cont rejects
+        // X only on BHI, so relX==2*d1 remains a zero-distance side contact
+        // (s2.asm:35138-35176). CPZ2's right-facing Sonic at x=$152B is exactly
+        // the right edge of the child centred at $1510; its child push bit stays
+        // set until x=$152C on the following frame.
+        return true;
+    }
+
+    @Override
     public boolean usesInstanceSolidStateLatchKey() {
         // updateDynamicSpawn() tracks the moving parent surface for placement and
         // diagnostics, but ROM keeps SolidObject standing/pushing bits in the live
@@ -255,6 +266,16 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
 
         SolidObjectParams neighbourParams = getPieceParams(neighbourIndex);
         int neighbourX = getPieceX(neighbourIndex);
+        int neighbourY = getPieceY(neighbourIndex) + neighbourParams.offsetY();
+        int maxVerticalDistance = neighbourParams.airHalfHeight() + playerEntity.getYRadius();
+        int relativeY = playerEntity.getCentreY() - neighbourY + 4 + maxVerticalDistance;
+        if (relativeY < 0 || relativeY >= maxVerticalDistance * 2) {
+            // SolidObject_cont adds the player's y_radius to d2, offsets the
+            // relative Y by +4, then rejects values outside [0,2*d2)
+            // (s2.asm:35177-35195). A horizontally adjacent step cannot retain
+            // its child-slot push bit when the rider is above/below that box.
+            return false;
+        }
         int playerX = playerEntity.getCentreX();
         return step > 0
                 ? playerX >= neighbourX - neighbourParams.halfWidth()

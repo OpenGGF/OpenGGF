@@ -286,6 +286,36 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void arzBossPillarKeepsSolidLatchInItsMovingSstSlot() {
+        ARZBossPillar pillar = new ARZBossPillar(
+                new ObjectSpawn(0x2B70, 0x0510, Sonic2ObjectIds.ARZ_BOSS, 0x04, 1, false, 0),
+                null);
+
+        assertTrue(pillar.usesInstanceSolidStateLatchKey(),
+                "Obj89 pillar movement rewrites y_pos while its push bit remains owned by the same SST slot");
+    }
+
+    @Test
+    void springboardSuppressesNativeObjectEdgeBalance() {
+        SpringboardObjectInstance springboard = new SpringboardObjectInstance(
+                new ObjectSpawn(0x07A4, 0x02E9, Sonic2ObjectIds.SPRINGBOARD, 0x00, 0, false, 0),
+                "Springboard");
+
+        assertTrue(springboard.suppressesObjectEdgeBalance(),
+                "Obj40_Init sets status.npc.no_balancing before entering the sloped-solid routine");
+    }
+
+    @Test
+    void mczStomperKeepsSolidLatchInItsMovingSstSlot() {
+        StomperObjectInstance stomper = new StomperObjectInstance(
+                new ObjectSpawn(0x1230, 0x06A0, Sonic2ObjectIds.STOMPER, 0x00, 0, false, 0),
+                "Stomper");
+
+        assertTrue(stomper.usesInstanceSolidStateLatchKey(),
+                "Obj2A changes y_pos throughout its cycle while one SST slot owns its contact bits");
+    }
+
+    @Test
     void arzBossPillarMainPlayerSidePushUsesRomStopPath() {
         ARZBossPillar pillar = new ARZBossPillar(
                 new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
@@ -615,6 +645,19 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void mtzLongPlatformBalanceUsesRomWidthPixels() {
+        MTZLongPlatformObjectInstance mtz3Conveyor = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x19C0, 0x04C8, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x04, 1, false, 0));
+        MTZLongPlatformObjectInstance widePlatform = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x0B20, 0x076C, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x10, 0, false, 0));
+
+        assertEquals(0x40, mtz3Conveyor.getBalanceWidthPixels(),
+                "MTZ3 Obj65 subtype $04 balances against its $40 width_pixels, not rendered bounds");
+        assertEquals(0x20, widePlatform.getBalanceWidthPixels(),
+                "Obj65 subtype $10 balances against the width selected by its ROM property offset");
+    }
+
+    @Test
     void mtzLongPlatformOptsIntoZeroXSpeedLeftSideStopCharacter() {
         MTZLongPlatformObjectInstance platform = new MTZLongPlatformObjectInstance(
                 new ObjectSpawn(0x1090, 0x01EC, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x00, 0, false, 0));
@@ -717,10 +760,36 @@ class TestSonic2ObjectBugFixes {
                 "Obj78's folded multi-piece latch is still needed when the rider is actually pressed "
                         + "into the lower neighbouring child slot's side");
 
+        tails.setCentreY((short) (staircase.getPieceY(3)
+                - staircase.getPieceParams(3).airHalfHeight() - tails.getYRadius() - 5));
+        assertFalse(staircase.preservesRidingPushStatus(tails),
+                "CPZ2 f5296 is horizontally inside the next child edge but vertically above its "
+                        + "SolidObject box, so the distant step cannot preserve Status_Push");
+
         TestablePlayableSprite sonic = new TestablePlayableSprite(
                 "sonic", (short) staircase.getPieceX(2), (short) staircase.getPieceY(2));
         assertFalse(staircase.preservesSidekickDelayedLeaderPushWhileRiding(sonic),
                 "The delayed leader push bridge is only for CPU sidekick follow control");
+    }
+
+    @Test
+    void cpzStaircaseKeepsStandardSolidObjectExactRightEdgeContact() {
+        CPZStaircaseObjectInstance staircase = new CPZStaircaseObjectInstance(
+                new ObjectSpawn(0x1510, 0x0702, Sonic2ObjectIds.CPZ_STAIRCASE, 0x01, 1, false, 0),
+                "CPZStaircase");
+
+        assertTrue(staircase.getSolidRoutineProfile().inclusiveRightEdge(),
+                "Obj78's SolidObject BHI gate accepts relX == 2*d1");
+    }
+
+    @Test
+    void mtzPlatformKeepsStandardSolidObjectExactRightEdgeContact() {
+        MTZPlatformObjectInstance platform = new MTZPlatformObjectInstance(
+                new ObjectSpawn(0x1ECE, 0x0670, Sonic2ObjectIds.MTZ_PLATFORM, 0x04, 0, false, 0),
+                "CPZSquarePform");
+
+        assertTrue(platform.getSolidRoutineProfile().inclusiveRightEdge(),
+                "Obj6B's SolidObject BHI gate accepts relX == 2*d1");
     }
 
     @Test

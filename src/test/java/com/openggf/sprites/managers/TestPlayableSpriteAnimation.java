@@ -89,6 +89,19 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void heldSpindashPreservesObjectPublishedWalkByte() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
+        ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile()).setSpindashAnimId(9);
+        sprite.setSpindash(true);
+        sprite.setAnimationId(0);
+
+        sprite.getAnimationManager().update(1);
+
+        assertEquals(0, sprite.getAnimationId(),
+                "held Down does not rewrite anim; SolidObject_TestClearPush's Walk byte must persist");
+    }
+
+    @Test
     public void objectPublishedLandingAnimUpdatesNativePreviousByte() {
         TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
         sprite.setObjectControlled(true);

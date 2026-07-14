@@ -142,6 +142,16 @@ public class ElevatorObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public boolean allowsDeepWaitPlayerRoutineWhileRidden(PlayableEntity player) {
+        // ObjD5 only updates itself and calls PlatformObjectD5; it never writes
+        // the rider's anim or object_control (docs/s2disasm/s2.asm:58849-58915).
+        // Sonic therefore continues through Obj01_MdNormal_Checks while the
+        // elevator supplies Status_OnObj, including the deep-Wait held-input
+        // transition to Blink (s2.asm:36444-36468).
+        return true;
+    }
+
+    @Override
     public int staleHorizontalLogicalInputFramesWhileRiding(PlayableEntity player, int rideFrames) {
         // ObjD5 calls PlatformObjectD5 after its state routine
         // (s2.asm:58435-58443). The helper returns immediately when the

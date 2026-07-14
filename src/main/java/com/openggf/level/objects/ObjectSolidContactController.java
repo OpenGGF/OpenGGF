@@ -1426,8 +1426,13 @@ final class ObjectSolidContactController {
         if (provider instanceof MultiPieceSolidProvider multiPiece) {
             MultiPieceContactResult result = processMultiPieceCollision(
                     player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer());
+            boolean preservedRidingPush = player instanceof AbstractPlayableSprite sprite
+                    && sprite.getPushingAtFrameStart()
+                    && result.standing()
+                    && provider.preservesRidingPushStatus(player);
             if (result.pushing()
-                    || (instance == multiPieceEarlierPiecesInstance && multiPieceEarlierPiecesPushing)) {
+                    || (instance == multiPieceEarlierPiecesInstance && multiPieceEarlierPiecesPushing)
+                    || preservedRidingPush) {
                 player.setPushing(true);
                 setObjectPushingBit(player, instance);
                 provider.setPlayerPushing(player, true);
@@ -1898,7 +1903,9 @@ final class ObjectSolidContactController {
 
     private void preserveRidingPushStatusIfNeeded(PlayableEntity player, ObjectInstance instance,
             SolidObjectProvider provider) {
-        if (!provider.preservesRidingPushStatus(player)) {
+        if (!(player instanceof AbstractPlayableSprite sprite)
+                || !sprite.getPushingAtFrameStart()
+                || !provider.preservesRidingPushStatus(player)) {
             return;
         }
         player.setPushing(true);
@@ -2548,7 +2555,11 @@ final class ObjectSolidContactController {
                         player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer());
                 boolean earlierSlotPushing =
                         instance == multiPieceEarlierPiecesInstance && multiPieceEarlierPiecesPushing;
-                if (result.pushing() || earlierSlotPushing) {
+                boolean preservedRidingPush = player instanceof AbstractPlayableSprite sprite
+                        && sprite.getPushingAtFrameStart()
+                        && result.standing()
+                        && provider.preservesRidingPushStatus(player);
+                if (result.pushing() || earlierSlotPushing || preservedRidingPush) {
                     player.setPushing(true);
                     // ROM: s2.asm:35220-35226 — also set pushing bit on the object
                     setObjectPushingBit(player, instance);
@@ -4547,6 +4558,17 @@ final class ObjectSolidContactController {
                 playableSprite.setFlipTurned(false);
                 playableSprite.setFlipsRemaining(0);
                 playableSprite.setLookDelayCounter((short) 0);
+                if (!playableSprite.getPinballMode()
+                        && instance instanceof SolidObjectProvider provider
+                        && provider.nonRollingLandingPublishesWalk(player)) {
+                    // S2 Solid_ResetFloor reaches Sonic_ResetOnFloor, whose
+                    // entry publishes Walk even when Status_Roll was already
+                    // clear. Only concrete routines that call that entry opt in.
+                    int walkAnimationId = playableSprite.resolveAnimationId(CanonicalAnimation.WALK);
+                    if (walkAnimationId >= 0) {
+                        playableSprite.setAnimationId(walkAnimationId);
+                    }
+                }
             }
         }
         player.setGroundMode(GroundMode.GROUND);

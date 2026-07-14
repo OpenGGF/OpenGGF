@@ -271,6 +271,17 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether this object's landing routine enters the full S2
+     * {@code Sonic_ResetOnFloor} entry and therefore publishes Walk even when
+     * the player was not rolling. Keep this separate from roll clearing:
+     * object-local RideObject/PlatformObject paths can establish a ride without
+     * owning the raw animation byte.
+     */
+    default boolean nonRollingLandingPublishesWalk(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether this solid uses S3K's {@code SolidObjectFull} Player 2 visibility
      * gate. That helper processes Player 1, then skips Player 2 when Player 2's
      * {@code render_flags} bit 7 is clear (sonic3k.asm:41003-41008).

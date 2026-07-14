@@ -714,8 +714,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (sprite.getAnimationFrameIndex() < 0x1E) {
 			return false; // cmpi.b #$1E,anim_frame / blo Obj01_MdNormal
 		}
-		// ROM: move.b (Ctrl_1_Held_Logical).w,d0 / andi #UDLR|ABC / beq Skip
-		if (!(inputUp || inputDown || inputLeft || inputRight || inputJump)) {
+		// ROM: move.b (Ctrl_1_Held_Logical).w,d0 / andi #UDLR|ABC / beq Skip.
+		// The riding-object stale-horizontal shim only delays Sonic_Move's
+		// consumption of a fresh direction edge; it does not mutate the logical
+		// control word already read here by Obj01_MdNormal_Checks. Use the
+		// pre-shim horizontal sample so an ObjD5 rider can enter Blink immediately
+		// while acceleration remains delayed until the object-order phase catches
+		// up (S2 CNZ2: Blink at f6801, inertia begins at f6804).
+		if (!(inputUp || inputDown || inputRawLeft || inputRawRight || inputJump)) {
 			return true; // deep wait with nothing held still skips the frame
 		}
 		int next = (getUpId >= 0 && sprite.getAnimationFrameIndex() >= 0xAC) ? getUpId : blinkId;

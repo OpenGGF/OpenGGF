@@ -134,6 +134,16 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj6B_Main passes width_pixels+$B to the standard SolidObject helper
+        // (s2.asm:53944-53956). SolidObject_cont rejects the right side with
+        // BHI, so relX==2*d1 remains a zero-distance side contact
+        // (s2.asm:35138-35176). In CPZ2, the narrow square at x=$1ECE has
+        // d1=$1B and keeps its push bit when Sonic is exactly at x=$1EE9.
+        return true;
+    }
+
+    @Override
     public int getOutOfRangeReferenceX() {
         // Obj6B_Main passes objoff_34(a0), not moving x_pos(a0), to MarkObjGone2
         // after the movement and SolidObject calls (s2.asm:53944-53967).

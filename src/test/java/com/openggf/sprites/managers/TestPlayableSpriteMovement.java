@@ -1755,6 +1755,26 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void s2SpindashChargePulseRepublishesSpindashAnimation() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_2);
+                ScriptedVelocityAnimationProfile profile = new ScriptedVelocityAnimationProfile()
+                                .setDuckAnimId(8)
+                                .setSpindashAnimId(9);
+                mockSprite.setAnimationProfile(profile);
+                mockSprite.setAnimationId(0);
+                mockSprite.setSpindash(true);
+
+                // Tails_ChargingSpindash calls this publisher only when the
+                // pressed ABC bits are nonzero, before its boundary/AnglePos tail.
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("setSpindashAnimation");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertEquals(profile.getSpindashAnimId(), mockSprite.getAnimationId(),
+                                "a fresh ABC charge press republishes the ROM $0900 animation word");
+        }
+
+        @Test
         public void s2ObjectOnlyPinballGuardDoesNotBlockRollingJump() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);
                 mockSprite.setAir(false);
@@ -3053,6 +3073,34 @@ public class TestPlayableSpriteMovement {
 
                 assertFalse((boolean) method.invoke(manager));
                 assertEquals(Sonic2AnimationIds.WAIT.id(), mockSprite.getAnimationId());
+        }
+
+        @Test
+        public void s2DeepWaitSeesHeldRightBeforeRidingStaleMovementFilter() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_2);
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setIdleAnimId(Sonic2AnimationIds.WAIT)
+                                .setWalkAnimId(Sonic2AnimationIds.WALK)
+                                .setBlinkAnimId(Sonic2AnimationIds.BLINK)
+                                .setGetUpAnimId(Sonic2AnimationIds.GET_UP));
+                mockSprite.setAnimationId(Sonic2AnimationIds.WAIT.id());
+                mockSprite.setAnimationFrameIndex(0x1E);
+
+                // ObjD5's object-order shim has hidden the fresh right edge from
+                // Sonic_Move, but Obj01_MdNormal_Checks already read it from the
+                // logical held-control word before that movement-only delay.
+                setInputState(false, false, false, false, false);
+                setRawHorizontalInput(false, true);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doWaitBlinkInterruptCheck");
+                method.setAccessible(true);
+
+                assertTrue((boolean) method.invoke(manager));
+                assertEquals(Sonic2AnimationIds.BLINK.id(), mockSprite.getAnimationId());
+                Field effectiveRight = PlayableSpriteMovement.class.getDeclaredField("inputRight");
+                effectiveRight.setAccessible(true);
+                assertFalse(effectiveRight.getBoolean(manager),
+                                "the stale riding shim must keep horizontal movement suppressed");
         }
 
         @Test

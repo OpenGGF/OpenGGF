@@ -702,6 +702,71 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void preservedMultiPieceRidingPushDoesNotPublishReleaseAnimationWord() {
+        GameModuleRegistry.setCurrent(new Sonic2GameModule());
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        PreservingRidingPushMultiPieceSolidObject object =
+                new PreservingRidingPushMultiPieceSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_2);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setGSpeed((short) 0x100);
+        player.setCentreX((short) 85);
+        player.setCentreY((short) 81);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0,
+                List.of(0x0F, 0x10, 0x11, 0x12), SpriteAnimationEndAction.LOOP, 0));
+        player.setAnimationSet(animations);
+        player.setAnimationId(0);
+        player.getAnimationManager().update(0);
+
+        manager.updateSolidContacts(player);
+        assertTrue(player.getPushing());
+        assertTrue(manager.hasObjectPushingBit(player));
+        player.captureOnObjectAtFrameStart();
+
+        player.setCentreX((short) 100);
+        player.setCentreY((short) 82);
+        player.setYSpeed((short) 0);
+        manager.updateSolidContacts(player);
+
+        assertTrue(player.isOnObject(), "fixture should produce a standing sibling contact");
+        assertTrue(player.getPushing(), "the provider-preserved native push latch stays visible");
+        assertTrue(manager.hasObjectPushingBit(player));
+        assertEquals(0, player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "preserving a native push latch must not publish the Run prev_anim sentinel");
+    }
+
+    @Test
+    public void preservedMultiPieceRidingPushIsNotConsultedWithoutFrameStartLatch() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        PreservingRidingPushMultiPieceSolidObject object =
+                new PreservingRidingPushMultiPieceSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setPushing(false);
+        player.captureOnObjectAtFrameStart();
+        player.setCentreX((short) 100);
+        player.setCentreY((short) 83);
+        player.setYSpeed((short) 0);
+
+        manager.updateSolidContacts(player);
+
+        assertTrue(player.isOnObject(), "fixture should establish a standing multi-piece contact");
+        assertEquals(0, object.preserveChecks,
+                "same-pass collision geometry cannot invoke the frame-start push preservation hook");
+    }
+
+    @Test
     public void sonic1SolidPushReleasePublishesWalkWithRunPreviousAnimation() {
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);
@@ -1808,6 +1873,37 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void optedInS2NonRollingObjectLandingPublishesWalk() {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        GameModuleRegistry.setCurrent(new Sonic2GameModule());
+        try {
+            SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+            TestSolidObject object = new NonRollingWalkSolidObject(100, 100, params);
+            ObjectManager manager = buildManager(object);
+
+            TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+            player.useGameRules(GameRules.SONIC_2);
+            player.setWidth(20);
+            player.setHeight(38);
+            player.setAir(true);
+            player.setYSpeed((short) 0x100);
+            player.setAnimationId(0x14);
+            player.setCentreX((short) 100);
+            player.setCentreY((short) (100 - 4 - params.groundHalfHeight()
+                    - player.getYRadius() + 8));
+
+            manager.updateSolidContacts(player);
+
+            assertTrue(player.isOnObject());
+            assertFalse(player.getAir());
+            assertEquals(0, player.getAnimationId(),
+                    "a full S2 ResetOnFloor landing publishes Walk when explicitly opted in");
+        } finally {
+            GameModuleRegistry.setCurrent(previous);
+        }
+    }
+
+    @Test
     public void testS3kObjectLandingRollClearUsesCurrentYRadiusDelta() {
         GameModule previous = GameModuleRegistry.getCurrent();
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
@@ -1980,6 +2076,17 @@ public class TestSolidObjectManager {
         }
     }
 
+    private static final class NonRollingWalkSolidObject extends TestSolidObject {
+        private NonRollingWalkSolidObject(int x, int y, SolidObjectParams params) {
+            super(x, y, params);
+        }
+
+        @Override
+        public boolean nonRollingLandingPublishesWalk(PlayableEntity player) {
+            return true;
+        }
+    }
+
     private static final class MutatingInclusiveRightEdgeSolidObject extends TestSolidObject {
         private boolean inclusiveRightEdge = true;
 
@@ -2041,6 +2148,22 @@ public class TestSolidObjectManager {
         public void setPlayerPushing(PlayableEntity player, boolean pushing) {
             lastPushingState = pushing;
             pushingStateChanges++;
+        }
+    }
+
+    private static final class PreservingRidingPushMultiPieceSolidObject
+            extends TestMultiPieceSolidObject {
+        private int preserveChecks;
+
+        private PreservingRidingPushMultiPieceSolidObject(
+                int x, int y, SolidObjectParams params) {
+            super(x, y, params);
+        }
+
+        @Override
+        public boolean preservesRidingPushStatus(PlayableEntity player) {
+            preserveChecks++;
+            return true;
         }
     }
 

@@ -1,5 +1,47 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S2 solid-edge, spindash, and respawn animation milestone
+
+Four remaining Sonic 2 routes were blocked by native state that the engine was
+either dropping at an exact boundary or continuously replacing. CPZ and HTZ
+solids now keep the retail `bhi`-inclusive right edge, CPZ staircase push
+preservation requires both vertical overlap and a frame-start `Status_Push`
+latch, and Obj36 moving spikes retain their initialization dispatch without a
+same-frame movement step (`docs/s2disasm/s2.asm:29362-29389,35138-35176`). The
+frame-start requirement also removes the temporary CPZ1 physics regression
+that a same-pass synthesized push latch exposed.
+
+Animation state now stays with its actual ROM writer: an active spindash flag
+does not continuously republish Spindash between charge presses; Obj69-style
+full reset-on-floor users can explicitly publish Walk on a non-rolling
+landing; and ordinary S2 `TailsCPU_Respawn` clears only the engine's forced-Fly
+latch while preserving the live status/animation/script bytes. S3K retains its
+separate catch-up-flight write. Moving ARZ pillars and MCZ stompers also retain
+their solid status on the live SST identity, while the MCZ springboard exposes
+its unconditional `no_balancing` bit. These decisions are driven by routine,
+object capability, and frame-start state rather than zone, route, or trace
+frame (`docs/s2disasm/s2.asm:35462-35509,39122-39228,40470-40587`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 417 -> 351 grouped errors
+Green: 6 -> 10 (newly CPZ1, CPZ2, HTZ1, CNZ1)
+ARZ2: 29 -> 28              MCZ2: 8 -> 3
+MTZ3: 24 -> 11              CNZ2: 251 -> 247
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- all ten S3K animation results exactly retain milestone `0f648a4f5`'s known
+  baseline (AIZ complete 259; CNZ 172/2673; HCZ 673; ICZ 1376; LBZ 375; MGZ
+  3923/4081; MHZ 98; standalone AIZ retains its input-alignment failure);
+- the full 58-method cross-game physics sweep retains 42 passes / 16 existing
+  failures, with no new failure;
+- the ten-test comparison-only invariant guard and hydration-default guard
+  remain green.
+
 ### 2026-07-14 -- S2 native landing and release-state animation milestone
 
 Several remaining Sonic 2 clusters shared a missing `ResetOnFloor` boundary.
