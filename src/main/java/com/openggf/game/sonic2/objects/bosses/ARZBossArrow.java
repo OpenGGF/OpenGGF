@@ -424,6 +424,16 @@ public class ARZBossArrow extends AbstractObjectInstance
         return preservesReleasedSidekickPushForCpu(player);
     }
 
+    @Override
+    public boolean publishesSidekickCpuPushFromInteractSlot(PlayableEntity player) {
+        // TailsCPU_Normal reads the live Status_Push bit through the sidekick's
+        // interact slot before its movement/animation dispatch. Obj89's drop
+        // path leaves that bit set, so publish the same semantic predicate used
+        // by the zero-grace auto-jump bridge.
+        // docs/s2disasm/s2.asm:39297-39300,40484-40491,65689-65704
+        return preservesReleasedSidekickPushForCpu(player);
+    }
+
     private boolean preservesReleasedSidekickPushForCpu(PlayableEntity player) {
         // Obj89_Arrow_ChkDropPlayers only sets InAir and clears OnObject on the
         // player; it does not clear Status_Push. At ARZ2 f6364 the ordinary

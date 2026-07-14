@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S2 ARZ2 arrow-release and pillar-edge animation milestone
+
+ARZ2's last fourteen animation groups came from Obj89 state that crosses the
+object/player dispatch boundary. An arrow's drop routine sets airborne and
+clears on-object without clearing `Status_Push`; CPU Tails now publishes that
+still-live bit through the retained interact slot before its movement and
+animation dispatch. The boss pillar also follows its ordinary `SolidObject`
+contract: the unsigned range gate includes the exact right edge, where the
+zero-distance correction leaves the position low word untouched while setting
+push. With those native states present, the later arrow support/drop cadence
+converges without a separate timing adjustment. No zone, route, frame, trace
+hydration, or comparator tolerance was added
+(`docs/s2disasm/s2.asm:35338-35436,39297-39300,40484-40491,65330-65339,65531-65539,65689-65704`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 261 -> 247 grouped errors
+Green: 17 -> 18 (newly ARZ2)
+CNZ2: 247
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- the S3K animation baseline remains unchanged from milestone `9c7326c09`:
+  AIZ complete 257, CNZ 172/2673, HCZ 673, ICZ 1376, LBZ 375, MGZ
+  3923/4081, MHZ 98, and standalone AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep improves from 42 passes / 16
+  existing failures to 43 / 15 by greening ARZ2, with no new failure;
+- the 73-test focused Sonic 2 object suite passes;
+- the ten-test comparison-only invariant guard, hydration-default guard, and
+  both rewind coverage guards remain green.
+
 ### 2026-07-14 -- S2 OOZ1 exact-edge push animation milestone
 
 OOZ1's last two animation groups came from Obj33's standard `SolidObject`

@@ -435,6 +435,11 @@ class TestSonic2ObjectBugFixes {
                 new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
                 null);
 
+        assertTrue(pillar.usesInclusiveRightEdge(),
+                "Obj89's standard SolidObject BHI gate accepts relX == 2*d1");
+        assertTrue(pillar.preservesEdgeSubpixelMotion(),
+                "Obj89's exact-edge d0=0 correction preserves the native x_sub low word");
+
         TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
         tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setWidth(18);
@@ -479,6 +484,10 @@ class TestSonic2ObjectBugFixes {
                 "At ARZ2 f6364 the local grace counter has already reached zero, but Tails' "
                         + "interact slot still dereferences the Obj89 arrow status byte for the "
                         + "same push-bypass CPU read (docs/s2disasm/s2.asm:39297-39300,65689-65704).");
+        assertTrue(arrow.publishesSidekickCpuPushFromInteractSlot(tails),
+                "TailsCPU_Normal must publish Obj89's retained Status_Push into the same-frame "
+                        + "movement/animation dispatch (docs/s2disasm/s2.asm:39297-39300,"
+                        + "40484-40491,65689-65704).");
         assertFalse(arrow.preservesSidekickCpuPushGraceAfterRideClears(tails),
                 "The ARZ arrow only needs the zero-grace interact-slot bridge; the broader released-ride "
                         + "window would keep Status_Push visible after Tails has reattached to the arrow.");
@@ -498,6 +507,8 @@ class TestSonic2ObjectBugFixes {
                 "The push-grace bridge is only for CPU sidekick reads of TailsCPU_Normal.");
         assertFalse(arrow.preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(sonic),
                 "The zero-grace interact bridge is only for CPU sidekick reads of TailsCPU_Normal.");
+        assertFalse(arrow.publishesSidekickCpuPushFromInteractSlot(sonic),
+                "The interact-slot push publication is only for CPU sidekick reads of TailsCPU_Normal.");
     }
 
     @Test
