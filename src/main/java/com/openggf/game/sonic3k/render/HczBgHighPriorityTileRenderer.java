@@ -18,6 +18,7 @@ import com.openggf.level.ParallaxManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.render.BackgroundRenderer;
+import com.openggf.level.scroll.M68KMath;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 
@@ -167,7 +168,8 @@ final class HczBgHighPriorityTileRenderer {
                 // Bias the BG (low) scroll word into window-local coordinates,
                 // mirroring the compositing pass's ScrollMidpoint = -bgTilemapBaseX.
                 int packed = hScroll[i];
-                this.hScroll[i] = (packed & 0xFFFF0000) | ((packed + bgScrollBias) & 0xFFFF);
+                this.hScroll[i] = M68KMath.packScrollWords(M68KMath.unpackFG(packed),
+                        (short) (M68KMath.unpackBG(packed) + bgScrollBias));
             }
             Arrays.fill(this.hScroll, copyLength, this.hScroll.length, 0);
             this.underwater = underwater; this.waterlineY = waterlineY; leased = true;
