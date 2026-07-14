@@ -1,5 +1,49 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S2 native push, hurt, and Tails respawn-animation ownership milestone
+
+Three ROM-owned animation transitions were still being represented as generic
+engine substitutions. First, S2 keeps raw `anim=Walk` while the `$FF`
+walk/run handler selects push mappings; Sonic publishes the current walk/run
+mapping and consumes a live timer before the push sub-handler is eligible
+(`docs/s2disasm/s2.asm:38449-38505,38627-38649`). Second,
+`Hurt_Sidekick` writes animation `$1A` for both Sonic and Tails rather than the
+generic `$19` entry (`docs/s2disasm/s2.asm:85497-85519`). Third,
+`TailsCPU_Respawn` changes routine/position/priority/spindash state without
+writing `anim`, `prev_anim`, `anim_frame`, or the animation timer; an already
+running Fly script must retain its cadence across SPAWNING -> APPROACHING
+(`docs/s2disasm/s2.asm:39116-39140,41272-41303`). Tails' separate native tumble
+mapping base is also `$75` (`docs/s2disasm/s2.asm:41405-41435`).
+
+The S2 `PlayerAnimationRules` now exposes push as a walk-special-handler owner,
+the shared animator defers Sonic's push mapping until the live walk timer
+expires, the canonical S2 hurt mapping resolves to `$1A`, and CPU respawn
+cleanup no longer fabricates a previous-animation mismatch. Focused tests cover
+raw Walk preservation, push-onset/expiry publication, both characters' hurt
+profile, Tails' tumble base, and preserved Fly `prev_anim`/frame/timer state.
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes improved; aggregate errors 14506 -> 8233 (-6273).
+ARZ1: 105 -> 3             DEZ1: 42 -> 1
+EHZ1: 435 -> 30            HTZ1: 851 -> 20
+CNZ2: 597 -> 202           HTZ2: 801 -> 81
+MCZ2: 344 -> 46            MTZ2: 1027 -> 116
+OOZ2: 412 -> 127           SCZ1: 22 -> 15
+```
+
+No zone, route, frame, trace hydration, or comparator exception was added.
+Regression gate at this milestone:
+
+- the 21 eligible S1 animation traces remain green;
+- all ten S3K animation results exactly retain milestone `36654f178`'s known
+  baseline, including the standalone AIZ input-alignment failure;
+- the full 58-method cross-game physics sweep retains the same 41 passes and
+  identical 17 existing failures as milestones `c886deab2` and `36654f178`;
+- the trace comparison-only invariant guard (10 tests) and hydration-default
+  guard remain green.
+
 ### 2026-07-14 -- S2 Tails private high-speed tier milestone
 
 The cadence fix exposed EHZ1 frame 1031 with Tails at effective speed above

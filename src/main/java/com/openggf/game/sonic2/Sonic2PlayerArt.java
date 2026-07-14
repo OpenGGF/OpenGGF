@@ -92,11 +92,10 @@ public class Sonic2PlayerArt {
         } else {
             animationSet = null;
         }
-        // Tails' TailsAni_Hurt (0x19) uses the same frame ($5D) as TailsAni_Death (0x18).
-        // Use TailsAni_Hurt2 (0x1A, frame $5C) for Tails so hurt looks distinct from death.
-        int hurtAnimId = (basePatternIndex == Sonic2Constants.ART_TILE_TAILS)
-                ? Sonic2AnimationIds.HURT2.id()
-                : Sonic2AnimationIds.HURT.id();
+        // Hurt_Sidekick writes animation $1A for both Sonic and Tails
+        // (s2.asm:85497-85519). Tails' $19 entry is death-like frame $5D,
+        // while $1A is the distinct hurt frame $5C.
+        int hurtAnimId = Sonic2AnimationIds.HURT2.id();
 
         boolean isSonic = basePatternIndex != Sonic2Constants.ART_TILE_TAILS;
         SpriteAnimationProfile animationProfile = new ScriptedVelocityAnimationProfile()
@@ -143,7 +142,8 @@ public class Sonic2PlayerArt {
                     .setHighSpeedWalkRunThreshold(0x700)
                     .setWalkSlopeFrameStride(4)
                     .setRunSlopeFrameStride(3)
-                    .setHighSpeedSlopeFrameStride(3);
+                    .setHighSpeedSlopeFrameStride(3)
+                    .setTumbleFrameBase(0x75); // TAnim_Tumble, s2.asm:41405-41435
         }
 
         return new SpriteArtSet(

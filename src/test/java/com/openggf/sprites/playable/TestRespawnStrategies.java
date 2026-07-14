@@ -597,6 +597,11 @@ class TestRespawnStrategies {
         SidekickCpuController ctrl = new SidekickCpuController(sk, main);
         ctrl.hydrateFromRomCpuState(0x06, 0, 0, 0, true, 0, 0);
         ctrl.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+        sk.setAnimationId(0x20);
+        sk.setAnimationFrameIndex(1);
+        sk.setAnimationTick(0);
+        sk.getAnimationManager().restoreRewindState(
+                new com.openggf.sprites.managers.PlayableSpriteAnimation.RewindState(0x20, 0x20));
 
         ctrl.update(0);
 
@@ -605,6 +610,10 @@ class TestRespawnStrategies {
         assertEquals(1, ctrl.getDiagnosticJumpingFlag(),
                 "S2 TailsCPU_Respawn does not clear Tails_CPU_jumping "
                         + "(s2.asm:39116-39130); the normal filter clears it later only when grounded");
+        assertEquals(0x20, sk.getAnimationManager().captureRewindState().lastAnimationId(),
+                "TailsCPU_Respawn does not write prev_anim or restart the existing Fly script");
+        assertEquals(1, sk.getAnimationFrameIndex());
+        assertEquals(0, sk.getAnimationTick());
     }
 
     @Test

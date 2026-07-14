@@ -1856,7 +1856,6 @@ public class SidekickCpuController {
     private void clearRespawnAnimationState() {
         sidekick.setObjectMappingFrameControl(false);
         sidekick.clearDrowningDeathState();
-        sidekick.forceAnimationRestart();
     }
 
     private void updateNormal() {

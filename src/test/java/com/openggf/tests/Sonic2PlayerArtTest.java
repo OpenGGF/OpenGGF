@@ -6,6 +6,7 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.Sonic2PlayerArt;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.level.Pattern;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
@@ -41,6 +42,8 @@ public class Sonic2PlayerArtTest {
         assertEquals(Sonic2Constants.SONIC_ANIM_SCRIPT_COUNT, sonic.animationSet().getScriptCount());
         assertTrue(((ScriptedVelocityAnimationProfile) sonic.animationProfile())
                 .isWalkRunPublishesFrameBeforeTimerAdvance());
+        assertEquals(Sonic2AnimationIds.HURT2.id(),
+                ((ScriptedVelocityAnimationProfile) sonic.animationProfile()).getHurtAnimId());
     }
 
     @Test
@@ -61,6 +64,8 @@ public class Sonic2PlayerArtTest {
         assertEquals(4, profile.getWalkSlopeFrameStride());
         assertEquals(3, profile.getRunSlopeFrameStride());
         assertEquals(3, profile.getHighSpeedSlopeFrameStride());
+        assertEquals(0x75, profile.getTumbleFrameBase());
+        assertEquals(Sonic2AnimationIds.HURT2.id(), profile.getHurtAnimId());
         assertTrue(profile.isDoubleWalkRunAnimationSpeedWhenSliding());
         assertEquals(List.of(0x32, 0x33), tails.animationSet().getScript(0x1F).frames());
     }

@@ -91,8 +91,11 @@ public enum Sonic2AnimationIds implements AnimationId {
             case BUBBLE         -> CanonicalAnimation.BUBBLE;
             case DROWN          -> CanonicalAnimation.DROWN;
             case DEATH          -> CanonicalAnimation.DEATH;
-            case HURT           -> CanonicalAnimation.HURT;
-            case HURT2          -> CanonicalAnimation.HURT2;
+            // Hurt_Sidekick writes $1A for both characters. Keep $19
+            // addressable through HURT2 for scripts that explicitly need the
+            // other table entry (s2.asm:85497-85519).
+            case HURT           -> CanonicalAnimation.HURT2;
+            case HURT2          -> CanonicalAnimation.HURT;
             case SLIDE          -> CanonicalAnimation.SLIDE;
             case BALANCE3       -> CanonicalAnimation.BALANCE3;
             case BALANCE4       -> CanonicalAnimation.BALANCE4;

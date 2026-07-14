@@ -292,7 +292,18 @@ public class PlayableSpriteAnimation {
         // the push bit is only tested when the animation step expires
         // (01 Sonic.asm:2253-2282,2353-2376). Do not replace the raw animation
         // id or reset the shared special-animation frame index when push begins.
+        int slopeOffset = resolveSlopeOffset(active, slopeStride);
+        int delay = computeSpeedDelay(speed, 0x800, 8);
         if (pushUsesWalkSpecialHandler() && sprite.getPushing()) {
+            // S2 Sonic publishes the already-selected walk/run mapping before
+            // its timer gate. A push that begins while that timer is live does
+            // not select SAnim_Push until the step expires (s2.asm:38449-38474,
+            // 38627-38649). Tails and S1 return at the earlier outer timer gate.
+            if (walkRunPublishesFrameBeforeTimerAdvance(baseScript.delay() & 0xFF)
+                    && remaining >= 0) {
+                updateWalkRunBeforeTimerAdvance(active, delay, slopeOffset, remaining);
+                return;
+            }
             SpriteAnimationScript pushScript = resolveScript(
                     profile != null ? profile.getPushAnimId() : -1, baseScript);
             int pushDelay = computeSpeedDelay(speed, 0x800, 6);
@@ -300,8 +311,6 @@ public class PlayableSpriteAnimation {
             return;
         }
 
-        int slopeOffset = resolveSlopeOffset(active, slopeStride);
-        int delay = computeSpeedDelay(speed, 0x800, 8);
         if (walkRunPublishesFrameBeforeTimerAdvance(baseScript.delay() & 0xFF)) {
             updateWalkRunBeforeTimerAdvance(active, delay, slopeOffset, remaining);
             return;

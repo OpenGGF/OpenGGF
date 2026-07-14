@@ -76,7 +76,7 @@ public class TestPlayableSpriteAnimation {
     public void s2GroundPushSurvivesInitialRomAnimByteCapture() {
         TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
         sprite.setAnimationId(0);
-        sprite.setMovementInputActive(false);
+        sprite.setMovementInputActive(true);
         sprite.setGSpeed((short) 0);
         sprite.setPushing(true);
 
@@ -84,8 +84,44 @@ public class TestPlayableSpriteAnimation {
 
         assertTrue(sprite.getPushing(),
                 "S2 does not clear Status_Push before prev_anim has a captured ROM anim byte");
-        assertEquals(4, sprite.getAnimationId(),
-                "The preserved push bit should render the push animation instead of resolving to idle");
+        assertEquals(0, sprite.getAnimationId(),
+                "S2 keeps raw anim=Walk while the $FF handler selects push mappings");
+    }
+
+    @Test
+    public void s2SonicPushWaitsForWalkTimerBeforePublishingPushMapping() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
+        ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile())
+                .setWalkRunPublishesFrameBeforeTimerAdvance(true);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0xFF,
+                List.of(0x10), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(1, new SpriteAnimationScript(0xFF,
+                List.of(0x20), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(4, new SpriteAnimationScript(0xFD,
+                List.of(0x48), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0);
+        sprite.getAnimationManager().restoreRewindState(
+                new PlayableSpriteAnimation.RewindState(0, 0));
+        sprite.setAnimationFrameIndex(0);
+        sprite.setAnimationTick(1);
+        sprite.setMappingFrame(0x10);
+        sprite.setMovementInputActive(true);
+        sprite.setPushing(true);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0, sprite.getAnimationId(), "Status_Push does not replace the raw anim byte");
+        assertEquals(0x10, sprite.getMappingFrame(),
+                "A live SAnim_WalkRun timer retains the walk mapping on push onset");
+        assertEquals(0, sprite.getAnimationTick());
+
+        sprite.getAnimationManager().update(1);
+
+        assertEquals(0, sprite.getAnimationId());
+        assertEquals(0x48, sprite.getMappingFrame(),
+                "The expired walk timer lets the native handler select SAnim_Push");
     }
 
     @Test

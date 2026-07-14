@@ -147,6 +147,13 @@ public class TestCanonicalAnimationMapping {
     }
 
     @Test
+    void s2CanonicalHurtUsesHurtSidekickAnimationByte() {
+        assertEquals(0x1A, Sonic2AnimationIds.fromCanonical(CanonicalAnimation.HURT));
+        assertEquals(CanonicalAnimation.HURT, Sonic2AnimationIds.HURT2.toCanonical());
+        assertEquals(CanonicalAnimation.HURT2, Sonic2AnimationIds.HURT.toCanonical());
+    }
+
+    @Test
     void s2SuperVariantsReturnNullFromToCanonical() {
         // SUPER_WALK, SUPER_RUN etc. index a separate table — toCanonical() returns null
         // Only SUPER_TRANSFORM maps to a canonical entry
