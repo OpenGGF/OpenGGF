@@ -73,6 +73,7 @@ public record GameRules(
                     false,
                     false,
                     false,
+                    true,
                     true
             ),
             new CameraRules(
@@ -205,6 +206,7 @@ public record GameRules(
                     true,
                     false,
                     true,
+                    false,
                     false
             ),
             new CameraRules(
@@ -337,6 +339,7 @@ public record GameRules(
                     true,
                     true,
                     true,
+                    false,
                     false
             ),
             new CameraRules(

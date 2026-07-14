@@ -4,5 +4,6 @@ public record PlayerAnimationRules(
         boolean extendedEdgeBalance,
         boolean singleFacingBalanceAnimationSet,
         boolean animationChangeClearsPush,
-        boolean pushUsesWalkSpecialHandler) {
+        boolean pushUsesWalkSpecialHandler,
+        boolean walkRunDelayLatchesRenderOrientation) {
 }

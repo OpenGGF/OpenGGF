@@ -113,8 +113,6 @@ public class PlayableSpriteAnimation {
             return;
         }
         updateFlipAngle(frameCounter);
-        boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
-        sprite.setRenderFlips(facingLeft, false);
         if (sprite.getSpindashDustController() != null) {
             sprite.getSpindashDustController().update();
         }
@@ -139,12 +137,14 @@ public class PlayableSpriteAnimation {
             }
             restoreWaterTunnelPreviousAnimation(profile);
             if (sprite.isObjectMappingFrameControl()) {
+                applyDefaultFacingRenderFlips();
                 return;
             }
             updateScriptedAnimation(frameCounter);
             return;
         }
 
+        applyDefaultFacingRenderFlips();
         if (profile == null) {
             return;
         }
@@ -192,13 +192,22 @@ public class PlayableSpriteAnimation {
         }
         var script = animationSet.getScript(sprite.getAnimationId());
         if (script == null || script.frames().isEmpty()) {
+            applyDefaultFacingRenderFlips();
             return;
+        }
+
+        if (!walkRunDelayLatchesRenderOrientation(script)) {
+            applyDefaultFacingRenderFlips();
         }
 
         // Sonic_Animate decrements obTimeFrame before it reads the script delay
         // or dispatches any special handler. Its non-negative branch is a bare
-        // return, so speed-script selection, slope offsets and obFrame all stay
-        // latched until the timer expires.
+        // return in S1, so speed-script selection, slope offsets, obFrame, and
+        // the paired obRender flip bits all stay latched until the timer expires
+        // (_incObj/01 Sonic.asm:2253-2279). S2/S3K walk/run orientation is
+        // selected before their timer gate (s2.asm:38449-38513;
+        // sonic3k.asm:24804-24882), so the S1-only latch rule is disabled for
+        // both later games.
         int remaining = sprite.getAnimationTick() - 1;
         if (remaining >= 0) {
             sprite.setAnimationTick(remaining);
@@ -212,6 +221,19 @@ public class PlayableSpriteAnimation {
         }
 
         updateScriptWithDelay(script, delayOrFlag, 0);
+    }
+
+    private boolean walkRunDelayLatchesRenderOrientation(SpriteAnimationScript script) {
+        PlayerAnimationRules rules = playerAnimationRulesOrNull();
+        return rules != null
+                && rules.walkRunDelayLatchesRenderOrientation()
+                && (script.delay() & 0xFF) == 0xFF
+                && sprite.getAnimationTick() > 0;
+    }
+
+    private void applyDefaultFacingRenderFlips() {
+        boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
+        sprite.setRenderFlips(facingLeft, false);
     }
 
     private void updateSpecialScript(int startFlag, SpriteAnimationScript script) {

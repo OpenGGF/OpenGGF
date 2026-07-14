@@ -475,6 +475,15 @@ public class TestPlayableSpriteAnimation {
                 "The negative transformed angle sets the native X flip");
         assertTrue(sprite.getRenderVFlip(),
                 "The negative transformed angle sets the native Y flip");
+
+        sprite.getAnimationManager().update(1);
+
+        assertEquals(0x1C, sprite.getMappingFrame(),
+                "S1 must retain the slope mapping while obTimeFrame remains non-negative");
+        assertTrue(sprite.getRenderHFlip(),
+                "The delayed S1 walk frame must retain its paired native X flip");
+        assertTrue(sprite.getRenderVFlip(),
+                "The delayed S1 walk frame must retain its paired native Y flip");
     }
 
     private static TestablePlayableSprite createSprite(GameRules featureSet) {

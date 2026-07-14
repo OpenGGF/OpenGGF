@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S1 delayed slope orientation fixed; 29-trace fleet remains green
+
+The new mapping-frame verifier correctly kept S1's high-angle Walk/Run mapping
+frame across `obTimeFrame` delay frames, but the renderer independently reset
+its X/Y flips to ordinary facing every frame. That split the two halves of the
+native displayed state: frame `$1C` remained selected while its required paired
+X/Y inversion disappeared, producing the alternating upside-down pose.
+
+`Sonic_Animate` decrements `obTimeFrame` and returns before reading the angle or
+rewriting either `obFrame` or the X/Y bits in `obRender`
+(`docs/s1disasm/_incObj/01 Sonic.asm:2253-2279`). The shared animation manager
+now retains the orientation with the mapping under an explicit
+`PlayerAnimationRules` value: S1 `true`, S2 `false`, S3K `false`. S2 and S3K
+place their Walk/Run orientation selection before their timer gates
+(`docs/s2disasm/s2.asm:38449-38513`;
+`docs/skdisasm/sonic3k.asm:24804-24882`). A focused regression holds mapping
+`$1C` and both render flips across the next delayed S1 frame.
+
+Authoritative REV01 S1 sweep with local uncommitted fix:
+
+```text
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true \
+  -Dsonic1.rom.path=<REV01 ROM> \
+  -Dtest='com.openggf.tests.trace.s1.*TraceReplay' test
+Tests run: 29, Failures: 0, Errors: 0, Skipped: 0
+```
+
+The full cross-game `*TraceReplay` sweep retained the same 29/29 S1 result.
+It reported 19 existing S2 failures (the common first frontier is mapping
+`expected=$10, actual=$0F`) and 43 skips, primarily disabled S3K fixtures. A
+detached clean-HEAD rerun of `TestS2Ehz1TraceReplay` reproduced its identical
+924-error baseline at frame 1, proving that S2 result is not introduced by this
+fix.
+
 ### 2026-07-13 -- Sonic 1 animation-verification fleet fully green
 
 The animation/frame verifier exposed native state that physics-only replay had
