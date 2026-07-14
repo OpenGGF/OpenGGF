@@ -131,7 +131,6 @@ public class Sonic3kLevel extends AbstractLevel {
         primaryCollisionIndexTable = strideCollisionTable(source.primaryCollisionIndices);
         secondaryCollisionIndexTable = strideCollisionTable(source.secondaryCollisionIndices);
         validateResourceReferences();
-        publishGraphicsCaches();
     }
 
     /** Returns the explicit S3K object pointer-table family for this level. */
@@ -980,19 +979,6 @@ public class Sonic3kLevel extends AbstractLevel {
             table[i * Sonic3kConstants.COLLISION_INDEX_STRIDE_BYTES] = (byte) indices[i];
         }
         return table;
-    }
-
-    private void publishGraphicsCaches() {
-        GraphicsManager graphics = GameServices.graphics();
-        if (!graphics.isGlInitialized()) {
-            return;
-        }
-        for (int i = 0; i < patternCount; i++) {
-            graphics.cachePatternTexture(patterns[i], i);
-        }
-        for (int i = 0; i < palettes.length; i++) {
-            graphics.cachePaletteTexture(palettes[i], i);
-        }
     }
 
     private static int clampLayoutDimension(int value, int fallback) {

@@ -1,8 +1,8 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.data.RomManager;
+import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.S3kZoneSet;
-import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Chunk;
 import com.openggf.level.LevelConstants;
 import com.openggf.level.Palette;
@@ -12,24 +12,20 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
 import com.openggf.mods.code.ModPaletteClaim;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mockStatic;
 
 class TestSonic3kLevelInMemoryConstruction {
 
-    @BeforeEach
-    void setUp() {
-        GraphicsManager.getInstance().initHeadless();
-        RomManager.getInstance().setRom(null);
-    }
-
     @Test
     void buildsS3kLevelWithoutDummyRomAddresses() throws Exception {
+        RomManager.getInstance().setRom(null);
         Palette character = characterPalette(0x0EEE);
         ObjectSpawn object = controllerSpawn();
         RingSpawn ring = new RingSpawn(0x345, 0x456, 34);
@@ -37,17 +33,22 @@ class TestSonic3kLevelInMemoryConstruction {
         byte[] preparedBlocks = blocks();
         preparedBlocks[1] = 1;
 
-        Sonic3kLevel level = Sonic3kLevel.inMemoryBuilder(0x40, patterns(), chunks(), preparedBlocks)
-                .layout(2, 1, new byte[]{0, 1}, new byte[]{1, 0})
-                .characterPalette(character)
-                .paletteClaims(List.of(new ModPaletteClaim(1, 0, 0x000E)))
-                .solidProfiles(profiles((byte) 3, (byte) 7), profiles((byte) 4, (byte) 8),
-                        new byte[]{0, 0x40})
-                .collisionIndices(new int[]{0, 1}, new int[]{1, 0})
-                .boundaries(0, 800, 0, 224)
-                .objectZoneSet(S3kZoneSet.S3KL)
-                .spawns(List.of(object), List.of(ring), ringSheet)
-                .build();
+        Sonic3kLevel level;
+        try (MockedStatic<GameServices> services = mockStatic(GameServices.class)) {
+            services.when(GameServices::graphics).thenThrow(
+                    new AssertionError("in-memory construction must not resolve graphics services"));
+            level = Sonic3kLevel.inMemoryBuilder(0x40, patterns(), chunks(), preparedBlocks)
+                    .layout(2, 1, new byte[]{0, 1}, new byte[]{1, 0})
+                    .characterPalette(character)
+                    .paletteClaims(List.of(new ModPaletteClaim(1, 0, 0x000E)))
+                    .solidProfiles(profiles((byte) 3, (byte) 7), profiles((byte) 4, (byte) 8),
+                            new byte[]{0, 0x40})
+                    .collisionIndices(new int[]{0, 1}, new int[]{1, 0})
+                    .boundaries(0, 800, 0, 224)
+                    .objectZoneSet(S3kZoneSet.S3KL)
+                    .spawns(List.of(object), List.of(ring), ringSheet)
+                    .build();
+        }
 
         assertFalse(RomManager.getInstance().isRomAvailable());
         assertSame(character, level.getPalette(0));
@@ -202,6 +203,16 @@ class TestSonic3kLevelInMemoryConstruction {
         assertThrows(IllegalArgumentException.class,
                 () -> validBuilder(patterns(), chunks(), blocks())
                         .collisionIndices(new int[]{0, 2}, new int[]{0, 0}).build());
+
+        IllegalArgumentException secondaryCount = assertThrows(IllegalArgumentException.class,
+                () -> validBuilder(patterns(), chunks(), blocks())
+                        .collisionIndices(new int[]{0, 0}, new int[]{0}).build());
+        assertTrue(secondaryCount.getMessage().contains("secondary collision count"));
+
+        IllegalArgumentException secondaryReference = assertThrows(IllegalArgumentException.class,
+                () -> validBuilder(patterns(), chunks(), blocks())
+                        .collisionIndices(new int[]{0, 0}, new int[]{0, 2}).build());
+        assertTrue(secondaryReference.getMessage().contains("secondary collision index 2"));
     }
 
     @Test
