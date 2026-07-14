@@ -66,6 +66,10 @@ public class DelegatingGameModule implements GameModule {
         return base.getPlayableCharacterRegistry();
     }
 
+    @Override public com.openggf.mods.code.ModZoneAdapter getModZoneAdapter() {
+        return base.getModZoneAdapter();
+    }
+
     @Override
     public ObjectRegistry createObjectRegistry() {
         return base.createObjectRegistry();

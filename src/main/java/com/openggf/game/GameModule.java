@@ -12,6 +12,10 @@ import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectPlacementEncoding;
 import com.openggf.level.objects.PlaneSwitcherConfig;
 import com.openggf.level.objects.TouchResponseTable;
+import com.openggf.mods.code.ModLevelDefinition;
+import com.openggf.mods.code.ModRegistrationException;
+import com.openggf.mods.code.ModZoneAdapter;
+import com.openggf.mods.code.ModZoneRuntimeProfile;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SuperStateController;
@@ -20,6 +24,33 @@ import java.util.Optional;
 
 @ModApi
 public interface GameModule {
+    ModZoneAdapter EMPTY_MOD_ZONE_ADAPTER = new ModZoneAdapter() {
+        private ModRegistrationException unsupported(String ownerModId) {
+            return new ModRegistrationException(ownerModId,
+                    "Host game does not support additive mod zones");
+        }
+
+        @Override
+        public void validate(String ownerModId, ModLevelDefinition level) {
+            throw unsupported(ownerModId);
+        }
+
+        @Override
+        public com.openggf.level.Level load(String ownerModId, ModLevelDefinition level) {
+            throw unsupported(ownerModId);
+        }
+
+        @Override
+        public ModZoneRuntimeProfile runtimeProfile(String ownerModId, ModLevelDefinition level) {
+            throw unsupported(ownerModId);
+        }
+
+        @Override
+        public boolean isUnsupported() {
+            return true;
+        }
+    };
+
     String getIdentifier();
 
     Game createGame(Rom rom);
@@ -42,6 +73,11 @@ public interface GameModule {
     /** One immutable character-registry view owned by this resolved module. */
     default PlayableCharacterRegistry getPlayableCharacterRegistry() {
         return StockPlayableCharacters.registry();
+    }
+
+    /** Returns the host-game capability for additive mod zones. */
+    default ModZoneAdapter getModZoneAdapter() {
+        return EMPTY_MOD_ZONE_ADAPTER;
     }
 
     ObjectRegistry createObjectRegistry();

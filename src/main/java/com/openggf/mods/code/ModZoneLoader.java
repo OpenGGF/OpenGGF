@@ -19,6 +19,12 @@ public final class ModZoneLoader {
     public static Level load(PreparedModZone contribution, RingSpriteSheet ringSheet) throws IOException {
         Objects.requireNonNull(contribution, "contribution");
         ModLevelDefinition definition = Objects.requireNonNull(contribution.definition(), "prepared definition");
+        return load(definition, ringSheet);
+    }
+
+    /** Builds a playable Sonic 2 level from one published immutable definition. */
+    public static Level load(ModLevelDefinition definition, RingSpriteSheet ringSheet) throws IOException {
+        Objects.requireNonNull(definition, "definition");
         if (definition.blockGridSide() != 8) {
             throw new IOException("Sonic 2 runtime requires blockGridSide 8");
         }

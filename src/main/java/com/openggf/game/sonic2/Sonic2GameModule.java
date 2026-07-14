@@ -95,6 +95,7 @@ public class Sonic2GameModule implements GameModule {
     private final LevelSelectManager levelSelectProvider = new LevelSelectManager();
     private final S2DataSelectProfile dataSelectHostProfile = new S2DataSelectProfile(this::getZoneRegistry);
     private final CrossGameDonorProvider donorProvider = new Sonic2CrossGameDonorProvider();
+    private final Sonic2ModZoneAdapter modZoneAdapter = new Sonic2ModZoneAdapter(this);
     private DataSelectPresentationProvider dataSelectPresentationProvider;
     private S2DataSelectImageCacheManager dataSelectImageCacheManager;
     private Sonic2ObjectArtProvider objectArtProvider;
@@ -134,6 +135,11 @@ public class Sonic2GameModule implements GameModule {
             additiveRingSheet = new Sonic2RingArt(activeRom, RomByteReader.fromRom(activeRom)).load();
         }
         return additiveRingSheet;
+    }
+
+    @Override
+    public com.openggf.mods.code.ModZoneAdapter getModZoneAdapter() {
+        return modZoneAdapter;
     }
 
     @Override
