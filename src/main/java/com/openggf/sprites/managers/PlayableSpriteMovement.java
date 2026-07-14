@@ -3772,11 +3772,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				&& !sprite.getAir() && !sprite.getRolling() && !sprite.getSpindash()
 				&& Math.abs(sprite.getGSpeed()) < movingThreshold
 				&& !sprite.isOnObject()) {
+			// SonicKnux_Roll/Tails_Roll run after the ground-input routine and
+			// unconditionally write Duck at low speed while Down is held. That
+			// later write supersedes the Balance animation selected by
+			// Sonic_Move/Tails_Move, but it does not undo that routine's facing
+			// write (sonic3k.asm:23223-23240,28458-28483).
 			if (preMoveBalanceEvaluated && preMoveBalanceState != 0) {
-				sprite.setBalanceState(preMoveBalanceState);
 				sprite.setDirection(preMoveBalanceDirection);
-				sprite.setCrouching(false);
-				return;
 			}
 			sprite.setCrouching(true);
 			sprite.setBalanceState(0);

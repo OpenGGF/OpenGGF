@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S3K post-balance low-speed Duck milestone
+
+Branch `feature/ai-trace-animation-verification`, after the AIZ/LRZ rock
+balance-width milestone. `SonicKnux_Roll` and `Tails_Roll` run after the
+ground-input routine. While Down is held below `$100`, their raw Duck write
+therefore supersedes a Balance animation selected by the earlier Move routine,
+but it does not undo Move's facing-bit change. The engine's post-movement
+crouch bridge now preserves exactly that split ownership. No zone, route,
+trace-frame, hydration, or comparison-tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 23223-23240
+(`SonicKnux_Roll`) and 27796-27861 / 28458-28483
+(`Tails_InputAcceleration_Path` and `Tails_Roll`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- AIZ complete-run advances from frame 12706 / 23 grouped animation errors to
+  frame 19814 / 21; the 21-frame CPU Tails Duck/mapping block is now exact.
+- Focused AIZ physics and HCZ animation replays pass.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  every previously green route retains its status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
 ### 2026-07-14 -- AIZ1 breakable-rock balance-width milestone
 
 Branch `feature/ai-trace-animation-verification`, after the signpost
