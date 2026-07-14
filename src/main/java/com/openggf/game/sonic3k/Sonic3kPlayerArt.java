@@ -199,6 +199,15 @@ public class Sonic3kPlayerArt {
                 .setBalance4AnimId(Sonic3kAnimationIds.BALANCE4)
                 .setWalkSpeedThreshold(0x40)
                 .setRunSpeedThreshold(0x600)
+                // Animate_Tails selects private AniTails1F at |ground_vel|
+                // >= $700 while leaving the public anim byte at Walk. Its
+                // $C3/$C4 frames use one-frame slope banks
+                // (sonic3k.asm:29462-29489; Anim - Tails.asm:79).
+                .setWalkSlopeFrameStride(4)
+                .setRunSlopeFrameStride(2)
+                .setHighSpeedWalkRunAnimId(0x1F)
+                .setHighSpeedWalkRunThreshold(0x700)
+                .setHighSpeedSlopeFrameStride(1)
                 .setFallbackFrame(0)
                 .setWalkRunPublishesFrameBeforeTimerAdvance(true)
                 .setAnglePreAdjust(true)       // sonic3k.asm:29358 — Tails uses same subq.b #1,d0

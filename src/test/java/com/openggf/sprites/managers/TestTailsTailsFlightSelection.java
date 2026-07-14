@@ -13,6 +13,7 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -89,5 +90,18 @@ class TestTailsTailsFlightSelection {
             assertTrue(((ScriptedVelocityAnimationProfile) art.animationProfile())
                     .isWalkRunPublishesFrameBeforeTimerAdvance());
         }
+    }
+
+    @Test
+    void s3kTailsProfileUsesNativePrivateHighSpeedWalkTier() throws Exception {
+        SpriteArtSet tails = new Sonic3kPlayerArt(
+                RomByteReader.fromRom(TestEnvironment.currentRom())).loadTails();
+        ScriptedVelocityAnimationProfile profile =
+                (ScriptedVelocityAnimationProfile) tails.animationProfile();
+
+        assertEquals(0x1F, profile.getHighSpeedWalkRunAnimId());
+        assertEquals(0x700, profile.getHighSpeedWalkRunThreshold());
+        assertEquals(1, profile.getHighSpeedSlopeFrameStride());
+        assertEquals(0xC3, (int) tails.animationSet().getScript(0x1F).frames().get(0));
     }
 }

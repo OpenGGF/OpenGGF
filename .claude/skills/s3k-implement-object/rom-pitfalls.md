@@ -1219,6 +1219,37 @@ and flight recovery writes Walk during its routine-4-to-6 handoff
 
 ---
 
+## P34 -- Public animation bytes can select private velocity tiers
+
+**Symptom.** A player's trace-visible raw animation byte and physics are both
+correct, but the displayed mapping frame comes from the ordinary Walk or Run
+script instead of a short private script. The mismatch begins only above a
+specific ground-speed threshold and can alternate among slope-frame banks.
+
+**Root cause.** A negative animation-table entry is executable selection logic,
+not merely a reference to the public animation ID. S3K Tails' Walk entry `$FF`
+handler leaves the public `anim` byte at Walk but changes the internal script
+pointer at `|ground_vel| >= $700` to private `AniTails1F`. That two-frame script
+uses `$C3/$C4`, whose slope-bank stride differs from both ordinary Walk and Run.
+Treating every velocity tier as a public raw-animation substitution makes the
+trace byte wrong; omitting the private tier makes only the mapping frame wrong.
+
+**What to check.** Follow every negative entry in the character's animation
+pointer table through its speed comparisons and private pointer selections.
+Record the exact threshold, whether the public animation byte is rewritten,
+and the slope-frame stride selected for each branch. Load private scripts even
+when no public animation constant names them, and test the production
+ROM-backed profile as well as the shared animator helper.
+
+**ROM citation.** `Animate_Tails` selects `AniTails1F` at absolute
+`ground_vel >= $700` without changing the Walk byte
+(`docs/skdisasm/sonic3k.asm:29462-29489`); `AniTails1F` is `$FF,$C3,$C4`
+(`docs/skdisasm/General/Sprites/Tails/Anim - Tails.asm:79`).
+
+**Originating commit.** `<pending: S3K Tails high-speed animation tier>`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
