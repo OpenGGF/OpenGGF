@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- HCZ animation-verification completion milestone
+
+Branch `feature/ai-trace-animation-verification`, after the S3K post-Move
+crouch milestone. HCZ's final three mismatches were isolated player/sidekick
+twist frames on Obj68 jump-release ticks. `sub_32784` calculates the rider's
+position and increments its swing byte, then tests the newly pressed logical
+jump bits. A taken jump branch returns through `loc_325F2`; it never reaches
+`loc_3260A`, so the player retains the twist mapping published on the preceding
+hold tick. The engine had published the incremented twist mapping before
+testing jump. The port now preserves the native instruction order. No zone,
+route, frame, trace hydration, or tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 68136-68148 and
+68235-68276 (`sub_32784`, `loc_325B6`, `loc_325F2`, and `loc_3260A`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestS3kHczSpinningColumn` passes 8/8, including a regression that releases
+  exactly as the incremented swing byte crosses a twist-table boundary.
+- `TestS3kHczCompleteRunTraceReplay` passes animation-only verification. HCZ
+  advances from frame 12975 / 3 grouped errors to fully green.
+- The full animation sweep reports 41/58 green routes / 17 expected failures,
+  improving the baseline by the newly green HCZ route. AIZ remains at frame
+  2980 / 78; every S1/S2 route and later expected S3K failure retains its
+  previous status.
+- The full physics sweep reports 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
 ### 2026-07-14 -- S3K post-Move crouch animation-owner milestone
 
 Branch `feature/ai-trace-animation-verification`, after the HCZ wind-tunnel
