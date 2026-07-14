@@ -990,7 +990,7 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
-    void s2SpikesUsePostObj33SidekickPushGraceThreshold() {
+    void s2SpikesDoNotClaimPushGraceFromUnrelatedSolid() {
         SpikeObjectInstance spikes = new SpikeObjectInstance(
                 new ObjectSpawn(0x0CF0, 0x0594, Sonic2ObjectIds.SPIKES, 0x30, 2, false, 0x4650),
                 "Spikes");
@@ -998,43 +998,13 @@ class TestSonic2ObjectBugFixes {
         TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x0CE3, (short) 0x0574);
         tails.setCpuControlled(true);
 
-        tails.setGSpeed((short) -0x000C);
         assertFalse(spikes.preservesSidekickCpuPushGraceWhileRiding(sonic));
         assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(sonic));
-        assertTrue(spikes.preservesSidekickCpuPushGraceWhileRiding(tails));
-        assertEquals(8, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
-                "OOZ1 f1782 reaches Obj36 riding push grace with eight frames remaining");
-
-        tails.setDirection(Direction.LEFT);
-        tails.setGSpeed((short) -0x0018);
-        tails.setXSpeed((short) -0x0018);
-        assertEquals(0, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
-                "OOZ1 f1794 reaches Obj36's inner-left edge with fresh negative inertia before Tails_TurnRight");
-
-        tails.setGSpeed((short) 0x0080);
-        assertEquals(14, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
-                "The faster positive-inertia spike ride keeps the conservative existing bridge window");
-
-        tails.setCentreX((short) 0x0CE3);
-        tails.setDirection(Direction.RIGHT);
-        tails.setGSpeed((short) 0x0018);
-        tails.setXSpeed((short) 0x0018);
-        assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMaximumFramesWhileRiding(tails),
-                "OOZ1 f1775 is still one pixel inside Obj36's left edge and keeps the long bridge");
-
-        tails.setCentreX((short) 0x0CE4);
-        tails.setDirection(Direction.RIGHT);
-        tails.setGSpeed((short) 0x0018);
-        tails.setXSpeed((short) 0x0018);
-        assertEquals(2, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
-                "OOZ1 f1803 is a late low-speed positive-inertia sample; only the immediate Obj36 bridge applies");
-        assertEquals(3, spikes.sidekickCpuPushGraceMaximumFramesWhileRiding(tails),
-                "At f1803 the later SolidObject pass sets Status_Push after TailsCPU_Normal, so grace=15 must fall through follow steering");
-
-        tails.setGSpeed((short) 0x0080);
-        tails.setXSpeed((short) 0x0080);
-        assertEquals(3, spikes.sidekickCpuPushGraceMaximumFramesWhileRiding(tails),
-                "OOZ1 f1805 is the late positive rebound at the same edge; grace=13 must not keep preserving delayed RIGHT");
+        assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMaximumFramesWhileRiding(sonic));
+        assertFalse(spikes.preservesSidekickCpuPushGraceWhileRiding(tails),
+                "Obj36 must not reinterpret push grace produced by a distinct solid as its own riding state");
+        assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails));
+        assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMaximumFramesWhileRiding(tails));
     }
 
     @Test

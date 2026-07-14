@@ -1,5 +1,41 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S2 OOZ1 exact-edge push animation milestone
+
+OOZ1's last two animation groups came from Obj33's standard `SolidObject`
+edge. Its unsigned `bhi` gate accepts the exact +$23 right edge and reaches
+`SolidObject_AtEdge` with zero distance: the routine sets `Status_Push` without
+entering `StopCharacter`, so position low word, velocity, and inertia remain
+unchanged. The shared solid profile now exposes that exact zero-distance
+contract separately from its broader edge-subpixel hook, leaving ordinary
+nonzero correction untouched. Once Obj33 publishes the real push pulses, the
+old Obj36 CPU-sidekick grace ladder is both unnecessary and incorrect; its
+frame-, position-, speed-, and direction-shaped compensation has been removed.
+No zone, route, frame, trace hydration, or comparator tolerance was added
+(`docs/s2disasm/s2.asm:35338-35444,39287-39300,49673-49687`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 263 -> 261 grouped errors
+Green: 16 -> 17 (newly OOZ1)
+ARZ2: 14                     CNZ2: 247
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- the S3K animation baseline remains unchanged from milestone `95806f3a9`:
+  AIZ complete 257, CNZ 172/2673, HCZ 673, ICZ 1376, LBZ 375, MGZ
+  3923/4081, MHZ 98, and standalone AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 42 passes / 16 existing
+  failures, including OOZ1's pre-existing respawn-counter mismatch and no new
+  failure;
+- the focused solid-contact, OOZ placed-object, and Sonic 2 object suites pass
+  61 + 17 + 73 tests;
+- the ten-test comparison-only invariant guard and hydration-default guard
+  remain green.
+
 ### 2026-07-14 -- S2 MCZ2 grounded-detach and stomper-edge animation milestone
 
 MCZ2's last three animation groups came from two native grounded dispatches.

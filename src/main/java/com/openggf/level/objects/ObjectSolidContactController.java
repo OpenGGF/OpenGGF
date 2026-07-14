@@ -3890,7 +3890,9 @@ final class ObjectSolidContactController {
                     // Push-driven objects (preserveSubpixels=true) skip the distX==0 block
                     // to preserve ROM push cadence.
                     boolean preserveSubpixels = preservesEdgeSubpixelMotion(instance);
-                    if (distX == 0 && !preserveSubpixels) {
+                    boolean preserveZeroDistanceMotion = instance instanceof SolidObjectProvider provider
+                            && provider.preservesZeroDistanceSideContactMotion();
+                    if (distX == 0 && !preserveSubpixels && !preserveZeroDistanceMotion) {
                         player.setCentreX((short) playerCenterX);
                         if (movingInto && !preserveMovingSideVelocity) {
                             player.setXSpeed((short) 0);

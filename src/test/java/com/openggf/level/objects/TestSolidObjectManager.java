@@ -1197,6 +1197,50 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void zeroDistanceOnlyMotionHookPreservesExactEdgeWithoutChangingNonzeroCorrection() {
+        SolidObjectParams params = new SolidObjectParams(19, 14, 15);
+        TestSolidObject object = new ZeroDistanceMotionInclusiveRightEdgeSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite exactEdge = new TestPlayableSprite((short) 0, (short) 0);
+        exactEdge.setWidth(20);
+        exactEdge.setHeight(38);
+        exactEdge.setAir(false);
+        exactEdge.setXSpeed((short) -0x100);
+        exactEdge.setGSpeed((short) -0x100);
+        exactEdge.setCentreX((short) (100 + params.halfWidth()));
+        exactEdge.setSubpixelRaw(0x8000, 0);
+        exactEdge.setCentreY((short) 100);
+
+        manager.updateSolidContacts(exactEdge);
+
+        assertTrue(exactEdge.getPushing());
+        assertEquals(100 + params.halfWidth(), exactEdge.getCentreX());
+        assertEquals(0x8000, exactEdge.getXSubpixelRaw(),
+                "SolidObject_AtEdge d0=0 preserves the native x_pos low word");
+        assertEquals(-0x100, exactEdge.getXSpeed());
+        assertEquals(-0x100, exactEdge.getGSpeed());
+
+        TestPlayableSprite nonzeroOverlap = new TestPlayableSprite((short) 0, (short) 0);
+        nonzeroOverlap.setWidth(20);
+        nonzeroOverlap.setHeight(38);
+        nonzeroOverlap.setAir(false);
+        nonzeroOverlap.setXSpeed((short) 0x100);
+        nonzeroOverlap.setGSpeed((short) 0x100);
+        nonzeroOverlap.setCentreX((short) (100 + params.halfWidth() - 1));
+        nonzeroOverlap.setSubpixelRaw(0x8000, 0);
+        nonzeroOverlap.setCentreY((short) 100);
+
+        manager.updateSolidContacts(nonzeroOverlap);
+
+        assertEquals(100 + params.halfWidth(), nonzeroOverlap.getCentreX());
+        assertEquals(0, nonzeroOverlap.getXSubpixelRaw(),
+                "The zero-distance-only hook must leave ordinary nonzero correction on the shared snap path");
+        assertEquals(0x100, nonzeroOverlap.getXSpeed());
+        assertEquals(0x100, nonzeroOverlap.getGSpeed());
+    }
+
+    @Test
     public void eggPrisonBodyExactLeftEdgeSetsGroundPushWithoutStoppingSpeed() {
         EggPrisonObjectInstance eggPrison = new EggPrisonObjectInstance(
                 new ObjectSpawn(0x3202, 0x04C2, 0x3E, 0, 0, false, 0),
@@ -2075,6 +2119,22 @@ public class TestSolidObjectManager {
 
         @Override
         public boolean usesInclusiveRightEdge() {
+            return true;
+        }
+    }
+
+    private static final class ZeroDistanceMotionInclusiveRightEdgeSolidObject extends TestSolidObject {
+        private ZeroDistanceMotionInclusiveRightEdgeSolidObject(int x, int y, SolidObjectParams params) {
+            super(x, y, params);
+        }
+
+        @Override
+        public boolean usesInclusiveRightEdge() {
+            return true;
+        }
+
+        @Override
+        public boolean preservesZeroDistanceSideContactMotion() {
             return true;
         }
     }

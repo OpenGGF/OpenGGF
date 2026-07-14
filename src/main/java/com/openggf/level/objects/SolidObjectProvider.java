@@ -335,6 +335,20 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether an exact zero-distance side contact keeps the native X subpixel,
+     * horizontal speed, and ground speed unchanged.
+     * <p>
+     * This is narrower than {@link #preservesEdgeSubpixelMotion()}: it affects
+     * only {@code distX == 0} and leaves ordinary nonzero side correction on the
+     * shared pixel-snapping path. Use it for standard {@code SolidObject}
+     * callers whose inclusive edge reaches {@code SolidObject_AtEdge} without
+     * entering {@code SolidObject_StopCharacter}.
+     */
+    default boolean preservesZeroDistanceSideContactMotion() {
+        return false;
+    }
+
+    /**
      * Whether this object preserves a same-frame SPECIAL TouchResponse velocity
      * handoff through the following airborne post-movement side contact.
      * <p>
