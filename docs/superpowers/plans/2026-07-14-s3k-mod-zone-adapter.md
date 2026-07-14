@@ -204,19 +204,19 @@ git commit -m "feat: add strict S3K mod-level metadata"
 - [ ] **Step 1: Write failing palette-usage tests**
 
 ```java
-@Test void everyOpaquePatternNibbleNeedsAClaimForItsBlockPaletteLine() {
+@Test void everyOpaquePatternNibbleNeedsAClaimForItsDescriptorPaletteLine() {
     ModLevelDefinition definition = fixtureWithBlockPalette(2)
             .patternPixels(0, 0, 0, 5)
             .claims(new ModPaletteClaim(2, 5, 0x00E0))
             .build();
-    assertDoesNotThrow(() -> ModPaletteUsageValidator.validate(definition));
+    assertDoesNotThrow(() -> ModPaletteUsageValidator.validate("alpha", definition));
 }
 
 @Test void missingClaimAndCharacterLineUseAreRejected() {
     assertThrows(ModRegistrationException.class,
-            () -> ModPaletteUsageValidator.validate(fixtureWithUnclaimedColor()));
+            () -> ModPaletteUsageValidator.validate("alpha", fixtureWithUnclaimedColor()));
     assertThrows(ModRegistrationException.class,
-            () -> ModPaletteUsageValidator.validate(fixtureUsingLineZero()));
+            () -> ModPaletteUsageValidator.validate("alpha", fixtureUsingLineZero()));
 }
 ```
 
@@ -229,14 +229,15 @@ Expected: compilation fails because the validator is absent.
 - [ ] **Step 3: Implement deterministic usage scanning**
 
 ```java
-public static void validate(ModLevelDefinition level) {
+public static void validate(String ownerModId, ModLevelDefinition level) {
     Set<Cell> claims = level.paletteClaims().stream()
             .map(c -> new Cell(c.line(), c.color())).collect(Collectors.toUnmodifiableSet());
-    for (int block = 0; block < level.blockCount(); block++) {
+    for (int block : blocksReferencedByMaps(level)) {
         for (PatternUse use : decodeBlockPatternUses(level, block)) {
             for (int color : nonZeroNibbles(level.patternBytes(), use.patternIndex())) {
                 if (use.paletteLine() == 0 || !claims.contains(new Cell(use.paletteLine(), color))) {
-                    throw invalid("Unclaimed indexed color line=" + use.paletteLine() + " color=" + color);
+                    throw invalid(ownerModId,
+                            "Unclaimed indexed color line=" + use.paletteLine() + " color=" + color);
                 }
             }
         }
@@ -244,7 +245,11 @@ public static void validate(ModLevelDefinition level) {
 }
 ```
 
-Decode block descriptors with the engine's existing Genesis descriptor masks; validate raw block data before any runtime sanitization. Color index 0 is transparent/background and still requires a claim when the block uses it as visible level backdrop; encode that rule explicitly in the fixture and validator rather than silently inventing black.
+The validator is engine-internal and receives `ownerModId` from the owning registration/adapter path; creator data never supplies or reports that identity. Use it on every `ModRegistrationException` so a palette failure disables the correct transaction. Task 5 calls this exact owner-aware signature from `Sonic3kModZoneAdapter.validate(...)`.
+
+Walk only blocks referenced by the foreground map or optional background map, then their chunks and pattern descriptors. Decode descriptors with the engine's existing Genesis masks and validate every raw reference before indexing; do not rely on runtime sanitization. Nonzero nibbles use the descriptor's palette line, and any nonzero use of host-owned line 0 is rejected.
+
+Pattern nibble 0 is not a color from the descriptor line: both tile shaders discard it, and `Level.getBackdropColor()` independently exposes palette line 2, color 0. Conservatively treat any zero nibble in reachable level patterns as possible backdrop exposure and require the creator claim `(2, 0)` exactly once. Unreachable blocks/patterns do not create claims. This deliberately favors a bounded, deterministic pre-publication rule over trying to predict future plane overlap or scrolling.
 
 - [ ] **Step 4: Run the focused tests**
 
