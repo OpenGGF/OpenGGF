@@ -35,10 +35,26 @@ class TestLevelConverter {
                 Files.readAllBytes(output.resolve("level.json")).length);
         assertFalse(Files.exists(output.resolve("level.yaml")));
         try (ModAssetRoot root = ModAssetRoot.directory(temp, output, ModInputLimits.production(), DirectoryAccess.TEST)) {
-            assertEquals("TEST", ModLevelDefinitionParser.read(root,
-                    new BakedLevelRef("level.json")).zoneName());
+            var definition = ModLevelDefinitionParser.read(root, new BakedLevelRef("level.json"));
+            assertEquals("TEST", definition.zoneName());
+            assertEquals(1, definition.formatVersion());
         }
+        assertTrue(Files.exists(output.resolve("palettes.bin")));
         assertTrue(result.filesCopied() >= 11);
+    }
+
+    @Test
+    void v1ConverterInventoryRequiresTheLegacyPaletteAsset() throws Exception {
+        Path source = temp.resolve("source-without-palette");
+        MutableLevel level = MutableLevel.snapshot(new MinimalLevel());
+        new FullLevelExporter(new ModLevelExportStagingValidator()).export(level,
+                new FullLevelExporter.ExportRequest(source, "TEST", 0x40, 0x400,
+                        0, 0, new FullLevelExporter.ExportMusic.Stock(0)));
+        Files.delete(source.resolve("palettes.bin"));
+        Path output = temp.resolve("missing-palette-output");
+
+        assertThrows(Exception.class, () -> new LevelConverter().convert(source, output));
+        assertFalse(Files.exists(output));
     }
 
     @Test

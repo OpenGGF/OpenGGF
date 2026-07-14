@@ -13,12 +13,63 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestModLevelDefinitionParser {
     @TempDir Path temp;
+
+    @Test
+    void v2ParsesTypedS3kMetadataAndSparseClaims() throws Exception {
+        ModLevelDefinition level = readFixture("s3k-v2-valid");
+
+        assertEquals(2, level.formatVersion());
+        assertEquals(ModLevelDefinition.S3kObjectZoneSet.S3KL,
+                level.s3kMetadata().orElseThrow().objectZoneSet());
+        assertEquals(List.of(new ModPaletteClaim(1, 0, 0x0EEE)), level.paletteClaims());
+        assertEquals(0, level.paletteLines().length);
+    }
+
+    @Test
+    void v2RejectsUnknownZoneSetDuplicateClaimAndLineZero() {
+        assertFormatError("s3k-v2-unknown-set", "objectZoneSet");
+        assertFormatError("s3k-v2-duplicate-claim", "Duplicate palette claim");
+        assertFormatError("s3k-v2-line-zero", "creator palette line must be 1..3");
+    }
+
+    @Test
+    void v1StillProducesFourCompleteLegacyPaletteLines() throws Exception {
+        ModLevelDefinition level = readFixture("s2-v1-valid");
+
+        assertEquals(1, level.formatVersion());
+        assertEquals(4, level.paletteLines().length);
+        assertTrue(level.s3kMetadata().isEmpty());
+        assertTrue(level.paletteClaims().isEmpty());
+    }
+
+    @Test
+    void versionsEnforceSeparateExactRootAssetAndMetadataKeys() throws Exception {
+        String v1 = fixtureJson("s2-v1-valid").replace("  \"objects\": []",
+                "  \"hostMetadata\": {\"s3k\": {\"objectZoneSet\": \"S3KL\"}},\n"
+                        + "  \"objects\": []");
+        assertFixtureJsonRejected(v1, "Unknown level.json field: hostMetadata");
+
+        String v2 = fixtureJson("s3k-v2-valid");
+        assertFixtureJsonRejected(v2.replace("\"collisionSecondary\": \"collision-secondary.bin\"",
+                "\"collisionSecondary\": \"collision-secondary.bin\", \"palettes\": \"palettes.bin\""),
+                "Unknown assets field: palettes");
+        assertFixtureJsonRejected(v2.replace("\"hostMetadata\": {\"s3k\": {",
+                "\"hostMetadata\": {\"otherHost\": {}, \"s3k\": {"),
+                "Unknown hostMetadata field: otherHost");
+        assertFixtureJsonRejected(v2.replace("\"objectZoneSet\": \"S3KL\"",
+                "\"objectZoneSet\": \"S3KL\", \"surprise\": true"),
+                "Unknown hostMetadata.s3k field: surprise");
+        assertFixtureJsonRejected(v2.replace("\"sega\": 3822",
+                "\"sega\": 3822, \"surprise\": true"),
+                "Unknown palette claim field: surprise");
+    }
 
     @Test
     void readsExactV1LevelAndDefensivelyOwnsDecodedPayloads() throws Exception {
@@ -235,6 +286,38 @@ class TestModLevelDefinitionParser {
             assertNotNull(ModLevelDefinitionParser.read(
                     root, new BakedLevelRef("levels/demo/level.json")));
         }
+    }
+
+    private ModLevelDefinition readFixture(String name) throws Exception {
+        String json = fixtureJson(name);
+        writeMinimalLevel(json);
+        if (isV2Json(json)) Files.deleteIfExists(asset("palettes.bin"));
+        try (ModAssetRoot root = openRoot()) {
+            return ModLevelDefinitionParser.read(root, new BakedLevelRef("levels/demo/level.json"));
+        }
+    }
+
+    private String fixtureJson(String name) throws IOException {
+        String resource = "/mods/formats/" + name + "/level.json";
+        try (var input = TestModLevelDefinitionParser.class.getResourceAsStream(resource)) {
+            if (input == null) throw new IOException("Missing test fixture: " + resource);
+            return new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        }
+    }
+
+    private void assertFormatError(String name, String messagePart) {
+        IOException error = assertThrows(IOException.class, () -> readFixture(name));
+        assertTrue(error.getMessage().contains(messagePart), error::getMessage);
+    }
+
+    private void assertFixtureJsonRejected(String json, String messagePart) throws Exception {
+        writeMinimalLevel(json);
+        if (isV2Json(json)) Files.deleteIfExists(asset("palettes.bin"));
+        assertReadRejected(messagePart);
+    }
+
+    private static boolean isV2Json(String json) {
+        return json.matches("(?s).*\\\"formatVersion\\\"\\s*:\\s*2(?:\\s*[,}]).*");
     }
 
     private void assertJsonRejected(String json, String messagePart) throws Exception {

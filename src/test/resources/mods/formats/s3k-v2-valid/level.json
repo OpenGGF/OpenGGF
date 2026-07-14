@@ -1,0 +1,27 @@
+{
+  "formatVersion": 2,
+  "zoneName": "Demo Zone",
+  "zoneIndex": 64,
+  "levelIndex": 1024,
+  "blockGridSide": 8,
+  "width": 1,
+  "height": 1,
+  "bounds": {"minX": 0, "maxX": 127, "minY": -32, "maxY": 96},
+  "start": {"x": 32, "y": 48},
+  "music": {"stockId": 129},
+  "assets": {
+    "patterns": "patterns.bin",
+    "chunks": "chunks.bin",
+    "blocks": "blocks.bin",
+    "foregroundMap": "fg-map.bin",
+    "solidHeights": "solid-heights.bin",
+    "solidWidths": "solid-widths.bin",
+    "solidAngles": "solid-angles.bin",
+    "collisionPrimary": "collision-primary.bin",
+    "collisionSecondary": "collision-secondary.bin"
+  },
+  "hostMetadata": {"s3k": {"objectZoneSet": "S3KL"}},
+  "paletteClaims": [{"line": 1, "color": 0, "sega": 3822}],
+  "objects": [],
+  "rings": []
+}

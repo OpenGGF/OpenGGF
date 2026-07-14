@@ -6,13 +6,19 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-/** Immutable, fully validated representation of a v1 baked level export. */
+/** Immutable, fully validated representation of a baked level export. */
 @com.openggf.game.ModApi
 public final class ModLevelDefinition {
     @com.openggf.game.ModApi
     public record Bounds(int minX, int maxX, int minY, int maxY) {}
     @com.openggf.game.ModApi
     public record Start(int x, int y) {}
+    @com.openggf.game.ModApi
+    public record S3kMetadata(S3kObjectZoneSet objectZoneSet) {
+        public S3kMetadata { Objects.requireNonNull(objectZoneSet, "objectZoneSet"); }
+    }
+    @com.openggf.game.ModApi
+    public enum S3kObjectZoneSet { S3KL, SKL }
 
     @com.openggf.game.ModApi
     public sealed interface Music permits StockMusic, TrackMusic {}
@@ -64,6 +70,8 @@ public final class ModLevelDefinition {
     private final int[] primaryCollision;
     private final int[] secondaryCollision;
     private final byte[][] paletteLines;
+    private final S3kMetadata s3kMetadata;
+    private final List<ModPaletteClaim> paletteClaims;
     private final int patternCount;
     private final int chunkCount;
     private final int blockCount;
@@ -77,6 +85,22 @@ public final class ModLevelDefinition {
                        byte[] solidAngles, int[] primaryCollision, int[] secondaryCollision,
                        byte[][] paletteLines, int patternCount, int chunkCount, int blockCount,
                        int solidProfileCount) {
+        this(formatVersion, zoneName, zoneIndex, levelIndex, blockGridSide, width, height, bounds,
+                start, music, objects, rings, patterns, chunks, blocks, foregroundMap,
+                backgroundMap, solidHeights, solidWidths, solidAngles, primaryCollision,
+                secondaryCollision, paletteLines, patternCount, chunkCount, blockCount,
+                solidProfileCount, null, List.of());
+    }
+
+    ModLevelDefinition(int formatVersion, String zoneName, int zoneIndex, int levelIndex,
+                       int blockGridSide, int width, int height, Bounds bounds, Start start,
+                       Music music, List<ObjectEntry> objects, List<RingEntry> rings,
+                       byte[] patterns, byte[] chunks, byte[] blocks, byte[] foregroundMap,
+                       byte[] backgroundMap, byte[] solidHeights, byte[] solidWidths,
+                       byte[] solidAngles, int[] primaryCollision, int[] secondaryCollision,
+                       byte[][] paletteLines, int patternCount, int chunkCount, int blockCount,
+                       int solidProfileCount, S3kMetadata s3kMetadata,
+                       List<ModPaletteClaim> paletteClaims) {
         this.formatVersion = formatVersion;
         this.zoneName = Objects.requireNonNull(zoneName, "zoneName");
         this.zoneIndex = zoneIndex;
@@ -100,6 +124,8 @@ public final class ModLevelDefinition {
         this.primaryCollision = primaryCollision.clone();
         this.secondaryCollision = secondaryCollision.clone();
         this.paletteLines = clone2d(paletteLines);
+        this.s3kMetadata = s3kMetadata;
+        this.paletteClaims = List.copyOf(paletteClaims);
         this.patternCount = patternCount;
         this.chunkCount = chunkCount;
         this.blockCount = blockCount;
@@ -131,6 +157,8 @@ public final class ModLevelDefinition {
     public int[] primaryCollisionIndices() { return primaryCollision.clone(); }
     public int[] secondaryCollisionIndices() { return secondaryCollision.clone(); }
     public byte[][] paletteLines() { return clone2d(paletteLines); }
+    public Optional<S3kMetadata> s3kMetadata() { return Optional.ofNullable(s3kMetadata); }
+    public List<ModPaletteClaim> paletteClaims() { return paletteClaims; }
     public int patternCount() { return patternCount; }
     public int chunkCount() { return chunkCount; }
     public int blockCount() { return blockCount; }
