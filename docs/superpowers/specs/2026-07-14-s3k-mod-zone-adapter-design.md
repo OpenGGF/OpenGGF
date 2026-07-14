@@ -81,7 +81,8 @@ Before a custom S3K level is published, the adapter supplies a runtime profile f
 each S3K-owned framework:
 
 - `ZoneRuntimeRegistry`: namespaced state owned by the contribution;
-- `PaletteOwnershipRegistry`: host character/HUD ownership plus creator zone ranges;
+- `PaletteOwnershipRegistry`: a new initial-palette/HUD bridge described below,
+  plus normal creator runtime writes;
 - `AnimatedTileChannelGraph`: declared channels, or an explicit empty graph;
 - `ZoneLayoutMutationPipeline`: normal mutable-level routing and dirty regions;
 - `ScrollEffectComposer`: a declared creator scroll policy, defaulting to flat
@@ -98,16 +99,29 @@ validation error; it is never silently approximated by a stock handler.
 
 ## Palette ownership
 
-S3K character palette line 0 remains host-owned and is loaded for the resolved main
-character. Creator zone art owns declared entries on level lines 1 through 3. HUD
-ownership is composed through the existing registry and wins over conflicting zone
-writes while the HUD is visible.
+S3K character palette line 0 remains host-owned and is loaded directly into
+`palettes[0]` for the resolved main character, matching current `Sonic3kLevel`
+construction. Creator zone art supplies declared entries on level lines 1 through 3.
 
-The export/manifest records ownership rather than requiring four complete palette
-lines. Duplicate ownership, a write into a reserved character entry, an out-of-range
-entry, or a mismatch between indexed art and its declared palette is rejected before
-launch. Standalone games retain their existing all-lines-owned behavior because they
-have no host character palette.
+This composition is new work. `PaletteOwnershipRegistry` currently arbitrates only
+submitted runtime writes by integer priority; it does not reserve initial palette
+entries or give the HUD intrinsic precedence. `HudRenderManager`'s current lives
+palette override also uploads directly and bypasses the registry. The adapter work
+adds an internal host-palette bridge that:
+
+- validates creator declarations against character and HUD-reserved entries before
+  publication;
+- exposes the S3K HUD provider's required palette entries as host-owned claims;
+- submits HUD-visible palette writes through `PaletteOwnershipRegistry` at a defined
+  host priority instead of using the direct lives-palette upload path; and
+- leaves stock level construction byte-for-byte unchanged when no custom zone is
+  active.
+
+The export/manifest records creator-owned entries rather than requiring four complete
+palette lines. Duplicate ownership, a write into a reserved character/HUD entry, an
+out-of-range entry, or a mismatch between indexed art and its declared palette is
+rejected before launch. Standalone games retain their existing all-lines-owned
+behavior because they have no host character palette.
 
 ## Save, disable, and progression behavior
 
@@ -117,9 +131,10 @@ the owner is disabled or removed, the existing safe fallback policy selects the
 nearest valid stock destination; no synthetic numeric index is trusted as a stock
 zone.
 
-New-game insertion is an independent generic contribution described by the Flappy
-design. The S3K adapter supports being selected as an initial destination but does
-not make every custom S3K zone a game-start zone.
+New-game insertion is an independent data-select contribution described by the
+Flappy design. The S3K adapter supports being selected as a data-select initial
+destination but does not make every custom S3K zone a game-start zone or change
+`ZoneProgressionPlan`'s results-successor responsibility.
 
 ## Rewind and lifecycle
 
@@ -159,3 +174,10 @@ Test-first delivery must cover:
 The maintained minimal fixture is the native-Tails Flappy zone, but adapter tests use
 a smaller neutral fixture so foundation failures are distinguishable from Flappy
 gameplay failures.
+
+## Delivery boundary
+
+This specification receives its own test-first implementation plan and lands before
+the gameplay-policy and Flappy-rebuild plans. It does not absorb game-start launch
+policy, input filtering, HUD layout policy, Flappy objects, or the separate Sonic 2
+ROM-art sample.
