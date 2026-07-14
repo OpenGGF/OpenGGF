@@ -134,7 +134,8 @@ public final class ModRuntime implements AutoCloseable {
                                 "Standalone module requires an installed fault boundary");
                     }
                     standalone = OwnerAwareStandaloneModule.wrap(
-                            owner, plan.standaloneModule(), faultBoundary, plan.characters());
+                            owner, plan.standaloneModule(), faultBoundary, plan.characters(),
+                            plan.preparedObjectArt());
                     standalone.getPlayableCharacterRegistry();
                     ownerRegistrations = List.of();
                 } else if (plan.hasContent()) {
