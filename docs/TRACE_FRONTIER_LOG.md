@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- AIZ collapsing-log rider-release milestone
+
+Branch `feature/ai-trace-animation-verification`, after the S3K post-balance
+low-speed Duck milestone. `sub_2AF9C` releases a collapsing-log rider after the
+player's native animation pass and writes `prev_anim=Run ($01)` while leaving
+the current Walk byte untouched. The next player slot therefore restarts
+`Animate_Sonic` at Walk mapping `$07`. The engine now publishes that exact
+adjacent animation byte when either bridge subtype ejects a rider; no zone,
+route, trace-frame, hydration, or comparison-tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 59410-59465
+(`loc_2AF70` and `sub_2AF9C`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestAizCollapsingLogBridgeObjectInstance` passes 2/2, including the raw
+  `anim`/`prev_anim` split on release.
+- AIZ complete-run advances from frame 19814 to frame 22373; the 34-frame
+  Walk/run mapping-cadence block is now exact (21 grouped errors remain after
+  the newly exposed later mapping group).
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  HCZ and every previously green route retain their status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
 ### 2026-07-14 -- S3K post-balance low-speed Duck milestone
 
 Branch `feature/ai-trace-animation-verification`, after the AIZ/LRZ rock

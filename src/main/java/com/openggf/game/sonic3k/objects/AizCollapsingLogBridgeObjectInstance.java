@@ -6,6 +6,7 @@ import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -23,6 +24,7 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -338,8 +340,18 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         player.setOnObject(false);
         player.setPushing(false);
         player.setAir(true);
+        if (player instanceof AbstractPlayableSprite sprite) {
+            publishKnockOffAnimationState(sprite);
+        }
         standingPlayers.remove(player);
         ejectedPlayers.add(player);
+    }
+
+    void publishKnockOffAnimationState(AbstractPlayableSprite player) {
+        // sub_2AF9C runs after the player's Animate pass and writes only
+        // prev_anim=Run. An unchanged Walk byte therefore restarts on the next
+        // player slot (sonic3k.asm:59455-59465).
+        player.getAnimationManager().publishPreviousAnimationId(Sonic3kAnimationIds.RUN.id());
     }
 
     @Override
