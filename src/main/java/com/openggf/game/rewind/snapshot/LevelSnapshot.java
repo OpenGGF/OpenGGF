@@ -34,7 +34,27 @@ public record LevelSnapshot(
         long levelTimerFrames,
         boolean levelTimerPaused,
         boolean respawnRequested,
-        CheckpointState.RewindState checkpointState) {
+        CheckpointState.RewindState checkpointState,
+        boolean transitionRingInitializationPending) {
+
+    /** Compatibility constructor for snapshots predating deferred transition-ring initialization. */
+    public LevelSnapshot(
+            long epochAtCapture,
+            Block[] blocks,
+            Chunk[] chunks,
+            byte[] mapData,
+            int frameCounter,
+            boolean hasLevelHudState,
+            int levelRings,
+            int levelRingExtraLifeFlags,
+            long levelTimerFrames,
+            boolean levelTimerPaused,
+            boolean respawnRequested,
+            CheckpointState.RewindState checkpointState) {
+        this(epochAtCapture, blocks, chunks, mapData, frameCounter,
+                hasLevelHudState, levelRings, levelRingExtraLifeFlags, levelTimerFrames,
+                levelTimerPaused, respawnRequested, checkpointState, false);
+    }
 
     public LevelSnapshot(
             long epochAtCapture,
@@ -43,7 +63,7 @@ public record LevelSnapshot(
             byte[] mapData,
             int frameCounter) {
         this(epochAtCapture, blocks, chunks, mapData, frameCounter,
-                false, 0, 0, 0, false, false, null);
+                false, 0, 0, 0, false, false, null, false);
     }
 
     public LevelSnapshot(
@@ -54,7 +74,7 @@ public record LevelSnapshot(
             int frameCounter,
             boolean respawnRequested) {
         this(epochAtCapture, blocks, chunks, mapData, frameCounter,
-                false, 0, 0, 0, false, respawnRequested, null);
+                false, 0, 0, 0, false, respawnRequested, null, false);
     }
 
     /** Compatibility constructor for callers predating ring-threshold flag capture. */
@@ -63,6 +83,7 @@ public record LevelSnapshot(
             boolean levelTimerPaused, boolean respawnRequested,
             CheckpointState.RewindState checkpointState) {
         this(epochAtCapture, blocks, chunks, mapData, frameCounter, hasLevelHudState,
-                levelRings, 0, levelTimerFrames, levelTimerPaused, respawnRequested, checkpointState);
+                levelRings, 0, levelTimerFrames, levelTimerPaused, respawnRequested,
+                checkpointState, false);
     }
 }

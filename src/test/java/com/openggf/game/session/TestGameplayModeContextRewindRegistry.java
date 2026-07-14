@@ -58,11 +58,20 @@ import static org.mockito.Mockito.mock;
  * Unit tests for the {@link RewindRegistry} integration on
  * {@link GameplayModeContext}.
  *
- * <p>Tests verify that the seven always-available atomic adapters are
+ * <p>Tests verify that the eight always-available atomic adapters are
  * registered automatically when {@link GameplayModeContext#attachGameplayManagers}
  * is called, without requiring a full level load or ROM access.
  */
 class TestGameplayModeContextRewindRegistry {
+    private static final Set<String> CORE_REWIND_KEYS = Set.of(
+            "camera",
+            "gamestate",
+            "gamerng",
+            "timermanager",
+            "fademanager",
+            "oscillation",
+            "kosinski-module-queue",
+            "solid-execution");
 
     @BeforeEach
     void configureServices() {
@@ -97,25 +106,17 @@ class TestGameplayModeContextRewindRegistry {
 
         CompositeSnapshot snapshot = registry.capture();
 
-        Set<String> expectedKeys = Set.of(
-                "camera",
-                "gamestate",
-                "gamerng",
-                "timermanager",
-                "fademanager",
-                "oscillation",
-                "solid-execution");
-        assertTrue(snapshot.entries().keySet().containsAll(expectedKeys),
-                "Expected all atomic adapter keys to be present, got: " + snapshot.entries().keySet());
+        assertEquals(CORE_REWIND_KEYS, snapshot.entries().keySet(),
+                "Core attach must register the exact atomic adapter set");
     }
 
     @Test
-    void exactlySevenAtomicKeysAfterAttach() {
+    void exactlyEightAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(7, snapshot.entries().keySet().size(),
-                "Expected exactly 7 atomic adapters, got: " + snapshot.entries().keySet());
+        assertEquals(8, snapshot.entries().keySet().size(),
+                "Expected exactly 8 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -168,8 +169,8 @@ class TestGameplayModeContextRewindRegistry {
         RewindRegistry second = ctx.getRewindRegistry();
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
-        // New registry should have the same 7 keys
-        assertEquals(7, second.capture().entries().keySet().size());
+        assertEquals(CORE_REWIND_KEYS, second.capture().entries().keySet(),
+                "Re-attach must rebuild the exact core set, including the KosM queue");
     }
 
     @Test

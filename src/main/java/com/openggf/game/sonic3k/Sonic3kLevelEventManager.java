@@ -381,6 +381,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // Clear intro-fall forced animation when players land
         updateIntroFallState();
 
+        // ROM ScreenEvents (sonic3k.asm:102233-102235) copies both live
+        // foreground camera words immediately before dispatching the zone's
+        // foreground and background event handlers. Keep these as independent
+        // words: transition/deform code can subsequently mutate the copies.
+        camera().copyLivePositionToScreenEventWords();
+
         // ROM: ScreenEvents dispatches to both FG and BG handlers each frame.
         // Boss_flag gates FG events during boss fights.
         if (aizEvents != null && currentZone == Sonic3kZoneIds.ZONE_AIZ) {

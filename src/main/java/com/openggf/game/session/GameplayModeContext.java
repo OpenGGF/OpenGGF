@@ -39,6 +39,7 @@ import com.openggf.level.Palette;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.resources.KosinskiModuleQueue;
 import com.openggf.level.rings.RingManager;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.BackgroundPlaneCollisionProvider;
@@ -85,6 +86,7 @@ public final class GameplayModeContext implements ModeContext {
     private SpecialRenderEffectRegistry specialRenderEffectRegistry;
     private AdvancedRenderModeController advancedRenderModeController;
     private ZoneLayoutMutationPipeline zoneLayoutMutationPipeline;
+    private final KosinskiModuleQueue kosinskiModuleQueue = new KosinskiModuleQueue();
 
     private BonusStageProvider activeBonusStageProvider = NoOpBonusStageProvider.INSTANCE;
     private boolean managersTornDown;
@@ -209,6 +211,7 @@ public final class GameplayModeContext implements ModeContext {
         this.rewindRegistry.register(timerManager);
         this.rewindRegistry.register(fadeManager);
         this.rewindRegistry.register(new OscillationStaticAdapter());
+        this.rewindRegistry.register(kosinskiModuleQueue);
         // Register solid-execution adapter (no-op if not DefaultSolidExecutionRegistry)
         if (solidExecutionRegistry instanceof DefaultSolidExecutionRegistry dser) {
             this.rewindRegistry.register(dser);
@@ -430,6 +433,11 @@ public final class GameplayModeContext implements ModeContext {
 
     public ZoneLayoutMutationPipeline getZoneLayoutMutationPipeline() {
         return zoneLayoutMutationPipeline;
+    }
+
+    /** Runtime owner for the ROM-visible Kosinski Moduled scheduling queue. */
+    public KosinskiModuleQueue getKosinskiModuleQueue() {
+        return kosinskiModuleQueue;
     }
 
     // ── Rewind framework ─────────────────────────────────────────────────
@@ -700,6 +708,7 @@ public final class GameplayModeContext implements ModeContext {
         if (zoneLayoutMutationPipeline != null) {
             zoneLayoutMutationPipeline.clear();
         }
+        kosinskiModuleQueue.clear();
         if (solidExecutionRegistry != null) {
             solidExecutionRegistry.clearTransientState();
         }
@@ -786,6 +795,7 @@ public final class GameplayModeContext implements ModeContext {
      * gameplay mode context is wired up.
      */
     public void initializeFreshGameplayState() {
+        kosinskiModuleQueue.clear();
         if (gameStateManager != null) {
             gameStateManager.resetState();
         }

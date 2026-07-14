@@ -10,21 +10,23 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
 
 /** Locked-on S3KL object {@code $AA}, {@code Obj_FBZMiniboss}. */
 public final class FbzMinibossInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomWorldPositionedObject {
     private static final int[] ACTIVATION_BOUNDS = {0x240, 0x600, 0x2D20, 0x2F20};
     private static final int[] LOCK_BOUNDS = {0x540, 0x540, 0x2E20, 0x2EA0};
     private static final String[] INITIAL_ROLES = {
@@ -67,13 +69,12 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
     private boolean bossSlotConverted;
     private boolean signSpawned;
     private boolean resultsObserved;
+    private boolean act2SizeWorkersSpawned;
     private boolean rootHitPending;
     private int paletteRequestCount;
     private int paletteSpawnCount;
     private int armTableInvocations;
-    @RewindTransient(reason = "structural live graph references relink from stable role metadata")
     private FbzMinibossArmChild leftArm;
-    @RewindTransient(reason = "structural live graph references relink from stable role metadata")
     private FbzMinibossArmChild rightArm;
 
     public FbzMinibossInstance(ObjectSpawn spawn) {
@@ -101,7 +102,7 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
             case END_SIGN_AWAIT_RESULTS -> awaitResults();
             case END_SIGN_AWAIT_ACT -> {
                 if (tryServices() != null && services().gameState() != null
-                        && services().gameState().isEndOfLevelFlag()) ObjectLifetimeOps.deleteNoRespawn(this);
+                        && services().gameState().isEndOfLevelFlag()) startAct2Sizes();
             }
         }
         updateHitState();
@@ -258,8 +259,59 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
         if (tryServices() == null || services().gameState() == null) return;
         if (!services().gameState().isEndOfLevelActive()) {
             resultsObserved = true;
+            restoreAllPlayerControls();
             phaseOrdinal = Phase.END_SIGN_AWAIT_ACT.ordinal();
         }
+    }
+
+    private void restoreAllPlayerControls() {
+        for (PlayableEntity participant : services().playerQuery()
+                .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (participant instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
+                sprite.setControlLocked(false);
+                ObjectControlState.none().applyTo(sprite);
+                sprite.setForcedAnimationId(-1);
+            }
+        }
+    }
+
+    private void startAct2Sizes() {
+        if (act2SizeWorkersSpawned) return;
+        act2SizeWorkersSpawned = true;
+        var level = services().currentLevel();
+        int targetMaxX = level != null ? level.getMaxX() : 0x6000;
+        int targetMinY = level != null ? level.getMinY() : 0;
+        int targetMaxY = level != null ? level.getMaxY() : 0x0B00;
+
+        // Change_Act2Sizes publishes the stored Act 2 sizes first, including
+        // Camera_target_max_Y_pos, without snapping any current boundary.
+        storedCameraMaxX = targetMaxX;
+        storedCameraMaxY = targetMaxY;
+        services().camera().setMaxYTarget((short) targetMaxY);
+
+        int[] kinds = {
+                FbzAct2CameraResizeWorker.MAX_X,
+                FbzAct2CameraResizeWorker.MIN_Y,
+                FbzAct2CameraResizeWorker.MAX_Y
+        };
+        int[] targets = {targetMaxX, targetMinY, targetMaxY};
+        for (int i = 0; i < kinds.length; i++) {
+            int kind = kinds[i];
+            int target = targets[i];
+            FbzAct2CameraResizeWorker worker = spawnAfterCurrentSibling(
+                    () -> new FbzAct2CameraResizeWorker(kind, target));
+            if (worker.isDestroyed()) break; // CreateChild1 stops at first allocation failure.
+        }
+        ObjectLifetimeOps.deleteNoRespawn(this);
+    }
+
+    @Override
+    public boolean isPersistent() {
+        // Once the root slot converts to Obj_EndSignControl it remains a live
+        // SST completion consumer across the long results/title presentation.
+        // Change_Act2Sizes deletes it explicitly after allocating its worker
+        // prefix; ordinary placement-window unload must not retire it first.
+        return bossSlotConverted;
     }
 
     private void setBossFlag(boolean value) {
@@ -374,6 +426,12 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
     @Override public int getPriorityBucket() { return 4; }
     @Override public boolean isHighPriority() { return true; }
+
+    @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        x = (x + offsetX) & 0xFFFF;
+        y = (y + offsetY) & 0xFFFF;
+    }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

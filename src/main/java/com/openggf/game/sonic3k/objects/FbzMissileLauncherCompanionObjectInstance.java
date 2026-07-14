@@ -14,7 +14,6 @@ public final class FbzMissileLauncherCompanionObjectInstance
     extends AbstractObjectInstance
     implements SolidObjectProvider, RewindRecreatable {
   private static final int[] OFFSETS = {-0x18, 2, -8, -4, 8, 4, 0x18, -2};
-  @RewindTransient(reason = "explicit family relink after rewind settle")
   private FbzMissileLauncherObjectInstance parent;
   private int familySlot = -1, anchorX;
   private boolean detonated;

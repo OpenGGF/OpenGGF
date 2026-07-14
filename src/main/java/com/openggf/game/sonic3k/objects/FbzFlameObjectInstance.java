@@ -5,10 +5,17 @@ import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 
@@ -17,6 +24,16 @@ import java.util.List;
 /** Independent after-current flame allocated by {@link FbzFlamethrowerObjectInstance}. */
 public final class FbzFlameObjectInstance extends AbstractObjectInstance
         implements TouchResponseProvider, RewindRecreatable {
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.NORMAL,
+            false,
+            true,
+            false,
+            TouchShieldDeflectCapability.NONE,
+            0x10,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
     private int x;
     private int y;
     private int xFixed;
@@ -61,7 +78,7 @@ public final class FbzFlameObjectInstance extends AbstractObjectInstance
             animationTimer = 5;
             animationBase -= 4;
             if (animationBase == 0) {
-                setDestroyed(true);
+                ObjectLifetimeOps.expireDynamic(this);
                 return;
             }
         }
@@ -79,6 +96,10 @@ public final class FbzFlameObjectInstance extends AbstractObjectInstance
     @Override public int getCollisionFlags() { return 0x98; }
     @Override public int getCollisionProperty() { return 0; }
     @Override public int getShieldReactionFlags() { return 0x10; }
+    @Override public TouchResponseProfile getTouchResponseProfile() { return TOUCH_RESPONSE_PROFILE; }
+    @Override public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
+    }
     @Override public int getPriorityBucket() { return priorityBucket; }
 
     @Override

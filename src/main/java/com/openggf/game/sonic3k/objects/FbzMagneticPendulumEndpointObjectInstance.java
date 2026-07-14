@@ -2,10 +2,10 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.GenericFieldCapturer;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -18,14 +18,12 @@ import java.util.List;
 /** Real after-current endpoint/interactor slot of the FBZ pendulum. */
 public final class FbzMagneticPendulumEndpointObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
-    @RewindTransient(reason = "relinked by stable parent slot")
     private FbzMagneticPendulumObjectInstance parent;
     private int parentSlot;
     private int x;
     private int y;
     private boolean chainAllocationAttempted;
     private boolean cascadeDelete;
-    @RewindTransient(reason = "relinked through the endpoint slot")
     private FbzMagneticPendulumChainObjectInstance chain;
 
     FbzMagneticPendulumEndpointObjectInstance(ObjectSpawn spawn, FbzMagneticPendulumObjectInstance parent) {
@@ -44,7 +42,7 @@ public final class FbzMagneticPendulumEndpointObjectInstance extends AbstractObj
     public void update(int frameCounter, PlayableEntity ignored) {
         if (cascadeDelete || parent == null || parent.isDestroyed()) {
             if (chain != null) chain.requestCascadeDelete();
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
             return;
         }
         if (!chainAllocationAttempted) {

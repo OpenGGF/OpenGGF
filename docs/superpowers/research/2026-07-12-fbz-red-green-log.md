@@ -879,3 +879,46 @@ recorded as `unknown/not previously run` rather than inferred.
   widescreen viewports, and donation disabled/S1 donor/S2 donor runs. This pass
   modified only the Task 12 plan, FBZ inventory, and this research log; no
   production code, tests, trace, or commit ran.
+
+- Task 12 implementation is GREEN without trace or commit. The initial focused
+  RED exposed four missing production contracts: S3K slot 93 was not
+  representable, the FBZ event byte was not consumed, the results owner played
+  Act 2 music/deleted itself instead of becoming the carried title owner, and
+  the legacy persistent-only transition snapshot dropped boss children. The
+  completed path now executes inside `FBZ1BGE_Normal`, brackets publication and
+  the full reload with hard rewind boundaries, keeps `Apparent_act=0` while
+  `Current_act=1`, loads primary PLC `$1C` exactly once with request-scoped
+  `$1D` suppression, installs palette `$13`, preserves live gameplay/music/
+  control/Y/subpixel state, shifts every player and captured X bound by
+  `-$2E00`, and preserves every live slot-backed identity at its original SST
+  slot. The offset scan remains independently gated by `[4,94)`, nonzero code,
+  and retained ROM render bit 2.
+- The production route caught and fixed two cadence/state regressions during
+  GREEN. `ObjectManager.reset()` initially materialized the FBZ2 launcher in
+  the ScreenEvents call; the synchronous reset now initializes placement and
+  respawn cursors without instantiating the window until the next object pass,
+  while the new RingManager already owns FBZ2 ring data at the shifted camera.
+  `GameState.resetForLevel()` initially cleared `_unkFAA8` during reload; the
+  preserve-gamestate request now carries it until results exit. That exit alone
+  sets `Apparent_act=1`, clears checkpoint/bonus state and `_unkFAA8`, and
+  changes the same live results owner into explicit title wait phases.
+  AwaitStart restores all engine players immediately. Wait2 owns the exact
+  90-frame-plus-title-child gate and then releases three independent absolute
+  16.16 max-X/min-Y/max-Y workers whose subtype survives reconstruction.
+- Verification: the mandatory Task 12 command passed 16/16 tests; the focused
+  PLC/offset/title/worker suite passed 8/8; the full real FBZ route passed with
+  writer, same-call consume/reload, same-frame ring, next-frame placement,
+  checkpoint/bonus timing, carried results/title, and boss-controller checks.
+  A 75-case Cartesian matrix (320/352/400/528/800 x donation off/S1/S2 x
+  zero/Tails/Tails+Knuckles/Tails+Knuckles+Sonic/duplicate-Tails teams), plus a
+  final fresh native/off/no-sidekick session, passed all offsets, daisy-chain,
+  control-owner, death-safety, and ring/object window invariants. It exposed and
+  fixed S3K's hard-coded placement lookahead at 800 pixels while preserving the
+  exact native 320-pixel window. Real production routes now cover checkpoint
+  death/restart on both sides, same-WorldSession continuity, and LiveRewind
+  restore inside Act 2 with the nested `LEVEL_LOAD` boundary suppressed. The
+  guard aggregate passed 27/29: both failures are inherited execution-branch
+  AIZ debt (`AizIntroEmeraldGlowChild` final scalars and two
+  `AizAct2CameraResizeController` inline-construction findings); no Task 12/FBZ
+  class appears in a guard failure. Trace remains deliberately deferred to the
+  final broad-zone polish step.

@@ -5,15 +5,14 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.game.rewind.RewindTransient;
 
 import java.util.List;
 
 /** Solid plunger; literal status bit 3 gives native P1 exclusive start authority. */
 final class FbzMinibossPlungerChild extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable,
+        RomWorldPositionedObject {
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x1B, 8, 0xD);
-    @RewindTransient(reason = "structural root link restored from stable family slot")
     private FbzMinibossInstance boss;
     private int familySlot;
     private int x;
@@ -77,6 +76,13 @@ final class FbzMinibossPlungerChild extends AbstractObjectInstance
     void setBoss(FbzMinibossInstance boss) { this.boss = boss; }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
+    @Override public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        x = (x + offsetX) & 0xFFFF;
+        y = (y + offsetY) & 0xFFFF;
+    }
+    @Override public void afterRomWorldTransitionOffset(int offsetX, int offsetY) {
+        baseY = (baseY + offsetY) & 0xFFFF;
+    }
     @Override public int getPriorityBucket() { return 5; }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer r = getRenderer(Sonic3kObjectArtKeys.FBZ_MINIBOSS);

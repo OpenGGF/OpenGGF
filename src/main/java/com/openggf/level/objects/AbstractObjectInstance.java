@@ -165,6 +165,9 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      */
     private int slotIndex = -1;
 
+    /** ROM {@code render_flags.level_fg} (bit 2), retained as live object state. */
+    private boolean romWorldPositioned = true;
+
     /**
      * ROM parity (S1): Index into the respawn state table (v_objstate+2).
      * <p>
@@ -240,6 +243,16 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     @Override
     public boolean participatesInLevelRepeatOffset() {
         return false;
+    }
+
+    @Override
+    public boolean participatesInRomWorldTransitionOffset() {
+        return romWorldPositioned;
+    }
+
+    /** Screen-space routines clear ROM {@code render_flags.level_fg}. */
+    protected final void setRomWorldPositioned(boolean worldPositioned) {
+        this.romWorldPositioned = worldPositioned;
     }
 
     @Override

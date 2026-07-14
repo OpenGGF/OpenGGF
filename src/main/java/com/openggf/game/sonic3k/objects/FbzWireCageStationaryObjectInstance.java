@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
@@ -20,9 +19,7 @@ public final class FbzWireCageStationaryObjectInstance extends AbstractObjectIns
     private static final int[] TRACK_HEIGHT = {4,0,0,0,0,0,0,0,0,0,0,4};
     private static final int[] ENTRY_FRAMES = {0x49,0x54,0x53,0x52,0x53,0x52,0x53,0x52,0x53,0x52,0x54,0x49};
     private static final int[] LOOP_FRAMES = {0x70,0x70,0x71,0x71,0x72,0x72,0x73,0x73,0x74,0x74,0x75,0x75,0x76,0x76,0x77,0x77,0x6C,0x6C,0x6D,0x6D,0x6E,0x6E,0x6F,0x6F,0x70,0x70,0x71,0x71,0x72,0x72,0x73,0x73,0x74,0x74,0x75,0x75};
-    @RewindTransient(reason = "Immutable constructor-derived spawn configuration; recreated from ObjectSpawn.")
     private final int travelAngle;
-    @RewindTransient(reason = "Immutable constructor-derived spawn configuration; recreated from ObjectSpawn.")
     private final int travelExtent;
     private final FbzParticipantStateTable participants=new FbzParticipantStateTable(4); // phase, side, vertical base, held
 

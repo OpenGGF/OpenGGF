@@ -103,12 +103,14 @@ class TestFbzSpiderCraneAndPendulum {
         }
         assertEquals("INERT", crane.stateName());
         assertNotNull(crane.companionMember());
-        org.mockito.Mockito.verify(main).setObjectControlled(true);
-        org.mockito.Mockito.verify(main).setObjectControlled(false);
+        org.mockito.Mockito.verify(main).applyObjectControlState(
+                com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl());
+        org.mockito.Mockito.verify(main).applyObjectControlState(
+                com.openggf.sprites.playable.ObjectControlState.none());
         org.mockito.Mockito.verify(main).setAir(true);
         for (AbstractPlayableSprite sidekick : List.of(first, second, third)) {
             org.mockito.Mockito.verify(sidekick, org.mockito.Mockito.never())
-                    .setObjectControlled(org.mockito.Mockito.anyBoolean());
+                    .applyObjectControlState(org.mockito.Mockito.any());
             org.mockito.Mockito.verify(sidekick, org.mockito.Mockito.never())
                     .setCentreXPreserveSubpixel(org.mockito.Mockito.anyShort());
         }
@@ -134,7 +136,9 @@ class TestFbzSpiderCraneAndPendulum {
         pivot.tryCapture(main, 0xF90, 0x700);
         assertTrue(pivot.isSwinging());
         pivot.update(1, null);
-        org.mockito.Mockito.verify(main).setObjectControlled(true);
+        org.mockito.Mockito.verify(main).applyObjectControlState(
+                com.openggf.sprites.playable.ObjectControlState
+                        .nativeBits0To6CpuAllowedMovementSuppressed());
         for (AbstractPlayableSprite sidekick : List.of(first, second, third)) {
             org.mockito.Mockito.verifyNoInteractions(sidekick);
         }

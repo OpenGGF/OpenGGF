@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
@@ -20,9 +19,7 @@ public final class FbzChainLinkObjectInstance extends AbstractObjectInstance imp
     private static final com.openggf.level.objects.ObjectPlayerQuery.PlayerVisitor<FbzChainLinkObjectInstance> UPDATE_PLAYER=(chain,entity)->{if(entity instanceof AbstractPlayableSprite player){int i=chain.participants.slot(player);if(chain.participants.get(i,1)!=0)chain.participants.set(i,1,chain.participants.get(i,1)-1);chain.updateParticipant(player,i);}};
     static final int RELEASE_Y_VELOCITY=-0x380, RELEASE_X_VELOCITY=0x200, JUMP_COOLDOWN=0x12,
             DIRECTIONAL_JUMP_COOLDOWN=0x3C;
-    @RewindTransient(reason = "Immutable constructor-derived spawn configuration; recreated from ObjectSpawn.")
     private final boolean horizontalMode;
-    @RewindTransient(reason = "Immutable constructor-derived spawn configuration; recreated from ObjectSpawn.")
     private final int rangePixels;
     private final FbzParticipantStateTable participants=new FbzParticipantStateTable(6); // grabbed,cooldown,step,timer,direction,phase
     private int currentLength;

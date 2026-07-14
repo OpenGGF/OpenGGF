@@ -15,9 +15,12 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import java.lang.reflect.Field;
@@ -29,6 +32,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /** Exact defeat-family oracle: sonic3k.asm:176659-176890, 147570-147592, 187282-187338. */
+@ExtendWith(SingletonResetExtension.class)
+@FullReset
 class TestFbzMinibossDefeatChildren {
     @BeforeEach
     void headless() {

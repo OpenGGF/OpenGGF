@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.events.Sonic3kFBZEvents;
@@ -24,7 +23,6 @@ import java.util.List;
 public final class FbzMagneticPlatformObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, TouchResponseProvider, SpawnRewindRecreatable {
 
-    @RewindTransient(reason = "immutable subtype decode")
     private final int maximumRise;
     private int y;
     private int yFixed;

@@ -7,19 +7,19 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.game.rewind.RewindTransient;
 
 import java.util.List;
 
 /** Three one-time cover leaves, loc_6F10E. */
-final class FbzMinibossCoverChild extends AbstractObjectInstance implements RewindRecreatable {
+final class FbzMinibossCoverChild extends AbstractObjectInstance
+        implements RewindRecreatable, RomWorldPositionedObject {
     private static final int[] INITIAL_TIMERS = {0x20, 0x20, 0x40};
     private static final int[] WAIT_UPDATES = {33, 33, 65};
     private static final int[] X_VELOCITIES = {-0x40, 0x40, 0};
     private static final int[] Y_VELOCITIES = {0, 0, 0x40};
-    @RewindTransient(reason = "structural root link restored from stable family slot")
     private FbzMinibossInstance boss;
     private int familySlot;
     private int coverIndex;
@@ -75,6 +75,12 @@ final class FbzMinibossCoverChild extends AbstractObjectInstance implements Rewi
     void setBoss(FbzMinibossInstance boss) { this.boss = boss; }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
+    @Override public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        x = (x + offsetX) & 0xFFFF;
+        y = (y + offsetY) & 0xFFFF;
+        xFixed = (x << 8) | (xFixed & 0xFF);
+        yFixed = (y << 8) | (yFixed & 0xFF);
+    }
     @Override public int getPriorityBucket() { return 2; }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer r = getRenderer(Sonic3kObjectArtKeys.FBZ_MINIBOSS);

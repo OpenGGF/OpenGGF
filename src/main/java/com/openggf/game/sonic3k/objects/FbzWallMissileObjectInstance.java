@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
@@ -10,7 +9,6 @@ import java.util.List;
 /** Locked-on Obj_FBZWallMissile ($E0), sonic3k.asm $3C7EC-$3C904. */
 public final class FbzWallMissileObjectInstance
     extends AbstractObjectInstance implements SpawnRewindRecreatable {
-  @RewindTransient(reason = "constructor subtype decode")
   private final int interval;
   private int timer, muzzleTimer, frame;
   private boolean muzzle;

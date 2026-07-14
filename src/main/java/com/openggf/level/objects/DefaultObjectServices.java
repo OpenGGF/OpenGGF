@@ -38,6 +38,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.rings.RingManager;
+import com.openggf.level.resources.KosinskiModuleQueue;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.BackgroundPlaneCollisionProvider;
 import com.openggf.sprites.managers.SpriteManager;
@@ -66,6 +67,7 @@ public class DefaultObjectServices implements ObjectServices {
     private final WorldSession worldSession;
     private final GameRng rng;
     private final ZoneRuntimeRegistry zoneRuntimeRegistry;
+    private final KosinskiModuleQueue kosinskiModuleQueue;
     private final PaletteOwnershipRegistry paletteOwnershipRegistry;
     private final ZoneLayoutMutationPipeline zoneLayoutMutationPipeline;
     private final SolidExecutionRegistry solidExecutionRegistry;
@@ -88,6 +90,7 @@ public class DefaultObjectServices implements ObjectServices {
                 gameplayMode.getWorldSession(),
                 gameplayMode.getRng(),
                 gameplayMode.getZoneRuntimeRegistry(),
+                gameplayMode.getKosinskiModuleQueue(),
                 gameplayMode.getPaletteOwnershipRegistry(),
                 gameplayMode.getZoneLayoutMutationPipeline(),
                 gameplayMode.getSolidExecutionRegistry(),
@@ -107,6 +110,7 @@ public class DefaultObjectServices implements ObjectServices {
                                  WorldSession worldSession,
                                  GameRng rng,
                                  ZoneRuntimeRegistry zoneRuntimeRegistry,
+                                 KosinskiModuleQueue kosinskiModuleQueue,
                                  PaletteOwnershipRegistry paletteOwnershipRegistry,
                                  ZoneLayoutMutationPipeline zoneLayoutMutationPipeline,
                                  SolidExecutionRegistry solidExecutionRegistry,
@@ -124,6 +128,7 @@ public class DefaultObjectServices implements ObjectServices {
         this.worldSession = worldSession;
         this.rng = Objects.requireNonNull(rng, "rng");
         this.zoneRuntimeRegistry = Objects.requireNonNull(zoneRuntimeRegistry, "zoneRuntimeRegistry");
+        this.kosinskiModuleQueue = Objects.requireNonNull(kosinskiModuleQueue, "kosinskiModuleQueue");
         this.paletteOwnershipRegistry = paletteOwnershipRegistry;
         this.zoneLayoutMutationPipeline = Objects.requireNonNull(zoneLayoutMutationPipeline, "zoneLayoutMutationPipeline");
         this.solidExecutionRegistry = Objects.requireNonNull(solidExecutionRegistry, "solidExecutionRegistry");
@@ -273,6 +278,11 @@ public class DefaultObjectServices implements ObjectServices {
     @Override
     public ZoneRuntimeRegistry zoneRuntimeRegistry() {
         return zoneRuntimeRegistry;
+    }
+
+    @Override
+    public KosinskiModuleQueue kosinskiModuleQueue() {
+        return kosinskiModuleQueue;
     }
 
     @Override

@@ -392,9 +392,9 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
                 camera.setMinY((short) level.getMinY());
                 camera.setMaxYTarget((short) level.getMaxY());
             }
-            spawnDynamicObject(new AizAct2CameraResizeController(
+            spawnAfterCurrentSibling(() -> new AizAct2CameraResizeController(
                     AizAct2CameraResizeController.MAX_X));
-            spawnDynamicObject(new AizAct2CameraResizeController(
+            spawnAfterCurrentSibling(() -> new AizAct2CameraResizeController(
                     AizAct2CameraResizeController.MAX_Y));
             // Obj_EndSignControlDoStart calls Change_Act2Sizes and then
             // Delete_Current_Sprite. The two workers above continue from

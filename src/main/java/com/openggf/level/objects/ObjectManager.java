@@ -10,7 +10,6 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.SpawnRefId;
 import com.openggf.game.solid.ContactKind;
-import com.openggf.level.objects.boss.BossChildComponent;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.PlayerStandingState;
@@ -26,6 +25,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
+import com.openggf.level.TransitionSstOccupant;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.spawn.AbstractPlacementManager;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -92,7 +92,8 @@ public class ObjectManager {
     private boolean updating;
 
     // ROM parity: slot-ordered execution array for ExecuteObjects emulation.
-    // The dynamic slot window is game-specific and comes from ObjectRegistry.
+    // This covers the complete processed SST range, while SlotAllocator below
+    // remains restricted to the game's independently-defined allocatable window.
     // When a child is spawned at a higher slot, it's placed here directly
     // so the ongoing loop reaches it naturally (same-frame execution).
     private final ObjectSlotLayout slotLayout;
@@ -229,7 +230,7 @@ public class ObjectManager {
                 camera != null ? camera::getWidth : com.openggf.level.spawn.PlacementViewportWidth::current);
         this.placement.setTwoAxisCursorPlacement(slotLayout.twoAxisCursorPlacement());
         this.placement.setWindowingStrategy(windowingStrategy);
-        this.execOrder = new ObjectInstance[slotLayout.dynamicSlotCount()];
+        this.execOrder = new ObjectInstance[slotLayout.processSlotCount()];
         this.slotAllocator = new SlotAllocator(slotLayout,
                 slotLayout.twoAxisCursorPlacement()
                         ? SlotEmptyPredicate.ROUTINE_POINTER
@@ -277,8 +278,12 @@ public class ObjectManager {
         return slotLayout.isDynamicSlot(slotIndex);
     }
 
+    private boolean isProcessedSstSlot(int slotIndex) {
+        return slotIndex >= 0 && slotIndex < slotLayout.lastProcessSlotExclusive();
+    }
+
     private int execIndexForSlot(int slotIndex) {
-        return slotLayout.toExecIndex(slotIndex);
+        return slotIndex;
     }
 
     private int executionSlotIndex(AbstractObjectInstance instance) {
@@ -286,10 +291,23 @@ public class ObjectManager {
     }
 
     private int slotIndexForExec(int execIndex) {
-        return slotLayout.toSlotIndex(execIndex);
+        return execIndex;
     }
 
     public void reset(int cameraX) {
+        reset(cameraX, true);
+    }
+
+    /**
+     * Resets the Act-2 placement cursors without materializing their window.
+     * ScreenEvents runs after Process_Sprites, so those placements first become
+     * live in the next frame's ExecuteObjects pass.
+     */
+    public void resetForSynchronousActTransition(int cameraX) {
+        reset(cameraX, false);
+    }
+
+    private void reset(int cameraX, boolean materializeInitialWindow) {
         clearActiveObjects();
         dynamicObjects.clear();
         auxiliaryDynamicObjects.clear();
@@ -321,7 +339,9 @@ public class ObjectManager {
         // manual camera resets and headless probes from sitting on an empty
         // active window until a later ObjectPlacementController delta occurs. Initial reset
         // materialization still honors the camera-Y filter; S2's vertical bypass is runtime-only.
-        syncActiveSpawnsLoad(false);
+        if (materializeInitialWindow) {
+            syncActiveSpawnsLoad(false);
+        }
     }
 
     ObjectServices services() {
@@ -734,12 +754,12 @@ public class ObjectManager {
 
         Arrays.fill(execOrder, null);
         for (ObjectInstance inst : activeObjects.values()) {
-            if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(executionSlotIndex(aoi))) {
+            if (inst instanceof AbstractObjectInstance aoi && isProcessedSstSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
             }
         }
         for (ObjectInstance inst : dynamicObjects) {
-            if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(executionSlotIndex(aoi))) {
+            if (inst instanceof AbstractObjectInstance aoi && isProcessedSstSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
             }
         }
@@ -900,12 +920,12 @@ public class ObjectManager {
         slotsFreedDuringObjectPass.clear();
         Arrays.fill(execOrder, null);
         for (ObjectInstance inst : activeObjects.values()) {
-            if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(executionSlotIndex(aoi))) {
+            if (inst instanceof AbstractObjectInstance aoi && isProcessedSstSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
             }
         }
         for (ObjectInstance inst : dynamicObjects) {
-            if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(executionSlotIndex(aoi))) {
+            if (inst instanceof AbstractObjectInstance aoi && isProcessedSstSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
             }
         }
@@ -1439,41 +1459,20 @@ public class ObjectManager {
      * mutate manager state through it.
      */
     public java.util.Map<Integer, Integer> occupiedDynamicSlotIds() {
-        java.util.Map<Integer, Integer> occupancy = new java.util.HashMap<>();
-        for (ObjectInstance instance : getActiveObjects()) {
-            if (instance instanceof AbstractObjectInstance aoi
-                    && !instance.isDestroyed()
-                    && instance.getSpawn() != null) {
-                int slot = aoi.getSlotIndex();
-                if (slotLayout.isDynamicSlot(slot)) {
-                    occupancy.put(slot, instance.getSpawn().objectId() & 0xFF);
-                }
-            }
-        }
-        return occupancy;
+        return ObjectDynamicSlotOccupancy.snapshot(getActiveObjects(), slotLayout);
     }
 
-    public List<ObjectInstance> snapshotPersistentDynamicObjectsForTransition() {
-        List<ObjectInstance> snapshot = new ArrayList<>();
-        for (ObjectInstance instance : dynamicObjects) {
-            if (instance == null || instance.isDestroyed() || !instance.isPersistent()) {
-                continue;
-            }
-            // ROM Load_Level clears Dynamic_object_RAM, so a boss object group does
-            // not survive a level reload. Boss component children report persistent
-            // only so they survive the off-screen cull during the fixed-arena fight
-            // (see AbstractBossChild.isPersistent); they must NOT ride a seamless act
-            // reload. Carrying them strands them un-offset in the new act — concretely
-            // the placed AIZ1 miniboss cutscene is dropped on the AIZ1->AIZ2 fire
-            // reload while its persistent body/arm/flame-barrel children were carried,
-            // leaving an art-less (invisible) body and still-hurting flame barrels
-            // partway through AIZ2.
-            if (instance instanceof BossChildComponent) {
-                continue;
-            }
-            snapshot.add(instance);
-        }
-        return snapshot;
+    public List<TransitionSstOccupant> snapshotPersistentDynamicObjectsForTransition() {
+        return ObjectTransitionSstSnapshot.persistentDynamic(dynamicObjects);
+    }
+
+    /**
+     * Captures every live SST-backed occupant for ROM reloads that leave
+     * Object_RAM intact. This is deliberately separate from the legacy
+     * persistent-only carry policy and from the later coordinate-offset scan.
+     */
+    public List<TransitionSstOccupant> snapshotAllLiveSstObjectsForTransition() {
+        return ObjectTransitionSstSnapshot.allLive(activeObjects.values(), dynamicObjects);
     }
 
     /**
@@ -1576,7 +1575,7 @@ public class ObjectManager {
     }
 
     public int getObjectSlotCapacity() {
-        return execOrder.length;
+        return slotLayout.dynamicSlotCount();
     }
 
     public Collection<ObjectSpawn> getActiveSpawns() {
@@ -1847,7 +1846,7 @@ public class ObjectManager {
             }
         }
         if (allowSameFrameExec && updating && object instanceof AbstractObjectInstance aoi2
-                && isManagedDynamicSlot(aoi2.getSlotIndex())) {
+                && isProcessedSstSlot(aoi2.getSlotIndex())) {
             // ROM parity: FindFreeObj places the child directly into the SST.
             // The ExecuteObjects loop processes slots sequentially, so a child
             // at a HIGHER slot than the parent will be reached and updated in
@@ -3353,7 +3352,7 @@ public class ObjectManager {
                 continue;
             }
             if (inst instanceof AbstractObjectInstance aoi
-                    && isManagedDynamicSlot(executionSlotIndex(aoi))) {
+                    && isProcessedSstSlot(executionSlotIndex(aoi))) {
                 continue;
             }
             dynamicFallbackScratch.add(inst);
@@ -3364,7 +3363,7 @@ public class ObjectManager {
         activeFallbackScratch.clear();
         for (ObjectInstance inst : activeObjects.values()) {
             if (inst instanceof AbstractObjectInstance aoi
-                    && isManagedDynamicSlot(executionSlotIndex(aoi))) {
+                    && isProcessedSstSlot(executionSlotIndex(aoi))) {
                 continue;
             }
             activeFallbackScratch.add(inst);
@@ -4068,7 +4067,7 @@ public class ObjectManager {
     }
 
     private long[] captureOwnedUsedSlotBits() {
-        BitSet owned = new BitSet(execOrder.length);
+        BitSet owned = new BitSet(slotLayout.dynamicSlotCount());
         for (ObjectInstance inst : activeObjects.values()) {
             markOwnedSlot(owned, inst);
         }
@@ -4081,7 +4080,7 @@ public class ObjectManager {
             }
             for (int slot : slots) {
                 if (isManagedDynamicSlot(slot)) {
-                    owned.set(execIndexForSlot(slot));
+                    owned.set(slotLayout.toExecIndex(slot));
                 }
             }
         }
@@ -4166,7 +4165,7 @@ public class ObjectManager {
 
     private void markOwnedSlot(BitSet owned, ObjectInstance inst) {
         if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(aoi.getSlotIndex())) {
-            owned.set(execIndexForSlot(aoi.getSlotIndex()));
+            owned.set(slotLayout.toExecIndex(aoi.getSlotIndex()));
         }
     }
 
@@ -4379,7 +4378,7 @@ public class ObjectManager {
                 }
             }
         }
-        if (isManagedDynamicSlot(slotIndex)) {
+        if (isProcessedSstSlot(slotIndex)) {
             int execIdx = execIndexForSlot(slotIndex);
             if (execIdx >= 0 && execIdx < execOrder.length) {
                 return execOrder[execIdx];

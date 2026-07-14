@@ -18,6 +18,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -33,7 +34,8 @@ import java.util.logging.Logger;
  *
  * <p>State machine: INIT -> FALLING -> LANDED -> RESULTS -> AFTER
  */
-public class S3kSignpostInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class S3kSignpostInstance extends AbstractObjectInstance
+        implements RewindRecreatable, RomWorldPositionedObject {
     private static final Logger LOG = Logger.getLogger(S3kSignpostInstance.class.getName());
 
     // ---- State machine ----
@@ -175,9 +177,9 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
      * Act 1 world position (docs/skdisasm/sonic3k.asm:176262-176279, CNZ1BGE_DoTransition).
      */
     @Override
-    public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
-        worldX += offsetX;
-        worldY += offsetY;
+    public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        worldX = (worldX + offsetX) & 0xFFFF;
+        worldY = (worldY + offsetY) & 0xFFFF;
     }
 
     @Override

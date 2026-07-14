@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
@@ -12,9 +11,7 @@ public final class FbzMissileLauncherObjectInstance
     extends AbstractObjectInstance implements SpawnRewindRecreatable {
   private static final int[] X_TRAJECTORY = {0x100, 0xE0, 0x120, 0x140,
                                              0x100, 0xE0, 0xC0,  0xE0};
-  @RewindTransient(reason = "constructor subtype decode")
   private final int interval, burst, phase;
-  @RewindTransient(reason = "constructor subtype decode")
   private final boolean companion;
   private boolean initialized, armed, cooling, targeting;
   private int burstRemaining, timer, trajectoryIndex, liveImpacts;

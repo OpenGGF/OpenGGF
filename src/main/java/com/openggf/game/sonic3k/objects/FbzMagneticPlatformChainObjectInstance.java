@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.GenericFieldCapturer;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -17,7 +16,6 @@ import java.util.List;
 /** Real after-current chain visual allocated by the magnetic platform. */
 public final class FbzMagneticPlatformChainObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
-    @RewindTransient(reason = "relinked by stable owner slot after restore")
     private FbzMagneticPlatformObjectInstance parent;
     private int parentSlot;
 

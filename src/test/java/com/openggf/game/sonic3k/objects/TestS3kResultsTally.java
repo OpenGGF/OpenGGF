@@ -7,7 +7,7 @@ class TestS3kResultsTally {
     private static final int[] TIME_BONUSES = {5000, 5000, 1000, 500, 400, 300, 100, 10};
 
     private int calculateTimeBonus(int elapsedSeconds) {
-        if (elapsedSeconds >= 599) return 10000;
+        if (elapsedSeconds == 599) return 10000;
         int index = Math.min(elapsedSeconds / 30, TIME_BONUSES.length - 1);
         return TIME_BONUSES[index];
     }
@@ -20,7 +20,7 @@ class TestS3kResultsTally {
     @Test void timeBonusTable_210seconds() { assertEquals(10, calculateTimeBonus(210)); }
     @Test void timeBonusTable_300seconds_capped() { assertEquals(10, calculateTimeBonus(300)); }
     @Test void timeBonusSpecialCase_959() { assertEquals(10000, calculateTimeBonus(599)); }
-    @Test void timeBonusSpecialCase_above959() { assertEquals(10000, calculateTimeBonus(600)); }
+    @Test void timeBonusAbove959UsesNormalCappedTable() { assertEquals(10, calculateTimeBonus(600)); }
     @Test void ringBonus_100rings() { assertEquals(1000, 100 * 10); }
     @Test void ringBonus_0rings() { assertEquals(0, 0 * 10); }
 
@@ -39,5 +39,4 @@ class TestS3kResultsTally {
         assertEquals(50, frames);
     }
 }
-
 

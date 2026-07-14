@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
@@ -20,9 +19,7 @@ public final class FbzWireCageObjectInstance extends AbstractObjectInstance impl
     private static final int[] VERTICAL_FRAMES = {
             0x6D,0x6D,0x6E,0x6E,0x6F,0x6F,0x70,0x70,0x71,0x71,0x72,0x72,0x73,
             0x73,0x74,0x74,0x75,0x75,0x76,0x76,0x77,0x77,0x6C,0x6C,0x6D,0x6D};
-    @RewindTransient(reason = "Immutable constructor-derived spawn configuration; recreated from ObjectSpawn.")
     private final int rangePixels;
-    @RewindTransient(reason = "Immutable constructor-derived spawn configuration; recreated from ObjectSpawn.")
     private final boolean verticalMode;
     private final FbzParticipantStateTable participants=new FbzParticipantStateTable(3);
 

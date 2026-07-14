@@ -40,6 +40,7 @@ public class Sonic3kLevel extends AbstractLevel {
     private int fgLayoutHeightBlocks = Sonic3kConstants.MAP_HEIGHT;
     private int bgLayoutWidthBlocks = Sonic3kConstants.MAP_WIDTH;
     private int bgLayoutHeightBlocks = Sonic3kConstants.MAP_HEIGHT;
+    private final List<Integer> patternLoadCueSchedule;
 
     /**
      * Creates an S3K level using a LevelResourcePlan for resource loading.
@@ -79,6 +80,7 @@ public class Sonic3kLevel extends AbstractLevel {
         this.rings = rings != null ? rings : Collections.emptyList();
         this.ringSpriteSheet = ringSpriteSheet;
         this.minXOverride = minXOverride;
+        this.patternLoadCueSchedule = resourcePlan.getPatternLoadCueSchedule();
 
         loadPalettes(rom, characterPaletteAddr, levelPaletteAddr);
         loadPatternsWithPlan(rom, resourcePlan);
@@ -96,6 +98,11 @@ public class Sonic3kLevel extends AbstractLevel {
     @Override
     public synchronized void ensurePatternCapacity(int minCount) {
         super.ensurePatternCapacity(minCount);
+    }
+
+    /** Immutable production provenance for the PLCs applied to this level image. */
+    public List<Integer> getPatternLoadCueSchedule() {
+        return patternLoadCueSchedule;
     }
 
     @Override

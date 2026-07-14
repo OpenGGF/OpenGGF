@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
@@ -14,7 +13,6 @@ import java.util.List;
 /** Locked-on {@code Obj_FBZDEZPlayerLauncher} ($78), sonic3k.asm $3B942-$3BA8A. */
 public final class FbzDezPlayerLauncherObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
-    @RewindTransient(reason = "Immutable constructor-derived spawn configuration; recreated from ObjectSpawn.")
     private final int anchorX;
     private int x,xFixed,xVelocity,launchTimer,doubleTimer;
     private boolean returning,launched;

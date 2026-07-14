@@ -1365,6 +1365,13 @@ class TestMgzDrillingRobotnikInstance {
             when(rom.readBytes(Sonic3kConstants.ART_UNC_MGZ_ENDBOSS_SCALED_ADDR,
                     Sonic3kConstants.ART_UNC_MGZ_ENDBOSS_SCALED_SIZE))
                     .thenReturn(new byte[Sonic3kConstants.ART_UNC_MGZ_ENDBOSS_SCALED_SIZE]);
+            when(rom.read16BitAddr(Sonic3kConstants.ART_KOSM_RESULTS_GENERAL_ADDR)).thenReturn(0x0900);
+            when(rom.read16BitAddr(Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM1_ADDR)).thenReturn(0x0200);
+            when(rom.read16BitAddr(Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM2_ADDR)).thenReturn(0x0200);
+            when(rom.read16BitAddr(Sonic3kConstants.ART_KOSM_RESULTS_SONIC_ADDR)).thenReturn(0x0240);
+            when(rom.read16BitAddr(Sonic3kConstants.ART_KOSM_RESULTS_MILES_ADDR)).thenReturn(0x0240);
+            when(rom.read16BitAddr(Sonic3kConstants.ART_KOSM_RESULTS_TAILS_ADDR)).thenReturn(0x0200);
+            when(rom.read16BitAddr(Sonic3kConstants.ART_KOSM_RESULTS_KNUCKLES_ADDR)).thenReturn(0x03C0);
         }
 
         RecordingServices withScaledCueArt(byte[] data) throws Exception {

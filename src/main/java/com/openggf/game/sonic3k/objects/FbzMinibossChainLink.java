@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
@@ -10,6 +9,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
@@ -18,7 +18,7 @@ import java.util.List;
 
 /** Exact {@code loc_6F3DE} five-link state machine. */
 final class FbzMinibossChainLink extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, RomWorldPositionedObject {
     private static final int[] INITIAL_SPEEDS = {-0xC0, -0x180, -0x240, -0x300, -0x3C0};
     private static final int[] LEFT_FAN_TARGETS = {-0x60, -0x78, 0x60, 0x48, 0x38};
     private static final int[] RIGHT_FAN_TARGETS = {0x60, 0x78, -0x70, -0x48, -0x34};
@@ -35,13 +35,9 @@ final class FbzMinibossChainLink extends AbstractObjectInstance
     }
     private static final State[] STATES = State.values();
 
-    @RewindTransient(reason = "structural root link restored from stable family slot")
     private FbzMinibossInstance boss;
-    @RewindTransient(reason = "cycle owner restored from stable arm side")
     private FbzMinibossArmChild arm;
-    @RewindTransient(reason = "cycle predecessor restored from stable link index")
     private Object previous;
-    @RewindTransient(reason = "cycle successor restored from stable link index")
     private Object next;
     private int familySlot;
     private int side;
@@ -405,6 +401,20 @@ final class FbzMinibossChainLink extends AbstractObjectInstance
     @Override public int getCollisionProperty() { return 0; }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
+
+    @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        x = (x + offsetX) & 0xFFFF;
+        y = (y + offsetY) & 0xFFFF;
+        xFixed = (x << 8) | (xFixed & 0xFF);
+        yFixed = (y << 8) | (yFixed & 0xFF);
+    }
+
+    @Override
+    public void afterRomWorldTransitionOffset(int offsetX, int offsetY) {
+        targetX = (targetX + offsetX) & 0xFFFF;
+        targetY = (targetY + offsetY) & 0xFFFF;
+    }
     @Override public boolean isHighPriority() { return true; }
     @Override public int getPriorityBucket() {
         boolean deployed = state().ordinal() > State.FAN_OUT.ordinal();

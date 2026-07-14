@@ -58,7 +58,7 @@ public final class FbzMineObjectInstance extends AbstractObjectInstance
         state = State.EXPLODED;
         services().playSfx(Sonic3kSfx.EXPLODE.id);
         int slot = ObjectLifetimeOps.detachSlotForTransfer(this);
-        setDestroyed(true);
+        ObjectLifetimeOps.deleteNoRespawn(this);
         ObjectLifetimeOps.addReplacementAtTransferredSlot(
                 services().objectManager(),
                 new ExplosionObjectInstance(6, spawn.x(), spawn.y(), services().renderManager()),

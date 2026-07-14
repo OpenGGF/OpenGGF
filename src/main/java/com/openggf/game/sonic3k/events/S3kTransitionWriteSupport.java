@@ -10,6 +10,15 @@ public final class S3kTransitionWriteSupport {
     public static void signalActTransition(ObjectServices services) {
         Object provider = services.levelEventProvider();
         if (provider instanceof S3kTransitionEventBridge bridge) {
+            // FBZ's results owner publishes the transition byte several frames
+            // before FBZ1BGE_Normal consumes it and synchronously reloads Act 2.
+            // Seal rewind history immediately before that publication so no
+            // keyframe can seek from a pre-results state into the request window.
+            if (services.romZoneId() == 0x04
+                    && services.currentAct() == 0
+                    && services.levelManager() != null) {
+                services.levelManager().markSynchronousSeamlessTransitionBoundary();
+            }
             bridge.signalActTransition();
         }
     }

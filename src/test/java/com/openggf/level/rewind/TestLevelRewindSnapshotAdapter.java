@@ -39,6 +39,7 @@ class TestLevelRewindSnapshotAdapter {
         when(manager.getLevelGamestate()).thenReturn(levelState);
         when(manager.getFrameCounter()).thenReturn(77);
         when(manager.isRespawnRequestedForRewind()).thenReturn(true);
+        when(manager.isTransitionRingInitializationPendingForRewind()).thenReturn(true);
 
         LevelSnapshot snapshot = LevelRewindSnapshotAdapter.create(manager).capture();
 
@@ -52,6 +53,7 @@ class TestLevelRewindSnapshotAdapter {
         assertEquals(456, snapshot.levelTimerFrames());
         assertTrue(snapshot.levelTimerPaused());
         assertTrue(snapshot.respawnRequested());
+        assertTrue(snapshot.transitionRingInitializationPending());
     }
 
     @Test
@@ -76,7 +78,8 @@ class TestLevelRewindSnapshotAdapter {
                 123,
                 false,
                 true,
-                null);
+                null,
+                true);
 
         RewindSnapshottable<LevelSnapshot> adapter = LevelRewindSnapshotAdapter.create(manager);
         adapter.restore(snapshot);
@@ -92,6 +95,7 @@ class TestLevelRewindSnapshotAdapter {
         verify(manager).invalidateAllTilemaps();
         verify(manager).restoreRespawnRequestedForRewind(true);
         verify(manager).restoreCheckpointStateForRewind(null);
+        verify(manager).restoreTransitionRingInitializationPendingForRewind(true);
     }
 
     @Test
@@ -126,6 +130,7 @@ class TestLevelRewindSnapshotAdapter {
         verify(manager).setFrameCounter(44);
         verify(manager).restoreRespawnRequestedForRewind(false);
         verify(manager).restoreCheckpointStateForRewind(null);
+        verify(manager).restoreTransitionRingInitializationPendingForRewind(false);
     }
 
     @Test

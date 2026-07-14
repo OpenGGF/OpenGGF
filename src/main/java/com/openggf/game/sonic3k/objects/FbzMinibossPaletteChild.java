@@ -5,7 +5,6 @@ import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
-import com.openggf.game.rewind.RewindTransient;
 
 import java.util.List;
 
@@ -14,7 +13,6 @@ final class FbzMinibossPaletteChild extends AbstractObjectInstance implements Re
     private static final int[] COLOR_INDEX = {15};
     private static final int[] BRIGHT = {0xEEE};
     private static final int[] DARK = {0x644};
-    @RewindTransient(reason = "structural root link restored from stable family slot")
     private FbzMinibossInstance boss;
     private int familySlot;
     private int timer;

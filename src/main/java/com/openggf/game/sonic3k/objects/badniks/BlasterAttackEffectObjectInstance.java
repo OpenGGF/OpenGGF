@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.GenericFieldCapturer;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
@@ -14,7 +13,6 @@ import java.util.List;
 public final class BlasterAttackEffectObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
     private static final int[] SCRIPT = {0, 4, 4, 5, 0xF4};
-    @RewindTransient(reason = "relinked from the captured parent slot after restore")
     private BlasterBadnikInstance parent;
     private int parentSlot;
     private int currentX;

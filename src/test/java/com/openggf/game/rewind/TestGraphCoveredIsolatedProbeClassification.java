@@ -636,6 +636,17 @@ class TestGraphCoveredIsolatedProbeClassification {
                 evidence);
     }
 
+    @Test
+    void fbzBadnikGraphMembersAreClassifiedByTheirOwnerGraphRewindEvidence() {
+        String evidence = "com.openggf.game.sonic3k.objects.badniks.TestFbzBadnikGraphRewind";
+        assertGraphCovered(
+                "com.openggf.game.sonic3k.objects.badniks.BlasterAttackEffectObjectInstance",
+                evidence);
+        assertGraphCovered(
+                "com.openggf.game.sonic3k.objects.badniks.TechnoSqueekAttachmentObjectInstance",
+                evidence);
+    }
+
     private void assertGraphCovered(String className, String evidence) {
         RoundTripSweepResult result = RewindRoundTripHarness.probeClass(className);
         RoundTripSweepResult.GraphCovered covered =

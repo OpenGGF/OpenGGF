@@ -174,6 +174,7 @@ import com.openggf.game.sonic3k.objects.PachinkoMagnetOrbObjectInstance;
 import com.openggf.game.sonic3k.objects.PachinkoPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.PachinkoTriangleBumperObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kSignpostStubChild;
+import com.openggf.game.sonic3k.objects.S3kResultsElementObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance;
@@ -6730,7 +6731,7 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kResultsGenericRecreateRestoresCapturedConstructorStateAndPlayerRef() {
+    void s3kResultsGenericRecreateRestoresCapturedRootStateAndRealTwelveChildGraph() {
         String fqn = BATCH44_DELETED_CODECS.getFirst().fqn();
         StubObjectServices stub = new StubObjectServices() {
             @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
@@ -6744,10 +6745,6 @@ public class TestScalarOnlyCodecDeletion {
         setIntField(source, "exitQueueCounter", 7);
         setBooleanField(source, "musicPlayed", true);
         setBooleanField(source, "actTransitionSignaled", true);
-        Object sourceFirstElement = ((Object[]) readObjectField(source, "elements"))[0];
-        setIntField(sourceFirstElement, "currentX", 0x0123);
-        setBooleanField(sourceFirstElement, "exitStarted", true);
-        setBooleanField(sourceFirstElement, "offScreen", true);
         TestablePlayableSprite capturedPlayer =
                 new TestablePlayableSprite("tails", (short) 0x200, (short) 0x160);
         setObjectField(source, "playerRef", capturedPlayer);
@@ -6795,15 +6792,57 @@ public class TestScalarOnlyCodecDeletion {
                 "standard restore must reapply actTransitionSignaled");
         assertSame(restoredPlayer, readObjectField(recreated, "playerRef"),
                 "compact restore must resolve playerRef through the restore identity table");
-        Object restoredFirstElement = ((Object[]) readObjectField(recreated, "elements"))[0];
-        assertNotSame(sourceFirstElement, restoredFirstElement,
-                "results element state must be reconstructed rather than retaining a stale object");
-        assertEquals(0x0123, readIntField(restoredFirstElement, "currentX"),
-                "compact restore must preserve the element's live slide coordinate");
-        assertTrue(readBooleanField(restoredFirstElement, "exitStarted"),
-                "compact restore must preserve the element's exit latch");
-        assertTrue(readBooleanField(restoredFirstElement, "offScreen"),
-                "compact restore must preserve the element's retirement state");
+
+        ObjectManager[] holder = new ObjectManager[1];
+        Camera camera = mockCamera();
+        StubObjectServices graphServices = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+            @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+            @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
+        };
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), new Sonic3kObjectRegistry(), 0, null, null,
+                GraphicsManager.getInstance(), camera, graphServices);
+        holder[0] = objectManager;
+        objectManager.reset(0);
+        S3kResultsScreenObjectInstance graphRoot = objectManager.createDynamicObject(
+                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.TAILS_ALONE, 1));
+        invokeNoArg(graphRoot, "createResultChildSsts");
+
+        List<S3kResultsElementObjectInstance> sourceChildren =
+                liveObjects(objectManager, S3kResultsElementObjectInstance.class);
+        assertEquals(12, sourceChildren.size(),
+                "Obj_LevelResultsCreate must publish 12 independent child SSTs");
+        List<Integer> sourceSlots = sourceChildren.stream()
+                .map(AbstractObjectInstance::getSlotIndex).toList();
+        assertEquals(java.util.stream.IntStream.range(0, 12).boxed().toList(),
+                sourceChildren.stream().map(S3kResultsElementObjectInstance::entryIndex).toList());
+        assertTrue(sourceChildren.stream().allMatch(child -> child.parentResults() == graphRoot),
+                "every source child must link to the live results controller SST");
+
+        RewindRegistry graphRegistry = new RewindRegistry();
+        graphRegistry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot graphSnapshot = graphRegistry.capture();
+        sourceChildren.forEach(objectManager::removeDynamicObject);
+        objectManager.removeDynamicObject(graphRoot);
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        graphRegistry.restore(graphSnapshot);
+
+        S3kResultsScreenObjectInstance restoredRoot =
+                singleLiveObject(objectManager, S3kResultsScreenObjectInstance.class);
+        List<S3kResultsElementObjectInstance> restoredChildren =
+                liveObjects(objectManager, S3kResultsElementObjectInstance.class);
+        assertEquals(12, restoredChildren.size(),
+                "forced generic restore must recreate the full child SST graph once");
+        assertEquals(sourceSlots, restoredChildren.stream()
+                .map(AbstractObjectInstance::getSlotIndex).toList(),
+                "forced generic restore must preserve every child SST slot");
+        assertEquals(java.util.stream.IntStream.range(0, 12).boxed().toList(),
+                restoredChildren.stream().map(S3kResultsElementObjectInstance::entryIndex).toList(),
+                "each restored SST must retain its ObjArray_LevResults role");
+        assertTrue(restoredChildren.stream().allMatch(child -> child.parentResults() == restoredRoot),
+                "settled restore must relink all 12 children to the recreated controller");
     }
 
     @Test
@@ -12432,6 +12471,17 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     // Private helpers
+
+    private static void invokeNoArg(Object target, String methodName) {
+        try {
+            var method = target.getClass().getDeclaredMethod(methodName);
+            method.setAccessible(true);
+            method.invoke(target);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to invoke " + methodName
+                    + " on " + target.getClass().getName(), e);
+        }
+    }
 
     private static ObjectInstance invokeGenericRecreate(String fqn, int x, int y, GameId gameId) {
         ObjectSpawn spawn = new ObjectSpawn(x, y, 0, 0, 0, false, 0);

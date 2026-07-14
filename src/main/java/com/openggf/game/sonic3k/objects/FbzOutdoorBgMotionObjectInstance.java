@@ -30,6 +30,9 @@ public final class FbzOutdoorBgMotionObjectInstance extends AbstractObjectInstan
 
     public FbzOutdoorBgMotionObjectInstance() {
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "FBZOutdoorBGMotion");
+        // This logic-only allocation never writes render_flags; native bit 2
+        // is therefore clear and Offset_ObjectsDuringTransition skips it.
+        setRomWorldPositioned(false);
     }
 
     @Override
@@ -71,6 +74,13 @@ public final class FbzOutdoorBgMotionObjectInstance extends AbstractObjectInstan
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new FbzOutdoorBgMotionObjectInstance();
+    }
+
+    @Override
+    public boolean isPersistent() {
+        // The native routine never calls out_of_range/MarkObjGone. Keep this
+        // logic-only SST alive even though its deliberately unused x_pos is 0.
+        return true;
     }
 
     @Override public void appendRenderCommands(List<GLCommand> commands) { }

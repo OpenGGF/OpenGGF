@@ -9,9 +9,11 @@ import com.openggf.game.sonic3k.FbzPaletteFoundation;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.objects.FbzOutdoorBgMotionObjectInstance;
 import com.openggf.level.Level;
 import com.openggf.level.Map;
+import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.StagedBackgroundPlaneRedrawController;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -51,6 +53,9 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     };
     private static final int FBZ_BG_INDOOR_PALETTE_ADDR = 0x52DC0;
     private static final int FBZ_BG_OUTDOOR_PALETTE_ADDR = 0x52DD0;
+    private static final int ACT_TRANSITION_WORLD_OFFSET_X = -0x2E00;
+    private static final int FIRST_ROM_WORLD_OFFSET_SLOT = 4;
+    private static final int LAST_ROM_WORLD_OFFSET_SLOT_EXCLUSIVE = 94;
 
     private int act;
     private int foregroundLayoutRegion;
@@ -271,7 +276,9 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
 
     public void updateAct1BackgroundEvent(int x, int y, boolean dying) {
         requireAct1();
-        // ROM transition check is before the normal-state death gate; active redraws continue.
+        // FBZ1_BackgroundEvent dispatches by Events_routine_bg. Only
+        // FBZ1BGE_Normal reads Events_fg_5; the four staged redraw routines
+        // execute their own draw/deform tail and leave the signal pending.
         if (backgroundRedrawDirection != RedrawDirection.NONE) {
             checkBackgroundChange(x, y);
             advanceBackgroundRedraw();
@@ -279,11 +286,69 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             finishPlaneBFrame();
             return;
         }
+
+        if (eventsFg5) {
+            eventsFg5 = false;
+            if (hasRuntime()) {
+                applyAct1ToAct2Reload();
+                levelManager().recomputeParallaxOnlyForCurrentFrame();
+            }
+
+            // ROM continues unconditionally through Reset_TileOffsetPositionActual,
+            // FBZ_Deform, Reset_TileOffsetPositionEff and FBZ1BGE_GoDeform after
+            // Load_Level. In particular, the later dying check is not reached.
+            drawNormalBackgroundRowIfCrossed();
+            finishPlaneBFrame();
+            if (hasRuntime()) {
+                // This is the first legal post-transition rewind state: the
+                // synchronous reload and the complete native event tail above
+                // have both finished.
+                levelManager().markSynchronousSeamlessTransitionBoundary();
+            }
+            return;
+        }
+
         if (dying) return;
         checkBackgroundChange(x, y);
         if (backgroundRedrawDirection != RedrawDirection.NONE) advanceBackgroundRedraw();
         drawNormalBackgroundRowIfCrossed();
         finishPlaneBFrame();
+    }
+
+    private void applyAct1ToAct2Reload() {
+        var cam = camera();
+        SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest
+                .builder(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(0x04, 1)
+                .preserveMusic(true)
+                .preserveLevelGamestate(true)
+                .preserveEndOfLevelState(true)
+                .preserveOffsetCameraPosition(true)
+                .playerOffset(ACT_TRANSITION_WORLD_OFFSET_X, 0)
+                .cameraOffset(ACT_TRANSITION_WORLD_OFFSET_X, 0)
+                .postTransitionMinX((int) cam.getMinX() + ACT_TRANSITION_WORLD_OFFSET_X)
+                .postTransitionMaxX((int) cam.getMaxX() + ACT_TRANSITION_WORLD_OFFSET_X)
+                .postTransitionMinY((int) cam.getMinY())
+                .postTransitionMaxY((int) cam.getMaxY())
+                .postTransitionMinXTarget((int) cam.getMinXTarget())
+                .postTransitionMaxXTarget((int) cam.getMaxXTarget())
+                .postTransitionMinYTarget((int) cam.getMinYTarget())
+                .postTransitionMaxYTarget((int) cam.getMaxYTarget())
+                .objectSurvivalPolicy(
+                        SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST)
+                .romWorldObjectOffsetRange(FIRST_ROM_WORLD_OFFSET_SLOT,
+                        LAST_ROM_WORLD_OFFSET_SLOT_EXCLUSIVE)
+                .preserveCheckpointUntilResults(true)
+                .omitSecondaryLevelPlc(true)
+                .suppressLevelLoadRewindBoundary(true)
+                .deferRingInitializationToLevelUpdate(true)
+                .mutationKey(S3kSeamlessMutationExecutor.MUTATION_FBZ1_POST_RELOAD_ACT2)
+                .build();
+
+        // ROM Clear_Switches occurs before Load_Level and clears both the
+        // trigger bytes and the respawn-table switch ownership.
+        Sonic3kLevelTriggerManager.reset();
+        levelManager().applySynchronousScreenEventTransition(request);
     }
 
     private void checkBackgroundChange(int x, int y) {

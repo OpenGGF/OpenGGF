@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.events.Sonic3kFBZEvents;
@@ -23,7 +22,6 @@ public final class FbzMagneticSpikeBallObjectInstance extends AbstractObjectInst
 
     public enum Kind { BALL, STATIC_BALL, FIELD_WIDE, FIELD_NARROW }
 
-    @RewindTransient(reason = "immutable subtype decode")
     private final Kind kind;
     private int y;
     private int yFixed;

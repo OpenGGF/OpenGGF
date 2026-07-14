@@ -88,5 +88,19 @@ public class TestSonic3kBonusTitleCard {
                 "native render bounds remove the last title child on phase 12 and the parent observes it on 13");
         assertFalse(manager.isComplete(), "the parent completion dispatch remains one manager tick later");
     }
-}
 
+    @Test
+    public void externallyOwnedInLevelCardIsVisualOnly() {
+        manager.initializeInLevel(4, 1);
+        manager.useExternalInLevelGameplayOwner();
+
+        for (int i = 0; i < 200 && !manager.isComplete(); i++) {
+            assertFalse(manager.willSetInLevelEndOfLevelFlagThisUpdate(),
+                    "the visual manager must never advertise a gameplay write owned by the carried SST object");
+            manager.update();
+        }
+
+        assertTrue(manager.isComplete());
+        assertFalse(manager.willSetInLevelEndOfLevelFlagThisUpdate());
+    }
+}

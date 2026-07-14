@@ -118,6 +118,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private boolean resetLevelGamestateOnInLevelDisplay;
     private int resetLevelGamestateCountdown;
     private boolean inLevelPlayerControlLockOwned;
+    private boolean inLevelGameplayOwnedExternally;
     private int inLevelExitDelayFrames;
     private boolean bonusMode;  // 2-element "BONUS STAGE" layout
     private float bonusFadeProgress; // 0.0→1.0 over BONUS_DISPLAY_HOLD_FRAMES during DISPLAY
@@ -230,6 +231,18 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     }
 
     /**
+     * Marks this in-level card as a visual child presentation only. The native
+     * SST owner remains responsible for Obj_TitleCardWait/Wait2 gameplay writes.
+     */
+    public void useExternalInLevelGameplayOwner() {
+        if (inLevelMode) {
+            inLevelGameplayOwnedExternally = true;
+            resetLevelGamestateOnInLevelDisplay = false;
+            resetLevelGamestateCountdown = 0;
+        }
+    }
+
+    /**
      * Initializes for bonus stage mode — shows "BONUS STAGE" text.
      * Uses 2 horizontal elements (frames 19/20) instead of the normal 4-element layout.
      * Both elements have exit priority 1 (exit simultaneously).
@@ -276,6 +289,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         this.resetLevelGamestateOnInLevelDisplay = false;
         this.resetLevelGamestateCountdown = 0;
         this.inLevelPlayerControlLockOwned = false;
+        this.inLevelGameplayOwnedExternally = false;
         this.inLevelExitDelayFrames = 0;
         this.state = Sonic3kTitleCardState.SLIDE_IN;
         this.stateTimer = 0;
@@ -354,7 +368,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     }
 
     public boolean willSetInLevelEndOfLevelFlagThisUpdate() {
-        if (!inLevelMode || state != Sonic3kTitleCardState.EXIT) {
+        if (!inLevelMode || inLevelGameplayOwnedExternally || state != Sonic3kTitleCardState.EXIT) {
             return false;
         }
         // Engine ordering: Sonic3kTitleCardManager advances before object
@@ -457,6 +471,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         phaseCounter = 0;
         exitChildrenGone = false;
         inLevelMode = false;
+        inLevelGameplayOwnedExternally = false;
         resetLevelGamestateOnInLevelDisplay = false;
         resetLevelGamestateCountdown = 0;
         inLevelExitDelayFrames = 0;
@@ -518,21 +533,24 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         if (levelManager != null) {
             levelManager.resetLevelGamestate(GameServices.module().createLevelState());
         }
-        // Obj_TitleCardWait's in-level branch resets both native player slots'
-        // air_left bytes alongside rings and timers (sonic3k.asm:62214-62235).
-        // The fixed countdown objects survive HCZ's in-place Load_Level, so this
-        // must update their existing DrowningController owners rather than
-        // recreating the countdown state.
-        var player = GameServices.camera().getFocusedSprite();
-        if (player != null && player.getDrowningController() != null) {
-            player.getDrowningController().replenishAir();
+        // Obj_TitleCardWait resets both native air_left bytes with rings and
+        // timers. Apply the same semantic reset to every configured engine
+        // participant; the fixed countdown owners survive in-place reloads.
+        var sprites = GameServices.spritesOrNull();
+        if (sprites != null) {
+            var main = sprites.getMainPlayable();
+            if (main != null && main.getDrowningController() != null) {
+                main.getDrowningController().resetAirTimerFromFixedCountdownDeath();
+            }
+            for (var sidekick : sprites.getSidekicks()) {
+                if (sidekick.getDrowningController() != null) {
+                    sidekick.getDrowningController().resetAirTimerFromFixedCountdownDeath();
+                }
+            }
         }
-        var nativeP2 = GameServices.sprites().getRegisteredSidekicks().stream()
-                .findFirst()
-                .orElse(null);
-        if (nativeP2 != null && nativeP2 != player
-                && nativeP2.getDrowningController() != null) {
-            nativeP2.getDrowningController().replenishAir();
+        int musicId = GameServices.module().getZoneRegistry().getMusicId(currentZone, currentAct);
+        if (musicId >= 0) {
+            GameServices.audio().playMusic(musicId);
         }
     }
 
@@ -599,7 +617,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
                 return;
             }
             state = Sonic3kTitleCardState.COMPLETE;
-            if (inLevelMode) {
+            if (inLevelMode && !inLevelGameplayOwnedExternally) {
                 // ROM Obj_TitleCardWait2 sets End_of_level_flag only after the
                 // in-level title-card timer has elapsed and its child objects
                 // have disappeared (sonic3k.asm:62244-62279).

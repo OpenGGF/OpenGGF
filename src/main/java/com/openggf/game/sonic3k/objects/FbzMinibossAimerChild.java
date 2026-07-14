@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -10,30 +9,38 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
 
 /** Exact closest-native-pair {@code Find_SonicTails8Way} aimer. */
-final class FbzMinibossAimerChild extends AbstractObjectInstance implements RewindRecreatable {
+final class FbzMinibossAimerChild extends AbstractObjectInstance
+        implements RewindRecreatable, RomWorldPositionedObject {
     private enum State { INIT, WAIT_START, START_DELAY, ACTIVE }
     private static final State[] STATES = State.values();
 
-    @RewindTransient(reason = "structural root link restored from stable family slot")
     private FbzMinibossInstance boss;
     private int familySlot;
     private int mappingFrame = 9;
     private int stateOrdinal;
     private int timer;
+    /** Latent SST x_pos/y_pos words; Child_Draw_Sprite2 renders from the root. */
+    private int nativeX;
+    private int nativeY;
 
     FbzMinibossAimerChild(FbzMinibossInstance boss) {
         super(new ObjectSpawn(boss.getX(), boss.getY() - 8, 0xAA, 8, 0, false, 0), "FBZMinibossAimer");
         this.boss = boss;
         familySlot = boss.getSlotIndex();
+        nativeX = getSpawn().x();
+        nativeY = getSpawn().y();
     }
 
     private FbzMinibossAimerChild(ObjectSpawn spawn) {
         super(spawn, "FBZMinibossAimer");
+        nativeX = spawn.x();
+        nativeY = spawn.y();
     }
 
     @Override
@@ -124,6 +131,15 @@ final class FbzMinibossAimerChild extends AbstractObjectInstance implements Rewi
 
     @Override public int getX() { return boss == null ? getSpawn().x() : boss.getX(); }
     @Override public int getY() { return boss == null ? getSpawn().y() : boss.getY() - 8; }
+
+    @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        // The ROM's carried-SST loop writes this slot's own position words even
+        // though Child_Draw_Sprite2 obtains the visible coordinates from the
+        // root. Preserve that latent state independently of the derived draw.
+        nativeX = (nativeX + offsetX) & 0xFFFF;
+        nativeY = (nativeY + offsetY) & 0xFFFF;
+    }
     @Override public int getPriorityBucket() { return 2; }
 
     @Override

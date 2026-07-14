@@ -3,12 +3,17 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kPlcArtRegistry;
 import com.openggf.level.objects.*;
 import com.openggf.physics.*;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import org.mockito.*;
 import org.mockito.ArgumentCaptor;
 import java.util.*;
+@ExtendWith(SingletonResetExtension.class)
+@FullReset
 class TestFbzMissileObjects {
   @BeforeEach
   void bounds() {

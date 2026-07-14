@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -9,12 +8,14 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
 
 /** One of the two exact {@code loc_6F178} arm-controller state machines. */
-final class FbzMinibossArmChild extends AbstractObjectInstance implements RewindRecreatable {
+final class FbzMinibossArmChild extends AbstractObjectInstance
+        implements RewindRecreatable, RomWorldPositionedObject {
     static final int LINK_COUNT = 5;
     static final int ARM_NORMAL_ATTACK = 1;
     static final int ARM_PATROL_READY = 2;
@@ -28,11 +29,8 @@ final class FbzMinibossArmChild extends AbstractObjectInstance implements Rewind
     }
     private static final State[] STATES = State.values();
 
-    @RewindTransient(reason = "structural root link restored from stable family slot")
     private FbzMinibossInstance boss;
-    @RewindTransient(reason = "cycle first link restored from stable side/index metadata")
     private FbzMinibossChainLink next;
-    @RewindTransient(reason = "cycle terminal restored from stable side/index metadata")
     private FbzMinibossChainLink terminal;
     private int familySlot;
     private int side;
@@ -302,6 +300,14 @@ final class FbzMinibossArmChild extends AbstractObjectInstance implements Rewind
     }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
+
+    @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        x = (x + offsetX) & 0xFFFF;
+        y = (y + offsetY) & 0xFFFF;
+        xFixed = (x << 8) | (xFixed & 0xFF);
+        yFixed = (y << 8) | (yFixed & 0xFF);
+    }
     @Override public int getPriorityBucket() { return 6; }
     @Override public boolean isHighPriority() { return true; }
 

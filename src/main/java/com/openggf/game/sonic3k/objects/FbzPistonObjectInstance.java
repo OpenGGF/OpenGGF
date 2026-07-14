@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
@@ -9,7 +8,6 @@ import java.util.List;
 /** Locked-on Obj_FBZPiston ($7D), sonic3k.asm $3C244-$3C326. */
 public final class FbzPistonObjectInstance extends AbstractObjectInstance
     implements SolidObjectProvider, SpawnRewindRecreatable {
-  @RewindTransient(reason = "constructor subtype decode")
   private final int travel, cull;
   private int displacement;
   private boolean retracting;

@@ -15,6 +15,10 @@ import com.openggf.sprites.playable.Tails;
 public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private short x = 0;
 	private short y = 0;
+	// ROM ScreenEvents snapshots. These are independent words: zone event/deform
+	// code may offset them without changing the live scroll position (and vice versa).
+	private short xCopy = 0;
+	private short yCopy = 0;
 
 	private short minX;
 	private short minY;
@@ -844,6 +848,35 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		this.y = y;
 	}
 
+	/** Returns ROM {@code Camera_X_pos_copy}, captured at the head of S3K ScreenEvents. */
+	public short getXCopy() {
+		return xCopy;
+	}
+
+	/** Writes ROM {@code Camera_X_pos_copy} without changing live camera X. */
+	public void setXCopy(short xCopy) {
+		this.xCopy = xCopy;
+	}
+
+	/** Returns ROM {@code Camera_Y_pos_copy}, captured at the head of S3K ScreenEvents. */
+	public short getYCopy() {
+		return yCopy;
+	}
+
+	/** Writes ROM {@code Camera_Y_pos_copy} without changing live camera Y. */
+	public void setYCopy(short yCopy) {
+		this.yCopy = yCopy;
+	}
+
+	/**
+	 * Mirrors the first two writes in S3K {@code ScreenEvents}: copy the live
+	 * camera position words before foreground/background event dispatch.
+	 */
+	public void copyLivePositionToScreenEventWords() {
+		xCopy = x;
+		yCopy = y;
+	}
+
 	/**
 	 * Sets the screen shake offsets (ROM: applied to Camera_X_pos_copy and Camera_Y_pos_copy).
 	 * These offsets are used by the rendering system to shake both foreground tiles and sprites.
@@ -905,6 +938,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		this.minXTarget = minX;
 	}
 
+	/** Writes only ROM {@code Camera_min_X_pos}, preserving its stored target. */
+	public void setMinXCurrent(short minX) {
+		this.minX = minX;
+	}
+
 	/**
 	 * Sets minX target for smooth easing.
 	 * Current minX will ease toward this value at 2px/frame.
@@ -933,6 +971,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void setMinY(short minY) {
 		this.minY = minY;
 		this.minYTarget = minY;
+	}
+
+	/** Writes only ROM {@code Camera_min_Y_pos}, preserving its stored target. */
+	public void setMinYCurrent(short minY) {
+		this.minY = minY;
 	}
 
 	/**
@@ -1028,6 +1071,12 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		this.maxXBeforeBoundaryEasing = maxX;
 	}
 
+	/** Writes only ROM {@code Camera_max_X_pos}, preserving its stored target. */
+	public void setMaxXCurrent(short maxX) {
+		this.maxX = maxX;
+		this.maxXBeforeBoundaryEasing = maxX;
+	}
+
 	/**
 	 * Sets maxX target for smooth easing.
 	 * Current maxX will ease toward this value at 2px/frame.
@@ -1051,6 +1100,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void setMaxY(short maxY) {
 		this.maxY = maxY;
 		this.maxYTarget = maxY;
+	}
+
+	/** Writes only ROM {@code Camera_max_Y_pos}, preserving its stored target. */
+	public void setMaxYCurrent(short maxY) {
+		this.maxY = maxY;
 	}
 
 	/**
@@ -1232,6 +1286,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void resetState() {
 		x = 0;
 		y = 0;
+		xCopy = 0;
+		yCopy = 0;
 		minX = 0;
 		minY = 0;
 		maxX = 0;
@@ -1325,7 +1381,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	@Override
 	public CameraSnapshot capture() {
 		return new CameraSnapshot(
-				x, y, minX, minY, maxX, maxY,
+				x, y, xCopy, yCopy, minX, minY, maxX, maxY,
 				shakeOffsetX, shakeOffsetY,
 				minXTarget, minYTarget, maxXTarget, maxYTarget, maxXBeforeBoundaryEasing,
 				maxYChanging, horizScrollDelayFrames, frozen, deferHorizontalBoundaryClampOnce,
@@ -1338,6 +1394,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void restore(CameraSnapshot snapshot) {
 		x = snapshot.x();
 		y = snapshot.y();
+		xCopy = snapshot.xCopy();
+		yCopy = snapshot.yCopy();
 		minX = snapshot.minX();
 		minY = snapshot.minY();
 		maxX = snapshot.maxX();

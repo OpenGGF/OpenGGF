@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -11,16 +10,16 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
 
 /** {@code ChildObjDat_6FAB0}: the fixed FBZ Egg Prison visual and full solid. */
 final class FbzMinibossPrisonChild extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider {
+        implements RewindRecreatable, SolidObjectProvider, RomWorldPositionedObject {
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x23, 0x20, 0x1C);
 
-    @RewindTransient(reason = "structural root link restored from stable family slot")
     private FbzMinibossInstance boss;
     private int familySlot;
     private int x;
@@ -84,6 +83,12 @@ final class FbzMinibossPrisonChild extends AbstractObjectInstance
     @Override
     public int getY() {
         return y;
+    }
+
+    @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        x = (x + offsetX) & 0xFFFF;
+        y = (y + offsetY) & 0xFFFF;
     }
 
     @Override

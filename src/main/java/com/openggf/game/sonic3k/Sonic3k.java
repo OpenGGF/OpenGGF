@@ -750,12 +750,12 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         }
 
         LinkedHashSet<Integer> plcOrder = new LinkedHashSet<>();
-        if (plcPrimary != 0) {
-            plcOrder.add(plcPrimary);
-        }
-        if (plcSecondary != 0 && plcSecondary != plcPrimary) {
-            plcOrder.add(plcSecondary);
-        }
+        var levelManager = GameServices.levelOrNull();
+        var transitionRequest = levelManager != null
+                ? levelManager.getExecutingSeamlessTransitionRequest() : null;
+        boolean omitSecondaryForTransition = transitionRequest != null
+                && transitionRequest.omitSecondaryLevelPlc();
+        plcOrder.addAll(selectLevelPlcs(plcPrimary, plcSecondary, omitSecondaryForTransition));
         // ROM startup path always loads active-character PLC after level PLC setup.
         plcOrder.add(resolveStartupCharacterPlcIndex());
         // PLC 0x4E (spikes/springs art). In the ROM this is loaded at runtime by
@@ -766,6 +766,14 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         for (int plcIndex : plcOrder) {
             appendPlcPatternOps(planBuilder, plcIndex);
         }
+    }
+
+    static java.util.List<Integer> selectLevelPlcs(int primary, int secondary,
+                                                    boolean omitSecondary) {
+        LinkedHashSet<Integer> selected = new LinkedHashSet<>();
+        if (primary != 0) selected.add(primary);
+        if (!omitSecondary && secondary != 0) selected.add(secondary);
+        return java.util.List.copyOf(selected);
     }
 
     private int resolveStartupCharacterPlcIndex() {
@@ -792,6 +800,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     private void appendPlcPatternOps(LevelResourcePlan.Builder planBuilder, int plcIndex) {
         try {
             var plc = Sonic3kPlcLoader.parsePlc(rom, plcIndex);
+            planBuilder.recordPatternLoadCue(plcIndex);
             List<LoadOp> ops = Sonic3kPlcLoader.toPatternOps(plc);
             for (LoadOp op : ops) {
                 planBuilder.addPatternOp(op);

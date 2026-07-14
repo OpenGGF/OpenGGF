@@ -10,6 +10,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
 
@@ -34,7 +35,8 @@ import java.util.List;
  * Calls SolidObjectFull2 for full solid object collision.
  */
 public class Sonic3kInvisibleBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable,
+        RomWorldPositionedObject {
 
     /** Gray color for debug wireframe rendering. */
     private static final float DEBUG_R = 0.5f;
@@ -43,6 +45,8 @@ public class Sonic3kInvisibleBlockObjectInstance extends AbstractObjectInstance
 
     private int halfWidth;
     private int halfHeight;
+    private int x;
+    private int y;
 
     public Sonic3kInvisibleBlockObjectInstance(ObjectSpawn spawn) {
         this(spawn, "InvisibleBlock");
@@ -58,6 +62,8 @@ public class Sonic3kInvisibleBlockObjectInstance extends AbstractObjectInstance
         // ROM: andi.w #$F,d1 / addq.w #1,d1 / lsl.w #3,d1
         // = ((lowerNibble + 1) * 8)
         this.halfHeight = ((subtype & 0xF) + 1) * 8;
+        this.x = spawn.x();
+        this.y = spawn.y();
     }
 
     @Override
@@ -107,8 +113,8 @@ public class Sonic3kInvisibleBlockObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        int centerX = spawn.x();
-        int centerY = spawn.y();
+        int centerX = x;
+        int centerY = y;
 
         int left = centerX - halfWidth;
         int right = centerX + halfWidth;
@@ -139,5 +145,14 @@ public class Sonic3kInvisibleBlockObjectInstance extends AbstractObjectInstance
     private boolean isDebugViewEnabled() {
         return services().configuration()
                 .getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
+    }
+
+    @Override public int getX() { return x; }
+    @Override public int getY() { return y; }
+
+    @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int deltaX, int deltaY) {
+        x = (x + deltaX) & 0xFFFF;
+        y = (y + deltaY) & 0xFFFF;
     }
 }

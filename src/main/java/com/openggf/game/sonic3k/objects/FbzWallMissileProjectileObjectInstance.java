@@ -22,7 +22,7 @@ public final class FbzWallMissileProjectileObjectInstance
   }
   public void update(int counter, PlayableEntity p) {
     if (!isOnScreen(0x20)) {
-      setDestroyed(true);
+      ObjectLifetimeOps.expireDynamic(this);
       return;
     }
     if ((counter & 3) == 0)

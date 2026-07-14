@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
@@ -13,9 +12,7 @@ import java.util.List;
 public final class FbzBentPipeObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SpawnRewindRecreatable {
     private static final int[][] SIZE={{0x18,0x10},{0x10,0x08},{0x18,0x10}};
-    @RewindTransient(reason = "Immutable constructor-derived spawn configuration; recreated from ObjectSpawn.")
     private final int frame;
-    @RewindTransient(reason = "Immutable constructor-derived size-table index; recreated from ObjectSpawn subtype.")
     private final int sizeIndex;
     public FbzBentPipeObjectInstance(ObjectSpawn spawn){super(spawn,"FBZBentPipe");frame=spawn.subtype()&0xFF;sizeIndex=spawn.subtype()&3;if(sizeIndex==3)throw new IllegalArgumentException("FBZ bent-pipe subtype has undefined ROM size-table index 3: $"+Integer.toHexString(frame));}
     int mappingFrame(){return frame;}

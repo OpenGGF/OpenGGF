@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -10,6 +9,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -17,13 +17,13 @@ import com.openggf.physics.TerrainCheckResult;
 import java.util.List;
 
 /** The five freed-animal roles from {@code ChildObjDat_89ED0}. */
-final class FbzMinibossAnimalChild extends AbstractObjectInstance implements RewindRecreatable {
+final class FbzMinibossAnimalChild extends AbstractObjectInstance
+        implements RewindRecreatable, RomWorldPositionedObject {
     private static final int[] X_OFFSETS = {0, 0x10, -0x10, 0x1C, -0x1C};
     private static final int[] BOUNCE_Y_VELOCITIES = {-0x380, -0x300, -0x280, -0x200, -0x380};
     private static final int FRAMES_PER_MAPPING = 3;
     private static final int ART_VARIANT_COUNT = 2;
 
-    @RewindTransient(reason = "structural root link restored from stable family slot")
     private FbzMinibossInstance boss;
     private int familySlot;
     private int role;
@@ -126,6 +126,14 @@ final class FbzMinibossAnimalChild extends AbstractObjectInstance implements Rew
     @Override
     public int getY() {
         return y;
+    }
+
+    @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        x = (x + offsetX) & 0xFFFF;
+        y = (y + offsetY) & 0xFFFF;
+        xFixed = (x << 16) | (xFixed & 0xFFFF);
+        yFixed = (y << 16) | (yFixed & 0xFFFF);
     }
 
     @Override

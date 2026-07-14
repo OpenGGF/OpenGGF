@@ -1230,7 +1230,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
 
                 refreshInvincibilityStarsAfterRewindRestore();
-                refreshPersistentInstaShieldAfterRewindRestore();
+                refreshPersistentInstaShieldRegistration();
         }
 
         private void refreshInvincibilityStarsAfterRewindRestore() {
@@ -1267,7 +1267,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
         }
 
-        private void refreshPersistentInstaShieldAfterRewindRestore() {
+        /** Restores the persistent insta-shield graph after a manager rebuild or rewind. */
+        public void refreshPersistentInstaShieldRegistration() {
                 if (!hasPersistentInstaShieldAbility() || powerUpSpawner == null) {
                         return;
                 }

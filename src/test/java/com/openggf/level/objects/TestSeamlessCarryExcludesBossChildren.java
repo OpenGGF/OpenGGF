@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.TransitionSstOccupant;
 import com.openggf.level.objects.boss.BossChildComponent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,7 +48,7 @@ class TestSeamlessCarryExcludesBossChildren {
     }
 
     @Test
-    void bossChildrenAreNotCarriedButParentStillIs() {
+    void fbzRomStyleReloadCarriesEveryLiveSlotBackedBossChild() {
         ObjectManager[] holder = new ObjectManager[1];
         Camera camera = cameraAtOrigin();
         ObjectServices services = new StubObjectServices() {
@@ -81,19 +82,19 @@ class TestSeamlessCarryExcludesBossChildren {
                     "boss children inherit the boss's persistence");
         }
 
-        List<ObjectInstance> carried = manager.snapshotPersistentDynamicObjectsForTransition();
+        List<TransitionSstOccupant> carried = manager.snapshotAllLiveSstObjectsForTransition();
 
         // Non-boss-child persistent objects (signposts, and here the boss body itself)
         // still ride the reload so they can be re-offset into the new act.
-        assertTrue(carried.contains(boss),
+        assertTrue(carried.stream().anyMatch(occupant -> occupant.identity() == boss),
                 "a persistent non-boss-child object must still be carried across the reload");
 
-        // Boss component children must NOT ride the reload.
+        // FBZ Load_Level does not clear SST. Every live slot-backed component
+        // survives; offset eligibility is a later, independent ROM scan.
         for (BossChildComponent child : boss.getChildComponents()) {
-            assertFalse(carried.contains(child),
+            assertTrue(carried.stream().anyMatch(occupant -> occupant.identity() == child),
                     "boss child " + child.getClass().getSimpleName()
-                            + " must not be carried across a seamless act reload "
-                            + "(ROM Load_Level clears Dynamic_object_RAM)");
+                            + " must survive the FBZ seamless reload in its original SST slot");
         }
     }
 

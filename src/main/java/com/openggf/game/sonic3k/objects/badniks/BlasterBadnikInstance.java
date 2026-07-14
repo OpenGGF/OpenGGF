@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.events.Sonic3kFBZEvents;
 import com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState;
@@ -25,7 +24,6 @@ public final class BlasterBadnikInstance extends AbstractS3kBadnikInstance
 
     enum State { WAIT_OFFSCREEN, INIT, PATROL, WAIT_TURN, ATTACK_WAIT, ATTACK, MAGNET_RISE, MAGNET_WAIT, MAGNET_FALL, FALLING_INIT, FALLING }
 
-    @RewindTransient(reason = "placement orientation is immutable")
     private final boolean magneticCapable;
     private State state;
     private State savedState;

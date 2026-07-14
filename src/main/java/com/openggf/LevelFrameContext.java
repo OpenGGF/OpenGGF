@@ -10,6 +10,7 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
+import com.openggf.level.resources.KosinskiModuleQueue;
 
 import java.util.Objects;
 
@@ -20,7 +21,8 @@ public record LevelFrameContext(GameModule gameModule,
                                 SpriteManager spriteManager,
                                 GameStateManager gameStateManager,
                                 TimerManager timerManager,
-                                PaletteOwnershipRegistry paletteOwnershipRegistry) {
+                                PaletteOwnershipRegistry paletteOwnershipRegistry,
+                                KosinskiModuleQueue kosinskiModuleQueue) {
 
     public LevelFrameContext {
         Objects.requireNonNull(gameModule, "gameModule");
@@ -40,6 +42,7 @@ public record LevelFrameContext(GameModule gameModule,
                 context.getSpriteManager(),
                 context.getGameStateManager(),
                 context.getTimerManager(),
-                context.getPaletteOwnershipRegistry());
+                context.getPaletteOwnershipRegistry(),
+                context.getKosinskiModuleQueue());
     }
 }

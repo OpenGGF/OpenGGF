@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.GenericFieldCapturer;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
@@ -27,7 +26,6 @@ public final class BlasterProjectileObjectInstance extends AbstractObjectInstanc
             TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
             TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
-    @RewindTransient(reason = "independent lifetime; relink is diagnostic only")
     private BlasterBadnikInstance owner;
     private int ownerSlot;
     private boolean primary;

@@ -2,7 +2,6 @@ package com.openggf.game.rewind.schema;
 
 import com.openggf.game.rewind.FieldKey;
 import com.openggf.game.rewind.GenericRewindEligibility;
-import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeImpactExplosion;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleButton;
@@ -37,8 +36,6 @@ class TestCapturedPolicyCompactReachabilityGuard {
         Map<FieldKey, RewindFieldPolicy> policies =
                 DefaultObjectRewindPolicies.exactFieldPoliciesForAudit();
 
-        assertEquals(RewindFieldPolicy.CAPTURED, policies.get(new FieldKey(
-                S3kResultsScreenObjectInstance.class.getName(), "elements")));
         assertEquals(RewindFieldPolicy.CAPTURED, policies.get(new FieldKey(
                 HczEndBossEggCapsuleButton.class.getName(), "parent")));
         assertEquals(RewindFieldPolicy.CAPTURED, policies.get(new FieldKey(

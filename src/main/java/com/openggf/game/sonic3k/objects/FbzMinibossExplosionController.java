@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -11,6 +10,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomWorldPositionedObject;
 
 import java.util.List;
 
@@ -22,8 +22,8 @@ import java.util.List;
  * before allocation and deletes at zero, producing 31 one-shot attempts at a
  * three-update cadence (sonic3k.asm:176659-176890).
  */
-final class FbzMinibossExplosionController extends AbstractObjectInstance implements RewindRecreatable {
-    @RewindTransient(reason = "structural root link restored from stable family slot")
+final class FbzMinibossExplosionController extends AbstractObjectInstance
+        implements RewindRecreatable, RomWorldPositionedObject {
     private FbzMinibossInstance boss;
     private int familySlot;
     private int x;
@@ -107,6 +107,12 @@ final class FbzMinibossExplosionController extends AbstractObjectInstance implem
     @Override
     public int getY() {
         return y;
+    }
+
+    @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        x = (x + offsetX) & 0xFFFF;
+        y = (y + offsetY) & 0xFFFF;
     }
 
     @Override

@@ -81,6 +81,6 @@ class TestFbzFramePhaseOrdering {
 
     private static LevelFrameContext context(LevelEventProvider events) {
         return new LevelFrameContext(mock(GameModule.class), null, events, null,
-                null, null, null, null);
+                null, null, null, null, new com.openggf.level.resources.KosinskiModuleQueue());
     }
 }

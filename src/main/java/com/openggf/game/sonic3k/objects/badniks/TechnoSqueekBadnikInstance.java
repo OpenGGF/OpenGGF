@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -24,7 +23,6 @@ public final class TechnoSqueekBadnikInstance extends AbstractS3kBadnikInstance
     private static final int ACCELERATION = 0x20;
     enum State { WAIT_OFFSCREEN, INIT, MOVING, TURNING, FALLING_INIT, FALLING }
 
-    @RewindTransient(reason = "immutable subtype decode")
     private final boolean verticalMotion;
     private boolean renderYFlip;
     private State state;
@@ -37,7 +35,6 @@ public final class TechnoSqueekBadnikInstance extends AbstractS3kBadnikInstance
     private boolean slowMovementRaw;
     private int turnAnimationUpdates;
     private int freezeReleaseCountdown;
-    @RewindTransient(reason = "89B24 relinks by captured parent slot after restore")
     private transient TechnoSqueekAttachmentObjectInstance attachment;
 
     public TechnoSqueekBadnikInstance(ObjectSpawn spawn) {

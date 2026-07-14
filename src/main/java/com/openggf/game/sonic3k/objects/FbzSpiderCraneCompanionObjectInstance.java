@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.GenericFieldCapturer;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -17,7 +16,6 @@ import java.util.List;
 /** Independent visual companion allocated once after the spider crane grabs P1. */
 public final class FbzSpiderCraneCompanionObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
-    @RewindTransient(reason = "successful-path owner link; child survives owner release")
     private FbzSpiderCraneObjectInstance owner;
     private int ownerSlot;
     private int x;

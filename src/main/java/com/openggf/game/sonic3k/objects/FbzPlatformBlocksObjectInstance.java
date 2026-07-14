@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
@@ -11,7 +10,6 @@ public final class FbzPlatformBlocksObjectInstance
     extends AbstractObjectInstance
     implements SolidObjectProvider, SpawnRewindRecreatable {
   private static final int[] WIDTH = {0x10, 0x20, 0x30, 0x40};
-  @RewindTransient(reason = "constructor subtype decode")
   private final int frame, width, travel;
   private int offset;
   public FbzPlatformBlocksObjectInstance(ObjectSpawn s) {

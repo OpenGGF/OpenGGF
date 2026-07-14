@@ -133,6 +133,8 @@ Drive that chain through its production owners and the real frame dispatcher. Th
 
 Model four independent sets: state that survives reload, entities whose original logical slots survive, entities eligible for the native coordinate-offset scan, and placement/ring state that is deliberately reinitialized. Never use the offset scan as a carry filter. If the native load leaves object RAM live but the engine must rebuild it, capture every live fixed/SST occupant at its original slot, including occupants outside the offset range and occupants that fail the offset predicate. Rebind the complete owner/child/link graph first; then apply the range-and-bit eligibility test, native centre-coordinate/subpixel-preserving offset exactly once, and separate anchor/origin/target hooks exactly once. Keep the request's offset range start-inclusive/end-exclusive and distinct from survival/carry policy.
 
+Restoring a fixed occupant is incomplete unless it re-enters the native global `Process_Sprites` order. Keep the processed SST range separate from the allocatable dynamic window: fixed slot 3 must execute before allocatable slot 4, fixed slots after that window must retain their global order, and destruction/unload/replacement must use the real slot rather than slotless fallback semantics. Prove lower-slot replacements wait for the next pass while higher unvisited slots remain same-pass eligible, without changing allocator pressure or the transition offset range.
+
 Inventory the concrete live families at publication: ordinary placed SST occupants, fixed occupants, boss/event roots and children, results/title owners, player power-ups, slotless children through their owner, and inside/outside-range plus render-bit-pass/fail cases. Seed representative real instances in `ObjectManager` and assert identity, exact slot, graph, centre coordinates, and subpixels after reload. A policy predicate, callback counter, synthetic carrier, or inherited no-op offset hook does not prove native mutation.
 
 Preserve ownership and publication order exactly:
@@ -213,6 +215,18 @@ The analysis review packet must print the numeric total placement count for each
 Present the analysis spec to the user for review. Display a summary:
 
 The four visual/event categories are not the full zone scope. Also decide and display route events and nonstandard handlers; traversal blockers; shared and zone-specific objects, badniks, bosses, projectiles, and children; PLC/KosinskiM/VRAM handoffs; music/SFX timing; checkpoints; exits; reset/rewind behavior; and the next-zone transition.
+
+Treat KosinskiM readiness and dependent object allocation as event architecture,
+not visual polish. A ROM routine polling `Kos_modules_left` must return without
+advancing its own timers until the gameplay-scoped four-entry scheduler is
+actually idle. Preserve the queue's header/payload source, source-residue
+alignment, evolving VRAM destination, start/DMA phase, FIFO shift, and rewind
+state as specified by `s3k-plc-system`. When the unblocked routine allocates an
+SST family (notably `Obj_LevelResults`), use real slots and test initial-allocation
+retry separately from later partial-prefix publication; embedded arrays, fixed
+waits, synthetic retirement timers, or healed missing children are false greens.
+Include forced and in-place rewind graph tests so restoration neither duplicates
+queued art nor loses parent/child identities.
 
 ```
 Zone Analysis Complete: {ZONE} ({Full Name})

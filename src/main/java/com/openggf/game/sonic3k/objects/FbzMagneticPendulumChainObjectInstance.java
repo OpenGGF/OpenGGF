@@ -2,10 +2,10 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.GenericFieldCapturer;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -19,9 +19,7 @@ import java.util.List;
 public final class FbzMagneticPendulumChainObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
     private static final int[] LINK_DISTANCES = {20, 37, 54, 71, 88};
-    @RewindTransient(reason = "graph links relinked by endpoint/pivot slots")
     private FbzMagneticPendulumEndpointObjectInstance endpoint;
-    @RewindTransient(reason = "graph links relinked by endpoint/pivot slots")
     private FbzMagneticPendulumObjectInstance parent;
     private int endpointSlot;
     private int parentSlot;
@@ -43,7 +41,7 @@ public final class FbzMagneticPendulumChainObjectInstance extends AbstractObject
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
-        if (cascadeDelete || parent == null || parent.isDestroyed()) setDestroyed(true);
+        if (cascadeDelete || parent == null || parent.isDestroyed()) ObjectLifetimeOps.expireDynamic(this);
     }
 
     void requestCascadeDelete() { cascadeDelete = true; }

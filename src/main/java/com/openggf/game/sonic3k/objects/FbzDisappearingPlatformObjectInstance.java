@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
@@ -16,7 +15,6 @@ public final class FbzDisappearingPlatformObjectInstance
   private static final ObjectPlayerQuery
       .PlayerVisitor<FbzDisappearingPlatformObjectInstance> DETACH =
       (platform, player) -> platform.detachRider(player);
-  @RewindTransient(reason = "constructor subtype decode")
   private final int mask, offset, animation;
   private final FbzParticipantStateTable riders =
       new FbzParticipantStateTable(1);

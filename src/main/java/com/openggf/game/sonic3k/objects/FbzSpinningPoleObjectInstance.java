@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
 import com.openggf.physics.Direction;
@@ -24,7 +23,6 @@ public final class FbzSpinningPoleObjectInstance
     if (e instanceof AbstractPlayableSprite p)
       pole.updatePlayer(p, pole.players.slot(p));
   };
-  @RewindTransient(reason = "constructor subtype decode")
   private final int height;
   private final FbzParticipantStateTable players =
       new FbzParticipantStateTable(3); // held,cooldown,angle

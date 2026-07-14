@@ -277,9 +277,17 @@ The FBZ Act 1 transition is not a conventional level restart and does not use
   `$2E00`; Y positions, current Y/target bounds, and all subpixel lows remain
   unchanged.
 - Slot-backed `BossChildComponent` instances retain their original slots and
-  shift only if that slot and render flag satisfy the offset rule. Slotless or
-  composite children survive through their owner graph, never through a second
-  allocation, and must not shift twice. Restoration order is: recreate every
+  shift only if that slot and render flag satisfy the offset rule. The real FBZ
+  publication live-family audit contains no slotless/composite family:
+  `Obj_LevelResultsCreate` allocates all 12 `ObjArray_LevResults` entries as
+  separate after-current SSTs before setting `Events_fg_5` (`62591-62623`), and
+  the live miniboss/signpost body, arm, chain, controller, and display families
+  are likewise SST-backed. The production route test captures that publication
+  set and proves exact identity/slot/owner links plus the single native
+  `LevResults_SlideIn` word delta that occurs between slot-70 publication and
+  later `ScreenEvents` (with no transition-offset delta), so no synthetic
+  slotless child is fabricated merely to exercise a generic engine capability.
+  Restoration order is: recreate every
   captured occupant at its stable slot (including slot 93), rebind all graph
   links, apply native centre-coordinate/subpixel-preserving offsets once, then
   update object-specific anchors/origins/targets once.
@@ -331,6 +339,23 @@ follow the same position/control/title path without a spindash exception or
 game-name carve-out. The reload is a rewind hard boundary. Rewind tests cover
 deterministic pre-signal and post-synchronous-reload states rather than seeking
 across that hard boundary.
+
+Implementation status (Task 12): this contract is now executable. The shared
+transition request distinguishes `ALL_LIVE_SST` survival from the half-open
+`ROM_WORLD_OFFSET_RANGE`; synchronous ScreenEvents reloads are bracketed by
+rewind hard boundaries, suppress secondary level PLCs request-locally, and
+defer only object-placement materialization. The production route proves that
+FBZ2 rings own the shifted window in the reload frame and that the launcher at
+the first free post-carry slot appears on the next object pass. Results owns
+explicit `TITLE_CARD_WAIT`/`TITLE_CARD_WAIT2` phases, while the carried end-sign
+controller restores every participant and later allocates three independently
+recreatable fixed-point boundary workers. The compatibility matrix covers
+all 75 combinations of 320/352/400/528/800 widths, donation off/S1/S2, and
+zero/Tails/Tails+Knuckles/Tails+Knuckles+Sonic/duplicate-Tails sidekick teams,
+then repeats a fresh native-width, donation-off, no-sidekick session to catch
+configuration leakage. S3K placement lookahead is viewport-aware (with the
+native 320-pixel result unchanged), so a launcher cannot be omitted while it
+is already visible at wide resolutions.
 
 ### Dynamic allocation contract
 

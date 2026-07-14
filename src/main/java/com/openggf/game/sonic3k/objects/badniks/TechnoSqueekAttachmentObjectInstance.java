@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.GenericFieldCapturer;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
@@ -17,7 +16,6 @@ public final class TechnoSqueekAttachmentObjectInstance extends AbstractObjectIn
     private static final int[] VERTICAL_OFFSETS = {-4,0x14, -4,0x0C, -4,0};
     private static final int[] HORIZONTAL_FRAMES = {2, 3, 4};
     private static final int[] VERTICAL_FRAMES = {7, 8, 9};
-    @RewindTransient(reason = "relinked by exact parent slot after rewind settle")
     private TechnoSqueekBadnikInstance parent;
     private int parentSlot;
     private int currentX;

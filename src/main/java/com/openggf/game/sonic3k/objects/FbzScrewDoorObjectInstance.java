@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.*;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
@@ -15,9 +14,7 @@ public final class FbzScrewDoorObjectInstance extends AbstractObjectInstance
   private static final int[][] FRAMES = {{0, 3, 2, 1},   {0, 1, 2, 3},
                                          {4, 5, 6, 7},   {4, 7, 6, 5},
                                          {8, 9, 10, 11}, {8, 11, 10, 9}};
-  @RewindTransient(reason = "constructor subtype decode")
   private final int animation, trigger, width, height;
-  @RewindTransient(reason = "constructor subtype decode")
   private final boolean horizontal, negative, legacy;
   private int displacement, mappingFrame, animStep = 1, animTimer = 1;
   private boolean opening, sfxPlayed, initialized, legacyRestored;

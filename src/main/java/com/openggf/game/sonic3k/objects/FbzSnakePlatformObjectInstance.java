@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -23,12 +22,10 @@ public final class FbzSnakePlatformObjectInstance extends AbstractObjectInstance
             {0x1D79,0x1EEB,0x1EEB,0x213,0x1EEB,0x400,0x1D79,0x400,0x1D79,0x319,0x1E82,0x319,0x1E82,0x369,0x1E1E,0x369,0x1E1E,0x213,0x1EEB,0x213,-1,0},
             {0x1D79,0x1EEB,0x1E82,0x319,0x1E82,0x369,0x1E1E,0x369,0x1E1E,0x213,0x1EEB,0x213,0x1EEB,0x400,0x1D79,0x400,0x1D79,0x319,0x1E82,0x319,-1,0}
     };
-    @RewindTransient(reason = "Immutable constructor-derived spawn configuration; recreated from ObjectSpawn.")
     private final int route;
     private int delay;
     private boolean child;
     private int familySlot=-1;
-    @RewindTransient(reason = "Explicit recreate relinks child to the restored parent sharing its stable source index.")
     private FbzSnakePlatformObjectInstance parent;
     private boolean childrenSpawned;
     private int delayRemaining;
@@ -42,7 +39,7 @@ public final class FbzSnakePlatformObjectInstance extends AbstractObjectInstance
         int[] r=ROUTES[route];cullRight=r[1];cullWidth=((r[1]-r[0])&0xFF80)+0x300;routeIndex=2;snapToFirstAndTarget();
     }
     @Override public void update(int frameCounter,PlayableEntity player){
-        if(child&&parent!=null&&parent.isDestroyed()){setDestroyed(true);return;}
+        if(child&&parent!=null&&parent.isDestroyed()){ObjectLifetimeOps.expireDynamic(this);return;}
         if(!child&&!childrenSpawned){childrenSpawned=true;if(familySlot<0)familySlot=getSlotIndex();int nextDelay=0x19;for(int attempt=0;attempt<3;attempt++){final int d=nextDelay;FbzSnakePlatformObjectInstance made=spawnChild(()->new FbzSnakePlatformObjectInstance(spawn,d,true,this));if(!made.isDestroyed())nextDelay+=0x18;}}
         if(delayRemaining>0){delayRemaining--;if(delayRemaining>0)return;}if(wait>0){wait--;if(wait>0)return;}
         xFixed+=xVelocity;yFixed+=yVelocity;x=xFixed>>8;y=yFixed>>8;

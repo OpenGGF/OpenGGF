@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -11,6 +10,7 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -27,7 +27,6 @@ public final class FbzSpiderCraneObjectInstance extends AbstractObjectInstance
     private int horizontalVelocityFixed;
     private boolean returning;
     private boolean companionAllocationAttempted;
-    @RewindTransient(reason = "visual companion is independently rewindable")
     private FbzSpiderCraneCompanionObjectInstance companion;
 
     public FbzSpiderCraneObjectInstance(ObjectSpawn spawn) {
@@ -65,9 +64,7 @@ public final class FbzSpiderCraneObjectInstance extends AbstractObjectInstance
                 int nativeX = sprite.getCentreX();
                 int nativeY = sprite.getCentreY();
                 sprite.setAnimationId(0xE);
-                sprite.setObjectControlled(true);
-                sprite.setObjectControlAllowsCpu(true);
-                sprite.setObjectControlSuppressesMovement(true);
+                ObjectControlState.nativeBit7FullControl().applyTo(sprite);
                 sprite.setSpindash(false);
                 sprite.setXSpeed((short) 0);
                 sprite.setYSpeed((short) 0);
@@ -135,7 +132,7 @@ public final class FbzSpiderCraneObjectInstance extends AbstractObjectInstance
     private static void releaseMain(PlayableEntity main) {
         if (main instanceof AbstractPlayableSprite sprite) {
             sprite.setAnimationId(0);
-            sprite.setObjectControlled(false);
+            ObjectControlState.none().applyTo(sprite);
             sprite.setAir(true);
         }
     }

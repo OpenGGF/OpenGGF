@@ -31,6 +31,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.rings.RingManager;
+import com.openggf.level.resources.KosinskiModuleQueue;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.sprites.managers.SpriteManager;
 
@@ -54,6 +55,7 @@ public class TestObjectServices implements ObjectServices {
     private AudioManager audioManager;
     private GameRng rng = new GameRng(GameRng.Flavour.S3K);
     private ZoneRuntimeRegistry zoneRuntimeRegistry = new ZoneRuntimeRegistry();
+    private KosinskiModuleQueue kosinskiModuleQueue = new KosinskiModuleQueue();
     private PaletteOwnershipRegistry paletteOwnershipRegistry;
     private ZoneLayoutMutationPipeline zoneLayoutMutationPipeline = new ZoneLayoutMutationPipeline();
     private SolidExecutionRegistry solidExecutionRegistry = SolidExecutionRegistry.inert();
@@ -125,6 +127,11 @@ public class TestObjectServices implements ObjectServices {
 
     public TestObjectServices withZoneRuntimeRegistry(ZoneRuntimeRegistry zoneRuntimeRegistry) {
         this.zoneRuntimeRegistry = zoneRuntimeRegistry;
+        return this;
+    }
+
+    public TestObjectServices withKosinskiModuleQueue(KosinskiModuleQueue queue) {
+        this.kosinskiModuleQueue = queue;
         return this;
     }
 
@@ -355,6 +362,11 @@ public class TestObjectServices implements ObjectServices {
     @Override
     public ZoneRuntimeRegistry zoneRuntimeRegistry() {
         return zoneRuntimeRegistry;
+    }
+
+    @Override
+    public KosinskiModuleQueue kosinskiModuleQueue() {
+        return kosinskiModuleQueue;
     }
 
     @Override

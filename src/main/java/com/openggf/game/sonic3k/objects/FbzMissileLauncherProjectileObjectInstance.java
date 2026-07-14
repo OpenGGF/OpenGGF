@@ -15,7 +15,6 @@ import java.util.List;
 public final class FbzMissileLauncherProjectileObjectInstance
     extends AbstractObjectInstance
     implements TouchResponseProvider, RewindRecreatable {
-  @RewindTransient(reason = "explicit family relink after rewind settle")
   private FbzMissileLauncherObjectInstance parent;
   private int familySlot = -1, x, y, xFixed, yFixed, yVel = -0x600, xDelta;
   private boolean damaging, impacted;
@@ -72,7 +71,7 @@ public final class FbzMissileLauncherProjectileObjectInstance
       parent.missileImpacted();
     services().playSfx(Sonic3kSfx.EXPLODE.id);
     int slot = ObjectLifetimeOps.detachSlotForTransfer(this);
-    setDestroyed(true);
+    ObjectLifetimeOps.deleteNoRespawn(this);
     ObjectLifetimeOps.addReplacementAtTransferredSlot(
         services().objectManager(),
         new com.openggf.level.objects.ExplosionObjectInstance(

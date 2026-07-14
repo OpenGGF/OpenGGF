@@ -2,8 +2,6 @@ package com.openggf.physics;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.GroundMode;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.level.ChunkDesc;
@@ -33,8 +31,7 @@ class TestFbzBackgroundPlaneCollision {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        SessionManager.clear();
+        TestEnvironment.resetAll();
         TestEnvironment.activeGameplayMode();
         level = mock(LevelManager.class);
         bgTile = mock(ChunkDesc.class);

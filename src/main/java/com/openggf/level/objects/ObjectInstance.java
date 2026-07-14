@@ -215,6 +215,15 @@ public interface ObjectInstance {
     }
 
     /**
+     * Whether the live ROM object has {@code render_flags} bit 2 set for
+     * {@code Offset_ObjectsDuringTransition}. Normal level-space objects do;
+     * screen-space owners such as level results/title cards override false.
+     */
+    default boolean participatesInRomWorldTransitionOffset() {
+        return false;
+    }
+
+    /**
      * Returns true when this object participates in ROM level-repeat coordinate
      * shifts such as MHZ's forced-scroll loop helper. The ROM gates these shifts
      * on {@code render_flags} bit 2, which normal level-space objects set after

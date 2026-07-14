@@ -50,23 +50,23 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implements RewindRecreatable {
+    enum CarriedTitlePhase {
+        RESULTS,
+        TITLE_CARD_WAIT,
+        TITLE_CARD_WAIT2,
+        DONE
+    }
     private static final Logger LOG = Logger.getLogger(S3kResultsScreenObjectInstance.class.getName());
 
     // ROM-accurate timing
     private static final int S3K_PRE_TALLY_DELAY = 360;  // 6*60 frames (ROM line 62580)
     private static final int S3K_WAIT_DURATION = 90;      // ROM line 62676
     private static final int MUSIC_TRIGGER_FRAME = 71;    // 360 - 289 = 71 (ROM line 62626)
-    private static final int RESULTS_CREATE_KOS_GATE_FRAMES = 9;
-    private static final int CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES = 3;
 
     // Time bonus table (ROM lines 62910-62918)
     private static final int[] TIME_BONUSES = {5000, 5000, 1000, 500, 400, 300, 100, 10};
     private static final int SPECIAL_TIME_BONUS = 10000;  // 9:59 override (ROM line 62559)
     private static final int MAX_TIMER_SECONDS = 599;     // 9:59 = 9*60 + 59
-
-    // Slide speeds (ROM lines 62847, 62836)
-    private static final int SLIDE_IN_SPEED = 16;   // moveq #$10,d1
-    private static final int SLIDE_OUT_SPEED = 32;  // move.w #-$20,d0
 
     // Pattern caching
     private static final int PATTERN_BASE = PatternAtlasRange.RESULTS_SCREENS.base();
@@ -106,19 +106,35 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     // Player reference for control restoration on exit
     private AbstractPlayableSprite playerRef;
 
-    // Elements
-    private final ResultsElement[] elements = new ResultsElement[12];
+    // Native child-SST creation/exit queue state.
     private int exitQueueCounter;
-    private int childrenRemaining;
-    private int createGateFrames = RESULTS_CREATE_KOS_GATE_FRAMES;
+    // ROM $30 is initialized to 12 before child allocation. A later
+    // CreateNewSprite4 failure does not repair this count, so a partial prefix
+    // intentionally leaves Wait2 stalled with the residual count.
+    private int childrenRemaining = S3kResultsElementObjectInstance.ENTRY_COUNT;
     private boolean actTransitionSignaled;
-    private int carriedResultsRenderRetireDispatches;
-    private boolean exitRetireDispatchesInitialized;
+    private CarriedTitlePhase carriedTitlePhase = CarriedTitlePhase.RESULTS;
+    private int carriedTitleWaitTimer;
 
     public S3kResultsScreenObjectInstance(PlayerCharacter character, int act) {
+        this(character, act, true);
+    }
+
+    /** Side-effect-free shell used only by generic rewind recreation. */
+    protected S3kResultsScreenObjectInstance(boolean rewindShell) {
+        this(PlayerCharacter.SONIC_AND_TAILS, 0, !rewindShell);
+    }
+
+    private S3kResultsScreenObjectInstance(PlayerCharacter character, int act,
+                                           boolean initializeRuntimeState) {
         super("S3kResults");
+        setRomWorldPositioned(false);
         this.character = character;
         this.act = act;
+
+        if (!initializeRuntimeState) {
+            return;
+        }
 
         // Calculate bonuses from current game state (ROM lines 62550-62578)
         calculateBonuses();
@@ -126,141 +142,54 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // Fade out current music immediately (ROM line 62513)
         fadeOutMusic();
 
-        // Load art
+        // The Java renderer may load immediately, but the ROM-visible KosM queue
+        // remains authoritative for Obj_LevelResultsCreate readiness.
+        enqueueResultsKosModules();
         loadArt();
-
-        // Create elements
-        createElements();
 
         LOG.fine(() -> String.format("S3K results init: character=%s act=%d timeBonus=%d ringBonus=%d",
                 character, act, timeBonus, ringBonus));
     }
 
     private S3kResultsScreenObjectInstance() {
-        this(PlayerCharacter.SONIC_AND_TAILS, 0);
+        this(true);
     }
 
     @Override
     public AbstractResultsScreen recreateForRewind(RewindRecreateContext ctx) {
         return ObjectConstructionContext.construct(ctx.objectServices(),
-                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+                () -> new S3kResultsScreenObjectInstance(true));
+    }
+
+    @Override
+    protected void afterRewindRestoreSettled() {
+        // Rebuild only derived art after restored character/act scalars settle.
+        // The gameplay KosM queue snapshot remains the sole readiness owner.
+        combinedPatterns = null;
+        mappingFrames = null;
+        spriteSheet = null;
+        renderer = null;
+        artLoaded = false;
+        artCached = false;
+        loadArt();
     }
 
     @Override
     public String traceDebugDetails() {
         return String.format(
-                "state=%02X timer=%04X total=%04X act=%d create=%02X sig=%b time=%d ring=%d total=%d music=%b complete=%b",
+                "state=%02X timer=%04X total=%04X act=%d kos=%02X children=%d sig=%b time=%d ring=%d total=%d music=%b complete=%b",
                 state,
                 stateTimer & 0xFFFF,
                 totalFrames & 0xFFFF,
                 act,
-                createGateFrames & 0xFFFF,
+                services().kosinskiModuleQueue().modulesLeftRaw() & 0xFF,
+                childrenRemaining,
                 actTransitionSignaled,
                 timeBonus,
                 ringBonus,
                 totalBonusCountUp,
                 musicPlayed,
                 complete);
-    }
-
-    // ---- Element data structure ----
-
-    /**
-     * A single visual element on the results screen that slides in and out.
-     * ROM: ObjArray_LevResults (sonic3k.asm lines 62919-63003).
-     */
-    private static class ResultsElement {
-        enum Type { CHAR_NAME, GENERAL, TIME_BONUS, RING_BONUS, TOTAL }
-        enum SlideDirection { FROM_LEFT, FROM_RIGHT }
-
-        final Type type;
-        final int targetX;
-        final int startX;
-        final int y;
-        final int mappingFrame;
-        final int widthPixels;
-        final int exitQueuePriority;
-        final SlideDirection slideDirection;
-        int currentX;
-        boolean exitStarted;
-        boolean offScreen;
-
-        ResultsElement(Type type, int targetX, int startX, int y,
-                       int mappingFrame, int widthPixels, int exitQueuePriority) {
-            this.type = type;
-            this.targetX = targetX;
-            this.startX = startX;
-            this.y = y;
-            this.mappingFrame = mappingFrame;
-            this.widthPixels = widthPixels;
-            this.exitQueuePriority = exitQueuePriority;
-            this.slideDirection = startX < 0 ? SlideDirection.FROM_LEFT : SlideDirection.FROM_RIGHT;
-            this.currentX = startX;
-        }
-
-        /** Move toward targetX at 16px/frame. Returns true when reached. */
-        boolean slideIn() {
-            if (currentX == targetX) return true;
-            if (currentX < targetX) {
-                currentX = Math.min(currentX + SLIDE_IN_SPEED, targetX);
-            } else {
-                currentX = Math.max(currentX - SLIDE_IN_SPEED, targetX);
-            }
-            return currentX == targetX;
-        }
-
-        /** Move at 32px/frame back toward the direction it came from. */
-        void slideOut() {
-            if (slideDirection == SlideDirection.FROM_LEFT) {
-                currentX -= SLIDE_OUT_SPEED;
-            } else {
-                currentX += SLIDE_OUT_SPEED;
-            }
-            offScreen = (currentX < -256 || currentX > 576);
-        }
-    }
-
-    // ---- Element creation ----
-
-    /**
-     * Populates the elements array from ROM data (ObjArray_LevResults).
-     * ROM: sonic3k.asm lines 62919-63003.
-     */
-    private void createElements() {
-        // ROM ObjArray_LevResults uses VDP coordinates (+128 hardware offset on X and Y).
-        // Our engine uses direct screen coordinates, so subtract 128 from all positions.
-        // CLAUDE.md: "VDP hardware adds 128 to X/Y. Convert: screen_position = vdp_value - 128"
-        final int V = 128; // VDP offset
-
-        int charNameFrame = getCharNameFrame();
-        int charNameTargetX = 0xE0 - V;
-        int charNameStartX = -0x220 - V;
-        int charNameWidth = 0x48;
-
-        if (character == PlayerCharacter.KNUCKLES) {
-            charNameTargetX -= 0x30;
-            charNameStartX -= 0x30;
-            charNameWidth += 0x30;
-        }
-        if (character == PlayerCharacter.TAILS_ALONE) {
-            charNameTargetX += 8;
-            charNameStartX += 8;
-            charNameWidth -= 8;
-        }
-
-        elements[0]  = new ResultsElement(ResultsElement.Type.CHAR_NAME,  charNameTargetX, charNameStartX, 0xB8 - V, charNameFrame, charNameWidth, 1);
-        elements[1]  = new ResultsElement(ResultsElement.Type.GENERAL,    0x130 - V, -0x1D0 - V, 0xB8 - V, 0x11, 0x30, 1);
-        elements[2]  = new ResultsElement(ResultsElement.Type.GENERAL,    0xE8 - V,   0x468 - V, 0xCC - V, 0x10, 0x70, 3);
-        elements[3]  = new ResultsElement(ResultsElement.Type.GENERAL,    0x160 - V,  0x4E0 - V, 0xBC - V, 0x0F, 0x38, 3);
-        elements[4]  = new ResultsElement(ResultsElement.Type.GENERAL,    0xC0 - V,   0x4C0 - V, 0xF0 - V, 0x0E, 0x20, 5);
-        elements[5]  = new ResultsElement(ResultsElement.Type.GENERAL,    0xE8 - V,   0x4E8 - V, 0xF0 - V, 0x0C, 0x30, 5);
-        elements[6]  = new ResultsElement(ResultsElement.Type.TIME_BONUS, 0x178 - V,  0x578 - V, 0xF0 - V, 1,    0x40, 5);
-        elements[7]  = new ResultsElement(ResultsElement.Type.GENERAL,    0xC0 - V,   0x500 - V, 0x100 - V, 0x0D, 0x20, 7);
-        elements[8]  = new ResultsElement(ResultsElement.Type.GENERAL,    0xE8 - V,   0x528 - V, 0x100 - V, 0x0C, 0x30, 7);
-        elements[9]  = new ResultsElement(ResultsElement.Type.RING_BONUS, 0x178 - V,  0x5B8 - V, 0x100 - V, 1,    0x40, 7);
-        elements[10] = new ResultsElement(ResultsElement.Type.GENERAL,    0xD4 - V,   0x554 - V, 0x11C - V, 0x0B, 0x30, 9);
-        elements[11] = new ResultsElement(ResultsElement.Type.TOTAL,      0x178 - V,  0x5F8 - V, 0x11C - V, 1,    0x40, 9);
-        childrenRemaining = 12;
     }
 
     /**
@@ -275,6 +204,79 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         };
     }
 
+    private void enqueueResultsKosModules() {
+        Rom rom;
+        try {
+            rom = services().rom();
+        } catch (Exception e) {
+            LOG.fine("Results KosM queue unavailable in construction fixture: " + e.getMessage());
+            return;
+        }
+        if (rom == null) {
+            LOG.fine("Results KosM queue skipped because no ROM is attached");
+            return;
+        }
+
+        int zone = services().romZoneId();
+        int numberSource = act == 0 && zone != 0x16
+                ? Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM1_ADDR
+                : Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM2_ADDR;
+        int characterSource = switch (character) {
+            case KNUCKLES -> Sonic3kConstants.ART_KOSM_RESULTS_KNUCKLES_ADDR;
+            case TAILS_ALONE -> Sonic3kConstants.ART_KOSM_RESULTS_TAILS_ADDR;
+            default -> Sonic3kConstants.ART_KOSM_RESULTS_SONIC_ADDR;
+        };
+        int characterDestination = (act == 0
+                ? Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT1
+                : Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT2) * Pattern.PATTERN_SIZE_IN_ROM;
+
+        enqueueRequiredKosArchive(rom, Sonic3kConstants.ART_KOSM_RESULTS_GENERAL_ADDR,
+                Sonic3kConstants.VRAM_RESULTS_BASE * Pattern.PATTERN_SIZE_IN_ROM);
+        enqueueRequiredKosArchive(rom, numberSource,
+                Sonic3kConstants.VRAM_RESULTS_NUMBERS * Pattern.PATTERN_SIZE_IN_ROM);
+        enqueueRequiredKosArchive(rom, characterSource, characterDestination);
+    }
+
+    private void enqueueRequiredKosArchive(Rom rom, int sourceAddress, int destinationVramBytes) {
+        try {
+            if (!services().kosinskiModuleQueue().enqueue(rom, sourceAddress, destinationVramBytes)) {
+                throw new IllegalStateException("S3K KosM queue capacity exhausted while queuing results art");
+            }
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(String.format(
+                    "Could not read results KosM header at $%06X", sourceAddress), e);
+        }
+    }
+
+    /**
+     * ROM {@code Obj_LevelResultsCreate}: wait for {@code Kos_modules_left==0},
+     * then allocate the 12 entries from {@code ObjArray_LevResults}. A failed
+     * first AllocateObjectAfterCurrent leaves this routine active for a retry;
+     * later CreateNewSprite4 failures leave the already-created prefix intact.
+     */
+    private void createResultChildSsts() {
+        if (services().objectManager() == null) {
+            return;
+        }
+        for (int entryIndex = 0; entryIndex < S3kResultsElementObjectInstance.ENTRY_COUNT; entryIndex++) {
+            int index = entryIndex;
+            S3kResultsElementObjectInstance child = spawnAfterCurrentSibling(
+                    () -> new S3kResultsElementObjectInstance(this, index, character));
+            if (child.isDestroyed() || child.getSlotIndex() < 0) {
+                if (entryIndex == 0) {
+                    return;
+                }
+                break;
+            }
+        }
+        signalActTransitionIfNeeded();
+        actTransitionSignaled = true;
+        // Create advances directly to Obj_LevelResultsWait and returns. The
+        // first 360-frame countdown decrement belongs to the next dispatch.
+        state = STATE_PRE_TALLY_DELAY;
+        stateTimer = 0;
+    }
+
     // ---- Bonus calculation ----
 
     private void calculateBonuses() {
@@ -287,7 +289,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         }
 
         // Special case: 9:59 -> 10000 (ROM lines 62557-62559)
-        if (elapsedSeconds >= MAX_TIMER_SECONDS) {
+        if (elapsedSeconds == MAX_TIMER_SECONDS) {
             timeBonus = SPECIAL_TIME_BONUS;
         } else {
             int index = Math.min(elapsedSeconds / 30, TIME_BONUSES.length - 1);
@@ -332,8 +334,18 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         this.playerRef = player;
+        if (carriedTitlePhase != CarriedTitlePhase.RESULTS) {
+            updateCarriedTitleCard();
+            return;
+        }
         this.frameCounter = frameCounter;
-        updateCreateGate();
+        if (!actTransitionSignaled) {
+            // Obj_LevelResultsCreate is a distinct routine. Waiting on KosM,
+            // retrying the first allocation, and the successful create/publish
+            // dispatch all return without consuming Obj_LevelResultsWait's $2E.
+            updateCreateGate();
+            return;
+        }
         stateTimer++;
         totalFrames++;
 
@@ -344,15 +356,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             case STATE_WAIT -> updateWait();
             case STATE_EXIT -> updateExitQueue();
             // Do NOT set complete=true here — exitQueue handles it
-        }
-
-        // Slide elements toward targets during pre-tally and tally
-        if (state <= STATE_TALLY) {
-            for (ResultsElement elem : elements) {
-                if (elem != null && !elem.offScreen) {
-                    elem.slideIn();
-                }
-            }
         }
     }
 
@@ -374,20 +377,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         if (actTransitionSignaled) {
             return;
         }
-
-        createGateFrames--;
-        if (romResultsCreateGateReady(createGateFrames)) {
-            // ROM Obj_LevelResultsInit queues three Kosinski module loads and
-            // advances to Obj_LevelResultsCreate; Create polls Kos_modules_left
-            // before allocating child objects and setting Events_fg_5
-            // (docs/skdisasm/sonic3k.asm:62512-62584, 62586-62616).
-            signalActTransitionIfNeeded();
-            actTransitionSignaled = true;
+        if (!services().kosinskiModuleQueue().isIdle()) {
+            return;
         }
-    }
-
-    static boolean romResultsCreateGateReady(int framesAfterDecrement) {
-        return framesAfterDecrement <= 0;
+        createResultChildSsts();
     }
 
     /**
@@ -397,48 +390,45 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      */
     private void updateExitQueue() {
         if (childrenRemaining <= 0) {
-            if (!exitRetireDispatchesInitialized) {
-                carriedResultsRenderRetireDispatches += additionalChildRetireDispatches();
-                exitRetireDispatchesInitialized = true;
-            }
-            if (carriedResultsRenderRetireDispatches > 0) {
-                carriedResultsRenderRetireDispatches--;
-                return;
-            }
             onExitReady();
-            complete = true;
+            complete = carriedTitlePhase == CarriedTitlePhase.RESULTS;
             return;
         }
         exitQueueCounter++;
-        for (ResultsElement elem : elements) {
-            if (elem == null || elem.offScreen) continue;
-            if (exitQueueCounter >= elem.exitQueuePriority) {
-                elem.exitStarted = true;
-            }
-            if (elem.exitStarted) {
-                elem.slideOut();
-                if (elem.offScreen) {
-                    childrenRemaining--;
-                }
-            }
+    }
+
+    boolean shouldExitElement(int priority) {
+        return state == STATE_EXIT && exitQueueCounter >= priority;
+    }
+
+    void childExited(S3kResultsElementObjectInstance child) {
+        if (childrenRemaining > 0) {
+            childrenRemaining--;
         }
     }
 
-    /**
-     * Additional owner dispatches while ROM child SSTs finish retiring after
-     * the engine's embedded result elements have left the screen.
-     */
-    protected int additionalChildRetireDispatches() {
-        return 0;
+    int nativeChildrenRemaining() {
+        return childrenRemaining;
     }
 
-    @Override
-    public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
-        // HCZ/MGZ-style Load_Level paths retain Obj_LevelResults and its ROM
-        // child SSTs. The engine carries the parent but renders its twelve
-        // children as embedded elements, so preserve the final three child
-        // retirement dispatches that occur after the embedded set is gone.
-        carriedResultsRenderRetireDispatches = CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES;
+    int activeResultsFrames() {
+        return totalFrames;
+    }
+
+    boolean hasPlayedResultsMusic() {
+        return musicPlayed;
+    }
+
+    PlayerCharacter resultsCharacter() {
+        return character;
+    }
+
+    int resultsAct() {
+        return act;
+    }
+
+    boolean hasLoadedResultsArt() {
+        return artLoaded;
     }
 
     // ---- Pre-tally delay with music trigger ----
@@ -449,6 +439,16 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // ROM: checks counter == 289 (360 - 71) at line 62626
         if (!musicPlayed && stateTimer == MUSIC_TRIGGER_FRAME) {
             musicPlayed = true;
+            for (PlayableEntity candidate : playerQuery()
+                    .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                if (candidate instanceof AbstractPlayableSprite sprite
+                        && sprite.getDrowningController() != null) {
+                    // Native writes air_left=30 for Player_1 and Player_2.
+                    // The extension applies the same state to every configured
+                    // engine player without restarting the old zone music.
+                    sprite.getDrowningController().restoreAirForExternalMusicOverride();
+                }
+            }
             try {
                 services().playMusic(GameMusic.ACT_CLEAR);
             } catch (Exception e) {
@@ -488,26 +488,24 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
         if (result.totalIncrement() > 0) {
             services().gameState().addScore(result.totalIncrement());
-        }
-
-        // ROM uses global frame counter for tick timing (line 62652-62654)
-        // Level_frame_counter & 3 == 0
-        // We use the frameCounter field (set by update()) as the global frame source
-        if (result.anyRemaining()) {
+            // ROM tests the amount removed on this dispatch, not whether any
+            // counter remains. The final decrement can therefore still tick.
             if ((this.frameCounter & 3) == 0) {
                 playTickSound();
             }
+            return;
         }
 
-        if (!result.anyRemaining()) {
-            playTallyEndSound();
-            int zone = services().romZoneId();
-            if ((act != 0) || (zone == 0x0A)) {
-                services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
-            }
-            state = STATE_WAIT;
-            stateTimer = 0;
+        // Only the following zero-increment dispatch completes the tally.
+        playTallyEndSound();
+        int zone = services().romZoneId();
+        if ((act != 0) || (zone == 0x0A)) {
+            services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
         }
+        state = STATE_WAIT;
+        // Native falls through from tally completion into Wait2 and
+        // immediately decrements 90 to 89 in this same dispatch.
+        stateTimer = 1;
     }
 
     // ---- Audio overrides ----
@@ -567,7 +565,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // Zones whose Act 1 → Act 2 boundary is a seamless level reload:
         //   HCZ (zone $01): HCZ1BGE_DoTransition
         //   MGZ (zone $02): MGZ1BGE_Transition
-        boolean hasSeamlessTransition = (act == 0) && (zone == 0x01 || zone == 0x02);
+        boolean hasSeamlessTransition = (act == 0) && (zone == 0x01 || zone == 0x02 || zone == 0x04);
+        boolean fbzCarriedTitleOwner = act == 0 && zone == 0x04;
 
         // Restore player controls (locked by signpost in Set_PlayerEndingPose).
         // For zones with seamless transitions (HCZ), defer unlocking — the player
@@ -621,7 +620,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
         services().gameState().setEndOfLevelActive(false);
 
-        if (isAct2OrSpecial || hasSeamlessTransition) {
+        if (isAct2OrSpecial || (hasSeamlessTransition && !fbzCarriedTitleOwner)) {
             // ROM loc_2DCF8 sets End_of_level_flag directly for Act 2/Sky
             // Sanctuary/LRZ boss results (sonic3k.asm:62693-62705).
             // For HCZ/MGZ Act 1, the engine's BG event handlers use the same
@@ -639,12 +638,15 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             // ROM: move.b #1,(Apparent_act).w — update display act so
             // death/restart title cards show "Act 2" from this point on.
             services().setApparentAct(1);
+            if (fbzCarriedTitleOwner && services().levelManager() != null) {
+                services().levelManager().clearCheckpointAndBonusReturnForActTitle();
+            }
             // The level data continues seamlessly (S3K acts share the same level).
 
             // Play act 2 music
             var zoneRegistry = services().gameModule().getZoneRegistry();
             int act2MusicId = zoneRegistry.getMusicId(zone, 1);
-            if (act2MusicId >= 0) {
+            if (act2MusicId >= 0 && !fbzCarriedTitleOwner) {
                 try { services().playMusic(act2MusicId); } catch (Exception e) { /* ignore */ }
             }
 
@@ -653,12 +655,19 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             // show its own title card after the level reload).
             // ROM lines 62713-62720
             boolean skipTitleCard = (zone == 0x08) || (zone == 0x0B);
-            if (!skipTitleCard && !hasSeamlessTransition) {
+            if (!skipTitleCard && (!hasSeamlessTransition || fbzCarriedTitleOwner)) {
                 var titleCardProvider = services().titleCardProvider();
                 titleCardProvider.initializeInLevel(zone, 1);
-                if (aizAct1MinibossTitleHandoff
-                        && titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
-                    s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();
+                if (titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
+                    if (fbzCarriedTitleOwner) {
+                        s3kTitleCard.useExternalInLevelGameplayOwner();
+                    } else if (aizAct1MinibossTitleHandoff) {
+                        s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();
+                    }
+                }
+                if (fbzCarriedTitleOwner) {
+                    carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_WAIT;
+                    carriedTitleWaitTimer = 0;
                 }
             }
 
@@ -676,20 +685,72 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             }
         }
 
-        ObjectLifetimeOps.deleteNoRespawn(this);
+        if (!fbzCarriedTitleOwner) {
+            ObjectLifetimeOps.deleteNoRespawn(this);
+        }
         LOG.fine(() -> String.format("S3K results exit: zone=%X act=%d isAct2OrSpecial=%b",
                 zone, act, isAct2OrSpecial));
     }
 
     static boolean shouldRestoreLevelCameraBoundsOnExit(int zone, int act) {
         boolean actOneInLevelTitleHandoff = act == 0
-                && (zone == 0x00 || zone == 0x01 || zone == 0x02);
+                && (zone == 0x00 || zone == 0x01 || zone == 0x02 || zone == 0x04);
         boolean lbzActTwoPostBossHandoff = zone == 0x06 && act == 1;
         return !actOneInLevelTitleHandoff && !lbzActTwoPostBossHandoff;
     }
 
     protected boolean shouldRestoreCameraBoundsOnExit(int zone, int act) {
         return shouldRestoreLevelCameraBoundsOnExit(zone, act);
+    }
+
+    private void updateCarriedTitleCard() {
+        switch (carriedTitlePhase) {
+            case TITLE_CARD_WAIT -> {
+                // ROM mutates this same SST owner into Obj_TitleCardWait, then
+                // clears Timer/Ring_count, restores air and music, and advances
+                // it to Wait2. Visual children are managed by the shared title
+                // renderer; this carried object owns every gameplay mutation.
+                resetLevelGamestateForActTransition();
+                for (PlayableEntity candidate : playerQuery()
+                        .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                    if (candidate instanceof AbstractPlayableSprite sprite
+                            && sprite.getDrowningController() != null) {
+                        sprite.getDrowningController().resetAirTimerFromFixedCountdownDeath();
+                    }
+                }
+                int musicId = services().gameModule().getZoneRegistry()
+                        .getMusicId(services().romZoneId(), 1);
+                if (musicId >= 0) {
+                    services().playMusic(musicId);
+                }
+                carriedTitleWaitTimer = 90;
+                carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_WAIT2;
+            }
+            case TITLE_CARD_WAIT2 -> {
+                if (carriedTitleWaitTimer > 0) {
+                    carriedTitleWaitTimer--;
+                    return; // Obj_TitleCardWait2 returns; child polling starts next dispatch.
+                }
+                if (services().titleCardProvider().isComplete()) {
+                    services().gameState().setEndOfLevelFlag(true);
+                    carriedTitlePhase = CarriedTitlePhase.DONE;
+                    complete = true;
+                    ObjectLifetimeOps.deleteNoRespawn(this);
+                }
+            }
+            case RESULTS, DONE -> {
+                // RESULTS is handled by the ordinary results state machine;
+                // DONE is retained only for rewind-visible routine identity.
+            }
+        }
+    }
+
+    CarriedTitlePhase carriedTitlePhase() {
+        return carriedTitlePhase;
+    }
+
+    int carriedTitleWaitTimer() {
+        return carriedTitleWaitTimer;
     }
 
     protected boolean shouldRestorePlayerControlsOnExit() {
@@ -852,6 +913,12 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        // Obj_LevelResults is the tally/controller SST. Each visual entry is a
+        // real child SST and issues its own DisplaySprite-equivalent draw.
+    }
+
+    void appendElementRender(S3kResultsElementObjectInstance element,
+                             List<GLCommand> commands) {
         if (!artLoaded || renderer == null) return;
         ensureArtCached();
         if (!renderer.isReady()) return;
@@ -863,17 +930,13 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         int baseX = camera.getX() + xOffset();
         int baseY = camera.getY();
 
-        for (ResultsElement elem : elements) {
-            if (elem == null || elem.offScreen) continue;
-            int worldX = baseX + elem.currentX;
-            int worldY = baseY + elem.y;
-
-            switch (elem.type) {
-                case TIME_BONUS -> renderBonusDigits(worldX, worldY, timeBonus);
-                case RING_BONUS -> renderBonusDigits(worldX, worldY, ringBonus);
-                case TOTAL -> renderBonusDigits(worldX, worldY, totalBonusCountUp);
-                default -> renderMappingFrame(elem.mappingFrame, worldX, worldY);
-            }
+        int worldX = baseX + element.currentScreenX();
+        int worldY = baseY + element.screenY();
+        switch (element.role()) {
+            case TIME_BONUS -> renderBonusDigits(worldX, worldY, timeBonus);
+            case RING_BONUS -> renderBonusDigits(worldX, worldY, ringBonus);
+            case TOTAL -> renderBonusDigits(worldX, worldY, totalBonusCountUp);
+            default -> renderMappingFrame(element.mappingFrame(), worldX, worldY);
         }
     }
 

@@ -27,9 +27,10 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
 
     private static final Logger LOG = Logger.getLogger(AizIntroEmeraldGlowChild.class.getName());
     private final AizIntroPlaneChild parent;
-    private final int variant;
-    private final int xOffset;
-    private final int yOffset;
+    // Non-final so generic rewind capture restores the exact live SST state.
+    private int variant;
+    private int xOffset;
+    private int yOffset;
 
     private static final int[][] ANIM_SEQUENCES = {
             {1, 2, 3, 4, 3, 2},

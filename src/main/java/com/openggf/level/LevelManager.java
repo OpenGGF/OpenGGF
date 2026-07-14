@@ -50,6 +50,7 @@ import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseTable;
@@ -80,6 +81,20 @@ import static org.lwjgl.opengl.GL11.glClearColor;
  * Manages the loading and rendering of game levels.
  */
 public class LevelManager {
+    private SeamlessLevelTransitionRequest executingSeamlessTransitionRequest;
+
+    void beginSeamlessTransitionLoad(SeamlessLevelTransitionRequest request) {
+        executingSeamlessTransitionRequest = request;
+    }
+
+    void endSeamlessTransitionLoad() {
+        executingSeamlessTransitionRequest = null;
+    }
+
+    public SeamlessLevelTransitionRequest getExecutingSeamlessTransitionRequest() {
+        return executingSeamlessTransitionRequest;
+    }
+
     static final Logger LOGGER = Logger.getLogger(LevelManager.class.getName());
     static final int OBJECT_PATTERN_BASE = PatternAtlasRange.OBJECTS.base();
     private static final int HUD_PATTERN_BASE = PatternAtlasRange.HUD.base();
@@ -181,6 +196,7 @@ public class LevelManager {
     int frameCounter = 0;
     ObjectManager objectManager;
     RingManager ringManager;
+    private boolean pendingTransitionRingInitialization;
     ZoneFeatureProvider zoneFeatureProvider;
     private TouchResponseTable touchResponseTable;
     ObjectRenderManager objectRenderManager;
@@ -349,6 +365,10 @@ public class LevelManager {
     }
 
     private void resetRewindBufferAfterLevelBoundary() {
+        if (executingSeamlessTransitionRequest != null
+                && executingSeamlessTransitionRequest.suppressLevelLoadRewindBoundary()) {
+            return;
+        }
         markRewindLevelLoadBoundary();
     }
 
@@ -629,6 +649,7 @@ public class LevelManager {
     public void initRings() {
         RingSpriteSheet ringSpriteSheet = level.getRingSpriteSheet();
         ringManager = new RingManager(level.getRings(), ringSpriteSheet, this, touchResponseTable, audioManager);
+        pendingTransitionRingInitialization = false;
         ringManager.reset(camera.getX());
         ringManager.ensurePatternsCached(graphicsManager, level.getPatternCount());
         com.openggf.game.session.GameplayModeContext gameplayMode =
@@ -1042,6 +1063,14 @@ public class LevelManager {
             playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
         }
         if (ringManager != null) {
+            if (pendingTransitionRingInitialization) {
+                // S3K Load_Rings follows ScreenEvents later in the same frame.
+                // The synchronous reload binds the Act 2 source first; only this
+                // canonical ring phase clears status and windows it from the
+                // post-transition camera position.
+                ringManager.reset(camera.getX());
+                pendingTransitionRingInitialization = false;
+            }
             ringManager.update(camera.getX(), playable, frameCounter + 1, false);
             // Per-ring spilled-ring physics now runs in the object exec loop
             // (LostRingObjectInstance); this only advances the shared decelerating
@@ -1389,6 +1418,16 @@ public class LevelManager {
 
     public void recomputeParallaxAfterRewindRestore() {
         frameRuntimeUpdater.recomputeParallaxAfterRewindRestore();
+    }
+
+    /**
+     * Recomputes only the current frame's deform/parallax output. This is used
+     * by synchronous native event tails that reload level data and must publish
+     * the replacement act's scroll tables before returning, without advancing
+     * animated-pattern or palette state a second time.
+     */
+    public void recomputeParallaxOnlyForCurrentFrame() {
+        frameRuntimeUpdater.recomputeParallaxOnlyForCurrentFrame();
     }
 
     /**
@@ -2889,21 +2928,33 @@ public class LevelManager {
         }
         Integer minX = request.postTransitionMinX();
         if (minX != null) {
-            cam.setMinX((short) (int) minX);
+            cam.setMinXCurrent((short) (int) minX);
         }
         Integer maxX = request.postTransitionMaxX();
         if (maxX != null) {
-            cam.setMaxX((short) (int) maxX);
+            cam.setMaxXCurrent((short) (int) maxX);
         }
         Integer minY = request.postTransitionMinY();
         if (minY != null) {
-            cam.setMinY((short) (int) minY);
+            cam.setMinYCurrent((short) (int) minY);
         }
         Integer maxY = request.postTransitionMaxY();
         if (maxY != null) {
-            cam.setMaxY((short) (int) maxY);
+            cam.setMaxYCurrent((short) (int) maxY);
         }
         Integer maxYTarget = request.postTransitionMaxYTarget();
+        Integer minXTarget = request.postTransitionMinXTarget();
+        if (minXTarget != null) {
+            cam.setMinXTarget((short) (int) minXTarget);
+        }
+        Integer maxXTarget = request.postTransitionMaxXTarget();
+        if (maxXTarget != null) {
+            cam.setMaxXTarget((short) (int) maxXTarget);
+        }
+        Integer minYTarget = request.postTransitionMinYTarget();
+        if (minYTarget != null) {
+            cam.setMinYTarget((short) (int) minYTarget);
+        }
         if (maxYTarget != null) {
             cam.setMaxYTarget((short) (int) maxYTarget);
         }
@@ -2915,7 +2966,7 @@ public class LevelManager {
      * The delta matches the player offset (player/camera/object offsets are the
      * same world shift for every S3K seamless act transition).
      */
-    void offsetCarriedObjectsForTransition(List<ObjectInstance> carried,
+    static void offsetCarriedObjectsForTransition(List<TransitionSstOccupant> carried,
                                                    SeamlessLevelTransitionRequest request) {
         if (request == null || carried == null || carried.isEmpty()) {
             return;
@@ -2925,8 +2976,25 @@ public class LevelManager {
         if (offsetX == 0 && offsetY == 0) {
             return;
         }
-        for (ObjectInstance instance : carried) {
-            if (instance != null && !instance.isDestroyed()) {
+        for (TransitionSstOccupant occupant : carried) {
+            ObjectInstance instance = occupant.identity();
+            if (instance == null || instance.isDestroyed()) {
+                continue;
+            }
+            if (request.objectOffsetPolicy()
+                    == SeamlessLevelTransitionRequest.ObjectOffsetPolicy.ROM_WORLD_OFFSET_RANGE) {
+                int slot = occupant.originalSlot();
+                if (request.shouldApplyRomWorldOffset(slot, true,
+                        instance.participatesInRomWorldTransitionOffset())) {
+                    if (!(instance instanceof RomWorldPositionedObject positioned)) {
+                        throw new IllegalStateException("SST slot " + slot + " reports render_flags bit 2 "
+                                + "without a native ROM position contract: "
+                                + instance.getClass().getName());
+                    }
+                    positioned.offsetNativePositionWordsPreserveSubpixel(offsetX, offsetY);
+                    positioned.afterRomWorldTransitionOffset(offsetX, offsetY);
+                }
+            } else {
                 instance.onCarriedAcrossSeamlessTransition(offsetX, offsetY);
             }
         }
@@ -2952,7 +3020,9 @@ public class LevelManager {
             }
             // Persistent insta-shield survives transitions but the ObjectManager was rebuilt
             // (rebuildManagersForActTransition creates a new one). Re-register + invalidate DPLC.
-            if (playable.getInstaShieldObject() != null) {
+            if (playable.getInstaShieldObject() != null
+                    && request.objectSurvivalPolicy()
+                    != SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST) {
                 playable.markInstaShieldForReregistration();
                 playable.getInstaShieldObject().invalidateDplcCache();
             }
@@ -2977,6 +3047,8 @@ public class LevelManager {
         }
         cam.setX((short) (cam.getX() + request.cameraOffsetX()));
         cam.setY((short) (cam.getY() + request.cameraOffsetY()));
+        cam.setXCopy((short) (cam.getXCopy() + request.cameraOffsetX()));
+        cam.setYCopy((short) (cam.getYCopy() + request.cameraOffsetY()));
     }
 
     /**
@@ -2990,8 +3062,12 @@ public class LevelManager {
      * reconstruct both managers so they reference {@code level.getObjects()}
      * and {@code level.getRings()} from the newly loaded act.
      */
-    void rebuildManagersForActTransition(Camera cam, List<ObjectInstance> persistentDynamicObjects) {
-        int cameraX = cam.getX();
+    void rebuildManagersForActTransition(Camera cam, List<TransitionSstOccupant> persistentDynamicObjects) {
+        rebuildManagersForActTransition(cam, persistentDynamicObjects, null, cam.getX());
+    }
+
+    void rebuildManagersForActTransition(Camera cam, List<TransitionSstOccupant> persistentDynamicObjects,
+                                         SeamlessLevelTransitionRequest request, int cameraX) {
 
         // Rebuild ObjectManager with the new act's object spawns
         objectManager = new ObjectManager(level.getObjects(),
@@ -3017,27 +3093,63 @@ public class LevelManager {
             objectManager.enablePermanentDestroyLatch();
         }
         collisionSystem.setObjectManager(objectManager);
-        objectManager.reset(cameraX);
+        if (request != null && request.objectSurvivalPolicy()
+                == SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST) {
+            objectManager.resetForSynchronousActTransition(cameraX);
+        } else {
+            objectManager.reset(cameraX);
+        }
 
         // Rebuild RingManager with the new act's ring spawns
         RingSpriteSheet ringSpriteSheet = level.getRingSpriteSheet();
         ringManager = new RingManager(level.getRings(), ringSpriteSheet, this, touchResponseTable, audioManager);
-        ringManager.reset(cameraX);
+        pendingTransitionRingInitialization = request != null
+                && request.deferRingInitializationToLevelUpdate();
+        if (!pendingTransitionRingInitialization) {
+            ringManager.reset(cameraX);
+        }
         ringManager.ensurePatternsCached(graphicsManager, level.getPatternCount());
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null) {
+            gameplayMode.registerRingAdapter(ringManager);
+        }
 
-        // Re-register player dynamic objects (shield, invincibility) that were
-        // orphaned when the old ObjectManager was replaced.
-        // ROM: these live in Dynamic_object_RAM which persists across act transitions.
-        reregisterPlayerDynamicObjects(cam.getFocusedSprite());
+        boolean allLiveSst = request != null
+                && request.objectSurvivalPolicy()
+                == SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST;
+        // Rebind every player to the replacement manager. Legacy transitions
+        // recreate their retained power-up entries; ALL_LIVE_SST restores the
+        // same captured identities at their exact slots below and must not
+        // allocate/register them twice first.
+        rebindPlayerDynamicObjects(cam.getFocusedSprite(), !allLiveSst);
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            reregisterPlayerDynamicObjects(sidekick);
+            rebindPlayerDynamicObjects(sidekick, !allLiveSst);
         }
         if (persistentDynamicObjects != null) {
-            for (ObjectInstance object : persistentDynamicObjects) {
+            for (TransitionSstOccupant occupant : persistentDynamicObjects) {
+                ObjectInstance object = occupant.identity();
                 if (object != null && !object.isDestroyed()) {
-                    objectManager.addDynamicObject(object);
+                    if (request != null
+                            && request.objectSurvivalPolicy()
+                            == SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST
+                            && object instanceof com.openggf.level.objects.AbstractObjectInstance aoi) {
+                        objectManager.addDynamicObjectAtSlot(object, occupant.originalSlot());
+                    } else {
+                        objectManager.addDynamicObject(object);
+                    }
                 }
             }
+        }
+        // ALL_LIVE_SST must restore captured identities before the persistent
+        // insta-shield reconciles with the replacement manager. The refresh
+        // then observes a carried shield in place, while still registering an
+        // owner-created shield that was not live when the snapshot was taken.
+        if (allLiveSst) {
+            if (cam.getFocusedSprite() instanceof AbstractPlayableSprite playable) {
+                playable.refreshPersistentInstaShieldRegistration();
+            }
+            spriteManager.getSidekicks().forEach(
+                    AbstractPlayableSprite::refreshPersistentInstaShieldRegistration);
         }
     }
 
@@ -3050,11 +3162,18 @@ public class LevelManager {
     }
 
     private void reregisterPlayerDynamicObjects(Sprite sprite) {
+        rebindPlayerDynamicObjects(sprite, true);
+    }
+
+    private void rebindPlayerDynamicObjects(Sprite sprite, boolean registerPowerUps) {
         if (!(sprite instanceof AbstractPlayableSprite playable)) {
             return;
         }
         // Re-inject spawner since ObjectManager was rebuilt
         playable.setPowerUpSpawner(new DefaultPowerUpSpawner(objectManager));
+        if (!registerPowerUps) {
+            return;
+        }
         PowerUpObject shield = playable.getShieldObject();
         if (shield != null && !shield.isDestroyed()) {
             playable.getPowerUpSpawner().registerObject(shield);
@@ -3097,6 +3216,12 @@ public class LevelManager {
         return checkpointCoordinator.state();
     }
 
+    /** ROM results-title handoff clears Last_star_post_hit and bonus return state. */
+    public void clearCheckpointAndBonusReturnForActTitle() {
+        checkpointCoordinator.clear();
+        transitions.clearBonusStageReturn();
+    }
+
     public CheckpointState.RewindState captureCheckpointStateForRewind() {
         return checkpointCoordinator.captureRewindState();
     }
@@ -3106,6 +3231,14 @@ public class LevelManager {
             return;
         }
         checkpointCoordinator.restoreRewindState(checkpointRewindState);
+    }
+
+    public boolean isTransitionRingInitializationPendingForRewind() {
+        return pendingTransitionRingInitialization;
+    }
+
+    public void restoreTransitionRingInitializationPendingForRewind(boolean pending) {
+        pendingTransitionRingInitialization = pending;
     }
 
     // ==================== Transition Coordinator Delegation ====================
@@ -3245,6 +3378,7 @@ public class LevelManager {
         gameModule = null;
         objectManager = null;
         ringManager = null;
+        pendingTransitionRingInitialization = false;
         zoneFeatureProvider = null;
         levelRenderer.resetState();
         objectRenderManager = null;
@@ -3384,6 +3518,26 @@ public class LevelManager {
      * which bypasses the profile system and matches ROM behavior.
      */
     public void applySeamlessTransition(SeamlessLevelTransitionRequest request) {
+        applySeamlessTransition(request, true);
+    }
+
+    /** Executes a ScreenEvents-owned reload before that same frame's tail work. */
+    public void applySynchronousScreenEventTransition(SeamlessLevelTransitionRequest request) {
+        // The owning ScreenEvents routine marks the post boundary only after
+        // its native post-Load_Level tail has completed. Marking here would
+        // expose a half-finished FBZ1BGE_Normal frame to LiveRewindManager.
+        applySeamlessTransition(request, false);
+    }
+
+    public void markSynchronousSeamlessTransitionBoundary() {
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null && gameplayMode.getLevelManager() == this) {
+            gameplayMode.markRewindBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
+        }
+    }
+
+    private void applySeamlessTransition(SeamlessLevelTransitionRequest request,
+                                         boolean advanceReloadFrameCounter) {
         if (request == null) {
             return;
         }
@@ -3393,31 +3547,12 @@ public class LevelManager {
             switch (request.type()) {
                 case MUTATE_ONLY -> applySeamlessMutation(request.mutationKey());
                 case RELOAD_SAME_LEVEL -> {
-                    SeamlessLevelTransitionRequest adjusted = SeamlessLevelTransitionRequest
-                            .builder(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
-                            .targetZoneAct(currentZone, currentAct)
-                            .deactivateLevelNow(request.deactivateLevelNow())
-                            .preserveMusic(request.preserveMusic())
-                            .preserveLevelGamestate(request.preserveLevelGamestate())
-                            .showInLevelTitleCard(request.showInLevelTitleCard())
-                            .forceAirOnStaleObjectSupportLoss(request.forceAirOnStaleObjectSupportLoss())
-                            .preserveOffsetCameraPosition(request.preserveOffsetCameraPosition())
-                            .postTransitionMinXIfPresent(request.postTransitionMinX())
-                            .postTransitionMaxXIfPresent(request.postTransitionMaxX())
-                            .postTransitionMinYIfPresent(request.postTransitionMinY())
-                            .postTransitionMaxYIfPresent(request.postTransitionMaxY())
-                            .postTransitionMaxYTargetIfPresent(request.postTransitionMaxYTarget())
-                            .playerOffset(request.playerOffsetX(), request.playerOffsetY())
-                            .cameraOffset(request.cameraOffsetX(), request.cameraOffsetY())
-                            .mutationKey(request.mutationKey())
-                            .musicOverrideId(request.musicOverrideId())
-                            .build();
-                    executeActTransition(adjusted);
-                    advanceFrameCounterAcrossSeamlessReload();
+                    executeActTransition(request.retargetedForReload(currentZone, currentAct));
+                    if (advanceReloadFrameCounter) advanceFrameCounterAcrossSeamlessReload();
                 }
                 case RELOAD_TARGET_LEVEL -> {
                     executeActTransition(request);
-                    advanceFrameCounterAcrossSeamlessReload();
+                    if (advanceReloadFrameCounter) advanceFrameCounterAcrossSeamlessReload();
                 }
             }
         } catch (IOException e) {

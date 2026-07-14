@@ -55,6 +55,7 @@ public class LevelResourcePlan {
     private final List<LoadOp> chunkOps;
     private final LoadOp primaryCollision;
     private final LoadOp secondaryCollision;
+    private final List<Integer> patternLoadCueSchedule;
 
     private LevelResourcePlan(Builder builder) {
         this.patternOps = Collections.unmodifiableList(new ArrayList<>(builder.patternOps));
@@ -62,6 +63,8 @@ public class LevelResourcePlan {
         this.chunkOps = Collections.unmodifiableList(new ArrayList<>(builder.chunkOps));
         this.primaryCollision = builder.primaryCollision;
         this.secondaryCollision = builder.secondaryCollision;
+        this.patternLoadCueSchedule = Collections.unmodifiableList(
+                new ArrayList<>(builder.patternLoadCueSchedule));
     }
 
     /**
@@ -100,6 +103,11 @@ public class LevelResourcePlan {
      */
     public LoadOp getSecondaryCollision() {
         return secondaryCollision;
+    }
+
+    /** Ordered PLC ids actually incorporated into this immutable load plan. */
+    public List<Integer> getPatternLoadCueSchedule() {
+        return patternLoadCueSchedule;
     }
 
     /**
@@ -158,6 +166,7 @@ public class LevelResourcePlan {
         private final List<LoadOp> chunkOps = new ArrayList<>();
         private LoadOp primaryCollision;
         private LoadOp secondaryCollision;
+        private final List<Integer> patternLoadCueSchedule = new ArrayList<>();
 
         private Builder() {
         }
@@ -167,6 +176,11 @@ public class LevelResourcePlan {
          */
         public Builder addPatternOp(LoadOp op) {
             patternOps.add(op);
+            return this;
+        }
+
+        public Builder recordPatternLoadCue(int plcId) {
+            patternLoadCueSchedule.add(plcId);
             return this;
         }
 

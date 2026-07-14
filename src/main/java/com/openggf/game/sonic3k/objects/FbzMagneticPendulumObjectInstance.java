@@ -1,12 +1,12 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectInstance;
@@ -15,6 +15,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.Tails;
 
 import java.util.List;
@@ -31,7 +32,6 @@ public final class FbzMagneticPendulumObjectInstance extends AbstractObjectInsta
     private int releaseCarryFrames;
     private boolean graphAllocationAttempted;
     private boolean orientationLoaded;
-    @RewindTransient(reason = "three-slot graph relinks through owner slot")
     private FbzMagneticPendulumEndpointObjectInstance endpoint;
 
     public FbzMagneticPendulumObjectInstance(ObjectSpawn spawn) {
@@ -52,7 +52,7 @@ public final class FbzMagneticPendulumObjectInstance extends AbstractObjectInsta
         if (releaseCarryFrames > 0 && main != null) {
             main.move(main.getXSpeed(), main.getYSpeed());
             if (--releaseCarryFrames == 0 && main instanceof AbstractPlayableSprite sprite) {
-                sprite.setObjectControlled(false);
+                ObjectControlState.none().applyTo(sprite);
                 sprite.setAir(false);
             }
         } else if (swinging) {
@@ -100,7 +100,7 @@ public final class FbzMagneticPendulumObjectInstance extends AbstractObjectInsta
         grabbed = false;
         int nativeX = player.getCentreX();
         int nativeY = player.getCentreY();
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setSpindash(false);
         player.setAir(true);
         player.setJumping(true);
@@ -170,7 +170,9 @@ public final class FbzMagneticPendulumObjectInstance extends AbstractObjectInsta
         if (reversedEndpoint) angularVelocity = -angularVelocity;
         swinging = true;
         grabbed = true;
-        if (main instanceof AbstractPlayableSprite sprite) sprite.setObjectControlled(true);
+        if (main instanceof AbstractPlayableSprite sprite) {
+            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
+        }
     }
 
     private void positionGrabbedPlayer(AbstractPlayableSprite player) {
@@ -209,7 +211,7 @@ public final class FbzMagneticPendulumObjectInstance extends AbstractObjectInsta
 
     void cascadeDelete() {
         if (endpoint != null) endpoint.requestCascadeDelete();
-        setDestroyed(true);
+        ObjectLifetimeOps.deleteNoRespawn(this);
     }
 
     static int signedByte(int value) { return (byte) value; }

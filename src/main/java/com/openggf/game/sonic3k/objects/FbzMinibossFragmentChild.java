@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -10,12 +9,14 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
 
 /** The five flickering fragments from {@code ChildObjDat_86B7A}. */
-final class FbzMinibossFragmentChild extends AbstractObjectInstance implements RewindRecreatable {
+final class FbzMinibossFragmentChild extends AbstractObjectInstance
+        implements RewindRecreatable, RomWorldPositionedObject {
     private static final int[] X_OFFSETS = {0, -0x10, 0x10, -0x18, 0x18};
     private static final int[][] VELOCITIES = {
             {0x100, -0x100},
@@ -25,7 +26,6 @@ final class FbzMinibossFragmentChild extends AbstractObjectInstance implements R
             {0x300, -0x200}
     };
 
-    @RewindTransient(reason = "structural root link restored from stable family slot")
     private FbzMinibossInstance boss;
     private int familySlot;
     private int role;
@@ -109,6 +109,14 @@ final class FbzMinibossFragmentChild extends AbstractObjectInstance implements R
     @Override
     public int getY() {
         return y;
+    }
+
+    @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        x = (x + offsetX) & 0xFFFF;
+        y = (y + offsetY) & 0xFFFF;
+        xFixed = (x << 16) | (xFixed & 0xFFFF);
+        yFixed = (y << 16) | (yFixed & 0xFFFF);
     }
 
     @Override
