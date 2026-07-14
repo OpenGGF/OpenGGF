@@ -1,5 +1,51 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S3K AIZ/HCZ intro animation-ownership milestone
+
+AIZ's plane intro now publishes the player's literal `mapping_frame=0` while
+its `$53` object-control byte suppresses `Animate_Sonic`; when the explosion
+releases the player after the player slot has already run, it publishes the
+raw Hurt byte without replacing that already displayed intro frame. The
+fresh CPU-sidekick slot likewise retains animation/mapping zero under
+`object_control=$83`: AIZ's dormant-marker release changes only the CPU
+routine, and the later catch-up trigger is the first owner that clears direct
+mapping control and selects Fly. Removing the engine-only forced-animation
+clear from ordinary established-follower placement also restores HCZ's
+`SpawnLevelMainSprites`-authored `$1B` intro animation. No zone, route, frame,
+trace hydration, or comparator tolerance was added
+(`docs/skdisasm/sonic3k.asm:8111-8148,22067-22076,26257-26272,
+26389-26397,26474-26534,135492-135495,135609-135619`).
+
+Authoritative locked-on S3K complete-run animation results before/after this
+milestone:
+
+```text
+AIZ complete: 257 groups at frame 0 -> 253 groups at frame 987
+HCZ complete: 673 groups at frame 0 -> 672 groups at frame 94
+```
+
+Regression gate at this milestone:
+
+- all 19 S2 animation routes and all 21 animation-capable S1 traces remain
+  green; the same eight legacy S1 credits traces reject their pre-v7 schema;
+- the other S3K animation counts do not regress: CNZ 172/2673, ICZ 1374
+  (improved from 1376), LBZ 375, MGZ 3923/4081, and MHZ 98; standalone AIZ
+  retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 43 passes / 15 existing
+  failures, with AIZ complete and HCZ complete still green;
+- the 39-test focused AIZ intro, HCZ intro, and sidekick catch-up suite passes;
+- the 13-test comparison-only invariant, hydration-default, and both rewind
+  coverage guard suite passes.
+
+Commands executed from the project root:
+
+```text
+mvn -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=animation -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay#replayMatchesTrace test
+mvn -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=animation -Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace test
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=animation "-Dtest=*TraceReplay" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=physics "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+```
+
 ### 2026-07-14 -- S2 CNZ2 boss-slot animation completion milestone
 
 CNZ2's final 247 animation groups came from Obj51 parent/child SST publication

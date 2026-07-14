@@ -1244,7 +1244,6 @@ public class SidekickCpuController {
         jumpingFlag = false;
         lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
         diagnosticS3kInteractWord = 0;
-        sidekick.setForcedAnimationId(-1);
         sidekick.setControlLocked(false);
         ObjectControlState.none().applyTo(sidekick);
         sidekick.setXSpeed((short) 0);
@@ -1307,7 +1306,6 @@ public class SidekickCpuController {
         jumpingFlag = false;
         lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
         diagnosticS3kInteractWord = 0;
-        sidekick.setForcedAnimationId(-1);
         sidekick.setControlLocked(false);
         ObjectControlState.none().applyTo(sidekick);
         sidekick.setXSpeed((short) 0);
@@ -1435,7 +1433,6 @@ public class SidekickCpuController {
         // Established followers do not re-run SpawnLevelMainSprites; preserve
         // ROM-visible interact globals until the next TailsCPU_UpdateObjInteract
         // / sub_13EFC pass refreshes them.
-        sidekick.setForcedAnimationId(-1);
         sidekick.setControlLocked(false);
         ObjectControlState.none().applyTo(sidekick);
         bootstrapPreludePlacementApplied = true;
@@ -1489,7 +1486,14 @@ public class SidekickCpuController {
         sidekick.setDoubleJumpFlag(0);
         sidekick.setControlLocked(true);
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
-        sidekick.setForcedAnimationId(flyAnimId);
+        // loc_13A10 writes object_control=$83 after sub_13ECA without writing
+        // anim or mapping_frame. Bit 1 then skips Animate_Tails, retaining the
+        // zeroed fresh-slot display state until the later routine-2 catch-up
+        // trigger (sonic3k.asm:26389-26397,26257-26272).
+        sidekick.setForcedAnimationId(-1);
+        sidekick.setAnimationId(0);
+        sidekick.setMappingFrame(0);
+        sidekick.setObjectMappingFrameControl(true);
         lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
         diagnosticS3kInteractWord = 0;
     }
@@ -3726,6 +3730,7 @@ public class SidekickCpuController {
         sidekick.setPushing(false);
         sidekick.setOnObject(false);
         sidekick.setMoveLockTimer(0);
+        clearRespawnAnimationState();
         sidekick.setForcedAnimationId(flyAnimId);
         sidekick.setControlLocked(true);
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
@@ -4948,8 +4953,9 @@ public class SidekickCpuController {
         sidekick.setAir(true);
         sidekick.setControlLocked(true);
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
-        clearRespawnAnimationState();
-        sidekick.setForcedAnimationId(flyAnimId);
+        // The level-event write changes only Tails_CPU_routine. Preserve the
+        // dormant marker's object_control=$83 animation suppression until
+        // Tails_Catch_Up_Flying reaches loc_13B50 and writes $81.
         return true;
     }
 

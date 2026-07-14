@@ -1165,6 +1165,52 @@ entry (`docs/skdisasm/sonic3k.asm:179032-179047,179136-179139`).
 
 ---
 
+## P33 -- Object-controlled players retain object-owned mapping frames
+
+**Symptom.** A player or CPU sidekick has the right position, velocity, raw
+animation byte, and object-control state, but displays an ordinary player
+animation frame instead of the literal mapping frame written by an intro,
+cutscene, or capture object. A later routine handoff can also replace the
+displayed frame one object slot too early.
+
+**Root cause.** S3K tests `object_control` bit 1 before calling
+`Animate_Sonic`/`Animate_Tails`. An object that writes a literal
+`mapping_frame` together with a bit-1 control byte therefore owns the displayed
+frame until that bit is cleared. Separately, an object running after the player
+slot can write a new raw `anim` byte on release without retroactively running
+the animator or changing the frame already published that tick. Engine forced
+animation helpers that clear or recompute mapping state during placement,
+release, or CPU routine changes collapse those native ownership boundaries.
+
+**What to check.** For any object-controlled player sequence:
+
+1. Record the exact `object_control`, `anim`, and `mapping_frame` writes; do not
+   infer one from another.
+2. If bit 1 is set, preserve the literal mapping frame and suppress the normal
+   player animator until the ROM clears bit 1.
+3. Keep CPU-routine changes separate from animation ownership. A routine write
+   that does not write `anim`, `mapping_frame`, or `object_control` must retain
+   all three.
+4. Respect slot order on release: a post-player object may publish the next raw
+   animation byte while the old displayed frame remains visible until the next
+   player dispatch.
+5. Do not clear an event-authored animation merely because a sidekick is being
+   installed as an established follower; verify whether the native init path
+   actually writes that byte.
+
+**ROM citation.** `Sonic_Control` and `Tails_Control` skip their animators for
+bit 1 (`docs/skdisasm/sonic3k.asm:22067-22076,26257-26272`). The AIZ plane
+intro writes player `mapping_frame=0` with `$53`, later publishes Hurt after
+the player slot, and its CPU-sidekick dormant marker writes `$83` without an
+animation write; Fly begins only at the catch-up trigger
+(`docs/skdisasm/sonic3k.asm:26389-26397,26474-26534,
+135492-135495,135609-135619`). HCZ level-start setup writes `$1B` before the
+ordinary sidekick init path (`docs/skdisasm/sonic3k.asm:8111-8148`).
+
+**Originating commit.** `<pending: S3K AIZ/HCZ intro animation milestone>`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
