@@ -13,7 +13,9 @@ import com.openggf.graphics.GLCommandable;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.TilemapGpuRenderer;
 import com.openggf.level.LevelManager;
+import com.openggf.level.LevelTilemapManager;
 import com.openggf.level.ParallaxManager;
+import com.openggf.level.Pattern;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.render.BackgroundRenderer;
 import java.util.ArrayDeque;
@@ -25,6 +27,15 @@ import java.util.Arrays;
  * replay must consume the same full HScroll table as the main background pass;
  * flattening it to one scanline reintroduces the opening wall during normal
  * HCZ2 parallax.
+ *
+ * <p>The replay must also sample exactly like the main tile-pass FBO plus the
+ * parallax compositing pass: the compositor subtracts the BG window base
+ * ({@code ScrollMidpoint = -bgTilemapBaseX}) and wraps at the FBO render width
+ * (the 512px plane period). The replay reproduces that by biasing each
+ * scanline's BG scroll word by the window base and forwarding the period as the
+ * shader's VDP wrap width — otherwise a BG tilemap wider or offset relative to
+ * the plane period (HCZ2's 2560px layout, or the chase window following the
+ * wall BG camera) samples the wrong 512px strip in per-band blocks.
  */
 final class HczBgHighPriorityTileRenderer {
     private static final ArrayDeque<OverlayCommand> COMMAND_POOL = new ArrayDeque<>();
@@ -75,12 +86,33 @@ final class HczBgHighPriorityTileRenderer {
         float waterlineScreenY = (float) (waterLevel - camera.getYWithShake());
         int uwPalId = useUnderwaterPalette ? underwaterPaletteId : 0;
 
+        LevelTilemapManager tilemapManager = levelManager.getTilemapManager();
+        int bgScrollBias = 0;
+        int planePeriodWrapTiles = 0;
+        if (tilemapManager != null) {
+            bgScrollBias = tilemapManager.getBgTilemapBaseX();
+            planePeriodWrapTiles = computePlanePeriodWrapTiles(screenW,
+                    tilemapManager.getBackgroundTilemapWidthTiles(),
+                    parallaxManager.getBgPeriodWidth());
+        }
+
         OverlayCommand command = COMMAND_POOL.pollFirst();
         if (command == null) command = new OverlayCommand();
         graphicsManager.registerCommand(command.configure(renderer, backgroundRenderer, screenW, screenH,
-                hScrollData, bgWorldOffsetY, graphicsManager.getPatternAtlasWidth(),
+                hScrollData, bgScrollBias, planePeriodWrapTiles, bgWorldOffsetY,
+                graphicsManager.getPatternAtlasWidth(),
                 graphicsManager.getPatternAtlasHeight(), atlasId, paletteId, uwPalId,
                 useUnderwaterPalette, waterlineScreenY));
+    }
+
+    /**
+     * Mirrors the main tile pass's FBO render width: the BG plane period capped
+     * by the tilemap's own width, but never narrower than the screen.
+     */
+    static int computePlanePeriodWrapTiles(int screenWidthPx, int tilemapWidthTiles, int bgPeriodWidthPx) {
+        int tilemapWidthPx = tilemapWidthTiles * Pattern.PATTERN_WIDTH;
+        int periodPx = Math.min(tilemapWidthPx, bgPeriodWidthPx);
+        return Math.max(screenWidthPx, periodPx) / Pattern.PATTERN_WIDTH;
     }
 
     static OverlayCommand acquireCaptured(TilemapGpuRenderer renderer, int[] viewport, int marker) {
@@ -89,7 +121,7 @@ final class HczBgHighPriorityTileRenderer {
         int[] hScroll = new int[224];
         hScroll[0] = marker;
         return command.configureCaptured(renderer, new BackgroundRenderer(), 320, 224,
-                hScroll, 0, 1, 1, 2, 3, 0, false, 0, viewport);
+                hScroll, 0, 0, 0, 1, 1, 2, 3, 0, false, 0, viewport);
     }
 
     static final class OverlayCommand implements GLCommandable {
@@ -98,11 +130,12 @@ final class HczBgHighPriorityTileRenderer {
         private TilemapGpuRenderer renderer;
         private BackgroundRenderer backgroundRenderer;
         private int screenW, screenH, atlasWidth, atlasHeight, atlasId, paletteId, underwaterPaletteId;
-        private float offsetY, waterlineY;
+        private float offsetY, waterlineY, planePeriodWrapTiles;
         private boolean underwater, leased;
 
         OverlayCommand configure(TilemapGpuRenderer renderer, BackgroundRenderer backgroundRenderer,
-                int screenW, int screenH, int[] hScroll, float offsetY, int atlasWidth, int atlasHeight,
+                int screenW, int screenH, int[] hScroll, int bgScrollBias, int planePeriodWrapTiles,
+                float offsetY, int atlasWidth, int atlasHeight,
                 int atlasId, int paletteId, int underwaterPaletteId,
                 boolean underwater, float waterlineY) {
             try {
@@ -111,13 +144,15 @@ final class HczBgHighPriorityTileRenderer {
                 COMMAND_POOL.addFirst(this);
                 throw failure;
             }
-            return configureCaptured(renderer, backgroundRenderer, screenW, screenH, hScroll, offsetY,
+            return configureCaptured(renderer, backgroundRenderer, screenW, screenH, hScroll,
+                    bgScrollBias, planePeriodWrapTiles, offsetY,
                     atlasWidth, atlasHeight, atlasId, paletteId, underwaterPaletteId,
                     underwater, waterlineY, viewport);
         }
 
         OverlayCommand configureCaptured(TilemapGpuRenderer renderer, BackgroundRenderer backgroundRenderer,
-                int screenW, int screenH, int[] hScroll, float offsetY, int atlasWidth, int atlasHeight,
+                int screenW, int screenH, int[] hScroll, int bgScrollBias, int planePeriodWrapTiles,
+                float offsetY, int atlasWidth, int atlasHeight,
                 int atlasId, int paletteId, int underwaterPaletteId,
                 boolean underwater, float waterlineY, int[] capturedViewport) {
             this.renderer = renderer; this.backgroundRenderer = backgroundRenderer;
@@ -125,10 +160,14 @@ final class HczBgHighPriorityTileRenderer {
             this.offsetY = offsetY; this.atlasId = atlasId;
             this.atlasWidth = atlasWidth; this.atlasHeight = atlasHeight;
             this.paletteId = paletteId; this.underwaterPaletteId = underwaterPaletteId;
+            this.planePeriodWrapTiles = planePeriodWrapTiles;
             System.arraycopy(capturedViewport, 0, viewport, 0, 4);
             int copyLength = Math.min(this.hScroll.length, hScroll != null ? hScroll.length : 0);
-            if (copyLength > 0) {
-                System.arraycopy(hScroll, 0, this.hScroll, 0, copyLength);
+            for (int i = 0; i < copyLength; i++) {
+                // Bias the BG (low) scroll word into window-local coordinates,
+                // mirroring the compositing pass's ScrollMidpoint = -bgTilemapBaseX.
+                int packed = hScroll[i];
+                this.hScroll[i] = (packed & 0xFFFF0000) | ((packed + bgScrollBias) & 0xFFFF);
             }
             Arrays.fill(this.hScroll, copyLength, this.hScroll.length, 0);
             this.underwater = underwater; this.waterlineY = waterlineY; leased = true;
@@ -140,7 +179,7 @@ final class HczBgHighPriorityTileRenderer {
                 if (renderer == null || backgroundRenderer == null) return;
                 backgroundRenderer.uploadHScroll(hScroll);
                 renderer.enablePerLineScroll(backgroundRenderer.getHScrollTextureId(),
-                        hScroll.length, 0.0f, 0.0f, 0.0f);
+                        hScroll.length, planePeriodWrapTiles, 0.0f, 0.0f);
                 renderer.render(TilemapGpuRenderer.Layer.BACKGROUND, screenW, screenH,
                         viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, offsetY,
                         atlasWidth, atlasHeight, atlasId,
