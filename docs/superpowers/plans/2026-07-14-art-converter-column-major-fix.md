@@ -23,9 +23,9 @@ Add this test and helper beside the existing exact-palette conversion test:
 @Test
 void emitsMultiTilePiecePatternsInGenesisColumnMajorOrder() throws Exception {
     int[] colors = {
-            0xff110000, 0xff220000,
-            0xff330000, 0xff440000,
-            0xff550000, 0xff660000
+            0xff240000, 0xff490000,
+            0xff6d0000, 0xff920000,
+            0xffb60000, 0xffdb0000
     };
     BufferedImage image = new BufferedImage(16, 24, BufferedImage.TYPE_INT_ARGB);
     for (int tileY = 0; tileY < 3; tileY++) {
@@ -58,7 +58,7 @@ private static String columnMajorManifest() {
     return """
             formatVersion: 1
             paletteLine: 0
-            palette: ["#000000", "#110000", "#220000", "#330000", "#440000", "#550000", "#660000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000"]
+            palette: ["#000000", "#240000", "#490000", "#6D0000", "#920000", "#B60000", "#DB0000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000"]
             frames:
               - delay: 5
                 pieces:

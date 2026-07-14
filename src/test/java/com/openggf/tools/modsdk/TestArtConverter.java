@@ -39,6 +39,40 @@ class TestArtConverter {
     }
 
     @Test
+    void emitsMultiTilePiecePatternsInGenesisColumnMajorOrder() throws Exception {
+        int[] colors = {
+                0xff240000, 0xff490000,
+                0xff6d0000, 0xff920000,
+                0xffb60000, 0xffdb0000
+        };
+        BufferedImage image = new BufferedImage(16, 24, BufferedImage.TYPE_INT_ARGB);
+        for (int tileY = 0; tileY < 3; tileY++) {
+            for (int tileX = 0; tileX < 2; tileX++) {
+                int color = colors[tileY * 2 + tileX];
+                for (int y = 0; y < 8; y++) {
+                    for (int x = 0; x < 8; x++) {
+                        image.setRGB(tileX * 8 + x, tileY * 8 + y, color);
+                    }
+                }
+            }
+        }
+        Path png = temp.resolve("column-major.png");
+        ImageIO.write(image, "png", png.toFile());
+        Path yaml = temp.resolve("column-major.yaml");
+        Files.writeString(yaml, columnMajorManifest());
+        Path output = temp.resolve("column-major.ggfsheet");
+
+        new ArtConverter().convert(png, yaml, output);
+        BakedSheetReader.BakedSheet sheet = BakedSheetReader.read(Files.readAllBytes(output));
+
+        assertEquals(6, sheet.patterns().length);
+        assertArrayEquals(new int[]{1, 3, 5, 2, 4, 6},
+                java.util.Arrays.stream(sheet.patterns())
+                        .mapToInt(pattern -> pattern.getPixel(0, 0))
+                        .toArray());
+    }
+
+    @Test
     void rejectsNonAlignedImageOutOfBoundsPieceAndReportsEveryOffPalettePixel() throws Exception {
         Path yaml = temp.resolve("sheet.yaml");
         Files.writeString(yaml, manifest(0, 0, 8, 8));
@@ -171,5 +205,26 @@ class TestArtConverter {
                         paletteIndex: 0
                         priority: false
                 """.formatted(sourceX, sourceY, width, height);
+    }
+
+    private static String columnMajorManifest() {
+        return """
+                formatVersion: 1
+                paletteLine: 0
+                palette: ["#000000", "#240000", "#490000", "#6D0000", "#920000", "#B60000", "#DB0000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000"]
+                frames:
+                  - delay: 5
+                    pieces:
+                      - sourceX: 0
+                        sourceY: 0
+                        widthPixels: 16
+                        heightPixels: 24
+                        xOffset: 0
+                        yOffset: 0
+                        hFlip: false
+                        vFlip: false
+                        paletteIndex: 0
+                        priority: false
+                """;
     }
 }
