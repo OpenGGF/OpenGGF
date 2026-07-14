@@ -1,5 +1,52 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S2 character-specific walk/run cadence milestone
+
+All 19 ordinary Sonic 2 animation traces initially diverged on Sonic's first
+walk mapping: after frame 0 published `$0F`, the engine held it through frame 1
+while the ROM immediately published `$10`. `SAnim_WalkRun` writes
+`mapping_frame` from the current `anim_frame` before its timer decrement and
+expiry advance (`docs/s2disasm/s2.asm:38494-38505`). Tails is deliberately
+different: `TAnim_WalkRunZoom` gates on its live timer before selecting and
+publishing a mapping (`docs/s2disasm/s2.asm:41330-41396`).
+
+The shared animator now models this as a per-character
+`ScriptedVelocityAnimationProfile` property. S2 Sonic and all S3K playable
+profiles use publish-first cadence; S1 Sonic and S2 Tails retain timer-first
+cadence. Translation and profile-copy paths preserve the property. Focused
+tests cover both orders, the exact publish-then-expiry sequence, the S2
+Sonic/Tails ROM profile split, and the S3K playable profiles.
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+19 traces before: 19 failed; common first frontier frame 1,
+  player_mapping_frame expected=$10 actual=$0F
+19 traces after:  19 failed; every frame-1 Sonic frontier cleared
+EHZ1: 924 errors at frame 1 -> 438 errors at frame 1031
+DEZ1: 911 errors -> 42 errors
+MCZ1: 471 errors -> 15 errors
+SCZ1: 359 errors -> 22 errors
+WFZ1: 1101 errors -> 38 errors
+```
+
+The first remaining EHZ1 mismatch is Tails' separate high-speed locomotion
+tier (`expected mapping=$38, actual=$32`); it is not part of the cadence rule.
+No route, zone, frame, trace hydration, or comparison tolerance was added.
+
+Regression gate at this milestone:
+
+- All 21 S1 traces whose CSV fixtures contain v7 animation fields remain green;
+  the eight historical credits fixtures reject animation-only verification
+  because they intentionally lack those fields.
+- Against a detached clean-HEAD baseline, all nine runnable S3K animation
+  traces reduced their error counts (for example AIZ complete-run
+  `3382 -> 286`, HCZ `2370 -> 674`, and MHZ `457 -> 98`); the standalone AIZ
+  fixture retains its identical pre-existing BK2 input-alignment failure.
+- The full 58-method cross-game physics replay sweep has the same 17 existing
+  failures as clean HEAD; all S1 physics traces remain green and no physics
+  frontier moved.
+
 ### 2026-07-14 -- S1 delayed slope orientation fixed; 29-trace fleet remains green
 
 The new mapping-frame verifier correctly kept S1's high-angle Walk/Run mapping

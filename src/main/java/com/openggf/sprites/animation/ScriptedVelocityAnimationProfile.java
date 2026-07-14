@@ -46,6 +46,9 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     // S2 Super Run uses compact slope layout (lsr.b #1,d0 = d0/2), while S3K Super Run
     // uses standard run spacing (add.b d0,d0 = d0*2). ROM: s2.asm:38159 vs s3.asm:22323.
     private boolean compactSuperRunSlope;
+    // Some native character handlers publish the current walk/run mapping
+    // before advancing their frame timer; others gate the mapping write first.
+    private boolean walkRunPublishesFrameBeforeTimerAdvance;
     // Tumble/rotation frame base: S2 = 0x5F (s2.asm:38216), S3K = 0x31 (sonic3k.asm:24955).
     private int tumbleFrameBase = 0x5F;
 
@@ -100,6 +103,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     public ScriptedVelocityAnimationProfile setFallbackFrame(int fallbackFrame) { this.fallbackFrame = fallbackFrame; return this; }
     public ScriptedVelocityAnimationProfile setAnglePreAdjust(boolean anglePreAdjust) { this.anglePreAdjust = anglePreAdjust; return this; }
     public ScriptedVelocityAnimationProfile setCompactSuperRunSlope(boolean compactSuperRunSlope) { this.compactSuperRunSlope = compactSuperRunSlope; return this; }
+    public ScriptedVelocityAnimationProfile setWalkRunPublishesFrameBeforeTimerAdvance(boolean value) { this.walkRunPublishesFrameBeforeTimerAdvance = value; return this; }
     public ScriptedVelocityAnimationProfile setTumbleFrameBase(int tumbleFrameBase) { this.tumbleFrameBase = tumbleFrameBase; return this; }
 
     @Override
@@ -521,6 +525,10 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         return compactSuperRunSlope;
     }
 
+    public boolean isWalkRunPublishesFrameBeforeTimerAdvance() {
+        return walkRunPublishesFrameBeforeTimerAdvance;
+    }
+
     public int getTumbleFrameBase() {
         return tumbleFrameBase;
     }
@@ -553,6 +561,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         copy.fallbackFrame = this.fallbackFrame;
         copy.anglePreAdjust = this.anglePreAdjust;
         copy.compactSuperRunSlope = this.compactSuperRunSlope;
+        copy.walkRunPublishesFrameBeforeTimerAdvance = this.walkRunPublishesFrameBeforeTimerAdvance;
         copy.tumbleFrameBase = this.tumbleFrameBase;
         return copy;
     }

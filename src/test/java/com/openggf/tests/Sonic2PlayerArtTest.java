@@ -8,11 +8,13 @@ import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.Sonic2PlayerArt;
 import com.openggf.level.Pattern;
 import com.openggf.sprites.art.SpriteArtSet;
+import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_2)
 public class Sonic2PlayerArtTest {
@@ -35,6 +37,8 @@ public class Sonic2PlayerArtTest {
         assertEquals(Sonic2Constants.ART_UNC_SONIC_SIZE / Pattern.PATTERN_SIZE_IN_ROM, sonic.artTiles().length);
         assertFalse(sonic.mappingFrames().isEmpty());
         assertEquals(Sonic2Constants.SONIC_ANIM_SCRIPT_COUNT, sonic.animationSet().getScriptCount());
+        assertTrue(((ScriptedVelocityAnimationProfile) sonic.animationProfile())
+                .isWalkRunPublishesFrameBeforeTimerAdvance());
     }
 
     @Test
@@ -46,7 +50,8 @@ public class Sonic2PlayerArtTest {
         assertEquals(tails.mappingFrames().size(), tails.dplcFrames().size());
         assertEquals(Sonic2Constants.ART_UNC_TAILS_SIZE / Pattern.PATTERN_SIZE_IN_ROM, tails.artTiles().length);
         assertFalse(tails.mappingFrames().isEmpty());
+        assertFalse(((ScriptedVelocityAnimationProfile) tails.animationProfile())
+                .isWalkRunPublishesFrameBeforeTimerAdvance());
     }
 }
-
 

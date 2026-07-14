@@ -40,6 +40,8 @@ public final class AnimationTranslator {
         // Copy non-animation properties
         result.setAnglePreAdjust(donorProfile.isAnglePreAdjust());
         result.setCompactSuperRunSlope(donorProfile.isCompactSuperRunSlope());
+        result.setWalkRunPublishesFrameBeforeTimerAdvance(
+                donorProfile.isWalkRunPublishesFrameBeforeTimerAdvance());
         result.setWalkSpeedThreshold(donorProfile.getWalkSpeedThreshold());
         result.setRunSpeedThreshold(donorProfile.getRunSpeedThreshold());
         result.setRunFramesUseWalkAnimationId(donorProfile.isRunFramesUseWalkAnimationId());

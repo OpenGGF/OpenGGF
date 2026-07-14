@@ -131,7 +131,8 @@ public class Sonic2PlayerArt {
             // Obj02 (Tails) has no impatient-wait blink/get-up interrupt.
             ((ScriptedVelocityAnimationProfile) animationProfile)
                     .setBlinkAnimId(Sonic2AnimationIds.BLINK)
-                    .setGetUpAnimId(Sonic2AnimationIds.GET_UP);
+                    .setGetUpAnimId(Sonic2AnimationIds.GET_UP)
+                    .setWalkRunPublishesFrameBeforeTimerAdvance(true);
         }
 
         return new SpriteArtSet(

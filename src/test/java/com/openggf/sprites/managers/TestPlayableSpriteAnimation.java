@@ -388,8 +388,89 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
-    public void slowSteepSlopeTurnaroundKeepsMappingFrameUntilWalkTickExpires() {
+    public void s2WalkPublishesAdvancedFrameOnTickAfterTimerExpiry() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
+        ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile())
+                .setWalkRunPublishesFrameBeforeTimerAdvance(true);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0xFF,
+                List.of(0x0F, 0x10, 0x11), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(1, new SpriteAnimationScript(0xFF,
+                List.of(0x1E), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0);
+        sprite.setMovementInputActive(true);
+        sprite.setGSpeed((short) 0x000C);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0x0F, sprite.getMappingFrame());
+        assertEquals(1, sprite.getAnimationFrameIndex(),
+                "SAnim_WalkRun advances anim_frame after the expired timer");
+        assertEquals(7, sprite.getAnimationTick());
+
+        sprite.getAnimationManager().update(1);
+
+        assertEquals(0x10, sprite.getMappingFrame(),
+                "S2 reads the advanced anim_frame before the live timer returns");
+        assertEquals(1, sprite.getAnimationFrameIndex());
+        assertEquals(6, sprite.getAnimationTick());
+    }
+
+    @Test
+    public void s2TailsWalkKeepsTimerFirstMappingCadence() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0xFF,
+                List.of(0x0E, 0x0F), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(1, new SpriteAnimationScript(0xFF,
+                List.of(0x20), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0);
+        sprite.setMovementInputActive(true);
+        sprite.setGSpeed((short) 0x000C);
+
+        sprite.getAnimationManager().update(0);
+        sprite.getAnimationManager().update(1);
+
+        assertEquals(0x0E, sprite.getMappingFrame(),
+                "S2 TAnim_WalkRunZoom gates mapping selection on its live timer");
+        assertEquals(1, sprite.getAnimationFrameIndex());
+        assertEquals(6, sprite.getAnimationTick());
+    }
+
+    @Test
+    public void s2WalkPublishesCurrentFrameBeforeAdvancingExpiredTimer() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
+        ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile())
+                .setWalkRunPublishesFrameBeforeTimerAdvance(true);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0xFF,
+                List.of(0x0F, 0x10, 0x11), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(1, new SpriteAnimationScript(0xFF,
+                List.of(0x1E), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0);
+        sprite.setMovementInputActive(true);
+        sprite.setGSpeed((short) 0x000C);
+
+        sprite.getAnimationManager().update(0);
+        sprite.setAnimationFrameIndex(1);
+        sprite.setAnimationTick(0);
+        sprite.getAnimationManager().update(1);
+
+        assertEquals(0x10, sprite.getMappingFrame(),
+                "SAnim_WalkRun publishes the current anim_frame before expiry processing");
+        assertEquals(2, sprite.getAnimationFrameIndex(),
+                "the expired timer advances anim_frame only after publication");
+        assertEquals(7, sprite.getAnimationTick());
+    }
+
+    @Test
+    public void s3kSlowSteepSlopeTurnaroundRefreshesOrientationBeforeWalkTickExpires() {
         TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
+        ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile())
+                .setWalkRunPublishesFrameBeforeTimerAdvance(true);
         SpriteAnimationSet animations = new SpriteAnimationSet();
         SpriteAnimationScript walk = new SpriteAnimationScript(0xFF,
                 List.of(10, 11, 12, 13), SpriteAnimationEndAction.LOOP, 0);
@@ -411,10 +492,10 @@ public class TestPlayableSpriteAnimation {
         sprite.setDirection(Direction.RIGHT);
         sprite.getAnimationManager().update(1);
 
-        assertEquals(22, sprite.getMappingFrame(),
-                "The ROM delay path returns without rewriting the displayed slope mapping frame");
-        assertFalse(sprite.getRenderVFlip(),
-                "Facing still updates at frame start, but the delayed slope-frame selection must not run");
+        assertEquals(15, sprite.getMappingFrame(),
+                "S3K republishes the advanced frame from the newly mirrored slope bank");
+        assertTrue(sprite.getRenderVFlip(),
+                "S3K refreshes walk/run mapping orientation before its timer gate");
     }
 
     @Test

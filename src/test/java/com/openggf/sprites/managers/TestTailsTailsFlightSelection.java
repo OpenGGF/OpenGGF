@@ -3,6 +3,7 @@ package com.openggf.sprites.managers;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic3k.Sonic3kPlayerArt;
 import com.openggf.sprites.animation.SpriteAnimationScript;
+import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 import com.openggf.tests.TestEnvironment;
@@ -74,6 +75,19 @@ class TestTailsTailsFlightSelection {
                         "DPLC frame out of range for animation 0x" + Integer.toHexString(animationId));
                 assertNotNull(tails.dplcFrames().get(frame));
             }
+        }
+    }
+
+    @Test
+    void s3kPlayableProfilesPublishWalkMappingBeforeTimerAdvance() throws Exception {
+        Sonic3kPlayerArt loader = new Sonic3kPlayerArt(
+                RomByteReader.fromRom(TestEnvironment.currentRom()));
+
+        for (SpriteArtSet art : new SpriteArtSet[]{
+                loader.loadSonic(), loader.loadTails(), loader.loadKnuckles()
+        }) {
+            assertTrue(((ScriptedVelocityAnimationProfile) art.animationProfile())
+                    .isWalkRunPublishesFrameBeforeTimerAdvance());
         }
     }
 }

@@ -125,6 +125,7 @@ public class Sonic3kPlayerArt {
                 .setWalkSpeedThreshold(0x40)
                 .setRunSpeedThreshold(0x600)
                 .setFallbackFrame(0)
+                .setWalkRunPublishesFrameBeforeTimerAdvance(true)
                 .setAnglePreAdjust(true)       // sonic3k.asm:24816 — subq.b #1,d0
                 .setTumbleFrameBase(0x31);     // sonic3k.asm:24955 — addi.b #$31,d0
 
@@ -199,6 +200,7 @@ public class Sonic3kPlayerArt {
                 .setWalkSpeedThreshold(0x40)
                 .setRunSpeedThreshold(0x600)
                 .setFallbackFrame(0)
+                .setWalkRunPublishesFrameBeforeTimerAdvance(true)
                 .setAnglePreAdjust(true)       // sonic3k.asm:29358 — Tails uses same subq.b #1,d0
                 .setTumbleFrameBase(0x31);     // sonic3k.asm:24955 — shared Anim_Tumble
 
@@ -265,6 +267,7 @@ public class Sonic3kPlayerArt {
                 .setWalkSpeedThreshold(0x40)
                 .setRunSpeedThreshold(0x600)
                 .setFallbackFrame(0)
+                .setWalkRunPublishesFrameBeforeTimerAdvance(true)
                 .setAnglePreAdjust(true)       // S3K shared subq.b #1,d0
                 .setTumbleFrameBase(0x31);     // S3K shared Anim_Tumble
 
@@ -388,6 +391,7 @@ public class Sonic3kPlayerArt {
                 .setWalkSpeedThreshold(0x40)
                 .setRunSpeedThreshold(0x600)
                 .setFallbackFrame(0)
+                .setWalkRunPublishesFrameBeforeTimerAdvance(true)
                 .setAnglePreAdjust(true)       // sonic3k.asm:24816 — same subq.b #1,d0
                 .setTumbleFrameBase(0x31);     // sonic3k.asm:24955 — shared Anim_Tumble
 

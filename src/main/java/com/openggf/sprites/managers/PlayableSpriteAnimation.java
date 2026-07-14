@@ -200,23 +200,19 @@ public class PlayableSpriteAnimation {
             applyDefaultFacingRenderFlips();
         }
 
-        // Sonic_Animate decrements obTimeFrame before it reads the script delay
-        // or dispatches any special handler. Its non-negative branch is a bare
-        // return in S1, so speed-script selection, slope offsets, obFrame, and
-        // the paired obRender flip bits all stay latched until the timer expires
-        // (_incObj/01 Sonic.asm:2253-2279). S2/S3K walk/run orientation is
-        // selected before their timer gate (s2.asm:38449-38513;
-        // sonic3k.asm:24804-24882), so the S1-only latch rule is disabled for
-        // both later games.
+        // Native walk/run handlers do not all put their timer gate in the same
+        // place. S1 Sonic and S2 Tails return before selecting a new mapping;
+        // S2 Sonic and the S3K characters publish the current mapping first.
+        // Keep that ordering on the per-character animation profile.
         int remaining = sprite.getAnimationTick() - 1;
-        if (remaining >= 0) {
+        int delayOrFlag = script.delay() & 0xFF;
+        if (remaining >= 0 && !walkRunPublishesFrameBeforeTimerAdvance(delayOrFlag)) {
             sprite.setAnimationTick(remaining);
             return;
         }
 
-        int delayOrFlag = script.delay() & 0xFF;
         if (delayOrFlag >= 0x80) {
-            updateSpecialScript(delayOrFlag, script);
+            updateSpecialScript(delayOrFlag, script, remaining);
             return;
         }
 
@@ -231,21 +227,28 @@ public class PlayableSpriteAnimation {
                 && sprite.getAnimationTick() > 0;
     }
 
+    private boolean walkRunPublishesFrameBeforeTimerAdvance(int delayOrFlag) {
+        SpriteAnimationProfile profile = sprite.getAnimationProfile();
+        return delayOrFlag == 0xFF
+                && profile instanceof ScriptedVelocityAnimationProfile velocityProfile
+                && velocityProfile.isWalkRunPublishesFrameBeforeTimerAdvance();
+    }
+
     private void applyDefaultFacingRenderFlips() {
         boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
         sprite.setRenderFlips(facingLeft, false);
     }
 
-    private void updateSpecialScript(int startFlag, SpriteAnimationScript script) {
+    private void updateSpecialScript(int startFlag, SpriteAnimationScript script, int remaining) {
         switch (startFlag & 0xFF) {
-            case 0xFF -> updateWalkRun(script);
+            case 0xFF -> updateWalkRun(script, remaining);
             case 0xFE -> updateRoll(script);
             case 0xFD -> updatePush(script);
             default -> updateScriptWithDelay(script, 0, 0);
         }
     }
 
-    private void updateWalkRun(SpriteAnimationScript baseScript) {
+    private void updateWalkRun(SpriteAnimationScript baseScript, int remaining) {
         int flipAngle = sprite.getFlipAngle();
         if (flipAngle != 0) {
             updateTumble(flipAngle);
@@ -278,7 +281,63 @@ public class PlayableSpriteAnimation {
 
         int slopeOffset = resolveSlopeOffset(active);
         int delay = computeSpeedDelay(speed, 0x800, 8);
+        if (walkRunPublishesFrameBeforeTimerAdvance(baseScript.delay() & 0xFF)) {
+            updateWalkRunBeforeTimerAdvance(active, delay, slopeOffset, remaining);
+            return;
+        }
         updateScriptWithDelay(active, delay, slopeOffset);
+    }
+
+    /**
+     * S2 Sonic and the S3K character walk/run handlers publish
+     * {@code mapping_frame} from the current
+     * {@code anim_frame} before decrementing the timer. Only an expired timer
+     * advances {@code anim_frame}, so the newly selected mapping becomes
+     * visible on the following object tick. S1 gates the mapping write before
+     * this point and therefore keeps the already displayed frame latched.
+     *
+     * <p>ROM: S2 Sonic's {@code SAnim_WalkRun} writes the mapping at
+     * s2.asm:38494-38495, then decrements/advances at 38496-38505. S2 Tails
+     * instead gates the whole special handler first at 41330-41336, then
+     * publishes at 41386-41396. S3K's {@code Animate_Sonic} publishes at
+     * sonic3k.asm:24859-24868 before its 24869-24879 timer/advance. S1 returns
+     * on the timer gate before selecting a walk/run mapping
+     * ({@code _incObj/01 Sonic.asm:2145-2149,2198-2209}).
+     */
+    private void updateWalkRunBeforeTimerAdvance(
+            SpriteAnimationScript script,
+            int delay,
+            int frameOffset,
+            int remaining
+    ) {
+        if (script == null || script.frames().isEmpty()) {
+            return;
+        }
+
+        int frameIndex = sprite.getAnimationFrameIndex();
+        if (frameIndex < 0) {
+            frameIndex = 0;
+            sprite.setAnimationFrameIndex(0);
+        }
+        if (frameIndex >= script.frames().size()) {
+            if (!processEndAction(script)) {
+                return;
+            }
+            frameIndex = sprite.getAnimationFrameIndex();
+            if (frameIndex < 0 || frameIndex >= script.frames().size()) {
+                frameIndex = 0;
+                sprite.setAnimationFrameIndex(0);
+            }
+        }
+
+        sprite.setMappingFrame(script.frames().get(frameIndex) + frameOffset);
+        if (remaining >= 0) {
+            sprite.setAnimationTick(remaining);
+            return;
+        }
+
+        sprite.setAnimationTick(delay);
+        sprite.setAnimationFrameIndex(frameIndex + 1);
     }
 
     private void updateTumble(int flipAngle) {
