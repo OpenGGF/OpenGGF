@@ -2809,6 +2809,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 setXSpeed((short) 0);
                 setYSpeed((short) -0x700);
                 setHighPriority(true);
+                // Kill_Character writes anim=Death in the kill call itself.
+                // Preserve the mapping/frame/timer selected earlier this frame;
+                // Animate_* consumes the new raw byte on the next player pass.
+                int deathAnimationId = resolveAnimationId(CanonicalAnimation.DEATH);
+                if (deathAnimationId >= 0) {
+                        setAnimationId(deathAnimationId);
+                }
                 GameSound sound = resolveDamageSound(cause);
                 if (sound != null) {
                         currentAudioManager().playSfx(sound);

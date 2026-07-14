@@ -155,6 +155,17 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void nutExposesNativeWidthForObjectEdgeBalance() {
+        NutObjectInstance nut = new NutObjectInstance(
+                new ObjectSpawn(0x18C0, 0x04F4, Sonic2ObjectIds.NUT, 0, 0, false, 0),
+                "Nut");
+
+        assertEquals(0x20, nut.getBalanceWidthPixels(),
+                "Obj69 writes width_pixels=$20; player balance must not use the 16px sprite default "
+                        + "or SolidObject's wider d1=$2B collision extent");
+    }
+
+    @Test
     void nutOffscreenSidekickSolidObjectGateReturnsNoContact() {
         NutObjectInstance nut = new NutObjectInstance(
                 new ObjectSpawn(0x16C0, 0x04E6, Sonic2ObjectIds.NUT, 0, 0, false, 0),

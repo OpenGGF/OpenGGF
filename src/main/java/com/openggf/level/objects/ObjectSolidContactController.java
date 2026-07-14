@@ -4539,6 +4539,15 @@ final class ObjectSolidContactController {
                 && provider.landingPreservesRolling(player);
         if (!preservesRolling) {
             clearRollingOnLanding(player);
+            if (playableSprite != null) {
+                // Sonic_ResetOnFloor_Part3 clears the full tumble state after
+                // ordinary platform landings. RideObject-only captures opt out
+                // through landingPreservesRolling because they never call it.
+                playableSprite.setFlipAngle(0);
+                playableSprite.setFlipTurned(false);
+                playableSprite.setFlipsRemaining(0);
+                playableSprite.setLookDelayCounter((short) 0);
+            }
         }
         player.setGroundMode(GroundMode.GROUND);
 

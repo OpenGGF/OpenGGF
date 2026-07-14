@@ -230,6 +230,7 @@ class TestCollisionSystemAirLanding {
         sprite.setAir(true);
         sprite.setGroundMode(GroundMode.RIGHTWALL);
         sprite.setRolling(true);
+        sprite.setAnimationId(0x10);
         sprite.setCentreXPreserveSubpixel((short) 0x18C2);
         sprite.setCentreY((short) 0x0967);
 
@@ -245,6 +246,8 @@ class TestCollisionSystemAirLanding {
                 "S3K Player_TouchFloor clears roll and adjusts y_pos, not x_pos, on wall landings");
         assertFalse(sprite.getRolling(), "Wall landing should still clear rolling");
         assertFalse(sprite.getAir(), "Wall landing should clear airborne state");
+        assertEquals(0, sprite.getAnimationId(),
+                "Sonic_ResetOnFloor publishes Walk on an angled ceiling/wall landing");
     }
 
     private static AbstractPlayableSprite newTestSprite() {

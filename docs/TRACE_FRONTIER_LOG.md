@@ -1,5 +1,46 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S2 native landing and release-state animation milestone
+
+Several remaining Sonic 2 clusters shared a missing `ResetOnFloor` boundary.
+Ordinary solid-object landings now clear the complete flip/tumble state, and
+angled wall/ceiling terrain landings publish Walk through a typed S2 movement
+rule. The latter remains disabled for S1, whose angled path can retain Spring,
+and S3K keeps its separate raw Push byte authoritative. The animator mirrors
+the native `anim` to `prev_anim` comparison for S1/S2's Walk-special push
+handler even when an object-owned landing makes the write on a resolver-null
+frame (`docs/s2disasm/s2.asm:38049-38152,38627-38649`).
+
+The other native owners in this milestone are similarly state-driven:
+Grabber's escape tail publishes Walk, `Kill_Character` publishes Death without
+replacing the mapping already drawn that frame, and MTZ Obj69 exposes its ROM
+`width_pixels=$20` for Balance independently from the `$2B` solid collision
+width (`docs/s2disasm/s2.asm:56382-56435`). No trace data, comparator tolerance,
+or zone/route/frame exception was added.
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 2381 -> 417 grouped errors
+Green: DEZ1, EHZ1, ARZ1, MCZ1, MTZ1, SCZ1
+CPZ2: 589 -> 9             CNZ1: 52 -> 4
+MTZ2: 35 -> 4              MTZ3: 1224 -> 24
+OOZ1: 34 -> 2              CNZ2: 294 -> 251
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- S3K gains no mismatching animation frame: CNZ complete-run improves from
+  2747 to 2673 grouped errors, while HCZ complete-run fixes one mismatching
+  frame (3874 -> 3873 unique frames) even though the split ranges raise its
+  grouped count from 672 to 673;
+- the full 58-method cross-game physics sweep improves from 41 passes / 17
+  existing failures to 42 / 16 by making MTZ3 physics green, with no new
+  failure;
+- the trace comparison-only invariant and hydration-default guards remain
+  green.
+
 ### 2026-07-14 -- S2 native object, landing, and tumble animation owners milestone
 
 The remaining broad Sonic 2 divergence clusters came from engine state being

@@ -1,5 +1,6 @@
 package com.openggf.physics;
 
+import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameServices;
 import com.openggf.game.GroundMode;
 import com.openggf.game.rules.CollisionRules;
@@ -1073,6 +1074,18 @@ public class CollisionSystem {
 
         if (!(sprite.getRolling() && sprite.getPinballMode() && preservePinballMode)) {
             sprite.setPinballMode(false);
+        }
+        if (!sprite.getPinballMode()
+                && rules != null
+                && rules.angledLandingPublishesWalk()) {
+            // Sonic_ResetOnFloor publishes Walk before clearing the airborne
+            // state on every accepted S2 terrain landing, including the angled
+            // ceiling/wall path (s2.asm:38049-38052, 38123-38127). S1's angled
+            // path does not own that write and can retain Spring.
+            int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+            if (walkAnimationId >= 0) {
+                sprite.setAnimationId(walkAnimationId);
+            }
         }
         sprite.setAir(false);
         sprite.setPushing(false);

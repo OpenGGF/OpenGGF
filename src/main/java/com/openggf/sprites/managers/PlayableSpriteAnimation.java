@@ -187,6 +187,19 @@ public class PlayableSpriteAnimation {
             return;
         }
         if (sprite.getAnimationId() != lastAnimationId) {
+            SpriteAnimationProfile profile = sprite.getAnimationProfile();
+            if (pushUsesWalkSpecialHandler()
+                    && profile instanceof ScriptedVelocityAnimationProfile velocityProfile) {
+                // Animate_Sonic/Tails stores the raw anim byte into prev_anim
+                // even when the movement resolver is intentionally null (for
+                // example an object-landing Walk write on an airborne-start
+                // frame). S1/S2 expose push inside that same Walk handler; S3K
+                // owns a distinct raw Push byte and keeps the resolver tracker
+                // authoritative. Keep the walk-special tracker in step with
+                // the native comparison without collapsing S3K's raw state.
+                lastGroundMovementAnimId = groundMoveAnimByte(
+                        velocityProfile, sprite.getAnimationId());
+            }
             resetScriptState();
         }
         var script = animationSet.getScript(sprite.getAnimationId());

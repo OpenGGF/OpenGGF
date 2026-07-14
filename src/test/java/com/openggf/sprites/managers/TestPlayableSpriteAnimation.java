@@ -89,6 +89,26 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void objectPublishedLandingAnimUpdatesNativePreviousByte() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
+        sprite.setObjectControlled(true);
+        sprite.setAnimationId(2);
+        sprite.getAnimationManager().update(0);
+
+        sprite.setAnimationId(0);
+        sprite.getAnimationManager().update(1);
+
+        sprite.setObjectControlled(false);
+        sprite.setMovementInputActive(true);
+        sprite.setPushing(true);
+        sprite.getAnimationManager().update(2);
+
+        assertTrue(sprite.getPushing(),
+                "the landing-frame Walk store must become prev_anim before the next push frame");
+        assertEquals(0, sprite.getAnimationManager().captureRewindState().lastGroundMovementAnimId());
+    }
+
+    @Test
     public void s2SonicPushWaitsForWalkTimerBeforePublishingPushMapping() {
         TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
         ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile())

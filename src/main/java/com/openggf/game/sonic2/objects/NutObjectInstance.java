@@ -161,6 +161,17 @@ public class NutObjectInstance extends AbstractObjectInstance
     public int getY() {
         return y;
     }
+
+    @Override
+    public int getBalanceWidthPixels() {
+        // Obj69_Init writes width_pixels=$20 (docs/s2disasm/s2.asm:53981-53991).
+        // Sonic_Move/Tails_Move use that SST byte for object-edge balance, not
+        // SolidObject's wider d1=$2B collision extent (s2.asm:36285,39359,
+        // 53996-54013). Keeping those two widths distinct prevents an interior
+        // rider from being classified as balancing at the nut's sprite edge.
+        return WIDTH_PIXELS;
+    }
+
     @Override
     public SolidObjectParams getSolidParams() {
         return new SolidObjectParams(HALF_WIDTH, Y_RADIUS, GROUND_HALF_HEIGHT);

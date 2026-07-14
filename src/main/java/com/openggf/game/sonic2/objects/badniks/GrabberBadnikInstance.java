@@ -512,6 +512,11 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
         if (grabbedPlayer != null) {
             ObjectControlState.none().applyTo(grabbedPlayer);
             grabbedPlayer.setAir(true);
+            if (escaped) {
+                // loc_390FA publishes Walk while releasing object control;
+                // velocity is deliberately left untouched.
+                grabbedPlayer.setAnimationId(Sonic2AnimationIds.WALK);
+            }
             // Per disassembly: player just becomes airborne and falls naturally
             // No velocity change on escape
             grabbedPlayer = null;

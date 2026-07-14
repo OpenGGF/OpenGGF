@@ -3003,6 +3003,19 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void crushDeathPublishesRawDeathWithoutReplacingCurrentMapping() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_2);
+                mockSprite.setAnimationId(Sonic2AnimationIds.WALK.id());
+                mockSprite.setMappingFrame(0x10);
+
+                assertTrue(mockSprite.applyCrushDeath());
+
+                assertEquals(Sonic2AnimationIds.DEATH.id(), mockSprite.getAnimationId());
+                assertEquals(0x10, mockSprite.getMappingFrame(),
+                                "same-frame Kill_Character leaves the already-rendered mapping latched");
+        }
+
+        @Test
         public void s2OrdinaryObjectRiderKeepsObjectOwnedWaitCadence() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);
                 mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
