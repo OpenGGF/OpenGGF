@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- AIZ2 results-owner control-restore milestone
+
+Branch `feature/ai-trace-animation-verification`, after the fire-bridge
+roll-cadence milestone. Once `Obj_LevelResults` clears `_unkFAA8`, the retained
+AIZ2 egg-capsule owner now publishes both native `Restore_PlayerControl`
+animation words: `anim=Wait`, `prev_anim=Wait`, and zeroed animation
+frame/timer, alongside the existing object-control release. The write remains
+in the capsule's post-player object dispatch and does not alter the displayed
+Victory mapping on the release frame. No route, trace-frame, hydration, or
+comparison-tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 166696-166703
+(`loc_7D078`) and 180361-180370 (`Restore_PlayerControl` /
+`Restore_PlayerControl2`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- All 34 `TestAiz2BossEndSequenceObjects` tests pass, including the delayed
+  capsule-owner animation-word publication for both native players.
+- AIZ complete-run advances from frame 25590 / 18 grouped animation errors to
+  frame 25592 / 17; the dual-player Victory-to-Wait release is exact.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  HCZ and every previously green route retain their status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
 ### 2026-07-14 -- AIZ fire-bridge roll-cadence milestone
 
 Branch `feature/ai-trace-animation-verification`, after the battleship

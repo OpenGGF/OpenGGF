@@ -701,6 +701,40 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void aizCapsulePublishesRestorePlayerControlAnimationWordAfterResultsExitDelay() {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+
+        GameStateManager gameState = new GameStateManager();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setAir(true);
+        sonic.setObjectControlled(true);
+        sonic.setAnimationId(Sonic3kAnimationIds.VICTORY);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setAir(true);
+        tails.setObjectControlled(true);
+        tails.setAnimationId(Sonic3kAnimationIds.VICTORY);
+
+        Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49E9, 0x0163);
+        capsule.setServices(new QueryOnlyServices(camera, sonic, List.of(tails))
+                .withGameState(gameState));
+        Aiz2BossEndSequenceState.scheduleTailsControlRelease(0);
+
+        capsule.update(0, sonic);
+
+        assertFalse(sonic.getAir());
+        assertFalse(tails.getAir());
+        assertFalse(sonic.isObjectControlled());
+        assertFalse(tails.isObjectControlled());
+        assertEquals(Sonic3kAnimationIds.WAIT.id(), sonic.getAnimationId());
+        assertEquals(Sonic3kAnimationIds.WAIT.id(), tails.getAnimationId());
+        assertEquals(0, sonic.getAnimationFrameIndex());
+        assertEquals(0, sonic.getAnimationTick());
+        assertEquals(0, tails.getAnimationFrameIndex());
+        assertEquals(0, tails.getAnimationTick());
+    }
+
+    @Test
     void aizCapsuleButtonRequiresSonicRollAnimationBeforeParentTrigger() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();

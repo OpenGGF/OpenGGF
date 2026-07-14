@@ -8,6 +8,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -113,6 +114,28 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
         advanceTailsEndingPoseCheck(true);
     }
 
+    private void restoreNativePlayerControls() {
+        for (var candidate : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (!(candidate instanceof AbstractPlayableSprite player)) {
+                continue;
+            }
+            // ROM loc_7D078 calls Restore_PlayerControl/2 from this capsule
+            // owner after both player animation slots have run. The routine
+            // writes anim and prev_anim together as $0505, then clears the
+            // animation frame/timer while leaving the displayed mapping intact
+            // for this frame (sonic3k.asm:166696-166703,180361-180370).
+            ObjectControlState.none().applyTo(player);
+            player.setAir(false);
+            player.setForcedAnimationId(-1);
+            player.setAnimationId(Sonic3kAnimationIds.WAIT);
+            player.getAnimationManager().publishPreviousAnimationId(
+                    Sonic3kAnimationIds.WAIT.id());
+            player.setAnimationFrameIndex(0);
+            player.setAnimationTick(0);
+        }
+    }
+
     private void advanceTailsEndingPoseCheck(boolean force) {
         if (tailsEndingPoseApplied) {
             return;
@@ -145,12 +168,12 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     }
 
     private void releaseTailsControlNow() {
+        restoreNativePlayerControls();
         if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick) {
             if (sidekick.getCpuController() != null) {
                 sidekick.getCpuController().setController2SignedLocked(false);
                 sidekick.getCpuController().mirrorRawController2LogicalForEndingPose();
             }
-            ObjectControlState.none().applyTo(sidekick);
             sidekick.setControlLocked(false);
         }
         tailsEndingPoseObjectControlLocked = false;
