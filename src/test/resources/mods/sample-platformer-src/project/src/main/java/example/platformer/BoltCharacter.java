@@ -4,6 +4,7 @@ import com.openggf.audio.StreamedMusicPort;
 import com.openggf.game.CharacterDefinition;
 import com.openggf.game.CharacterKey;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.PlayableSheetMaterializer.MaterializedArt;
 import com.openggf.physics.Direction;
 import com.openggf.physics.GroundSensor;
@@ -26,11 +27,14 @@ public final class BoltCharacter extends AbstractPlayableSprite {
     private final CharacterKey key;
 
     /**
-     * Double-jump latch. Non-final so it round-trips through rewind capture/restore --
-     * a rewind seek across an in-air double jump must land back on the correct latch
-     * state rather than silently re-granting (or permanently denying) the ability.
-     * Reset to {@code false} on landing in {@link #draw()} (see that method's javadoc
-     * for why the per-frame {@code draw()} hook is the landing-reset seam).
+     * Double-jump latch. Rides the production rewind path via {@link #captureSubclassRewindState()}
+     * / {@link #restoreSubclassRewindState(PerObjectRewindSnapshot.PlayableSubclassRewindExtra)},
+     * which pack this field into a {@link BoltRewindExtra} on every keyframe capture and
+     * restore it (or reset to {@code false} when the snapshot carries no payload) on every
+     * rewind restore -- a rewind seek across an in-air double jump must land back on the
+     * correct latch state rather than silently re-granting (or permanently denying) the
+     * ability. Reset to {@code false} on landing in {@link #draw()} (see that method's
+     * javadoc for why the per-frame {@code draw()} hook is the landing-reset seam).
      */
     private boolean doubleJumpUsed;
 
@@ -85,6 +89,25 @@ public final class BoltCharacter extends AbstractPlayableSprite {
             getSpriteRenderer().drawFrame(getMappingFrame(), getRenderCentreX(), getRenderCentreY(),
                     getRenderHFlip(), getRenderVFlip());
         }
+    }
+
+    /** Immutable payload carrying the double-jump latch through a rewind keyframe. */
+    private record BoltRewindExtra(boolean doubleJumpUsed)
+            implements PerObjectRewindSnapshot.PlayableSubclassRewindExtra {
+    }
+
+    @Override protected PerObjectRewindSnapshot.PlayableSubclassRewindExtra captureSubclassRewindState() {
+        return new BoltRewindExtra(doubleJumpUsed);
+    }
+
+    /**
+     * Tolerates {@code null} (no subclass payload in the snapshot -- e.g. a pre-Task-3
+     * snapshot shape) by resetting the latch to its fresh default of {@code false} rather
+     * than assuming a payload is always present, per the hook's null contract.
+     */
+    @Override
+    protected void restoreSubclassRewindState(PerObjectRewindSnapshot.PlayableSubclassRewindExtra extra) {
+        doubleJumpUsed = extra instanceof BoltRewindExtra bolt && bolt.doubleJumpUsed();
     }
 
     @Override protected void defineSpeeds() {

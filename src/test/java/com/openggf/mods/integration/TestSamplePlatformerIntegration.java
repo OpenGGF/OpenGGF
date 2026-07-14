@@ -22,9 +22,6 @@ import com.openggf.game.MusicReference;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.PhysicsProfile;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.FieldKey;
-import com.openggf.game.rewind.GenericFieldCapturer;
-import com.openggf.game.rewind.snapshot.GenericObjectSnapshot;
 import com.openggf.io.ModInputLimits;
 import com.openggf.level.Level;
 import com.openggf.level.ModLevel;
@@ -391,16 +388,18 @@ class TestSamplePlatformerIntegration {
      * {@code currentGameState().resetItemBonus()}, which requires an active
      * {@code GameplayModeContext} that this construction-only slice of the test does not set up.
      *
-     * <p>The rewind assertion drives {@link GenericFieldCapturer#restore(Object, GenericObjectSnapshot)}
-     * -- the real production write path -- against a snapshot scoped to just the {@code doubleJumpUsed}
-     * key, per the task brief's "GenericFieldCapturer directly at test level is acceptable" allowance.
-     * {@link GenericFieldCapturer#capture(Object)} cannot be used unscoped here: it walks the full
-     * {@code AbstractPlayableSprite}/{@code AbstractSprite} field hierarchy and throws on pre-existing,
-     * unrelated structural fields (e.g. {@code AbstractSprite#ceilingSensors}, a {@code Sensor[]} with
-     * no {@code @RewindTransient} annotation) -- an engine-wide gap orthogonal to this task's scope.
-     * This is also not an assertion about the production {@code AbstractPlayableSprite#captureRewindState()}
-     * pipeline, which is a closed, hand-enumerated record and does not currently capture
-     * mod-subclass-declared fields at all.
+     * <p>The rewind assertion now drives the real production round-trip -- {@code BoltCharacter}
+     * has migrated onto Mod API 2.2.0's {@code captureSubclassRewindState()} /
+     * {@code restoreSubclassRewindState(...)} hooks (see {@code BoltCharacter}), so
+     * {@link AbstractPlayableSprite#captureRewindState()} now packs the armed latch into a
+     * mod-declared {@link PerObjectRewindSnapshot.PlayableSubclassRewindExtra} payload, and
+     * {@link AbstractPlayableSprite#restoreRewindState(PerObjectRewindSnapshot)} unpacks it back
+     * onto the live field just like any other engine-owned scalar -- no test-level
+     * {@code GenericFieldCapturer} scaffold is needed any more. The live latch is cleared through
+     * the real landing-reset seam ({@code draw()}) between capture and restore so the restore
+     * assertion can only pass if the value actually round-tripped through the snapshot, and a
+     * final behavioral assertion confirms the restored latch still gates a fresh mid-air press
+     * rather than merely matching on the reflected field.
      */
     private void exerciseDoubleJumpAndRewindLatch(AbstractPlayableSprite player) throws Exception {
         setAirField(player, true);
@@ -411,22 +410,38 @@ class TestSamplePlatformerIntegration {
         assertFalse(invokeAbilityActivate(player), "A second mid-air press before landing must be latched");
         assertEquals((short) 0x0111, player.getYSpeed(), "A latched press must not re-apply the impulse");
 
-        setAirField(player, false);
-        player.draw();
-        setAirField(player, true);
-        assertTrue(invokeAbilityActivate(player), "After the landing-reset seam the ability must be available again");
-        assertEquals((short) -0x600, player.getYSpeed(), "The re-armed ability must apply the ROM impulse again");
-
         Field doubleJumpUsedField = player.getClass().getDeclaredField("doubleJumpUsed");
         doubleJumpUsedField.setAccessible(true);
         assertEquals(true, doubleJumpUsedField.get(player), "Sanity: latch must be set after the ability just fired");
 
-        GenericObjectSnapshot snapshot = new GenericObjectSnapshot(player.getClass(),
-                List.of(FieldKey.of(doubleJumpUsedField)), new Object[] { true });
-        doubleJumpUsedField.set(player, false);
-        GenericFieldCapturer.restore(player, snapshot);
+        // Capture a keyframe while the latch is armed -- the same production write path every
+        // gameplay rewind keyframe goes through.
+        PerObjectRewindSnapshot snapshot = player.captureRewindState();
+        PerObjectRewindSnapshot.PlayableSubclassRewindExtra subclassExtra =
+                snapshot.playerExtra().subclassExtra();
+        assertNotNull(subclassExtra,
+                "capture must produce a subclass payload for a character overriding captureSubclassRewindState()");
+        assertEquals("BoltRewindExtra", subclassExtra.getClass().getSimpleName(),
+                "the captured payload must be Bolt's own mod-declared record, resolved through the mod "
+                + "classloader (the concrete type cannot be referenced directly from this engine-side test)");
+
+        // Clear the live latch through the real landing-reset seam so the restore assertion
+        // below can only pass if the value actually round-tripped through the snapshot rather
+        // than observing incidental unchanged live state.
+        setAirField(player, false);
+        player.draw();
+        assertEquals(false, doubleJumpUsedField.get(player),
+                "Sanity: the landing-reset seam must have cleared the live latch before restore");
+
+        player.restoreRewindState(snapshot);
         assertEquals(true, doubleJumpUsedField.get(player),
                 "Rewind restore must bring the double-jump latch back rather than leaving the stale live value");
+
+        // Behavioral assertion: the restored latch must actually gate gameplay, not just the
+        // reflected field -- a fresh mid-air press right after restore must still be denied.
+        setAirField(player, true);
+        assertFalse(invokeAbilityActivate(player),
+                "After restore the ability must remain latched, matching the captured mid-jump state");
     }
 
     private static void setAirField(AbstractPlayableSprite player, boolean value) throws Exception {
