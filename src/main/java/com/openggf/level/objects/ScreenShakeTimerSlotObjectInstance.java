@@ -30,7 +30,7 @@ public final class ScreenShakeTimerSlotObjectInstance extends AbstractObjectInst
             remainingFrames--;
         }
         if (remainingFrames == 0) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
         }
     }
 

@@ -37,6 +37,10 @@ public interface RewindCodec {
         return false;
     }
 
+    default boolean requiresIdentityTable() {
+        return false;
+    }
+
     final class OpaqueIndex {
         private int value;
 

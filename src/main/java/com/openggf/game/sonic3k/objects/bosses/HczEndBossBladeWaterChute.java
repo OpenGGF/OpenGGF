@@ -124,6 +124,7 @@ public class HczEndBossBladeWaterChute extends AbstractBossChild implements Rewi
 
     private int state;
     private int waitTimer;               // staggered start delay
+    private boolean initialized;
 
     // Animate_RawMultiDelay emulation
     private int animFrameIndex;          // ROM anim_frame byte offset into animScript
@@ -198,6 +199,14 @@ public class HczEndBossBladeWaterChute extends AbstractBossChild implements Rewi
 
         if (animComplete) {
             setDestroyed(true);
+            return;
+        }
+
+        // loc_6B4C4 only performs SetUp_ObjAttributes/sub_6B96C and installs
+        // Obj_Wait. That wait routine cannot dispatch until the child's next
+        // SST pass, even when subtype 0 gives it a zero timer.
+        if (!initialized) {
+            initialized = true;
             return;
         }
 

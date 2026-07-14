@@ -1306,21 +1306,20 @@ public class GraphicsManager {
 		ensureUnderwaterPaletteSourceScratch(totalLines);
 		boolean hasDerivedDonorRow = false;
 		for (int row = 0; row < totalLines; row++) {
-			Palette source = palettes != null && row < palettes.length ? palettes[row] : null;
+			PaletteView source = palettes != null && row < palettes.length ? palettes[row] : null;
 			byte rowCase = UNDERWATER_ROW_DIRECT;
 			if (source == null) {
 				rowCase = UNDERWATER_ROW_ABSENT;
 				if (normalLine0 != null && underwaterLine0 != null) {
-					for (RenderContext ctx : RenderContext.getDonorContexts()) {
-						int base = ctx.getPaletteLineBase();
-						if (row >= base && row < base + RenderContext.LINES_PER_CONTEXT) {
-							source = ctx.getPalette(row - base);
-							if (source != null) {
-								rowCase = UNDERWATER_ROW_DERIVED;
-								hasDerivedDonorRow = true;
-							}
-							break;
-						}
+					source = RenderContext.getUnderwaterPaletteForEffectiveLine(row);
+					if (source != null) {
+						rowCase = UNDERWATER_ROW_DIRECT;
+					} else {
+						source = getRenderContextPaletteForEffectiveLine(row);
+					}
+					if (source != null && rowCase != UNDERWATER_ROW_DIRECT) {
+						rowCase = UNDERWATER_ROW_DERIVED;
+						hasDerivedDonorRow = true;
 					}
 				}
 			}
@@ -1340,16 +1339,15 @@ public class GraphicsManager {
 					? underwaterPaletteRowCases[sourceIndex]
 					: (sourceIndex == totalLines ? UNDERWATER_BASE_NORMAL : UNDERWATER_BASE_SHIFTED);
 			writeUnderwaterContentKeyByte(sourceTag);
-			Palette source = (Palette) underwaterPaletteRowSources[sourceIndex];
+			PaletteView source = (PaletteView) underwaterPaletteRowSources[sourceIndex];
 			if (source == null) {
 				continue;
 			}
 			int rgbOffset = sourceIndex * 16 * 3;
 			for (int colorIndex = 0; colorIndex < 16; colorIndex++) {
-				Palette.Color color = source.getColor(colorIndex);
-				byte r = color.r;
-				byte g = color.g;
-				byte b = color.b;
+				byte r = source.red(colorIndex);
+				byte g = source.green(colorIndex);
+				byte b = source.blue(colorIndex);
 				underwaterPaletteSourceRgb[rgbOffset++] = r;
 				underwaterPaletteSourceRgb[rgbOffset++] = g;
 				underwaterPaletteSourceRgb[rgbOffset++] = b;
@@ -1441,6 +1439,25 @@ public class GraphicsManager {
 		underwaterPaletteContentKeyLength = pendingUnderwaterPaletteContentKeyLength;
 		underwaterPaletteContentKeyValid = true;
 		return underwaterPaletteTextureId;
+	}
+
+	private PaletteView getRenderContextPaletteForEffectiveLine(int effectiveLine) {
+		for (RenderContext context : RenderContext.getDonorContexts()) {
+			PaletteView palette = contextPaletteForEffectiveLine(context, effectiveLine);
+			if (palette != null) return palette;
+		}
+		for (RenderContext context : RenderContext.getSidekickContexts()) {
+			PaletteView palette = contextPaletteForEffectiveLine(context, effectiveLine);
+			if (palette != null) return palette;
+		}
+		return null;
+	}
+
+	private PaletteView contextPaletteForEffectiveLine(RenderContext context, int effectiveLine) {
+		int logicalLine = effectiveLine - context.getPaletteLineBase();
+		return logicalLine >= 0 && logicalLine < RenderContext.LINES_PER_CONTEXT
+				? context.getPalette(logicalLine)
+				: null;
 	}
 
 	private void ensureUnderwaterPaletteSourceScratch(int totalLines) {

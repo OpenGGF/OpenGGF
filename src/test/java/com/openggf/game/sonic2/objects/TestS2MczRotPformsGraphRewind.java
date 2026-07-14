@@ -17,10 +17,14 @@ import com.openggf.level.objects.StubObjectServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.lang.reflect.Field;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -33,6 +37,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestS2MczRotPformsGraphRewind {
     private static final ObjectSpawn PARENT_SPAWN =
             new ObjectSpawn(0x180, 0x180, Sonic2ObjectIds.MCZ_ROT_PFORMS, 0x18, 0, false, 0, 74);
+
+    private static Stream<Arguments> actCases() {
+        return Stream.of(
+                Arguments.of("MCZ1", 0x980, 0x580, 0x98F, 0xA01, 0xA05),
+                Arguments.of("MCZ2", 0xEA0, 0x5A0, 0xE60, 0xF01, 0xF07));
+    }
 
     @BeforeEach
     void initHeadless() {
@@ -104,6 +114,94 @@ class TestS2MczRotPformsGraphRewind {
     }
 
     @Test
+    void childrenKeepShiftedLivePositionsButInheritParentUnloadAnchor() {
+        Harness harness = Harness.create(List.of(PARENT_SPAWN));
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.update(0, null, null, 0, false);
+
+        List<MCZRotPformsObjectInstance> children = childPlatforms(objectManager);
+        assertEquals(2, children.size());
+        MCZRotPformsObjectInstance left = childAt(children, PARENT_SPAWN.x() - 0x40);
+        MCZRotPformsObjectInstance right = childAt(children, PARENT_SPAWN.x() + 0x40);
+        assertEquals(PARENT_SPAWN.x() - 0x40, left.getSpawn().x());
+        assertEquals(PARENT_SPAWN.x() + 0x40, right.getSpawn().x());
+        assertEquals(PARENT_SPAWN.y() + 0x40, left.getSpawn().y());
+        assertEquals(PARENT_SPAWN.y() + 0x40, right.getSpawn().y());
+        for (MCZRotPformsObjectInstance child : children) {
+            assertEquals(PARENT_SPAWN.x(), readIntField(child, "baseX"),
+                    "Obj6A child objoff_32 must inherit the parent x_pos before the live +/-$40 shift");
+            assertEquals(PARENT_SPAWN.y(), readIntField(child, "baseY"),
+                    "Obj6A child objoff_30 must inherit the parent y_pos before the live +$40 shift");
+        }
+    }
+
+    @ParameterizedTest(name = "{0} shared unload anchor")
+    @MethodSource("actCases")
+    void sharedUnloadAnchorKeepsAssemblyTogetherAtFormerFailureWindow(
+            String act, int baseX, int baseY, int failureParentX,
+            int previousPostCameraX, int preCameraX) {
+        ObjectSpawn parentSpawn = new ObjectSpawn(
+                baseX, baseY, Sonic2ObjectIds.MCZ_ROT_PFORMS, 0x18, 1, false, 0x2580, 38);
+        int setupCameraX = Math.max(0, baseX - 160);
+        Harness harness = Harness.create(List.of(parentSpawn), setupCameraX);
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.update(setupCameraX, null, null, 0, false);
+        MCZRotPformsObjectInstance parent = onlyParent(objectManager, parentSpawn);
+        setIntField(parent, "x", failureParentX);
+        setIntField(parent, "xFixed", failureParentX << 8);
+        // S2 RunObjects uses the post-camera coarse X latched by the previous
+        // ObjectsManager pass, while this frame's placement pass receives pre-camera X.
+        objectManager.postCameraPlacementUpdate(previousPostCameraX);
+        objectManager.update(preCameraX, null, null, 1, false);
+
+        parent = onlyParent(objectManager, parentSpawn);
+        assertEquals(3, livePlatforms(objectManager).size(),
+                act + " must keep parent and both children at the former closure-failure camera");
+        assertEquals(2, readChildren(parent).size(), act + " parent must retain both children");
+        objectManager.validateRewindReferenceClosure();
+        registryFor(objectManager).capture();
+
+        int fartherCameraX = preCameraX + 0x300;
+        objectManager.postCameraPlacementUpdate(fartherCameraX);
+        objectManager.update(preCameraX, null, null, 2, false);
+        assertEquals(0, livePlatforms(objectManager).size(),
+                act + " assembly must cull together once the shared parent anchor leaves range");
+    }
+
+    @Test
+    void defensiveChildDetachRelinksAcrossRestoreAndIgnoresLateOldCallback() {
+        Harness harness = Harness.create(List.of(PARENT_SPAWN));
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        objectManager.update(0, null, null, 0, false);
+        MCZRotPformsObjectInstance parent = onlyParent(objectManager);
+        List<MCZRotPformsObjectInstance> children = childPlatforms(objectManager);
+        MCZRotPformsObjectInstance oldLeft = childAt(children, PARENT_SPAWN.x() - 0x40);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.removeDynamicObject(oldLeft);
+        assertEquals(1, readChildren(parent).size());
+        objectManager.validateRewindReferenceClosure();
+
+        rewindRegistry.restore(snapshot);
+        MCZRotPformsObjectInstance restoredParent = onlyParent(objectManager);
+        List<MCZRotPformsObjectInstance> restoredChildren = childPlatforms(objectManager);
+        assertEquals(3, livePlatforms(objectManager).size());
+        assertTrue(readChildren(restoredParent).containsAll(restoredChildren));
+        restoredChildren.forEach(child -> {
+            assertSame(restoredParent, readOwner(child));
+            assertEquals(PARENT_SPAWN.x(), readIntField(child, "baseX"),
+                    "compact restore must replace the recreate constructor's shifted child anchor");
+            assertEquals(PARENT_SPAWN.y(), readIntField(child, "baseY"));
+        });
+
+        oldLeft.onUnload();
+        assertEquals(2, readChildren(restoredParent).size(),
+                "late callback from a pre-seek child must not mutate the restored graph");
+    }
+
+    @Test
     void mczRotPformsChildrenReferenceStillRequiresRewindIdentity() {
         Harness harness = Harness.create(List.of(PARENT_SPAWN));
         ObjectManager objectManager = harness.objectManager();
@@ -131,6 +229,10 @@ class TestS2MczRotPformsGraphRewind {
 
     private record Harness(ObjectManager objectManager) {
         static Harness create(List<ObjectSpawn> spawns) {
+            return create(spawns, 0);
+        }
+
+        static Harness create(List<ObjectSpawn> spawns, int resetCameraX) {
             ObjectManager[] holder = new ObjectManager[1];
             Camera camera = mockCamera();
             ObjectServices services = new StubObjectServices() {
@@ -149,7 +251,7 @@ class TestS2MczRotPformsGraphRewind {
                     camera,
                     services);
             holder[0] = objectManager;
-            objectManager.reset(0);
+            objectManager.reset(resetCameraX);
             return new Harness(objectManager);
         }
     }
@@ -177,8 +279,13 @@ class TestS2MczRotPformsGraphRewind {
     }
 
     private static MCZRotPformsObjectInstance onlyParent(ObjectManager objectManager) {
+        return onlyParent(objectManager, PARENT_SPAWN);
+    }
+
+    private static MCZRotPformsObjectInstance onlyParent(
+            ObjectManager objectManager, ObjectSpawn parentSpawn) {
         List<MCZRotPformsObjectInstance> parents = livePlatforms(objectManager).stream()
-                .filter(TestS2MczRotPformsGraphRewind::isParentSpawn)
+                .filter(platform -> isParentSpawn(platform, parentSpawn))
                 .toList();
         assertEquals(1, parents.size(),
                 "expected one MCZ rotating-platform parent: " + describePlatforms(objectManager));
@@ -186,19 +293,27 @@ class TestS2MczRotPformsGraphRewind {
     }
 
     private static List<MCZRotPformsObjectInstance> childPlatforms(ObjectManager objectManager) {
+        return childPlatforms(objectManager, PARENT_SPAWN);
+    }
+
+    private static List<MCZRotPformsObjectInstance> childPlatforms(
+            ObjectManager objectManager, ObjectSpawn parentSpawn) {
         return livePlatforms(objectManager).stream()
-                .filter(platform -> !isParentSpawn(platform))
+                .filter(platform -> !isParentSpawn(platform, parentSpawn))
                 .sorted(Comparator.comparingInt(MCZRotPformsObjectInstance::getX))
                 .toList();
     }
 
     private static boolean isParentSpawn(MCZRotPformsObjectInstance platform) {
+        return isParentSpawn(platform, PARENT_SPAWN);
+    }
+
+    private static boolean isParentSpawn(
+            MCZRotPformsObjectInstance platform, ObjectSpawn parentSpawn) {
         ObjectSpawn spawn = platform.getSpawn();
-        return spawn.objectId() == PARENT_SPAWN.objectId()
-                && spawn.subtype() == PARENT_SPAWN.subtype()
-                && spawn.x() == PARENT_SPAWN.x()
-                && spawn.y() == PARENT_SPAWN.y()
-                && spawn.layoutIndex() == PARENT_SPAWN.layoutIndex();
+        return spawn.objectId() == parentSpawn.objectId()
+                && spawn.subtype() == parentSpawn.subtype()
+                && spawn.layoutIndex() == parentSpawn.layoutIndex();
     }
 
     private static List<MCZRotPformsObjectInstance> livePlatforms(ObjectManager objectManager) {
@@ -234,6 +349,16 @@ class TestS2MczRotPformsGraphRewind {
             Field field = MCZRotPformsObjectInstance.class.getDeclaredField("children");
             field.setAccessible(true);
             return (List<MCZRotPformsObjectInstance>) field.get(parent);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private static MCZRotPformsObjectInstance readOwner(MCZRotPformsObjectInstance child) {
+        try {
+            Field field = MCZRotPformsObjectInstance.class.getDeclaredField("owner");
+            field.setAccessible(true);
+            return (MCZRotPformsObjectInstance) field.get(child);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError(e);
         }

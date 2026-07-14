@@ -80,6 +80,22 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void rawControllerHeldBitsExcludeCpuGeneratedDirections() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setCpuController(controller);
+
+        controller.setController2Input(AbstractPlayableSprite.INPUT_DOWN, 0);
+        tails.setDirectionalInputPressed(true, false, false, false);
+
+        assertTrue(RawControllerInput.isHeld(tails, AbstractPlayableSprite.INPUT_DOWN));
+        assertFalse(RawControllerInput.isHeld(tails, AbstractPlayableSprite.INPUT_UP),
+                "CPU follow UP must remain in Ctrl_2_logical and not leak into raw Ctrl_2");
+    }
+
+    @Test
     void s3kFreshSpawnInitFrameResetsKinematicsWithoutRunningNormalCpu() {
         TestableSprite sonic = new TestableSprite("sonic");
         sonic.setGameRulesForTest(GameRules.SONIC_3K);
@@ -337,7 +353,6 @@ class TestSidekickCpuFollowParity {
                         GameRules.SONIC_2.sidekickCpu().sidekickDespawnX(),
                         0,
                         false,
-                        false,
                         true,
                         true,
                         GameRules.SONIC_2.sidekickCpu().sidekickFlyLandStatusBlockerMask(),
@@ -348,6 +363,7 @@ class TestSidekickCpuFollowParity {
                         0,
                         0,
                         0,
+                        false,
                         false,
                         false,
                         false)));
@@ -1181,7 +1197,7 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
-    void s3kDelayedJumpPressClearsAfterOneHistorySampleWhileHeldJumpRemains() throws Exception {
+    void s3kDelayedJumpPressUsesRecordedLowByteWhileHeldJumpRemains() throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
@@ -1205,7 +1221,7 @@ class TestSidekickCpuFollowParity {
         inputHistory[delayedSlot] = AbstractPlayableSprite.INPUT_UP | AbstractPlayableSprite.INPUT_JUMP;
         inputHistory[previousDelayedSlot] = AbstractPlayableSprite.INPUT_UP | AbstractPlayableSprite.INPUT_JUMP;
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
-        setJumpPressHistorySlot(sonic, delayedSlot, true);
+        setJumpPressHistorySlot(sonic, delayedSlot, false);
         setJumpPressHistorySlot(sonic, previousDelayedSlot, true);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
@@ -3392,7 +3408,7 @@ class TestSidekickCpuFollowParity {
         Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_JUMP);
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
         int delayedSlot = sonic.getHistorySlotIndex(SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES);
-        setJumpPressHistorySlot(sonic, delayedSlot, true);
+        setJumpPressHistorySlot(sonic, delayedSlot, false);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);

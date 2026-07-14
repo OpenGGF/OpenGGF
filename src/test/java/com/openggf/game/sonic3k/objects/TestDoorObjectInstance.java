@@ -36,6 +36,15 @@ public class TestDoorObjectInstance {
     }
 
     @Test
+    public void solidObjectFullKeepsExactRightEdgeContact() {
+        DoorObjectInstance door = new DoorObjectInstance(
+                new ObjectSpawn(0x0CD0, 0x0660, 0x3C, 0x00, 0, false, 0));
+
+        assertTrue(door.usesInclusiveRightEdge(),
+                "Obj_Door calls SolidObjectFull, whose bhi X gate includes relX == d1*2");
+    }
+
+    @Test
     public void horizontalDoorUsesWideCollisionAndMovesOnXAxis() {
         DoorObjectInstance door = new DoorObjectInstance(
                 new ObjectSpawn(0x200, 0x180, 0x3C, 0x80, 0, false, 0));
@@ -210,5 +219,4 @@ public class TestDoorObjectInstance {
         }
     }
 }
-
 

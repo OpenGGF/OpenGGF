@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies the ROM-faithful Ctrl_1_locked latch on
@@ -69,6 +70,24 @@ class TestLogicalInputControlLockLatch {
         short historyDuringLock = sprite.getInputHistory(0);
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT, historyDuringLock,
                 "S3K frame N: while controlLocked + latch flag, logicalInputState must persist");
+    }
+
+    @Test
+    void followerHistoryPreservesConsecutiveIndependentActionPresses() {
+        TestablePlayableSprite sprite = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sprite.setGameRulesForTest(GameRules.SONIC_3K);
+
+        // B is pressed while DOWN is held.
+        sprite.setLogicalInputState(false, true, false, false, true, true);
+        sprite.endOfTick();
+        // C is newly pressed on the next frame while B remains held. The
+        // aggregate jump state never went low, but Ctrl_1_Press has another
+        // action bit and Stat_table must retain that second press.
+        sprite.setLogicalInputState(false, true, false, false, true, true);
+        sprite.endOfTick();
+
+        assertTrue(sprite.getJumpPressHistory(0));
+        assertTrue(sprite.getJumpPressHistory(1));
     }
 
     @Test

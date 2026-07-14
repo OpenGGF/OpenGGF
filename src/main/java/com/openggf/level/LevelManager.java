@@ -3161,6 +3161,29 @@ public class LevelManager {
     /** @see LevelTransitionCoordinator#requestInLevelTitleCard(int, int) */
     public void requestInLevelTitleCard(int zone, int act) { transitions.requestInLevelTitleCard(zone, act); }
 
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay) {
+        transitions.requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches) {
+        transitions.requestInLevelTitleCard(
+                zone, act, resetLevelGamestateAtDisplay, resetAdditionalDispatches);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches, boolean lockPlayerControl) {
+        transitions.requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay,
+                resetAdditionalDispatches, lockPlayerControl);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches, boolean lockPlayerControl,
+                                        int exitAdditionalDispatches) {
+        transitions.requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay,
+                resetAdditionalDispatches, lockPlayerControl, exitAdditionalDispatches);
+    }
+
     /** @see LevelTransitionCoordinator#isTitleCardRequested() */
     public boolean isTitleCardRequested() { return transitions.isTitleCardRequested(); }
 
@@ -3176,6 +3199,22 @@ public class LevelManager {
 
     /** @see LevelTransitionCoordinator#consumeInLevelTitleCardRequest() */
     public boolean consumeInLevelTitleCardRequest() { return transitions.consumeInLevelTitleCardRequest(); }
+
+    public boolean consumeInLevelTitleCardLevelGamestateResetRequest() {
+        return transitions.consumeInLevelTitleCardLevelGamestateResetRequest();
+    }
+
+    public int consumeInLevelTitleCardResetAdditionalDispatches() {
+        return transitions.consumeInLevelTitleCardResetAdditionalDispatches();
+    }
+
+    public boolean consumeInLevelTitleCardPlayerControlLockRequest() {
+        return transitions.consumeInLevelTitleCardPlayerControlLockRequest();
+    }
+
+    public int consumeInLevelTitleCardExitAdditionalDispatches() {
+        return transitions.consumeInLevelTitleCardExitAdditionalDispatches();
+    }
 
     /** @see LevelTransitionCoordinator#getTitleCardZone() */
     public int getTitleCardZone() { return transitions.getTitleCardZone(); }

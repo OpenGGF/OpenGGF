@@ -117,6 +117,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private boolean inLevelMode;  // No black background, control released immediately
     private boolean resetLevelGamestateOnInLevelDisplay;
     private int resetLevelGamestateCountdown;
+    private boolean inLevelPlayerControlLockOwned;
     private int inLevelExitDelayFrames;
     private boolean bonusMode;  // 2-element "BONUS STAGE" layout
     private float bonusFadeProgress; // 0.0→1.0 over BONUS_DISPLAY_HOLD_FRAMES during DISPLAY
@@ -173,6 +174,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
      * native Obj_TitleCardWait reset becomes visible when the engine's title
      * card children finish sliding to their display positions.
      */
+    @Override
     public void requestLevelGamestateResetAtInLevelDisplay() {
         if (inLevelMode) {
             resetLevelGamestateOnInLevelDisplay = true;
@@ -187,6 +189,43 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
             // five updates after the slotless manager would otherwise predict
             // completion when initialization precedes phase 0.
             inLevelExitDelayFrames = modulePhase == 1 ? 5 : 0;
+        }
+    }
+
+    @Override
+    public void requestLevelGamestateResetAtInLevelDisplay(int additionalDispatches) {
+        requestLevelGamestateResetAtInLevelDisplay();
+        if (resetLevelGamestateOnInLevelDisplay) {
+            resetLevelGamestateCountdown += Math.max(0, additionalDispatches);
+        }
+    }
+
+    @Override
+    public void requestInLevelPlayerControlLock() {
+        if (inLevelMode) {
+            inLevelPlayerControlLockOwned = true;
+        }
+    }
+
+    @Override
+    public boolean ownsInLevelPlayerControlLock() {
+        return inLevelPlayerControlLockOwned;
+    }
+
+    @Override
+    public boolean shouldLockPlayerControlForInLevelOverlay() {
+        return inLevelPlayerControlLockOwned && inLevelMode;
+    }
+
+    @Override
+    public void releaseInLevelPlayerControlLockOwnership() {
+        inLevelPlayerControlLockOwned = false;
+    }
+
+    @Override
+    public void requestInLevelExitAdditionalDispatches(int dispatches) {
+        if (inLevelMode) {
+            inLevelExitDelayFrames += Math.max(0, dispatches);
         }
     }
 
@@ -236,6 +275,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         this.inLevelMode = inLevel;
         this.resetLevelGamestateOnInLevelDisplay = false;
         this.resetLevelGamestateCountdown = 0;
+        this.inLevelPlayerControlLockOwned = false;
         this.inLevelExitDelayFrames = 0;
         this.state = Sonic3kTitleCardState.SLIDE_IN;
         this.stateTimer = 0;
@@ -420,6 +460,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         resetLevelGamestateOnInLevelDisplay = false;
         resetLevelGamestateCountdown = 0;
         inLevelExitDelayFrames = 0;
+        inLevelPlayerControlLockOwned = false;
         bonusMode = false;
         bonusFadeProgress = 0f;
         currentZone = 0;
@@ -476,6 +517,22 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         var levelManager = GameServices.levelOrNull();
         if (levelManager != null) {
             levelManager.resetLevelGamestate(GameServices.module().createLevelState());
+        }
+        // Obj_TitleCardWait's in-level branch resets both native player slots'
+        // air_left bytes alongside rings and timers (sonic3k.asm:62214-62235).
+        // The fixed countdown objects survive HCZ's in-place Load_Level, so this
+        // must update their existing DrowningController owners rather than
+        // recreating the countdown state.
+        var player = GameServices.camera().getFocusedSprite();
+        if (player != null && player.getDrowningController() != null) {
+            player.getDrowningController().replenishAir();
+        }
+        var nativeP2 = GameServices.sprites().getRegisteredSidekicks().stream()
+                .findFirst()
+                .orElse(null);
+        if (nativeP2 != null && nativeP2 != player
+                && nativeP2.getDrowningController() != null) {
+            nativeP2.getDrowningController().replenishAir();
         }
     }
 

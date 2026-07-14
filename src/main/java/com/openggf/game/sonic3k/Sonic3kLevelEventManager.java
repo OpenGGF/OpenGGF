@@ -265,17 +265,17 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     @Override
     public void updateFixedInLevelObjectsBeforeDynamicObjects() {
-        if (fbzEvents == null) {
-            return;
-        }
         var levelManager = GameServices.levelOrNull();
-        if (levelManager != null) {
+        if (fbzEvents != null && levelManager != null) {
             // ROM LevelLoop increments Level_frame_counter, runs AnPal_FBZ,
             // then Process_Sprites. ObjectManager receives this same +1 frame.
             var fade = GameServices.fadeOrNull();
             fbzEvents.advanceMagneticPhase(
                     levelManager.getFrameCounter() + 1,
                     fade != null && fade.isActive());
+        }
+        if (hczEvents != null) {
+            hczEvents.updateRetainedCarrierObjectPass(currentAct);
         }
     }
 
@@ -370,7 +370,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         handleBonusStageTopExit();
         // After HCZ seamless transition to Act 2: start the whirlpool descent
         // cutscene that spirals Sonic down into the Act 2 starting area.
-        if (hczPendingPostTransitionCutscene && hczEvents != null) {
+        if (hczPendingPostTransitionCutscene && hczEvents != null
+                && !GameServices.gameState().isEndOfLevelActive()
+                && GameServices.module().getTitleCardProvider().ownsInLevelPlayerControlLock()
+                && !GameServices.module().getTitleCardProvider().isOverlayActive()) {
             hczPendingPostTransitionCutscene = false;
             hczEvents.startPostTransitionCutscene();
         }

@@ -3,6 +3,7 @@ package com.openggf.game.rewind;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.game.rewind.schema.CompactFieldCapturer;
 
 import java.lang.reflect.Modifier;
 import java.util.Objects;
@@ -39,6 +40,19 @@ public final class GenericRewindEligibility {
         Objects.requireNonNull(type, "type");
         return DEFAULT_BADNIK_CAPTURE_CACHE.computeIfAbsent(type,
                 GenericRewindEligibility::computeUsesDefaultBadnikSubclassCapture);
+    }
+
+    /**
+     * Returns whether {@code type} follows the default compact subclass-field
+     * capture path used by its object base class.
+     */
+    public static boolean usesCompactDefaultSubclassCapture(Class<?> type) {
+        Objects.requireNonNull(type, "type");
+        boolean defaultEligible = AbstractBadnikInstance.class.isAssignableFrom(type)
+                ? usesDefaultBadnikSubclassCapture(type)
+                : usesDefaultObjectSubclassCapture(type);
+        return defaultEligible
+                && CompactFieldCapturer.supportsDefaultObjectSubclassScalars(type);
     }
 
     private static boolean computeUsesDefaultBadnikSubclassCapture(Class<?> type) {

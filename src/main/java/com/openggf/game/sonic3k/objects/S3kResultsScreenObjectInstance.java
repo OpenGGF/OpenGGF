@@ -57,6 +57,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private static final int S3K_WAIT_DURATION = 90;      // ROM line 62676
     private static final int MUSIC_TRIGGER_FRAME = 71;    // 360 - 289 = 71 (ROM line 62626)
     private static final int RESULTS_CREATE_KOS_GATE_FRAMES = 9;
+    private static final int CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES = 3;
 
     // Time bonus table (ROM lines 62910-62918)
     private static final int[] TIME_BONUSES = {5000, 5000, 1000, 500, 400, 300, 100, 10};
@@ -111,6 +112,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private int childrenRemaining;
     private int createGateFrames = RESULTS_CREATE_KOS_GATE_FRAMES;
     private boolean actTransitionSignaled;
+    private int carriedResultsRenderRetireDispatches;
+    private boolean exitRetireDispatchesInitialized;
 
     public S3kResultsScreenObjectInstance(PlayerCharacter character, int act) {
         super("S3kResults");
@@ -394,6 +397,14 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      */
     private void updateExitQueue() {
         if (childrenRemaining <= 0) {
+            if (!exitRetireDispatchesInitialized) {
+                carriedResultsRenderRetireDispatches += additionalChildRetireDispatches();
+                exitRetireDispatchesInitialized = true;
+            }
+            if (carriedResultsRenderRetireDispatches > 0) {
+                carriedResultsRenderRetireDispatches--;
+                return;
+            }
             onExitReady();
             complete = true;
             return;
@@ -411,6 +422,23 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 }
             }
         }
+    }
+
+    /**
+     * Additional owner dispatches while ROM child SSTs finish retiring after
+     * the engine's embedded result elements have left the screen.
+     */
+    protected int additionalChildRetireDispatches() {
+        return 0;
+    }
+
+    @Override
+    public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
+        // HCZ/MGZ-style Load_Level paths retain Obj_LevelResults and its ROM
+        // child SSTs. The engine carries the parent but renders its twelve
+        // children as embedded elements, so preserve the final three child
+        // retirement dispatches that occur after the embedded set is gone.
+        carriedResultsRenderRetireDispatches = CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES;
     }
 
     // ---- Pre-tally delay with music trigger ----
@@ -574,8 +602,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         if (!lbzAct2PostBossHandoff) {
             cam.setFrozen(false);
         }
-        if (!aizAct1MinibossTitleHandoff
-                && !lbzAct2PostBossHandoff
+        if (shouldRestoreCameraBoundsOnExit(zone, act)
                 && !Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
             var level = services().currentLevel();
             if (level != null) {
@@ -652,6 +679,17 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         ObjectLifetimeOps.deleteNoRespawn(this);
         LOG.fine(() -> String.format("S3K results exit: zone=%X act=%d isAct2OrSpecial=%b",
                 zone, act, isAct2OrSpecial));
+    }
+
+    static boolean shouldRestoreLevelCameraBoundsOnExit(int zone, int act) {
+        boolean actOneInLevelTitleHandoff = act == 0
+                && (zone == 0x00 || zone == 0x01 || zone == 0x02);
+        boolean lbzActTwoPostBossHandoff = zone == 0x06 && act == 1;
+        return !actOneInLevelTitleHandoff && !lbzActTwoPostBossHandoff;
+    }
+
+    protected boolean shouldRestoreCameraBoundsOnExit(int zone, int act) {
+        return shouldRestoreLevelCameraBoundsOnExit(zone, act);
     }
 
     protected boolean shouldRestorePlayerControlsOnExit() {

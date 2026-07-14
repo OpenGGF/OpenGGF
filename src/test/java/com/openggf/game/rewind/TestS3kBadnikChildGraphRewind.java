@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Comparator;
 import java.util.List;
 
@@ -340,7 +341,9 @@ class TestS3kBadnikChildGraphRewind {
         TurboSpikerBadnikInstance sourceParentA = sourceParents.get(0);
         TurboSpikerBadnikInstance sourceParentB = sourceParents.get(1);
         sourceParentA.update(0, player);
+        sourceParentA.update(1, player);
         sourceParentB.update(0, player);
+        sourceParentB.update(1, player);
         List<ObjectInstance> sourceShells = liveByClassName(objectManager, TURBO_SPIKER_SHELL_CHILD);
         assertEquals(2, sourceShells.size(), "precondition: each Turbo Spiker must create one shell");
         ObjectInstance sourceShellA = childWithParent(sourceShells, sourceParentA);
@@ -353,6 +356,8 @@ class TestS3kBadnikChildGraphRewind {
         setIntField(sourceShellB, "currentY", 0x158);
         setIntField(sourceShellB, "xVelocity", 0x55);
         setIntField(sourceShellB, "yVelocity", -0x66);
+        ObjectSpawn capturedShellASpawn = sourceShellA.getSpawn();
+        ObjectSpawn capturedShellBSpawn = sourceShellB.getSpawn();
 
         ObjectRefId parentAId = objectId(objectManager, sourceParentA);
         ObjectRefId parentBId = objectId(objectManager, sourceParentB);
@@ -394,6 +399,22 @@ class TestS3kBadnikChildGraphRewind {
         assertEquals(0x158, readIntField(restoredShellB, "currentY"));
         assertEquals(0x55, readIntField(restoredShellB, "xVelocity"));
         assertEquals(-0x66, readIntField(restoredShellB, "yVelocity"));
+        assertEquals(capturedShellASpawn, restoredShellA.getSpawn(),
+                "shell A recreation must preserve immutable spawn metadata");
+        assertEquals(capturedShellBSpawn, restoredShellB.getSpawn(),
+                "shell B recreation must preserve immutable spawn metadata");
+
+        CompositeSnapshot secondSnapshot = rewindRegistry.capture();
+        objectManager.createDynamicObject(() -> new TurboSpikerBadnikInstance(new ObjectSpawn(
+                0x380, 0x180, Sonic3kObjectIds.TURBO_SPIKER, 7, 2, false, 32)));
+        rewindRegistry.restore(secondSnapshot);
+
+        ObjectInstance secondRestoredShellA = objectById(objectManager, ObjectInstance.class, shellAId);
+        ObjectInstance secondRestoredShellB = objectById(objectManager, ObjectInstance.class, shellBId);
+        assertEquals(capturedShellASpawn, secondRestoredShellA.getSpawn(),
+                "shell A spawn metadata must remain stable across repeated rewind round trips");
+        assertEquals(capturedShellBSpawn, secondRestoredShellB.getSpawn(),
+                "shell B spawn metadata must remain stable across repeated rewind round trips");
     }
 
     @Test
@@ -408,7 +429,9 @@ class TestS3kBadnikChildGraphRewind {
         TurboSpikerBadnikInstance sourceParentA = sourceParents.get(0);
         TurboSpikerBadnikInstance sourceParentB = sourceParents.get(1);
         sourceParentA.update(0, player);
+        sourceParentA.update(1, player);
         sourceParentB.update(0, player);
+        sourceParentB.update(1, player);
         List<ObjectInstance> sourceShells = liveByClassName(objectManager, TURBO_SPIKER_SHELL_CHILD);
         assertEquals(2, sourceShells.size(), "precondition: each Turbo Spiker must create one shell");
         List<ObjectInstance> sourceOverlays = liveByClassName(objectManager, TURBO_SPIKER_WATERFALL_OVERLAY_CHILD);
@@ -416,9 +439,10 @@ class TestS3kBadnikChildGraphRewind {
         ObjectInstance sourceShellA = childWithParent(sourceShells, sourceParentA);
         ObjectInstance sourceShellB = childWithParent(sourceShells, sourceParentB);
         ObjectInstance sourceOverlayB = childWithParent(sourceOverlays, sourceParentB);
-        setObjectField(sourceParentA, "shellChild", sourceShellA);
         setObjectField(sourceParentB, "shellChild", sourceShellB);
         setObjectField(sourceShellA, "attached", false);
+        setObjectField(sourceShellA, "parent", null);
+        setObjectField(sourceParentA, "shellChild", null);
         setIntField(sourceShellA, "currentX", 0x1E8);
         setIntField(sourceShellA, "currentY", 0x150);
         ObjectInstance sourceTrailA = objectManager.createDynamicObject(
@@ -455,12 +479,12 @@ class TestS3kBadnikChildGraphRewind {
                 "trail emitter must resolve to restored launched shell");
         assertSame(restoredTrailA, readObjectField(restoredShellA, "trailEmitter"),
                 "shell A trail slot must not retain stale pre-restore emitter");
-        assertSame(restoredParentA, readObjectField(restoredShellA, "parent"),
-                "launched shell A parent must resolve to restored Turbo Spiker A");
+        assertNull(readObjectField(restoredShellA, "parent"),
+                "launched shell A must remain independent from its former Turbo Spiker");
         assertSame(restoredParentB, readObjectField(restoredShellB, "parent"),
                 "attached shell B parent must resolve to restored Turbo Spiker B");
-        assertSame(restoredShellA, readObjectField(restoredParentA, "shellChild"),
-                "parent A shell slot must resolve to restored shell A");
+        assertNull(readObjectField(restoredParentA, "shellChild"),
+                "parent A must not recover ownership of its launched shell");
         assertSame(restoredShellB, readObjectField(restoredParentB, "shellChild"),
                 "parent B shell slot must resolve to restored shell B");
         assertSame(restoredParentB, readObjectField(restoredOverlayB, "parent"),
@@ -478,6 +502,7 @@ class TestS3kBadnikChildGraphRewind {
         ObjectManager objectManager = harness.objectManager();
         TurboSpikerBadnikInstance parent = liveByType(objectManager, TurboSpikerBadnikInstance.class).get(0);
         parent.update(0, player());
+        parent.update(1, player());
         ObjectInstance shell = liveByClassName(objectManager, TURBO_SPIKER_SHELL_CHILD).get(0);
 
         ((AbstractObjectInstance) shell).setDestroyed(true);
@@ -487,6 +512,55 @@ class TestS3kBadnikChildGraphRewind {
                 "removed shell references must not escape the live rewind identity graph");
         assertNull(readObjectField(parent, "shellChild"),
                 "removing the shell must detach the parent's stale object reference");
+    }
+
+    @Test
+    void launchedTurboSpikerShellOutlivesUnloadedParentWithoutRetainingReference() {
+        Harness harness = Harness.create(new S3klTestRegistry(), List.of(
+                new ObjectSpawn(0x1C0, 0x140, Sonic3kObjectIds.TURBO_SPIKER, 4, 0, false, 36)));
+        ObjectManager objectManager = harness.objectManager();
+        TestablePlayableSprite player = player();
+        TurboSpikerBadnikInstance parent = liveByType(objectManager, TurboSpikerBadnikInstance.class).get(0);
+        parent.update(0, player);
+        parent.update(1, player);
+        ObjectInstance shell = liveByClassName(objectManager, TURBO_SPIKER_SHELL_CHILD).get(0);
+
+        invokeNoArg(shell, "launch");
+
+        assertNull(readObjectField(parent, "shellChild"),
+                "loc_87D72 turns the launched shell into an independent object operation");
+        assertNull(readObjectField(shell, "parent"),
+                "launched shell must not retain a parent it no longer reads");
+
+        parent.setDestroyed(true);
+        objectManager.update(0x180, player, List.of(), 2, false);
+
+        assertTrue(liveByClassName(objectManager, TURBO_SPIKER_SHELL_CHILD).contains(shell),
+                "detached shell must remain live after the badnik unloads");
+        assertDoesNotThrow(objectManager::validateRewindReferenceClosure,
+                "detached shell graph must remain closed after the parent unloads");
+    }
+
+    @Test
+    void turboSpikerTrailRetiresWhenLaunchedShellUnloads() {
+        Harness harness = Harness.create(new S3klTestRegistry(), List.of(
+                new ObjectSpawn(0x1C0, 0x140, Sonic3kObjectIds.TURBO_SPIKER, 4, 0, false, 37)));
+        ObjectManager objectManager = harness.objectManager();
+        TestablePlayableSprite player = player();
+        TurboSpikerBadnikInstance parent = liveByType(objectManager, TurboSpikerBadnikInstance.class).get(0);
+        parent.update(0, player);
+        parent.update(1, player);
+        ObjectInstance shell = liveByClassName(objectManager, TURBO_SPIKER_SHELL_CHILD).get(0);
+        invokeNoArg(shell, "launch");
+        ObjectInstance trail = liveByClassName(objectManager, TURBO_SPIKER_TRAIL_EMITTER).get(0);
+
+        ((AbstractObjectInstance) shell).setDestroyed(true);
+        objectManager.removeDynamicObject(shell);
+
+        assertTrue(trail.isDestroyed(),
+                "loc_87DC0 must retire the trail when its shell enters the ROM delete state");
+        assertDoesNotThrow(objectManager::validateRewindReferenceClosure,
+                "retiring trail must not retain an unloaded shell in the live rewind graph");
     }
 
     @Test
@@ -1473,6 +1547,16 @@ class TestS3kBadnikChildGraphRewind {
         }
     }
 
+    private static void invokeNoArg(Object target, String methodName) {
+        try {
+            Method method = target.getClass().getDeclaredMethod(methodName);
+            method.setAccessible(true);
+            method.invoke(target);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to invoke " + methodName + " on " + target.getClass(), e);
+        }
+    }
+
     private static ObjectInstance instantiateTurboSpikerTrailEmitter(ObjectInstance shell) {
         try {
             Class<?> cls = Class.forName(TURBO_SPIKER_TRAIL_EMITTER);
@@ -1703,7 +1787,8 @@ class TestS3kBadnikChildGraphRewind {
     private record Harness(ObjectManager objectManager) {
         static Harness create(ObjectRegistry registry, List<ObjectSpawn> spawns) {
             ObjectManager[] holder = new ObjectManager[1];
-            Camera camera = mockCamera();
+            int cameraX = initialCameraX(spawns);
+            Camera camera = mockCamera(cameraX);
             TestablePlayableSprite player = player();
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
@@ -1722,7 +1807,7 @@ class TestS3kBadnikChildGraphRewind {
                     camera,
                     services);
             holder[0] = objectManager;
-            objectManager.reset(0);
+            objectManager.reset(cameraX);
             return new Harness(objectManager);
         }
     }
@@ -1755,9 +1840,13 @@ class TestS3kBadnikChildGraphRewind {
         }
     }
 
-    private static Camera mockCamera() {
+    private static int initialCameraX(List<ObjectSpawn> spawns) {
+        return spawns.stream().mapToInt(ObjectSpawn::x).min().orElse(0) & 0xFF80;
+    }
+
+    private static Camera mockCamera(int cameraX) {
         return new Camera() {
-            @Override public short getX() { return 0; }
+            @Override public short getX() { return (short) cameraX; }
             @Override public short getY() { return 0; }
             @Override public short getWidth() { return 0x400; }
             @Override public short getHeight() { return 0x300; }

@@ -198,6 +198,8 @@ class TestGraphCoveredIsolatedProbeClassification {
                 HCZ_END_BOSS_GRAPH_TEST,
                 "com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeSplash",
                 HCZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeImpactExplosion",
+                HCZ_END_BOSS_GRAPH_TEST,
                 "com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeWaterChute",
                 HCZ_END_BOSS_GRAPH_TEST,
                 "com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikShip",
@@ -206,6 +208,8 @@ class TestGraphCoveredIsolatedProbeClassification {
                 HCZ_END_BOSS_GRAPH_TEST,
                 "com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn",
                 HCZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleButton",
+                S3K_SELF_CONTAINED_TRANSIENT_GRAPH_TEST,
                 "com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanPlatformChild",
                 HCZ_CGZ_FAN_GRAPH_TEST);
 

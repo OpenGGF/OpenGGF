@@ -68,10 +68,7 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
     private static final int SPIN_FRAME_D = 5;
     private static final int[] SPIN_FRAMES = {SPIN_FRAME_A, SPIN_FRAME_B, SPIN_FRAME_C, SPIN_FRAME_D};
 
-    /**
-     * Animation speed (frames per step) for each routine.
-     * ROM: fast=2 when ACTIVE, 4 when WIND_DOWN, 8 when STOPPING.
-     */
+    /** Animation speed (frames per step) for the simplified steady/stop phases. */
     private static final int ANIM_SPEED_ACTIVE = 2;
     private static final int ANIM_SPEED_WIND_DOWN = 4;
     private static final int ANIM_SPEED_STOPPING = 8;
@@ -92,7 +89,10 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
     private int animFrame;
     private int animCounter;
     private int animSpeed;
-    /** Water column child — spawned when turbine becomes ACTIVE. */
+    /** ROM byte_6BDF4 initial delay and zero-delay revolution counter. */
+    private int accelerationDelay;
+    private int accelerationLoops;
+    /** Water column child — spawned by the acceleration-complete callback. */
     private HczEndBossWaterColumn waterColumn;
 
     // =========================================================================
@@ -175,6 +175,8 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
         animFrame = 0;
         animCounter = 0;
         animSpeed = ANIM_SPEED_ACTIVE;
+        accelerationDelay = 7;
+        accelerationLoops = 0;
         routine = ROUTINE_WAIT;
     }
 
@@ -186,43 +188,35 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
         if (boss.isPropellerActive()) {
             // Spin up: set collision, play SFX immediately, transition to ACTIVE
             collisionFlags = ACTIVE_COLLISION_FLAGS;
-            animSpeed = ANIM_SPEED_ACTIVE;
+            accelerationDelay = 7;
+            accelerationLoops = 0;
             services().playSfx(Sonic3kSfx.FAN_BIG.id);
             routine = ROUTINE_ACTIVE;
         }
     }
 
     /**
-     * ROM routine 4: spinning at full speed, collision active.
-     * Refreshes the continuous sfx_FanBig while ACTIVE.
-     * Spawns water column on first entry.
-     * Transitions to WIND_DOWN when propellerActive is cleared.
+     * ROM routine 4: accelerate with Animate_RawGetFaster over byte_6BDF4.
+     * Its loc_6B212 callback, not entry to routine 4, creates the water column
+     * and advances to routine 6 (sonic3k.asm:141040-141058, 177749-177792).
      */
     private void updateActive(int frameCounter) {
-        // Spawn water column on first entry (lazy — only once per ACTIVE phase)
-        if (waterColumn == null || waterColumn.isDestroyed()) {
-            spawnWaterColumn();
-        }
-
-        // Animate fast spin
-        animSpeed = ANIM_SPEED_ACTIVE;
-        tickAnimation();
-
-        // Refresh the continuous fan SFX often enough that the audio backend extends it
         if ((frameCounter & (FAN_SFX_INTERVAL - 1)) == 0 && isOnScreen()) {
             services().playSfx(Sonic3kSfx.FAN_BIG.id);
         }
 
-        // Check for wind-down signal
-        if (!boss.isPropellerActive()) {
-            animSpeed = ANIM_SPEED_WIND_DOWN;
+        if (tickAccelerationAnimation()) {
             routine = ROUTINE_WIND_DOWN;
+            animCounter = 0;
+            if (waterColumn == null || waterColumn.isDestroyed()) {
+                spawnWaterColumn();
+            }
         }
     }
 
     /**
      * Spawns the water column child via the boss's public spawn delegate.
-     * ROM: water column is spawned when the turbine activates.
+     * ROM: loc_6B212 creates the water column after spin-up completes.
      */
     private void spawnWaterColumn() {
         waterColumn = new HczEndBossWaterColumn(boss, this);
@@ -231,31 +225,23 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
     }
 
     /**
-     * ROM routine 6: spinning slower, collision still active.
-     * Checks whether propellerActive has gone back high (re-spin) or
-     * remains low (proceed to STOPPING).
+     * ROM routine 6: steady full-speed animation while propellerActive stays
+     * set; clearing it advances to routine 8 (loc_6B22A/loc_6B244).
      */
     private void updateWindDown(int frameCounter) {
-        // Animate at reduced speed
-        animSpeed = ANIM_SPEED_WIND_DOWN;
-        tickAnimation();
+        animFrame = (animFrame + 1) % SPIN_FRAMES.length;
 
-        // If boss re-activates propeller, go back to ACTIVE
         if (boss.isPropellerActive()) {
             collisionFlags = ACTIVE_COLLISION_FLAGS;
-            animSpeed = ANIM_SPEED_ACTIVE;
-            services().playSfx(Sonic3kSfx.FAN_BIG.id);
-            routine = ROUTINE_ACTIVE;
+            if ((frameCounter & (FAN_SFX_INTERVAL - 1)) == 0 && isOnScreen()) {
+                services().playSfx(Sonic3kSfx.FAN_BIG.id);
+            }
             return;
         }
-
-        if ((frameCounter & (FAN_SFX_INTERVAL - 1)) == 0 && isOnScreen()) {
-            services().playSfx(Sonic3kSfx.FAN_BIG.id);
-        }
-
-        // When the animation completes one full revolution at wind-down speed,
-        // proceed to STOPPING
         animSpeed = ANIM_SPEED_STOPPING;
+        animCounter = 0;
+        accelerationDelay = 0;
+        accelerationLoops = 0;
         routine = ROUTINE_STOPPING;
     }
 
@@ -264,16 +250,27 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
      * Returns to WAIT when animation rate hits zero.
      */
     private void updateStopping() {
-        animSpeed = ANIM_SPEED_STOPPING;
-        tickAnimation();
-
-        // Clear collision flags — turbine is no longer dangerous
-        collisionFlags = 0;
-
-        // One full cycle at stopping speed means turbine has halted — go back to WAIT
-        if (animCounter == 0 && animFrame == 0) {
-            routine = ROUTINE_WAIT;
+        animCounter--;
+        if (animCounter >= 0) {
+            return;
         }
+
+        animFrame++;
+        if (animFrame >= SPIN_FRAMES.length) {
+            animFrame = 0;
+            accelerationDelay++;
+            if (accelerationDelay >= 7) {
+                accelerationDelay = 7;
+                accelerationLoops++;
+                if (accelerationLoops >= 2) {
+                    collisionFlags = 0;
+                    routine = ROUTINE_WAIT;
+                    accelerationLoops = 0;
+                    return;
+                }
+            }
+        }
+        animCounter = accelerationDelay;
     }
 
     // =========================================================================
@@ -292,6 +289,33 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
         }
     }
 
+    /**
+     * Exact counter shape of Animate_RawGetFaster for byte_6BDF4
+     * ({@code 7,8,2,3,4,5,$FC}). Each revolution reduces the frame delay;
+     * after delay zero, eight more revolutions fire the callback.
+     */
+    private boolean tickAccelerationAnimation() {
+        animCounter--;
+        if (animCounter >= 0) {
+            return false;
+        }
+
+        animFrame++;
+        if (animFrame >= SPIN_FRAMES.length) {
+            animFrame = 0;
+            if (accelerationDelay == 0) {
+                accelerationLoops++;
+                if (accelerationLoops >= 8) {
+                    return true;
+                }
+            } else {
+                accelerationDelay--;
+            }
+        }
+        animCounter = accelerationDelay;
+        return false;
+    }
+
     // =========================================================================
     // Collision (TouchResponseProvider)
     // =========================================================================
@@ -305,6 +329,16 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
     public int getCollisionProperty() {
         // ROM: collision_property not used for enemy-touch hazards — return 0
         return 0;
+    }
+
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        // loc_6B1A8 refreshes this child's position immediately before
+        // Child_DrawTouch_Sprite2_FlickerMove adds its pointer to the response
+        // list, so the next player pass observes that refreshed coordinate.
+        // Once loc_6B244 selects routine 8, the player-side response pass
+        // observes the frame-start child coordinate before this slot moves.
+        return routine != ROUTINE_STOPPING;
     }
 
     // =========================================================================

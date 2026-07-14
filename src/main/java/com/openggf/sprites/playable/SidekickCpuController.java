@@ -271,6 +271,7 @@ public class SidekickCpuController {
      * call the CPU routine (sonic3k.asm:26196-26205).
      */
     private boolean controller2SignedLocked;
+    private boolean nativeEndingPosePending;
     private NormalStepDiagnostics latestNormalStepDiagnostics;
     private int diagnosticCtrl2HeldLatch;
     private int diagnosticCtrl2PressedLatch;
@@ -370,6 +371,30 @@ public class SidekickCpuController {
         this.frameCounter = resolveCpuFrameCounter(frameCount);
         deferredDespawnDeadFallContinuingThisFrame = false;
         manualInputAppliedThisTick = false;
+
+        // Kill_Character can be reached outside Tails_Check_Screen_Boundaries
+        // (for example Obj_InvisibleHurtBlockVertical's sub_1F734). In that
+        // case the playable sprite has already entered object routine 6, but
+        // the CPU controller did not originate the kill and still holds its
+        // prior state. Adopt the native dead-object dispatch on the following
+        // CPU tick so Obj02_Dead/sub_123C2 owns the fall/marker transition just
+        // as it does for a boundary kill (sonic3k.asm:21136-21159,26091-26096,
+        // 29277-29285; s2.asm:40736-40759).
+        if (sidekick.getDead() && state != State.DEAD_FALLING) {
+            int romCpuRoutine = romCpuRoutineForState(state);
+            deadFallingRomCpuRoutine = romCpuRoutine >= 0 ? romCpuRoutine : 0x06;
+            state = State.DEAD_FALLING;
+            normalFrameCount = 0;
+        }
+        if (state == State.DEAD_FALLING) {
+            clearInputs();
+            // Generic KillCharacter adoption must retain the status maintenance
+            // previously reached through NORMAL before Obj02_Dead continues its
+            // fall (docs/s2disasm/s2.asm:40736-40759,41018-41043).
+            clearStaleDeadOnObjectAfterVisibleWindow();
+            updateDeadFalling();
+            return;
+        }
 
         if (controller2SignedLocked) {
             carryController().setParentagePending(false);
@@ -519,8 +544,22 @@ public class SidekickCpuController {
         return (controller2Logical & AbstractPlayableSprite.INPUT_JUMP) != 0;
     }
 
+    /** Returns held bits from the raw Player-2 controller word, excluding CPU-generated input. */
+    public boolean isRawController2InputHeld(int inputMask) {
+        return (controller2Held & inputMask) != 0;
+    }
+
     public void setController2SignedLocked(boolean locked) {
         controller2SignedLocked = locked;
+    }
+
+    /**
+     * Queues Check_TailsEndPose's Set_PlayerEndingPose tail-call for the next
+     * Player_2 control slot. The capsule/signpost object runs later in the SST
+     * list, after Tails has already moved for the current frame.
+     */
+    public void queueNativeEndingPoseForNextPlayerSlot() {
+        nativeEndingPosePending = true;
     }
 
     public void clearController2LogicalLatch() {
@@ -720,19 +759,39 @@ public class SidekickCpuController {
     }
 
     public void recordDiagnosticPostPhysics() {
-        if (latestNormalStepDiagnostics == null
-                || latestNormalStepDiagnostics.frameCounter() != frameCounter) {
+        if (latestNormalStepDiagnostics != null
+                && latestNormalStepDiagnostics.frameCounter() == frameCounter) {
+            latestNormalStepDiagnostics = latestNormalStepDiagnostics.withPostPhysics(
+                    diagnosticStatusByte(),
+                    diagnosticObjectControlByte(),
+                    sidekick.getXSpeed(),
+                    sidekick.getYSpeed(),
+                    sidekick.getGSpeed(),
+                    sidekick.getCentreX(),
+                    (short) sidekick.getXSubpixelRaw(),
+                    sidekick.getAngle());
+        }
+        applyPendingNativeEndingPoseAfterPhysics();
+    }
+
+    private void applyPendingNativeEndingPoseAfterPhysics() {
+        if (!nativeEndingPosePending) {
             return;
         }
-        latestNormalStepDiagnostics = latestNormalStepDiagnostics.withPostPhysics(
-                diagnosticStatusByte(),
-                diagnosticObjectControlByte(),
-                sidekick.getXSpeed(),
-                sidekick.getYSpeed(),
-                sidekick.getGSpeed(),
-                sidekick.getCentreX(),
-                (short) sidekick.getXSubpixelRaw(),
-                sidekick.getAngle());
+        nativeEndingPosePending = false;
+        controller2SignedLocked = false;
+        mirrorRawController2LogicalForEndingPose();
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+        sidekick.setControlLocked(false);
+        sidekick.setSpindash(false);
+        sidekick.setPushing(false);
+        sidekick.setXSpeed((short) 0);
+        sidekick.setYSpeed((short) 0);
+        sidekick.setGSpeed((short) 0);
+        int victoryAnimation = sidekick.resolveAnimationId(CanonicalAnimation.VICTORY);
+        if (victoryAnimation >= 0) {
+            sidekick.setAnimationId(victoryAnimation);
+        }
     }
 
     /**
@@ -2487,13 +2546,10 @@ public class SidekickCpuController {
                     | AbstractPlayableSprite.INPUT_DOWN
                     | AbstractPlayableSprite.INPUT_LEFT
                     | AbstractPlayableSprite.INPUT_RIGHT)) == 0;
-            // S2 stores the real low-byte press in Sonic_Stat_Record_Buf, while
-            // S3K reconstructs the press from history edges. Preserve the sampled
-            // byte only for the S2-style rule; loc_13E64 itself contributes held
-            // high-byte bits and must not repeat an S3K low-byte press.
-            boolean preservesRecordedJumpPress = recordedJumpPress
-                    && (sidekickRules == null
-                            || !sidekickRules.sidekickDelayedJumpPressUsesHistoryEdge());
+            // The Stat table stores the real low-byte logical press alongside
+            // the held byte. Preserve that sampled byte; loc_13E64 itself only
+            // contributes held high-byte bits.
+            boolean preservesRecordedJumpPress = recordedJumpPress;
             if (sidekick.getAir()
                     && delayedJumpOnly
                     && normalPushingGraceFrames <= 2
@@ -2672,10 +2728,6 @@ public class SidekickCpuController {
         if ((recordedInput & AbstractPlayableSprite.INPUT_JUMP) == 0
                 || !effectiveLeader.getJumpPressHistory(delayFrames)) {
             return false;
-        }
-        SidekickCpuRules rules = sidekickCpuRulesOrNull();
-        if (rules != null && rules.sidekickDelayedJumpPressUsesHistoryEdge()) {
-            return !effectiveLeader.getJumpPressHistory(delayFrames + 1);
         }
         return true;
     }
@@ -3834,6 +3886,10 @@ public class SidekickCpuController {
             // PlayableSpriteMovement.applyGravity() would keep applying the
             // +0x08 flight gravity to a grounded Tails in NORMAL.
             sidekick.setDoubleJumpFlag(0);
+            // Tails_CPU_flight_timer is one shared ROM word: routine 4 counts
+            // flight recovery in it and routine 6 immediately reuses the same
+            // value in TailsCPU_CheckDespawn. Landing does not clear the word.
+            despawnCounter = flightTimer;
             state = State.NORMAL;
             normalFrameCount = 0;
             if (suppressNextLevelEventNormalMovement) {
@@ -4457,7 +4513,13 @@ public class SidekickCpuController {
         // x_pos. Routine 6 (NORMAL / loc_13D78, sonic3k.asm:26668) instead branches
         // to loc_13EBE after the same respawn (object_control bit 7 -> bmi) and
         // never runs a facing block, so it keeps sub_13ECA's cleared facing.
-        applyDespawnMarker(state == State.PANIC);
+        // The ordinary TailsCPU_CheckDespawn timeout calls sub_13ECA directly,
+        // even if the CPU dispatcher currently holds routine 8. Only the
+        // object/interact mismatch path originates inside loc_13F40's
+        // sub_13EFC call and therefore continues into its post-warp facing
+        // block.
+        applyDespawnMarker(state == State.PANIC
+                && cause == DespawnCause.OBJECT_ID_MISMATCH);
     }
 
     /**
@@ -5326,6 +5388,7 @@ public class SidekickCpuController {
                 catchUpFrameCounterOverride,
                 lastNormalAutoJumpPressFrameCounter,
                 controller2SignedLocked,
+                nativeEndingPosePending,
                 latestNormalStepDiagnostics,
                 mgzCarryIntroAscend,
                 mgzCarryFlapTimer,
@@ -5383,6 +5446,7 @@ public class SidekickCpuController {
         catchUpFrameCounterOverride = snapshot.catchUpFrameCounterOverride();
         lastNormalAutoJumpPressFrameCounter = snapshot.lastNormalAutoJumpPressFrameCounter();
         controller2SignedLocked = snapshot.controller2SignedLocked();
+        nativeEndingPosePending = snapshot.nativeEndingPosePending();
         latestNormalStepDiagnostics = snapshot.latestNormalStepDiagnostics();
         mgzCarryIntroAscend = snapshot.mgzCarryIntroAscend();
         mgzCarryFlapTimer = snapshot.mgzCarryFlapTimer();
@@ -5436,6 +5500,7 @@ public class SidekickCpuController {
         skipPhysicsThisFrame = false;
         deadOnObjectReenteredVisibleWindow = false;
         controller2SignedLocked = false;
+        nativeEndingPosePending = false;
         nextCpuFrameCounterOverride = -1;
         catchUpFrameCounterOverride = -1;
         // Note: leader is NOT cleared — it's a structural chain relationship set at

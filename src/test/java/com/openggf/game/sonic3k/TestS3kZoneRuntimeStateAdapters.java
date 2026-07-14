@@ -75,6 +75,23 @@ class TestS3kZoneRuntimeStateAdapters {
     }
 
     @Test
+    void hczAdapterExposesNormalPlaneOnlyAfterTheWallClearCompletes() {
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents();
+        events.init(1);
+        HczZoneRuntimeState state = new HczZoneRuntimeState(
+                1, PlayerCharacter.SONIC_AND_TAILS, events);
+
+        events.setAct2BgRoutine(8);
+        assertFalse(state.normalBackgroundPlaneActive());
+
+        events.setAct2BgRoutine(0xC);
+        assertTrue(state.normalBackgroundPlaneActive());
+
+        events.setAct2BgRoutine(0x10);
+        assertTrue(state.normalBackgroundPlaneActive());
+    }
+
+    @Test
     void cnzAdapterCarriesPlayerCharacterAndBossBackgroundMode() {
         Sonic3kCNZEvents events = new Sonic3kCNZEvents();
         events.init(0);

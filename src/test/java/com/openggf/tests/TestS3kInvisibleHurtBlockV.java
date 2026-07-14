@@ -9,8 +9,19 @@ import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestS3kInvisibleHurtBlockV {
+
+    @Test
+    public void solidObjectFull2KeepsCollisionLiveOutsideRenderBounds() {
+        Sonic3kInvisibleHurtBlockVObjectInstance block =
+                new Sonic3kInvisibleHurtBlockVObjectInstance(
+                        new ObjectSpawn(0x0A98, 0x07C0, 0x6B, 0x16, 0x01, false, 0));
+
+        assertTrue(block.bypassesOffscreenSolidGate());
+        assertTrue(block.usesInclusiveRightEdge());
+    }
 
     @Test
     public void standingContactKillsPlayerOnDefaultFace() {
@@ -48,5 +59,4 @@ public class TestS3kInvisibleHurtBlockV {
         verifyNoInteractions(player);
     }
 }
-
 

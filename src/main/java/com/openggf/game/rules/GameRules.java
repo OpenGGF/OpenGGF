@@ -37,8 +37,7 @@ public record GameRules(
                     false,
                     false,
                     true,
-                    false,
-                    true
+                    false
             ),
             new PlayerCapabilityRules(
                     false,
@@ -56,9 +55,7 @@ public record GameRules(
                     false,
                     false,
                     true,
-                    false,
-                    false,
-                    false,
+                    new AirCollisionRules(false, false, false, false),
                     true,
                     false,
                     false,
@@ -115,7 +112,6 @@ public record GameRules(
                     0,
                     false,
                     false,
-                    false,
                     true,
                     0,
                     false,
@@ -127,7 +123,8 @@ public record GameRules(
                     1024,
                     false,
                     false,
-                    false
+                    false,
+                    true
             ),
             new PowerUpRules(
                     0,
@@ -170,8 +167,7 @@ public record GameRules(
                     false,
                     false,
                     false,
-                    true,
-                    false
+                    true
             ),
             new PlayerCapabilityRules(
                     true,
@@ -189,9 +185,7 @@ public record GameRules(
                     false,
                     true,
                     false,
-                    false,
-                    false,
-                    false,
+                    new AirCollisionRules(false, false, false, false),
                     true,
                     true,
                     true,
@@ -247,7 +241,6 @@ public record GameRules(
                     16384,
                     0,
                     false,
-                    false,
                     true,
                     true,
                     210,
@@ -260,7 +253,8 @@ public record GameRules(
                     1024,
                     false,
                     false,
-                    true
+                    true,
+                    false
             ),
             new PowerUpRules(
                     1,
@@ -303,8 +297,7 @@ public record GameRules(
                     true,
                     true,
                     false,
-                    false,
-                    true
+                    false
             ),
             new PlayerCapabilityRules(
                     true,
@@ -322,9 +315,7 @@ public record GameRules(
                     true,
                     false,
                     true,
-                    true,
-                    true,
-                    true,
+                    new AirCollisionRules(true, true, true, true),
                     false,
                     true,
                     true,
@@ -381,7 +372,6 @@ public record GameRules(
                     32,
                     true,
                     true,
-                    true,
                     false,
                     128,
                     true,
@@ -391,6 +381,7 @@ public record GameRules(
                     1,
                     32,
                     1024,
+                    true,
                     true,
                     true,
                     true

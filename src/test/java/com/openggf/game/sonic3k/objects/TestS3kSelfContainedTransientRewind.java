@@ -9,6 +9,7 @@ import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleButton;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance;
@@ -237,6 +238,7 @@ class TestS3kSelfContainedTransientRewind {
 
         setIntFieldInHierarchy(capsule, "postOpenTimer", 0);
         capsule.update(0, player);
+        capsule.update(1, player);
         assertEquals(1, countLive(objectManager, aiz2ResultsScreenClass),
                 "AIZ2 capsule must spawn its specialized results-screen child");
 
@@ -661,6 +663,8 @@ class TestS3kSelfContainedTransientRewind {
                 "precondition: exactly one AIZ2 egg capsule fixture is live");
         assertEquals(1, countLive(objectManager, HczEndBossEggCapsuleInstance.class),
                 "precondition: exactly one HCZ egg capsule fixture is live");
+        assertEquals(1, countLive(objectManager, HczEndBossEggCapsuleButton.class),
+                "precondition: the HCZ egg capsule must own one separate button slot");
         assertEquals(1, countLive(objectManager, IczEndBossEggCapsuleInstance.class),
                 "precondition: exactly one ICZ egg capsule fixture is live");
         assertEquals(1, countLive(objectManager, MhzEndBossEggCapsuleInstance.class),
@@ -790,6 +794,12 @@ class TestS3kSelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, S3kBossDefeatSignpostFlow.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, Aiz2EndEggCapsuleInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, HczEndBossEggCapsuleInstance.class, capturedState);
+        HczEndBossEggCapsuleInstance restoredHczCapsule =
+                liveObjects(objectManager, HczEndBossEggCapsuleInstance.class).getFirst();
+        HczEndBossEggCapsuleButton restoredHczButton =
+                liveObjects(objectManager, HczEndBossEggCapsuleButton.class).getFirst();
+        assertSame(restoredHczCapsule, readObjectField(restoredHczButton, "parent"),
+                "the restored capsule button must resolve its captured parent identity");
         assertSimpleStateRoundTrip(objectManager, IczEndBossEggCapsuleInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, MhzEndBossEggCapsuleInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, Mgz2EndEggCapsuleInstance.class, capturedState);
@@ -904,6 +914,12 @@ class TestS3kSelfContainedTransientRewind {
         Field field = instance.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getInt(instance);
+    }
+
+    private static Object readObjectField(Object instance, String fieldName) throws Exception {
+        Field field = fieldInHierarchy(instance.getClass(), fieldName);
+        field.setAccessible(true);
+        return field.get(instance);
     }
 
     private static void setIntField(Object instance, String fieldName, int value) throws Exception {

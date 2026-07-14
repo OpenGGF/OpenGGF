@@ -21,7 +21,6 @@ import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.logging.Logger;
 
 public abstract class AbstractObjectInstance implements ObjectInstance {
@@ -1268,11 +1267,10 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
                 null   // Base class does not capture player extra; subclass overrides if needed
         );
         if (GenericRewindEligibility.usesDefaultObjectSubclassCapture(getClass())) {
-            var compactState = this instanceof AbstractBadnikInstance
-                    ? Optional.<RewindObjectStateBlob>empty()
-                    : GenericFieldCapturer.captureObjectSubclassScalarsCompact(this, context);
-            if (compactState.isPresent()) {
-                snapshot = snapshot.withCompactGenericState(compactState.get());
+            if (GenericRewindEligibility.usesCompactDefaultSubclassCapture(getClass())) {
+                RewindObjectStateBlob compactState =
+                        GenericFieldCapturer.captureObjectSubclassScalarsCompact(this, context).orElseThrow();
+                snapshot = snapshot.withCompactGenericState(compactState);
             } else {
                 var genericState = GenericFieldCapturer.captureObjectSubclassScalars(this);
                 if (!genericState.keys().isEmpty()) {

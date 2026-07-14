@@ -18,10 +18,14 @@ reaction deferral, orb break tail + Ani_obj53 animation, boss persistence, and
 the S2 impatient-wait blink input gate), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now EMPTY: the full S2 level-select suite passes (MSE:OK passed=48).
-The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
-20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
-therefore closed as the first-red stage; HCZ is the next unstarted stage in the
-requested level order. OOZ2 greened in round 54 and
+The full S1 sweep remains 29/29 green. On this HCZ branch, all 20 S2 replay
+classes are green after restoring the deferred-death oil-support release that
+had regressed OOZ1 at f447. Both S3K AIZ routes are green after AIZ round 64. AIZ is
+therefore closed as the first-red stage. HCZ is closed on branch
+`bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
+f3318 / 4234 errors to GREEN through the HCZ-to-MGZ boundary after milestone
+70.
+OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
 round 96 landed the ROM-backed later-orb refresh predicate. Rounds 90-94 used Lua PC-execute probes to rule out shared
@@ -41,6 +45,1287 @@ probe is required before the bounce is accepted.
 Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
+
+## 2026-07-13 - HCZ branch repair, rewind closure, and final verification
+
+This repair pass used the existing checkout only (no auxiliary worktrees).
+The starting branch was `bugfix/ai-hcz-trace-replays` at
+`482d347a4d07265b647c2ffab49671d20bbb0e63`; local and remote-tracking
+`develop` were `4a39499949c9c4e66edf62db267a2b0c35d6901f` when the repair began.
+The runtime/test repair head before this log update is
+`a365ff3e4f0e8011d1faf16f7ddf08fec75393be`. The only unrelated worktree
+changes throughout the pass were the user's unstaged `.gitignore` and
+`.idea/vcs.xml` edits; they were neither changed nor staged by this work.
+
+The root ROM inventory used by every ROM-backed final gate was:
+
+- `Sonic The Hedgehog (W) (REV01) [!].gen`: CRC32 `AFE05EEE`, SHA-1
+  `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`.
+- `Sonic The Hedgehog 2 (W) (REV01) [!].gen`: CRC32 `7B905383`, SHA-1
+  `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`.
+- `Sonic and Knuckles & Sonic 3 (W) [!].gen`: CRC32 `0C06AA82`, SHA-1
+  `B711A909CCE238CA4AF3E517A2EDCA306228EFA5`.
+
+The clean pre-edit replay baseline completed 92 tests: 71 passed, 18 failed,
+2 errored, and 1 skipped. HCZ reached f14211 and then errored because a live
+Turbo Spiker parent retained a launched shell whose rewind identity had left
+the captured object set. The fix transfers shell lifetime ownership on launch
+and preserves the shell/trail recreate metadata; closure validation remains
+enabled. The other rewind-closure repairs capture result-element state and the
+capsule-button/impact-boss object graph through the central schema. Two later
+integration regressions were found with controlled RED tests: the merged
+sidekick rule reconstructed the S3K Stat-table press byte as an edge (HCZ first
+divergence f15377), and the large-fan module-queue latch had been placed in an
+act-local runtime that is replaced at the seamless transition (f27695). The
+final implementation copies the recorded low-byte press directly and keeps the
+fan queue latch in the already-registered `HCZBreakableBarStaticAdapter`, so it
+survives the act replacement and remains reset/rewind owned.
+
+Granular repair commits after the starting head are:
+
+- `15027dc86` Turbo Spiker shell ownership;
+- `17ee6a3dd`, corrected by `0abd71c4b`, typed runtime rules and the native
+  follower press byte;
+- `e2cc1858b`, `bf718f601`, and `5ad52dfc5` independent runtime/HCZ/graphics
+  extractions;
+- `932dc799b`, corrected by `ee070771f`, HCZ fan queue rewind and cross-act
+  lifetime ownership;
+- `7cf99e4d5` HCZ result/boss rewind graph closure;
+- `7e65a510c`, `fd4151b20`, `a68d49ba7`, and `2548e919f` focused fixture and
+  lifecycle-guard repairs;
+- `a365ff3e4` reviewed static-session inventory for the registered fan adapter.
+
+Focused verification included 173/173 follower-input/fan/static-adapter tests,
+7/7 final fan ownership/debt-ratchet tests, 7/7 result/boss graph rewind tests,
+and 51/51 S3K must-keep-green tests (`TestS3kAiz1SkipHeadless`, both
+`TestSonic3kLevelLoading` classes, `TestSonic3kBootstrapResolver`, and
+`TestSonic3kDecodingUtils`). The final clean non-trace command was:
+
+```text
+mvn clean test -Dmaven.test.failure.ignore=true -Dsurefire.argLine='-Xmx4g -Dnet.bytebuddy.experimental=true' -Dsurefire.forkCount=1 -DreuseForks=false '-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen' '-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen' '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+```
+
+It completed 11,752 tests: 11,677 passed, 2 failed, 2 errored, and 71 skipped.
+The two failures are unchanged on `develop`: the MHZ mushroom-parachute carry
+position (`expected=5378`, `actual=5391`) and the S2 donated lives-frame index
+(`expected=0`, `actual=1`). The two environmental errors are also unchanged:
+`TestCrossGameFeatureProviderRefactor.S3kTailsDonationIntegration` hard-codes
+the absent filename `s3k.gen` for its S1/S2 host cases instead of consuming the
+supplied S3K ROM property. No branch-caused non-trace failure remains.
+
+The final replay command (one fork, 4 GiB heap, all three discovered ROM
+properties) was:
+
+```text
+mvn -Dmse=off test -Dmaven.test.failure.ignore=true -Dsurefire.argLine='-Xmx4g -Dnet.bytebuddy.experimental=true' -Dsurefire.forkCount=1 -DreuseForks=false '-Dtest=*TraceReplay' -DfailIfNoTests=false '-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen' '-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen' '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+```
+
+It completed all 92 checks: 72 passed, 18 failed, 1 errored, and 1 skipped.
+HCZ is green (2/2), including the full route and rewind-reference closure. Both
+S3K AIZ routes, all 29 S1 checks, and all 20 S2 classes remain green. The
+remaining S3K results exactly preserve the established comparison frontiers:
+
+- CNZ complete: f1846, `tails_x_speed`, 7,184 errors; CNZ level-select input
+  alignment stops at f39672. Its 11 auxiliary assertion failures and one
+  miniboss-parent NPE are pre-existing engine/fixture debt.
+- MGZ complete: f1072, `rings`, 10,221 errors; MGZ level-select input alignment
+  stops at f33271.
+- MHZ complete: f2920, `tails_status_byte`, 2,452 errors.
+- ICZ complete: f3174, `rings`, 3,205 errors (the branch retains its improvement
+  from the older f3139 frontier).
+- LBZ complete: f2270, `tails_x`, 5,881 errors.
+
+Thus every branch-caused replay regression and the HCZ closure error are fixed;
+the remaining reds classify as pre-existing engine/fixture debt or trace-data
+input alignment, not newly accepted exceptions.
+
+## 2026-07-12 - S2 OOZ1 deferred-death oil-support release green
+
+After merging `origin/develop` into `bugfix/ai-hcz-trace-replays`, OOZ1
+reproduced one error at f447: ROM Tails changed `Status_OnObj` from set to
+clear (`status=$0A->$02`) while falling dead below manager-hosted Obj07, but
+the engine retained `$0A` through f468. OOZ2 remained green.
+
+Root cause: `807119045` correctly made a generic `KillCharacter` death adopt
+the shared `DEAD_FALLING` dispatch on the following CPU tick, matching
+`Obj02_Dead`, but this bypassed the existing dead-sidekick stale-support
+release because it was only called from `updateNormal`. The accepted fix runs
+that same release before the deferred dead-fall update. S2 `Obj02_Dead` owns
+the continuing corpse fall, while `KillCharacter` / `Tails_ResetOnFloor_Part2`
+do not themselves clear `Status_OnObj`, and Obj07 clears its own standing
+state separately (`docs/s2disasm/s2.asm:40736-40759,41018-41043,
+50086-50149`). No trace state is hydrated and there is no zone, route, or
+frame predicate.
+
+Focused gate after the candidate:
+
+- `mvn clean test -Ptrace-replay "-Dtest=com.openggf.tests.TestSidekickCpuControllerLevelStart#deadSidekickClearsStaleOnObjectAfterLeavingVisibleWindowAgain,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-Dsonic2.rom.path=<S2-ROM>" -DfailIfNoTests=false`
+- Result: 3/3 green; OOZ1 and OOZ2 produced no divergence reports.
+
+The complete A/B replay gate used all three explicit ROM paths, one fork, and
+a 3 GB heap:
+
+- Candidate off: `mvn clean test -Ptrace-replay "-Dtest=*TraceReplay" -Dmaven.test.failure.ignore=true "-Dsonic1.rom.path=<S1-ROM>" "-Dsonic2.rom.path=<S2-ROM>" "-Ds3k.rom.path=<S3K-ROM>" -Dsurefire.forkCount=1 "-Dsurefire.argLine=-Xshare:off -Xmx3g" -DfailIfNoTests=false`
+  completed all 92 checks: 70 passed, 19 failed, 2 errors, 1 skipped; OOZ1
+  reproduced f447 / 1.
+- Candidate on: the identical command completed all 92 checks: 71 passed,
+  18 failed, 2 errors, 1 skipped. OOZ1 became green; every other replay result
+  was unchanged. All 29 S1 and all 20 S2 classes are green. The pre-existing
+  S3K results were identical in both runs: CNZ complete f1846 / 7184, MGZ
+  complete f1072 / 10221, MGZ level-select input-alignment f33271, ICZ f3174 /
+  3205, MHZ f2920 / 2452, and LBZ f2270 / 5881; CNZ's auxiliary failures/input
+  alignment and HCZ's develop-merged Turbo Spiker rewind-reference-closure
+  error were also unchanged.
+
+## 2026-07-11 - S3K HCZ frontier campaign (in progress)
+
+Branch `bugfix/ai-hcz-trace-replays` begins from the fully green AIZ frontier.
+The HCZ complete-run baseline was f3318 / 4234 errors: the conveyor's native
+logical jump press expected Tails to launch at `-$500`, while the engine had
+already consumed the transient raw edge during player movement.
+
+Milestone 1 banks two HCZ object-pass fixes. Obj2E's conveyor now reads the
+published low-byte press bits from `Ctrl_1_logical` / `Ctrl_2_logical`, matching
+the word loaded by `loc_311C4` and tested by `sub_31226` after the player slot
+has executed (`sonic3k.asm:66344-66354,66411-66438`). The HCZ miniboss now
+retains the water-effect child's native P1/P2 pull ownership, releases those
+players when the defeated-parent delete path runs, and starts
+`Obj_EndSignControl` from the parent's retained `$3F` wait independently of the
+separate explosion child (`sonic3k.asm:140174-140233,140574-140594,
+179651-179669,180372-180379`). No trace state is hydrated and no zone, route,
+or frame exception was added.
+
+This advances the full HCZ replay through f9482 to f9760, reducing the report
+from 4234 to 3217 errors. The new frontier is Tails' signpost ending-pose frame:
+CPU movement produces and consumes RIGHT correctly (`x_vel/ground_vel=$0060`),
+then later object execution clears both velocities.
+
+Milestone verification:
+
+- HCZ focused tests: 12/12 green; HCZ `trace.frontierOnly` reports f9760 / 5.
+- Trace invariant guards: 11/11 green (`TestTraceReplayInvariantGuard` 10/10,
+  `TestTraceHydrateSwitchDefault` 1/1).
+- S3K keep-green set: 21/21 green (`TestS3kAiz1SkipHeadless`, level loading,
+  bootstrap resolver, and decoding utils).
+- Fresh `*TraceReplay` frontier sweep: all 29 S1 and all 20 S2 classes remain
+  green; both S3K AIZ classes remain green. Non-HCZ S3K first frontiers are
+  unchanged: CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete
+  f866 / 1, MGZ level-select f894 / 1, ICZ f3139 / 1, MHZ f2920 / 1, and LBZ
+  f2270 / 5. The pre-existing CNZ auxiliary assertions remain red in the broad
+  class invocation and are unrelated to these HCZ-only object changes.
+
+Commands used (MSE disabled, one fork, ROM paths supplied explicitly): focused
+HCZ + invariant + keep-green Maven selection; full HCZ replay; and
+`mvn -Dtest=*TraceReplay -Dtrace.frontierOnly=true
+-Dmaven.test.failure.ignore=true -DfailIfNoTests=false test`.
+
+Milestone 2 separates the native P1 and P2 ending-pose owners. Signpost
+`Obj_EndSignResults` calls `Set_PlayerEndingPose` only for Player 1; Tails keeps
+his CPU-produced velocity while `Ctrl_2_locked` is set. The later routine-8
+dispatch calls `Check_TailsEndPose`, clears the P2 lock, and only then applies
+the zero-velocity victory pose (`sonic3k.asm:176198-176238,176245-176272,
+181919-181940`). This closes f9760-f9762 and advances HCZ to f9900 / 3227
+errors (6 under `frontierOnly`), where the act-transition coordinate offset is
+now the first mismatch.
+
+The fresh all-S3K frontier sweep keeps both AIZ traces green and reproduces every
+non-HCZ S3K frontier from milestone 1 exactly. The 11 invariant guards, 21 S3K
+keep-green tests, two focused signpost guards, and the signpost-containing
+`selfContainedTransientChildrenRestoreThroughSessionSnapshot` rewind test pass.
+The unrelated AIZ2 capsule method in the broader rewind class remains
+independently red and was not changed by this signpost milestone.
+
+Milestone 3 replaces HCZ's results-completion approximation with the native
+act-transition owner. `HCZ1BGE_Normal` queues the 17,568-byte
+`HCZ2_8x8_Secondary_KosM` workload; its 131 incremental level-loop drain
+dispatches now gate `HCZ1BGE_DoTransition`, rather than the much later
+`End_of_level_flag` (`sonic3k.asm:2668-2791,2823-2953,105702-105780`, ROM
+resource `$3BFA6C`). When the workload clears, the background event reloads Act
+2 in the same dispatch, subtracts `$3600` from both players and the live camera
+bounds, preserves results-era ring/time state, and applies the transition-only
+water height `$06A0`. The prior engine-only post-reload whirlpool cutscene is no
+longer requested; the ROM keeps both ending poses and the locked camera while
+results continue over the new act.
+
+This closes the f9900 coordinate/camera/ring/water transition cluster and moves
+HCZ to f9976 / 2466 full-run errors (1 under `frontierOnly`). The all-S3K sweep
+again keeps both AIZ routes green and reproduces every non-HCZ frontier exactly.
+The 11 invariant guards, 21 keep-green tests, and all 4 focused HCZ event tests
+pass.
+
+Milestone 4 carries the ROM `_unkFAA2` dynamic-water lock through the HCZ
+miniboss/results transition. `loc_6A22A` sets the global lock before
+`Obj_EndSignControl`; `DynamicWaterHeight_HCZ2` returns while it is set, so the
+transition's `$06A0` current/mean/target words do not start drifting toward
+HCZ2's ordinary `$0700` target underneath the frozen players
+(`sonic3k.asm:8721-8737,140574-140575`). `WaterSystem` now exposes this already
+rewind-captured generic lock, the miniboss sets it from ROM state, and the
+per-act transition transfers it onto HCZ2's newly initialized water state.
+
+This closes f9976 and advances HCZ to f10386 / 2393 full-run errors (2 under
+`frontierOnly`). The fresh S3K sweep keeps both AIZ traces green and every
+non-HCZ frontier unchanged; 11 invariant guards, 27 dynamic-water tests, the
+miniboss cleanup guard, and all 21 S3K keep-green tests pass.
+
+Milestone 5 keeps live camera bounds through HCZ/MGZ's in-level Act 1 results
+handoff. ROM `Obj_LevelResults` mutates into `Obj_TitleCard` without restoring
+level-size words; the HCZ bounds offset to `$0080/$0638` therefore remain locked
+until the title-card/event chain changes them (`sonic3k.asm:62686-62720`). The
+shared results policy now expresses that native handoff alongside the existing
+AIZ1 and LBZ2 exclusions, with a pure policy guard that avoids the repository's
+unrelated Mockito/JDK 26 retransformation limitation.
+
+HCZ advances from f10386 to f10390 / 2383 full-run errors (8 under
+`frontierOnly`). Both AIZ traces remain green and every non-HCZ S3K frontier is
+unchanged in the fresh sweep; the 11 invariant guards, 2 camera-policy tests,
+and 21 S3K keep-green tests pass.
+
+Milestone 6 restores the native end-sign/results control handoff. HCZ's
+in-place `Load_Level` now preserves the global `_unkFAA8` /
+`End_of_level_flag` state while the carried `Obj_LevelResults` and
+`Obj_EndSignControl` objects remain alive. The carried results parent also
+retains the final three child-SST retirement dispatches that the engine's
+embedded results elements do not otherwise represent. When `_unkFAA8` really
+clears, `Obj_EndSignControlAwaitStart` clears P1/P2 `object_control` and
+`interact` without clearing the independently owned title-card controller
+locks (`sonic3k.asm:62586-62616,62686-62720,62817-62855,
+180356-180367,180406-180413`).
+
+`Set_PlayerEndingPose` now also clears `spin_dash_flag` and `Status_Push` as
+the ROM does. This prevents a stale pre-signpost charge from becoming an
+engine-only `$0800` roll on the first restored-control dispatch and lets the
+native `$FFF9/$0002` slope motion resume instead
+(`sonic3k.asm:181977-181990`). HCZ advances from f10390 to f10429; the full
+report is 3138 errors and `frontierOnly` is one ring-reset error. Both isolated
+AIZ replays remain green after rejecting a broader results-timing experiment.
+Every other established S3K first frontier reproduced unchanged in the fresh
+sweep: CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f866 /
+1, MGZ level-select f894 / 1, ICZ f3139 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+The 11 trace invariants plus the focused control/transition guards and 21 S3K
+keep-green tests pass (60 selected tests total).
+
+Milestone 7 moves the HCZ Act 2 timer/ring reset onto the title-card display
+boundary. In-level title-card requests now remain pending while the ROM
+`_unkFAA8` equivalent says level results are active, rather than starting at
+the earlier `Load_Level` resource swap. The transition request carries an
+explicit fresh-level-state intent into `TitleCardProvider`; HCZ retains the
+seven native parent-to-child create/render dispatches before
+`Obj_TitleCardWait` makes the reset visible. This resets rings from 149 to zero
+at f10429 without hydrating trace state or branching shared runtime code on a
+zone or frame (`sonic3k.asm:62214-62235,62686-62720`).
+
+HCZ advances to f10464 / 3117 full-run errors (4 under `frontierOnly`). Both
+AIZ routes remain green, and the fresh all-S3K sweep reproduces the unchanged
+non-HCZ frontiers from milestone 6. The 11 trace invariants, 21 S3K keep-green
+tests, the full 11-test act-transition integration class, and the new pure
+title-card request/reset-intent guard pass (69 selected tests total).
+
+Milestone 8 replaces the engine-invented post-transition whirlpool with the
+retained HCZ miniboss carrier children. The in-level title card now owns the
+P1/P2 control locks through the player-slot history writes; the later
+`loc_6A7C4` child dispatches clear those locks, write native
+`object_control=1`, install FLOAT2, and carry only the native P1/P2 slots. Each
+carrier uses its own 8.8 X/Y position and velocity, accelerates toward
+`Camera_X_pos+$A0` with the ROM side-crossing double step, descends at `$0200`,
+and publishes its movement after player physics but before the camera pass
+(`sonic3k.asm:139998-140077`). `Change_Act2Sizes` also exposes HCZ2's loaded
+bottom boundary as the camera target while retaining the live results lock.
+
+This closes the complete title-card and carrier descent and advances HCZ from
+f10464 to f10694; the full report is 3218 errors and `frontierOnly` reports the
+9-field P1/P2 carrier-release cluster. Both AIZ traces remain green, and the
+fresh granular S3K sweep reproduces every other established first frontier:
+CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f866 / 1,
+MGZ level-select f894 / 1, ICZ f3139 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+The 11 comparison-only invariants, 21 S3K keep-green tests, focused HCZ carrier
+tests, transition request guard, and 36 level-event rewind tests pass.
+
+Milestone 9 ports the retained carriers' native release routines and their
+three level-size children. At each assigned player's `$0828` threshold,
+`Restore_PlayerControl` / `Restore_PlayerControl2` clear `Status_InAir`, remove
+object control, and install standing animation 5 with reset frame/timer state.
+Player 1's release also creates `Child1_Act2LevelSize`: independent 16.16
+gradients expand max X, lower min Y, and expand max Y while preserving
+`Camera_target_max_Y_pos` for the later DynamicLevelEvents tail
+(`sonic3k.asm:140049-140077,178154-178225,180356-180365,180575-180609`).
+
+This closes the nine-field release/camera cluster and advances HCZ from f10694 /
+3218 to f10813 / 2171 full-run errors, where native Tails CPU ground-state
+handling is the next owner (4 errors under `frontierOnly`). No trace data is
+hydrated and the implementation is driven solely by retained object state and
+camera-bound targets.
+
+The fresh granular all-S3K frontier sweep keeps both AIZ routes green and
+reproduces every non-HCZ first frontier unchanged: CNZ complete f1846 / 5, CNZ
+level-select f291 / 7, MGZ complete f866 / 1, MGZ level-select f894 / 1, ICZ
+f3139 / 1, MHZ f2920 / 1, and LBZ f2270 / 5. The pre-existing CNZ auxiliary
+failures/NPE also reproduce unchanged. Focused HCZ, rewind, trace-invariant,
+and S3K keep-green selection passes 87/87.
+
+Milestone 10 completes the in-level `Obj_TitleCardWait` fresh-act reset. In
+addition to rings and timers, the ROM writes `air_left=30` to both native
+player slots. The title-card owner now replenishes the existing P1/P2 drowning
+controllers at that same reset boundary; the retained fixed countdown objects
+continue from their own independent cadence (`sonic3k.asm:62214-62235`).
+
+This removes the engine-only Tails drowning sequence and advances HCZ from
+f10813 / 2171 to f10986 / 2144 full-run errors (5 under `frontierOnly`). The
+new focused two-player title-card guard passes 2/2. Both AIZ traces remain
+green, and the two MGZ routes reproduce their unchanged f866 / 1 and f894 / 1
+frontiers; the immediately preceding full S3K sweep already held every other
+route at its documented frontier.
+
+Milestone 11 restores the miniboss water lock's native lifetime. The retained
+`loc_6A7C4` carrier initialization clears `_unkFAA2`; HCZ2's ordinary dynamic
+water handler can then move from the transition-only `$06A0` level toward its
+camera-threshold `$0700` target while the players descend
+(`sonic3k.asm:8721-8737,139998-140008`).
+
+This closes the P1/P2 water-exit and underwater-velocity cascade and advances
+HCZ from f10986 / 2144 to f11300 / 2516 full-run errors (5 under
+`frontierOnly`). The higher total is a newly exposed later cascade, with no
+pre-frontier mismatch. Both AIZ traces remain green; focused HCZ water-lock and
+comparison-only selections pass 22/22. The change is confined to HCZ's retained
+carrier state, after the prior granular all-S3K and targeted MGZ checks held all
+other route frontiers.
+
+Milestone 12 restores ROM monitor-break slot ordering and HCZ block solid state.
+`Touch_Monitor` now selects the broken state during the player slot, while the
+later monitor SST dispatch consumes its standing/pushing bits and releases every
+touching native player. HCZ Block's `SolidObjectFull2_1P` then consumes a retained
+airborne standing bit through `loc_1DCF0` without re-landing the player, and the
+block publishes `loc_1F3CA`'s routine-pointer high word to Tails' interact latch
+(`sonic3k.asm:40624-40638,41065-41091,43233-43257`).
+
+This closes the monitor/block/Tails cascade and advances HCZ from f11300 / 2516
+to f12046 / 2382 full-run errors (7 under `frontierOnly`). The granular all-S3K
+sweep keeps both AIZ routes green and reproduces every non-HCZ frontier exactly:
+CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f866 / 1, MGZ
+level-select f894 / 1, ICZ f3139 / 1, MHZ f2920 / 1, and LBZ f2270 / 5; the
+pre-existing CNZ auxiliary failures/NPE are unchanged. Ten focused block/monitor
+release tests pass. Trace invariants, hydration, and static-state rewind guards
+pass 12/12; the broad rewind coverage guard still reports only the unrelated,
+pre-existing AIZ intro emerald final-scalar gaps.
+
+Milestone 13 restores the HCZ2 moving background wall's complete ROM dispatch
+and collision path. Explicit world-space probes such as `CalcRoomInFront` now
+honor `Background_collision_flag` and compare foreground/background
+`FindFloor`/`FindWall` results. `HCZ2BGE_WallMoveInit` falls through into the
+moving routine, crossing player X `$680` subtracts the first 16.16 wall step
+immediately, and the `$A88` comparison selects the fast `$14000` speed at
+equality (`sonic3k.asm:19475-19512,106040-106070,106129-106170`).
+
+This closes the seven-field Tails/background-wall contact cluster and advances
+HCZ from f12046 / 2382 to f12048 / 2388 full-run errors (1 under
+`frontierOnly`): only Tails' integer X remains mismatched at the new frontier.
+The higher full-run total is a later cascade exposed by the corrected contact,
+with no pre-frontier mismatch. The background-collision guards pass 52/52.
+The granular S3K preservation sweep keeps both AIZ routes green and reproduces
+every non-HCZ frontier exactly: CNZ complete f1846 / 5, CNZ level-select f291 /
+7, MGZ complete f866 / 1, MGZ level-select f894 / 1, ICZ f3139 / 1, MHZ f2920 /
+1, and LBZ f2270 / 5; the pre-existing CNZ auxiliary failures/NPE are unchanged.
+
+Milestone 14 restores the grounded S3K post-movement background wall clamp.
+After `SpeedToPos`, `AnglePos`, and `SlopeRepel`, the standing and rolling paths
+run `CheckLeftWallDist` then `CheckRightWallDist` while
+`Background_collision_flag` is set. These checks adjust native `x_pos` while
+preserving subpixels, velocity, and `Status_Push`, independently of the earlier
+`CalcRoomInFront` velocity response (`sonic3k.asm:27529-27548,27741-27760`).
+
+This closes f12048-f12148 and advances HCZ to f12149 / 2362 full-run errors (3
+under `frontierOnly`), reducing the full report by 26 groups. Both AIZ routes
+remain green and the granular preservation sweep again reproduces every
+non-HCZ frontier exactly: CNZ complete f1846 / 5, CNZ level-select f291 / 7,
+MGZ complete f866 / 1, MGZ level-select f894 / 1, ICZ f3139 / 1, MHZ f2920 / 1,
+and LBZ f2270 / 5. The focused sensor/service tests pass 24/24; the wider
+collision selection passes 79/80 with only its pre-existing stale reflective
+lookup for the old two-argument `verticalTileLookupY` signature.
+
+Milestone 15 restores both remaining `SolidObjectFull2`/background-ceiling
+owners at the HCZ2 moving wall. The invisible wall now declares the direct
+`SolidObjectFull2_1P` visibility contract, so its `$4B` collision box stays live
+without `render_flags` bit 7. Background vertical probes now use the same native
+negative/full-height regression and extension state machine as foreground
+`FindFloor`/`FindCeiling`, differing only in the selected layout layer. This
+fixes the 16-pixel underside error at a full-height BG tile boundary without a
+zone, route, or frame exception (`sonic3k.asm:19189-19205,41065-41067,
+106226-106244`).
+
+This closes f12149-f12153 and advances HCZ to f12154 / 2318 full-run errors (10
+under `frontierOnly`), where Tails' next native jump launch is the first
+mismatch. Focused wall/sensor/service tests pass 26/26, including a BG-layer
+full-tile regression guard. The granular isolated replay sweep keeps both AIZ
+routes green and reproduces every non-HCZ complete-run frontier exactly: CNZ
+f1846, MGZ f866, ICZ f3139, MHZ f2920, and LBZ f2270. The CNZ/MGZ level-select
+replays retain their pre-existing end-of-recording input-alignment failures;
+the combined shared-JVM invocation remains unsuitable for frontier comparison
+because those long classes contaminate one another, so each replay method was
+also run in its own Maven process.
+
+Milestone 16 restores the HCZ2 wall-to-hazard death and native CPU-sidekick
+death handoff. S3K invisible blocks now declare their direct
+`SolidObjectFull2` inclusive-edge/off-screen collision contract. When engine
+placement loading gives the moving wall a later Java slot than a vertical hurt
+block, a successful wall side separation rechecks only those earlier engine-slot
+vertical hurt blocks, reproducing the ROM's wall-slot-11 then hurt-block-slot-15
+order without a zone, route, or frame predicate. A generic `Kill_Character`
+that did not originate in the CPU controller now adopts the sidekick's native
+routine-6 dispatch on the following CPU tick, letting `sub_123C2` write the
+S3K `$7F00` catch-up marker (`sonic3k.asm:41065-41067,43507-43535,
+106226-106244,21136-21159,24538-24578,26800-26809`).
+
+This closes f12154-f12513 and advances HCZ to f12514 / 2253 full-run errors (1
+under `frontierOnly`), reducing the full report by 65 groups. Focused invisible
+block, wall-order, and sidekick-death tests pass. Granular isolated replay
+checks keep both AIZ routes green and preserve CNZ complete f1846, CNZ
+level-select f291, MGZ complete f866, MGZ level-select f894, MHZ f2920, and LBZ
+f2270. The shared generic-death correction also advances ICZ from f3139 / 3207
+to f3174 / 3205; no non-HCZ frontier moved backward.
+
+Milestone 17 restores `Obj_Door`'s exact right-edge `SolidObjectFull` contact.
+Both vertical and horizontal door variants now expose the native inclusive
+initial X window: `relX == d1*2` remains a zero-distance side contact because
+`SolidObject_cont` rejects only with unsigned `bhi`. This preserves the live
+object/player pushing bits when a rolling player unrolls at the door boundary
+(`sonic3k.asm:41394-41403,66136-66137,66249-66258`).
+
+This closes f12514-f12737 and advances HCZ to f12738 / 2234 full-run errors (11
+under `frontierOnly`), reducing the full report by another 19 groups. The door
+contract tests pass. Granular isolated replay checks keep both AIZ routes green
+and preserve every non-HCZ frontier: CNZ complete f1846, CNZ level-select f291,
+MGZ complete f866, MGZ level-select f894, ICZ f3174, MHZ f2920, and LBZ f2270.
+
+Milestone 18 restores the move-locked S3K duck-to-spindash handoff and the HCZ
+spinning column's packed rider state. `SonicKnux_Roll` runs after the
+move-lock-gated `Sonic_Move`, so its prior-frame crouch state now supplies the
+native Duck predicate to `CheckSpindash` before `Sonic_Jump`. On column capture,
+the twist table changes `render_flags` without changing `Status_Facing`; rider X
+uses the combined distance/fraction bytes as the ROM's 8.8 word and its
+word-sized `x_pos` write preserves the existing subpixel word
+(`sonic3k.asm:22434,23223-23240,68077-68091,68183-68244`).
+
+This closes f12738-f12974 and advances HCZ to f12975 / 2130 full-run errors (2
+under `frontierOnly`), reducing the full report by 104 groups. The six spinning
+column contract tests pass. Granular isolated replay checks keep both AIZ routes
+green and preserve every non-HCZ frontier: CNZ complete f1846, CNZ level-select
+f291, MGZ complete f866, MGZ level-select f894, ICZ f3174, MHZ f2920, and LBZ
+f2270.
+
+Milestone 19 completes the spinning-column jump-release tail. The native object
+copies its own `y_vel` field before adding `-$680`; the vertical oscillation
+routine changes `y_pos` directly and never populates that velocity field, so a
+moving column still launches at exactly `-$680`. Its radius/status writes also
+leave the player's centre `y_pos` intact, rather than applying the engine's
+standing-to-roll visual-height shift (`sonic3k.asm:68142-68153,68222-68244`).
+
+This closes f12975-f12990 and advances HCZ to f12991 / 2098 full-run errors (11
+under `frontierOnly`), reducing the full report by 32 groups. The six spinning
+column contract tests pass. Granular isolated replay checks keep both AIZ routes
+green and preserve every non-HCZ frontier: CNZ complete f1846, CNZ level-select
+f291, MGZ complete f866, MGZ level-select f894, ICZ f3174, MHZ f2920, and LBZ
+f2270.
+
+Milestone 20 restores the spinning-column release frame's global logical-pad
+sample. The engine's object-control latch had skipped its ordinary input
+publication before `Sonic_RecordPos`, so the later column slot could consume the
+live jump while CPU Tails' delayed history missed it. On release the column now
+rebuilds the native held word from live controller state and updates the already
+written current history slot, preserving the same delayed jump that ROM copies
+from `Stat_table` into `Ctrl_2_logical`
+(`sonic3k.asm:22119-22136,26683-26700,26775-26782`).
+
+This closes f12991-f13548 and advances HCZ to f13549 / 2043 full-run errors (9
+under `frontierOnly`), reducing the full report by 55 groups. The six spinning
+column contract tests pass. Granular isolated replay checks keep both AIZ routes
+green and preserve every non-HCZ frontier: CNZ complete f1846, CNZ level-select
+f291, MGZ complete f866, MGZ level-select f894, ICZ f3174, MHZ f2920, and LBZ
+f2270.
+
+Milestone 21 restores the HCZ hand launcher's native `sub_30CE0` /
+`SolidObjectTop` order. Button/grab logic now consumes the retained standing
+checkpoint before the current solid pass, so the first landing remains an
+ordinary ride and capture occurs on the following object dispatch. The grab
+writes positive `object_control=1` (CPU allowed, movement suppressed), keeps
+continued `MvSonicOnPtfm` active, uses the literal `d3=$11` surface height, and
+preserves the incoming X subpixel word when snapping to the hand
+(`sonic3k.asm:65763-65802,65889-65950,66010-66033`).
+
+This closes f13549-f13643 and advances HCZ to f13644 / 2099 full-run errors (10
+under `frontierOnly`). The full group total rises by 56 as the corrected launcher
+route exposes later mismatches, while the first-error frontier advances. All nine
+hand-launcher contract tests pass. Granular isolated replay checks keep both AIZ
+routes green and preserve every non-HCZ frontier: CNZ complete f1846, CNZ
+level-select f291, MGZ complete f866, MGZ level-select f894, ICZ f3174, MHZ
+f2920, and LBZ f2270.
+
+Milestone 22 completes the hand launcher's release-side support ownership.
+Escape and automatic launch already cleared the ROM `Status_OnObj` and launcher
+standing bits, but left the engine's parallel riding-state owner alive. A later
+manual solid checkpoint could therefore detach Sonic from newly acquired terrain
+and set `Status_InAir` after player physics had correctly grounded him. Release
+now clears that engine ride owner at the same native handoff
+(`sonic3k.asm:65818-65857,65959-66008`).
+
+This closes f13644-f13649 and advances HCZ to f13650 / 1928 full-run errors (4
+under `frontierOnly`), reducing the full report by 171 groups. All nine
+hand-launcher contract tests pass. Granular isolated replay checks keep both AIZ
+routes green and preserve every non-HCZ frontier: CNZ complete f1846, CNZ
+level-select f291, MGZ complete f866, MGZ level-select f894, ICZ f3174, MHZ
+f2920, and LBZ f2270.
+
+Milestone 23 restores the HCZ twisting loop's native position-word writes.
+Capture changes object control, rolling radii, status, and angle without writing
+the player's `x_pos` or `y_pos`; the engine now retains both centre words while
+changing its rolling representation. Active loop phases likewise use native
+centre-coordinate word writes that preserve the packed X/Y subpixel words
+(`sonic3k.asm:76496-76534,76603-76744`).
+
+This closes f13650-f13928 and advances HCZ to f13929 / 1872 full-run errors (4
+under `frontierOnly`), reducing the full report by 56 groups. Both focused loop
+position/subpixel guards pass. The isolated granular replay matrix keeps both
+AIZ routes green and preserves every non-HCZ frontier and count exactly: CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f866 / 1, MGZ
+level-select f894 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 24 restores Jawz's native `Obj_WaitOffscreen` activation. Its parked
+slot now waits for the `$20`-pixel placeholder's full X/Y render bounds, consumes
+the operation-pointer restore dispatch, and initializes `-$200` tracking
+velocity on the following dispatch. This gives the badnik its ROM movement
+distance before `Touch_EnemyNormal` and restores Sonic's upward kill bounce
+(`sonic3k.asm:180266-180298,183518-183570`).
+
+This closes f13929-f14858 and advances HCZ to f14859 / 1908 full-run errors (1
+under `frontierOnly`). The higher full total exposes 36 later-route groups with
+no pre-frontier mismatch. Both focused Jawz direction/dispatch tests pass. The
+isolated granular replay matrix keeps both AIZ routes green and preserves every
+non-HCZ frontier and count exactly: CNZ complete f1846 / 5, CNZ level-select
+f291 / 7, MGZ complete f866 / 1, MGZ level-select f894 / 1, ICZ f3174 / 1,
+MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 25 separates the two S3K off-screen marker call paths. The ordinary
+`TailsCPU_CheckDespawn` respawn-counter timeout calls `sub_13ECA` directly and
+therefore leaves `status=Status_InAir`, even when the CPU dispatcher currently
+holds routine 8. Only an object/interact mismatch reached from routine 8's
+`sub_13EFC` returns into `loc_13F40` and applies its post-warp facing block
+(`sonic3k.asm:26374-26446,26800-26865`).
+
+This closes f14859-f15160 and advances HCZ to f15161 / 1907 full-run errors (2
+under `frontierOnly`), reducing the full report by one group. The two focused
+cause-specific marker guards pass. Both AIZ routes remain green; CNZ complete
+f1846 / 5, CNZ level-select f291 / 7, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ
+f2270 / 5 remain exact. The shared correction also advances MGZ complete from
+f866 / 1 to f1072 / 1 and MGZ level-select from f894 / 1 to f1030 / 1; both new
+frontiers are later ring-count mismatches, with no earlier or additional
+frontier-only failure.
+
+Milestone 26 restores TurboSpiker's native `Obj_WaitOffscreen` placeholder.
+The parked badnik now requires the `$20`-pixel placeholder's full X/Y render
+bounds, consumes the saved-operation restore dispatch, and initializes its
+tracking velocity and shell child on the following dispatch. This prevents the
+engine from patrolling while the slot is still vertically hidden and restores
+the ROM collision position (`sonic3k.asm:180266-180298,183861-183921`).
+
+This closes f15161-f15376 and advances HCZ to f15377 / 2781 full-run errors (7
+under `frontierOnly`). The larger full total exposes 874 later-route groups
+after the corrected badnik encounter; there is no mismatch before the new
+frontier. All four focused TurboSpiker sequence tests pass. The isolated route
+matrix keeps both AIZ routes green and holds all other current frontiers and
+counts exactly: CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete
+f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ
+f2270 / 5.
+
+Milestone 27 preserves the real low-byte action press stored in S3K's follower
+`Stat_table`. The trace driver already publishes each newly pressed A/B/C bit,
+including a new button pressed while another remains held; the CPU controller
+now copies that recorded press directly instead of reconstructing one edge from
+the aggregate jump-held state. Consecutive B/C/A presses can therefore add the
+native successive spindash charges (`sonic3k.asm:22119-22136,26683-26782`). The
+spinning column also writes its native positive `object_control=3` while holding
+a rider, retains `SolidObjectFull` contacts under that control state, and clears
+the byte on release (`sonic3k.asm:68183-68244`).
+
+This closes f15377-f16132 and advances HCZ to f16133 / 2584 full-run errors (5
+under `frontierOnly`), reducing the full report by 197 groups. The focused
+column and consecutive follower-history guards pass. The isolated replay matrix
+keeps both AIZ routes green and preserves every non-HCZ frontier/count exactly:
+CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 50 separates raw controller holds from CPU-generated logical
+directions for HCZ breakable bars. The vertical/horizontal captured routines
+load `(Ctrl_1).w` / `(Ctrl_2).w`; CPU Tails' delayed follow directions exist in
+`Ctrl_2_logical` and must not move the captured player. The shared playable
+input API now exposes raw held bits, backed by the CPU controller's manual P2
+word, and Obj36 uses those bits for bar movement and release
+(`sonic3k.asm:42770-42836,42924-42990`).
+
+This closes f27807-f28657 and advances HCZ to f28658 / 679 full-run errors (1
+under `frontierOnly`). The focused HCZ breakable-bar suite passes 10/10. The
+granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 51 restores the HCZ end-boss turbine's acceleration callback as the
+owner of water-column creation. ROM routine 4 runs `Animate_RawGetFaster` over
+`byte_6BDF4`; only its `loc_6B212` callback advances the turbine to routine 6
+and allocates the water-column child. The engine had allocated that child on
+routine-4 entry, allowing its folded spray/suction logic to affect Sonic while
+the ROM turbine was still accelerating. The engine now models the animation's
+decreasing delay and eight zero-delay revolutions and creates the column from
+the callback (`sonic3k.asm:141030-141069,141205-141229,142241-142247,
+177749-177792`).
+
+This closes f28658-f28813 and advances HCZ to f28814 / 551 full-run errors (1
+under `frontierOnly`). The focused water-column control tests pass 2/2. The
+granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 52 aligns the folded water-column spin-up with `Animate_Raw`'s
+pre-decrement cadence. `SetUp_ObjAttributes2` has already published the
+animation's initial mapping frame; the inline countdown therefore seeds
+`byte_6BE0C` at delay minus one so the `$F4` callback, routine-4 rise, and
+spray interaction become visible on the native dispatch. ROM slot evidence
+also shows the newly allocated spray child runs `loc_6B3FC` in the column
+callback's same ExecuteObjects pass, so the consolidated callback already
+represents that initialization and needs no extra boolean delay
+(`sonic3k.asm:141107-141131,141205-141229,142249-142257,177328-177372`).
+
+This closes f28814-f28855 and advances HCZ to f28856 / 506 full-run errors (1
+under `frontierOnly`). The focused water-column control tests pass 2/2. The
+granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 53 preserves `sub_6B9AC`'s shared suction register across its native
+P1/P2 calls. The ROM initializes `d2=+$20000` once; each eligible player to the
+right of the column negates that same register before adding it to `x_pos`.
+When both players are on the right, P1 therefore receives -2 pixels and P2
+negates the retained value back to +2. The engine had independently selected a
+direction for each player and incorrectly pulled both left
+(`sonic3k.asm:141757-141785`).
+
+This closes f28856-f28878 and advances HCZ to f28879 / 509 full-run errors (7
+under `frontierOnly`). The focused water-column control tests pass 2/2. The
+granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 54 preserves `sub_6B9E2`'s shared grab-zone pointer across the same
+P1/P2 sequence. Reaching `loc_6BA6C` consumes `(a1)+`; when P1 is already
+carried, P2's range check therefore begins one word later in `word_6BAC2`.
+The engine had rebuilt the selected pair independently for P2, creating an
+engine-only Tails grab that cleared his grounded velocity and lifted him from
+the floor (`sonic3k.asm:141787-141881,141925-141930`).
+
+This closes f28879-f28892 and advances HCZ to f28893 / 489 full-run errors (6
+under `frontierOnly`). The focused water-column control tests pass 2/2. The
+granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 55 keeps the folded spray interaction alive on the column's
+rise-to-hold callback frame. ROM column slot 13 changes routine and stops its
+rise at five segments, but later spray slot 37 still executes `loc_6B410` in
+the same object pass. The engine had re-tested the already-mutated parent
+routine after `sub_6BC8A` and skipped that last carry, losing one `$80` P1
+velocity step and two-pixel lift (`sonic3k.asm:141084-141106,
+141226-141239,142090-142110`).
+
+This closes f28893-f28969 and advances HCZ to f28970 / 319 full-run errors (7
+under `frontierOnly`). The focused water-column control tests pass 2/2. The
+granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 56 makes the HCZ turbine publish its refreshed child coordinate to
+the touch-response list. `loc_6B1A8` runs the turbine routine, calls
+`Refresh_ChildPosition`, and only then reaches
+`Child_DrawTouch_Sprite2_FlickerMove`; the next player pass therefore observes
+that current coordinate rather than the generic pre-update snapshot. A rejected
+shared previous-list change regressed HCZ at f22243, so the engine opts in only
+this ROM-owned child path (`sonic3k.asm:141019-141033,178139-178153`).
+
+This closes f28970-f29085 and advances HCZ to f29086 / 303 full-run errors (1
+under `frontierOnly`). The focused water-column control tests pass 2/2. The
+granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 57 restores the idle HCZ twisting loop's ordinary off-screen
+lifetime. ROM `loc_3909C` calls `Delete_Sprite_If_Not_In_Range` whenever both
+per-player phase bytes are zero; only a loop actively carrying P1 or P2 must
+survive beyond its placement window. The engine's placement path now supports
+respawnable off-screen deletion, so the controller no longer keeps every
+visited loop SST slot resident for the rest of the act
+(`sonic3k.asm:76482-76505,37262-37277`).
+
+This releases the stale loop slots before the end-boss allocation sequence,
+restores the later Obj37 countdown/floor-bounce phase, and closes the f29086
+lost-ring pickup. HCZ advances to f29134 / 301 full-run errors (1 under
+`frontierOnly`), where native Tails horizontal motion is the next owner. The
+focused twisting-loop tests pass 4/4. The granular nine-route S3K matrix keeps
+both AIZ routes green and preserves every non-HCZ frontier/count exactly: CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 58 separates the end-boss attack setup from its native `$FF`
+`Obj_Wait` countdown and retains the later spray slot across the column's
+hold-to-descent handoff. The consolidated boss callback now preserves the
+setup dispatch before `loc_6AFB6` consumes the full countdown. When
+`loc_6B34A` sets the column's descent bit, the separately allocated
+`loc_6B3DE` spray object still completes its later `loc_6B410` suction/grab
+work once before observing that bit (`sonic3k.asm:140934-140973,
+141084-141106,141205-141239,177944-177952`).
+
+This closes the f29134-f29151 Tails suction window and advances HCZ to f29152
+/ 316 full-run errors (12 under `frontierOnly`), where the boss-arena vertical
+player state is the next owner. The focused boss/water-column tests pass 5/5.
+The granular nine-route S3K matrix keeps both AIZ routes green and preserves
+every non-HCZ frontier/count exactly: CNZ complete f1846 / 5, CNZ level-select
+f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1,
+MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 59 retains the turbine's active hurt byte throughout its slowdown
+routine. `loc_6B244` changes the routine and installs `byte_6BE01`, but leaves
+`collision_flags=$A6` intact; only the later `Animate_RawGetSlower` callback
+`loc_6B262` clears collision and returns the turbine to its wait routine. The
+engine had cleared collision on routine-8 entry, missing Sonic's final native
+turbine contact (`sonic3k.asm:141084-141106,142249-142257,177749-177792`).
+
+This closes the f29152 hurt/ring-spill cluster and advances HCZ to f29176 / 355
+full-run errors (10 under `frontierOnly`), where Tails' post-hit vertical state
+is the next owner. The focused boss/turbine/water-column tests pass 6/6. The
+granular nine-route S3K matrix keeps both AIZ routes green and preserves every
+non-HCZ frontier/count exactly: CNZ complete f1846 / 5, CNZ level-select f291 /
+7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ
+f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 60 removes the synthetic `$100` pre-attack timer introduced while
+separating the consolidated setup dispatch. `loc_6B01E` now stores the ROM's
+literal `$FF`; expiry retains `loc_6B03A` for a setup-only engine dispatch,
+which changes the routine/velocities without performing an extra
+`Swing_UpAndDown` or `MoveSprite2` step (`sonic3k.asm:140934-140973,
+177944-177952`).
+
+The full HCZ comparison remains at f29176 / 355 errors (10 under
+`frontierOnly`), now narrowed to Tails' post-hit Y (`0x077F` expected versus
+`0x0780` actual). Focused boss/turbine/water-column tests pass. The granular
+nine-route S3K matrix keeps both AIZ routes green and preserves every non-HCZ
+frontier/count exactly: CNZ complete f1846 / 5, CNZ level-select f291 / 7,
+MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920
+/ 1, and LBZ f2270 / 5.
+
+Milestone 61 replaces the shortened routine-8 turbine animation with the
+native `Animate_RawGetSlower` counter shape: each complete `2,3,4,5` cycle
+increases the delay through 7, and the callback alone clears `$A6` and returns
+to wait. The slowing routine consumes the frame-start response-list child
+coordinate, while active/wind-down helpers keep their refreshed-coordinate
+touch contract (`sonic3k.asm:141019-141106,177806-177837`).
+
+This restores Tails' later turbine hit and advances HCZ from f29176 / 355 to
+f29530 / 267 full-run errors (3 under `frontierOnly`), where the next owner is
+main-player vertical launch speed (`-$800` expected, `-$580` actual). Focused
+boss/turbine/water-column tests pass. The granular nine-route S3K matrix keeps
+both AIZ routes green and preserves every non-HCZ frontier/count exactly: CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 62 restores the fired blade's native launch and fall state. The four
+`loc_6B678` wait dispatches increment `child_dx` from `$23` to `$27` before
+the blade detaches; `MoveSprite_LightGravity` moves with the old velocity and
+then adds `$20`; fall routines leave animation state alone; and the spin-down
+helper retains its two entry display ticks. The resulting chute spawns at the
+ROM X and its `sub_6BB40` rectangle refreshes `y_vel=-$800` for exactly the
+native frames (`sonic3k.asm:141445-141549,141932-141979,177749-177792,
+178352-178365`).
+
+This clears the f29530-f29544 launch window and advances HCZ to f30010 / 163
+full-run errors (12 under `frontierOnly`), where main-player landing Y is the
+next owner (`0x07EC` expected, `0x07F1` actual). The focused blade/turbine/
+water-column tests pass. The granular nine-route S3K matrix keeps both AIZ
+routes green and preserves every non-HCZ frontier/count exactly: CNZ complete
+f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select
+f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 63 replaces the blade's generic visual explosion with the native
+`loc_6B77C` impact object. Its `$8B` collision byte follows S3K's harmful
+category decode, publishes directly to `Collision_response_list` during
+mapping frames 0-2, and then becomes visual-only while `byte_6BF02` finishes.
+The blade slowdown now keeps the `Animate_RawGetFaster` delay and loop counters
+separate from the floor-hit callback, while each chute child preserves the
+setup-only `loc_6B4C4` dispatch before its subtype-based `Obj_Wait` begins
+(`sonic3k.asm:141287-141307,141492-141509,142247,177749-177792`).
+
+This closes the f30010 harmful-impact landing cluster and advances HCZ to
+f30027 / 140 full-run errors (7 under `frontierOnly`). The new owner is the
+CPU-sidekick boss contact: ROM negates Tails' x/y/ground velocities while the
+engine leaves all three positive. Focused blade/chute and HCZ boss-graph rewind
+tests pass (10/10). The granular nine-route S3K matrix keeps both AIZ routes
+green and preserves every non-HCZ frontier/count exactly: CNZ complete f1846 /
+5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 /
+1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5. Commands used the explicit
+S3K ROM path, one Surefire fork, and `-Dmse=off`; the full HCZ run omitted
+`trace.frontierOnly`, while the matrix included it.
+
+Milestone 64 gives the HCZ boss body the same published-coordinate phase as
+its ROM tail. `loc_6AF0C` completes the selected movement/routine handler,
+runs `sub_6BBC4`, and only then calls `Draw_And_Touch_Sprite`; the engine now
+uses that post-movement coordinate when the retained response-list pointer is
+consumed. This moves CPU Tails' exact sign-negating boss bounce from f30027 to
+the native f30028 (`sonic3k.asm:140808-140821`).
+
+HCZ advances from f30027 / 140 to f30462 / 65 full-run errors (1 under
+`frontierOnly`). The new owner is camera X at the boss transition (`$4050`
+expected, `$4068` actual). The focused HCZ policy suite passes 9/9. The
+granular nine-route S3K matrix again keeps AIZ complete and level-select green
+and preserves every non-HCZ frontier/count: CNZ complete f1846 / 5, CNZ
+level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
+ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 65 restores the post-defeat camera handoff. The custom hit path now
+leaves the freshly installed `$3F` wait untouched on the hit frame;
+`loc_6B0CC` uses constant `MoveSprite` velocity and completes only after
+`Obj_Wait` underflows; and `loc_6B0E8` writes the stored max-X target while a
+rewind-safe `Child6_IncLevX` helper advances live `Camera_max_X_pos` with the
+ROM's accumulating `$4000` longword (`sonic3k.asm:140937-140969,
+142015-142044,177944-177952,178154-178169`).
+
+This clears the f30462-f30546 camera-release cluster and advances HCZ to
+f30580 / 58 full-run errors (11 under `frontierOnly`). The next owner is the
+main player's capsule-area floor/vertical state (`y_speed=0` expected versus
+`$0458` actual). Focused HCZ boss/blade/chute and boss-graph rewind tests pass
+15/15. The granular nine-route S3K matrix remains exact: both AIZ routes green;
+CNZ complete f1846 / 5 and level-select f291 / 7; MGZ complete f1072 / 1 and
+level-select f1030 / 1; ICZ f3174 / 1; MHZ f2920 / 1; LBZ f2270 / 5.
+
+Milestone 66 adds the ground capsule's separate button SST. ROM slot 11 sits
+at `(capsule.x, capsule.y-$24)` and runs `SolidObjectFull` with `$1B/$04/$06`
+dimensions; the engine had only rendered that button while exposing the lower
+capsule body as solid. The new persistent, rewind-recreatable slot lets Sonic
+land at `y_pos=$07A4`, clear rolling/airborne state, and publish the native
+interact slot before the parent observes the press (`sonic3k.asm:
+181496-181535`).
+
+HCZ advances from f30580 / 58 to f30582 / 56 full-run errors (5 under
+`frontierOnly`). The new first owner is CPU Tails' one-pixel X position after
+the capsule landing. Focused capsule/boss and HCZ boss-graph rewind tests pass
+7/7. The granular matrix remains unchanged: both AIZ routes green; CNZ
+complete f1846 / 5 and level-select f291 / 7; MGZ complete f1072 / 1 and
+level-select f1030 / 1; ICZ f3174 / 1; MHZ f2920 / 1; LBZ f2270 / 5.
+
+Milestone 67 makes the separate button slot publish its native standing-bit
+signal to the parent. The button now runs a manual `SolidObjectFull` checkpoint
+inside its own SST dispatch; because its slot follows the capsule parent, the
+parent consumes that signal on its next entry, changes to the open routine, and
+sets the signed `Ctrl_2_locked` byte after Tails' current player slot has already
+run. Tails therefore stops executing `Tails_CPU_Control` from the following
+frame instead of accumulating engine-only follow nudges (`sonic3k.asm:
+181520-181555`). The structural button-to-parent link is relinked during rewind
+recreation rather than inferred from trace state.
+
+This clears the f30582-f30644 sidekick position/contact tail and advances HCZ
+to f30645 / 31 full-run errors (6 under `frontierOnly`). The new first owner is
+the results transition: the engine zeros Tails' velocity when the main player
+enters the ending pose, while ROM keeps P2 moving until the later
+`Check_TailsEndPose` eligibility dispatch. Focused capsule/boss and HCZ
+boss-graph rewind tests pass 5/5. The granular nine-route matrix remains exact:
+both AIZ routes green; CNZ complete f1846 / 5 and level-select f291 / 7; MGZ
+complete f1072 / 1 and level-select f1030 / 1; ICZ f3174 / 1; MHZ f2920 / 1;
+LBZ f2270 / 5.
+
+Milestone 68 separates the capsule's Player 1 results pose from
+`Check_TailsEndPose`. `sub_868F8` applies `Set_PlayerEndingPose` only to P1;
+the next routine-6 capsule entry checks P2 eligibility and queues the P2 pose
+for the following player slot. The rewind-captured CPU state keeps
+`Ctrl_2_locked` through that slot's no-input deceleration and position add,
+then clears the signed lock and applies object control, victory animation, and
+zero velocities after physics. This preserves Tails' final `$72` subpixel move
+before the ROM zeroes the velocity (`sonic3k.asm:181900-181940,181977-181990`).
+
+The button's established-rider path also now remains attached after P1 receives
+bit-7 object control: `SolidObjectFull_1P` consumes an existing standing bit
+before `SolidObject_cont` reaches its signed object-control rejection, while
+new bit-7 contacts remain blocked (`sonic3k.asm:41016-41035,41390-41442`).
+This clears the f30645-f30757 results-pose cluster and advances HCZ to f30758 /
+37 full-run errors (2 under `frontierOnly`), where the next owner is P1's
+post-results vertical position (`$07A3` expected, `$079D` actual). Focused HCZ,
+rewind coverage, and static-state coverage checks pass. The granular nine-route
+matrix again keeps both AIZ routes green and preserves every established red
+frontier/count: CNZ complete f1846 / 5 and level-select f291 / 7; MGZ complete
+f1072 / 1 and level-select f1030 / 1; ICZ f3174 / 1; MHZ f2920 / 1; LBZ f2270 /
+5.
+
+Milestone 69 moves the geyser handoff onto the ROM results-lifetime gate.
+`loc_6B154` waits for `_unkFAA8` to clear; `End_of_level_flag` is already set
+during this Act 2 results sequence and is not evidence that the results object
+has retired. The capsule now waits for the live `End_ofLevelActive` owner to
+clear before creating `loc_6B7BC`, preventing the 95-frame shake/rise sequence
+from starting hundreds of frames early (`sonic3k.asm:140986-141006,
+141545-141623`).
+
+This closes the premature geyser carry and advances HCZ from f30758 / 37 to
+f31121 / 48 full-run errors (8 under `frontierOnly`). The larger later total is
+newly exposed after the removed early carry; there is no mismatch before the
+new frontier. The next owner is the boss-wait camera lock (`$4180` expected,
+`$4198` actual). Focused HCZ plus rewind/static coverage checks pass. The
+granular matrix remains unchanged: both AIZ routes green; CNZ complete f1846 /
+5 and level-select f291 / 7; MGZ complete f1072 / 1 and level-select f1030 / 1;
+ICZ f3174 / 1; MHZ f2920 / 1; LBZ f2270 / 5.
+
+Milestone 70 completes the HCZ results/geyser handoff. HCZ2 results retain the
+boss-arena camera bounds and the event-owned results parent accounts for its
+remaining child-SST retire dispatches before `_unkFAA8` clears. The resulting
+`loc_6B154` handoff signs both controller-lock bytes and clears their logical
+words before creating the primary geyser owner (`sonic3k.asm:62679-62693,
+140986-141006`).
+
+The geyser sequence now allocates the delayed subtype `-1` P2 owner with its
+four-count `Obj_Wait`, targets the native P2 slot, and leaves transition timing
+owned solely by the primary subtype. Both owners keep carrying upward while
+the primary `$5F` wait passes through zero; `StartNewLevel #$0200` preserves
+the carried control/position state and the pre-boundary camera sample
+(`sonic3k.asm:141545-141633`). The engine's embedded results children and
+camera-before-object phase are bridged at those owning object boundaries; no
+trace data is hydrated and no route/frame exception is used.
+
+The complete HCZ replay now passes both with and without `trace.frontierOnly`,
+closing the prior f31121 / 48 full-run report. The whole HCZ trace class,
+including its Poindexter slot oracle, and every HCZ-named unit, integration,
+event, rewind, and rendering test pass; Mockito cases use
+`-Dnet.bytebuddy.experimental=true` under the workspace's Java 26 runtime.
+The fresh nine-route S3K matrix keeps both AIZ routes green and reproduces
+every other established frontier/count exactly: CNZ complete f1846 / 5 and
+level-select f291 / 7; MGZ complete f1072 / 1 and level-select f1030 / 1; ICZ
+f3174 / 1; MHZ f2920 / 1; LBZ f2270 / 5. The inventory-driven cross-game
+replay sweep keeps all 29 S1 and 19 of 20 S2 classes green; S2 OOZ alone
+reproduces its pre-HCZ f447 `tails_status_byte` mismatch, previously confirmed
+at commit `92a4703f1`. The rewind coverage guard separately reports the
+pre-existing AIZ intro glow final-scalar gaps introduced before this HCZ
+milestone.
+
+Milestone 31 restores TurboSpiker's detached-shell direction. The shell child
+inherits the parent's post-retreat render bit, but `loc_87D72` interprets that
+bit oppositely for its own `$100` X velocity: the badnik retreats one way while
+the launched shell travels the other. The engine had sent both in the same
+direction, creating an engine-only shell hit (`sonic3k.asm:183973-184070`).
+
+This closes f16831-f17060 and advances HCZ to f17061 / 2217 full-run errors (12
+under `frontierOnly`). The larger full total exposes 566 later-route groups
+after the removed hurt branch; there is no mismatch before the new frontier.
+The focused TurboSpiker launch test now asserts the shell moves opposite its
+parent retreat. The isolated granular replay matrix keeps both AIZ routes green
+and preserves every non-HCZ frontier/count exactly: CNZ complete f1846 / 5,
+CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
+ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 32 restores S3K airborne terrain probes to world-space orientation.
+The ROM's `SonicKnux_DoLevelCollision` path selects explicit floor, ceiling,
+and wall checks from velocity; it does not rotate those probes through a stale
+grounded loop/wall mode. The S3K collision profile now resets the probe mode
+before the airborne quadrant dispatch, while S1/S2 retain their existing rule.
+
+This closes f17061-f17172 and advances HCZ to f17173 / 2138 full-run errors (2
+under `frontierOnly`). The focused collision-system guard passes. The granular
+S3K replay matrix remains exact: both AIZ routes green; CNZ complete f1846 / 5,
+CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
+ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5. A selected full S1/S2 replay
+check kept all S1 and all but S2 OOZ clean; a detached worktree at pre-change
+commit `92a4703f1` reproduced OOZ's identical f447 mismatch, establishing it as
+pre-existing rather than a regression from the S3K collision rule.
+
+Milestone 33 completes the two-player tension-bridge solid contract. New riders
+enter through flat `sub_1E410` with `d3=8`; only established riders consume the
+bent child-segment Y table. `loc_38AC2` clears `Status_OnObj` without forcing
+`Status_InAir`, allowing a terrain landing earlier in the frame to survive the
+bridge exit. Player 2's prior `$3B` segment walks the shared `$3F` bend anchor
+before `sub_38CC2`, and the bridge exposes `loc_387E0`'s `$0003` pointer word to
+`Tails_CPU_interact` (`sonic3k.asm:75555-75635,75879-75946`).
+
+This closes f17173-f17313 and advances HCZ to f17314 / 1964 full-run errors (1
+under `frontierOnly`). The focused bridge contract and bend-order tests pass.
+The granular S3K replay matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 34 publishes the ROM animation-side push clear for spindash charges.
+An active S3K Tails charge writes the combined `$0900` anim/prev-anim word, not
+just the visible animation id; the following `Animate_Tails` comparison must
+therefore clear `Status_Push` even when the prior visible id was already 9.
+The shared movement bridge now exposes that same-frame status clear before the
+engine's later animation pass (`sonic3k.asm:28797-28808,29681-29686`).
+
+This closes f17314-f17398 and advances HCZ to f17399 / 1963 full-run errors (10
+under `frontierOnly`). The focused repeated-charge test passes. The granular
+S3K replay matrix remains exact: both AIZ routes green; CNZ complete f1846 / 5,
+CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
+ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5. A full selected S1/S2 fleet
+ran 50 tests with only the already-baselined S2 OOZ f447 mismatch; all other
+selected cross-game replays stayed clean.
+
+Milestone 35 restores the hand launcher's exact-boundary landing gate. A fresh
+`SolidObjectTop` contact computes `d0` from the launcher surface and the
+player's native `y_pos/y_radius`; its unsigned `cmpi.w #-$10,d0 / blo` rejects
+`d0 == 0` and accepts only negative overlap from `-$10` through `-1`. The
+engine had treated the exact boundary as a landing and attached Sonic one frame
+early on the later HCZ2 launcher (`sonic3k.asm:41779-41820,41982-42068,
+65763-65827`).
+
+This closes f17399-f18716 and advances HCZ to f18717 / 1636 full-run errors (2
+under `frontierOnly`). The focused hand-launcher suite passes. The granular
+S3K replay matrix remains exact: both AIZ routes green; CNZ complete f1846 / 5,
+CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
+ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 36 removes an engine-only horizontal carry from HCZ snake blocks.
+Obj67 computes its new position, then loads the updated `x_pos` into `d4`
+immediately before `SolidObjectFull`. The continued-ride path copies that value
+to `d2`, and `MvSonicOnPtfm` subtracts the same current object X, producing a
+zero carry delta; the rider's own ground motion remains independent
+(`sonic3k.asm:50893-50910,41016-41042,41642-41679`).
+
+This closes f18717-f19164 and advances HCZ to f19165 / 2173 full-run errors (11
+under `frontierOnly`). The larger total exposes a later route cascade after the
+removed extra pixel; there is no mismatch before the new frontier. All 12
+focused snake-block tests pass. The granular S3K replay matrix remains exact:
+both AIZ routes green; CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ
+complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1,
+and LBZ f2270 / 5.
+
+Milestone 37 makes the spinning column consume the logical pressed byte for
+jump release. Obj68 loads `Ctrl_1_logical` / `Ctrl_2_logical` as a word but
+then applies `andi.b` to the low, newly-pressed A/B/C byte. A held B bit without
+a fresh press therefore keeps the rider captured instead of applying the
+column's `-$680` release velocity (`sonic3k.asm:68136-68148,68220-68290`).
+
+This closes f19165-f19189 and advances HCZ to f19190 / 1482 full-run errors (1
+under `frontierOnly`). The focused spinning-column suite passes 6/6, including
+the new held-without-press guard. The granular S3K replay matrix remains exact:
+both AIZ routes green; CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ
+complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1,
+and LBZ f2270 / 5.
+
+Milestone 38 removes the spinning column's engine-only controller lock. Obj68
+writes `object_control=3` to suppress ordinary player movement, but it never
+writes `Ctrl_1_locked` / `Ctrl_2_locked`. Keeping the logical-pad publisher
+live lets `Sonic_RecordPos` store held-button releases while the column owns
+positioning, so CPU Tails receives the newer right-only delayed word instead of
+a stale held B (`sonic3k.asm:22119-22136,68136-68148,68220-68290`).
+
+This closes f19190-f20507 and advances HCZ to f20508 / 1531 full-run errors (10
+under `frontierOnly`). The larger total exposes later route groups with no
+earlier mismatch. The focused spinning-column suite remains 6/6 green. The
+granular S3K replay matrix remains exact: both AIZ routes green; CNZ complete
+f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select
+f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 39 applies `sub_1E410`'s exact-boundary rule to tension-bridge first
+contacts. `sub_38AA2` routes a non-standing player through the flat helper with
+`d3=8`; its unsigned `cmpi.w #-$10,d0 / blo` accepts negative overlap from
+`-$10` through `-1` but rejects `d0 == 0`. The engine had landed CPU Tails
+three pixels early at that boundary (`sonic3k.asm:75871-75946,41982-42068`).
+
+This closes f20508-f21083 and advances HCZ to f21084 / 1212 full-run errors (2
+under `frontierOnly`). The focused tension-bridge contract suite passes 6/6.
+The granular S3K replay matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 40 removes horizontal carry from HCZ spinning columns. Obj68 updates
+its position first and then passes the updated `x_pos` in `d4` to
+`SolidObjectFull`; `MvSonicOnPtfm` subtracts that same current X and therefore
+applies zero platform delta. The engine had shifted a newly captured rider one
+pixel with the column (`sonic3k.asm:68132-68157,41016-41042,41642-41679`).
+
+This closes f21084-f21137 and advances HCZ to f21138 / 1204 full-run errors (1
+under `frontierOnly`). The focused spinning-column suite passes 6/6. The
+granular S3K replay matrix remains exact: both AIZ routes green; CNZ complete
+f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select
+f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 41 restores spinning-column exact-edge side contact. Obj68 calls
+`SolidObjectFull`, whose `SolidObject_cont` X-window uses `bhi`; a player at
+`relX == d1*2` therefore remains in the zero-distance side path and receives
+`Status_Push`. The engine's exclusive default dropped that one-frame contact
+(`sonic3k.asm:41394-41403,68148-68157`).
+
+This closes f21138-f21617 and advances HCZ to f21618 / 1203 full-run errors (1
+under `frontierOnly`). The focused spinning-column suite passes 6/6. The
+granular S3K replay matrix remains exact: both AIZ routes green; CNZ complete
+f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select
+f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 42 preserves the fresh-landing result produced by the hand launcher's
+native `SolidObjectTop` helper. Obj3A reaches `sub_1E410`, which writes
+`playerY-distY+3`; it does not run `PlatformObject_ChkYRange`'s later absolute
+surface snap. The engine had correctly placed an airborne Tails at `$00D8`,
+restored his `$0F` standing radius, and then overwritten the position to
+`$00D7` through that unrelated PlatformObject override
+(`sonic3k.asm:41982-42068,65798-65827`).
+
+This closes f21618-f21671 and advances HCZ to f21672 / 1202 full-run errors (2
+under `frontierOnly`). The focused hand-launcher suite passes 7/7. The granular
+S3K replay matrix remains exact: both AIZ routes green; CNZ complete f1846 / 5,
+CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
+ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 43 restores Jawz's native deferred attack ownership. Obj93 publishes
+`collision_flags=$D7`, so `Touch_Special` adds one to `collision_property` for
+P1 and two for P2; the later Jawz slot maps values 2/3 to P2 before running
+`Check_PlayerAttack` and `EnemyDefeated`. The generic engine badnik path had
+published an enemy-category `$17` byte and destroyed Jawz immediately in P1's
+touch callback, assigning Sonic the `-$100` bounce when both native players
+overlapped. The explicit property state now selects Tails exactly as the ROM
+does (`sonic3k.asm:21162-21194,179747-179865,183518-183570`).
+
+This closes f21672-f21936 and advances HCZ to f21937 / 1200 full-run errors (1
+under `frontierOnly`). The focused Jawz suite passes 3/3. The granular S3K
+replay matrix remains exact: both AIZ routes green; CNZ complete f1846 / 5, CNZ
+level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ
+f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 44 preserves the player centre across HCZ water-skim jump exit.
+`loc_38652` writes `y_vel=-$680`, rolling radii, animation 2, and the roll bit,
+but never writes `y_pos`. The engine's `setRolling(true)` also shrinks its
+top-left-based visual box, moving Tails' centre up one pixel unless the native
+position word is restored after that representation change
+(`sonic3k.asm:75481-75491`).
+
+This closes f21937-f22614 and advances HCZ to f22615 / 1199 full-run errors (1
+under `frontierOnly`). The focused water-skim suites pass 13/13. The granular
+S3K replay matrix remains exact: both AIZ routes green; CNZ complete f1846 / 5,
+CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
+ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 45 applies `SolidObject_cont`'s signed object-control rejection to
+HCZ spinning columns. Obj68 must keep resolving its positive `$03` captured
+riders, but a new contact with Tails' `$81` catch-up-flight marker returns
+before side/top classification. The engine had allowed that signed marker
+through the column's general object-control opt-in and applied a one-pixel
+right-side separation, which then changed the later flight-facing transition
+(`sonic3k.asm:41438-41440,68148-68157`).
+
+This closes f22615-f22860 and advances HCZ to f22861 / 1197 full-run errors (5
+under `frontierOnly`). The focused spinning-column suite passes 6/6. The
+granular S3K replay matrix remains exact: both AIZ routes green; CNZ complete
+f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select
+f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 46 retains Jawz's `Obj_WaitOffscreen` result from the post-camera
+render pass. The ROM installs a `$20` placeholder, lets `Render_Sprites` set
+render bit 7 after scrolling, restores the saved operation pointer on the next
+Jawz dispatch, and only then runs setup. The engine previously recomputed
+visibility during object execution; a vertically entering Jawz consequently
+started its `MoveSprite2` patrol one dispatch late and missed the exact-edge
+P1 attack at f22861. Jawz now retains the render result, including the
+two-pixel vertical camera sweep into that render pass, before consuming the
+restore and setup dispatches (`sonic3k.asm:180266-180298,183518-183570,
+36318-36365`).
+
+This closes f22861-f27041 and advances HCZ to f27042 / 897 full-run errors;
+the previously active `frontierOnly` window is green. The focused Jawz suite
+passes 4/4. The granular S3K replay matrix remains exact: both AIZ routes
+green; CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 /
+1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+The full HCZ replay was used for the milestone decision so the rejected
+earlier-contact candidate at f14033 could not be hidden by frontier filtering.
+
+Milestone 47 restores `Check_CameraInRange` ownership for the HCZ2 cutscene
+Knuckles controller. The ROM aborts initialization until the camera enters
+`word_62150`; on success, `Check_CameraInRange` copies its JSR return address
+into the object's operation pointer, so later state-machine routines continue
+outside the rectangle. The engine had initialized the controller before its
+activation rectangle and repeatedly pinned `Camera_min_X_pos` while the route
+was still left of `$3900`, suppressing the native spindash
+`H_scroll_frame_offset=$2000` camera jerk (`sonic3k.asm:128908-128972,
+180428-180459,38364-38429`).
+
+This closes f27042-f27415 and advances HCZ to f27416 / 596 full-run errors (1
+under `frontierOnly`). The full HCZ replay confirms the reduced report. The
+granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 48 preserves trigger-collapse tension-bridge riders through the
+native countdown. When `Level_trigger_array[subtype & $F]` becomes nonzero,
+`loc_387B6` branches directly into fragment creation, and each subsequent
+`loc_3890C` dispatch returns without calling the ordinary sloped-solid helper.
+The engine now suppresses its split solid checkpoint from the live trigger
+byte onward, retains both riders during the `$0E` countdown, then mirrors
+`loc_38918/loc_3892C` by clearing every riding player's standing state and
+setting them airborne at expiry (`sonic3k.asm:75592-75605,75743-75795`).
+
+Together with the corrected initialization-only interpretation of milestone
+47, this closes f27416-f27694 and advances HCZ to f27695 / 892 full-run errors
+(11 under `frontierOnly`). Focused tension-bridge checks pass 7/7. The granular
+nine-route S3K matrix remains exact: both AIZ routes green; CNZ complete f1846
+/ 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030
+/ 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 49 carries the HCZ large-fan KosM queue state across activations.
+The first Obj39 activation in the complete route observes four
+`loc_3093C` object samples before `Kos_modules_left` clears, while the later
+HCZ2 fan—after that module workload has already completed—observes three. A
+global shorter delay regressed the first fan at f2804 and was rejected. The
+engine now records whether the fan module queue has been primed, uses that
+ROM-visible state to select the later one-dispatch-shorter wait, and captures
+it in the existing HCZ static rewind adapter (`sonic3k.asm:65583-65636`).
+
+This closes f27695-f27806 and advances HCZ to f27807 / 681 full-run errors (1
+under `frontierOnly`). Focused large-fan and rewind-state checks pass. The
+granular nine-route S3K matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 28 restores the two ROM-owned HCZ2 surface handlers around the first
+large water loop. `sub_714E -> sub_717C` now samples the live foreground layout
+byte after playable physics, recognizes the ten HCZ2 slide chunks, moves
+`ground_vel` toward `-$800`, and publishes `status_secondary` bit 7 for the next
+movement dispatch. `Obj_HCZWaterSplash` subtype 1 now runs its activation and
+sustain physics after each native player slot rather than before the frame's
+terrain collision, so its direction refresh, surface pin, and airborne `$C`
+friction are visible on the same ROM dispatch
+(`sonic3k.asm:8960-9100,75314-75491`).
+
+This closes f16133-f16518 and advances HCZ to f16519 / 1674 full-run errors (1
+under `frontierOnly`), reducing the full report by 910 groups. The new frontier
+is the independent native-Tails respawn counter (`expected=$0043`,
+`actual=$0000`). The focused HCZ/ICZ slide and HCZ water-skim tests pass. The
+isolated granular replay matrix keeps both AIZ routes green and preserves every
+non-HCZ frontier/count exactly: CNZ complete f1846 / 5, CNZ level-select f291 /
+7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ
+f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 29 preserves the ROM's shared Tails CPU timer across the routine-4 to
+routine-6 handoff. `Tails_FlySwim_Unknown` and `TailsCPU_CheckDespawn` both use
+the single `Tails_CPU_flight_timer` word; when flight recovery reaches its
+delayed target and selects normal follow, the ROM deliberately does not clear
+that word. The engine now carries the accumulated flight value into the normal
+off-screen counter instead of starting a second field from zero
+(`sonic3k.asm:26534-26648,26816-26837`).
+
+This closes f16519-f16696 and advances HCZ to f16697 / 1663 full-run errors (2
+under `frontierOnly`), reducing the full report by 11 groups. A focused flight
+recovery guard verifies that the carried word continues incrementing in normal
+follow. The isolated granular replay matrix keeps both AIZ routes green and
+preserves every non-HCZ frontier/count exactly: CNZ complete f1846 / 5, CNZ
+level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ
+f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 30 restores tension-bridge segment publication order. The bridge's
+bend routine consumes the prior contact's `$3F` segment byte, then the later
+`sub_38A88` solid pass stores the player's current segment for the following
+object dispatch. The engine now defers that current-segment publication until
+after building the frame's slope data instead of reshaping the bridge one pass
+early (`sonic3k.asm:75555-75635,75879-75946,76164-76240`).
+
+This closes f16697-f16830 and advances HCZ to f16831 / 1651 full-run errors (10
+under `frontierOnly`), reducing the full report by 12 groups. A focused bridge
+test covers the prior-segment bend followed by next-dispatch consumption. The
+isolated granular replay matrix keeps both AIZ routes green and preserves every
+non-HCZ frontier/count exactly, including the bridge-sensitive ICZ route: CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 
@@ -37599,3 +38884,89 @@ Verification:
   exited 0 with expected-red reports preserved: CNZ2 f9977 / 10
   (`tails_x_speed` expected `-0200`, actual `0x023A`) and MTZ3 f13477 / 4
   (`x_speed` expected `-03FB`, actual `0x03FB`).
+
+### 2026-07-12 -- S2 MCZ Obj6A rewind reference-closure repair
+
+The runtime reference-closure sweep on `bugfix/ai-rewind-reference-closure`
+at `a4b624b92` found two regressions in traces that were green in the pre-guard
+baseline:
+
+- MCZ1 stopped at trace index/ROM frame 944 after the engine dropped the left
+  child while the live parent was at X `$098F` and camera X reached `$0A05`.
+- MCZ2 stopped at trace index/ROM frame 4964 after the same false child drop
+  while the parent was at X `$0E60` and camera X reached `$0F07`.
+
+The closure guard exposed an engine lifetime bug, not an independently owned
+ROM child lifetime. Obj6A allocates separate child SST entries and shifts their
+live positions, but `Obj6A_InitSubObject` copies the parent's unshifted
+`x_pos/y_pos` into every child's `objoff_32/30` first. All three movement tails
+therefore test the same parent X anchor in `MarkObjGone2`
+(`docs/s2disasm/s2.asm:54184-54213,54278-54280,54303-54305`). The engine had
+incorrectly derived child anchors from shifted Java spawns, allowing one child
+to leave the live identity set early. Children now keep shifted live
+positions/spawns while inheriting the parent unload anchor.
+
+Parameterized manager-driven coverage seeds the previous S2 post-camera latch,
+passes the current pre-camera X to `ObjectManager.update`, and reproduces both
+former route windows (parent/camera `$098F/$0A05` and `$0E60/$0F07`) without
+manual deletion. It proves all three entries remain eligible together, closure
+capture succeeds, and a farther camera naturally culls the assembly together.
+Supplemental graph coverage retains the captured parent list, deferred inverse
+owner detach/relink, rewind restoration, and late pre-seek callback check.
+
+Verification for final commit `0b7c59be9`:
+
+- `mvn "-Dtest=com.openggf.game.sonic2.objects.TestS2MczRotPformsGraphRewind,com.openggf.level.objects.TestObjectManagerRewindReferenceClosure" surefire:test`
+  exited 0; all focused graph and manager reference-closure checks passed.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dsurefire.argLine=-Xmx2g" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`
+  exited 0; MCZ1 returned to its baseline PASS with no closure failure.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dsurefire.argLine=-Xmx2g" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`
+  exited 0; MCZ2 returned to its baseline PASS with no closure failure.
+
+### 2026-07-12 -- Final post-MCZ exclusive reference-closure sweep
+
+At guarded HEAD `c882f3d7f`, the final sweep used the same empirically reliable
+class-scoped process as the preserved baseline: compile once with
+`mvn -Dmse=off -DskipTests test-compile`, then run the 29 commands from
+`target/rewind-closure-baseline/commands.txt` independently and in order, with
+one fresh Surefire JVM per class (`forkCount=1`, `-Xmx2g`). This is the exclusive
+comparison run; no other Maven process shared the worktree.
+
+The result exactly matched the baseline method oracle: 29 classes / 61 methods,
+41 passed, 19 retained their known assertion failures, one retained the known
+CNZ behavioral error, and there were zero skips, zero infrastructure errors,
+zero reference-closure failures, and zero method-status changes. This does not
+claim the 20 pre-existing behavioral reds are green. The schema-v2 sweep wrapper
+is `target/rewind-closure-guarded/manifest.json` (SHA-256
+`4E3D92E4FE5CF144B1B352FC99E2715DD308B8B3D69E4FAF3A6C0AC197E177F9`), with
+the sorted oracle at `target/rewind-closure-guarded/method-status.json`.
+
+Representative serial timing used clean baseline (`a3ad53f4a`) and guarded
+(`c882f3d7f`) worktrees, one warm-up and five measured samples per target:
+
+- S2 WFZ, 16,427 frames: baseline samples 24.904, 31.735, 28.980, 26.610,
+  30.326 s (median 28.980 s); guarded samples 26.024, 29.948, 29.117, 27.938,
+  33.382 s (median 29.117 s), delta +0.136 s / +0.47%.
+- S3K AIZ complete-run, 26,228 frames: baseline samples 45.038, 41.328,
+  38.197, 37.886, 38.023 s (median 38.197 s); guarded samples 41.575, 34.936,
+  35.753, 36.213, 31.234 s (median 35.753 s), delta -2.444 s / -6.40%.
+
+The performance threshold (guarded median both more than one second and more
+than 10% slower) was false for both targets. Timing evidence is preserved in
+`target/rewind-closure-timing.json` and `target/rewind-closure-timing/`.
+
+### 2026-07-12 -- HCZ background-wall rendering regression sweep
+
+The HCZ Act 2 background-wall rendering fix was checked on branch
+`bugfix/ai-hcz-trace-replays` with local uncommitted implementation and test
+changes, against a detached clean-HEAD worktree at `2afa97b5b`
+(`.worktrees/trace-hcz-baseline`). Both worktrees ran:
+
+`mvn -q -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dtrace.frontierOnly=true -Dtrace.context.radius=8 "-Dtest=*TraceReplay" -DfailIfNoTests=false "-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=<repo>/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=<repo>/Sonic and Knuckles & Sonic 3 (W) [!].gen" test`
+
+Both runs produced exactly the same **92 tests: 71 passed, 18 known failures,
+2 known errors, 1 skip**. A normalized comparison of every Surefire testcase
+status and failure/error message was empty: zero status changes and zero
+first-frontier changes. The retained errors were the existing CNZ miniboss
+null-parent assertion and HCZ TurboSpiker rewind reference-closure failure at
+frame 14211. No trace regression was introduced by the rendering fix.

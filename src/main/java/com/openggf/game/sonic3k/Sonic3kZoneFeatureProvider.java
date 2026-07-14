@@ -29,6 +29,7 @@ import com.openggf.game.sonic3k.render.IczBigSnowPileBackgroundEffect;
 import com.openggf.game.sonic3k.render.IczBigSnowPilePriorityMaskEffect;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GraphicsManager;
@@ -149,7 +150,23 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         return zoneId == Sonic3kZoneIds.ZONE_MGZ
                 || zoneId == Sonic3kZoneIds.ZONE_FBZ
                 || zoneId == Sonic3kZoneIds.ZONE_ICZ
+                || isHcz2NormalBackgroundPlaneActive(zoneId)
                 || isCnzBossBackgroundWindowActive(zoneId);
+    }
+
+    /**
+     * HCZ2's opening wall occupies the second 512px BG-layout strip. Once the
+     * ROM's bottom-up refresh reaches state $C, Plane B contains only the
+     * ordinary strip sourced from X=$000 and wraps at the VDP's 512px width.
+     */
+    private boolean isHcz2NormalBackgroundPlaneActive(int zoneId) {
+        if (zoneId != Sonic3kZoneIds.ZONE_HCZ || !GameServices.hasRuntime()) {
+            return false;
+        }
+        return GameServices.zoneRuntimeRegistry()
+                .currentAs(HczZoneRuntimeState.class)
+                .map(HczZoneRuntimeState::normalBackgroundPlaneActive)
+                .orElse(false);
     }
 
     @Override
@@ -308,7 +325,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ && player != null && !player.getDead()) {
             int act = levelManager != null ? levelManager.getFeatureActId() : 0;
-            HCZWaterSkimHandler.update();
+            HCZWaterSkimHandler.beginFrame();
             if (GameServices.module().getLevelEventProvider()
                     instanceof Sonic3kLevelEventManager mgr) {
                 mgr.ensureZoneRuntimeStateInstalled();
@@ -334,7 +351,8 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public void updateAfterPlayablePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
-        if (zoneIndex != Sonic3kZoneIds.ZONE_ICZ || player == null || player.getDead()) {
+        if (player == null || player.getDead()
+                || (zoneIndex != Sonic3kZoneIds.ZONE_HCZ && zoneIndex != Sonic3kZoneIds.ZONE_ICZ)) {
             return;
         }
         var levelManager = GameServices.levelOrNull();
@@ -342,9 +360,17 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         if (GameServices.module().getLevelEventProvider()
                 instanceof Sonic3kLevelEventManager mgr) {
             mgr.ensureZoneRuntimeStateInstalled();
-            var events = mgr.getIczEvents();
-            if (events != null) {
-                events.updateSlideTerrainAfterPlayablePhysics(act, player);
+            if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ) {
+                HCZWaterSkimHandler.updateAfterPlayablePhysics(player);
+                var events = mgr.getHczEvents();
+                if (events != null) {
+                    events.updateSlideTerrainAfterPlayablePhysics(act, player);
+                }
+            } else {
+                var events = mgr.getIczEvents();
+                if (events != null) {
+                    events.updateSlideTerrainAfterPlayablePhysics(act, player);
+                }
             }
         }
     }

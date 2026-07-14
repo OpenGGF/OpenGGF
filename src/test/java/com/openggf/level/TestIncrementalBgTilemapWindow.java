@@ -206,6 +206,27 @@ public class TestIncrementalBgTilemapWindow {
     }
 
     @Test
+    public void runtimeWrapActivationRebuildsFullLayoutAsVdpPlaneWindow() {
+        MutableWrapZoneFeatures zfp = new MutableWrapZoneFeatures();
+        LevelTilemapManager manager = newManager(0, zfp);
+        assertEquals(MAP_WIDTH_BLOCKS * 16, manager.getBackgroundTilemapWidthTiles(),
+                "non-wrapped S3K background initially exposes the full layout");
+
+        zfp.wraps = true;
+        ensure(manager, zfp);
+
+        assertEquals(PERIOD_PX / Pattern.PATTERN_WIDTH,
+                manager.getBackgroundTilemapWidthTiles(),
+                "dynamic Plane B refresh must rebuild as a 64-cell VDP window");
+        assertEquals(0, manager.getBgTilemapBaseX(),
+                "post-chase Plane B refresh must retain the X=$000 source strip");
+        assertArrayEquals(fullRebuildAt(0, new StubZoneFeatures(true, false)),
+                manager.getBackgroundTilemapData());
+        assertEquals(2, manager.bgFullRebuildCount);
+        assertEquals(0, manager.bgIncrementalShiftCount);
+    }
+
+    @Test
     public void runtimeTilemapOverlayWriteForcesFullRebuildOnNextWindowStep() {
         ZoneFeatureProvider zfp = new StubZoneFeatures(true, false);
         LevelTilemapManager manager = newManager(496, zfp);
@@ -925,6 +946,22 @@ public class TestIncrementalBgTilemapWindow {
 
         @Override
         public int ensurePatternsCached(GraphicsManager graphicsManager, int baseIndex) {
+            return baseIndex;
+        }
+    }
+
+    private static final class MutableWrapZoneFeatures implements ZoneFeatureProvider {
+        private boolean wraps;
+
+        @Override public boolean bgWrapsHorizontally() { return wraps; }
+        @Override public void initZoneFeatures(Rom rom, int zoneIndex, int actIndex, int cameraX) { }
+        @Override public void update(AbstractPlayableSprite player, int cameraX, int zoneIndex) { }
+        @Override public void reset() { wraps = false; }
+        @Override public boolean hasCollisionFeatures(int zoneIndex) { return false; }
+        @Override public boolean hasWater(int zoneIndex) { return false; }
+        @Override public int getWaterLevel(int zoneIndex, int actIndex) { return 0; }
+        @Override public void render(Camera camera, int frameCounter) { }
+        @Override public int ensurePatternsCached(GraphicsManager graphicsManager, int baseIndex) {
             return baseIndex;
         }
     }

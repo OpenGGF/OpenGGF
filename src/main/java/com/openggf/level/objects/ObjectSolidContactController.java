@@ -4180,7 +4180,8 @@ final class ObjectSolidContactController {
         CollisionRules rules = collisionRulesOrNull(player);
         return player.getAir()
                 && rules != null
-                && rules.airBottomSolidHitClearsGroundSpeed();
+                && rules.air() != null
+                && rules.air().bottomSolidHitClearsGroundSpeed();
     }
 
     private boolean usesCurrentYRadiusOnlyForFullSolidBottomOverlap(PlayableEntity player) {

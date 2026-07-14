@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnCoordinateDefaultArgsRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -123,7 +124,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         switch (phase) {
             case WAIT_FADE -> updateWaitFade();
             case SPAWN_SIGNPOST -> updateSpawnSignpost();
-            case AWAIT_RESULTS -> updateAwaitResults();
+            case AWAIT_RESULTS -> updateAwaitResults(player);
             case AWAIT_ACT_TRANSITION -> updateAwaitActTransition();
         }
     }
@@ -249,11 +250,31 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
     // Phase 3: AWAIT_RESULTS
     // =========================================================================
 
-    private void updateAwaitResults() {
+    private void updateAwaitResults(AbstractPlayableSprite player) {
         if (!services().gameState().isEndOfLevelActive()) {
+            restoreNativePlayerControl(player);
+            if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite nativeP2
+                    && nativeP2 != player) {
+                restoreNativePlayerControl(nativeP2);
+            }
             phase = Phase.AWAIT_ACT_TRANSITION;
             LOG.fine("S3K defeat flow AWAIT_RESULTS -> AWAIT_ACT_TRANSITION");
         }
+    }
+
+    /**
+     * ROM: {@code Obj_EndSignControlAwaitStart} calls
+     * {@code Restore_PlayerControl} / {@code Restore_PlayerControl2} as soon
+     * as {@code _unkFAA8} clears. Those routines clear only
+     * {@code object_control} and {@code interact}; the title card's controller
+     * lock, ending animation, and velocities remain independently owned.
+     */
+    static void restoreNativePlayerControl(AbstractPlayableSprite player) {
+        if (player == null) {
+            return;
+        }
+        ObjectControlState.none().applyTo(player);
+        player.setInteractSlotIndex(0);
     }
 
     // =========================================================================
