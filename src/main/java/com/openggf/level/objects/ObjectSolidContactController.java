@@ -4550,6 +4550,10 @@ final class ObjectSolidContactController {
                 && provider.landingPreservesRolling(player);
         if (!preservesRolling) {
             clearRollingOnLanding(player);
+            // RideObject_SetRide dispatches to ResetOnFloor_Part2/Part3 for
+            // every ordinary airborne landing. Part3 clears Status_Push even
+            // when a prior solid's object-side pushing latch remains set.
+            player.setPushing(false);
             if (playableSprite != null) {
                 // Sonic_ResetOnFloor_Part3 clears the full tumble state after
                 // ordinary platform landings. RideObject-only captures opt out

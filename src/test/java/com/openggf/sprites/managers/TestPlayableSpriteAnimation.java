@@ -122,6 +122,22 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void postPlayerLandingWalkChangeClearsFreshPushWhenResolverIsSuppressed() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
+        sprite.setObjectControlled(true);
+        sprite.setAnimationId(2);
+        sprite.getAnimationManager().update(0);
+
+        sprite.setAnimationId(0);
+        sprite.setPushing(true);
+        sprite.getAnimationManager().update(1);
+
+        assertFalse(sprite.getPushing(),
+                "Animate_Tails clears Status_Push when a post-player landing changed raw anim from Roll to Walk");
+        assertEquals(0, sprite.getAnimationManager().captureRewindState().lastAnimationId());
+    }
+
+    @Test
     public void s2SonicPushWaitsForWalkTimerBeforePublishingPushMapping() {
         TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
         ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile())

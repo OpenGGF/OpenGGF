@@ -1,5 +1,41 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S2 MTZ2 exact-edge landing animation milestone
+
+MTZ2's final two animation groups came from one ordinary Obj47 landing spread
+across the native object/player dispatch boundary. The button's standard
+`SolidObject` call accepts the exact +$1B right edge. When that contact becomes
+an airborne landing, `RideObject_SetRide` reaches `ResetOnFloor_Part3`, which
+clears `Status_Push` even if an earlier object-side latch remains live. If the
+object pass publishes the resulting Walk byte after the player's animation
+pass, the next player tick still compares raw `anim` with `prev_anim` and owns
+the corresponding push clear even when object control suppresses the movement
+resolver. These are generic ROM state and ordering rules; no zone, route,
+frame, trace hydration, or comparator tolerance was added
+(`docs/s2disasm/s2.asm:35331-35446,35980-36028,41013-41037,41262-41290,50825-50842`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 275 -> 273 grouped errors
+Green: 13 -> 14 (newly MTZ2)
+ARZ2: 14                     CNZ2: 247
+MCZ2: 3                      OOZ1: 2
+WFZ: 7
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- the S3K animation baseline remains unchanged from milestone `38dc7d81d`:
+  AIZ complete 257, CNZ 172/2673, HCZ 673, ICZ 1376, LBZ 375, MGZ
+  3923/4081, MHZ 98, and standalone AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 42 passes / 16 existing
+  failures, with MTZ2 still physics-green and no new failure;
+- the focused Obj47, solid-contact, and playable-animation suites pass;
+- the ten-test comparison-only invariant guard and hydration-default guard
+  remain green.
+
 ### 2026-07-14 -- S2 OOZ2 landing and capsule-contact animation milestone
 
 OOZ2's last eleven animation groups came from four ROM state owners that meet

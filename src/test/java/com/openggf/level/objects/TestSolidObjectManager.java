@@ -1842,6 +1842,7 @@ public class TestSolidObjectManager {
             player.setAir(true);
             player.setYSpeed((short) 0x100);
             player.setRolling(true);
+            player.setPushing(true);
             player.setAnimationId(2);
             player.setFlipAngle(0x80);
             player.setFlipTurned(true);
@@ -1859,6 +1860,8 @@ public class TestSolidObjectManager {
             assertTrue(player.isOnObject());
             assertFalse(player.getAir());
             assertFalse(player.getRolling());
+            assertFalse(player.getPushing(),
+                    "ResetOnFloor_Part3 clears Status_Push on an ordinary object landing");
             assertEquals(0, player.getAnimationId(),
                     "Object landing must publish Sonic_ResetOnFloor's id_Walk write after clearing roll");
             assertEquals(0, player.getFlipAngle());

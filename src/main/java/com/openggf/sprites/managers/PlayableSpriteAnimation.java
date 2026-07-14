@@ -197,6 +197,17 @@ public class PlayableSpriteAnimation {
                 // owns a distinct raw Push byte and keeps the resolver tracker
                 // authoritative. Keep the walk-special tracker in step with
                 // the native comparison without collapsing S3K's raw state.
+                PlayerAnimationRules rules = playerAnimationRulesOrNull();
+                if (lastAnimationId >= 0
+                        && rules != null
+                        && rules.animationChangeClearsPush()) {
+                    // The raw anim/prev_anim comparison is still authoritative
+                    // when the movement resolver intentionally returns null.
+                    // A post-player object landing can publish Walk after the
+                    // previous Animate pass; on the next player tick, a fresh
+                    // wall push must be cleared before Walk selects mappings.
+                    sprite.setPushing(false);
+                }
                 lastGroundMovementAnimId = groundMoveAnimByte(
                         velocityProfile, sprite.getAnimationId());
             }
