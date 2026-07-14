@@ -139,7 +139,7 @@ class TestTmxLevelCliIntegration {
         assertEquals(1, help.exit());
         assertTrue(help.output().contains(
                 "ggfmod convert level --from-tmx <map.tmx> --palette <GPAL>"
-                        + " [--solid-tiles <profile-dir>] --out <dir>"));
+                        + " [--solid-tiles <profile-dir>] [--music <owner:localName>] --out <dir>"));
 
         Path canonical = temp.resolve("canonical");
         new TmxLevelImporter().importLevel(fixture.tmx(), fixture.palette(), fixture.profiles(), canonical);

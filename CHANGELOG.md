@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Seventh gallery sample **`sample-platformer`** plus two narrated build-along guides
+  (`docs/modding/guides/standalone-platformer.md`, `docs/modding/guides/ai-art.md`):
+  a no-ROM standalone game with a level authored directly in Tiled and imported via
+  `ggfmod convert level --from-tmx`, an original double-jumping character ("Bolt")
+  with a distinct `PhysicsProfile`, a patrolling badnik ("ZapBug"), a spring gimmick
+  ("SpringPad"), namespaced streamed OGG music, and WAV SFX. `TestSamplePlatformerIntegration`
+  adds no-ROM master-title/save/rewind/gimmick coverage; `TestSampleModsPackage` now
+  builds and validates seven sources as one repository. The AI-art guide covers
+  prompting, exact 16-color Genesis-palette quantization, and 8-aligned sheet layout
+  for original sprite art. See `docs/modding/samples/index.md`.
+- **`ggfmod convert level --from-tmx` gained a `--music <owner:localName>` flag**,
+  declaring a namespaced streamed `TrackMusic` for the imported level instead of the
+  default `StockMusic(0)` placeholder — required for any TMX level feeding a
+  standalone module (`ModZoneLoader#loadStandalone` requires a namespaced owned
+  track). See `docs/modding/ggfmod.md`.
 - Sixth gallery sample **`sample-flappy`** plus a narrated build-along guide
   (`docs/modding/guides/flappy-remix.md`): an additive Sonic 2 patch demonstrating
   object-controlled minigame gameplay (full player seize/hide/release), ROM-art

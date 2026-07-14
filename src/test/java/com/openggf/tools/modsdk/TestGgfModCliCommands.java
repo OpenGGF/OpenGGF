@@ -33,6 +33,16 @@ class TestGgfModCliCommands {
         assertTrue(bytes.toString().contains("ERROR"));
     }
 
+    @Test void malformedMusicFlagFailsWithExactlyOneColonMessage() {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        int exit = GgfModCli.run(new String[]{"convert", "level", "--from-tmx", "map.tmx",
+                "--palette", "palette.gpal", "--music", "no-colon-here",
+                "--out", temp.resolve("music-malformed").toString()}, new PrintStream(bytes));
+        assertEquals(1, exit);
+        assertTrue(bytes.toString().contains("ERROR COMMAND_FAILED Mod key must contain exactly one colon"),
+                bytes.toString());
+    }
+
     @Test void engineExitCodesAreNormalizedToCliSuccessOrFailure() {
         assertEquals(0,GgfModCli.normalizeProcessExit(0));
         assertEquals(1,GgfModCli.normalizeProcessExit(2));

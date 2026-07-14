@@ -17,6 +17,13 @@ effort.
 - [Flappy remix](guides/flappy-remix.md) — build-along tour of the `sample-flappy`
   gallery sample: object-controlled minigame gameplay, ROM-art intake, forced scroll,
   and layout obstacles inside a Sonic 2 patch.
+- [Standalone platformer](guides/standalone-platformer.md) — build-along tour of the
+  `sample-platformer` gallery sample: a no-ROM standalone game with a Tiled-authored
+  level, an original character with a double jump, a patrolling badnik, and a spring
+  gimmick.
+- [AI-generated art](guides/ai-art.md) — prompting, quantizing, and laying out
+  original sprite/tile PNGs for `ggfmod convert art`, and swapping generated art into
+  either build-along sample.
 
 ## Reference
 
@@ -33,5 +40,5 @@ effort.
 - [Deferred-backlog decisions](BACKLOG.md)
 - [GUI tooling evaluation](GUI_TOOLING_EVALUATION.md)
 
-The six sample sources are built by the default test suite. Treat them as executable
-contracts rather than snippets copied out of context.
+The seven sample sources are built by the default test suite. Treat them as
+executable contracts rather than snippets copied out of context.

@@ -42,11 +42,24 @@ verifies:
 - a `GameId.STANDALONE` module whose identifier/save code is `sample-platformer`;
 - one game-agnostic level with solid ground, floating platforms, a pit, ~20 rings, a
   patrolling badnik, and a spring gimmick, all authored in Tiled and converted with
-  `ggfmod convert level --from-tmx --palette`;
-- an owner-tagged `bolt` character with a distinct `PhysicsProfile` and a double-jump
-  ability;
-- namespaced `zone-theme` streamed music plus `jump2`/`hit`/`spring` one-shot SFX; and
-  slot-1 save, terminal credits/title return, and Continue restoration.
+  `ggfmod convert level --from-tmx --palette --music`;
+- an owner-tagged `bolt` character with a distinct `PhysicsProfile`, a double-jump
+  secondary ability, its landing-reset latch, and the latch's rewind restore path;
+- `ZapBug` patrol-and-reverse movement, its 2-frame walk-animation cadence, and namespaced
+  `hit` SFX on destruction, all resolved through the standalone module's own
+  `ObjectArtProvider`;
+- `SpringPad` proximity-launch physics, its namespaced `spring` SFX, and its 8-frame
+  extended pose;
+- `recreateForRewind` for both `ZapBug` and `SpringPad`;
+- namespaced `zone-theme` streamed music plus `jump2`/`hit`/`spring` one-shot SFX, each
+  decoding nonzero PCM through the bounded pool;
+- real master-title New Game boot, slot-1 save, terminal credits/title return, and
+  Continue restoration; and
+- corrupt, fractional, or overflowing save payloads hiding Continue.
 
 For the build-along guide, see
-[`docs/modding/guides/standalone-platformer.md`](../../../../docs/modding/guides/standalone-platformer.md).
+[`docs/modding/guides/standalone-platformer.md`](../../../../docs/modding/guides/standalone-platformer.md),
+and for generating replacement sprite art, see
+[`docs/modding/guides/ai-art.md`](../../../../docs/modding/guides/ai-art.md). For the
+creator contract and standalone-game boundaries, see
+[`docs/modding/standalone-games.md`](../../../../docs/modding/standalone-games.md).
