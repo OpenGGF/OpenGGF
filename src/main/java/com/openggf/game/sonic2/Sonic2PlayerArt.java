@@ -125,14 +125,25 @@ public class Sonic2PlayerArt {
                 .setRunSpeedThreshold(0x600)
                 .setFallbackFrame(0)
                 .setAnglePreAdjust(true)
-                .setCompactSuperRunSlope(true);
+                .setDoubleWalkRunAnimationSpeedWhenSliding(true);
         if (isSonic) {
             // ROM Obj01_MdNormal_Checks (s2.asm:36444-36468) is Sonic-only:
             // Obj02 (Tails) has no impatient-wait blink/get-up interrupt.
             ((ScriptedVelocityAnimationProfile) animationProfile)
                     .setBlinkAnimId(Sonic2AnimationIds.BLINK)
                     .setGetUpAnimId(Sonic2AnimationIds.GET_UP)
+                    .setCompactSuperRunSlope(true)
                     .setWalkRunPublishesFrameBeforeTimerAdvance(true);
+        } else {
+            // TAnim_WalkRunZoom keeps raw anim=Walk while selecting its private
+            // TailsAni_HaulAss pointer at or above $700. Its angle-bank strides are
+            // walk*4, run*3, haul-ass*3 (s2.asm:41366-41401).
+            ((ScriptedVelocityAnimationProfile) animationProfile)
+                    .setHighSpeedWalkRunAnimId(0x1F)
+                    .setHighSpeedWalkRunThreshold(0x700)
+                    .setWalkSlopeFrameStride(4)
+                    .setRunSlopeFrameStride(3)
+                    .setHighSpeedSlopeFrameStride(3);
         }
 
         return new SpriteArtSet(

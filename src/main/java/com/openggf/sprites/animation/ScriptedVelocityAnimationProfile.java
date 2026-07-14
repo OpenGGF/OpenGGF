@@ -49,6 +49,16 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     // Some native character handlers publish the current walk/run mapping
     // before advancing their frame timer; others gate the mapping write first.
     private boolean walkRunPublishesFrameBeforeTimerAdvance;
+    // Optional third locomotion tier selected inside the native $FF walk
+    // handler without changing the public animation byte (for example Tails'
+    // AniTails1F/HaulAss tier at $700).
+    private int highSpeedWalkRunAnimId = -1;
+    private int highSpeedWalkRunThreshold;
+    // Zero retains the legacy script-length-derived slope stride.
+    private int walkSlopeFrameStride;
+    private int runSlopeFrameStride;
+    private int highSpeedSlopeFrameStride;
+    private boolean doubleWalkRunAnimationSpeedWhenSliding;
     // Tumble/rotation frame base: S2 = 0x5F (s2.asm:38216), S3K = 0x31 (sonic3k.asm:24955).
     private int tumbleFrameBase = 0x5F;
 
@@ -104,6 +114,12 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     public ScriptedVelocityAnimationProfile setAnglePreAdjust(boolean anglePreAdjust) { this.anglePreAdjust = anglePreAdjust; return this; }
     public ScriptedVelocityAnimationProfile setCompactSuperRunSlope(boolean compactSuperRunSlope) { this.compactSuperRunSlope = compactSuperRunSlope; return this; }
     public ScriptedVelocityAnimationProfile setWalkRunPublishesFrameBeforeTimerAdvance(boolean value) { this.walkRunPublishesFrameBeforeTimerAdvance = value; return this; }
+    public ScriptedVelocityAnimationProfile setHighSpeedWalkRunAnimId(int value) { this.highSpeedWalkRunAnimId = value; return this; }
+    public ScriptedVelocityAnimationProfile setHighSpeedWalkRunThreshold(int value) { this.highSpeedWalkRunThreshold = value; return this; }
+    public ScriptedVelocityAnimationProfile setWalkSlopeFrameStride(int value) { this.walkSlopeFrameStride = value; return this; }
+    public ScriptedVelocityAnimationProfile setRunSlopeFrameStride(int value) { this.runSlopeFrameStride = value; return this; }
+    public ScriptedVelocityAnimationProfile setHighSpeedSlopeFrameStride(int value) { this.highSpeedSlopeFrameStride = value; return this; }
+    public ScriptedVelocityAnimationProfile setDoubleWalkRunAnimationSpeedWhenSliding(boolean value) { this.doubleWalkRunAnimationSpeedWhenSliding = value; return this; }
     public ScriptedVelocityAnimationProfile setTumbleFrameBase(int tumbleFrameBase) { this.tumbleFrameBase = tumbleFrameBase; return this; }
 
     @Override
@@ -529,6 +545,30 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         return walkRunPublishesFrameBeforeTimerAdvance;
     }
 
+    public int getHighSpeedWalkRunAnimId() {
+        return highSpeedWalkRunAnimId;
+    }
+
+    public int getHighSpeedWalkRunThreshold() {
+        return highSpeedWalkRunThreshold;
+    }
+
+    public int getWalkSlopeFrameStride() {
+        return walkSlopeFrameStride;
+    }
+
+    public int getRunSlopeFrameStride() {
+        return runSlopeFrameStride;
+    }
+
+    public int getHighSpeedSlopeFrameStride() {
+        return highSpeedSlopeFrameStride;
+    }
+
+    public boolean isDoubleWalkRunAnimationSpeedWhenSliding() {
+        return doubleWalkRunAnimationSpeedWhenSliding;
+    }
+
     public int getTumbleFrameBase() {
         return tumbleFrameBase;
     }
@@ -562,6 +602,12 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         copy.anglePreAdjust = this.anglePreAdjust;
         copy.compactSuperRunSlope = this.compactSuperRunSlope;
         copy.walkRunPublishesFrameBeforeTimerAdvance = this.walkRunPublishesFrameBeforeTimerAdvance;
+        copy.highSpeedWalkRunAnimId = this.highSpeedWalkRunAnimId;
+        copy.highSpeedWalkRunThreshold = this.highSpeedWalkRunThreshold;
+        copy.walkSlopeFrameStride = this.walkSlopeFrameStride;
+        copy.runSlopeFrameStride = this.runSlopeFrameStride;
+        copy.highSpeedSlopeFrameStride = this.highSpeedSlopeFrameStride;
+        copy.doubleWalkRunAnimationSpeedWhenSliding = this.doubleWalkRunAnimationSpeedWhenSliding;
         copy.tumbleFrameBase = this.tumbleFrameBase;
         return copy;
     }

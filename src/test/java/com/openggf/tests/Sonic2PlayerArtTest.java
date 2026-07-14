@@ -12,6 +12,8 @@ import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -52,6 +54,14 @@ public class Sonic2PlayerArtTest {
         assertFalse(tails.mappingFrames().isEmpty());
         assertFalse(((ScriptedVelocityAnimationProfile) tails.animationProfile())
                 .isWalkRunPublishesFrameBeforeTimerAdvance());
+        ScriptedVelocityAnimationProfile profile =
+                (ScriptedVelocityAnimationProfile) tails.animationProfile();
+        assertEquals(0x1F, profile.getHighSpeedWalkRunAnimId());
+        assertEquals(0x700, profile.getHighSpeedWalkRunThreshold());
+        assertEquals(4, profile.getWalkSlopeFrameStride());
+        assertEquals(3, profile.getRunSlopeFrameStride());
+        assertEquals(3, profile.getHighSpeedSlopeFrameStride());
+        assertTrue(profile.isDoubleWalkRunAnimationSpeedWhenSliding());
+        assertEquals(List.of(0x32, 0x33), tails.animationSet().getScript(0x1F).frames());
     }
 }
-

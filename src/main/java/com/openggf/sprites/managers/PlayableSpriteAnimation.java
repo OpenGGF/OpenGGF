@@ -254,13 +254,34 @@ public class PlayableSpriteAnimation {
             updateTumble(flipAngle);
             return;
         }
-        int speed = Math.abs(sprite.getGSpeed());
         ScriptedVelocityAnimationProfile profile = resolveVelocityProfile();
+        int speed = Math.abs(sprite.getGSpeed());
+        if (profile != null
+                && profile.isDoubleWalkRunAnimationSpeedWhenSliding()
+                && sprite.isSliding()) {
+            speed = Math.min(0xFFFF, speed << 1);
+        }
         int runThreshold = resolveRunThreshold(profile);
 
         SpriteAnimationScript walkScript = resolveScript(profile != null ? profile.getWalkAnimId() : -1, baseScript);
         SpriteAnimationScript runScript = resolveScript(profile != null ? profile.getRunAnimId() : -1, baseScript);
-        SpriteAnimationScript active = speed >= runThreshold ? runScript : walkScript;
+        boolean highSpeedTier = profile != null
+                && profile.getHighSpeedWalkRunAnimId() >= 0
+                && profile.getHighSpeedWalkRunThreshold() > 0
+                && speed >= profile.getHighSpeedWalkRunThreshold();
+        boolean runTier = !highSpeedTier && speed >= runThreshold;
+        SpriteAnimationScript active;
+        int slopeStride;
+        if (highSpeedTier) {
+            active = resolveScript(profile.getHighSpeedWalkRunAnimId(), baseScript);
+            slopeStride = profile.getHighSpeedSlopeFrameStride();
+        } else if (runTier) {
+            active = runScript;
+            slopeStride = profile != null ? profile.getRunSlopeFrameStride() : 0;
+        } else {
+            active = walkScript;
+            slopeStride = profile != null ? profile.getWalkSlopeFrameStride() : 0;
+        }
         if (active == null) {
             active = baseScript;
         }
@@ -279,7 +300,7 @@ public class PlayableSpriteAnimation {
             return;
         }
 
-        int slopeOffset = resolveSlopeOffset(active);
+        int slopeOffset = resolveSlopeOffset(active, slopeStride);
         int delay = computeSpeedDelay(speed, 0x800, 8);
         if (walkRunPublishesFrameBeforeTimerAdvance(baseScript.delay() & 0xFF)) {
             updateWalkRunBeforeTimerAdvance(active, delay, slopeOffset, remaining);
@@ -599,7 +620,7 @@ public class PlayableSpriteAnimation {
      * frame count: {@code offset = d0 * (framesPerSet / 2)} where framesPerSet is the
      * number of frames in the base angle set (the script's frame list size).
      */
-    private int resolveSlopeOffset(SpriteAnimationScript activeScript) {
+    private int resolveSlopeOffset(SpriteAnimationScript activeScript, int configuredStride) {
         int d0 = sprite.getAngle() & 0xFF;
 
         // S2 only: subtract 1 from positive non-zero angles (s2.asm:38078-38080)
@@ -621,6 +642,10 @@ public class PlayableSpriteAnimation {
             sprite.setRenderFlips(facingLeft, false);
         }
         d0 = (d0 >> 4) & 0x6;
+
+        if (configuredStride > 0) {
+            return d0 * configuredStride;
+        }
 
         // Derive the offset multiplier from the animation script's frame count.
         // Walk: S2 has 8 frames/set → d0*(8/2)=d0*4, S1 has 6 frames/set → d0*(6/2)=d0*3

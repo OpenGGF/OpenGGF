@@ -1,5 +1,51 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S2 Tails private high-speed tier milestone
+
+The cadence fix exposed EHZ1 frame 1031 with Tails at effective speed above
+`$700`, raw animation Walk (`$00`), expected mapping `$38`, and engine mapping
+`$32`. `TAnim_WalkRunZoom` has three internal locomotion tiers while leaving
+the public animation byte at Walk: Walk below `$600`, Run from `$600`, and the
+private `TailsAni_HaulAss` pointer at or above `$700`. Their slope-bank strides
+are `4/3/3`; HaulAss is table slot `$1F` with frames `$32,$33`
+(`docs/s2disasm/s2.asm:41366-41401,41553,41622-41623`). The same routine doubles
+animation-purpose speed while `status_secondary.sliding` is set.
+
+`ScriptedVelocityAnimationProfile` now carries an optional private high-speed
+tier, exact per-tier slope strides, and sliding-speed policy. The shared
+animator selects that script without writing the raw animation ID or resetting
+the shared frame/timer cadence. Translation validates that a donor really has
+the private script before retaining the tier. S2 Tails is configured as
+`$1F/$700` with strides `4/3/3`; S2 Sonic receives only the independently native
+sliding-speed policy. S3K profiles remain unchanged in this milestone, keeping
+its existing trace baseline stable until its own tier-transition cadence is
+addressed.
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+EHZ1: 438 errors at frame 1031 -> 435 errors at frame 1534
+CNZ1: 281 errors at frame 191  -> 277 errors at frame 1023
+CNZ2: 607 errors at frame 223  -> 597 errors at frame 909
+CPZ1: 60 errors at frame 250   -> 55 errors at frame 706
+CPZ2: 2113 errors at frame 402 -> 2110 errors at frame 759
+OOZ2: 443 errors               -> 412 errors
+All 19 routes: no animation error count increased.
+```
+
+Focused tests cover S2 Run's three-frame slope stride, the `$700` HaulAss
+boundary, raw-Walk preservation, sliding `$380 -> $700` effective speed, ROM
+script frames, translation/copy behavior, and the cross-game-capable `4/2/1`
+S3K data shape without enabling it in S3K runtime profiles.
+
+Regression gate at this milestone:
+
+- the 21 eligible S1 animation traces remain green;
+- the ten S3K animation replay results exactly match milestone `c886deab2`
+  (including the existing standalone AIZ input-alignment failure);
+- the full 58-method cross-game physics sweep retains the same 41 passes and
+  identical 17 existing failures as `c886deab2`.
+
 ### 2026-07-14 -- S2 character-specific walk/run cadence milestone
 
 All 19 ordinary Sonic 2 animation traces initially diverged on Sonic's first

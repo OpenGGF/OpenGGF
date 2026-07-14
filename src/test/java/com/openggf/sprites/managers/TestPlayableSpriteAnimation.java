@@ -467,6 +467,136 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void s2TailsRunUsesNativeThreeFrameSlopeStride() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
+        ScriptedVelocityAnimationProfile profile =
+                (ScriptedVelocityAnimationProfile) sprite.getAnimationProfile();
+        profile.setRunFramesUseWalkAnimationId(true)
+                .setAnglePreAdjust(true)
+                .setWalkSlopeFrameStride(4)
+                .setRunSlopeFrameStride(3)
+                .setHighSpeedWalkRunAnimId(0x1F)
+                .setHighSpeedWalkRunThreshold(0x700)
+                .setHighSpeedSlopeFrameStride(3);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0xFF,
+                List.of(0x0E), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(1, new SpriteAnimationScript(0xFF,
+                List.of(0x2E), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(0x1F, new SpriteAnimationScript(0xFF,
+                List.of(0x32, 0x33), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0);
+        sprite.setMovementInputActive(true);
+        sprite.setGSpeed((short) 0x600);
+        sprite.setAngle((byte) 0xE8);
+        sprite.setDirection(Direction.RIGHT);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0x34, sprite.getMappingFrame(),
+                "TAnim_WalkRunZoom adds angle bucket 2 * run stride 3 to frame $2E");
+        assertEquals(0, sprite.getAnimationId(),
+                "the internal run script must not replace the native Walk animation byte");
+    }
+
+    @Test
+    public void s2TailsSelectsPrivateHaulAssTierWithoutChangingAnimationId() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
+        ScriptedVelocityAnimationProfile profile =
+                (ScriptedVelocityAnimationProfile) sprite.getAnimationProfile();
+        profile.setRunFramesUseWalkAnimationId(true)
+                .setAnglePreAdjust(true)
+                .setWalkSlopeFrameStride(4)
+                .setRunSlopeFrameStride(3)
+                .setHighSpeedWalkRunAnimId(0x1F)
+                .setHighSpeedWalkRunThreshold(0x700)
+                .setHighSpeedSlopeFrameStride(3);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0xFF,
+                List.of(0x0E), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(1, new SpriteAnimationScript(0xFF,
+                List.of(0x2E), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(0x1F, new SpriteAnimationScript(0xFF,
+                List.of(0x32, 0x33), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0);
+        sprite.setMovementInputActive(true);
+        sprite.setGSpeed((short) 0x940);
+        sprite.setAngle((byte) 0xD8);
+        sprite.setDirection(Direction.RIGHT);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0x38, sprite.getMappingFrame(),
+                "TailsAni_HaulAss frame $32 uses the retained three-frame slope stride");
+        assertEquals(0, sprite.getAnimationId(),
+                "TailsAni_HaulAss is a private pointer inside raw Walk animation");
+    }
+
+    @Test
+    public void s3kTailsHighSpeedTierUsesSingleFrameSlopeStride() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
+        ScriptedVelocityAnimationProfile profile =
+                (ScriptedVelocityAnimationProfile) sprite.getAnimationProfile();
+        profile.setAnglePreAdjust(true)
+                .setWalkRunPublishesFrameBeforeTimerAdvance(true)
+                .setWalkSlopeFrameStride(4)
+                .setRunSlopeFrameStride(2)
+                .setHighSpeedWalkRunAnimId(0x1F)
+                .setHighSpeedWalkRunThreshold(0x700)
+                .setHighSpeedSlopeFrameStride(1);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0xFF,
+                List.of(0x0E), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(1, new SpriteAnimationScript(0xFF,
+                List.of(0x2E), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(0x1F, new SpriteAnimationScript(0xFF,
+                List.of(0xC3, 0xC4), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0);
+        sprite.setMovementInputActive(true);
+        sprite.setGSpeed((short) 0x940);
+        sprite.setAngle((byte) 0xE8);
+        sprite.setDirection(Direction.RIGHT);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0xC5, sprite.getMappingFrame(),
+                "S3K AniTails1F adds angle bucket 2 * high-speed stride 1");
+    }
+
+    @Test
+    public void s2TailsSlidingSpeedReachesPrivateHighSpeedTier() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
+        ScriptedVelocityAnimationProfile profile =
+                (ScriptedVelocityAnimationProfile) sprite.getAnimationProfile();
+        profile.setAnglePreAdjust(true)
+                .setDoubleWalkRunAnimationSpeedWhenSliding(true)
+                .setHighSpeedWalkRunAnimId(0x1F)
+                .setHighSpeedWalkRunThreshold(0x700)
+                .setHighSpeedSlopeFrameStride(3);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0xFF,
+                List.of(0x0E), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(1, new SpriteAnimationScript(0xFF,
+                List.of(0x2E), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(0x1F, new SpriteAnimationScript(0xFF,
+                List.of(0x32), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0);
+        sprite.setMovementInputActive(true);
+        sprite.setSliding(true);
+        sprite.setGSpeed((short) 0x380);
+        sprite.setAngle((byte) 0);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0x32, sprite.getMappingFrame(),
+                "status_secondary.sliding doubles $380 to the native $700 tier threshold");
+    }
+
+    @Test
     public void s3kSlowSteepSlopeTurnaroundRefreshesOrientationBeforeWalkTickExpires() {
         TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
         ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile())

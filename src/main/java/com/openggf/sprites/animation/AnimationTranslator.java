@@ -42,6 +42,15 @@ public final class AnimationTranslator {
         result.setCompactSuperRunSlope(donorProfile.isCompactSuperRunSlope());
         result.setWalkRunPublishesFrameBeforeTimerAdvance(
                 donorProfile.isWalkRunPublishesFrameBeforeTimerAdvance());
+        int highSpeedAnimId = donorProfile.getHighSpeedWalkRunAnimId();
+        result.setHighSpeedWalkRunAnimId(highSpeedAnimId >= 0
+                && donorAnimSet.getScript(highSpeedAnimId) != null ? highSpeedAnimId : -1);
+        result.setHighSpeedWalkRunThreshold(donorProfile.getHighSpeedWalkRunThreshold());
+        result.setWalkSlopeFrameStride(donorProfile.getWalkSlopeFrameStride());
+        result.setRunSlopeFrameStride(donorProfile.getRunSlopeFrameStride());
+        result.setHighSpeedSlopeFrameStride(donorProfile.getHighSpeedSlopeFrameStride());
+        result.setDoubleWalkRunAnimationSpeedWhenSliding(
+                donorProfile.isDoubleWalkRunAnimationSpeedWhenSliding());
         result.setWalkSpeedThreshold(donorProfile.getWalkSpeedThreshold());
         result.setRunSpeedThreshold(donorProfile.getRunSpeedThreshold());
         result.setRunFramesUseWalkAnimationId(donorProfile.isRunFramesUseWalkAnimationId());
