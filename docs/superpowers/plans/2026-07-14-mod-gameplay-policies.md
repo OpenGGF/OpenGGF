@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add four owner-tagged Mod API 2.3 contributions for new-game destination, launch-local team, deterministic input filtering, and immutable HUD presentation.
+**Goal:** Add four owner-tagged Mod API 2.4 contributions for new-game destination, launch-local team, deterministic input filtering, and immutable HUD presentation.
 
 **Architecture:** Contributions freeze inside `ModRegistrationPlan` and are composed by `ModBackedGamePatch` in effective owner order. Data select resolves game start before constructing its two fresh-start actions; launch team resolves after module decoration but before `WorldSession`/sprite bootstrap; input filters run in `SpriteManager` after raw live/replay snapshot acquisition; HUD profiles are selected by tagged destination and consumed by a row-driven `HudRenderManager`. A dedicated engine test proves mod-classloader dynamic-object recreation through `genericRecreate` before Flappy becomes the first sample consumer.
 
@@ -10,9 +10,15 @@
 
 **Design reference:** `docs/superpowers/specs/2026-07-14-flappy-native-tails-design.md`
 
-**Prerequisite:** Complete `docs/superpowers/plans/2026-07-14-s3k-mod-zone-adapter.md` first.
+**Prerequisite:** Complete `docs/superpowers/plans/2026-07-14-s3k-mod-zone-adapter.md` first, including its immutable published 2.3 baseline and exact 2.3 signature-test method names.
 
-**Commit policy:** Keep the repository trailer block on every commit. For Tasks 1-8, use `Changelog: n/a: covered by the aggregate Mod API 2.3 policy entry in Task 9`; Task 9 stages `CHANGELOG.md` and uses `Changelog: updated`, `Guide: updated`, with other mappings marked accurately.
+**Commit policy:** Keep the repository trailer block on every commit. For Tasks 1-8, use `Changelog: n/a: covered by the aggregate Mod API 2.4 policy entry in Task 9`; Task 9 stages `CHANGELOG.md` and uses `Changelog: updated` and `Guide: n/a: modding handbook is outside docs/guide`, with other mappings marked accurately. Never modify or regenerate `mods/mod-api-signatures-2.3.txt`.
+
+**Mandatory expected-red signature gate for Tasks 1-8:** After each task's green feature command, run:
+
+`mvn "-Dtest=com.openggf.mods.TestModApiSignatureSurface#publishedTwoThreeSurfaceIsPinnedToTheCurrentSurface+twoTwoToTwoThreeIsAnAdditiveMinorBump" test`
+
+Expected: those two named 2.3 methods fail because the live surface contains unrefrozen 2.4 additions; no other signature method fails. Task 9 creates a new 2.4 baseline, closes 2.3 as historical, and makes the complete signature class green.
 
 ---
 
@@ -28,7 +34,7 @@
 - Modify `GameplayModeContext`, `LevelManager`, and `SpriteManager` for filter/profile installation and teardown.
 - Modify `HudRenderManager` for immutable row-driven presentation.
 - Add focused tests in data-select, patch, sprite, HUD, and rewind packages.
-- Update Mod API 2.3 signature/docs and `CHANGELOG.md`.
+- Freeze a new Mod API 2.4 signature/docs lineage while preserving the closed 2.3 file, and update `CHANGELOG.md`.
 
 ### Task 1: Rewire both fresh-start data-select branches
 
@@ -80,11 +86,13 @@ return new DataSelectAction(DataSelectActionType.NO_SAVE_START, -1,
 
 Use the same local construction for the empty-slot `NEW_SLOT_START` branch. Do not alter `LOAD_SLOT` or `CLEAR_RESTART`.
 
+`DataSelectHostProfile` is already a recursive `@ModApi` type in the frozen 2.3 surface; do not add a second annotation or create a host-internal shadow interface. The new default method is deliberately creator-visible and must appear in the new 2.4 signature snapshot. Add an assertion in `TestModApiSignatureSurface` Task 9 for the exact canonical line `METHOD com.openggf.game.dataselect.DataSelectHostProfile public  com.openggf.game.dataselect.DataSelectDestination newGameDestination()`.
+
 - [ ] **Step 4: Run data-select profile/controller tests**
 
 Run: `mvn "-Dtest=com.openggf.game.dataselect.TestDataSelectSessionController,com.openggf.game.sonic3k.dataselect.TestS3kDataSelectProfile,com.openggf.game.sonic2.dataselect.TestS2DataSelectProfile" test`
 
-Expected: all tests pass.
+Expected: feature tests pass. Then the mandatory signature command fails only `publishedTwoThreeSurfaceIsPinnedToTheCurrentSurface` and `twoTwoToTwoThreeIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
@@ -118,6 +126,16 @@ git commit -m "feat: resolve fresh-start data-select destination"
     assertEquals(zoneDestination(resolve(enabled("alpha")), "alpha"), start());
     assertEquals(new DataSelectDestination(0, 0), start(resolve(disabled("alpha"))));
 }
+
+@Test void anchorlessGameStartUsesTaggedDestinationWithoutProgressionInsertion() {
+    GameModule resolved = applyInOrder(base(), anchorlessStartZone("alpha"));
+    int custom = resolved.getZoneRegistry()
+            .resolveZoneKey(ZoneKey.mod("alpha", "sky")).orElseThrow();
+    assertEquals(new DataSelectDestination(custom, 0),
+            resolved.getDataSelectHostProfile().newGameDestination());
+    assertTrue(StockProgressionAnchors.anchorsFor("s3k").isEmpty());
+    assertStockSuccessorUnchanged(resolved.getZoneRegistry().progressionPlan());
+}
 ```
 
 - [ ] **Step 2: Run and verify red**
@@ -141,11 +159,13 @@ public record ModZoneContribution(String localKey, BakedLevelRef level,
 
 `ModGameStartResolver` receives the fully assembled `ModZoneRegistry`, iterates frozen effective contribution order, records one owner finding for every marked zone except the last, and returns the winner's current runtime destination. If no marked contribution is enabled, delegate to the inherited host profile.
 
+Consume Plan A's anchorless-zone seam: a game-start contribution may keep `insertAfter == null`, remains addressable by `ZoneKey.Mod`, and contributes no `ZoneProgressionPlan` edge. Do not call `withDefaultAnchor` for an anchorless S3K game-start contribution and do not add `aiz1` to `StockProgressionAnchors`. Existing anchored S2 contributions and their `mtz3` compatibility default stay unchanged.
+
 - [ ] **Step 4: Run game-start, progression, and compatibility tests**
 
 Run: `mvn "-Dtest=com.openggf.mods.code.TestModGameStartResolver,com.openggf.mods.code.TestModZoneLoader,com.openggf.game.TestZoneProgressionPlan" test`
 
-Expected: all tests pass and no test observes a prepend edge in `ZoneProgressionPlan`.
+Expected: feature tests pass and no test observes a prepend edge in `ZoneProgressionPlan`. Then the mandatory signature command fails only `publishedTwoThreeSurfaceIsPinnedToTheCurrentSurface` and `twoTwoToTwoThreeIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
@@ -225,11 +245,11 @@ public record HudRow(boolean visible, HudLabel label, HudMetric metric,
 
 Add `GameModule.getGameplayPolicyProvider()` with a stock-empty default and forward it from `DelegatingGameModule`, so patch composition never relies on game-name checks or downcasts.
 
-- [ ] **Step 4: Run registration and Mod API closure tests**
+- [ ] **Step 4: Run registration tests and the expected-red signature gate**
 
-Run: `mvn "-Dtest=com.openggf.mods.code.TestModGameplayPolicyRegistration,com.openggf.mods.TestModApiSignatureSurface" test`
+Run: `mvn "-Dtest=com.openggf.mods.code.TestModGameplayPolicyRegistration" test`
 
-Expected: policy tests pass; the signature test reports only the intended additive 2.3 entries until Task 9 freezes the final snapshot.
+Expected: policy tests pass. Then the mandatory signature command fails only `publishedTwoThreeSurfaceIsPinnedToTheCurrentSurface` and `twoTwoToTwoThreeIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
@@ -290,7 +310,7 @@ Validate every key against `resolvedModule.getPlayableCharacterRegistry()` befor
 
 Run: `mvn "-Dtest=com.openggf.TestEngineDataSelectPatchResolution,com.openggf.TestGameplayTeamBootstrapContext" test`
 
-Expected: all tests pass.
+Expected: feature tests pass. Then the mandatory signature command fails only `publishedTwoThreeSurfaceIsPinnedToTheCurrentSurface` and `twoTwoToTwoThreeIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
@@ -353,7 +373,7 @@ Use `effectivePlayerOne` in both `publishHeldInputForLevelEvents` and `update`. 
 
 Run: `mvn "-Dtest=com.openggf.sprites.managers.TestSpriteManagerGameplayInputFilter,com.openggf.game.rewind.TestGameplayInputFilterReplay,com.openggf.game.rewind.TestLiveRewindInputSource" test`
 
-Expected: all tests pass.
+Expected: feature tests pass. Then the mandatory signature command fails only `publishedTwoThreeSurfaceIsPinnedToTheCurrentSurface` and `twoTwoToTwoThreeIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
@@ -412,7 +432,7 @@ Map labels to existing `HudStaticArt` frames. Map metrics to `GameStateManager.s
 
 Run: `mvn "-Dtest=com.openggf.level.objects.TestHudRenderManager,com.openggf.mods.code.TestModHudProfileResolution,com.openggf.tests.graphics.RenderOrderTest" test`
 
-Expected: all tests pass.
+Expected: feature tests pass. Then the mandatory signature command fails only `publishedTwoThreeSurfaceIsPinnedToTheCurrentSurface` and `twoTwoToTwoThreeIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
@@ -481,16 +501,17 @@ Keep `registerRewindReconstructionChild`/adoption for objects a reconstructed pa
 
 Run: `mvn "-Dtest=com.openggf.mods.code.TestModOwnedDynamicObjectRewind,com.openggf.mods.code.TestModClassResolverRecreate,com.openggf.level.objects.TestObjectManagerDynamicChainRewindRestore,com.openggf.game.rewind.coverage.TestRewindCoverageGuard" test`
 
-Expected: all tests pass.
+Expected: feature tests pass. Then the mandatory signature command fails only `publishedTwoThreeSurfaceIsPinnedToTheCurrentSurface` and `twoTwoToTwoThreeIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
+Stage the two production files only when Step 3 actually changed them:
+
 ```powershell
-git add src/test/resources/mods/dynamic-rewind-src src/test/java/com/openggf/mods/code/TestModOwnedDynamicObjectRewind.java src/main/java/com/openggf/level/objects/ObjectManager.java src/main/java/com/openggf/mods/code/ModClassResolver.java
+git add src/test/resources/mods/dynamic-rewind-src src/test/java/com/openggf/mods/code/TestModOwnedDynamicObjectRewind.java
+git add src/main/java/com/openggf/level/objects/ObjectManager.java src/main/java/com/openggf/mods/code/ModClassResolver.java # only changed paths; omit this line when both are unchanged
 git commit -m "test: prove mod-owned dynamic rewind recreation"
 ```
-
-If neither production file changed, omit it from `git add`.
 
 ### Task 8: Verify owner fault boundaries and teardown
 
@@ -504,13 +525,13 @@ If neither production file changed, omit it from `git add`.
 ```java
 @Test void throwingRequiredFilterDisablesOwnerAndAbortsLaunch() {
     registerFilter("alpha", input -> { throw new IllegalStateException("boom"); });
-    assertThrows(ModCallbackException.class, this::stepFirstGameplayFrame);
+    assertThrows(ModFaultBoundary.CallbackAborted.class, this::stepFirstGameplayFrame);
     assertOwnerDisabled("alpha", "MOD_CALLBACK_FAILED");
 }
 
-@Test void closingContextRemovesFilterAndHudProfile() {
+@Test void destroyingContextRemovesFilterAndHudProfile() {
     GameplayModeContext first = launchWithPolicies();
-    first.close();
+    first.destroy();
     GameplayModeContext stock = launchStock();
     assertSame(GameplayInputFilter.IDENTITY, stock.getGameplayInputFilter());
     assertEquals(HudProfile.stock(), stock.getHudProfile());
@@ -525,13 +546,13 @@ Expected: callback ownership or teardown assertion fails.
 
 - [ ] **Step 3: Route every creator callback and clear context state**
 
-Wrap filters/providers with the existing `ModFaultBoundary.call(owner, ...)`. Treat launch team, input filter, and HUD profile as required for their matching destination: failure aborts the launch/session rather than continuing with a partial policy set. Clear installed values in `GameplayModeContext.close()` and initialize identity/stock defaults in the constructor.
+Wrap filters/providers with the existing `ModFaultBoundary.call(owner, ...)`; its abort type is `ModFaultBoundary.CallbackAborted`. Treat launch team, input filter, and HUD profile as required for their matching destination: failure aborts the launch/session rather than continuing with a partial policy set. Clear installed values in `GameplayModeContext.destroy()` / `tearDownManagers()` and initialize identity/stock defaults in the constructor. Do not introduce `ModCallbackException` or a `close()` alias.
 
 - [ ] **Step 4: Run fault-boundary regression tests**
 
 Run: `mvn "-Dtest=com.openggf.mods.code.TestModGameplayPolicyFaultBoundary,com.openggf.mods.code.TestModContextAndFaultBoundary" test`
 
-Expected: all tests pass.
+Expected: feature tests pass. Then the mandatory signature command fails only `publishedTwoThreeSurfaceIsPinnedToTheCurrentSurface` and `twoTwoToTwoThreeIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
@@ -540,11 +561,11 @@ git add src/test/java/com/openggf/mods/code/TestModGameplayPolicyFaultBoundary.j
 git commit -m "feat: fault-bound mod gameplay policies"
 ```
 
-### Task 9: Freeze the complete Mod API 2.3 surface and document it
+### Task 9: Freeze the complete Mod API 2.4 surface and document it
 
 **Files:**
 - Modify: `src/main/java/com/openggf/mods/ModApiVersion.java`
-- Modify: `src/test/resources/mods/mod-api-signatures-2.3.txt`
+- Create: `src/test/resources/mods/mod-api-signatures-2.4.txt`
 - Modify: `src/test/java/com/openggf/mods/TestModApiSignatureSurface.java`
 - Modify: `docs/architecture/mod-api-compatibility.md`
 - Modify: `docs/modding/content-mods.md`
@@ -555,14 +576,18 @@ git commit -m "feat: fault-bound mod gameplay policies"
 
 Run: `mvn "-Dtest=com.openggf.mods.TestModApiSignatureSurface" test`
 
-Expected: failure lists the game-start field/constructor and gameplay policy types/methods added in Tasks 1-6.
+Expected: the two live-2.3 pin methods fail and the diff lists only the game-start/default-destination and gameplay-policy additions from Tasks 1-8.
 
-- [ ] **Step 2: Regenerate and inspect the final 2.3 snapshot**
+- [ ] **Step 2: Set 2.4 and freeze a new snapshot without changing 2.3**
 
-The final snapshot must include the S3K adapter plan's creator-facing format additions plus:
+```java
+public static final SemanticVersion CURRENT = SemanticVersion.parse("2.4.0");
+```
+
+Generate `mods/mod-api-signatures-2.4.txt`. Keep `mods/mod-api-signatures-2.3.txt` byte-for-byte unchanged as a closed historical baseline. The final 2.4 snapshot must contain every 2.3 line plus:
 
 ```text
-DataSelectHostProfile.newGameDestination()
+METHOD com.openggf.game.dataselect.DataSelectHostProfile public  com.openggf.game.dataselect.DataSelectDestination newGameDestination()
 GameplayInputFilter.filter(PlayerInputState)
 GameplayLaunchTeam
 HudProfile / HudRow / HudLabel / HudMetric / HudWarningPolicy
@@ -572,7 +597,7 @@ ModContext.registerHudProfile(...)
 ModZoneContribution(..., boolean gameStart)
 ```
 
-Retain source/binary compatibility constructors for all pre-2.3 records changed by an appended component.
+Retain source/binary compatibility constructors for all pre-2.4 records changed by an appended component. In `TestModApiSignatureSurface`, make 2.3 a named historical baseline with its frozen line/type counts, add `twoThreeToTwoFourIsAnAdditiveMinorBump`, and rename the live pin to `publishedTwoFourSurfaceIsPinnedToTheCurrentSurface`. Assert the 2.4 snapshot contains `DataSelectHostProfile.newGameDestination()`; the interface was already published, so this method is part of 2.4 rather than an untracked host-internal change.
 
 - [ ] **Step 3: Document ordering, determinism, and non-persistence**
 
@@ -587,8 +612,8 @@ Expected: all tests pass.
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add src/main/java/com/openggf/mods/ModApiVersion.java src/test/resources/mods/mod-api-signatures-2.3.txt src/test/java/com/openggf/mods/TestModApiSignatureSurface.java docs/architecture/mod-api-compatibility.md docs/modding/content-mods.md docs/modding/index.md CHANGELOG.md
-git commit -m "docs: publish Mod API 2.3 gameplay policies"
+git add src/main/java/com/openggf/mods/ModApiVersion.java src/test/resources/mods/mod-api-signatures-2.4.txt src/test/java/com/openggf/mods/TestModApiSignatureSurface.java docs/architecture/mod-api-compatibility.md docs/modding/content-mods.md docs/modding/index.md CHANGELOG.md
+git commit -m "docs: publish Mod API 2.4 gameplay policies"
 ```
 
 ## Completion gate
@@ -598,4 +623,5 @@ git commit -m "docs: publish Mod API 2.3 gameplay policies"
 - [ ] Confirm `git diff --check` is clean.
 - [ ] Confirm `LiveRewindInputSource` still records raw `InputHandler.logical()` snapshots.
 - [ ] Confirm no config/save mutation is used to implement launch-team selection.
+- [ ] Confirm `git diff --exit-code -- src/test/resources/mods/mod-api-signatures-2.3.txt` is clean.
 - [ ] Confirm a stock S3K data-select launch still starts AIZ1 with the selected durable team and stock HUD/input.

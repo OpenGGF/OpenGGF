@@ -10,7 +10,15 @@
 
 **Design reference:** `docs/superpowers/specs/2026-07-14-s3k-mod-zone-adapter-design.md`
 
-**Commit policy:** Keep the repository trailer block on every commit. For Tasks 1-9, use `Changelog: n/a: covered by the aggregate S3K mod-zone entry in Task 10`; Task 10 stages `CHANGELOG.md` and uses `Changelog: updated`, `Guide: updated`, with other mappings marked accurately.
+**Commit policy:** Keep the repository trailer block on every commit. For Tasks 1-9, use `Changelog: n/a: covered by the aggregate S3K mod-zone entry in Task 10`; Task 10 stages `CHANGELOG.md` and uses `Changelog: updated` and `Guide: n/a: modding handbook is outside docs/guide`, with other mappings marked accurately. Never use a blanket `git add` path.
+
+**Mandatory expected-red signature gate for Tasks 1-9:** The live 2.2 surface must drift while the additive 2.3 types are under construction. After each task's green feature command, run:
+
+`mvn "-Dtest=com.openggf.mods.TestModApiSignatureSurface#publishedTwoTwoSurfaceIsPinnedToTheCurrentSurface+twoOneToTwoTwoIsAnAdditiveMinorBump" test`
+
+Expected: those two named methods fail because the current surface has unrefrozen additions; no other `TestModApiSignatureSurface` method fails. Task 10 is the only task that changes `ModApiVersion.CURRENT`, creates the 2.3 baseline, and makes the whole signature class green.
+
+**Mandatory S3K regression gate:** At Tasks 9 and 10 completion, run `mvn "-Ds3k.rom.path=s3k.gen" "-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" test`. Missing `s3k.gen` is a blocked verification, not a green skip.
 
 ---
 
@@ -38,6 +46,8 @@
 **Files:**
 - Create: `src/main/java/com/openggf/mods/code/ModZoneAdapter.java`
 - Create: `src/main/java/com/openggf/mods/code/ModZoneRuntimeProfile.java`
+- Create: `src/main/java/com/openggf/game/sonic2/Sonic2ModZoneAdapter.java`
+- Modify: `src/main/java/com/openggf/mods/code/ModZoneLoader.java`
 - Modify: `src/main/java/com/openggf/game/GameModule.java`
 - Modify: `src/main/java/com/openggf/game/patch/DelegatingGameModule.java`
 - Modify: `src/main/java/com/openggf/game/sonic2/Sonic2GameModule.java`
@@ -56,7 +66,7 @@
 @Test void aModuleWithoutAnAdapterRejectsAdditiveZones() {
     assertTrue(GameModule.EMPTY_MOD_ZONE_ADAPTER.isUnsupported());
     assertThrows(ModRegistrationException.class,
-            () -> GameModule.EMPTY_MOD_ZONE_ADAPTER.validate(preparedZone()));
+            () -> GameModule.EMPTY_MOD_ZONE_ADAPTER.validate("alpha", levelDefinition()));
 }
 ```
 
@@ -71,9 +81,9 @@ Expected: compilation fails because `ModZoneAdapter` and `GameModule.getModZoneA
 ```java
 @ModApi
 public interface ModZoneAdapter {
-    void validate(PreparedModZone zone);
-    Level load(PreparedModZone zone) throws IOException;
-    ModZoneRuntimeProfile runtimeProfile(PreparedModZone zone);
+    void validate(String ownerModId, ModLevelDefinition level);
+    Level load(String ownerModId, ModLevelDefinition level) throws IOException;
+    ModZoneRuntimeProfile runtimeProfile(String ownerModId, ModLevelDefinition level);
     default boolean isUnsupported() { return false; }
 }
 
@@ -91,18 +101,18 @@ public record ModZoneRuntimeProfile(
 }
 ```
 
-Add `GameModule.getModZoneAdapter()` with an unsupported singleton and add an explicit forwarding override to `DelegatingGameModule`. Make `Sonic2GameModule` return a new `Sonic2ModZoneAdapter(this)`; do not put an `s2` comparison in shared mod code.
+Add `GameModule.getModZoneAdapter()` with an unsupported singleton and add an explicit forwarding override to `DelegatingGameModule`. Keep engine-owned `PreparedModZone` out of this published recursive signature: the adapter accepts the already-published immutable `ModLevelDefinition` plus an owner id supplied by the engine caller. Extract the existing S2 builder body to a `ModZoneLoader.load(ModLevelDefinition, RingSpriteSheet)` overload, create the initial `Sonic2ModZoneAdapter` as a thin wrapper over it, and make `Sonic2GameModule` return the adapter. Task 5 changes the shared caller to use this capability; do not put an `s2` comparison in shared mod code and never accept an owner id from creator code.
 
 - [ ] **Step 4: Run the focused test and forwarding guard**
 
 Run: `mvn "-Dtest=com.openggf.mods.code.TestModZoneAdapterRouting" test`
 
-Expected: all tests pass.
+Expected: feature tests pass. Then the mandatory signature command fails only `publishedTwoTwoSurfaceIsPinnedToTheCurrentSurface` and `twoOneToTwoTwoIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add src/main/java/com/openggf/mods/code/ModZoneAdapter.java src/main/java/com/openggf/mods/code/ModZoneRuntimeProfile.java src/main/java/com/openggf/game/GameModule.java src/main/java/com/openggf/game/patch/DelegatingGameModule.java src/main/java/com/openggf/game/sonic2/Sonic2GameModule.java src/main/java/com/openggf/game/sonic2/Sonic2ModZoneAdapter.java src/test/java/com/openggf/mods/code/TestModZoneAdapterRouting.java
+git add src/main/java/com/openggf/mods/code/ModZoneAdapter.java src/main/java/com/openggf/mods/code/ModZoneRuntimeProfile.java src/main/java/com/openggf/game/GameModule.java src/main/java/com/openggf/game/patch/DelegatingGameModule.java src/main/java/com/openggf/game/sonic2/Sonic2GameModule.java src/main/java/com/openggf/game/sonic2/Sonic2ModZoneAdapter.java src/main/java/com/openggf/mods/code/ModZoneLoader.java src/test/java/com/openggf/mods/code/TestModZoneAdapterRouting.java
 git commit -m "feat: add typed mod-zone adapter capability"
 ```
 
@@ -176,7 +186,7 @@ Use separate exact-key sets for v1 and v2. V1 keeps `assets.palettes`; v2 remove
 
 Run: `mvn "-Dtest=com.openggf.mods.code.TestModLevelDefinitionParser,com.openggf.tools.modsdk.TestLevelConverter" test`
 
-Expected: all tests pass, including all v1 fixtures.
+Expected: feature tests pass, including all v1 fixtures. Then the mandatory signature command fails only `publishedTwoTwoSurfaceIsPinnedToTheCurrentSurface` and `twoOneToTwoTwoIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
@@ -240,7 +250,7 @@ Decode block descriptors with the engine's existing Genesis descriptor masks; va
 
 Run: `mvn "-Dtest=com.openggf.mods.code.TestModPaletteUsageValidator,com.openggf.mods.code.TestModLevelDefinitionParser" test`
 
-Expected: all tests pass.
+Expected: feature tests pass. Then the mandatory signature command fails only `publishedTwoTwoSurfaceIsPinnedToTheCurrentSurface` and `twoOneToTwoTwoIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
@@ -301,9 +311,9 @@ The builder must clone every caller-owned array, require an 8x8 block grid, deco
 
 - [ ] **Step 4: Run in-memory and stock level tests**
 
-Run: `mvn "-Dtest=com.openggf.game.sonic3k.TestSonic3kLevelInMemoryConstruction,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading" test`
+Run: `mvn "-Ds3k.rom.path=s3k.gen" "-Dtest=com.openggf.game.sonic3k.TestSonic3kLevelInMemoryConstruction,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading" test`
 
-Expected: all tests pass.
+Expected: feature tests pass with the supplied S3K ROM; a missing ROM is not accepted as a pass. Then the mandatory signature command fails only `publishedTwoTwoSurfaceIsPinnedToTheCurrentSurface` and `twoOneToTwoTwoIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
@@ -315,31 +325,48 @@ git commit -m "feat: construct S3K levels from bounded mod data"
 ### Task 5: Implement S2 and S3K adapters and remove shared game-name branching
 
 **Files:**
-- Create: `src/main/java/com/openggf/game/sonic2/Sonic2ModZoneAdapter.java`
+- Modify: `src/main/java/com/openggf/game/sonic2/Sonic2ModZoneAdapter.java`
 - Create: `src/main/java/com/openggf/game/sonic3k/Sonic3kModZoneAdapter.java`
 - Modify: `src/main/java/com/openggf/mods/code/ModZoneLoader.java`
 - Modify: `src/main/java/com/openggf/mods/code/ModContext.java`
+- Modify: `src/main/java/com/openggf/mods/code/PreparedModZone.java`
+- Modify: `src/main/java/com/openggf/mods/code/ModZoneRegistry.java`
 - Modify: `src/main/java/com/openggf/mods/code/ModRuntime.java`
 - Modify: `src/main/java/com/openggf/mods/code/ModBackedGamePatch.java`
+- Modify: `src/main/java/com/openggf/mods/StockProgressionAnchors.java`
 - Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kGameModule.java`
 - Test: `src/test/java/com/openggf/mods/code/TestS3kModZoneAdapter.java`
 - Test: `src/test/java/com/openggf/mods/code/TestModZoneLoader.java`
+- Test: `src/test/java/com/openggf/game/TestZoneProgressionPlan.java`
 
 - [ ] **Step 1: Write failing routing and owner-finding tests**
 
 ```java
 @Test void patchDelegatesPreparedZoneToResolvedModuleAdapter() throws Exception {
     ModZoneAdapter adapter = mock(ModZoneAdapter.class);
-    GameModule resolved = applyPlan(moduleWithAdapter(adapter), s3kPreparedPlan());
+    ModLevelDefinition definition = preparedDefinition();
+    GameModule resolved = applyPlan(moduleWithAdapter(adapter), s3kPreparedPlan(definition));
     resolved.loadLevelOverride(MOD_LEVEL_INDEX);
-    verify(adapter).validate(argThat(z -> z.ownerModId().equals("alpha")));
-    verify(adapter).load(any(PreparedModZone.class));
+    verify(adapter).validate(eq("alpha"), same(definition));
+    verify(adapter).load(eq("alpha"), same(definition));
 }
 
 @Test void unsupportedModuleFailsTheOwnerTransactionBeforePublication() {
     RegistrationResult result = register(zoneEntrypoint(), moduleWithoutAdapter());
     assertEquals("MOD_ZONE_HOST_UNSUPPORTED", result.finding().code());
     assertFalse(result.publishedOwners().contains("alpha"));
+}
+
+@Test void anchorlessS3kZoneIsAddressableButAddsNoProgressionEdge() {
+    ZoneRegistry stock = s3kStockRegistry();
+    ZoneRegistry decorated = ModZoneRegistry.decorate(stock,
+            List.of(anchorlessPreparedS3kZone()));
+    int custom = decorated.resolveZoneKey(ZoneKey.mod("alpha", "sky")).orElseThrow();
+    ZoneProgressionPlan.ProgressionResult next = decorated.progressionPlan().next(
+            decorated.progressionTopology(), stockResultsZone(), stockResultsLastAct());
+    assertNotEquals(new ZoneProgressionPlan.Successor(custom, 0), next);
+    assertEquals(stock.getZoneCount(), custom);
+    assertTrue(StockProgressionAnchors.anchorsFor("s3k").isEmpty());
 }
 ```
 
@@ -358,52 +385,78 @@ if (registry instanceof ModZoneRegistry mods) {
     PreparedModZone zone = mods.levelContribution(levelIndex);
     if (zone != null) {
         ModZoneAdapter adapter = super.getModZoneAdapter();
-        adapter.validate(zone);
-        return adapter.load(zone);
+        adapter.validate(zone.ownerModId(), zone.definition());
+        return adapter.load(zone.ownerModId(), zone.definition());
     }
 }
 return super.loadLevelOverride(levelIndex);
 ```
 
-`Sonic2ModZoneAdapter` must call the existing S2 builder and accept v1. `Sonic3kModZoneAdapter` must require v2, blockGridSide 8, typed S3K metadata, validated palette use, and host-owned character/ring assets. A namespaced-only object list may omit metadata and defaults to `S3KL`; any stock object requires the explicit declaration. Reject a stock ID whose registered factory is incompatible with the selected set.
+`Sonic2ModZoneAdapter` must call the existing S2 builder and accept v1. `Sonic3kModZoneAdapter` must require v2, blockGridSide 8, typed S3K metadata, validated palette use, and host-owned character/ring assets. A namespaced-only object list may omit metadata and defaults to `S3KL`; any stock object requires the explicit declaration. Task 6 owns the factory-compatibility predicate and registration-time rejection.
+
+Generalize anchor handling without inventing an S3K stock boundary. Add `StockProgressionAnchors.defaultAnchorFor(gameId)`: it returns `mtz3` for S2 and empty for S1/S3K, alongside the existing anchor sets. `ModContext` uses an explicit manifest default first, then this registry default; it validates only a non-null result. Remove the raw `"s2"` gate and hardcoded `"mtz3"` fallback from `ModContext.registerZone`. For S3K, retain `insertAfter == null` in `PreparedModZone` (remove its current non-null constructor check); `ModZoneRegistry` publishes the tagged zone but calls `ZoneProgressionPlan.Builder.insertAfter(...)` only for non-null anchors:
+
+```java
+if (contribution.insertAfter() != null) {
+    int anchor = stock.resolveStockZoneAnchor(contribution.insertAfter());
+    builder.insertAfter(anchor, stock.getZoneCount() + i);
+}
+```
+
+An explicitly supplied S3K anchor still fails because `StockProgressionAnchors.anchorsFor("s3k")` is empty. This is the addressable-but-unsequenced seam later consumed by the game-start marker; do not add `aiz1`.
 
 - [ ] **Step 4: Run adapter, S2 compatibility, and hostile-input tests**
 
-Run: `mvn "-Dtest=com.openggf.mods.code.TestS3kModZoneAdapter,com.openggf.mods.code.TestModZoneLoader,com.openggf.game.sonic2.TestSonic2LevelInMemoryConstruction,com.openggf.mods.TestModApiSignatureSurface" test`
+Run: `mvn "-Dtest=com.openggf.mods.code.TestS3kModZoneAdapter,com.openggf.mods.code.TestModZoneLoader,com.openggf.game.sonic2.TestSonic2LevelInMemoryConstruction,com.openggf.game.TestZoneProgressionPlan" test`
 
-Expected: all tests pass.
+Expected: feature tests pass. Then the mandatory signature command fails only `publishedTwoTwoSurfaceIsPinnedToTheCurrentSurface` and `twoOneToTwoTwoIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add src/main/java/com/openggf/game/sonic2/Sonic2ModZoneAdapter.java src/main/java/com/openggf/game/sonic3k/Sonic3kModZoneAdapter.java src/main/java/com/openggf/game/sonic3k/Sonic3kGameModule.java src/main/java/com/openggf/mods/code/ModZoneLoader.java src/main/java/com/openggf/mods/code/ModContext.java src/main/java/com/openggf/mods/code/ModRuntime.java src/main/java/com/openggf/mods/code/ModBackedGamePatch.java src/test/java/com/openggf/mods/code/TestS3kModZoneAdapter.java src/test/java/com/openggf/mods/code/TestModZoneLoader.java
+git add src/main/java/com/openggf/game/sonic2/Sonic2ModZoneAdapter.java src/main/java/com/openggf/game/sonic3k/Sonic3kModZoneAdapter.java src/main/java/com/openggf/game/sonic3k/Sonic3kGameModule.java src/main/java/com/openggf/mods/StockProgressionAnchors.java src/main/java/com/openggf/mods/code/ModZoneLoader.java src/main/java/com/openggf/mods/code/ModContext.java src/main/java/com/openggf/mods/code/PreparedModZone.java src/main/java/com/openggf/mods/code/ModZoneRegistry.java src/main/java/com/openggf/mods/code/ModRuntime.java src/main/java/com/openggf/mods/code/ModBackedGamePatch.java src/test/java/com/openggf/mods/code/TestS3kModZoneAdapter.java src/test/java/com/openggf/mods/code/TestModZoneLoader.java src/test/java/com/openggf/game/TestZoneProgressionPlan.java
 git commit -m "feat: load additive zones through host adapters"
 ```
 
 ### Task 6: Make S3K zone-set identity explicit at object creation
 
 **Files:**
+- Create: `src/main/java/com/openggf/game/sonic3k/objects/S3kObjectCreationContext.java`
 - Modify: `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kModZoneAdapter.java`
 - Test: `src/test/java/com/openggf/game/sonic3k/objects/TestSonic3kModZoneObjectSet.java`
+- Modify: `src/test/java/com/openggf/mods/code/TestS3kModZoneAdapter.java`
 
-- [ ] **Step 1: Write failing same-ID/different-set tests**
+- [ ] **Step 1: Write failing set and registration-compatibility tests**
 
 ```java
 @Test void syntheticZoneUsesLevelDeclaredSetNotSyntheticIndex() {
-    loadCustomLevel(S3kZoneSet.SKL, stockSpawn(0x14));
-    assertEquals("Updraft", registry.getPrimaryName(0x14, registry.currentZoneSetForTest()));
-    loadCustomLevel(S3kZoneSet.S3KL, stockSpawn(0x14));
-    assertEquals("LBZTriggerBridge", registry.getPrimaryName(0x14, registry.currentZoneSetForTest()));
+    assertEquals(S3kZoneSet.SKL, loadCustomLevel(S3kZoneSet.SKL).getObjectZoneSet());
+    assertEquals(S3kZoneSet.S3KL, loadCustomLevel(S3kZoneSet.S3KL).getObjectZoneSet());
+}
+
+@Test void zoneIdGatedMhzAndLbzFactoriesRejectCustomZonesBeforePublication() {
+    assertFalse(registry.canCreateInCustomZone(S3kZoneSet.SKL,
+            Sonic3kObjectIds.MHZ_MUSHROOM_PLATFORM));
+    assertFalse(registry.canCreateInCustomZone(S3kZoneSet.S3KL,
+            Sonic3kObjectIds.LBZ_PIPE_PLUG));
+    assertRegistrationFinding("MOD_S3K_STOCK_OBJECT_INCOMPATIBLE",
+            customZoneWithStockObject(S3kZoneSet.S3KL, Sonic3kObjectIds.LBZ_PIPE_PLUG));
+}
+
+@Test void setOnlyFactoryAndNamespacedObjectRemainValid() {
+    assertTrue(registry.canCreateInCustomZone(S3kZoneSet.S3KL, setOnlyObjectId()));
+    assertPublishes(customZoneWithNamespacedObject("alpha:controller"));
 }
 ```
 
 - [ ] **Step 2: Run and verify the synthetic-index failure**
 
-Run: `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kModZoneObjectSet" test`
+Run: `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kModZoneObjectSet,com.openggf.mods.code.TestS3kModZoneAdapter" test`
 
-Expected: the synthetic zone is incorrectly inferred as `SKL` or defaults without consulting the level.
+Expected: the synthetic zone is incorrectly inferred as `SKL` or defaults without consulting the level, and zone-id-bound MHZ/LBZ stock placements are not rejected before publication.
 
-- [ ] **Step 3: Read the set from the active S3K level first**
+- [ ] **Step 3: Read the set from the level and make factory compatibility explicit**
 
 ```java
 private S3kZoneSet getCurrentZoneSet() {
@@ -418,16 +471,28 @@ private S3kZoneSet getCurrentZoneSet() {
 
 Do not special-case a zone id, level index, or owner.
 
+Replace raw factory predicates with entries evaluated from one internal context:
+
+```java
+record S3kObjectCreationContext(S3kZoneSet zoneSet, OptionalInt stockRomZoneId) {
+    static S3kObjectCreationContext custom(S3kZoneSet set) {
+        return new S3kObjectCreationContext(set, OptionalInt.empty());
+    }
+}
+```
+
+Store `FactoryEntry(ObjectFactory factory, Predicate<S3kObjectCreationContext> compatibility)` rather than a bare factory. Provide explicit `registerSetOnly(...)` and `registerStockZoneBound(...)` helpers and migrate every existing factory branch that reads `currentRomZoneId()` to the latter; a registry test inventories those entries so a future zone-id-bound factory cannot silently use the set-only default. The normal stock path supplies its real ROM zone id. `canCreateInCustomZone(set, id)` evaluates the same predicate with an empty id; MHZ/LBZ factories that require a specific `currentRomZoneId()` therefore reject before publication, while set-only factories remain available. `Sonic3kModZoneAdapter.validate` calls this predicate for every stock placement and emits `MOD_S3K_STOCK_OBJECT_INCOMPATIBLE`. Namespaced objects bypass the stock predicate. Never infer a fake MHZ/LBZ id from a synthetic custom-zone index.
+
 - [ ] **Step 4: Run object-set and S3K object registry suites**
 
-Run: `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kModZoneObjectSet" test`
+Run: `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kModZoneObjectSet,com.openggf.mods.code.TestS3kModZoneAdapter" test`
 
-Expected: all tests pass.
+Expected: feature tests pass. Then the mandatory signature command fails only `publishedTwoTwoSurfaceIsPinnedToTheCurrentSurface` and `twoOneToTwoTwoIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java src/test/java/com/openggf/game/sonic3k/objects/TestSonic3kModZoneObjectSet.java
+git add src/main/java/com/openggf/game/sonic3k/objects/S3kObjectCreationContext.java src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java src/main/java/com/openggf/game/sonic3k/Sonic3kModZoneAdapter.java src/test/java/com/openggf/game/sonic3k/objects/TestSonic3kModZoneObjectSet.java src/test/java/com/openggf/mods/code/TestS3kModZoneAdapter.java
 git commit -m "feat: preserve S3K mod-zone object set identity"
 ```
 
@@ -448,10 +513,11 @@ git commit -m "feat: preserve S3K mod-zone object set identity"
     assertArrayEquals(new int[]{cameraX(), cameraY()}, backgroundScroll());
     assertNull(levelManager.getAnimatedPatternManager());
     assertNull(levelManager.getAnimatedPaletteManager());
-    assertFalse(specialRenderRegistry().hasContributions());
-    assertFalse(advancedRenderController().hasOverride());
-    assertEquals(0, plcQueue().pendingCount());
-    assertInstanceOf(NoOpLevelEventProvider.class, activeEvents());
+    assertTrue(animatedTileChannelGraph().channels().isEmpty());
+    assertTrue(specialRenderRegistry().isEmpty());
+    assertTrue(advancedRenderController().isEmpty());
+    assertNull(activeEvents());
+    assertFalse(gameplay.getRewindRegistry().capture().containsKey("s3k-plc-art"));
 }
 ```
 
@@ -471,13 +537,13 @@ public final class Sonic3kModZoneRuntimeProfile {
 }
 ```
 
-Store the immutable profile in `PreparedModZone`. In `ModBackedGamePatch`, decorate scroll, animation, event, zone-feature, PLC, and render providers so a mod-zone lookup uses the profile and a stock lookup delegates unchanged. For flat scroll return `{cameraX, cameraY}`. An explicit creator event factory still routes through `ModFaultBoundary`; absence returns the no-event provider, not the stock provider.
+Store the immutable profile in `PreparedModZone`. In `ModBackedGamePatch`, decorate scroll, animation, event, zone-feature, PLC-art, and render providers so a mod-zone lookup uses the profile and a stock lookup delegates unchanged. For flat scroll return `{cameraX, cameraY}`. An explicit creator event factory still routes through `ModFaultBoundary`; absence returns `null`, which is the engine's existing no-events convention. Passing a null/non-snapshottable object-art provider through `GameplayModeContext.registerPlcArtAdapter` removes stale `s3k-plc-art` state. Do not introduce a `NoOpLevelEventProvider`, a PLC queue facade, or test-only registry methods.
 
 - [ ] **Step 4: Run runtime-profile, stock S3K init, and rewind registry tests**
 
 Run: `mvn "-Dtest=com.openggf.mods.code.TestModZoneRuntimeProfile,com.openggf.game.sonic3k.TestSonic3kLevelInitProfile,com.openggf.game.session.TestGameplayModeContextRewindRegistry" test`
 
-Expected: all tests pass.
+Expected: feature tests pass. Then the mandatory signature command fails only `publishedTwoTwoSurfaceIsPinnedToTheCurrentSurface` and `twoOneToTwoTwoIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
@@ -537,7 +603,7 @@ Add immutable reservations to `PaletteOwnershipRegistry` or the bridge, validate
 
 Run: `mvn "-Dtest=com.openggf.game.sonic3k.TestS3kCustomZonePaletteBridge,com.openggf.game.sonic3k.TestS3kPaletteOwnershipRegistryIntegration,com.openggf.level.objects.TestHudRenderManager" test`
 
-Expected: all tests pass; stock expected palette bytes remain unchanged.
+Expected: feature tests pass and stock expected palette bytes remain unchanged. Then the mandatory signature command fails only `publishedTwoTwoSurfaceIsPinnedToTheCurrentSurface` and `twoOneToTwoTwoIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
@@ -575,26 +641,28 @@ git commit -m "feat: compose custom S3K host palettes"
 }
 ```
 
-- [ ] **Step 2: Run and verify red at the missing lifecycle seam**
+- [ ] **Step 2: Run the lifecycle assertions against the existing tagged-identity seam**
 
 Run: `mvn "-Dtest=com.openggf.mods.code.TestS3kModZoneLifecycle" test`
 
-Expected: one or more lifecycle assertions fail before adapter state is threaded through save/editor/rewind.
+Expected: tests pass because save/resume/editor already use tagged `ZoneKey`; a failure is a blocker that must be assigned to an exact owning file before continuing, not permission to stage a shared source tree.
 
-- [ ] **Step 3: Wire only missing tagged-identity/profile state**
+- [ ] **Step 3: Inspect the test diff for synthetic-index coupling**
 
-Use `ZoneRegistry.zoneKey(...)` and `resolveZoneKey(...)` at save/resume boundaries. Do not persist or reinterpret the synthetic index. Register custom runtime state with the existing gameplay `RewindRegistry`; keep immutable adapter/profile data outside snapshots.
+The committed test must call `ZoneRegistry.zoneKey(...)` / `resolveZoneKey(...)` and assert the persisted identity is `ZoneKey.Mod`; it must not add a synthetic index to payloads or hydrate runtime state from the assertion fixture. If a production change is genuinely required, stop and amend this task with its exact path and a red-green test before editing it.
 
 - [ ] **Step 4: Run lifecycle and cross-mode suites**
 
 Run: `mvn "-Dtest=com.openggf.mods.code.TestS3kModZoneLifecycle,com.openggf.mods.code.TestS3kModZoneAdapter,com.openggf.mods.code.TestModZoneLoader,com.openggf.mods.integration.TestPhase3StandaloneSampleIntegration" test`
 
-Expected: all tests pass.
+Run: `mvn "-Ds3k.rom.path=s3k.gen" "-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" test`
+
+Expected: feature and must-keep-green tests pass with the supplied ROM. Then the mandatory signature command fails only `publishedTwoTwoSurfaceIsPinnedToTheCurrentSurface` and `twoOneToTwoTwoIsAnAdditiveMinorBump`.
 
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add src/main/java/com/openggf src/test/java/com/openggf/mods/code/TestS3kModZoneLifecycle.java src/test/java/com/openggf/mods/code/TestS3kModZoneAdapter.java src/test/java/com/openggf/mods/code/TestModZoneLoader.java src/test/java/com/openggf/mods/integration/TestPhase3StandaloneSampleIntegration.java
+git add src/test/java/com/openggf/mods/code/TestS3kModZoneLifecycle.java src/test/java/com/openggf/mods/code/TestS3kModZoneAdapter.java src/test/java/com/openggf/mods/code/TestModZoneLoader.java src/test/java/com/openggf/mods/integration/TestPhase3StandaloneSampleIntegration.java
 git commit -m "test: cover S3K mod-zone lifecycle"
 ```
 
@@ -625,6 +693,8 @@ public static final SemanticVersion CURRENT = SemanticVersion.parse("2.3.0");
 
 Generate `mods/mod-api-signatures-2.3.txt`, retain every 1.1/1.2/2.0/2.1/2.2 snapshot, and update the compatibility test so 2.3 is an additive superset.
 
+In `TestModApiSignatureSurface`, keep `mod-api-signatures-2.2.txt` as `BASELINE_22`, make 2.3 the only `PUBLISHED_BASELINE`, rename the live pin to `publishedTwoThreeSurfaceIsPinnedToTheCurrentSurface`, and add `twoTwoToTwoThreeIsAnAdditiveMinorBump`. The older `twoOneToTwoTwoIsAnAdditiveMinorBump` becomes a closed historical-to-historical comparison and must no longer compare 2.2 directly to the live surface. Plan B depends on these exact two 2.3 method names for its expected-red 2.4 choreography.
+
 - [ ] **Step 3: Document exact v2 JSON, ownership, and host behavior**
 
 Document `hostMetadata.s3k.objectZoneSet`, sparse `paletteClaims`, namespaced-only `S3KL` default, stock-object explicit-set requirement, host line-0 ownership, HUD reservations, empty runtime defaults, and the unchanged v1 S2/standalone path. Update `LevelConverter` inventory validation so v1 requires `palettes.bin` and v2 forbids it.
@@ -639,7 +709,9 @@ Expected: all tests pass.
 
 Run: `mvn "-Ds3k.rom.path=s3k.gen" "-Dtest=com.openggf.tests.TestSonic3kLevelLoading,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
 
-Expected: all tests pass or retain their checked-in accepted frontier without moving backward.
+Run: `mvn "-Ds3k.rom.path=s3k.gen" "-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" test`
+
+Expected: the must-keep-green suite passes; trace tests pass or retain their checked-in accepted frontier without moving backward. A missing ROM is a blocked gate, never a silent green.
 
 - [ ] **Step 6: Commit**
 
@@ -652,6 +724,7 @@ git commit -m "docs: publish S3K mod-zone adapter contract"
 
 - [ ] Run `mvn "-Dtest=com.openggf.mods.code.TestS3kModZoneAdapter,com.openggf.mods.code.TestS3kModZoneLifecycle,com.openggf.game.sonic3k.TestSonic3kLevelInMemoryConstruction,com.openggf.game.sonic3k.TestS3kCustomZonePaletteBridge,com.openggf.mods.code.TestModZoneLoader,com.openggf.mods.TestModApiSignatureSurface,com.openggf.tools.modsdk.TestLevelConverter" test`.
 - [ ] Run `mvn package`.
+- [ ] Run the mandatory S3K must-keep-green command with `-Ds3k.rom.path=s3k.gen`.
 - [ ] Confirm `git diff --check` is clean.
 - [ ] Confirm stock S2 sample-zone and standalone fixtures still accept format v1.
 - [ ] Confirm no shared mod-runtime source branches on `s2`, `s3k`, `Sonic2GameModule`, or `Sonic3kGameModule` for adapter selection.

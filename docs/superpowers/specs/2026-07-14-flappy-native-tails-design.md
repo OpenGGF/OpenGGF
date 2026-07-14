@@ -49,6 +49,12 @@ owner order; the last enabled contribution wins and produces a deterministic fin
 for every shadowed owner. Disabling the winner reveals the preceding contribution,
 or the stock destination when none remains.
 
+The marked Flappy zone is anchorless: `insertAfter == null` means it is addressable
+by tagged identity but contributes no results-successor edge. S3K's empty
+`StockProgressionAnchors` inventory remains empty; `aiz1` is not promoted into a
+results boundary. Disabling Flappy restores the stock AIZ1 destination through
+data-select fallback, not through a synthetic progression edge.
+
 Today `DataSelectSessionController` emits `DataSelectAction` values whose
 `DataSelectActionType.NO_SAVE_START` and genuinely empty-slot
 `DataSelectActionType.NEW_SLOT_START` branches both hardcode `(0,0)`. The feature
@@ -99,6 +105,9 @@ collectible-ring health.
 
 The ring counter is run-local Flappy score. There are no collectible ring placements,
 and the stock score counter is neither incremented nor persisted for the minigame.
+The controller updates the ring-backed metric with `LevelState.setRings` rather than
+the collectible-ring `addRings` path, so crossing 100/200 points does not award a
+stock extra life or interrupt flight with extra-life music.
 
 ## Short static level and fixed camera
 
@@ -107,6 +116,12 @@ Flappy controller; `objects[]` contains no pipe placements and `rings[]` is empt
 Equal camera min/max bounds pin both axes at the initial viewport. Tails' horizontal
 anchor prevents focus-driven movement, so the controller makes no forced-scroll or
 camera-lead request.
+
+The strict level format represents those values through the existing nested
+`bounds` object; it does not invent `cameraMinX`, `visibleHeight`, or `game` root
+keys. Because the parser requires `start` inside equal bounds, the controller's
+first activation moves Tails to the configured screen-space anchor before arming
+flight and boundary death, then captures that world X as the stable anchor.
 
 The bounded-format problem therefore disappears: neither Tails nor the camera
 approaches `maxX`, no world-coordinate rebasing occurs, and no wrapping runtime is
@@ -215,8 +230,11 @@ Initial/HUD palette composition is new adapter work, not an existing registry
 feature. As specified by the S3K adapter design, creator declarations are validated
 against host reservations and the current direct lives-palette override is replaced
 for custom zones by host HUD claims submitted through `PaletteOwnershipRegistry`.
-Exact palette and rendered-pixel assertions cover Tails, the life icon, `SCORE`, sky,
-and rectangular pipes.
+Headless verification does not claim framebuffer pixels: GL execution is a no-op in
+that mode. Exact palette-register assertions cover Tails and the life icon; HUD tests
+intercept `renderPatternWithId` piece calls for `SCORE`; decoded pattern-nibble and
+mapping-piece assertions cover sky and rectangular pipes. A framebuffer capture
+system is outside this revision.
 
 ## ROM-art gallery contract
 
@@ -239,8 +257,9 @@ version are validated before session publication. Gameplay-context teardown remo
 every installed policy. Removing the mod restores ordinary S3K launch, controls,
 camera, Tails fatigue, and HUD behavior.
 
-The S3K adapter plus the four creator-facing contributions advance Mod API 2.2.0 to
-2.3.0. The sample declares `>=2.3.0 <3.0.0`. This work does not add a mod GUI,
+The S3K adapter publishes Mod API 2.3.0. The four later creator-facing gameplay
+contributions publish the additive 2.4.0 surface while leaving 2.3 frozen. The sample
+declares `>=2.4.0 <3.0.0`. This work does not add a mod GUI,
 general HUD editor, arbitrary physics scripting, endless-world runtime, stock S3K
 event emulation, Flappy completion sequence, or persistent high scores.
 
@@ -265,7 +284,8 @@ Test-first delivery covers:
 12. rewind restoration before/after recycling and scoring crossings;
 13. corrected column-major pipe art and unchanged native ROM rendering;
 14. host character/HUD palette composition and hostile palette rejection;
-15. rendered pixel probes for Tails, life icon, HUD, sky, and pipe pieces; and
+15. palette-register, HUD piece-call, and decoded pattern/mapping probes for Tails,
+   the life icon, HUD, sky, and pipe pieces; and
 16. sample packaging, zero-finding validation, API compatibility guards, and the
     relevant S3K/mod regression suites.
 

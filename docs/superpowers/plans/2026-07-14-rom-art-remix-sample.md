@@ -2,30 +2,30 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add the gallery's eighth maintained source project: a minimal Sonic 2 patch mod that teaches safe ROM-art intake independently of the native-Tails Flappy sample.
+**Goal:** Add the gallery's eighth maintained source project: a complete Sonic 2 patch sample that teaches bounded ROM-art intake independently of native-Tails Flappy.
 
-**Architecture:** The sample contributes one short baked Sonic 2 level and one rewind-recreatable display object. Its registration transaction requests the existing Tails flight art from the user's Sonic 2 ROM, while the packaged mod contains only creator source, baked level data, and metadata. It launches with the normal data-select team; Sonic and Tails share S2 palette line 0, while the guide accurately calls out the Knuckles lock-on palette mutation.
+**Architecture:** The sample contributes one short format-v1 S2 level and one rewind-recreatable display object. Its registration transaction requests Tails flight art from the user's S2 ROM; the package contains only code, metadata, and original baked level data. The project uses the default Sonic team because S2 palette line 0 is shared by Sonic and Tails.
 
-**Tech Stack:** Java 21, Maven, JUnit 5, `ggfmod`, Mod API 2.1-compatible ROM-art intake, Sonic 2 ROM-gated integration tests.
+**Tech Stack:** Java 21, Maven, JUnit 5, `ggfmod`, Mod API 2.1 ROM-art intake, Sonic 2 ROM-gated integration tests.
 
 **Design reference:** `docs/superpowers/specs/2026-07-14-rom-art-remix-sample-design.md`
 
-**Prerequisites:** Complete `docs/superpowers/plans/2026-07-14-art-converter-column-major-fix.md`, `docs/superpowers/plans/2026-07-14-s3k-mod-zone-adapter.md`, and `docs/superpowers/plans/2026-07-14-mod-gameplay-policies.md` first. Do not delete the old Flappy ROM-art consumer until Task 5 is green.
+**Prerequisites:** Complete the converter, S3K adapter, and gameplay-policy plans first. Keep the existing Flappy ROM-art consumer and `flappy-remix.md` guide in place throughout this plan; Plan D removes them only after this sample is green.
 
-**Commit policy:** Keep the repository trailer block on every commit. Tasks 1-4 use `Changelog: n/a: covered by the aggregate gallery entry in Task 5`; Task 5 stages the guide and changelog and uses `Changelog: updated`, `Guide: updated`, with other mappings marked accurately.
+**Commit policy:** Keep the repository trailer block. Tasks 1-2 use `Changelog: n/a: covered by the aggregate gallery entry in Task 3`. Task 3 stages `CHANGELOG.md` and uses `Changelog: updated` and `Guide: n/a: modding guides are outside docs/guide`, with other trailers accurate.
 
 ---
 
 ## File map
 
-- Create the complete `src/test/resources/mods/sample-rom-art-remix-src/` source project.
+- Create the complete `src/test/resources/mods/sample-rom-art-remix-src/` source project atomically.
 - Create `RomArtRemixMod` and `TailsFlightArtObject` under `example.romartremix`.
-- Create a one-screen S2 format-v1 baked level source and deterministic asset generator.
-- Add package, level-source, runtime-materialization, rendering, rewind, and no-ROM-payload tests.
-- Move the old Flappy ROM-art lesson into `docs/modding/guides/rom-art-remix.md` and update gallery indexes.
-- Modify no engine runtime code; any runtime defect exposed here belongs in a separately reviewed fix.
+- Create a deterministic one-screen S2 format-v1 level source using the parser's exact root keys and Base64 asset convention.
+- Add package, level-source, registration, materialization, decoded-pattern, rewind, and archive tests.
+- Create `docs/modding/guides/rom-art-remix.md` and move only the old guide's ROM-borrowing links in this plan.
+- Leave non-ROM Flappy guide links and the old guide alive for Plan D's atomic native-guide migration.
 
-### Task 1: Scaffold and admit the eighth maintained source project
+### Task 1: Add one complete, packageable eighth source project
 
 **Files:**
 - Create: `src/test/resources/mods/sample-rom-art-remix-src/sample.properties`
@@ -35,155 +35,85 @@
 - Create: `src/test/resources/mods/sample-rom-art-remix-src/project/pom.xml`
 - Create: `src/test/resources/mods/sample-rom-art-remix-src/project/README.md`
 - Create: `src/test/resources/mods/sample-rom-art-remix-src/project/src/main/resources/META-INF/openggf-mod.yaml`
-- Modify: `src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java`
-
-- [ ] **Step 1: Write the failing eight-project gallery assertions**
-
-```java
-private static final Path ROM_ART_REMIX = Path.of(
-        "src/test/resources/mods/sample-rom-art-remix-src/project");
-
-private static final Set<String> EXPECTED_IDS = Set.of(
-        "openggf-gallery-music-sample", "phase2-reskin", "phase2-sample",
-        "phase3-character", "phase3-standalone", "sample-flappy",
-        "sample-platformer", "sample-rom-art-remix");
-
-@Test void maintainedGalleryContainsExactlyEightProjects() {
-    assertEquals(8, discoverSampleProjects().size());
-}
-```
-
-Add `sample-rom-art-remix -> >=2.1.0 <3.0.0` and include it in the trusted-code sample set.
-
-- [ ] **Step 2: Run and verify the count/id failure**
-
-Run: `mvn "-Dtest=com.openggf.tools.modsdk.TestSampleModsPackage" test`
-
-Expected: the expected ID is absent and the gallery count is seven.
-
-- [ ] **Step 3: Add reproducible wrapper files and the S2 manifest**
-
-```yaml
-id: sample-rom-art-remix
-name: ROM Art Remix
-version: 1.0.0
-engineApiRange: ">=2.1.0 <3.0.0"
-type: code
-baseGame: s2
-entrypoint: example.romartremix.RomArtRemixMod
-```
-
-Copy the maintained wrapper conventions from `sample-flappy-src`: resolve the engine SDK JAR explicitly, invoke the `ggfmod` Maven goal, and write only beneath the sample's `target/` directory. `sample.properties` identifies `project` and the expected packaged JAR; neither wrapper searches for or copies a ROM.
-
-- [ ] **Step 4: Run the package contract test**
-
-Run: `mvn "-Dtest=com.openggf.tools.modsdk.TestSampleModsPackage" test`
-
-Expected: all eight projects are discovered, scanned, and validated.
-
-- [ ] **Step 5: Commit**
-
-```powershell
-git add src/test/resources/mods/sample-rom-art-remix-src src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java
-git commit -m "feat: scaffold ROM-art remix sample"
-```
-
-### Task 2: Add a deterministic one-screen Sonic 2 level
-
-**Files:**
+- Create: `src/test/resources/mods/sample-rom-art-remix-src/project/src/main/java/example/romartremix/RomArtRemixMod.java`
+- Create: `src/test/resources/mods/sample-rom-art-remix-src/project/src/main/java/example/romartremix/TailsFlightArtObject.java`
 - Create: `src/test/resources/mods/sample-rom-art-remix-src/project/src/main/mod/level-source/level.json`
 - Create: `src/test/resources/mods/sample-rom-art-remix-src/project/src/main/mod/level-source/binary-assets.properties`
 - Create: `src/test/java/com/openggf/tools/modsdk/SampleRomArtRemixAssetGenerator.java`
 - Create: `src/test/java/com/openggf/tools/modsdk/TestSampleRomArtRemixLevelSource.java`
-- Modify: `src/test/resources/mods/sample-rom-art-remix-src/project/pom.xml`
-
-- [ ] **Step 1: Write a failing source-level contract**
-
-```java
-@Test void sourceIsShortStaticS2FormatWithOneDisplayObject() throws Exception {
-    JsonNode level = mapper.readTree(LEVEL_SOURCE.resolve("level.json").toFile());
-    assertEquals(1, level.path("formatVersion").asInt());
-    assertEquals("s2", level.path("game").asText());
-    assertEquals(1, level.path("objects").size());
-    assertEquals("sample-rom-art-remix:tails-flight-art",
-            level.path("objects").get(0).path("key").asText());
-    assertTrue(level.path("mapWidthPixels").asInt() <= 640);
-}
-```
-
-Also parse every declared binary asset and assert exact lengths, indices, and palette bounds.
-
-- [ ] **Step 2: Run and verify missing source failure**
-
-Run: `mvn "-Dtest=com.openggf.tools.modsdk.TestSampleRomArtRemixLevelSource" test`
-
-Expected: source assets do not exist.
-
-- [ ] **Step 3: Generate the small static sky/platform level**
-
-The generator writes deterministic format-v1 S2 blocks/chunks/map/collision/palette inputs using the same byte-order and SHA-256 manifest conventions as `SampleFlappyAssetGenerator`. The level contains ordinary baked background/terrain only and a single layout placement for the display object. Keep camera bounds stationary enough to make the art comparison repeatable.
-
-```java
-writeProperties(Map.of(
-        "blocks.bin", sha256(blocks),
-        "chunks.bin", sha256(chunks),
-        "map.bin", sha256(map),
-        "collision.bin", sha256(collision),
-        "palette.bin", sha256(palette)));
-```
-
-- [ ] **Step 4: Convert and validate twice for reproducibility**
-
-Run: `mvn "-DskipTests" test-compile`
-
-Run: `java -cp target/test-classes com.openggf.tools.modsdk.SampleRomArtRemixAssetGenerator`
-
-Run: `mvn "-Dtest=com.openggf.tools.modsdk.TestSampleRomArtRemixLevelSource" test`
-
-Run: `mvn "-DskipTests" package`
-
-Expected: the focused test passes and repeated conversion leaves no tracked diff.
-
-- [ ] **Step 5: Commit**
-
-```powershell
-git add src/test/resources/mods/sample-rom-art-remix-src/project/src/main/mod src/test/resources/mods/sample-rom-art-remix-src/project/pom.xml src/test/java/com/openggf/tools/modsdk/SampleRomArtRemixAssetGenerator.java src/test/java/com/openggf/tools/modsdk/TestSampleRomArtRemixLevelSource.java
-git commit -m "feat: add ROM-art remix level source"
-```
-
-### Task 3: Register the exact bounded Sonic 2 ROM-art request
-
-**Files:**
-- Create: `src/test/resources/mods/sample-rom-art-remix-src/project/src/main/java/example/romartremix/RomArtRemixMod.java`
-- Create: `src/test/resources/mods/sample-rom-art-remix-src/project/src/main/java/example/romartremix/TailsFlightArtObject.java`
 - Create: `src/test/java/com/openggf/mods/code/TestSampleRomArtRemixRegistration.java`
-- Modify: `src/test/resources/mods/sample-rom-art-remix-src/project/README.md`
+- Modify: `src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java`
 
-- [ ] **Step 1: Write failing isolated registration assertions**
+- [ ] **Step 1: Write failing gallery, exact-schema, and registration tests**
 
 ```java
-@Test void registersOneS2ZoneAndTheExactTailsArtWindow() throws Exception {
+@Test void maintainedGalleryContainsExactlyEightCompleteProjects() throws Exception {
+    assertEquals(Set.of("openggf-gallery-music-sample", "phase2-reskin", "phase2-sample",
+            "phase3-character", "phase3-standalone", "sample-flappy",
+            "sample-platformer", "sample-rom-art-remix"), discoveredIds());
+    assertEquals(8, discoverSampleProjects().size());
+    assertPackagesAndValidates(ROM_ART_REMIX);
+}
+
+@Test void levelUsesOnlyTheStrictV1RootShapeAndOneDisplayObject() throws Exception {
+    JsonNode level = readLevelSource();
+    assertEquals(Set.of("formatVersion", "zoneName", "zoneIndex", "levelIndex",
+            "blockGridSide", "width", "height", "bounds", "start", "music",
+            "assets", "objects", "rings"), fieldNames(level));
+    assertEquals(1, level.path("formatVersion").asInt());
+    assertTrue(level.path("width").asInt() <= 3);
+    assertEquals(2, level.path("height").asInt());
+    assertEquals("sample-rom-art-remix:tails-flight-art",
+            level.path("objects").get(0).path("objectKey").asText());
+    assertEquals(1, level.path("objects").size());
+    assertEquals(0, level.path("rings").size());
+    assertFalse(level.has("game"));
+    assertFalse(level.has("mapWidthPixels"));
+}
+
+@Test void registersExactTailsWindowWithoutGameplayPolicies() throws Exception {
     ModRegistrationPlan plan = compileAndRegister(SAMPLE);
-    assertEquals(1, plan.romObjectArt().size());
     RomArtRequest request = plan.romObjectArt().get("sample-rom-art-remix:tails-flight");
     assertEquals(0x64320, request.artAddress());
-    assertEquals(0xB8C0, request.artLength());
+    assertEquals(0xB8C0, request.uncompressedByteSize());
     assertEquals(0x739E2, request.mappingAddress());
     assertEquals(0x7446C, request.dplcAddress());
     assertEquals(0, request.paletteLine());
-    assertFalse(plan.zones().getFirst().gameStart());
+    assertTrue(plan.launchTeams().isEmpty());
+    assertTrue(plan.inputFilters().isEmpty());
+    assertTrue(plan.hudProfiles().isEmpty());
 }
 ```
 
-Assert the zone is inserted after a valid S2 anchor and that no launch-team, input-filter, or HUD contribution is registered.
+The initial run is red because the eighth project is absent. Do not add the project to `TestSampleModsPackage` until its entrypoint, level source, and assets all exist in this same task.
 
-- [ ] **Step 2: Run and verify classes are absent**
+- [ ] **Step 2: Run and verify the missing-project failure**
 
-Run: `mvn "-Dtest=com.openggf.mods.code.TestSampleRomArtRemixRegistration" test`
+Run: `mvn "-Dtest=com.openggf.tools.modsdk.TestSampleModsPackage,com.openggf.tools.modsdk.TestSampleRomArtRemixLevelSource,com.openggf.mods.code.TestSampleRomArtRemixRegistration" test`
 
-Expected: sample compilation fails because its entrypoint and object do not exist.
+Expected: compilation/resource discovery fails only for the new sample and tests.
 
-- [ ] **Step 3: Implement registration and a rewind-recreatable display object**
+- [ ] **Step 3: Implement the complete source project**
+
+Use the real manifest vocabulary:
+
+```yaml
+formatVersion: 1
+id: sample-rom-art-remix
+name: ROM Art Remix
+version: 1.0.0
+authors: [Mod Author]
+description: Minimal bounded Sonic 2 ROM-art intake sample.
+engineApiRange: ">=2.1.0 <3.0.0"
+type: patch
+baseGame: s2
+entrypoint: example.romartremix.RomArtRemixMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}
+```
+
+The level JSON uses the exact v1 keys shown in Step 1. `binary-assets.properties` maps the actual parser asset names (`patterns.bin`, `chunks.bin`, `blocks.bin`, `fg-map.bin`, `solid-heights.bin`, `solid-widths.bin`, `solid-angles.bin`, `collision-primary.bin`, `collision-secondary.bin`, `palettes.bin`) to Base64-encoded file contents. It does not contain hashes. `SampleRomArtRemixAssetGenerator` mirrors `SampleFlappyAssetGenerator`'s deterministic binary writers and Base64 property output.
 
 ```java
 context.registerObject("tails-flight-art",
@@ -195,71 +125,68 @@ context.registerZone(new ModZoneContribution("rom-art-gallery",
         new BakedLevelRef("levels/rom-art-gallery/level.json"), "ehz2", null));
 ```
 
-`TailsFlightArtObject` keeps only a non-final `animTick`, selects mapping frames 94/95 every four frames, draws `sample-rom-art-remix:tails-flight` at its centre coordinates, and recreates from `context.spawn()`. It does not hide, replace, recolour, or control the playable sprite.
+`TailsFlightArtObject` has one non-final `animTick`, alternates mapping frames 94/95 every four frames, draws `sample-rom-art-remix:tails-flight` at centre coordinates, and returns `new TailsFlightArtObject(context.spawn())` from `recreateForRewind`. It never controls or hides the playable.
 
-- [ ] **Step 4: Run registration and transaction tests**
+- [ ] **Step 4: Generate assets and run the complete source-project gate**
 
-Run: `mvn "-Dtest=com.openggf.mods.code.TestSampleRomArtRemixRegistration,com.openggf.mods.code.TestModContextRomArt,com.openggf.mods.code.TestModContextAndFaultBoundary" test`
+Run: `mvn "-DskipTests" test-compile`
 
-Expected: all tests pass, including existing non-S2 and standalone ROM-art rejection coverage.
+Run: `java -cp target/test-classes com.openggf.tools.modsdk.SampleRomArtRemixAssetGenerator`
+
+Run: `mvn "-Dtest=com.openggf.tools.modsdk.TestSampleModsPackage,com.openggf.tools.modsdk.TestSampleRomArtRemixLevelSource,com.openggf.mods.code.TestSampleRomArtRemixRegistration,com.openggf.mods.code.TestModContextRomArt" test`
+
+Expected: all tests pass; the gallery becomes exactly eight only after the project compiles, packages, converts, and validates.
 
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add src/test/resources/mods/sample-rom-art-remix-src/project/src/main/java src/test/resources/mods/sample-rom-art-remix-src/project/README.md src/test/java/com/openggf/mods/code/TestSampleRomArtRemixRegistration.java
-git commit -m "feat: teach bounded Sonic 2 ROM-art intake"
+git add src/test/resources/mods/sample-rom-art-remix-src src/test/java/com/openggf/tools/modsdk/SampleRomArtRemixAssetGenerator.java src/test/java/com/openggf/tools/modsdk/TestSampleRomArtRemixLevelSource.java src/test/java/com/openggf/mods/code/TestSampleRomArtRemixRegistration.java src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java
+git commit -m "feat: add complete ROM-art remix sample"
 ```
 
-### Task 4: Prove default-team rendering, palette behavior, rewind, and packaging
+### Task 2: Prove materialization, default-team palette, decoded art, rewind, and archive safety
 
 **Files:**
 - Create: `src/test/java/com/openggf/mods/code/TestSampleRomArtRemixIntegration.java`
-- Modify: `src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java`
 
-- [ ] **Step 1: Add a ROM-gated end-to-end test before moving old assertions**
+- [ ] **Step 1: Write the ROM-gated end-to-end test**
 
 ```java
-@Test void defaultTeamMaterializesRendersAndRewindsTailsFlightArt() throws Exception {
-    assumeTrue(Files.isRegularFile(Path.of("s2.gen")));
-    LoadedSample loaded = buildInstallResolveWithS2Rom(SAMPLE);
+@Test void defaultTeamMaterializesFramesPatternsAndRewindState() throws Exception {
+    assertNotNull(RomTestUtils.ensureSonic2RomAvailable(),
+            "requires the explicitly supplied Sonic 2 ROM");
+    LoadedSample loaded = buildInstallAndResolveWithS2Rom(SAMPLE);
     assertEquals(CharacterKey.SONIC, loaded.launchTeam().main());
-    PatternSpriteRenderer renderer = loaded.objectArt().getRenderer(
+
+    ObjectSpriteSheet sheet = loaded.objectArt().getSheet(
             "sample-rom-art-remix:tails-flight");
-    assertNotNull(renderer);
-    assertEquals(96, renderer.sheet().frames().size());
-    assertFramePixelProbe(renderer, 94, EXPECTED_TAILS_FLIGHT_PROBE);
+    assertTrue(sheet.getFrameCount() > 95);
+    assertFalse(sheet.getFrame(94).pieces().isEmpty());
+    assertFalse(sheet.getFrame(95).pieces().isEmpty());
+    SpriteFramePiece first = sheet.getFrame(94).pieces().getFirst();
+    assertEquals(0, first.paletteIndex());
+    Pattern pattern = sheet.getPatterns()[first.tileIndex()];
+    assertTrue(IntStream.range(0, 64)
+            .anyMatch(i -> pattern.getPixel(i % 8, i / 8) != 0));
+
     ObjectRefId id = loaded.onlyDisplayObjectId();
+    int initialFrame = loaded.displayedMappingFrame();
     stepFrames(9);
     rewindToInitialKeyframe();
     assertEquals(id, loaded.onlyDisplayObjectId());
-    assertEquals(initialRenderCommands(), currentRenderCommands());
+    assertEquals(initialFrame, loaded.displayedMappingFrame());
 }
 ```
 
-Copy the exact ROM materialization and frame-94/95 pixel probes from `TestSampleFlappyIntegration` while the old test still exists. Add a palette assertion proving the default Sonic team and a Tails main both leave line 0 on the shared `Pal_SonicTails` values; do not assert that selecting Tails is required.
+Add assertions that `Sonic2GameModule.getCharacterPaletteAddr()` yields the shared `SONIC_TAILS_PALETTE_ADDR` for the default Sonic/Tails cases and document, without rejecting, the Knuckles-main lock-on mutation of line-0 indices 2-5.
 
-- [ ] **Step 2: Run and verify the new integration is initially red**
+- [ ] **Step 2: Run with an explicit ROM and reject silent skips**
 
-Run: `mvn "-Ds2.rom.path=s2.gen" "-Dtest=com.openggf.mods.code.TestSampleRomArtRemixIntegration" test`
+Run: `mvn "-Dsonic2.rom.path=s2.gen" "-Dtest=com.openggf.mods.code.TestSampleRomArtRemixIntegration" test`
 
-Expected: any missing materialized resource, frame probe, or sample packaging assertion fails before transfer is considered complete.
+Expected: the test executes (not skipped) and passes. If `s2.gen` is absent, verification is blocked.
 
-- [ ] **Step 3: Make the new sample own the full ROM-art contract**
-
-The integration must verify:
-
-- no ROM byte range appears as an entry in the source or packaged JAR;
-- materialization occurs only after an accepted S2 ROM source is installed;
-- mapping frames 94/95 retain DPLC remapping and palette line 0;
-- the stock/default Sonic team launches successfully;
-- rewind restores the object's animation scalar and stable layout identity;
-- a Knuckles-main lock-on is documented as a presentation caveat because it shifts palette indices 2-5, not as a rejected configuration.
-
-- [ ] **Step 4: Build the sample and inspect the archive**
-
-Run: `mvn "-Ds2.rom.path=s2.gen" "-Dtest=com.openggf.mods.code.TestSampleRomArtRemixIntegration,com.openggf.tools.modsdk.TestSampleModsPackage" test`
-
-Run:
+- [ ] **Step 3: Inspect the real package contents**
 
 ```powershell
 $build = Join-Path $env:TEMP ("sample-rom-art-remix-" + [guid]::NewGuid())
@@ -267,42 +194,42 @@ $build = Join-Path $env:TEMP ("sample-rom-art-remix-" + [guid]::NewGuid())
   -EngineJar (Resolve-Path target/OpenGGF-0.6.prerelease.jar) `
   -SdkJar (Resolve-Path target/OpenGGF-0.6.prerelease-openggf-mod-sdk.jar) `
   -OutputDirectory $build
-jar tf (Join-Path $build 'target/sample-rom-art-remix-mod.jar')
+if ($LASTEXITCODE -ne 0) { throw "sample-rom-art-remix build failed" }
+$entries = jar tf (Join-Path $build 'target/sample-rom-art-remix-mod.jar')
+if ($entries -match '\.gen$|art/tails-flight\.ggfs$') { throw "ROM-derived payload packaged" }
 ```
 
-Expected: tests pass; the archive contains code, manifest, and baked creator assets, with no `.gen`, `.bin` ROM dump, or materialized Tails sheet.
+Original baked level binaries are allowed. The forbidden entries are ROM images and a materialized Tails sheet; materialization remains in memory at launch.
+
+- [ ] **Step 4: Run ROM-art and rewind regression tests**
+
+Run: `mvn "-Dsonic2.rom.path=s2.gen" "-Dtest=com.openggf.mods.code.TestSampleRomArtRemixIntegration,com.openggf.mods.code.TestRomArtMaterializer,com.openggf.game.rewind.coverage.TestRewindCoverageGuard" test`
+
+Expected: all tests execute and pass.
 
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add src/test/java/com/openggf/mods/code/TestSampleRomArtRemixIntegration.java src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java
+git add src/test/java/com/openggf/mods/code/TestSampleRomArtRemixIntegration.java
 git commit -m "test: prove ROM-art remix materialization"
 ```
 
-### Task 5: Transfer the guide and release the old Flappy consumer
+### Task 3: Publish the ROM-art guide without orphaning native-Flappy links
 
 **Files:**
 - Create: `docs/modding/guides/rom-art-remix.md`
-- Delete: `docs/modding/guides/flappy-remix.md`
+- Modify: `docs/modding/guides/standalone-platformer.md`
 - Modify: `docs/modding/index.md`
 - Modify: `docs/modding/samples/index.md`
 - Modify: `docs/modding/content-mods.md`
-- Modify: `src/test/java/com/openggf/mods/code/TestSampleFlappyIntegration.java`
+- Modify: `src/test/resources/mods/sample-rom-art-remix-src/README.md`
+- Modify: `src/test/resources/mods/sample-rom-art-remix-src/project/README.md`
+- Modify: `src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java`
 - Modify: `CHANGELOG.md`
 
-- [ ] **Step 1: Add failing guide-link and ownership assertions**
+- [ ] **Step 1: Write the source-first ROM-art guide**
 
-Extend the documentation/gallery checks in `TestSampleModsPackage` to require `rom-art-remix.md`, reject stale links to `flappy-remix.md`, and assert that only `sample-rom-art-remix` registers `RomArtRequest` after the subsequent Flappy migration.
-
-- [ ] **Step 2: Run both consumers together before deleting anything**
-
-Run: `mvn "-Ds2.rom.path=s2.gen" "-Dtest=com.openggf.mods.code.TestSampleRomArtRemixIntegration,com.openggf.mods.code.TestSampleFlappyIntegration" test`
-
-Expected: both are green. Stop here if the replacement sample is not green.
-
-- [ ] **Step 3: Write the source-first guide and remove transferred Flappy assertions**
-
-The guide explains the bounded request fields, validation/materialization boundary, DPLC frame ordering, package inspection, and legal asset model. State explicitly:
+Explain the bounded address fields, S2-only validation, launch-time in-memory materialization, DPLC frame ordering, decoded pattern probe, rewind scalar, and package inspection. State exactly:
 
 ```text
 Sonic 2 palette line 0 is Pal_SonicTails, shared by Sonic and Tails, so the
@@ -310,28 +237,33 @@ sample works with the default Sonic team. A Knuckles-main lock-on changes line
 0 indices 2-5 and may recolour borrowed Tails art.
 ```
 
-Remove ROM-art materialization/render assertions from `TestSampleFlappyIntegration` only after the new integration owns them. Do not yet rewrite Flappy's S2 implementation; that is the next plan.
+- [ ] **Step 2: Move only links that belong to the ROM-borrowing chapter**
 
-- [ ] **Step 4: Run the documentation/sample completion gate**
+Change `docs/modding/guides/standalone-platformer.md`'s Chapter-3 borrowing link to the matching anchor in `rom-art-remix.md`. Add the new sample/guide to the indexes and content reference. Do not delete `flappy-remix.md`, change its non-ROM Chapter-4/6 links, or change the Flappy README in this plan; those links remain valid until Plan D creates their native replacement.
 
-Run: `mvn "-Ds2.rom.path=s2.gen" "-Dtest=com.openggf.tools.modsdk.TestSampleModsPackage,com.openggf.tools.modsdk.TestSampleRomArtRemixLevelSource,com.openggf.mods.code.TestSampleRomArtRemixRegistration,com.openggf.mods.code.TestSampleRomArtRemixIntegration" test`
+- [ ] **Step 3: Add a non-orphan link assertion**
 
-Expected: all tests pass and the maintained gallery count remains exactly eight.
+Extend `TestSampleModsPackage` to require the new guide and the updated Chapter-3 link, while still requiring `flappy-remix.md` for the remaining links. Do not add a repository-wide stale-`flappy-remix` rejection yet.
+
+- [ ] **Step 4: Run the sample/documentation gate**
+
+Run: `mvn "-Dsonic2.rom.path=s2.gen" "-Dtest=com.openggf.tools.modsdk.TestSampleModsPackage,com.openggf.tools.modsdk.TestSampleRomArtRemixLevelSource,com.openggf.mods.code.TestSampleRomArtRemixRegistration,com.openggf.mods.code.TestSampleRomArtRemixIntegration" test`
+
+Expected: all tests pass; both the new ROM-art guide and the still-live old Flappy guide have valid consumers.
 
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add docs/modding/guides/rom-art-remix.md docs/modding/guides/flappy-remix.md docs/modding/index.md docs/modding/samples/index.md docs/modding/content-mods.md src/test/java/com/openggf/mods/code/TestSampleFlappyIntegration.java CHANGELOG.md
-git commit -m "docs: move ROM-art lesson to remix sample"
+git add docs/modding/guides/rom-art-remix.md docs/modding/guides/standalone-platformer.md docs/modding/index.md docs/modding/samples/index.md docs/modding/content-mods.md src/test/resources/mods/sample-rom-art-remix-src/README.md src/test/resources/mods/sample-rom-art-remix-src/project/README.md src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java CHANGELOG.md
+git commit -m "docs: publish ROM-art remix sample"
 ```
 
 ## Completion gate
 
-- [ ] Run the Task 5 focused command.
+- [ ] Run Task 3's focused command with `-Dsonic2.rom.path=s2.gen`; a missing ROM blocks the gate.
 - [ ] Run `mvn package`.
-- [ ] Run the Task 4 PowerShell wrapper command; on a Bash host, run `build.sh` with the same engine JAR, SDK JAR, and a fresh temporary output directory.
-- [ ] Confirm the packaged sample contains no ROM-derived art payload.
-- [ ] Confirm the integration launches the default Sonic team without selecting Tails.
-- [ ] Confirm documentation names the real Knuckles-main indices 2-5 caveat.
-- [ ] Confirm the old Flappy ROM-art assertions were removed only after the replacement test passed.
+- [ ] Confirm the gallery contains exactly eight complete projects.
+- [ ] Confirm the package contains no ROM image or materialized Tails sheet.
+- [ ] Confirm the default Sonic team is used and the Knuckles indices 2-5 caveat is documented.
+- [ ] Confirm `flappy-remix.md` and every remaining non-ROM link still resolve for Plan D.
 - [ ] Confirm `git diff --check` is clean.

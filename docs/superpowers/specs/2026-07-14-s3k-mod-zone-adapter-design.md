@@ -35,7 +35,10 @@ with an owner-attributed finding. The shared patch decorator never tests `s2`, `
 or a concrete module class.
 
 The S3K implementation builds from the bounded `ModAssetRoot` data already captured
-by `PreparedModZone`. ROM reads remain permitted only for host-owned shared assets
+by `PreparedModZone`. The published adapter boundary receives the engine-supplied
+owner id and already-published immutable `ModLevelDefinition`; it does not expose
+the engine-owned `PreparedModZone` record through the recursive Mod API. ROM reads
+remain permitted only for host-owned shared assets
 that the contract names explicitly, such as the active character and ring art. The
 level's patterns, blocks, chunks, layouts, collision profiles, boundaries, objects,
 and zone palette all come from the mod export.
@@ -131,6 +134,13 @@ the owner is disabled or removed, the existing safe fallback policy selects the
 nearest valid stock destination; no synthetic numeric index is trusted as a stock
 zone.
 
+S3K currently exposes no results-driven stock anchors. An S3K contribution may
+therefore omit `insertAfter`; the zone is addressable by tagged identity but is not
+inserted into `ZoneProgressionPlan`. Existing S2 behavior remains unchanged: an
+omitted anchor still receives the historical `mtz3` default. The gameplay-policy
+revision uses this anchorless form for an explicit game-start zone; it does not add
+`aiz1` or any cutscene handoff to `StockProgressionAnchors`.
+
 New-game insertion is an independent data-select contribution described by the
 Flappy design. The S3K adapter supports being selected as a data-select initial
 destination but does not make every custom S3K zone a game-start zone or change
@@ -151,10 +161,12 @@ and opening a new gameplay session restores stock behavior.
 ## Compatibility
 
 The creator-facing additions are recursive `@ModApi` types with immutable values and
-defaults that preserve existing S2 and standalone mods. The Mod API advances from
-2.2.0 to 2.3.0 once the complete S3K and gameplay-policy surface lands. The SDK,
-validator, handbook, examples, compatibility snapshot, and API floor declarations
-advance together.
+defaults that preserve existing S2 and standalone mods. This independently
+mergeable adapter revision advances Mod API 2.2.0 to 2.3.0 and freezes 2.3 as a
+closed historical baseline. The subsequent gameplay-policy revision advances to
+2.4.0 rather than mutating the published 2.3 snapshot. Each revision advances its
+SDK, validator, handbook, compatibility snapshot, and relevant API floor
+declarations together.
 
 ## Verification
 

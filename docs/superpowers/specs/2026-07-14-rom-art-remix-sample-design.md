@@ -54,8 +54,12 @@ no new engine API or runtime architecture.
 
 ## Guide migration
 
-The current `docs/modding/guides/flappy-remix.md` is replaced by
-`docs/modding/guides/rom-art-remix.md`. The guide retains the valuable material on:
+The current `docs/modding/guides/flappy-remix.md` is eventually split between
+`docs/modding/guides/rom-art-remix.md` and the native-Flappy guide. This sample
+revision creates the ROM-art guide and migrates only the borrowing chapter's links;
+the old guide stays live until native Flappy has a replacement for its level,
+controller, pipe, score, and death sections. The ROM-art guide retains the valuable
+material on:
 
 - why ROM bytes never ship in the mod JAR;
 - validated Sonic 2 ROM address, compression, mapping, DPLC, palette, and bank-size
@@ -66,10 +70,12 @@ The current `docs/modding/guides/flappy-remix.md` is replaced by
 - build, package, validate, install, and test commands.
 
 It removes Flappy controller physics, forced scrolling, obstacle generation,
-scoring, and the old S2 palette workaround. Gallery index, handbook links, sample
-counts, changelog text, package tests, and integration-test names move to the new
-sample. General `content-mods.md` API reference remains valid and links to the new
-guide.
+scoring, and the old S2 palette workaround. ROM-art handbook/index references,
+sample counts, changelog text, package tests, and integration-test names move to the
+new sample. The later native-Flappy revision updates every remaining anchored and
+plain-text old-guide reference before deleting `flappy-remix.md` and enabling the
+stale-link guard. General `content-mods.md` API reference remains valid and links to
+the new ROM-art guide.
 
 ## Compatibility and ownership
 
@@ -79,7 +85,7 @@ path and owner fault boundary. The sample JAR contains code and original level d
 but no Sega art or palette bytes.
 
 The sample's declared API floor remains 2.1.0 even when built by an engine whose
-current API is 2.3.0, because it calls no newer surface. This preserves a meaningful
+current API is 2.4.0, because it calls no newer surface. This preserves a meaningful
 compatibility example rather than mechanically raising every gallery project.
 
 ## Verification
@@ -92,7 +98,9 @@ Test-first delivery covers:
 4. default-team use of the shared Sonic/Tails line-0 palette, plus the documented
    Knuckles-main lock-on caveat;
 5. namespaced renderer resolution and the two expected mapping frames;
-6. an actual rendered frame/pixel probe rather than registration-only assertions;
+6. materialized frames 94/95 with non-empty mappings plus a decoded pattern-nibble
+   probe rather than registration-only assertions or an unavailable headless
+   framebuffer claim;
 7. rewind restoration of the object's animation phase;
 8. confirmation that the packed JAR contains no materialized ROM bytes;
 9. link/sample-count guards for the renamed guide and gallery index; and
