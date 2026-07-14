@@ -773,9 +773,15 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertTrue(legacyCarry.carryParentagePending());
         assertEquals(expectedCarry.cooldown(), legacyCarry.releaseCooldown());
 
+        // Excludes both "tailsCarryState" (added post-API-1.1) and "subclassExtra"
+        // (added in Mod API 2.2.0) so the resulting argument count uniquely matches
+        // the API 1.1 compatibility constructor rather than colliding with the
+        // API 2.0 compatibility constructor's parameter count (which also omits
+        // subclassExtra but still carries tailsCarryState).
         RecordComponent[] components = PlayerRewindExtra.class.getRecordComponents();
         Object[] api11Arguments = java.util.Arrays.stream(components)
-                .filter(component -> !component.getName().equals("tailsCarryState"))
+                .filter(component -> !component.getName().equals("tailsCarryState")
+                        && !component.getName().equals("subclassExtra"))
                 .map(component -> {
                     try {
                         return component.getAccessor().invoke(currentExtra);

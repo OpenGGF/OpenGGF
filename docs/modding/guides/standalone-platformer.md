@@ -372,31 +372,45 @@ coverage validator would want (`FINAL_SCALAR_REWIND_GAP` rejects uncaptured *fin
 scalar state; a mutable field like this one is exactly what it expects). But
 `BoltCharacter` is a **player-character sprite**, not a `RewindRecreatable` mod
 object, so it is governed by a different, closed pipeline —
-`AbstractPlayableSprite.captureRewindState()` / `PlayerRewindExtra` — and
-[`characters.md`](../characters.md#failure-rewind-and-acceptance-checklist)
-documents the resulting known limitation exactly:
+`AbstractPlayableSprite.captureRewindState()` / `PlayerRewindExtra` — and, since Mod
+API 2.2.0, that pipeline publishes an overridable subclass extension point exactly
+for fields like this one. `BoltCharacter` implements both hook halves, copied
+verbatim from
+[`BoltCharacter.java`](../../../src/test/resources/mods/sample-platformer-src/project/src/main/java/example/platformer/BoltCharacter.java):
 
-> **Known limitation (rewind, character subclass fields):** the production player
-> rewind snapshot (`AbstractPlayableSprite.captureRewindState()` /
-> `PlayerRewindExtra`) is a closed, hand-enumerated record with no extension point
-> for subclass-declared fields. A custom character's own instance fields (for
-> example a double-jump latch) are therefore **not** restored on a rewind seek that
-> lands exactly on a keyframe or replays a cached segment; only seeks that
-> re-simulate through live input re-derive them. Design ability state to be
-> self-correcting on landing/ground transitions where possible (the
-> `sample-platformer` Bolt character's latch clears on landing, which bounds any
-> staleness to a single airtime). A subclass capture hook is tracked in the
-> deferred backlog.
+```java
+/** Immutable payload carrying the double-jump latch through a rewind keyframe. */
+private record BoltRewindExtra(boolean doubleJumpUsed)
+        implements PerObjectRewindSnapshot.PlayableSubclassRewindExtra {
+}
 
-In practice: `doubleJumpUsed` can only ever be stale immediately after a
-keyframe-exact or cached-segment rewind seek that lands mid-air, and only for the
-remainder of that single airborne stretch — the very next landing clears it
-regardless of how it got set, so staleness can never accumulate or leak across
-multiple jumps. Engine-side rewind coverage tests exercise the production restore
-path (`GenericFieldCapturer.restore` against a scoped snapshot) to prove the field
-*would* round-trip correctly if the closed pipeline ever gained subclass capture —
-see `TestSamplePlatformerIntegration#exerciseDoubleJumpAndRewindLatch`. Follow-up
-work is tracked in [`BACKLOG.md`](../BACKLOG.md)'s "Rewind capture for
+@Override protected PerObjectRewindSnapshot.PlayableSubclassRewindExtra captureSubclassRewindState() {
+    return new BoltRewindExtra(doubleJumpUsed);
+}
+
+/**
+ * Tolerates {@code null} (no subclass payload in the snapshot -- e.g. a pre-Task-3
+ * snapshot shape) by resetting the latch to its fresh default of {@code false} rather
+ * than assuming a payload is always present, per the hook's null contract.
+ */
+@Override
+protected void restoreSubclassRewindState(PerObjectRewindSnapshot.PlayableSubclassRewindExtra extra) {
+    doubleJumpUsed = extra instanceof BoltRewindExtra bolt && bolt.doubleJumpUsed();
+}
+```
+
+`captureSubclassRewindState()` runs on every keyframe capture and
+`restoreSubclassRewindState(...)` runs on every restore — both including
+keyframe-exact seeks and cached-segment scrubs, not just re-simulated seeks — so
+`doubleJumpUsed` now round-trips byte-for-byte across any rewind seek, mid-air or
+not. The landing reset in `draw()` (Chapter 5, above) is no longer load-bearing for
+this correctness — it still clears the latch every grounded frame, which is simply
+the right ability-reset behavior independent of rewind. See
+[`characters.md`'s rewind section](../characters.md#failure-rewind-and-acceptance-checklist)
+for the hooks' full contract (call cadence, ordering guarantee, immutability and
+null contracts). Engine-side rewind coverage tests exercise this exact restore path
+— see `TestSamplePlatformerIntegration#exerciseDoubleJumpAndRewindLatch`. This
+closes the engine gap tracked in [`BACKLOG.md`](../BACKLOG.md)'s "Rewind capture for
 mod-character subclass fields" row.
 
 ## 6. Badnik + gimmick

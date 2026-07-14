@@ -200,10 +200,20 @@ class TestArchUnitRules {
             // the engine-owned ModRuntime then freezes PatchOwner/RegisteredPatch
             // plans for ModuleResolutionService without exposing mutable state.
             "mods -> game",
+            // EmptyObjectArtProvider (the mod-gap-fixes standalone object-art overlay
+            // fallback) implements the engine's ObjectArtProvider contract, which
+            // returns graphics-owned render/upload types (GraphicsManager,
+            // PatternSpriteRenderer) and a sprites-owned animation-set type
+            // (SpriteAnimationSet); graphics and sprites never depend back on mods.
+            "mods -> graphics",
             // Phase 2 explicitly chooses mods -> level: creator registrations retain
             // the canonical ObjectFactory vocabulary instead of defining a parallel
             // mod-only object abstraction that would drift from engine behavior.
             "mods -> level",
+            // See the "mods -> graphics" note above: EmptyObjectArtProvider's
+            // ObjectArtProvider implementation also references sprites.animation's
+            // SpriteAnimationSet.
+            "mods -> sprites",
             // Mod API 2.1's ROM-art intake (RomArtMaterializer) deliberately reuses the
             // engine's existing decompression pipeline (util.PatternDecompressor,
             // util.DplcStaticFlattener) instead of duplicating parsers; util is a leaf

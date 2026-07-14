@@ -10,8 +10,9 @@ games. Mods are discovered from the
 process `mods/` directory at restart; executable mods must be enabled and granted
 trust in the Mod Manager before they run.
 
-The public mod API is version `2.1.0` (a deliberate breaking bump from `1.1.0` via
-the additive `1.2.0` step, followed by the additive `2.1.0` ROM-art intake step; see
+The public mod API is version `2.2.0` (a deliberate breaking bump from `1.1.0` via
+the additive `1.2.0` step, followed by the additive `2.1.0` ROM-art intake step and
+the additive `2.2.0` playable-subclass rewind capture hooks; see
 `docs/architecture/mod-api-compatibility.md`). Mods must declare a `2.x` engine range
 such as `>=2.0.0 <3.0.0`. Start with the guide for the contribution you are building:
 
