@@ -115,6 +115,8 @@ artOverrides: {}
 
 The level JSON uses the exact v1 keys shown in Step 1. `binary-assets.properties` maps the actual parser asset names (`patterns.bin`, `chunks.bin`, `blocks.bin`, `fg-map.bin`, `solid-heights.bin`, `solid-widths.bin`, `solid-angles.bin`, `collision-primary.bin`, `collision-secondary.bin`, `palettes.bin`) to Base64-encoded file contents. It does not contain hashes. `SampleRomArtRemixAssetGenerator` mirrors `SampleFlappyAssetGenerator`'s deterministic binary writers and Base64 property output.
 
+In `TestSampleModsPackage`, add `sample-rom-art-remix` to `EXPECTED_API_RANGES` with `>=2.1.0 <3.0.0` and to `TRUSTED_CODE_SAMPLES`, alongside the exact eight-id/count update. Do not rely only on discovery count: the sample must participate in the same API-range and trusted-code checks as the other maintained code-bearing projects.
+
 ```java
 context.registerObject("tails-flight-art",
         (spawn, registry) -> new TailsFlightArtObject(spawn));
@@ -153,8 +155,8 @@ git commit -m "feat: add complete ROM-art remix sample"
 
 ```java
 @Test void defaultTeamMaterializesFramesPatternsAndRewindState() throws Exception {
-    assertNotNull(RomTestUtils.ensureSonic2RomAvailable(),
-            "requires the explicitly supplied Sonic 2 ROM");
+    File romFile = RomTestUtils.ensureSonic2RomAvailable();
+    assumeTrue(romFile != null, "Sonic 2 ROM unavailable");
     LoadedSample loaded = buildInstallAndResolveWithS2Rom(SAMPLE);
     assertEquals(CharacterKey.SONIC, loaded.launchTeam().main());
 
@@ -163,7 +165,7 @@ git commit -m "feat: add complete ROM-art remix sample"
     assertTrue(sheet.getFrameCount() > 95);
     assertFalse(sheet.getFrame(94).pieces().isEmpty());
     assertFalse(sheet.getFrame(95).pieces().isEmpty());
-    SpriteFramePiece first = sheet.getFrame(94).pieces().getFirst();
+    SpriteMappingPiece first = sheet.getFrame(94).pieces().getFirst();
     assertEquals(0, first.paletteIndex());
     Pattern pattern = sheet.getPatterns()[first.tileIndex()];
     assertTrue(IntStream.range(0, 64)
@@ -178,17 +180,18 @@ git commit -m "feat: add complete ROM-art remix sample"
 }
 ```
 
-Add assertions that `Sonic2GameModule.getCharacterPaletteAddr()` yields the shared `SONIC_TAILS_PALETTE_ADDR` for the default Sonic/Tails cases and document, without rejecting, the Knuckles-main lock-on mutation of line-0 indices 2-5.
+Read `Palette.PALETTE_SIZE_IN_ROM` bytes directly from the supplied ROM at `Sonic2Constants.SONIC_TAILS_PALETTE_ADDR` and assert that the resolved default-team line 0 matches those bytes. Do not call `Sonic2GameModule.getCharacterPaletteAddr()`; it is private on Sonic 2. Document, without rejecting, the Knuckles-main lock-on mutation of line-0 indices 2-5.
 
 - [ ] **Step 2: Run with an explicit ROM and reject silent skips**
 
 Run: `mvn "-Dsonic2.rom.path=s2.gen" "-Dtest=com.openggf.mods.code.TestSampleRomArtRemixIntegration" test`
 
-Expected: the test executes (not skipped) and passes. If `s2.gen` is absent, verification is blocked.
+Expected: the test passes when the ROM is available and otherwise reports a JUnit assumption skip. The focused test follows repository convention; only the completion gate below treats a skipped ROM test as a blocker.
 
 - [ ] **Step 3: Inspect the real package contents**
 
 ```powershell
+mvn package
 $build = Join-Path $env:TEMP ("sample-rom-art-remix-" + [guid]::NewGuid())
 & src/test/resources/mods/sample-rom-art-remix-src/build.ps1 `
   -EngineJar (Resolve-Path target/OpenGGF-0.6.prerelease.jar) `
@@ -260,7 +263,7 @@ git commit -m "docs: publish ROM-art remix sample"
 
 ## Completion gate
 
-- [ ] Run Task 3's focused command with `-Dsonic2.rom.path=s2.gen`; a missing ROM blocks the gate.
+- [ ] Run Task 3's focused command with `-Dsonic2.rom.path=s2.gen`, then parse `target/surefire-reports/TEST-com.openggf.mods.code.TestSampleRomArtRemixIntegration.xml` and require `skipped="0"`; a missing ROM blocks the completion gate even though the focused test uses `assumeTrue`.
 - [ ] Run `mvn package`.
 - [ ] Confirm the gallery contains exactly eight complete projects.
 - [ ] Confirm the package contains no ROM image or materialized Tails sheet.

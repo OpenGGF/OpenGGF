@@ -80,7 +80,7 @@
 }
 ```
 
-In `TestSampleFlappyIntegration`, replace every S2 fixture with the real S3K equivalents in this same task: `RomTestUtils.ensureSonic3kRomAvailable()`, `Sonic3kGameModule`, launch base id `s3k`, and `-Ds3k.rom.path=s3k.gen`. Remove borrowed-bird renderer assertions and start native-player assertions.
+In `TestSampleFlappyIntegration`, replace every S2 fixture with the real S3K equivalents in this same task: capture `File romFile = RomTestUtils.ensureSonic3kRomAvailable()` and call `assumeTrue(romFile != null, "Sonic 3&K ROM unavailable")`, then use `Sonic3kGameModule`, launch base id `s3k`, and `-Ds3k.rom.path=s3k.gen`. Remove borrowed-bird renderer assertions and start native-player assertions. The focused test follows repository convention and may assumption-skip; Task 6's completion gate is responsible for rejecting that skip.
 
 - [ ] **Step 2: Run and verify the old S2 contract is red**
 
@@ -185,6 +185,8 @@ git commit -m "feat: atomically retarget Flappy to native S3K Tails"
     assertFalse(rightmostPipe().gateConsumed());
 }
 ```
+
+`resizeToSuper32By9Width()` is a test-fixture helper over the viewport-width configuration seam, not a new engine API: on the configured `SonicConfigurationService` instance, call `setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "SUPER_32_9")` before gameplay bootstrap, let the existing aspect resolver derive `SCREEN_WIDTH_PIXELS`, and assert the active camera width is 800 before checking that the six-entry pool still covers the viewport. Clear the session override during fixture teardown.
 
 - [ ] **Step 2: Run and verify no dynamic pool exists**
 
@@ -471,6 +473,7 @@ git commit -m "test: lock Flappy palette HUD and pipe presentation"
 - Modify: `src/test/resources/mods/sample-flappy-src/project/README.md`
 - Modify: `src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java`
 - Modify: `CHANGELOG.md`
+- Modify: `.gitignore`
 - Generate locally, do not commit: `mods/sample-flappy-mod.jar`
 
 - [ ] **Step 1: Write the native guide from final source**
@@ -481,13 +484,15 @@ Cover anchorless game-start resolution, scoped Tails/input/HUD policies, nested 
 
 Move `standalone-platformer.md`'s Chapter-4 level link to the matching native-guide anchor and reword its introductory plain-text `flappy-remix` mention. Update all three `ai-art.md` references (project structure, Chapter-6 pipe/score/death, and pipe swap target) to `native-tails-flappy.md`. Update the Flappy source README and both indexes/content reference. The Chapter-3 ROM borrowing link already points to `rom-art-remix.md` from Plan C.
 
-Only after all replacements exist, delete `flappy-remix.md` and extend `TestSampleModsPackage` to fail on any remaining `flappy-remix` text under `docs/modding` or `sample-flappy-src`.
+Only after all replacements exist, delete `flappy-remix.md`. In the same change, remove Plan C's temporary “old guide still exists” assertion from `TestSampleModsPackage`, then arm the repository-wide check that fails on any remaining `flappy-remix` text under `docs/modding` or `sample-flappy-src`.
 
 - [ ] **Step 3: Run the complete cross-sample gate**
 
 Run: `mvn "-Dsonic2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dtest=com.openggf.tools.modsdk.TestSampleModsPackage,com.openggf.tools.modsdk.TestSampleFlappyLevelSource,com.openggf.mods.code.TestSampleFlappyRegistration,com.openggf.mods.code.TestSampleFlappyIntegration,com.openggf.mods.code.TestSampleRomArtRemixIntegration,com.openggf.mods.code.TestModOwnedDynamicObjectRewind,com.openggf.mods.TestModApiSignatureSurface" test`
 
 Expected: all tests execute and pass; gallery count remains eight, the remix owns ROM-art intake, and no old-guide reference remains.
+
+After Maven returns, parse both `target/surefire-reports/TEST-com.openggf.mods.code.TestSampleFlappyIntegration.xml` and `target/surefire-reports/TEST-com.openggf.mods.code.TestSampleRomArtRemixIntegration.xml`; require `skipped="0"` for each. Their test methods use `assumeTrue` when the relevant ROM is unavailable, per repository convention, but a skipped ROM-gated integration is a completion-gate failure.
 
 - [ ] **Step 4: Build engine/sample and copy the ignored local package**
 
@@ -504,6 +509,8 @@ Copy-Item -Force (Join-Path $build 'target/sample-flappy-mod.jar') mods/sample-f
 git check-ignore mods/sample-flappy-mod.jar
 ```
 
+Add `/mods/` to `.gitignore` before this packaging check; the directory is currently merely untracked, so `git check-ignore` cannot pass without this explicit local-package rule.
+
 Run: `java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar`
 
 Manual acceptance: Flappy is the initial S3K data-select destination, visible Tails flies natively, horizontal input is suppressed, pipes approach/recycle, pipe/top/bottom contact kills, restart is deterministic, and HUD shows ring-backed `SCORE` with correct palette composition.
@@ -511,13 +518,13 @@ Manual acceptance: Flappy is the initial S3K data-select destination, visible Ta
 - [ ] **Step 5: Commit maintained docs/source only**
 
 ```powershell
-git add docs/modding/guides/native-tails-flappy.md docs/modding/guides/flappy-remix.md docs/modding/guides/standalone-platformer.md docs/modding/guides/ai-art.md docs/modding/index.md docs/modding/samples/index.md docs/modding/content-mods.md src/test/resources/mods/sample-flappy-src/README.md src/test/resources/mods/sample-flappy-src/project/README.md src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java CHANGELOG.md
+git add .gitignore docs/modding/guides/native-tails-flappy.md docs/modding/guides/flappy-remix.md docs/modding/guides/standalone-platformer.md docs/modding/guides/ai-art.md docs/modding/index.md docs/modding/samples/index.md docs/modding/content-mods.md src/test/resources/mods/sample-flappy-src/README.md src/test/resources/mods/sample-flappy-src/project/README.md src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java CHANGELOG.md
 git commit -m "docs: publish native-Tails Flappy sample"
 ```
 
 ## Completion gate
 
-- [ ] Run Task 6's cross-sample command with both explicit ROM properties; missing ROMs block the gate.
+- [ ] Run Task 6's cross-sample command with both explicit ROM properties and require `skipped="0"` in both ROM-gated integration XML reports; missing ROMs block the gate even though each test uses `assumeTrue`.
 - [ ] Run `mvn package`.
 - [ ] Confirm the sample requires `>=2.4.0 <3.0.0` and 2.3 remains untouched.
 - [ ] Confirm S3K `StockProgressionAnchors` remains empty and Flappy's `insertAfter` is null.

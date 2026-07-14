@@ -262,6 +262,7 @@ git commit -m "feat: define mod gameplay policy contributions"
 
 **Files:**
 - Modify: `src/main/java/com/openggf/game/patch/GameplayLaunchRequest.java`
+- Modify: `src/main/java/com/openggf/game/patch/GameplayTeamAvailability.java`
 - Modify: `src/main/java/com/openggf/mods/code/ModBackedGamePatch.java`
 - Modify: `src/main/java/com/openggf/Engine.java`
 - Modify: `src/main/java/com/openggf/game/save/SaveSessionContext.java`
@@ -304,7 +305,7 @@ SaveSessionContext launchContext = sanitized.withSelectedTeam(
                 launchTeam.sidekicks().stream().map(CharacterKey::persisted).toList()));
 ```
 
-Validate every key against `resolvedModule.getPlayableCharacterRegistry()` before `SessionManager.openGameplaySession`. Route creator/provider callbacks through `ModFaultBoundary`. Keep `config.yaml`, the original data-select selection, and durable save payload unchanged.
+Validate every key against `resolvedModule.getPlayableCharacterRegistry()` before `SessionManager.openGameplaySession`. Route the selected team through `GameplayTeamAvailability` so its availability/sanitization check uses the resolved session-local request rather than the durable data-select value. Route creator/provider callbacks through `ModFaultBoundary`. Keep `config.yaml`, the original data-select selection, and durable save payload unchanged.
 
 - [ ] **Step 4: Run launch and save-context tests**
 
@@ -315,7 +316,7 @@ Expected: feature tests pass. Then the mandatory signature command fails only `p
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add src/main/java/com/openggf/game/patch/GameplayLaunchRequest.java src/main/java/com/openggf/mods/code/ModBackedGamePatch.java src/main/java/com/openggf/Engine.java src/main/java/com/openggf/game/save/SaveSessionContext.java src/main/java/com/openggf/game/session/GameplayTeamBootstrap.java src/test/java/com/openggf/TestEngineDataSelectPatchResolution.java src/test/java/com/openggf/TestGameplayTeamBootstrapContext.java
+git add src/main/java/com/openggf/game/patch/GameplayLaunchRequest.java src/main/java/com/openggf/game/patch/GameplayTeamAvailability.java src/main/java/com/openggf/mods/code/ModBackedGamePatch.java src/main/java/com/openggf/Engine.java src/main/java/com/openggf/game/save/SaveSessionContext.java src/main/java/com/openggf/game/session/GameplayTeamBootstrap.java src/test/java/com/openggf/TestEngineDataSelectPatchResolution.java src/test/java/com/openggf/TestGameplayTeamBootstrapContext.java
 git commit -m "feat: apply destination-scoped launch teams"
 ```
 
@@ -368,6 +369,8 @@ private PlayerInputState effectivePlayerOne(InputHandler handler) {
 ```
 
 Use `effectivePlayerOne` in both `publishHeldInputForLevelEvents` and `update`. `LiveRewindInputSource.appendFrame` remains unchanged and records `handler.logical().player1()` raw. `LiveRewindStepper` and trace replay keep installing raw logical overrides; the normal SpriteManager path reapplies the filter. Reset to `GameplayInputFilter.IDENTITY` on context teardown/stock zone load.
+
+Document and test the `PlayerInputState` reconstruction contract: its compact constructor sanitizes directions and re-derives `INPUT_JUMP` from `actionHeldMask` / `actionPressedMask`. A filter that intends to preserve jump must preserve those action masks; merely clearing the jump bit in `heldMask` / `pressedMask` cannot suppress it. The Flappy filter clears only left/right and reconstructs with `PlayerInputState.of(...)`, preserving both action masks and both start fields.
 
 - [ ] **Step 4: Run input, rewind, and trace-input tests**
 
@@ -518,6 +521,7 @@ git commit -m "test: prove mod-owned dynamic rewind recreation"
 **Files:**
 - Create: `src/test/java/com/openggf/mods/code/TestModGameplayPolicyFaultBoundary.java`
 - Modify: `src/main/java/com/openggf/mods/code/ModBackedGamePatch.java`
+- Modify: `src/main/java/com/openggf/mods/code/OwnerAwareGameplayInputFilter.java`
 - Modify: `src/main/java/com/openggf/game/session/GameplayModeContext.java`
 
 - [ ] **Step 1: Write failing callback-failure and teardown tests**
@@ -546,7 +550,7 @@ Expected: callback ownership or teardown assertion fails.
 
 - [ ] **Step 3: Route every creator callback and clear context state**
 
-Wrap filters/providers with the existing `ModFaultBoundary.call(owner, ...)`; its abort type is `ModFaultBoundary.CallbackAborted`. Treat launch team, input filter, and HUD profile as required for their matching destination: failure aborts the launch/session rather than continuing with a partial policy set. Clear installed values in `GameplayModeContext.destroy()` / `tearDownManagers()` and initialize identity/stock defaults in the constructor. Do not introduce `ModCallbackException` or a `close()` alias.
+Task 5 owns the deterministic install/replay wiring; this task owns the owner-aware callback seam and its failure test. Complete `OwnerAwareGameplayInputFilter` so every filter invocation routes through the existing `ModFaultBoundary.call(owner, ...)`; its abort type is `ModFaultBoundary.CallbackAborted`. Treat launch team, input filter, and HUD profile as required for their matching destination: failure aborts the launch/session rather than continuing with a partial policy set. Clear installed values in `GameplayModeContext.destroy()` / `tearDownManagers()` and initialize identity/stock defaults in the constructor. Do not introduce `ModCallbackException` or a `close()` alias.
 
 - [ ] **Step 4: Run fault-boundary regression tests**
 
@@ -557,7 +561,7 @@ Expected: feature tests pass. Then the mandatory signature command fails only `p
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add src/test/java/com/openggf/mods/code/TestModGameplayPolicyFaultBoundary.java src/main/java/com/openggf/mods/code/ModBackedGamePatch.java src/main/java/com/openggf/game/session/GameplayModeContext.java
+git add src/test/java/com/openggf/mods/code/TestModGameplayPolicyFaultBoundary.java src/main/java/com/openggf/mods/code/ModBackedGamePatch.java src/main/java/com/openggf/mods/code/OwnerAwareGameplayInputFilter.java src/main/java/com/openggf/game/session/GameplayModeContext.java
 git commit -m "feat: fault-bound mod gameplay policies"
 ```
 
@@ -584,7 +588,14 @@ Expected: the two live-2.3 pin methods fail and the diff lists only the game-sta
 public static final SemanticVersion CURRENT = SemanticVersion.parse("2.4.0");
 ```
 
-Generate `mods/mod-api-signatures-2.4.txt`. Keep `mods/mod-api-signatures-2.3.txt` byte-for-byte unchanged as a closed historical baseline. The final 2.4 snapshot must contain every 2.3 line plus:
+Compile the signature tool, then generate `mods/mod-api-signatures-2.4.txt` with its existing snapshot mode:
+
+```powershell
+mvn "-DskipTests" compile
+java -cp target/classes com.openggf.mods.code.ModApiSignatureSurface --snapshot | Set-Content -Encoding utf8NoBOM src/test/resources/mods/mod-api-signatures-2.4.txt
+```
+
+Keep `mods/mod-api-signatures-2.3.txt` byte-for-byte unchanged as a closed historical baseline. The final 2.4 snapshot must contain every 2.3 line plus:
 
 ```text
 METHOD com.openggf.game.dataselect.DataSelectHostProfile public  com.openggf.game.dataselect.DataSelectDestination newGameDestination()
@@ -601,7 +612,7 @@ Retain source/binary compatibility constructors for all pre-2.4 records changed 
 
 - [ ] **Step 3: Document ordering, determinism, and non-persistence**
 
-Document exclusive last-enabled game-start resolution, session-only launch team, raw-snapshot recording followed by deterministic filtering, row-only HUD presentation, creator fault boundaries, and stock defaults. State that no movement/camera/fatigue framework was added.
+Document exclusive last-enabled game-start resolution, session-only launch team, raw-snapshot recording followed by deterministic filtering, the `PlayerInputState` jump re-derivation/action-mask contract, row-only HUD presentation, creator fault boundaries, and stock defaults. State that no movement/camera/fatigue framework was added.
 
 - [ ] **Step 4: Run the policy completion gate**
 

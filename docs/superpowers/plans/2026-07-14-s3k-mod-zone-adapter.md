@@ -691,7 +691,14 @@ Expected: failure reports the additive types/methods missing from the closed 2.2
 public static final SemanticVersion CURRENT = SemanticVersion.parse("2.3.0");
 ```
 
-Generate `mods/mod-api-signatures-2.3.txt`, retain every 1.1/1.2/2.0/2.1/2.2 snapshot, and update the compatibility test so 2.3 is an additive superset.
+Compile the signature tool, then generate `mods/mod-api-signatures-2.3.txt` with its existing snapshot mode:
+
+```powershell
+mvn "-DskipTests" compile
+java -cp target/classes com.openggf.mods.code.ModApiSignatureSurface --snapshot | Set-Content -Encoding utf8NoBOM src/test/resources/mods/mod-api-signatures-2.3.txt
+```
+
+Retain every 1.1/1.2/2.0/2.1/2.2 snapshot, and update the compatibility test so 2.3 is an additive superset.
 
 In `TestModApiSignatureSurface`, keep `mod-api-signatures-2.2.txt` as `BASELINE_22`, make 2.3 the only `PUBLISHED_BASELINE`, rename the live pin to `publishedTwoThreeSurfaceIsPinnedToTheCurrentSurface`, and add `twoTwoToTwoThreeIsAnAdditiveMinorBump`. The older `twoOneToTwoTwoIsAnAdditiveMinorBump` becomes a closed historical-to-historical comparison and must no longer compare 2.2 directly to the live surface. Plan B depends on these exact two 2.3 method names for its expected-red 2.4 choreography.
 
