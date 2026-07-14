@@ -30,8 +30,8 @@ class TestEffectiveCatalogBuilder {
     void apiRangeUsesPinnedCurrentCompatibilityWithoutImplicitLowerMajorAcceptance() {
         List<ModDescriptor> mods = List.of(
                 patch("canonical", "s1", "1.0.0", ">=2.0.0 <3.0.0"),
-                patch("exact-current", "s2", "1.0.0", "2.1.0"),
-                patch("future", "s1", "1.0.0", ">=2.2.0 <3.0.0"),
+                patch("exact-current", "s2", "1.0.0", "2.2.0"),
+                patch("future", "s1", "1.0.0", ">=2.3.0 <3.0.0"),
                 patch("old-major", "s3k", "1.0.0", "<2.0.0"));
 
         ModCatalog result = new EffectiveCatalogBuilder().build(

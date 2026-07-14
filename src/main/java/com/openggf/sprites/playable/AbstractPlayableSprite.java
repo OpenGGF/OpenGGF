@@ -1236,6 +1236,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * typically by resetting subclass state to its default — rather than
          * assuming a payload is always present.
          *
+         * <p><strong>Ordering guarantee:</strong> this hook runs after all base
+         * {@link PlayerRewindExtra} fields, controller-owned state (movement,
+         * spindash dust, animation, drowning, Tails-carry, sidekick CPU), and
+         * sensor offsets have been restored, so overrides may safely read
+         * already-restored base sprite/controller state when reconstructing
+         * subclass-local state.
+         *
          * <p>The default implementation is a no-op, matching the default
          * {@link #captureSubclassRewindState()} returning {@code null}.
          *

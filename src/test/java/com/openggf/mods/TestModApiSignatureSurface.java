@@ -30,17 +30,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestModApiSignatureSurface {
     // Reconciled surface lineage: 1.1.0 -> 1.2.0 (additive) -> 2.0.0 (breaking)
-    // -> 2.1.0 (additive). 1.1, 1.2, and 2.0 are closed historical baselines;
-    // 2.1 is the published surface.
+    // -> 2.1.0 (additive) -> 2.2.0 (additive). 1.1, 1.2, 2.0, and 2.1 are closed
+    // historical baselines; 2.2 is the published surface.
     private static final String BASELINE_11 = "mods/mod-api-signatures-1.1.txt";
     private static final String BASELINE_12 = "mods/mod-api-signatures-1.2.txt";
     private static final String BASELINE_20 = "mods/mod-api-signatures-2.0.txt";
-    private static final String PUBLISHED_BASELINE = "mods/mod-api-signatures-2.1.txt";
+    private static final String BASELINE_21 = "mods/mod-api-signatures-2.1.txt";
+    private static final String PUBLISHED_BASELINE = "mods/mod-api-signatures-2.2.txt";
     private static final String PLATFORM_ALLOWLIST = "mods/mod-api-platform-allowlist.txt";
     private static final SemanticVersion VERSION_11 = new SemanticVersion(1, 1, 0);
     private static final SemanticVersion VERSION_12 = new SemanticVersion(1, 2, 0);
     private static final SemanticVersion VERSION_20 = new SemanticVersion(2, 0, 0);
-    private static final SemanticVersion PUBLISHED_VERSION = new SemanticVersion(2, 1, 0);
+    private static final SemanticVersion VERSION_21 = new SemanticVersion(2, 1, 0);
+    private static final SemanticVersion PUBLISHED_VERSION = new SemanticVersion(2, 2, 0);
 
     @Retention(RetentionPolicy.CLASS)
     @Target(ElementType.TYPE_USE)
@@ -103,15 +105,15 @@ class TestModApiSignatureSurface {
     }
 
     @Test
-    void publishedTwoOneSurfaceIsPinnedToTheCurrentSurface() throws Exception {
+    void publishedTwoTwoSurfaceIsPinnedToTheCurrentSurface() throws Exception {
         List<String> published = readBaseline(PUBLISHED_BASELINE);
-        assertNotNull(published, "Missing published 2.1 API snapshot");
+        assertNotNull(published, "Missing published 2.2 API snapshot");
         assertEquals(new ArrayList<>(new TreeSet<>(published)), published,
                 "Published API baseline must be unique, sorted canonical UTF-8 text");
         assertEquals(new ArrayList<>(ModApiSignatureSurface.snapshotLines()), published,
-                "Review 2.1 API changes and refresh the full published snapshot (mod-api-signatures-2.1.txt)");
+                "Review 2.2 API changes and refresh the full published snapshot (mod-api-signatures-2.2.txt)");
         assertEquals(PUBLISHED_VERSION, ModApiVersion.CURRENT,
-                "The published Mod API version must match the frozen 2.1 baseline");
+                "The published Mod API version must match the frozen 2.2 baseline");
     }
 
     @Test
@@ -171,25 +173,52 @@ class TestModApiSignatureSurface {
         List<String> historicalTwoZero = readBaseline(BASELINE_20);
         assertEquals(new ArrayList<>(new TreeSet<>(historicalTwoZero)), historicalTwoZero,
                 "Historical 2.0 baseline must remain unique, sorted canonical UTF-8 text");
-        List<String> published = readBaseline(PUBLISHED_BASELINE);
-        assertEquals(new ArrayList<>(new TreeSet<>(published)), published,
-                "Published 2.1 baseline must be unique, sorted canonical UTF-8 text");
-        assertEquals(875, published.stream().filter(line -> line.startsWith("TYPE ")).count(),
-                "Published API 2.1 baseline engine-type count must match the frozen ROM-art intake surface");
-        assertEquals(17_196, published.size(), "Published API 2.1 baseline is frozen");
+        List<String> historicalTwoOne = readBaseline(BASELINE_21);
+        assertEquals(new ArrayList<>(new TreeSet<>(historicalTwoOne)), historicalTwoOne,
+                "Historical 2.1 baseline must remain unique, sorted canonical UTF-8 text");
+        assertEquals(875, historicalTwoOne.stream().filter(line -> line.startsWith("TYPE ")).count(),
+                "Historical 2.1 API baseline engine-type count is immutable");
+        assertEquals(17_196, historicalTwoOne.size(), "Historical API 2.1 baseline is immutable");
 
         // 2.0 -> 2.1 is a clean additive minor bump: the 2.1 surface is a strict superset
         // of 2.0 (the ROM-art intake publish added RomArtRequest, RomArtCompression, and
-        // ModContext.registerRomObjectArt), with no removals.
+        // ModContext.registerRomObjectArt), with no removals. Both sides are now closed
+        // historical baselines, so this check no longer depends on the live surface.
         List<String> additiveViolations = ModApiSignatureSurface.baselineViolations(
-                VERSION_20, Set.copyOf(historicalTwoZero), PUBLISHED_VERSION, Set.copyOf(published));
+                VERSION_20, Set.copyOf(historicalTwoZero), VERSION_21, Set.copyOf(historicalTwoOne));
         assertTrue(additiveViolations.isEmpty(),
                 () -> "2.0 -> 2.1 must be a clean additive minor bump:\n"
                         + String.join("\n", additiveViolations));
-        assertTrue(Set.copyOf(published).containsAll(historicalTwoZero),
+        assertTrue(Set.copyOf(historicalTwoOne).containsAll(historicalTwoZero),
                 "The 2.1 surface must contain every 2.0 signature");
+    }
 
-        // The published 2.1 baseline is frozen against the current surface: no removals,
+    @Test
+    void twoOneToTwoTwoIsAnAdditiveMinorBump() throws IOException {
+        List<String> historicalTwoOne = readBaseline(BASELINE_21);
+        assertEquals(new ArrayList<>(new TreeSet<>(historicalTwoOne)), historicalTwoOne,
+                "Historical 2.1 baseline must remain unique, sorted canonical UTF-8 text");
+        List<String> published = readBaseline(PUBLISHED_BASELINE);
+        assertEquals(new ArrayList<>(new TreeSet<>(published)), published,
+                "Published 2.2 baseline must be unique, sorted canonical UTF-8 text");
+        assertEquals(876, published.stream().filter(line -> line.startsWith("TYPE ")).count(),
+                "Published API 2.2 baseline engine-type count must match the frozen playable-subclass rewind surface");
+        assertEquals(17_205, published.size(), "Published API 2.2 baseline is frozen");
+
+        // 2.1 -> 2.2 is a clean additive minor bump: the 2.2 surface is a strict superset
+        // of 2.1 (the playable-subclass rewind publish added
+        // PlayerRewindExtra.PlayableSubclassRewindExtra, the subclassExtra record
+        // component/accessor, the new canonical PlayerRewindExtra constructor, and the
+        // AbstractPlayableSprite capture/restore hooks), with no removals.
+        List<String> additiveViolations = ModApiSignatureSurface.baselineViolations(
+                VERSION_21, Set.copyOf(historicalTwoOne), PUBLISHED_VERSION, Set.copyOf(published));
+        assertTrue(additiveViolations.isEmpty(),
+                () -> "2.1 -> 2.2 must be a clean additive minor bump:\n"
+                        + String.join("\n", additiveViolations));
+        assertTrue(Set.copyOf(published).containsAll(historicalTwoOne),
+                "The 2.2 surface must contain every 2.1 signature");
+
+        // The published 2.2 baseline is frozen against the current surface: no removals,
         // no unreviewed additions. Any drift from here fails and must be reviewed and
         // refrozen (a same-major minor bump for additions, a new major for removals).
         Set<String> current = ModApiSignatureSurface.snapshotLines();
