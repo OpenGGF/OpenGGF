@@ -58,8 +58,8 @@ verifies:
 - corrupt, fractional, or overflowing save payloads hiding Continue.
 
 For the build-along guide, see
-[`docs/modding/guides/standalone-platformer.md`](../../../../docs/modding/guides/standalone-platformer.md),
+[`docs/modding/guides/standalone-platformer.md`](../../../../../docs/modding/guides/standalone-platformer.md),
 and for generating replacement sprite art, see
-[`docs/modding/guides/ai-art.md`](../../../../docs/modding/guides/ai-art.md). For the
+[`docs/modding/guides/ai-art.md`](../../../../../docs/modding/guides/ai-art.md). For the
 creator contract and standalone-game boundaries, see
-[`docs/modding/standalone-games.md`](../../../../docs/modding/standalone-games.md).
+[`docs/modding/standalone-games.md`](../../../../../docs/modding/standalone-games.md).
