@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- AIZ1 breakable-rock balance-width milestone
+
+Branch `feature/ai-trace-animation-verification`, after the signpost
+results-lifetime milestone. `Obj_AIZLRZEMZRock` stores the size-specific
+`byte_1F9D0` width in `width_pixels`, then passes a separate width plus `$B`
+to `SolidObjectFull`. The engine had exposed its generic `$10` full-solid
+balance width instead. At the covered rock, that changed Tails' native inner
+position from 13 pixels inside the `$18` rock to 3 pixels inside the generic
+width, falsely selecting Balance immediately before the rock broke. The rock
+now exposes its exact table width to the shared balance routine; no zone,
+route, trace-frame, hydration, or comparison-tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 43838-43935
+(`Obj_AIZLRZEMZRock` initialization and `SolidObjectFull` call) and
+27820-27837 (Tails' on-object `width_pixels` balance check).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestAizLrzRockPlayerParticipation#balanceWidthUsesNativeUnpaddedRockWidth`
+  passes for all eight size-table entries.
+- AIZ complete-run advances from frame 12091 / 25 grouped animation errors to
+  frame 12706 / 23; the 27-frame Tails Wait/mapping block is now exact.
+- Focused AIZ physics and HCZ animation replays pass.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  every previously green route retains its status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
 ### 2026-07-14 -- AIZ1 signpost results-lifetime milestone
 
 Branch `feature/ai-trace-animation-verification`, after the collapsing-platform

@@ -338,6 +338,15 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Obj_AIZLRZEMZRock stores byte_1F9D0's unpadded width in
+        // width_pixels. Tails_Move reads that byte for its on-object balance
+        // window; SolidObjectFull alone receives the separate +$B extension.
+        // (sonic3k.asm:43838-43848,43922-43935,27820-27837).
+        return SIZE_TABLE[Math.clamp(sizeIndex, 0, SIZE_TABLE.length - 1)][0];
+    }
+
+    @Override
     public boolean usesInclusiveRightEdge() {
         // Obj_AIZLRZEMZRock calls SolidObjectFull (sonic3k.asm:43935). For a player
         // who is not standing on the rock, SolidObjectFull_1P branches to loc_1DF88 ->
