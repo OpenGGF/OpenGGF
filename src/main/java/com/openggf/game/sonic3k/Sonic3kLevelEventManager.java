@@ -466,6 +466,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      */
     @Override
     public void onPlayableLandingAnimationWrite(AbstractPlayableSprite playable) {
+        // HCZ's wind-tunnel exit byte is a one-shot animation owner. The zone
+        // feature pass runs after the player slot, so consume its live exit
+        // latch here before this landing reaches Animate.
+        HCZWaterTunnelHandler.consumeExitAnimationOnLanding(playable);
         AbstractPlayableSprite focused = GameServices.camera().getFocusedSprite();
         if (introFallActiveOnPlayer && playable == focused) {
             playable.setForcedAnimationId(-1);

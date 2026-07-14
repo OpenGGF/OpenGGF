@@ -108,6 +108,26 @@ class TestHCZWaterTunnelHandler {
     }
 
     @Test
+    void landingConsumesOnlyTheMatchingTunnelExitAnimationOwner() {
+        AbstractPlayableSprite main = playerInsideFirstHcz1Tunnel();
+        AbstractPlayableSprite nativeP2 = playerInsideFirstHcz1Tunnel();
+        AbstractPlayableSprite extraSidekick = playerOutsideTunnels();
+        ObjectPlayerQuery query = query(main, nativeP2, extraSidekick);
+        HCZWaterTunnelHandler.update(query, 0);
+
+        when(main.getCentreX()).thenReturn((short) 0x0200);
+        when(main.getCentreY()).thenReturn((short) 0x0200);
+        when(main.getAir()).thenReturn(true);
+        HCZWaterTunnelHandler.update(query, 0);
+
+        assertTrue(HCZWaterTunnelHandler.consumeExitAnimationOnLanding(query, main));
+        assertFalse(HCZWaterTunnelHandler.consumeExitAnimationOnLanding(query, extraSidekick));
+        verify(main).setForcedAnimationId(-1);
+        verify(nativeP2, never()).setForcedAnimationId(-1);
+        verify(extraSidekick, never()).setForcedAnimationId(-1);
+    }
+
+    @Test
     void unclearedBreakableBarStateBlocksTunnelCaptureBeforeWaterRushTrigger() {
         AbstractPlayableSprite main = playerInsideFirstHcz1Tunnel();
         HCZBreakableBarState.setState(1);

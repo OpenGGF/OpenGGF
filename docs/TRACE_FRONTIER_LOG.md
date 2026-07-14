@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- HCZ wind-tunnel landing animation-owner milestone
+
+Branch `feature/ai-trace-animation-verification`, after the S3K
+`SolidObjectFull` release-word milestone. HCZ's water-tunnel handler writes
+`anim=$1A` when the live `WindTunnel_flag` leaves its region, then
+`Player_TouchFloor_Check_Spindash` publishes Walk if the player lands before a
+later routine changes that byte. The engine represented the tunnel byte as a
+forced animation and released it only from the post-player zone-feature pass,
+one slot too late for the landing frame's `Animate_Sonic`/`Animate_Tails`.
+The handler now consumes its existing per-player exit latch from the shared
+S3K landing callback, before animation, without consulting zone, route, frame,
+or trace data. Native P1 and P2 exit owners remain independent.
+
+ROM references: `docs/skdisasm/sonic3k.asm` `loc_7046` and `loc_121B6`.
+
+Verification with all three discovered root-level REV01/locked-on ROMs:
+
+- `TestHCZWaterTunnelHandler` and the focused HCZ complete-run replay passed
+  their unit assertions; HCZ advances from frame 1222 / 16 grouped animation
+  errors to frame 12727 / 9. All six Hurt-to-Walk player/sidekick groups and
+  the dependent frame-1231 mapping mismatch are removed.
+- The 58-test animation sweep retains every previously green S1/S2 route (the
+  same eight legacy S1 credits fixtures remain structurally ineligible for
+  animation-only verification). AIZ remains at frame 2980 / 78 groups; all
+  post-HCZ S3K frontiers and group counts are unchanged.
+- The 58-test physics sweep remains 43 green / 15 expected-red. AIZ and HCZ
+  complete runs remain physics-green.
+
 ### 2026-07-14 -- S3K SolidObject release-word milestone
 
 The typed S3K object-interaction rules now model `SolidObjectFull`'s
