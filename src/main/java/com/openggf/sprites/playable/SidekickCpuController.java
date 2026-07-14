@@ -2243,6 +2243,14 @@ public class SidekickCpuController {
                 && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y;
+        if (interactObjectPushGrace && publishesSidekickCpuPushFromInteractSlot()) {
+            // This provider-approved bridge represents a live Status_Push bit
+            // at TailsCPU_Normal's slot, before the later solid-object pass can
+            // refresh it. Publish the same bit for the movement/animation pass:
+            // S2 WalkAnim tests Status_Push to select the push mappings after
+            // TailsCPU_Normal has consumed it (s2.asm:39297-39300,40484-40491).
+            sidekick.setPushing(true);
+        }
         boolean releasedObjectAutoJumpGrace = !sidekick.getAir()
                 && !sidekick.isOnObject()
                 && !sidekick.getRolling()
@@ -3007,6 +3015,17 @@ public class SidekickCpuController {
         }
         if (interactObject instanceof SolidObjectProvider provider) {
             return provider.preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(sidekick);
+        }
+        return false;
+    }
+
+    private boolean publishesSidekickCpuPushFromInteractSlot() {
+        ObjectInstance interactObject = currentInteractSlotObject();
+        if (!hasLiveInteractSlotObject(interactObject)) {
+            return false;
+        }
+        if (interactObject instanceof SolidObjectProvider provider) {
+            return provider.publishesSidekickCpuPushFromInteractSlot(sidekick);
         }
         return false;
     }

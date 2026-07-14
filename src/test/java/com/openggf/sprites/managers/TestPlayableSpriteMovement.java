@@ -3036,7 +3036,7 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
-        public void s2OrdinaryObjectRiderKeepsObjectOwnedWaitCadence() throws Exception {
+        public void s2OrdinaryObjectRiderStillEntersBlinkFromDeepWait() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);
                 mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
                                 .setIdleAnimId(Sonic2AnimationIds.WAIT)
@@ -3051,13 +3051,13 @@ public class TestPlayableSpriteMovement {
                 Method method = PlayableSpriteMovement.class.getDeclaredMethod("doWaitBlinkInterruptCheck");
                 method.setAccessible(true);
 
-                assertFalse((boolean) method.invoke(manager));
-                assertEquals(Sonic2AnimationIds.WAIT.id(), mockSprite.getAnimationId(),
-                                "ordinary platforms retain their object-owned rider cadence");
+                assertTrue((boolean) method.invoke(manager));
+                assertEquals(Sonic2AnimationIds.BLINK.id(), mockSprite.getAnimationId(),
+                                "Status_OnObj does not bypass Obj01_MdNormal_Checks in the ROM");
         }
 
         @Test
-        public void s2OrdinaryObjectRiderDoesNotEnterGetUp() throws Exception {
+        public void s2OrdinaryObjectRiderStillEntersGetUpFromDeepWait() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);
                 mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
                                 .setIdleAnimId(Sonic2AnimationIds.WAIT)
@@ -3071,8 +3071,9 @@ public class TestPlayableSpriteMovement {
                 Method method = PlayableSpriteMovement.class.getDeclaredMethod("doWaitBlinkInterruptCheck");
                 method.setAccessible(true);
 
-                assertFalse((boolean) method.invoke(manager));
-                assertEquals(Sonic2AnimationIds.WAIT.id(), mockSprite.getAnimationId());
+                assertTrue((boolean) method.invoke(manager));
+                assertEquals(Sonic2AnimationIds.GET_UP.id(), mockSprite.getAnimationId(),
+                                "ordinary ridden solids do not suppress the player's deep-wait routine");
         }
 
         @Test

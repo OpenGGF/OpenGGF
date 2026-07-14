@@ -526,6 +526,18 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether an approved interact-slot push bridge must also publish
+     * {@code Status_Push} to the sidekick's later movement/animation pass.
+     * <p>
+     * Most interact-slot bridges only reproduce the earlier CPU-control read.
+     * Use this narrower hook when ROM object ordering leaves the same live SST
+     * push bit visible after {@code TailsCPU_Normal} as well.
+     */
+    default boolean publishesSidekickCpuPushFromInteractSlot(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether a CPU sidekick's persistent {@code interact(a0)} slot should keep
      * the delayed leader status sample in the push-visible branch after the live
      * push-grace window has expired.

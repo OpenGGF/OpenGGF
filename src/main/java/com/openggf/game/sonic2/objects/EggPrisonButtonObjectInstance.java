@@ -88,7 +88,12 @@ public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isSolidFor(PlayableEntity sprite) {
-        return true; // Solid for all players
+        // AllocateObject can place the ROM's routine-4 button SST before the
+        // routine-2 body SST, so the later body SolidObject call owns the final
+        // Status_Push at its exact side edge. The engine's structural child can
+        // occupy a later slot instead; do not let its non-overlapping button
+        // check clear the body push that was just published for a CPU sidekick.
+        return !isGroundedCpuSidekickAtCapsuleBodyEdge(sprite);
     }
 
     @Override
@@ -107,6 +112,11 @@ public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(PlayableEntity player) {
+        return isGroundedCpuSidekickAtCapsuleBodyEdge(player);
+    }
+
+    @Override
+    public boolean publishesSidekickCpuPushFromInteractSlot(PlayableEntity player) {
         return isGroundedCpuSidekickAtCapsuleBodyEdge(player);
     }
 

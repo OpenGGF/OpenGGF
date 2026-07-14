@@ -337,35 +337,12 @@ public class CollisionSystem {
             return;
         }
 
-        boolean deferRepeatedObjectRideResponse = shouldDeferRepeatedObjectRideResponse(sprite, mode, predictedDx);
+        // Tails_Move/Sonic_Move applies CalcRoomInFront once. The later S2
+        // SolidObject_Always/DropOnFloor object pass does not repeat a negative
+        // terrain response; only the exactly-flush handoff above is deferred.
+        // Replaying this distance after ObjectMove doubles the stored velocity
+        // when the current probe already reports the full penetration.
         applyGroundWallVelocityResponse(sprite, mode, distance);
-        if (deferRepeatedObjectRideResponse) {
-            sprite.deferGroundWallVelocityResponse(mode, distance);
-        }
-    }
-
-    private boolean shouldDeferRepeatedObjectRideResponse(AbstractPlayableSprite sprite, int mode, short predictedDx) {
-        CollisionRules rules = collisionRulesOrNull(sprite);
-        if (rules == null
-                || !rules.repeatedObjectRideGroundWallResponseDeferred()
-                || objectManager == null
-                || !sprite.isOnObject()
-                || !sprite.getPushing()
-                || !((mode == 0x40 && predictedDx < 0) || (mode == 0xC0 && predictedDx > 0))) {
-            return false;
-        }
-        ObjectInstance ridingObject = objectManager.getRidingObject(sprite);
-        if (!(ridingObject instanceof SolidObjectProvider provider)) {
-            return false;
-        }
-        // S2's deferred repeated object-ride correction models platforms that
-        // run SolidObject_Always and then DropOnFloor after player physics
-        // (Obj30, docs/s2disasm/s2.asm:35070-35095, 49560-49604,
-        // 49674-49676). Plain PlatformObjectD5 does not call DropOnFloor
-        // after MvSonicOnPtfm, so deferring here would apply CalcRoomInFront's
-        // wall response twice (docs/s2disasm/s2.asm:35860-35894, 58905-58915).
-        return provider.dropOnFloor()
-                && isRiderOnGroundWallProbeSide(sprite, ridingObject, mode);
     }
 
     private boolean shouldDeferFlushWallResponseForRiddenDropOnFloor(

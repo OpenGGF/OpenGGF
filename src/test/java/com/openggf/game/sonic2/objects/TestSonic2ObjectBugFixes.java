@@ -53,6 +53,28 @@ import static org.mockito.Mockito.when;
 class TestSonic2ObjectBugFixes {
 
     @Test
+    void barrierKeepsStandardSolidObjectExactRightEdgeContact() {
+        BarrierObjectInstance barrier = new BarrierObjectInstance(
+                new ObjectSpawn(0x1678, 0x0720, Sonic2ObjectIds.BARRIER, 0, 0, false, 0),
+                "Barrier");
+
+        assertTrue(barrier.getSolidRoutineProfile().inclusiveRightEdge(),
+                "Obj2D's standard SolidObject BHI gate accepts relX == 2*d1");
+        assertTrue(barrier.preservesEdgeSubpixelMotion(),
+                "Obj2D exact-edge d0=0 must bypass StopCharacter velocity clearing");
+    }
+
+    @Test
+    void eggPrisonBodyKeepsStandardSolidObjectExactRightEdgeContact() {
+        EggPrisonObjectInstance prison = new EggPrisonObjectInstance(
+                new ObjectSpawn(0x3202, 0x04C2, Sonic2ObjectIds.EGG_PRISON, 0, 0, false, 0),
+                "EggPrison");
+
+        assertTrue(prison.getSolidRoutineProfile().inclusiveRightEdge(),
+                "Obj3E's standard SolidObject BHI gate accepts relX == 2*d1");
+    }
+
+    @Test
     void oozLauncherBallCaptureUsesObjectControlWithoutGlobalControlLockedLatch() {
         LauncherBallObjectInstance.clearActiveCaptures();
         ObjectSpawn spawn = new ObjectSpawn(0x1240, 0x02E0, Sonic2ObjectIds.LAUNCHER_BALL, 0x00, 0, false, 0);
@@ -459,6 +481,16 @@ class TestSonic2ObjectBugFixes {
                 "The push-grace bridge is only for CPU sidekick reads of TailsCPU_Normal.");
         assertFalse(arrow.preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(sonic),
                 "The zero-grace interact bridge is only for CPU sidekick reads of TailsCPU_Normal.");
+    }
+
+    @Test
+    void arzBossArrowKeepsClearedNativeBalanceWidth() {
+        ARZBossArrow arrow = new ARZBossArrow(
+                new ObjectSpawn(0x2A77, 0x0481, Sonic2ObjectIds.ARZ_BOSS, 0x06, 0, false, 0),
+                null, null, false);
+
+        assertEquals(0, arrow.getBalanceWidthPixels(),
+                "Obj89's arrow allocation leaves width_pixels cleared even though its solid collision is wider");
     }
 
     @Test

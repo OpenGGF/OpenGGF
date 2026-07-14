@@ -679,7 +679,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * switches the animation to Blink -- or GetUp past the lying-down stage
 	 * (anim_frame >= $AC) -- and control only resumes after that animation's
 	 * $FD command switches back to walk. A fresh A/B/C press bypasses the whole
-	 * check, so jumping out of deep wait responds instantly. The gate is
+	 * check, so jumping out of deep wait responds instantly. Status_OnObj does
+	 * not bypass these checks in the ROM; ordinary ridden solids therefore do
+	 * not own or suppress the player's deep-wait transition. The gate is
 	 * data-driven: only profiles that define a blink anim (S2 Sonic) engage it;
 	 * S1 and S3K have no equivalent in their disassemblies.
 	 */
@@ -691,13 +693,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int blinkId = velocityProfile.getBlinkAnimId();
 		if (blinkId < 0) {
 			return false;
-		}
-		if (sprite.isOnObject()) {
-			ObjectInstance ridingObject = currentRidingSolidForStaleHorizontalInput();
-			if (!(ridingObject instanceof SolidObjectProvider provider)
-					|| !provider.allowsDeepWaitPlayerRoutineWhileRidden(sprite)) {
-				return false;
-			}
 		}
 		// ROM: move.b (Ctrl_1_Press_Logical).w,d0 / andi #ABC / bne Obj01_MdNormal
 		if (inputJumpPress) {

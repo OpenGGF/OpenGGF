@@ -12,6 +12,7 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.SidekickCpuRules;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance;
 import com.openggf.game.sonic2.objects.RisingLavaObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.graphics.GLCommand;
@@ -3520,6 +3521,55 @@ class TestSidekickCpuFollowParity {
                                     + "Tails_CPU_jumping through loc_1BDCE as a held A/B/C input."),
                     () -> assertEquals(1, controller.getDiagnosticJumpingFlag(),
                             "Bypassing loc_1BDCE also skips the grounded latch clear."));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
+    void s2EggPrisonInteractPushGracePublishesStatusForAnimation() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic2GameModule());
+            installEmptyObjectManager();
+            TestableSprite sonic = new TestableSprite("sonic");
+            sonic.setGameRulesForTest(GameRules.SONIC_2);
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setGameRulesForTest(GameRules.SONIC_2);
+            tails.setAir(false);
+            tails.setPushing(false);
+            tails.setOnObject(false);
+            tails.setCentreX((short) 0x31D7);
+            tails.setCentreY((short) 0x04D3);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+            controller.hydrateFromRomCpuState(0x06, 0, 0, 0x3E, false, 0, 0);
+
+            EggPrisonButtonObjectInstance button = new EggPrisonButtonObjectInstance(
+                    new ObjectSpawn(0x3202, 0x04CA, 0x3E, 0, 0, false, 0));
+            button.setSlotIndex(22);
+            GameServices.level().getObjectManager().addDynamicObjectAtSlot(button, 22);
+            tails.setLatchedSolidObject(0x3E, button);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x3200);
+            Arrays.fill(yHistory, (short) 0x04D3);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+            setNormalPushingGraceFrames(controller, 0);
+
+            controller.update(0x24BF);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("interact_push_grace", diagnostics.followBranch()),
+                    () -> assertTrue(tails.getPushing(),
+                            "Obj3E runs after TailsCPU_Normal, so its approved interact-slot bridge "
+                                    + "must publish the ROM-visible Status_Push for WalkAnim."));
         } finally {
             installStandaloneGameModule(previous);
         }

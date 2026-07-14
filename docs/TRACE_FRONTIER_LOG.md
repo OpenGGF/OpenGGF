@@ -1,5 +1,49 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S2 exact-edge push and deep-wait animation milestone
+
+HTZ2's remaining animation cluster came from live solid state that the engine
+lost at two native boundaries. Obj2D Barrier and Obj3E Egg Prison now retain
+the standard S2 `SolidObject` inclusive right edge, while the capsule's folded
+body/button representation preserves the ROM SST ordering that leaves
+`Status_Push` visible to CPU Tails and its later Walk animation pass. The
+provider hook is driven by the live interact object and grounded body-edge
+geometry, not by a zone, route, or frame exception
+(`docs/s2disasm/s2.asm:35193-35207,39297-39300,40484-40491`).
+
+Two smaller native ownership fixes advance other routes: Obj89's arrow uses
+the cleared SST `width_pixels=0` for balance checks independently from its
+platform collision dimensions, and S2 `Sonic_ChkWait` continues through its
+Wait/Blink transition while riding because `Status_OnObj` is not one of that
+routine's gates (`docs/s2disasm/s2.asm:36545-36602,65565-65591`). Publishing
+Barrier's correct push bit exposed an older collision compensation: a negative
+`CalcRoomInFront` distance was being applied immediately and then repeated
+after `ObjectMove`. The ROM executes that terrain response once; only Obj30's
+separate exactly-flush `DropOnFloor` handoff remains deferred. Removing the
+duplicate restores HTZ2 physics without weakening the animation fix.
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 351 -> 292 grouped errors
+Green: 10 -> 11 (newly HTZ2)
+ARZ2: 28 -> 14              MTZ2: 4 -> 2
+MTZ3: 11 -> 6               OOZ2: 13 -> 11
+HTZ2: 36 -> 0
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- all ten S3K animation results exactly retain milestone `0f648a4f5`'s known
+  baseline (AIZ complete 259; CNZ 172/2673; HCZ 673; ICZ 1376; LBZ 375; MGZ
+  3923/4081; MHZ 98; standalone AIZ retains its input-alignment failure);
+- the full 58-method cross-game physics sweep retains 42 passes / 16 existing
+  failures, with HTZ2 green and no new failure;
+- the focused object, movement, and sidekick suites pass 71 + 131 + 97 tests;
+- the ten-test comparison-only invariant guard and hydration-default guard
+  remain green.
+
 ### 2026-07-14 -- S2 solid-edge, spindash, and respawn animation milestone
 
 Four remaining Sonic 2 routes were blocked by native state that the engine was

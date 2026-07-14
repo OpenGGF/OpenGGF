@@ -355,6 +355,16 @@ public class ARZBossArrow extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Obj89's arrow initializer never writes width_pixels after
+        // AllocateObject clears its SST slot (s2.asm:65565-65591). Sonic's
+        // object-edge balance probe therefore compares x_pos against the
+        // arrow's centre with a native width of zero, independently of the
+        // wider SolidObject collision dimensions above.
+        return 0;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         // ROM Obj89_Arrow_Platform only calls PlatformObject while
         // obj89_arrow_timer is zero. Once a rider starts the timer, later

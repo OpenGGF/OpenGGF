@@ -451,6 +451,13 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj3E calls the standard S2 SolidObject helper with d1=$2B.
+        // Its BHI range check keeps relX==2*d1 as an exact-edge side contact.
+        return true;
+    }
+
+    @Override
     public boolean preservesSidekickCpuPushGraceFromInteractSlot(PlayableEntity player) {
         // TailsCPU_Normal reads current Status_Push before Obj3E's later
         // SolidObject body pass refreshes the live object status byte.
@@ -462,6 +469,11 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         // HTZ2 capsule edge: ROM Tails interact still points at Obj3E when
         // TailsCPU_Normal tests Status_Push (s2.asm:39297-39300), while the
         // body SolidObject call is Obj3E loc_3F278.
+        return isGroundedCpuSidekickAtBodyEdge(player);
+    }
+
+    @Override
+    public boolean publishesSidekickCpuPushFromInteractSlot(PlayableEntity player) {
         return isGroundedCpuSidekickAtBodyEdge(player);
     }
 
