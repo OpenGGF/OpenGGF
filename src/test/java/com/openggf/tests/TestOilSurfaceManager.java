@@ -172,6 +172,8 @@ public class TestOilSurfaceManager {
         sprite.setXSpeed((short) 0x0200);
         sprite.setYSpeed((short) 0x0200);
         sprite.setGSpeed((short) 0);
+        sprite.setAnimationId(Sonic2AnimationIds.HURT.id());
+        sprite.setMappingFrame(0x5A);
 
         manager.update(sprite);
 
@@ -183,6 +185,10 @@ public class TestOilSurfaceManager {
         assertEquals(0x0200, sprite.getGSpeed() & 0xFFFF,
                 "RideObject_SetRide copies x_vel to inertia on the landing frame before HurtStop zeroes it");
         assertEquals(0, sprite.getYSpeed());
+        assertEquals(Sonic2AnimationIds.HURT.id(), sprite.getAnimationId(),
+                "Obj07 runs after Animate, so HurtStop does not publish Walk until the next player tick");
+        assertEquals(0x5A, sprite.getMappingFrame(),
+                "the oil landing must not advance or replace the already-rendered Hurt mapping");
     }
 
     @Test

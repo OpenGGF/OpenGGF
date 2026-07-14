@@ -437,6 +437,13 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Obj3E_ObjLoadData stores width_pixels=$20 for the body. The separate
+        // SolidObject call expands only collision d1 to $2B.
+        return 0x20;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Always solid, even after breaking

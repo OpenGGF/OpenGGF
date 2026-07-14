@@ -104,6 +104,14 @@ public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj3E's routine-4 button calls the standard SolidObject helper with
+        // d1=$1B. Its BHI range gate keeps relX == 2*d1 as the grounded
+        // zero-distance side contact that publishes Status_Push.
+        return true;
+    }
+
+    @Override
     public boolean preservesSidekickCpuPushGraceFromInteractSlot(PlayableEntity player) {
         // The button is Obj3E's routine-4 child and owns a normal SolidObject
         // status byte when TailsCPU_Normal samples interact(a0).

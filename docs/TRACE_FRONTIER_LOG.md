@@ -1,5 +1,44 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S2 OOZ2 landing and capsule-contact animation milestone
+
+OOZ2's last eleven animation groups came from four ROM state owners that meet
+around Oil Ocean's late capsule. `Sonic_SlopeRepel` sets air and move-lock but
+does not eagerly clear `Status_Push`; that clear remains owned by the later
+`anim != prev_anim` branch. An Obj07 oil landing reached after HurtStop keeps
+the already-published Hurt byte/mapping through the object pass instead of
+inventing an unconditional Walk write. Obj3E keeps its initialized
+`width_pixels=$20` for balance decisions while passing the separately expanded
+`d1=$2B` only to its body collision. Finally, its routine-4 button uses the
+standard `SolidObject` unsigned `bhi` range gate, so the exact +$1B right edge
+is a live zero-distance side contact that republishes `Status_Push` after the
+body landing. These owners are routine/object-state driven; no zone, route,
+frame, trace hydration, or comparator tolerance was added
+(`docs/s2disasm/s2.asm:35331-35446,37775-37799,50086-50155,84733-84858`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 286 -> 275 grouped errors
+Green: 12 -> 13 (newly OOZ2)
+ARZ2: 14                     CNZ2: 247
+MCZ2: 3                      MTZ2: 2
+OOZ1: 2                      WFZ: 7
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- the S3K animation baseline remains unchanged from milestone `b9825a931`:
+  AIZ complete 257, CNZ 172/2673, HCZ 673, ICZ 1376, LBZ 375, MGZ
+  3923/4081, MHZ 98, and standalone AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 42 passes / 16 existing
+  failures, with OOZ2 still physics-green and no new failure;
+- the focused Sonic 2 oil, object, and movement suites pass 11 + 73 + 132
+  tests;
+- the ten-test comparison-only invariant guard and hydration-default guard
+  remain green.
+
 ### 2026-07-14 -- S2 active-charge landing and exact-zero animation milestone
 
 MTZ3's remaining mismatches came from three independent native state owners.

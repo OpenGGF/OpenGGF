@@ -72,6 +72,19 @@ class TestSonic2ObjectBugFixes {
 
         assertTrue(prison.getSolidRoutineProfile().inclusiveRightEdge(),
                 "Obj3E's standard SolidObject BHI gate accepts relX == 2*d1");
+        assertEquals(0x20, prison.getBalanceWidthPixels(),
+                "Obj3E balance uses body width_pixels, not the $B-expanded collision d1");
+    }
+
+    @Test
+    void eggPrisonButtonKeepsStandardSolidObjectExactRightEdgeContact() {
+        EggPrisonButtonObjectInstance button = new EggPrisonButtonObjectInstance(
+                new ObjectSpawn(0x2AC0, 0x0240, Sonic2ObjectIds.EGG_PRISON, 0, 0, false, 0));
+
+        assertTrue(button.getSolidRoutineProfile().inclusiveRightEdge(),
+                "Obj3E routine 4 accepts the button's exact +$1B edge through SolidObject's BHI gate");
+        assertTrue(button.preservesEdgeSubpixelMotion(),
+                "the exact edge publishes push without StopCharacter clearing subpixel motion");
     }
 
     @Test
