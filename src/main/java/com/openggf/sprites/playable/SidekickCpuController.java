@@ -4574,7 +4574,12 @@ public class SidekickCpuController {
         sidekick.setAir(true);
         sidekick.setMoveLockTimer(0);
         clearRespawnAnimationState();
-        sidekick.setForcedAnimationId(resolveDeathAnimationId());
+        int deathAnimationId = resolveDeathAnimationId();
+        // Kill_Character publishes anim=Death in the kill frame. Keep the
+        // forced owner for subsequent dead-fall updates, but do not defer the
+        // ROM-visible animation byte until the next animation phase.
+        sidekick.setAnimationId(deathAnimationId);
+        sidekick.setForcedAnimationId(deathAnimationId);
         sidekick.setControlLocked(true);
         // NOT object_controlled - DEAD_FALLING is its own dispatch state
         // so updateDeadFalling fires on the next tick regardless.

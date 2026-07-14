@@ -496,6 +496,8 @@ class TestSonic2TriggerParticipation {
         grabPlayer.invoke(plating, player);
 
         assertRomObjControlBitOneState(player, "Breakable Plating obj_control=1");
+        assertTrue(plating.requiresContinuousTouchCallbacks(),
+                "Touch_Special must refresh ObjC1 collision_property during sustained overlap");
     }
 
     @Test

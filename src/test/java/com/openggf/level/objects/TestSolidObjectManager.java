@@ -742,7 +742,7 @@ public class TestSolidObjectManager {
     }
 
     @Test
-    public void sonic2SolidPushReleaseDoesNotPublishSonic1AnimationWord() {
+    public void sonic2SolidPushReleasePublishesNativeWalkRunAnimationWord() {
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);
         TestMultiPieceSolidObject object = new TestMultiPieceSolidObject(100, 100, params);
@@ -767,9 +767,41 @@ public class TestSolidObjectManager {
         player.setCentreX((short) 40);
         manager.updateSolidContacts(player);
 
-        assertEquals(5, player.getAnimationId(),
-                "S2 SolidObject_TestClearPush clears status without S1's animation-word bug");
-        assertEquals(5, player.getAnimationManager().captureRewindState().lastAnimationId());
+        assertEquals(0, player.getAnimationId(),
+                "S2 SolidObject_TestClearPush writes Walk to anim");
+        assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "S2 SolidObject_TestClearPush writes Run to the adjacent prev_anim byte");
+    }
+
+    @Test
+    public void sonic2SolidPushReleasePreservesRollAnimation() {
+        GameModuleRegistry.setCurrent(new Sonic2GameModule());
+        TestMultiPieceSolidObject object = new TestMultiPieceSolidObject(
+                100, 100, new SolidObjectParams(16, 8, 8));
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_2);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setCentreX((short) 85);
+        player.setCentreY((short) 81);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(2, new SpriteAnimationScript(0,
+                List.of(0x02), SpriteAnimationEndAction.LOOP, 0));
+        player.setAnimationSet(animations);
+        player.setAnimationId(2);
+        player.getAnimationManager().update(0);
+
+        manager.updateSolidContacts(player);
+        player.setCentreX((short) 40);
+        manager.updateSolidContacts(player);
+
+        assertEquals(2, player.getAnimationId(),
+                "SolidObject_TestClearPush branches around the Walk/Run word write for Roll");
+        assertEquals(2, player.getAnimationManager().captureRewindState().lastAnimationId());
     }
 
     @Test

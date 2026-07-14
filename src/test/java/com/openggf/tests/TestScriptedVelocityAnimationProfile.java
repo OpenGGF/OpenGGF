@@ -17,11 +17,37 @@ public class TestScriptedVelocityAnimationProfile {
         TestSprite sprite = new TestSprite();
         sprite.setSliding(true);
         sprite.setAir(false);
+        sprite.setAnimationId(13);
         sprite.setGSpeed((short) 0x0800); // would normally choose run
 
         Integer animId = profile.resolveAnimationId(sprite, 0, 32);
 
-        assertEquals(13, animId.intValue());
+        assertNull(animId, "The slide routine's already-published byte remains authoritative");
+    }
+
+    @Test
+    void groundedSlidePreservesObjectPublishedWalk() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setSliding(true);
+        sprite.setAir(false);
+        sprite.setAnimationId(profile.getWalkAnimId());
+
+        assertNull(profile.resolveAnimationId(sprite, 0, 32),
+                "OilSlides may publish Walk while its sliding status bit remains set");
+    }
+
+    @Test
+    void airborneTumblePreservesObjectPublishedFloatAnimation() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setAir(true);
+        sprite.setRolling(true);
+        sprite.setFlipAngle(1);
+        sprite.setAnimationId(15);
+
+        assertNull(profile.resolveAnimationId(sprite, 0, 32),
+                "A non-zero flip angle keeps the animation byte written by the launching object");
     }
 
     @Test

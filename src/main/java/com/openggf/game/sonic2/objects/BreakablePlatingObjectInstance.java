@@ -511,6 +511,13 @@ public class BreakablePlatingObjectInstance extends AbstractObjectInstance
         return 0;
     }
 
+    @Override
+    public boolean requiresContinuousTouchCallbacks() {
+        // Touch_Special refreshes collision_property on every overlapping frame;
+        // ObjC1 may reject an early overlap and accept it later without separation.
+        return true;
+    }
+
     /**
      * Called by the touch response system when the player overlaps this object.
      * ROM: collision_property is set by Touch_Special, then ObjC1_Main checks it.

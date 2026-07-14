@@ -191,9 +191,12 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
                 && sprite.getTailsFlightController().isActive()) {
             return null;
         }
-        if (sprite.getSpringing() && sprite.getAir() && springAnimId >= 0) {
-            return springAnimId;
-        }
+        // The engine's springing flag is a control-lock timer, not a ROM
+        // animation owner. Spring objects write anim explicitly on the launch
+        // frame, and variants may instead write Walk for a twirl/horizontal
+        // launch. Reasserting Spring for the whole synthetic lock overwrites
+        // those later/native bytes (S2 Obj41: s2.asm:33732-33752,
+        // 33867-33915,34023-34043).
         // S2 Obj84 mirrors forced-spin pinball mode into the same ROM byte the
         // player spindash uses, but it also writes Status_Roll/anim=Roll. Keep
         // the tunnel visual curled instead of showing the spindash charge pose.
@@ -207,8 +210,12 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // next LZWaterSlides call observes InAir, clears slide mode, and installs
         // locktime (S1 LZWaterFeatures.asm:468-513; Sonic AnglePos.asm terrain
         // detach tails).
-        if (sprite.isSliding() && !sprite.getAir() && slideAnimId >= 0) {
-            return slideAnimId;
+        if (sprite.isSliding() && !sprite.getAir()) {
+            // Sliding is a state bit, not the animation owner. The slide
+            // routines explicitly write Slide, Walk, or Wait as their own
+            // branches require while leaving the bit set (S2 OilSlides,
+            // s2.asm:5537-5643). Preserve that published raw byte.
+            return null;
         }
         if (sprite.getAir()) {
             // ROM: Sonic_MdAir/Sonic_MdJump do NOT call Sonic_Move, so the anim
@@ -274,6 +281,9 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             // flip_angle only diverts the walk/run animation handler into tumble
             // frames; it does not keep externally-set animations like Float2 active
             // once Sonic is actively rolling/jumping.
+            if (sprite.getFlipAngle() != 0) {
+                return null;
+            }
             return sprite.getRolling() ? rollAnimId : airAnimId;
         }
         if (sprite.getRolling()) {

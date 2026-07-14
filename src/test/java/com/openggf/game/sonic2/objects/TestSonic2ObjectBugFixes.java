@@ -643,6 +643,18 @@ class TestSonic2ObjectBugFixes {
                 "TailsCPU_Normal reads Status_Push before the next Obj6A SolidObject pass clears it");
         assertEquals(8, platform.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
                 "MCZ2 f4485 keeps the post-Obj6A push bit visible to the Tails CPU slot with eight grace frames");
+        assertEquals(0x20, platform.getBalanceWidthPixels(),
+                "Obj6A balancing consumes the native MTZ width_pixels field");
+    }
+
+    @Test
+    void slidingSpikesExposeNativeBalanceWidth() {
+        SlidingSpikesObjectInstance spikes = new SlidingSpikesObjectInstance(
+                new ObjectSpawn(0x0DF7, 0x04B0, Sonic2ObjectIds.SLIDING_SPIKES, 0, 0, false, 0),
+                "SlidingSpikes");
+
+        assertEquals(0x40, spikes.getBalanceWidthPixels(),
+                "Obj76 balancing uses its $40 width_pixels rather than rendered bounds");
     }
 
     @Test
@@ -806,6 +818,37 @@ class TestSonic2ObjectBugFixes {
 
         assertEquals(0x0BC0, platform.getOutOfRangeReferenceX(),
                 "Obj6B_Main checks objoff_34, not moving x_pos(a0), for MarkObjGone2");
+    }
+
+    @Test
+    void cnzRectBlockExposesLiveNativePositionAndBalanceWidth() {
+        CNZRectBlocksObjectInstance block = new CNZRectBlocksObjectInstance(
+                new ObjectSpawn(0x1380, 0x0410, Sonic2ObjectIds.CNZ_RECT_BLOCKS, 0x00, 0, false, 0),
+                "CNZRectBlocks");
+
+        assertEquals(0x1358, block.getX());
+        assertEquals(0x0428, block.getY());
+        assertEquals(0x08, block.getBalanceWidthPixels());
+        assertEquals(0, block.getSolidParams().offsetX());
+        assertEquals(0, block.getSolidParams().offsetY());
+        assertFalse(block.carriesRiderOnHorizontalMove(null));
+        assertEquals(0x1380, block.getOutOfRangeReferenceX(),
+                "ObjD2 unloads against objoff_30 rather than its moving x_pos");
+        assertFalse(block.suppressesObjectEdgeBalance());
+    }
+
+    @Test
+    void mtzPlatformExposesSubtypeWidthToObjectBalance() {
+        MTZPlatformObjectInstance widePlatform = new MTZPlatformObjectInstance(
+                new ObjectSpawn(0x0460, 0x052C, Sonic2ObjectIds.MTZ_PLATFORM, 0x07, 0, false, 0),
+                "MTZPlatform");
+        MTZPlatformObjectInstance narrowPlatform = new MTZPlatformObjectInstance(
+                new ObjectSpawn(0x0460, 0x052C, Sonic2ObjectIds.MTZ_PLATFORM, 0x10, 0, false, 0),
+                "MTZPlatform");
+
+        assertEquals(0x20, widePlatform.getBalanceWidthPixels());
+        assertEquals(0x10, narrowPlatform.getBalanceWidthPixels());
+        assertFalse(widePlatform.suppressesObjectEdgeBalance());
     }
 
     @Test

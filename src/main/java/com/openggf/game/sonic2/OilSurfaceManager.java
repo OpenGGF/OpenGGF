@@ -287,10 +287,16 @@ public class OilSurfaceManager {
                 // so the new larger hitbox does not clip into the platform.
                 // ROM does `subq.w #5, y_pos(a0)` - a word write that leaves
                 // the sub-pixel low word untouched.
-                if (player.getRolling()) {
+                boolean wasRolling = player.getRolling();
+                if (wasRolling) {
                     player.setRolling(false);
                     player.setY((short) (player.getY() - player.getRollHeightAdjustment()));
                 }
+
+                // Sonic_ResetOnFloor_Part2 publishes Walk for every fresh
+                // landing, including a non-rolling player whose move_lock was
+                // still preserving Slide (docs/s2disasm/s2.asm:37780-37786).
+                player.setAnimationId(Sonic2AnimationIds.WALK);
             }
         }
     }

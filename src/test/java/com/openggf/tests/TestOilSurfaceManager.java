@@ -7,6 +7,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.game.sonic2.OilSurfaceManager;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -56,6 +57,20 @@ public class TestOilSurfaceManager {
         assertFalse(sprite.getAir());
         assertTrue(sprite.isOnObject());
         assertEquals(before - 1, manager.getSubmersion());
+    }
+
+    @Test
+    void rollingOilLandingPublishesWalkWithoutAdvancingMapping() {
+        sprite.setRolling(true);
+        sprite.setAnimationId(Sonic2AnimationIds.ROLL.id());
+        sprite.setMappingFrame(0x3F);
+
+        landOnOilSurface();
+
+        assertFalse(sprite.getRolling());
+        assertEquals(Sonic2AnimationIds.WALK.id(), sprite.getAnimationId());
+        assertEquals(0x3F, sprite.getMappingFrame(),
+                "Obj07 lands after Animate and only publishes the raw Walk byte this frame");
     }
 
     @Test

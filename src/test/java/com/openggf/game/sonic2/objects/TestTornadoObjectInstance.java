@@ -54,6 +54,14 @@ public class TestTornadoObjectInstance {
 
     private GameModule previousModule;
 
+    @Test
+    void sczTornadoDoesNotSuppressFreshLogicalHorizontalInput() {
+        TornadoObjectInstance tornado = createTornado(0x700, 0x100, 0x50);
+
+        assertEquals(0, tornado.staleHorizontalLogicalInputFramesWhileRiding(null, 121),
+                "Obj01_MdNormal_Checks must see the fresh logical direction and enter Blink");
+    }
+
     @BeforeEach
     public void setUp() {
         previousModule = GameModuleRegistry.getCurrent();
@@ -78,6 +86,10 @@ public class TestTornadoObjectInstance {
     @Test
     public void moveObeyPlayerClampsPlayerToTornado() throws Exception {
         TornadoObjectInstance tornado = createTornado(100, 0x100, 0x50);
+        assertEquals(0x60, tornado.getBalanceWidthPixels(),
+                "ObjB2 balancing uses its native width_pixels, not its smaller SolidObject width");
+        assertTrue(tornado.allowsDeepWaitPlayerRoutineWhileRidden(null),
+                "SCZ ObjB2 keeps the native player-slot Wait/Blink owner active while riding");
         TestPlayableSprite main = new TestPlayableSprite("main", (short) 200, (short) 100);
 
         invokePrivate(tornado, "moveObeyPlayer",

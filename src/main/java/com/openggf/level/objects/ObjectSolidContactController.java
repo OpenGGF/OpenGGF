@@ -361,6 +361,14 @@ final class ObjectSolidContactController {
             // (_incObj/26, 2E Monitors and Power-Ups.asm:140-160).
             return;
         }
+        int rollAnimationId = sprite.resolveAnimationId(CanonicalAnimation.ROLL);
+        if (rules.solidPushReleaseSkipsWalkRunWhenRolling()
+                && rollAnimationId >= 0
+                && sprite.getAnimationId() == rollAnimationId) {
+            // S2 SolidObject_TestClearPush skips the adjacent Walk/Run word
+            // write while anim is Roll (docs/s2disasm/s2.asm:35464-35476).
+            return;
+        }
         int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
         boolean persistentNativeLatch = instance instanceof SolidObjectProvider provider
                 && provider.preservesNativePushLatchAcrossSkippedSolidCheckpoints();

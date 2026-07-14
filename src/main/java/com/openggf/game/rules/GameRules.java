@@ -107,7 +107,8 @@ public record GameRules(
                     false,
                     false,
                     false,
-                    true
+                    true,
+                    false
             ),
             new SidekickCpuRules(
                     16,
@@ -240,7 +241,8 @@ public record GameRules(
                     false,
                     true,
                     true,
-                    false
+                    true,
+                    true
             ),
             new SidekickCpuRules(
                     16,
@@ -371,6 +373,7 @@ public record GameRules(
                     true,
                     false,
                     true,
+                    false,
                     false,
                     false,
                     false

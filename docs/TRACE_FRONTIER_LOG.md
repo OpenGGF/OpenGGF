@@ -1,5 +1,50 @@
 # Trace Frontier Log
 
+### 2026-07-14 -- S2 native object, landing, and tumble animation owners milestone
+
+The remaining broad Sonic 2 divergence clusters came from engine state being
+treated as an animation owner. The synthetic spring and grounded-slide flags
+no longer overwrite bytes explicitly published by objects or OilSlides;
+`Player_JumpFlip` advances `flip_angle` in the airborne player routine before
+collision rather than in the later animation pass; and pinball-mode landings
+retain Roll while ordinary oil/terrain landings publish Walk. S2's
+`SolidObject_TestClearPush` Walk/Run word now has its native Roll guard, scoped
+through typed `ObjectInteractionRules` so S1's retail behavior is unchanged
+(`docs/s2disasm/s2.asm:35464-35476,37780-37786`).
+
+Object data now supplies the animation decisions that depend on it: CNZ
+rectangle blocks expose their live position and frame width, the Tornado,
+sliding spikes, MCZ rotating platforms, MTZ platforms, and OOZ popping lids
+expose their native balance widths, and the MTZ cylinder publishes the complete
+Walk/Run animation word. WFZ's breakable plating and invisible grabber retain
+Touch_Special's continuous collision-property polling. The SCZ Tornado opts
+into the native player-slot deep Wait/Blink routine while ordinary riders keep
+their platform-owned cadence; this object capability avoids the CNZ1/MTZ2
+physics regressions produced by enabling the whole-frame Blink skip for every
+rider.
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 8233 -> 2381 errors
+Green: DEZ1, EHZ1, ARZ1, MCZ1, SCZ1
+CNZ1: 351 -> 52            MTZ2: 274 -> 35
+CNZ2: 387 -> 294           OOZ2: 15 -> 14
+HTZ1: 6                    MCZ2: 22
+```
+
+No zone, route, frame, trace hydration, or comparator exception was added.
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- S3K animation has no new mismatching frame: CNZ complete-run fixes frame
+  1506, reducing its mapping mismatch span by one even though splitting the
+  surrounding range increases the report's grouped-divergence count by one;
+- the full 58-method cross-game physics sweep retains the same 41 passes and
+  identical 17 existing failures as milestone `59ce3445b`;
+- the trace comparison-only invariant and hydration-default guards remain
+  green.
+
 ### 2026-07-14 -- S2 native push, hurt, and Tails respawn-animation ownership milestone
 
 Three ROM-owned animation transitions were still being represented as generic

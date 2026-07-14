@@ -424,6 +424,13 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Obj33_Init writes width_pixels=$18. Balance uses width_pixels, while
+        // the SolidObject call separately adds its $B horizontal allowance.
+        return WIDTH_PIXELS;
+    }
+
+    @Override
     public boolean allowsObjectControlledSolidContacts() {
         // Obj33 writes obj_control(a1)=1 while the player rides the rising lid
         // (s2.asm:49809/49837/49843), then still calls SolidObject from Obj33_Main.

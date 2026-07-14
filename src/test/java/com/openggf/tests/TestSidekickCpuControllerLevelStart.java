@@ -496,6 +496,10 @@ class TestSidekickCpuControllerLevelStart {
         assertEquals(0, tails.getXSpeed(), "KillCharacter clears x_vel");
         assertEquals((short) -0x700, tails.getYSpeed(), "KillCharacter writes y_vel=-$700");
         assertEquals(0, tails.getGSpeed(), "KillCharacter clears ground_vel");
+        assertEquals(0x18, tails.getAnimationId(),
+                "KillCharacter publishes Tails' Death animation in the boundary-kill frame");
+        assertEquals(0x18, tails.getForcedAnimationId(),
+                "dead-fall updates retain the Death animation owner after the kill frame");
     }
 
     @Test

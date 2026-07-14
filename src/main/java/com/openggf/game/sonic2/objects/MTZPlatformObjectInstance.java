@@ -112,6 +112,12 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
     public int getY() {
         return y;
     }
+
+    @Override
+    public int getBalanceWidthPixels() {
+        return widthPixels;
+    }
+
     @Override
     public SolidObjectParams getSolidParams() {
         // From disassembly line 53930-53937:

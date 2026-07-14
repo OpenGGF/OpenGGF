@@ -95,7 +95,7 @@ public class TestPlayableSpriteAnimation {
                 .setWalkRunPublishesFrameBeforeTimerAdvance(true);
         SpriteAnimationSet animations = new SpriteAnimationSet();
         animations.addScript(0, new SpriteAnimationScript(0xFF,
-                List.of(0x10), SpriteAnimationEndAction.LOOP, 0));
+                List.of(0x10, 0x11), SpriteAnimationEndAction.LOOP, 0));
         animations.addScript(1, new SpriteAnimationScript(0xFF,
                 List.of(0x20), SpriteAnimationEndAction.LOOP, 0));
         animations.addScript(4, new SpriteAnimationScript(0xFD,
@@ -104,7 +104,7 @@ public class TestPlayableSpriteAnimation {
         sprite.setAnimationId(0);
         sprite.getAnimationManager().restoreRewindState(
                 new PlayableSpriteAnimation.RewindState(0, 0));
-        sprite.setAnimationFrameIndex(0);
+        sprite.setAnimationFrameIndex(1);
         sprite.setAnimationTick(1);
         sprite.setMappingFrame(0x10);
         sprite.setMovementInputActive(true);
@@ -122,6 +122,51 @@ public class TestPlayableSpriteAnimation {
         assertEquals(0, sprite.getAnimationId());
         assertEquals(0x48, sprite.getMappingFrame(),
                 "The expired walk timer lets the native handler select SAnim_Push");
+    }
+
+    @Test
+    public void springControlLockDoesNotOverwriteObjectPublishedWalk() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
+        ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile())
+                .setSpringAnimId(0x10);
+        SpriteAnimationSet animations = createAnimationSet();
+        animations.addScript(0x10, new SpriteAnimationScript(0,
+                List.of(0x59), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0);
+        sprite.getAnimationManager().restoreRewindState(
+                new PlayableSpriteAnimation.RewindState(0, 0));
+        sprite.setAir(true);
+        sprite.setSpringing(48);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0, sprite.getAnimationId(),
+                "The synthetic spring control lock must not replace Obj41's explicit anim byte");
+    }
+
+    @Test
+    public void groundedSpiralAngleIsRenderedWithoutSyntheticAdvance() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0xFF,
+                List.of(0x10), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(1, new SpriteAnimationScript(0xFF,
+                List.of(0x20), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0);
+        sprite.setMovementInputActive(true);
+        sprite.setGSpeed((short) 0x0100);
+        sprite.setFlipAngle(0xF2);
+        sprite.setFlipSpeed(4);
+        sprite.setFlipsRemaining(1);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0xF2, sprite.getFlipAngle(),
+                "grounded Obj06 owns flip_angle; Animate_Sonic only renders it");
+        assertEquals(0x6A, sprite.getMappingFrame(),
+                "SAnim_Tumble applies byte-sized +$0B to the object-published angle");
     }
 
     @Test

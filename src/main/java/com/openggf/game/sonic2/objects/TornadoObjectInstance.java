@@ -80,8 +80,6 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     // ------------------------------------------------------------------------
 
     private static final SolidObjectParams TORNADO_SOLID_PARAMS = new SolidObjectParams(0x1B, 8, 9);
-    private static final int SCZ_STALE_LOGICAL_HORIZONTAL_FRAMES = 3;
-    private static final int SCZ_STALE_LOGICAL_MIN_RIDE_FRAMES = 120;
     private static final int SCZ_CAMERA_FINISH_X = 0x1400;
     private static final int SCZ_PLAYER_FINISH_X = 0x1568;
     private static final int SCZ_PLAYER_PUSH_MARGIN = 0x11;
@@ -946,21 +944,20 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public SolidExecutionMode solidExecutionMode() {
-        return SolidExecutionMode.MANUAL_CHECKPOINT;
+    public int getBalanceWidthPixels() {
+        return 0x60; // ObjB2_SubObjData width_pixels, s2.asm:79602-79603
     }
 
     @Override
-    public int staleHorizontalLogicalInputFramesWhileRiding(PlayableEntity player, int rideFrames) {
-        if (routine != ROUTINE_SCZ_MAIN || rideFrames <= SCZ_STALE_LOGICAL_MIN_RIDE_FRAMES) {
-            return 0;
-        }
-        // S2 recorder v9.3-s2 documents this exact ROM/BK2 split:
-        // Read_Joypads can leave Ctrl_1_Held_Logical stale for three frames
-        // during SCZ Tornado long V-int paths. Sonic_Move consumes the logical
-        // byte (s2.asm:36255-36260), while trace validation compares against
-        // BK2-aligned input to avoid false alignment errors.
-        return SCZ_STALE_LOGICAL_HORIZONTAL_FRAMES;
+    public boolean allowsDeepWaitPlayerRoutineWhileRidden(PlayableEntity player) {
+        // ObjB2 keeps Sonic in his normal grounded player slot while the plane
+        // supplies support, so Obj01_MdNormal_Checks still owns deep Wait/Blink.
+        return routine == ROUTINE_SCZ_MAIN;
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     @Override
@@ -990,6 +987,13 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    @Override
+    public boolean requiresContinuousTouchCallbacks() {
+        // The invisible WFZ grabber polls collision_property every object pass,
+        // while Touch_Special republishes it for a sustained overlap.
+        return true;
     }
 
     @Override
@@ -1259,9 +1263,14 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     private void applyWaitingAnimation(AbstractPlayableSprite player) {
+        // ObjB2 writes the combined mapping/anim state before setting
+        // duration=$0100: mapping_frame=1, anim_frame=0, anim=prev_anim=Wait
+        // (docs/s2disasm/s2.asm, ObjB2 waiting-player helpers).
+        player.setMappingFrame(1);
         player.setAnimationId(Sonic2AnimationIds.WAIT);
+        player.getAnimationManager().publishPreviousAnimationId(Sonic2AnimationIds.WAIT.id());
         player.setAnimationFrameIndex(0);
-        player.setAnimationTick(0);
+        player.setAnimationTick(1);
     }
 
     private void applyScriptInput(AbstractPlayableSprite player, int forcedMask, boolean lock) {

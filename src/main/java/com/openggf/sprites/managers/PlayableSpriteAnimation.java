@@ -112,7 +112,6 @@ public class PlayableSpriteAnimation {
         if (sprite == null) {
             return;
         }
-        updateFlipAngle(frameCounter);
         if (sprite.getSpindashDustController() != null) {
             sprite.getSpindashDustController().update();
         }
@@ -301,7 +300,7 @@ public class PlayableSpriteAnimation {
             // 38627-38649). Tails and S1 return at the earlier outer timer gate.
             if (walkRunPublishesFrameBeforeTimerAdvance(baseScript.delay() & 0xFF)
                     && remaining >= 0) {
-                updateWalkRunBeforeTimerAdvance(active, delay, slopeOffset, remaining);
+                sprite.setAnimationTick(remaining);
                 return;
             }
             SpriteAnimationScript pushScript = resolveScript(
@@ -401,54 +400,6 @@ public class PlayableSpriteAnimation {
         sprite.setRenderFlips(hFlip, vFlip);
         sprite.setMappingFrame(frame);
         sprite.setAnimationTick(0);
-    }
-
-    private void updateFlipAngle(int frameCounter) {
-        int flipAngle = sprite.getFlipAngle();
-        if (flipAngle == 0) {
-            return;
-        }
-        if (sprite.wasSpiralActive(frameCounter)) {
-            return;
-        }
-        int flipSpeed = sprite.getFlipSpeed();
-        if (flipSpeed == 0) {
-            return;
-        }
-        int inertia = sprite.getGSpeed();
-        if (inertia == 0) {
-            inertia = sprite.getXSpeed();
-        }
-        boolean movingLeft = inertia < 0;
-        int flipsRemaining = sprite.getFlipsRemaining();
-        if (!movingLeft || sprite.isFlipTurned()) {
-            int newAngle = flipAngle + flipSpeed;
-            if (newAngle > 0xFF) {
-                flipsRemaining -= 1;
-                if (flipsRemaining < 0) {
-                    flipsRemaining = 0;
-                    newAngle = 0;
-                } else {
-                    newAngle &= 0xFF;
-                }
-            }
-            sprite.setFlipAngle(newAngle);
-            sprite.setFlipsRemaining(flipsRemaining);
-            return;
-        }
-
-        int newAngle = flipAngle - flipSpeed;
-        if (newAngle < 0) {
-            flipsRemaining -= 1;
-            if (flipsRemaining < 0) {
-                flipsRemaining = 0;
-                newAngle = 0;
-            } else {
-                newAngle = (newAngle + 0x100) & 0xFF;
-            }
-        }
-        sprite.setFlipAngle(newAngle);
-        sprite.setFlipsRemaining(flipsRemaining);
     }
 
     private void updateRoll(SpriteAnimationScript baseScript) {

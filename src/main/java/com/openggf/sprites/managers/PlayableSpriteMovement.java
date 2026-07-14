@@ -692,14 +692,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (blinkId < 0) {
 			return false;
 		}
-		// Scope: plain-terrain standing only for now. Object riders keep their
-		// existing per-object stale-logical-input models (CNZ ObjD5 elevator,
-		// MTZ Obj65/Obj6C platforms, SCZ Tornado), which encode the same ROM
-		// blink freeze as observed through each ride's own anim cadence.
-		// Unifying those under this gate needs the ride-time wait-animation
-		// cadence brought to ROM parity first (see TRACE_FRONTIER_LOG).
 		if (sprite.isOnObject()) {
-			return false;
+			ObjectInstance ridingObject = currentRidingSolidForStaleHorizontalInput();
+			if (!(ridingObject instanceof SolidObjectProvider provider)
+					|| !provider.allowsDeepWaitPlayerRoutineWhileRidden(sprite)) {
+				return false;
+			}
 		}
 		// ROM: move.b (Ctrl_1_Press_Logical).w,d0 / andi #ABC / bne Obj01_MdNormal
 		if (inputJumpPress) {
@@ -938,6 +936,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// return-to-zero, so the ground angle is preserved through recoil.
 		if (!sprite.isHurt()) {
 			sprite.returnAngleToZero();
+			advanceAirborneFlipAngle();
 		}
 		sprite.updateSensors(originalX, originalY);
 		boolean wasAirBeforeCollision = sprite.getAir();
@@ -976,6 +975,53 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setForcedAnimationId(0x23);  // GLIDE_SLIDE (crouching frame)
 			}
 		}
+	}
+
+	/**
+	 * ROM Player_JumpFlip: advances the object-published flip angle only in the
+	 * normal airborne player routine, after JumpAngle and before level collision.
+	 * Grounded spiral objects write the angle after the player's slot and must not
+	 * have it advanced by the later animation pass.
+	 */
+	private void advanceAirborneFlipAngle() {
+		int flipAngle = sprite.getFlipAngle();
+		int flipSpeed = sprite.getFlipSpeed();
+		if (flipAngle == 0 || flipSpeed == 0) {
+			return;
+		}
+
+		// Native JumpFlip tests inertia (ground_vel) directly. x_vel is not a
+		// fallback when inertia is zero.
+		boolean movingLeft = sprite.getGSpeed() < 0;
+		int flipsRemaining = sprite.getFlipsRemaining();
+		if (!movingLeft || sprite.isFlipTurned()) {
+			int newAngle = flipAngle + flipSpeed;
+			if (newAngle > 0xFF) {
+				flipsRemaining--;
+				if (flipsRemaining < 0) {
+					flipsRemaining = 0;
+					newAngle = 0;
+				} else {
+					newAngle &= 0xFF;
+				}
+			}
+			sprite.setFlipAngle(newAngle);
+			sprite.setFlipsRemaining(flipsRemaining);
+			return;
+		}
+
+		int newAngle = flipAngle - flipSpeed;
+		if (newAngle < 0) {
+			flipsRemaining--;
+			if (flipsRemaining < 0) {
+				flipsRemaining = 0;
+				newAngle = 0;
+			} else {
+				newAngle = (newAngle + 0x100) & 0xFF;
+			}
+		}
+		sprite.setFlipAngle(newAngle);
+		sprite.setFlipsRemaining(flipsRemaining);
 	}
 
 	// ========================================
@@ -3230,7 +3276,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// through the air. Object/platform landings do not pass through this
 		// terrain owner and retain their separate post-animation timing (S1
 		// 01 Sonic.asm:1527-1602).
-		setWalkAnimationAfterRollingLanding(sprite);
+		if (!sprite.getPinballMode()) {
+			setWalkAnimationAfterRollingLanding(sprite);
+		}
 		if (wasHurt) {
 			sprite.setGSpeed((short) 0);
 			sprite.setXSpeed((short) 0);
@@ -3312,7 +3360,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
         boolean wasHurt = sprite.isHurt();
         int savedDoubleJumpFlag = sprite.getDoubleJumpFlag();
         resetOnFloor();
-        setWalkAnimationAfterRollingLanding(sprite);
+        if (!sprite.getPinballMode()) {
+            setWalkAnimationAfterRollingLanding(sprite);
+        }
         if (wasHurt) {
             // ROM Sonic_HurtStop / Tails hurt-stop zeroes all velocity when the
             // hurt routine touches floor before returning to normal control

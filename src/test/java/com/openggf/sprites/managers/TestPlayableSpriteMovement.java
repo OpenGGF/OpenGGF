@@ -2978,18 +2978,83 @@ public class TestPlayableSpriteMovement {
         @Test
         public void testS2LandingPreservesRollingInPinballMode() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setWalkAnimId(0)
+                                .setRollAnimId(2));
+                mockSprite.setAnimationId(2);
                 mockSprite.setRolling(true);
                 mockSprite.setPinballMode(true);
                 mockSprite.setAir(true);
+                mockSprite.setXSpeed((short) 0x0200);
+                mockSprite.setYSpeed((short) 0x0200);
+                mockSprite.setAngle((byte) 0);
 
-                Method method = PlayableSpriteMovement.class.getDeclaredMethod("resetOnFloor");
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "calculateLanding", AbstractPlayableSprite.class);
                 method.setAccessible(true);
-                method.invoke(manager);
+                method.invoke(manager, mockSprite);
 
                 assertTrue(mockSprite.getRolling(),
                                 "S2 Sonic_ResetOnFloor skips the roll-clear block when pinball_mode is set");
                 assertTrue(mockSprite.getPinballMode(),
                                 "ROM Tails_ResetOnFloor never clears pinball_mode (bne.s *_Part3 skips the roll-clear block; s2.asm:40625-40626)");
+                assertEquals(2, mockSprite.getAnimationId(),
+                                "pinball_mode skips Sonic_ResetOnFloor's Walk write");
+        }
+
+        @Test
+        public void s2OrdinaryObjectRiderKeepsObjectOwnedWaitCadence() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_2);
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setIdleAnimId(Sonic2AnimationIds.WAIT)
+                                .setWalkAnimId(Sonic2AnimationIds.WALK)
+                                .setBlinkAnimId(Sonic2AnimationIds.BLINK)
+                                .setGetUpAnimId(Sonic2AnimationIds.GET_UP));
+                mockSprite.setAnimationId(Sonic2AnimationIds.WAIT.id());
+                mockSprite.setAnimationFrameIndex(0x1E);
+                mockSprite.setOnObject(true);
+                setInputState(true, false, false, false, false);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doWaitBlinkInterruptCheck");
+                method.setAccessible(true);
+
+                assertFalse((boolean) method.invoke(manager));
+                assertEquals(Sonic2AnimationIds.WAIT.id(), mockSprite.getAnimationId(),
+                                "ordinary platforms retain their object-owned rider cadence");
+        }
+
+        @Test
+        public void s2OrdinaryObjectRiderDoesNotEnterGetUp() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_2);
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setIdleAnimId(Sonic2AnimationIds.WAIT)
+                                .setBlinkAnimId(Sonic2AnimationIds.BLINK)
+                                .setGetUpAnimId(Sonic2AnimationIds.GET_UP));
+                mockSprite.setAnimationId(Sonic2AnimationIds.WAIT.id());
+                mockSprite.setAnimationFrameIndex(0xAC);
+                mockSprite.setOnObject(true);
+                setInputState(false, false, false, true, false);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doWaitBlinkInterruptCheck");
+                method.setAccessible(true);
+
+                assertFalse((boolean) method.invoke(manager));
+                assertEquals(Sonic2AnimationIds.WAIT.id(), mockSprite.getAnimationId());
+        }
+
+        @Test
+        public void airborneJumpFlipAdvancesFromInertiaBeforeAnimation() throws Exception {
+                mockSprite.setFlipAngle(0xF2);
+                mockSprite.setFlipSpeed(4);
+                mockSprite.setFlipsRemaining(1);
+                mockSprite.setGSpeed((short) 0x0100);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("advanceAirborneFlipAngle");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertEquals(0xF6, mockSprite.getFlipAngle());
+                assertEquals(1, mockSprite.getFlipsRemaining());
         }
 
         @Test
