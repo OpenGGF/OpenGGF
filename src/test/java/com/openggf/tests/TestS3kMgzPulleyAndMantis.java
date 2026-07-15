@@ -1,6 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.GroundMode;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
@@ -15,6 +16,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.StubObjectServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,6 +65,8 @@ class TestS3kMgzPulleyAndMantis {
         }
 
         assertInstanceOf(MGZPulleyObjectInstance.class, pulley);
+        assertFalse(pulley instanceof SolidObjectProvider,
+                "MGZ pulley uses explicit proximity capture and never calls a ROM solid routine");
         assertInstanceOf(MantisBadnikInstance.class, mantis);
     }
 
@@ -78,6 +82,7 @@ class TestS3kMgzPulleyAndMantis {
         player.setXSpeed((short) -0x100);
         player.setOnObject(true);
         player.setAir(false);
+        player.setGroundMode(GroundMode.RIGHTWALL);
         player.setJumpInputPressed(false);
 
         pulley.update(0, player);
@@ -102,9 +107,12 @@ class TestS3kMgzPulleyAndMantis {
         pulley.update(1, player);
 
         assertFalse(player.isObjectControlled(), "Jump should release object control");
+        assertEquals(0x01DA, player.getCentreX(),
+                "Pulley jump release must not shift x_pos while changing wall-oriented radii");
         assertEquals(-0x400, player.getXSpeed());
         assertEquals(-0x600, player.getYSpeed());
         assertTrue(player.getRolling());
+        assertEquals(GroundMode.GROUND, player.getGroundMode());
         assertEquals(Sonic3kAnimationIds.ROLL.id(), player.getAnimationId());
     }
 

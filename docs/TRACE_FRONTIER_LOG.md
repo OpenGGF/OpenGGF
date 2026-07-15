@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ pulley release bypasses generic solid collision
+
+Branch `feature/ai-trace-animation-verification`, after the retained capture
+status milestone. `Obj_MGZPulley` updates its two explicit player slots through
+`sub_349A2` / `sub_349BA` and returns without calling `SolidObject`. The engine
+had nevertheless registered the pulley as a full solid, so its post-update
+compatibility checkpoint pushed Sonic five pixels left after the jump-release
+routine had written the correct native position and launch state. The pulley
+now exposes only its explicit proximity capture/release behavior. Jump release
+also writes the literal `$0E/$07` rolling radii, Roll bit, and ground mode
+without allowing sprite-width changes to reinterpret `x_pos`. No trace state,
+zone/route/frame carve-out, hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:71117-71473`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 17240 to frame 17276
+  (`y_sub`, expected `$7600` / actual `$4E00`).
+- MGZ complete-run animation remains at frame 17293
+  (`player_animation_id`, expected Wait `$00` / actual Walk `$02`).
+- `TestS3kMgzPulleyAndMantis` passes 9/9, including the non-solid registry,
+  exact release-position, radii/status, and ground-mode contracts.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ pulley capture retains its existing solid status
 
 Branch `feature/ai-trace-animation-verification`, after the pulley fractional

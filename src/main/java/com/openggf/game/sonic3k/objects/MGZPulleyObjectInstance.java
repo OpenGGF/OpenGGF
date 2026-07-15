@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.GroundMode;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -14,10 +15,6 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.SolidContact;
-import com.openggf.level.objects.SolidObjectListener;
-import com.openggf.level.objects.SolidObjectParams;
-import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
@@ -36,7 +33,7 @@ import java.util.List;
  * with the ROM's fixed launch speeds.
  */
 public class MGZPulleyObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements RewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_PULLEY;
 
@@ -141,11 +138,6 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
             cleanupForRemoval();
         }
         super.setDestroyed(destroyed);
-    }
-
-    @Override
-    public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        // ROM capture/release is handled by the explicit proximity checks in update().
     }
 
     private void cleanupForRemoval() {
@@ -327,8 +319,9 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         player.setGSpeed((short) 0);
         player.setJumping(true);
         player.setAir(true);
-        player.setRolling(true);
         player.applyRollingRadii(false);
+        player.setRollingFlagPreserveRadii(true);
+        player.setGroundMode(GroundMode.GROUND);
         player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
         player.setDirection(flipped ? Direction.LEFT : Direction.RIGHT);
     }
@@ -383,11 +376,6 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
                 default -> null;
             };
         }
-    }
-
-    @Override
-    public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(HALF_WIDTH + 0x0B, HALF_HEIGHT, HALF_HEIGHT + 1);
     }
 
     @Override
