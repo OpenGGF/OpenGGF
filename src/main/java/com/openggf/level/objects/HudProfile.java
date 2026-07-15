@@ -10,7 +10,7 @@ public record HudProfile(List<HudRow> rows) {
             new HudRow(true, HudLabel.SCORE, HudMetric.SCORE,
                     16, 8, 64, 8, 6, HudWarningPolicy.NONE),
             new HudRow(true, HudLabel.TIME, HudMetric.TIME,
-                    16, 24, 56, 24, 4, HudWarningPolicy.NONE),
+                    16, 24, 56, 24, 4, HudWarningPolicy.TIMER_FLASH),
             new HudRow(true, HudLabel.RINGS, HudMetric.RINGS,
                     16, 40, 64, 40, 3, HudWarningPolicy.ZERO_FLASH),
             new HudRow(true, HudLabel.LIVES, HudMetric.LIVES,

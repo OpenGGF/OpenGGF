@@ -78,7 +78,7 @@ class TestModGameplayPolicyRegistration {
                 new HudRow(true, HudLabel.SCORE, HudMetric.SCORE,
                         16, 8, 64, 8, 6, HudWarningPolicy.NONE),
                 new HudRow(true, HudLabel.TIME, HudMetric.TIME,
-                        16, 24, 56, 24, 4, HudWarningPolicy.NONE),
+                        16, 24, 56, 24, 4, HudWarningPolicy.TIMER_FLASH),
                 new HudRow(true, HudLabel.RINGS, HudMetric.RINGS,
                         16, 40, 64, 40, 3, HudWarningPolicy.ZERO_FLASH),
                 new HudRow(true, HudLabel.LIVES, HudMetric.LIVES,
@@ -127,6 +127,18 @@ class TestModGameplayPolicyRegistration {
     }
 
     @Test
+    void providerMethodsDefaultToEmptyForSourceCompatiblePartialProviders() {
+        GameplayPolicyProvider launchOnly = new GameplayPolicyProvider() {
+            @Override public java.util.Optional<GameplayLaunchTeam> launchTeam(ZoneKey destination) {
+                return java.util.Optional.of(new GameplayLaunchTeam(CharacterKey.TAILS, List.of()));
+            }
+        };
+
+        assertTrue(launchOnly.inputFilter(ZoneKey.stock(0)).isEmpty());
+        assertTrue(launchOnly.hudProfile(ZoneKey.stock(0)).isEmpty());
+    }
+
+    @Test
     void prePolicyRegistrationPlanConstructorDefaultsMapsToEmpty() {
         ModRegistrationPlan compatible = new ModRegistrationPlan(
                 "alpha", "s3k", Map.of(), Map.of(), Map.of(), List.of(),
@@ -136,6 +148,42 @@ class TestModGameplayPolicyRegistration {
         assertTrue(compatible.inputFilters().isEmpty());
         assertTrue(compatible.hudProfiles().isEmpty());
         assertFalse(compatible.hasContent());
+    }
+
+    @Test
+    void canonicalPlanRejectsForeignPolicyKeysAndNullValues() {
+        ZoneKey.Mod owned = (ZoneKey.Mod) ZoneKey.mod("alpha", "sky");
+        ZoneKey.Mod foreign = (ZoneKey.Mod) ZoneKey.mod("other", "sky");
+        GameplayLaunchTeam team = new GameplayLaunchTeam(CharacterKey.TAILS, List.of());
+
+        assertThrows(IllegalArgumentException.class, () -> canonicalPlan(
+                Map.of(foreign, team), Map.of(), Map.of()));
+        assertThrows(IllegalArgumentException.class, () -> canonicalPlan(
+                Map.of(), Map.of(foreign, GameplayInputFilter.IDENTITY), Map.of()));
+        assertThrows(IllegalArgumentException.class, () -> canonicalPlan(
+                Map.of(), Map.of(), Map.of(foreign, HudProfile.stock())));
+
+        Map<ZoneKey.Mod, GameplayLaunchTeam> nullTeams = new java.util.LinkedHashMap<>();
+        nullTeams.put(owned, null);
+        Map<ZoneKey.Mod, GameplayInputFilter> nullFilters = new java.util.LinkedHashMap<>();
+        nullFilters.put(owned, null);
+        Map<ZoneKey.Mod, HudProfile> nullProfiles = new java.util.LinkedHashMap<>();
+        nullProfiles.put(owned, null);
+        assertThrows(IllegalArgumentException.class, () -> canonicalPlan(
+                nullTeams, Map.of(), Map.of()));
+        assertThrows(IllegalArgumentException.class, () -> canonicalPlan(
+                Map.of(), nullFilters, Map.of()));
+        assertThrows(IllegalArgumentException.class, () -> canonicalPlan(
+                Map.of(), Map.of(), nullProfiles));
+    }
+
+    private static ModRegistrationPlan canonicalPlan(
+            Map<ZoneKey.Mod, GameplayLaunchTeam> teams,
+            Map<ZoneKey.Mod, GameplayInputFilter> filters,
+            Map<ZoneKey.Mod, HudProfile> profiles) {
+        return new ModRegistrationPlan("alpha", "s3k", Map.of(), Map.of(), Map.of(),
+                List.of(), List.of(), List.of(), Map.of(), Map.of(), null, Map.of(),
+                teams, filters, profiles);
     }
 
     private static ModContext context(String owner) {

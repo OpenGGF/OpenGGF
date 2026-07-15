@@ -60,6 +60,9 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 Objects.requireNonNull(inputFilters, "inputFilters")));
         hudProfiles = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
                 Objects.requireNonNull(hudProfiles, "hudProfiles")));
+        validatePolicies(ownerModId, launchTeams, "launch team");
+        validatePolicies(ownerModId, inputFilters, "input filter");
+        validatePolicies(ownerModId, hudProfiles, "HUD profile");
         characters.forEach((key, definition) -> {
             if (!key.equals(definition.key()) || !ownerModId.equals(key.ownerModId().orElse(null))) {
                 throw new IllegalArgumentException("Character contribution owner/key mismatch");
@@ -82,6 +85,20 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                     || !Objects.equals(declared.insertAfter(), prepared.insertAfter())
                     || declared.gameStart() != prepared.gameStart()) {
                 throw new IllegalArgumentException("Prepared zones must exactly match declarations");
+            }
+        }
+    }
+
+    private static void validatePolicies(String ownerModId,
+            Map<com.openggf.game.ZoneKey.Mod, ?> policies, String policyName) {
+        for (Map.Entry<com.openggf.game.ZoneKey.Mod, ?> entry : policies.entrySet()) {
+            com.openggf.game.ZoneKey.Mod destination = entry.getKey();
+            if (destination == null || !ownerModId.equals(destination.ownerModId())) {
+                throw new IllegalArgumentException(
+                        "Foreign or null " + policyName + " destination");
+            }
+            if (entry.getValue() == null) {
+                throw new IllegalArgumentException("Null " + policyName + " policy");
             }
         }
     }

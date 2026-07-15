@@ -429,7 +429,7 @@ for (HudRow row : profile.rows()) {
 }
 ```
 
-Map labels to existing `HudStaticArt` frames. Map metrics to `GameStateManager.score`, `LevelState.displayTime`, `LevelState.rings`, and lives. Only `HudWarningPolicy.ZERO_FLASH` may select flash art. Preserve debug HUD behavior and bonus-stage layout outside profile mode. `LevelManager` resolves the current tagged zone profile after level publication and sets `HudProfile.stock()` for stock zones.
+Map labels to existing `HudStaticArt` frames. Map metrics to `GameStateManager.score`, `LevelState.displayTime`, `LevelState.rings`, and lives. `HudWarningPolicy.TIMER_FLASH` selects the timer flash frame through `LevelState.shouldFlashTimer()`, while `ZERO_FLASH` selects flash art only when the row's resolved metric is zero; `NONE` never selects warning art. Preserve debug HUD behavior and bonus-stage layout outside profile mode. `LevelManager` resolves the current tagged zone profile after level publication and sets `HudProfile.stock()` for stock zones.
 
 - [ ] **Step 4: Run HUD and UI render-order tests**
 

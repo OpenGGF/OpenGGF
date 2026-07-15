@@ -4,5 +4,6 @@ package com.openggf.level.objects;
 @com.openggf.game.ModApi
 public enum HudWarningPolicy {
     NONE,
+    TIMER_FLASH,
     ZERO_FLASH
 }
