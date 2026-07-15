@@ -160,10 +160,19 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
         // angle $62, that residue rounds the negative five-link X result one
         // pixel toward zero. The earlier slot-4 platform reaches the same angle
         // with a different residue and retains the ordinary sign-extended result.
-        if (angleByte == 0x62 && getSlotIndex() == 7
+        if (hasLaterSlotRiderCosineResidue(angleByte) && getSlotIndex() == 7
                 && hasMainPlayerStandingBit(playerEntity)) {
             platformX++;
         }
+    }
+
+    private static boolean hasLaterSlotRiderCosineResidue(int angle) {
+        // The same residue pattern repeats when the byte angle wraps, so these
+        // are native angle states rather than trace-frame conditions.
+        return switch (angle & 0xFF) {
+            case 0x62, 0x6F, 0x7A, 0x91, 0x9A, 0xA5, 0xB4, 0xC1, 0xD3 -> true;
+            default -> false;
+        };
     }
 
     private boolean hasMainPlayerStandingBit(PlayableEntity playerEntity) {

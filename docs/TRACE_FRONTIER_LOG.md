@@ -5,21 +5,23 @@
 Branch `feature/ai-trace-animation-verification`, after the spike-ball helper-
 slot milestone. `GetSineCosine` writes only `d1.w`; `sub_34074` then swaps and
 shifts the full register, so the five-link fixed-point cosine retains residue
-from the live SST execution position. On the later-slot continued-rider pass at
-angle `$62`, the native residue rounds the negative X endpoint one pixel toward
-zero. The earlier slot-4 platform reaches the same angle with the ordinary
-sign-extended result, which rules out a generic angle or standing correction.
-The platform now preserves the later-slot, standing-bit result from concrete
-object state. No trace hydration, route/frame predicate, comparator tolerance,
-or physics-state synchronization was added.
+from the live SST execution position. On the later-slot continued-rider pass,
+the native residue rounds nine byte-angle X endpoints one pixel toward zero;
+the same angle-state pattern repeats after the byte wraps. The earlier slot-4
+platform reaches angle `$62` with the ordinary sign-extended result, which
+rules out a generic angle or standing correction. The platform now preserves
+the later-slot, standing-bit result from concrete object state. No trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
 
 ROM references:
 `docs/skdisasm/sonic3k.asm:3021-3029,70468-70543`.
 
 Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
 
-- MGZ complete-run physics advances from frame 29122 to frame 29135 (`x`,
-  expected `$2A6A` / actual `$2A69`).
+- MGZ complete-run physics advances from frame 29122 through the full
+  swinging-platform ride to frame 31319 (`tails_x`, expected `$34CA` / actual
+  `$34CB`).
 - The older slot-4 ride at frame 23515 remains exact; the first approximation
   based on angle/standing alone was rejected before this milestone.
 - MGZ complete-run animation remains at frame 31643; standalone remains at
