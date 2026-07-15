@@ -172,24 +172,42 @@ public final class ModBackedGamePatch implements GamePatch {
                         @Override
                         public java.util.Optional<com.openggf.game.GameplayLaunchTeam> launchTeam(
                                 com.openggf.game.ZoneKey destination) {
-                            if (destination instanceof com.openggf.game.ZoneKey.Mod mod) {
-                                com.openggf.game.GameplayLaunchTeam contributed =
-                                        plan.launchTeams().get(mod);
-                                if (contributed != null) return java.util.Optional.of(contributed);
-                            }
-                            return inherited.launchTeam(destination);
+                            return callGameplayPolicy(destination, () -> {
+                                if (destination instanceof com.openggf.game.ZoneKey.Mod mod) {
+                                    com.openggf.game.GameplayLaunchTeam contributed =
+                                            plan.launchTeams().get(mod);
+                                    if (contributed != null) {
+                                        return java.util.Optional.of(contributed);
+                                    }
+                                }
+                                return inherited.launchTeam(destination);
+                            });
                         }
 
                         @Override
                         public java.util.Optional<com.openggf.game.GameplayInputFilter> inputFilter(
                                 com.openggf.game.ZoneKey destination) {
-                            return inherited.inputFilter(destination);
+                            return callGameplayPolicy(destination,
+                                    () -> inherited.inputFilter(destination));
                         }
 
                         @Override
                         public java.util.Optional<com.openggf.level.objects.HudProfile> hudProfile(
                                 com.openggf.game.ZoneKey destination) {
-                            return inherited.hudProfile(destination);
+                            return callGameplayPolicy(destination,
+                                    () -> inherited.hudProfile(destination));
+                        }
+
+                        private <T> T callGameplayPolicy(com.openggf.game.ZoneKey destination,
+                                                        java.util.function.Supplier<T> callback) {
+                            if (!(destination instanceof com.openggf.game.ZoneKey.Mod mod)) {
+                                return callback.get();
+                            }
+                            if (faultBoundary == null) {
+                                throw new IllegalStateException(
+                                        "Mod gameplay policies require an installed fault boundary");
+                            }
+                            return faultBoundary.call(mod.ownerModId(), callback);
                         }
                     };
                 }
