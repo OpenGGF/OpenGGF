@@ -225,6 +225,16 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        // Obj_MGZTriggerPlatform loads d4 from the already-updated x_pos before
+        // calling SolidObjectFull, so MvSonicOnPtfm sees no horizontal delta.
+        // This is observable while the horizontal variant retracts beneath a
+        // rider: the platform moves, but the rider keeps their world X.
+        // sonic3k.asm:70991-71005.
+        return false;
+    }
+
+    @Override
     public int romObjectCodePointerHighWord() {
         // Obj_MGZTriggerPlatform lives at $000345D4 in the locked-on ROM.
         return 0x0003;

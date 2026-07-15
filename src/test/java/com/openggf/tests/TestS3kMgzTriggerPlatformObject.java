@@ -53,6 +53,8 @@ class TestS3kMgzTriggerPlatformObject {
                 "SolidObjectFull must return before new contact for an airborne stale rider");
         assertTrue(instance.suppressesGroundingRecoveryFromAirborneStaleRide(null),
                 "The earlier player slot must remain airborne until the later SolidObjectFull pass");
+        assertFalse(instance.carriesRiderOnHorizontalMove(null),
+                "SolidObjectFull receives the trigger platform's post-move X as d4");
         assertEquals(0x0003, instance.romObjectCodePointerHighWord());
         assertEquals(5, instance.getPriorityBucket());
     }

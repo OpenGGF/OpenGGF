@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ horizontal trigger platform uses its post-move carry reference
+
+Branch `feature/ai-trace-animation-verification`, after the head-trigger
+recovery milestone. The horizontal Object `$57` movement routine updates
+`x_pos`, then loads that current value into `d4` before calling
+`SolidObjectFull`. Consequently `MvSonicOnPtfm` observes a zero horizontal
+delta: the retracting platform slides beneath a rider while the rider retains
+their world X. The shared solid-contact hook now represents that concrete
+object calling convention. No trace state, zone/route/frame carve-out,
+hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:70991-71005`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 27165 to frame 27170 (`air`,
+  expected airborne / actual grounded).
+- MGZ complete-run animation remains at frame 27165 (`player_animation_id`,
+  expected Balance / actual Push); the prior actual Walk mismatch is removed.
+- `TestS3kMgzTriggerPlatformObject` passes 8/8, including an explicit
+  post-move carry-reference contract assertion.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ head-trigger recovery runs beside animation restart
 
 Branch `feature/ai-trace-animation-verification`, after the twisting-loop
