@@ -242,6 +242,9 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private List<VortexBubbleChild> vortexBubbles;
     /** Players whose full-control state was acquired by this boss's vortex. */
     private final Map<PlayableEntity, Boolean> vortexControlledPlayers = new IdentityHashMap<>();
+    /** ROM-native P1/P2 ownership bits retained alongside the extensible player map. */
+    private boolean vortexTrackedP1;
+    private boolean vortexTrackedP2;
     private S3kBossExplosionController defeatExplosionController;
 
     private enum WaitCallback {
@@ -712,6 +715,8 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             releaseVortexPlayer(entity);
         }
         vortexControlledPlayers.clear();
+        vortexTrackedP1 = false;
+        vortexTrackedP2 = false;
     }
 
     /**
@@ -962,9 +967,14 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private void applyVortexPull(AbstractPlayableSprite player) {
         List<PlayableEntity> participants = vortexParticipants(player);
         reconcileVortexPlayers(participants);
-        for (PlayableEntity entity : participants) {
+        for (int index = 0; index < participants.size(); index++) {
+            PlayableEntity entity = participants.get(index);
             if (entity instanceof AbstractPlayableSprite sprite) {
                 applyVortexPullTo(sprite);
+                if (vortexControlledPlayers.containsKey(sprite)) {
+                    if (index == 0) vortexTrackedP1 = true;
+                    else if (index == 1) vortexTrackedP2 = true;
+                }
             }
         }
     }
@@ -992,6 +1002,33 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             ObjectControlState.none().applyTo(sprite);
             sprite.setForcedAnimationId(-1);
         }
+    }
+
+    /**
+     * Releases the native slots retained by the vortex effect when its parent is deleted.
+     * The extensible control map remains the source of truth for additional sidekicks.
+     */
+    void releaseTrackedVortexPlayersOnWaterEffectDelete() {
+        PlayableEntity focused = services().camera().getFocusedSprite();
+        List<PlayableEntity> participants = vortexParticipants(focused);
+        for (int index = 0; index < Math.min(2, participants.size()); index++) {
+            boolean tracked = index == 0 ? vortexTrackedP1 : vortexTrackedP2;
+            PlayableEntity entity = participants.get(index);
+            if (tracked && entity instanceof AbstractPlayableSprite sprite) {
+                sprite.setAir(true);
+                ObjectControlState.none().applyTo(sprite);
+                sprite.setForcedAnimationId(-1);
+            }
+        }
+        for (PlayableEntity entity : List.copyOf(vortexControlledPlayers.keySet())) {
+            if (entity instanceof AbstractPlayableSprite sprite) {
+                sprite.setAir(true);
+            }
+            releaseVortexPlayer(entity);
+        }
+        vortexControlledPlayers.clear();
+        vortexTrackedP1 = false;
+        vortexTrackedP2 = false;
     }
 
     /**

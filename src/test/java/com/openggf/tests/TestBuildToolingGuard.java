@@ -117,6 +117,7 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/game/sonic3k/objects/GumballMachineObjectInstance.java - private static volatile int debugBucketFilter = -1;",
             "src/main/java/com/openggf/game/sonic3k/objects/GumballMachineObjectInstance.java - private static volatile int debugSourceFilter = -1;",
             "src/main/java/com/openggf/game/sonic3k/objects/HCZWaterRushObjectInstance.java - private static int state;",
+            "src/main/java/com/openggf/game/sonic3k/objects/HCZWaterRushObjectInstance.java - private static boolean largeFanModulePrimed;",
             "src/main/java/com/openggf/game/sonic3k/objects/HCZWaterRushObjectInstance.java - private static boolean active;",
             "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static PatternSpriteRenderer sonicRenderer;",
             "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static PatternSpriteRenderer snowboardRenderer;",

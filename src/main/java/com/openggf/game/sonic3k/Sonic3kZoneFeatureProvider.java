@@ -28,6 +28,7 @@ import com.openggf.game.sonic3k.render.IczBigSnowPileBackgroundEffect;
 import com.openggf.game.sonic3k.render.IczBigSnowPilePriorityMaskEffect;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GraphicsManager;
@@ -146,7 +147,27 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         int zoneId = levelManager.getFeatureZoneId();
         return zoneId == Sonic3kZoneIds.ZONE_MGZ
                 || zoneId == Sonic3kZoneIds.ZONE_ICZ
+                || isHcz2BackgroundPlaneWindowActive(zoneId)
                 || isCnzBossBackgroundWindowActive(zoneId);
+    }
+
+    /**
+     * HCZ2 keeps Plane B a 512px VDP window through every act-2 BG state.
+     * During the wall chase, {@code HCZ2BGE_WallMove} refreshes the plane with
+     * {@code DrawBGAsYouMove} at the wall BG camera
+     * ({@code Camera_X_pos_BG_copy = camX - $200 + wall offset}), so the engine
+     * window must follow {@code getBgCameraX()}; the post-chase states rebuild
+     * it from source X={@code $000} ({@code HCZ2BGE_NormalRefresh}), where the
+     * window stays anchored at 0 and wraps at the VDP's 512px width.
+     */
+    private boolean isHcz2BackgroundPlaneWindowActive(int zoneId) {
+        if (zoneId != Sonic3kZoneIds.ZONE_HCZ || !GameServices.hasRuntime()) {
+            return false;
+        }
+        return GameServices.zoneRuntimeRegistry()
+                .currentAs(HczZoneRuntimeState.class)
+                .map(HczZoneRuntimeState::backgroundPlaneWindowActive)
+                .orElse(false);
     }
 
     @Override
@@ -195,7 +216,12 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public boolean useLinearBackgroundLayoutOverflow(int zoneIndex) {
-        return isCnzBossBackgroundWindowActive();
+        // HCZ2's BG layout stores the wall strip at X=$200..$3FF and zero-filled
+        // columns beyond; DrawBGAsYouMove reads those rows raw, so once the wall
+        // BG camera runs past the data the ROM plane shows blank chunks. Linear
+        // overflow reproduces that instead of wrapping back into the normal strip.
+        return isCnzBossBackgroundWindowActive()
+                || isHcz2BackgroundPlaneWindowActive(zoneIndex);
     }
 
     /**
@@ -305,7 +331,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ && player != null && !player.getDead()) {
             int act = levelManager != null ? levelManager.getFeatureActId() : 0;
-            HCZWaterSkimHandler.update();
+            HCZWaterSkimHandler.beginFrame();
             if (GameServices.module().getLevelEventProvider()
                     instanceof Sonic3kLevelEventManager mgr) {
                 mgr.ensureZoneRuntimeStateInstalled();
@@ -331,7 +357,8 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public void updateAfterPlayablePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
-        if (zoneIndex != Sonic3kZoneIds.ZONE_ICZ || player == null || player.getDead()) {
+        if (player == null || player.getDead()
+                || (zoneIndex != Sonic3kZoneIds.ZONE_HCZ && zoneIndex != Sonic3kZoneIds.ZONE_ICZ)) {
             return;
         }
         var levelManager = GameServices.levelOrNull();
@@ -339,9 +366,17 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         if (GameServices.module().getLevelEventProvider()
                 instanceof Sonic3kLevelEventManager mgr) {
             mgr.ensureZoneRuntimeStateInstalled();
-            var events = mgr.getIczEvents();
-            if (events != null) {
-                events.updateSlideTerrainAfterPlayablePhysics(act, player);
+            if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ) {
+                HCZWaterSkimHandler.updateAfterPlayablePhysics(player);
+                var events = mgr.getHczEvents();
+                if (events != null) {
+                    events.updateSlideTerrainAfterPlayablePhysics(act, player);
+                }
+            } else {
+                var events = mgr.getIczEvents();
+                if (events != null) {
+                    events.updateSlideTerrainAfterPlayablePhysics(act, player);
+                }
             }
         }
     }

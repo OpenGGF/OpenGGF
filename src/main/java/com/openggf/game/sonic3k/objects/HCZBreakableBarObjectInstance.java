@@ -20,6 +20,7 @@ import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
+import com.openggf.sprites.playable.RawControllerInput;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -393,7 +394,8 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
             player.setYSpeed((short) 0);
 
             // ROM: andi.w #button_A|B|C,d1 / beq locret — ABC to release
-            if (player.isJumpPressed()) {
+            if (RawControllerInput.isHeld(player, AbstractPlayableSprite.INPUT_JUMP)
+                    || player.isRawControllerJumpJustPressed()) {
                 releasePlayer(player, state, pi);
                 // ROM: btst #6,subtype / bne locret — if non-destructive, don't break
                 if (!nonDestructiveRelease) {
@@ -441,7 +443,8 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
 
-            if (player.isJumpPressed()) {
+            if (RawControllerInput.isHeld(player, AbstractPlayableSprite.INPUT_JUMP)
+                    || player.isRawControllerJumpJustPressed()) {
                 releasePlayer(player, state, pi);
                 if (!nonDestructiveRelease) {
                     triggerBreak = true;

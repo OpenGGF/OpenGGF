@@ -100,6 +100,7 @@ class TestHCZConveyorBeltObjectInstance {
         assertEquals(0x0214, player.getCentreY() & 0xFFFF);
 
         player.setJumpInputPressed(true);
+        player.setLogicalInputState(false, false, false, false, true, true);
         top.update(51, player);
         assertFalse(player.isObjectControlled());
         assertFalse(player.isObjectControlAllowsCpu());
@@ -120,6 +121,29 @@ class TestHCZConveyorBeltObjectInstance {
         assertTrue(player.isObjectControlSuppressesMovement());
         assertEquals(0x65, player.getMappingFrame());
         assertEquals(0x0216, player.getCentreY() & 0xFFFF);
+    }
+
+    @Test
+    void logicalJumpPressReleasesAfterRawEdgeIsConsumed() throws Exception {
+        camera.setX((short) 0x0C00);
+        TestablePlayableSprite player = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        TestObjectServices services = servicesFor(camera, player);
+        player.setCentreX((short) 0x0C00);
+        player.setCentreY((short) 0x0221);
+        player.setYSpeed((short) 0);
+        HCZConveyorBeltObjectInstance belt = buildBelt(services, 0x0B28, 0x0200, 0x00, 0);
+
+        belt.update(10, player);
+        assertTrue(player.isObjectControlled());
+
+        player.setJumpInputPressed(false, false);
+        player.setLogicalInputState(false, false, false, false, true, true);
+        belt.update(11, player);
+
+        assertFalse(player.isObjectControlled());
+        assertTrue(player.getAir());
+        assertTrue(player.getRolling());
+        assertEquals(-0x500, player.getYSpeed());
     }
 
     @Test

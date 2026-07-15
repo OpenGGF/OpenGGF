@@ -1,5 +1,7 @@
 package com.openggf.level;
 
+import com.openggf.graphics.PaletteView;
+
 import java.util.Arrays;
 
 /**
@@ -14,7 +16,7 @@ import java.util.Arrays;
  * and manipulation on a PC.
  */
 @com.openggf.game.ModApi
-public class Palette {
+public class Palette implements PaletteView {
     public static final int BYTES_PER_COLOR = 2;
     public static final int PALETTE_SIZE = 16;
     public static final int PALETTE_SIZE_IN_ROM = BYTES_PER_COLOR * PALETTE_SIZE;
@@ -121,6 +123,21 @@ public class Palette {
             throw new IllegalArgumentException("Invalid palette index");
         }
         return colors[index];
+    }
+
+    @Override
+    public byte red(int colorIndex) {
+        return getColor(colorIndex).r;
+    }
+
+    @Override
+    public byte green(int colorIndex) {
+        return getColor(colorIndex).g;
+    }
+
+    @Override
+    public byte blue(int colorIndex) {
+        return getColor(colorIndex).b;
     }
 
     // Set a color by index

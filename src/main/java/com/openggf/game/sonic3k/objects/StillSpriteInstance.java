@@ -75,7 +75,12 @@ public class StillSpriteInstance extends AbstractObjectInstance implements Rewin
 
     @Override
     public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
-        if (!isOnScreenX()) {
+        // ROM Obj_StillSprite loops in Sprite_OnScreen_Test (sonic3k.asm:
+        // 37262-37277): delete only when the chunk-aligned X leaves the coarse
+        // (Camera_X_pos_coarse_back .. +$280) window, not the exact screen.
+        // Placement spawns sprites beyond the screen edge, so an exact-screen
+        // check would delete every StillSprite on its first update.
+        if (!isInRangeAt(getX())) {
             setDestroyedByOffscreen();
         }
     }

@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -90,6 +91,21 @@ class TestS3kTensionBridgeObject {
         assertTrue(profile.getImplementedIds().contains(Sonic3kObjectIds.TENSION_BRIDGE));
     }
 
+    @Test
+    void rideExitClearsOnObjectWithoutForcingAirborne() {
+        TensionBridgeObjectInstance bridge = new TensionBridgeObjectInstance(
+                new ObjectSpawn(0x1200, 0x0600, Sonic3kObjectIds.TENSION_BRIDGE, 0x0C, 0x00, false, 0));
+
+        assertFalse(bridge.forceAirOnRideExit(),
+                "sub_38AA2 must preserve a terrain landing made before the bridge clears Status_OnObj");
+        assertEquals(0x0003, bridge.romObjectCodePointerHighWord(),
+                "sub_13EFC must sample loc_387E0's ROM bank from a stood-on bridge");
+        assertFalse(bridge.usesSlopeForNewLanding(),
+                "sub_38AA2 first contact uses flat sub_1E410 before bent-segment ride seating");
+        assertTrue(bridge.rejectsZeroDistanceTopSolidLanding(),
+                "sub_1E410 rejects d0=0 and accepts only negative top overlap");
+    }
+
     private static LevelArtEntry findLevelEntry(List<LevelArtEntry> entries, String key) {
         return entries.stream()
                 .filter(entry -> key.equals(entry.key()))
@@ -97,5 +113,3 @@ class TestS3kTensionBridgeObject {
                 .orElseThrow(() -> new AssertionError("Missing art entry: " + key));
     }
 }
-
-

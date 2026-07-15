@@ -95,9 +95,10 @@ public class TestZoneEventRewindSchemaGuard {
     );
 
     /**
-     * FIELD names (not getter names) the legacy writeHczState byte layout serialized.
+     * Required HCZ event fields: the legacy sidecar state plus the native per-player
+     * carrier state that replaced its synthetic frame/centre/current-Y tuple.
      */
-    private static final Set<String> HCZ_LEGACY_FIELDS = Set.of(
+    private static final Set<String> HCZ_REQUIRED_FIELDS = Set.of(
             "eventsFg5",
             "bossFlag",
             "transitionRequested",
@@ -111,9 +112,20 @@ public class TestZoneEventRewindSchemaGuard {
             "wallOffsetFixed",
             "wallOffsetPixels",
             "shakeTimer",
-            "cutsceneFrame",
-            "cutsceneCenterX",
-            "cutsceneCurrentY"
+            "carrierMovementPending",
+            "carrierUpdatedBeforeDynamicObjects",
+            "carrierP1Active",
+            "carrierP2Active",
+            "carrierP1XFixed",
+            "carrierP1YFixed",
+            "carrierP1XVelocity",
+            "carrierP2XFixed",
+            "carrierP2YFixed",
+            "carrierP2XVelocity",
+            "carrierP1TargetSide",
+            "carrierP2TargetSide",
+            "carrierP1BoundsYOffset",
+            "carrierP2BoundsYOffset"
     );
 
     /**
@@ -308,12 +320,12 @@ public class TestZoneEventRewindSchemaGuard {
     }
 
     @Test
-    public void hczSchemaCoversAllLegacySidecarFields() {
+    public void hczSchemaCoversLegacyAndNativeCarrierState() {
         RewindClassSchema schema = RewindSchemaRegistry.schemaFor(Sonic3kHCZEvents.class);
         Set<String> captured = schema.capturedFields().stream()
                 .map(plan -> plan.field().getName())
                 .collect(Collectors.toSet());
-        Set<String> missing = HCZ_LEGACY_FIELDS.stream()
+        Set<String> missing = HCZ_REQUIRED_FIELDS.stream()
                 .filter(name -> !captured.contains(name))
                 .collect(Collectors.toSet());
         assertTrue(missing.isEmpty(),

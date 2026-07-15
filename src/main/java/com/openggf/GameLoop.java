@@ -1410,6 +1410,9 @@ public class GameLoop {
         TitleCardProvider tcp = getTitleCardProviderLazy();
         if (tcp != null && tcp.isOverlayActive()) {
             tcp.update();
+            if (tcp.ownsInLevelPlayerControlLock()) {
+                applyTitleCardControlLock(tcp.shouldLockPlayerControlForInLevelOverlay());
+            }
         }
 
         if (multiplayerRaceCoordinator != null) {
@@ -1441,9 +1444,7 @@ public class GameLoop {
                 return false;
             }
             levelManager.applySeamlessTransition(seamlessRequest);
-            if (levelManager.consumeInLevelTitleCardRequest()) {
-                enterInLevelTitleCard(levelManager.getInLevelTitleCardZone(), levelManager.getInLevelTitleCardAct());
-            }
+            startPendingInLevelTitleCard();
             updateNonGameplayAudio(doFrameStep);
             // Trace playback still consumes one BK2/VBlank row on a
             // transition-only frame. Headless replay advances its movie
@@ -1463,9 +1464,7 @@ public class GameLoop {
         }
 
         // Trigger transparent in-level title card overlays (no mode switch).
-        if (levelManager.consumeInLevelTitleCardRequest()) {
-            enterInLevelTitleCard(levelManager.getInLevelTitleCardZone(), levelManager.getInLevelTitleCardAct());
-        }
+        startPendingInLevelTitleCard();
 
         // Check if a title card was requested (new level loaded)
         if (levelManager.consumeTitleCardRequest()) {
@@ -3104,16 +3103,10 @@ public class GameLoop {
         LOGGER.info("Entered Title Card for zone " + zoneIndex + " act " + actIndex);
     }
 
-    /**
-     * Starts a transparent in-level title card overlay without switching game mode.
-     */
-    private void enterInLevelTitleCard(int zoneIndex, int actIndex) {
-        TitleCardProvider provider = getTitleCardProviderLazy();
-        if (provider == null) {
-            return;
-        }
-        provider.initializeInLevel(zoneIndex, actIndex);
-        LOGGER.info("Entered in-level Title Card for zone " + zoneIndex + " act " + actIndex);
+    private void startPendingInLevelTitleCard() {
+        InLevelTitleCardCoordinator.startIfRequested(
+                levelManager, getTitleCardProviderLazy(),
+                GameServices.gameState().isEndOfLevelActive(), this::applyTitleCardControlLock);
     }
 
     /**

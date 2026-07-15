@@ -53,6 +53,7 @@ public class LevelTilemapManager {
     private int backgroundTilemapHeightTiles;
     private boolean backgroundTilemapDirty = true;
     private Boolean lastRequiresFullWidthBgTilemap;
+    private Boolean lastBackgroundWrap;
     private int backgroundVdpWrapHeightTiles = 0; // 0 = disabled
     // X offset (in pixels, 512-aligned) for BG tilemap building.
     // Wide BG maps (> 512px) need tiles from the correct region, not always from position 0.
@@ -200,13 +201,21 @@ public class LevelTilemapManager {
                                             ParallaxManager parallaxManager,
                                             boolean verticalWrapEnabled) {
         boolean requiresFullWidthBgTilemap = zoneRuntimeRequiresFullWidthBgTilemap();
+        boolean backgroundWrap = zoneFeatureProvider != null
+                && zoneFeatureProvider.bgWrapsHorizontally()
+                && !requiresFullWidthBgTilemap;
         if (lastRequiresFullWidthBgTilemap != null
                 && lastRequiresFullWidthBgTilemap != requiresFullWidthBgTilemap) {
             backgroundTilemapDirty = true;
             bgWindowShiftCandidate = false;
         }
+        if (lastBackgroundWrap != null && lastBackgroundWrap != backgroundWrap) {
+            backgroundTilemapDirty = true;
+            bgWindowShiftCandidate = false;
+        }
         if (!backgroundTilemapDirty && backgroundTilemapData != null) {
             lastRequiresFullWidthBgTilemap = requiresFullWidthBgTilemap;
+            lastBackgroundWrap = backgroundWrap;
             ensurePatternLookupData();
             // Tilemap data already up to date — but still push VDP wrap height
             // to the renderer in case it was null during the initial build.
@@ -242,6 +251,7 @@ public class LevelTilemapManager {
                     parallaxManager, verticalWrapEnabled);
         }
         lastRequiresFullWidthBgTilemap = requiresFullWidthBgTilemap;
+        lastBackgroundWrap = backgroundWrap;
         backgroundTilemapDirty = false;
 
         ensurePatternLookupData();
@@ -652,9 +662,12 @@ public class LevelTilemapManager {
                 continue;
             }
 
-            // xBlockBit uses the query position to select the correct chunk within the block.
-            int xBlockBit = (queryX % blockPixelSize) / chunkWidth;
-            int yBlockBit = (queryY % blockPixelSize) / chunkHeight;
+            // xBlockBit uses the query position to select the correct chunk within
+            // the block. floorMod: linear-overflow windows can query negative X
+            // (HCZ2's wall BG camera starts left of the layout), and the wrapped
+            // block lookup must pair with a wrapped chunk selection.
+            int xBlockBit = Math.floorMod(queryX, blockPixelSize) / chunkWidth;
+            int yBlockBit = Math.floorMod(queryY, blockPixelSize) / chunkHeight;
             ChunkDesc chunkDesc = block.getChunkDesc(xBlockBit, yBlockBit);
             int chunkIndex = chunkDesc.getChunkIndex();
 
@@ -845,7 +858,13 @@ public class LevelTilemapManager {
         int wrappedY = ((y % (layerHeightCells * blockPixelSize)) + layerHeightCells * blockPixelSize)
                 % (layerHeightCells * blockPixelSize);
         int linearCell = (wrappedY / blockPixelSize) * layerWidthCells + Math.floorDiv(x, blockPixelSize);
-        linearCell = ((linearCell % layerCellCount) + layerCellCount) % layerCellCount;
+        if (linearCell < 0) {
+            // Columns left of the layout's first row have no ROM row data behind
+            // them; wrapping would resurface the layout's tail cells. Render blank
+            // (HCZ2's wall BG camera starts left of the layout at act entry).
+            return null;
+        }
+        linearCell = linearCell % layerCellCount;
         int mapX = linearCell % layerWidthCells;
         int mapY = linearCell / layerWidthCells;
         int blockIndex = map.getValue(1, mapX, mapY) & 0xFF;
@@ -1327,6 +1346,7 @@ public class LevelTilemapManager {
         prebuiltBgTilemap = null;
         backgroundTilemapDirty = true;
         lastRequiresFullWidthBgTilemap = null;
+        lastBackgroundWrap = null;
         lastForegroundWrap = null;
         foregroundRingSeeded = false;
         foregroundRingCameraX = 0;

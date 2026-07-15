@@ -132,6 +132,9 @@ public class HczEndBossInstance extends AbstractBossInstance
     // =========================================================================
     private int waitTimer = -1;
     private WaitCallback waitCallback = WaitCallback.NONE;
+    /** Retains loc_6B03A for the next consolidated setup dispatch. */
+    private boolean pendingAttackSetupDispatch;
+    private boolean pendingDefeatDispatch;
     private boolean customFlashDirty;
     private S3kSharedBossCameraGate cameraGate;
 
@@ -181,6 +184,7 @@ public class HczEndBossInstance extends AbstractBossInstance
         state.renderFlags = 0;
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
+        pendingAttackSetupDispatch = false;
         customFlashDirty = false;
         if (cameraGate == null) {
             cameraGate = new S3kSharedBossCameraGate();
@@ -247,6 +251,15 @@ public class HczEndBossInstance extends AbstractBossInstance
     }
 
     @Override
+    public boolean usesCurrentTouchResponseState() {
+        // loc_6AF0C runs the movement/routine handler before
+        // Draw_And_Touch_Sprite publishes this boss to Collision_response_list.
+        // The next player pass therefore observes the post-movement coordinate,
+        // not this object's pre-update snapshot.
+        return true;
+    }
+
+    @Override
     public boolean isPersistent() {
         // ROUTINE_FLEE runs off-screen for 0x77 frames before loc_6B0E8 clears
         // Boss_flag, widens the camera, and spawns Obj_EggCapsule.
@@ -286,6 +299,11 @@ public class HczEndBossInstance extends AbstractBossInstance
             state.defeated = true;
             services().gameState().addScore(1000);
             onDefeatStarted();
+            // The player touch pass precedes this boss slot. ROM loc_6BC1C
+            // installs Wait_FadeToLevelMusic/BossDefeated at the tail of the
+            // already-running loc_6AF0C dispatch, so its $3F wait cannot tick
+            // until the following object pass.
+            pendingDefeatDispatch = true;
         }
     }
 
@@ -295,6 +313,20 @@ public class HczEndBossInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+        if (pendingDefeatDispatch) {
+            pendingDefeatDispatch = false;
+            updateCustomFlash();
+            updateDynamicSpawn(state.x, state.y);
+            return;
+        }
+        if (pendingAttackSetupDispatch) {
+            pendingAttackSetupDispatch = false;
+            beginAttackPhase();
+            updateCustomFlash();
+            updateDynamicSpawn(state.x, state.y);
+            return;
+        }
+
         switch (state.routine) {
             case ROUTINE_INIT -> updateInit();
             case ROUTINE_DESCEND -> updateMoveAndWait();
@@ -560,10 +592,9 @@ public class HczEndBossInstance extends AbstractBossInstance
     // Defeat & flee constants (ROM: loc_6B0B0–loc_6B154)
     // =========================================================================
     private static final int DEFEAT_WAIT = 0x3F;       // 63 frames of explosions
-    private static final int FADE_MUSIC_WAIT = 119;     // 0x77 frames before music resumes
+    private static final int FADE_MUSIC_WAIT = 0x77;
     private static final int FLEE_X_VEL = 0x200;
     private static final int FLEE_Y_VEL = -0x200;
-    private static final int FLEE_GRAVITY = 0x18;
 
     /** Egg capsule spawn positions — Sonic/Tails (ROM: loc_6B0E8). */
     private static final int ST_CAPSULE_X = 0x4250;
@@ -635,10 +666,11 @@ public class HczEndBossInstance extends AbstractBossInstance
      * decrement timer. When timer expires, call onFleeComplete().
      */
     private void updateFlee() {
-        state.yVel += FLEE_GRAVITY;
+        // loc_6B0CC calls MoveSprite, not MoveSpriteAndFall: flee velocity is
+        // constant for the whole Obj_Wait countdown.
         state.applyVelocity();
         fleeTimer--;
-        if (fleeTimer <= 0) {
+        if (fleeTimer < 0) {
             onFleeComplete();
         }
     }
@@ -660,9 +692,12 @@ public class HczEndBossInstance extends AbstractBossInstance
         // Clear boss ID
         services().gameState().setCurrentBossId(0);
 
-        // Expand camera rightward to allow player to proceed
-        var camera = services().camera();
-        camera.setMaxX((short) (targetLockXLeft + POST_FLEE_CAMERA_EXPAND));
+        // loc_6B0E8 writes Camera_stored_max_X_pos and allocates
+        // Child6_IncLevX; live Camera_max_X_pos remains locked until the
+        // independent helper's accelerating $4000 accumulator advances it.
+        int cameraTarget = targetLockXLeft + POST_FLEE_CAMERA_EXPAND;
+        spawnChild(() -> new HczEndBossGradualMaxXExtender(
+                state.x, state.y, cameraTarget));
 
         // Resume zone music
         services().playMusic(Sonic3kMusic.HCZ2.id);
@@ -735,7 +770,7 @@ public class HczEndBossInstance extends AbstractBossInstance
             case PRE_ATTACK_WAIT_COMPLETE -> onPreAttackWaitComplete();
             case ST_DESCENT_COMPLETE -> onStDescentComplete();
             case ST_RISE_COMPLETE -> onStRiseComplete();
-            case BEGIN_ATTACK_PHASE -> beginAttackPhase();
+            case BEGIN_ATTACK_PHASE -> pendingAttackSetupDispatch = true;
             case ATTACK_PASS_COMPLETE -> onAttackPassComplete();
             case BEGIN_FLEE_SEQUENCE -> beginFleeSequence();
             case NONE -> {

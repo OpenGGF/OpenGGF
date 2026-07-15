@@ -186,6 +186,40 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s3kPanicOffscreenTimeoutUsesDirectMarkerFacing() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setDirection(Direction.LEFT);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.PANIC, 0);
+
+        controller.despawn(SidekickCpuController.DespawnCause.OFF_SCREEN_TIMEOUT);
+
+        assertEquals(Direction.RIGHT, tails.getDirection(),
+                "TailsCPU_CheckDespawn calls sub_13ECA directly and leaves status=Status_InAir");
+    }
+
+    @Test
+    void s3kPanicInteractMismatchContinuesIntoRoutineEightFacing() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.useGameRules(GameRules.SONIC_3K);
+        sonic.setCentreX((short) 0x0200);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.PANIC, 0);
+
+        controller.despawn(SidekickCpuController.DespawnCause.OBJECT_ID_MISMATCH);
+
+        assertEquals(Direction.LEFT, tails.getDirection(),
+                "loc_13F40 continues after sub_13EFC and faces from the post-warp sentinel");
+    }
+
+    @Test
     void s2FlyingRespawnTimeoutReturnsToSpawningAtZeroMarker() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -752,6 +786,32 @@ class TestSidekickCpuDespawnParity {
                 "After sub_13ECA writes y_pos=0, loc_157C8 still runs MoveSprite_TestGravity "
                         + "with the old y_vel (sonic3k.asm:29284-29285,36032-36042)");
         assertEquals((short) -0x06C8, tails.getYSpeed());
+    }
+
+    @Test
+    void s3kGenericKillAdoptsDeadRoutineAndAppliesNextFrameMarker() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0A7D);
+        tails.setCentreY((short) 0x0780);
+        tails.setAir(true);
+        tails.setYSpeed((short) -0x0700);
+        tails.setDead(true);
+        GameServices.camera().setY((short) 0x066C);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+
+        controller.update(0x2F7B);
+
+        assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState());
+        assertEquals((short) 0x7F00, tails.getCentreX());
+        assertEquals((short) -0x0007, tails.getCentreY());
+        assertEquals((short) -0x06C8, tails.getYSpeed());
+        assertEquals(0x0002, controller.getDiagnosticRomCpuRoutine(),
+                "sub_13ECA replaces the prior CPU routine after generic Kill_Character");
     }
 
     @Test
@@ -1751,7 +1811,7 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void normalRoutineClearsRepeatedDelayedJumpPressHistoryAfterFirstS3kSample() {
+    void normalRoutinePreservesRepeatedDelayedJumpPressBytesForS3k() {
         TestableSprite sonic = new TestableSprite("sonic");
         sonic.useGameRules(GameRules.SONIC_3K);
         sonic.setCentreX((short) 0x1200);
@@ -1777,10 +1837,10 @@ class TestSidekickCpuDespawnParity {
 
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
                 controller.getDiagnosticGeneratedHeldInput());
-        assertEquals(0,
+        assertEquals(AbstractPlayableSprite.INPUT_JUMP,
                 controller.getDiagnosticGeneratedPressedInput() & AbstractPlayableSprite.INPUT_JUMP,
-                "S3K keeps the delayed held A/B/C bit visible but clears the repeated low-byte "
-                        + "jump press after the first follower-history sample.");
+                "S3K Stat_table stores the real low-byte Ctrl_1_Press_Logical value; "
+                        + "a consecutive action press must not be reconstructed from the aggregate held edge.");
     }
 
     @Test

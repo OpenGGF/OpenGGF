@@ -1635,6 +1635,30 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void s3kSpindashAnimationTransitionClearsPushBeforeTraceSample() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_3K);
+                ScriptedVelocityAnimationProfile profile = new ScriptedVelocityAnimationProfile()
+                                .setDuckAnimId(8)
+                                .setSpindashAnimId(9);
+                mockSprite.setAnimationProfile(profile);
+                mockSprite.setAnimationId(profile.getDuckAnimId());
+                mockSprite.setPushing(true);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("setSpindashAnimation");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertEquals(profile.getSpindashAnimId(), mockSprite.getAnimationId());
+                assertFalse(mockSprite.getPushing(),
+                                "Animate_Tails must clear Status_Push when spindash changes anim from Duck");
+
+                mockSprite.setPushing(true);
+                method.invoke(manager);
+                assertFalse(mockSprite.getPushing(),
+                                "an active charge's $0900 anim/prev_anim word must force the clear again");
+        }
+
+        @Test
         public void s2ObjectOnlyPinballGuardDoesNotBlockRollingJump() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);
                 mockSprite.setAir(false);

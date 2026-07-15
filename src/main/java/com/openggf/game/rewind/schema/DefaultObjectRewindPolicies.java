@@ -390,6 +390,8 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn", "player1Owner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn", "player2Owner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn", "extensionGrabbed"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeImpactExplosion", "boss"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleButton", "parent"), RewindFieldPolicy.CAPTURED),
             // Fixed 2-slot rider array whose RiderState holds a live player reference plus the
             // cross-frame twist angle / horizontal-swing distance. A final array of a
             // reference-bearing plain state holder is not auto-captured by the scalar policy

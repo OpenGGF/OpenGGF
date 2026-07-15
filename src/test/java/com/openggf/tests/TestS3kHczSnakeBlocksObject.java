@@ -50,6 +50,14 @@ class TestS3kHczSnakeBlocksObject {
     }
 
     @Test
+    void continuedRideUsesPostMoveXAsItsZeroDeltaCarryReference() {
+        HCZSnakeBlocksObjectInstance instance = createInstance(0x00, 0x00);
+
+        assertFalse(instance.carriesRiderOnHorizontalMove(null),
+                "Obj67 loads its post-movement x_pos into d4 before SolidObjectFull");
+    }
+
+    @Test
     void motionClampsAngleDuringCornerWait() {
         HCZSnakeBlocksObjectInstance instance = createInstance(0x00, 0x00);
         instance.update(0, null);
@@ -185,5 +193,4 @@ class TestS3kHczSnakeBlocksObject {
         return instance;
     }
 }
-
 

@@ -11,6 +11,7 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameServices;
+import com.openggf.game.InLevelTitleCardCoordinator;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelManager;
@@ -118,6 +119,10 @@ public final class RecordingFrameDriver {
         TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
         if (titleCardProvider != null && titleCardProvider.isOverlayActive()) {
             titleCardProvider.update();
+            if (titleCardProvider.ownsInLevelPlayerControlLock()) {
+                applyInLevelTitleCardControlLock(
+                        titleCardProvider.shouldLockPlayerControlForInLevelOverlay());
+            }
         }
     }
 
@@ -132,14 +137,17 @@ public final class RecordingFrameDriver {
     }
 
     private void startPendingInLevelTitleCardIfRequested() {
-        if (!levelManager.consumeInLevelTitleCardRequest()) {
-            return;
-        }
-        TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
-        if (titleCardProvider != null) {
-            titleCardProvider.initializeInLevel(
-                    levelManager.getInLevelTitleCardZone(),
-                    levelManager.getInLevelTitleCardAct());
+        InLevelTitleCardCoordinator.startIfRequested(
+                levelManager, GameServices.module().getTitleCardProvider(),
+                GameServices.gameState().isEndOfLevelActive(),
+                this::applyInLevelTitleCardControlLock);
+    }
+
+    private void applyInLevelTitleCardControlLock(boolean locked) {
+        for (var sprite : GameServices.sprites().getAllSprites()) {
+            if (sprite instanceof AbstractPlayableSprite playable) {
+                playable.setControlLocked(locked);
+            }
         }
     }
 

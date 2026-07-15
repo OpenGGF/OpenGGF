@@ -1,17 +1,22 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.events.Sonic3kHCZEvents;
+import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
+import static com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBreakableBarState;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestHczLargeFanCoordinateParity {
 
     @Test
     void activationWindowUsesPlayerRomCentrePositionAfterKosLoadWait() {
+        HCZBreakableBarState.reset();
         int fanX = 0x0B80;
         int fanY = 0x0580;
         HCZLargeFanObjectInstance fan = new HCZLargeFanObjectInstance(
@@ -34,6 +39,18 @@ class TestHczLargeFanCoordinateParity {
 
         assertEquals(fanY + 8, fan.getY(),
                 "Obj_HCZLargeFan compares ROM x_pos/y_pos, which map to player centre coordinates");
+    }
+
+    @Test
+    void laterActFanConsumesSessionPrimedModuleQueueOneDispatchSooner() {
+        HczZoneRuntimeState actOneState = new HczZoneRuntimeState(
+                0, PlayerCharacter.SONIC_AND_TAILS, new Sonic3kHCZEvents());
+        HCZBreakableBarState.reset();
+
+        assertEquals(3, HCZBreakableBarState.claimLargeFanModuleWaitFrames());
+        new HczZoneRuntimeState(1, actOneState.playerCharacter(), new Sonic3kHCZEvents());
+        assertEquals(2, HCZBreakableBarState.claimLargeFanModuleWaitFrames(),
+                "the shared KosM queue remains primed across HCZ's seamless act runtime replacement");
     }
 
     private static TestablePlayableSprite standingPlayer() {

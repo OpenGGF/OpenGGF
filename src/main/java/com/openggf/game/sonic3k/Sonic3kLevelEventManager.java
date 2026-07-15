@@ -316,6 +316,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
+    @Override
+    public void updateFixedInLevelObjectsBeforeDynamicObjects() {
+        if (hczEvents != null) {
+            hczEvents.updateRetainedCarrierObjectPass(currentAct);
+        }
+    }
+
     private void installFixedDynamicObjects(int zone) {
         if (!GameServices.hasRuntime() || zone != Sonic3kZoneIds.ZONE_MHZ) {
             return;
@@ -336,7 +343,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         handleBonusStageTopExit();
         // After HCZ seamless transition to Act 2: start the whirlpool descent
         // cutscene that spirals Sonic down into the Act 2 starting area.
-        if (hczPendingPostTransitionCutscene && hczEvents != null) {
+        if (hczPendingPostTransitionCutscene && hczEvents != null
+                && !GameServices.gameState().isEndOfLevelActive()
+                && GameServices.module().getTitleCardProvider().ownsInLevelPlayerControlLock()
+                && !GameServices.module().getTitleCardProvider().isOverlayActive()) {
             hczPendingPostTransitionCutscene = false;
             hczEvents.startPostTransitionCutscene();
         }

@@ -193,6 +193,33 @@ class TestSidekickCpuControllerFlightAutoRecovery {
     }
 
     @Test
+    void flightTimerCarriesIntoNormalRespawnCounterWord() {
+        TestableSprite sonic = sonicAt(0x1000, 0x0400);
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1000);
+        tails.setCentreY((short) 0x0400);
+        tails.setAir(true);
+        tails.setRenderFlagOnScreen(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, 0);
+
+        controller.update(10);
+
+        assertSame(SidekickCpuController.State.NORMAL, controller.getState());
+        assertEquals(1, controller.getDiagnosticRespawnCounter(),
+                "Routine 4 to 6 preserves the shared Tails_CPU_flight_timer word");
+
+        tails.setRenderFlagOnScreen(false);
+        controller.update(11);
+
+        assertEquals(2, controller.getDiagnosticRespawnCounter(),
+                "Routine 6 continues incrementing that same shared word off-screen");
+    }
+
+    @Test
     void flightTransitionUsesDelayedStatTableInsteadOfLiveObjectControl() {
         TestableSprite sonic = sonicAt(0x1000, 0x0400);
         sonic.setObjectControlled(true);

@@ -24,6 +24,38 @@ public interface TitleCardProvider {
     }
 
     /**
+     * Defers a fresh level-gamestate install to the native in-level title-card
+     * display boundary. Games without that handoff can ignore the request.
+     */
+    default void requestLevelGamestateResetAtInLevelDisplay() {
+        // No-op for games without S3K's in-level act-title handoff.
+    }
+
+    default void requestLevelGamestateResetAtInLevelDisplay(int additionalDispatches) {
+        requestLevelGamestateResetAtInLevelDisplay();
+    }
+
+    default void requestInLevelPlayerControlLock() {
+        // No-op unless an in-level title card owns the native controller lock.
+    }
+
+    default boolean ownsInLevelPlayerControlLock() {
+        return false;
+    }
+
+    default boolean shouldLockPlayerControlForInLevelOverlay() {
+        return false;
+    }
+
+    /** Releases an in-level lock after its ROM object owner takes over. */
+    default void releaseInLevelPlayerControlLockOwnership() {
+    }
+
+    default void requestInLevelExitAdditionalDispatches(int dispatches) {
+        // No-op unless the title card models SST child retirement dispatches.
+    }
+
+    /**
      * Initializes the title card for a bonus stage entry.
      * S3K shows "BONUS STAGE" text; S1/S2 have no bonus stages so this is a no-op.
      */

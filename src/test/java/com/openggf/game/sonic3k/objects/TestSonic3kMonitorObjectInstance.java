@@ -164,6 +164,7 @@ class TestSonic3kMonitorObjectInstance {
 
         monitor.setPlayerPushing(player, true);
         monitor.onTouchResponse(player, TOUCH_RESULT, 1);
+        monitor.update(1, player);
 
         assertTrue(player.getAir(),
                 "Obj_MonitorBreak sets Status_InAir when the monitor still has p1_pushing set");
@@ -188,6 +189,7 @@ class TestSonic3kMonitorObjectInstance {
         monitor.onSolidContact(tails, new SolidContact(true, false, false, true, false), 125);
         monitor.onSolidContactCleared(tails, 125);
         monitor.onTouchResponse(sonic, TOUCH_RESULT, 125);
+        monitor.update(125, sonic);
 
         assertTrue(tails.getAir(),
                 "Obj_MonitorBreak must still see a same-frame P2 standing contact when Sonic breaks the shell");
@@ -215,6 +217,7 @@ class TestSonic3kMonitorObjectInstance {
         sonic.setYSpeed((short) 0x05A0);
 
         monitor.onTouchResponse(sonic, TOUCH_RESULT, 125);
+        monitor.update(125, sonic);
 
         assertTrue(tails.getAir(),
                 "S3K Monitor_ChkOverEdge keeps the P2 standing bit through the exact right edge before break release");
@@ -223,7 +226,7 @@ class TestSonic3kMonitorObjectInstance {
     }
 
     @Test
-    void drySidekickMonitorReleaseSuppressesNextGravityStep() {
+    void drySidekickMonitorReleaseLeavesNextGravityStepEnabled() {
         DummyPlayer tails = new DummyPlayer();
         tails.setCpuControlled(true);
         tails.setAir(false);
@@ -241,11 +244,12 @@ class TestSonic3kMonitorObjectInstance {
         tails.setCentreY((short) 0x03F0);
 
         monitor.onTouchResponse(sonic, TOUCH_RESULT, 125);
+        monitor.update(125, sonic);
 
         assertTrue(tails.getAir(),
                 "Obj_MonitorBreak releases P2 by setting Status_InAir");
-        assertTrue(tails.consumeSuppressNextGravityStep(),
-                "Dry Obj_MonitorBreak release skips the same-frame gravity step observed at HCZ frame 125");
+        assertFalse(tails.consumeSuppressNextGravityStep(),
+                "Obj_MonitorBreak runs after the player slot, so gravity belongs to the following frame");
     }
 
     @Test
@@ -268,6 +272,7 @@ class TestSonic3kMonitorObjectInstance {
         tails.setCentreY((short) 0x03F0);
 
         monitor.onTouchResponse(sonic, TOUCH_RESULT, 125);
+        monitor.update(125, sonic);
 
         assertTrue(tails.getAir(),
                 "Obj_MonitorBreak releases underwater P2 by setting Status_InAir");

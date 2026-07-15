@@ -341,6 +341,7 @@ public record PerObjectRewindSnapshot(
             int catchUpFrameCounterOverride,
             int lastNormalAutoJumpPressFrameCounter,
             boolean controller2SignedLocked,
+            boolean nativeEndingPosePending,
             com.openggf.sprites.playable.SidekickCpuController.NormalStepDiagnostics latestNormalStepDiagnostics,
             short carryLatchX,
             short carryLatchY,

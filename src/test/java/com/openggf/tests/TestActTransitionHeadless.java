@@ -98,6 +98,23 @@ public class TestActTransitionHeadless {
     }
 
     @Test
+    public void executeActTransitionCanPreserveEndOfLevelGlobals() throws Exception {
+        GameServices.gameState().setEndOfLevelActive(true);
+        GameServices.gameState().setEndOfLevelFlag(true);
+
+        SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest
+                .builder(TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(ZONE_EHZ, ACT_2)
+                .preserveEndOfLevelState(true)
+                .build();
+
+        GameServices.level().executeActTransition(request);
+
+        assertTrue(GameServices.gameState().isEndOfLevelActive());
+        assertTrue(GameServices.gameState().isEndOfLevelFlag());
+    }
+
+    @Test
     public void executeActTransitionSpawnListIsNotStaleReference() throws Exception {
         LevelManager lm = GameServices.level();
 
@@ -312,6 +329,5 @@ public class TestActTransitionHeadless {
                 "when camera is at X=5000");
     }
 }
-
 
 

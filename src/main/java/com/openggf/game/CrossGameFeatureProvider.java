@@ -260,6 +260,16 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
     }
 
     /**
+     * Loads the donor's native underwater character palette when available.
+     */
+    public Palette loadUnderwaterCharacterPalette(String characterCode) {
+        if (donorProvider == null || donorReader == null) {
+            return null;
+        }
+        return donorProvider.loadUnderwaterCharacterPalette(donorReader, characterCode);
+    }
+
+    /**
      * Returns a palette compatible with the HOST game's palette line 0 layout,
      * but with the donor character's colors. For Knuckles donated from S3K into S2,
      * this returns the S2-compatible Knuckles palette (0x060BEA) which has Knuckles'
@@ -287,6 +297,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         if (charPalette != null) {
             donorRenderContext.setPalette(0, charPalette);
         }
+        donorRenderContext.setUnderwaterPalette(0, loadUnderwaterCharacterPalette(characterCode));
     }
 
     /**

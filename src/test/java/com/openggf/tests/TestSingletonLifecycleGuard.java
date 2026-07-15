@@ -74,7 +74,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectPresentation.java#configureEngineServices
             src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectProfile.java#configureEngineServices
             src/test/java/com/openggf/game/sonic3k/events/TestSonic3kAIZEvents.java#setUp
-            src/test/java/com/openggf/game/sonic3k/events/TestSonic3kHCZEvents.java#setUp
             src/test/java/com/openggf/game/sonic3k/events/TestSonic3kMgz2BgRiseEvents.java#setUp
             src/test/java/com/openggf/game/sonic3k/events/TestSonic3kMgz2ChunkEvents.java#setUp
             src/test/java/com/openggf/game/sonic3k/events/TestSonic3kMgz2CollapseEvents.java#setUp

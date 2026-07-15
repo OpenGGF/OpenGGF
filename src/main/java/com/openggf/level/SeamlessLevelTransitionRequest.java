@@ -18,7 +18,12 @@ public final class SeamlessLevelTransitionRequest {
     private final boolean deactivateLevelNow;
     private final boolean preserveMusic;
     private final boolean preserveLevelGamestate;
+    private final boolean preserveEndOfLevelState;
     private final boolean showInLevelTitleCard;
+    private final boolean resetLevelGamestateAtInLevelTitleCardDisplay;
+    private final int inLevelTitleCardResetAdditionalDispatches;
+    private final boolean lockPlayerControlForInLevelTitleCard;
+    private final int inLevelTitleCardExitAdditionalDispatches;
     private final boolean forceAirOnStaleObjectSupportLoss;
     private final boolean preserveOffsetCameraPosition;
     private final Integer postTransitionMinX;
@@ -40,7 +45,15 @@ public final class SeamlessLevelTransitionRequest {
         this.deactivateLevelNow = builder.deactivateLevelNow;
         this.preserveMusic = builder.preserveMusic;
         this.preserveLevelGamestate = builder.preserveLevelGamestate;
+        this.preserveEndOfLevelState = builder.preserveEndOfLevelState;
         this.showInLevelTitleCard = builder.showInLevelTitleCard;
+        this.resetLevelGamestateAtInLevelTitleCardDisplay =
+                builder.resetLevelGamestateAtInLevelTitleCardDisplay;
+        this.inLevelTitleCardResetAdditionalDispatches =
+                builder.inLevelTitleCardResetAdditionalDispatches;
+        this.lockPlayerControlForInLevelTitleCard = builder.lockPlayerControlForInLevelTitleCard;
+        this.inLevelTitleCardExitAdditionalDispatches =
+                builder.inLevelTitleCardExitAdditionalDispatches;
         this.forceAirOnStaleObjectSupportLoss = builder.forceAirOnStaleObjectSupportLoss;
         this.preserveOffsetCameraPosition = builder.preserveOffsetCameraPosition;
         this.postTransitionMinX = builder.postTransitionMinX;
@@ -80,8 +93,28 @@ public final class SeamlessLevelTransitionRequest {
         return preserveLevelGamestate;
     }
 
+    public boolean preserveEndOfLevelState() {
+        return preserveEndOfLevelState;
+    }
+
     public boolean showInLevelTitleCard() {
         return showInLevelTitleCard;
+    }
+
+    public boolean resetLevelGamestateAtInLevelTitleCardDisplay() {
+        return resetLevelGamestateAtInLevelTitleCardDisplay;
+    }
+
+    public int inLevelTitleCardResetAdditionalDispatches() {
+        return inLevelTitleCardResetAdditionalDispatches;
+    }
+
+    public boolean lockPlayerControlForInLevelTitleCard() {
+        return lockPlayerControlForInLevelTitleCard;
+    }
+
+    public int inLevelTitleCardExitAdditionalDispatches() {
+        return inLevelTitleCardExitAdditionalDispatches;
     }
 
     public boolean forceAirOnStaleObjectSupportLoss() {
@@ -148,7 +181,12 @@ public final class SeamlessLevelTransitionRequest {
         private boolean deactivateLevelNow;
         private boolean preserveMusic = true;
         private boolean preserveLevelGamestate;
+        private boolean preserveEndOfLevelState;
         private boolean showInLevelTitleCard;
+        private boolean resetLevelGamestateAtInLevelTitleCardDisplay;
+        private int inLevelTitleCardResetAdditionalDispatches;
+        private boolean lockPlayerControlForInLevelTitleCard;
+        private int inLevelTitleCardExitAdditionalDispatches;
         private boolean forceAirOnStaleObjectSupportLoss;
         private boolean preserveOffsetCameraPosition;
         private Integer postTransitionMinX;
@@ -188,8 +226,38 @@ public final class SeamlessLevelTransitionRequest {
             return this;
         }
 
+        /**
+         * Keeps the ROM end-of-level globals alive across an in-place
+         * {@code Load_Level}. Use this when the results/end-sign objects span
+         * the resource reload and still own those globals afterward.
+         */
+        public Builder preserveEndOfLevelState(boolean preserveEndOfLevelState) {
+            this.preserveEndOfLevelState = preserveEndOfLevelState;
+            return this;
+        }
+
         public Builder showInLevelTitleCard(boolean showInLevelTitleCard) {
             this.showInLevelTitleCard = showInLevelTitleCard;
+            return this;
+        }
+
+        public Builder resetLevelGamestateAtInLevelTitleCardDisplay(boolean reset) {
+            this.resetLevelGamestateAtInLevelTitleCardDisplay = reset;
+            return this;
+        }
+
+        public Builder inLevelTitleCardResetAdditionalDispatches(int dispatches) {
+            this.inLevelTitleCardResetAdditionalDispatches = Math.max(0, dispatches);
+            return this;
+        }
+
+        public Builder lockPlayerControlForInLevelTitleCard(boolean lock) {
+            this.lockPlayerControlForInLevelTitleCard = lock;
+            return this;
+        }
+
+        public Builder inLevelTitleCardExitAdditionalDispatches(int dispatches) {
+            this.inLevelTitleCardExitAdditionalDispatches = Math.max(0, dispatches);
             return this;
         }
 

@@ -667,6 +667,24 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
     }
 
     /**
+     * Sets the ROM {@code _unkFAA2} dynamic-water lock for a loaded zone/act.
+     * While locked, the per-zone handler cannot replace the retained target;
+     * callers may still install an explicit current/target level as the ROM's
+     * transition routines do.
+     */
+    public void setDynamicWaterLocked(int zoneId, int actId, boolean locked) {
+        DynamicWaterState state = dynamicWaterStates.get(makeKey(zoneId, actId));
+        if (state != null) {
+            state.setLocked(locked);
+        }
+    }
+
+    public boolean isDynamicWaterLocked(int zoneId, int actId) {
+        DynamicWaterState state = dynamicWaterStates.get(makeKey(zoneId, actId));
+        return state != null && state.isLocked();
+    }
+
+    /**
      * Returns the dynamic water handler for a level, if one is active.
      *
      * <p>This is used by object/event bridges that need to set handler-owned ROM

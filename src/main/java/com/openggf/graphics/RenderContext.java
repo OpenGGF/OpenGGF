@@ -93,6 +93,34 @@ public class RenderContext {
     }
 
     /**
+     * Returns the normal palette assigned to an expanded palette-texture row.
+     * Covers both shared donor contexts and per-sidekick contexts so every
+     * cross-game sprite can receive a derived underwater row.
+     */
+    public static Collection<RenderContext> getSidekickContexts() {
+        return Collections.unmodifiableList(sidekickContexts);
+    }
+
+    /** Returns a donor-supplied native underwater palette for an expanded row. */
+    public static PaletteView getUnderwaterPaletteForEffectiveLine(int effectiveLine) {
+        PaletteView palette = getUnderwaterPaletteForEffectiveLine(donorContexts.values(), effectiveLine);
+        return palette != null
+                ? palette
+                : getUnderwaterPaletteForEffectiveLine(sidekickContexts, effectiveLine);
+    }
+
+    private static PaletteView getUnderwaterPaletteForEffectiveLine(
+            Collection<RenderContext> contexts, int effectiveLine) {
+        for (RenderContext ctx : contexts) {
+            int logicalLine = effectiveLine - ctx.paletteLineBase;
+            if (logicalLine >= 0 && logicalLine < LINES_PER_CONTEXT) {
+                return ctx.underwaterPalettes[logicalLine];
+            }
+        }
+        return null;
+    }
+
+    /**
      * Derives an underwater palette for a donor sprite by applying the base
      * game's average normal-to-underwater color shift to each donor color.
      *
@@ -185,6 +213,7 @@ public class RenderContext {
     private final GameId gameId;
     private final int paletteLineBase;
     private final Palette[] palettes = new Palette[LINES_PER_CONTEXT];
+    private final PaletteView[] underwaterPalettes = new PaletteView[LINES_PER_CONTEXT];
 
     private RenderContext(GameId gameId, int paletteLineBase) {
         this.gameId = gameId;
@@ -213,5 +242,13 @@ public class RenderContext {
 
     public Palette getPalette(int line) {
         return palettes[line];
+    }
+
+    public void setUnderwaterPalette(int line, PaletteView palette) {
+        underwaterPalettes[line] = palette;
+    }
+
+    public PaletteView getUnderwaterPalette(int line) {
+        return underwaterPalettes[line];
     }
 }

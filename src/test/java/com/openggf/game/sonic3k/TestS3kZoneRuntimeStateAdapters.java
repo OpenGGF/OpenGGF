@@ -98,6 +98,32 @@ class TestS3kZoneRuntimeStateAdapters {
     }
 
     @Test
+    void hczAdapterExposesBackgroundPlaneWindowInAllAct2BgStates() {
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents();
+        events.init(1);
+        HczZoneRuntimeState state = new HczZoneRuntimeState(
+                1, PlayerCharacter.SONIC_AND_TAILS, events);
+
+        // ROM keeps Plane B a 512px VDP window through every act-2 BG state:
+        // DrawBGAsYouMove during the wall chase, Draw_PlaneVert* afterwards.
+        for (int routine : new int[]{0, 4, 8, 0xC, 0x10}) {
+            events.setAct2BgRoutine(routine);
+            assertTrue(state.backgroundPlaneWindowActive(),
+                    "window must stay active in act-2 BG routine 0x" + Integer.toHexString(routine));
+        }
+    }
+
+    @Test
+    void hczAdapterReportsNoBackgroundPlaneWindowInAct1() {
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents();
+        events.init(0);
+        HczZoneRuntimeState state = new HczZoneRuntimeState(
+                0, PlayerCharacter.SONIC_AND_TAILS, events);
+
+        assertFalse(state.backgroundPlaneWindowActive());
+    }
+
+    @Test
     void cnzAdapterCarriesPlayerCharacterAndBossBackgroundMode() {
         Sonic3kCNZEvents events = new Sonic3kCNZEvents();
         events.init(0);

@@ -121,13 +121,52 @@ public final class HCZWaterSkimHandler {
         }
     }
 
+    /** Advances the object-local counter once before the playable slots run. */
+    public static void beginFrame() {
+        frameCounter++;
+    }
+
     /**
-     * Main per-frame update. Called from zone feature provider's pre-physics hook.
-     * Processes both P1 and P2 skim state.
+     * Compatibility update path for callers that do not have per-player post-physics hooks.
      */
     public static void update() {
-        frameCounter++;
+        beginFrame();
         update(playerQueryFromGameServices(), getWaterLevel(), frameCounter);
+    }
+
+    /** Runs the skim routine for one player at ROM post-player timing. */
+    public static void updateAfterPlayablePhysics(AbstractPlayableSprite player) {
+        if (player == null || player.getDead() || player.isDebugMode()) {
+            return;
+        }
+        ObjectPlayerQuery query = playerQueryFromGameServices();
+        int waterLevel = getWaterLevel();
+        if (waterLevel == 0) {
+            return;
+        }
+        List<PlayableEntity> participants = query.playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        hydratePendingExtensionStates(participants);
+        lastParticipants = List.copyOf(participants);
+        if (player == query.mainPlayerOrNull()) {
+            skimActiveP1 = processSkimPhysics(player, skimActiveP1, waterLevel, frameCounter, 0, null, false);
+            return;
+        }
+        AbstractPlayableSprite nativeP2 = nativeP2From(query);
+        bindNativeP2(nativeP2);
+        if (player == nativeP2) {
+            skimActiveP2 = processSkimPhysics(player, skimActiveP2, waterLevel, frameCounter, 1, null, false);
+            return;
+        }
+        for (int index = 2; index < participants.size(); index++) {
+            if (participants.get(index) == player) {
+                ExtensionSkimState state = extensionStates.computeIfAbsent(player,
+                        ignored -> new ExtensionSkimState());
+                state.active = processSkimPhysics(player, state.active, waterLevel, frameCounter,
+                        index, state, false);
+                return;
+            }
+        }
     }
 
     static void update(ObjectPlayerQuery query, int waterLevel, int frameCounter) {
@@ -152,14 +191,14 @@ public final class HCZWaterSkimHandler {
         hydratePendingExtensionStates(participants);
 
         if (!player.getDead() && !player.isDebugMode()) {
-            skimActiveP1 = processSkimPhysics(player, skimActiveP1, waterLevel, frameCounter, 0, null);
+            skimActiveP1 = processSkimPhysics(player, skimActiveP1, waterLevel, frameCounter, 0, null, true);
         }
 
         AbstractPlayableSprite p2 = nativeP2From(query);
         bindNativeP2(p2);
         if (p2 != null) {
             if (!p2.getDead() && !p2.isDebugMode()) {
-                skimActiveP2 = processSkimPhysics(p2, skimActiveP2, waterLevel, frameCounter, 1, null);
+                skimActiveP2 = processSkimPhysics(p2, skimActiveP2, waterLevel, frameCounter, 1, null, true);
             } else if (skimActiveP2) {
                 skimActiveP2 = false;
                 splashAnimFrameP2 = SPLASH_EXIT_FRAME;
@@ -176,7 +215,7 @@ public final class HCZWaterSkimHandler {
                     participant, ignored -> new ExtensionSkimState());
             if (!extension.getDead() && !extension.isDebugMode()) {
                 state.active = processSkimPhysics(
-                        extension, state.active, waterLevel, frameCounter, index, state);
+                        extension, state.active, waterLevel, frameCounter, index, state, true);
             } else if (state.active) {
                 state.active = false;
                 state.splashFrame = SPLASH_EXIT_FRAME;
@@ -201,7 +240,8 @@ public final class HCZWaterSkimHandler {
                                                int waterLevel,
                                                int frameCounter,
                                                int playerIndex,
-                                               ExtensionSkimState extensionState) {
+                                               ExtensionSkimState extensionState,
+                                               boolean suppressSameFrameGravity) {
         if (!wasActive) {
             // === Activation check (sonic3k.asm:75393-75421) ===
             // Condition 1: y_vel must be zero
@@ -266,27 +306,23 @@ public final class HCZWaterSkimHandler {
         // i.e. terrain raised the player above the water surface (e.g. running into a curve).
         // Using unsigned comparison to match ROM's bhi (branch if higher, unsigned).
         if (Integer.compareUnsigned(pinnedY, player.getCentreY()) > 0) {
-            return exitBySpeedLoss(player, playerIndex, extensionState);
+            return exitBySpeedLoss(player, playerIndex, extensionState, suppressSameFrameGravity);
         }
 
         // Check speed threshold — exit if too slow
         // ROM: cmpi.w #$700,d1 / blo.s loc_38646 (sonic3k.asm:75440-75441)
         int absXSpeed = Math.abs(player.getXSpeed());
         if (absXSpeed < SPEED_THRESHOLD) {
-            return exitBySpeedLoss(player, playerIndex, extensionState);
+            return exitBySpeedLoss(player, playerIndex, extensionState, suppressSameFrameGravity);
         }
 
         // NOW pin player Y to water surface (only if still skimming)
         // ROM: move.w d0,y_pos(a1) / move.w #0,y_vel(a1) (sonic3k.asm:75442-75443)
         NativePositionOps.writeYPosPreserveSubpixel(player, pinnedY);
         player.setYSpeed((short) 0);
-        if (player.getAir()) {
-            // Obj_HCZWaterSplash runs in object order after the player
-            // dispatcher; the engine hook runs pre-physics. Suppress the
-            // generic airborne gravity tick that the ROM has already passed.
+        if (suppressSameFrameGravity && player.getAir()) {
             player.suppressNextGravityStep();
         }
-
         // Apply friction when airborne and no directional input
         // ROM: btst #Status_InAir,status(a1) / andi.w #(left|right)<<8,d5
         if (player.getAir() && !player.isLeftPressed() && !player.isRightPressed()) {
@@ -294,7 +330,7 @@ public final class HCZWaterSkimHandler {
             // ROM: move.w x_vel(a1),d0 / beq.s loc_38646 (sonic3k.asm:75452)
             // If friction reduced x_vel to zero, exit skim immediately
             if (player.getXSpeed() == 0) {
-                return exitBySpeedLoss(player, playerIndex, extensionState);
+                return exitBySpeedLoss(player, playerIndex, extensionState, suppressSameFrameGravity);
             }
         }
 
@@ -332,6 +368,7 @@ public final class HCZWaterSkimHandler {
      */
     private static boolean exitWithJump(AbstractPlayableSprite player, int playerIndex,
                                         ExtensionSkimState extensionState) {
+        int centreY = player.getCentreY();
         player.setYSpeed(JUMP_EXIT_Y_VEL);
         player.setAir(true);
         player.setJumping(true);
@@ -339,6 +376,7 @@ public final class HCZWaterSkimHandler {
         player.applyRollingRadii(false);
         player.setAnimationId(Sonic3kAnimationIds.ROLL);
         player.setRolling(true);
+        NativePositionOps.writeYPosPreserveSubpixel(player, centreY);
 
         if (extensionState != null) {
             extensionState.splashFrame = SPLASH_EXIT_FRAME;
@@ -357,7 +395,8 @@ public final class HCZWaterSkimHandler {
      * ROM: loc_38646 (sonic3k.asm:75473-75476).
      */
     private static boolean exitBySpeedLoss(AbstractPlayableSprite player, int playerIndex,
-                                           ExtensionSkimState extensionState) {
+                                           ExtensionSkimState extensionState,
+                                           boolean suppressSameFrameGravity) {
         if (extensionState != null) {
             extensionState.splashFrame = SPLASH_EXIT_FRAME;
         } else if (playerIndex == 0) {
@@ -366,10 +405,7 @@ public final class HCZWaterSkimHandler {
             splashAnimFrameP2 = SPLASH_EXIT_FRAME;
         }
 
-        if (player.getAir()) {
-            // loc_38646 clears the splash object's active bit after the player
-            // routine for the frame (sonic3k.asm:75473-75476), so an airborne
-            // speed/terrain exit must not receive a same-frame gravity step.
+        if (suppressSameFrameGravity && player.getAir()) {
             player.suppressNextGravityStep();
         }
         player.setWaterSkimActive(false);

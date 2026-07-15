@@ -1,5 +1,6 @@
 package com.openggf.tests.game;
 
+import com.openggf.game.rules.AirCollisionRules;
 import com.openggf.game.rules.CameraRules;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.DrowningBubbleRules;
@@ -46,6 +47,7 @@ class TestPerGameRuleArchitectureGuard {
             PlayerMovementRules.class,
             PlayerCapabilityRules.class,
             CollisionRules.class,
+            AirCollisionRules.class,
             PlayerAnimationRules.class,
             CameraRules.class,
             RingRules.class,

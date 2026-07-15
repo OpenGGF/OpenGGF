@@ -113,10 +113,7 @@ class TestRemainingRewindTailInventory {
         assertEquals(0, buckets.get(Bucket.COUNT_MISMATCH).size(), "count-mismatch inventory count");
         assertEquals(0, buckets.get(Bucket.SCALAR_MISMATCH).size(), "scalar-mismatch inventory count");
 
-        // July 2026 merge audit: AizAct2CameraResizeController and
-        // ScreenShakeTimerSlotObjectInstance are intentional slot-owning objects. Both expose
-        // generic recreate paths and pass the round-trip probe; the non-passing tail stays empty.
-        return new TailInventory(838, 662, 176, 0, buckets);
+        return new TailInventory(842, 664, 178, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {
