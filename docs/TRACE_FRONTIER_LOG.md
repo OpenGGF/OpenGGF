@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ follow-nudge frontier advances to frame 9259
+
+Branch `feature/ai-trace-animation-verification`, after the frame-8799
+execution-classification milestone. S3K `TailsCPU_Normal` applies its literal
+`-1 x_pos` follow nudge whenever Tails is moving left, facing left, and the
+current `Status_Push` bit is clear, including while he remains supported by an
+ordinary `SolidObjectFull` platform. At MGZ frame 8799, native Tails rides the
+vertical trigger platform with a clear push bit; the nudge moves the predicted
+`CalcRoomInFront` probe one pixel into terrain, so the `$FFFF` result changes
+`x_vel` from `-$18` to `+$E8`, zeros `ground_vel`, and sets `Status_Push` before
+movement returns him to the recorded position. Replay was suppressing that
+nudge solely because a generic push-grace counter remained live while any
+object ride existed. Nudge suppression now requires a ROM-visible object-order
+context, leader support, or an object provider that explicitly preserves the
+riding push grace. No route, zone, frame, hydration, or tolerance condition was
+added.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 8799 to frame 9259 (`rings`),
+  while animation advances from frame 8800 to frame 15970
+  (`tails_mapping_frame`).
+- AIZ and HCZ complete-run physics and animation remain green. MGZ standalone
+  remains unchanged at physics frame 1538 and animation frame 1574.
+- The full animation sweep remains 42/58 green routes / 16 established reds.
+  The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ complete-run execution frontier advances to frame 8799
 
 Branch `feature/ai-trace-animation-verification`, after aligning the MGZ

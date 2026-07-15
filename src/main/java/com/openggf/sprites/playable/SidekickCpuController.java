@@ -2298,7 +2298,7 @@ public class SidekickCpuController {
         boolean localGracePushBypassObjectContext = localGracePushBypass
                 && (objectOrderFollowSteeringContext
                 || leaderStatusOnObject
-                || ridingObject != null);
+                || ridingObjectPushGrace);
         boolean suppressLocalGraceFollowNudge =
                 localGracePushBypassObjectContext
                         && normalPushingGraceFrames >= OBJECT_ORDER_PUSH_BRIDGE_MIN_GRACE
