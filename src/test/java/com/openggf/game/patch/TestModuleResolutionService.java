@@ -3,6 +3,11 @@ package com.openggf.game.patch;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.mods.code.BakedLevelRef;
+import com.openggf.mods.code.ModBackedGamePatch;
+import com.openggf.mods.code.ModRegistrationPlan;
+import com.openggf.mods.code.ModZoneContribution;
+import com.openggf.mods.code.PreparedModZone;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -244,6 +249,38 @@ class TestModuleResolutionService {
         assertEquals(Set.of(dependency, dependent, transitive), context.failedOwners());
         assertEquals(Set.of(dependency, dependent, transitive), result.ownerFailures().keySet());
         assertInstanceOf(IllegalStateException.class, context.failures().get(dependency));
+    }
+
+    @Test
+    void unsupportedZoneHostDisablesOwnerAndDependentsWithoutPublishingZone() {
+        PatchOwner.Mod owner = new PatchOwner.Mod("zone-owner");
+        PatchOwner dependent = new PatchOwner.Mod("dependent");
+        ModZoneContribution declaration = new ModZoneContribution(
+                "sky", new BakedLevelRef("sky/level.json"), null, null);
+        PreparedModZone prepared = new PreparedModZone(
+                "zone-owner", "sky", null, null, null,
+                "SKY", 0x400, 0x40, 0, 0);
+        ModRegistrationPlan plan = new ModRegistrationPlan(
+                "zone-owner", "s1", Map.of(), Map.of(), Map.of(), List.of(),
+                List.of(declaration), List.of(prepared));
+        ModBackedGamePatch backing = new ModBackedGamePatch(plan);
+        List<RegisteredPatch> registrations = new ArrayList<>(
+                ModPatchPlanAssembler.backingFirst(owner, backing, List.of()));
+        registrations.add(new RegisteredPatch(dependent, "dependent:p",
+                stubPatch("dependent", "s1", true), 0));
+        ResolutionContext context = ResolutionContext.forTests(PatchEnablement.ALL_ENABLED,
+                registrations, Map.of(dependent, Set.of(owner)));
+        GameModule base = new com.openggf.game.sonic1.Sonic1GameModule();
+
+        ResolutionResult.Resolved result = (ResolutionResult.Resolved) ModuleResolutionService
+                .forTests(PatchEnablement.ALL_ENABLED)
+                .resolve(context, base, new GameplayLaunchRequest("s1", "sonic", List.of()));
+
+        assertSame(base, result.module());
+        assertEquals(Set.of(owner, dependent), context.failedOwners());
+        assertEquals(Set.of(owner, dependent), result.ownerFailures().keySet());
+        assertTrue(result.module().getZoneRegistry()
+                .resolveZoneKey(com.openggf.game.ZoneKey.mod("zone-owner", "sky")).isEmpty());
     }
 
     @Test

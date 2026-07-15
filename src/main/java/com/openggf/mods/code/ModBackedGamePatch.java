@@ -117,6 +117,8 @@ public final class ModBackedGamePatch implements GamePatch {
             }).toList();
         }
         List<PreparedModZone> publishedZones = resolvedZones;
+        ModZoneDataSelectDecorator dataSelectDecorator =
+                zoneAdapter instanceof ModZoneDataSelectDecorator decorator ? decorator : null;
         List<ModObjectKeyRegistry.Registration> registrations = plan.objectFactories().entrySet().stream()
                 .map(entry -> new ModObjectKeyRegistry.Registration(
                         plan.ownerModId(), entry.getKey(), entry.getValue()))
@@ -221,9 +223,11 @@ public final class ModBackedGamePatch implements GamePatch {
             public synchronized com.openggf.game.dataselect.DataSelectHostProfile getDataSelectHostProfile() {
                 if (plan.preparedZones().isEmpty()) return super.getDataSelectHostProfile();
                 if (dataSelectHost == null) {
-                    dataSelectHost = new com.openggf.game.sonic2.dataselect.S2DataSelectProfile(
-                            this::getZoneRegistry, finding -> saveFindingSink.accept(
-                                    finding.ownerModId() == null ? "s2-save" : finding.ownerModId(), finding));
+                    com.openggf.game.dataselect.DataSelectHostProfile inherited =
+                            super.getDataSelectHostProfile();
+                    dataSelectHost = dataSelectDecorator == null ? inherited
+                            : dataSelectDecorator.decorateHostProfile(
+                                    inherited, this::getZoneRegistry, saveFindingSink);
                 }
                 return dataSelectHost;
             }
@@ -233,9 +237,11 @@ public final class ModBackedGamePatch implements GamePatch {
                     getDataSelectPresentationProvider() {
                 if (plan.preparedZones().isEmpty()) return super.getDataSelectPresentationProvider();
                 if (dataSelectPresentation == null) {
-                    dataSelectPresentation = com.openggf.game.dataselect.CrossGameDataSelectPresentations
-                            .donated(com.openggf.game.dataselect.CrossGameDataSelectPresentations.DONOR_S3K,
-                                    getDataSelectHostProfile());
+                    com.openggf.game.dataselect.DataSelectPresentationProvider inherited =
+                            super.getDataSelectPresentationProvider();
+                    dataSelectPresentation = dataSelectDecorator == null ? inherited
+                            : dataSelectDecorator.decoratePresentationProvider(
+                                    inherited, getDataSelectHostProfile());
                 }
                 return dataSelectPresentation;
             }

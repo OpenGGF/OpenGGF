@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.Sonic3kModZoneAdapter;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -12,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class TestS3kModZoneAdapter {
 
@@ -58,8 +60,11 @@ class TestS3kModZoneAdapter {
         Object previous = config.getConfigValue(
                 com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE);
         try (var rom = new com.openggf.data.Rom()) {
-            org.junit.jupiter.api.Assertions.assertTrue(rom.open("s3k.gen"),
-                    "Task 5 S3K adapter test requires s3k.gen");
+            File romFile = com.openggf.tests.RomTestUtils.ensureSonic3kRomAvailable();
+            assumeTrue(romFile != null,
+                    "Task 5 S3K adapter test requires a configured S3K ROM");
+            assumeTrue(rom.open(romFile.getPath()),
+                    "Configured S3K ROM must be readable");
             config.setConfigValue(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE,
                     "knuckles");
             var module = new com.openggf.game.sonic3k.Sonic3kGameModule();

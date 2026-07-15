@@ -5,6 +5,9 @@ import com.openggf.game.MusicReference;
 import com.openggf.game.ZoneProgressionPlan;
 import com.openggf.game.ZoneRegistry;
 import com.openggf.game.GameModule;
+import com.openggf.game.dataselect.DataSelectDestination;
+import com.openggf.game.save.SelectedTeam;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.LevelDescriptor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -172,11 +175,12 @@ class TestModZoneLoader {
 
         ZoneRegistry decorated = ModZoneRegistry.decorate(stock, List.of(anchorless));
         int custom = decorated.resolveZoneKey(ZoneKey.mod("alpha", "sky")).orElseThrow();
-        ZoneProgressionPlan.ProgressionResult next = decorated.progressionPlan().next(
-                decorated.progressionTopology(), 1, 0);
+        ZoneProgressionPlan.ProgressionResult terminal = decorated.progressionPlan().next(
+                decorated.progressionTopology(), stock.getZoneCount() - 1, 0);
 
-        assertNotEquals(new ZoneProgressionPlan.Successor(custom, 0), next);
+        assertEquals(ZoneProgressionPlan.Credits.INSTANCE, terminal);
         assertEquals(stock.getZoneCount(), custom);
+        assertEquals(ZoneKey.mod("alpha", "sky"), decorated.zoneKey(custom));
         assertTrue(com.openggf.mods.StockProgressionAnchors.anchorsFor("s3k").isEmpty());
     }
 
@@ -396,6 +400,39 @@ class TestModZoneLoader {
                 betaOnly.getDataSelectHostProfile().resolveSlotPreview(taggedPayload("beta", "b")));
     }
 
+    @Test
+    void s3kZonePatchPreservesNativeDataSelectProfileAndPresentation() {
+        GameModule base = new com.openggf.game.sonic3k.Sonic3kGameModule();
+        var inheritedPresentation = base.getDataSelectPresentationProvider();
+        GameModule resolved = new ModBackedGamePatch(s3kZonePlan("alpha", "sky"))
+                .apply(base, patchContext());
+        Map<String, Object> clearPayload = Map.of(
+                "zone", Sonic3kZoneIds.ZONE_DEZ,
+                "act", 0,
+                "mainCharacter", "sonic",
+                "sidekicks", List.of("tails"),
+                "chaosEmeralds", List.of(0, 2, 4),
+                "clear", true,
+                "progressCode", 13,
+                "clearState", 1);
+
+        assertEquals("s3k", resolved.getGameCode());
+        assertEquals("s3k", resolved.getDataSelectHostProfile().gameCode());
+        assertSame(base.getDataSelectHostProfile(), resolved.getDataSelectHostProfile());
+        assertTrue(resolved.getDataSelectHostProfile().builtInTeams()
+                .contains(new SelectedTeam("tails", List.of())));
+        assertEquals(base.getDataSelectHostProfile().clearRestartDestinations(clearPayload),
+                resolved.getDataSelectHostProfile().clearRestartDestinations(clearPayload));
+        assertEquals(List.of(
+                        new DataSelectDestination(Sonic3kZoneIds.ZONE_AIZ, 0),
+                        new DataSelectDestination(Sonic3kZoneIds.ZONE_HCZ, 0)),
+                resolved.getDataSelectHostProfile().clearRestartDestinations(clearPayload)
+                        .subList(0, 2));
+        assertSame(inheritedPresentation, resolved.getDataSelectPresentationProvider());
+        assertSame(resolved.getDataSelectHostProfile(),
+                resolved.getDataSelectPresentationProvider().controller().hostProfile());
+    }
+
     private static Map<String, Object> taggedPayload(String owner, String local) {
         java.util.LinkedHashMap<String, Object> payload = new java.util.LinkedHashMap<>();
         com.openggf.game.sonic2.dataselect.S2SavedZone.write(payload, ZoneKey.mod(owner, local));
@@ -417,6 +454,16 @@ class TestModZoneLoader {
                 local, new BakedLevelRef(local + "/level.json"), "mtz3", null);
         PreparedModZone prepared = PreparedModZone.prepared(owner, declared, definition);
         return new ModRegistrationPlan(owner, "s2", Map.of(), Map.of(), Map.of(), List.of(),
+                List.of(declared), List.of(prepared));
+    }
+
+    private static ModRegistrationPlan s3kZonePlan(String owner, String local) {
+        ModZoneContribution declared = new ModZoneContribution(
+                local, new BakedLevelRef(local + "/level.json"), null, null);
+        PreparedModZone prepared = PreparedModZone.prepared(owner, declared,
+                TestS3kModZoneAdapter.definition(2, null,
+                        List.of(new ModPaletteClaim(2, 0, 0))));
+        return new ModRegistrationPlan(owner, "s3k", Map.of(), Map.of(), Map.of(), List.of(),
                 List.of(declared), List.of(prepared));
     }
 
