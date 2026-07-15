@@ -34,9 +34,12 @@ class TestSampleModsPackage {
     private static final Path STANDALONE = Path.of("src/test/resources/mods/sample-standalone-src/project");
     private static final Path FLAPPY = Path.of("src/test/resources/mods/sample-flappy-src/project");
     private static final Path PLATFORMER = Path.of("src/test/resources/mods/sample-platformer-src/project");
+    private static final Path ROM_ART_REMIX = Path.of(
+            "src/test/resources/mods/sample-rom-art-remix-src/project");
     private static final Set<String> EXPECTED_IDS = Set.of(
             "openggf-gallery-music-sample", "phase2-reskin", "phase2-sample",
-            "phase3-character", "phase3-standalone", "sample-flappy", "sample-platformer");
+            "phase3-character", "phase3-standalone", "sample-flappy", "sample-platformer",
+            "sample-rom-art-remix");
     private static final Map<String, String> EXPECTED_API_RANGES = Map.of(
             "openggf-gallery-music-sample", ">=2.0.0 <3.0.0",
             "phase2-reskin", ">=2.0.0 <3.0.0",
@@ -44,15 +47,17 @@ class TestSampleModsPackage {
             "phase3-character", ">=2.0.0 <3.0.0",
             "phase3-standalone", ">=2.0.0 <3.0.0",
             "sample-flappy", ">=2.1.0 <3.0.0",
-            "sample-platformer", ">=2.2.0 <3.0.0");
+            "sample-platformer", ">=2.2.0 <3.0.0",
+            "sample-rom-art-remix", ">=2.1.0 <3.0.0");
     private static final Set<String> TRUSTED_CODE_SAMPLES = Set.of(
-            "phase2-sample", "phase3-character", "phase3-standalone", "sample-flappy", "sample-platformer");
+            "phase2-sample", "phase3-character", "phase3-standalone", "sample-flappy",
+            "sample-platformer", "sample-rom-art-remix");
     private static final Set<String> STANDALONE_IDS = Set.of("phase3-standalone", "sample-platformer");
 
     @TempDir Path temp;
 
     @Test
-    void exactlySevenMaintainedSourcesBuildThroughRealPackageAndValidateAsOneRepository() throws Exception {
+    void exactlyEightMaintainedSourcesBuildThroughRealPackageAndValidateAsOneRepository() throws Exception {
         List<Sample> samples = List.of(
                 new Sample("music", this::materializeMusic),
                 new Sample("reskin", this::materializeReskin),
@@ -60,8 +65,9 @@ class TestSampleModsPackage {
                 new Sample("character", this::materializeCharacter),
                 new Sample("standalone", this::materializeStandalone),
                 new Sample("flappy", this::materializeFlappy),
-                new Sample("platformer", this::materializePlatformer));
-        assertEquals(7, samples.size(), "The Phase 4 gallery contract is exactly seven source mods");
+                new Sample("platformer", this::materializePlatformer),
+                new Sample("rom-art-remix", this::materializeRomArtRemix));
+        assertEquals(8, samples.size(), "The maintained gallery contract is exactly eight source mods");
 
         Path repository = temp.resolve("repository");
         Files.createDirectory(repository);
@@ -76,10 +82,10 @@ class TestSampleModsPackage {
         }
 
         var scanned = new DefaultModRepositoryScanner().scan(repository.toAbsolutePath().normalize());
-        assertEquals(7, scanned.size());
+        assertEquals(8, scanned.size());
         var validated = new ModCatalogValidator(repository.toAbsolutePath().normalize(),
                 ModInputLimits.production(), (game, stockId) -> true).validate(scanned);
-        assertEquals(7, validated.entries().size());
+        assertEquals(8, validated.entries().size());
         Set<String> ids = new java.util.LinkedHashSet<>();
         for (var entry : validated.entries()) {
             ModDescriptor descriptor = assertInstanceOf(ModDescriptor.class, entry);
@@ -189,6 +195,15 @@ class TestSampleModsPackage {
                 "--palette", PLATFORMER.resolve("src/main/mod/palette.gpal").toString(),
                 "--music", "sample-platformer:zone-theme",
                 "--out", output.resolve("levels/act1").toString());
+    }
+
+    private void materializeRomArtRemix(Path output) throws Exception {
+        copyTree(ROM_ART_REMIX.resolve("src/main/resources"), output);
+        compileJava(ROM_ART_REMIX.resolve("src/main/java"), output);
+        Path level = materializeLevel(
+                ROM_ART_REMIX.resolve("src/main/mod/level-source"), "rom-art-remix-level");
+        assertCli("convert", "level", "--from-export", level.toString(),
+                "--out", output.resolve("levels/rom-art-gallery").toString());
     }
 
     private Path materializeLevel(Path source, String name) throws Exception {

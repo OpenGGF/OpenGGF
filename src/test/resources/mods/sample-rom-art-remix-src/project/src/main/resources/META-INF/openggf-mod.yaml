@@ -1,0 +1,13 @@
+formatVersion: 1
+id: sample-rom-art-remix
+name: ROM Art Remix
+version: 1.0.0
+authors: [Mod Author]
+description: Minimal bounded Sonic 2 ROM-art intake sample.
+engineApiRange: ">=2.1.0 <3.0.0"
+type: patch
+baseGame: s2
+entrypoint: example.romartremix.RomArtRemixMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}
