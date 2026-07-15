@@ -24,7 +24,9 @@ All notable changes to the OpenGGF project are documented in this file.
   The host replaces only palette line 0 after decoding creator-owned level data,
   preserving lines 1-3 while restoring the shared Sonic/Tails colors used by
   ROM-borrowed object art. Cross-game Knuckles launches retain the existing
-  host-compatible indices 2-5 override.
+  host-compatible indices 2-5 override. The SDK scaffold and maintained Phase 2
+  sample now place creator terrain and object art on line 1 so generated projects
+  remain visible under that host-owned line-0 contract.
 - **Mod API 2.4.0: game-start insertion and destination gameplay policies.** Complete
   zones may declare an exclusive fresh-game destination (last enabled declaration
   wins without changing stock progression), a launch-only required team that never

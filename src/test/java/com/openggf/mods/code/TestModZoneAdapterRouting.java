@@ -5,15 +5,18 @@ import com.openggf.game.modzone.ModZoneLevelData;
 import com.openggf.game.modzone.ModZoneRuntimeProfile;
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.data.Game;
+import com.openggf.data.Rom;
 import com.openggf.game.AbstractStandaloneGameModule;
 import com.openggf.game.GameDataSource;
 import com.openggf.game.GameModule;
 import com.openggf.game.PhysicsProvider;
 import com.openggf.game.ZoneRegistry;
 import com.openggf.game.patch.DelegatingGameModule;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.Sonic2ModZoneAdapter;
 import com.openggf.level.Level;
+import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectPlacementEncoding;
 import com.openggf.level.objects.ObjectRegistry;
@@ -68,6 +71,13 @@ class TestModZoneAdapterRouting {
                 return ringSheet;
             }
         };
+        byte[] romBytes = new byte[Sonic2Constants.SONIC_TAILS_PALETTE_ADDR
+                + Palette.PALETTE_SIZE_IN_ROM];
+        romBytes[Sonic2Constants.SONIC_TAILS_PALETTE_ADDR + 2] = 0x0E;
+        romBytes[Sonic2Constants.SONIC_TAILS_PALETTE_ADDR + 3] = (byte) 0xEE;
+        Rom rom = mock(Rom.class);
+        when(rom.readAllBytes()).thenReturn(romBytes);
+        module.createGame(rom);
         ModLevelDefinition definition = levelDefinition();
 
         Level adapted = module.getModZoneAdapter().load("alpha",
@@ -83,6 +93,10 @@ class TestModZoneAdapterRouting {
         assertEquals(direct.getMap().getWidth(), adapted.getMap().getWidth());
         assertEquals(direct.getMap().getHeight(), adapted.getMap().getHeight());
         assertSame(ringSheet, adapted.getRingSpriteSheet());
+        Palette.Color hostColor = adapted.getPalette(0).getColor(1);
+        assertEquals(255, Byte.toUnsignedInt(hostColor.r));
+        assertEquals(255, Byte.toUnsignedInt(hostColor.g));
+        assertEquals(255, Byte.toUnsignedInt(hostColor.b));
     }
 
     @Test

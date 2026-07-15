@@ -7,11 +7,13 @@ import com.openggf.game.patch.*;
 import com.openggf.game.save.SaveManager;
 import com.openggf.game.session.*;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.dataselect.S2DataSelectProfile;
 import com.openggf.game.sonic2.dataselect.S2SavedZone;
 import com.openggf.io.ModInputLimits;
 import com.openggf.data.RomManager;
 import com.openggf.level.objects.*;
+import com.openggf.level.Palette;
 import com.openggf.mods.*;
 import com.openggf.mods.code.*;
 import com.openggf.tools.HeadlessGameBoot;
@@ -69,8 +71,13 @@ class TestPhase2SampleModIntegration {
             var level=resolved.loadLevelOverride(0x400);assertNotNull(level);assertEquals(1,level.getObjects().size());
             ObjectSpawn spawn=level.getObjects().getFirst();assertEquals("phase2-sample:sample-badnik",spawn.objectKey());
             assertEquals(new MusicReference.Stock(129),resolved.getLevelMusicReference(11,0));
-            assertEquals(15,resolved.getObjectArtProvider().getSheet(
-                    "phase2-sample:sample-badnik").getPatterns()[0].getPixel(1,0));
+            var sampleSheet = resolved.getObjectArtProvider().getSheet(
+                    "phase2-sample:sample-badnik");
+            assertEquals(15, sampleSheet.getPatterns()[0].getPixel(1,0));
+            assertEquals(1, sampleSheet.getPaletteIndex());
+            assertEquals(1, (sampleSheet.getPaletteIndex()
+                    + sampleSheet.getFrame(0).pieces().getFirst().paletteIndex()) & 0x3,
+                    "sample badnik must render on creator-owned line 1");
             assertEquals("phase2-sample:sample-badnik",resolved.createObjectRegistry()
                     .editorPreviewArtKey("phase2-sample:sample-badnik").orElseThrow());
 
@@ -96,11 +103,17 @@ class TestPhase2SampleModIntegration {
                 assertEquals(1,Byte.toUnsignedInt(playable.getMap().getValue(0,0,1)));
                 assertEquals(1,playable.getBlock(1).getChunkDesc(0,0).getChunkIndex());
                 assertEquals(1,playable.getChunk(1).getSolidTileIndex());
+                assertEquals(1, playable.getChunk(1).getPatternDesc(0, 0).getPaletteIndex());
                 assertEquals(16,Byte.toUnsignedInt(playable.getSolidTile(1).getHeightAt((byte) 0)));
-                var terrainColor=playable.getPalette(0).getColor(1);
+                Palette expectedCharacter = new Palette();
+                expectedCharacter.fromSegaFormat(rom.readBytes(
+                        Sonic2Constants.SONIC_TAILS_PALETTE_ADDR, Palette.PALETTE_SIZE_IN_ROM));
+                assertTrue(expectedCharacter.dataEquals(playable.getPalette(0)),
+                        "host-owned line 0 must remain the ROM character palette");
+                var terrainColor=playable.getPalette(1).getColor(1);
                 assertTrue((terrainColor.r&0xFF)>0 && (terrainColor.g&0xFF)>0 && (terrainColor.b&0xFF)>0,
                         "Authored floor pattern must use a visible palette color");
-                var objectColor=playable.getPalette(0).getColor(15);
+                var objectColor=playable.getPalette(1).getColor(15);
                 assertTrue((objectColor.r&0xFF)>0 && (objectColor.g&0xFF)>0 && (objectColor.b&0xFF)>0,
                         "Sample badnik's white pixels must use a visible palette color");
                 GroundSensor.setLevelManager(GameServices.level());
