@@ -41317,3 +41317,34 @@ With the root-level REV01 ROM, the Obj36 unit suite passed 9/9 and MZ1
 complete-run advanced from frame 2815 / 5 reported animation errors to frame
 3969 / 4, with zero physics divergences. The new frontier is separate: ROM Wait
 `$05` versus engine Walk `$00`.
+### 2026-07-14 -- StillSprite ROM lifetime fix: new s3k_hcz completerun frontier
+
+Branch `bugfix/ai-hcz2-wall-window-bg` (worktree
+`.claude/worktrees/hcz2-wall-window-bg`, base `1204d2abf`). `StillSpriteInstance`
+(obj 0x2F) previously self-deleted on its first update via the exact-screen
+`isOnScreenX()`, so every placement-spawned StillSprite died at the spawn-window
+edge before becoming visible (HCZ waterfall curtains and HCZ2 tube-crossing
+pieces vanished in sprite-sized blocks). The fix switches the despawn to
+`isInRangeAt(getX())`, the engine's `Sprite_OnScreen_Test` coarse-window parity
+helper (sonic3k.asm:37262-37277).
+
+Command: `mvn "-Dtest=TestS3k*TraceReplay" "-Ds3k.rom.path=s3k.gen"
+"-Dsurefire.forkCount=2" "-Dsurefire.argLine=-Xmx3g" test`
+
+A/B against the same worktree with only this change reverted:
+
+- `s3k_hcz` completerun: GREEN before, now **FAILS — 1 error, 0 warnings,
+  first error f29096 `rings` (expected=1, actual=2, span 3 frames)**. The
+  engine re-collects a scattered end-boss ring 3 frames before the ROM;
+  the two lost rings sit in engine slots s38/s48 with player physics
+  byte-identical through f29096. Classified as a residual object-slot /
+  update-order divergence near the HCZ2 end boss that the now-ROM-faithful
+  StillSprite lifetimes expose (StillSprites occupy slots for their ROM
+  duration, shifting downstream slot allocation). Follow-up: pin the arena
+  object whose slot/lifetime still differs from ROM.
+- `s3k_aiz` completerun + `s3k_aiz1`: green both before and after.
+- `s3k_cnz`/`s3k_icz`/`s3k_lbz`/`s3k_mgz`/`s3k_mhz` completeruns: identical
+  first errors with and without the change (f1846 tails_x_speed / f3174 rings
+  / f2270 tails_x / f1072 rings / f2920 tails_status_byte) — pre-existing
+  frontiers, not moved by this fix. Note these differ from older log entries
+  (e.g. mgz f738): the recorded frontiers were already stale on develop.
