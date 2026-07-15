@@ -210,6 +210,21 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // SolidObjectFull2_1P sees this object's retained standing bit before
+        // SolidObject_cont. An airborne rider clears the bit and returns without
+        // resolving another contact (sonic3k.asm:41066-41084).
+        return true;
+    }
+
+    @Override
+    public boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity player) {
+        // Player slots run before this later object slot. Preserve the airborne
+        // movement pass until SolidObjectFull consumes the stale standing bit.
+        return true;
+    }
+
+    @Override
     public int romObjectCodePointerHighWord() {
         // Obj_MGZTriggerPlatform lives at $000345D4 in the locked-on ROM.
         return 0x0003;

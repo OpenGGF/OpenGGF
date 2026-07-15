@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ trigger platform consumes airborne stale rides in its later slot
+
+Branch `feature/ai-trace-animation-verification`, after the regressed-floor-angle
+milestone. Tails crossed from upward to downward velocity while still carrying
+the prior standing bits for the subtype `$22` MGZ trigger platform. The engine's
+pre-movement support recovery treated that stale ride as current ground and ran
+ground movement; the ROM runs Tails' airborne slot first, then the platform's
+later `SolidObjectFull2_1P` call clears its standing bit and returns without a
+new contact. The platform now declares both halves of that shared solid-routine
+contract. No trace state, zone/route/frame carve-out, hydration, or comparator
+tolerance was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:70989-71029,41066-41084`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 21922 to frame 22016, leaving
+  one missed ring (`rings`, expected 61 / actual 60).
+- MGZ complete-run animation advances from frame 21922 to frame 22541
+  (`player_mapping_frame`, expected `$23` / actual `$22`).
+- `TestS3kMgzTriggerPlatformObject` passes 7/7, including the two explicit
+  airborne stale-ride contract assertions.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- FindFloor regress keeps the prior collision angle
 
 Branch `feature/ai-trace-animation-verification`, after the Mantis landing

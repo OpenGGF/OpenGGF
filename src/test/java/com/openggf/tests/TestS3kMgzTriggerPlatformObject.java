@@ -43,6 +43,10 @@ class TestS3kMgzTriggerPlatformObject {
         assertEquals(0x1F, params.groundHalfHeight());
         assertTrue(instance.usesInclusiveRightEdge(),
                 "SolidObjectFull retains the exact d1*2 right edge");
+        assertTrue(instance.airborneStaleStandingBitReturnsNoContact(null),
+                "SolidObjectFull must return before new contact for an airborne stale rider");
+        assertTrue(instance.suppressesGroundingRecoveryFromAirborneStaleRide(null),
+                "The earlier player slot must remain airborne until the later SolidObjectFull pass");
         assertEquals(0x0003, instance.romObjectCodePointerHighWord());
         assertEquals(5, instance.getPriorityBucket());
     }
