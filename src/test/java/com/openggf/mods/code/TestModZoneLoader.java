@@ -402,7 +402,7 @@ class TestModZoneLoader {
     }
 
     @Test
-    void s3kZonePatchPreservesNativeDataSelectProfileAndPresentation() {
+    void s3kZonePatchKeepsNativePresentationWithRegistryAwareProfile() {
         GameModule base = new com.openggf.game.sonic3k.Sonic3kGameModule();
         var inheritedPresentation = base.getDataSelectPresentationProvider();
         GameModule resolved = new ModBackedGamePatch(s3kZonePlan("alpha", "sky"))
@@ -419,7 +419,9 @@ class TestModZoneLoader {
 
         assertEquals("s3k", resolved.getGameCode());
         assertEquals("s3k", resolved.getDataSelectHostProfile().gameCode());
-        assertSame(base.getDataSelectHostProfile(), resolved.getDataSelectHostProfile());
+        assertInstanceOf(com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile.class,
+                resolved.getDataSelectHostProfile());
+        assertNotSame(base.getDataSelectHostProfile(), resolved.getDataSelectHostProfile());
         assertTrue(resolved.getDataSelectHostProfile().builtInTeams()
                 .contains(new SelectedTeam("tails", List.of())));
         assertEquals(base.getDataSelectHostProfile().clearRestartDestinations(clearPayload),
@@ -429,7 +431,7 @@ class TestModZoneLoader {
                         new DataSelectDestination(Sonic3kZoneIds.ZONE_HCZ, 0)),
                 resolved.getDataSelectHostProfile().clearRestartDestinations(clearPayload)
                         .subList(0, 2));
-        assertSame(inheritedPresentation, resolved.getDataSelectPresentationProvider());
+        assertNotSame(inheritedPresentation, resolved.getDataSelectPresentationProvider());
         assertSame(resolved.getDataSelectHostProfile(),
                 resolved.getDataSelectPresentationProvider().controller().hostProfile());
     }

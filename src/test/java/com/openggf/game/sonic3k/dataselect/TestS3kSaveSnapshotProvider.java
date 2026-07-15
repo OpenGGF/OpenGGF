@@ -9,6 +9,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
+import com.openggf.game.GameModule;
+import com.openggf.game.ZoneKey;
+import com.openggf.game.ZoneRegistry;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -66,6 +69,7 @@ class TestS3kSaveSnapshotProvider {
         com.openggf.game.GameStateManager gameState = mock(com.openggf.game.GameStateManager.class);
         when(gameplayMode.getLevelManager()).thenReturn(levelManager);
         when(gameplayMode.getGameStateManager()).thenReturn(gameState);
+        stubStockZones(levelManager);
         when(levelManager.getCurrentZone()).thenReturn(4);
         when(levelManager.getCurrentAct()).thenReturn(1);
         when(gameState.getLives()).thenReturn(7);
@@ -87,6 +91,35 @@ class TestS3kSaveSnapshotProvider {
     }
 
     @Test
+    void capture_runtimeModZoneUsesTaggedIdentityWithoutSyntheticZone() {
+        SaveSessionContext ctx = SaveSessionContext.forSlot("s3k", 1,
+                new SelectedTeam("tails", List.of()), 0, 0);
+        GameplayModeContext gameplayMode = mock(GameplayModeContext.class);
+        com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
+        com.openggf.game.GameStateManager gameState = mock(com.openggf.game.GameStateManager.class);
+        GameModule module = mock(GameModule.class);
+        ZoneRegistry zones = mock(ZoneRegistry.class);
+        when(gameplayMode.getLevelManager()).thenReturn(levelManager);
+        when(gameplayMode.getGameStateManager()).thenReturn(gameState);
+        when(levelManager.getCurrentZone()).thenReturn(22);
+        when(levelManager.getCurrentAct()).thenReturn(0);
+        when(levelManager.getGameModule()).thenReturn(module);
+        when(module.getZoneRegistry()).thenReturn(zones);
+        when(zones.zoneKey(22)).thenReturn(ZoneKey.mod("flappy", "sky"));
+        when(gameState.getLives()).thenReturn(3);
+        when(gameState.getCollectedChaosEmeraldIndices()).thenReturn(List.of());
+        when(gameState.getCollectedSuperEmeraldIndices()).thenReturn(List.of());
+
+        Map<String, Object> payload = new S3kSaveSnapshotProvider().capture(
+                SaveReason.PROGRESSION_SAVE,
+                RuntimeSaveContext.forGameplayMode(gameplayMode, ctx));
+
+        assertFalse(payload.containsKey("zone"));
+        assertEquals(ZoneKey.mod("flappy", "sky"), S3kSavedZone.read(payload).zoneKey());
+        assertEquals(1, payload.get("progressCode"));
+    }
+
+    @Test
     void capture_clearSaveIncludesProgressCodeAndClearState() {
         SaveSessionContext ctx = SaveSessionContext.forSlot("s3k", 1,
                 new SelectedTeam("sonic", List.of("tails")), 0, 0);
@@ -96,6 +129,7 @@ class TestS3kSaveSnapshotProvider {
         com.openggf.game.GameStateManager gameState = mock(com.openggf.game.GameStateManager.class);
         when(gameplayMode.getLevelManager()).thenReturn(levelManager);
         when(gameplayMode.getGameStateManager()).thenReturn(gameState);
+        stubStockZones(levelManager);
         when(levelManager.getCurrentZone()).thenReturn(0x0C);
         when(levelManager.getCurrentAct()).thenReturn(0);
         when(gameState.getLives()).thenReturn(7);
@@ -133,6 +167,7 @@ class TestS3kSaveSnapshotProvider {
         com.openggf.game.GameStateManager gameState = mock(com.openggf.game.GameStateManager.class);
         when(gameplayMode.getLevelManager()).thenReturn(levelManager);
         when(gameplayMode.getGameStateManager()).thenReturn(gameState);
+        stubStockZones(levelManager);
         when(levelManager.getCurrentZone()).thenReturn(7);
         when(levelManager.getCurrentAct()).thenReturn(0);
         when(gameState.getLives()).thenReturn(5);
@@ -151,5 +186,11 @@ class TestS3kSaveSnapshotProvider {
         assertEquals(2, payload.get("continues"));
         assertEquals(List.of(0, 1, 2, 3, 4, 5, 6), payload.get("chaosEmeralds"));
         assertEquals(List.of(1, 4), payload.get("superEmeralds"));
+    }
+
+    private static void stubStockZones(com.openggf.level.LevelManager levelManager) {
+        GameModule module = mock(GameModule.class);
+        when(levelManager.getGameModule()).thenReturn(module);
+        when(module.getZoneRegistry()).thenReturn(new com.openggf.game.sonic3k.Sonic3kZoneRegistry());
     }
 }

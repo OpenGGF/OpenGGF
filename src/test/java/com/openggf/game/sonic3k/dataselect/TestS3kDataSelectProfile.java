@@ -3,6 +3,8 @@ package com.openggf.game.sonic3k.dataselect;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.DataSelectProvider;
+import com.openggf.game.ZoneKey;
+import com.openggf.game.ZoneRegistry;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.NoOpDataSelectProvider;
 import com.openggf.game.dataselect.DataSelectDestination;
@@ -17,6 +19,8 @@ import org.junit.jupiter.api.parallel.Isolated;
 
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.OptionalInt;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -87,6 +91,60 @@ class TestS3kDataSelectProfile {
         var summary = profile.summarizeFreshSlot(3);
         assertEquals(3, summary.slot());
         assertTrue(summary.payload().isEmpty());
+    }
+
+    @Test
+    void taggedModZoneResolvesThroughEffectiveRegistry() {
+        ZoneRegistry zones = org.mockito.Mockito.mock(ZoneRegistry.class);
+        ZoneKey key = ZoneKey.mod("flappy", "sky");
+        org.mockito.Mockito.when(zones.resolveZoneKey(key)).thenReturn(OptionalInt.of(22));
+        S3kDataSelectProfile profile = new S3kDataSelectProfile(() -> zones);
+        Map<String, Object> payload = validPayload();
+        S3kSavedZone.write(payload, key);
+
+        assertTrue(profile.isPayloadValid(payload));
+        assertEquals(new DataSelectDestination(22, 0), profile.resolveLoadDestination(payload));
+    }
+
+    @Test
+    void missingModOwnerFallsBackWithoutUsingStaleSyntheticIndex() {
+        ZoneRegistry zones = org.mockito.Mockito.mock(ZoneRegistry.class);
+        ZoneKey key = ZoneKey.mod("flappy", "sky");
+        org.mockito.Mockito.when(zones.resolveZoneKey(key)).thenReturn(OptionalInt.empty());
+        S3kDataSelectProfile profile = new S3kDataSelectProfile(() -> zones);
+        Map<String, Object> payload = validPayload();
+        S3kSavedZone.write(payload, key);
+
+        assertEquals(new DataSelectDestination(Sonic3kZoneIds.ZONE_AIZ, 0),
+                profile.resolveLoadDestination(payload));
+    }
+
+    @Test
+    void legacyNumericSyntheticZoneNeverBindsToCurrentModCatalog() {
+        ZoneRegistry zones = org.mockito.Mockito.mock(ZoneRegistry.class);
+        org.mockito.Mockito.when(zones.getZoneCount()).thenReturn(23);
+        S3kDataSelectProfile profile = new S3kDataSelectProfile(() -> zones);
+        Map<String, Object> payload = validPayload();
+        payload.put("zone", 22);
+
+        assertFalse(profile.isPayloadValid(payload));
+        assertEquals(new DataSelectDestination(Sonic3kZoneIds.ZONE_AIZ, 0),
+                profile.resolveLoadDestination(payload));
+    }
+
+    private static Map<String, Object> validPayload() {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("zone", 0);
+        payload.put("act", 0);
+        payload.put("mainCharacter", "tails");
+        payload.put("sidekicks", List.of());
+        payload.put("lives", 3);
+        payload.put("chaosEmeralds", List.of());
+        payload.put("superEmeralds", List.of());
+        payload.put("clear", false);
+        payload.put("progressCode", 1);
+        payload.put("clearState", 0);
+        return payload;
     }
 
     @Test

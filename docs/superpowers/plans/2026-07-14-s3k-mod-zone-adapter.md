@@ -620,6 +620,12 @@ git commit -m "feat: compose custom S3K host palettes"
 ### Task 9: Prove lifecycle, save identity, rewind, and compatibility
 
 **Files:**
+- Create: `src/main/java/com/openggf/game/sonic3k/dataselect/S3kSavedZone.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/dataselect/S3kSaveSnapshotProvider.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/dataselect/S3kDataSelectProfile.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kModZoneAdapter.java`
+- Modify: `src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kSaveSnapshotProvider.java`
+- Modify: `src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectProfile.java`
 - Modify: `src/test/java/com/openggf/mods/code/TestS3kModZoneAdapter.java`
 - Create: `src/test/java/com/openggf/mods/code/TestS3kModZoneLifecycle.java`
 - Modify: `src/test/java/com/openggf/mods/code/TestModZoneLoader.java`
@@ -648,9 +654,24 @@ git commit -m "feat: compose custom S3K host palettes"
 
 - [ ] **Step 2: Run the lifecycle assertions against the existing tagged-identity seam**
 
+First add failing focused tests proving that S3K stock saves retain the historical numeric `zone`
+field, live custom-zone saves instead persist a tagged `ZoneKey.Mod`, available owners resolve the
+tag through the effective decorated `ZoneRegistry`, and a missing/disabled owner falls back to AIZ1
+without interpreting a stale synthetic index. The stock `S3kDataSelectPresentation` remains inherited
+unchanged.
+
+The implementation owner is the S3K data-select package: `S3kSavedZone` owns the strict tagged/legacy
+payload codec, `S3kSaveSnapshotProvider` asks the active module registry for the live `ZoneKey`, and
+`S3kDataSelectProfile` receives an effective-zone supplier for load resolution. Make
+`Sonic3kModZoneAdapter` implement the existing internal `ModZoneDataSelectDecorator`, returning the
+registry-aware S3K host profile while returning the inherited native S3K presentation unchanged.
+Do not reuse the S2-named codec or donated S2 profile, and do not add synthetic indices to payloads.
+
 Run: `mvn "-Dtest=com.openggf.mods.code.TestS3kModZoneLifecycle" test`
 
-Expected: tests pass because save/resume/editor already use tagged `ZoneKey`; a failure is a blocker that must be assigned to an exact owning file before continuing, not permission to stage a shared source tree.
+Expected: tests pass through the now-explicit S3K tagged persistence seam. Any further failure is a
+blocker that must be assigned to an exact owning file before continuing, not permission to stage a
+shared source tree.
 
 - [ ] **Step 3: Inspect the test diff for synthetic-index coupling**
 
@@ -658,7 +679,7 @@ The committed test must call `ZoneRegistry.zoneKey(...)` / `resolveZoneKey(...)`
 
 - [ ] **Step 4: Run lifecycle and cross-mode suites**
 
-Run: `mvn "-Dtest=com.openggf.mods.code.TestS3kModZoneLifecycle,com.openggf.mods.code.TestS3kModZoneAdapter,com.openggf.mods.code.TestModZoneLoader,com.openggf.mods.integration.TestPhase3StandaloneSampleIntegration" test`
+Run: `mvn "-Dtest=com.openggf.game.sonic3k.dataselect.TestS3kSaveSnapshotProvider,com.openggf.game.sonic3k.dataselect.TestS3kDataSelectProfile,com.openggf.mods.code.TestS3kModZoneLifecycle,com.openggf.mods.code.TestS3kModZoneAdapter,com.openggf.mods.code.TestModZoneLoader,com.openggf.mods.integration.TestPhase3StandaloneSampleIntegration" test`
 
 Run: `mvn "-Ds3k.rom.path=s3k.gen" "-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" test`
 
@@ -667,7 +688,7 @@ Expected: feature and must-keep-green tests pass with the supplied ROM. Then the
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add src/test/java/com/openggf/mods/code/TestS3kModZoneLifecycle.java src/test/java/com/openggf/mods/code/TestS3kModZoneAdapter.java src/test/java/com/openggf/mods/code/TestModZoneLoader.java src/test/java/com/openggf/mods/integration/TestPhase3StandaloneSampleIntegration.java
+git add src/main/java/com/openggf/game/sonic3k/dataselect/S3kSavedZone.java src/main/java/com/openggf/game/sonic3k/dataselect/S3kSaveSnapshotProvider.java src/main/java/com/openggf/game/sonic3k/dataselect/S3kDataSelectProfile.java src/main/java/com/openggf/game/sonic3k/Sonic3kModZoneAdapter.java src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kSaveSnapshotProvider.java src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectProfile.java src/test/java/com/openggf/mods/code/TestS3kModZoneLifecycle.java src/test/java/com/openggf/mods/code/TestS3kModZoneAdapter.java src/test/java/com/openggf/mods/code/TestModZoneLoader.java src/test/java/com/openggf/mods/integration/TestPhase3StandaloneSampleIntegration.java
 git commit -m "test: cover S3K mod-zone lifecycle"
 ```
 

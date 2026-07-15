@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.dataselect;
 
+import com.openggf.game.ZoneKey;
 import com.openggf.game.save.RuntimeSaveContext;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SaveSnapshotProvider;
@@ -32,7 +33,9 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
                 : context.levelManager().getCurrentZone();
         int act = !hasLiveState ? save.startAct()
                 : context.levelManager().getCurrentAct();
-        payload.put("zone", zone);
+        ZoneKey zoneKey = !hasLiveState ? ZoneKey.stock(zone)
+                : context.levelManager().getGameModule().getZoneRegistry().zoneKey(zone);
+        S3kSavedZone.write(payload, zoneKey);
         payload.put("act", act);
         payload.put("mainCharacter", save.selectedTeam().mainCharacter());
         payload.put("sidekicks", save.selectedTeam().sidekicks());
@@ -50,8 +53,10 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
         payload.put("chaosEmeralds", chaosEmeralds);
         payload.put("superEmeralds", superEmeralds);
         payload.put("clear", clear);
-        payload.put("progressCode",
-                S3kSaveProgressions.progressCodeForState(zone, act, save.selectedTeam(), clear, superEmeralds));
+        payload.put("progressCode", zoneKey instanceof ZoneKey.Stock
+                ? S3kSaveProgressions.progressCodeForState(
+                        zone, act, save.selectedTeam(), clear, superEmeralds)
+                : 1);
         payload.put("clearState", clear ? (S3kSaveProgressions.hasAllSuperEmeralds(superEmeralds) ? 2 : 1) : 0);
         return payload;
     }

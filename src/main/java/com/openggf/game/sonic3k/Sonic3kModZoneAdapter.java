@@ -7,6 +7,7 @@ import com.openggf.mods.code.ModLevelDefinition;
 import com.openggf.mods.code.ModPaletteUsageValidator;
 import com.openggf.mods.code.ModRegistrationException;
 import com.openggf.mods.code.ModZoneAdapter;
+import com.openggf.mods.code.ModZoneDataSelectDecorator;
 import com.openggf.mods.code.ModZoneLoader;
 import com.openggf.mods.code.ModZoneRuntimeProfile;
 
@@ -14,7 +15,7 @@ import java.io.IOException;
 import java.util.Objects;
 
 /** Sonic 3&amp;K host capability for additive format-v2 zone construction. */
-public final class Sonic3kModZoneAdapter implements ModZoneAdapter {
+public final class Sonic3kModZoneAdapter implements ModZoneAdapter, ModZoneDataSelectDecorator {
     private final Sonic3kGameModule gameModule;
 
     public Sonic3kModZoneAdapter(Sonic3kGameModule gameModule) {
@@ -83,5 +84,23 @@ public final class Sonic3kModZoneAdapter implements ModZoneAdapter {
     public ModZoneRuntimeProfile runtimeProfile(String ownerModId, ModLevelDefinition level) {
         validate(ownerModId, level);
         return Sonic3kModZoneRuntimeProfile.flatEmpty();
+    }
+
+    @Override
+    public com.openggf.game.dataselect.DataSelectHostProfile decorateHostProfile(
+            com.openggf.game.dataselect.DataSelectHostProfile inherited,
+            java.util.function.Supplier<com.openggf.game.ZoneRegistry> effectiveZones,
+            java.util.function.BiConsumer<String,
+                    com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink) {
+        return new com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile(effectiveZones);
+    }
+
+    @Override
+    public com.openggf.game.dataselect.DataSelectPresentationProvider decoratePresentationProvider(
+            com.openggf.game.dataselect.DataSelectPresentationProvider inherited,
+            com.openggf.game.dataselect.DataSelectHostProfile effectiveHostProfile) {
+        return new com.openggf.game.dataselect.DataSelectPresentationProvider(
+                com.openggf.game.sonic3k.dataselect.S3kDataSelectManager::new,
+                new com.openggf.game.dataselect.DataSelectSessionController(effectiveHostProfile));
     }
 }

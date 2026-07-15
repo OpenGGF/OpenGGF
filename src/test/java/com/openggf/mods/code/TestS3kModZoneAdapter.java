@@ -148,6 +148,29 @@ class TestS3kModZoneAdapter {
     }
 
     @Test
+    void s3kDataSelectDecorationUsesEffectiveRegistryAndPreservesNativePresentation() {
+        Sonic3kModZoneAdapter adapter = new Sonic3kModZoneAdapter(
+                new com.openggf.game.sonic3k.Sonic3kGameModule());
+        com.openggf.game.ZoneRegistry effective =
+                org.mockito.Mockito.mock(com.openggf.game.ZoneRegistry.class);
+        com.openggf.game.dataselect.DataSelectHostProfile inherited =
+                new com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile();
+        com.openggf.game.dataselect.DataSelectPresentationProvider presentation =
+                org.mockito.Mockito.mock(
+                        com.openggf.game.dataselect.DataSelectPresentationProvider.class);
+
+        var decorated = adapter.decorateHostProfile(
+                inherited, () -> effective, (owner, finding) -> { });
+
+        assertInstanceOf(com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile.class,
+                decorated);
+        var decoratedPresentation =
+                adapter.decoratePresentationProvider(presentation, decorated);
+        org.junit.jupiter.api.Assertions.assertNotSame(presentation, decoratedPresentation);
+        assertSame(decorated, decoratedPresentation.controller().hostProfile());
+    }
+
+    @Test
     void sonic2AdapterAcceptsV1AndRejectsV2() {
         var adapter = new com.openggf.game.sonic2.Sonic2ModZoneAdapter(
                 new com.openggf.game.sonic2.Sonic2GameModule());
