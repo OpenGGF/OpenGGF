@@ -9,10 +9,12 @@ import java.util.Set;
  * Canonical stock results-flow boundaries exposed to mod manifests.
  *
  * <p>The keys name the completed stock act, not a zone display name. Event and
- * cutscene-driven handoffs are deliberately absent. Phase 2's new-zone seam is
- * scoped to Sonic 2, so other games expose no anchors yet. The Phase 2
- * {@code ZoneProgressionPlan} must consume this inventory rather than creating a
- * second list of accepted manifest anchors.</p>
+ * cutscene-driven handoffs are deliberately absent. Sonic 2 exposes its
+ * results-driven boundaries and defaults additive sequencing to {@code mtz3}.
+ * Sonic 3&amp;K intentionally exposes no stock results-driven anchors: its additive
+ * zones may still be published under stable keys, but remain unsequenced until
+ * entered explicitly. {@code ZoneProgressionPlan} must consume this inventory
+ * rather than creating a second list of accepted manifest anchors.</p>
  */
 public final class StockProgressionAnchors {
     private static final Map<String, Set<String>> BY_GAME = Map.of(
