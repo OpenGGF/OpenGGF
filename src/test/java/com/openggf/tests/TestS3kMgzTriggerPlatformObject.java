@@ -71,7 +71,10 @@ class TestS3kMgzTriggerPlatformObject {
         assertEquals(0x1200, instance.getX(), "Object must wait for its trigger");
 
         Sonic3kLevelTriggerManager.setAll(3);
-        for (int frame = 0; frame < 65; frame++) {
+        instance.update(8, null);
+        assertEquals(0x1202, instance.getX(),
+                "Horizontal movement must begin on the pass that observes the trigger");
+        for (int frame = 9; frame < 72; frame++) {
             instance.update(frame, null);
         }
 
@@ -89,7 +92,10 @@ class TestS3kMgzTriggerPlatformObject {
         assertEquals(0x0600, instance.getY());
 
         Sonic3kLevelTriggerManager.setAll(0);
-        for (int frame = 0; frame < 65; frame++) {
+        instance.update(1, null);
+        assertEquals(0x0600, instance.getY(),
+                "A later-slot vertical trigger becomes visible on the following pass");
+        for (int frame = 2; frame < 66; frame++) {
             instance.update(frame, null);
         }
 

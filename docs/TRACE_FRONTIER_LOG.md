@@ -1,5 +1,43 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ horizontal trigger begins on its native object pass
+
+Branch `feature/ai-trace-animation-verification`, after the post-move carry-
+reference milestone. The horizontal Object `$57` trigger is published before
+the platform's native SST slot, and `loc_34600` moves the platform by two
+pixels on that same pass. The engine delayed every trigger by one platform
+update, leaving this horizontal platform one step behind: Balance, Balance2,
+and the final walk-off therefore each occurred a frame late. Horizontal
+activation now moves immediately, while vertical subtypes retain the existing
+following-pass bridge required by their later-slot trigger sources.
+
+The newly reached full route also exposed a Mantis lifecycle invariant: its
+dynamic visual child can retire independently while the parent remains live.
+The child now clears the parent's structural back-reference in `onUnload()`
+before ObjectManager unregisters its rewind identity. No trace state,
+zone/route/frame carve-out, hydration, or comparator tolerance was added.
+
+ROM references:
+`docs/skdisasm/sonic3k.asm:70954-71025,185700-185846`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 27170 to frame 27577
+  (`x_speed`, expected zero / actual `-$0200`).
+- MGZ complete-run animation advances from frame 27165 to frame 27577
+  (`player_animation_id`, expected Roll / actual Hurt).
+- `TestS3kMgzTriggerPlatformObject` passes 8/8, including exact horizontal
+  same-pass and vertical following-pass trigger visibility.
+- `TestMantisBadnikInstance` passes 3/3, including child-unload rewind-reference
+  closure; the complete route also runs past frame 28722 without a closure
+  error.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ horizontal trigger platform uses its post-move carry reference
 
 Branch `feature/ai-trace-animation-verification`, after the head-trigger

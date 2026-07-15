@@ -128,7 +128,13 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
             activated = true;
         }
 
-        if (!completed && wasActivated) {
+        // Horizontal triggers are published before this native SST slot and
+        // loc_34600 moves on the same pass. The vertical trigger sources run
+        // after their platform slots, so their newly visible byte belongs to
+        // the following pass in the engine's consolidated object update.
+        boolean activationVisibleThisPass = wasActivated
+                || (mode == Mode.HORIZONTAL_DELETE && activated);
+        if (!completed && activationVisibleThisPass) {
             advanceActiveMotion();
             applyScreenShake(frameCounter);
         } else {

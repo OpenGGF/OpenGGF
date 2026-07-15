@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestMantisBadnikInstance {
@@ -39,6 +40,21 @@ class TestMantisBadnikInstance {
         assertEquals("WAIT", readField(mantis, "state").toString());
         assertEquals(0x0680, mantis.getY(),
                 "loc_88F48 only writes routine=2; it does not restore the floor-hit Y");
+    }
+
+    @Test
+    void unloadingChildClearsParentRewindReference() throws Exception {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
+        MantisBadnikInstance mantis = new MantisBadnikInstance(
+                new ObjectSpawn(0x0200, 0x0100, 0x9D, 0, 0, false, 0));
+        mantis.setServices(new StubObjectServices());
+        mantis.update(0, null);
+        AbstractObjectInstance child = (AbstractObjectInstance) readField(mantis, "child");
+
+        child.onUnload();
+
+        assertNull(readField(mantis, "child"),
+                "A retired child must not remain reachable after its rewind id is unregistered");
     }
 
     private static Object readField(Object target, String name) throws Exception {

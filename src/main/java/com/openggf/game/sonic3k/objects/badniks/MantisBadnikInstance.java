@@ -287,6 +287,17 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
             syncFromParent();
         }
 
+        @Override
+        public void onUnload() {
+            // The child has its own dynamic SST lifetime. If it is retired
+            // before the parent, remove the parent's structural back-reference
+            // before ObjectManager unregisters this child's rewind identity.
+            if (parent != null && parent.child == this) {
+                parent.child = null;
+            }
+            parent = null;
+        }
+
         private void syncFromParent() {
             currentX = parent.getX() + (parent.badnikFacingLeft() ? -9 : 9);
             currentY = parent.getY() - 0x0B;
