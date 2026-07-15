@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- Spindash Push clears after follower-history publication
+
+Branch `feature/ai-trace-animation-verification`, after the repeated head-
+projectile milestone. A spindash charge writes the `$0900` animation word
+during movement, but `Sonic_RecordPos` publishes the current status byte before
+`Animate_Sonic`/`Animate_Tails` consumes that animation change and clears
+Status_Push. The engine cleared Push at the animation-word write instead, so
+the player finished the frame correctly after the later solid-object pass but
+CPU Tails read an incorrect delayed Stat-table byte 16 frames later. The clear
+is now deferred until immediately after follower-history publication and still
+precedes the normal animation pass. No trace state, zone/route/frame carve-out,
+hydration, or comparator tolerance was added.
+
+ROM references:
+`docs/skdisasm/sonic3k.asm:22006-22017,22119-22136,23642-23675,26683-26729,29359-29364`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 27867 to frame 28165 (`rings`,
+  expected 6 / actual 7).
+- MGZ complete-run animation remains at frame 31643 (`tails_animation_id`,
+  expected Roll / actual Hurt).
+- `TestPlayableSpriteMovement` passes in full, including an explicit assertion
+  that the follower-history byte retains Push before the deferred clear.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ head triggers restore native repeated-projectile cadence
 
 Branch `feature/ai-trace-animation-verification`, after the trigger-platform

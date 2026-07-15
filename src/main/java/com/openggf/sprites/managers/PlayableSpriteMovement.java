@@ -105,6 +105,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean slopeResistAppliedThisFrame;
 	private boolean directionalBrakeReachedZero;
 	private boolean facingFlipForcesPushClearAfterGroundWall;
+	private boolean deferredSpindashAnimationPushClear;
 	private boolean wasCrouching;
 	// ROM Sonic_Move/Tails_Move decide the standing-still duck/look-up/balance
 	// animation from inertia BEFORE ground friction runs: the `tst.w inertia`
@@ -534,6 +535,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		facingFlipForcesPushClearAfterGroundWall = false;
+		deferredSpindashAnimationPushClear = false;
 
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
@@ -4071,15 +4073,27 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setAnimationId(spindashAnimationId);
 			sprite.setAnimationFrameIndex(0);
 			sprite.setAnimationTick(0);
+			// Every charge writes anim/prev_anim as the word $0900. The ensuing
+			// Animate_Tails/Animate_Sonic pass owns Status_Push clearing; do not
+			// publish it here because Sonic_RecordPos runs between movement and
+			// animation and must retain the pre-animation status byte
+			// (sonic3k.asm:22006-22017,22119-22136,23642-23675,29359-29364).
 			PlayerAnimationRules rules = playerAnimationRulesOrNull();
-			if (rules != null && rules.animationChangeClearsPush()) {
-				// Every charge writes anim/prev_anim as the word $0900, forcing
-				// Animate_Tails/Animate_Sonic to observe a change and clear
-				// Status_Push. Trace state is sampled before the engine's later
-				// animation pass, so publish that native clear here.
-				sprite.setPushing(false);
-			}
+			deferredSpindashAnimationPushClear =
+					rules != null && rules.animationChangeClearsPush();
 		}
+	}
+
+	/**
+	 * Applies Animate_Sonic/Animate_Tails' animation-change push clear after the
+	 * follower status table has sampled the pre-animation byte.
+	 */
+	public void applyDeferredSpindashAnimationPushClear() {
+		if (!deferredSpindashAnimationPushClear) {
+			return;
+		}
+		deferredSpindashAnimationPushClear = false;
+		sprite.setPushing(false);
 	}
 
 	private void setRollAnimation() {

@@ -1734,7 +1734,7 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
-        public void s3kSpindashAnimationTransitionClearsPushBeforeTraceSample() throws Exception {
+        public void s3kSpindashAnimationTransitionPreservesPushForFollowerHistory() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_3K);
                 ScriptedVelocityAnimationProfile profile = new ScriptedVelocityAnimationProfile()
                                 .setDuckAnimId(8)
@@ -1748,13 +1748,23 @@ public class TestPlayableSpriteMovement {
                 method.invoke(manager);
 
                 assertEquals(profile.getSpindashAnimId(), mockSprite.getAnimationId());
+                assertTrue(mockSprite.getPushing(),
+                                "Sonic_RecordPos runs before Animate_Sonic clears Status_Push");
+                mockSprite.recordFollowerHistoryForTick();
+                assertEquals(AbstractPlayableSprite.STATUS_PUSHING,
+                                mockSprite.getStatusHistory(0) & AbstractPlayableSprite.STATUS_PUSHING,
+                                "the delayed Tails CPU status table must retain the pre-animation push bit");
+                manager.applyDeferredSpindashAnimationPushClear();
                 assertFalse(mockSprite.getPushing(),
-                                "Animate_Tails must clear Status_Push when spindash changes anim from Duck");
+                                "the later animation transition clears Push after follower history");
 
                 mockSprite.setPushing(true);
                 method.invoke(manager);
+                assertTrue(mockSprite.getPushing(),
+                                "an active charge leaves the clear to its later animation pass");
+                manager.applyDeferredSpindashAnimationPushClear();
                 assertFalse(mockSprite.getPushing(),
-                                "an active charge's $0900 anim/prev_anim word must force the clear again");
+                                "each active charge's $0900 word re-arms the later animation clear");
         }
 
         @Test

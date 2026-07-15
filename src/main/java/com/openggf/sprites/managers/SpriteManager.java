@@ -1498,6 +1498,9 @@ public class SpriteManager {
 			playable.getTailsCarryController().updateAfterTailsCollision(mainCarryInput);
 		}
 		playable.recordFollowerHistoryForTick();
+		if (playable.getMovementManager() instanceof PlayableSpriteMovement movement) {
+			movement.applyDeferredSpindashAnimationPushClear();
+		}
 		// ROM Obj01_Control runs Sonic_Display before Sonic_Animate and
 		// TouchResponse (S1 01 Sonic.asm:73-90, S2 s2.asm:36243-36258,
 		// S3K sonic3k.asm:21995-22022). Sonic_Display decrements
