@@ -9,6 +9,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.GameplayInputFilter;
 import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
@@ -90,6 +91,7 @@ public final class GameplayModeContext implements ModeContext {
     private final GhostRenderRegistry ghostRenderRegistry = new GhostRenderRegistry();
 
     private BonusStageProvider activeBonusStageProvider = NoOpBonusStageProvider.INSTANCE;
+    private GameplayInputFilter gameplayInputFilter = GameplayInputFilter.IDENTITY;
     private boolean managersTornDown;
 
     private PerformanceProfiler profiler;
@@ -238,6 +240,7 @@ public final class GameplayModeContext implements ModeContext {
         this.collisionSystem = Objects.requireNonNull(collisionSystem, "collisionSystem");
         this.spriteManager = Objects.requireNonNull(spriteManager, "spriteManager");
         this.levelManager = Objects.requireNonNull(levelManager, "levelManager");
+        this.spriteManager.setGameplayInputFilter(gameplayInputFilter);
 
         if (rewindRegistry != null) {
             rewindRegistry.deregister("parallax");
@@ -375,6 +378,19 @@ public final class GameplayModeContext implements ModeContext {
 
     public LevelManager getLevelManager() {
         return levelManager;
+    }
+
+    /** Returns the deterministic P1 transform installed for the active destination. */
+    public GameplayInputFilter getGameplayInputFilter() {
+        return gameplayInputFilter;
+    }
+
+    /** Installs the active destination's deterministic P1 transform. */
+    public void setGameplayInputFilter(GameplayInputFilter filter) {
+        gameplayInputFilter = Objects.requireNonNull(filter, "filter");
+        if (spriteManager != null) {
+            spriteManager.setGameplayInputFilter(gameplayInputFilter);
+        }
     }
 
     public ObjectManager getObjectManager() {
@@ -680,6 +696,7 @@ public final class GameplayModeContext implements ModeContext {
             return;
         }
         managersTornDown = true;
+        setGameplayInputFilter(GameplayInputFilter.IDENTITY);
         if (zoneLayoutMutationPipeline != null) {
             zoneLayoutMutationPipeline.clear();
         }

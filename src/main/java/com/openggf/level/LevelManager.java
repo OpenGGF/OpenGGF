@@ -38,6 +38,7 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
 import com.openggf.game.session.PatternWindowSessionState;
+import com.openggf.mods.code.OwnerAwareGameplayInputFilter;
 import com.openggf.level.rewind.LevelRewindSnapshotAdapter;
 import com.openggf.level.objects.HudRenderManager;
 import com.openggf.level.objects.HudPaletteBridgeAccess;
@@ -476,6 +477,7 @@ public class LevelManager {
      * @return the loaded Level instance (also assigned to {@code this.level})
      */
     public Level loadLevelData(int levelIndex) throws IOException {
+        installGameplayInputFilter();
         activeModZoneRuntimeContribution = gameModule == null ? null
                 : gameModule.getZoneRegistry().modZoneRuntimeContribution(levelIndex);
         activeModZoneRuntimeProfile = activeModZoneRuntimeContribution != null
@@ -486,6 +488,23 @@ public class LevelManager {
         writeCurrentLevel(loaded);
         rebuildLevelDerivedState();
         return loaded;
+    }
+
+    private void installGameplayInputFilter() {
+        GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode == null || gameModule == null) {
+            return;
+        }
+        ZoneKey destination = gameModule.getZoneRegistry().zoneKey(currentZone);
+        GameplayInputFilter filter = gameModule.getGameplayPolicyProvider()
+                .inputFilter(destination)
+                .orElse(GameplayInputFilter.IDENTITY);
+        if (destination instanceof ZoneKey.Mod mod
+                && filter != GameplayInputFilter.IDENTITY
+                && !(filter instanceof OwnerAwareGameplayInputFilter)) {
+            filter = new OwnerAwareGameplayInputFilter(mod.ownerModId(), filter);
+        }
+        gameplayMode.setGameplayInputFilter(filter);
     }
 
     /**
