@@ -1,12 +1,14 @@
 package com.openggf.mods.code;
 
 import com.openggf.game.LevelEventProvider;
+import com.openggf.game.AbstractLevelEventManager;
+import com.openggf.game.LevelEventRewindResolver;
 
 import java.util.List;
 import java.util.Objects;
 
 /** Selects stock or mod events at level init and routes creator callbacks through the fault boundary. */
-final class ModZoneEventProvider implements LevelEventProvider {
+final class ModZoneEventProvider implements LevelEventProvider, LevelEventRewindResolver {
     private final LevelEventProvider stock;
     private final int inheritedZoneCount;
     private final List<PreparedModZone> addedZones;
@@ -52,6 +54,17 @@ final class ModZoneEventProvider implements LevelEventProvider {
         invoke(LevelEventProvider::updateFixedInLevelObjectsBeforeDynamicObjects);
     }
     @Override public void updateFixedInLevelObjects() { invoke(LevelEventProvider::updateFixedInLevelObjects); }
+
+    @Override
+    public AbstractLevelEventManager resolveLevelEventRewindManager(int zoneIndex) {
+        if (zoneIndex < 0) {
+            return null;
+        }
+        if (zoneIndex < inheritedZoneCount) {
+            return LevelEventRewindResolver.resolve(stock, zoneIndex);
+        }
+        return null;
+    }
 
     private void invoke(java.util.function.Consumer<LevelEventProvider> callback) {
         if (active == null) return;

@@ -62,6 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -174,6 +175,27 @@ class TestModZoneRuntimeProfile {
         assertEquals(1, priorInitializations.get());
         assertEquals(1, priorUpdates.get(),
                 "the outer factory-absent zone must not retain the prior active event manager");
+    }
+
+    @Test
+    void stackedEventProvidersResolveOnlyTheInheritedStockRewindManager() {
+        TestLevelEventManager stockEvents = new TestLevelEventManager();
+        GameModule base = mock(GameModule.class);
+        ZoneRegistry stockRegistry = stockRegistry();
+        when(base.getZoneRegistry()).thenReturn(stockRegistry);
+        when(base.getLevelEventProvider()).thenReturn(stockEvents);
+        when(base.getModZoneAdapter()).thenReturn(flatAdapter());
+
+        GameModule prior = patch("prior", null, null)
+                .apply(base, mock(PatchContext.class));
+        GameModule stacked = patch("outer", null, null)
+                .apply(prior, mock(PatchContext.class));
+        LevelEventProvider provider = stacked.getLevelEventProvider();
+
+        assertSame(stockEvents,
+                com.openggf.game.LevelEventRewindResolver.resolve(provider, 0));
+        assertNull(com.openggf.game.LevelEventRewindResolver.resolve(provider, 1));
+        assertNull(com.openggf.game.LevelEventRewindResolver.resolve(provider, 2));
     }
 
     @Test
@@ -367,6 +389,18 @@ class TestModZoneRuntimeProfile {
         @Override public String key() { return "s3k-plc-art"; }
         @Override public Integer capture() { return 0; }
         @Override public void restore(Integer snapshot) { }
+    }
+
+    private static final class TestLevelEventManager
+            extends com.openggf.game.AbstractLevelEventManager {
+        @Override protected int getEventDataFgSize() { return 0; }
+        @Override protected int getEventDataBgSize() { return 0; }
+        @Override protected int getRoutineStride() { return 2; }
+        @Override protected void onInitLevel(int zone, int act) { }
+        @Override protected void onUpdate() { }
+        @Override public com.openggf.game.PlayerCharacter getPlayerCharacter() {
+            return com.openggf.game.PlayerCharacter.SONIC_ALONE;
+        }
     }
 
     private static ZoneRegistry stockRegistry() {
