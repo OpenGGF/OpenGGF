@@ -532,6 +532,7 @@ public class CollisionSystem {
         if (sprite.isOnObject()) {
             if (hasObjectSupport == null
                     || hasObjectSupport.getAsBoolean()
+                    || sprite.isObjectControlled()
                     || hasPendingStaleObjectSupportLoss(sprite)) {
                 return;
             }

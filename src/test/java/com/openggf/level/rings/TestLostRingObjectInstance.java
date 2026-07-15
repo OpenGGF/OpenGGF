@@ -98,8 +98,8 @@ class TestLostRingObjectInstance {
     void s3kObj37CounterPhaseModelsNativeVIntVisibility() {
         assertEquals(0, GameRules.SONIC_1.ring().ringFloorCheckCounterPhase());
         assertEquals(0, GameRules.SONIC_2.ring().ringFloorCheckCounterPhase());
-        assertEquals(4, GameRules.SONIC_3K.ring().ringFloorCheckCounterPhase(),
-                "S3K Obj37 must see the native V_int_run_count byte four counts ahead of the object clock");
+        assertEquals(0, GameRules.SONIC_3K.ring().ringFloorCheckCounterPhase(),
+                "S3K Obj37 reads the aligned global V_int_run_count clock directly");
     }
 
     @Test
@@ -627,7 +627,8 @@ class TestLostRingObjectInstance {
     @Test
     void delayedSpawnVariantAppliesInitialObj37MovementStep() throws Exception {
         LevelManager levelManager = GameServices.level();
-        ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
+        ObjectManager objectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_3K), 0, null, null);
         setField(levelManager, "objectManager", objectManager);
 
         RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
@@ -643,7 +644,8 @@ class TestLostRingObjectInstance {
         int baselineYVel = baseline.getYVelForTest();
 
         LevelManager steppedLevelManager = GameServices.level();
-        ObjectManager steppedObjectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
+        ObjectManager steppedObjectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_3K), 0, null, null);
         setField(steppedLevelManager, "objectManager", steppedObjectManager);
 
         RingManager steppedRingManager = buildRingManagerWithLevelManager(steppedLevelManager);
@@ -656,10 +658,23 @@ class TestLostRingObjectInstance {
                 steppedObjectManager.activeObjectsOfType(LostRingObjectInstance.class).get(0);
 
         assertEquals(baselineXSub + baselineXVel, stepped.getXSubpixelForTest(),
-                "S3K delayed Obj37 materialization must compensate for the same-frame MoveSprite2 step");
+                "S3K delayed Obj37 materialization must catch up the init fall-through MoveSprite2 step");
         assertEquals(baselineYSub + baselineYVel, stepped.getYSubpixelForTest());
         assertEquals(baselineYVel + 0x18, stepped.getYVelForTest(),
                 "Obj37_Main applies gravity after the same-frame position update");
+    }
+
+    @Test
+    void collectedSparkleDoesNotConsumeS3kCollisionResponseListCapacity() {
+        LostRingObjectInstance ring = LostRingObjectInstance.forTest(
+                0x120, 0x180, 0, 0, 0, 0xFF);
+
+        assertTrue(ring.publishesTouchResponseListEntryThisFrame());
+
+        ring.markCollected(10);
+
+        assertFalse(ring.publishesTouchResponseListEntryThisFrame(),
+                "Obj37's collected sparkle routine does not call Add_SpriteToCollisionResponseList");
     }
 
     @Test

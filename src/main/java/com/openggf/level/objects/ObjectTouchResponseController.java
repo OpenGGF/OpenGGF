@@ -502,7 +502,16 @@ final class ObjectTouchResponseController {
                     int invuln = lostRingCollectionInvulnerableFrames(aps, isSidekick);
                     if (invuln < LOST_RING_INVULNERABLE_THRESHOLD && !lostRing.isCollected()) {
                         lostRing.markCollected(currentFrameCounter);
-                        aps.addRings(1); // AbstractPlayableSprite.java:1427
+                        // Outside competition mode both CollectRing and
+                        // CollectRing_Tails fall through to the shared 1P
+                        // Ring_count increment. A CPU sidekick does not own a
+                        // player-local LevelState, so route this through the
+                        // gameplay-scoped counter instead of the touching sprite.
+                        if (objectManager.services().levelGamestate() != null) {
+                            objectManager.services().levelGamestate().addRings(1);
+                        } else {
+                            aps.addRings(1);
+                        }
                         objectManager.services().playSfx(GameSound.RING);
                     }
                 }
@@ -567,11 +576,9 @@ final class ObjectTouchResponseController {
     }
 
     private static boolean usesCurrentTouchState(ObjectInstance instance) {
-        // S3K Obj_Bouncing_Ring calls Add_SpriteToCollisionResponseList after
-        // Obj37_Main moves and applies gravity (docs/skdisasm/sonic3k.asm:
-        // 35616-35626). The collision-response list therefore contains the
-        // live post-movement Obj37 position, even on inline player-touch frames
-        // where generic object touch uses the frame-start snapshot.
+        // S3K's Collision_response_list stores object RAM pointers, not copied
+        // coordinates. Obj37 publishes after MoveSprite2, so the next player
+        // pass observes the ring's live position from that published object.
         return instance instanceof LostRingObjectInstance
                 || instance.usesCurrentTouchResponseState();
     }

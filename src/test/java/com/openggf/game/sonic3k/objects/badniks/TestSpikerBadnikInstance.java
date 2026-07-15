@@ -93,16 +93,45 @@ class TestSpikerBadnikInstance {
         assertFalse(services.playedSfx.contains(Sonic3kSfx.PROJECTILE.id),
                 "Launcher should not fire on the trigger frame");
 
-        for (int frame = 12; frame <= 30; frame++) {
+        for (int frame = 12; frame <= 28; frame++) {
             leftLauncher.update(frame, player);
         }
         assertFalse(services.playedSfx.contains(Sonic3kSfx.PROJECTILE.id),
                 "Launcher should not reach frame 4 before the ROM delay elapses");
 
-        leftLauncher.update(31, player);
+        leftLauncher.update(29, player);
 
         assertTrue(services.playedSfx.contains(Sonic3kSfx.PROJECTILE.id), "Expected projectile SFX");
         assertTrue(services.spawnedChildren.size() >= 4, "Expected launcher to spawn a spike projectile");
+        AbstractObjectInstance projectile = findChild(services.spawnedChildren, "SpikerSpikeProjectile");
+        assertEquals(0x10A, projectile.getX(),
+                "A later-slot projectile should move once on its allocation frame");
+        projectile.update(30, player);
+        assertEquals(0x108, projectile.getX(), "Left projectile should travel at -$200");
+    }
+
+    @Test
+    void leftLauncherWaitsUntilPlayerCrossesItsOwnPosition() throws Exception {
+        RecordingServices services = new RecordingServices();
+        SpikerBadnikInstance spiker = new SpikerBadnikInstance(
+                new ObjectSpawn(0x120, 0x100, Sonic3kObjectIds.SPIKER, 0, 0, false, 0));
+        spiker.setServices(services);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x118, (short) 0x100);
+        services.withMain(player);
+        advancePastWaitOffscreenInit(spiker, player);
+        for (int frame = 2; frame <= 10; frame++) {
+            spiker.update(frame, player);
+        }
+
+        AbstractObjectInstance leftLauncher = findChild(services.spawnedChildren, 0x110, 0x104);
+        leftLauncher.update(11, player);
+        assertEquals("ARMED", readNestedState(leftLauncher),
+                "Find_SonicTails runs from the launcher, not the parent body");
+
+        player.setCentreX((short) 0x110);
+        leftLauncher.update(12, player);
+        assertEquals("ATTACK", readNestedState(leftLauncher));
     }
 
     @Test
@@ -133,11 +162,20 @@ class TestSpikerBadnikInstance {
         assertEquals(0, spiker.getCollisionFlags(), "Parent hurtbox should disable during compression");
         assertTrue(services.playedSfx.contains(Sonic3kSfx.SPRING.id), "Expected spring SFX");
 
-        for (int frame = 12; frame <= 26; frame++) {
+        for (int frame = 12; frame <= 15; frame++) {
             spiker.update(frame, player);
         }
 
         assertEquals(-0x600, player.getYSpeed());
+        assertEquals(0, spiker.getCollisionFlags(),
+                "Launch pass must not also consume the following raw-animation pair");
+
+        for (int frame = 16; frame <= 21; frame++) {
+            spiker.update(frame, player);
+        }
+        assertEquals(0, spiker.getCollisionFlags(), "Final frame delay should keep the parent hurtbox disabled");
+
+        spiker.update(22, player);
         assertEquals("OPEN", readState(spiker));
         assertEquals(0x0A, spiker.getCollisionFlags(), "Parent hurtbox should restore after the launch anim");
         assertEquals(0, provider.getCollisionFlags(), "Top spike should still be in cooldown");
@@ -199,7 +237,7 @@ class TestSpikerBadnikInstance {
             spiker.update(frame, player);
         }
         AbstractObjectInstance leftLauncher = findChild(services.spawnedChildren, 0x110, 0x104);
-        for (int frame = 11; frame <= 31; frame++) {
+        for (int frame = 11; frame <= 29; frame++) {
             leftLauncher.update(frame, player);
         }
 
@@ -236,6 +274,12 @@ class TestSpikerBadnikInstance {
         Field field = SpikerBadnikInstance.class.getDeclaredField("state");
         field.setAccessible(true);
         return String.valueOf(field.get(spiker));
+    }
+
+    private static String readNestedState(AbstractObjectInstance object) throws Exception {
+        Field field = object.getClass().getDeclaredField("state");
+        field.setAccessible(true);
+        return String.valueOf(field.get(object));
     }
 
     private static AbstractObjectInstance findChild(List<ObjectInstance> children, int x, int y) {

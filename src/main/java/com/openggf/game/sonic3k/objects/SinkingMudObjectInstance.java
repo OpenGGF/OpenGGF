@@ -13,10 +13,13 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.sprites.NativePositionOps;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,10 +41,17 @@ import java.util.Set;
  * <p>ROM: {@code Obj_SinkingMud} / {@code SolidObjectTop_1P} (sonic3k.asm:68500-68661)
  */
 public class SinkingMudObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider,
+        RewindRecreatable {
 
     private static final int PRIORITY = 4;
     private static final int MAX_RAW_SURFACE = 0x30;
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_SinkingMud dispatches through $00032AAE.
+        return 0x0003;
+    }
 
     private static final float DEBUG_R = 1.0f;
     private static final float DEBUG_G = 1.0f;
@@ -76,6 +86,21 @@ public class SinkingMudObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // ROM SolidObjectTop_1P computes surface-playerBottom into d0, then
+        // accepts only the unsigned range $FFF0..$FFFF. d0 == 0 is below
+        // $FFF0 and branches to the no-contact return (sonic3k.asm:41998-42007).
+        return true;
+    }
+
+    @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // SolidObjectTop_1P enters the shared stale-rider branch when this
+        // object's standing bit is still set and the player is airborne.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity player) {
         return player != null && !player.getDead() && !killedThisFrame.contains(player);
     }
@@ -85,8 +110,37 @@ public class SinkingMudObjectInstance extends AbstractObjectInstance
         if (player == null || !contact.standing() || killedThisFrame.contains(player)) {
             return;
         }
+        boolean wasStandingAtUpdate = standingNextUpdate.getOrDefault(player, false);
         standingNextUpdate.put(player, true);
-        snapPlayerToOwnSurface(player);
+        if (wasStandingAtUpdate) {
+            // Continued riding uses MvSonicOnPtfm's current-radius absolute
+            // surface snap. A fresh SolidObjectTop landing already applied
+            // its distinct d0/+3 formula before Player_TouchFloor changed the
+            // radius, so re-snapping here would move that landing downward.
+            snapPlayerToOwnSurface(player);
+        } else if (player instanceof AbstractPlayableSprite sprite
+                && preContactYRadius(sprite) > sprite.getYRadius()) {
+            // SolidObjectTop applies its fresh-landing y_pos formula using the
+            // incoming radius before Player_TouchFloor restores the default.
+            // Preserve that native centre across the engine's radius/bounds
+            // representation change (notably the MGZ carrier-to-mud handoff).
+            int incomingYRadius = preContactYRadius(sprite);
+            int targetCentreY = getY()
+                    - collisionSurfaceHeight(rawSurfaceByPlayer.getOrDefault(player, MAX_RAW_SURFACE))
+                    - incomingYRadius - 1;
+            if (sprite.isObjectControlled()) {
+                // The carrier still owns y_radius until its later release.
+                sprite.applyCustomRadii(sprite.getXRadius(), incomingYRadius);
+            }
+            NativePositionOps.writeYPosPreserveSubpixel(sprite, targetCentreY);
+        }
+    }
+
+    @Override
+    public void onSolidContactCleared(PlayableEntity player, int frameCounter) {
+        if (player != null) {
+            standingNextUpdate.put(player, false);
+        }
     }
 
     @Override
@@ -137,12 +191,12 @@ public class SinkingMudObjectInstance extends AbstractObjectInstance
 
     private void advancePlayerSurface(PlayableEntity player) {
         boolean wasStanding = standingNextUpdate.getOrDefault(player, false);
-        standingNextUpdate.put(player, false);
 
         int rawSurface = rawSurfaceByPlayer.getOrDefault(player, MAX_RAW_SURFACE);
         if (wasStanding) {
             if (rawSurface == 0) {
                 rawSurfaceByPlayer.put(player, MAX_RAW_SURFACE);
+                standingNextUpdate.put(player, false);
                 killedThisFrame.add(player);
                 player.applyCrushDeath();
                 ObjectServices svc = tryServices();
@@ -159,8 +213,10 @@ public class SinkingMudObjectInstance extends AbstractObjectInstance
             Integer copiedSurface = copiedSurfaceFromAdjacentMud(player);
             if (copiedSurface != null) {
                 rawSurface = copiedSurface;
-            } else {
-                rawSurface = Math.min(MAX_RAW_SURFACE, rawSurface + 2);
+            } else if (rawSurface < MAX_RAW_SURFACE) {
+                // ROM compares against $30 before addq #2, so recovery from
+                // $2F overshoots to $31 and remains there on later frames.
+                rawSurface += 2;
             }
         }
         rawSurfaceByPlayer.put(player, rawSurface);
@@ -187,6 +243,13 @@ public class SinkingMudObjectInstance extends AbstractObjectInstance
         int newCentreY = getY() - surface - player.getYRadius();
         int newY = newCentreY - (player.getHeight() / 2);
         player.setY((short) newY);
+    }
+
+    private int preContactYRadius(AbstractPlayableSprite player) {
+        ObjectServices svc = tryServices();
+        return svc != null && svc.objectManager() != null
+                ? svc.objectManager().getPreContactYRadius()
+                : player.getYRadius();
     }
 
     private int sharedSurfaceHeight() {

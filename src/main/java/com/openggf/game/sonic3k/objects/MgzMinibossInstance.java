@@ -34,6 +34,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.SwingMotion;
 import com.openggf.physics.TerrainCheckResult;
+import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -87,6 +88,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     private static final int KNUCKLES_FALL_TIME = 0x17;
     private static final int RISE_TIME = 0x3F;
     private static final int RETURN_SWING_TIME = 0x3F;
+    private static final int RETURN_SWING_RELEASE_TIME = 0x1F;
     private static final int DEFEAT_WAIT_TIME = 0x3F;
     private static final int LEVEL_MUSIC_FADE_TIME = 2 * 60;
     private static final int MINIBOSS_MUSIC_FADE_TIME = 90;
@@ -126,6 +128,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     private boolean knucklesRecovery;
     private boolean flashColorsSaved;
     private boolean defeatHandoffQueued;
+    private boolean defeatWaitArmed;
     private final int[] savedFlashSegaWords = new int[FLASH_INDICES.length];
     private S3kBossExplosionController defeatExplosionController;
     private DrillArmChild leftArm;
@@ -160,6 +163,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         knucklesRecovery = false;
         flashColorsSaved = false;
         defeatHandoffQueued = false;
+        defeatWaitArmed = false;
         defeatExplosionController = null;
     }
 
@@ -200,16 +204,25 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     private void updateWaitCamera() {
         updateSwing();
         applySwingVelocity();
-        services().camera().setMinX((short) services().camera().getX());
-        services().camera().setMaxX((short) ARENA_LOCK_X);
-        services().camera().setMaxYTarget((short) ARENA_TARGET_MAX_Y);
-        if (services().camera().getX() < ARENA_LOCK_X) {
+        var camera = services().camera();
+        camera.setMinX((short) camera.getX());
+        camera.setMaxX((short) ARENA_LOCK_X);
+        camera.setMaxYTarget((short) ARENA_TARGET_MAX_Y);
+
+        // loc_85C7E waits until Camera_max_Y_pos has eased down to the
+        // requested target before it locks the vertical arena and invokes the
+        // drill callback. The horizontal threshold alone is not sufficient.
+        if ((camera.getMaxY() & 0xFFFF) > (camera.getMaxYTarget() & 0xFFFF)) {
+            return;
+        }
+        camera.setMinY(camera.getMaxYTarget());
+        if (camera.getX() < ARENA_LOCK_X) {
             return;
         }
 
         arenaEngaged = true;
-        services().camera().setMinX((short) ARENA_LOCK_X);
-        services().camera().setMaxX((short) ARENA_LOCK_X);
+        camera.setMinX((short) ARENA_LOCK_X);
+        camera.setMaxX((short) ARENA_LOCK_X);
         enterDrill();
     }
 
@@ -225,7 +238,8 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         animateRaw();
         state.y--;
 
-        TerrainCheckResult ceiling = ObjectTerrainUtils.checkCeilingDist(state.x, state.y, BODY_Y_RADIUS);
+        TerrainCheckResult ceiling = ObjectTerrainUtils.checkNativeUpwardCeilingDist(
+                state.x, state.y, BODY_Y_RADIUS);
         if (ceiling.distance() < 0) {
             enterCeilingShake();
         }
@@ -234,9 +248,10 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     private void updateCeilingShake(int frameCounter) {
         enforceArenaLock();
         animateRaw();
-        state.y += ((frameCounter & 1) == 0) ? -2 : 1;
-        applyContinuousShake(frameCounter);
-        if ((frameCounter & 7) == 0) {
+        int vIntLowByte = frameCounter + 3;
+        state.y += ((vIntLowByte & 1) == 0) ? -2 : 1;
+        applyContinuousShake(vIntLowByte);
+        if ((vIntLowByte & 7) == 0) {
             services().playSfx(Sonic3kSfx.RUMBLE_2.id);
             spawnCeilingDebris();
         }
@@ -254,7 +269,6 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         }
 
         state.routine = ROUTINE_DROP_SHAKE;
-        facingRight = true;
         upsideDown = true;
         routineTimer = SHAKE_TIME;
         setScreenShakeActive(true);
@@ -272,9 +286,10 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     private void updateDropShake(int frameCounter, PlayableEntity playerEntity) {
         enforceArenaLock();
         animateRaw();
-        state.y += ((frameCounter & 1) == 0) ? 2 : -1;
-        applyContinuousShake(frameCounter);
-        if ((frameCounter & 7) == 0) {
+        int vIntLowByte = frameCounter + 3;
+        state.y += ((vIntLowByte & 1) == 0) ? 2 : -1;
+        applyContinuousShake(vIntLowByte);
+        if ((vIntLowByte & 7) == 0) {
             services().playSfx(Sonic3kSfx.RUMBLE_2.id);
             spawnCeilingDebris();
         }
@@ -317,11 +332,18 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         updateSwing();
         applySwingVelocity();
         animateRaw();
-        if (--routineTimer < 0) {
-            facingRight = false;
-            upsideDown = false;
-            enterTunnelUp();
+        if (--routineTimer >= 0) {
+            return;
         }
+        if (upsideDown) {
+            // loc_887A4 clears the vertical render flip, then installs a
+            // second $1F-frame Obj_Wait callback before loc_887BA returns to
+            // the tunnel routine. Horizontal facing is unchanged.
+            upsideDown = false;
+            routineTimer = RETURN_SWING_RELEASE_TIME;
+            return;
+        }
+        enterTunnelUp();
     }
 
     private void updateDefeated(int frameCounter) {
@@ -338,7 +360,12 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
             }
         }
 
-        if (!defeatHandoffQueued && --routineTimer < 0) {
+        // The final hit changes the object's code pointer during the player
+        // touch pass. The ROM boss slot has already executed for that frame,
+        // so Wait_FadeToLevelMusic cannot consume $2E until the next pass.
+        if (!defeatWaitArmed) {
+            defeatWaitArmed = true;
+        } else if (!defeatHandoffQueued && --routineTimer < 0) {
             queuePostDefeatFlow();
         }
 
@@ -636,7 +663,6 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         if (levelMusicId > 0) {
             spawnChild(() -> new SongFadeTransitionInstance(LEVEL_MUSIC_FADE_TIME, levelMusicId));
         }
-        spawnChild(() -> new MgzBossCameraScrollHelper(ARENA_LOCK_X));
         // ROM: Obj_EndSignControlDoSign spawns the signpost via CreateChild6_Simple,
         // inheriting the control object's x_pos — the miniboss's X at the moment of
         // defeat, not the camera lock point.
@@ -725,8 +751,13 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         state.routine = ROUTINE_DEFEATED;
         upsideDown = false;
         routineTimer = DEFEAT_WAIT_TIME;
+        defeatWaitArmed = false;
         defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, services().rng());
         spawnDefeatFragments();
+        // sub_88AB4 allocates loc_887DA immediately when the final hit is
+        // consumed. Its later SST slot advances Camera_X_pos once during the
+        // same ExecuteObjects pass, independently of the delayed sign flow.
+        spawnChild(() -> new MgzBossCameraScrollHelper(ARENA_LOCK_X));
     }
 
     @Override
@@ -864,12 +895,24 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
 
         @Override
         public int getCollisionFlags() {
-            return (parent.state.defeated || parent.state.invulnerable) ? 0 : ARM_COLLISION_FLAGS;
+            // loc_88804 keeps each drill arm in Collision_response_list while
+            // the parent flashes after a body hit. Only parent destruction
+            // removes the child; body invulnerability does not clear $9E.
+            return parent.state.defeated ? 0 : ARM_COLLISION_FLAGS;
         }
 
         @Override
         public int getCollisionProperty() {
             return 0;
+        }
+
+        @Override
+        public boolean usesCurrentTouchResponseState() {
+            // loc_88804 calls Refresh_ChildPositionAdjusted immediately
+            // before publishing the arm pointer through the collision-response
+            // list. The following player pass therefore sees that refreshed
+            // child coordinate, rather than the older frame-start snapshot.
+            return true;
         }
 
         @Override
@@ -900,7 +943,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     private static class CeilingDebrisChild extends AbstractObjectInstance
             implements SpawnCoordinateZeroScalarArgsRewindRecreatable {
         private static final int PRIORITY_BUCKET = 4;
-        private static final int GRAVITY = 0x18;
+        private static final int GRAVITY = 0x20;
         private static final int LIFE = 0x5F;
 
         // Non-final so the generic rewind field capturer can reapply the captured
@@ -909,6 +952,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         private boolean spire;
         private int xFixed;
         private int yFixed;
+        private int xVel;
         private int yVel;
         private int life;
 
@@ -918,12 +962,14 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
             this.spire = spire;
             this.xFixed = x << 8;
             this.yFixed = y << 8;
+            this.xVel = 0;
             this.yVel = 0;
             this.life = LIFE;
         }
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
+            xFixed += xVel;
             yFixed += yVel;
             yVel += GRAVITY;
             updateDynamicSpawn(xFixed >> 8, yFixed >> 8);
@@ -940,6 +986,18 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         @Override
         public int getY() {
             return yFixed >> 8;
+        }
+
+        protected void deflectFrom(AbstractPlayableSprite player) {
+            int dx = player.getCentreX() - getX();
+            int dy = player.getCentreY() - getY();
+            int angle = TrigLookupTable.calcAngle(saturateToShort(dx), saturateToShort(dy));
+            xVel = -((TrigLookupTable.cosHex(angle) * 0x800) >> 8);
+            yVel = -((TrigLookupTable.sinHex(angle) * 0x800) >> 8);
+        }
+
+        private static short saturateToShort(int value) {
+            return (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, value));
         }
 
         @Override
@@ -963,18 +1021,36 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
 
     private static final class CeilingSpireChild extends CeilingDebrisChild
             implements TouchResponseProvider, SpawnCoordinateZeroScalarArgsRewindRecreatable {
+        private boolean collisionEnabled = true;
+
         private CeilingSpireChild(int x, int y, int mappingFrame) {
             super(x, y, mappingFrame, true);
         }
 
         @Override
         public int getCollisionFlags() {
-            return 0x84;
+            return collisionEnabled ? 0x84 : 0;
         }
 
         @Override
         public int getCollisionProperty() {
             return 0;
+        }
+
+        @Override
+        public int getShieldReactionFlags() {
+            // loc_88820: bset #3,shield_reaction(a0).
+            return 0x08;
+        }
+
+        @Override
+        public boolean onShieldDeflect(PlayableEntity playerEntity) {
+            if (!(playerEntity instanceof AbstractPlayableSprite player)) {
+                return false;
+            }
+            deflectFrom(player);
+            collisionEnabled = false;
+            return true;
         }
     }
 
@@ -1256,7 +1332,6 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
             int nextX = services().camera().getX() + 1;
             services().camera().setX((short) nextX);
             services().camera().setMinX((short) nextX);
-            services().camera().setMaxX((short) nextX);
             if (nextX >= targetX) {
                 setDestroyed(true);
             }

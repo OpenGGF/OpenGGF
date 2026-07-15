@@ -28,6 +28,18 @@ import static org.mockito.Mockito.verify;
 class TestS3kBreakableWallPlayerParticipation {
 
     @Test
+    void breakableWallKeepsRomInclusiveRightContactEdge() {
+        BreakableWallObjectInstance wall = new BreakableWallObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic3kObjectIds.BREAKABLE_WALL, 0, 0, false, 0));
+
+        assertTrue(wall.usesInclusiveRightEdge(),
+                "SolidObjectFull should keep a player flush with the wall's padded right edge in contact");
+        assertTrue(wall.projectsPreMovementGroundXForSolidContact(
+                        player("sonic", 0x0FC0, 0x1000)),
+                "Obj_BreakableWall should classify the player's pending native X step");
+    }
+
+    @Test
     void breakableWallAppliesCheckpointContactToQueryOnlySidekick() {
         TestablePlayableSprite main = player("sonic", 0x1200, 0x1000);
         TestablePlayableSprite sidekick = rollingPlayer("tails", 0x0F00, 0x1000);

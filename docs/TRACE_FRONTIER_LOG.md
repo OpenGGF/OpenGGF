@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ complete-run frontiers aligned at frame 5918
+
+Branch `feature/ai-trace-animation-verification`, after restoring the HCZ
+physics frontier. This milestone ports the native object-slot behavior needed
+through MGZ Act 1's miniboss/results handoff: carried top-platform players now
+retain the ROM's positive object-control semantics while later monitors,
+walls, mud, bridges, spikes, and springs execute their own solid checkpoints;
+the dash/trigger platform family, twisting loop, swinging objects, sinking mud,
+Spiker, collapsing bridge, and miniboss preserve their native latches,
+subpixels, timers, child lifetimes, and touch-list ordering. S3K lost-ring
+materialization also uses the global V-int clock across the AIZ seamless reload
+and its native single first update. The HCZ miniboss supplies the one initial
+end-sign wait entry consumed by its retained controller path, keeping the
+shared MGZ sign-flow initialization delay without moving HCZ's `$3F` handoff.
+The S3K upward FindFloor ceiling probe is exposed explicitly so the MGZ users
+do not change the legacy S1/S2 object-ceiling contract. No trace state,
+route/frame predicate, zone carve-out, or comparator tolerance was added.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run advances from frame 1072 (`rings`) to frame 5918. Its first
+  physics mismatch is now Tails' respawn counter (`$2A/$29`), and its first
+  animation mismatch is Sonic's duck mapping (`$87/$86`) on that same frame;
+  only those two three-frame groups remain under `trace.frontierOnly`.
+- MGZ standalone remains the next target: physics first diverges at frame 1538
+  and animation at frame 1574.
+- AIZ and HCZ complete-run physics and animation both pass. Focused S1 MZ2,
+  AIZ, HCZ, MGZ, lost-ring, act-transition, and MGZ object parity gates retain
+  their expected status.
+- The full animation sweep remains 42/58 green routes / 16 established reds.
+  The full physics sweep returns to 43/58 green routes / 15 established reds;
+  the temporary S1 MZ2 ceiling-probe regression found by that sweep is covered
+  by the focused green replay after separating the S3K upward probe.
+
 ### 2026-07-15 -- HCZ physics restored after develop merge
 
 Branch `feature/ai-trace-animation-verification`, after the AIZ animation

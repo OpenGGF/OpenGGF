@@ -229,7 +229,7 @@ public class TestLostRingTouchOrdering {
         objectManager.runTouchResponsesForPlayer(player, 1, true);
 
         assertTrue(ring.isCollected(),
-                "S3K Obj37 adds itself to Collision_response_list after MoveSprite2, so touch uses live position");
+                "S3K Collision_response_list pointers expose Obj37's live published position");
     }
 
     @Test

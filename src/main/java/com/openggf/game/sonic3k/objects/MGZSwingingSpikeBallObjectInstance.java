@@ -272,6 +272,14 @@ public class MGZSwingingSpikeBallObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOutOfRangeReferenceX() {
+        // ROM loc_341F0 reloads the fixed anchor from $30(a0) into d0 before
+        // tail-calling loc_1B666.  Using the moving ball X here can delete a
+        // right-facing ball as soon as its anchor enters the placement window.
+        return baseX;
+    }
+
+    @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(PRIORITY_BUCKET);
     }

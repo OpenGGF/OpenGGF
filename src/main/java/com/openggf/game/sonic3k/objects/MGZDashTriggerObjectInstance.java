@@ -13,7 +13,9 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -46,7 +48,8 @@ import java.util.List;
  * pixels (player launched right), set = target {@code +16} (launched left).
  */
 public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider,
+        RomObjectCodePointerProvider, SpawnRewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_DASH_TRIGGER;
 
@@ -111,6 +114,10 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
+
+        // ROM loc_25D9C resolves sub_1DD0E before inspecting its standing-bit
+        // result and before the armed launch loop (sonic3k.asm:51489-51579).
+        checkpointAll();
 
         // ROM: each frame sub_1DD0E performs a proximity probe (independent of
         // SolidObject collision). The post-call mask is #$33 -- both standing
@@ -259,6 +266,11 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
+    }
+
+    @Override
     public byte[] getSlopeData() {
         return SLOPE_DATA;
     }
@@ -269,11 +281,40 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean usesSlopeForNewLanding() {
-        // ROM: sub_1DD0E only dispatches to SolidObjSloped2 when the standing
-        // bit is already set; first contact continues through SolidObject_cont.
-        // Sonic 3K disassembly: sonic3k.asm:41112-41142,41727-41753.
-        return false;
+    public boolean addsSlopeCatchRangeToVerticalOverlap() {
+        // ROM loc_1DECE adds the caller's d2 ($10) to y_radius before
+        // classifying the sampled slope contact (sonic3k.asm:41275-41281).
+        return true;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // ROM loc_1DECE rejects only d0 > d1*2 (bhi), so a player whose
+        // centre is exactly halfWidth pixels to the right is still sampled.
+        // sonic3k.asm:41263-41272.
+        return true;
+    }
+
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // sub_1DD0E enters loc_1DECE directly when the standing bit is clear;
+        // unlike SolidObjectFull, it never tests render_flags bit 7 at
+        // loc_1DF88 before resolving a new sloped contact.
+        return true;
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_MGZDashTrigger lives at $00025D9C in the locked-on ROM.
+        return 0x0002;
+    }
+
+    @Override
+    public boolean keepsOnObjWhenAirborneAfterSameFrameStandingContact(PlayableEntity player) {
+        // Obj_MGZDashTrigger runs sub_1DD0E first, then sub_25EA6 sets
+        // Status_InAir without clearing Status_OnObj. The stale-standing
+        // cleanup cannot run until this object's next execution.
+        return true;
     }
 
     @Override
@@ -327,4 +368,5 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
     public int getPriorityBucket() {
         return RenderPriority.clamp(PRIORITY_BUCKET);
     }
+
 }

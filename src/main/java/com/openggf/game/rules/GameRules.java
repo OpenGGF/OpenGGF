@@ -359,7 +359,7 @@ public record GameRules(
             ),
             new RingRules(
                     7,
-                    4,
+                    0,
                     true,
                     6,
                     6,

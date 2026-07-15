@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlatformBobHelper;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -59,12 +60,19 @@ import java.util.logging.Logger;
  * sub_24FDE (line 50229), Platform_Rising (line 50462), loc_252B8 (line 50556).
  */
 public class FloatingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider,
+        RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(FloatingPlatformObjectInstance.class.getName());
 
     // Priority: $180 = bucket 3 (ROM: move.w #$180,priority(a0))
     private static final int PRIORITY = 3;
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_FloatingPlatform dispatches through $000255F4.
+        return 0x0002;
+    }
 
     // ===== Size table (byte_254FA): 3-byte entries =====
     // Each entry: halfWidth, halfHeight, mappingFrame

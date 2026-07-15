@@ -2501,6 +2501,15 @@ public class ObjectManager {
     }
 
     /**
+     * Clear support established by an earlier solid slot after a later controller
+     * object has made the player airborne in the same ExecuteObjects pass.
+     */
+    public void clearRidingObjectAfterControllerAirborneRelease(
+            PlayableEntity player, ObjectInstance formerSupport) {
+        solidContacts.clearRidingObjectAfterControllerAirborneRelease(player, formerSupport);
+    }
+
+    /**
      * One-time native bootstrap for route starts that begin with the player
      * already riding a ROM solid object.
      *
@@ -2569,6 +2578,11 @@ public class ObjectManager {
 
     public int getHeadroomDistance(PlayableEntity player, int hexAngle) {
         return solidContacts.getHeadroomDistance(player, hexAngle);
+    }
+
+    /** Player y-radius captured before the currently executing solid checkpoint. */
+    public int getPreContactYRadius() {
+        return solidContacts.getPreContactYRadius();
     }
 
     public boolean latestStandingSnapshot(PlayableEntity player) {

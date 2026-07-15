@@ -164,19 +164,11 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public int getTopSolidPlayerPositionHistoryFrames(PlayableEntity player) {
-        // Obj_MGZSwingingPlatform updates the endpoint and immediately calls
-        // SolidObjectTop (sonic3k.asm:70501-70513). SolidObjectTop's new-landing
-        // path reads the player's position/radius before RideObject_SetRide
-        // (sonic3k.asm:41982-42015). For the airborne rolling state established
-        // by Player_DoRoll/Sonic_Jump (sonic3k.asm:23259-23264,
-        // 23335-23342) and cleared by Player_TouchFloor
-        // (sonic3k.asm:24341-24368), this object samples the pre-control player
-        // position; non-rolling fall landings use the current position.
-        return player != null
-                && !player.isCpuControlled()
-                && player.getAir()
-                && player.getRolling() ? 1 : 0;
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // ROM SolidObjectTop reaches loc_1E45A, where d0 == 0 is rejected by
+        // cmpi.w #-$10,d0 / blo (sonic3k.asm:42004-42005). Only the negative
+        // overlap window [-$10, -1] proceeds to RideObject_SetRide.
+        return true;
     }
 
     // ===== SolidObjectListener =====

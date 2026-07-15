@@ -268,6 +268,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
         updateMovement();
 
+
         // Obj37_CheckBoundary: shared Ring_spill_anim_counter == 0 → delete.
         if (spillAnimation != null && spillAnimation.counter() == 0) {
             setDestroyed(true);
@@ -340,9 +341,9 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     /**
      * Maps the engine's object-loop VBlank clock to the byte observed by the
-     * native Obj37 cadence gate. S3K's gameplay bootstrap exposes that byte
-     * four counts ahead of the gameplay-scoped object counter; S1/S2 are
-     * already phase-aligned.
+     * native Obj37 cadence gate. The global V-int clock is aligned directly
+     * for all three games; this rule seam remains for games whose native
+     * object loop needs a fixed phase in future.
      */
     protected int resolveFloorCheckCounterPhase() {
         RingRules rules = resolveRingRules();
@@ -507,6 +508,18 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     public boolean isCollected() {
         return collected;
+    }
+
+    /**
+     * Obj37_Main publishes the live ring to Collision_response_list, but the
+     * collected sparkle routine returns through DisplaySprite without adding a
+     * touch entry. Keeping collision_flags at zero is not sufficient here: the
+     * S3K list has a fixed 63-entry capacity, so a stale sparkle pointer can
+     * displace a later live ring even though TouchResponse would skip it.
+     */
+    @Override
+    public boolean publishesTouchResponseListEntryThisFrame() {
+        return !collected && !isDestroyed();
     }
 
     public void markCollected(int frameCounter) {

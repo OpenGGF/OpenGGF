@@ -7,7 +7,9 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.BreakableWallObjectInstance;
 import com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kSpikeObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -15,6 +17,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.rules.RequiresRom;
@@ -101,12 +104,12 @@ class TestS3kMgzTopPlatformParityHeadless {
         assertNotNull(platform, "Expected Sonic to grab the MGZ top platform");
         assertTrue(sprite.isObjectControlled(),
                 "MGZ top platform should own the player via objectControlled while grabbed");
-        assertFalse(sprite.isObjectControlAllowsCpu(),
-                "MGZ top platform carry uses bit-7-style full object control");
+        assertTrue(sprite.isObjectControlAllowsCpu(),
+                "MGZ top platform carry uses native bit 0, so P2 CPU remains eligible");
         assertTrue(sprite.isObjectControlSuppressesMovement(),
                 "MGZ top platform carry should suppress normal movement while grabbed");
-        assertTrue(sprite.isTouchResponseSuppressedByObjectControl(),
-                "MGZ top platform full object control should suppress touch responses");
+        assertFalse(sprite.isTouchResponseSuppressedByObjectControl(),
+                "Native bit-0 control leaves ROM touch-response polling active");
         assertTrue(sprite.isWallCling(),
                 "MGZ top platform should keep the ROM wall-cling/status-tertiary state while grabbed");
         assertFalse(sprite.isOnObject(),
@@ -148,6 +151,79 @@ class TestS3kMgzTopPlatformParityHeadless {
                 "MGZ carry MoveSprite2 state should inherit the preserved x_sub high byte");
         assertEquals((expectedYSub >> 8) & 0xFF, getIntField(grabState, "ySub"),
                 "MGZ carry MoveSprite2 state should inherit the preserved y_sub high byte");
+    }
+
+    @Test
+    void grabbedState_reassertsExpandedRadiusAfterSolidLandingReset() throws Exception {
+        MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(0, 0, 0x5B, 0, 0, false, 0));
+        sprite.applyStandingRadii(false);
+
+        Method applyGrabbedRadii = MGZTopPlatformObjectInstance.class.getDeclaredMethod(
+                "applyGrabbedCollisionRadii", AbstractPlayableSprite.class);
+        applyGrabbedRadii.setAccessible(true);
+        applyGrabbedRadii.invoke(platform, sprite);
+
+        assertEquals(sprite.getStandYRadius() + 0x18, sprite.getYRadius(),
+                "loc_34F84 rewrites the carried collision radius every platform tick");
+    }
+
+    @Test
+    void freshStandingCheckpoint_grabsAlignedPlayerInSameObjectSlot() {
+        int platformX = 0x0B88;
+        int platformY = 0x0AC3;
+        MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(platformX, platformY, 0x5B, 0, 0, false, 0));
+        sprite.setCentreX((short) platformX);
+        sprite.setCentreY((short) (platformY - 0x0C - sprite.getStandYRadius()));
+        sprite.setAir(false);
+        sprite.setOnObject(true);
+        sprite.clearWallClingState();
+
+        platform.onSolidContact(
+                sprite, new SolidContact(true, false, false, true, false), 0);
+
+        assertTrue(sprite.isObjectControlled(),
+                "loc_34F2A must fall through to the aligned grab check in the contact slot");
+        assertTrue(sprite.getAir());
+        assertFalse(sprite.isOnObject());
+        assertEquals(platformY - 0x0C - sprite.getStandYRadius(), sprite.getCentreY(),
+                "same-slot sub_35202 should apply the carried-player post-sync");
+    }
+
+    @Test
+    void airborneGravity_allowsNativePostAddOvershoot() throws Exception {
+        MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(0, 0, 0x5B, 0, 0, false, 0));
+        setIntField(platform, "yVel", 0x01FC);
+        Method gravity = MGZTopPlatformObjectInstance.class.getDeclaredMethod("applyAirborneGravity");
+        gravity.setAccessible(true);
+
+        gravity.invoke(platform);
+        assertEquals(0x0204, getIntField(platform, "yVel"),
+                "loc_34C88 compares before add and does not clamp the $1FC + 8 result");
+
+        gravity.invoke(platform);
+        assertEquals(0x0204, getIntField(platform, "yVel"));
+    }
+
+    @Test
+    void miniMotionFacingChange_publishesRunAsPreviousAnimation() throws Exception {
+        MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(0, 0, 0x5B, 0, 0, false, 0));
+        sprite.setDirection(com.openggf.physics.Direction.RIGHT);
+        sprite.setPushing(true);
+        sprite.getAnimationManager().publishPreviousAnimationId(0);
+        Method setDirection = MGZTopPlatformObjectInstance.class.getDeclaredMethod(
+                "setMiniMotionDirection", AbstractPlayableSprite.class,
+                com.openggf.physics.Direction.class);
+        setDirection.setAccessible(true);
+
+        setDirection.invoke(platform, sprite, com.openggf.physics.Direction.LEFT);
+
+        assertFalse(sprite.getPushing(), "native facing change clears Status_Push");
+        assertEquals(1, sprite.getAnimationManager().captureRewindState().lastAnimationId(),
+                "native mini-motion writes prev_anim=Run when Status_Facing changes");
     }
 
     @Test
@@ -223,7 +299,16 @@ class TestS3kMgzTopPlatformParityHeadless {
     }
 
     @Test
-    void mgzCarryController_onlyAllowsMgzPlatformAndWallCandidates() {
+    void solidContactProjectsGroundMovementBecausePlatformRunsAfterPlayerSlot() {
+        MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(0x1A60, 0x0A45, 0x5B, 0, 0, false, 0));
+
+        assertTrue(platform.projectsPreMovementGroundXForSolidContact(sprite),
+                "Obj_MGZTopPlatform must test the grounded X position already advanced by Obj01");
+    }
+
+    @Test
+    void mgzCarryController_allowsRomPositiveObjectControlSolids() {
         Sonic isolated = new Sonic("sonic", (short) 0, (short) 0);
         MGZTopPlatformObjectInstance controllingPlatform = new MGZTopPlatformObjectInstance(
                 new ObjectSpawn(0, 0, 0x5B, 0, 0, false, 0));
@@ -231,6 +316,8 @@ class TestS3kMgzTopPlatformParityHeadless {
                 new ObjectSpawn(32, 0, 0x5B, 0, 0, false, 1));
         BreakableWallObjectInstance mgzWall = new BreakableWallObjectInstance(
                 new ObjectSpawn(0, 0, 0x0D, 0, 0, false, 0));
+        Sonic3kMonitorObjectInstance monitor = new Sonic3kMonitorObjectInstance(
+                new ObjectSpawn(0, 0, 0x01, 0x06, 0, false, 0));
         isolated.setObjectControlled(true);
         isolated.setMgzTopPlatformCarrySolidContactObject(controllingPlatform);
 
@@ -238,6 +325,10 @@ class TestS3kMgzTopPlatformParityHeadless {
                 "MGZ carry should allow solid contacts against the controlling platform instance");
         assertTrue(isolated.allowsSolidContactsWhileObjectControlled(mgzWall),
                 "MGZ carry should still allow the MGZ wall checkpoint contact the controller depends on");
+        assertTrue(isolated.allowsSolidContactsWhileObjectControlled(monitor),
+                "S3K monitor SolidObject_cont accepts the platform's positive object_control bit 0");
+        assertTrue(monitor.zeroXSpeedStopsOnLeftSideContact(),
+                "S3K SolidObject_cont treats zero velocity as entering its player-left side");
         assertFalse(isolated.allowsSolidContactsWhileObjectControlled(otherPlatform),
                 "MGZ carry should not opt the player back into every other solid while object-controlled");
     }
@@ -254,6 +345,22 @@ class TestS3kMgzTopPlatformParityHeadless {
 
         assertTrue(isolated.allowsSolidContactsWhileObjectControlled(spring),
                 "MGZ carry should still allow spring solid contacts so the carried spring handoff can run");
+        assertTrue(spring.zeroXSpeedStopsOnLeftSideContact(),
+                "S3K SolidObject_cont stops zero velocity on a spring's left side");
+    }
+
+    @Test
+    void mgzCarryController_allowsSpikeCandidates() {
+        Sonic isolated = new Sonic("sonic", (short) 0, (short) 0);
+        MGZTopPlatformObjectInstance controllingPlatform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(0, 0, 0x5B, 0, 0, false, 0));
+        Sonic3kSpikeObjectInstance spikes = new Sonic3kSpikeObjectInstance(
+                new ObjectSpawn(0, 0, 0x08, 0x00, 0x00, false, 0));
+        isolated.setObjectControlled(true);
+        isolated.setMgzTopPlatformCarrySolidContactObject(controllingPlatform);
+
+        assertTrue(isolated.allowsSolidContactsWhileObjectControlled(spikes),
+                "Positive object_control bit 0 must not block Obj_Spikes' SolidObject_cont path");
     }
 
     @Test
@@ -276,7 +383,10 @@ class TestS3kMgzTopPlatformParityHeadless {
         sprite.setAir(true);
         sprite.setOnObject(false);
 
-        stompBridge.onSolidContact(sprite, new SolidContact(true, false, false, true, false), 0);
+        Method performStomp = CollapsingBridgeObjectInstance.class.getDeclaredMethod(
+                "performMgzStomp", AbstractPlayableSprite.class);
+        performStomp.setAccessible(true);
+        performStomp.invoke(stompBridge, sprite);
 
         assertTrue(getBooleanField(stompBridge, "fragmented"),
                 "MGZ stomp bridge should shatter when carried Sonic touches it with wall-cling armed");
@@ -312,6 +422,29 @@ class TestS3kMgzTopPlatformParityHeadless {
         int maxResolvedCentreY = candidate.centreY() + candidate.clearance();
         assertTrue(sprite.getCentreY() <= maxResolvedCentreY,
                 "Grabbed carry motion should resolve nearby floor contact instead of moving through terrain");
+    }
+
+    @Test
+    void grabbedCarryMotion_preservesGroundedResultFromLaterSolidSlot() throws Exception {
+        MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(START_PIXEL_X, START_PIXEL_Y, 0x5B, 0, 0, false, 0));
+        Object grabState = newPlayerGrabState();
+        setIntField(grabState, "routine", 4);
+        setBooleanField(grabState, "grabbed", true);
+        playerStates(platform).put(sprite, grabState);
+
+        sprite.setObjectControlled(true);
+        sprite.setMgzTopPlatformCarrySolidContactObject(platform);
+        sprite.setWallCling(true);
+        sprite.setAir(false);
+        sprite.setOnObject(false);
+        sprite.setXSpeed((short) 0x100);
+        sprite.setYSpeed((short) 0x100);
+
+        invokeMoveGrabbedPlayer(platform, sprite, grabState);
+
+        assertFalse(sprite.getAir(),
+                "loc_35070 must preserve a grounded contact written by a permitted earlier solid slot");
     }
 
     @Test
@@ -522,6 +655,43 @@ class TestS3kMgzTopPlatformParityHeadless {
                 "Released-flight handoff should clear main-player entry bias");
         assertEquals(0, getIntField(sidekickState, "entrySideBias"),
                 "Released-flight handoff should clear secondary-rider entry bias");
+    }
+
+    @Test
+    void releasedFlight_forcesAndPostSyncsUntouchedSecondarySlot() throws Exception {
+        int platformX = 0x1128;
+        int platformY = 0x08B0;
+        MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(platformX, platformY, 0x5B, 0, 0, false, 0));
+        Sonic mainPlayer = new Sonic("sonic", (short) platformX, (short) 0x0884);
+        Tails sidekick = new Tails("tails", (short) 0x0B65, (short) 0x0AC2);
+
+        Object mainState = newPlayerGrabState();
+        setIntField(mainState, "routine", 4);
+        setBooleanField(mainState, "grabbed", true);
+        Object sidekickState = newPlayerGrabState();
+        setIntField(sidekickState, "routine", 0);
+
+        Map<Object, Object> playerStates = playerStates(platform);
+        playerStates.put(mainPlayer, mainState);
+        playerStates.put(sidekick, sidekickState);
+
+        Method enterReleasedFlight = MGZTopPlatformObjectInstance.class.getDeclaredMethod("enterReleasedFlight");
+        enterReleasedFlight.setAccessible(true);
+        enterReleasedFlight.invoke(platform);
+
+        assertEquals(6, getIntField(sidekickState, "routine"),
+                "ROM sub_3519A must force the untouched P2 slot to state 6");
+
+        Method snapGrabbedPlayer = MGZTopPlatformObjectInstance.class
+                .getDeclaredMethod("snapGrabbedPlayer", AbstractPlayableSprite.class);
+        snapGrabbedPlayer.setAccessible(true);
+        snapGrabbedPlayer.invoke(platform, sidekick);
+
+        assertEquals(platformX, sidekick.getCentreX(),
+                "Same-frame sub_35202 should snap an unseated released P2 to platform X");
+        assertEquals(platformY - 0x0C - sidekick.getStandYRadius(), sidekick.getCentreY(),
+                "Same-frame sub_35202 should snap an unseated released P2 above the platform");
     }
 
     @Test

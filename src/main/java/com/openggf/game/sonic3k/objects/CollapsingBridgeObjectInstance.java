@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -20,6 +22,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -321,6 +324,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     private int state;
     private int collapseTimer;        // $38 countdown (initialized per zone formula)
     private boolean collapseTriggered; // $3A flag
+    private boolean collapseTriggerPending;
     private boolean fragmented;
 
     // Wave collapse phase tracking (state 2)
@@ -584,6 +588,14 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // SolidObjectTop reaches loc_1E45A for fresh contacts. Its unsigned
+        // cmpi.w #-$10,d0 / blo accepts only negative overlap [-$10,-1],
+        // rejecting the exact d0=0 boundary (sonic3k.asm:41982-42015).
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         // ROM: once the platform enters Obj_PlatformCollapseWaitHandlePlayer it stops
         // calling SolidObjectTop entirely. Only riders already standing on it remain
@@ -607,10 +619,14 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
         switch (mode) {
             case STANDARD -> {
-                // Player stepping on triggers collapse countdown.
-                // ROM: btst #p1_standing_bit,status(a0) at loc_2095E:45140
-                if (!collapseTriggered) {
-                    collapseTriggered = true;
+                // The engine resolves this SolidObjectTop contact before the
+                // object's update. ROM loc_209A8 instead observes the standing
+                // bit only after the countdown check and calls SolidObjectTop
+                // at the end of the object slot. Defer arming $3A until this
+                // tick's update so the first decrement begins on the same
+                // following frame as the ROM.
+                if (!collapseTriggered && !collapseTriggerPending) {
+                    collapseTriggerPending = true;
                 }
             }
             case TRIGGER -> {
@@ -620,12 +636,8 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
                 // (e.g., killing a nearby badnik sets the trigger array entry).
             }
             case MGZ_STOMP -> {
-                // ROM: btst #7,status_tertiary(a1) — only the wall-cling bit triggers
-                // the stomp, which in stock S3K is raised exclusively by MGZ Top Platform.
-                AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-                if (player.isWallCling() && !fragmented) {
-                    performMgzStomp(player);
-                }
+                // MGZ resolves both native players before testing the combined
+                // standing mask; update() consumes the manual checkpoint batch.
             }
         }
     }
@@ -634,11 +646,47 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         return mode == CollapseMode.MGZ_STOMP;
     }
 
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        // loc_209D0 calls SolidObjectTop for P1 and P2 before it inspects the
+        // standing bits and replaces the parent with the first debris piece.
+        // AUTO_AFTER_UPDATE publishes callbacks one player at a time, which
+        // can shatter after P1 and incorrectly prevent P2's same-slot landing.
+        return mode == CollapseMode.MGZ_STOMP
+                ? SolidExecutionMode.MANUAL_CHECKPOINT
+                : SolidExecutionMode.AUTO_AFTER_UPDATE;
+    }
+
     // ===== Update =====
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+
+        if (mode == CollapseMode.MGZ_STOMP && state == 0 && !fragmented) {
+            SolidCheckpointBatch batch = checkpointAll();
+            ArrayList<AbstractPlayableSprite> standingPlayers = new ArrayList<>();
+            AbstractPlayableSprite stomper = null;
+            for (PlayableEntity participant : collapseParticipants(player)) {
+                PlayerSolidContactResult result = batch.perPlayer().get(participant);
+                if (result != null && result.standingNow()
+                        && participant instanceof AbstractPlayableSprite playable) {
+                    standingPlayers.add(playable);
+                    if (stomper == null && playable.isWallCling()) {
+                        stomper = playable;
+                    }
+                }
+            }
+            if (stomper != null) {
+                performMgzStomp(stomper);
+                // loc_209FC clears both native standing bits and then clears
+                // Status_OnObj for every player whose bit was set, not only
+                // the wall-clinging player that selected the stomp branch.
+                for (AbstractPlayableSprite standingPlayer : standingPlayers) {
+                    clearMgzStompStandingState(standingPlayer);
+                }
+            }
+        }
 
         switch (state) {
             case 0 -> { // Idle
@@ -649,7 +697,10 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
                     // ROM: clr.b respawn_addr(a0) — prevent respawn after trigger collapse
                 }
 
-                if (collapseTriggered && mode != CollapseMode.MGZ_STOMP) {
+                if (collapseTriggerPending) {
+                    collapseTriggerPending = false;
+                    collapseTriggered = true;
+                } else if (collapseTriggered && mode != CollapseMode.MGZ_STOMP) {
                     state = 1;
                 }
             }
@@ -685,7 +736,11 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
                 }
 
                 if (!isOnScreen(128)) {
-                    setDestroyed(true);
+                    // ObjPlatformCollapse_SmashObject clears respawn_addr bit 7
+                    // when the bridge fragments, so its later off-screen delete
+                    // remains eligible for a fresh placement load on camera
+                    // re-entry (sonic3k.asm:45435-45445).
+                    setDestroyedByOffscreen();
                 }
             }
         }
@@ -808,10 +863,22 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         fragmented = true;
         collapseWaveRiders.clear();
 
-        // Release the player
-        // ROM: lea (Player_1).w,a1; bsr.s loc_20A3C
-        player.setAir(true);
+        // Release the player from the object without forcing InAir. loc_209FC
+        // clears only Status_OnObj after SolidObjectTop has already landed the
+        // player this frame; unlike Check_CollapsePlayerRelease, this stomp
+        // path never sets Status_InAir (sonic3k.asm:45189-45216).
         player.setOnObject(false);
+        try {
+            if (services().objectManager() != null) {
+                // The same loc_209FC block also clears the bridge's native
+                // standing bit. Drop the engine ride owner now so the next
+                // compatibility checkpoint does not reinterpret the already
+                // completed stomp as a generic platform walk-off and set air.
+                services().objectManager().clearRidingObject(player);
+            }
+        } catch (Exception e) {
+            // Reflection-level tests may instantiate the bridge without services.
+        }
 
         // Advance mapping frame for fragment pieces
         // ROM: addq.b #1,mapping_frame(a0)
@@ -835,7 +902,10 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
                 SpriteMappingFrame frame = sheet.getFrame(stompFrameIndex);
                 int pieceCount = frame.pieces().size();
                 int maxPieces = Math.min(pieceCount, MGZ_STOMP_VELOCITIES.length);
-                for (int i = 0; i < maxPieces; i++) {
+                // BreakObjectToPieces starts with a1=a0, so piece zero is the
+                // bridge parent itself. Only later pieces consume newly
+                // allocated slots (sonic3k.asm:45772-45811).
+                for (int i = 1; i < maxPieces; i++) {
                     int xVel = MGZ_STOMP_VELOCITIES[i][0];
                     int yVel = MGZ_STOMP_VELOCITIES[i][1];
                     MgzStompDebris debris = new MgzStompDebris(
@@ -856,6 +926,17 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
         // Enter falling state directly
         state = 3;
+    }
+
+    private void clearMgzStompStandingState(AbstractPlayableSprite player) {
+        player.setOnObject(false);
+        try {
+            if (services().objectManager() != null) {
+                services().objectManager().clearRidingObject(player);
+            }
+        } catch (Exception e) {
+            // Reflection-level tests may instantiate the bridge without services.
+        }
     }
 
     private boolean shouldTrackCollapseRider(AbstractPlayableSprite player) {

@@ -35,6 +35,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectControlledSolidContactController;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
@@ -3125,6 +3126,38 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 return mgzTopPlatformCarrySolidContactObject instanceof ObjectControlledSolidContactController controller
                         && controller.allowsObjectControlledSolidContact(this, candidate);
+        }
+
+        public void notifyObjectControlledSolidContact(ObjectInstance candidate, SolidContact contact) {
+                if (candidate == null || contact == null || mgzTopPlatformCarrySolidContactObject == null) {
+                        return;
+                }
+                if (mgzTopPlatformCarrySolidContactObject
+                                instanceof ObjectControlledSolidContactController controller) {
+                        controller.onObjectControlledSolidContact(this, candidate, contact);
+                }
+        }
+
+        public Short getObjectControlledSolidContactProjectedXSpeed(ObjectInstance candidate) {
+                if (candidate == null || mgzTopPlatformCarrySolidContactObject == null) {
+                        return null;
+                }
+                if (mgzTopPlatformCarrySolidContactObject
+                                instanceof ObjectControlledSolidContactController controller
+                                && controller.allowsObjectControlledSolidContact(this, candidate)) {
+                        return controller.projectedSolidContactXSpeed(this, candidate);
+                }
+                return null;
+        }
+
+        public void notifyObjectControlledSolidContactInvalidated(ObjectInstance candidate) {
+                if (candidate == null || mgzTopPlatformCarrySolidContactObject == null) {
+                        return;
+                }
+                if (mgzTopPlatformCarrySolidContactObject
+                                instanceof ObjectControlledSolidContactController controller) {
+                        controller.onObjectControlledSolidContactInvalidated(this, candidate);
+                }
         }
 
         public void setMgzTopPlatformCarrySolidContactObject(ObjectInstance instance) {

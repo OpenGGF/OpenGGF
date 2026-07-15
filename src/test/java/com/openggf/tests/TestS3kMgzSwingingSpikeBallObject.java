@@ -42,6 +42,8 @@ class TestS3kMgzSwingingSpikeBallObject {
 
         assertEquals(0x1260, instance.getX());
         assertEquals(0x0600, instance.getY());
+        assertEquals(0x1200, instance.getOutOfRangeReferenceX(),
+                "loc_341F0 uses the stored anchor rather than the swinging ball position");
 
         TouchResponseProvider.TouchRegion[] regions = instance.getMultiTouchRegions();
         assertNotNull(regions);

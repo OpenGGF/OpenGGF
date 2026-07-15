@@ -15,6 +15,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -144,6 +145,24 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj_BreakableWall calls SolidObjectFull, whose unsigned X-window
+        // rejection is `bhi`, not `bhs` (sonic3k.asm:41405). A player exactly
+        // flush with the padded right edge therefore remains a side contact and
+        // has Status_Push reasserted without positional correction.
+        return true;
+    }
+
+    @Override
+    public boolean projectsPreMovementGroundXForSolidContact(PlayableEntity player) {
+        // Obj_BreakableWall's SolidObjectFull call observes the player slot's
+        // already-applied X step. This also lets an object-controlled carrier
+        // publish its equivalent pending MoveSprite2 step through the shared
+        // projection seam.
+        return true;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         return false;
     }
@@ -254,11 +273,27 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         return isKnuckles() && player.getDoubleJumpFlag() == GLIDE_ACTIVE;
     }
 
+    boolean wouldBreakFromSideContact(AbstractPlayableSprite player) {
+        if (player == null || broken) {
+            return false;
+        }
+        return switch (config.breakMode) {
+            case STANDARD -> player.isSuperSonic()
+                    || isKnuckles()
+                    || player.getAnimationId() == ANIM_ROLL
+                            && Math.abs(player.getXSpeed()) >= BREAK_SPEED_THRESHOLD;
+            case KNUCKLES_ONLY -> isKnuckles();
+            case MGZ_SPIN_BREAK -> player.isWallCling()
+                    || isKnuckles() && player.getDoubleJumpFlag() == GLIDE_ACTIVE;
+        };
+    }
+
     private void performBreak(AbstractPlayableSprite player) {
         if (broken) {
             return;
         }
         broken = true;
+        player.notifyObjectControlledSolidContactInvalidated(this);
 
         player.setXSpeed(savedPreContactXSpeed);
         player.setGSpeed(savedPreContactXSpeed);
@@ -335,7 +370,30 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         int pieceCount = brokenFrame.pieces().size();
         int maxFragments = Math.min(pieceCount, velTable.length);
 
-        for (int i = 0; i < maxFragments; i++) {
+        int firstAllocatedPiece = 0;
+        if (maxFragments > 0) {
+            // BreakObjectToPieces starts with a1=a0, so piece zero morphs the
+            // wall's existing SST slot in place before AllocateObjectAfterCurrent
+            // is used for the remaining pieces (sonic3k.asm:216D8-21726).
+            // Keeping that slot occupied is load-bearing for later S3K object
+            // allocation and execution order.
+            ObjectManager objectManager = services().objectManager();
+            int transferredSlot = ObjectLifetimeOps.detachSlotForTransfer(this);
+            if (objectManager != null && transferredSlot >= 0) {
+                int xVel = velTable[0][0];
+                int yVel = velTable[0][1];
+                BreakableWallFragment firstFragment = new BreakableWallFragment(
+                        x, y, brokenFrameIndex, 0, xVel, yVel, config.artKey);
+                ObjectLifetimeOps.addReplacementAtTransferredSlot(
+                        objectManager, firstFragment, transferredSlot);
+                // The ROM immediately falls through to loc_21692 after the
+                // in-place conversion, so piece zero moves once this same tick.
+                firstFragment.update(0, null);
+                firstAllocatedPiece = 1;
+            }
+        }
+
+        for (int i = firstAllocatedPiece; i < maxFragments; i++) {
             int xVel = velTable[i][0];
             int yVel = velTable[i][1];
             BreakableWallFragment fragment = new BreakableWallFragment(

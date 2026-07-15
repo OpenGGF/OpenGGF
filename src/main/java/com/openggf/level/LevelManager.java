@@ -868,6 +868,7 @@ public class LevelManager {
                     objectsExecuteAfterPlayerPhysics());
         }
         if (ringManager != null && player instanceof AbstractPlayableSprite playable && !playable.getDead()) {
+            ringManager.attractStageRings(playable);
             if (!ringManager.usesObjectTouchCollection()) {
                 ringManager.collectStageRings(playable, frameCounter + 1);
             }
@@ -2936,6 +2937,11 @@ public class LevelManager {
      */
     void rebuildManagersForActTransition(Camera cam, List<ObjectInstance> persistentDynamicObjects) {
         int cameraX = cam.getX();
+        // V_int_run_count is global work RAM, outside Dynamic_object_RAM, and
+        // Load_Level does not clear it. The ObjectManager owns our live copy of
+        // that clock, so carry it across the manager rebuild even though the
+        // per-act object execution counter intentionally restarts.
+        int inheritedVblaCounter = objectManager != null ? objectManager.getVblaCounter() : 0;
 
         // Rebuild ObjectManager with the new act's object spawns
         objectManager = new ObjectManager(level.getObjects(),
@@ -2962,6 +2968,7 @@ public class LevelManager {
         }
         collisionSystem.setObjectManager(objectManager);
         objectManager.reset(cameraX);
+        objectManager.initVblaCounter(inheritedVblaCounter);
 
         // Rebuild RingManager with the new act's ring spawns
         RingSpriteSheet ringSpriteSheet = level.getRingSpriteSheet();
@@ -3399,6 +3406,14 @@ public class LevelManager {
         // frame top and returns from RecordingFrameDriver/GameLoop, so preserve
         // that native post-ScreenEvents oscillator tick explicitly.
         advanceGlobalOscillation();
+
+        // The pending seamless reload is consumed at frame top, so this row
+        // returns before ObjectManager.update() can perform its normal V-int
+        // clock increment. V_int_run_count is global work RAM and still ticks
+        // in the ROM on that transition-only VBlank.
+        if (objectManager != null) {
+            objectManager.advanceVblaCounter();
+        }
 
         // ROM keeps Level_frame_counter ticking through AIZ's reload frame
         // (docs/skdisasm/sonic3k.asm:7884-7894); S3K Tails CPU reads it for

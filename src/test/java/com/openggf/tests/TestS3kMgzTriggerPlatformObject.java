@@ -41,6 +41,9 @@ class TestS3kMgzTriggerPlatformObject {
         assertEquals(0x4B, params.halfWidth());
         assertEquals(0x1E, params.airHalfHeight());
         assertEquals(0x1F, params.groundHalfHeight());
+        assertTrue(instance.usesInclusiveRightEdge(),
+                "SolidObjectFull retains the exact d1*2 right edge");
+        assertEquals(0x0003, instance.romObjectCodePointerHighWord());
         assertEquals(5, instance.getPriorityBucket());
     }
 
@@ -56,7 +59,7 @@ class TestS3kMgzTriggerPlatformObject {
         assertEquals(0x1200, instance.getX(), "Object must wait for its trigger");
 
         Sonic3kLevelTriggerManager.setAll(3);
-        for (int frame = 0; frame < 64; frame++) {
+        for (int frame = 0; frame < 65; frame++) {
             instance.update(frame, null);
         }
 
@@ -74,7 +77,7 @@ class TestS3kMgzTriggerPlatformObject {
         assertEquals(0x0600, instance.getY());
 
         Sonic3kLevelTriggerManager.setAll(0);
-        for (int frame = 0; frame < 64; frame++) {
+        for (int frame = 0; frame < 65; frame++) {
             instance.update(frame, null);
         }
 

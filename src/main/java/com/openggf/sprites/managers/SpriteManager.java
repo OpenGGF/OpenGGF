@@ -1509,7 +1509,14 @@ public class SpriteManager {
 		// ReactToItem must observe the post-movement animation state from the
 		// current player slot, not the previous frame's mapping state.
 		playable.getAnimationManager().update(frameCounter);
-		levelManager.applyTouchResponses(playable);
+		// S3K/S2/S1 hurt and death routines animate/draw but do not call
+		// TouchResponse. In particular, S3K Tails loc_156D6 runs movement,
+		// collision, Animate_Tails and Draw_Sprite only; allowing another touch
+		// pass lets an already-hurt sidekick trigger SPECIAL objects such as the
+		// MGZ Spiker spring while the ROM cannot.
+		if (!hurtAtTickStart && !playable.getDead()) {
+			levelManager.applyTouchResponses(playable);
+		}
 		// S1 (UNIFIED): Post-movement solid pass matches ROM timing — solid objects
 		// check Sonic's position after he has moved in the ROM's ExecuteObjects loop.
 		// postMovement=true disables velocity classification adjustment.

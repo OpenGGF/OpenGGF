@@ -2518,6 +2518,58 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s3kOrdinaryLiveRideDoesNotSuppressFollowLeftNudge() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic3kGameModule());
+            installEmptyObjectManager();
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setAir(false);
+            tails.setObjectControlled(false);
+            tails.setCentreX((short) 0x19B7);
+            tails.setCentreY((short) 0x0C34);
+            tails.setDirection(Direction.LEFT);
+            tails.setGSpeed((short) 0xFFF4);
+            tails.setXSpeed((short) 0xFFF4);
+
+            LiveRideObject rideObject = new LiveRideObject(0x57);
+            rideObject.setSlotIndex(4);
+            GameServices.level().getObjectManager().addDynamicObject(rideObject);
+            tails.setLatchedSolidObject(0x57, rideObject);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x1962);
+            Arrays.fill(yHistory, (short) 0x0BE0);
+            Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_DOWN);
+            Arrays.fill(statusHistory, (byte) AbstractPlayableSprite.STATUS_ON_OBJECT);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+            sonic.setGSpeed((short) 0x0170);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+            setNormalPushingGraceFrames(controller, 8);
+
+            controller.update(0x225F);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("follow_steering", diagnostics.followBranch()),
+                    () -> assertEquals(-1, diagnostics.appliedFollowNudge(),
+                            "A live ordinary support does not manufacture ROM Status_Push. With the "
+                                    + "current push bit clear, loc_13E0A applies the -1 x_pos nudge."),
+                    () -> assertEquals(0x19B6, tails.getCentreX() & 0xFFFF));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
     void s3kLeaderOnObjectLocalPushGraceStillAppliesFollowNudge() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");

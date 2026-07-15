@@ -13,6 +13,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -40,7 +41,8 @@ import java.util.List;
  * and vertical variants.
  */
 public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider,
+        SpawnRewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_TRIGGER_PLATFORM;
     private static final int PRIORITY_BUCKET = 5; // ROM: priority = $280
@@ -121,11 +123,12 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        boolean wasActivated = activated;
         if (!completed && Sonic3kLevelTriggerManager.testAny(triggerIndex)) {
             activated = true;
         }
 
-        if (!completed && activated) {
+        if (!completed && wasActivated) {
             advanceActiveMotion();
             applyScreenShake(frameCounter);
         } else {
@@ -196,6 +199,32 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return new SolidObjectParams(widthPixels + 0x0B, heightPixels, heightPixels + 1);
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // ROM SolidObjectFull's horizontal entry check rejects only values
+        // above d1*2 (bhi), retaining the exact right edge.
+        // sonic3k.asm:41390-41401.
+        return true;
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_MGZTriggerPlatform lives at $000345D4 in the locked-on ROM.
+        return 0x0003;
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        // ROM Render_Sprites consumes byte_34568's width_pixels value.
+        return widthPixels;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        // render_flags bit 2 selects the custom height_pixels visibility path.
+        return heightPixels;
     }
 
     @Override

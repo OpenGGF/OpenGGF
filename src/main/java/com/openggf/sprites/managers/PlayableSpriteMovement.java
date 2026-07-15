@@ -465,7 +465,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
-		if (sprite.isObjectControlSuppressesMovement()) {
+		// Player routine dispatch reaches Hurt/Dead independently of the normal
+		// control routine's object_control gate. A late object-slot hurt can leave
+		// positive object_control set until its owner runs on the following frame;
+		// the recoil routine must still execute on that frame (S3K MGZ top carrier
+		// into Obj_Spikes: Obj01_Hurt precedes sub_34EEC's release pass).
+		if (sprite.isObjectControlSuppressesMovement()
+				&& !sprite.isHurt()
+				&& !sprite.getDead()) {
 			applyScreenYWrapValueAfterControl();
 			return;
 		}
@@ -941,7 +948,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 		sprite.updateSensors(originalX, originalY);
 		boolean wasAirBeforeCollision = sprite.getAir();
-		if (!sprite.isObjectControlSuppressesMovement() && !sprite.isSuppressAirCollision()) {
+		// Hurt routine 4 owns its terrain pass even if a positive object_control
+		// bit remains set until a later object slot releases it. The normal
+		// control routine alone is suppressed by that byte.
+		if ((!sprite.isObjectControlSuppressesMovement() || hurt)
+				&& !sprite.isSuppressAirCollision()) {
 			doLevelCollision(sprite.isForceFloorCheck());
 		}
 

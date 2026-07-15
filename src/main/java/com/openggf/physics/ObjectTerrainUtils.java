@@ -45,6 +45,7 @@ public final class ObjectTerrainUtils {
         return checkFloorDistAtPoint(x, y, false);
     }
 
+
     /**
      * Check distance to floor from exact point, returning the ROM-transformed terrain
      * angle after chunk H/V flip handling.
@@ -63,7 +64,16 @@ public final class ObjectTerrainUtils {
      * ROM-transformed terrain angle after chunk H/V flip handling.
      */
     public static TerrainCheckResult checkCeilingDistWithFlipAwareAngle(int x, int y, int yRadius) {
-        return checkCeilingDistAtPoint(x, y - yRadius, true);
+        return checkNativeUpwardCeilingDistAtPoint(x, y - yRadius, true);
+    }
+
+    /**
+     * Check distance to the ceiling through the S3K upward FindFloor entry.
+     * This keeps the height-map/X-indexed probe explicit instead of changing
+     * the legacy object-ceiling contract used by S1/S2 object families.
+     */
+    public static TerrainCheckResult checkNativeUpwardCeilingDist(int x, int y, int yRadius) {
+        return checkNativeUpwardCeilingDistAtPoint(x, y - yRadius, false);
     }
 
     /** Check distance to right wall (ROM: ObjCheckRightWallDist s2.asm:43871) */
@@ -227,7 +237,7 @@ public final class ObjectTerrainUtils {
             if (edgeResult != null) return edgeResult;
         }
 
-        return createCeilingResult(tile, desc, metric, y, y, flipAwareAngle);
+        return createLegacyCeilingResult(tile, desc, metric, y, y, flipAwareAngle);
     }
 
     private static TerrainCheckResult checkCeilingExtension(LevelManager lm, int x, int y,
@@ -238,7 +248,7 @@ public final class ObjectTerrainUtils {
         byte metric = getCeilingMetric(tile, desc, prevY);
 
         if (metric > 0) {
-            return createCeilingResult(tile, desc, metric, y, prevY, flipAwareAngle);
+            return createLegacyCeilingResult(tile, desc, metric, y, prevY, flipAwareAngle);
         }
         return TerrainCheckResult.noCollision();
     }
@@ -251,18 +261,97 @@ public final class ObjectTerrainUtils {
         byte metric = getCeilingMetric(tile, desc, nextY);
 
         if (metric > 0 && metric < FULL_TILE) {
-            return createCeilingResult(tile, desc, metric, y, nextY, flipAwareAngle);
+            return createLegacyCeilingResult(tile, desc, metric, y, nextY, flipAwareAngle);
         }
         return null;
     }
 
-    private static TerrainCheckResult createCeilingResult(SolidTile tile, ChunkDesc desc,
-                                                          byte metric, int checkY, int tileY,
-                                                          boolean flipAwareAngle) {
+    private static TerrainCheckResult createLegacyCeilingResult(SolidTile tile, ChunkDesc desc,
+                                                                 byte metric, int checkY, int tileY,
+                                                                 boolean flipAwareAngle) {
         int tileTop = tileY & ~0x0F;
         int surfaceY = tileTop + metric - 1;
         int dist = checkY - surfaceY;
         return new TerrainCheckResult(dist, getAngle(tile, desc, flipAwareAngle), getTileIndex(desc));
+    }
+
+    private static TerrainCheckResult checkNativeUpwardCeilingDistAtPoint(
+            int x, int y, boolean flipAwareAngle) {
+        LevelManager lm = com.openggf.game.GameServices.levelOrNull();
+        if (lm == null) return TerrainCheckResult.noCollision();
+
+        TerrainCheckResult current = scanCeilingTile(lm, x, y, y, false, flipAwareAngle);
+        if (current != null) {
+            return current;
+        }
+        TerrainCheckResult extension = scanCeilingTile(
+                lm, x, y, y - FULL_TILE, true, flipAwareAngle);
+        return extension != null ? extension : TerrainCheckResult.noCollision();
+    }
+
+    /**
+     * Mirrors FindFloor/FindFloor2 as entered by the native upward probe. The
+     * caller's EOR #$F changes the low-nibble arithmetic, while collision data
+     * still comes from the height map indexed by X (not the rotated width map).
+     */
+    private static TerrainCheckResult scanCeilingTile(
+            LevelManager lm, int x, int originalY, int checkY,
+            boolean extension, boolean flipAwareAngle) {
+        ChunkDesc desc = lm.getChunkDescAt((byte) 0, x, checkY);
+        SolidTile tile = getSolidTile(lm, desc, SOLIDITY_ALL);
+        if (tile == null) {
+            return null;
+        }
+
+        int metric = getCeilingHeightMetric(tile, desc, x);
+        if (metric == 0) {
+            return extension
+                    ? createCeilingResult(tile, desc, 0, originalY, checkY, flipAwareAngle)
+                    : null;
+        }
+
+        if (metric < 0) {
+            int mirroredYInTile = (originalY ^ 0x0F) & 0x0F;
+            if (metric + mirroredYInTile >= 0) {
+                return extension
+                        ? createCeilingResult(tile, desc, 0, originalY, checkY, flipAwareAngle)
+                        : null;
+            }
+            if (extension) {
+                return new TerrainCheckResult(
+                        ~mirroredYInTile + FULL_TILE,
+                        getAngle(tile, desc, flipAwareAngle), getTileIndex(desc));
+            }
+
+            int regressY = checkY + FULL_TILE;
+            TerrainCheckResult regress = scanCeilingTile(
+                    lm, x, originalY, regressY, true, flipAwareAngle);
+            if (regress != null) {
+                return regress;
+            }
+            return createCeilingResult(tile, desc, 0, originalY, regressY, flipAwareAngle);
+        }
+
+        if (metric == FULL_TILE && !extension) {
+            int regressY = checkY + FULL_TILE;
+            TerrainCheckResult regress = scanCeilingTile(
+                    lm, x, originalY, regressY, true, flipAwareAngle);
+            if (regress != null) {
+                return regress;
+            }
+            return createCeilingResult(tile, desc, 0, originalY, regressY, flipAwareAngle);
+        }
+
+        return createCeilingResult(tile, desc, metric, originalY, checkY, flipAwareAngle);
+    }
+
+    private static TerrainCheckResult createCeilingResult(
+            SolidTile tile, ChunkDesc desc, int metric,
+            int originalY, int tileY, boolean flipAwareAngle) {
+        int surfaceY = (tileY & ~0x0F) + metric;
+        return new TerrainCheckResult(
+                originalY - surfaceY,
+                getAngle(tile, desc, flipAwareAngle), getTileIndex(desc));
     }
 
     // ========================================
@@ -377,6 +466,22 @@ public final class ObjectTerrainUtils {
         if (metric != 0 && metric != FULL_TILE && desc != null && desc.getVFlip()) {
             // ROM: neg.w d0 (s2.asm:42984-42987) - simple negation
             metric = (byte) -metric;
+        }
+        return metric;
+    }
+
+    private static int getCeilingHeightMetric(SolidTile tile, ChunkDesc desc, int x) {
+        if (tile == null) return 0;
+
+        int index = x & 0x0F;
+        if (desc != null && desc.getHFlip()) {
+            index = 15 - index;
+        }
+
+        int metric = tile.getHeightAt((byte) index);
+        if (metric != 0 && metric != FULL_TILE
+                && (desc == null || !desc.getVFlip())) {
+            metric = -metric;
         }
         return metric;
     }

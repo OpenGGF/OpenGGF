@@ -23,6 +23,7 @@ class TestFloatingPlatformObjectInstance {
                         + "before square-path movement (sonic3k.asm:50810-50835)");
         assertFalse(platform.usesCustomOutOfRangeCheck(),
                 "Subtype 8 keeps ROM's normal $280 deletion range and only needs the saved anchor");
+        assertEquals(0x0002, platform.romObjectCodePointerHighWord());
     }
 
     @Test
