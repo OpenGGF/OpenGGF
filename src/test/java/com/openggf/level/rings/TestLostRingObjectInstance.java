@@ -157,6 +157,21 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void s3kLostRingRenderFlagUsesZeroHeightPixels() {
+        // S3K Render_Sprites reads height_pixels directly. Obj_Bouncing_Ring
+        // initializes y_radius/x_radius but leaves height_pixels zero, so a ring
+        // below the 224-line viewport clears bit 7 without S1/S2's 32 px band.
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        LatchedRenderProbeRing ring = new LatchedRenderProbeRing(
+                0x100, 0x00E0, 0, 0, GameRules.SONIC_3K.ring().lostRingRenderYMargin());
+
+        ring.update(0, null);
+
+        assertFalse(ring.renderFlagForTest(),
+                "S3K Obj37 height_pixels remains zero, making the viewport bottom exclusive");
+    }
+
+    @Test
     void s1OffscreenLostRingStillProbesTerrain() {
         // S1 RLoss_Bounce calls ObjFloorDist directly after the vblank cadence gate; unlike S2/S3K,
         // there is no render_flags bit-7 check before the floor probe.
@@ -281,10 +296,17 @@ class TestLostRingObjectInstance {
 
     private static final class LatchedRenderProbeRing extends LostRingObjectInstance {
         int floorProbeCount;
+        private final int renderYMargin;
 
         private LatchedRenderProbeRing(int xPixel, int yPixel, int xVel, int yVel) {
+            this(xPixel, yPixel, xVel, yVel, GameRules.SONIC_2.ring().lostRingRenderYMargin());
+        }
+
+        private LatchedRenderProbeRing(int xPixel, int yPixel, int xVel, int yVel,
+                                       int renderYMargin) {
             super(new ObjectSpawn(xPixel & 0xFFFF, yPixel & 0xFFFF, 0x37, 0, 0, false, 0));
             initFixedPointForTest(xPixel, yPixel, xVel, yVel, 0, 0xFF);
+            this.renderYMargin = renderYMargin;
         }
 
         boolean renderFlagForTest() {
@@ -299,6 +321,11 @@ class TestLostRingObjectInstance {
         @Override
         protected int resolveVblaCounter() {
             return 0;
+        }
+
+        @Override
+        protected int resolveLostRingRenderYMargin() {
+            return renderYMargin;
         }
 
         @Override

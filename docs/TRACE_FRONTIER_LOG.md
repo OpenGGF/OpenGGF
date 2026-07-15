@@ -1,5 +1,37 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- S3K lost rings use their zero-height render window
+
+Branch `feature/ai-trace-animation-verification`, after the spindash follower-
+history milestone. S3K `Obj_Bouncing_Ring` initializes `y_radius` and
+`x_radius`, but leaves the freshly allocated SST's `height_pixels` byte zero.
+`Render_Sprites` reads that separate byte when refreshing
+`render_flags.on_screen`; it therefore clears the flag at the 224-line viewport
+edge. The shared ring object had retained S1/S2 BuildSprites' assumed 32-pixel
+Y margin, allowing an off-screen MGZ ring to probe and bounce from terrain,
+return on-screen, and be collected by Sonic. The lost-ring renderer extent is
+now owned by typed `RingRules`: S1/S2 retain 32 and S3K uses zero. No trace
+state, zone/route/frame carve-out, hydration, or comparator tolerance was
+added.
+
+ROM references:
+`docs/skdisasm/sonic3k.asm:35549-35604,35623-35645,36336-36365`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 28165 to frame 28398 (`rings`,
+  expected 2 / actual 1).
+- MGZ complete-run animation remains at frame 31643 (`tails_animation_id`,
+  expected Roll / actual Hurt).
+- The focused lost-ring and ring-manager suites pass, including an explicit
+  S3K zero-height render-window assertion.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- Spindash Push clears after follower-history publication
 
 Branch `feature/ai-trace-animation-verification`, after the repeated head-

@@ -57,8 +57,6 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private static final int RING_Y_RADIUS = 8;
     /** ROM Obj37_Init sets width_pixels(a1) = 8 for BuildSprites' X gate. */
     private static final int RING_RENDER_HALF_WIDTH = 8;
-    /** BuildSprites assumed-height path uses a 32 px Y band when render_flags bit 4 is clear. */
-    private static final int BUILDSPRITES_ASSUMED_Y_MARGIN = 32;
     /** ROM RingCheckFloorDist top-solidity bit (s2.asm Obj37 floor probe). */
     private static final int SOLIDITY_TOP = 0x0C;
 
@@ -332,8 +330,9 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * <p>
      * The bit is latched by the prior BuildSprites pass, not recomputed inside
      * Obj37_Main. Obj37_Init starts with render_flags=$84, then DisplaySprite/
-     * BuildSprites refreshes bit 7 after each object step using width_pixels=8
-     * and the assumed 32 px Y band because render_flags bit 4 is clear.
+     * BuildSprites or Render_Sprites refreshes bit 7 after each object step using
+     * width_pixels=8 and the game's Obj37 Y margin. S1/S2 use the assumed 32 px
+     * band; S3K reads height_pixels, which Obj_Bouncing_Ring leaves zero.
      */
     protected boolean hasRomRenderFlagForFloorProbe() {
         return romRenderFlagForFloorProbe;
@@ -359,12 +358,26 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     private void refreshRomRenderFlagForFloorProbe() {
         romRenderFlagForFloorProbe = isWithinRenderSpriteBounds(
-                RING_RENDER_HALF_WIDTH, BUILDSPRITES_ASSUMED_Y_MARGIN);
+                RING_RENDER_HALF_WIDTH, resolveLostRingRenderYMargin());
     }
 
     protected boolean ringFloorProbeRequiresRenderFlag() {
         RingRules rules = resolveRingRules();
         return rules == null || rules.ringFloorProbeRequiresRenderFlag();
+    }
+
+    /**
+     * ROM renderer Y extent used to latch {@code render_flags.on_screen} for Obj37.
+     * S1/S2 BuildSprites use the 32 px assumed-height branch. S3K Render_Sprites
+     * reads {@code height_pixels}; Obj_Bouncing_Ring initializes y/x_radius but
+     * never height_pixels, so a freshly allocated ring has a zero-pixel Y margin
+     * (sonic3k.asm:35549-35604, 36336-36365).
+     */
+    protected int resolveLostRingRenderYMargin() {
+        RingRules rules = resolveRingRules();
+        return rules != null
+                ? rules.lostRingRenderYMargin()
+                : GameRules.SONIC_2.ring().lostRingRenderYMargin();
     }
 
     /**
