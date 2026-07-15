@@ -1332,7 +1332,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     private void registerStockZoneBound(int objectId, ObjectFactory factory) {
         factories.put(objectId, factory);
         factoryEntries.put(objectId, new FactoryEntry(factory,
-                context -> context.stockRomZoneId().isPresent()));
+                context -> context.source() != S3kObjectCreationContext.Source.CUSTOM));
         stockZoneBoundFactoryIds.add(objectId);
     }
 
@@ -1345,7 +1345,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         }
         int romZoneId = currentRomZoneId();
         return romZoneId < 0
-                ? S3kObjectCreationContext.custom(S3kZoneSet.S3KL)
+                ? S3kObjectCreationContext.legacy(S3kZoneSet.S3KL)
                 : S3kObjectCreationContext.stock(S3kZoneSet.forZone(romZoneId), romZoneId);
     }
 

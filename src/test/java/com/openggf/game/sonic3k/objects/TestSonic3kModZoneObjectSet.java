@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 class TestSonic3kModZoneObjectSet {
 
@@ -38,6 +39,16 @@ class TestSonic3kModZoneObjectSet {
                 Sonic3kObjectIds.MONITOR));
         assertTrue(registry.canCreateInCustomZone(S3kZoneSet.SKL,
                 Sonic3kObjectIds.MONITOR));
+    }
+
+    @Test
+    void bareRegistryPreservesLegacyFallbackForStockZoneBoundFactory() {
+        Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
+        var spawn = new com.openggf.level.objects.ObjectSpawn(
+                0x11F0, 0x289, Sonic3kObjectIds.AIZ_MINIBOSS,
+                0, 0, false, 0);
+
+        assertInstanceOf(AizMinibossInstance.class, registry.create(spawn));
     }
 
     @Test
