@@ -4,7 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 - **Mod API 2.3.0: host-adapted additive Sonic 3&K zones.** The mod runtime now
-  delegates complete-zone validation/loading to a typed, game-owned `ModZoneAdapter` instead of
+  delegates complete-zone validation/loading to a typed, game-owned `ModZoneAdapter` whose
+  creator ABI contains only validation, loading, and runtime-profile selection, instead of
   selecting behavior through game-name branches. Strict level format v2 adds typed
   S3K object-set metadata and sparse Genesis palette claims while leaving the Sonic
   2/standalone format-v1 contract unchanged. Custom S3K zones compose host-owned

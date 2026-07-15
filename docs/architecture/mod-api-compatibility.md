@@ -22,7 +22,7 @@ a closed historical baseline, `mod-api-signatures-2.1.txt`, **875 engine types**
 and **17,196 canonical signature entries**); 2.2.0 was an additive minor bump on
 top of 2.1.0 (now a closed historical baseline, **876 engine types** and **17,205
 canonical signature entries**); and 2.3.0 is the current additive minor bump on
-top of 2.2.0 (**886 engine types** and **17,339 canonical signature entries**).
+top of 2.2.0 (**885 engine types** and **17,323 canonical signature entries**).
 The breadth is intentional. In particular, the legacy-wide
 signatures of `GameModule`, `ObjectServices`, and the object base classes expose
 substantial runtime infrastructure; silently treating those transitive types as
@@ -243,8 +243,10 @@ Added signatures:
   **`GameModule.EMPTY_MOD_ZONE_ADAPTER`**, let registration validate and load a
   complete level through the selected host instead of branching on a game name in
   shared mod runtime code.
-- **`ModZoneAdapter`** publishes the narrow `validate`, `load`, and `runtimeProfile`
-  contract over immutable, game-owned `ModZoneLevelData`. An unsupported host
+- **`ModZoneAdapter`** publishes exactly the narrow `validate`, `load`, and
+  `runtimeProfile` contract over immutable, game-owned `ModZoneLevelData`. Data-select
+  decoration stays on the unannotated internal `ModZoneDataSelectDecorator`; it is
+  deliberately absent from the creator ABI. An unsupported host
   rejects the contribution before publication. `ModZoneRuntimeContribution` and
   `ZoneRegistry.modZoneRuntimeContribution(...)` carry that resolved payload to
   gameplay without introducing a `game -> mods` or `level -> mods` dependency.

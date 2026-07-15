@@ -307,7 +307,6 @@ CF-ANNOTATION TYPE com.openggf.game.dataselect.DataSelectPresentationProvider vi
 CF-ANNOTATION TYPE com.openggf.game.dataselect.DataSelectSessionController visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.dataselect.HostSlotPreview visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.dataselect.ModZoneSaveFinding visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ghost.GhostHeader visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ghost.GhostRecording visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ghost.GhostRenderRegistry visible @com.openggf.game.ModApi
@@ -1091,7 +1090,6 @@ CONSTRUCTOR com.openggf.game.dataselect.DataSelectPresentationProvider public  <
 CONSTRUCTOR com.openggf.game.dataselect.DataSelectSessionController public  <init>(com.openggf.game.dataselect.DataSelectHostProfile)
 CONSTRUCTOR com.openggf.game.dataselect.HostSlotPreview public  <init>(com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType,java.lang.String)
 CONSTRUCTOR com.openggf.game.dataselect.HostSlotPreview public  <init>(com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType,java.lang.String,java.lang.Integer)
-CONSTRUCTOR com.openggf.game.dataselect.ModZoneSaveFinding public  <init>(java.lang.String,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.game.ghost.GhostHeader public  <init>(int,java.lang.String,int,int,java.lang.String,java.lang.String,int,int,int[],byte[])
 CONSTRUCTOR com.openggf.game.ghost.GhostRecording public  <init>(com.openggf.game.ghost.GhostHeader,byte[])
 CONSTRUCTOR com.openggf.game.ghost.GhostRenderRegistry public  <init>()
@@ -5778,12 +5776,6 @@ METHOD com.openggf.game.dataselect.HostSlotPreview public,static  com.openggf.ga
 METHOD com.openggf.game.dataselect.HostSlotPreview public,static  com.openggf.game.dataselect.HostSlotPreview textOnly(java.lang.String)
 METHOD com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType public,static  com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType valueOf(java.lang.String)
 METHOD com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType public,static  com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType[] values()
-METHOD com.openggf.game.dataselect.ModZoneSaveFinding public  java.lang.String code()
-METHOD com.openggf.game.dataselect.ModZoneSaveFinding public  java.lang.String detail()
-METHOD com.openggf.game.dataselect.ModZoneSaveFinding public  java.lang.String ownerModId()
-METHOD com.openggf.game.dataselect.ModZoneSaveFinding public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.dataselect.ModZoneSaveFinding public,final  int hashCode()
-METHOD com.openggf.game.dataselect.ModZoneSaveFinding public,final  java.lang.String toString()
 METHOD com.openggf.game.ghost.GhostHeader public  boolean equals(java.lang.Object)
 METHOD com.openggf.game.ghost.GhostHeader public  byte[] inputRecordingHash()
 METHOD com.openggf.game.ghost.GhostHeader public  int act()
@@ -5849,9 +5841,6 @@ METHOD com.openggf.game.modzone.ModPaletteClaim public  int segaColor()
 METHOD com.openggf.game.modzone.ModPaletteClaim public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.modzone.ModPaletteClaim public,final  int hashCode()
 METHOD com.openggf.game.modzone.ModPaletteClaim public,final  java.lang.String toString()
-METHOD com.openggf.game.modzone.ModZoneAdapter public  boolean isUnsupported()
-METHOD com.openggf.game.modzone.ModZoneAdapter public  com.openggf.game.dataselect.DataSelectHostProfile decorateHostProfile(com.openggf.game.dataselect.DataSelectHostProfile,java.util.function.Supplier<com.openggf.game.ZoneRegistry>,java.util.function.BiConsumer<java.lang.String,com.openggf.game.dataselect.ModZoneSaveFinding>)
-METHOD com.openggf.game.modzone.ModZoneAdapter public  com.openggf.game.dataselect.DataSelectPresentationProvider decoratePresentationProvider(com.openggf.game.dataselect.DataSelectPresentationProvider,com.openggf.game.dataselect.DataSelectHostProfile)
 METHOD com.openggf.game.modzone.ModZoneAdapter public,abstract  com.openggf.game.modzone.ModZoneRuntimeProfile runtimeProfile(java.lang.String,com.openggf.game.modzone.ModZoneLevelData)
 METHOD com.openggf.game.modzone.ModZoneAdapter public,abstract  com.openggf.level.Level load(java.lang.String,com.openggf.game.modzone.ModZoneLevelData) THROWS java.io.IOException
 METHOD com.openggf.game.modzone.ModZoneAdapter public,abstract  void validate(java.lang.String,com.openggf.game.modzone.ModZoneLevelData)
@@ -13517,9 +13506,6 @@ RECORD-COMPONENT com.openggf.game.dataselect.DataSelectDestination zone int
 RECORD-COMPONENT com.openggf.game.dataselect.HostSlotPreview type com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType
 RECORD-COMPONENT com.openggf.game.dataselect.HostSlotPreview zoneDisplayNumber java.lang.Integer
 RECORD-COMPONENT com.openggf.game.dataselect.HostSlotPreview zoneLabelText java.lang.String
-RECORD-COMPONENT com.openggf.game.dataselect.ModZoneSaveFinding code java.lang.String
-RECORD-COMPONENT com.openggf.game.dataselect.ModZoneSaveFinding detail java.lang.String
-RECORD-COMPONENT com.openggf.game.dataselect.ModZoneSaveFinding ownerModId java.lang.String
 RECORD-COMPONENT com.openggf.game.ghost.GhostHeader act int
 RECORD-COMPONENT com.openggf.game.ghost.GhostHeader character java.lang.String
 RECORD-COMPONENT com.openggf.game.ghost.GhostHeader displayName java.lang.String
@@ -16056,7 +16042,6 @@ TYPE record public,final com.openggf.game.animation.DestinationPlan SUPER java.l
 TYPE record public,final com.openggf.game.dataselect.DataSelectAction SUPER java.lang.Record
 TYPE record public,final com.openggf.game.dataselect.DataSelectDestination SUPER java.lang.Record
 TYPE record public,final com.openggf.game.dataselect.HostSlotPreview SUPER java.lang.Record
-TYPE record public,final com.openggf.game.dataselect.ModZoneSaveFinding SUPER java.lang.Record
 TYPE record public,final com.openggf.game.ghost.GhostHeader SUPER java.lang.Record
 TYPE record public,final com.openggf.game.launch.LaunchProfile SUPER java.lang.Record
 TYPE record public,final com.openggf.game.modzone.ModPaletteClaim SUPER java.lang.Record
@@ -16704,7 +16689,6 @@ TYPE-ANNOTATION com.openggf.game.dataselect.DataSelectPresentationProvider @com.
 TYPE-ANNOTATION com.openggf.game.dataselect.DataSelectSessionController @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.dataselect.HostSlotPreview @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.dataselect.ModZoneSaveFinding @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ghost.GhostHeader @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ghost.GhostRecording @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ghost.GhostRenderRegistry @com.openggf.game.ModApi

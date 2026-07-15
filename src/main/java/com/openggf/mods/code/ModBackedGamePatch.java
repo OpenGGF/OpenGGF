@@ -8,6 +8,7 @@ import com.openggf.game.patch.LogicalRom;
 import com.openggf.game.patch.PatchContext;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.modzone.ModZoneAdapter;
+import com.openggf.game.modzone.ModZoneDataSelectDecorator;
 import com.openggf.game.modzone.ModZoneLevelData;
 import com.openggf.game.modzone.ModZoneRuntimeProfile;
 import com.openggf.io.ModInputLimits;
@@ -108,7 +109,7 @@ public final class ModBackedGamePatch implements GamePatch {
                 ? null : base.getModZoneAdapter();
         List<PreparedModZone> resolvedZones = plan.preparedZones();
         if (!resolvedZones.isEmpty()) {
-            if (zoneAdapter.isUnsupported()) {
+            if (zoneAdapter == GameModule.EMPTY_MOD_ZONE_ADAPTER) {
                 throw new ModRegistrationException(plan.ownerModId(),
                         "MOD_ZONE_HOST_UNSUPPORTED",
                         "Host game does not support additive mod zones", null, null);
@@ -128,6 +129,8 @@ public final class ModBackedGamePatch implements GamePatch {
             }).toList();
         }
         List<PreparedModZone> publishedZones = resolvedZones;
+        ModZoneDataSelectDecorator dataSelectDecorator =
+                zoneAdapter instanceof ModZoneDataSelectDecorator decorator ? decorator : null;
         List<ModObjectKeyRegistry.Registration> registrations = plan.objectFactories().entrySet().stream()
                 .map(entry -> new ModObjectKeyRegistry.Registration(
                         plan.ownerModId(), entry.getKey(), entry.getValue()))
@@ -239,11 +242,12 @@ public final class ModBackedGamePatch implements GamePatch {
                 if (dataSelectHost == null) {
                     com.openggf.game.dataselect.DataSelectHostProfile inherited =
                             super.getDataSelectHostProfile();
-                    dataSelectHost = zoneAdapter.decorateHostProfile(
-                            inherited, this::getZoneRegistry,
-                            (owner, finding) -> saveFindingSink.accept(owner,
-                                    new com.openggf.game.sonic2.dataselect.S2SaveFinding(
-                                            finding.ownerModId(), finding.code(), finding.detail())));
+                    dataSelectHost = dataSelectDecorator == null ? inherited
+                            : dataSelectDecorator.decorateHostProfile(
+                                    inherited, this::getZoneRegistry,
+                                    (owner, finding) -> saveFindingSink.accept(owner,
+                                            new com.openggf.game.sonic2.dataselect.S2SaveFinding(
+                                                    finding.ownerModId(), finding.code(), finding.detail())));
                 }
                 return dataSelectHost;
             }
@@ -255,8 +259,9 @@ public final class ModBackedGamePatch implements GamePatch {
                 if (dataSelectPresentation == null) {
                     com.openggf.game.dataselect.DataSelectPresentationProvider inherited =
                             super.getDataSelectPresentationProvider();
-                    dataSelectPresentation = zoneAdapter.decoratePresentationProvider(
-                            inherited, getDataSelectHostProfile());
+                    dataSelectPresentation = dataSelectDecorator == null ? inherited
+                            : dataSelectDecorator.decoratePresentationProvider(
+                                    inherited, getDataSelectHostProfile());
                 }
                 return dataSelectPresentation;
             }

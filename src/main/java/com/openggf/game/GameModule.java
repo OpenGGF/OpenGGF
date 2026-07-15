@@ -47,10 +47,6 @@ public interface GameModule {
             throw unsupported(ownerModId);
         }
 
-        @Override
-        public boolean isUnsupported() {
-            return true;
-        }
     };
 
     String getIdentifier();

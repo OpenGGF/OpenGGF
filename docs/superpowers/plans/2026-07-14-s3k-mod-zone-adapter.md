@@ -45,6 +45,7 @@ Expected: those two named methods fail because the current surface has unrefroze
 
 **Files:**
 - Create: `src/main/java/com/openggf/game/modzone/ModZoneAdapter.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModZoneDataSelectDecorator.java`
 - Create: `src/main/java/com/openggf/game/modzone/ModZoneLevelData.java`
 - Create: `src/main/java/com/openggf/game/modzone/ModZoneRegistrationException.java`
 - Create: `src/main/java/com/openggf/game/modzone/ModZoneRuntimeProfile.java`
@@ -67,7 +68,6 @@ Expected: those two named methods fail because the current surface has unrefroze
 }
 
 @Test void aModuleWithoutAnAdapterRejectsAdditiveZones() {
-    assertTrue(GameModule.EMPTY_MOD_ZONE_ADAPTER.isUnsupported());
     assertThrows(ModRegistrationException.class,
             () -> GameModule.EMPTY_MOD_ZONE_ADAPTER.validate("alpha", levelDefinition()));
 }
@@ -87,7 +87,6 @@ public interface ModZoneAdapter {
     void validate(String ownerModId, ModZoneLevelData level);
     Level load(String ownerModId, ModZoneLevelData level) throws IOException;
     ModZoneRuntimeProfile runtimeProfile(String ownerModId, ModZoneLevelData level);
-    default boolean isUnsupported() { return false; }
 }
 
 @ModApi
@@ -668,7 +667,8 @@ unchanged.
 The implementation owner is the S3K data-select package: `S3kSavedZone` owns the strict tagged/legacy
 payload codec, `S3kSaveSnapshotProvider` asks the active module registry for the live `ZoneKey`, and
 `S3kDataSelectProfile` receives an effective-zone supplier for load resolution. Make
-`Sonic3kModZoneAdapter` implement the existing internal `ModZoneDataSelectDecorator`, returning the
+`Sonic3kModZoneAdapter` implement the internal, unannotated game-owned
+`ModZoneDataSelectDecorator`, returning the
 registry-aware S3K host profile while returning the inherited native S3K presentation unchanged.
 Do not reuse the S2-named codec or donated S2 profile, and do not add synthetic indices to payloads.
 
@@ -718,6 +718,7 @@ git commit -m "test: cover S3K mod-zone lifecycle"
 - Create: `src/main/java/com/openggf/game/modzone/ModPaletteClaim.java`
 - Create: `src/main/java/com/openggf/game/modzone/ModPaletteUsageValidator.java`
 - Create: `src/main/java/com/openggf/game/modzone/ModZoneAdapter.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModZoneDataSelectDecorator.java`
 - Create: `src/main/java/com/openggf/game/modzone/ModZoneHostMetadata.java`
 - Create: `src/main/java/com/openggf/game/modzone/ModZoneLevelData.java`
 - Create: `src/main/java/com/openggf/game/modzone/ModZoneRegistrationException.java`

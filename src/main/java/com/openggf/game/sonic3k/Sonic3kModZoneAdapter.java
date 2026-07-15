@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.Level;
 import com.openggf.game.modzone.ModPaletteUsageValidator;
 import com.openggf.game.modzone.ModZoneAdapter;
+import com.openggf.game.modzone.ModZoneDataSelectDecorator;
 import com.openggf.game.modzone.ModZoneLevelData;
 import com.openggf.game.modzone.ModZoneRegistrationException;
 import com.openggf.game.modzone.ModZoneRuntimeProfile;
@@ -13,7 +14,7 @@ import java.io.IOException;
 import java.util.Objects;
 
 /** Sonic 3&amp;K host capability for additive format-v2 zone construction. */
-public final class Sonic3kModZoneAdapter implements ModZoneAdapter {
+public final class Sonic3kModZoneAdapter implements ModZoneAdapter, ModZoneDataSelectDecorator {
     private final Sonic3kGameModule gameModule;
 
     public Sonic3kModZoneAdapter(Sonic3kGameModule gameModule) {

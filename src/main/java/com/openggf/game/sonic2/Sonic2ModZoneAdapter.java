@@ -2,6 +2,7 @@ package com.openggf.game.sonic2;
 
 import com.openggf.level.Level;
 import com.openggf.game.modzone.ModZoneAdapter;
+import com.openggf.game.modzone.ModZoneDataSelectDecorator;
 import com.openggf.game.modzone.ModZoneLevelData;
 import com.openggf.game.modzone.ModZoneRegistrationException;
 import com.openggf.game.modzone.ModZoneRuntimeProfile;
@@ -10,7 +11,7 @@ import java.io.IOException;
 import java.util.Objects;
 
 /** Sonic 2 host capability for additive mod-zone construction. */
-public final class Sonic2ModZoneAdapter implements ModZoneAdapter {
+public final class Sonic2ModZoneAdapter implements ModZoneAdapter, ModZoneDataSelectDecorator {
     private final Sonic2GameModule gameModule;
 
     public Sonic2ModZoneAdapter(Sonic2GameModule gameModule) {

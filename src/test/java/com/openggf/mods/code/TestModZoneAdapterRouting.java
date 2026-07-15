@@ -22,16 +22,25 @@ import com.openggf.level.rings.RingSpriteSheet;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class TestModZoneAdapterRouting {
+
+    @Test
+    void publishedAdapterExposesOnlyTheThreeHostOperations() {
+        Set<String> methods = java.util.Arrays.stream(ModZoneAdapter.class.getDeclaredMethods())
+                .map(java.lang.reflect.Method::getName)
+                .collect(java.util.stream.Collectors.toSet());
+
+        assertEquals(Set.of("validate", "load", "runtimeProfile"), methods);
+    }
 
     @Test
     void aConcreteModuleWithoutAnOverrideUsesTheExactUnsupportedAdapter() {
@@ -93,7 +102,6 @@ class TestModZoneAdapterRouting {
 
     @Test
     void aModuleWithoutAnAdapterRejectsAdditiveZones() {
-        assertTrue(GameModule.EMPTY_MOD_ZONE_ADAPTER.isUnsupported());
         assertThrows(com.openggf.game.modzone.ModZoneRegistrationException.class,
                 () -> GameModule.EMPTY_MOD_ZONE_ADAPTER.validate("alpha",
                         TestS3kModZoneAdapter.hostData(levelDefinition())));

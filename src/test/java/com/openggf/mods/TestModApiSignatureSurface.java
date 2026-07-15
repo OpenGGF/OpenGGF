@@ -229,9 +229,9 @@ class TestModApiSignatureSurface {
         List<String> published = readBaseline(PUBLISHED_BASELINE);
         assertEquals(new ArrayList<>(new TreeSet<>(published)), published,
                 "Published 2.3 baseline must be unique, sorted canonical UTF-8 text");
-        assertEquals(886, published.stream().filter(line -> line.startsWith("TYPE ")).count(),
+        assertEquals(885, published.stream().filter(line -> line.startsWith("TYPE ")).count(),
                 "Published API 2.3 baseline engine-type count must match the frozen S3K mod-zone surface");
-        assertEquals(17_339, published.size(), "Published API 2.3 baseline is frozen");
+        assertEquals(17_323, published.size(), "Published API 2.3 baseline is frozen");
 
         // 2.2 -> 2.3 publishes the host-adapted additive-zone surface without
         // removing or changing any previously supported signature.
