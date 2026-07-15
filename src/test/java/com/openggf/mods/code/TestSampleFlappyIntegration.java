@@ -1,11 +1,16 @@
 package com.openggf.mods.code;
 
+import com.openggf.ModSubsystem;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.control.InputHandler;
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.PlayerInputState;
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.game.CharacterKey;
+import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
@@ -27,6 +32,8 @@ import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.rewind.LiveRewindManager;
+import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.io.ModInputLimits;
 import com.openggf.level.objects.ObjectInstance;
@@ -57,6 +64,7 @@ import javax.tools.ToolProvider;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -96,6 +104,7 @@ class TestSampleFlappyIntegration {
         GroundSensor.setLevelManager(null);
         SessionManager.clear();
         GameModuleRegistry.reset();
+        ModSubsystem.clearProcess();
         TestEnvironment.resetAll();
     }
 
@@ -396,6 +405,75 @@ class TestSampleFlappyIntegration {
         });
     }
 
+    @Test
+    void rewindRestoresAndResimulatesScoreAndLiveRecycleExactly() throws Exception {
+        withLaunchedGameplay(null, game -> {
+            LiveRewindHarness rewind = installLiveRewind(game);
+            stepRecordedFrame(game, rewind);
+
+            ObjectInstance pipe = orderedPipes(game.objects()).getFirst();
+            recyclePipe(pipe, game.tails().getCentreX() + 2, 2);
+            rewind.controller().resetBufferAtCurrentFrame();
+            RunState before = captureRunState(game, rewind.controller());
+            ObjectRefId recycledId = objectId(game.objects(), pipe);
+
+            for (int frame = 0; frame < 100
+                    && (GameServices.level().getLevelGamestate().getRings() == before.rings()
+                    || fieldInt(controller(game.objects()), "generationCounter")
+                    == before.generationCounter()); frame++) {
+                stepRecordedFrame(game, rewind);
+            }
+
+            RunState after = captureRunState(game, rewind.controller());
+            assertEquals(before.rings() + 1, after.rings(),
+                    "the recorded run must cross exactly one scoring gate");
+            assertEquals(before.generationCounter() + 1, after.generationCounter(),
+                    "the recorded run must recycle exactly one live pipe");
+            assertTrue(after.pipes().stream().anyMatch(state -> state.id().equals(recycledId)),
+                    "live recycling must retain the original pipe identity");
+
+            rewind.controller().seekTo(before.frame());
+            assertEquals(before, captureRunState(game, rewind.controller()),
+                    "backward seek must restore every controller, score, and pipe scalar");
+
+            rewind.controller().seekTo(after.frame());
+            assertEquals(after, captureRunState(game, rewind.controller()),
+                    "raw-input re-simulation must reproduce the exact post-recycle state");
+        });
+    }
+
+    @Test
+    void rewindAcrossFirstControllerUpdateKeepsOneControllerAndSixStablePipes() throws Exception {
+        withLaunchedGameplay(null, game -> {
+            LiveRewindHarness rewind = installLiveRewind(game);
+            assertEquals(0, pipes(game.objects()).size(),
+                    "frame-zero keyframe must precede the controller's first update");
+
+            stepRecordedFrame(game, rewind);
+            List<ObjectRefId> constructedIds = pipeIds(game.objects());
+            assertEquals(6, constructedIds.size());
+
+            rewind.controller().seekTo(0);
+            assertEquals(0, pipes(game.objects()).size());
+            assertSingleLayoutController(game.objects(), 0);
+
+            rewind.controller().seekTo(1);
+            List<ObjectRefId> replayedIds = pipeIds(game.objects());
+            assertEquals(6, replayedIds.size(),
+                    "re-simulating the first update must create exactly six pipes");
+            assertEquals(6, new HashSet<>(replayedIds).size(),
+                    "re-simulating construction must not duplicate a dynamic identity");
+            assertSingleLayoutController(game.objects(), 6);
+
+            rewind.controller().resetBufferAtCurrentFrame();
+            stepRecordedFrame(game, rewind);
+            rewind.controller().seekTo(1);
+            assertEquals(replayedIds, pipeIds(game.objects()),
+                    "restoring the post-construction keyframe must preserve existing identities");
+            assertSingleLayoutController(game.objects(), 6);
+        });
+    }
+
     private void assertDiesAtVisibleBoundary(boolean top) throws Exception {
         withLaunchedGameplay(null, game -> {
             game.runner().stepIdleFrames(1);
@@ -409,6 +487,78 @@ class TestSampleFlappyIntegration {
             assertTrue(game.tails().getDead(),
                     (top ? "top" : "bottom") + " visible bound must be inclusive");
         });
+    }
+
+    private static LiveRewindHarness installLiveRewind(LaunchedGameplay game) {
+        game.configuration().setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        InputHandler input = new InputHandler();
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(AbstractPlayableSprite.INPUT_RIGHT, 0,
+                        0, 0, false, false),
+                PlayerInputState.neutral()));
+        LiveRewindManager manager = new LiveRewindManager(game.configuration());
+        assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
+        RewindController controller = game.gameplay().getRewindController();
+        assertTrue(controller != null, "live rewind must install its production controller");
+        return new LiveRewindHarness(manager, controller, input);
+    }
+
+    private static void stepRecordedFrame(LaunchedGameplay game, LiveRewindHarness rewind) {
+        int before = rewind.controller().currentFrame();
+        game.runner().stepFrame(false, false, false, true, false);
+        rewind.manager().recordExternalFrame(GameMode.LEVEL, false, rewind.input());
+        assertEquals(before + 1, rewind.controller().currentFrame());
+    }
+
+    private static RunState captureRunState(LaunchedGameplay game, RewindController rewind)
+            throws Exception {
+        ObjectInstance controller = controller(game.objects());
+        List<PipeRunState> pipeStates = new ArrayList<>();
+        for (ObjectInstance pipe : pipes(game.objects())) {
+            pipeStates.add(new PipeRunState(
+                    objectId(game.objects(), pipe),
+                    centreX(pipe),
+                    fieldInt(pipe, "xSubpixelRemainder"),
+                    invokeInt(pipe, "gapVariant"),
+                    invokeBoolean(pipe, "gateConsumed")));
+        }
+        pipeStates.sort(Comparator.comparing(PipeRunState::id,
+                TestSampleFlappyIntegration::compareObjectIds));
+        return new RunState(
+                rewind.currentFrame(),
+                fieldInt(controller, "routine"),
+                fieldBoolean(controller, "poolInitialized"),
+                fieldInt(controller, "anchorX"),
+                fieldInt(controller, "generationCounter"),
+                GameServices.level().getLevelGamestate().getRings(),
+                List.copyOf(pipeStates));
+    }
+
+    private static List<ObjectRefId> pipeIds(ObjectManager objects) {
+        return pipes(objects).stream()
+                .map(pipe -> objectId(objects, pipe))
+                .sorted(TestSampleFlappyIntegration::compareObjectIds)
+                .toList();
+    }
+
+    private static int compareObjectIds(ObjectRefId left, ObjectRefId right) {
+        int dynamic = Integer.compare(left.dynamicId(), right.dynamicId());
+        if (dynamic != 0) return dynamic;
+        int spawn = Integer.compare(left.spawnId(), right.spawnId());
+        if (spawn != 0) return spawn;
+        return Integer.compare(left.generation(), right.generation());
+    }
+
+    private static void assertSingleLayoutController(ObjectManager objects, int dynamicCount) {
+        ObjectManagerSnapshot snapshot = objects.rewindSnapshottable().capture();
+        assertEquals(1, snapshot.slots().size());
+        assertEquals("example.flappysample.FlappyController",
+                snapshot.slots().getFirst().className());
+        assertEquals(dynamicCount, snapshot.dynamicObjects().size());
+        assertEquals(1, objects.getActiveObjects().stream()
+                .filter(object -> object.getClass().getName()
+                        .equals("example.flappysample.FlappyController"))
+                .count());
     }
 
     private static void applyProtection(LaunchedGameplay game, Protection protection) {
@@ -497,7 +647,8 @@ class TestSampleFlappyIntegration {
                 GroundSensor.setLevelManager(GameServices.level());
                 camera.updatePosition(true);
                 assertion.verify(new LaunchedGameplay(tails, camera,
-                        new HeadlessTestRunner(tails), GameServices.level().getObjectManager()));
+                        new HeadlessTestRunner(tails), GameServices.level().getObjectManager(),
+                        gameplay, configuration));
             } finally {
                 configuration.clearSessionOverrides();
                 SessionManager.clear();
@@ -538,6 +689,20 @@ class TestSampleFlappyIntegration {
 
     private static boolean invokeBoolean(Object target, String name) throws Exception {
         return (boolean) target.getClass().getMethod(name).invoke(target);
+    }
+
+    private static int fieldInt(Object target, String name) throws Exception {
+        return (int) field(target, name).get(target);
+    }
+
+    private static boolean fieldBoolean(Object target, String name) throws Exception {
+        return (boolean) field(target, name).get(target);
+    }
+
+    private static Field field(Object target, String name) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field;
     }
 
     private static void invoke(Object target, String name) throws Exception {
@@ -648,6 +813,8 @@ class TestSampleFlappyIntegration {
         runtime.installFaultBoundary(new ModFaultBoundary(Map.of(),
                 new ModRuntimeFindingStore(), owners -> new ModStateSaveResult.Saved(),
                 owners -> { }));
+        ModSubsystem.current().installRewindClassResolver(
+                new ModClassResolver(runtime, getClass().getClassLoader()));
         return new CatalogFixture(runtime, catalog.effective(), runtime.newRegistrationPlan());
     }
 
@@ -693,7 +860,18 @@ class TestSampleFlappyIntegration {
     }
 
     private record LaunchedGameplay(AbstractPlayableSprite tails, Camera camera,
-                                    HeadlessTestRunner runner, ObjectManager objects) {}
+                                    HeadlessTestRunner runner, ObjectManager objects,
+                                    GameplayModeContext gameplay,
+                                    SonicConfigurationService configuration) {}
+
+    private record LiveRewindHarness(LiveRewindManager manager, RewindController controller,
+                                     InputHandler input) {}
+
+    private record PipeRunState(ObjectRefId id, int centreX, int xSubpixelRemainder,
+                                int gapVariant, boolean gateConsumed) {}
+
+    private record RunState(int frame, int routine, boolean poolInitialized, int anchorX,
+                            int generationCounter, int rings, List<PipeRunState> pipes) {}
 
     @FunctionalInterface
     private interface GameplayAssertion {
