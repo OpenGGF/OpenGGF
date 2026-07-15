@@ -1,6 +1,7 @@
 package com.openggf.mods.code;
 
 import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
@@ -24,7 +25,11 @@ import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.io.ModInputLimits;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.mods.DefaultModRepositoryScanner;
 import com.openggf.mods.EffectiveCatalogBuilder;
 import com.openggf.mods.ModCatalog;
@@ -50,10 +55,13 @@ import javax.tools.ToolProvider;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -176,6 +184,175 @@ class TestSampleFlappyIntegration {
         }
     }
 
+    @Test
+    void firstForwardUpdateCreatesSixIndependentEntriesAndCoversSuper32By9() throws Exception {
+        withLaunchedGameplay("SUPER_32_9", game -> {
+            assertEquals(800, game.camera().getWidth(),
+                    "viewport-width configuration must reach the active camera");
+            assertEquals(0, pipes(game.objects()).size(),
+                    "the controller constructor and rewind recreation must not spawn pipes");
+
+            game.runner().stepIdleFrames(1);
+            List<ObjectInstance> pipes = pipes(game.objects());
+            assertEquals(6, pipes.size());
+            assertEquals(6, new HashSet<>(pipes.stream()
+                    .map(pipe -> objectId(game.objects(), pipe)).toList()).size(),
+                    "every independent dynamic entry needs a distinct stable identity");
+
+            ObjectManagerSnapshot snapshot = game.objects().rewindSnapshottable().capture();
+            assertEquals(1, snapshot.slots().size(), "the level layout contains only its controller");
+            assertEquals("example.flappysample.FlappyController",
+                    snapshot.slots().getFirst().className());
+            assertEquals(6, snapshot.dynamicObjects().size());
+
+            game.runner().stepIdleFrames(3);
+            assertEquals(6, pipes(game.objects()).size(),
+                    "resizing and later updates must not grow the fixed pool");
+        });
+    }
+
+    @Test
+    void recycleMovesTheSameEntryAndAdvancesCounterPermutation() throws Exception {
+        withLaunchedGameplay(null, game -> {
+            game.runner().stepIdleFrames(1);
+            ObjectInstance pipe = pipes(game.objects()).stream()
+                    .min(Comparator.comparingInt(TestSampleFlappyIntegration::centreX))
+                    .orElseThrow();
+            ObjectRefId id = objectId(game.objects(), pipe);
+            ObjectInstance controller = controller(game.objects());
+            int before = invokeInt(controller, "generationCounter");
+
+            int pixelsPastViewport = centreX(pipe) - game.camera().getX() + 17;
+            invoke(pipe, "advance", int.class, pixelsPastViewport << 8);
+            invoke(pipe, "consumeGate");
+            assertTrue(invokeBoolean(pipe, "gateConsumed"));
+
+            game.runner().stepIdleFrames(1);
+
+            ObjectInstance rightmost = pipes(game.objects()).stream()
+                    .max(Comparator.comparingInt(TestSampleFlappyIntegration::centreX))
+                    .orElseThrow();
+            assertEquals(id, objectId(game.objects(), rightmost),
+                    "recycling must reposition the same live entry");
+            assertEquals(before + 1, invokeInt(controller, "generationCounter"));
+            assertEquals(expectedVariant(before), invokeInt(rightmost, "gapVariant"));
+            assertFalse(invokeBoolean(rightmost, "gateConsumed"));
+            assertEquals(6, pipes(game.objects()).size());
+        });
+    }
+
+    private void withLaunchedGameplay(String aspect, GameplayAssertion assertion) throws Exception {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null, "Sonic 3&K ROM unavailable");
+
+        Path jar = buildFlappyMod();
+        try (CatalogFixture fixture = load(jar); Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getAbsolutePath()),
+                    "Configured Sonic 3&K ROM must be readable");
+            GameModule base = new Sonic3kGameModule();
+            base.createGame(rom);
+
+            SonicConfigurationService configuration = SonicConfigurationService.createStandalone();
+            if (aspect != null) {
+                configuration.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, aspect);
+                configuration.resolveDisplayAspect();
+            }
+            ModuleResolutionService resolver = resolver(fixture, configuration);
+            GameModule resolved = resolver.resolveForLaunch(base,
+                    new GameplayLaunchRequest("s3k", "sonic", List.of()),
+                    ModuleResolutionService.LaunchPolicy.STANDARD);
+            int zoneIndex = resolved.getZoneRegistry().resolveZoneKey(FLAPPY_ZONE).orElseThrow();
+            GameplayLaunchTeam requiredTeam = resolved.getGameplayPolicyProvider()
+                    .launchTeam(FLAPPY_ZONE).orElseThrow();
+            SaveSessionContext launchContext = SaveSessionLaunchTeamAccess.withLaunchTeam(
+                    SaveSessionContext.noSave("s3k",
+                            new SelectedTeam("sonic", List.of()), zoneIndex, 0),
+                    requiredTeam);
+
+            EngineContext previous = EngineServices.current();
+            EngineContext injected = withResolver(
+                    previous, resolver, isolatedRomManager(), configuration);
+            try {
+                EngineServices.configure(injected);
+                injected.roms().setRom(rom);
+                GameplayModeContext gameplay = SessionManager.openGameplaySession(
+                        base, resolved, StockGameDataSources.pinned(rom, base), launchContext);
+                GameplaySessionFactory.attachManagers(gameplay, injected);
+                injected.graphics().initHeadless();
+                GameplayTeamBootstrap.BootstrappedTeam team =
+                        GameplayTeamBootstrap.registerActiveTeam(
+                                resolved, GameServices.sprites(), configuration);
+                AbstractPlayableSprite tails = team.mainSprite();
+                Camera camera = GameServices.camera();
+                camera.setFocusedSprite(tails);
+                camera.setFrozen(false);
+                GameServices.level().loadZoneAndAct(zoneIndex, 0);
+                GroundSensor.setLevelManager(GameServices.level());
+                camera.updatePosition(true);
+                assertion.verify(new LaunchedGameplay(tails, camera,
+                        new HeadlessTestRunner(tails), GameServices.level().getObjectManager()));
+            } finally {
+                configuration.clearSessionOverrides();
+                SessionManager.clear();
+                EngineServices.configure(previous);
+            }
+        }
+    }
+
+    private static List<ObjectInstance> pipes(ObjectManager objects) {
+        return objects.getActiveObjects().stream()
+                .filter(object -> object.getClass().getName()
+                        .equals("example.flappysample.FlappyPipe"))
+                .toList();
+    }
+
+    private static ObjectInstance controller(ObjectManager objects) {
+        return objects.getActiveObjects().stream()
+                .filter(object -> object.getClass().getName()
+                        .equals("example.flappysample.FlappyController"))
+                .findFirst().orElseThrow();
+    }
+
+    private static ObjectRefId objectId(ObjectManager objects, ObjectInstance object) {
+        return objects.captureIdentityContext().requireIdentityTable().idFor(object);
+    }
+
+    private static int centreX(Object object) {
+        try {
+            return invokeInt(object, "centreX");
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private static int invokeInt(Object target, String name) throws Exception {
+        return (int) target.getClass().getMethod(name).invoke(target);
+    }
+
+    private static boolean invokeBoolean(Object target, String name) throws Exception {
+        return (boolean) target.getClass().getMethod(name).invoke(target);
+    }
+
+    private static void invoke(Object target, String name) throws Exception {
+        target.getClass().getMethod(name).invoke(target);
+    }
+
+    private static void invoke(Object target, String name, Class<?> parameterType, Object argument)
+            throws Exception {
+        Method method = target.getClass().getMethod(name, parameterType);
+        method.invoke(target, argument);
+    }
+
+    private static int expectedVariant(int generation) {
+        return switch (Math.floorMod(generation, 5)) {
+            case 0 -> 2;
+            case 1 -> 0;
+            case 2 -> 4;
+            case 3 -> 1;
+            default -> 3;
+        };
+    }
+
     private Path buildFlappyMod() throws Exception {
         Path output = temp.resolve("flappy-exploded");
         Files.createDirectories(output);
@@ -266,15 +443,26 @@ class TestSampleFlappyIntegration {
     }
 
     private ModuleResolutionService resolver(CatalogFixture fixture) {
+        return resolver(fixture, SonicConfigurationService.createStandalone());
+    }
+
+    private ModuleResolutionService resolver(CatalogFixture fixture,
+                                             SonicConfigurationService configuration) {
         return new ModuleResolutionService(List.of(),
                 new EffectiveCatalogPatchEnablement(fixture.effective()),
-                new LogicalRomResolver(() -> null), SonicConfigurationService.createStandalone(),
+                new LogicalRomResolver(() -> null), configuration,
                 ignored -> fixture.plan());
     }
 
     private static EngineContext withResolver(EngineContext old, ModuleResolutionService resolver,
                                               RomManager roms) {
-        return new EngineContext(SonicConfigurationService.createStandalone(), old.graphics(),
+        return withResolver(old, resolver, roms, SonicConfigurationService.createStandalone());
+    }
+
+    private static EngineContext withResolver(EngineContext old, ModuleResolutionService resolver,
+                                              RomManager roms,
+                                              SonicConfigurationService configuration) {
+        return new EngineContext(configuration, old.graphics(),
                 old.audio(), roms, old.profiler(), old.debugOverlay(), old.playbackDebug(),
                 old.romDetection(), old.crossGameFeatures(), resolver);
     }
@@ -293,5 +481,13 @@ class TestSampleFlappyIntegration {
         public void close() throws Exception {
             runtime.close();
         }
+    }
+
+    private record LaunchedGameplay(AbstractPlayableSprite tails, Camera camera,
+                                    HeadlessTestRunner runner, ObjectManager objects) {}
+
+    @FunctionalInterface
+    private interface GameplayAssertion {
+        void verify(LaunchedGameplay game) throws Exception;
     }
 }
