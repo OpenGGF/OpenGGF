@@ -1630,9 +1630,14 @@ public class ObjectManager {
         return ObjectConstructionContext.construct(objectServices, () -> {
             T object = factory.get();
             addDynamicObject(object);
-            return object;
+            return object instanceof AbstractObjectInstance aoi && (aoi.getSlotIndex() < 0 || aoi.isDestroyed()) ? null : object;
         });
     }
+
+    public ObjectRewindDynamicCodecs.ExactAdoptionSurface exactRewindAdoptionSurface() {
+        return new ObjectRewindDynamicCodecs.ExactAdoptionSurface(objectServices, slotLayout, slotAllocator, rewindObjectIds, dynamicObjects, auxiliaryDynamicObjects, execOrder, this::execIndexForSlot, slot -> objectIdInSlot(slot) >= 0, this::markRewindAdoptionDirty);
+    }
+    void markRewindAdoptionDirty() { bucketsDirty = activeObjectsCacheDirty = true; }
 
     /**
      * Constructs an object in a ROM-selected dynamic SST slot.

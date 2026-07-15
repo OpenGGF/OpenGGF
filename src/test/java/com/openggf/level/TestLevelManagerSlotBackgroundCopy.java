@@ -65,6 +65,20 @@ public class TestLevelManagerSlotBackgroundCopy {
     }
 
     @Test
+    public void genericForegroundRowCopyPreservesLayerAndNativeSourceCoordinates() throws Exception {
+        TestLevelManager levelManager = new TestLevelManager(gameplayMode);
+        RecordingTilemapManager tilemapManager = new RecordingTilemapManager();
+        setTilemapManager(levelManager, tilemapManager);
+
+        levelManager.copyTileRowFromLayerToRetainedPlane(0, 0x2D08, 0x00F0, 0xE000, 1);
+
+        assertEquals(levelManager.foregroundDescriptorFor(0x2D00, 0x00F0), tilemapManager.descriptorAt(0, 0));
+        assertEquals(levelManager.foregroundDescriptorFor(0x2D08, 0x00F0), tilemapManager.descriptorAt(1, 0));
+        assertEquals(levelManager.foregroundDescriptorFor(0x2D00, 0x00F8), tilemapManager.descriptorAt(0, 1));
+        assertEquals(levelManager.foregroundDescriptorFor(0x2D08, 0x00F8), tilemapManager.descriptorAt(1, 1));
+    }
+
+    @Test
     public void retainedColumnCopyUsesEffectiveBackgroundYAndWrapsThe64x32Plane() throws Exception {
         TestLevelManager levelManager = new TestLevelManager(gameplayMode);
         RecordingTilemapManager tilemapManager = new RecordingTilemapManager();
@@ -157,8 +171,17 @@ public class TestLevelManagerSlotBackgroundCopy {
             return descriptorFor(worldX, worldY);
         }
 
+        @Override
+        public int getForegroundTileDescriptorAtWorld(int worldX, int worldY) {
+            return foregroundDescriptorFor(worldX, worldY);
+        }
+
         int descriptorFor(int worldX, int worldY) {
             return ((worldY & 0x3F) << 10) | (worldX & 0x3FF);
+        }
+
+        int foregroundDescriptorFor(int worldX, int worldY) {
+            return 0x4000_0000 | descriptorFor(worldX, worldY);
         }
     }
 

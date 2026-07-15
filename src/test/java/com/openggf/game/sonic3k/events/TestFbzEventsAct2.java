@@ -1,7 +1,19 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.data.Rom;
+import com.openggf.data.RomManager;
+import com.openggf.game.GameServices;
+import com.openggf.game.PlayerCharacter;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,6 +21,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Locked-on oracle for FBZ2_ScreenInit/Event and FBZ2_BackgroundInit/Event. */
 class TestFbzEventsAct2 {
+    @TempDir
+    Path tempDir;
+
     @Test
     void ordinaryScreenInitStartsAtNativePrebossStages() {
         Sonic3kFBZEvents events = fresh();
@@ -186,6 +201,28 @@ class TestFbzEventsAct2 {
     }
 
     @Test
+    void unownedReentryDoesNotQueueArtFromAmbientFixtureRom() throws IOException {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
+        Sonic3kFBZEvents activeOwner = fresh();
+        GameServices.zoneRuntimeRegistry().install(new FbzZoneRuntimeState(
+                1, PlayerCharacter.SONIC_ALONE, activeOwner));
+
+        Path fixture = tempDir.resolve("ambient-one-mib.bin");
+        Files.write(fixture, new byte[1024 * 1024]);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(fixture.toString()));
+            RomManager.getInstance().setRom(rom);
+
+            Sonic3kFBZEvents unowned = fresh();
+            assertDoesNotThrow(() -> unowned.initializeAct2Screen(0x2C40));
+            assertTrue(TestEnvironment.activeGameplayMode().getKosinskiModuleQueue().isIdle(),
+                    "a detached event workspace must not consume the active session's ROM or art queue");
+        } finally {
+            TestEnvironment.resetAll();
+        }
+    }
+
+    @Test
     void rewindTraversalSnapshotRoundTripsActiveRedrawWords() {
         Sonic3kFBZEvents source = fresh();
         source.initializeAct2Screen(0x1800);
@@ -196,6 +233,81 @@ class TestFbzEventsAct2 {
         Sonic3kFBZEvents restored = fresh();
         restored.restoreAct2TraversalState(source.captureAct2TraversalState());
         assertEquals(source.captureAct2TraversalState(), restored.captureAct2TraversalState());
+    }
+
+    @Test
+    void ordinaryDyingPathReturnsBeforeShakeTailAndPreservesEveryShakeWord() {
+        withLiveDyingEvents(4, events -> {
+            events.restoreScreenShakePipelineState(true, 4, 2, 7, 0x404);
+
+            events.update(1, 0x1A);
+
+            assertEquals(4, events.getScreenShakeOffset());
+            assertEquals(2, events.getScreenShakeLastOffset());
+            assertEquals(7, events.getScreenShakePhase());
+        });
+    }
+
+    @Test
+    void bossDyingPathExecutesShakeTailButPublishesZeroAsTheNextOffset() {
+        withLiveDyingEvents(16, events -> {
+            events.restoreScreenShakePipelineState(true, 4, 2, 7, 0x404);
+
+            events.update(1, 0x1A);
+
+            assertEquals(0, events.getScreenShakeOffset());
+            assertEquals(4, events.getScreenShakeLastOffset());
+            assertEquals(7, events.getScreenShakePhase(), "death does not sample ScreenShakeArray2");
+        });
+    }
+
+    @Test
+    void preSetupRestoreClearsStaleControllerIntentBeforeLiveCollisionPublication() {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
+        try {
+            TestablePlayableSprite player = new TestablePlayableSprite(
+                    "sonic", (short) 0x2000, (short) 0x400);
+            GameServices.sprites().addSprite(player);
+            GameServices.camera().setFocusedSprite(player);
+            Sonic3kFBZEvents events = fresh();
+            events.initializeAct2Screen(0);
+            events.initializeAct2Background(0);
+            events.setBossBackgroundState(4, 0, 0);
+            FbzZoneRuntimeState runtime = new FbzZoneRuntimeState(
+                    1, PlayerCharacter.SONIC_ALONE, events);
+            GameServices.zoneRuntimeRegistry().install(runtime);
+            byte[] beforeController = runtime.captureBytes();
+            events.setBossApproachMotionState(0x120, 0x230, true);
+
+            runtime.restoreBytes(beforeController);
+            events.update(1, 0);
+
+            assertFalse(events.isBossCollisionIntentActive());
+            assertEquals(Sonic3kFBZEvents.CollisionMode.FOREGROUND_ONLY, events.getCollisionMode());
+        } finally {
+            TestEnvironment.resetAll();
+        }
+    }
+
+    private static void withLiveDyingEvents(int backgroundStage,
+                                            java.util.function.Consumer<Sonic3kFBZEvents> assertion) {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
+        try {
+            TestablePlayableSprite player = new TestablePlayableSprite(
+                    "sonic", (short) 0x2000, (short) 0x400);
+            player.setDead(true);
+            GameServices.sprites().addSprite(player);
+            GameServices.camera().setFocusedSprite(player);
+            Sonic3kFBZEvents events = fresh();
+            events.initializeAct2Screen(0);
+            events.initializeAct2Background(0);
+            events.setBossBackgroundState(backgroundStage, 0, 0);
+            GameServices.zoneRuntimeRegistry().install(new FbzZoneRuntimeState(
+                    1, PlayerCharacter.SONIC_ALONE, events));
+            assertion.accept(events);
+        } finally {
+            TestEnvironment.resetAll();
+        }
     }
 
     private static Sonic3kFBZEvents fresh() {

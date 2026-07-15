@@ -16,7 +16,7 @@ import java.util.function.Supplier;
 import static com.openggf.level.scroll.M68KMath.negWord;
 
 /** ROM-accurate FBZ indoor/outdoor and Act 2 cloud deformation. */
-public final class SwScrlFbz extends AbstractZoneScrollHandler {
+public final class SwScrlFbz extends AbstractZoneScrollHandler implements FbzCloudPositionSource {
     private static final int[] INDOOR_HEIGHTS = {
             0x80, 0x40, 0x20, 8, 8, 8, 8, 0x28, 0x30, 8, 4, 4,
             0xB8, 0x30, 0x10, 0x10, 0x30, 0x28, 0x18, 0x10, 0x30,
@@ -59,6 +59,7 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler {
     };
     private int cloudPositionCount;
     private int lastAct = -1;
+    private short vscrollFactorFG;
 
     public SwScrlFbz() {
         this(() -> GameServices.hasRuntime()
@@ -84,7 +85,9 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler {
         composer.reset();
         hScrollTable.clear();
         FbzZoneRuntimeState state = stateSupplier.get();
-        if (actId == 1 && state != null && state.bossBackgroundStage() != 0) {
+        // FBZ2BGE_BossEvent is Events_routine_bg=$10. Stages 4/8/12 are
+        // ordinary traversal/redraw states and must never select CloudDeform.
+        if (actId == 1 && state != null && state.bossBackgroundStage() == 0x10) {
             updateCloudBoss(cameraX, cameraY, frameCounter, state);
         } else if (state != null && state.backgroundOutdoor()) {
             updateOutdoor(cameraX, frameCounter, state);
@@ -95,6 +98,7 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler {
         minScrollOffset = composer.getMinScrollOffset();
         maxScrollOffset = composer.getMaxScrollOffset();
         vscrollFactorBG = composer.getVscrollFactorBG();
+        vscrollFactorFG = composer.getVscrollFactorFG();
     }
 
     private void updateIndoor(int cameraX, int cameraY) {
@@ -133,7 +137,8 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler {
     }
 
     private void updateCloudBoss(int cameraX, int cameraY, int frameCounter, FbzZoneRuntimeState state) {
-        int bgY = (short) (cameraY - 0x300 + state.bossBackgroundOffsetY());
+        int shake = state.screenShakeLastOffset();
+        int bgY = (short) (cameraY - 0x300 + state.bossBackgroundOffsetY() + shake);
         int bgX = (short) (cameraX - 0x2600 - state.bossBackgroundOffsetX());
         int fixed = ((short) bgX) << 16;
         fixed >>= 4;
@@ -144,31 +149,61 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler {
             hScrollTable.set(index, (short) (fixed >> 16));
             fixed += step;
         }
-        int shake = state.screenShakeActive() ? state.screenShakeOffset() : 0;
         int cloudY = (short) (bgY - shake);
         cloudY >>= 1;
         cloudY = (short) (-(cloudY + shake) + state.outdoorBobOffset());
-        for (int i = 0; i < CLOUD_POSITION_FRAME_DATA.length; i++) {
-            int[] data = CLOUD_POSITION_FRAME_DATA[i];
-            int x = ((data[0] - hScrollTable.get(i)) & 0x1FF) + 0x54;
+        for (int addressSlot = 0; addressSlot < CLOUD_POSITION_FRAME_DATA.length; addressSlot++) {
+            // SetUp_FBZ2BossEvent allocates selectors 9..0 into address slots
+            // 0..9. CloudDeform then consumes HScroll words in address order.
+            int selector = 9 - addressSlot;
+            int[] data = CLOUD_POSITION_FRAME_DATA[selector];
+            int x = ((data[0] - hScrollTable.get(addressSlot)) & 0x1FF) + 0x54;
             int y = ((data[1] + cloudY) & 0xFF) + 0x74;
-            cloudPositionSlots[i].setPosition(x, y);
+            cloudPositionSlots[addressSlot].setPosition(x, y);
         }
         cloudPositionCount = CLOUD_POSITION_FRAME_DATA.length;
         composer.setVscrollFactorBG((short) bgY);
+        composer.setVscrollFactorFG((short) state.bossForegroundVScroll());
         composer.fillPackedScrollWords(0, composer.visibleLineCount(), negWord(bgX), negWord(cameraX));
     }
+
+    @Override public short getVscrollFactorFG() { return vscrollFactorFG; }
 
     public List<CloudPosition> cloudPositions() {
         return cloudPositions;
     }
 
+    @Override
+    public CloudPosition cloudPositionAtAddressSlot(int addressSlot) {
+        return cloudPositions.get(addressSlot);
+    }
+
     private static CloudPosition[] createCloudPositionSlots() {
         CloudPosition[] slots = new CloudPosition[CLOUD_POSITION_FRAME_DATA.length];
         for (int i = 0; i < slots.length; i++) {
-            slots[i] = new CloudPosition(0, 0, CLOUD_POSITION_FRAME_DATA[i][2]);
+            int selector = 9 - i;
+            slots[i] = new CloudPosition(0, 0, CLOUD_POSITION_FRAME_DATA[selector][2], selector, i);
         }
         return slots;
+    }
+
+    public static int cloudMappingFrameForSelector(int selector) {
+        return CLOUD_POSITION_FRAME_DATA[Objects.checkIndex(selector, CLOUD_POSITION_FRAME_DATA.length)][2];
+    }
+
+    /** Pure oracle helper for one native address-table cloud. */
+    public static CloudPosition computeBossCloudPosition(int selector, int addressSlot,
+                                                          int hScrollValue, int bgY,
+                                                          int shake, int bob) {
+        Objects.checkIndex(selector, CLOUD_POSITION_FRAME_DATA.length);
+        Objects.checkIndex(addressSlot, CLOUD_POSITION_FRAME_DATA.length);
+        int[] data = CLOUD_POSITION_FRAME_DATA[selector];
+        int effectiveY = (short) (bgY - shake);
+        effectiveY >>= 1;
+        effectiveY = (short) (-(effectiveY + shake) + bob);
+        int x = ((data[0] - hScrollValue) & 0x1FF) + 0x54;
+        int y = ((data[1] + effectiveY) & 0xFF) + 0x74;
+        return new CloudPosition(x, y, data[2], selector, addressSlot);
     }
 
     /** Mutable, preallocated output slot; consumers retain the slot identity across frames. */
@@ -176,11 +211,19 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler {
         private int x;
         private int y;
         private final int mappingFrame;
+        private final int selector;
+        private final int addressSlot;
 
         public CloudPosition(int x, int y, int mappingFrame) {
+            this(x, y, mappingFrame, -1, -1);
+        }
+
+        public CloudPosition(int x, int y, int mappingFrame, int selector, int addressSlot) {
             this.x = x;
             this.y = y;
             this.mappingFrame = mappingFrame;
+            this.selector = selector;
+            this.addressSlot = addressSlot;
         }
 
         private void setPosition(int x, int y) {
@@ -199,6 +242,9 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler {
         public int mappingFrame() {
             return mappingFrame;
         }
+
+        public int selector() { return selector; }
+        public int addressSlot() { return addressSlot; }
 
         @Override
         public boolean equals(Object other) {

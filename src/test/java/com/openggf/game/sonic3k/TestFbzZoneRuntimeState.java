@@ -69,7 +69,7 @@ class TestFbzZoneRuntimeState {
         events.setCloudRewindId(9, ObjectRefId.child(7, 8, 9, 10));
         events.setPlaneAssignmentMode(Sonic3kFBZEvents.PlaneAssignmentMode.REVERSED);
         events.setCollisionMode(Sonic3kFBZEvents.CollisionMode.FOREGROUND_AND_BACKGROUND, 0x20, -0x10);
-        events.setScreenShakeState(true, -3, 0x22);
+        events.restoreScreenShakePipelineState(true, -3, 5, 0x22, 0x404);
         events.setEventsFg5(true);
 
         FbzZoneRuntimeState state = new FbzZoneRuntimeState(1, PlayerCharacter.KNUCKLES, events);
@@ -101,7 +101,9 @@ class TestFbzZoneRuntimeState {
                 state.backgroundPlaneCollisionStateOrNull());
         assertTrue(state.screenShakeActive());
         assertEquals(-3, state.screenShakeOffset());
+        assertEquals(5, state.screenShakeLastOffset());
         assertEquals(0x22, state.screenShakePhase());
+        assertEquals(0x404, state.bossForegroundVScroll());
         assertTrue(state.isActTransitionFlagActive());
     }
 
@@ -130,6 +132,24 @@ class TestFbzZoneRuntimeState {
         assertEquals(0x8E00, state.hScrollAccumulator());
         events.advanceMagneticPhase(0x200);
         assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, state.magneticPolarity());
+    }
+
+    @Test
+    void setupLatchAndControllerCollisionIntentRoundTripAsAuthoritativeEventWords() {
+        Sonic3kFBZEvents events = new Sonic3kFBZEvents();
+        events.init(1);
+        events.setAct2ForegroundStage(4);
+        events.setBossApproachMotionState(0x120, 0x230, true);
+        FbzZoneRuntimeState state = new FbzZoneRuntimeState(
+                1, PlayerCharacter.SONIC_ALONE, events);
+        byte[] captured = state.captureBytes();
+
+        events.init(1);
+        state.restoreBytes(captured);
+
+        assertTrue(events.isBossEventSetupAttempted());
+        assertTrue(events.isBossCollisionIntentActive());
+        assertArrayEquals(captured, state.captureBytes());
     }
 
     @Test

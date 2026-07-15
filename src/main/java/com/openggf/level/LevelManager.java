@@ -2071,7 +2071,19 @@ public class LevelManager {
      * 16x16 source block row.
      */
     public boolean copyBackgroundTileRowFromWorldToVdpPlane(int sourceWorldX, int sourceWorldY,
-                                                            int destVramAddress, int longWordCount) {
+                                                             int destVramAddress, int longWordCount) {
+        return copyTileRowFromLayerToRetainedPlane(1, sourceWorldX, sourceWorldY,
+                destVramAddress, longWordCount);
+    }
+
+    /**
+     * Generic retained-plane row copy for native events which temporarily draw
+     * either level layer into physical Plane B (FBZ2's boss approach draws FG).
+     */
+    public boolean copyTileRowFromLayerToRetainedPlane(int sourceLayer,
+                                                       int sourceWorldX, int sourceWorldY,
+                                                       int destVramAddress, int longWordCount) {
+        if (sourceLayer < 0 || sourceLayer > 1) throw new IllegalArgumentException("sourceLayer");
         if (tilemapManager == null || longWordCount <= 0) {
             return false;
         }
@@ -2097,8 +2109,10 @@ public class LevelManager {
                 if (destTileX >= bgWidthTiles || destTileY >= bgHeightTiles) {
                     continue;
                 }
-                int descriptor = getBackgroundTileDescriptorAtWorld(sourceStartX + i * Pattern.PATTERN_WIDTH,
-                        sourceRowY);
+                int sourceX = sourceStartX + i * Pattern.PATTERN_WIDTH;
+                int descriptor = sourceLayer == 0
+                        ? getForegroundTileDescriptorAtWorld(sourceX, sourceRowY)
+                        : getBackgroundTileDescriptorAtWorld(sourceX, sourceRowY);
                 changed |= tilemapManager.setRetainedBackgroundTileDescriptorAtTilemapCell(destTileX, destTileY, descriptor);
             }
         }

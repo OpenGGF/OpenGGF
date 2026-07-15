@@ -56,13 +56,21 @@ class TestFbzScrollHandler {
         f.handler.update(scroll, 0x1000, 0x0200, 11, 1);
         assertEquals(0x00000E00, f.state.hScrollAccumulator(), "indoor deform must freeze HScroll+$1FC");
 
-        f.events.setBossBackgroundState(4, 0, 0);
-        f.handler.update(scroll, 0x2800, 0x0400, 12, 1);
+        for (int ordinaryStage : new int[]{4, 8, 0x0C}) {
+            f.events.setBossBackgroundState(ordinaryStage, 0, 0);
+            f.handler.update(scroll, 0x2800, 0x0400, ordinaryStage + 8, 1);
+            assertEquals(0x00000E00, f.state.hScrollAccumulator(),
+                    "ordinary stage $" + Integer.toHexString(ordinaryStage)
+                            + " must not run FBZ2_CloudDeform");
+        }
+
+        f.events.setBossBackgroundState(0x10, 0, 0);
+        f.handler.update(scroll, 0x2800, 0x0400, 24, 1);
         assertEquals(0x00008E00, f.state.hScrollAccumulator(), "boss mode resumes the same accumulator with +$8000");
 
         f.events.setBossBackgroundState(0, 0, 0);
         f.events.setBackgroundOutdoor(true);
-        f.handler.update(scroll, 0x1000, 0x0200, 13, 1);
+        f.handler.update(scroll, 0x1000, 0x0200, 25, 1);
         assertEquals(0x00009C00, f.state.hScrollAccumulator(), "outdoor mode resumes the boss-advanced phase with +$E00");
     }
 

@@ -18,7 +18,7 @@ import java.util.Objects;
 /** Event-backed FBZ runtime adapter and sole rewind serializer for FBZ event RAM. */
 public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
     private static final int MAGIC = 0x46425A31;
-    private static final int VERSION = 8;
+    private static final int VERSION = 11;
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
     private final Sonic3kFBZEvents events;
@@ -72,7 +72,12 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
     public Sonic3kFBZEvents.CollisionMode collisionMode() { return events.getCollisionMode(); }
     public boolean screenShakeActive() { return events.isScreenShakeActive(); }
     public int screenShakeOffset() { return events.getScreenShakeOffset(); }
+    public int screenShakeLastOffset() { return events.getScreenShakeLastOffset(); }
     public int screenShakePhase() { return events.getScreenShakePhase(); }
+    public int bossForegroundVScroll() { return events.getBossForegroundVScroll(); }
+    public int bossPlaneRefreshRows() { return events.getBossPlaneRefreshRows(); }
+    public boolean bossEventSetupAttempted() { return events.isBossEventSetupAttempted(); }
+    public boolean bossCollisionIntentActive() { return events.isBossCollisionIntentActive(); }
 
     @Override public BackgroundPlaneCollisionProvider.State backgroundPlaneCollisionStateOrNull() {
         return events.getCollisionMode() == Sonic3kFBZEvents.CollisionMode.FOREGROUND_ONLY
@@ -84,7 +89,7 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
         List<ObjectRefId> clouds = events.getCloudRewindIds();
         byte[] retainedPlane = events.captureRetainedPlaneSnapshot();
         int cloudBytes = clouds.stream().mapToInt(id -> 1 + (id == null ? 0 : 20)).sum();
-        ByteBuffer out = ByteBuffer.allocate(200 + retainedPlane.length + cloudBytes);
+        ByteBuffer out = ByteBuffer.allocate(214 + retainedPlane.length + cloudBytes);
         out.putInt(MAGIC).putInt(VERSION).putInt(events.getForegroundLayoutRegion());
         out.put(bool(events.isForegroundOutdoor())).put(bool(events.isBackgroundOutdoor()));
         out.putInt(events.getBackgroundRedrawStage()).putInt(events.getBackgroundRedrawDirection().ordinal());
@@ -110,8 +115,12 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
         out.put(bool(events.isCloudCleanupTerminal()));
         out.putInt(events.getPlaneAssignmentMode().ordinal()).putInt(events.getCollisionMode().ordinal());
         out.putInt(events.getCollisionCameraDiffX()).putInt(events.getCollisionCameraDiffY());
-        out.put(bool(events.isScreenShakeActive())).putInt(events.getScreenShakeOffset()).putInt(events.getScreenShakePhase());
+        out.put(bool(events.isScreenShakeActive())).putInt(events.getScreenShakeOffset())
+                .putInt(events.getScreenShakeLastOffset()).putInt(events.getScreenShakePhase())
+                .putInt(events.getBossForegroundVScroll());
         out.put(bool(events.isEventsFg5()));
+        out.putInt(events.getBossPlaneRefreshRows());
+        out.put(bool(events.isBossEventSetupAttempted())).put(bool(events.isBossCollisionIntentActive()));
         if (out.hasRemaining()) throw new IllegalStateException("FBZ rewind size mismatch: " + out.remaining());
         return out.array();
     }
@@ -163,8 +172,12 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
             var collision = enumAt(Sonic3kFBZEvents.CollisionMode.values(), in.getInt(), "collision mode");
             int diffX = in.getInt(), diffY = in.getInt();
             boolean shakeActive = readBool(in, "screen shake active");
-            int shakeOffset = in.getInt(), shakePhase = in.getInt();
+            int shakeOffset = in.getInt(), shakeLastOffset = in.getInt(), shakePhase = in.getInt();
+            int bossForegroundVScroll = in.getInt();
             boolean eventsFg5 = readBool(in, "Events_fg_5");
+            int bossPlaneRefreshRows = in.getInt();
+            boolean bossEventSetupAttempted = readBool(in, "boss setup attempted");
+            boolean bossCollisionIntentActive = readBool(in, "boss collision intent active");
             if (in.hasRemaining()) throw new IllegalArgumentException("trailing FBZ rewind bytes: " + in.remaining());
             s = new Snapshot(layout, fgOutdoor, bgOutdoor, redrawStage, redraw,
                     redrawProgress, redrawPosition, redrawRowCount, redrawVerticalAnchor, lastRoundedBackgroundY,
@@ -175,7 +188,8 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
                     polarity, magneticPhase, magneticEdgeObserved, magneticLastEdgeFrame, pendulumOrientationBits,
                     foregroundStage, bossStage, bossX, bossY, adjustment,
                     Collections.unmodifiableList(clouds), cleanupTerminal, plane, collision, diffX, diffY,
-                    shakeActive, shakeOffset, shakePhase, eventsFg5);
+                    shakeActive, shakeOffset, shakeLastOffset, shakePhase, bossForegroundVScroll,
+                    eventsFg5, bossPlaneRefreshRows, bossEventSetupAttempted, bossCollisionIntentActive);
         } catch (BufferUnderflowException e) {
             throw new IllegalArgumentException("truncated FBZ rewind state", e);
         }
@@ -208,14 +222,20 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
             target.restoreCloudState(s.clouds(), s.cleanupTerminal());
             target.setPlaneAssignmentMode(s.plane());
             target.setCollisionMode(s.collision(), s.diffX(), s.diffY());
-            target.setScreenShakeState(s.shakeActive(), s.shakeOffset(), s.shakePhase());
+            target.restoreScreenShakePipelineState(s.shakeActive(), s.shakeOffset(), s.shakeLastOffset(),
+                    s.shakePhase(), s.bossForegroundVScroll());
+            target.restoreBossPlaneRefreshRows(s.bossPlaneRefreshRows());
+            target.restoreBossControllerEventState(
+                    s.bossEventSetupAttempted(), s.bossCollisionIntentActive());
         } else if (s.foregroundStage() != 0 || s.bossStage() != 0 || s.bossX() != 0 || s.bossY() != 0) {
             throw new IllegalArgumentException("Act 2 FBZ state present in Act 1 snapshot");
         } else if (s.adjustment() || s.cleanupTerminal() || s.clouds().stream().anyMatch(Objects::nonNull)
                 || s.plane() != Sonic3kFBZEvents.PlaneAssignmentMode.NORMAL
                 || s.collision() != Sonic3kFBZEvents.CollisionMode.FOREGROUND_ONLY
                 || s.diffX() != 0 || s.diffY() != 0 || s.shakeActive()
-                || s.shakeOffset() != 0 || s.shakePhase() != 0) {
+                || s.shakeOffset() != 0 || s.shakeLastOffset() != 0 || s.shakePhase() != 0
+                || s.bossForegroundVScroll() != 0 || s.bossPlaneRefreshRows() != 0
+                || s.bossEventSetupAttempted() || s.bossCollisionIntentActive()) {
             throw new IllegalArgumentException("Act 2-only FBZ state present in Act 1 snapshot");
         }
         target.setEventsFg5(s.eventsFg5());
@@ -259,5 +279,8 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
                             int foregroundStage, int bossStage, int bossX, int bossY, boolean adjustment,
                             List<ObjectRefId> clouds, boolean cleanupTerminal, Sonic3kFBZEvents.PlaneAssignmentMode plane,
                             Sonic3kFBZEvents.CollisionMode collision, int diffX, int diffY,
-                            boolean shakeActive, int shakeOffset, int shakePhase, boolean eventsFg5) { }
+                            boolean shakeActive, int shakeOffset, int shakeLastOffset, int shakePhase,
+                            int bossForegroundVScroll, boolean eventsFg5,
+                            int bossPlaneRefreshRows, boolean bossEventSetupAttempted,
+                            boolean bossCollisionIntentActive) { }
 }

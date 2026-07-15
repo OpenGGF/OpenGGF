@@ -29,9 +29,35 @@ public final class S3kFbzEventWriteSupport {
         if (bridge != null) bridge.setBossLoadPositionAdjustmentPending(value);
     }
 
+    public static int getAct2ForegroundStage(ObjectServices services) {
+        FbzObjectEventBridge bridge = bridgeOrNull(services);
+        return bridge == null ? 0 : bridge.getAct2ForegroundStage();
+    }
+
+    public static void setAct2ForegroundStage(ObjectServices services, int stage) {
+        FbzObjectEventBridge bridge = bridgeOrNull(services);
+        if (bridge != null) bridge.setAct2ForegroundStage(stage);
+    }
+
+    public static int getBossBackgroundOffsetX(ObjectServices services) {
+        FbzObjectEventBridge bridge = bridgeOrNull(services);
+        return bridge == null ? 0 : bridge.getBossBackgroundOffsetX();
+    }
+
+    public static int getBossBackgroundOffsetY(ObjectServices services) {
+        FbzObjectEventBridge bridge = bridgeOrNull(services);
+        return bridge == null ? 0 : bridge.getBossBackgroundOffsetY();
+    }
+
     public static void setBossBackgroundOffsets(ObjectServices services, int x, int y) {
         FbzObjectEventBridge bridge = bridgeOrNull(services);
         if (bridge != null) bridge.setBossBackgroundOffsets(x, y);
+    }
+
+    public static void setBossApproachMotionState(ObjectServices services, int x, int y,
+                                                   boolean collisionActive) {
+        FbzObjectEventBridge bridge = bridgeOrNull(services);
+        if (bridge != null) bridge.setBossApproachMotionState(x, y, collisionActive);
     }
 
     public static void setPlaneAssignmentMode(ObjectServices services, Sonic3kFBZEvents.PlaneAssignmentMode plane) {
@@ -53,6 +79,11 @@ public final class S3kFbzEventWriteSupport {
     public static boolean isScreenShakeActive(ObjectServices services) {
         FbzObjectEventBridge bridge = bridgeOrNull(services);
         return bridge != null && bridge.isScreenShakeActive();
+    }
+
+    public static void setScreenShakeActive(ObjectServices services, boolean active) {
+        FbzObjectEventBridge bridge = bridgeOrNull(services);
+        if (bridge != null) bridge.setScreenShakeActive(active);
     }
 
     private static FbzObjectEventBridge bridgeOrNull(ObjectServices services) {

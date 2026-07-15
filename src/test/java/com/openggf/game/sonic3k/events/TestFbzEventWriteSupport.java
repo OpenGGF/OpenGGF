@@ -21,6 +21,7 @@ class TestFbzEventWriteSupport {
         S3kFbzEventWriteSupport.setCollisionMode(services,
                 Sonic3kFBZEvents.CollisionMode.FOREGROUND_AND_BACKGROUND, 4, 5);
         S3kFbzEventWriteSupport.setScreenShakeState(services, true, -2, 7);
+        S3kFbzEventWriteSupport.setScreenShakeActive(services, false);
 
         assertEquals(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, bridge.polarity);
         assertEquals(9, bridge.phase);
@@ -30,7 +31,9 @@ class TestFbzEventWriteSupport {
         assertEquals(-14, bridge.offsetY);
         assertEquals(Sonic3kFBZEvents.PlaneAssignmentMode.REVERSED, bridge.planeMode);
         assertEquals(Sonic3kFBZEvents.CollisionMode.FOREGROUND_AND_BACKGROUND, bridge.collisionMode);
-        assertTrue(bridge.shakeActive);
+        assertFalse(bridge.shakeActive);
+        assertEquals(-2, bridge.shakeOffset, "flag-only terminal clear must preserve the residual offset");
+        assertEquals(7, bridge.shakePhase);
     }
 
     @Test
@@ -57,6 +60,8 @@ class TestFbzEventWriteSupport {
         Sonic3kFBZEvents.PlaneAssignmentMode planeMode;
         Sonic3kFBZEvents.CollisionMode collisionMode;
         boolean shakeActive;
+        int shakeOffset;
+        int shakePhase;
         @Override public void initLevel(int zone, int act) { }
         @Override public void update() { }
         @Override public void setMagneticState(Sonic3kFBZEvents.MagneticPolarity polarity, int timerPhase) { this.polarity = polarity; this.phase = timerPhase; }
@@ -66,6 +71,9 @@ class TestFbzEventWriteSupport {
         @Override public void setBossBackgroundOffsets(int x, int y) { offsetX = x; offsetY = y; }
         @Override public void setPlaneAssignmentMode(Sonic3kFBZEvents.PlaneAssignmentMode plane) { planeMode = plane; }
         @Override public void setCollisionMode(Sonic3kFBZEvents.CollisionMode collision, int diffX, int diffY) { collisionMode = collision; }
-        @Override public void setScreenShakeState(boolean active, int offset, int phase) { shakeActive = active; }
+        @Override public void setScreenShakeState(boolean active, int offset, int phase) {
+            shakeActive = active; shakeOffset = offset; shakePhase = phase;
+        }
+        @Override public void setScreenShakeActive(boolean active) { shakeActive = active; }
     }
 }

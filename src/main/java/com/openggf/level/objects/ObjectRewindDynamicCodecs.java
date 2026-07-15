@@ -1,11 +1,19 @@
 package com.openggf.level.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.IntPredicate;
+import java.util.function.IntUnaryOperator;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 /**
@@ -28,6 +36,72 @@ public final class ObjectRewindDynamicCodecs {
     private static final Logger LOG = Logger.getLogger(ObjectRewindDynamicCodecs.class.getName());
 
     private ObjectRewindDynamicCodecs() {
+    }
+
+    /**
+     * Restore-time adoption surface for event-owned objects whose captured
+     * {@link ObjectRefId} and SST slot must be retained exactly. This lives with
+     * the rewind recreate machinery rather than growing the ObjectManager facade.
+     */
+    public static final class ExactAdoptionSurface {
+        private final ObjectServices services;
+        private final ObjectSlotLayout slots;
+        private final SlotAllocator allocator;
+        private final Map<ObjectInstance, ObjectRefId> identities;
+        private final List<ObjectInstance> dynamicObjects;
+        private final Set<ObjectInstance> auxiliaryObjects;
+        private final ObjectInstance[] execOrder;
+        private final IntUnaryOperator execIndexForSlot;
+        private final IntPredicate occupied;
+        private final Runnable markDirty;
+
+        ExactAdoptionSurface(ObjectServices services, ObjectSlotLayout slots, SlotAllocator allocator,
+                             Map<ObjectInstance, ObjectRefId> identities, List<ObjectInstance> dynamicObjects,
+                             Set<ObjectInstance> auxiliaryObjects, ObjectInstance[] execOrder,
+                             IntUnaryOperator execIndexForSlot, IntPredicate occupied, Runnable markDirty) {
+            this.services = services;
+            this.slots = slots;
+            this.allocator = allocator;
+            this.identities = identities;
+            this.dynamicObjects = dynamicObjects;
+            this.auxiliaryObjects = auxiliaryObjects;
+            this.execOrder = execOrder;
+            this.execIndexForSlot = execIndexForSlot;
+            this.occupied = occupied;
+            this.markDirty = markDirty;
+        }
+
+        public <T extends AbstractObjectInstance> T adopt(ObjectRefId stableId, Supplier<T> factory) {
+            Objects.requireNonNull(stableId, "stableId");
+            Objects.requireNonNull(factory, "factory");
+            int slot = stableId.slotIndex();
+            if (!slots.isDynamicSlot(slot) || occupied.test(slot)) return null;
+            T object = ObjectConstructionContext.construct(services, factory);
+            if (object == null) return null;
+            object.setServices(services);
+            object.setSlotIndex(slot);
+            allocator.reserveOrMarkUsed(slot);
+            identities.put(object, stableId);
+            dynamicObjects.add(object);
+            int execIndex = execIndexForSlot.applyAsInt(slot);
+            if (execIndex >= 0 && execIndex < execOrder.length) execOrder[execIndex] = object;
+            markDirty.run();
+            return object;
+        }
+
+        /** Removes a failed batch member without releasing its snapshot-owned reservation. */
+        public void rollback(AbstractObjectInstance object) {
+            if (object == null) return;
+            dynamicObjects.remove(object);
+            auxiliaryObjects.remove(object);
+            identities.remove(object);
+            int execIndex = execIndexForSlot.applyAsInt(object.getSlotIndex());
+            if (execIndex >= 0 && execIndex < execOrder.length && execOrder[execIndex] == object) {
+                execOrder[execIndex] = null;
+            }
+            ObjectLifetimeOps.clearPreviousManagerSlot(object);
+            markDirty.run();
+        }
     }
 
     /**

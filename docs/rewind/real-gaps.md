@@ -6,10 +6,10 @@ Generated: 2026-07-15
 
 | Metric | Value |
 |--------|-------|
-| Total classes discovered | 905 |
-| Probed: | 794 |
+| Total classes discovered | 908 |
+| Probed: | 797 |
 | Skipped/Unprobed: | 111 |
-| Probe coverage | 87.7% |
+| Probe coverage | 87.8% |
 | REAL gaps found | 0 |
 
 ## Real Gaps (fields that differ after capture → restore)

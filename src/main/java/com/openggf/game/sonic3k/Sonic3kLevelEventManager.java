@@ -14,6 +14,7 @@ import com.openggf.game.sonic3k.events.AizObjectEventBridge;
 import com.openggf.game.sonic3k.events.CnzObjectEventBridge;
 import com.openggf.game.sonic3k.events.HczObjectEventBridge;
 import com.openggf.game.sonic3k.events.FbzObjectEventBridge;
+import com.openggf.game.sonic3k.objects.FbzBossEventRewindLinks;
 import com.openggf.game.sonic3k.events.FbzCloudRecreationBatchFactory;
 import com.openggf.game.sonic3k.events.FbzCloudIdentityResolver;
 import com.openggf.game.sonic3k.events.MgzObjectEventBridge;
@@ -883,7 +884,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (fbzEvents != null) fbzEvents.setCloudCleanupTerminal(value);
     }
 
-    /** Installs Task 15's deterministic ROM-table cloud recreation implementation. */
+    /** Installs the deterministic ROM-table cloud recreation implementation used after rewind restore. */
     public void installFbzCloudRecreationBatchFactory(FbzCloudRecreationBatchFactory factory) {
         this.fbzCloudRecreationBatchFactory = java.util.Objects.requireNonNull(factory, "factory");
     }
@@ -903,7 +904,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                         : objectManager.captureIdentityContext().requireIdentityTable();
             }
         }
-        fbzEvents.reconcileCloudsAfterObjectRestore(new LiveResolver(), fbzCloudRecreationBatchFactory);
+        FbzCloudRecreationBatchFactory factory = fbzCloudRecreationBatchFactory != null
+                ? fbzCloudRecreationBatchFactory
+                : FbzBossEventRewindLinks.recreationFactory(objectManager);
+        fbzEvents.reconcileCloudsAfterObjectRestore(new LiveResolver(), factory);
     }
 
     void reconcileFbzRuntimeStateAfterRestore() {
@@ -933,8 +937,33 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public int getAct2ForegroundStage() {
+        return fbzEvents == null ? 0 : fbzEvents.getAct2ForegroundStage();
+    }
+
+    @Override
+    public void setAct2ForegroundStage(int stage) {
+        if (fbzEvents != null) fbzEvents.setAct2ForegroundStage(stage);
+    }
+
+    @Override
+    public int getBossBackgroundOffsetX() {
+        return fbzEvents == null ? 0 : fbzEvents.getBossBackgroundOffsetX();
+    }
+
+    @Override
+    public int getBossBackgroundOffsetY() {
+        return fbzEvents == null ? 0 : fbzEvents.getBossBackgroundOffsetY();
+    }
+
+    @Override
     public void setBossBackgroundOffsets(int x, int y) {
         if (fbzEvents != null) fbzEvents.setBossBackgroundOffsets(x, y);
+    }
+
+    @Override
+    public void setBossApproachMotionState(int x, int y, boolean collisionActive) {
+        if (fbzEvents != null) fbzEvents.setBossApproachMotionState(x, y, collisionActive);
     }
 
     @Override
@@ -950,6 +979,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public void setScreenShakeState(boolean active, int offset, int phase) {
         if (fbzEvents != null) fbzEvents.setScreenShakeState(active, offset, phase);
+    }
+
+    @Override
+    public void setScreenShakeActive(boolean active) {
+        if (fbzEvents != null) fbzEvents.setScreenShakeActive(active);
     }
 
     @Override
