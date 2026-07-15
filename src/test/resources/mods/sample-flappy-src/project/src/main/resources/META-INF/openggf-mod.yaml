@@ -5,9 +5,9 @@ version: 1.0.0
 authors:
   - Mod Author
 description: Generated OpenGGF sample mod.
-engineApiRange: ">=2.1.0 <3.0.0"
+engineApiRange: ">=2.4.0 <3.0.0"
 type: patch
-baseGame: s2
+baseGame: s3k
 entrypoint: example.flappysample.FlappySampleMod
 dependencies: []
 audioOverrides: {}

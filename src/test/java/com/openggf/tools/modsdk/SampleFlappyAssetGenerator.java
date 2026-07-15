@@ -12,7 +12,7 @@ import java.util.TreeMap;
 import javax.imageio.ImageIO;
 
 /**
- * Deterministic offline generator for the {@code sample-flappy} gallery mod's zone-agnostic
+ * Deterministic offline generator for the {@code sample-flappy} gallery mod's strict S3K-v2
  * level source (the binary asset inventory, base64-embedded in {@code binary-assets.properties},
  * matching the {@code sample-mod-src} template, plus the {@code objects[]} JSON fragment pasted
  * into the hand-written {@code level.json}) and the {@code pipe.png} obstacle art sheet consumed
@@ -26,7 +26,7 @@ import javax.imageio.ImageIO;
  * not byte-identical PNG files).
  *
  * <p>Mirrors {@code FullLevelExporter}'s exact binary writers (pattern/chunk/block/map/solid/
- * collision/palette layouts) so the generated directory round-trips through
+ * collision layouts) so the generated directory round-trips through
  * {@code ModLevelDefinitionParser} / {@code ggfmod convert level --from-export} exactly like the
  * {@code sample-mod-src} template.
  */
@@ -47,8 +47,8 @@ public final class SampleFlappyAssetGenerator {
     private static final int PIPE_GREEN_MID = 0x009200;
     private static final int PIPE_GREEN_LIGHT = 0x00B600;
 
-    /** Map is 80x2 blocks of {@code blockGridSide=8} chunks of 16px each: 10240x256 level pixels. */
-    private static final int MAP_WIDTH_BLOCKS = 80;
+    /** Seven 128px blocks cover the maximum 800px viewport while keeping the sky strip bounded. */
+    private static final int MAP_WIDTH_BLOCKS = 7;
     private static final int MAP_HEIGHT_BLOCKS = 2;
     private static final int BLOCK_GRID_SIDE = 8;
 
@@ -75,7 +75,6 @@ public final class SampleFlappyAssetGenerator {
         assets.put("solid-angles.bin", solidAngles());
         assets.put("collision-primary.bin", collisions(false));
         assets.put("collision-secondary.bin", collisions(true));
-        assets.put("palettes.bin", palettes());
 
         // Written by hand (not java.util.Properties#store) so the output has no timestamp comment
         // and is byte-for-byte reproducible across runs/JDKs. Keys are sorted (TreeMap); base64
@@ -213,7 +212,7 @@ public final class SampleFlappyAssetGenerator {
         });
     }
 
-    /** 80x2 map cells, all referencing content block 1 (block 0 is reserved-empty at load). */
+    /** 7x2 map cells, all referencing content block 1 (block 0 is reserved-empty at load). */
     private static byte[] foregroundMap() throws IOException {
         return binary(out -> {
             out.writeBytes("GMAP");
@@ -270,52 +269,6 @@ public final class SampleFlappyAssetGenerator {
         });
     }
 
-    /**
-     * GPAL v1, 4 lines x 16 colors. Line 0 is reserved for the player/Tails palette (loaded by the
-     * player art path, not by zone chunks) and is left black. Lines 1-3 hold this zone's original
-     * sky blues, pipe greens, and HUD-safe white.
-     */
-    private static byte[] palettes() throws IOException {
-        return binary(out -> {
-            out.writeBytes("GPAL");
-            out.writeShort(1);
-            out.writeShort(4);
-            out.writeShort(16);
-            out.writeShort(0);
-            writePaletteLine(out, new int[][] {
-                    {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0},
-                    {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0},
-                    {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0},
-                    {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0},
-            }); // line 0: player/Tails palette (owned elsewhere)
-            writePaletteLine(out, new int[][] {
-                    {0, 0, 0}, {0, 4, 7}, {0, 5, 7}, {1, 5, 7},
-                    {2, 6, 7}, {3, 6, 7}, {4, 7, 7}, {5, 7, 7},
-                    {6, 7, 7}, {7, 7, 7}, {0, 2, 4}, {0, 3, 5},
-                    {1, 4, 6}, {2, 5, 6}, {3, 5, 6}, {4, 6, 6},
-            }); // line 1: sky blues (flat sky fill = index 2, dimmer band = index 4)
-            writePaletteLine(out, new int[][] {
-                    {0, 0, 0}, {0, 3, 0}, {0, 4, 0}, {0, 5, 0},
-                    {0, 6, 0}, {0, 7, 0}, {1, 7, 1}, {2, 7, 2},
-                    {0, 2, 0}, {0, 4, 1}, {1, 5, 1}, {1, 6, 1},
-                    {2, 6, 2}, {3, 7, 3}, {4, 7, 4}, {5, 7, 5},
-            }); // line 2: pipe greens
-            writePaletteLine(out, new int[][] {
-                    {0, 0, 0}, {7, 7, 7}, {6, 6, 6}, {5, 5, 5},
-                    {4, 4, 4}, {3, 3, 3}, {2, 2, 2}, {1, 1, 1},
-                    {7, 7, 6}, {7, 6, 5}, {6, 5, 4}, {5, 4, 3},
-                    {7, 7, 7}, {6, 6, 6}, {5, 5, 5}, {4, 4, 4},
-            }); // line 3: HUD-safe white/greys
-        });
-    }
-
-    private static void writePaletteLine(DataOutputStream out, int[][] colors) throws IOException {
-        for (int[] c : colors) {
-            int r = c[0], g = c[1], b = c[2];
-            out.writeShort((b << 9) | (g << 5) | (r << 1));
-        }
-    }
-
     private static byte[] binary(IoWriter writer) throws IOException {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try (DataOutputStream out = new DataOutputStream(bytes)) {
@@ -331,30 +284,9 @@ public final class SampleFlappyAssetGenerator {
 
     // ---- objects[] JSON fragment ----
 
-    /**
-     * One controller at (128,128) plus a pipe every 224px from x=512 through x&lt;=9700
-     * (last pipe at x=9696), subtype cycling 0-4 by index. All entries use renderFlags=0 and
-     * respawnTracked=false, so rawYWord == y.
-     */
+    /** The controller is the sole layout object; it owns the dynamic pipe pool at runtime. */
     private static String objectsJsonFragment() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("[");
-        sb.append("{\"placementId\":1,\"x\":128,\"y\":128,\"objectKey\":\"sample-flappy:controller\",")
-                .append("\"subtype\":0,\"renderFlags\":0,\"respawnTracked\":false,\"rawYWord\":128}");
-        int placementId = 2;
-        int index = 0;
-        for (int x = 512; x <= 9700; x += 224) {
-            int subtype = index % 5;
-            int y = 128;
-            sb.append(",{\"placementId\":").append(placementId).append(",\"x\":").append(x)
-                    .append(",\"y\":").append(y).append(",\"objectKey\":\"sample-flappy:pipe\",")
-                    .append("\"subtype\":").append(subtype)
-                    .append(",\"renderFlags\":0,\"respawnTracked\":false,\"rawYWord\":").append(y)
-                    .append("}");
-            placementId++;
-            index++;
-        }
-        sb.append("]");
-        return sb.toString();
+        return "[{\"placementId\":1,\"x\":0,\"y\":0,\"objectKey\":\"sample-flappy:controller\","
+                + "\"subtype\":0,\"renderFlags\":0,\"respawnTracked\":false,\"rawYWord\":0}]";
     }
 }

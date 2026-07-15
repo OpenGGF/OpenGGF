@@ -54,9 +54,16 @@ class TestSampleModsPackage {
             "phase2-sample", ">=2.0.0 <3.0.0",
             "phase3-character", ">=2.0.0 <3.0.0",
             "phase3-standalone", ">=2.0.0 <3.0.0",
-            "sample-flappy", ">=2.1.0 <3.0.0",
+            "sample-flappy", ">=2.4.0 <3.0.0",
             "sample-platformer", ">=2.2.0 <3.0.0",
             "sample-rom-art-remix", ">=2.1.0 <3.0.0");
+    private static final Map<String, String> EXPECTED_PATCH_BASE_GAMES = Map.of(
+            "openggf-gallery-music-sample", "s2",
+            "phase2-reskin", "s2",
+            "phase2-sample", "s2",
+            "phase3-character", "s2",
+            "sample-flappy", "s3k",
+            "sample-rom-art-remix", "s2");
     private static final Set<String> TRUSTED_CODE_SAMPLES = Set.of(
             "phase2-sample", "phase3-character", "phase3-standalone", "sample-flappy",
             "sample-platformer", "sample-rom-art-remix");
@@ -107,7 +114,8 @@ class TestSampleModsPackage {
             boolean standalone = STANDALONE_IDS.contains(id);
             assertEquals(standalone ? ModType.STANDALONE : ModType.PATCH,
                     descriptor.manifest().type(), id + " type");
-            assertEquals(standalone ? null : "s2", descriptor.manifest().baseGame(), id + " base game");
+            assertEquals(standalone ? null : EXPECTED_PATCH_BASE_GAMES.get(id),
+                    descriptor.manifest().baseGame(), id + " base game");
             assertTrue(descriptor.findings().isEmpty(), id + " catalog findings: " + descriptor.findings());
         }
         assertEquals(EXPECTED_IDS, ids);
