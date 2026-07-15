@@ -77,6 +77,9 @@ public final class ModZoneRegistry implements ZoneRegistry {
     }
 
     public List<PreparedModZone> contributions() { return contributions; }
+    List<PreparedModZone> gameStartContributions() {
+        return contributions.stream().filter(PreparedModZone::gameStart).toList();
+    }
     public PreparedModZone levelContribution(int levelIndex) { return byLevelIndex.get(levelIndex); }
 
     @Override

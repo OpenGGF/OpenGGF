@@ -179,12 +179,7 @@ public final class ModContext {
         mutate(() -> {
             if (standalone) throw failure("Standalone manifests cannot register additive zones");
             Objects.requireNonNull(contribution, "contribution");
-            String anchor = contribution.insertAfter();
-            if (anchor == null) anchor = defaultInsertAfter;
-            if (anchor == null) {
-                anchor = com.openggf.mods.StockProgressionAnchors.defaultAnchorFor(baseGame)
-                        .orElse(null);
-            }
+            String anchor = resolveZoneAnchor(contribution);
             ModZoneContribution frozen = anchor == null
                     ? contribution : contribution.withDefaultAnchor(anchor);
             if (anchor != null
@@ -196,6 +191,14 @@ public final class ModContext {
             }
             zones.add(frozen);
         });
+    }
+
+    private String resolveZoneAnchor(ModZoneContribution contribution) {
+        if (contribution.insertAfter() != null) return contribution.insertAfter();
+        if (defaultInsertAfter != null) return defaultInsertAfter;
+        // A host without a compatibility default (notably S3K) keeps game-start zones
+        // addressable but outside stock progression instead of inventing an anchor.
+        return com.openggf.mods.StockProgressionAnchors.defaultAnchorFor(baseGame).orElse(null);
     }
 
     /** Stages a manifest-declared stock-key override without creator namespacing. */

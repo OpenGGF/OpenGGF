@@ -242,12 +242,18 @@ public final class ModBackedGamePatch implements GamePatch {
                 if (dataSelectHost == null) {
                     com.openggf.game.dataselect.DataSelectHostProfile inherited =
                             super.getDataSelectHostProfile();
-                    dataSelectHost = dataSelectDecorator == null ? inherited
+                    com.openggf.game.dataselect.DataSelectHostProfile decorated =
+                            dataSelectDecorator == null ? inherited
                             : dataSelectDecorator.decorateHostProfile(
                                     inherited, this::getZoneRegistry,
                                     (owner, finding) -> saveFindingSink.accept(owner,
                                             new com.openggf.game.sonic2.dataselect.S2SaveFinding(
                                                     finding.ownerModId(), finding.code(), finding.detail())));
+                    dataSelectHost = ModGameStartResolver.decorate(decorated, inherited,
+                            (ModZoneRegistry) getZoneRegistry(),
+                            (owner, finding) -> saveFindingSink.accept(owner,
+                                    new com.openggf.game.sonic2.dataselect.S2SaveFinding(
+                                            finding.ownerModId(), finding.code(), finding.detail())));
                 }
                 return dataSelectHost;
             }

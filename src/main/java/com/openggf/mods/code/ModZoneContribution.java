@@ -9,11 +9,17 @@ import java.util.Optional;
 /** One creator-declared, owner-scoped zone registration. */
 @ModApi
 public record ModZoneContribution(String localKey, BakedLevelRef level,
-                                  String insertAfter, ZoneEventFactory eventFactory) {
+                                  String insertAfter, ZoneEventFactory eventFactory,
+                                  boolean gameStart) {
     public ModZoneContribution {
         localKey = ModKeySyntax.requireLocalName(localKey);
         Objects.requireNonNull(level, "level");
         if (insertAfter != null) insertAfter = requireAnchor(insertAfter);
+    }
+
+    public ModZoneContribution(String localKey, BakedLevelRef level,
+                               String insertAfter, ZoneEventFactory eventFactory) {
+        this(localKey, level, insertAfter, eventFactory, false);
     }
 
     public Optional<ZoneEventFactory> optionalEventFactory() {
@@ -22,7 +28,8 @@ public record ModZoneContribution(String localKey, BakedLevelRef level,
 
     ModZoneContribution withDefaultAnchor(String fallback) {
         return insertAfter == null
-                ? new ModZoneContribution(localKey, level, Objects.requireNonNull(fallback, "default insertAfter"), eventFactory)
+                ? new ModZoneContribution(localKey, level,
+                Objects.requireNonNull(fallback, "default insertAfter"), eventFactory, gameStart)
                 : this;
     }
 
