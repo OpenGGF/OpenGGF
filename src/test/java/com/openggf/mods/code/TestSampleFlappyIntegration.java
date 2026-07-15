@@ -61,6 +61,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -193,11 +194,24 @@ class TestSampleFlappyIntegration {
                     "the controller constructor and rewind recreation must not spawn pipes");
 
             game.runner().stepIdleFrames(1);
-            List<ObjectInstance> pipes = pipes(game.objects());
-            assertEquals(6, pipes.size());
-            assertEquals(6, new HashSet<>(pipes.stream()
+            List<ObjectInstance> initialPipes = pipes(game.objects()).stream()
+                    .sorted(Comparator.comparingInt(TestSampleFlappyIntegration::centreX))
+                    .toList();
+            assertEquals(6, initialPipes.size());
+            assertEquals(game.camera().getX() + game.camera().getWidth() + 64,
+                    centreX(initialPipes.getFirst()));
+            for (int index = 1; index < initialPipes.size(); index++) {
+                assertEquals(224,
+                        centreX(initialPipes.get(index)) - centreX(initialPipes.get(index - 1)),
+                        "adjacent pipe centres must cover the viewport at the fixed spacing");
+            }
+            assertEquals(6, new HashSet<>(initialPipes.stream()
                     .map(pipe -> objectId(game.objects(), pipe)).toList()).size(),
                     "every independent dynamic entry needs a distinct stable identity");
+            Map<ObjectRefId, Integer> initialCentres = new HashMap<>();
+            for (ObjectInstance pipe : initialPipes) {
+                initialCentres.put(objectId(game.objects(), pipe), centreX(pipe));
+            }
 
             ObjectManagerSnapshot snapshot = game.objects().rewindSnapshottable().capture();
             assertEquals(1, snapshot.slots().size(), "the level layout contains only its controller");
@@ -205,7 +219,18 @@ class TestSampleFlappyIntegration {
                     snapshot.slots().getFirst().className());
             assertEquals(6, snapshot.dynamicObjects().size());
 
-            game.runner().stepIdleFrames(3);
+            game.runner().stepIdleFrames(1);
+            List<ObjectInstance> movedPipes = pipes(game.objects());
+            assertEquals(6, movedPipes.size());
+            assertEquals(initialCentres.keySet(), new HashSet<>(movedPipes.stream()
+                    .map(pipe -> objectId(game.objects(), pipe)).toList()));
+            for (ObjectInstance pipe : movedPipes) {
+                ObjectRefId id = objectId(game.objects(), pipe);
+                assertEquals(initialCentres.get(id) - 2, centreX(pipe),
+                        "0x200 fixed-point speed must move every stable entry exactly two pixels");
+            }
+
+            game.runner().stepIdleFrames(2);
             assertEquals(6, pipes(game.objects()).size(),
                     "resizing and later updates must not grow the fixed pool");
         });
