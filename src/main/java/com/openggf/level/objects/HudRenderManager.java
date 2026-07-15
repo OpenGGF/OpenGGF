@@ -49,6 +49,7 @@ public class HudRenderManager {
     private Palette livesPaletteOverride;
     private Palette lastAppliedLivesPaletteOverride;
     private Supplier<Palette> livesPaletteOverrideSupplier;
+    private boolean routeLivesPaletteOverrideThroughOwnership;
     private boolean bonusStageHudLayout;
 
     public HudRenderManager(GraphicsManager graphicsManager, Camera camera, GameStateManager gameState) {
@@ -96,6 +97,15 @@ public class HudRenderManager {
     public void setLivesPaletteOverrideSupplier(Supplier<Palette> supplier) {
         this.livesPaletteOverrideSupplier = supplier;
         this.lastAppliedLivesPaletteOverride = null;
+    }
+
+    /**
+     * Routes a custom zone's lives palette through the frame palette ownership
+     * model. The stock HUD leaves this disabled and retains its direct upload.
+     */
+    public void setRouteLivesPaletteOverrideThroughOwnership(boolean routed) {
+        routeLivesPaletteOverrideThroughOwnership = routed;
+        lastAppliedLivesPaletteOverride = null;
     }
 
     /**
@@ -266,6 +276,10 @@ public class HudRenderManager {
     }
 
     private boolean shouldApplyLivesPaletteOverride() {
+        if (routeLivesPaletteOverrideThroughOwnership) {
+            lastAppliedLivesPaletteOverride = null;
+            return false;
+        }
         Palette paletteOverride = resolveLivesPaletteOverride();
         if (paletteOverride == null) {
             lastAppliedLivesPaletteOverride = null;

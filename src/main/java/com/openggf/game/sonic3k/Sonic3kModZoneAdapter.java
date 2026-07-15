@@ -54,6 +54,9 @@ public final class Sonic3kModZoneAdapter implements ModZoneAdapter {
             }
         }
         ModPaletteUsageValidator.validate(ownerModId, level);
+        var hudProvider = gameModule.getObjectArtProvider();
+        S3kCustomZonePaletteBridge.validateCreatorClaims(ownerModId, level.paletteClaims(),
+                hudProvider.getHudFlashPaletteLine(), hudProvider.getHudLivesPaletteOverride());
     }
 
     @Override

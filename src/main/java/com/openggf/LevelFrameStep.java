@@ -126,6 +126,7 @@ public final class LevelFrameStep {
         PaletteOwnershipRegistry paletteRegistry = context.paletteOwnershipRegistry();
         if (paletteRegistry != null) {
             paletteRegistry.beginFrame();
+            levelManager.submitCustomZonePaletteClaims(paletteRegistry);
         }
 
         // 0. Process dirty regions from MutableLevel (editor mutations).

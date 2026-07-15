@@ -382,6 +382,55 @@ public class TestHudRenderManager {
     }
 
     @Test
+    void ownershipRoutedLivesPaletteDoesNotUseDirectUploadOrImmediateFlush() {
+        GraphicsManager graphicsManager = mock(GraphicsManager.class);
+        Camera camera = mock(Camera.class);
+        GameStateManager gameState = mock(GameStateManager.class);
+        LevelState levelState = mock(LevelState.class);
+        when(camera.getXWithShake()).thenReturn((short) 0);
+        when(camera.getYWithShake()).thenReturn((short) 0);
+        when(levelState.getRings()).thenReturn(10);
+        when(levelState.getFlashCycle()).thenReturn(false);
+        when(levelState.shouldFlashTimer()).thenReturn(false);
+        when(levelState.getDisplayTime()).thenReturn("0:10");
+        when(gameState.getScore()).thenReturn(0);
+        when(gameState.getLives()).thenReturn(3);
+
+        HudRenderManager hud = new HudRenderManager(graphicsManager, camera, gameState);
+        hud.setDigitPatternIndex(200);
+        hud.setLivesNumbersPatternIndex(220);
+        hud.setLivesPaletteOverride(paletteWithColor(12, 0x0E00));
+        hud.setRouteLivesPaletteOverrideThroughOwnership(true);
+
+        hud.draw(levelState, null);
+
+        verify(graphicsManager, never()).cachePaletteTexture(any(), anyInt());
+        verify(graphicsManager, never()).flush();
+    }
+
+    @Test
+    void stockDirectModeStillUploadsLivesPaletteOverride() {
+        GraphicsManager graphicsManager = mock(GraphicsManager.class);
+        Camera camera = mock(Camera.class);
+        GameStateManager gameState = mock(GameStateManager.class);
+        LevelState levelState = mock(LevelState.class);
+        when(camera.getXWithShake()).thenReturn((short) 0);
+        when(camera.getYWithShake()).thenReturn((short) 0);
+        when(levelState.getRings()).thenReturn(10);
+        when(levelState.getDisplayTime()).thenReturn("0:10");
+
+        HudRenderManager hud = new HudRenderManager(graphicsManager, camera, gameState);
+        hud.setDigitPatternIndex(200);
+        hud.setLivesNumbersPatternIndex(220);
+        hud.setHudPalettes(1, 3);
+        hud.setLivesPaletteOverride(paletteWithColor(12, 0x0E00));
+
+        hud.draw(levelState, null);
+
+        verify(graphicsManager).cachePaletteTexture(any(Palette.class), eq(3));
+    }
+
+    @Test
     void mappingDrivenRingsFrameUsesFlashVariantInsteadOfHudString() {
         GraphicsManager graphicsManager = mock(GraphicsManager.class);
         Camera camera = mock(Camera.class);
@@ -434,5 +483,12 @@ public class TestHudRenderManager {
         color.r = (byte) r;
         color.g = (byte) g;
         color.b = (byte) b;
+    }
+
+    private static Palette paletteWithColor(int index, int segaWord) {
+        Palette palette = new Palette();
+        palette.getColor(index).fromSegaFormat(
+                new byte[]{(byte) (segaWord >>> 8), (byte) segaWord}, 0);
+        return palette;
     }
 }
