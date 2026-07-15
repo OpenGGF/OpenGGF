@@ -106,6 +106,8 @@ whose dimensions, palette use, or piece bounds cannot be represented exactly.
 This is the supported way to remix a stock game's existing art (for example, Tails'
 flying frames) into a new mod object — the mod jar itself ships zero ROM bytes; the
 sheet is decoded into memory only after the engine opens the player's `s2.gen`.
+The maintained [ROM-art remix guide](guides/rom-art-remix.md) follows the complete
+source, decoded-pattern probe, rewind, and package-inspection workflow.
 
 The request names a ROM art address, its compression, an S2 mapping table address, an
 optional DPLC table address, a palette line, and a bank size:
@@ -136,9 +138,11 @@ real decompression, mapping, and DPLC parsing happen at gameplay launch once the
 player's ROM is available.
 
 **Palette.** `paletteLine` is a palette *line* index (0-3) into the active zone
-palette, not a ROM color address — in an S2 format-v1 zone the sheet's actual colors
-come from that zone's `palettes.bin` (or the stock palette in an unmodified zone),
-matching whichever palette line the mod assigns.
+palette, not a ROM color address. For an additive S2 format-v1 zone, the host
+replaces line 0 with the active ROM character palette after decoding creator level
+data while preserving creator-owned lines 1-3. Sonic and Tails share
+`Pal_SonicTails`; a Knuckles-main lock-on changes line 0 indices 2-5 and can recolour
+borrowed Tails art.
 
 **DPLC.** An optional `dplcAddress` (S2 player-format DPLC table) flattens
 frame-by-frame VRAM tile swaps into one static sheet, the same technique the engine

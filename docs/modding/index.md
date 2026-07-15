@@ -18,6 +18,9 @@ contracts.
 
 ## Follow-along guides
 
+- [ROM-art remix](guides/rom-art-remix.md) — source-first tour of the
+  `sample-rom-art-remix` gallery sample: bounded Sonic 2 art, mapping, and DPLC
+  intake, launch-memory materialization, decoded-pattern probes, and rewind.
 - [Flappy remix](guides/flappy-remix.md) — build-along tour of the `sample-flappy`
   gallery sample: object-controlled minigame gameplay, ROM-art intake, forced scroll,
   and layout obstacles inside a Sonic 2 patch.
@@ -45,5 +48,5 @@ contracts.
 - [Deferred-backlog decisions](BACKLOG.md)
 - [GUI tooling evaluation](GUI_TOOLING_EVALUATION.md)
 
-The seven sample sources are built by the default test suite. Treat them as
+The eight sample sources are built by the default test suite. Treat them as
 executable contracts rather than snippets copied out of context.

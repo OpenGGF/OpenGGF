@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Eighth gallery sample **`sample-rom-art-remix`** plus a source-first guide
+  (`docs/modding/guides/rom-art-remix.md`): an additive Sonic 2 patch demonstrating
+  bounded ROM-art, mapping, and DPLC intake, launch-memory-only materialization,
+  decoded-pattern probes, and generic scalar rewind with the default Sonic team.
+  `TestSampleModsPackage` now builds and validates exactly eight maintained sources;
+  the explicit-ROM integration proves real materialization and package inspection
+  confirms that neither ROM bytes nor a baked borrowed sheet are shipped.
 - **fix: Sonic 2 additive zones now receive the active ROM character palette.**
   The host replaces only palette line 0 after decoding creator-owned level data,
   preserving lines 1-3 while restoring the shared Sonic/Tails colors used by

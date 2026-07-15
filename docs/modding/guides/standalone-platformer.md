@@ -204,7 +204,7 @@ paletteLine: 2
 ```
 
 The rendered CRAM line is `(sheet.paletteLine + piece.paletteIndex) & 3`, exactly
-the arithmetic [`flappy-remix.md` Chapter 3](flappy-remix.md#3-borrowing-tails-from-your-rom)
+the arithmetic [ROM-art remix Chapter 3](rom-art-remix.md#3-request-the-bounded-rom-window)
 introduced for ROM-materialized art — it applies uniformly to baked sheets too.
 Level tile art occupies lines 0–1 in this level's GPAL; the three object sheets share
 line 2 deliberately, so their `palette:` lists must stay byte-for-byte identical to

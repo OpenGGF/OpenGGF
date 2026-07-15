@@ -36,6 +36,14 @@ class TestSampleModsPackage {
     private static final Path PLATFORMER = Path.of("src/test/resources/mods/sample-platformer-src/project");
     private static final Path ROM_ART_REMIX = Path.of(
             "src/test/resources/mods/sample-rom-art-remix-src/project");
+    private static final Path ROM_ART_GUIDE = Path.of(
+            "docs/modding/guides/rom-art-remix.md");
+    private static final Path FLAPPY_GUIDE = Path.of(
+            "docs/modding/guides/flappy-remix.md");
+    private static final Path STANDALONE_GUIDE = Path.of(
+            "docs/modding/guides/standalone-platformer.md");
+    private static final Path AI_ART_GUIDE = Path.of(
+            "docs/modding/guides/ai-art.md");
     private static final Set<String> EXPECTED_IDS = Set.of(
             "openggf-gallery-music-sample", "phase2-reskin", "phase2-sample",
             "phase3-character", "phase3-standalone", "sample-flappy", "sample-platformer",
@@ -103,6 +111,29 @@ class TestSampleModsPackage {
             assertTrue(descriptor.findings().isEmpty(), id + " catalog findings: " + descriptor.findings());
         }
         assertEquals(EXPECTED_IDS, ids);
+    }
+
+    @Test
+    void romArtGuideIsLinkedWithoutOrphaningRemainingFlappyChapters() throws Exception {
+        assertTrue(Files.isRegularFile(ROM_ART_GUIDE));
+        String romArt = Files.readString(ROM_ART_GUIDE);
+        assertTrue(romArt.contains("## 3. Request the bounded ROM window"));
+        assertTrue(romArt.contains("Sonic 2 palette line 0 is Pal_SonicTails"));
+        String standalone = Files.readString(STANDALONE_GUIDE);
+        assertTrue(standalone.contains(
+                "rom-art-remix.md#3-request-the-bounded-rom-window"));
+        assertFalse(standalone.contains(
+                "flappy-remix.md#3-borrowing-tails-from-your-rom"));
+
+        assertTrue(Files.isRegularFile(FLAPPY_GUIDE));
+        assertTrue(standalone.contains("flappy-remix.md#4-the-level"));
+        String aiArt = Files.readString(AI_ART_GUIDE);
+        assertTrue(aiArt.contains("flappy-remix.md#6-pipes-score-death"));
+
+        String outerReadme = Files.readString(ROM_ART_REMIX.getParent().resolve("README.md"));
+        String projectReadme = Files.readString(ROM_ART_REMIX.resolve("README.md"));
+        assertTrue(outerReadme.contains("docs/modding/guides/rom-art-remix.md"));
+        assertTrue(projectReadme.contains("docs/modding/guides/rom-art-remix.md"));
     }
 
     private void materializeMusic(Path output) throws Exception {
