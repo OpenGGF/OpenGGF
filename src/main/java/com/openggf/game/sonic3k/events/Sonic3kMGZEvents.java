@@ -670,7 +670,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             return;
         }
         int rightBoundary = (camera().getX() & 0xFFFF) + camera().getWidth() - PLAYER_RIGHT_SCREEN_MARGIN;
-        if ((player.getCentreX() & 0xFFFF) < rightBoundary) {
+        if ((player.getCentreX() & 0xFFFF) <= rightBoundary) {
             return;
         }
         player.setCentreX((short) rightBoundary);

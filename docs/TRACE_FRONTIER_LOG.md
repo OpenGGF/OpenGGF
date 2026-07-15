@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ quake clamp preserves S3K's strict right edge
+
+Branch `feature/ai-trace-animation-verification`, after the pulley jumping-byte
+milestone. The MGZ quake bridge clamps players after movement while the native
+`Player_LevelBound` check runs before `MoveSprite_TestGravity2`. Its equality
+case must therefore preserve the position fraction and velocities: S3K uses
+`blo Player_Boundary_Sides`, so only a projected position strictly past
+`Camera_max_X_pos+$128` is outside. The engine bridge previously treated exact
+equality as outside, clearing `$0908.B000` and both speeds one frame early. No
+trace state, route/frame carve-out, hydration, or comparator tolerance was
+added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:22290-22310,23172-23217,106579-106786`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 17964 to frame 18267
+  (`camera_x`, expected `$07E0` / actual `$07F8`).
+- MGZ complete-run animation advances from frame 17965 to frame 18641
+  (`player_animation_id`, expected Walk `$00` / actual Roll `$02`).
+- The focused overshoot-clamp and exact-edge-preservation unit tests pass 2/2.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ pulley release preserves native jumping-byte ownership
 
 Branch `feature/ai-trace-animation-verification`, after removal of the pulley's

@@ -247,6 +247,36 @@ class TestSonic3kMgz2QuakeEvents {
     }
 
     @Test
+    void activeQuakeSequence_preservesExactViewportRightEdgeUntilPlayerBoundaryCheck() {
+        AbstractPlayableSprite player = placePlayer(0, 0);
+        player.setWidth(20);
+        player.setHeight(38);
+        player.setCentreX((short) 0x31E0);
+        player.setCentreY((short) 0x0200);
+
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        events.update(1, 0);
+        assertEquals(8, events.getQuakeEventRoutine(), "precondition: state 8");
+
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x2F80);
+        int rightBoundary = 0x2F80 + 320 - 24;
+        player.setCentreX((short) rightBoundary);
+        player.setSubpixelRaw(0xB000, 0x2D00);
+        player.setXSpeed((short) 0x065C);
+        player.setGSpeed((short) 0x0669);
+
+        events.update(1, 1);
+
+        assertEquals(rightBoundary, player.getCentreX());
+        assertEquals(0xB000, player.getXSubpixelRaw(),
+                "S3K's strict right-boundary comparison preserves the exact-edge fraction");
+        assertEquals(0x065C, player.getXSpeed());
+        assertEquals(0x0669, player.getGSpeed());
+    }
+
+    @Test
     void quakeEvent3_advancesToFlee_whenCameraReachesLock() {
         AbstractPlayableSprite player = placePlayer(0x3460, 0x6A0);
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
