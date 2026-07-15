@@ -35,7 +35,7 @@ public final class Sonic2ModZoneAdapter implements ModZoneAdapter, ModZoneDataSe
     @Override
     public Level load(String ownerModId, ModZoneLevelData level) throws IOException {
         validate(ownerModId, level);
-        return Sonic2Level.inMemoryBuilder(level.zoneIndex(), level.patternBytes(),
+        Sonic2Level loaded = Sonic2Level.inMemoryBuilder(level.zoneIndex(), level.patternBytes(),
                         level.chunkBytes(), level.blockBytes())
                 .layout(level.width(), level.height(), level.foregroundMap(),
                         level.backgroundMap().orElse(null))
@@ -45,6 +45,8 @@ public final class Sonic2ModZoneAdapter implements ModZoneAdapter, ModZoneDataSe
                 .boundaries(level.minX(), level.maxX(), level.minY(), level.maxY())
                 .spawns(level.objects(), level.rings(), gameModule.getAdditiveLevelRingSpriteSheet())
                 .build();
+        loaded.setPalette(0, gameModule.getAdditiveLevelCharacterPalette());
+        return loaded;
     }
 
     @Override

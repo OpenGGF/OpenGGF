@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class TestS3kModZoneAdapter {
@@ -183,6 +184,47 @@ class TestS3kModZoneAdapter {
                         new ModZoneHostMetadata(ModObjectZoneSet.S3KL), List.of()))));
     }
 
+    @Test
+    void sonic2AdapterInjectsActiveCharacterPaletteWithoutChangingCreatorLevelLines()
+            throws Exception {
+        File romFile = com.openggf.tests.RomTestUtils.ensureSonic2RomAvailable();
+        assumeTrue(romFile != null, "S2 mod-zone palette test requires a configured S2 ROM");
+        var config = com.openggf.configuration.SonicConfigurationService.getInstance();
+        Object previous = config.getConfigValue(
+                com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE);
+        try (var rom = new com.openggf.data.Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Configured S2 ROM must be readable");
+            config.setConfigValue(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE,
+                    "sonic");
+            var module = new com.openggf.game.sonic2.Sonic2GameModule();
+            module.createGame(rom);
+            byte[][] creatorPalettes = {
+                    new byte[32], filledPaletteLine((byte) 0x02),
+                    filledPaletteLine((byte) 0x04), filledPaletteLine((byte) 0x06)
+            };
+
+            com.openggf.game.sonic2.Sonic2Level level = assertInstanceOf(
+                    com.openggf.game.sonic2.Sonic2Level.class,
+                    module.getModZoneAdapter().load("alpha", hostData(definition(
+                            1, 8, null, List.of(), List.of(), creatorPalettes))));
+
+            com.openggf.level.Palette expectedCharacter = new com.openggf.level.Palette();
+            expectedCharacter.fromSegaFormat(rom.readBytes(
+                    com.openggf.game.sonic2.constants.Sonic2Constants.SONIC_TAILS_PALETTE_ADDR,
+                    com.openggf.level.Palette.PALETTE_SIZE_IN_ROM));
+            assertTrue(expectedCharacter.dataEquals(level.getPalette(0)));
+            for (int line = 1; line < 4; line++) {
+                com.openggf.level.Palette expectedCreator = new com.openggf.level.Palette();
+                expectedCreator.fromSegaFormat(creatorPalettes[line]);
+                assertTrue(expectedCreator.dataEquals(level.getPalette(line)),
+                        "creator palette line " + line + " must remain unchanged");
+            }
+        } finally {
+            config.setConfigValue(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE,
+                    previous == null ? "sonic" : previous);
+        }
+    }
+
     private static S3kZoneSet map(ModObjectZoneSet source) {
         return S3kZoneSet.valueOf(source.name());
     }
@@ -196,6 +238,15 @@ class TestS3kModZoneAdapter {
                                          ModZoneHostMetadata metadata,
                                          List<ModPaletteClaim> claims,
                                          List<ModLevelDefinition.ObjectEntry> objects) {
+        return definition(version, blockGridSide, metadata, claims, objects,
+                new byte[][]{new byte[32], new byte[32], new byte[32], new byte[32]});
+    }
+
+    static ModLevelDefinition definition(int version, int blockGridSide,
+                                         ModZoneHostMetadata metadata,
+                                         List<ModPaletteClaim> claims,
+                                         List<ModLevelDefinition.ObjectEntry> objects,
+                                         byte[][] paletteLines) {
         return new ModLevelDefinition(version, "SKY", 0x40, 0x400, blockGridSide, 1, 1,
                 new ModLevelDefinition.Bounds(0, 0x100, 0, 0x100),
                 new ModLevelDefinition.Start(0x20, 0x20),
@@ -203,8 +254,14 @@ class TestS3kModZoneAdapter {
                 new byte[32], new byte[8], new byte[blockGridSide * blockGridSide * 2],
                 new byte[1], null,
                 new byte[16], new byte[16], new byte[1], new int[]{0}, new int[]{0},
-                new byte[][]{new byte[32], new byte[32], new byte[32], new byte[32]},
+                paletteLines,
                 1, 1, 1, 1, metadata, claims);
+    }
+
+    private static byte[] filledPaletteLine(byte lowByte) {
+        byte[] line = new byte[32];
+        for (int i = 1; i < line.length; i += 2) line[i] = lowByte;
+        return line;
     }
 
     private static List<ModPaletteClaim> backdropClaim() {

@@ -33,6 +33,7 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.WaterDataProvider;
 import com.openggf.game.LevelInitProfile;
@@ -135,6 +136,23 @@ public class Sonic2GameModule implements GameModule {
             additiveRingSheet = new Sonic2RingArt(activeRom, RomByteReader.fromRom(activeRom)).load();
         }
         return additiveRingSheet;
+    }
+
+    /** Host-owned character line used by ROM-backed additive S2 zones. */
+    Palette getAdditiveLevelCharacterPalette() throws java.io.IOException {
+        if (activeRom == null) throw new IllegalStateException("Sonic 2 game has not been created");
+        String mainCharacter = ActiveGameplayTeamResolver.resolveMainCharacterCode(
+                GameServices.configuration());
+        if (CrossGameFeatureProvider.isActive()) {
+            Palette hostCompatible = GameServices.crossGameFeatures()
+                    .loadHostCompatiblePalette(mainCharacter);
+            if (hostCompatible != null) {
+                return hostCompatible.deepCopy();
+            }
+        }
+        Palette palette = donorProvider.loadCharacterPalette(
+                RomByteReader.fromRom(activeRom), mainCharacter);
+        return java.util.Objects.requireNonNull(palette, "active character palette").deepCopy();
     }
 
     @Override
