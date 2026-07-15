@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ drilling mini-boss retains native setup dispatches
+
+Branch `feature/ai-trace-animation-verification`, after the fast trigger-
+platform milestone. The engine had folded `Obj_MGZ2DrillingRobotnik`'s initial
+entry, `Obj_Wait` completion, `Obj_MGZ2DrillingRobotnikGo`, and
+`Obj_MGZ2DrillingRobotnikStart` too tightly. ROM leaves the freshly written
+`$2E=120` timer untouched on the initial entry, calls its callback only after
+signed underflow, and gives both the Go and Start/setup routines their own SST
+passes before routine 2 promotes the drill drop. Restoring those concrete
+routine phases places the boss at `$0743` instead of `$0736` on frame 31641,
+preventing Sonic's three-frame-early attack bounce and the resulting Tails
+Hurt path. No trace hydration, route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:142389-142490,177949-177959`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 31641 to frame 31797
+  (`camera_x`, expected `$32BF` / actual `$32C0`).
+- MGZ complete-run animation advances from frame 31643 to frame 31894
+  (`player_mapping_frame`, expected `$96` / actual `$98`).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-16 -- MGZ fast trigger platforms observe earlier dash SST writes
 
 Branch `feature/ai-trace-animation-verification`, after the swinging-platform

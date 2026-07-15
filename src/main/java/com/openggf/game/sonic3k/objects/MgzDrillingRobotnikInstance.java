@@ -80,6 +80,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private static final int INIT_WAIT_FRAMES = 2 * 60;
 
     private static final int ROUTINE_INIT = 0;
+    /** Java-only phase for the ROM's separate Obj_MGZ2DrillingRobotnikGo entry. */
+    private static final int ROUTINE_MINI_SETUP = 0x4A;
     private static final int ROUTINE_START_DROP = 2;
     private static final int ROUTINE_DRILL_DROP = 4;
     private static final int ROUTINE_HANG = 6;
@@ -315,6 +317,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private int xSubpixel;
     private int ySubpixel;
     private int waitTimer;
+    /** The placement-created instance still owes Obj_MGZ2DrillingRobotnik's init entry. */
+    private boolean miniInitialExecutionPending;
     private boolean flipX;
     private boolean artQueued;
     private boolean palettesLoaded;
@@ -393,6 +397,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         xSubpixel = 0;
         ySubpixel = 0;
         waitTimer = INIT_WAIT_FRAMES;
+        miniInitialExecutionPending = !endBossMode;
         artQueued = false;
         palettesLoaded = false;
         bossMusicPlayed = false;
@@ -447,20 +452,47 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
         queueInitialAssetsIfNeeded();
 
+        if (!endBossMode && miniInitialExecutionPending) {
+            // The ROM placement slot first executes Obj_MGZ2DrillingRobotnik,
+            // which installs Obj_Wait and its callback but does not decrement
+            // the freshly written $2E timer on that same pass.
+            miniInitialExecutionPending = false;
+            updateCustomFlash();
+            return;
+        }
+
         // ROM: Obj_MGZ2DrillingRobotnik init queues art + PLC #$6D + palette and
         // sits in Obj_Wait for 120 frames before becoming DrillingRobotnikStart.
-        if (state.routine == ROUTINE_INIT && waitTimer > 0) {
-            waitTimer--;
-            if (waitTimer == 0) {
-                playBossMusicOnce();
-                if (endBossMode) {
+        if (state.routine == ROUTINE_INIT) {
+            if (!endBossMode) {
+                // Obj_Wait invokes its callback only after the signed word
+                // underflows: values $77 through $0000 all return normally.
+                waitTimer--;
+                if (waitTimer < 0) {
+                    playBossMusicOnce();
+                    state.routine = ROUTINE_MINI_SETUP;
+                }
+                updateCustomFlash();
+                return;
+            }
+            if (waitTimer > 0) {
+                waitTimer--;
+                if (waitTimer == 0) {
+                    playBossMusicOnce();
                     state.routine = ROUTINE_END_DESCEND;
                     yVel = 0x80;
                     waitTimer = 0xBF;
-                } else {
-                    state.routine = ROUTINE_START_DROP;
                 }
+                updateCustomFlash();
+                return;
             }
+        }
+
+        if (!endBossMode && state.routine == ROUTINE_MINI_SETUP) {
+            // The underflow callback (Obj_MGZ2DrillingRobotnikGo) only installs
+            // Obj_MGZ2DrillingRobotnikStart. Its loc_6BFCA setup runs in the
+            // following ExecuteObjects pass and leaves routine 2 for the next.
+            state.routine = ROUTINE_START_DROP;
             updateCustomFlash();
             return;
         }
