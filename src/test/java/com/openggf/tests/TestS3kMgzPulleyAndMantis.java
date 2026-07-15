@@ -112,6 +112,7 @@ class TestS3kMgzPulleyAndMantis {
         assertEquals(-0x400, player.getXSpeed());
         assertEquals(-0x600, player.getYSpeed());
         assertTrue(player.getRolling());
+        assertFalse(player.isJumping(), "Pulley launch does not write the native jumping byte");
         assertEquals(GroundMode.GROUND, player.getGroundMode());
         assertEquals(Sonic3kAnimationIds.ROLL.id(), player.getAnimationId());
     }

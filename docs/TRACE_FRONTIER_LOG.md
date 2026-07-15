@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ pulley release preserves native jumping-byte ownership
+
+Branch `feature/ai-trace-animation-verification`, after removal of the pulley's
+false solid capability. `loc_349F4` publishes `x_vel=-$400`, `y_vel=-$600`,
+`Status_InAir`, the `$0E/$07` radii, Roll animation, and `Status_Roll`; it does
+not write the separate `jumping` byte. The engine's extra `jumping=true` kept
+`Sonic_JumpHeight` on the variable-height / shield-move path, so a later fresh
+jump press incorrectly activated Sonic's lightning shield. The release now
+leaves that byte under its prior ROM owner. No trace state, zone/route/frame
+carve-out, hydration, or comparator tolerance was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:71295-71327,23366-23440`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 17276 to frame 17964
+  (`x_sub`, expected `$B000` / actual `$0000`).
+- MGZ complete-run animation advances from frame 17293 to frame 17965
+  (`player_animation_id`, expected Walk `$00` / actual Wait `$05`).
+- `TestS3kMgzPulleyAndMantis` passes 9/9, including the assertion that pulley
+  launch does not write the native `jumping` byte.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ pulley release bypasses generic solid collision
 
 Branch `feature/ai-trace-animation-verification`, after the retained capture

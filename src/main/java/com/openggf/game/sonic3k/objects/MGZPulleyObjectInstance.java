@@ -317,7 +317,6 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         player.setXSpeed((short) (flipped ? LAUNCH_X_SPEED : -LAUNCH_X_SPEED));
         player.setYSpeed((short) -LAUNCH_Y_SPEED);
         player.setGSpeed((short) 0);
-        player.setJumping(true);
         player.setAir(true);
         player.applyRollingRadii(false);
         player.setRollingFlagPreserveRadii(true);
