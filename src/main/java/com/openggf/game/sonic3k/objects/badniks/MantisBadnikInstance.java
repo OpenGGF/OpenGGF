@@ -63,14 +63,12 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
     private boolean initialized;
     private int animIndex = -1;
     private int animTimer;
-    private int restY;
     private MantisChild child;
 
     public MantisBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Mantis",
                 Sonic3kObjectArtKeys.MGZ_MANTIS, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
         this.mappingFrame = WAIT_FRAME;
-        this.restY = spawn.y();
     }
 
     @Override
@@ -120,7 +118,7 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
         mappingFrame = WAIT_FRAME;
         animIndex = -1;
         animTimer = 0;
-        currentY = restY;
+        currentY = spawn.y();
         yVelocity = 0;
     }
 
@@ -166,7 +164,6 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
         TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, FLOOR_Y_RADIUS);
         if (floor.hasCollision()) {
             currentY += floor.distance();
-            restY = currentY;
             ySubpixel = 0;
             beginLand();
         }
@@ -205,7 +202,6 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
 
     private void finishCycle() {
         state = State.WAIT;
-        currentY = restY;
         yVelocity = 0;
         ySubpixel = 0;
         animIndex = -1;

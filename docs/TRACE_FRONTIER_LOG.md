@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
++### 2026-07-15 -- MGZ Mantis landing callback retains composed Y
+
+Branch `feature/ai-trace-animation-verification`, after the global-oscillator
+ownership milestone. The first Mantis at X `$1428` matched the native jump
+and landing timeline through frame 19579. On frame 19580 the landing animation
+completed at Y `$0680`; native callback `loc_88F48` writes only
+`routine=2`, but the engine also restored the earlier floor-hit Y `$0669`.
+That invented reset shifted the next jump arc upward and made Sonic miss the
+native frame-19646 attack bounce. The callback now retains the position
+composed by the landing animation. No trace state, zone/route/frame carve-out,
+hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:185700-185840`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 19646 to frame 20490
+  (`x_speed`, expected `-$0B10` / actual `-$0BE8`).
+- MGZ complete-run animation advances from frame 19720 to frame 20559
+  (`player_mapping_frame`, expected `$21` / actual `$03`).
+- `TestMantisBadnikInstance` passes 2/2, including a direct assertion that
+  the `$F4` landing callback retains its composed Y.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ moving-spike platform preserves global oscillator ownership
 +### 2026-07-15 -- MGZ moving-spike platform preserves global oscillator ownership
 
 Branch `feature/ai-trace-animation-verification`, after the live Mantis-touch
