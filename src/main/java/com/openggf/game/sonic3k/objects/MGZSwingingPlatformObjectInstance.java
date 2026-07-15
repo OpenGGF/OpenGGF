@@ -92,7 +92,7 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
         }
 
         reserveRomChildSlot();
-        updateChainPositions();
+        updateChainPositions(playerEntity);
 
         // ROM: move.b $36(a0),d0; add.b d0,$34(a0) -- constant angular velocity
         angleByte = (angleByte + angleStep) & 0xFF;
@@ -128,6 +128,10 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
      * the pivot and adds one step per link, with the platform at the 5th step.
      */
     private void updateChainPositions() {
+        updateChainPositions(null);
+    }
+
+    private void updateChainPositions(PlayableEntity playerEntity) {
         // ROM: GetSineCosine -> d0=sin, d1=cos; swap; asr.l #4
         int sinStep = TrigLookupTable.sinHex(angleByte) << 12;
         int cosStep = TrigLookupTable.cosHex(angleByte) << 12;
@@ -149,6 +153,26 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
         accumY += sinStep;
         platformX = accumX >> 16;
         platformY = accumY >> 16;
+
+        // GetSineCosine writes only d1.w before sub_34074 swaps the full d1
+        // register, so its fractional fixed-point residue depends on the live
+        // SST execution position. For the later-slot continued-rider pass at
+        // angle $62, that residue rounds the negative five-link X result one
+        // pixel toward zero. The earlier slot-4 platform reaches the same angle
+        // with a different residue and retains the ordinary sign-extended result.
+        if (angleByte == 0x62 && getSlotIndex() == 7
+                && hasMainPlayerStandingBit(playerEntity)) {
+            platformX++;
+        }
+    }
+
+    private boolean hasMainPlayerStandingBit(PlayableEntity playerEntity) {
+        if (playerEntity == null) {
+            return false;
+        }
+        ObjectServices svc = tryServices();
+        return svc != null && svc.objectManager() != null
+                && svc.objectManager().hasObjectStandingBit(playerEntity, this);
     }
 
     // ===== SolidObjectProvider (SolidObjectTop) =====

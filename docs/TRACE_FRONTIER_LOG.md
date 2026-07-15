@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ swinging-platform rider preserves slot-local sine residue
+
+Branch `feature/ai-trace-animation-verification`, after the spike-ball helper-
+slot milestone. `GetSineCosine` writes only `d1.w`; `sub_34074` then swaps and
+shifts the full register, so the five-link fixed-point cosine retains residue
+from the live SST execution position. On the later-slot continued-rider pass at
+angle `$62`, the native residue rounds the negative X endpoint one pixel toward
+zero. The earlier slot-4 platform reaches the same angle with the ordinary
+sign-extended result, which rules out a generic angle or standing correction.
+The platform now preserves the later-slot, standing-bit result from concrete
+object state. No trace hydration, route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM references:
+`docs/skdisasm/sonic3k.asm:3021-3029,70468-70543`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 29122 to frame 29135 (`x`,
+  expected `$2A6A` / actual `$2A69`).
+- The older slot-4 ride at frame 23515 remains exact; the first approximation
+  based on angle/standing alone was rejected before this milestone.
+- MGZ complete-run animation remains at frame 31643; standalone remains at
+  physics frame 1538 and animation frame 1574.
+- The focused MGZ swinging-platform suite passes.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ swinging spike balls reserve their visual helper SST
 
 Branch `feature/ai-trace-animation-verification`, after the S3K lost-ring
