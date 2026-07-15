@@ -17,6 +17,9 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.mods.code.OwnerAwareGameplayInputFilter;
+import com.openggf.mods.code.ModFaultBoundary;
+import com.openggf.mods.ModRuntimeFindingStore;
+import com.openggf.mods.ModStateSaveResult;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Sensor;
 import com.openggf.physics.TerrainCollisionManager;
@@ -31,6 +34,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -145,7 +149,9 @@ class TestSpriteManagerGameplayInputFilter {
     @Test
     void ownerAwareShapeRetainsDestinationOwnerWithoutChangingFilterSemantics() {
         OwnerAwareGameplayInputFilter owned = new OwnerAwareGameplayInputFilter(
-                "alpha", raw -> PlayerInputState.neutral());
+                "alpha", raw -> PlayerInputState.neutral(),
+                new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
+                        owners -> new ModStateSaveResult.Saved(), owners -> { }));
 
         assertEquals("alpha", owned.ownerModId());
         assertEquals(PlayerInputState.neutral(), owned.filter(PlayerInputState.of(

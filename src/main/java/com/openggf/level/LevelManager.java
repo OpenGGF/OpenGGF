@@ -39,7 +39,6 @@ import com.openggf.game.session.GameplayInputFilterAccess;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
 import com.openggf.game.session.PatternWindowSessionState;
-import com.openggf.mods.code.OwnerAwareGameplayInputFilter;
 import com.openggf.level.rewind.LevelRewindSnapshotAdapter;
 import com.openggf.level.objects.HudPaletteBridgeAccess;
 import com.openggf.level.objects.HudProfile;
@@ -519,11 +518,6 @@ public class LevelManager {
         GameplayInputFilter filter = gameModule.getGameplayPolicyProvider()
                 .inputFilter(destination)
                 .orElse(GameplayInputFilter.IDENTITY);
-        if (destination instanceof ZoneKey.Mod mod
-                && filter != GameplayInputFilter.IDENTITY
-                && !(filter instanceof OwnerAwareGameplayInputFilter)) {
-            filter = new OwnerAwareGameplayInputFilter(mod.ownerModId(), filter);
-        }
         GameplayInputFilterAccess.install(gameplayMode, filter);
     }
 
@@ -3362,6 +3356,9 @@ public class LevelManager {
         zoneFeatureProvider = null;
         levelRenderer.resetState();
         objectRenderManager = null;
+        if (hudRenderManager != null) {
+            HudProfileAccess.install(hudRenderManager, HudProfile.stock());
+        }
         hudRenderManager = null;
         activeHudProfile = HudProfile.stock();
         activeModZoneRuntimeContribution = null;

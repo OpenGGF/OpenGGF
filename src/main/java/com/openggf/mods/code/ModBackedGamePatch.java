@@ -86,6 +86,11 @@ public final class ModBackedGamePatch implements GamePatch {
         if (!plan.characters().isEmpty() && faultBoundary == null) {
             throw new IllegalArgumentException("Mod characters require an installed fault boundary");
         }
+        if ((!plan.launchTeams().isEmpty() || !plan.inputFilters().isEmpty()
+                || !plan.hudProfiles().isEmpty()) && faultBoundary == null) {
+            throw new IllegalArgumentException(
+                    "Mod gameplay policies require an installed fault boundary");
+        }
     }
 
     public ModRegistrationPlan plan() { return plan; }
@@ -187,8 +192,25 @@ public final class ModBackedGamePatch implements GamePatch {
                         @Override
                         public java.util.Optional<com.openggf.game.GameplayInputFilter> inputFilter(
                                 com.openggf.game.ZoneKey destination) {
-                            return callGameplayPolicy(destination,
-                                    () -> inherited.inputFilter(destination));
+                            return callGameplayPolicy(destination, () -> {
+                                java.util.Optional<com.openggf.game.GameplayInputFilter> resolved;
+                                if (destination instanceof com.openggf.game.ZoneKey.Mod mod) {
+                                    com.openggf.game.GameplayInputFilter contributed =
+                                            plan.inputFilters().get(mod);
+                                    if (contributed != null) {
+                                        resolved = java.util.Optional.of(contributed);
+                                    } else {
+                                        resolved = inherited.inputFilter(destination);
+                                    }
+                                    return resolved.map(filter -> filter ==
+                                                    com.openggf.game.GameplayInputFilter.IDENTITY
+                                                    || filter instanceof OwnerAwareGameplayInputFilter
+                                            ? filter
+                                            : new OwnerAwareGameplayInputFilter(
+                                                    mod.ownerModId(), filter, faultBoundary));
+                                }
+                                return inherited.inputFilter(destination);
+                            });
                         }
 
                         @Override
