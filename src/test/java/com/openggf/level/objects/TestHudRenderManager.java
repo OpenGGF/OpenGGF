@@ -157,6 +157,25 @@ public class TestHudRenderManager {
     }
 
     @Test
+    void flappyProfileHidesStockScoreAndRendersRingScoreWithoutZeroFlash() {
+        HudFixture fixture = hudFixture(999, "4:44", 17, 3, true, true);
+        HudProfileAccess.install(fixture.hud(), flappyProfile());
+
+        fixture.hud().draw(fixture.levelState(), null);
+
+        verify(fixture.graphicsManager(), never()).renderPatternWithId(
+                eq(0x28020), any(), eq(16), eq(8));
+        verify(fixture.graphicsManager()).renderPatternWithId(
+                eq(0x28020), any(), eq(16), eq(40));
+        verify(fixture.graphicsManager()).renderPatternWithId(eq(202), any(), eq(72), eq(40));
+        verify(fixture.graphicsManager()).renderPatternWithId(eq(203), any(), eq(72), eq(48));
+        verify(fixture.graphicsManager()).renderPatternWithId(eq(214), any(), eq(80), eq(40));
+        verify(fixture.graphicsManager()).renderPatternWithId(eq(215), any(), eq(80), eq(48));
+        verify(fixture.graphicsManager(), never()).renderPatternWithId(
+                eq(0x28025), any(), eq(16), eq(40));
+    }
+
+    @Test
     void warningPoliciesUseResolvedMetricAndTimerStateOnlyWhenConfigured() {
         HudFixture fixture = hudFixture(0, "9:59", 0, 3, true, true);
         HudProfileAccess.install(fixture.hud(), new HudProfile(List.of(
@@ -662,7 +681,19 @@ public class TestHudRenderManager {
                     invocation.getArgument(3)));
             return null;
         }).when(graphicsManager).renderPatternWithId(anyInt(), any(), anyInt(), anyInt());
-        return new HudFixture(hud, levelState, draws);
+        return new HudFixture(hud, levelState, graphicsManager, draws);
+    }
+
+    private static HudProfile flappyProfile() {
+        return new HudProfile(List.of(
+                new HudRow(false, HudLabel.SCORE, HudMetric.SCORE,
+                        16, 8, 64, 8, 6, HudWarningPolicy.NONE),
+                new HudRow(true, HudLabel.TIME, HudMetric.TIME,
+                        16, 24, 56, 24, 4, HudWarningPolicy.TIMER_FLASH),
+                new HudRow(true, HudLabel.SCORE, HudMetric.RINGS,
+                        16, 40, 64, 40, 3, HudWarningPolicy.NONE),
+                new HudRow(true, HudLabel.LIVES, HudMetric.LIVES,
+                        16, 200, 56, 208, 2, HudWarningPolicy.NONE)));
     }
 
     private static HudProfile singleNumericRow(HudMetric metric, int maxDigits) {
@@ -677,7 +708,8 @@ public class TestHudRenderManager {
 
     private record Draw(int patternId, int x, int y) { }
 
-    private record HudFixture(HudRenderManager hud, LevelState levelState, List<Draw> draws) { }
+    private record HudFixture(HudRenderManager hud, LevelState levelState,
+                              GraphicsManager graphicsManager, List<Draw> draws) { }
 
     private static org.mockito.ArgumentMatcher<Palette> paletteMatches(int r, int g, int b) {
         return palette -> {

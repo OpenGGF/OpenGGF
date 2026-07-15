@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.BakedSheetReader;
+import com.openggf.level.render.SpriteMappingPiece;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -86,6 +87,16 @@ class TestSampleFlappyLevelSource {
 
         BakedSheetReader.BakedSheet sheet = BakedSheetReader.read(Files.readAllBytes(pipeSheet));
         BakedSheetReader.Palette palette = sheet.palette().orElseThrow();
+        assertEquals(2, sheet.frames().size());
+        SpriteMappingPiece body = sheet.frames().get(0).mapping().pieces().getFirst();
+        assertEquals(4, body.widthTiles());
+        assertEquals(4, body.heightTiles());
+        SpriteMappingPiece lip = sheet.frames().get(1).mapping().pieces().getFirst();
+        assertEquals(4, lip.widthTiles());
+        assertEquals(2, lip.heightTiles());
+        assertTrue(java.util.Arrays.stream(sheet.patterns()).anyMatch(
+                TestSampleFlappyLevelSource::hasNonZeroNibble),
+                "decoded pipe patterns must contain visible nonzero pixels");
         Set<Integer> finalRenderLines = new HashSet<>();
         sheet.frames().forEach(frame -> frame.mapping().pieces().forEach(piece ->
                 finalRenderLines.add((palette.line() + piece.paletteIndex()) & 0x3)));
@@ -152,6 +163,17 @@ class TestSampleFlappyLevelSource {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         int exit = GgfModCli.run(arguments, new PrintStream(bytes));
         assertEquals(0, exit, bytes.toString(StandardCharsets.UTF_8));
+    }
+
+    private static boolean hasNonZeroNibble(Pattern pattern) {
+        for (int y = 0; y < Pattern.PATTERN_HEIGHT; y++) {
+            for (int x = 0; x < Pattern.PATTERN_WIDTH; x++) {
+                if (pattern.getPixel(x, y) != 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private record PaletteCell(int line, int color) {}

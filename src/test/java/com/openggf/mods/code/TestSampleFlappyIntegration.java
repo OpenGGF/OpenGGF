@@ -1,5 +1,7 @@
 package com.openggf.mods.code;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.ModSubsystem;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
@@ -8,6 +10,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.control.PlayerInputState;
 import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
 import com.openggf.data.RomManager;
 import com.openggf.game.CharacterKey;
 import com.openggf.game.GameMode;
@@ -35,10 +38,16 @@ import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.rewind.LiveRewindManager;
 import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.palette.PaletteSurface;
+import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.io.ModInputLimits;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
+import com.openggf.level.Palette;
+import com.openggf.level.Pattern;
+import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.mods.DefaultModRepositoryScanner;
 import com.openggf.mods.EffectiveCatalogBuilder;
 import com.openggf.mods.ModCatalog;
@@ -79,6 +88,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -406,6 +416,58 @@ class TestSampleFlappyIntegration {
     }
 
     @Test
+    void customZoneComposesNativeTailsHudCreatorClaimsAndDecodedPipeArt() throws Exception {
+        withLaunchedGameplay(null, game -> {
+            game.runner().stepIdleFrames(1);
+            // Palette ownership is committed at the headless presentation boundary;
+            // no framebuffer or GL execution is required for this draw call.
+            GameServices.level().draw();
+
+            Palette expectedTails = game.resolved().getCrossGameDonorProvider()
+                    .loadCharacterPalette(RomByteReader.fromRom(game.rom()), "tails");
+            assertNotNull(expectedTails);
+            Palette liveCharacter = GameServices.level().getCurrentLevel().getPalette(0);
+            for (int color = 0; color < Palette.PALETTE_SIZE; color++) {
+                assertEquals(PaletteWriteSupport.segaWordFromColor(expectedTails.getColor(color)),
+                        PaletteWriteSupport.segaWordFromColor(liveCharacter.getColor(color)),
+                        "native Tails line-0 word mismatch at color " + color);
+                assertColorEquals(expectedTails.getColor(color), liveCharacter.getColor(color),
+                        "native Tails line-0 RGB mismatch at color " + color);
+            }
+
+            for (int color : new int[]{1, 5, 14, 15}) {
+                assertEquals("host:s3k-hud", GameServices.paletteOwnershipRegistry()
+                        .ownerAt(PaletteSurface.NORMAL, 1, color),
+                        "S3K lives HUD must own reserved line-1 color " + color);
+            }
+
+            JsonNode source = new ObjectMapper().readTree(
+                    FLAPPY.resolve("src/main/mod/level-source/level.json").toFile());
+            for (JsonNode claim : source.path("paletteClaims")) {
+                int line = claim.path("line").asInt();
+                int color = claim.path("color").asInt();
+                int segaWord = claim.path("sega").asInt();
+                assertEquals(segaWord, PaletteWriteSupport.segaWordFromColor(
+                                GameServices.level().getCurrentLevel()
+                                        .getPalette(line).getColor(color)),
+                        "live palette must apply sparse creator claim " + line + ":" + color);
+                assertEquals("sample-flappy:flappy-garden",
+                        GameServices.paletteOwnershipRegistry()
+                                .ownerAt(PaletteSurface.NORMAL, line, color));
+            }
+
+            ObjectSpriteSheet pipe = game.resolved().getObjectArtProvider()
+                    .getSheet("sample-flappy:pipe");
+            assertNotNull(pipe);
+            assertEquals(2, pipe.getFrameCount());
+            assertPieceSize(pipe.getFrame(0).pieces().getFirst(), 4, 4);
+            assertPieceSize(pipe.getFrame(1).pieces().getFirst(), 4, 2);
+            assertTrue(java.util.Arrays.stream(pipe.getPatterns())
+                    .anyMatch(TestSampleFlappyIntegration::hasNonZeroNibble));
+        });
+    }
+
+    @Test
     void rewindRestoresAndResimulatesScoreAndLiveRecycleExactly() throws Exception {
         withLaunchedGameplay(null, game -> {
             LiveRewindHarness rewind = installLiveRewind(game);
@@ -561,6 +623,30 @@ class TestSampleFlappyIntegration {
                 .count());
     }
 
+    private static void assertColorEquals(Palette.Color expected, Palette.Color actual,
+                                          String message) {
+        assertEquals(expected.r & 0xFF, actual.r & 0xFF, message + " (red)");
+        assertEquals(expected.g & 0xFF, actual.g & 0xFF, message + " (green)");
+        assertEquals(expected.b & 0xFF, actual.b & 0xFF, message + " (blue)");
+    }
+
+    private static void assertPieceSize(SpriteMappingPiece piece,
+                                        int widthTiles, int heightTiles) {
+        assertEquals(widthTiles, piece.widthTiles());
+        assertEquals(heightTiles, piece.heightTiles());
+    }
+
+    private static boolean hasNonZeroNibble(Pattern pattern) {
+        for (int y = 0; y < Pattern.PATTERN_HEIGHT; y++) {
+            for (int x = 0; x < Pattern.PATTERN_WIDTH; x++) {
+                if (pattern.getPixel(x, y) != 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private static void applyProtection(LaunchedGameplay game, Protection protection) {
         switch (protection) {
             case RINGS -> GameServices.level().getLevelGamestate().setRings(10);
@@ -648,7 +734,7 @@ class TestSampleFlappyIntegration {
                 camera.updatePosition(true);
                 assertion.verify(new LaunchedGameplay(tails, camera,
                         new HeadlessTestRunner(tails), GameServices.level().getObjectManager(),
-                        gameplay, configuration));
+                        gameplay, configuration, resolved, rom));
             } finally {
                 configuration.clearSessionOverrides();
                 SessionManager.clear();
@@ -862,7 +948,8 @@ class TestSampleFlappyIntegration {
     private record LaunchedGameplay(AbstractPlayableSprite tails, Camera camera,
                                     HeadlessTestRunner runner, ObjectManager objects,
                                     GameplayModeContext gameplay,
-                                    SonicConfigurationService configuration) {}
+                                    SonicConfigurationService configuration,
+                                    GameModule resolved, Rom rom) {}
 
     private record LiveRewindHarness(LiveRewindManager manager, RewindController controller,
                                      InputHandler input) {}
