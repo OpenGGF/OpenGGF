@@ -168,6 +168,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             if (Math.abs(dx) <= effectiveHalf && Math.abs(dy) <= effectiveHalf
                     && addAttractedRing(index, ring.x(), ring.y())) {
                 placement.markCollected(index);
+                // ROM Test_Ring_Collisions_AttractRing returns immediately after
+                // allocating one Obj_Attracted_Ring. The remaining placement
+                // records are not considered until the next player touch pass.
+                return;
             }
         }
     }

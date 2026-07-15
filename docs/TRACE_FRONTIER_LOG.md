@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- S3K lightning attraction allocates one ring per touch pass
+
+Branch `feature/ai-trace-animation-verification`, after the MGZ trigger-platform
+milestone. `Test_Ring_Collisions_AttractRing` returns immediately after
+allocating one `Obj_Attracted_Ring`; the engine instead continued through the
+placement table and allocated every nearby ring during the same player touch
+pass. That gave adjacent MGZ rings the wrong acceleration phase and delayed
+their later collision-response pickup. Lightning attraction now stops after
+the first successful allocation and resumes at the next player touch pass. No
+trace state, zone/route/frame carve-out, hydration, or comparator tolerance was
+added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:18444-18560,35721-35900`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 22016 to frame 22432
+  (`x_sub`, expected `$3700` / actual `$D700`).
+- MGZ complete-run animation remains at frame 22541
+  (`player_mapping_frame`, expected `$23` / actual `$22`).
+- `TestRingManager` passes 23/23, including the explicit one-allocation-per-
+  touch-pass regression.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ trigger platform consumes airborne stale rides in its later slot
 
 Branch `feature/ai-trace-animation-verification`, after the regressed-floor-angle

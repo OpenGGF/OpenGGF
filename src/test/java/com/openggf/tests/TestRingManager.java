@@ -254,6 +254,30 @@ public class TestRingManager {
     }
 
     @Test
+    public void testLightningAttractionAllocatesOneRingPerPlayerTouchPass() {
+        RingSpawn first = new RingSpawn(140, 100);
+        RingSpawn second = new RingSpawn(164, 100);
+        RingManager ringManager = buildRingManager(List.of(first, second));
+        ringManager.reset(0);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.giveShield(ShieldType.LIGHTNING);
+
+        ringManager.update(0, player, 0);
+
+        assertTrue(ringManager.isCollected(first));
+        assertFalse(ringManager.isCollected(second),
+                "Test_Ring_Collisions returns after allocating one Obj_Attracted_Ring");
+        assertEquals(1, ringManager.capture().attractedRings().length);
+
+        ringManager.update(0, player, 1);
+
+        assertTrue(ringManager.isCollected(second));
+        assertEquals(2, ringManager.capture().attractedRings().length);
+    }
+
+    @Test
     public void testLightningAttractionUsesTypedCapabilityRulesWithoutLegacyGameRules() {
         RingSpawn spawn = new RingSpawn(169, 100);
         RingManager ringManager = buildRingManager(List.of(spawn));
