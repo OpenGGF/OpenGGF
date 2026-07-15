@@ -9,7 +9,10 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.MGZTriggerPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.tools.Sonic3kObjectProfile;
 import org.junit.jupiter.api.Test;
@@ -20,6 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TestS3kMgzTriggerPlatformObject {
 
@@ -98,6 +104,30 @@ class TestS3kMgzTriggerPlatformObject {
                 new ObjectSpawn(0x1200, 0x0600, Sonic3kObjectIds.MGZ_TRIGGER_PLATFORM, 0x25, 0x01, false, 0));
 
         assertEquals(0x0600 - 0x80, instance.getY());
+    }
+
+    @Test
+    void subtypeOneLandingRechecksReversedEarlierSlotSubtypeTwoSibling() {
+        MGZTriggerPlatformObjectInstance landing = new MGZTriggerPlatformObjectInstance(
+                new ObjectSpawn(0x1D20, 0x0354, Sonic3kObjectIds.MGZ_TRIGGER_PLATFORM,
+                        0x14, 0x00, false, 133));
+        MGZTriggerPlatformObjectInstance laterNativeSibling = new MGZTriggerPlatformObjectInstance(
+                new ObjectSpawn(0x1CE0, 0x0314, Sonic3kObjectIds.MGZ_TRIGGER_PLATFORM,
+                        0x24, 0x00, false, 132));
+        landing.setSlotIndex(6);
+        laterNativeSibling.setSlotIndex(4);
+        ObjectServices services = mock(ObjectServices.class);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        com.openggf.game.PlayableEntity player = mock(com.openggf.game.PlayableEntity.class);
+        when(services.objectManager()).thenReturn(objectManager);
+        when(objectManager.activeObjectsOfType(MGZTriggerPlatformObjectInstance.class))
+                .thenReturn(List.of(laterNativeSibling, landing));
+        landing.setServices(services);
+
+        landing.onSolidContact(player,
+                new SolidContact(true, false, false, true, false), 0);
+
+        verify(objectManager).processImmediateInlineSolidCheckpoint(laterNativeSibling, player, List.of());
     }
 
     @Test

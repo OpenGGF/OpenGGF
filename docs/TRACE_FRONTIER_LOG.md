@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ vertical trigger platforms restore native sibling SST order
+
+Branch `feature/ai-trace-animation-verification`, after the Spiker-launcher
+milestone. Each vertical trigger-platform placement calls `SolidObjectFull` in
+native SST order. At the current crossing the subtype-`$14` platform lands
+Sonic before a later subtype-`$24` platform tests its side, allowing that
+second object to publish `Status_Push`. Engine placement allocation had
+reversed those two live slots, so the side test ran while Sonic was still
+airborne and the push state arrived one frame late. After a subtype-`$1x`
+standing contact, the landing object now re-runs only earlier engine-slot
+subtype-`$2x` siblings through the shared inline solid checkpoint. No trace
+state, zone/route/frame carve-out, hydration, or comparator tolerance was
+added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:41370-41534,70910-71029`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 24075 to frame 25250
+  (`y_speed`, expected `$03FD` / actual `$0400`).
+- MGZ complete-run animation remains at frame 25258
+  (`player_mapping_frame`, expected `$71` / actual `$70`).
+- `TestS3kMgzTriggerPlatformObject` passes 8/8, including the reversed-slot
+  sibling checkpoint regression.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- Spiker launchers select players from their own SST coordinates
 
 Branch `feature/ai-trace-animation-verification`, after the regressed-wall-

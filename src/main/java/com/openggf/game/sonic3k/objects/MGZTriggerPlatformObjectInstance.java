@@ -244,7 +244,29 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        // SolidObjectFull behavior is handled by the shared solid-contact system.
+        if (playerEntity == null || contact == null || !contact.standing()
+                || (getSpawn().subtype() & 0xF0) != 0x10) {
+            return;
+        }
+
+        // The two vertical variants are adjacent placements, but FindFreeObj's
+        // live SST landscape can allocate the subtype-$1x landing platform
+        // before a subtype-$2x sibling even when the engine's placement slots
+        // are reversed. The later native SolidObjectFull sees the just-grounded
+        // player and may publish Status_Push. Re-run only those reversed,
+        // earlier-engine-slot $2x siblings after this landing checkpoint.
+        // sonic3k.asm:70910-71029,41370-41534.
+        int landingSlot = getSlotIndex();
+        ObjectManager objectManager = services().objectManager();
+        for (MGZTriggerPlatformObjectInstance sibling :
+                objectManager.activeObjectsOfType(MGZTriggerPlatformObjectInstance.class)) {
+            if (sibling.getSlotIndex() >= landingSlot) {
+                break;
+            }
+            if ((sibling.getSpawn().subtype() & 0xF0) == 0x20) {
+                objectManager.processImmediateInlineSolidCheckpoint(sibling, playerEntity, List.of());
+            }
+        }
     }
 
     @Override
