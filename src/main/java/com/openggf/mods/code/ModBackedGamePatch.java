@@ -177,6 +177,9 @@ public final class ModBackedGamePatch implements GamePatch {
                         @Override
                         public java.util.Optional<com.openggf.game.GameplayLaunchTeam> launchTeam(
                                 com.openggf.game.ZoneKey destination) {
+                            if (faultBoundary == null) {
+                                return inherited.launchTeam(destination);
+                            }
                             return callGameplayPolicy(destination, () -> {
                                 if (destination instanceof com.openggf.game.ZoneKey.Mod mod) {
                                     com.openggf.game.GameplayLaunchTeam contributed =
@@ -192,6 +195,17 @@ public final class ModBackedGamePatch implements GamePatch {
                         @Override
                         public java.util.Optional<com.openggf.game.GameplayInputFilter> inputFilter(
                                 com.openggf.game.ZoneKey destination) {
+                            if (faultBoundary == null) {
+                                java.util.Optional<com.openggf.game.GameplayInputFilter> resolved =
+                                        inherited.inputFilter(destination);
+                                if (resolved.isEmpty()
+                                        || resolved.get() == com.openggf.game.GameplayInputFilter.IDENTITY
+                                        || resolved.get() instanceof OwnerAwareGameplayInputFilter) {
+                                    return resolved;
+                                }
+                                throw new IllegalStateException(
+                                        "A raw inherited mod input filter requires an installed fault boundary");
+                            }
                             return callGameplayPolicy(destination, () -> {
                                 java.util.Optional<com.openggf.game.GameplayInputFilter> resolved;
                                 if (destination instanceof com.openggf.game.ZoneKey.Mod mod) {
@@ -216,6 +230,9 @@ public final class ModBackedGamePatch implements GamePatch {
                         @Override
                         public java.util.Optional<com.openggf.level.objects.HudProfile> hudProfile(
                                 com.openggf.game.ZoneKey destination) {
+                            if (faultBoundary == null) {
+                                return inherited.hudProfile(destination);
+                            }
                             return callGameplayPolicy(destination, () -> {
                                 if (destination instanceof com.openggf.game.ZoneKey.Mod mod) {
                                     com.openggf.level.objects.HudProfile contributed =

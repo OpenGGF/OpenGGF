@@ -321,6 +321,8 @@ class TestModZoneRuntimeProfile {
         when(base.createGame(any(GameDataSource.class))).thenReturn(game);
         when(base.getObjectArtProvider()).thenReturn(objectArt);
         when(base.getLevelEventProvider()).thenReturn(mock(LevelEventProvider.class));
+        when(base.getGameplayPolicyProvider()).thenReturn(
+                com.openggf.game.GameplayPolicyProvider.EMPTY);
         when(base.getIdentifier()).thenReturn("s3k");
         return base;
     }

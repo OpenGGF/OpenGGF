@@ -48,8 +48,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -171,6 +173,35 @@ class TestModGameplayPolicyFaultBoundary {
     }
 
     @Test
+    void boundarylessContentPatchPreservesEmptyInheritedGameplayPolicies() {
+        GameModule resolved = resolvedModule(contentOnlyPlan(), GameplayPolicyProvider.EMPTY, null);
+
+        assertEquals(Optional.empty(), resolved.getGameplayPolicyProvider().launchTeam(FLAPPY));
+        assertEquals(Optional.empty(), resolved.getGameplayPolicyProvider().inputFilter(FLAPPY));
+        assertEquals(Optional.empty(), resolved.getGameplayPolicyProvider().hudProfile(FLAPPY));
+    }
+
+    @Test
+    void boundarylessContentPatchRejectsRawInheritedFilterBeforeInvocation() {
+        AtomicBoolean invoked = new AtomicBoolean();
+        GameplayInputFilter raw = input -> {
+            invoked.set(true);
+            return input;
+        };
+        GameplayPolicyProvider inherited = new GameplayPolicyProvider() {
+            @Override
+            public Optional<GameplayInputFilter> inputFilter(ZoneKey destination) {
+                return Optional.of(raw);
+            }
+        };
+        GameModule resolved = resolvedModule(contentOnlyPlan(), inherited, null);
+
+        assertThrows(IllegalStateException.class,
+                () -> resolved.getGameplayPolicyProvider().inputFilter(FLAPPY));
+        assertFalse(invoked.get(), "A raw inherited filter must be rejected before execution");
+    }
+
+    @Test
     void destroyingContextClearsSessionFilterAndInstalledHudBeforeFreshStockSession() throws Exception {
         GameModule module = mock(GameModule.class);
         WorldSession world = new WorldSession(module);
@@ -203,6 +234,13 @@ class TestModGameplayPolicyFaultBoundary {
                 "alpha", "s3k", Map.of(), Map.of(), Map.of(), List.of(),
                 List.of(), List.of(), Map.of(), Map.of(), null, Map.of(),
                 Map.of(), filters, Map.of());
+    }
+
+    private static ModRegistrationPlan contentOnlyPlan() {
+        return new ModRegistrationPlan(
+                "alpha", "s3k", Map.of("alpha:dummy", mock(com.openggf.level.objects.ObjectFactory.class)),
+                Map.of(), Map.of(), List.of(), List.of(), List.of(), Map.of(), Map.of(), null,
+                Map.of(), Map.of(), Map.of(), Map.of());
     }
 
     private static GameModule resolvedModule(ModRegistrationPlan plan,
