@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- AIZ2 forced-walk input-phase milestone
+
+Branch `feature/ai-trace-animation-verification`, after the results-owner
+control-restore milestone. The post-boss controller now exposes
+`loc_69526`'s logical Right word on the object entry before the next player
+dispatch, while leaving acceleration, subpixel movement, and Walk animation
+publication to that player dispatch. Its separately allocated gradual camera
+child retains its existing later activation, so animation timing advances
+without shifting the physics-green camera boundary. No route, trace-frame,
+hydration, or comparison-tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 138263-138293
+(`loc_694D4`, `loc_6950E`, and `loc_69526`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- All 34 `TestAiz2BossEndSequenceObjects` tests pass; the controller test now
+  confirms that the object slot publishes input without performing player
+  acceleration or subpixel movement itself.
+- AIZ complete-run advances from frame 25592 / 17 grouped animation errors to
+  frame 25951 / 6; the entire initial forced-walk animation/mapping cadence is
+  exact.
+- Focused AIZ and HCZ physics replays pass.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  HCZ and every previously green route retain their status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
 ### 2026-07-14 -- AIZ2 results-owner control-restore milestone
 
 Branch `feature/ai-trace-animation-verification`, after the fire-bridge

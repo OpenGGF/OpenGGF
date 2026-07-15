@@ -876,9 +876,10 @@ class TestAiz2BossEndSequenceObjects {
         assertTrue(player.isControlLocked());
         assertFalse(player.isObjectControlled());
         assertTrue(player.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT));
-        assertEquals(0x000C, player.getXSpeed() & 0xFFFF);
-        assertEquals(0x000C, player.getGSpeed() & 0xFFFF);
-        assertEquals(0x6500, player.getXSubpixelRaw());
+        assertEquals(0, player.getXSpeed(),
+                "loc_69526 only publishes Ctrl_1_logical; the next player slot owns acceleration");
+        assertEquals(0, player.getGSpeed());
+        assertEquals(0x5900, player.getXSubpixelRaw());
 
         for (int i = 0; i < 16; i++) {
             camera.updateBoundaryEasing();
