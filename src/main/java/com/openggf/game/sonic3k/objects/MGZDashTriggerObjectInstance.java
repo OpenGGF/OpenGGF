@@ -258,6 +258,10 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
         return new ObjectPlayerQuery(() -> primary, query::sidekicks);
     }
 
+    int triggerIndex() {
+        return triggerIndex;
+    }
+
     // ===== SolidObjectProvider (sloped solid bumper -- pushes from sides too) =====
 
     @Override

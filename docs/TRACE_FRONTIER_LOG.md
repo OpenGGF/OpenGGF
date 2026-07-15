@@ -1,5 +1,37 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ fast trigger platforms observe earlier dash SST writes
+
+Branch `feature/ai-trace-animation-verification`, after the swinging-platform
+residue milestone. `Obj_MGZTriggerPlatform` reads `Level_trigger_array` from
+its own SST slot before `loc_3466E` applies the vertical step. The fast `$2x`
+platform at the new frontier occupies slot 12 after its matching dash trigger
+in slot 11, so the trigger byte is live and the platform moves two pixels on
+that same `ExecuteObjects` pass. The former blanket vertical one-pass delay
+left the platform two pixels low, creating a false airborne side contact that
+shifted Tails right and cleared both horizontal speeds. The platform now uses
+the concrete speed variant and relative live SST order to select same-pass
+visibility; earlier-writer ordering is covered directly. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM references:
+`docs/skdisasm/sonic3k.asm:51473-51608,70910-71029`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 31319 to frame 31641
+  (`g_speed`, expected `-$00D7` / actual `$00D7`).
+- MGZ complete-run animation remains at frame 31643; standalone remains at
+  physics frame 1538 and animation frame 1574.
+- The focused trigger-platform suite passes, including the earlier dash-slot
+  visibility contract.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-16 -- MGZ swinging-platform rider preserves slot-local sine residue
 
 Branch `feature/ai-trace-animation-verification`, after the spike-ball helper-

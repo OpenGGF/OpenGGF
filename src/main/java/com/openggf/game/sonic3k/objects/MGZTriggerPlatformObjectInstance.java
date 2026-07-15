@@ -130,10 +130,13 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
 
         // Horizontal triggers are published before this native SST slot and
         // loc_34600 moves on the same pass. The vertical trigger sources run
-        // after their platform slots, so their newly visible byte belongs to
-        // the following pass in the engine's consolidated object update.
+        // after their platform slots in the common layout, so their newly visible
+        // byte belongs to the following pass. The fast $2x variant also occurs
+        // after its matching dash trigger in the live SST table; in that ordering
+        // loc_3466E observes the write and moves on the same ExecuteObjects pass.
         boolean activationVisibleThisPass = wasActivated
-                || (mode == Mode.HORIZONTAL_DELETE && activated);
+                || (mode == Mode.HORIZONTAL_DELETE && activated)
+                || (activated && stepPerFrame == 2 && hasEarlierDashTriggerSlot());
         if (!completed && activationVisibleThisPass) {
             advanceActiveMotion();
             applyScreenShake(frameCounter);
@@ -142,6 +145,22 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         }
 
         updateDynamicSpawn(currentX, currentY);
+    }
+
+    private boolean hasEarlierDashTriggerSlot() {
+        var svc = tryServices();
+        if (svc == null || svc.objectManager() == null || getSlotIndex() < 0) {
+            return false;
+        }
+        for (MGZDashTriggerObjectInstance trigger :
+                svc.objectManager().activeObjectsOfType(MGZDashTriggerObjectInstance.class)) {
+            if (trigger.triggerIndex() == triggerIndex
+                    && trigger.getSlotIndex() >= 0
+                    && trigger.getSlotIndex() < getSlotIndex()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void advanceActiveMotion() {

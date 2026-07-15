@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.Sonic3kPlcArtRegistry;
 import com.openggf.game.sonic3k.Sonic3kPlcArtRegistry.LevelArtEntry;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.objects.MGZDashTriggerObjectInstance;
 import com.openggf.game.sonic3k.objects.MGZTriggerPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.objects.ObjectInstance;
@@ -112,6 +113,31 @@ class TestS3kMgzTriggerPlatformObject {
                 new ObjectSpawn(0x1200, 0x0600, Sonic3kObjectIds.MGZ_TRIGGER_PLATFORM, 0x25, 0x01, false, 0));
 
         assertEquals(0x0600 - 0x80, instance.getY());
+    }
+
+    @Test
+    void fastVerticalSubtypeObservesEarlierDashTriggerSlotImmediately() {
+        Sonic3kLevelTriggerManager.reset();
+        MGZTriggerPlatformObjectInstance platform = new MGZTriggerPlatformObjectInstance(
+                new ObjectSpawn(0x34A0, 0x0694, Sonic3kObjectIds.MGZ_TRIGGER_PLATFORM,
+                        0x2A, 0x00, false, 0));
+        MGZDashTriggerObjectInstance dash = new MGZDashTriggerObjectInstance(
+                new ObjectSpawn(0x34D0, 0x0700, Sonic3kObjectIds.MGZ_DASH_TRIGGER,
+                        0x0A, 0x00, false, 0));
+        platform.setSlotIndex(12);
+        dash.setSlotIndex(11);
+        ObjectServices services = mock(ObjectServices.class);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(services.objectManager()).thenReturn(objectManager);
+        when(objectManager.activeObjectsOfType(MGZDashTriggerObjectInstance.class))
+                .thenReturn(List.of(dash));
+        platform.setServices(services);
+
+        Sonic3kLevelTriggerManager.setAll(0x0A);
+        platform.update(0, null);
+
+        assertEquals(0x0696, platform.getY(),
+                "The later fast platform must see the earlier native trigger write in the same pass");
     }
 
     @Test
