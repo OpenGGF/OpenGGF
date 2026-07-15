@@ -447,6 +447,8 @@ public class TestRingManager {
         player.useGameRules(GameRules.SONIC_3K);
         player.giveShield(ShieldType.LIGHTNING);
 
+        ringManager.prepareAttractedRingTouchSnapshot();
+        ringManager.collectAttractedRing(player, 0);
         ringManager.update(0, player, 0);
 
         assertEquals(1, player.getRingCount());
@@ -525,7 +527,9 @@ public class TestRingManager {
         TestPlayableSprite player = new TestPlayableSprite((short) 0x0A4A, (short) 0x0C4B);
         player.setRolling(true);
 
-        ringManager.update(0, player, 2388);
+        ringManager.prepareAttractedRingTouchSnapshot();
+        ringManager.collectAttractedRing(player, 2388);
+        ringManager.update(0x0A00, player, 2388);
 
         assertEquals(0, player.getRingCount(),
                 "S3K collision_flags $47 uses TouchResponse bounds; this frame-2388 geometry is near but not overlapping");
@@ -559,6 +563,9 @@ public class TestRingManager {
         sidekick.setCpuControlled(true);
         GameServices.sprites().addSprite(sidekick);
 
+        ringManager.prepareAttractedRingTouchSnapshot();
+        ringManager.collectAttractedRing(main, 0);
+        ringManager.collectAttractedRing(sidekick, 0);
         ringManager.update(0, main, 0);
 
         assertEquals(1, sidekick.getRingCount(),

@@ -28,11 +28,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Handles ring collection state, sparkle animation, rendering, and lost-ring behavior.
@@ -129,6 +126,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             collectStageRings(player, frameCounter);
         }
 
+        // Retain the self-contained update contract used by editor/headless callers.
+        // The gameplay loop passes false and performs this at the native player touch point.
+        if (collectStageRingsInUpdate) {
+            attractStageRings(player);
+        }
+
         // Lightning shield ring attraction — S3K only
         RingRules ringRules = playerRingRules(player);
         boolean lightningAttractionActive = lightningShieldEnabled(player)
@@ -166,6 +169,42 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     && addAttractedRing(index, ring.x(), ring.y())) {
                 placement.markCollected(index);
             }
+        }
+    }
+
+    /**
+     * Captures the attracted rings published to the prior frame's collision-response list.
+     *
+     * <p>ROM {@code Obj_Attracted_Ring} moves in its object slot and then calls
+     * {@code Add_SpriteToCollisionResponseList}; the player consumes that retained list at
+     * its next {@code ReactToItem}. A ring created by the current player slot has not run an
+     * object slot yet and therefore must not be visible to a later player in the same frame.
+     */
+    public void prepareAttractedRingTouchSnapshot() {
+        for (AttractedRing ring : attractedRings) {
+            ring.listedForTouchThisFrame = ring.active && !ring.collected;
+        }
+    }
+
+    /**
+     * Runs the attracted-ring portion of one player's retained collision-response pass.
+     * ROM touch handling returns after the first matching response entry, so each player can
+     * receive at most one attracted ring per object tick.
+     */
+    public void collectAttractedRing(AbstractPlayableSprite player, int frameCounter) {
+        if (player == null || player.getDead() || cannotCollectRings(player)) {
+            return;
+        }
+        for (AttractedRing ring : activeAttractedRingsInSlotOrder()) {
+            if (!ring.listedForTouchThisFrame || ring.collected
+                    || !attractedRingOverlapsPlayerTouchBox(ring, player)) {
+                continue;
+            }
+            player.addRings(1);
+            audioManager.playSfx(GameSound.RING);
+            ring.collected = true;
+            ring.sparkleStartFrame = frameCounter;
+            return;
         }
     }
 
@@ -724,8 +763,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private void updateAttractedRings(AbstractPlayableSprite player, int frameCounter, int cameraX) {
         int pcx = player.getCentreX();
         int pcy = player.getCentreY();
-        Set<AbstractPlayableSprite> collectorsThisPass =
-                Collections.newSetFromMap(new IdentityHashMap<>());
         for (AttractedRing ar : activeAttractedRingsInSlotOrder()) {
             if (!ar.active) continue;
 
@@ -733,17 +770,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 if (attractedSparkleFinished(ar, frameCounter)) {
                     deactivateAttractedRing(ar);
                 }
-                continue;
-            }
-
-            AbstractPlayableSprite collector = attractedRingCollector(
-                    ar, player, collectorsThisPass);
-            if (collector != null) {
-                collector.addRings(1);
-                audioManager.playSfx(GameSound.RING);
-                ar.collected = true;
-                ar.sparkleStartFrame = frameCounter;
-                collectorsThisPass.add(collector);
                 continue;
             }
 
@@ -812,29 +838,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         active.sort(Comparator.comparingInt(
                 ring -> ring.objectSlotIndex >= 0 ? ring.objectSlotIndex : Integer.MAX_VALUE));
         return active;
-    }
-
-    private AbstractPlayableSprite attractedRingCollector(
-            AttractedRing ar,
-            AbstractPlayableSprite mainPlayer,
-            Set<AbstractPlayableSprite> collectorsThisPass) {
-        if (!collectorsThisPass.contains(mainPlayer)
-                && !cannotCollectRings(mainPlayer)
-                && attractedRingOverlapsPlayerTouchBox(ar, mainPlayer)) {
-            return mainPlayer;
-        }
-        var sprites = GameServices.spritesOrNull();
-        if (sprites == null) {
-            return null;
-        }
-        for (AbstractPlayableSprite sidekick : sprites.getSidekicks()) {
-            if (!collectorsThisPass.contains(sidekick)
-                    && !cannotCollectRings(sidekick)
-                    && attractedRingOverlapsPlayerTouchBox(ar, sidekick)) {
-                return sidekick;
-            }
-        }
-        return null;
     }
 
     private boolean attractedRingOverlapsPlayerTouchBox(AttractedRing ar, AbstractPlayableSprite player) {
@@ -909,6 +912,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         ar.objectSlotIndex = -1;
         ar.collected = false;
         ar.sparkleStartFrame = -1;
+        ar.listedForTouchThisFrame = false;
     }
 
     // --- RewindSnapshottable<RingSnapshot> ---
@@ -1036,6 +1040,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         int objectSlotIndex = -1;
         boolean collected;
         int sparkleStartFrame = -1;
+        boolean listedForTouchThisFrame;
         boolean active;
     }
 

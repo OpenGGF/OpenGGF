@@ -870,6 +870,7 @@ public class LevelManager {
                     objectsExecuteAfterPlayerPhysics());
         }
         if (ringManager != null && player instanceof AbstractPlayableSprite playable && !playable.getDead()) {
+            ringManager.collectAttractedRing(playable, frameCounter + 1);
             ringManager.attractStageRings(playable);
             if (!ringManager.usesObjectTouchCollection()) {
                 ringManager.collectStageRings(playable, frameCounter + 1);
@@ -887,6 +888,7 @@ public class LevelManager {
      */
     public void prepareTouchResponseSnapshots() {
         if (objectManager != null) objectManager.snapshotTouchResponseState(touchResponseUsesPreviousCollisionResponseList());
+        if (ringManager != null) ringManager.prepareAttractedRingTouchSnapshot();
     }
 
     private boolean touchResponseUsesPreviousCollisionResponseList() {

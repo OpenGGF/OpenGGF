@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ attracted-ring frontier advances to frame 15947
+
+Branch `feature/ai-trace-animation-verification`, after the frame-11531
+spilled-ring milestone. Native `Obj_Attracted_Ring` publishes its moved
+position to the collision-response list at the end of its object slot, and the
+next player slot consumes that retained list before later MGZ objects can carry
+or reposition the player. The engine already moved attracted rings on the
+object side of the frame, but still performed the give-ring overlap in the late
+level update after the top platform had moved Sonic. That let the second ring
+in the MGZ sequence overlap one frame early.
+
+`RingManager` now snapshots the active attracted rings at the frame-start touch
+checkpoint. Each playable consumes at most the first overlapping retained
+entry during its own `ReactToItem` phase, before lightning attraction creates
+new ring objects; attracted-ring motion and collision-list publication remain
+in the later object update. Consequently a ring created by P1 is not visible
+to P2 until that ring has executed its first native object slot. No trace state,
+route, zone, frame, hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:35719-35846`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 11531 to frame 15947
+  (`tails_x`, expected `$2E75` / actual `$2E74`). Animation remains at frame
+  15970 (`tails_mapping_frame`).
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused ring-manager suite passes (22/22).
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ spilled-ring frontier advances to frame 11531
 
 Branch `feature/ai-trace-animation-verification`, after the frame-9259
