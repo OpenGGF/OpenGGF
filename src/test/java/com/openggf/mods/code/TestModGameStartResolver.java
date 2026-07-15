@@ -17,6 +17,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestModGameStartResolver {
@@ -33,6 +34,20 @@ class TestModGameStartResolver {
         assertEquals(List.of(
                         new ObservedFinding("alpha", "MOD_GAME_START_SHADOWED"),
                         new ObservedFinding("beta", "MOD_GAME_START_SHADOWED")),
+                findings);
+    }
+
+    @Test
+    void multipleShadowedStartsFromOneOwnerEmitOneOwnerFinding() {
+        List<ObservedFinding> findings = new ArrayList<>();
+        GameModule resolved = apply(new Sonic3kGameModule(), findings,
+                startPlan("alpha", "sky", 0),
+                startPlan("alpha", "clouds", 1),
+                startPlan("beta", "sky", 2));
+
+        assertEquals(zoneDestination(resolved, "beta", "sky"),
+                resolved.getDataSelectHostProfile().newGameDestination());
+        assertEquals(List.of(new ObservedFinding("alpha", "MOD_GAME_START_SHADOWED")),
                 findings);
     }
 
@@ -79,6 +94,18 @@ class TestModGameStartResolver {
         assertFalse(compatible.gameStart());
         assertTrue(start.withDefaultAnchor("mtz3").gameStart());
         assertEquals("mtz3", start.withDefaultAnchor("mtz3").insertAfter());
+    }
+
+    @Test
+    void declaredAndPreparedGameStartMismatchIsRejected() {
+        ModZoneContribution declared = new ModZoneContribution(
+                "sky", new BakedLevelRef("sky/level.json"), null, null, true);
+        PreparedModZone mismatched = PreparedModZone.metadata(
+                "alpha", "sky", null, "SKY", 0x400, 0x40, 0x20, 0x20);
+
+        assertThrows(IllegalArgumentException.class, () -> new ModRegistrationPlan(
+                "alpha", "s3k", Map.of(), Map.of(), Map.of(), List.of(),
+                List.of(declared), List.of(mismatched)));
     }
 
     private static void assertStockProgressionUnchanged(ZoneRegistry stock, ZoneRegistry decorated) {

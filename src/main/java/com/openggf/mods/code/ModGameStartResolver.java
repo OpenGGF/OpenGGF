@@ -20,14 +20,14 @@ final class ModGameStartResolver implements DataSelectHostProfile {
 
     private final DataSelectHostProfile delegate;
     private final DataSelectDestination destination;
-    private final Set<ZoneKey.Mod> reportedShadowed;
+    private final Set<String> reportedShadowedOwners;
 
     private ModGameStartResolver(DataSelectHostProfile delegate,
                                  DataSelectDestination destination,
-                                 Set<ZoneKey.Mod> reportedShadowed) {
+                                 Set<String> reportedShadowedOwners) {
         this.delegate = delegate;
         this.destination = destination;
-        this.reportedShadowed = Set.copyOf(reportedShadowed);
+        this.reportedShadowedOwners = Set.copyOf(reportedShadowedOwners);
     }
 
     static DataSelectHostProfile decorate(DataSelectHostProfile delegate,
@@ -37,22 +37,23 @@ final class ModGameStartResolver implements DataSelectHostProfile {
         List<PreparedModZone> starts = zones.gameStartContributions();
         if (starts.isEmpty()) return delegate;
 
-        LinkedHashSet<ZoneKey.Mod> reported = new LinkedHashSet<>();
+        LinkedHashSet<String> reportedOwners = new LinkedHashSet<>();
         if (inherited instanceof ModGameStartResolver prior) {
-            reported.addAll(prior.reportedShadowed);
+            reportedOwners.addAll(prior.reportedShadowedOwners);
         }
         PreparedModZone winner = starts.getLast();
         ZoneKey.Mod winnerKey = new ZoneKey.Mod(winner.ownerModId(), winner.localKey());
         for (PreparedModZone shadowed : starts.subList(0, starts.size() - 1)) {
             ZoneKey.Mod shadowedKey = new ZoneKey.Mod(shadowed.ownerModId(), shadowed.localKey());
-            if (reported.add(shadowedKey)) {
+            if (reportedOwners.add(shadowed.ownerModId())) {
                 findingSink.accept(shadowed.ownerModId(), new ModZoneSaveFinding(
                         shadowed.ownerModId(), SHADOWED,
                         keyText(shadowedKey) + " is shadowed by " + keyText(winnerKey)));
             }
         }
         int runtimeZone = zones.resolveZoneKey(winnerKey).orElseThrow();
-        return new ModGameStartResolver(delegate, new DataSelectDestination(runtimeZone, 0), reported);
+        return new ModGameStartResolver(delegate, new DataSelectDestination(runtimeZone, 0),
+                reportedOwners);
     }
 
     private static String keyText(ZoneKey.Mod key) {
