@@ -599,8 +599,12 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
             // Issue 16: ROM does NOT advance Dynamic_Resize_Routine here.
             services().playMusic(Sonic2Music.WING_FORTRESS.id);
             Camera camera = services().camera();
-            camera.setMaxYAfterNextUpdate((short) CAMERA_MAX_Y_DEFEAT);
-            services().gameState().setCurrentBossId(0);
+            if (camera != null) {
+                camera.setMaxYAfterNextUpdate((short) CAMERA_MAX_Y_DEFEAT);
+            }
+            if (services().gameState() != null) {
+                services().gameState().setCurrentBossId(0);
+            }
             ObjectLifetimeOps.markSpawnRemembered(services().objectManager(), spawn);
             setDestroyed(true);
             return;
@@ -969,6 +973,11 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
                 return null;
             }
             ObjectSpawn spawn = ctx.spawn();
+            if (spawn == null) {
+                // Drop, don't throw, on an absent spawn — match the sibling scans
+                // (e.g. findRestoredPlatformForHurt). Prevents an NPE on spawn.x().
+                return null;
+            }
             WFZLaserWall wall = new WFZLaserWall(boss, spawn.x(), spawn.y());
             relinkWallForRewind(boss, wall);
             return wall;
@@ -1261,6 +1270,11 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
                 return null;
             }
             ObjectSpawn spawn = ctx.spawn();
+            if (spawn == null) {
+                // Drop, don't throw, on an absent spawn — match the sibling scans
+                // (e.g. findRestoredPlatformForHurt). Prevents an NPE on spawn.x().
+                return null;
+            }
             WFZFloatingPlatform platform = new WFZFloatingPlatform(boss, spawn.x(), spawn.y());
             relinkPlatformForRewind(boss, platform);
             return platform;
