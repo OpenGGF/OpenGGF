@@ -169,6 +169,11 @@ public class HczEndBossRobotnikShip extends AbstractBossChild implements RewindR
         yFixed = currentY << 16;
         shipFrame = SHIP_FRAME_IDLE;
         shipFacingRight = boss.isFacingRight();
+        // Obj_RobotnikShip2 initializes a real Obj_RobotnikHead child through
+        // Child1_MakeRoboHead. Its visual remains folded into this renderer,
+        // but its independent SST lifetime affects every later first-free
+        // allocation in the boss arena.
+        spawnChild(() -> new HczEndBossRobotnikHead(boss));
         routine = ROUTINE_MAIN;
     }
 

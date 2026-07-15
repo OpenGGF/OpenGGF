@@ -35,6 +35,17 @@ public class TestTraceDataParsing {
     }
 
     @Test
+    void parsesRecordedRingFloorCheckCounterPhase() throws IOException {
+        TraceMetadata hcz = TraceMetadata.load(Path.of(
+                "src/test/resources/traces/s3k/hcz_completerun/metadata.json"));
+        TraceMetadata mgz = TraceMetadata.load(Path.of(
+                "src/test/resources/traces/s3k/mgz_completerun/metadata.json"));
+
+        assertEquals(2, hcz.ringFloorCheckCounterPhase());
+        assertEquals(3, mgz.ringFloorCheckCounterPhase());
+    }
+
+    @Test
     void csvVersionFourAcceptsStableRetroV22TwentyColumnRows() throws IOException {
         Path dir = Files.createTempDirectory("trace-stable-retro-v22");
         Files.writeString(dir.resolve("metadata.json"), """

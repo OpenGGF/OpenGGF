@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ spilled-ring frontier advances to frame 11531
+
+Branch `feature/ai-trace-animation-verification`, after the frame-9259
+follow-nudge milestone. Legacy S3K complete-run CSVs captured the word adjacent
+to the byte used by `Obj_Bouncing_Ring`, so trace metadata now records that
+initial low-bit floor-check phase independently and `LevelManager` carries it
+across seamless act object-manager rebuilds. This is trace-start clock state;
+per-frame trace values remain comparison-only.
+
+HCZ's end boss also now materializes every slot owner in
+`ChildObjDat_6BD8A` and `Child1_MakeRoboHead`: the previously folded lower
+housing and Robotnik head are real SST children. The detached `loc_6B3DE`
+spray remains live during the water column's descent, as in its native routine,
+so later damage spills retain their native owner slot. No zone, route, frame,
+or tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:140832-141240,142198-142246`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 9259 to frame 11531
+  (`rings`, expected 22 / actual 23). Animation remains at frame 15970.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ follow-nudge frontier advances to frame 9259
 
 Branch `feature/ai-trace-animation-verification`, after the frame-8799

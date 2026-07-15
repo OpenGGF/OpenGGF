@@ -138,6 +138,7 @@ public class ObjectManager {
     private final SlotAllocator slotAllocator;
     private int s2LatchedObjectManagerCameraX = Integer.MIN_VALUE;
     private int twoAxisCameraYCoarse = Integer.MIN_VALUE;
+    private int ringFloorCheckCounterPhase;
 
     // ROM parity: Tracks child slots reserved by objects with getReservedChildSlotCount() > 0.
     // In S1, ring objects (obj25) allocate child ring slots via FindFreeObj. These slots
@@ -1917,6 +1918,33 @@ public class ObjectManager {
     }
 
     /**
+     * Reassigns an already-loaded placement object through the ROM's first-free
+     * allocator. This is used when a widened engine placement window materializes
+     * an initializer before its native camera gate; once that gate succeeds, the
+     * object must occupy the slot it would have received from the native load pass.
+     */
+    public void reallocateToFirstFreeDynamicSlot(AbstractObjectInstance object) {
+        if (object == null || !isManagedDynamicSlot(object.getSlotIndex())) {
+            return;
+        }
+        int oldSlot = object.getSlotIndex();
+        releaseSlot(oldSlot);
+        int newSlot = slotAllocator.allocate();
+        if (newSlot < 0) {
+            slotAllocator.reserve(oldSlot);
+            return;
+        }
+        object.setSlotIndex(newSlot);
+        int oldExecIndex = execIndexForSlot(oldSlot);
+        if (oldExecIndex >= 0 && oldExecIndex < execOrder.length
+                && execOrder[oldExecIndex] == object) {
+            execOrder[oldExecIndex] = null;
+        }
+        bucketsDirty = true;
+        activeObjectsCacheDirty = true;
+    }
+
+    /**
      * Reserves the next free dynamic slot for a deferred S2 Obj37 owner. S2
      * {@code HurtCharacter} calls {@code AllocateObject} before later dynamic slots
      * finish and delete themselves; reserving the owner slot immediately captures
@@ -2357,6 +2385,19 @@ public class ObjectManager {
      */
     public int getVblaCounter() {
         return vblaCounter;
+    }
+
+    /**
+     * Initializes the low-bit V-int phase observed by spilled-ring floor probes.
+     * Trace recorders capture this independently because legacy S3K CSV fixtures
+     * stored the adjacent V-int word rather than {@code V_int_run_count+2}.
+     */
+    public void initRingFloorCheckCounterPhase(int phase) {
+        ringFloorCheckCounterPhase = phase;
+    }
+
+    public int getRingFloorCheckCounterPhase() {
+        return ringFloorCheckCounterPhase;
     }
 
     public boolean isRemembered(ObjectSpawn spawn) {

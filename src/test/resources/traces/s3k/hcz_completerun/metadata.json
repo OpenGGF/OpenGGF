@@ -4,6 +4,7 @@
   "zone_id": 1,
   "act": 1,
   "bk2_frame_offset": 27170,
+  "ring_floor_check_counter_phase": 2,
   "source_bk2": "s3k-complete-sonic-tails.bk2",
   "trace_frame_count": 31482,
   "pre_trace_osc_frames": 0,

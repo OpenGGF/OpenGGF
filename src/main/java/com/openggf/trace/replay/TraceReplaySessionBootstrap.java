@@ -224,6 +224,10 @@ public final class TraceReplaySessionBootstrap {
                 && gameplayMode.getLevelManager() != null
                 && gameplayMode.getLevelManager().getObjectManager() != null) {
             ObjectManager objectManager = gameplayMode.getLevelManager().getObjectManager();
+            gameplayMode.getLevelManager().initRingFloorCheckCounterPhase(
+                    trace.metadata().ringFloorCheckCounterPhase() != null
+                            ? trace.metadata().ringFloorCheckCounterPhase()
+                            : 0);
             objectPreludeFrames = s2TornadoObjectPreludeFrames(trace, objectManager);
             if (objectPreludeFrames == 0) {
                 objectPreludeFrames = TraceReplayBootstrap
@@ -685,6 +689,13 @@ public final class TraceReplaySessionBootstrap {
             TraceReplayBootstrap.ReplayStartState replayStart,
             TraceFrame previousDriveFrame,
             TraceFrame firstDriveFrame) {
+        if (GameServices.levelOrNull() != null
+                && GameServices.levelOrNull().getObjectManager() != null) {
+            GameServices.levelOrNull().initRingFloorCheckCounterPhase(
+                    trace.metadata().ringFloorCheckCounterPhase() != null
+                            ? trace.metadata().ringFloorCheckCounterPhase()
+                            : 0);
+        }
         int completeRunSeed = s3kCompleteRunFrameCounterSeedForReplayStart(trace, replayStart);
         if (completeRunSeed >= 0) {
             if (GameServices.spritesOrNull() != null) {

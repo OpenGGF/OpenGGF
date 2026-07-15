@@ -19,6 +19,7 @@ public record TraceMetadata(
     @JsonProperty("zone_id") Integer zoneId,
     @JsonProperty("act") int act,
     @JsonProperty("bk2_frame_offset") int bk2FrameOffset,
+    @JsonProperty("ring_floor_check_counter_phase") Integer ringFloorCheckCounterPhase,
     @JsonProperty("trace_frame_count") int traceFrameCount,
     @JsonProperty("start_x") String startXHex,
     @JsonProperty("start_y") String startYHex,
@@ -470,4 +471,3 @@ public record TraceMetadata(
         return mapper.readValue(metadataFile.toFile(), TraceMetadata.class);
     }
 }
-

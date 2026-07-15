@@ -180,6 +180,7 @@ public class LevelManager {
     }
     int frameCounter = 0;
     ObjectManager objectManager;
+    private int ringFloorCheckCounterPhase;
     RingManager ringManager;
     ZoneFeatureProvider zoneFeatureProvider;
     private TouchResponseTable touchResponseTable;
@@ -530,6 +531,7 @@ public class LevelManager {
                 graphicsManager,
                 camera,
                 buildObjectServices());
+        objectManager.initRingFloorCheckCounterPhase(ringFloorCheckCounterPhase);
 
         // S1 parity: counter-based respawn tracking DISABLED pending fix for
         // load/unload/reload incompatibility. The counter system prevents respawns
@@ -2259,6 +2261,14 @@ public class LevelManager {
         return objectManager;
     }
 
+    /** Preserves the recorded Obj37 V-int low-bit phase across seamless act rebuilds. */
+    public void initRingFloorCheckCounterPhase(int phase) {
+        ringFloorCheckCounterPhase = phase;
+        if (objectManager != null) {
+            objectManager.initRingFloorCheckCounterPhase(phase);
+        }
+    }
+
     public void spawnLostRings(AbstractPlayableSprite player, int frameCounter) {
         if (ringManager == null || player == null) {
             return;
@@ -2952,6 +2962,7 @@ public class LevelManager {
                 graphicsManager,
                 camera,
                 buildObjectServices());
+        objectManager.initRingFloorCheckCounterPhase(ringFloorCheckCounterPhase);
         GameRules gameRules = gameModule.getRules();
         if (gameRules != null
                 && gameRules.collision() != null

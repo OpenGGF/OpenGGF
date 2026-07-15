@@ -267,6 +267,22 @@ public class HczEndBossInstance extends AbstractBossInstance
     }
 
     @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        // Obj_HCZEndBoss calls Check_CameraInRange only while its entry-point
+        // routine is still the initializer. An early ObjPosLoad must therefore
+        // use Delete_Sprite_If_Not_In_Range's fixed native window instead of
+        // lingering in a low SST slot until the widened engine camera arrives.
+        return state.routine == ROUTINE_INIT;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        int bossRounded = getX() & 0xFF80;
+        int cameraBack = (cameraX - 0x80) & 0xFF80;
+        return ((bossRounded - cameraBack) & 0xFFFF) > 0x280;
+    }
+
+    @Override
     protected int getBossHitSfxId() {
         return Sonic3kSfx.BOSS_HIT.id;
     }
@@ -358,6 +374,11 @@ public class HczEndBossInstance extends AbstractBossInstance
         if (!isCameraInRange()) {
             return; // Not yet in range; stay in INIT
         }
+
+        // A widened viewport can materialize this placement before the native
+        // Check_CameraInRange gate. Re-run the first-free allocation at the
+        // gate so the boss owns the slot the ROM load pass observes.
+        services().objectManager().reallocateToFirstFreeDynamicSlot(this);
 
         // Set Boss_flag on HCZ events
         setBossFlag(true);
@@ -728,8 +749,6 @@ public class HczEndBossInstance extends AbstractBossInstance
     private void spawnChildren() {
         // Robotnik ship cockpit at offset (0, 0x0C) — Obj_RobotnikShip2 subtype 5
         spawnChild(() -> new HczEndBossRobotnikShip(this));
-        // Task 3: Propeller turbine at offset (0, 0x24)
-        spawnChild(() -> new HczEndBossTurbine(this, TURBINE_OFFSET_X, TURBINE_OFFSET_Y));
         // Task 4: Blade children — ROM: ChildObjDat_6BD8A blade entries
         // Subtype 0 (bottom, fires): xOffset=0x23, yOffset=0x12
         // Subtype 2 (middle):        xOffset=0x1B, yOffset=0x0A
@@ -737,6 +756,11 @@ public class HczEndBossInstance extends AbstractBossInstance
         spawnChild(() -> new HczEndBossBlade(this, 0, 0x23, 0x12));
         spawnChild(() -> new HczEndBossBlade(this, 2, 0x1B, 0x0A));
         spawnChild(() -> new HczEndBossBlade(this, 4, 0x13, 0x0A));
+        // ChildObjDat_6BD8A lists the three blades, the lower housing, and then
+        // the propeller turbine, so AllocateObjectAfterCurrent assigns slots in
+        // that exact order.
+        spawnChild(() -> new HczEndBossLowerHousing(this));
+        spawnChild(() -> new HczEndBossTurbine(this, TURBINE_OFFSET_X, TURBINE_OFFSET_Y));
         // Task 5: Water column is spawned lazily by HczEndBossTurbine when it enters ACTIVE
         LOG.fine("HCZ End Boss: ship + turbine + 3 blades spawned; water column spawned by turbine on activation");
     }

@@ -32,7 +32,7 @@ final class HczEndBossWaterSprayChild extends AbstractBossChild implements Rewin
             return;
         }
         HczEndBossWaterColumn column = activeColumn();
-        if (column == null || column.isDestroyed() || column.isWaterChildShutdownActive()) {
+        if (column == null || column.isDestroyed()) {
             ObjectLifetimeOps.expireDynamic(this);
             return;
         }

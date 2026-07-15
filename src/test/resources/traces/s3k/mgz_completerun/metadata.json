@@ -3,6 +3,7 @@
   "zone": "mgz",
   "zone_id": 2,
   "act": 1,
+  "ring_floor_check_counter_phase": 3,
   "bk2_frame_offset": 58653,
   "source_bk2": "s3k-complete-sonic-tails.bk2",
   "trace_frame_count": 39398,

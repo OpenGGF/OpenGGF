@@ -347,9 +347,14 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      */
     protected int resolveFloorCheckCounterPhase() {
         RingRules rules = resolveRingRules();
-        return rules != null
+        int gamePhase = rules != null
                 ? rules.ringFloorCheckCounterPhase()
                 : GameRules.SONIC_2.ring().ringFloorCheckCounterPhase();
+        ObjectServices services = servicesOrNull();
+        ObjectManager objectManager = services != null ? services.objectManager() : null;
+        return gamePhase + (objectManager != null
+                ? objectManager.getRingFloorCheckCounterPhase()
+                : 0);
     }
 
     private void refreshRomRenderFlagForFloorProbe() {

@@ -42,6 +42,7 @@ public final class TraceFixtures {
                 zoneId,
                 act,
                 0,
+                null,
                 0,
                 "0x0000",
                 "0x0000",
