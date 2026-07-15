@@ -2853,7 +2853,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (dead) {
                         return false;
                 }
-                dead = true;
+                setDead(true);
                 // Lock camera when dying - prevent following the falling corpse
                 // Only freeze camera for the main player, not for CPU sidekick
                 if (!cpuControlled) {

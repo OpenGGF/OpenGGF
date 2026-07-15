@@ -416,6 +416,19 @@ class TestSampleFlappyIntegration {
     }
 
     @Test
+    void initialTitleCardSeesTheResolvedS3kCustomZonePalette() throws Exception {
+        withLaunchedGameplay(null, game -> {
+            assertTrue(GameServices.paletteOwnershipRegistry().hasResolvedThisFrame(),
+                    "custom-zone palette ownership must resolve before the first gameplay frame");
+            assertEquals("host:s3k-character", GameServices.paletteOwnershipRegistry()
+                    .ownerAt(PaletteSurface.NORMAL, 0, 6));
+            assertEquals(0x000E, PaletteWriteSupport.segaWordFromColor(
+                            GameServices.level().getCurrentLevel().getPalette(0).getColor(6)),
+                    "title-card tile $500 uses line 0 color 6 for the red banner");
+        });
+    }
+
+    @Test
     void customZoneComposesNativeTailsHudCreatorClaimsAndDecodedPipeArt() throws Exception {
         withLaunchedGameplay(null, game -> {
             game.runner().stepIdleFrames(1);

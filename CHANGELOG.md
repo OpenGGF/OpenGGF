@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **fix: native Tails deaths and initial S3K mod title cards now complete their
+  host lifecycle transitions.** Instant death enters through the canonical player
+  setter, clearing active Tails flight while retaining the stock `-0x700` hop,
+  normal dead-fall gravity, countdown, and restart. Custom S3K palette ownership is
+  also resolved once during level initialization, so the title card receives its
+  red banner color before the first gameplay frame instead of sampling a stale GPU
+  palette from the preceding screen.
 - Sixth gallery sample **`sample-flappy`** has been rebuilt as a Mod API 2.4
   Sonic 3 & Knuckles patch with a maintained native-Tails guide
   (`docs/modding/guides/native-tails-flappy.md`). An anchorless fresh-game

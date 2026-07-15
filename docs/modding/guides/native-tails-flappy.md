@@ -109,6 +109,12 @@ Unclaimed cells remain host-owned or zero-filled according to the adapter contra
 This is why the sample no longer exhibits the palette corruption from its original
 Sonic 2 prototype.
 
+The adapter resolves those host and creator claims once during level initialization,
+before the pre-level title card can draw. That initial publication matters because
+the S3K red banner uses character line 0, color 6; waiting for the first gameplay
+frame would let the card sample a stale palette texture from the preceding screen.
+Normal frames begin a fresh ownership pass and resubmit the same claims.
+
 `pipe-sheet.yaml` documents the other easy-to-miss rule. A piece's final CRAM line
 is `(sheet.paletteLine + piece.paletteIndex) & 3`. The sheet uses base line 1 and
 piece index 1, so the pipe renders from claimed line 2. `ggfmod convert art` writes
@@ -146,7 +152,10 @@ only on its first trip.
 Death uses the normal player path. The controller calls `applyCrushDeath()` when
 Tails overlaps either pipe body, reaches the top threshold
 `cameraMinY + 0x10`, or reaches the bottom threshold `cameraY + 224`. It does not
-fake damage, hide Tails, or write vertical physics directly.
+fake damage, hide Tails, or write vertical physics directly. The host death
+transition clears active flight before installing the stock `-0x700` death hop;
+subsequent dead frames use normal player gravity, countdown, life loss, and restart
+handling rather than continuing to run Tails' flight controller.
 
 ## 7. Presentation trade-off
 

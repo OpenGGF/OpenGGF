@@ -21,6 +21,7 @@ import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.palette.CustomZonePaletteBridge;
+import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.modzone.ModZoneRuntimeContribution;
 import com.openggf.game.modzone.ModZoneRuntimeProfile;
 import com.openggf.game.rewind.RewindSnapshottable;
@@ -1350,6 +1351,7 @@ public class LevelManager {
                         activeModZoneRuntimeContribution, level, provider);
             }
             if (activeCustomZonePaletteBridge != null) {
+                primeCustomZonePaletteBridge();
                 HudPaletteBridgeAccess.routeLivesPaletteOverrideThroughOwnership(
                         hudRenderManager, true);
             }
@@ -1409,6 +1411,22 @@ public class LevelManager {
         }
         registerPlcArtAdapter(activeModZoneRuntimeProfile != null
                 && !activeModZoneRuntimeProfile.plcLoads() ? null : provider);
+    }
+
+    /**
+     * Publishes the initial custom-zone palette before pre-level presentation
+     * (notably the S3K title card) can render against a palette texture left by
+     * the preceding screen. Later gameplay frames resubmit the same immutable
+     * bridge claims through {@link com.openggf.LevelFrameStep}.
+     */
+    private void primeCustomZonePaletteBridge() {
+        PaletteOwnershipRegistry registry = GameServices.paletteOwnershipRegistryOrNull();
+        if (registry == null) {
+            return;
+        }
+        registry.beginFrame();
+        activeCustomZonePaletteBridge.submitFrameClaims(registry);
+        PaletteWriteSupport.resolvePendingFrameWrites(registry, level, null, graphicsManager);
     }
 
     void submitCustomZonePaletteClaimsForEngine(PaletteOwnershipRegistry registry) {
