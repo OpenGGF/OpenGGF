@@ -1094,6 +1094,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (currentZone != Sonic3kZoneIds.ZONE_MGZ || currentAct != 1) {
             return;
         }
+        // MGZ1BGE_Transition reloads Act 2 behind the still-live
+        // Obj_LevelResults owner. Retain both ending poses until that owner
+        // clears _unkFAA8 at its actual post-tally exit.
+        if (GameServices.gameState().isEndOfLevelActive()) {
+            return;
+        }
         mgzPendingPostTransitionRelease = false;
 
         AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();

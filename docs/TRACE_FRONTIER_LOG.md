@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ seamless-reload frontier advances to results exit
+
+Branch `feature/ai-trace-animation-verification`, after the landing-wait
+milestone. `MGZ1BGE_Normal` queues two Kosinski streams plus one Kosinski
+Module stream when `Obj_LevelResultsCreate` sets `Events_fg_5`; the following
+background routine waits for `Kos_modules_left`, then performs `Load_Level`
+and the `-$2E00/-$600` coordinate shifts while `Obj_LevelResults` is still
+active. The engine instead gated this reload on `End_of_level_flag`, delaying
+it until the tally and results exit roughly five hundred frames later.
+
+MGZ now retains a rewind-captured 26-entry representation of that queued
+secondary-art workload and executes the reload in the owning ScreenEvents
+dispatch. The transition preserves the live results/ring/time state, applies
+the native offsets to players, camera, and camera bounds, and keeps both
+ending poses until the carried results owner actually clears its active flag.
+No trace state, route, frame, hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:106280-106360`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 16009 to frame 16513
+  (`tails_y_speed`, expected `-$0002` / actual `$0000`).
+- MGZ complete-run animation remains at frame 16512, now with the retained
+  Victory animation (`expected $05` / `actual $13`) rather than an early idle
+  release.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The S3K level-event rewind/schema guards pass (54/54).
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ landing-wait frontiers advance past the end sign
 
 Branch `feature/ai-trace-animation-verification`, after the aligned

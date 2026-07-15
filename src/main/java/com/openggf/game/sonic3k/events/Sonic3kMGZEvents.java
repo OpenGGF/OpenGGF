@@ -36,6 +36,7 @@ import com.openggf.sprites.playable.TailsCarryController;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
@@ -75,6 +76,8 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     /** ROM: MGZ1BGE_Transition applies (-$2E00, -$600) to player/camera/objects. */
     private static final int TRANSITION_OFFSET_X = -0x2E00;
     private static final int TRANSITION_OFFSET_Y = -0x600;
+    /** Three queued MGZ2 secondary Kos/KosM streams remain busy for these ScreenEvents entries. */
+    private static final int MGZ2_SECONDARY_KOS_DRAIN_FRAMES = 26;
 
     // ========================================================================
     // Act 2 quake-event state machine (MGZ2_QuakeEvent)
@@ -259,6 +262,8 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     /** Prevents requesting the transition more than once. */
     private boolean transitionRequested;
+    /** ROM: Kos_modules_left workload queued by MGZ1BGE_Normal. */
+    private int transitionKosDrainFrames;
 
     /** ROM: Events_bg+$10 — MGZ2 quake event state machine counter. */
     private int quakeEventRoutine;
@@ -340,6 +345,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         bgRoutine = BG_STAGE_NORMAL;
         eventsFg5 = false;
         transitionRequested = false;
+        transitionKosDrainFrames = 0;
         quakeEventRoutine = QUAKE_CHECK;
         appearance1Complete = false;
         appearance2Complete = false;
@@ -1917,14 +1923,18 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                 if (eventsFg5) {
                     eventsFg5 = false;
                     bgRoutine = BG_STAGE_DO_TRANSITION;
+                    transitionKosDrainFrames = 0;
                     LOG.info("MGZ1 BG: Events_fg_5 detected, advancing to transition stage");
                 }
             }
             case BG_STAGE_DO_TRANSITION -> {
-                // ROM gate: tst.b (Kos_modules_left) — we have no Kos queue, so
-                // gate on endOfLevelFlag (results screen has finished exiting)
-                // to ensure the tally completes before the reload.
-                if (!transitionRequested && gameState().isEndOfLevelFlag()) {
+                // ROM waits only for the three MGZ2 secondary Kos/KosM streams
+                // queued by MGZ1BGE_Normal. Obj_LevelResults remains alive and
+                // continues its tally across Load_Level; End_of_level_flag is
+                // therefore not this transition's owner.
+                transitionKosDrainFrames++;
+                if (!transitionRequested
+                        && transitionKosDrainFrames >= MGZ2_SECONDARY_KOS_DRAIN_FRAMES) {
                     requestMgz2Transition();
                 }
             }
@@ -1946,24 +1956,59 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                 module().getLevelEventProvider());
 
         LevelManager lm = levelManager();
+        int postTransitionMinX = offsetWord(camera().getMinX(), TRANSITION_OFFSET_X);
+        int postTransitionMaxX = offsetWord(camera().getMaxX(), TRANSITION_OFFSET_X);
+        int postTransitionMinY = offsetWord(camera().getMinY(), TRANSITION_OFFSET_Y);
+        int postTransitionMaxY = offsetWord(camera().getMaxY(), TRANSITION_OFFSET_Y);
+        int postTransitionMaxYTarget = offsetWord(camera().getMaxYTarget(), TRANSITION_OFFSET_Y);
         SessionSaveRequests.requestCurrentSessionSave(SaveReason.PROGRESSION_SAVE);
-        lm.requestSeamlessTransition(
+        SeamlessLevelTransitionRequest request =
                 SeamlessLevelTransitionRequest.builder(
                                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                         .targetZoneAct(Sonic3kZoneIds.ZONE_MGZ, 1)
                         .deactivateLevelNow(false)
                         // Results screen already started act 2 music.
                         .preserveMusic(true)
+                        // Obj_LevelResults and its ring/time globals remain live
+                        // while MGZ1BGE_Transition reloads the act behind them.
+                        .preserveLevelGamestate(true)
+                        .preserveEndOfLevelState(true)
                         // Title card skipped during the results path for seamless
                         // transitions; show it after the reload completes.
                         .showInLevelTitleCard(true)
+                        // Native code subtracts the offsets from the live camera
+                        // and all four bounds; it does not recenter after Load_Level.
+                        .preserveOffsetCameraPosition(true)
+                        .postTransitionMinX(postTransitionMinX)
+                        .postTransitionMaxX(postTransitionMaxX)
+                        .postTransitionMinY(postTransitionMinY)
+                        .postTransitionMaxY(postTransitionMaxY)
+                        .postTransitionMaxYTarget(postTransitionMaxYTarget)
                         .playerOffset(TRANSITION_OFFSET_X, TRANSITION_OFFSET_Y)
                         .cameraOffset(TRANSITION_OFFSET_X, TRANSITION_OFFSET_Y)
-                        .build());
+                        .build();
+
+        if (lm.getCurrentLevel() == null) {
+            lm.requestSeamlessTransition(request);
+        } else {
+            try {
+                // MGZ1BGE_Transition performs Load_Level and both coordinate
+                // subtractions inside this background-event dispatch. Deferring
+                // through the outer frame driver leaves one unshifted comparison
+                // frame, unlike the native ScreenEvents path.
+                lm.executeActTransition(request);
+            } catch (IOException e) {
+                throw new IllegalStateException("Failed to apply MGZ act transition", e);
+            }
+        }
 
         LOG.info("MGZ1: requested seamless transition to Act 2 (offset X="
                 + Integer.toHexString(TRANSITION_OFFSET_X) + " Y="
                 + Integer.toHexString(TRANSITION_OFFSET_Y) + ")");
+    }
+
+    private static int offsetWord(short value, int offset) {
+        return ((value & 0xFFFF) + offset) & 0xFFFF;
     }
 
     public boolean isTransitionRequested() {
