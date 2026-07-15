@@ -7,6 +7,9 @@ import com.openggf.data.RomByteReader;
 import com.openggf.game.*;
 import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
+import com.openggf.game.modzone.ModZoneAdapter;
+import com.openggf.game.modzone.ModZoneRuntimeContribution;
+import com.openggf.game.palette.CustomZonePaletteBridge;
 import com.openggf.game.save.SaveSnapshotProvider;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.level.LevelManager;
@@ -66,8 +69,14 @@ public class DelegatingGameModule implements GameModule {
         return base.getPlayableCharacterRegistry();
     }
 
-    @Override public com.openggf.mods.code.ModZoneAdapter getModZoneAdapter() {
+    @Override public ModZoneAdapter getModZoneAdapter() {
         return base.getModZoneAdapter();
+    }
+
+    @Override public CustomZonePaletteBridge createCustomZonePaletteBridge(
+            ModZoneRuntimeContribution contribution, com.openggf.level.Level level,
+            ObjectArtProvider objectArtProvider) {
+        return base.createCustomZonePaletteBridge(contribution, level, objectArtProvider);
     }
 
     @Override

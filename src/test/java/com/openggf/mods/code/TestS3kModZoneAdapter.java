@@ -1,5 +1,10 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.modzone.ModObjectZoneSet;
+import com.openggf.game.modzone.ModPaletteClaim;
+import com.openggf.game.modzone.ModZoneHostMetadata;
+import com.openggf.game.modzone.ModZoneLevelData;
+import com.openggf.game.modzone.ModZoneRegistrationException;
 import com.openggf.game.sonic3k.constants.S3kZoneSet;
 import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.Sonic3kModZoneAdapter;
@@ -43,16 +48,16 @@ class TestS3kModZoneAdapter {
                 new com.openggf.game.sonic3k.Sonic3kGameModule());
         List<ModPaletteClaim> claims = backdropClaim();
 
-        assertThrows(ModRegistrationException.class,
-                () -> adapter.validate("alpha", definition(1, null, claims)));
-        assertThrows(ModRegistrationException.class,
-                () -> adapter.validate("alpha", definition(2, 16, null, claims, List.of())));
-        assertThrows(ModRegistrationException.class,
-                () -> adapter.validate("alpha", definition(2, 8, null, claims,
+        assertThrows(ModZoneRegistrationException.class,
+                () -> adapter.validate("alpha", hostData(definition(1, null, claims))));
+        assertThrows(ModZoneRegistrationException.class,
+                () -> adapter.validate("alpha", hostData(definition(2, 16, null, claims, List.of()))));
+        assertThrows(ModZoneRegistrationException.class,
+                () -> adapter.validate("alpha", hostData(definition(2, 8, null, claims,
                         List.of(new ModLevelDefinition.StockObjectSpawn(
-                                1, 10, 20, 3, 0, 0, false, 20)))));
+                                1, 10, 20, 3, 0, 0, false, 20))))));
         assertDoesNotThrow(() -> adapter.validate("alpha",
-                definition(2, null, claims)));
+                hostData(definition(2, null, claims))));
     }
 
     @Test
@@ -71,11 +76,10 @@ class TestS3kModZoneAdapter {
             var module = new com.openggf.game.sonic3k.Sonic3kGameModule();
             module.createGame(rom);
             var definition = definition(2,
-                    new ModLevelDefinition.S3kMetadata(
-                            ModLevelDefinition.S3kObjectZoneSet.SKL), backdropClaim());
+                    new ModZoneHostMetadata(ModObjectZoneSet.SKL), backdropClaim());
 
             Sonic3kLevel level = assertInstanceOf(Sonic3kLevel.class,
-                    module.getModZoneAdapter().load("alpha", definition));
+                    module.getModZoneAdapter().load("alpha", hostData(definition)));
 
             assertEquals(S3kZoneSet.SKL, level.getObjectZoneSet());
             assertFalse(level.hasStockRomZoneIdentity());
@@ -101,10 +105,9 @@ class TestS3kModZoneAdapter {
                             0, 0, false, 1)));
 
             Sonic3kLevel s3kl = assertInstanceOf(Sonic3kLevel.class,
-                    module.getModZoneAdapter().load("alpha", definition(2,
-                            new ModLevelDefinition.S3kMetadata(
-                                    ModLevelDefinition.S3kObjectZoneSet.S3KL),
-                            backdropClaim())));
+                    module.getModZoneAdapter().load("alpha", hostData(definition(2,
+                            new ModZoneHostMetadata(ModObjectZoneSet.S3KL),
+                            backdropClaim()))));
             assertEquals(S3kZoneSet.S3KL, s3kl.getObjectZoneSet());
             assertFalse(s3kl.hasStockRomZoneIdentity());
         } finally {
@@ -115,8 +118,8 @@ class TestS3kModZoneAdapter {
 
     @Test
     void typedMetadataMapsToTheExactInternalZoneSet() {
-        assertEquals(S3kZoneSet.S3KL, map(ModLevelDefinition.S3kObjectZoneSet.S3KL));
-        assertEquals(S3kZoneSet.SKL, map(ModLevelDefinition.S3kObjectZoneSet.SKL));
+        assertEquals(S3kZoneSet.S3KL, map(ModObjectZoneSet.S3KL));
+        assertEquals(S3kZoneSet.SKL, map(ModObjectZoneSet.SKL));
     }
 
     @Test
@@ -127,11 +130,10 @@ class TestS3kModZoneAdapter {
                 1, 10, 20,
                 com.openggf.game.sonic3k.constants.Sonic3kObjectIds.LBZ_PIPE_PLUG,
                 0, 0, false, 20);
-        ModRegistrationException failure = assertThrows(ModRegistrationException.class,
-                () -> adapter.validate("alpha", definition(2, 8,
-                        new ModLevelDefinition.S3kMetadata(
-                                ModLevelDefinition.S3kObjectZoneSet.S3KL),
-                        backdropClaim(), List.of(stockPipePlug))));
+        ModZoneRegistrationException failure = assertThrows(ModZoneRegistrationException.class,
+                () -> adapter.validate("alpha", hostData(definition(2, 8,
+                        new ModZoneHostMetadata(ModObjectZoneSet.S3KL),
+                        backdropClaim(), List.of(stockPipePlug)))));
 
         assertEquals("MOD_S3K_STOCK_OBJECT_INCOMPATIBLE", failure.findingCode());
     }
@@ -143,8 +145,8 @@ class TestS3kModZoneAdapter {
         var controller = new ModLevelDefinition.KeyedObjectSpawn(
                 1, 10, 20, "alpha:controller", 0, 0, false, 20);
 
-        assertDoesNotThrow(() -> adapter.validate("alpha", definition(2, 8, null,
-                backdropClaim(), List.of(controller))));
+        assertDoesNotThrow(() -> adapter.validate("alpha", hostData(definition(2, 8, null,
+                backdropClaim(), List.of(controller)))));
     }
 
     @Test
@@ -175,24 +177,23 @@ class TestS3kModZoneAdapter {
         var adapter = new com.openggf.game.sonic2.Sonic2ModZoneAdapter(
                 new com.openggf.game.sonic2.Sonic2GameModule());
 
-        assertDoesNotThrow(() -> adapter.validate("alpha", definition(1, null, List.of())));
-        assertThrows(ModRegistrationException.class,
-                () -> adapter.validate("alpha", definition(2,
-                        new ModLevelDefinition.S3kMetadata(
-                                ModLevelDefinition.S3kObjectZoneSet.S3KL), List.of())));
+        assertDoesNotThrow(() -> adapter.validate("alpha", hostData(definition(1, null, List.of()))));
+        assertThrows(ModZoneRegistrationException.class,
+                () -> adapter.validate("alpha", hostData(definition(2,
+                        new ModZoneHostMetadata(ModObjectZoneSet.S3KL), List.of()))));
     }
 
-    private static S3kZoneSet map(ModLevelDefinition.S3kObjectZoneSet source) {
+    private static S3kZoneSet map(ModObjectZoneSet source) {
         return S3kZoneSet.valueOf(source.name());
     }
 
-    static ModLevelDefinition definition(int version, ModLevelDefinition.S3kMetadata metadata,
+    static ModLevelDefinition definition(int version, ModZoneHostMetadata metadata,
                                          List<ModPaletteClaim> claims) {
         return definition(version, 8, metadata, claims, List.of());
     }
 
     static ModLevelDefinition definition(int version, int blockGridSide,
-                                         ModLevelDefinition.S3kMetadata metadata,
+                                         ModZoneHostMetadata metadata,
                                          List<ModPaletteClaim> claims,
                                          List<ModLevelDefinition.ObjectEntry> objects) {
         return new ModLevelDefinition(version, "SKY", 0x40, 0x400, blockGridSide, 1, 1,
@@ -208,6 +209,14 @@ class TestS3kModZoneAdapter {
 
     private static List<ModPaletteClaim> backdropClaim() {
         return List.of(new ModPaletteClaim(2, 0, 0));
+    }
+
+    static ModZoneLevelData hostData(ModLevelDefinition definition) {
+        try {
+            return ModZoneLoader.prepareHostData(definition);
+        } catch (java.io.IOException e) {
+            throw new AssertionError(e);
+        }
     }
 
     private static final class LevelBackedRegistry

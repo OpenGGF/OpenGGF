@@ -1,8 +1,8 @@
-package com.openggf.mods.code;
+package com.openggf.game.modzone;
 
 import com.openggf.game.ModApi;
 
-/** One creator-owned color cell in the host palette. */
+/** One creator-owned color cell in a host-composed palette. */
 @ModApi
 public record ModPaletteClaim(int line, int color, int segaColor) {
     public ModPaletteClaim {

@@ -1,18 +1,16 @@
 package com.openggf.game.sonic2;
 
 import com.openggf.level.Level;
-import com.openggf.mods.code.ModLevelDefinition;
-import com.openggf.mods.code.ModRegistrationException;
-import com.openggf.mods.code.ModZoneAdapter;
-import com.openggf.mods.code.ModZoneDataSelectDecorator;
-import com.openggf.mods.code.ModZoneLoader;
-import com.openggf.mods.code.ModZoneRuntimeProfile;
+import com.openggf.game.modzone.ModZoneAdapter;
+import com.openggf.game.modzone.ModZoneLevelData;
+import com.openggf.game.modzone.ModZoneRegistrationException;
+import com.openggf.game.modzone.ModZoneRuntimeProfile;
 
 import java.io.IOException;
 import java.util.Objects;
 
 /** Sonic 2 host capability for additive mod-zone construction. */
-public final class Sonic2ModZoneAdapter implements ModZoneAdapter, ModZoneDataSelectDecorator {
+public final class Sonic2ModZoneAdapter implements ModZoneAdapter {
     private final Sonic2GameModule gameModule;
 
     public Sonic2ModZoneAdapter(Sonic2GameModule gameModule) {
@@ -20,27 +18,36 @@ public final class Sonic2ModZoneAdapter implements ModZoneAdapter, ModZoneDataSe
     }
 
     @Override
-    public void validate(String ownerModId, ModLevelDefinition level) {
+    public void validate(String ownerModId, ModZoneLevelData level) {
         Objects.requireNonNull(ownerModId, "ownerModId");
         Objects.requireNonNull(level, "level");
         if (level.formatVersion() != 1) {
-            throw new ModRegistrationException(ownerModId,
+            throw new ModZoneRegistrationException(ownerModId,
                     "Sonic 2 additive zones require formatVersion 1");
         }
         if (level.blockGridSide() != 8) {
-            throw new ModRegistrationException(ownerModId,
+            throw new ModZoneRegistrationException(ownerModId,
                     "Sonic 2 runtime requires blockGridSide 8");
         }
     }
 
     @Override
-    public Level load(String ownerModId, ModLevelDefinition level) throws IOException {
+    public Level load(String ownerModId, ModZoneLevelData level) throws IOException {
         validate(ownerModId, level);
-        return ModZoneLoader.load(level, gameModule.getAdditiveLevelRingSpriteSheet());
+        return Sonic2Level.inMemoryBuilder(level.zoneIndex(), level.patternBytes(),
+                        level.chunkBytes(), level.blockBytes())
+                .layout(level.width(), level.height(), level.foregroundMap(),
+                        level.backgroundMap().orElse(null))
+                .paletteLines(level.paletteLines())
+                .solidProfiles(level.solidHeights(), level.solidWidths(), level.solidAngles())
+                .collisionIndices(level.primaryCollisionIndices(), level.secondaryCollisionIndices())
+                .boundaries(level.minX(), level.maxX(), level.minY(), level.maxY())
+                .spawns(level.objects(), level.rings(), gameModule.getAdditiveLevelRingSpriteSheet())
+                .build();
     }
 
     @Override
-    public ModZoneRuntimeProfile runtimeProfile(String ownerModId, ModLevelDefinition level) {
+    public ModZoneRuntimeProfile runtimeProfile(String ownerModId, ModZoneLevelData level) {
         validate(ownerModId, level);
         return ModZoneRuntimeProfile.flatEmpty();
     }
@@ -50,10 +57,12 @@ public final class Sonic2ModZoneAdapter implements ModZoneAdapter, ModZoneDataSe
             com.openggf.game.dataselect.DataSelectHostProfile inherited,
             java.util.function.Supplier<com.openggf.game.ZoneRegistry> effectiveZones,
             java.util.function.BiConsumer<String,
-                    com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink) {
+                    com.openggf.game.dataselect.ModZoneSaveFinding> saveFindingSink) {
         return new com.openggf.game.sonic2.dataselect.S2DataSelectProfile(
                 effectiveZones, finding -> saveFindingSink.accept(
-                        finding.ownerModId() == null ? "s2-save" : finding.ownerModId(), finding));
+                        finding.ownerModId() == null ? "s2-save" : finding.ownerModId(),
+                        new com.openggf.game.dataselect.ModZoneSaveFinding(
+                                finding.ownerModId(), finding.code(), finding.detail())));
     }
 
     @Override

@@ -20,7 +20,9 @@ import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
-import com.openggf.game.sonic3k.S3kCustomZonePaletteBridge;
+import com.openggf.game.palette.CustomZonePaletteBridge;
+import com.openggf.game.modzone.ModZoneRuntimeContribution;
+import com.openggf.game.modzone.ModZoneRuntimeProfile;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.render.AdvancedRenderModeController;
@@ -68,9 +70,6 @@ import com.openggf.level.objects.DefaultPowerUpSpawner;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
-import com.openggf.mods.code.ModZoneRegistry;
-import com.openggf.mods.code.ModZoneRuntimeProfile;
-import com.openggf.mods.code.PreparedModZone;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -211,8 +210,8 @@ public class LevelManager {
     AnimatedPatternManager animatedPatternManager;
     AnimatedPaletteManager animatedPaletteManager;
     private ModZoneRuntimeProfile activeModZoneRuntimeProfile;
-    private PreparedModZone activePreparedModZone;
-    private S3kCustomZonePaletteBridge activeCustomZonePaletteBridge;
+    private ModZoneRuntimeContribution activeModZoneRuntimeContribution;
+    private CustomZonePaletteBridge activeCustomZonePaletteBridge;
     LevelState levelGamestate;
 
     // GPU tilemap lifecycle delegate (build/cache/upload/invalidate)
@@ -477,22 +476,16 @@ public class LevelManager {
      * @return the loaded Level instance (also assigned to {@code this.level})
      */
     public Level loadLevelData(int levelIndex) throws IOException {
-        activePreparedModZone = resolvePreparedModZone(levelIndex);
-        activeModZoneRuntimeProfile = activePreparedModZone != null
-                ? activePreparedModZone.runtimeProfile() : null;
+        activeModZoneRuntimeContribution = gameModule == null ? null
+                : gameModule.getZoneRegistry().modZoneRuntimeContribution(levelIndex);
+        activeModZoneRuntimeProfile = activeModZoneRuntimeContribution != null
+                ? activeModZoneRuntimeContribution.runtimeProfile() : null;
         activeCustomZonePaletteBridge = null;
         Level loaded = gameModule.loadLevelOverride(levelIndex);
         if (loaded == null) loaded = game.loadLevel(levelIndex);
         writeCurrentLevel(loaded);
         rebuildLevelDerivedState();
         return loaded;
-    }
-
-    private PreparedModZone resolvePreparedModZone(int levelIndex) {
-        if (gameModule == null || !(gameModule.getZoneRegistry() instanceof ModZoneRegistry zones)) {
-            return null;
-        }
-        return zones.levelContribution(levelIndex);
     }
 
     /**
@@ -1318,14 +1311,11 @@ public class LevelManager {
 
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
             hudRenderManager.setHudPalettes(provider.getHudTextPaletteLine(), provider.getHudFlashPaletteLine());
-            if (activePreparedModZone != null
-                    && S3kCustomZonePaletteBridge.supports(level)) {
-                activeCustomZonePaletteBridge = new S3kCustomZonePaletteBridge(
-                        activePreparedModZone.ownerModId(),
-                        activePreparedModZone.ownerModId() + ":" + activePreparedModZone.localKey(),
-                        level.getPalette(0), activePreparedModZone.definition().paletteClaims(),
-                        provider.getHudFlashPaletteLine(), provider.getHudStaticArt(),
-                        provider.getHudLivesNumbers(), provider::getHudLivesPaletteOverride);
+            if (activeModZoneRuntimeContribution != null) {
+                activeCustomZonePaletteBridge = gameModule.createCustomZonePaletteBridge(
+                        activeModZoneRuntimeContribution, level, provider);
+            }
+            if (activeCustomZonePaletteBridge != null) {
                 HudPaletteBridgeAccess.routeLivesPaletteOverrideThroughOwnership(
                         hudRenderManager, true);
             }
@@ -3333,7 +3323,7 @@ public class LevelManager {
         levelRenderer.resetState();
         objectRenderManager = null;
         hudRenderManager = null;
-        activePreparedModZone = null;
+        activeModZoneRuntimeContribution = null;
         activeModZoneRuntimeProfile = null;
         activeCustomZonePaletteBridge = null;
         animatedPatternManager = null;

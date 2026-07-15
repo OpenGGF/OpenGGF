@@ -7,10 +7,11 @@ protected constructors, methods, fields, generic bounds, annotations, nested
 types, supertypes, interfaces, record components, and sealed permits clauses is
 part of the same contract and must also be annotated.
 
-The published version is Mod API 2.2.0. Its recursive surface spans many hundreds
-of engine types and is pinned exactly by `mod-api-signatures-2.2.txt` (the
+The published version is Mod API 2.3.0. Its recursive surface spans many hundreds
+of engine types and is pinned exactly by `mod-api-signatures-2.3.txt` (the
 `TestModApiSignatureSurface` guard is the authoritative count). The surface has a
-single reconciled lineage, 1.1.0 -> 1.2.0 -> 2.0.0 -> 2.1.0 -> 2.2.0: 1.1.0 is the
+single reconciled lineage, 1.1.0 -> 1.2.0 -> 2.0.0 -> 2.1.0 -> 2.2.0 -> 2.3.0:
+1.1.0 is the
 original closed baseline; 1.2.0 was an additive minor bump (its frozen historical
 baseline `mod-api-signatures-1.2.txt` contains **875 engine types** and **17,178
 canonical signature entries**, a strict superset of 1.1.0); 2.0.0 was a deliberate
@@ -18,9 +19,11 @@ breaking bump published on top of 1.2.0 (now itself a closed historical baseline
 `mod-api-signatures-2.0.txt`, **873 engine types** and **17,165 canonical signature
 entries**); 2.1.0 was an additive minor bump published on top of 2.0.0 (now itself
 a closed historical baseline, `mod-api-signatures-2.1.txt`, **875 engine types**
-and **17,196 canonical signature entries**); and 2.2.0 is the current additive
-minor bump published on top of 2.1.0 (**876 engine types** and **17,205 canonical
-signature entries**). The breadth is intentional. In particular, the legacy-wide
+and **17,196 canonical signature entries**); 2.2.0 was an additive minor bump on
+top of 2.1.0 (now a closed historical baseline, **876 engine types** and **17,205
+canonical signature entries**); and 2.3.0 is the current additive minor bump on
+top of 2.2.0 (**886 engine types** and **17,339 canonical signature entries**).
+The breadth is intentional. In particular, the legacy-wide
 signatures of `GameModule`, `ObjectServices`, and the object base classes expose
 substantial runtime infrastructure; silently treating those transitive types as
 unsupported would make creator binaries depend on an undocumented, unstable ABI.
@@ -40,20 +43,23 @@ retained and produce ownerless engine entries, so existing 1.1 binaries remain
 source- and binary-compatible.
 
 The published baseline is
-`src/test/resources/mods/mod-api-signatures-2.2.txt`, pinned exactly to the
+`src/test/resources/mods/mod-api-signatures-2.3.txt`, pinned exactly to the
 current canonical surface by `TestModApiSignatureSurface`. The prior
 `mod-api-signatures-1.1.txt` (831 engine types, 16,483 canonical entries),
 `mod-api-signatures-1.2.txt` (875 engine types, 17,178 canonical entries),
 `mod-api-signatures-2.0.txt` (873 engine types, 17,165 canonical entries), and
-`mod-api-signatures-2.1.txt` (875 engine types, 17,196 canonical entries) are
+`mod-api-signatures-2.1.txt` (875 engine types, 17,196 canonical entries), and
+`mod-api-signatures-2.2.txt` (876 engine types, 17,205 canonical entries) are
 retained as closed historical records: 1.1 is the original contract, 1.2 is its
-additive successor, 2.0 is the deliberate breaking bump, and 2.1 is the additive
-bump that 2.2 extends. `TestModApiSignatureSurface` verifies the full lineage —
+additive successor, 2.0 is the deliberate breaking bump, and 2.1/2.2 are additive
+steps that 2.3 extends. `TestModApiSignatureSurface` verifies the full lineage —
 1.1 -> 1.2 is asserted additive (1.2 is a strict superset of 1.1), 1.2 -> 2.0 is
 asserted to be a declared breaking transition (see the 2.0.0 breaking-transition
 section below), 2.0 -> 2.1 is asserted additive (2.1 is a strict superset of 2.0;
 see the 2.1.0 additive-bump section below), and 2.1 -> 2.2 is asserted additive
-(2.2 is a strict superset of 2.1; see the 2.2.0 additive-bump section below) — so
+(2.2 is a strict superset of 2.1; see the 2.2.0 additive-bump section below), and
+2.2 -> 2.3 is asserted additive (2.3 is a strict superset of 2.2; see the 2.3.0
+additive-bump section below) — so
 each step's changes are never silently absorbed into an undocumented jump. The
 guard requires the published baseline to remain a subset of the current canonical
 surface, so removals and changes fail while reviewed compatible additions can be
@@ -66,7 +72,21 @@ published baseline:
    allowlisting the dependency;
 4. add a JDK type only to the explicit platform allowlist after compatibility
    review; package-prefix exemptions are forbidden;
-5. regenerate the sorted LF baseline and re-run the Javadoc/SDK packaging tests.
+5. regenerate the sorted LF baseline with the dependency-complete snapshot command
+   below and re-run the Javadoc/SDK packaging tests.
+
+On PowerShell, `ModApiSignatureSurface --snapshot` requires both the compiled engine
+classes and its ASM dependency. Use this exact reproducible sequence (the shorter
+`java -cp target/classes ...` form is insufficient and fails with
+`NoClassDefFoundError`):
+
+```powershell
+mvn "-DskipTests" compile
+mvn dependency:build-classpath "-Dmdep.outputFile=target/mod-api-snapshot-classpath.txt"
+$cp = "target/classes;$((Get-Content target/mod-api-snapshot-classpath.txt -Raw).Trim())"
+java -cp $cp com.openggf.mods.code.ModApiSignatureSurface --snapshot |
+    Set-Content -Encoding utf8NoBOM src/test/resources/mods/mod-api-signatures-2.3.txt
+```
 
 The 1.2 roots add the character and standalone creator path: owner-tagged
 `CharacterKey`/`CharacterDefinition` registration and playable construction, plus
@@ -90,7 +110,7 @@ a deliberate breaking-version transition and migration guidance.
 
 ## Mod API 2.0.0 breaking transition
 
-`ModApiVersion.CURRENT` is `2.0.0`. This is a deliberate major-version break from
+At publication, `ModApiVersion.CURRENT` became `2.0.0`. This is a deliberate major-version break from
 `1.2.0` (the additive successor of `1.1.0`): the rewind-reference-closure and
 per-game rules work removed and changed signatures that were frozen in the 1.2
 surface — and, because 1.2 is a strict superset of 1.1, in the 1.1 surface as
@@ -132,7 +152,7 @@ Signatures removed or changed between 1.1 and 2.0 (the reason for the major bump
 
 ## Mod API 2.1.0 additive bump
 
-`ModApiVersion.CURRENT` is `2.1.0`. This is a same-major additive minor bump
+At publication, `ModApiVersion.CURRENT` became `2.1.0`. This is a same-major additive minor bump
 above `2.0.0`: it publishes the ROM-art intake surface that lets Sonic 2 patch
 mods stage object art materialized from the user's ROM at gameplay launch
 instead of shipping baked art assets.
@@ -168,7 +188,7 @@ also a closed historical baseline, extended by 2.2.
 
 ## Mod API 2.2.0 additive bump
 
-`ModApiVersion.CURRENT` is `2.2.0`. This is a same-major additive minor bump
+At publication, `ModApiVersion.CURRENT` became `2.2.0`. This is a same-major additive minor bump
 above `2.1.0`: it publishes the playable-subclass rewind hooks that let a
 compiled-mod playable character (Phase 3 owner-tagged character) capture and
 restore its own rewind-relevant state alongside the base `PlayerRewindExtra`
@@ -206,11 +226,50 @@ verbatim as a compatibility overload and always yields a `null` `subclassExtra`,
 matching the pattern used by the earlier standalone, Phase-2, and ROM-art
 canonical-shape additions.
 
-No existing 2.1 signature was removed, narrowed, or changed. `mod-api-signatures-2.1.txt`
-is retained as a closed historical baseline; `mod-api-signatures-2.2.txt` is the
-current published baseline and is a strict superset of it.
+No existing 2.1 signature was removed, narrowed, or changed. Both
+`mod-api-signatures-2.1.txt` and `mod-api-signatures-2.2.txt` are retained as closed
+historical baselines; 2.2 is a strict superset of 2.1.
 
-When the current surface next drifts, refreeze `mod-api-signatures-2.2.txt`
-(additions only, published with a same-major minor bump) or, for further
-removals/changes, repeat a deliberate breaking-version transition like the 2.0.0
-one above.
+## Mod API 2.3.0 additive bump
+
+`ModApiVersion.CURRENT` is `2.3.0`. This same-major additive minor bump above 2.2.0
+publishes the host-adapted additive-zone seam used by strict Sonic 3&K level format
+v2 while preserving the Sonic 2/standalone format-v1 route unchanged.
+
+Added signatures:
+
+- **`GameModule.getModZoneAdapter()`** and the forwarding
+  **`DelegatingGameModule.getModZoneAdapter()`**, with
+  **`GameModule.EMPTY_MOD_ZONE_ADAPTER`**, let registration validate and load a
+  complete level through the selected host instead of branching on a game name in
+  shared mod runtime code.
+- **`ModZoneAdapter`** publishes the narrow `validate`, `load`, and `runtimeProfile`
+  contract over immutable, game-owned `ModZoneLevelData`. An unsupported host
+  rejects the contribution before publication. `ModZoneRuntimeContribution` and
+  `ZoneRegistry.modZoneRuntimeContribution(...)` carry that resolved payload to
+  gameplay without introducing a `game -> mods` or `level -> mods` dependency.
+- **`ModZoneHostMetadata`** and **`ModObjectZoneSet`** (`S3KL`/`SKL`) carry typed
+  object-factory identity, while `ModLevelDefinition.hostMetadata()` exposes it
+  without converting the tagged set into a runtime index.
+- **`ModPaletteClaim`** and `ModLevelDefinition.paletteClaims()` publish sparse
+  per-cell Genesis palette ownership. S3K retains host line 0 and actual lives-HUD
+  cells; level art must claim every other reachable indexed color.
+- **`ModZoneRuntimeProfile`** and its `FLAT` scroll policy describe the intentionally
+  empty initial runtime: no stock animation, PLC, special-render, or advanced-render
+  features.
+- **`GameModule.createCustomZonePaletteBridge(...)`** and
+  **`CustomZonePaletteBridge`** keep host palette composition behind a game-owned
+  interface; shared `LevelManager` never names the S3K implementation.
+
+The engine implementation also preserves S3K mod zones in saves as tagged
+owner/local identities and falls back to AIZ1 when an owner is disabled, without
+trusting a synthetic runtime index. Those save/profile adapters are host internals,
+not additional recursive creator types.
+
+No existing 2.2 signature was removed, narrowed, or changed.
+`mod-api-signatures-2.2.txt` remains immutable; `mod-api-signatures-2.3.txt` is its
+strict additive superset and the live exact pin.
+
+When the current surface next drifts, add a new baseline for an additive same-major
+minor bump; never rewrite 2.3. For removals or changes, repeat a deliberate breaking
+transition like 2.0.0.

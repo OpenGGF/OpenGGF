@@ -1,6 +1,9 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.CustomZonePaletteBridge;
+import com.openggf.game.modzone.ModPaletteClaim;
+import com.openggf.game.modzone.ModZoneRegistrationException;
 import com.openggf.game.palette.PaletteWrite;
 import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.level.Palette;
@@ -9,8 +12,6 @@ import com.openggf.level.LevelOrigin;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.HudStaticArt;
 import com.openggf.level.render.SpriteMappingPiece;
-import com.openggf.mods.code.ModPaletteClaim;
-import com.openggf.mods.code.ModRegistrationException;
 
 import java.util.List;
 import java.util.Objects;
@@ -20,7 +21,7 @@ import java.util.function.Supplier;
  * Composes immutable custom-zone palette claims with host-owned character and
  * HUD palette data. Stock levels do not install this bridge.
  */
-public final class S3kCustomZonePaletteBridge {
+public final class S3kCustomZonePaletteBridge implements CustomZonePaletteBridge {
     public static final String CHARACTER_OWNER = "host:s3k-character";
     public static final String HUD_OWNER = "host:s3k-hud";
 
@@ -73,7 +74,7 @@ public final class S3kCustomZonePaletteBridge {
         for (ModPaletteClaim claim : creatorClaims) {
             Objects.requireNonNull(claim, "creator palette claim");
             if (claim.line() == 0) {
-                throw new ModRegistrationException(ownerModId,
+                throw new ModZoneRegistrationException(ownerModId,
                         "MOD_PALETTE_RESERVED",
                         "Creator palette claim targets host-reserved line " + claim.line()
                                 + ", color " + claim.color(),
@@ -89,7 +90,7 @@ public final class S3kCustomZonePaletteBridge {
         validateCreatorClaims(ownerModId, creatorClaims);
         for (ModPaletteClaim claim : creatorClaims) {
             if (claim.line() == hudPaletteLine && hudUsedColors[claim.color()]) {
-                throw new ModRegistrationException(ownerModId,
+                throw new ModZoneRegistrationException(ownerModId,
                         "MOD_PALETTE_RESERVED",
                         "Creator palette claim targets host HUD-reserved line " + claim.line()
                                 + ", color " + claim.color(),

@@ -1,5 +1,8 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.modzone.ModObjectZoneSet;
+import com.openggf.game.modzone.ModPaletteClaim;
+import com.openggf.game.modzone.ModZoneHostMetadata;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.StreamReadConstraints;
@@ -78,7 +81,7 @@ public final class ModLevelDefinitionParser {
         ModLevelDefinition.Start start = parseStart(required(metadata, "start"), bounds);
         ModLevelDefinition.Music music = parseMusic(required(metadata, "music"), limits);
         AssetNames names = parseAssets(required(metadata, "assets"), reference, limits, version);
-        ModLevelDefinition.S3kMetadata s3kMetadata = version == 2
+        ModZoneHostMetadata hostMetadata = version == 2
                 ? parseHostMetadata(required(metadata, "hostMetadata"), limits) : null;
         List<ModPaletteClaim> paletteClaims = version == 2
                 ? parsePaletteClaims(required(metadata, "paletteClaims"), limits) : List.of();
@@ -121,7 +124,7 @@ public final class ModLevelDefinitionParser {
                 blocks.payload(), foreground.cells(), background == null ? null : background.cells(),
                 heights.payload(), widths.payload(), angles.payload(), primary.indices(),
                 secondary.indices(), palettes, patterns.count(), chunks.count(), blocks.count(),
-                heights.count(), s3kMetadata, paletteClaims);
+                heights.count(), hostMetadata, paletteClaims);
     }
 
     private static JsonNode parseJson(byte[] json, ModInputLimits limits) throws IOException {
@@ -204,7 +207,7 @@ public final class ModLevelDefinitionParser {
                         ? Optional.of(asset(node, "palettes", ref, limits)) : Optional.empty());
     }
 
-    private static ModLevelDefinition.S3kMetadata parseHostMetadata(JsonNode node,
+    private static ModZoneHostMetadata parseHostMetadata(JsonNode node,
             ModInputLimits limits) throws IOException {
         object(node, "hostMetadata"); only(node, HOST_METADATA, "hostMetadata");
         JsonNode s3k = required(node, "s3k");
@@ -212,8 +215,7 @@ public final class ModLevelDefinitionParser {
         String value = text(required(s3k, "objectZoneSet"),
                 "hostMetadata.s3k.objectZoneSet", limits);
         try {
-            return new ModLevelDefinition.S3kMetadata(
-                    ModLevelDefinition.S3kObjectZoneSet.valueOf(value));
+            return new ModZoneHostMetadata(ModObjectZoneSet.valueOf(value));
         } catch (IllegalArgumentException error) {
             throw new IOException("hostMetadata.s3k.objectZoneSet must be S3KL or SKL", error);
         }

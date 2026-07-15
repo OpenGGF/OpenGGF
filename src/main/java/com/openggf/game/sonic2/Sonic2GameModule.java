@@ -138,7 +138,7 @@ public class Sonic2GameModule implements GameModule {
     }
 
     @Override
-    public com.openggf.mods.code.ModZoneAdapter getModZoneAdapter() {
+    public com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter() {
         return modZoneAdapter;
     }
 

@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k;
 
 import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
+import com.openggf.game.modzone.ModPaletteClaim;
 import com.openggf.game.sonic3k.constants.S3kZoneSet;
 import com.openggf.level.Chunk;
 import com.openggf.level.LevelConstants;
@@ -11,7 +12,6 @@ import com.openggf.level.SolidTile;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
-import com.openggf.mods.code.ModPaletteClaim;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 

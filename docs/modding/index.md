@@ -30,7 +30,7 @@ effort.
 - [`ggfmod` command reference](ggfmod.md)
 - [Manifest v1](formats/manifest.md)
 - [Baked art containers](formats/baked-containers.md)
-- [`ModLevelDefinition` v1](formats/level-definition.md)
+- [`ModLevelDefinition` formats v1 and v2](formats/level-definition.md)
 - [Audio manifest v1](formats/audio-manifest.md)
 - [Character archetypes](concepts/character-archetypes.md)
 - [Executable-code trust](concepts/trust.md)

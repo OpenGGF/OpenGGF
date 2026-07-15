@@ -6,16 +6,18 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
+import com.openggf.game.modzone.ModZoneAdapter;
+import com.openggf.game.modzone.ModZoneLevelData;
+import com.openggf.game.modzone.ModZoneRegistrationException;
+import com.openggf.game.modzone.ModZoneRuntimeContribution;
+import com.openggf.game.modzone.ModZoneRuntimeProfile;
+import com.openggf.game.palette.CustomZonePaletteBridge;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectPlacementEncoding;
 import com.openggf.level.objects.PlaneSwitcherConfig;
 import com.openggf.level.objects.TouchResponseTable;
-import com.openggf.mods.code.ModLevelDefinition;
-import com.openggf.mods.code.ModRegistrationException;
-import com.openggf.mods.code.ModZoneAdapter;
-import com.openggf.mods.code.ModZoneRuntimeProfile;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SuperStateController;
@@ -25,23 +27,23 @@ import java.util.Optional;
 @ModApi
 public interface GameModule {
     ModZoneAdapter EMPTY_MOD_ZONE_ADAPTER = new ModZoneAdapter() {
-        private ModRegistrationException unsupported(String ownerModId) {
-            return new ModRegistrationException(ownerModId,
+        private ModZoneRegistrationException unsupported(String ownerModId) {
+            return new ModZoneRegistrationException(ownerModId,
                     "Host game does not support additive mod zones");
         }
 
         @Override
-        public void validate(String ownerModId, ModLevelDefinition level) {
+        public void validate(String ownerModId, ModZoneLevelData level) {
             throw unsupported(ownerModId);
         }
 
         @Override
-        public com.openggf.level.Level load(String ownerModId, ModLevelDefinition level) {
+        public com.openggf.level.Level load(String ownerModId, ModZoneLevelData level) {
             throw unsupported(ownerModId);
         }
 
         @Override
-        public ModZoneRuntimeProfile runtimeProfile(String ownerModId, ModLevelDefinition level) {
+        public ModZoneRuntimeProfile runtimeProfile(String ownerModId, ModZoneLevelData level) {
             throw unsupported(ownerModId);
         }
 
@@ -78,6 +80,14 @@ public interface GameModule {
     /** Returns the host-game capability for additive mod zones. */
     default ModZoneAdapter getModZoneAdapter() {
         return EMPTY_MOD_ZONE_ADAPTER;
+    }
+
+    /** Creates any host-specific palette composition required by one additive zone. */
+    default CustomZonePaletteBridge createCustomZonePaletteBridge(
+            ModZoneRuntimeContribution contribution,
+            com.openggf.level.Level level,
+            ObjectArtProvider objectArtProvider) {
+        return null;
     }
 
     ObjectRegistry createObjectRegistry();

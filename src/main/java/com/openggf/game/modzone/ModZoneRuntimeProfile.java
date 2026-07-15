@@ -1,10 +1,10 @@
-package com.openggf.mods.code;
+package com.openggf.game.modzone;
 
 import com.openggf.game.ModApi;
 
 import java.util.Objects;
 
-/** Runtime feature profile selected by the host adapter for an additive zone. */
+/** Host-selected runtime features for one additive zone. */
 @ModApi
 public record ModZoneRuntimeProfile(
         ScrollPolicy scroll,

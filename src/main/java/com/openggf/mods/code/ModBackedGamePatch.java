@@ -7,6 +7,9 @@ import com.openggf.game.patch.GameplayLaunchRequest;
 import com.openggf.game.patch.LogicalRom;
 import com.openggf.game.patch.PatchContext;
 import com.openggf.game.patch.DelegatingGameModule;
+import com.openggf.game.modzone.ModZoneAdapter;
+import com.openggf.game.modzone.ModZoneLevelData;
+import com.openggf.game.modzone.ModZoneRuntimeProfile;
 import com.openggf.io.ModInputLimits;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -111,21 +114,20 @@ public final class ModBackedGamePatch implements GamePatch {
                         "Host game does not support additive mod zones", null, null);
             }
             resolvedZones = resolvedZones.stream().map(zone -> {
-                zoneAdapter.validate(zone.ownerModId(), zone.definition());
+                ModZoneLevelData hostData = prepareHostData(zone);
+                zoneAdapter.validate(zone.ownerModId(), hostData);
                 ModZoneRuntimeProfile profile = zoneAdapter.runtimeProfile(
-                        zone.ownerModId(), zone.definition());
+                        zone.ownerModId(), hostData);
                 if (!ModZoneRuntimeProfile.flatEmpty().equals(profile)) {
                     throw new ModRegistrationException(zone.ownerModId(),
                             "MOD_ZONE_RUNTIME_PROFILE_UNSUPPORTED",
                             "Host adapter requested unsupported additive-zone runtime features",
                             null, null);
                 }
-                return zone.withRuntimeProfile(profile);
+                return zone.withRuntimeProfile(profile, hostData);
             }).toList();
         }
         List<PreparedModZone> publishedZones = resolvedZones;
-        ModZoneDataSelectDecorator dataSelectDecorator =
-                zoneAdapter instanceof ModZoneDataSelectDecorator decorator ? decorator : null;
         List<ModObjectKeyRegistry.Registration> registrations = plan.objectFactories().entrySet().stream()
                 .map(entry -> new ModObjectKeyRegistry.Registration(
                         plan.ownerModId(), entry.getKey(), entry.getValue()))
@@ -198,7 +200,7 @@ public final class ModBackedGamePatch implements GamePatch {
                 if (registry instanceof ModZoneRegistry mods) {
                     PreparedModZone contribution = mods.levelContribution(levelIndex);
                     if (contribution != null) {
-                        return zoneAdapter.load(contribution.ownerModId(), contribution.definition());
+                        return zoneAdapter.load(contribution.ownerModId(), contribution.hostData());
                     }
                 }
                 return super.loadLevelOverride(levelIndex);
@@ -237,9 +239,11 @@ public final class ModBackedGamePatch implements GamePatch {
                 if (dataSelectHost == null) {
                     com.openggf.game.dataselect.DataSelectHostProfile inherited =
                             super.getDataSelectHostProfile();
-                    dataSelectHost = dataSelectDecorator == null ? inherited
-                            : dataSelectDecorator.decorateHostProfile(
-                                    inherited, this::getZoneRegistry, saveFindingSink);
+                    dataSelectHost = zoneAdapter.decorateHostProfile(
+                            inherited, this::getZoneRegistry,
+                            (owner, finding) -> saveFindingSink.accept(owner,
+                                    new com.openggf.game.sonic2.dataselect.S2SaveFinding(
+                                            finding.ownerModId(), finding.code(), finding.detail())));
                 }
                 return dataSelectHost;
             }
@@ -251,9 +255,8 @@ public final class ModBackedGamePatch implements GamePatch {
                 if (dataSelectPresentation == null) {
                     com.openggf.game.dataselect.DataSelectPresentationProvider inherited =
                             super.getDataSelectPresentationProvider();
-                    dataSelectPresentation = dataSelectDecorator == null ? inherited
-                            : dataSelectDecorator.decoratePresentationProvider(
-                                    inherited, getDataSelectHostProfile());
+                    dataSelectPresentation = zoneAdapter.decoratePresentationProvider(
+                            inherited, getDataSelectHostProfile());
                 }
                 return dataSelectPresentation;
             }
@@ -263,5 +266,14 @@ public final class ModBackedGamePatch implements GamePatch {
                 return getDataSelectPresentationProvider();
             }
         };
+    }
+
+    private static ModZoneLevelData prepareHostData(PreparedModZone zone) {
+        try {
+            return ModZoneLoader.prepareHostData(zone.definition());
+        } catch (IOException e) {
+            throw new ModRegistrationException(zone.ownerModId(), "MOD_ZONE_INVALID",
+                    "Unable to prepare additive-zone data", null, e);
+        }
     }
 }

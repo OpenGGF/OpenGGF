@@ -1,6 +1,7 @@
 package com.openggf.mods.code;
 
 import com.openggf.game.sonic2.Sonic2Level;
+import com.openggf.game.modzone.ModZoneLevelData;
 import com.openggf.level.Level;
 import com.openggf.level.ModLevel;
 import com.openggf.level.objects.ObjectSpawn;
@@ -41,6 +42,22 @@ public final class ModZoneLoader {
                         definition.bounds().minY(), definition.bounds().maxY())
                 .spawns(objects, rings, Objects.requireNonNull(ringSheet, "ringSheet"))
                 .build();
+    }
+
+    /** Converts a private parsed definition into the neutral game-owned host seam. */
+    public static ModZoneLevelData prepareHostData(ModLevelDefinition definition) throws IOException {
+        Objects.requireNonNull(definition, "definition");
+        return new ModZoneLevelData(
+                definition.formatVersion(), definition.zoneIndex(), definition.blockGridSide(),
+                definition.width(), definition.height(), definition.bounds().minX(),
+                definition.bounds().maxX(), definition.bounds().minY(), definition.bounds().maxY(),
+                definition.patternBytes(), definition.chunkBytes(), definition.blockBytes(),
+                definition.foregroundMap(), definition.backgroundMap().orElse(null),
+                definition.solidHeights(), definition.solidWidths(), definition.solidAngles(),
+                definition.primaryCollisionIndices(), definition.secondaryCollisionIndices(),
+                definition.paletteLines(), definition.hostMetadata(), definition.paletteClaims(),
+                decodeObjects(definition, true), decodeRings(definition), definition.patternCount(),
+                definition.chunkCount(), definition.blockCount());
     }
 
     /** Builds a standalone level without consulting a ROM or host game module. */

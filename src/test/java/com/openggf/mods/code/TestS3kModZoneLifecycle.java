@@ -1,5 +1,6 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.modzone.ModPaletteClaim;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
@@ -20,7 +21,6 @@ import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.EditorCursorState;
 import com.openggf.game.session.EditorModeContext;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplaySessionFactory;
@@ -33,6 +33,7 @@ import com.openggf.game.sonic3k.dataselect.S3kSavedZone;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -56,7 +57,7 @@ class TestS3kModZoneLifecycle {
 
     @BeforeAll
     static void configureServices() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetAll();
     }
 
     @AfterEach

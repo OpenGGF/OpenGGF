@@ -3,6 +3,8 @@ package com.openggf.game.sonic3k;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.palette.PaletteSurface;
 import com.openggf.game.palette.PaletteWrite;
+import com.openggf.game.modzone.ModPaletteClaim;
+import com.openggf.game.modzone.ModZoneRegistrationException;
 import com.openggf.level.Palette;
 import com.openggf.level.Map;
 import com.openggf.level.MutableLevel;
@@ -11,8 +13,6 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.objects.HudStaticArt;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
-import com.openggf.mods.code.ModPaletteClaim;
-import com.openggf.mods.code.ModRegistrationException;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -53,7 +53,7 @@ class TestS3kCustomZonePaletteBridge {
     @Test
     void creatorCannotClaimCharacterOrConfiguredHudReservation() {
         assertThrows(IllegalArgumentException.class, () -> new ModPaletteClaim(0, 2, 0x0EEE));
-        assertThrows(ModRegistrationException.class,
+        assertThrows(ModZoneRegistrationException.class,
                 () -> new S3kCustomZonePaletteBridge(
                         "sample", "sample:level", new Palette(),
                         List.of(new ModPaletteClaim(2, 12, 0x0EEE)),

@@ -4,15 +4,16 @@ This page is the detailed additive-content reference. New creators should start 
 the [handbook index](index.md), which orders the six quickstarts by effort and links
 the format, trust, identity, troubleshooting, and sample references.
 
-OpenGGF Mod API 2.0 supports restart-loaded music packs, code-backed objects,
-baked art, complete Sonic 2 zones, playable characters, and no-ROM standalone
-games. Mods are discovered from the
+OpenGGF Mod API 2.3 supports restart-loaded music packs, code-backed objects,
+baked art, complete Sonic 2 and Sonic 3&K zones, playable characters, and no-ROM
+standalone games. Mods are discovered from the
 process `mods/` directory at restart; executable mods must be enabled and granted
 trust in the Mod Manager before they run.
 
-The public mod API is version `2.2.0` (a deliberate breaking bump from `1.1.0` via
+The public mod API is version `2.3.0` (a deliberate breaking bump from `1.1.0` via
 the additive `1.2.0` step, followed by the additive `2.1.0` ROM-art intake step and
-the additive `2.2.0` playable-subclass rewind capture hooks; see
+the additive `2.2.0` playable-subclass rewind capture hooks, then the additive
+`2.3.0` host-adapted S3K zone surface; see
 `docs/architecture/mod-api-compatibility.md`). Mods must declare a `2.x` engine range
 such as `>=2.0.0 <3.0.0`. Start with the guide for the contribution you are building:
 
@@ -135,9 +136,9 @@ real decompression, mapping, and DPLC parsing happen at gameplay launch once the
 player's ROM is available.
 
 **Palette.** `paletteLine` is a palette *line* index (0-3) into the active zone
-palette, not a ROM color address — the sheet's actual colors come from the mod
-zone's own `palettes.bin` (or the stock zone's palette, for objects placed in
-unmodified zones), matching whichever palette line the mod assigns.
+palette, not a ROM color address — in an S2 format-v1 zone the sheet's actual colors
+come from that zone's `palettes.bin` (or the stock palette in an unmodified zone),
+matching whichever palette line the mod assigns.
 
 **DPLC.** An optional `dplcAddress` (S2 player-format DPLC table) flattens
 frame-by-frame VRAM tile swaps into one static sheet, the same technique the engine
@@ -159,9 +160,10 @@ Once materialized, the sheet is served through the normal object-art path: call
 
 ## Add a Sonic 2 zone
 
-Phase 2 new-zone support is intentionally Sonic 2 only. In the editor, start from a
-level, make the desired changes, and use the full-level export into the mod project's
-source tree. A full export is different from the editor's sidecar/delta save: the
+The format-v1 additive-zone path is intentionally Sonic 2 only; S3K uses format v2
+as described in the next section. In the editor, start from a level, make the desired
+changes, and use the full-level export into the mod project's source tree. A full
+export is different from the editor's sidecar/delta save: the
 export directory must contain these required files:
 
 ```text
@@ -208,6 +210,33 @@ tagged destination resolvable again.
 Full exports may contain material derived from a user-supplied ROM. Mod authors are
 responsible for ensuring they have the right to distribute every exported asset;
 shipping a lightly edited stock level may distribute copyrighted level data.
+
+## Add a Sonic 3&K zone
+
+Mod API 2.3 adds an S3K host adapter for additive zones. Use level format v2 and
+declare `baseGame: s3k`; the v1 Sonic 2 and standalone paths above are unchanged.
+Format v2 keeps the bounded pattern, chunk, block, map, solid, and collision files,
+but removes `palettes.bin`. Its `hostMetadata.s3k.objectZoneSet` value is `S3KL` or
+`SKL`, while `paletteClaims` lists only the line 1-3 color cells used by reachable
+level art. See the [exact level-format reference](formats/level-definition.md).
+
+For a namespaced-object-only level, write `S3KL` as the default object set. If any
+entry uses `stockObjectId`, select the intended set explicitly; registration rejects
+stock objects whose factories depend on a real ROM zone. Namespaced mod objects are
+the reliable path for custom gameplay.
+
+S3K supplies the selected character palette on line 0 and reserves only the cells
+actually used by the lives HUD. The creator owns every other declared sparse cell.
+Claims that overlap host-owned line 0 or a live HUD cell fail registration instead
+of creating a frame-order-dependent palette conflict. The custom-zone runtime is
+otherwise deliberately empty: flat scroll and no stock animated tiles, PLC loads,
+zone features/events, special passes, or advanced render modes.
+
+Registration remains additive and tagged. Runtime zone indices may change with the
+enabled mod set, so saves store `savedZone.mod.owner/local` identity rather than that
+synthetic index. If the owner is later disabled, S3K data select preserves the slot
+but safely falls back to AIZ1; re-enabling the owner makes the tagged destination
+resolvable again.
 
 ## Make a data-only art reskin
 

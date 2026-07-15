@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Mod API 2.3.0: host-adapted additive Sonic 3&K zones.** The mod runtime now
+  delegates complete-zone validation/loading to a typed, game-owned `ModZoneAdapter` instead of
+  selecting behavior through game-name branches. Strict level format v2 adds typed
+  S3K object-set metadata and sparse Genesis palette claims while leaving the Sonic
+  2/standalone format-v1 contract unchanged. Custom S3K zones compose host-owned
+  character line 0 and actual lives-HUD cells with creator-owned level colors, use
+  empty flat runtime defaults (no stock events, animation, PLC, or render effects),
+  retain stock object-set identity through mutable/editor/rewind paths, and persist
+  owner/local zone keys in S3K saves with safe AIZ1 fallback when an owner is absent.
+  Neutral `ModZoneLevelData` / `ModZoneRuntimeContribution` payloads and a host
+  palette-bridge interface keep shared gameplay code independent of the private
+  mod parser and concrete S3K palette composer. The exact additive ABI is frozen
+  in `mod-api-signatures-2.3.txt`.
 - **fix: SDK sprite conversion now emits Genesis column-major multi-tile pieces.**
   `ggfmod convert art` previously wrote each piece row-major even though native
   mappings and `SpritePieceRenderer` consume columns first, scrambling rectangular

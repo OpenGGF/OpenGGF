@@ -1,5 +1,6 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.modzone.ModPaletteClaim;
 import com.openggf.level.Chunk;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.Pattern;

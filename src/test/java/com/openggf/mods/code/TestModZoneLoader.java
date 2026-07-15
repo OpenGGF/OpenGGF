@@ -1,5 +1,9 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.modzone.ModPaletteClaim;
+import com.openggf.game.modzone.ModZoneAdapter;
+import com.openggf.game.modzone.ModZoneLevelData;
+import com.openggf.game.modzone.ModZoneRuntimeProfile;
 import com.openggf.game.ZoneKey;
 import com.openggf.game.MusicReference;
 import com.openggf.game.ZoneProgressionPlan;
@@ -31,7 +35,7 @@ class TestModZoneLoader {
     void patchDelegatesPreparedZoneToResolvedModuleAdapter() throws Exception {
         ModZoneAdapter adapter = mock(ModZoneAdapter.class);
         ModLevelDefinition definition = minimalDefinition();
-        when(adapter.runtimeProfile("alpha", definition))
+        when(adapter.runtimeProfile(eq("alpha"), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(ModZoneRuntimeProfile.flatEmpty());
         GameModule host = moduleProxy(stockRegistry(), adapter);
         GameModule resolved = new ModBackedGamePatch(zonePlan("alpha", "zone", definition))
@@ -39,8 +43,8 @@ class TestModZoneLoader {
 
         resolved.loadLevelOverride(definition.levelIndex());
 
-        verify(adapter).validate(eq("alpha"), same(definition));
-        verify(adapter).load(eq("alpha"), same(definition));
+        verify(adapter).validate(eq("alpha"), org.mockito.ArgumentMatchers.any());
+        verify(adapter).load(eq("alpha"), org.mockito.ArgumentMatchers.any());
     }
 
     @Test
@@ -493,9 +497,9 @@ class TestModZoneLoader {
 
     private static GameModule moduleProxy(ZoneRegistry registry) {
         return moduleProxy(registry, new ModZoneAdapter() {
-            public void validate(String owner, ModLevelDefinition level) { }
-            public com.openggf.level.Level load(String owner, ModLevelDefinition level) { return null; }
-            public ModZoneRuntimeProfile runtimeProfile(String owner, ModLevelDefinition level) {
+            public void validate(String owner, ModZoneLevelData level) { }
+            public com.openggf.level.Level load(String owner, ModZoneLevelData level) { return null; }
+            public ModZoneRuntimeProfile runtimeProfile(String owner, ModZoneLevelData level) {
                 return ModZoneRuntimeProfile.flatEmpty();
             }
         });

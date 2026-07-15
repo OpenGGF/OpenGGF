@@ -1,5 +1,7 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.modzone.ModObjectZoneSet;
+import com.openggf.game.modzone.ModPaletteClaim;
 import com.openggf.io.DirectoryAccess;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
@@ -26,8 +28,8 @@ class TestModLevelDefinitionParser {
         ModLevelDefinition level = readFixture("s3k-v2-valid");
 
         assertEquals(2, level.formatVersion());
-        assertEquals(ModLevelDefinition.S3kObjectZoneSet.S3KL,
-                level.s3kMetadata().orElseThrow().objectZoneSet());
+        assertEquals(ModObjectZoneSet.S3KL,
+                level.hostMetadata().orElseThrow().objectZoneSet());
         assertEquals(List.of(new ModPaletteClaim(1, 0, 0x0EEE)), level.paletteClaims());
         assertEquals(0, level.paletteLines().length);
     }
@@ -45,7 +47,7 @@ class TestModLevelDefinitionParser {
 
         assertEquals(1, level.formatVersion());
         assertEquals(4, level.paletteLines().length);
-        assertTrue(level.s3kMetadata().isEmpty());
+        assertTrue(level.hostMetadata().isEmpty());
         assertTrue(level.paletteClaims().isEmpty());
     }
 

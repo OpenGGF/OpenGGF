@@ -1,5 +1,7 @@
 package com.openggf.tools.modsdk;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openggf.editor.persistence.FullLevelExporter;
 import com.openggf.io.DirectoryAccess;
 import com.openggf.io.ModAssetRoot;
@@ -18,6 +20,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestLevelConverter {
+    private static final ObjectMapper JSON = new ObjectMapper();
+
     @TempDir Path temp;
 
     @Test
@@ -58,6 +62,29 @@ class TestLevelConverter {
     }
 
     @Test
+    void v2ConverterInventoryForbidsTheLegacyPaletteAsset() throws Exception {
+        Path source = createV2Export("v2-with-palette");
+        Files.write(source.resolve("palettes.bin"), new byte[] {0});
+        Path output = temp.resolve("v2-with-palette-output");
+
+        assertThrows(Exception.class, () -> new LevelConverter().convert(source, output));
+        assertFalse(Files.exists(output));
+    }
+
+    @Test
+    void v2ConverterAcceptsTheExactPaletteClaimInventory() throws Exception {
+        Path source = createV2Export("v2-exact");
+        Path output = temp.resolve("v2-exact-output");
+
+        LevelConverter.Result result = new LevelConverter().convert(source, output);
+
+        assertFalse(Files.exists(output.resolve("palettes.bin")));
+        assertEquals(2, JSON.readTree(output.resolve("level.json").toFile())
+                .get("formatVersion").intValue());
+        assertTrue(result.filesCopied() >= 10);
+    }
+
+    @Test
     void rejectsInvalidExportBeforePublishingOutput() throws Exception {
         Path source = temp.resolve("bad"); Files.createDirectories(source);
         Files.writeString(source.resolve("level.json"), "{}");
@@ -88,6 +115,22 @@ class TestLevelConverter {
             catch(Exception error){throw new RuntimeException(error);}}).convert(source,output);
         assertArrayEquals(before,Files.readAllBytes(output.resolve("patterns.bin")));
         assertArrayEquals(new byte[]{9,9,9},Files.readAllBytes(source.resolve("patterns.bin")));
+    }
+
+    private Path createV2Export(String directory) throws Exception {
+        Path source = temp.resolve(directory);
+        MutableLevel level = MutableLevel.snapshot(new MinimalLevel());
+        new FullLevelExporter(new ModLevelExportStagingValidator()).export(level,
+                new FullLevelExporter.ExportRequest(source, "TEST", 0x40, 0x400,
+                        0, 0, new FullLevelExporter.ExportMusic.Stock(0)));
+        ObjectNode metadata = (ObjectNode) JSON.readTree(source.resolve("level.json").toFile());
+        metadata.put("formatVersion", 2);
+        ((ObjectNode) metadata.get("assets")).remove("palettes");
+        metadata.putObject("hostMetadata").putObject("s3k").put("objectZoneSet", "S3KL");
+        metadata.putArray("paletteClaims");
+        JSON.writeValue(source.resolve("level.json").toFile(), metadata);
+        Files.delete(source.resolve("palettes.bin"));
+        return source;
     }
 
     private static final class MinimalLevel extends AbstractLevel {

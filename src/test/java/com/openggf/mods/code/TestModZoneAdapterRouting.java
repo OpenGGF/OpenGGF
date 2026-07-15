@@ -1,5 +1,8 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.modzone.ModZoneAdapter;
+import com.openggf.game.modzone.ModZoneLevelData;
+import com.openggf.game.modzone.ModZoneRuntimeProfile;
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.data.Game;
 import com.openggf.game.AbstractStandaloneGameModule;
@@ -58,7 +61,8 @@ class TestModZoneAdapterRouting {
         };
         ModLevelDefinition definition = levelDefinition();
 
-        Level adapted = module.getModZoneAdapter().load("alpha", definition);
+        Level adapted = module.getModZoneAdapter().load("alpha",
+                TestS3kModZoneAdapter.hostData(definition));
         Level direct = ModZoneLoader.load(definition, ringSheet);
 
         assertEquals(direct.getClass(), adapted.getClass());
@@ -90,8 +94,9 @@ class TestModZoneAdapterRouting {
     @Test
     void aModuleWithoutAnAdapterRejectsAdditiveZones() {
         assertTrue(GameModule.EMPTY_MOD_ZONE_ADAPTER.isUnsupported());
-        assertThrows(ModRegistrationException.class,
-                () -> GameModule.EMPTY_MOD_ZONE_ADAPTER.validate("alpha", levelDefinition()));
+        assertThrows(com.openggf.game.modzone.ModZoneRegistrationException.class,
+                () -> GameModule.EMPTY_MOD_ZONE_ADAPTER.validate("alpha",
+                        TestS3kModZoneAdapter.hostData(levelDefinition())));
     }
 
     private static GameModule moduleWithAdapter(ModZoneAdapter adapter) {

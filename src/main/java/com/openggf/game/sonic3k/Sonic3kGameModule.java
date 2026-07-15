@@ -139,8 +139,23 @@ public class Sonic3kGameModule implements GameModule {
     }
 
     @Override
-    public com.openggf.mods.code.ModZoneAdapter getModZoneAdapter() {
+    public com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter() {
         return modZoneAdapter;
+    }
+
+    @Override
+    public com.openggf.game.palette.CustomZonePaletteBridge createCustomZonePaletteBridge(
+            com.openggf.game.modzone.ModZoneRuntimeContribution contribution,
+            com.openggf.level.Level level,
+            ObjectArtProvider objectArtProvider) {
+        if (!S3kCustomZonePaletteBridge.supports(level)) {
+            return null;
+        }
+        return new S3kCustomZonePaletteBridge(
+                contribution.ownerModId(), contribution.ownerModId() + ":" + contribution.localKey(),
+                level.getPalette(0), contribution.levelData().paletteClaims(),
+                objectArtProvider.getHudFlashPaletteLine(), objectArtProvider.getHudStaticArt(),
+                objectArtProvider.getHudLivesNumbers(), objectArtProvider::getHudLivesPaletteOverride);
     }
 
     Palette getAdditiveLevelCharacterPalette() {

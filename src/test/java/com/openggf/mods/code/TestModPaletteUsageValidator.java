@@ -1,5 +1,8 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.modzone.ModObjectZoneSet;
+import com.openggf.game.modzone.ModPaletteClaim;
+import com.openggf.game.modzone.ModZoneHostMetadata;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -428,7 +431,7 @@ class TestModPaletteUsageValidator {
                     new byte[16], new byte[16], new byte[1],
                     new int[chunkCount], new int[chunkCount], new byte[0][],
                     patternCount, chunkCount, blockCount, 1,
-                    new ModLevelDefinition.S3kMetadata(ModLevelDefinition.S3kObjectZoneSet.S3KL),
+                    new ModZoneHostMetadata(ModObjectZoneSet.S3KL),
                     claims);
         }
 

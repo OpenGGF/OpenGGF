@@ -1,5 +1,9 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.modzone.ModPaletteClaim;
+import com.openggf.game.modzone.ModZoneAdapter;
+import com.openggf.game.modzone.ModZoneLevelData;
+import com.openggf.game.modzone.ModZoneRuntimeProfile;
 import com.openggf.audio.AudioManager;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
@@ -288,12 +292,12 @@ class TestModZoneRuntimeProfile {
 
     private static ModZoneAdapter adapterFor(ModZoneRuntimeProfile profile) {
         return new ModZoneAdapter() {
-            @Override public void validate(String ownerModId, ModLevelDefinition level) { }
-            @Override public Level load(String ownerModId, ModLevelDefinition level) {
+            @Override public void validate(String ownerModId, ModZoneLevelData level) { }
+            @Override public Level load(String ownerModId, ModZoneLevelData level) {
                 return mock(Level.class);
             }
             @Override public ModZoneRuntimeProfile runtimeProfile(String ownerModId,
-                                                                  ModLevelDefinition level) {
+                                                                  ModZoneLevelData level) {
                 return profile;
             }
         };

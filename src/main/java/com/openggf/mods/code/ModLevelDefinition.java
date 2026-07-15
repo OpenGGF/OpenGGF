@@ -1,5 +1,7 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.modzone.ModPaletteClaim;
+import com.openggf.game.modzone.ModZoneHostMetadata;
 import com.openggf.mods.TrackKey;
 
 import java.util.List;
@@ -13,13 +15,6 @@ public final class ModLevelDefinition {
     public record Bounds(int minX, int maxX, int minY, int maxY) {}
     @com.openggf.game.ModApi
     public record Start(int x, int y) {}
-    @com.openggf.game.ModApi
-    public record S3kMetadata(S3kObjectZoneSet objectZoneSet) {
-        public S3kMetadata { Objects.requireNonNull(objectZoneSet, "objectZoneSet"); }
-    }
-    @com.openggf.game.ModApi
-    public enum S3kObjectZoneSet { S3KL, SKL }
-
     @com.openggf.game.ModApi
     public sealed interface Music permits StockMusic, TrackMusic {}
     @com.openggf.game.ModApi
@@ -70,7 +65,7 @@ public final class ModLevelDefinition {
     private final int[] primaryCollision;
     private final int[] secondaryCollision;
     private final byte[][] paletteLines;
-    private final S3kMetadata s3kMetadata;
+    private final ModZoneHostMetadata hostMetadata;
     private final List<ModPaletteClaim> paletteClaims;
     private final int patternCount;
     private final int chunkCount;
@@ -99,7 +94,7 @@ public final class ModLevelDefinition {
                        byte[] backgroundMap, byte[] solidHeights, byte[] solidWidths,
                        byte[] solidAngles, int[] primaryCollision, int[] secondaryCollision,
                        byte[][] paletteLines, int patternCount, int chunkCount, int blockCount,
-                       int solidProfileCount, S3kMetadata s3kMetadata,
+                       int solidProfileCount, ModZoneHostMetadata hostMetadata,
                        List<ModPaletteClaim> paletteClaims) {
         this.formatVersion = formatVersion;
         this.zoneName = Objects.requireNonNull(zoneName, "zoneName");
@@ -124,7 +119,7 @@ public final class ModLevelDefinition {
         this.primaryCollision = primaryCollision.clone();
         this.secondaryCollision = secondaryCollision.clone();
         this.paletteLines = clone2d(paletteLines);
-        this.s3kMetadata = s3kMetadata;
+        this.hostMetadata = hostMetadata;
         this.paletteClaims = List.copyOf(paletteClaims);
         this.patternCount = patternCount;
         this.chunkCount = chunkCount;
@@ -157,7 +152,9 @@ public final class ModLevelDefinition {
     public int[] primaryCollisionIndices() { return primaryCollision.clone(); }
     public int[] secondaryCollisionIndices() { return secondaryCollision.clone(); }
     public byte[][] paletteLines() { return clone2d(paletteLines); }
-    public Optional<S3kMetadata> s3kMetadata() { return Optional.ofNullable(s3kMetadata); }
+    public Optional<ModZoneHostMetadata> hostMetadata() {
+        return Optional.ofNullable(hostMetadata);
+    }
     public List<ModPaletteClaim> paletteClaims() { return paletteClaims; }
     public int patternCount() { return patternCount; }
     public int chunkCount() { return chunkCount; }

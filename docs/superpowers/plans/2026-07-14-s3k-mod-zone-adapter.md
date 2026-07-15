@@ -44,8 +44,11 @@ Expected: those two named methods fail because the current surface has unrefroze
 ### Task 1: Introduce and forward the typed adapter capability
 
 **Files:**
-- Create: `src/main/java/com/openggf/mods/code/ModZoneAdapter.java`
-- Create: `src/main/java/com/openggf/mods/code/ModZoneRuntimeProfile.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModZoneAdapter.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModZoneLevelData.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModZoneRegistrationException.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModZoneRuntimeProfile.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModZoneRuntimeContribution.java`
 - Create: `src/main/java/com/openggf/game/sonic2/Sonic2ModZoneAdapter.java`
 - Modify: `src/main/java/com/openggf/mods/code/ModZoneLoader.java`
 - Modify: `src/main/java/com/openggf/game/GameModule.java`
@@ -81,9 +84,9 @@ Expected: compilation fails because `ModZoneAdapter` and `GameModule.getModZoneA
 ```java
 @ModApi
 public interface ModZoneAdapter {
-    void validate(String ownerModId, ModLevelDefinition level);
-    Level load(String ownerModId, ModLevelDefinition level) throws IOException;
-    ModZoneRuntimeProfile runtimeProfile(String ownerModId, ModLevelDefinition level);
+    void validate(String ownerModId, ModZoneLevelData level);
+    Level load(String ownerModId, ModZoneLevelData level) throws IOException;
+    ModZoneRuntimeProfile runtimeProfile(String ownerModId, ModZoneLevelData level);
     default boolean isUnsupported() { return false; }
 }
 
@@ -101,7 +104,7 @@ public record ModZoneRuntimeProfile(
 }
 ```
 
-Add `GameModule.getModZoneAdapter()` with an unsupported singleton and add an explicit forwarding override to `DelegatingGameModule`. Keep engine-owned `PreparedModZone` out of this published recursive signature: the adapter accepts the already-published immutable `ModLevelDefinition` plus an owner id supplied by the engine caller. Extract the existing S2 builder body to a `ModZoneLoader.load(ModLevelDefinition, RingSpriteSheet)` overload, create the initial `Sonic2ModZoneAdapter` as a thin wrapper over it, and make `Sonic2GameModule` return the adapter. Task 5 changes the shared caller to use this capability; do not put an `s2` comparison in shared mod code and never accept an owner id from creator code.
+Add `GameModule.getModZoneAdapter()` with an unsupported singleton and add an explicit forwarding override to `DelegatingGameModule`. Keep private parser types and engine-owned `PreparedModZone` out of the game package: `ModZoneLoader` converts the parsed definition once into immutable `ModZoneLevelData`, and adapters consume only that game-owned view plus an owner id supplied by the engine caller. `ModZoneRuntimeContribution` carries the resolved data/profile through `ZoneRegistry` so shared level code never depends on `mods.code`. Create the initial `Sonic2ModZoneAdapter` as a thin host wrapper and make `Sonic2GameModule` return it. Task 5 changes the shared caller to use this capability; do not put an `s2` comparison in shared mod code and never accept an owner id from creator code.
 
 - [ ] **Step 4: Run the focused test and forwarding guard**
 
@@ -112,14 +115,16 @@ Expected: feature tests pass. Then the mandatory signature command fails only `p
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add src/main/java/com/openggf/mods/code/ModZoneAdapter.java src/main/java/com/openggf/mods/code/ModZoneRuntimeProfile.java src/main/java/com/openggf/game/GameModule.java src/main/java/com/openggf/game/patch/DelegatingGameModule.java src/main/java/com/openggf/game/sonic2/Sonic2GameModule.java src/main/java/com/openggf/game/sonic2/Sonic2ModZoneAdapter.java src/main/java/com/openggf/mods/code/ModZoneLoader.java src/test/java/com/openggf/mods/code/TestModZoneAdapterRouting.java
+git add src/main/java/com/openggf/game/modzone/ModZoneAdapter.java src/main/java/com/openggf/game/modzone/ModZoneLevelData.java src/main/java/com/openggf/game/modzone/ModZoneRegistrationException.java src/main/java/com/openggf/game/modzone/ModZoneRuntimeProfile.java src/main/java/com/openggf/game/modzone/ModZoneRuntimeContribution.java src/main/java/com/openggf/game/GameModule.java src/main/java/com/openggf/game/patch/DelegatingGameModule.java src/main/java/com/openggf/game/sonic2/Sonic2GameModule.java src/main/java/com/openggf/game/sonic2/Sonic2ModZoneAdapter.java src/main/java/com/openggf/mods/code/ModZoneLoader.java src/test/java/com/openggf/mods/code/TestModZoneAdapterRouting.java
 git commit -m "feat: add typed mod-zone adapter capability"
 ```
 
 ### Task 2: Add format-v2 S3K metadata and sparse palette claims
 
 **Files:**
-- Create: `src/main/java/com/openggf/mods/code/ModPaletteClaim.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModPaletteClaim.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModObjectZoneSet.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModZoneHostMetadata.java`
 - Modify: `src/main/java/com/openggf/mods/code/ModLevelDefinition.java`
 - Modify: `src/main/java/com/openggf/mods/code/ModLevelDefinitionParser.java`
 - Test: `src/test/java/com/openggf/mods/code/TestModLevelDefinitionParser.java`
@@ -131,8 +136,8 @@ git commit -m "feat: add typed mod-zone adapter capability"
 @Test void v2ParsesTypedS3kMetadataAndSparseClaims() throws Exception {
     ModLevelDefinition level = readFixture("s3k-v2-valid");
     assertEquals(2, level.formatVersion());
-    assertEquals(ModLevelDefinition.S3kObjectZoneSet.S3KL,
-            level.s3kMetadata().orElseThrow().objectZoneSet());
+    assertEquals(ModObjectZoneSet.S3KL,
+            level.hostMetadata().orElseThrow().objectZoneSet());
     assertEquals(List.of(new ModPaletteClaim(1, 0, 0x0EEE)), level.paletteClaims());
 }
 
@@ -146,7 +151,7 @@ git commit -m "feat: add typed mod-zone adapter capability"
     ModLevelDefinition level = readFixture("s2-v1-valid");
     assertEquals(1, level.formatVersion());
     assertEquals(4, level.paletteLines().length);
-    assertTrue(level.s3kMetadata().isEmpty());
+    assertTrue(level.hostMetadata().isEmpty());
 }
 ```
 
@@ -176,8 +181,8 @@ public record ModPaletteClaim(int line, int color, int segaColor) {
     }
 }
 
-@ModApi public record S3kMetadata(S3kObjectZoneSet objectZoneSet) {}
-@ModApi public enum S3kObjectZoneSet { S3KL, SKL }
+@ModApi public record ModZoneHostMetadata(ModObjectZoneSet objectZoneSet) {}
+@ModApi public enum ModObjectZoneSet { S3KL, SKL }
 ```
 
 Use separate exact-key sets for v1 and v2. V1 keeps `assets.palettes`; v2 removes that asset and requires `hostMetadata.s3k` plus `paletteClaims`. Preserve the existing `read(root, ref)` method and constructor overloads so S2 and standalone callers remain source/binary compatible.
@@ -191,7 +196,7 @@ Expected: feature tests pass, including all v1 fixtures. Then the mandatory sign
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add src/main/java/com/openggf/mods/code/ModPaletteClaim.java src/main/java/com/openggf/mods/code/ModLevelDefinition.java src/main/java/com/openggf/mods/code/ModLevelDefinitionParser.java src/test/java/com/openggf/mods/code/TestModLevelDefinitionParser.java src/test/java/com/openggf/tools/modsdk/TestLevelConverter.java src/test/resources/mods/formats
+git add src/main/java/com/openggf/game/modzone/ModPaletteClaim.java src/main/java/com/openggf/game/modzone/ModObjectZoneSet.java src/main/java/com/openggf/game/modzone/ModZoneHostMetadata.java src/main/java/com/openggf/mods/code/ModLevelDefinition.java src/main/java/com/openggf/mods/code/ModLevelDefinitionParser.java src/test/java/com/openggf/mods/code/TestModLevelDefinitionParser.java src/test/java/com/openggf/tools/modsdk/TestLevelConverter.java src/test/resources/mods/formats
 git commit -m "feat: add strict S3K mod-level metadata"
 ```
 
@@ -698,12 +703,57 @@ git commit -m "test: cover S3K mod-zone lifecycle"
 - Modify: `src/main/java/com/openggf/mods/ModApiVersion.java`
 - Create: `src/test/resources/mods/mod-api-signatures-2.3.txt`
 - Modify: `src/test/java/com/openggf/mods/TestModApiSignatureSurface.java`
+- Modify: `src/test/java/com/openggf/mods/TestSemanticVersionAndRange.java`
+- Modify: `src/test/java/com/openggf/mods/TestEffectiveCatalogBuilder.java`
+- Modify: `src/test/java/com/openggf/mods/code/TestS3kModZoneLifecycle.java`
 - Modify: `src/main/java/com/openggf/tools/modsdk/LevelConverter.java`
+- Modify: `src/test/java/com/openggf/tools/modsdk/TestLevelConverter.java`
 - Modify: `docs/modding/formats/level-definition.md`
 - Modify: `docs/modding/content-mods.md`
 - Modify: `docs/modding/index.md`
 - Modify: `docs/architecture/mod-api-compatibility.md`
 - Modify: `CHANGELOG.md`
+- Create: `src/main/java/com/openggf/game/dataselect/ModZoneSaveFinding.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModObjectZoneSet.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModPaletteClaim.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModPaletteUsageValidator.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModZoneAdapter.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModZoneHostMetadata.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModZoneLevelData.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModZoneRegistrationException.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModZoneRuntimeContribution.java`
+- Create: `src/main/java/com/openggf/game/modzone/ModZoneRuntimeProfile.java`
+- Create: `src/main/java/com/openggf/game/palette/CustomZonePaletteBridge.java`
+- Modify: `src/main/java/com/openggf/game/GameModule.java`
+- Modify: `src/main/java/com/openggf/game/ZoneRegistry.java`
+- Modify: `src/main/java/com/openggf/game/patch/DelegatingGameModule.java`
+- Modify: `src/main/java/com/openggf/game/sonic2/Sonic2GameModule.java`
+- Modify: `src/main/java/com/openggf/game/sonic2/Sonic2ModZoneAdapter.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/S3kCustomZonePaletteBridge.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kGameModule.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kLevel.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kModZoneAdapter.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kModZoneRuntimeProfile.java`
+- Modify: `src/main/java/com/openggf/level/LevelManager.java`
+- Modify: `src/main/java/com/openggf/mods/code/ModBackedGamePatch.java`
+- Modify: `src/main/java/com/openggf/mods/code/ModLevelDefinition.java`
+- Modify: `src/main/java/com/openggf/mods/code/ModLevelDefinitionParser.java`
+- Modify: `src/main/java/com/openggf/mods/code/ModPaletteUsageValidator.java`
+- Modify: `src/main/java/com/openggf/mods/code/ModZoneLoader.java`
+- Modify: `src/main/java/com/openggf/mods/code/ModZoneRegistry.java`
+- Modify: `src/main/java/com/openggf/mods/code/PreparedModZone.java`
+- Delete before publication: `src/main/java/com/openggf/mods/code/ModPaletteClaim.java`
+- Delete before publication: `src/main/java/com/openggf/mods/code/ModZoneAdapter.java`
+- Delete before publication: `src/main/java/com/openggf/mods/code/ModZoneDataSelectDecorator.java`
+- Delete before publication: `src/main/java/com/openggf/mods/code/ModZoneRuntimeProfile.java`
+- Modify: `src/test/java/com/openggf/game/sonic3k/TestS3kCustomZonePaletteBridge.java`
+- Modify: `src/test/java/com/openggf/game/sonic3k/TestSonic3kLevelInMemoryConstruction.java`
+- Modify: `src/test/java/com/openggf/mods/code/TestModLevelDefinitionParser.java`
+- Modify: `src/test/java/com/openggf/mods/code/TestModPaletteUsageValidator.java`
+- Modify: `src/test/java/com/openggf/mods/code/TestModZoneAdapterRouting.java`
+- Modify: `src/test/java/com/openggf/mods/code/TestModZoneLoader.java`
+- Modify: `src/test/java/com/openggf/mods/code/TestModZoneRuntimeProfile.java`
+- Modify: `src/test/java/com/openggf/mods/code/TestS3kModZoneAdapter.java`
 
 - [ ] **Step 1: Generate the candidate signature and verify the version guard is red**
 
@@ -721,7 +771,9 @@ Compile the signature tool, then generate `mods/mod-api-signatures-2.3.txt` with
 
 ```powershell
 mvn "-DskipTests" compile
-java -cp target/classes com.openggf.mods.code.ModApiSignatureSurface --snapshot | Set-Content -Encoding utf8NoBOM src/test/resources/mods/mod-api-signatures-2.3.txt
+mvn dependency:build-classpath "-Dmdep.outputFile=target/mod-api-snapshot-classpath.txt"
+$cp = "target/classes;$((Get-Content target/mod-api-snapshot-classpath.txt -Raw).Trim())"
+java -cp $cp com.openggf.mods.code.ModApiSignatureSurface --snapshot | Set-Content -Encoding utf8NoBOM src/test/resources/mods/mod-api-signatures-2.3.txt
 ```
 
 Retain every 1.1/1.2/2.0/2.1/2.2 snapshot, and update the compatibility test so 2.3 is an additive superset.
@@ -749,7 +801,7 @@ Expected: the must-keep-green suite passes; trace tests pass or retain their che
 - [ ] **Step 6: Commit**
 
 ```powershell
-git add src/main/java/com/openggf/mods/ModApiVersion.java src/test/resources/mods/mod-api-signatures-2.3.txt src/test/java/com/openggf/mods/TestModApiSignatureSurface.java src/main/java/com/openggf/tools/modsdk/LevelConverter.java docs/modding/formats/level-definition.md docs/modding/content-mods.md docs/modding/index.md docs/architecture/mod-api-compatibility.md CHANGELOG.md
+git add src/main/java/com/openggf/mods/ModApiVersion.java src/test/resources/mods/mod-api-signatures-2.3.txt src/test/java/com/openggf/mods/TestModApiSignatureSurface.java src/test/java/com/openggf/mods/TestSemanticVersionAndRange.java src/test/java/com/openggf/mods/TestEffectiveCatalogBuilder.java src/test/java/com/openggf/mods/code/TestS3kModZoneLifecycle.java src/main/java/com/openggf/tools/modsdk/LevelConverter.java src/test/java/com/openggf/tools/modsdk/TestLevelConverter.java docs/modding/formats/level-definition.md docs/modding/content-mods.md docs/modding/index.md docs/architecture/mod-api-compatibility.md docs/superpowers/plans/2026-07-14-s3k-mod-zone-adapter.md CHANGELOG.md
 git commit -m "docs: publish S3K mod-zone adapter contract"
 ```
 

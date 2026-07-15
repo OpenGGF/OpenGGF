@@ -12,7 +12,7 @@ import com.openggf.level.resources.ModLevelInputLimits;
 import com.openggf.level.resources.ResourceLoader;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
-import com.openggf.mods.code.ModPaletteClaim;
+import com.openggf.game.modzone.ModPaletteClaim;
 
 import java.io.IOException;
 import java.util.Arrays;
