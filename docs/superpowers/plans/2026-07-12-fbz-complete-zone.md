@@ -501,10 +501,16 @@ mvn "-Dtest=TestFbzEventsAct2,TestFbzElevator,TestFbzAct2TraversalPreboss,TestFb
 
 **Steps:**
 
-1. RED-test the full subboss routine graph, four/two repeated pieces, controllers, sprite mask, Robotnik/EggRobo character branch, hit counter/cadence, palette/music/SFX, defeat, and cleanup.
-2. Load the correct Sonic/Tails or Knuckles PLC. On normal progression, the subboss defeat path must queue `ArtKosM_FBZCloud` and `ArtKosM_FBZBossPillar` through `PLCKosM_FBZ2Subboss` before the `$2B30` setup, then restore `PLC_Monitors` followed by `PLC_MonitorsSpikesSprings` at the disassembly-defined stages.
+1. RED-test the full subboss routine graph, four/two repeated pieces, controllers, sprite mask, Robotnik/EggRobo character branch, the signed `$39=$06` counter's seven cycles (and six nonfinal anchor moves), palette/music/SFX, defeat, and cleanup.
+2. Load the correct inline Sonic/Tails or Knuckles raw PLC selection (the pointer-table `$62-$6A` aliases are unused here). On normal progression, the subboss defeat path must queue `ArtKosM_FBZCloud` and `ArtKosM_FBZBossPillar` through `PLCKosM_FBZ2Subboss` before the `$2B30` setup, then restore raw `PLC_Monitors` followed by raw `PLC_MonitorsSpikesSprings` at the disassembly-defined stages.
 3. RED-test the normal cloud/pillar art readiness/order separately from checkpoint/re-entry. Verify the post-subboss route and rewind during each PLC handoff.
 4. Run the mandatory route-wave gate. This is the **Act 2 traversal/subboss wave boundary**.
+   Task 14's honest headless gate reuses the fixed 11,900-frame native-start
+   mechanics frontier and the real starpost-5 120-left lower magnetic/chain
+   wave; neither wave claims arena crossing. Complete start-to-arena controller
+   validation is deferred specifically to Task 20's BK2 trace polish, while the
+   placed `$AB` routine graph, timing, allocation failures, art handoffs, and
+   rewind behavior remain independently disassembly-reviewed and focused-tested.
 
 **Verify:**
 

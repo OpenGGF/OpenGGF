@@ -393,6 +393,14 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzMinibossArmChild", "terminal"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzMinibossChainLink", "previous"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzMinibossChainLink", "next"), RewindFieldPolicy.TRANSIENT),
+            // FBZ2 subboss family references are reconstructed from captured family-slot and
+            // native-role scalars after the restore graph settles (TestFbz2SubbossRewind).
+            // Keep these exact because root/corner/upperLeft/upperRight are not globally
+            // structural names outside this object family.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractFbz2SubbossChild", "root"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Fbz2SubbossInstance", "upperLeft"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Fbz2SubbossInstance", "upperRight"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Fbz2SubbossSolidSideChild", "corner"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzSpiderCraneCompanionObjectInstance", "owner"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzSpiderCraneObjectInstance", "companion"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.BlasterProjectileObjectInstance", "owner"), RewindFieldPolicy.TRANSIENT),

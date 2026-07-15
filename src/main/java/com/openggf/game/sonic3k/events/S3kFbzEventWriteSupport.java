@@ -50,6 +50,11 @@ public final class S3kFbzEventWriteSupport {
         if (bridge != null) bridge.setScreenShakeState(active, offset, phase);
     }
 
+    public static boolean isScreenShakeActive(ObjectServices services) {
+        FbzObjectEventBridge bridge = bridgeOrNull(services);
+        return bridge != null && bridge.isScreenShakeActive();
+    }
+
     private static FbzObjectEventBridge bridgeOrNull(ObjectServices services) {
         Object provider = services.levelEventProvider();
         return provider instanceof FbzObjectEventBridge bridge ? bridge : null;

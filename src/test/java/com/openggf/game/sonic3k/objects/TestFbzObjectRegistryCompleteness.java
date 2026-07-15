@@ -24,7 +24,7 @@ class TestFbzObjectRegistryCompleteness {
             0x6F, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78,
             0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F, 0xE0, 0xE1,
             0xE2, 0xE3, 0xE4, 0xE5, 0xFF,
-            0x80, 0x85, 0xA8, 0xA9, 0xAA);
+            0x80, 0x85, 0xA8, 0xA9, 0xAA, 0xAB);
 
     @Test
     void fbzProfileAllowlistMatchesTheCheckedConcreteFactoryInventory() {
@@ -48,7 +48,7 @@ class TestFbzObjectRegistryCompleteness {
                 .map(registry::create)
                 .filter(PlaceholderObjectInstance.class::isInstance)
                 .count();
-        assertEquals(25, placeholders);
+        assertEquals(24, placeholders);
 
         for (ObjectSpawn spawn : placements) {
             ObjectInstance instance = registry.create(spawn);

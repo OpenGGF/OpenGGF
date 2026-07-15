@@ -82,6 +82,11 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     private static final int ACT_TRANSITION_WORLD_OFFSET_X = -0x2E00;
     private static final int FIRST_ROM_WORLD_OFFSET_SLOT = 4;
     private static final int LAST_ROM_WORLD_OFFSET_SLOT_EXCLUSIVE = 94;
+    /** Native ScreenShakeArray2; the 32-byte pattern is repeated over the 64-frame mask. */
+    private static final int[] SCREEN_SHAKE_ARRAY_2 = {
+            1,2,1,3,1,2,2,1,2,3,1,2,1,2,0,0,
+            2,0,3,2,2,3,2,2,1,3,0,0,1,0,1,3
+    };
 
     private int act;
     private int foregroundLayoutRegion;
@@ -225,6 +230,12 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         initializeAct2Runtime();
         // FBZ2_ScreenEvent adds Screen_shake_offset to Camera_Y_pos_copy,
         // leaving the live Camera_Y_pos word untouched.
+        if (screenShakeActive) {
+            screenShakePhase = frameCounter & 0x3F;
+            screenShakeOffset = SCREEN_SHAKE_ARRAY_2[screenShakePhase & 0x1F];
+        } else {
+            screenShakeOffset = 0;
+        }
         camera().setYCopy((short) (camera().getYCopy() + screenShakeOffset));
         applyRuntimeCopies(updateAct2ScreenEvent(player.getCentreX(), player.getCentreY(),
                 player.getDead(), camera().getX()));

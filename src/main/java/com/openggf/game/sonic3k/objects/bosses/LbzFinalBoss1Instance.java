@@ -315,7 +315,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             }
             if (!bossMusicStarted) {
                 // ROM: Obj_Song_Fade_Transition -> mus_EndBoss.
-                SongFadeTransitionInstance fade = new SongFadeTransitionInstance(2 * 60, Sonic3kMusic.BOSS.id);
+                SongFadeTransitionInstance fade = SongFadeTransitionInstance.transitionTo(Sonic3kMusic.BOSS.id);
                 recordChild(ChildKind.MUSIC_FADE, fade);
                 spawnDynamicObject(fade);
                 bossMusicStarted = true;

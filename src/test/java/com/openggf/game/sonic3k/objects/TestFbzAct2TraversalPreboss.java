@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Placement-backed, deterministic route contract through FBZ2's preboss handoff. */
 @RequiresRom(SonicGame.SONIC_3K)
-class TestFbzAct2TraversalPreboss {
+public class TestFbzAct2TraversalPreboss {
     /**
      * Fixed ordinary P1 controller program from the native FBZ2 start.
      * Each entry is {@code frame-count:input-mask}; masks use the playable
@@ -96,8 +96,7 @@ class TestFbzAct2TraversalPreboss {
         assertTrue(unresolved.isEmpty(), () -> "ordinary preboss placeholders: " + unresolved);
     }
 
-    @Test
-    void lateNativeStarpostRestartMaterializesAndExecutesLowerMagneticSection() {
+    public static void assertLateNativeStarpostRestartMaterializesAndExecutesLowerMagneticSection() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 1)
                 .build();
@@ -165,8 +164,7 @@ class TestFbzAct2TraversalPreboss {
      * Task20's final BK2 trace validation. {@code TestFbzEventsAct2} owns the
      * exact $2B30 foreground/background stage semantics in the focused suite.
      */
-    @Test
-    void nativeStartFixedInputsReachSafeLateFrontierWithAllRouteMilestones() {
+    public static void assertNativeStartFixedInputsReachSafeLateFrontierWithAllRouteMilestones() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 1)
                 .build();

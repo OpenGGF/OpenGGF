@@ -240,6 +240,8 @@ public final class Sonic3kObjectArtKeys {
     public static final String FBZ1_MINIBOSS_FRAGMENTS = "fbz1_miniboss_fragments";
     public static final String FBZ2_SUBBOSS = "fbz2_subboss";
     public static final String FBZ_ROBOTNIK_STAND = "fbz_robotnik_stand";
+    public static final String FBZ_EGGROBO_STAND = "fbz_eggrobo_stand";
+    public static final String FBZ_EGGROBO_RUN = "fbz_eggrobo_run";
     public static final String FBZ_ROBOTNIK_HEAD = "fbz_robotnik_head";
     public static final String FBZ_END_BOSS_FLAME = "fbz_end_boss_flame";
     public static final String FBZ_CLOUD = "fbz_cloud";

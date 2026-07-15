@@ -229,12 +229,12 @@ When `Events_bg+$06` is set (boss loaded):
 - **PLC load:** `PLC_FBZ2Subboss_SonicTails` (Robotnik art) or `PLC_FBZ2Subboss_Knuckles` (EggRobo art) based on `Player_1+character_id`
 - **Palette:** `Pal_FBZ2Subboss` loaded to palette line 1
 - **Arena boundaries:** `Camera_min_X_pos = $2900`, `Camera_target_max_Y_pos = $5E0`
-- **HP:** 127 hits (`collision_property = $7F` -- effectively invincible, uses hit counter at $39 = 6 real hits)
+- **HP:** ordinary contact property `$7F` (effectively invincible); the separate signed cycle byte starts at `$06`, is predecremented after each laser cycle, and defeats on negative, producing **seven** scripted cycles. Only the first six nonfinal callbacks advance the left anchors.
 - **Boss flag:** Sets `Boss_flag = 1` on init
 - **Music:** Fades to `mus_Miniboss`
-- **Defeat behavior:** Loads boss pillar/cloud art (`PLCKosM_FBZ2Subboss`), clears `Boss_flag`, loads `PLC_Monitors`
+- **Defeat behavior:** Queues `ArtKosM_FBZCloud` at tile `$3A3` then `ArtKosM_FBZBossPillar` at `$3D5`; after the first `$5F` wait the character escapes and the level-music fade is attempted, after the second `$5F` wait `Boss_flag` clears and raw `PLC_Monitors` is applied, then the escaping character applies raw `PLC_MonitorsSpikesSprings` only when it leaves the screen.
 - **Character difference:** Knuckles gets `ArtNem_EggRoboStand` / `ArtNem_EggRoboRun` instead of `ArtNem_FBZRobotnikStand` / `ArtNem_FBZRobotnikRun`
-- **Confidence:** MEDIUM -- arena setup and character branching clear; multi-phase attack loop (routines 0-8) needs deeper reading
+- **Confidence:** HIGH -- routines 0-8, all five child tables, allocation failure edges, raw animations, hit flash, screen-shake ownership, PLC ordering, and cleanup were ported from the locked-on routine graph.
 
 ### Act 2 End Boss (Obj_FBZEndBoss)
 

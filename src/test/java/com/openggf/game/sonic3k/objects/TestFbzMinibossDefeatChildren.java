@@ -243,22 +243,31 @@ class TestFbzMinibossDefeatChildren {
 
     private static int intField(Object target, String fieldName) {
         try {
-            Field field = target.getClass().getDeclaredField(fieldName);
-            field.setAccessible(true);
-            return field.getInt(target);
-        } catch (ReflectiveOperationException e) {
+            return fieldInHierarchy(target, fieldName).getInt(target);
+        } catch (IllegalAccessException e) {
             throw new AssertionError("missing exact-state field " + fieldName, e);
         }
     }
 
     private static boolean booleanField(Object target, String fieldName) {
         try {
-            Field field = target.getClass().getDeclaredField(fieldName);
-            field.setAccessible(true);
-            return field.getBoolean(target);
-        } catch (ReflectiveOperationException e) {
+            return fieldInHierarchy(target, fieldName).getBoolean(target);
+        } catch (IllegalAccessException e) {
             throw new AssertionError("missing exact-state field " + fieldName, e);
         }
+    }
+
+    private static Field fieldInHierarchy(Object target, String fieldName) {
+        for (Class<?> type = target.getClass(); type != null; type = type.getSuperclass()) {
+            try {
+                Field field = type.getDeclaredField(fieldName);
+                field.setAccessible(true);
+                return field;
+            } catch (NoSuchFieldException ignored) {
+                // Shared object-family state can move into a superclass without changing behavior.
+            }
+        }
+        throw new AssertionError("missing exact-state field " + fieldName);
     }
 
     private static boolean skipsSameFrameUpdate(AbstractObjectInstance target) {

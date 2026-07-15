@@ -5,13 +5,12 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 
 /**
- * Lightweight persistent object that fades out the current music, waits a
- * specified number of frames, then plays a new track and destroys itself.
+ * Lightweight persistent object that fades out the current music, executes a
+ * native signed wait word, then plays a new track and destroys itself.
  *
  * ROM equivalent: Obj_Song_Fade_Transition / Obj_Song_Fade_ToLevelMusic
  * (sonic3k.asm line 180305). The ROM spawns this as an independent object so
@@ -19,34 +18,57 @@ import java.util.List;
  * that initiated it.
  */
 public class SongFadeTransitionInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+    /** Locked-on {@code Obj_Song_Fade_Transition} initial wait word. */
+    public static final int TRANSITION_WAIT_WORD = 90;
+    /** Locked-on {@code Obj_Song_Fade_ToLevelMusic} initial wait word. */
+    public static final int TO_LEVEL_MUSIC_WAIT_WORD = 120;
 
-    // Non-final: delayFrames/musicId are not derivable from the dummy
+    // Non-final: nativeWaitWord/musicId are not derivable from the dummy
     // ObjectSpawn (the ctor passes ObjectSpawn(0,0,0,0,0,false,0) to super).
     // Generic rewind recreate constructs with placeholder (0, 0), then the
     // GenericFieldCapturer reapplies these captured values after recreate.
 
-    /** Number of frames to wait after fade-out starts before playing new music. */
-    private int delayFrames;
+    /**
+     * Initial signed 16-bit wait word. Native code completes only when the
+     * decremented word becomes negative, so a value of N completes on update N+1.
+     * This is deliberately not named or treated as an ordinary frame duration.
+     *
+     * <p>Caller audit: the zone-event constants and literal values used by AIZ,
+     * CNZ, MGZ, MHZ, LBZ, FBZ, and their cutscene/boss helpers are native wait
+     * words. Common values 2, 30, 90 and 120 therefore execute for 3, 31, 91 and
+     * 121 updates respectively; callers must not pre-adjust them.</p>
+     */
+    private int nativeWaitWord;
 
     /** Music ID to play when the delay expires. */
     private int musicId;
 
-    /** Frame counter since creation. */
-    private int timer;
+    /** Number of update executions since creation. */
+    private int elapsedUpdates;
 
     /** Whether the initial fade-out has been issued. */
     private boolean fadeStarted;
 
     /**
-     * @param delayFrames frames to wait after fade-out before playing new music
-     * @param musicId     music ID to play when the delay expires
+     * @param nativeWaitWord native signed 16-bit wait word; N completes on update N+1
+     * @param musicId        music ID to play when the wait word underflows
      */
-    public SongFadeTransitionInstance(int delayFrames, int musicId) {
+    public SongFadeTransitionInstance(int nativeWaitWord, int musicId) {
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "SongFadeTransition");
-        this.delayFrames = delayFrames;
+        this.nativeWaitWord = (short) nativeWaitWord;
         this.musicId = musicId;
-        this.timer = 0;
+        this.elapsedUpdates = 0;
         this.fadeStarted = false;
+    }
+
+    /** Creates the locked-on generic song transition helper (90 -> update 91). */
+    public static SongFadeTransitionInstance transitionTo(int musicId) {
+        return new SongFadeTransitionInstance(TRANSITION_WAIT_WORD, musicId);
+    }
+
+    /** Creates the locked-on level-music restore helper (120 -> update 121). */
+    public static SongFadeTransitionInstance toLevelMusic(int musicId) {
+        return new SongFadeTransitionInstance(TO_LEVEL_MUSIC_WAIT_WORD, musicId);
     }
 
     SongFadeTransitionInstance(ObjectSpawn spawn) {
@@ -55,6 +77,10 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
 
     int getMusicIdForTest() {
         return musicId;
+    }
+
+    int nativeWaitWordForTest() {
+        return nativeWaitWord;
     }
 
     @Override
@@ -74,13 +100,13 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!fadeStarted) {
             services().audioManager().fadeOutMusic(0x28, 6);
             fadeStarted = true;
         }
-        timer++;
-        if (timer >= delayFrames) {
+        // Native helpers decrement a signed wait word and complete only after it underflows:
+        // a word of 90 completes on update 91; a word of 120 completes on update 121.
+        if (elapsedUpdates++ >= nativeWaitWord) {
             services().playMusic(musicId);
             setDestroyed(true);
         }

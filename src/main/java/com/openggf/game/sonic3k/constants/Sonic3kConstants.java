@@ -1508,6 +1508,7 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_FBZ_MINIBOSS_ADDR = 0x1652B4;
     /** Pal_FBZMiniboss, locked-on S&K-side bytes (32-byte palette line). */
     public static final int PAL_FBZ_MINIBOSS_ADDR = 0x06FAC0;
+    public static final int PAL_FBZ2_SUBBOSS_ADDR = 0x070420;
     public static final int ART_NEM_FBZ2_SUBBOSS_ADDR = 0x0DBDDE;
     public static final int ART_NEM_FBZ2_SUBBOSS_SIZE = 2368;
     public static final int ART_KOSM_FBZ_CLOUD_ADDR = 0x165826;
@@ -1523,6 +1524,7 @@ public class Sonic3kConstants {
     public static final int ART_TILE_FBZ_EXIT_HALL = 0x03F4;
     public static final int MAP_FBZ_MINIBOSS_ADDR = 0x06FAF8;
     public static final int MAP_FBZ2_SUBBOSS_ADDR = 0x070440;
+    public static final int MAP_SPRITE_MASK_ADDR = 0x18595E;
     public static final int MAP_FBZ2_PREBOSS_ADDR = 0x053518;
     public static final int MAP_FBZ_END_BOSS_ADDR = 0x070FB4;
     public static final int MAP_FBZ_EXIT_DOOR_ADDR = 0x070F7E;
@@ -1999,6 +2001,12 @@ public class Sonic3kConstants {
     public static final int ART_NEM_FBZ_ROBOTNIK_STAND_SIZE = 2144;
     public static final int MAP_FBZ_ROBOTNIK_STAND_ADDR = 0x06847C;
     public static final int ART_TILE_FBZ_ROBOTNIK_STAND = 0x0466;
+    public static final int ART_NEM_FBZ_EGGROBO_RUN_ADDR = 0x15FFBE;
+    public static final int ART_NEM_FBZ_EGGROBO_RUN_SIZE = 2208;
+    public static final int MAP_FBZ_EGGROBO_RUN_ADDR = 0x186C20;
+    public static final int ART_NEM_FBZ_EGGROBO_STAND_ADDR = 0x160340;
+    public static final int ART_NEM_FBZ_EGGROBO_STAND_SIZE = 1984;
+    public static final int MAP_FBZ_EGGROBO_STAND_ADDR = 0x186BB0;
     public static final int ART_NEM_FBZ_END_BOSS_FLAME_ADDR = 0x0DDFE6;
     public static final int ART_NEM_FBZ_END_BOSS_FLAME_SIZE = 2176;
     public static final int MAP_FBZ_END_BOSS_FLAME_ADDR = 0x071090;

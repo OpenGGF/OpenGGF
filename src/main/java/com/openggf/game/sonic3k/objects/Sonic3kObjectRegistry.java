@@ -1049,6 +1049,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new FbzMinibossInstance(spawn);
                 });
+        factories.put(Sonic3kObjectIds.FBZ2_SUBBOSS,
+                (spawn, registry) -> {
+                    if (getCurrentZoneSet() != S3kZoneSet.S3KL) {
+                        return new PlaceholderObjectInstance(spawn,
+                                getPrimaryName(spawn.objectId(), getCurrentZoneSet()));
+                    }
+                    return new Fbz2SubbossInstance(spawn);
+                });
         factories.put(Sonic3kObjectIds.CLAMER,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();

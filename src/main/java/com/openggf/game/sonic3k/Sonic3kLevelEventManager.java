@@ -953,6 +953,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public boolean isScreenShakeActive() {
+        return fbzEvents != null && fbzEvents.isScreenShakeActive();
+    }
+
+    @Override
     public void setPendingArenaChunkDestruction(int chunkWorldX, int chunkWorldY) {
         if (cnzEvents != null) {
             cnzEvents.setPendingArenaChunkDestruction(chunkWorldX, chunkWorldY);

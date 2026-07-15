@@ -34,7 +34,6 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
     private static final int INITIAL_MAPPING_FRAME = 0x16;
     private static final int STAND_MAPPING_FRAME = 0x1C;
     private static final int CAMERA_MIN_Y = 0x00A0;
-    private static final int SONG_FADE_FRAMES = 2 * 60;
     private static final int WAIT_AFTER_CAPTURE = 60 - 1;
     private static final int WAIT_AFTER_BOMB = 0x0F;
     private static final int WAIT_BEFORE_COLLAPSE = 0x7F;
@@ -177,7 +176,7 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
         if (!helperSignal) {
             return;
         }
-        spawnDynamicObject(new SongFadeTransitionInstance(SONG_FADE_FRAMES, Sonic3kMusic.KNUCKLES.id));
+        spawnDynamicObject(SongFadeTransitionInstance.transitionTo(Sonic3kMusic.KNUCKLES.id));
         timer = WAIT_AFTER_CAPTURE;
         routine = Routine.WAIT_AFTER_SIGNAL;
     }

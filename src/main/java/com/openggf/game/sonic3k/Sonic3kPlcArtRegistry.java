@@ -1441,8 +1441,18 @@ public final class Sonic3kPlcArtRegistry {
                     Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_RUN_ADDR,
                     CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_RUN_SIZE,
                     Sonic3kConstants.MAP_FBZ_ROBOTNIK_RUN_ADDR, 0, -1));
-            // `SetUp_FBZ2BossEvent` queues both KosM blocks into the level VRAM
-            // buffer. Pillar consumes default frame 0; clouds explicitly select
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_EGGROBO_STAND,
+                    Sonic3kConstants.ART_NEM_FBZ_EGGROBO_STAND_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_EGGROBO_STAND_SIZE,
+                    Sonic3kConstants.MAP_FBZ_EGGROBO_STAND_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_EGGROBO_RUN,
+                    Sonic3kConstants.ART_NEM_FBZ_EGGROBO_RUN_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_EGGROBO_RUN_SIZE,
+                    Sonic3kConstants.MAP_FBZ_EGGROBO_RUN_ADDR, 0, -1));
+            // Obj_FBZ2Subboss's normal defeat path queues both KosM blocks.
+            // Pillar consumes default frame 0; clouds explicitly select
             // frames 1-3 from FBZCloud_PositionFrameData.
             levelArt.add(new LevelArtEntry(
                     Sonic3kObjectArtKeys.FBZ_BOSS_PILLAR,

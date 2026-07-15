@@ -283,6 +283,7 @@ public final class Sonic3kObjectIds {
     public static final int CNZ_END_BOSS = 0xA7;
     // S3KL object table: Obj_FBZMiniboss. SKL reuses $AA for Hyudoro.
     public static final int FBZ_MINIBOSS = 0xAA;
+    public static final int FBZ2_SUBBOSS = 0xAB;
     // S3KL object table: Obj_Penguinator.
     public static final int PENGUINATOR = 0xAD;
     // S3KL object table: Obj_StarPointer.

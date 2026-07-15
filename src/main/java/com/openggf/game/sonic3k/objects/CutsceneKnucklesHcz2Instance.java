@@ -496,11 +496,11 @@ public class CutsceneKnucklesHcz2Instance extends AbstractObjectInstance
 
     /**
      * ROM: sub_456C6 — Allocates Obj_Song_Fade_Transition with mus_Knuckles.
-     * Fades current music then plays Knuckles' Theme after 2*60 frames.
+     * Fades current music through locked-on Obj_Song_Fade_Transition (wait word 90).
      */
     private void fadeAndPlayKnucklesTheme() {
         // Spawn a SongFadeTransitionInstance that fades out, waits, then plays Knuckles theme
-        spawnDynamicObject(new SongFadeTransitionInstance(2 * 60, Sonic3kMusic.KNUCKLES.id));
+        spawnDynamicObject(SongFadeTransitionInstance.transitionTo(Sonic3kMusic.KNUCKLES.id));
     }
 
     /**
@@ -508,7 +508,7 @@ public class CutsceneKnucklesHcz2Instance extends AbstractObjectInstance
      * Waits 2*60 frames then plays HCZ Act 2 music.
      */
     private void fadeThenPlayLevelMusic() {
-        spawnDynamicObject(new SongFadeTransitionInstance(2 * 60, Sonic3kMusic.HCZ2.id));
+        spawnDynamicObject(SongFadeTransitionInstance.toLevelMusic(Sonic3kMusic.HCZ2.id));
     }
 
     /**

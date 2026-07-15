@@ -265,6 +265,8 @@ class TestLbz2RideCameoInstances {
         assertEquals(4, cameo.swingChildrenForTest().size());
         assertEquals(List.of(Sonic3kMusic.KNUCKLES.id), cameo.musicFadeTargetsForTest(),
                 "loc_628E0 spawns Obj_Song_Fade_Transition -> mus_Knuckles");
+        assertEquals(List.of(SongFadeTransitionInstance.TRANSITION_WAIT_WORD), cameo.musicFadeWaitWordsForTest(),
+                "locked-on Obj_Song_Fade_Transition seeds its signed wait word with 90");
 
         cameo.triggerFromShip();
         cameo.update(0, playerAt(0x3D00, 0x0608, "sonic"));
@@ -289,6 +291,9 @@ class TestLbz2RideCameoInstances {
         assertEquals(List.of(Sonic3kMusic.KNUCKLES.id, Sonic3kMusic.LBZ2.id),
                 cameo.musicFadeTargetsForTest(),
                 "flung cameo fades back to level music (loc_6297A)");
+        assertEquals(List.of(SongFadeTransitionInstance.TRANSITION_WAIT_WORD,
+                        SongFadeTransitionInstance.TO_LEVEL_MUSIC_WAIT_WORD), cameo.musicFadeWaitWordsForTest(),
+                "LBZ2 intro and level restore use distinct locked-on helper wait words");
     }
 
     @Test

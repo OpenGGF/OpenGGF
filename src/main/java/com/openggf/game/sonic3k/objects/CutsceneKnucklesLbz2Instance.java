@@ -66,6 +66,7 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
     private final List<SwingChild> swingChildren = new ArrayList<>(4);
     private final List<LbzKnuxPillarInstance> supportPillars = new ArrayList<>(1);
     private final List<Integer> musicFadeTargets = new ArrayList<>(2);
+    private final List<Integer> musicFadeWaitWords = new ArrayList<>(2);
     private int x;
     private int y;
     private int xFixed;
@@ -195,9 +196,14 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
         return List.copyOf(musicFadeTargets);
     }
 
-    private void spawnMusicFade(int musicId) {
+    public List<Integer> musicFadeWaitWordsForTest() {
+        return List.copyOf(musicFadeWaitWords);
+    }
+
+    private void spawnMusicFade(int nativeWaitWord, int musicId) {
         musicFadeTargets.add(musicId);
-        spawnDynamicObject(new SongFadeTransitionInstance(2 * 60, musicId));
+        musicFadeWaitWords.add(nativeWaitWord);
+        spawnDynamicObject(new SongFadeTransitionInstance(nativeWaitWord, musicId));
     }
 
     private void initializeAfterServices() {
@@ -213,7 +219,7 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
         // Pal_CutsceneKnux line 1, ChildObjDat_66592 (4 children at (2,$24)).
         renderXFlip = true;
         mappingFrame = 0x20;
-        spawnMusicFade(Sonic3kMusic.KNUCKLES.id);
+        spawnMusicFade(SongFadeTransitionInstance.TRANSITION_WAIT_WORD, Sonic3kMusic.KNUCKLES.id);
         AizIntroArtLoader.applyKnucklesPalette(services());
         ensureSupportPillar();
         for (int subtype = 0; subtype <= 6; subtype += 2) {
@@ -305,7 +311,7 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
             mappingFrame = 9;
             xVel = 0x0200;
             yVel = -0x0100;
-            spawnMusicFade(Sonic3kMusic.LBZ2.id);
+            spawnMusicFade(SongFadeTransitionInstance.TO_LEVEL_MUSIC_WAIT_WORD, Sonic3kMusic.LBZ2.id);
             return;
         }
         addLaunchYDelta();

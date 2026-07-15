@@ -1862,6 +1862,17 @@ public class GraphicsManager {
 		}
 	}
 
+	/** Submits one non-drawable SAT control entry while collection is active. */
+	public void submitSpriteSatControlEntry(int x, int y, int widthTiles, int heightTiles,
+			int rawTileWordLow11) {
+		if (!spriteSatCollectionActive) return;
+		spriteSatEntries.add(new SpriteSatEntry(currentSpriteSatBucket, x, y,
+				widthTiles, heightTiles, 0, rawTileWordLow11, 0,
+				false, false, false, currentSpriteHighPriority,
+				SpriteMaskReplayRole.NORMAL, 0, widthTiles, 0, heightTiles,
+				currentSpriteSatDebugSource));
+	}
+
 	public void setCurrentSpriteSatDebugSource(String debugSource) {
 		currentSpriteSatDebugSource = debugSource;
 	}

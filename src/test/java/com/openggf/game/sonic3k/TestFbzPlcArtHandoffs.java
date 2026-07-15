@@ -24,6 +24,8 @@ class TestFbzPlcArtHandoffs {
                 Sonic3kObjectArtKeys.FBZ2_SUBBOSS,
                 Sonic3kObjectArtKeys.FBZ_ROBOTNIK_STAND,
                 Sonic3kObjectArtKeys.FBZ_ROBOTNIK_RUN,
+                Sonic3kObjectArtKeys.FBZ_EGGROBO_STAND,
+                Sonic3kObjectArtKeys.FBZ_EGGROBO_RUN,
                 Sonic3kObjectArtKeys.FBZ_CLOUD,
                 Sonic3kObjectArtKeys.FBZ_BOSS_PILLAR,
                 Sonic3kObjectArtKeys.FBZ_END_BOSS,
@@ -63,6 +65,10 @@ class TestFbzPlcArtHandoffs {
         assertStandalone(plan, Sonic3kObjectArtKeys.FBZ_ROBOTNIK_RUN,
                 0x0D8302, 0x06837E, 2784);
         assertEquals(0x4A9, Sonic3kConstants.ART_TILE_FBZ_ROBOTNIK_RUN);
+        assertStandalone(plan, Sonic3kObjectArtKeys.FBZ_EGGROBO_STAND,
+                0x160340, 0x186BB0, 1984);
+        assertStandalone(plan, Sonic3kObjectArtKeys.FBZ_EGGROBO_RUN,
+                0x15FFBE, 0x186C20, 2208);
         assertStandalone(plan, Sonic3kObjectArtKeys.FBZ_ROBOTNIK_HEAD,
                 0x0D7C7A, 0x068454, 1024);
         assertEquals(0x430, Sonic3kConstants.ART_TILE_FBZ_ROBOTNIK_HEAD);
