@@ -202,7 +202,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         switch (state) {
             case INIT -> updateInit(player);
             case FALLING -> updateFalling(frameCounter, player);
-            case LANDED -> updateLanded();
+            case LANDED -> updateLanded(player);
             case RESULTS -> updateResults(player);
             case AFTER -> updateAfter(player);
         }
@@ -378,7 +378,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     // LANDED
     // =========================================================================
 
-    private void updateLanded() {
+    private void updateLanded(AbstractPlayableSprite player) {
         // If a hidden monitor cleared our landed flag, bounce back up
         if (!landed) {
             yVel = -0x200;
@@ -398,6 +398,16 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
             animFrame = FACE_FRAMES[pc.ordinal()];
             xVel = 0;
             yVel = 0;
+            // loc_838D6 runs in the signpost's later object slot and writes
+            // Ctrl_2_locked=$FF. Tails_Control therefore skips Tails_CPU_Control
+            // beginning with the next player slot while retaining the last
+            // Ctrl_2_logical word for ordinary movement.
+            for (PlayableEntity candidate : playerQuery(player)
+                    .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+                if (candidate instanceof AbstractPlayableSprite sprite && sprite != player) {
+                    applySidekickInputLock(sprite);
+                }
+            }
             state = State.RESULTS;
             LOG.fine("S3K Signpost LANDED -> RESULTS");
         }
@@ -461,6 +471,9 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
             return;
         }
         sprite.setControlLocked(true);
+        if (sprite.getCpuController() != null) {
+            sprite.getCpuController().setController2SignedLocked(true);
+        }
     }
 
     static void applySidekickEndingPose(AbstractPlayableSprite sprite) {
@@ -470,6 +483,9 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         // Check_TailsEndPose clears Ctrl_2_locked immediately before tail-calling
         // Set_PlayerEndingPose (sonic3k.asm:181919-181940).
         sprite.setControlLocked(false);
+        if (sprite.getCpuController() != null) {
+            sprite.getCpuController().setController2SignedLocked(false);
+        }
         applyMainPlayerEndingPose(sprite);
     }
 

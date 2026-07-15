@@ -1,5 +1,38 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ complete-run frontiers align at frame 15974
+
+Branch `feature/ai-trace-animation-verification`, after the frame-15947
+attracted-ring milestone. `Obj_EndSignLanded` changes to routine 6 and writes
+`Ctrl_2_locked=$FF` in its later object slot. On the next frame the signed lock
+makes `Tails_Control` bypass both the raw-controller copy and
+`Tails_CPU_Control`, while ordinary Tails movement continues from the retained
+`Ctrl_2_logical` word. Replay represented only the general Boolean input lock,
+so CPU follow steering still applied a literal `-1 x_pos` nudge and restarted
+Tails' mapping sequence.
+
+The landed-to-results transition now publishes the CPU controller's existing
+signed-lock state at the same object checkpoint. The later
+`Check_TailsEndPose` path clears both representations before installing the
+ending pose. The extension applies the native P2 behavior to configured
+sidekicks through the existing participation policy; no zone, route, frame,
+trace hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:176198-176238,181919-181943`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 15947 to frame 15974
+  (`x_speed`, expected `$0000` / actual `$0196`).
+- MGZ complete-run animation advances from frame 15970 to frame 15974
+  (`player_animation_id`, expected `$13` / actual `$00`).
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ attracted-ring frontier advances to frame 15947
 
 Branch `feature/ai-trace-animation-verification`, after the frame-11531
