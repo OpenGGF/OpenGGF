@@ -233,7 +233,7 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         boolean shouldBreak = switch (config.breakMode) {
             case STANDARD -> checkStandardBreak(player);
             case KNUCKLES_ONLY -> isKnuckles();
-            case MGZ_SPIN_BREAK -> checkMgzSpinBreak(player);
+            case MGZ_SPIN_BREAK -> checkMgzSpinBreak(player, result.sideDistX());
         };
 
         if (shouldBreak) {
@@ -261,13 +261,20 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
 
     /**
      * MGZ spin-break check (loc_2172E).
-     * ROM: bclr #6,$37(a1) clears the wall-cling side-contact bit when the wall
-     * sees a side hit. Knuckles-in-glide is kept as an engine fallback because
-     * the glide path does not always raise the cling bit at the same point.
+     * ROM: bclr #6,$37(a1) tests and consumes the tertiary side-contact bit set
+     * by SolidObjectFull after a non-zero side correction. This is distinct from
+     * the engine's persistent wall-cling flag, which also owns the MGZ top-platform
+     * grab state. Knuckles-in-glide remains an engine fallback because the glide
+     * path does not always raise the contact bit at the same point.
      */
-    private boolean checkMgzSpinBreak(AbstractPlayableSprite player) {
-        if (player.isWallCling()) {
-            player.setWallClingSideContact(false);
+    private boolean checkMgzSpinBreak(AbstractPlayableSprite player, int sideDistX) {
+        if (player.consumeWallClingSideContact()) {
+            return true;
+        }
+        // A later wall slot observes the carrier's already-applied MoveSprite2
+        // step. The manual checkpoint represents its non-zero SolidObjectFull
+        // d0 before the controller callback can publish status_tertiary bit 6.
+        if (player.isWallCling() && sideDistX != 0) {
             return true;
         }
         return isKnuckles() && player.getDoubleJumpFlag() == GLIDE_ACTIVE;
@@ -283,9 +290,16 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
                     || player.getAnimationId() == ANIM_ROLL
                             && Math.abs(player.getXSpeed()) >= BREAK_SPEED_THRESHOLD;
             case KNUCKLES_ONLY -> isKnuckles();
+            // The projection guard runs before SolidObjectFull can raise the
+            // transient side-contact bit, so the active MGZ grab/cling state
+            // predicts that the resolving side pass is eligible to break.
             case MGZ_SPIN_BREAK -> player.isWallCling()
                     || isKnuckles() && player.getDoubleJumpFlag() == GLIDE_ACTIVE;
         };
+    }
+
+    boolean breaksFromTertiarySideFeedback() {
+        return config.breakMode == BreakMode.MGZ_SPIN_BREAK;
     }
 
     private void performBreak(AbstractPlayableSprite player) {

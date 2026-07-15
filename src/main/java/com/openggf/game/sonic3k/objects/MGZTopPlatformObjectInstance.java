@@ -342,7 +342,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         if (!sprite.isWallCling()) {
             return;
         }
-        if (contact.touchSide() && contact.movingInto()) {
+        if (contact.touchSide() && contact.sideDistX() != 0 && contact.movingInto()) {
             sprite.setWallClingSideContact(true);
         }
         if (contact.touchBottom()) {
@@ -378,7 +378,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         if (!(playerEntity instanceof AbstractPlayableSprite player) || contact == null) {
             return;
         }
-        if (candidate instanceof BreakableWallObjectInstance
+        if (candidate instanceof BreakableWallObjectInstance wall
                 && contact.touchSide()
                 // A zero-distance boundary only needs deferred replay while
                 // the carrier's later word-only snap would put the player
@@ -386,7 +386,8 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
                 // to the clamped X, sub_35504 is free to accumulate away-input
                 // ground velocity again.
                 && (contact.sideDistX() != 0
-                        || carrierSnapWouldCrossBoundary(player, candidate))) {
+                        || !wall.breaksFromTertiarySideFeedback()
+                                && carrierSnapWouldCrossBoundary(player, candidate))) {
             PlayerGrabState state = playerStates.computeIfAbsent(player, key -> new PlayerGrabState());
             // The engine's S3K post-movement solid pass reaches this wall
             // before the controller body, while the ROM's slot order applies
@@ -410,7 +411,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         // SolidObject_cont writes status_tertiary before this platform's later
         // object slot runs. loc_350A6 clears the flags and stops the matching
         // platform axis before copying its velocity back to Player_1.
-        if (contact.touchSide() && contact.movingInto()) {
+        if (contact.touchSide() && contact.sideDistX() != 0 && contact.movingInto()) {
             player.setWallClingSideContact(true);
         }
         if (contact.touchBottom()) {
@@ -423,6 +424,16 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             PlayableEntity player, ObjectInstance candidate) {
         if (player == null) {
             return null;
+        }
+        if (candidate instanceof BreakableWallObjectInstance wall
+                && player instanceof AbstractPlayableSprite sprite
+                && getExecutionSlotIndex() > wall.getExecutionSlotIndex()
+                && sprite.getCentreX() == wall.getX() + wall.getSolidParams().halfWidth()) {
+            // This wall's SST slot runs before the carrier and the player is
+            // exactly on SolidObjectFull's inclusive right boundary. Its d0
+            // folds to zero, so the wall returns before the later platform's
+            // MoveSprite2 step; do not project that future carrier movement.
+            return 0;
         }
         if (candidate instanceof BreakableWallObjectInstance wall
                 && player instanceof AbstractPlayableSprite sprite

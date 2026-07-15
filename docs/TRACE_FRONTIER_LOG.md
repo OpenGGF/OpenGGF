@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ carried wall feedback follows SST order and non-zero d0
+
+Branch `feature/ai-trace-animation-verification`, after the lightning-attraction
+milestone. MGZ's frame-2 breakable wall reads `status_tertiary` bit 6, which
+`SolidObjectFull` sets only after a non-zero side correction while the cling bit
+is active. The engine instead treated the persistent top-platform grab bit as
+the side-hit bit, projected a later carrier slot through an earlier wall slot,
+and published side feedback even on the inclusive-right-edge `d0 == 0` path.
+Carrier projection now observes SST order, the exact-right-edge earlier-wall
+case retains its current position, and both carried-contact publishers require
+the ROM's non-zero correction before raising bit 6. No trace state,
+zone/route/frame carve-out, hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:41394-41498,45519-45920`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 22432 to frame 22451
+  (`x`, expected `$175C` / actual `$1762`).
+- MGZ complete-run animation advances from frame 22541 to frame 22590
+  (`player_mapping_frame`, expected `$22` / actual `$08`).
+- `TestS3kBreakableWallPlayerParticipation` passes 7/7, including exact-edge,
+  non-zero-displacement, and consumed tertiary-feedback assertions.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- S3K lightning attraction allocates one ring per touch pass
 
 Branch `feature/ai-trace-animation-verification`, after the MGZ trigger-platform

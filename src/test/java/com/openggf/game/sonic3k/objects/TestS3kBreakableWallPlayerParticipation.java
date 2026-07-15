@@ -8,7 +8,9 @@ import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
@@ -100,6 +102,43 @@ class TestS3kBreakableWallPlayerParticipation {
     }
 
     @Test
+    void mgzSpinWallRequiresTransientSideContactInsteadOfPersistentGrabOwnership() {
+        TestablePlayableSprite sonic = player("sonic", 0x0F00, 0x1000);
+        sonic.setWallCling(true);
+        TestableBreakableWallObjectInstance wall = mgzSpinWall();
+        wall.setCheckpointBatch(new SolidCheckpointBatch(wall, Map.of(
+                sonic, sideContact(0x0480, false, 0)
+        )));
+        wall.setServices(queryOnlyServices(sonic, List.of()));
+
+        wall.update(1, sonic);
+
+        assertTrue(!wall.isDestroyed(),
+                "MGZ top-platform grab ownership must not stand in for ROM status_tertiary bit 6");
+
+        wall.setCheckpointBatch(new SolidCheckpointBatch(wall, Map.of(
+                sonic, sideContact(0x0480, false, 0, -8)
+        )));
+        wall.update(1, sonic);
+
+        assertTrue(wall.isDestroyed(),
+                "A later MGZ wall slot should consume the carrier's non-zero SolidObjectFull d0");
+
+        wall = mgzSpinWall();
+        wall.setServices(queryOnlyServices(sonic, List.of()));
+        sonic.setWallClingSideContact(true);
+        wall.setCheckpointBatch(new SolidCheckpointBatch(wall, Map.of(
+                sonic, sideContact(0x0480, false, 0)
+        )));
+        wall.update(1, sonic);
+
+        assertTrue(wall.isDestroyed(),
+                "MGZ spin wall should break once SolidObjectFull raises the transient side-contact bit");
+        assertTrue(!sonic.hasWallClingSideContact(),
+                "Obj_BreakableWall bclr should consume ROM status_tertiary bit 6");
+    }
+
+    @Test
     void iczBreakableWallAppliesKnucklesContactToQueryOnlySidekick() {
         TestablePlayableSprite main = player("knuckles", 0x1200, 0x0700);
         TestablePlayableSprite sidekick = player("tails", 0x3200, 0x0700);
@@ -155,6 +194,19 @@ class TestS3kBreakableWallPlayerParticipation {
         return player;
     }
 
+    private static TestableBreakableWallObjectInstance mgzSpinWall() {
+        TestObjectServices constructionServices = new TestObjectServices() {
+            @Override
+            public int romZoneId() {
+                return Sonic3kZoneIds.ZONE_MGZ;
+            }
+        };
+        return ObjectConstructionContext.construct(constructionServices,
+                () -> new TestableBreakableWallObjectInstance(
+                        new ObjectSpawn(0x1000, 0x1000,
+                                Sonic3kObjectIds.BREAKABLE_WALL, 2, 0, false, 0)));
+    }
+
     private static PlayerSolidContactResult noContact() {
         return new PlayerSolidContactResult(ContactKind.NONE, false, false, false, false,
                 PreContactState.ZERO, null, 0);
@@ -165,8 +217,13 @@ class TestS3kBreakableWallPlayerParticipation {
     }
 
     private static PlayerSolidContactResult sideContact(int xSpeed, boolean rolling, int animationId) {
+        return sideContact(xSpeed, rolling, animationId, 0);
+    }
+
+    private static PlayerSolidContactResult sideContact(
+            int xSpeed, boolean rolling, int animationId, int sideDistX) {
         return new PlayerSolidContactResult(ContactKind.SIDE, false, false, true, false,
-                new PreContactState((short) xSpeed, (short) 0, rolling, animationId), null, 0);
+                new PreContactState((short) xSpeed, (short) 0, rolling, animationId), null, sideDistX);
     }
 
     private static TestObjectServices queryOnlyServices(
