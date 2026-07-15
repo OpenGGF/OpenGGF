@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class TestS3kModZoneAdapter {
@@ -77,6 +78,7 @@ class TestS3kModZoneAdapter {
                     module.getModZoneAdapter().load("alpha", definition));
 
             assertEquals(S3kZoneSet.SKL, level.getObjectZoneSet());
+            assertFalse(level.hasStockRomZoneIdentity());
             assertSame(module.getAdditiveLevelRingSpriteSheet(), level.getRingSpriteSheet());
             byte[] expected = rom.readBytes(
                     com.openggf.game.sonic3k.constants.Sonic3kConstants.KNUCKLES_PALETTE_ADDR,
@@ -86,6 +88,14 @@ class TestS3kModZoneAdapter {
             assertEquals(palette.getColor(1).r, level.getPalette(0).getColor(1).r);
             assertEquals(palette.getColor(1).g, level.getPalette(0).getColor(1).g);
             assertEquals(palette.getColor(1).b, level.getPalette(0).getColor(1).b);
+
+            Sonic3kLevel s3kl = assertInstanceOf(Sonic3kLevel.class,
+                    module.getModZoneAdapter().load("alpha", definition(2,
+                            new ModLevelDefinition.S3kMetadata(
+                                    ModLevelDefinition.S3kObjectZoneSet.S3KL),
+                            backdropClaim())));
+            assertEquals(S3kZoneSet.S3KL, s3kl.getObjectZoneSet());
+            assertFalse(s3kl.hasStockRomZoneIdentity());
         } finally {
             config.setConfigValue(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE,
                     previous == null ? "sonic" : previous);
@@ -96,6 +106,34 @@ class TestS3kModZoneAdapter {
     void typedMetadataMapsToTheExactInternalZoneSet() {
         assertEquals(S3kZoneSet.S3KL, map(ModLevelDefinition.S3kObjectZoneSet.S3KL));
         assertEquals(S3kZoneSet.SKL, map(ModLevelDefinition.S3kObjectZoneSet.SKL));
+    }
+
+    @Test
+    void zoneIdGatedStockFactoryIsRejectedBeforePublication() {
+        Sonic3kModZoneAdapter adapter = new Sonic3kModZoneAdapter(
+                new com.openggf.game.sonic3k.Sonic3kGameModule());
+        var stockPipePlug = new ModLevelDefinition.StockObjectSpawn(
+                1, 10, 20,
+                com.openggf.game.sonic3k.constants.Sonic3kObjectIds.LBZ_PIPE_PLUG,
+                0, 0, false, 20);
+        ModRegistrationException failure = assertThrows(ModRegistrationException.class,
+                () -> adapter.validate("alpha", definition(2, 8,
+                        new ModLevelDefinition.S3kMetadata(
+                                ModLevelDefinition.S3kObjectZoneSet.S3KL),
+                        backdropClaim(), List.of(stockPipePlug))));
+
+        assertEquals("MOD_S3K_STOCK_OBJECT_INCOMPATIBLE", failure.findingCode());
+    }
+
+    @Test
+    void namespacedObjectBypassesStockFactoryCompatibility() {
+        Sonic3kModZoneAdapter adapter = new Sonic3kModZoneAdapter(
+                new com.openggf.game.sonic3k.Sonic3kGameModule());
+        var controller = new ModLevelDefinition.KeyedObjectSpawn(
+                1, 10, 20, "alpha:controller", 0, 0, false, 20);
+
+        assertDoesNotThrow(() -> adapter.validate("alpha", definition(2, 8, null,
+                backdropClaim(), List.of(controller))));
     }
 
     @Test

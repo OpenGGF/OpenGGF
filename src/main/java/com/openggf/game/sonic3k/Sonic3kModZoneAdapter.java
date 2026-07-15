@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.game.sonic3k.constants.S3kZoneSet;
+import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.Level;
 import com.openggf.mods.code.ModLevelDefinition;
 import com.openggf.mods.code.ModPaletteUsageValidator;
@@ -37,6 +38,20 @@ public final class Sonic3kModZoneAdapter implements ModZoneAdapter {
         if (hasStockObjects && level.s3kMetadata().isEmpty()) {
             throw new ModRegistrationException(ownerModId,
                     "S3K stock objects require an explicit objectZoneSet");
+        }
+        S3kZoneSet zoneSet = level.s3kMetadata()
+                .map(metadata -> S3kZoneSet.valueOf(metadata.objectZoneSet().name()))
+                .orElse(S3kZoneSet.S3KL);
+        Sonic3kObjectRegistry registry = (Sonic3kObjectRegistry) gameModule.createObjectRegistry();
+        for (ModLevelDefinition.ObjectEntry object : level.objects()) {
+            if (object instanceof ModLevelDefinition.StockObjectSpawn stock
+                    && !registry.canCreateInCustomZone(zoneSet, stock.stockObjectId())) {
+                throw new ModRegistrationException(ownerModId,
+                        "MOD_S3K_STOCK_OBJECT_INCOMPATIBLE",
+                        "Stock S3K object 0x%02X requires a real ROM zone identity"
+                                .formatted(stock.stockObjectId() & 0xFF),
+                        null, null);
+            }
         }
         ModPaletteUsageValidator.validate(ownerModId, level);
     }

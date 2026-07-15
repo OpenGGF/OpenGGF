@@ -43,6 +43,7 @@ public class Sonic3kLevel extends AbstractLevel {
     private byte[] secondaryCollisionIndexTable = new byte[0];
     private final Integer minXOverride;
     private final S3kZoneSet objectZoneSet;
+    private final boolean stockRomZoneIdentity;
     private int fgLayoutWidthBlocks = Sonic3kConstants.MAP_WIDTH;
     private int fgLayoutHeightBlocks = Sonic3kConstants.MAP_HEIGHT;
     private int bgLayoutWidthBlocks = Sonic3kConstants.MAP_WIDTH;
@@ -87,6 +88,7 @@ public class Sonic3kLevel extends AbstractLevel {
         this.ringSpriteSheet = ringSpriteSheet;
         this.minXOverride = minXOverride;
         this.objectZoneSet = S3kZoneSet.forZone(zoneIndex);
+        this.stockRomZoneIdentity = true;
 
         loadPalettes(rom, characterPaletteAddr, levelPaletteAddr);
         loadPatternsWithPlan(rom, resourcePlan);
@@ -113,6 +115,7 @@ public class Sonic3kLevel extends AbstractLevel {
         source.requireComplete();
         source.validateResourceReferences();
         objectZoneSet = source.objectZoneSet;
+        stockRomZoneIdentity = false;
 
         decodePatterns(source.patternBytes, null);
         decodeSolidProfiles(source.solidHeights, source.solidWidths, source.solidAngles);
@@ -136,6 +139,11 @@ public class Sonic3kLevel extends AbstractLevel {
     /** Returns the explicit S3K object pointer-table family for this level. */
     public S3kZoneSet getObjectZoneSet() {
         return objectZoneSet;
+    }
+
+    /** Whether {@link #getZoneIndex()} is an actual S3K ROM zone id rather than a synthetic index. */
+    public boolean hasStockRomZoneIdentity() {
+        return stockRomZoneIdentity;
     }
 
     /** Strict builder for the prepared format-v2 S3K level payload. */
