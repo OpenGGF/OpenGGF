@@ -1,5 +1,37 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ swinging spike balls reserve their visual helper SST
+
+Branch `feature/ai-trace-animation-verification`, after the S3K lost-ring
+render-height milestone. `Obj_MGZSwingingSpikeBall` creates a separate
+`loc_34244` helper with `AllocateObjectAfterCurrent`; the helper owns the
+anchor and chain sprites and independently runs `Sprite_OnScreen_Test`. The
+engine renders that geometry inline, but had not reserved the helper's SST.
+Consequently a later Mantis loaded one slot early, its child and the subsequent
+lost-ring cluster inherited the shifted slot phases, and Sonic collected one
+ring a frame late. The object now reserves one after-parent child slot for the
+helper while retaining inline rendering. Both native parent and helper retire
+on complete-run frame 27968, matching the existing parent-owned reservation
+lifetime. No trace state, zone/route/frame carve-out, hydration, or comparator
+tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:70563-70730`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 28398 to frame 29122 (`x`,
+  expected `$2A78` / actual `$2A77`).
+- MGZ complete-run animation remains at frame 31643 (`tails_animation_id`,
+  expected Roll / actual Hurt).
+- The focused swinging-spike-ball suite passes, including the one-helper SST
+  reservation contract.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- S3K lost rings use their zero-height render window
 
 Branch `feature/ai-trace-animation-verification`, after the spindash follower-

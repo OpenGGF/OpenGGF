@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
@@ -43,6 +44,7 @@ public class MGZSwingingSpikeBallObjectInstance extends AbstractObjectInstance
     private static final int FRAME_BALL = 3;
 
     private static final int LINK_COUNT = 4;
+    private static final int ROM_CHILD_SLOT_COUNT = 1;
     private static final int LINK_SPACING = 0x10;
     private static final int HORIZONTAL_ANGLE_STEP = 2;
     private static final int VERTICAL_SPEED_INIT = 0x0100;
@@ -65,6 +67,7 @@ public class MGZSwingingSpikeBallObjectInstance extends AbstractObjectInstance
     private int anchorFrame;
     private boolean ballInFront;
     private boolean linksInFrontOfAnchor;
+    private boolean childSlotReserved;
 
     public MGZSwingingSpikeBallObjectInstance(ObjectSpawn spawn) {
         super(spawn, "MGZSwingingSpikeBall");
@@ -87,6 +90,7 @@ public class MGZSwingingSpikeBallObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        reserveRomChildSlot();
         int oldAngle = currentAngleByte();
         updateGeometry();
 
@@ -110,6 +114,26 @@ public class MGZSwingingSpikeBallObjectInstance extends AbstractObjectInstance
                 // Audio should not affect gameplay determinism.
             }
         }
+    }
+
+    @Override
+    public int getReservedChildSlotCount() {
+        return ROM_CHILD_SLOT_COUNT;
+    }
+
+    private void reserveRomChildSlot() {
+        if (childSlotReserved || getSlotIndex() < 0) {
+            return;
+        }
+        childSlotReserved = true;
+        ObjectServices svc = tryServices();
+        if (svc == null || svc.objectManager() == null) {
+            return;
+        }
+        // The ROM allocates the loc_34244 visual helper immediately after the
+        // parent. Rendering it inline is equivalent visually, but its SST must
+        // remain occupied so later AllocateObject calls see native slot pressure.
+        svc.objectManager().allocateChildSlotsAfter(spawn, ROM_CHILD_SLOT_COUNT, getSlotIndex());
     }
 
     private void updateGeometry() {
