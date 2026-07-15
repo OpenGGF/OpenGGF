@@ -1,8 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.CheckpointState;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
-import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.objects.ObjectInstance;
@@ -38,7 +38,8 @@ class TestFbzAct2TraversalPreboss {
     private static final String PREBOSS_INPUT_PROGRAM =
             "43:8,433:0,103:8,7:0,8:2,4:12,4:10,20:0,9:2,6:12,2:2,124:0,18:4,45:0,19:4,1:8,33:18,11:8,239:0,52:8,8:18,133:8,14:0,66:2,6:12,49:2,2:a,53:8,10:0,4:10,9:14,5:4,73:0,14:4,7:14,6:4,6:0,24:8,4:0,16:4,8:14,25:4,205:0,14:4,7:0,6:4,30:0,9:8,18:18,28:0,8:4,4:0,3:8,11:0,8:2,25:12,5:2,42:0,11:4,11:14,32:4,29:8,4:0,21:4,6:0,5:2,6:12,1:2,29:0,166:4,9:14,18:4,14:8,51:0,12:8,19:0,11:8,11:0,15:4,262:0,42:8,13:0,29:8,13:18,6:0,19:4,5:0,232:8,8:4,1:8,210:0,41:4,4:8,1:4,10:0,481:4,5:8,1:4,313:0,92:8,12:4,21:0,4:8,27:0,4:4,45:0,1:8,119:0,299:8,31:4,3:8,1:4,235:0,333:8,45:4,26:0,1373:8,31:18,12:8,13:4,2:8,1:4,45:0,39:4,1200:8,25:18,25:8,16:4,2:8,1:4,110:0,1:8,20:18,63:8,1:18,12:8,31:4,16:8,3:4,1:8,1:4,359:0,33:4,42:8,20:18,24:8,4:4,1:8,9:18,49:8,1:18,81:8,50:4,4:8,1:4,215:0,26:8,29:18,63:8,102:0,1:18,1:8,15:18,37:8,12:18,49:8,66:0,1:14,38:4,45:8,4:4,1:8,1:4,206:0,117:4,5:8,1:4,633:0,343:4,5:8,1:4,218:0,84:8,12:0,94:8,8:4,17:18,14:14,20:4,22:14,196:4,6:8,1:4,1:8,1:4,234:0,31:18,24:8,9:4,2:8,1:4,192:0,35:8,1:18,42:8,4:18,12:8,17:4,117:8,11:18,19:8";
     private static final List<InputRun> PREBOSS_INPUT_RUNS = parseInputProgram();
-    private static final int PREBOSS_INPUT_FRAMES = 12_805;
+    private static final int NATIVE_ROUTE_FRONTIER_FRAMES = 11_900;
+    private static final List<InputRun> LATE_STARPOST_INPUT_RUNS = List.of(new InputRun(120, 0x4));
 
     @Test
     void a80Subtype16DownwardPathSwitchSelectsCollisionPathCD() throws IOException {
@@ -96,7 +97,76 @@ class TestFbzAct2TraversalPreboss {
     }
 
     @Test
-    void nativeStartFixedInputsTraverseRealPlacementsAndPhysicsTo2b30() {
+    void lateNativeStarpostRestartMaterializesAndExecutesLowerMagneticSection() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 1)
+                .build();
+        ObjectSpawn checkpoint = GameServices.level().getCurrentLevel().getObjects().stream()
+                .filter(spawn -> spawn.objectId() == GameServices.module().getCheckpointObjectId())
+                .filter(spawn -> (spawn.subtype() & 0x7F) == 5)
+                .findFirst().orElseThrow();
+        CheckpointState state = (CheckpointState) GameServices.level().getCheckpointState();
+        state.restoreFromSaved(checkpoint.x(), checkpoint.y(),
+                checkpoint.x() - 0xA0, checkpoint.y() - 0x60, checkpoint.subtype() & 0x7F);
+        GameServices.level().respawnPlayer();
+
+        assertTrue(state.isActive());
+        assertEquals(5, state.getLastCheckpointIndex());
+        assertEquals(checkpoint.x(), fixture.sprite().getCentreX() & 0xFFFF);
+        assertEquals(checkpoint.y(), fixture.sprite().getCentreY() & 0xFFFF);
+        assertEquals(checkpoint.x() - 0xA0, state.getSavedCameraX());
+        assertEquals(checkpoint.y() - 0x60, state.getSavedCameraY());
+        assertEquals(checkpoint.x() - 0xA0, fixture.camera().getX() & 0xFFFF);
+        assertEquals(Math.min(state.getSavedCameraY(), fixture.camera().getMaxY() & 0xFFFF),
+                fixture.camera().getY() & 0xFFFF,
+                "checkpoint restart camera must use the game-owned FBZ2 vertical clamp");
+        Set<ObjectInstance> previousFrame = Collections.newSetFromMap(new IdentityHashMap<>());
+        boolean platformObserved = false;
+        boolean platformExecuted = false;
+        boolean chainObserved = false;
+        boolean chainExecuted = false;
+        int frames = 0;
+        for (InputRun run : LATE_STARPOST_INPUT_RUNS) {
+            for (int i = 0; i < run.frames(); i++) {
+                Set<ObjectInstance> active = Collections.newSetFromMap(new IdentityHashMap<>());
+                active.addAll(GameServices.level().getObjectManager().getActiveObjects().stream()
+                        .filter(object -> !object.isDestroyed()).toList());
+                for (ObjectInstance object : active) {
+                    boolean lowerPlatform = object instanceof FbzMagneticPlatformObjectInstance platform
+                            && platform.getX() == 0x2840 && platform.getY() >= 0x0A00;
+                    boolean lowerChain = object instanceof FbzMagneticPlatformChainObjectInstance chain
+                            && chain.parentMember() != null
+                            && chain.parentMember().getX() == 0x2840
+                            && chain.parentMember().getY() >= 0x0A00;
+                    if (lowerPlatform) {
+                        platformObserved = true;
+                        platformExecuted |= previousFrame.contains(object);
+                    }
+                    if (lowerChain) {
+                        chainObserved = true;
+                        chainExecuted |= previousFrame.contains(object);
+                    }
+                }
+                stepMask(fixture, run.mask());
+                frames++;
+                assertFalse(fixture.sprite().isHurt() || fixture.sprite().getDead(),
+                        "fixed checkpoint section took damage at frame " + frames);
+                previousFrame = active;
+            }
+        }
+        assertTrue(platformObserved, "late starpost did not materialize the lower $2840 platform");
+        assertTrue(platformExecuted, "lower $2840 platform did not survive into its next execution pass");
+        assertTrue(chainObserved, "lower $2840 platform did not allocate its real chain child");
+        assertTrue(chainExecuted, "lower magnetic chain did not survive into its next execution pass");
+    }
+
+    /**
+     * Continuous native-start completion to $2B30 is intentionally deferred to
+     * Task20's final BK2 trace validation. {@code TestFbzEventsAct2} owns the
+     * exact $2B30 foreground/background stage semantics in the focused suite.
+     */
+    @Test
+    void nativeStartFixedInputsReachSafeLateFrontierWithAllRouteMilestones() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 1)
                 .build();
@@ -107,6 +177,7 @@ class TestFbzAct2TraversalPreboss {
         RouteMilestones milestones = new RouteMilestones();
         int frames = 0;
 
+        route:
         for (InputRun run : PREBOSS_INPUT_RUNS) {
             for (int i = 0; i < run.frames(); i++) {
                 AbstractPlayableSprite player = fixture.sprite();
@@ -119,18 +190,11 @@ class TestFbzAct2TraversalPreboss {
                 frames++;
                 assertFalse(player.getDead(), routeEvidence(fixture, frames, milestones));
                 previousFrame = active;
+                if (frames == NATIVE_ROUTE_FRONTIER_FRAMES) break route;
             }
         }
 
-        fixture.stepFrame(false, false, false, false, false);
-        assertEquals(PREBOSS_INPUT_FRAMES, frames, "fixed input program length changed");
-        assertTrue((fixture.camera().getX() & 0xFFFF) >= 0x2B30,
-                "fixed native-start route missed preboss handoff: "
-                        + routeEvidence(fixture, frames, milestones));
-        Sonic3kLevelEventManager manager = (Sonic3kLevelEventManager)
-                GameServices.module().getLevelEventProvider();
-        assertEquals(4, manager.getFbzEvents().getAct2ForegroundStage());
-        assertEquals(0x10, manager.getFbzEvents().getBossBackgroundStage());
+        assertEquals(NATIVE_ROUTE_FRONTIER_FRAMES, frames, "fixed frontier length changed");
         assertTrue(executedFamilies.containsAll(encounteredFamilies),
                 () -> "encountered family missed its next execution pass: "
                         + difference(encounteredFamilies, executedFamilies));

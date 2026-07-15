@@ -150,22 +150,26 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         return zoneId == Sonic3kZoneIds.ZONE_MGZ
                 || zoneId == Sonic3kZoneIds.ZONE_FBZ
                 || zoneId == Sonic3kZoneIds.ZONE_ICZ
-                || isHcz2NormalBackgroundPlaneActive(zoneId)
+                || isHcz2BackgroundPlaneWindowActive(zoneId)
                 || isCnzBossBackgroundWindowActive(zoneId);
     }
 
     /**
-     * HCZ2's opening wall occupies the second 512px BG-layout strip. Once the
-     * ROM's bottom-up refresh reaches state $C, Plane B contains only the
-     * ordinary strip sourced from X=$000 and wraps at the VDP's 512px width.
+     * HCZ2 keeps Plane B a 512px VDP window through every act-2 BG state.
+     * During the wall chase, {@code HCZ2BGE_WallMove} refreshes the plane with
+     * {@code DrawBGAsYouMove} at the wall BG camera
+     * ({@code Camera_X_pos_BG_copy = camX - $200 + wall offset}), so the engine
+     * window must follow {@code getBgCameraX()}; the post-chase states rebuild
+     * it from source X={@code $000} ({@code HCZ2BGE_NormalRefresh}), where the
+     * window stays anchored at 0 and wraps at the VDP's 512px width.
      */
-    private boolean isHcz2NormalBackgroundPlaneActive(int zoneId) {
+    private boolean isHcz2BackgroundPlaneWindowActive(int zoneId) {
         if (zoneId != Sonic3kZoneIds.ZONE_HCZ || !GameServices.hasRuntime()) {
             return false;
         }
         return GameServices.zoneRuntimeRegistry()
                 .currentAs(HczZoneRuntimeState.class)
-                .map(HczZoneRuntimeState::normalBackgroundPlaneActive)
+                .map(HczZoneRuntimeState::backgroundPlaneWindowActive)
                 .orElse(false);
     }
 
@@ -215,7 +219,12 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public boolean useLinearBackgroundLayoutOverflow(int zoneIndex) {
-        return isCnzBossBackgroundWindowActive();
+        // HCZ2's BG layout stores the wall strip at X=$200..$3FF and zero-filled
+        // columns beyond; DrawBGAsYouMove reads those rows raw, so once the wall
+        // BG camera runs past the data the ROM plane shows blank chunks. Linear
+        // overflow reproduces that instead of wrapping back into the normal strip.
+        return isCnzBossBackgroundWindowActive()
+                || isHcz2BackgroundPlaneWindowActive(zoneIndex);
     }
 
     /**

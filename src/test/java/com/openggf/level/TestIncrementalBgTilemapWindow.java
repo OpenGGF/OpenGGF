@@ -127,6 +127,27 @@ public class TestIncrementalBgTilemapWindow {
         assertArrayEquals(fullRebuildAt(496, zfp), manager.getBackgroundTilemapData());
     }
 
+    @Test
+    public void linearRowOverflowWindowLeftOfLayoutBuildsBlankLeadingColumns() {
+        // HCZ2's wall BG camera starts left of the layout at act entry: the
+        // window base is negative, so top-row cells left of the layout have no
+        // ROM row data behind them and must build blank (not wrap to the
+        // layout's tail cells), and the build must not throw.
+        ZoneFeatureProvider zfp = new StubZoneFeatures(true, true);
+        LevelTilemapManager manager = newManager(-64, zfp);
+
+        byte[] data = manager.getBackgroundTilemapData();
+        int widthTiles = manager.getBackgroundTilemapWidthTiles();
+        // Leading 64px (8 tile columns) of the top block row query negative
+        // layout X on row 0 -> blank tiles (alpha byte 0).
+        for (int tileY = 0; tileY < BLOCK_PX / 8; tileY++) {
+            for (int tileX = 0; tileX < 8; tileX++) {
+                assertEquals(0, data[(tileY * widthTiles + tileX) * 4 + 3],
+                        "tile (" + tileX + "," + tileY + ") left of the layout must be blank");
+            }
+        }
+    }
+
     // ── Fallbacks ───────────────────────────────────────────────────────────
 
     @Test

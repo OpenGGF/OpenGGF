@@ -1146,17 +1146,6 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * Whether HCZ2 has completed the chase-wall clear and entered the normal
-     * 64-cell Plane B refresh.
-     *
-     * <p>ROM: state {@code $8} clears the chase plane from source X={@code $400};
-     * state {@code $C} begins rebuilding the live nametable from source X={@code $000}.
-     */
-    public boolean isAct2NormalBackgroundPlaneActive() {
-        return act2BgRoutine == BG_WALL_REFRESH || act2BgRoutine == BG_NORMAL;
-    }
-
-    /**
      * Publishes HCZ2 slide-terrain state after the current playable slot has
      * moved, matching {@code sub_714E -> sub_717C}. The status bit is therefore
      * consumed by the next frame's movement routine.

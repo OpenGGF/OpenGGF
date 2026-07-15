@@ -128,10 +128,16 @@ class TestFbzAct1RouteHeadless {
                 controlledAfterCurrentSlots.add(slot);
             }
         }
-        assertTrue(controlledAfterCurrentSlots.size() >= 3,
-                "the real route must expose three controllable AllocateObjectAfterCurrent slots");
+        assertTrue(controlledAfterCurrentSlots.size() >= 4,
+                "the real route must expose one placement hole plus three "
+                        + "controllable AllocateObjectAfterCurrent slots");
         act2Objects.reserveAllButNFreeSlots(0);
-        for (int i = 0; i < freeCapacity; i++) {
+        // ExecObjects precedes ObjPosLoad. The persistent ID $2F placement that
+        // native range culling keeps pending therefore claims the first reopened
+        // post-controller hole before the later EndSign controller dispatch.
+        // Reserve that real placement claim explicitly, then expose exactly N
+        // following holes for CreateChild1's successful worker prefix.
+        for (int i = 0; i <= freeCapacity; i++) {
             act2Objects.releaseDynamicSlot(controlledAfterCurrentSlots.get(i));
         }
         fixture.stepFrame(false, false, false, false, false);
@@ -143,6 +149,13 @@ class TestFbzAct1RouteHeadless {
                 "the carried title owner remains live while its visual children exit");
         await(fixture, 240, results::isDestroyed,
                 "the external title children did not complete and publish the carried title flag");
+
+        int placementClaimSlot = controlledAfterCurrentSlots.getFirst();
+        assertTrue(act2Objects.activeObjectsOfType(StillSpriteInstance.class).stream()
+                        .anyMatch(still -> still.getSlotIndex() == placementClaimSlot),
+                "native persistent StillSprite must claim the explicitly reserved first hole; "
+                        + "slot=" + placementClaimSlot + ", occupancy="
+                        + act2Objects.occupiedDynamicSlotIds());
 
         List<FbzAct2CameraResizeWorker> workers = act2Objects.activeObjectsOfType(
                 FbzAct2CameraResizeWorker.class);
