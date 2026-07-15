@@ -9,7 +9,8 @@ All notable changes to the OpenGGF project are documented in this file.
   selecting behavior through game-name branches. Strict level format v2 adds typed
   S3K object-set metadata and sparse Genesis palette claims while leaving the Sonic
   2/standalone format-v1 contract unchanged. Custom S3K zones compose host-owned
-  character line 0 and actual lives-HUD cells with creator-owned level colors, use
+  character line 0 and the exact mixed-palette lives-HUD cells on lines 0 and 1
+  with creator-owned level colors, use
   empty flat runtime defaults (no stock events, animation, PLC, or render effects),
   retain stock object-set identity through mutable/editor/rewind paths, and persist
   owner/local zone keys in S3K saves with safe AIZ1 fallback when an owner is absent.

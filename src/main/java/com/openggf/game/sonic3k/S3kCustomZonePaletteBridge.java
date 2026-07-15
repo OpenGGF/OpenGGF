@@ -33,8 +33,7 @@ public final class S3kCustomZonePaletteBridge implements CustomZonePaletteBridge
     private final String creatorOwner;
     private final Palette characterPalette;
     private final List<ModPaletteClaim> creatorClaims;
-    private final int hudPaletteLine;
-    private final boolean[] hudUsedColors;
+    private final boolean[][] hudUsedColors;
     private final Supplier<Palette> hudPaletteSupplier;
 
     /** Whether a level (including an editor snapshot) is a custom S3K level. */
@@ -60,10 +59,9 @@ public final class S3kCustomZonePaletteBridge implements CustomZonePaletteBridge
         this.characterPalette = Objects.requireNonNull(characterPalette, "characterPalette").deepCopy();
         this.creatorClaims = List.copyOf(Objects.requireNonNull(creatorClaims, "creatorClaims"));
         requirePaletteLine(hudPaletteLine);
-        this.hudPaletteLine = hudPaletteLine;
         this.hudUsedColors = deriveHudUsedColors(hudPaletteLine, hudStaticArt, hudLivesNumbers);
         this.hudPaletteSupplier = Objects.requireNonNull(hudPaletteSupplier, "hudPaletteSupplier");
-        validateCreatorClaims(ownerModId, creatorClaims, hudPaletteLine, hudUsedColors);
+        validateCreatorClaims(ownerModId, creatorClaims, hudUsedColors);
     }
 
     /** Validates the character-line reservation before a creator zone is published. */
@@ -73,7 +71,7 @@ public final class S3kCustomZonePaletteBridge implements CustomZonePaletteBridge
         Objects.requireNonNull(creatorClaims, "creatorClaims");
         for (ModPaletteClaim claim : creatorClaims) {
             Objects.requireNonNull(claim, "creator palette claim");
-            if (claim.line() == 0) {
+            if (claim.line() == 0 || S3kHudPaletteUseContract.isReserved(claim.line(), claim.color())) {
                 throw new ModZoneRegistrationException(ownerModId,
                         "MOD_PALETTE_RESERVED",
                         "Creator palette claim targets host-reserved line " + claim.line()
@@ -85,11 +83,10 @@ public final class S3kCustomZonePaletteBridge implements CustomZonePaletteBridge
 
     private static void validateCreatorClaims(String ownerModId,
                                               List<ModPaletteClaim> creatorClaims,
-                                              int hudPaletteLine,
-                                              boolean[] hudUsedColors) {
+                                              boolean[][] hudUsedColors) {
         validateCreatorClaims(ownerModId, creatorClaims);
         for (ModPaletteClaim claim : creatorClaims) {
-            if (claim.line() == hudPaletteLine && hudUsedColors[claim.color()]) {
+            if (hudUsedColors[claim.line()][claim.color()]) {
                 throw new ModZoneRegistrationException(ownerModId,
                         "MOD_PALETTE_RESERVED",
                         "Creator palette claim targets host HUD-reserved line " + claim.line()
@@ -110,25 +107,28 @@ public final class S3kCustomZonePaletteBridge implements CustomZonePaletteBridge
         }
         Palette override = hudPaletteSupplier.get();
         Palette hudPalette = override != null ? override : characterPalette;
-        for (int color = 1; color < hudUsedColors.length; color++) {
-            if (hudUsedColors[color]) {
-                registry.submit(PaletteWrite.normal(HUD_OWNER, HUD_PRIORITY,
-                        hudPaletteLine, color,
-                        segaBytes(PaletteWriteSupport.segaWordFromColor(hudPalette.getColor(color)))));
+        for (int line = 0; line < hudUsedColors.length; line++) {
+            for (int color = 1; color < hudUsedColors[line].length; color++) {
+                if (hudUsedColors[line][color]) {
+                    registry.submit(PaletteWrite.normal(HUD_OWNER, HUD_PRIORITY,
+                            line, color,
+                            segaBytes(PaletteWriteSupport.segaWordFromColor(hudPalette.getColor(color)))));
+                }
             }
         }
     }
 
-    private static boolean[] deriveHudUsedColors(int hudPaletteLine,
-                                                  HudStaticArt staticArt,
-                                                  Pattern[] livesNumbers) {
-        boolean[] used = new boolean[Palette.PALETTE_SIZE];
+    private static boolean[][] deriveHudUsedColors(int livesNumberPaletteLine,
+                                                   HudStaticArt staticArt,
+                                                   Pattern[] livesNumbers) {
+        boolean[][] used = new boolean[4][Palette.PALETTE_SIZE];
         if (staticArt != null && staticArt.livesFrame() != null && staticArt.patterns() != null) {
             Pattern[] patterns = staticArt.patterns();
             for (SpriteMappingPiece piece : staticArt.livesFrame().pieces()) {
-                if (piece == null || piece.paletteIndex() != hudPaletteLine) {
+                if (piece == null) {
                     continue;
                 }
+                requirePaletteLine(piece.paletteIndex());
                 int tileCount = Math.multiplyExact(piece.widthTiles(), piece.heightTiles());
                 for (int tile = 0; tile < tileCount; tile++) {
                     int patternIndex = Math.addExact(piece.tileIndex(), tile);
@@ -136,13 +136,14 @@ public final class S3kCustomZonePaletteBridge implements CustomZonePaletteBridge
                         throw new IllegalArgumentException(
                                 "HUD lives mapping references missing pattern " + patternIndex);
                     }
-                    collectNonzeroColors(patterns[patternIndex], used);
+                    collectNonzeroColors(patterns[patternIndex], used[piece.paletteIndex()]);
                 }
             }
         }
         if (livesNumbers != null) {
             for (Pattern pattern : livesNumbers) {
-                collectNonzeroColors(Objects.requireNonNull(pattern, "HUD lives number pattern"), used);
+                collectNonzeroColors(Objects.requireNonNull(pattern, "HUD lives number pattern"),
+                        used[livesNumberPaletteLine]);
             }
         }
         return used;

@@ -565,11 +565,13 @@ git commit -m "feat: isolate custom S3K runtime profiles"
 
 **Files:**
 - Create: `src/main/java/com/openggf/game/sonic3k/S3kCustomZonePaletteBridge.java`
+- Create: `src/main/java/com/openggf/game/sonic3k/S3kHudPaletteUseContract.java`
 - Modify: `src/main/java/com/openggf/game/palette/PaletteOwnershipRegistry.java`
 - Modify: `src/main/java/com/openggf/level/objects/HudRenderManager.java`
 - Modify: `src/main/java/com/openggf/level/LevelManager.java`
 - Modify: `src/main/java/com/openggf/LevelFrameStep.java`
 - Test: `src/test/java/com/openggf/game/sonic3k/TestS3kCustomZonePaletteBridge.java`
+- Test: `src/test/java/com/openggf/game/sonic3k/TestSonic3kLivesHudPaletteOverride.java`
 - Test: `src/test/java/com/openggf/level/objects/TestHudRenderManager.java`
 
 - [ ] **Step 1: Write failing reservation and composition tests**
@@ -606,7 +608,7 @@ public void submitHudClaims(PaletteOwnershipRegistry registry, Palette palette) 
 }
 ```
 
-Add immutable reservations to `PaletteOwnershipRegistry` or the bridge, validate them before level publication, and submit HUD writes before the frame's single `resolveInto`. `HudRenderManager` receives the bridge for custom S3K zones and stops calling `cachePaletteTexture` directly in that mode. Preserve the existing direct stock path exactly when no bridge is installed.
+Add the immutable ROM-independent S3K lives-HUD contract beside the bridge and validate it before level publication: line 0 reserves the exact icon/digit cells and line 1 reserves the exact second-piece cells. Derive runtime masks from every lives mapping piece on its actual palette line, add lives-number use to the provider's line-0 contract, and submit only those nonzero cells before the frame's single `resolveInto`. A ROM-gated test must prove the fixed masks still match the stock art. Keep the contract package-private and the host priority at 1000. `HudRenderManager` receives the bridge for custom S3K zones and stops calling `cachePaletteTexture` directly in that mode. Preserve the existing direct stock path exactly when no bridge is installed.
 
 - [ ] **Step 4: Run palette integration and stock HUD tests**
 

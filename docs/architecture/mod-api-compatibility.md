@@ -254,8 +254,12 @@ Added signatures:
   object-factory identity, while `ModLevelDefinition.hostMetadata()` exposes it
   without converting the tagged set into a runtime index.
 - **`ModPaletteClaim`** and `ModLevelDefinition.paletteClaims()` publish sparse
-  per-cell Genesis palette ownership. S3K retains host line 0 and actual lives-HUD
-  cells; level art must claim every other reachable indexed color.
+  per-cell Genesis palette ownership. S3K retains host line 0 and the exact
+  lives-HUD cells used by its mixed-palette mapping (line 0 icon/digits and the
+  line 1 second icon piece); level art must claim every other reachable indexed
+  color. A ROM-independent fixed mask enforces those reservations before creator
+  publication, while runtime art-derived masks route each cell to its piece's
+  actual palette line.
 - **`ModZoneRuntimeProfile`** and its `FLAT` scroll policy describe the intentionally
   empty initial runtime: no stock animation, PLC, special-render, or advanced-render
   features.
