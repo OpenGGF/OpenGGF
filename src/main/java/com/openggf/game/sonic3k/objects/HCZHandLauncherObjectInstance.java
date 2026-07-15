@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -554,6 +555,11 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (parent.isDestroyed()
+                    || !services().objectManager().isActiveObjectInstance(parent)) {
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
             if (parent.getYOffset() > Y_OFFSET_GRAB) {
                 return;
             }

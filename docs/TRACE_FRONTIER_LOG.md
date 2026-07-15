@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- HCZ physics restored after develop merge
+
+Branch `feature/ai-trace-animation-verification`, after the AIZ animation
+completion milestone. The ROM HCZ hand-launcher arm at `loc_30DEC` is a child
+of the placement-owned launcher and now releases its dynamic slot when that
+parent leaves the active placement set. The HCZ end-boss water column now also
+creates the two `ChildObjDat_6BDCA` surface objects, twenty
+`ChildObjDat_6BDE6` bubble objects (including their native `Random_Number`
+consumption), and the later `loc_6B3DE` spray object as independent SST
+occupants. Their mappings remain folded into the existing consolidated water-
+column render pass, but their lifetimes and `Process_Sprites` slots are real.
+This restores the Obj37 floor-probe phase exposed by the incoming StillSprite
+lifetime change without a zone/route/frame exception, trace hydration, or
+comparison tolerance.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 65730-66018
+(`Obj_HCZHandLauncher` / `loc_30DEC`) and 141080-141340
+(`loc_6B2AA`, `loc_6B3DE`, `loc_6B456`, and `loc_6B50C`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- HCZ complete-run physics and animation both pass through the MGZ handoff;
+  the incoming frame-29096 scattered-ring regression is removed.
+- HCZ hand-launcher unit/rewind tests and both rewind coverage guards pass.
+- The full physics sweep improves from the post-merge 42/58 to 43/58 green
+  routes / 15 expected failures; every previously green route remains green.
+- The full animation sweep remains 42/58 green routes / 16 expected failures;
+  every previously green route remains green.
+
 ### 2026-07-15 -- AIZ animation complete
 
 Branch `feature/ai-trace-animation-verification`, after merging current

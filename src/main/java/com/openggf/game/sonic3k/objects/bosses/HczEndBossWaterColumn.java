@@ -59,8 +59,8 @@ import java.util.logging.Logger;
  * The platform object draws ONE mapping frame via Draw_Sprite. The growing
  * whirlpool body is drawn by a separate spray child (loc_6B3DE) which selects
  * progressively taller mapping frames based on the parent's $39 segment count.
- * Since the spray child is not yet its own class, this object also renders the
- * spray visual inline using the ROM's frame tables and Y-offset tables.
+ * The spray retains its own object-loop slot, while this object renders that
+ * child's visual inline using the ROM's frame tables and Y-offset tables.
  *
  * <h3>Animation scripts (Animate_Raw format: delay, frames..., command):</h3>
  * <ul>
@@ -345,6 +345,15 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
 
         updateDynamicSpawn();
 
+        // ChildObjDat_6BDCA / ChildObjDat_6BDE6 allocate real SST children.
+        // Their visuals are currently folded into the column renderer, but
+        // their Process_Sprites slots and RNG consumption remain gameplay state.
+        spawnChild(() -> new HczEndBossWaterSurfaceChild(boss, -4));
+        spawnChild(() -> new HczEndBossWaterSurfaceChild(boss, 4));
+        for (int i = 0; i < 0x14; i++) {
+            spawnChild(() -> new HczEndBossBubbleParticle(boss));
+        }
+
         // Transition to ANIMATE immediately
         routine = ROUTINE_ANIMATE;
         LOG.fine("HCZ Water Column: INIT, waterBaseY=" + waterBaseY);
@@ -386,6 +395,9 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         routine = ROUTINE_RISE;
         yVel = RISE_YVEL;
         yFixed = currentY << 8;
+
+        // loc_6B2F8 creates loc_6B3DE as a separately executed child slot.
+        spawnChild(() -> new HczEndBossWaterSprayChild(boss));
 
         // Init column animation (byte_6BE15: frames $15, $20 looping)
         columnAnimIndex = 0;
@@ -548,6 +560,11 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
 
             LOG.fine("HCZ Water Column: propeller stopped, entering DESCEND");
         }
+    }
+
+    /** ROM parent flag bit 3 observed by loc_6B598 and loc_6B3DE. */
+    boolean isWaterChildShutdownActive() {
+        return routine >= ROUTINE_DESCEND;
     }
 
     // =========================================================================
@@ -983,6 +1000,10 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
             LOG.fine(() -> "HczEndBossWaterColumn.getWaterLevelY: " + e.getMessage());
         }
         return FLOOR_Y_LIMIT;
+    }
+
+    int getWaterSurfaceYForChildren() {
+        return waterBaseY + 8;
     }
 
     // =========================================================================
