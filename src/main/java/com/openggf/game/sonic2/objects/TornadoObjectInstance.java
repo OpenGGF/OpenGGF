@@ -492,9 +492,11 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 yVel = 0x100;
             }
             case 4 -> {
-                // ObjB2_Main_WFZ_Start_shot_down
+                // ObjB2_Main_WFZ_Start_shot_down: ROM plays SndID_Scatter ($EB) every
+                // $20 frames as the Tornado is gunned down (s2.asm:78890-78895), not the
+                // ring-loss/RingSpill sound ($C6). SndID_Scatter aliases SndID_LaserFloor.
                 if ((frameCounter & WFZ_SCATTER_SFX_MASK) == 0) {
-                    services().playSfx(Sonic2Sfx.RING_SPILL.id);
+                    services().playSfx(Sonic2Sfx.LASER_FLOOR.id);
                 }
 
                 scriptTimer--;
