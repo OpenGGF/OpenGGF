@@ -2,11 +2,10 @@
 # computes the rendered line as (paletteLine + piece.paletteIndex) & 0x3 (Genesis
 # art_tile-addition semantics -- see per-game-rule-placement / SpritePieceRenderer).
 # Both frames below declare paletteIndex: 1, so the pipe actually renders on CRAM
-# line (1 + 1) & 3 = 2, which is SampleFlappyAssetGenerator.palettes()'s dedicated
-# "pipe greens" GPAL line (line 1 there is unrelated sky-blue level-tile color data
-# that this sheet must NOT land on). Do not "simplify" paletteIndex back to 0 to
-# match paletteLine -- that would drop the render line to 1 and collide with the
-# sky tiles' colors.
+# line (1 + 1) & 3 = 2. The strict v2 level owns the sheet's used indices 2..5 as
+# sparse line-2 paletteClaims; line 1 remains unrelated sky-blue level-tile data.
+# Do not "simplify" paletteIndex back to 0 to match paletteLine -- that would move
+# the pipe onto the sky line and bypass the declared pipe cells.
 formatVersion: 1
 paletteLine: 1
 palette:

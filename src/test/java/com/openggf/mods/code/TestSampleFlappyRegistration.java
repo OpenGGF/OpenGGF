@@ -1,14 +1,22 @@
 package com.openggf.mods.code;
 
+import com.openggf.control.InputActionMasks;
+import com.openggf.control.PlayerInputState;
 import com.openggf.game.CharacterKey;
 import com.openggf.game.GameplayLaunchTeam;
 import com.openggf.game.ZoneKey;
 import com.openggf.io.DirectoryAccess;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
+import com.openggf.level.objects.HudLabel;
+import com.openggf.level.objects.HudMetric;
+import com.openggf.level.objects.HudProfile;
+import com.openggf.level.objects.HudRow;
+import com.openggf.level.objects.HudWarningPolicy;
 import com.openggf.mods.ModManifest;
 import com.openggf.mods.ModManifestParser;
 import com.openggf.mods.ModType;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tools.modsdk.GgfModCli;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -26,6 +34,7 @@ import java.util.List;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -55,6 +64,36 @@ class TestSampleFlappyRegistration {
         assertTrue(launchTeam.sidekicks().isEmpty());
         assertEquals(1, plan.inputFilters().size());
         assertEquals(1, plan.hudProfiles().size());
+
+        PlayerInputState raw = PlayerInputState.of(
+                AbstractPlayableSprite.INPUT_UP | AbstractPlayableSprite.INPUT_LEFT
+                        | AbstractPlayableSprite.INPUT_RIGHT,
+                AbstractPlayableSprite.INPUT_DOWN | AbstractPlayableSprite.INPUT_LEFT
+                        | AbstractPlayableSprite.INPUT_RIGHT,
+                InputActionMasks.ACTION_A | InputActionMasks.ACTION_C,
+                InputActionMasks.ACTION_B,
+                true,
+                true);
+        PlayerInputState filtered = plan.inputFilters().get(FLAPPY).filter(raw);
+        assertEquals(AbstractPlayableSprite.INPUT_UP | AbstractPlayableSprite.INPUT_JUMP,
+                filtered.heldMask());
+        assertEquals(AbstractPlayableSprite.INPUT_DOWN | AbstractPlayableSprite.INPUT_JUMP,
+                filtered.pressedMask());
+        assertEquals(raw.actionHeldMask(), filtered.actionHeldMask());
+        assertEquals(raw.actionPressedMask(), filtered.actionPressedMask());
+        assertEquals(raw.startHeld(), filtered.startHeld());
+        assertEquals(raw.startPressed(), filtered.startPressed());
+
+        HudProfile hud = plan.hudProfiles().get(FLAPPY);
+        HudRow stockScore = hud.rows().stream()
+                .filter(row -> row.metric() == HudMetric.SCORE).findFirst().orElseThrow();
+        assertEquals(HudLabel.SCORE, stockScore.label());
+        assertFalse(stockScore.visible());
+        HudRow ringScore = hud.rows().stream()
+                .filter(row -> row.metric() == HudMetric.RINGS).findFirst().orElseThrow();
+        assertTrue(ringScore.visible());
+        assertEquals(HudLabel.SCORE, ringScore.label());
+        assertEquals(HudWarningPolicy.NONE, ringScore.warning());
     }
 
     private ModRegistrationPlan compileAndRegister() throws Exception {

@@ -1,6 +1,9 @@
 package com.openggf.tools.modsdk;
 
-import static org.junit.jupiter.api.Assertions.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.level.Pattern;
+import com.openggf.level.objects.BakedSheetReader;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -8,12 +11,17 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Verifies the sample-flappy level source materializes and converts through the real CLI. */
 class TestSampleFlappyLevelSource {
@@ -62,6 +70,55 @@ class TestSampleFlappyLevelSource {
     }
 
     @Test
+    void pipeSheetFinalRenderLineAndUsedColorsAreCoveredBySparseClaims() throws Exception {
+        Path pipeSheet = temp.resolve("pipe.ggfs");
+        assertCli("convert", "art", "--image", SOURCE.resolveSibling("pipe.png").toString(),
+                "--sheet", SOURCE.resolveSibling("pipe-sheet.yaml").toString(),
+                "--out", pipeSheet.toString());
+
+        BakedSheetReader.BakedSheet sheet = BakedSheetReader.read(Files.readAllBytes(pipeSheet));
+        BakedSheetReader.Palette palette = sheet.palette().orElseThrow();
+        Set<Integer> finalRenderLines = new HashSet<>();
+        sheet.frames().forEach(frame -> frame.mapping().pieces().forEach(piece ->
+                finalRenderLines.add((palette.line() + piece.paletteIndex()) & 0x3)));
+
+        Set<Integer> usedColorIndices = new HashSet<>();
+        for (Pattern pattern : sheet.patterns()) {
+            for (int y = 0; y < Pattern.PATTERN_HEIGHT; y++) {
+                for (int x = 0; x < Pattern.PATTERN_WIDTH; x++) {
+                    int color = Byte.toUnsignedInt(pattern.getPixel(x, y));
+                    if (color != 0) {
+                        usedColorIndices.add(color);
+                    }
+                }
+            }
+        }
+
+        JsonNode level = new ObjectMapper().readTree(SOURCE.resolve("level.json").toFile());
+        Map<PaletteCell, Integer> claims = new HashMap<>();
+        level.path("paletteClaims").forEach(claim -> claims.put(
+                new PaletteCell(claim.path("line").asInt(), claim.path("color").asInt()),
+                claim.path("sega").asInt()));
+
+        assertEquals(Set.of(2), finalRenderLines,
+                "paletteLine is a base; each piece adds its own palette index");
+        assertEquals(Set.of(2, 3, 4, 5), usedColorIndices);
+        Map<Integer, Integer> actualPipeWords = new HashMap<>();
+        usedColorIndices.forEach(color -> actualPipeWords.put(color, palette.colors()[color]));
+        assertEquals(Map.of(2, 0x0040, 3, 0x0060, 4, 0x0080, 5, 0x00A0),
+                actualPipeWords);
+        for (int line : finalRenderLines) {
+            for (int color : usedColorIndices) {
+                PaletteCell cell = new PaletteCell(line, color);
+                assertTrue(claims.containsKey(cell),
+                        () -> "missing sparse palette claim for rendered pipe cell " + cell);
+                assertEquals(palette.colors()[color], claims.get(cell).intValue(),
+                        () -> "claim must preserve the GGFS palette word for " + cell);
+            }
+        }
+    }
+
+    @Test
     void flappyLevelSourceConvertsCleanly() throws Exception {
         Path src = SOURCE;
         Path export = temp.resolve("export");
@@ -82,4 +139,12 @@ class TestSampleFlappyLevelSource {
         assertEquals(0, exit, bytes.toString(StandardCharsets.UTF_8));
         assertTrue(Files.exists(out.resolve("level.json")));
     }
+
+    private static void assertCli(String... arguments) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        int exit = GgfModCli.run(arguments, new PrintStream(bytes));
+        assertEquals(0, exit, bytes.toString(StandardCharsets.UTF_8));
+    }
+
+    private record PaletteCell(int line, int color) {}
 }

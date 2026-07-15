@@ -29,6 +29,10 @@
   "hostMetadata": {"s3k": {"objectZoneSet": "S3KL"}},
   "paletteClaims": [
     {"line": 1, "color": 2, "sega": 3744},
-    {"line": 1, "color": 4, "sega": 3780}
+    {"line": 1, "color": 4, "sega": 3780},
+    {"line": 2, "color": 2, "sega": 64},
+    {"line": 2, "color": 3, "sega": 96},
+    {"line": 2, "color": 4, "sega": 128},
+    {"line": 2, "color": 5, "sega": 160}
   ]
 }
