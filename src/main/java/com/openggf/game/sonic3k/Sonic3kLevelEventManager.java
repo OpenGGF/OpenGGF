@@ -1001,6 +1001,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
+    @Override
+    public void completeDrillingRobotnikFlee() {
+        if (mgzEvents != null) {
+            mgzEvents.completeDrillingRobotnikFlee();
+        }
+    }
+
     public Sonic3kHCZEvents getHczEvents() {
         return hczEvents;
     }

@@ -169,6 +169,25 @@ class TestMgzDrillingRobotnikInstance {
     }
 
     @Test
+    void drillingRobotnikCameraUnlockUsesNativeQuarterPixelWorker() throws Exception {
+        RecordingServices services = new RecordingServices(camera);
+        camera.setMinX((short) 0x32C0);
+        MgzDrillingRobotnikCameraUnlockController worker =
+                new MgzDrillingRobotnikCameraUnlockController(true);
+        worker.setServices(services);
+
+        worker.update(1, null);
+        worker.update(2, null);
+        worker.update(3, null);
+        assertEquals(0x32C0, camera.getMinX() & 0xFFFF,
+                "The first three $4000 updates retain only fractional residue");
+
+        worker.update(4, null);
+        assertEquals(0x32BF, camera.getMinX() & 0xFFFF,
+                "Obj_DecLevStartXGradual publishes one pixel on its fourth update");
+    }
+
+    @Test
     void rendersRomDrillChildPiecesAtBaseOffsets() throws Exception {
         RecordingServices services = new RecordingServices(camera);
         MgzDrillingRobotnikInstance boss = createBoss(services);
@@ -1537,6 +1556,7 @@ class TestMgzDrillingRobotnikInstance {
 
     private static final class RecordingMgzEventBridge implements LevelEventProvider, MgzObjectEventBridge {
         private int collapseHandoffCount;
+        private int drillingRobotnikFleeCount;
 
         @Override
         public void initLevel(int zone, int act) {
@@ -1549,6 +1569,11 @@ class TestMgzDrillingRobotnikInstance {
         @Override
         public void triggerBossCollapseHandoff() {
             collapseHandoffCount++;
+        }
+
+        @Override
+        public void completeDrillingRobotnikFlee() {
+            drillingRobotnikFleeCount++;
         }
     }
 }

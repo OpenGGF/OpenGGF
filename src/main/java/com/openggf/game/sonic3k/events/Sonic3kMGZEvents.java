@@ -877,6 +877,20 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         postFleeUnlockDone = true;
     }
 
+    /**
+     * Called by the native-style cleanup path after it has allocated the
+     * gradual camera worker. The worker now owns the boundary accumulator;
+     * this event-side acknowledgement only retires the boss reference and
+     * prevents the legacy destruction fallback above from duplicating it.
+     */
+    public void completeDrillingRobotnikFlee() {
+        setGenericBossFlag(false);
+        activeRobotnik = null;
+        postFleeUnlockDone = true;
+        gradualUnlockDirection = GRADUAL_UNLOCK_NONE;
+        gradualUnlockAccumulator = 0;
+    }
+
     private void updateGradualCameraUnlock() {
         if (gradualUnlockDirection == GRADUAL_UNLOCK_NONE) {
             return;

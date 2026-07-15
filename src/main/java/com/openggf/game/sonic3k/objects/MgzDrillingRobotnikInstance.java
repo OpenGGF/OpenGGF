@@ -1061,6 +1061,20 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         }
         restoreMgzPalette();
         services().playMusic(Sonic3kMusic.MGZ2.id);
+        // ROM loc_6C200 allocates the gradual boundary worker from the start
+        // of SST. A later free slot executes in this same object pass before
+        // DeformLayers scrolls the camera. Appearances 2/3 face left and use
+        // Obj_DecLevStartXGradual; appearance 1 uses Obj_IncLevEndXGradual.
+        // AllocateObject searches from the start of SST. The first appearance
+        // finds a lower slot and waits for the next pass; the third finds a
+        // later slot and executes immediately. That slot-relative distinction
+        // is observable in the camera frontier.
+        MgzDrillingRobotnikCameraUnlockController unlockWorker =
+                spawnFreeChild(() -> new MgzDrillingRobotnikCameraUnlockController(flipX));
+        if (unlockWorker != null) {
+            unlockWorker.preserveWrappedAllocationSetupPass(getSlotIndex());
+        }
+        S3kMgzEventWriteSupport.completeDrillingRobotnikFlee(services());
         setDestroyed(true);
         LOG.fine(() -> "MGZ2 Drilling Robotnik cleanup completed at y=" + state.y);
     }

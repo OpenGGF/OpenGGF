@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ drilling cleanup allocates its native gradual-bound SST
+
+Branch `feature/ai-trace-animation-verification`, after the drilling setup-
+dispatch milestone. `loc_6C200` does not leave the quake-arena boundary under
+the level-event routine: it uses `AllocateObject` to create an independent
+`Obj_IncLevEndXGradual` or `Obj_DecLevStartXGradual` SST with its own `$4000`
+longword accumulator. The allocation searches from the start of SST, so the
+first appearance wraps to an already-visited lower slot while the third uses a
+later slot and runs on the same `ExecuteObjects` pass. Preserving that concrete
+slot-relative phase releases the third arena's `$32C0` left boundary on the
+recorded camera frame. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:142620-142706,178159-178198`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 31797 to frame 31890 (`x`,
+  expected `$320F` / actual `$320B`).
+- MGZ complete-run animation remains at frame 31894
+  (`player_mapping_frame`, expected `$96` / actual `$98`).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-16 -- MGZ drilling mini-boss retains native setup dispatches
 
 Branch `feature/ai-trace-animation-verification`, after the fast trigger-
