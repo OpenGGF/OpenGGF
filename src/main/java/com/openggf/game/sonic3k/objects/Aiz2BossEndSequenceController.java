@@ -60,7 +60,6 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private boolean buttonHandled;
     private boolean transitionRequested;
     private boolean pendingLookUpInputAfterStop;
-    private boolean pendingButtonControlRelease;
     private boolean postButtonMaxYReleaseActive;
     private int postButtonMaxYAccumulator;
     private int postResultsControlRestoreDelay = -1;
@@ -145,13 +144,6 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             player.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
         }
 
-        if (pendingButtonControlRelease) {
-            pendingButtonControlRelease = false;
-            player.clearForcedInputMask();
-            player.setForceInputRight(false);
-            player.setControlLocked(false);
-        }
-
         // Phase: Walk right until reaching stop coordinate
         if (!knucklesSpawned) {
             int stopX = arenaMaxX + PLAYER_STOP_X_OFFSET;
@@ -183,13 +175,13 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             // Bridge collapses — release all player locks so the bridge's
             // ejectStandingPlayers() can set the hurt-fall state and the
             // animation system doesn't overwrite it.
-            // The button occupies an earlier SST slot than this controller. It
-            // clears Ctrl_1_locked after the player slot has already consumed
-            // the controller's final UP word; loc_69588 observes that clear and
-            // advances without writing another word. Preserve that last logical
-            // input until the next engine player pass instead of letting the
-            // shared cutscene latch erase it in this collapsed object update.
-            pendingButtonControlRelease = true;
+            // Obj_CutsceneButton clears Ctrl_1_locked in its earlier object
+            // slot. This controller then observes the shared button flag and
+            // clears its engine-side forced word so the next player dispatch
+            // reads the unlocked raw input, matching loc_65C56/loc_69588.
+            player.clearForcedInputMask();
+            player.setForceInputRight(false);
+            player.setControlLocked(false);
             services().camera().setMaxYTarget((short) POST_BUTTON_CAMERA_MAX_Y_TARGET);
             postButtonMaxYReleaseActive = true;
             postButtonMaxYAccumulator = 0;

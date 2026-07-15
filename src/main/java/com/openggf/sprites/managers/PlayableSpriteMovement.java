@@ -3275,10 +3275,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// ROM: Sonic_HurtStop — when landing from hurt state, zero all velocity.
 		// Must check before resetOnFloor() which clears the hurt flag via setAir(false).
 		boolean wasHurt = sprite.isHurt();
+		int hurtFallAnimationId = sprite.resolveAnimationId(CanonicalAnimation.HURT_FALL);
+		boolean forcedHurtFall = hurtFallAnimationId >= 0
+				&& sprite.getForcedAnimationId() == hurtFallAnimationId;
 		// Save doubleJumpFlag BEFORE resetOnFloor() clears it via setAir(false).
 		// ROM (s3.asm:21849-21859) tests the flag before clearing.
 		int savedDoubleJumpFlag = sprite.getDoubleJumpFlag();
 		resetOnFloor();
+		if (forcedHurtFall) {
+			// Object/event owners use the engine forced slot to retain a native
+			// HurtFall byte through the airborne player passes. Player_TouchFloor
+			// now owns anim=Walk, so release only that semantic override before
+			// this frame reaches Animate.
+			sprite.setForcedAnimationId(-1);
+		}
 		// Sonic_Floor writes id_Walk immediately after ResetOnFloor on every
 		// accepted floor landing, including a non-rolling fall that carried Wait
 		// through the air. Object/platform landings do not pass through this

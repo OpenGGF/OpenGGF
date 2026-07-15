@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- AIZ animation complete
+
+Branch `feature/ai-trace-animation-verification`, after merging current
+`origin/develop` at `661c4df0f`. The earlier cutscene button clears
+`Ctrl_1_locked` before the later end-sequence controller observes the shared
+button flag, so the controller now clears its forced logical input immediately
+instead of carrying the final Up word into the next player dispatch. Fourteen
+bridge entries later, `Obj_AIZDrawBridge` clears both standing bits and writes
+raw `anim=HurtFall ($1B)` after the two player animation slots; the engine
+bridge now publishes both the raw byte and its temporary forced owner. On the
+subsequent terrain landing, `Player_TouchFloor` owns `anim=Walk`, so the shared
+landing path releases only that semantic HurtFall override before Animate.
+These are routine-, status-, and animation-owner transitions; no zone/route/
+trace-frame exception, trace hydration, or tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 59730-59762
+(`loc_2B452`, `loc_2B45E`, and `loc_2B478`), 133931-133943
+(`Obj_CutsceneButton`), and 138282-138326 (`loc_69588`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestAiz2BossEndSequenceObjects` passes, including the drawbridge's immediate
+  raw HurtFall publication.
+- AIZ complete-run physics and animation both pass; animation advances from
+  frame 25951 / 6 grouped errors to fully green.
+- The full animation sweep improves from 41/58 to 42/58 green routes / 16
+  expected failures. HCZ and every previously green route retain their status.
+- The full physics sweep is 42/58 green routes / 16 expected failures after the
+  develop merge. Every prior green remains green except the already documented
+  incoming HCZ frame-29096 scattered-ring regression; AIZ remains green.
+
 ### 2026-07-15 -- AIZ2 forced-walk input-phase milestone
 
 Branch `feature/ai-trace-animation-verification`, after the results-owner

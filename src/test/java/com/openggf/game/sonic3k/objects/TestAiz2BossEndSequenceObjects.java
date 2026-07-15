@@ -141,6 +141,7 @@ class TestAiz2BossEndSequenceObjects {
 
         assertFalse(bridge.isSolidFor(player));
         assertTrue(player.getAir());
+        assertEquals(Sonic3kAnimationIds.HURT_FALL.id(), player.getAnimationId());
         assertEquals(Sonic3kAnimationIds.HURT_FALL.id(), player.getForcedAnimationId());
     }
 
