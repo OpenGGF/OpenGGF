@@ -110,6 +110,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     private int resultsTimerCatchUpEntries;
     private int resultsWaitDurationAdjustment;
     private int resultsPostControlHandoffDelayEntries;
+    private boolean resultsWaitedForPlayerLanding;
     private boolean mainEndingPosePending;
     private boolean sidekickEndingPoseApplied;
     private boolean sidekickEndingPoseCheckArmed;
@@ -430,14 +431,24 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
 
         // Wait for player to be on the ground
         if (player.getAir()) {
+            resultsWaitedForPlayerLanding = true;
             return;
         }
 
-        // The engine reaches the landed-to-results boundary one collapsed
-        // owner dispatch before the ROM's routine-6 Set_PlayerEndingPose call.
-        // Preserve that SST entry boundary so the current frame retains both
-        // its raw animation and mapping; routine 8 publishes Victory next frame.
-        mainEndingPosePending = true;
+        if (resultsWaitedForPlayerLanding) {
+            // Obj_EndSignResults has already occupied its native routine-6
+            // slot while waiting on Status_InAir. Once the player lands in the
+            // earlier player slot, this later object slot applies the ending
+            // pose immediately and routine 8 may check Tails next frame.
+            applyMainPlayerEndingPose(player);
+            sidekickEndingPoseCheckArmed = true;
+        } else {
+            // When routine 6 never waited, the engine reaches the
+            // landed-to-results boundary one collapsed owner dispatch before
+            // the ROM's Set_PlayerEndingPose call. Preserve that SST entry
+            // boundary so this frame retains its raw animation and mapping.
+            mainEndingPosePending = true;
+        }
 
         // ROM Obj_EndSignLanded writes only Ctrl_2_locked before this routine;
         // Obj_EndSignResults calls Set_PlayerEndingPose with a1=Player_1 only

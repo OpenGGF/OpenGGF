@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ landing-wait frontiers advance past the end sign
+
+Branch `feature/ai-trace-animation-verification`, after the aligned
+frame-15974 milestone. In MGZ, `Obj_EndSignResults` spends native routine-6
+entries waiting for Player 1's `Status_InAir` bit to clear. Sonic lands during
+the earlier player slot at frame 15974, so the later signpost slot calls
+`Set_PlayerEndingPose` immediately; the following routine-8 entry can then run
+`Check_TailsEndPose`. The engine previously applied the collapsed-entry delay
+used by the already-grounded end-sign path, publishing both ending poses one
+frame late.
+
+The signpost now retains whether routine 6 actually waited for a landing. A
+waited path applies Player 1's ending pose on the landing frame and arms the
+next-entry Tails check; an already-grounded path keeps the existing delayed
+dispatch required by AIZ and HCZ. This models only live player air state and
+routine ownership; no zone, route, frame, trace hydration, or comparator
+tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:176229-176272,181919-181943`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 15974 to frame 16009
+  (`x`, expected `$0091` / actual `$2E91`).
+- MGZ complete-run animation advances from frame 15974 to frame 16512
+  (`player_animation_id`, expected `$05` / actual `$00`).
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The focused signpost suite passes (12/12).
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ complete-run frontiers align at frame 15974
 
 Branch `feature/ai-trace-animation-verification`, after the frame-15947
