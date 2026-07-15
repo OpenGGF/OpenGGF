@@ -17,6 +17,7 @@ import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import org.junit.jupiter.api.AfterEach;
@@ -167,6 +168,27 @@ public class TestTornadoObjectInstance {
                 "WFZ start release should use ObjectPlayerQuery participants instead of raw sidekicks");
         assertFalse(sidekick.isOnObject());
         assertTrue(sidekick.getAir());
+    }
+
+    @Test
+    public void wfzStartShotDownPlaysScatterSfxNotRingLoss() throws Exception {
+        // ObjB2_Main_WFZ_Start_shot_down plays SndID_Scatter ($EB) every $20 frames as
+        // the Tornado is gunned down, NOT the ring-loss/RingSpill sound ($C6).
+        // Ref: docs/s2disasm/s2.asm:78890-78895 (moveq #signextendB(SndID_Scatter),d0).
+        SfxRecordingServices services = new SfxRecordingServices();
+        TornadoObjectInstance tornado = createTornado(0x700, 0x100, 0x52, services);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x700, (short) 0x100);
+
+        setField(tornado, "routineSecondary", 4);
+        setField(tornado, "scriptTimer", 0x60);
+
+        // frameCounter 0 satisfies (frameCounter & $1F) == 0, so the scatter SFX fires.
+        tornado.update(0, main);
+
+        assertTrue(services.playedSfx.contains(Sonic2Sfx.LASER_FLOOR.id),
+                "Shot-down Tornado should play SndID_Scatter ($EB)");
+        assertFalse(services.playedSfx.contains(Sonic2Sfx.RING_SPILL.id),
+                "Shot-down Tornado must not play the ring-loss sound ($C6)");
     }
 
     @Test
@@ -621,6 +643,21 @@ public class TestTornadoObjectInstance {
         @Override
         public void draw() {
             // No-op for unit tests.
+        }
+    }
+
+    private static final class SfxRecordingServices extends TestObjectServices {
+        private final java.util.List<Integer> playedSfx = new java.util.ArrayList<>();
+
+        private SfxRecordingServices() {
+            withCamera(GameServices.camera());
+            withParallaxManager(GameServices.parallax());
+            withSpriteManager(GameServices.sprites());
+        }
+
+        @Override
+        public void playSfx(int soundId) {
+            playedSfx.add(soundId);
         }
     }
 
