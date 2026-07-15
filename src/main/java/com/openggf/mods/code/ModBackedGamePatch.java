@@ -209,12 +209,12 @@ public final class ModBackedGamePatch implements GamePatch {
             @Override
             public synchronized com.openggf.game.LevelEventProvider getLevelEventProvider() {
                 if (levelEvents == null) {
-                    com.openggf.game.ZoneRegistry registry = getZoneRegistry();
-                    if (!(registry instanceof ModZoneRegistry mods)
-                            || mods.contributions().stream().noneMatch(zone -> zone.eventFactory() != null)) {
+                    if (publishedZones.isEmpty()) {
                         return super.getLevelEventProvider();
                     }
-                    levelEvents = new ModZoneEventProvider(super.getLevelEventProvider(), mods, faultBoundary);
+                    int inheritedZoneCount = super.getZoneRegistry().getZoneCount();
+                    levelEvents = new ModZoneEventProvider(super.getLevelEventProvider(),
+                            inheritedZoneCount, publishedZones, faultBoundary);
                 }
                 return levelEvents;
             }

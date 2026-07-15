@@ -81,6 +81,6 @@ public final class Sonic3kModZoneAdapter implements ModZoneAdapter {
     @Override
     public ModZoneRuntimeProfile runtimeProfile(String ownerModId, ModLevelDefinition level) {
         validate(ownerModId, level);
-        return ModZoneRuntimeProfile.flatEmpty();
+        return Sonic3kModZoneRuntimeProfile.flatEmpty();
     }
 }

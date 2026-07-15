@@ -313,7 +313,8 @@ class TestModZoneLoader {
                     public void update() { throw new IllegalStateException("boom"); }
                 }, "ZONE", 0x400, 0x40, 0, 0);
         ZoneRegistry registry = ModZoneRegistry.decorate(stockRegistry(), List.of(zone));
-        ModZoneEventProvider provider = new ModZoneEventProvider(null, (ModZoneRegistry) registry, boundary);
+        ModZoneEventProvider provider = new ModZoneEventProvider(null, 3,
+                ((ModZoneRegistry) registry).contributions(), boundary);
         provider.initLevel(3, 0);
 
         ModFaultBoundary.CallbackAborted aborted = assertThrows(
