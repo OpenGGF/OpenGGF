@@ -1063,6 +1063,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (hczPendingPostTransitionCutscene && hczEvents != null) {
             hczEvents.restorePostResultsPlayerControl();
         }
+        if (mgzPendingPostTransitionRelease) {
+            // The carried Obj_LevelResults owner calls Restore_PlayerControl
+            // in its later object slot after clearing _unkFAA8. Publish the
+            // armed MGZ release here rather than waiting for the following
+            // ScreenEvents dispatch.
+            releasePendingMgzPostTransition();
+        }
     }
 
     @Override
@@ -1107,11 +1114,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             ObjectControlState.none().applyTo(player);
             player.setControlLocked(false);
             player.setForcedAnimationId(-1);
+            player.setAnimationId(Sonic3kAnimationIds.WAIT);
         }
         for (AbstractPlayableSprite sidekick : sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             ObjectControlState.none().applyTo(sidekick);
             sidekick.setControlLocked(false);
             sidekick.setForcedAnimationId(-1);
+            sidekick.setAnimationId(Sonic3kAnimationIds.WAIT);
         }
         LOG.info("MGZ: released player from victory pose after Act 1 → Act 2 reload");
     }

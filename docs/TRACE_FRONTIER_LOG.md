@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ carried-results frontiers advance through title display
+
+Branch `feature/ai-trace-animation-verification`, after the seamless-reload
+milestone. The carried `Obj_LevelResults` parent clears `_unkFAA8` in its later
+object slot, publishes `Restore_PlayerControl`'s Wait animation for both
+players, and then lets the next player slots resume normal physics. The engine
+left the MGZ release to the following ScreenEvents entry and used the HCZ
+carried-child retirement count even though MGZ's routine-6 landing wait had
+already consumed one collapsed owner dispatch.
+
+The results object now carries that live routine-entry fact into its retained
+child retirement count: a path that actually waited on `Status_InAir` has two
+remaining dispatches, while the already-grounded HCZ path keeps three. The
+results-owned release bridge publishes Wait immediately. MGZ's Act 2 title
+card also resets the carried ring/time gamestate after its twelve native child
+create/render dispatches, matching the display checkpoint rather than the
+earlier reload. No zone, route, frame, trace hydration, or comparator tolerance
+was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:62214-62279,62686-62720`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 16513 to frame 16656
+  (`camera_y`, expected `$0813` / actual `$0810`).
+- MGZ complete-run animation advances from frame 16512 to frame 16860
+  (`player_animation_id`, expected `$02` / actual `$05`).
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ seamless-reload frontier advances to results exit
 
 Branch `feature/ai-trace-animation-verification`, after the landing-wait

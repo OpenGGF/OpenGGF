@@ -87,6 +87,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private int act;  // 0-indexed: 0=Act 1, 1=Act 2
     private int waitDurationAdjustment;
     private int postControlHandoffDelayEntries;
+    private int carriedResultsRetireDispatches = CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES;
     private boolean controlsReleasedAheadOfHandoff;
 
     // Tally values
@@ -125,11 +126,18 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
             int postControlHandoffDelayEntries) {
+        this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
+                CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES);
+    }
+
+    S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
+            int postControlHandoffDelayEntries, int carriedResultsRetireDispatches) {
         super("S3kResults");
         this.character = character;
         this.act = act;
         this.waitDurationAdjustment = Math.max(0, waitDurationAdjustment);
         this.postControlHandoffDelayEntries = Math.max(0, postControlHandoffDelayEntries);
+        this.carriedResultsRetireDispatches = Math.max(0, carriedResultsRetireDispatches);
 
         // Calculate bonuses from current game state (ROM lines 62550-62578)
         calculateBonuses();
@@ -472,7 +480,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // child SSTs. The engine carries the parent but renders its twelve
         // children as embedded elements, so preserve the final three child
         // retirement dispatches that occur after the embedded set is gone.
-        carriedResultsRenderRetireDispatches = CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES;
+        carriedResultsRenderRetireDispatches = carriedResultsRetireDispatches;
     }
 
     // ---- Pre-tally delay with music trigger ----

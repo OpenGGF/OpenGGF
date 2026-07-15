@@ -1976,6 +1976,11 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                         // Title card skipped during the results path for seamless
                         // transitions; show it after the reload completes.
                         .showInLevelTitleCard(true)
+                        .resetLevelGamestateAtInLevelTitleCardDisplay(true)
+                        // The carried results parent mutates into Obj_TitleCard;
+                        // its twelve child SST create/render entries precede
+                        // Obj_TitleCardWait's display-time gamestate reset.
+                        .inLevelTitleCardResetAdditionalDispatches(12)
                         // Native code subtracts the offsets from the live camera
                         // and all four bounds; it does not recenter after Load_Level.
                         .preserveOffsetCameraPosition(true)

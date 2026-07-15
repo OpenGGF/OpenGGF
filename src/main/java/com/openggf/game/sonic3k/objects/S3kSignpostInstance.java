@@ -82,6 +82,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     private static final int SPARKLE_INTERVAL = 4;
     private static final int POST_LAND_TIMER = 0x40;
     private static final int BUMP_COOLDOWN = 0x20;
+    private static final int RESULTS_CARRIED_RETIRE_DISPATCHES = 3;
+    private static final int RESULTS_WAITED_LANDING_RETIRE_DISPATCHES = 2;
 
     // Bump detection box relative to signpost center
     private static final int BUMP_LEFT = -0x20;
@@ -472,7 +474,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         }
         spawnFreeChild(() -> new S3kResultsScreenObjectInstance(
                 getPlayerCharacter(), apparentAct, resultsWaitDurationAdjustment,
-                resultsPostControlHandoffDelayEntries));
+                resultsPostControlHandoffDelayEntries,
+                resultsWaitedForPlayerLanding
+                        ? RESULTS_WAITED_LANDING_RETIRE_DISPATCHES
+                        : RESULTS_CARRIED_RETIRE_DISPATCHES));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
     }
