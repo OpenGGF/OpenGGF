@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ pulley capture preserves native position fractions
+
+Branch `feature/ai-trace-animation-verification`, after the Act 2 size-worker
+phase milestone. `Obj_MGZPulley` captures and subsequently anchors a player
+with word writes to `x_pos` and `y_pos`; those writes leave the adjacent
+`x_sub`/`y_sub` words untouched. The engine now routes both checkpoints through
+`NativePositionOps`, and models the pulley's literal positive
+`object_control=$01` instead of the signed bit-7 full-control gate. Focused
+coverage asserts both fractional words and the positive object-control CPU
+semantics. No trace state, zone/route/frame carve-out, hydration, or comparator
+tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:71255-71381`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics remains on frame 17174 but clears both playable
+  subpixel errors; the next owner is `camera_y` (expected `$0766` / actual
+  `$0760`) and the focused frontier shrinks from five errors to three.
+- MGZ complete-run animation remains at frame 17293
+  (`player_animation_id`, expected Wait `$00` / actual Walk `$02`).
+- `TestS3kMgzPulleyAndMantis` passes 9/9.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ Act 2 size workers retain their create-entry phase
 
 Branch `feature/ai-trace-animation-verification`, after the title-card size

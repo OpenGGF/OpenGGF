@@ -74,6 +74,7 @@ class TestS3kMgzPulleyAndMantis {
         pulley.setServices(services);
 
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x01DA, (short) 0x012E);
+        player.setSubpixelRaw(0x2E00, 0xA600);
         player.setXSpeed((short) -0x100);
         player.setJumpInputPressed(false);
 
@@ -82,6 +83,12 @@ class TestS3kMgzPulleyAndMantis {
         assertTrue(player.isObjectControlled(), "Pulley should capture a player entering the handle box");
         assertEquals(0x01DA, player.getCentreX());
         assertEquals(0x012E, player.getCentreY());
+        assertEquals(0x2E00, player.getXSubpixelRaw(),
+                "ROM pulley capture writes x_pos without clearing x_sub");
+        assertEquals(0xA600, player.getYSubpixelRaw(),
+                "ROM pulley capture writes y_pos without clearing y_sub");
+        assertTrue(player.isObjectControlAllowsCpu(),
+                "Pulley writes positive object_control bit 0 rather than the signed bit-7 gate");
         assertEquals(Sonic3kAnimationIds.GET_UP.id(), player.getAnimationId());
         assertTrue(services.playedSfx.contains(Sonic3kSfx.PULLEY_GRAB.id));
 

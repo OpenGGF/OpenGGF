@@ -20,6 +20,7 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -264,9 +265,9 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
-        player.setCentreX((short) handleX);
-        player.setCentreY((short) handleY);
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        NativePositionOps.writeXPosPreserveSubpixel(player, handleX);
+        NativePositionOps.writeYPosPreserveSubpixel(player, handleY);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setOnObject(false);
         player.setAir(true);
         player.setAnimationId(PLAYER_HANG_ANIM);
@@ -289,12 +290,12 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
-        player.setCentreX((short) computeHandleX());
-        player.setCentreY((short) computeHandleY());
+        NativePositionOps.writeXPosPreserveSubpixel(player, computeHandleX());
+        NativePositionOps.writeYPosPreserveSubpixel(player, computeHandleY());
         player.setDirection(flipped ? Direction.LEFT : Direction.RIGHT);
     }
 
