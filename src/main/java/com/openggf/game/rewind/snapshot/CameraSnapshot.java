@@ -37,5 +37,6 @@ public record CameraSnapshot(
         boolean lastFrameWrapped,
         short wrapDeltaY,
         short yPosBias,
-        short fastScrollCap) {
+        short fastScrollCap,
+        boolean customMaxXBoundaryEasingClaimed) {
 }

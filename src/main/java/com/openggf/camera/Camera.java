@@ -62,6 +62,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	// This is separate from horizScrollDelayFrames which only affects horizontal scroll.
 	private boolean frozen = false;
 	private boolean deferHorizontalBoundaryClampOnce = false;
+	private boolean customMaxXBoundaryEasingClaimed = false;
 	private boolean deferMaxYWriteUntilAfterUpdate = false;
 	private short deferredMaxYValue = 0;
 
@@ -716,8 +717,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			}
 		}
 
+		// A native Obj_IncLevEndXGradual worker owns this frame's max-X movement.
+		boolean customMaxXEasing = customMaxXBoundaryEasingClaimed;
+		customMaxXBoundaryEasingClaimed = false;
 		// Ease maxX toward target
-		if (maxX != maxXTarget) {
+		if (!customMaxXEasing && maxX != maxXTarget) {
 			short diff = (short) (maxXTarget - maxX);
 			if (diff > 0) {
 				maxX += Math.min(diff, BOUNDARY_EASE_STEP);
@@ -1077,6 +1081,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		this.maxXBeforeBoundaryEasing = maxX;
 	}
 
+	/** Claims the current frame's max-X easing for a ROM object worker. */
+	public void claimCustomMaxXBoundaryEasing() {
+		customMaxXBoundaryEasingClaimed = true;
+	}
+
 	/**
 	 * Sets maxX target for smooth easing.
 	 * Current maxX will ease toward this value at 2px/frame.
@@ -1292,6 +1301,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		minY = 0;
 		maxX = 0;
 		maxXBeforeBoundaryEasing = 0;
+		customMaxXBoundaryEasingClaimed = false;
 		maxY = 0;
 		shakeOffsetX = 0;
 		shakeOffsetY = 0;
@@ -1387,7 +1397,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 				maxYChanging, horizScrollDelayFrames, frozen, deferHorizontalBoundaryClampOnce,
 				deferMaxYWriteUntilAfterUpdate, deferredMaxYValue, levelStarted,
 				verticalWrapEnabled, verticalWrapRange, verticalWrapMask,
-				lastFrameWrapped, wrapDeltaY, yPosBias, fastScrollCap);
+				lastFrameWrapped, wrapDeltaY, yPosBias, fastScrollCap,
+				customMaxXBoundaryEasingClaimed);
 	}
 
 	@Override
@@ -1421,6 +1432,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		wrapDeltaY = snapshot.wrapDeltaY();
 		yPosBias = snapshot.yPosBias();
 		fastScrollCap = snapshot.fastScrollCap();
+		customMaxXBoundaryEasingClaimed = snapshot.customMaxXBoundaryEasingClaimed();
 		// Re-resolve focused sprite via SpriteManager after restore. Object instances
 		// are rebuilt during rewind; this ensures Camera tracks the live main player
 		// sprite rather than a stale or null reference (Track C / H.1).

@@ -1477,6 +1477,11 @@ public final class Sonic3kPlcArtRegistry {
                     CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_HEAD_SIZE,
                     Sonic3kConstants.MAP_FBZ_ROBOTNIK_HEAD_ADDR, 0, -1));
             standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_EGGROBO_HEAD,
+                    Sonic3kConstants.ART_KOSM_FBZ_EGGROBO_HEAD_ADDR,
+                    CompressionType.KOSINSKI_MODULED, Sonic3kConstants.ART_KOSM_FBZ_EGGROBO_HEAD_SIZE,
+                    Sonic3kConstants.MAP_FBZ_EGGROBO_HEAD_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(
                     Sonic3kObjectArtKeys.FBZ_END_BOSS_FLAME,
                     Sonic3kConstants.ART_NEM_FBZ_END_BOSS_FLAME_ADDR,
                     CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_END_BOSS_FLAME_SIZE,

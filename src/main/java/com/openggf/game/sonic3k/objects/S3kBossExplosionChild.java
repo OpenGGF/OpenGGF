@@ -17,26 +17,19 @@ import java.util.List;
  * The spawning controller plays sfx_Explode (0xB4); this child animates through
  * AniRaw_BossExplosion.
  *
- * ROM animation format: Animate_RawMultiDelay — (delay, frame) pairs.
+ * ROM animation format: Animate_RawMultiDelay — (mapping frame, delay) pairs.
  * AniRaw_BossExplosion (sonic3k.asm:176871):
  *   dc.b 0,0, 0,1, 1,1, 2,2, 3,3, 4,4, 5,4, $F4
  * $F4 = end (calls Go_Delete_Sprite via $34 callback).
  */
 public class S3kBossExplosionChild extends AbstractObjectInstance implements SpawnCoordinateRewindRecreatable {
-    // ROM: (delay, frame) pairs from AniRaw_BossExplosion
-    // delay N = show frame for N+1 ticks
-    private static final int[][] ANIM_PAIRS = {
-            {0, 0},  // frame 0, 1 tick
-            {0, 1},  // frame 1, 1 tick
-            {1, 1},  // frame 1, 2 ticks
-            {2, 2},  // frame 2, 3 ticks
-            {3, 3},  // frame 3, 4 ticks
-            {4, 4},  // frame 4, 5 ticks
-            {5, 4},  // frame 4, 6 ticks  (total: 22 ticks)
-    };
+    // The leading 0,0 pair is skipped by Animate_RawMultiDelay's initial +2.
+    private static final int[] FRAMES = {0, 1, 2, 3, 4, 5};
+    private static final int[] DELAYS = {1, 1, 2, 3, 4, 4};
 
-    private int pairIndex;
-    private int delayCounter;
+    private int rawIndex;
+    private int mappingFrame;
+    private int animationFrameTimer;
 
     S3kBossExplosionChild() {
         this(0, 0);
@@ -44,37 +37,37 @@ public class S3kBossExplosionChild extends AbstractObjectInstance implements Spa
 
     public S3kBossExplosionChild(int x, int y) {
         super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "S3kBossExplosion");
-        this.pairIndex = 0;
-        this.delayCounter = ANIM_PAIRS[0][0];
+        this.rawIndex = 0;
+        this.mappingFrame = 0;
+        this.animationFrameTimer = 0;
     }
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // SFX is played by the controller (sub_52850), not each child
-        if (delayCounter > 0) {
-            delayCounter--;
-            return;
-        }
-        // Advance to next pair
-        pairIndex++;
-        if (pairIndex >= ANIM_PAIRS.length) {
+        if (--animationFrameTimer >= 0) return;
+        if (rawIndex >= FRAMES.length) {
             setDestroyed(true);
             return;
         }
-        delayCounter = ANIM_PAIRS[pairIndex][0];
+        mappingFrame = FRAMES[rawIndex];
+        animationFrameTimer = DELAYS[rawIndex];
+        rawIndex++;
     }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (isDestroyed() || pairIndex >= ANIM_PAIRS.length) return;
+        if (isDestroyed()) return;
         ObjectRenderManager rm = services().renderManager();
         if (rm == null) return;
         // ROM: Obj_BossExplosion1/2 share Map_BossExplosion and AniRaw_BossExplosion.
         PatternSpriteRenderer renderer = rm.getBossExplosionRenderer();
         if (renderer == null || !renderer.isReady()) return;
-        renderer.drawFrameIndex(ANIM_PAIRS[pairIndex][1], spawn.x(), spawn.y(), false, false);
+        renderer.drawFrameIndex(mappingFrame, spawn.x(), spawn.y(), false, false);
     }
+
+    int mappingFrameForTest() { return mappingFrame; }
 
     @Override
     public boolean isHighPriority() {

@@ -1509,6 +1509,7 @@ public class Sonic3kConstants {
     /** Pal_FBZMiniboss, locked-on S&K-side bytes (32-byte palette line). */
     public static final int PAL_FBZ_MINIBOSS_ADDR = 0x06FAC0;
     public static final int PAL_FBZ2_SUBBOSS_ADDR = 0x070420;
+    public static final int PAL_FBZ_END_BOSS_ADDR = 0x070F94;
     public static final int ART_NEM_FBZ2_SUBBOSS_ADDR = 0x0DBDDE;
     public static final int ART_NEM_FBZ2_SUBBOSS_SIZE = 2368;
     public static final int ART_KOSM_FBZ_CLOUD_ADDR = 0x165826;
@@ -1997,6 +1998,9 @@ public class Sonic3kConstants {
     public static final int ART_NEM_FBZ_ROBOTNIK_HEAD_SIZE = 1024;
     public static final int MAP_FBZ_ROBOTNIK_HEAD_ADDR = 0x068454;
     public static final int ART_TILE_FBZ_ROBOTNIK_HEAD = 0x0430;
+    public static final int ART_KOSM_FBZ_EGGROBO_HEAD_ADDR = 0x15FDDC;
+    public static final int ART_KOSM_FBZ_EGGROBO_HEAD_SIZE = 1024;
+    public static final int MAP_FBZ_EGGROBO_HEAD_ADDR = 0x0681D4;
     public static final int ART_NEM_FBZ_ROBOTNIK_STAND_ADDR = 0x0D7EEC;
     public static final int ART_NEM_FBZ_ROBOTNIK_STAND_SIZE = 2144;
     public static final int MAP_FBZ_ROBOTNIK_STAND_ADDR = 0x06847C;

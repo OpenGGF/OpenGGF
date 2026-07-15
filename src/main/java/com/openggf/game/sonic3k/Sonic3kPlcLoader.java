@@ -63,6 +63,15 @@ public final class Sonic3kPlcLoader {
                         Sonic3kConstants.ART_TILE_FBZ_BOSS_PILLAR * 32));
     }
 
+    /** Exact inline PLCKosM_FBZEndBoss_Exit: door first, then hall. */
+    public static List<KosmQueueEntry> fbzEndBossExitKosmEntries() {
+        return List.of(
+                new KosmQueueEntry(Sonic3kConstants.ART_KOSM_FBZ_EXIT_DOOR_ADDR,
+                        Sonic3kConstants.ART_TILE_FBZ_EXIT_DOOR * 32),
+                new KosmQueueEntry(Sonic3kConstants.ART_KOSM_FBZ_EXIT_HALL_ADDR,
+                        Sonic3kConstants.ART_TILE_FBZ_EXIT_HALL * 32));
+    }
+
     /** Exact body of locked-on {@code PLC_Monitors}; this does not prescribe sequencing. */
     public static List<RawPlcEntry> monitorPlcEntries() {
         return List.of(new RawPlcEntry(Sonic3kConstants.ARTTILE_MONITORS,

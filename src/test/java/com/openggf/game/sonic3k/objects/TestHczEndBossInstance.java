@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance;
-import com.openggf.game.sonic3k.objects.bosses.HczEndBossGradualMaxXExtender;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleButton;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance;
 import com.openggf.configuration.SonicConfigurationService;
@@ -38,8 +37,9 @@ class TestHczEndBossInstance {
                 .withConfiguration(SonicConfigurationService.getInstance())
                 .withCamera(new Camera(SonicConfigurationService.getInstance()));
         services.camera().setMaxX((short) 0x4050);
-        HczEndBossGradualMaxXExtender extender = ObjectConstructionContext.construct(
-                services, () -> new HczEndBossGradualMaxXExtender(0x4178, 0x07E0, 0x4180));
+        services.camera().setMaxXTarget((short) 0x4180);
+        S3kIncLevelEndXGradualInstance extender = ObjectConstructionContext.construct(
+                services, () -> new S3kIncLevelEndXGradualInstance(0x4178, 0x07E0));
         extender.setServices(services);
 
         extender.update(0, null);
@@ -50,6 +50,16 @@ class TestHczEndBossInstance {
         extender.update(3, null);
         assertEquals(0x4051, services.camera().getMaxX() & 0xFFFF,
                 "Obj_IncLevEndXGradual adds the swapped $4000 accumulator");
+        assertEquals(0x4180, services.camera().getMaxXTarget() & 0xFFFF,
+                "the worker writes Camera_max_X_pos without corrupting Camera_stored_max_X_pos");
+
+        services.camera().setMaxXTarget((short) 0x4060);
+        extender.update(4, null);
+        assertEquals(0x4060, services.camera().getMaxXTarget() & 0xFFFF,
+                "an already-live Child6 observes the mutable global stored target");
+        services.camera().updateBoundaryEasing();
+        assertEquals(0x4052, services.camera().getMaxX() & 0xFFFF,
+                "custom object easing suppresses the generic +2 boundary tail for this frame");
     }
 
     @Test

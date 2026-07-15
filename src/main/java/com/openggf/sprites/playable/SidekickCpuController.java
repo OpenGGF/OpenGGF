@@ -571,6 +571,12 @@ public class SidekickCpuController {
         clearInputs();
     }
 
+    /** ROM {@code clr.w Tails_CPU_idle_timer}: return native P2 authority to CPU immediately. */
+    public void clearManualControlTimer() {
+        controlCounter = 0;
+        manualInputAppliedThisTick = false;
+    }
+
     public boolean isController2SignedLocked() {
         return controller2SignedLocked;
     }

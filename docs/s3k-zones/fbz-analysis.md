@@ -247,8 +247,8 @@ When `Events_bg+$06` is set (boss loaded):
 - **Boss flag:** Sets `Boss_flag = 1`
 - **Music:** Fades out current, transitions to `mus_EndBoss`
 - **Screen shake:** Cleared (`Screen_shake_flag = 0`) when boss loads
-- **Defeat behavior:** `Obj_EndSignControl` called, palette rotation script started for transition; creates `Obj_FBZRobotnikHead` and `Obj_FBZRobotnikShip` children
-- **Confidence:** MEDIUM -- spawn sequence and arena well-documented; the boss's multi-phase attack pattern (5 routines) needs deeper investigation
+- **Defeat behavior:** pauses the level timer, dismantles the arm graph into exact debris, runs the ship explosion/escape sequence, spawns the fixed egg capsule and waits on `endOfLevelActive`, then publishes the native control/camera workers and queues exit door followed by exit hall KosM art.
+- **Confidence:** HIGH -- the complete root/child graph, allocation prefixes, targeting, raw flame scripts, damage flash, defeat/escape/capsule timing, exit-ready handoff, and family-safe rewind behavior are implemented and disassembly-reviewed.
 
 ### Boss Event Control (Obj_FBZEndBossEventControl)
 

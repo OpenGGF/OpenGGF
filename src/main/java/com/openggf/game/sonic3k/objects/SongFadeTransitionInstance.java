@@ -71,6 +71,11 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
         return new SongFadeTransitionInstance(TO_LEVEL_MUSIC_WAIT_WORD, musicId);
     }
 
+    /** Re-evaluates Restore_LevelMusic state (including invincibility) at expiry. */
+    public static SongFadeTransitionInstance toCurrentLevelMusic() {
+        return new SongFadeTransitionInstance(TO_LEVEL_MUSIC_WAIT_WORD, -1);
+    }
+
     SongFadeTransitionInstance(ObjectSpawn spawn) {
         this(0, 0);
     }
@@ -107,7 +112,8 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
         // Native helpers decrement a signed wait word and complete only after it underflows:
         // a word of 90 completes on update 91; a word of 120 completes on update 121.
         if (elapsedUpdates++ >= nativeWaitWord) {
-            services().playMusic(musicId);
+            int resolvedMusicId = musicId >= 0 ? musicId : services().getCurrentLevelMusicId();
+            if (resolvedMusicId >= 0) services().playMusic(resolvedMusicId);
             setDestroyed(true);
         }
     }
