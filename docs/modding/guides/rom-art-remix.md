@@ -12,8 +12,8 @@ Build OpenGGF before the sample so both artifacts expected by the scripts exist:
 ```powershell
 mvn package
 src/test/resources/mods/sample-rom-art-remix-src/build.ps1 `
-  target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar `
-  target/OpenGGF-0.6.prerelease-sdk.jar `
+  target/OpenGGF-0.6.prerelease.jar `
+  target/OpenGGF-0.6.prerelease-openggf-mod-sdk.jar `
   target/sample-rom-art-remix-build
 ```
 
@@ -25,7 +25,7 @@ part of the maintained example.
 ## 1. Register the object and zone
 
 `RomArtRemixMod` makes three transactional contributions: the display
-object, its ROM-art request, and an EHZ2 replacement zone. The relevant shape is:
+object, its ROM-art request, and a zone inserted after EHZ2. The relevant shape is:
 
 ```java
 context.registerObject("tails-flight-art",
@@ -105,11 +105,12 @@ the mod.
 ## 6. Probe decoded patterns, not a framebuffer
 
 Headless tests do not capture OpenGL output. The integration test therefore checks
-the decoded representation that drives rendering: frame 94 has at least one
-`SpriteMappingPiece`, its first piece selects palette index 0, and the referenced
-pattern span contains a non-zero decoded pixel. It performs the same check for the
-second flight pose through normal object animation. This catches wrong addresses,
-mapping/DPLC misalignment, and blank materialization without inventing a framebuffer
+the decoded representation that drives rendering: frames 94 and 95 each have at
+least one `SpriteMappingPiece`, each first piece selects palette index 0, and each
+referenced pattern span contains a non-zero decoded pixel. The integration then
+steps five real frames and verifies that the live object visibly advances from
+frame 94 to frame 95. This catches wrong addresses, mapping/DPLC misalignment,
+blank materialization, and disconnected animation without inventing a framebuffer
 test seam.
 
 ## 7. Keep object animation rewind-safe
@@ -120,10 +121,10 @@ ticks per flight pose. The object implements `RewindRecreatable`, so recreation
 uses the same mod classloader and object identity path as the live instance.
 
 The generic rewind machinery captures the non-final scalar. The real-ROM
-integration steps nine frames, seeks back to frame zero, and confirms both the
-stable object reference identity and restored animation state before replay. Do
-not make gameplay scalars `static` or `final`: either form would fall outside this
-ordinary per-instance capture contract.
+integration steps five frames to displayed frame 95, seeks back to frame zero, and
+confirms the stable object reference identity, frame 94, and initial tick before
+replay. Do not make gameplay scalars `static` or `final`: either form would fall
+outside this ordinary per-instance capture contract.
 
 ## 8. Inspect the redistributable package
 

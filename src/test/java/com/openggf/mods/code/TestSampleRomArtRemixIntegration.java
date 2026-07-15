@@ -134,11 +134,16 @@ class TestSampleRomArtRemixIntegration {
                     "borrowed sheet must include Tails flight frames 94 and 95");
             assertFalse(sheet.getFrame(94).pieces().isEmpty(), "frame 94 must have mapping pieces");
             assertFalse(sheet.getFrame(95).pieces().isEmpty(), "frame 95 must have mapping pieces");
-            SpriteMappingPiece firstPiece = sheet.getFrame(94).pieces().getFirst();
-            assertEquals(0, firstPiece.paletteIndex(),
-                    "Tails' mapping piece must address the shared Sonic/Tails palette line");
-            assertTrue(pieceReferencesNonzeroPixel(sheet, firstPiece),
+            SpriteMappingPiece frame94Piece = sheet.getFrame(94).pieces().getFirst();
+            assertEquals(0, frame94Piece.paletteIndex(),
+                    "Tails' frame 94 piece must address the shared Sonic/Tails palette line");
+            assertTrue(pieceReferencesNonzeroPixel(sheet, frame94Piece),
                     "frame 94's first piece must reference visible ROM pattern data");
+            SpriteMappingPiece frame95Piece = sheet.getFrame(95).pieces().getFirst();
+            assertEquals(0, frame95Piece.paletteIndex(),
+                    "Tails' frame 95 piece must address the shared Sonic/Tails palette line");
+            assertTrue(pieceReferencesNonzeroPixel(sheet, frame95Piece),
+                    "frame 95's first piece must reference visible ROM pattern data");
             assertDefaultPaletteLineMatchesRom(rom,
                     resolved.getCrossGameDonorProvider().loadCharacterPalette(
                             RomByteReader.fromRom(rom), launchTeam.main().persisted()));
@@ -169,17 +174,22 @@ class TestSampleRomArtRemixIntegration {
                         .requireIdentityTable().idFor(initialObject);
                 int initialTick = animTick(initialObject);
                 int initialFrame = displayFrame(initialObject);
+                assertEquals(94, initialFrame,
+                        "the display object must begin on the first Tails flight frame");
 
                 HeadlessTestRunner runner = new HeadlessTestRunner(team.mainSprite());
                 TenFrameInputSource inputs = new TenFrameInputSource();
                 RewindController rewind = new RewindController(
                         gameplay.getRewindRegistry(), new InMemoryKeyframeStore(), inputs,
                         new RunnerStepper(runner, inputs), 1);
-                for (int i = 0; i < 9; i++) {
+                for (int i = 0; i < 5; i++) {
                     rewind.step();
                 }
-                assertNotEquals(initialTick, animTick(displayObject()),
-                        "nine real frames must advance the object's captured animation scalar");
+                ObjectInstance advancedObject = displayObject();
+                assertEquals(95, displayFrame(advancedObject),
+                        "five real frames must visibly advance to the second Tails flight frame");
+                assertNotEquals(initialTick, animTick(advancedObject),
+                        "five real frames must advance the object's captured animation scalar");
 
                 rewind.seekTo(0);
                 ObjectInstance restoredObject = displayObject();
@@ -187,8 +197,8 @@ class TestSampleRomArtRemixIntegration {
                         .requireIdentityTable().idFor(restoredObject);
                 assertEquals(initialId, restoredId,
                         "layout reconstruction must preserve the object's rewind identity");
-                assertEquals(initialFrame, displayFrame(restoredObject),
-                        "backward seek must restore the displayed Tails flight frame");
+                assertEquals(94, displayFrame(restoredObject),
+                        "backward seek must restore the first displayed Tails flight frame");
                 assertEquals(initialTick, animTick(restoredObject),
                         "backward seek must restore the sample's non-final animation scalar");
             } finally {

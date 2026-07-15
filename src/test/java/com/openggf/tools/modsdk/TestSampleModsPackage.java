@@ -119,6 +119,11 @@ class TestSampleModsPackage {
         String romArt = Files.readString(ROM_ART_GUIDE);
         assertTrue(romArt.contains("## 3. Request the bounded ROM window"));
         assertTrue(romArt.contains("Sonic 2 palette line 0 is Pal_SonicTails"));
+        assertTrue(romArt.contains("target/OpenGGF-0.6.prerelease.jar"));
+        assertTrue(romArt.contains(
+                "target/OpenGGF-0.6.prerelease-openggf-mod-sdk.jar"));
+        assertTrue(romArt.contains("inserted after EHZ2"));
+        assertFalse(romArt.contains("EHZ2 replacement zone"));
         String standalone = Files.readString(STANDALONE_GUIDE);
         assertTrue(standalone.contains(
                 "rom-art-remix.md#3-request-the-bounded-rom-window"));
@@ -126,6 +131,8 @@ class TestSampleModsPackage {
                 "flappy-remix.md#3-borrowing-tails-from-your-rom"));
 
         assertTrue(Files.isRegularFile(FLAPPY_GUIDE));
+        String flappyReadme = Files.readString(FLAPPY.getParent().resolve("README.md"));
+        assertTrue(flappyReadme.contains("docs/modding/guides/flappy-remix.md"));
         assertTrue(standalone.contains("flappy-remix.md#4-the-level"));
         String aiArt = Files.readString(AI_ART_GUIDE);
         assertTrue(aiArt.contains("flappy-remix.md#6-pipes-score-death"));
