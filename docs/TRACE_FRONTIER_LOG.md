@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ diagonal wall clamps retain shallow-flight velocity
+
+Branch `feature/ai-trace-animation-verification`, after the waypoint-target
+milestone. The diagonal branches of `sub_3526A` always correct the platform's
+position at a side wall, but preserve `x_vel` while `(angle+$30) < $60`; only
+the steep-wall branch clears `x_vel` and transfers `y_vel` into `ground_vel`.
+The engine instead stopped horizontal motion after every diagonal wall clamp.
+Both left and right helpers now keep the ROM's angle gate. No trace state,
+zone/route/frame carve-out, hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:72070-72404`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 22669 to frame 22676 (`x`,
+  expected `$1B43` / actual `$1B37`).
+- MGZ complete-run animation remains at frame 22688 (`player_animation_id`,
+  expected Hurt / actual Walk).
+- `TestS3kMgzTopPlatformParityHeadless` passes 29/29, including shallow-wall
+  velocity retention and steep-wall velocity transfer assertions.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ waypoint approach retains the raw destination Y
 
 Branch `feature/ai-trace-animation-verification`, after the carried-wall

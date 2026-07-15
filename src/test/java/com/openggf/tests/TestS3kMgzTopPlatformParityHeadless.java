@@ -208,6 +208,32 @@ class TestS3kMgzTopPlatformParityHeadless {
     }
 
     @Test
+    void diagonalAirborneWallRetainsVelocityUntilSteepAngleGate() throws Exception {
+        MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(0, 0, 0x5B, 0, 0, false, 0));
+        Method applyWallVelocity = MGZTopPlatformObjectInstance.class.getDeclaredMethod(
+                "applyAirborneSideWallVelocity", boolean.class, int.class);
+        applyWallVelocity.setAccessible(true);
+        setIntField(platform, "xVel", 0x0BE8);
+        setIntField(platform, "yVel", -0x0111);
+        setIntField(platform, "groundVel", 0x0828);
+
+        applyWallVelocity.invoke(platform, true, 0x00);
+
+        assertEquals(0x0BE8, getIntField(platform, "xVel"),
+                "loc_3547A should retain x_vel after a shallow diagonal wall correction");
+        assertEquals(0x0828, getIntField(platform, "groundVel"),
+                "A shallow wall should not transfer y_vel into ground_vel");
+
+        applyWallVelocity.invoke(platform, true, 0x40);
+
+        assertEquals(0, getIntField(platform, "xVel"),
+                "A wall passing the ROM's (angle+$30) >= $60 gate should stop x_vel");
+        assertEquals(-0x0111, getIntField(platform, "groundVel"),
+                "The steep-wall branch should transfer y_vel into ground_vel");
+    }
+
+    @Test
     void miniMotionFacingChange_publishesRunAsPreviousAnimation() throws Exception {
         MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
                 new ObjectSpawn(0, 0, 0x5B, 0, 0, false, 0));

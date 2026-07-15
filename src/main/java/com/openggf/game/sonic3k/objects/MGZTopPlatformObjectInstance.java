@@ -1681,12 +1681,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
         posX += wall.distance;
-        if (steepWallTransfersToGround && (((wall.angle + 0x30) & 0xFF) >= 0x60)) {
-            xVel = 0;
-            groundVel = yVel;
-            return;
-        }
-        xVel = 0;
+        applyAirborneSideWallVelocity(steepWallTransfersToGround, wall.angle);
     }
 
     private void resolveLeftWall(boolean steepWallTransfersToGround) {
@@ -1695,12 +1690,21 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
         posX -= wall.distance;
-        if (steepWallTransfersToGround && (((wall.angle + 0x30) & 0xFF) >= 0x60)) {
+        applyAirborneSideWallVelocity(steepWallTransfersToGround, wall.angle);
+    }
+
+    private void applyAirborneSideWallVelocity(boolean steepWallTransfersToGround, int wallAngle) {
+        if (!steepWallTransfersToGround) {
             xVel = 0;
-            groundVel = yVel;
             return;
         }
-        xVel = 0;
+        // ROM loc_3536E/loc_3547A always applies the position correction, but
+        // retains x_vel when (angle+$30) is below $60. Only a steep wall turns
+        // the diagonal airborne approach into ground motion.
+        if (((wallAngle + 0x30) & 0xFF) >= 0x60) {
+            xVel = 0;
+            groundVel = yVel;
+        }
     }
 
     // ROM sub_3526A wall probes: sub_FA1A / sub_FD32 are PAIRED wall checks at
