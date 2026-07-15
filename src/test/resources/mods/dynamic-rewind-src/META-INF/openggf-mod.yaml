@@ -1,0 +1,14 @@
+formatVersion: 1
+id: dynamic-rewind
+name: Dynamic Rewind Fixture
+version: 1.0.0
+authors:
+  - OpenGGF Tests
+description: Test-only mod-owned dynamic rewind fixture.
+engineApiRange: ">=2.2.0 <3.0.0"
+type: patch
+baseGame: s2
+entrypoint: example.dynamicrewind.DynamicProbe
+dependencies: []
+audioOverrides: {}
+artOverrides: {}
