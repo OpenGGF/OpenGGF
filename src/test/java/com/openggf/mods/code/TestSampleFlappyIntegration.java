@@ -10,6 +10,8 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameplayLaunchTeam;
+import com.openggf.game.LevelState;
+import com.openggf.game.ShieldType;
 import com.openggf.game.StockGameDataSources;
 import com.openggf.game.ZoneKey;
 import com.openggf.game.patch.GameplayLaunchRequest;
@@ -81,6 +83,8 @@ class TestSampleFlappyIntegration {
             "sample-flappy", "flappy-garden");
 
     @TempDir Path temp;
+    private int buildSequence;
+    private int loadSequence;
 
     @BeforeEach
     void resetState() {
@@ -266,6 +270,184 @@ class TestSampleFlappyIntegration {
         });
     }
 
+    @Test
+    void onePipeScoresOncePerCycleAndResetEnablesTheNextCycle() throws Exception {
+        withLaunchedGameplay(null, game -> {
+            game.runner().stepIdleFrames(1);
+            LevelState levelState = GameServices.level().getLevelGamestate();
+            levelState.setRings(0);
+            ObjectInstance pipe = orderedPipes(game.objects()).getFirst();
+            ObjectRefId id = objectId(game.objects(), pipe);
+
+            recyclePipe(pipe, game.tails().getCentreX() + 2, 2);
+            game.runner().stepIdleFrames(1);
+            assertEquals(0, levelState.getRings(),
+                    "a gate level with Tails has not passed his centre");
+            game.runner().stepIdleFrames(1);
+            assertEquals(1, levelState.getRings());
+            assertTrue(invokeBoolean(pipe, "gateConsumed"));
+            assertEquals(id, objectId(game.objects(), pipe));
+
+            game.runner().stepIdleFrames(20);
+            assertEquals(1, levelState.getRings(),
+                    "a consumed gate must not score on later overlapping frames");
+            assertFalse(game.tails().getDead(),
+                    "the no-repeat interval must keep native flight alive for the next cycle");
+
+            int pixelsPastViewport = centreX(pipe) - game.camera().getX() + 17;
+            invoke(pipe, "advance", int.class, pixelsPastViewport << 8);
+            game.runner().stepIdleFrames(1);
+            ObjectInstance recycled = pipeWithId(game.objects(), id);
+            assertFalse(invokeBoolean(recycled, "gateConsumed"));
+            assertEquals(id, objectId(game.objects(), recycled));
+
+            recyclePipe(recycled, game.tails().getCentreX() + 2, 2);
+            game.runner().stepIdleFrames(2);
+            assertEquals(2, levelState.getRings(),
+                    "the same stable pipe may score again after a live recycle");
+            assertTrue(invokeBoolean(recycled, "gateConsumed"));
+            assertEquals(id, objectId(game.objects(), recycled));
+        });
+    }
+
+    @Test
+    void scoreCrossingOneHundredDoesNotRunCollectibleRingBonusLogic() throws Exception {
+        withLaunchedGameplay(null, game -> {
+            game.runner().stepIdleFrames(1);
+            LevelState levelState = GameServices.level().getLevelGamestate();
+            levelState.setRings(99);
+            int livesBefore = GameServices.gameState().getLives();
+            int stockScoreBefore = GameServices.gameState().getScore();
+            var audioBefore = GameServices.audio().captureLogicalSnapshot();
+
+            ObjectInstance pipe = orderedPipes(game.objects()).getFirst();
+            recyclePipe(pipe, game.tails().getCentreX() + 2, 2);
+            game.runner().stepIdleFrames(2);
+
+            var audioAfter = GameServices.audio().captureLogicalSnapshot();
+            assertEquals(100, levelState.getRings());
+            assertEquals(livesBefore, GameServices.gameState().getLives(),
+                    "Flappy score must bypass collectible-ring extra lives");
+            assertEquals(stockScoreBefore, GameServices.gameState().getScore(),
+                    "the stock score counter is not part of Flappy scoring");
+            assertEquals(audioBefore.backend().currentMusic(), audioAfter.backend().currentMusic(),
+                    "crossing 100 Flappy points must not replace music with the 1-up cue");
+            assertEquals(audioBefore.commandEntryCount() + 1, audioAfter.commandEntryCount(),
+                    "only the gate's ring SFX command should be emitted");
+        });
+    }
+
+    @Test
+    void pipeAndVisibleBoundsAlwaysUseCrushDeath() throws Exception {
+        for (Protection protection : Protection.values()) {
+            withLaunchedGameplay(null, game -> {
+                game.runner().stepIdleFrames(1);
+                applyProtection(game, protection);
+                ObjectInstance pipe = orderedPipes(game.objects()).getFirst();
+                recyclePipe(pipe, game.tails().getCentreX(), 0);
+
+                game.runner().stepIdleFrames(1);
+
+                assertTrue(game.tails().getDead(),
+                        protection + " must not protect Tails from a pipe body");
+            });
+        }
+
+        assertDiesAtVisibleBoundary(true);
+        assertDiesAtVisibleBoundary(false);
+    }
+
+    @Test
+    void engineRestartResetsRunAndRecreatesTheSameInitialSequence() throws Exception {
+        withLaunchedGameplay(null, game -> {
+            game.runner().stepIdleFrames(1);
+            List<Integer> initialVariants = gapVariants(game.objects());
+            int livesBefore = GameServices.gameState().getLives();
+            GameServices.level().getLevelGamestate().setRings(7);
+            ObjectInstance pipe = orderedPipes(game.objects()).getFirst();
+            recyclePipe(pipe, game.tails().getCentreX(), 0);
+            game.runner().stepIdleFrames(1);
+            assertTrue(game.tails().getDead());
+
+            for (int frame = 0;
+                 frame < 600 && GameServices.gameState().getLives() == livesBefore;
+                 frame++) {
+                game.runner().stepIdleFrames(1);
+            }
+            assertEquals(livesBefore - 1, GameServices.gameState().getLives(),
+                    "the normal death movement/countdown owns the single life decrement");
+            assertTrue(GameServices.level().consumeRespawnRequest(),
+                    "the death countdown must request the normal engine restart");
+
+            GameServices.level().loadCurrentLevel();
+            GroundSensor.setLevelManager(GameServices.level());
+            game.camera().setFocusedSprite(game.tails());
+            game.camera().updatePosition(true);
+            assertEquals(0, pipes(GameServices.level().getObjectManager()).size());
+            game.runner().stepIdleFrames(1);
+
+            ObjectManager restartedObjects = GameServices.level().getObjectManager();
+            assertEquals(livesBefore - 1, GameServices.gameState().getLives());
+            assertEquals(0, GameServices.level().getLevelGamestate().getRings());
+            assertEquals(6, pipes(restartedObjects).size());
+            assertEquals(initialVariants, gapVariants(restartedObjects));
+            assertTrue(game.tails().getTailsFlightController().isActive());
+            assertEquals(0xF0, game.tails().getDoubleJumpProperty() & 0xFF);
+        });
+    }
+
+    private void assertDiesAtVisibleBoundary(boolean top) throws Exception {
+        withLaunchedGameplay(null, game -> {
+            game.runner().stepIdleFrames(1);
+            int boundaryY = top
+                    ? game.camera().getMinY() + 0x10
+                    : game.camera().getY() + 224;
+            game.tails().setCentreY((short) boundaryY);
+
+            game.runner().stepIdleFrames(1);
+
+            assertTrue(game.tails().getDead(),
+                    (top ? "top" : "bottom") + " visible bound must be inclusive");
+        });
+    }
+
+    private static void applyProtection(LaunchedGameplay game, Protection protection) {
+        switch (protection) {
+            case RINGS -> GameServices.level().getLevelGamestate().setRings(10);
+            case SHIELD -> game.tails().giveShield(ShieldType.FIRE);
+            case INVINCIBLE -> game.tails().setInvincibleFrames(120);
+            case SUPER -> game.tails().setSuperSonic(true);
+        }
+    }
+
+    private static List<ObjectInstance> orderedPipes(ObjectManager objects) {
+        return pipes(objects).stream()
+                .sorted(Comparator.comparingInt(TestSampleFlappyIntegration::centreX))
+                .toList();
+    }
+
+    private static List<Integer> gapVariants(ObjectManager objects) {
+        return orderedPipes(objects).stream().map(pipe -> {
+            try {
+                return invokeInt(pipe, "gapVariant");
+            } catch (Exception e) {
+                throw new AssertionError(e);
+            }
+        }).toList();
+    }
+
+    private static ObjectInstance pipeWithId(ObjectManager objects, ObjectRefId id) {
+        return pipes(objects).stream()
+                .filter(pipe -> id.equals(objectId(objects, pipe)))
+                .findFirst().orElseThrow();
+    }
+
+    private static void recyclePipe(ObjectInstance pipe, int centreX, int gapVariant)
+            throws Exception {
+        Method method = pipe.getClass().getMethod("recycleAfter", int.class, int.class);
+        method.invoke(pipe, centreX, gapVariant);
+    }
+
     private void withLaunchedGameplay(String aspect, GameplayAssertion assertion) throws Exception {
         File romFile = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(romFile != null, "Sonic 3&K ROM unavailable");
@@ -379,17 +561,19 @@ class TestSampleFlappyIntegration {
     }
 
     private Path buildFlappyMod() throws Exception {
-        Path output = temp.resolve("flappy-exploded");
+        int buildId = buildSequence++;
+        Path output = temp.resolve("flappy-exploded-" + buildId);
         Files.createDirectories(output);
         copyTree(FLAPPY.resolve("src/main/resources"), output);
         compileJava(FLAPPY.resolve("src/main/java"), output);
         assertCli("convert", "art", "--image", FLAPPY.resolve("src/main/mod/pipe.png").toString(),
                 "--sheet", FLAPPY.resolve("src/main/mod/pipe-sheet.yaml").toString(),
                 "--out", output.resolve("art/pipe.ggfs").toString());
-        Path level = materializeLevel(FLAPPY.resolve("src/main/mod/level-source"), "flappy-level");
+        Path level = materializeLevel(
+                FLAPPY.resolve("src/main/mod/level-source"), "flappy-level-" + buildId);
         assertCli("convert", "level", "--from-export", level.toString(),
                 "--out", output.resolve("levels/flappy").toString());
-        Path jar = temp.resolve("sample-flappy.jar");
+        Path jar = temp.resolve("sample-flappy-" + buildId + ".jar");
         assertCli("package", "--input", output.toString(), "--out", jar.toString());
         assertTrue(Files.isRegularFile(jar));
         return jar;
@@ -444,7 +628,7 @@ class TestSampleFlappyIntegration {
     }
 
     private CatalogFixture load(Path jar) throws Exception {
-        Path repo = temp.resolve("repo");
+        Path repo = temp.resolve("repo-" + loadSequence++);
         Files.createDirectories(repo);
         Path packed = repo.resolve(jar.getFileName());
         Files.copy(jar, packed);
@@ -514,5 +698,12 @@ class TestSampleFlappyIntegration {
     @FunctionalInterface
     private interface GameplayAssertion {
         void verify(LaunchedGameplay game) throws Exception;
+    }
+
+    private enum Protection {
+        RINGS,
+        SHIELD,
+        INVINCIBLE,
+        SUPER
     }
 }

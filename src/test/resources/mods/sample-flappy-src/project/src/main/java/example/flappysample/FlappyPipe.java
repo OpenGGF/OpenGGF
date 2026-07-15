@@ -62,6 +62,17 @@ public final class FlappyPipe extends AbstractObjectInstance implements RewindRe
         gateConsumed = true;
     }
 
+    public boolean overlapsPlayableBounds(PlayableEntity player) {
+        int playerLeft = player.getCentreX() - player.getXRadius();
+        int playerRight = player.getCentreX() + player.getXRadius();
+        if (playerRight < leftEdge() || playerLeft > rightEdge()) {
+            return false;
+        }
+        int playerTop = player.getCentreY() - player.getYRadius();
+        int playerBottom = player.getCentreY() + player.getYRadius();
+        return playerTop <= gapTop() || playerBottom >= gapBottom();
+    }
+
     @Override
     public boolean isPersistent() {
         // The controller owns the complete lifecycle of this fixed pool. Several entries

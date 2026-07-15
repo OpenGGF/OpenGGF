@@ -1,5 +1,6 @@
 package example.flappysample;
 
+import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
@@ -47,12 +48,15 @@ public final class FlappyController extends AbstractObjectInstance implements Re
             activateNativeRun(tails);
             return;
         }
+        if (tails.getDead()) {
+            return;
+        }
 
         tails.setCentreX((short) anchorX);
         tails.setXSpeed((short) 0);
         tails.setGSpeed((short) 0);
         tails.setDoubleJumpProperty((byte) FLIGHT_REFILL);
-        advanceAndRecyclePipes();
+        advanceScoreAndRecyclePipes(tails);
     }
 
     private void ensurePipePool() {
@@ -71,7 +75,7 @@ public final class FlappyController extends AbstractObjectInstance implements Re
         poolInitialized = true;
     }
 
-    private void advanceAndRecyclePipes() {
+    private void advanceScoreAndRecyclePipes(AbstractPlayableSprite tails) {
         List<FlappyPipe> pipes = services().objectManager()
                 .activeObjectsOfType(FlappyPipe.class);
         if (pipes.isEmpty()) {
@@ -93,6 +97,21 @@ public final class FlappyController extends AbstractObjectInstance implements Re
                 rightmostX += PIPE_SPACING;
                 pipe.recycleAfter(rightmostX, nextGapVariant());
             }
+        }
+
+        boolean fatalContact = tails.getCentreY() <= services().camera().getMinY() + 0x10
+                || tails.getCentreY() >= services().camera().getY() + 224;
+        for (FlappyPipe pipe : pipes) {
+            if (!pipe.gateConsumed() && pipe.centreX() < tails.getCentreX()) {
+                var levelState = services().levelGamestate();
+                levelState.setRings(levelState.getRings() + 1);
+                services().playSfx(GameSound.RING);
+                pipe.consumeGate();
+            }
+            fatalContact |= pipe.overlapsPlayableBounds(tails);
+        }
+        if (fatalContact) {
+            tails.applyCrushDeath();
         }
     }
 
