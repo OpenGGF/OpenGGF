@@ -426,18 +426,33 @@ public final class ObjectTerrainUtils {
         int xAdjusted = checkingLeft ? (15 - xInTile) : xInTile;
         if (metric == 0) {
             int dist = 15 - xAdjusted - 16;
-            return new TerrainCheckResult(dist, getAngle(origTile, origDesc, flipAwareAngle), getTileIndex(origDesc));
+            return createWallRegressDefaultResult(
+                    tile, desc, origTile, origDesc, dist, flipAwareAngle);
         }
         if (metric < 0) {
             int adjusted = metric + xAdjusted;
             if (adjusted >= 0) {
                 int dist = 15 - xAdjusted - 16;
-                return new TerrainCheckResult(dist, getAngle(origTile, origDesc, flipAwareAngle), getTileIndex(origDesc));
+                return createWallRegressDefaultResult(
+                        tile, desc, origTile, origDesc, dist, flipAwareAngle);
             }
             int dist = ~xAdjusted - 16;
             return new TerrainCheckResult(dist, getAngle(tile, desc, flipAwareAngle), getTileIndex(desc));
         }
         return createWallResult(tile, desc, metric, x, checkingLeft, -16, flipAwareAngle);
+    }
+
+    private static TerrainCheckResult createWallRegressDefaultResult(
+            SolidTile tile, ChunkDesc desc, SolidTile origTile, ChunkDesc origDesc,
+            int distance, boolean flipAwareAngle) {
+        // ROM sub_F584 writes the prior tile's angle before sampling its width.
+        // Only a missing collision shape leaves the original tile's angle intact.
+        if (tile != null) {
+            return new TerrainCheckResult(
+                    distance, getAngle(tile, desc, flipAwareAngle), getTileIndex(desc));
+        }
+        return new TerrainCheckResult(
+                distance, getAngle(origTile, origDesc, flipAwareAngle), getTileIndex(origDesc));
     }
 
     private static TerrainCheckResult createWallResult(SolidTile tile, ChunkDesc desc,

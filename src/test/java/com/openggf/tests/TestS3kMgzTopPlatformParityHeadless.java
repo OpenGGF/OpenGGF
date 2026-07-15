@@ -10,6 +10,8 @@ import com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kSpikeObjectInstance;
+import com.openggf.level.ChunkDesc;
+import com.openggf.level.SolidTile;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -231,6 +233,28 @@ class TestS3kMgzTopPlatformParityHeadless {
                 "A wall passing the ROM's (angle+$30) >= $60 gate should stop x_vel");
         assertEquals(-0x0111, getIntField(platform, "groundVel"),
                 "The steep-wall branch should transfer y_vel into ground_vel");
+    }
+
+    @Test
+    void diagonalAirborneWallProbeUsesPriorSolidTileAngleOnZeroWidthRegress() throws Exception {
+        SolidTile priorTile = new SolidTile(0x86, new byte[16], new byte[16], (byte) 0xFC);
+        SolidTile originalTile = new SolidTile(0x87, new byte[16], new byte[16], (byte) 0xFF);
+        Method createPreviousWallResult = ObjectTerrainUtils.class.getDeclaredMethod(
+                "createPreviousWallResult",
+                SolidTile.class, ChunkDesc.class, SolidTile.class, ChunkDesc.class,
+                byte.class, int.class, boolean.class, boolean.class);
+        createPreviousWallResult.setAccessible(true);
+        TerrainCheckResult wall = (TerrainCheckResult) createPreviousWallResult.invoke(
+                null,
+                priorTile, new ChunkDesc(0x86), originalTile, new ChunkDesc(0x87),
+                (byte) 0, 0x1B53, false, true);
+
+        assertEquals(-4, wall.distance(),
+                "MGZ diagonal approach should regress four pixels from the full tile edge");
+        assertEquals(0xFC, wall.angle() & 0xFF,
+                "sub_F584 keeps the prior solid tile's angle when its sampled width is zero");
+        assertEquals(0x86, wall.tileIndex(),
+                "The regress result should identify the prior tile that supplied the angle");
     }
 
     @Test

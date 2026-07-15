@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- FindWall regress keeps the prior collision angle
+
+Branch `feature/ai-trace-animation-verification`, after the shallow-wall
+velocity milestone. S3K `FindWall` stores a regressed tile's angle before
+sampling its rotated height map. At MGZ's full-tile boundary the prior solid
+tile supplied angle `$FC` but a zero width sample; the engine instead retained
+the original tile's odd `$FF` angle, which the paired sensor replaced with its
+steep-wall fallback and incorrectly stopped the top platform. The shared
+object-terrain wall probe now retains the prior collision shape's angle and
+tile identity whenever that shape exists, matching the already-correct
+`FindFloor` regress path. No trace state, zone/route/frame carve-out,
+hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:19522-19659`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 22676 to frame 23566
+  (`tails_x_speed`, expected `$0200` / actual `-$0150`).
+- MGZ complete-run animation advances from frame 22688 to frame 23566
+  (`tails_animation_id`, expected Hurt / actual Walk).
+- `TestS3kMgzTopPlatformParityHeadless` passes 30/30, including an explicit
+  zero-width wall-regress angle and tile-identity assertion.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ diagonal wall clamps retain shallow-flight velocity
 
 Branch `feature/ai-trace-animation-verification`, after the waypoint-target
