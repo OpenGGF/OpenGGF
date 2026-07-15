@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -285,13 +286,13 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
         player.setJumping(false);
     }
 
-    private AbstractPlayableSprite findNearestTarget(AbstractPlayableSprite mainPlayer) {
+    private AbstractPlayableSprite findNearestTarget(AbstractPlayableSprite mainPlayer, int referenceX) {
         AbstractPlayableSprite nearest = null;
         int nearestDistance = Integer.MAX_VALUE;
 
         if (mainPlayer != null && !mainPlayer.getDead()) {
             nearest = mainPlayer;
-            nearestDistance = Math.abs(currentX - mainPlayer.getCentreX());
+            nearestDistance = Math.abs(referenceX - mainPlayer.getCentreX());
         }
 
         ObjectServices svc = tryServices();
@@ -303,7 +304,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
             if (!(candidate instanceof AbstractPlayableSprite sprite) || sprite.getDead()) {
                 continue;
             }
-            int distance = Math.abs(currentX - sprite.getCentreX());
+            int distance = Math.abs(referenceX - sprite.getCentreX());
             if (distance < nearestDistance) {
                 nearest = sprite;
                 nearestDistance = distance;
@@ -313,7 +314,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     private int nearestPlayerDistance(AbstractPlayableSprite mainPlayer) {
-        AbstractPlayableSprite target = findNearestTarget(mainPlayer);
+        AbstractPlayableSprite target = findNearestTarget(mainPlayer, currentX);
         return target == null ? Integer.MAX_VALUE : Math.abs(currentX - target.getCentreX());
     }
 
@@ -442,21 +443,16 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
         private void spawnProjectile() {
             int xVelocity = leftSide ? -0x200 : 0x200;
             int xOffset = leftSide ? -4 : 4;
-            spawnChild(() -> {
-                SpikerSpikeProjectile projectile = new SpikerSpikeProjectile(
-                        parent,
-                        getX() + xOffset,
-                        getY(),
-                        xVelocity,
-                        -0x200,
-                        leftSide);
-                // CreateChild5_ComplexAdjusted allocates after the launcher,
-                // so loc_86D4A/MoveSlowFall_AnimateRaw executes later in the
-                // same object loop. Dynamic engine children begin updating on
-                // the next pass; consume that native first step here.
-                projectile.advanceMovementAndAnimation();
-                return projectile;
-            });
+            // CreateChild5_ComplexAdjusted allocates after the launcher, so the
+            // projectile's higher SST slot executes loc_86D4A/loc_86D5E later
+            // in this same object loop and owns the allocation-frame movement.
+            spawnChild(() -> new SpikerSpikeProjectile(
+                    parent,
+                    getX() + xOffset,
+                    getY(),
+                    xVelocity,
+                    -0x200,
+                    leftSide));
         }
 
         private void playProjectileSfx() {
@@ -482,7 +478,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
             }
 
             AbstractPlayableSprite target = playerEntity instanceof AbstractPlayableSprite sprite
-                    ? parent.findNearestTarget(sprite) : null;
+                    ? parent.findNearestTarget(sprite, getX()) : null;
             int launcherX = getX();
             if (target == null || Math.abs(launcherX - target.getCentreX()) >= DETECT_RANGE) {
                 return;
@@ -684,6 +680,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
         private int animFrame;
         private int animTimer;
         private boolean collisionEnabled = true;
+        private boolean deleteNextFrame;
 
         private SpikerSpikeProjectile() {
             this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), 0, 0, 0, 0, false);
@@ -706,11 +703,33 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (deleteNextFrame) {
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
             advanceMovementAndAnimation();
 
-            if (!isOnScreen(48)) {
-                setDestroyed(true);
+            if (!spriteCheckDeleteTouchXYKeepsAlive()) {
+                // Go_Delete_Sprite installs Delete_Current_Sprite and removes
+                // collision immediately, but the SST slot is freed only on its
+                // next execution (sonic3k.asm:179032-179047,179131-179134).
+                deleteNextFrame = true;
             }
+        }
+
+        private boolean spriteCheckDeleteTouchXYKeepsAlive() {
+            ObjectServices svc = tryServices();
+            int cameraX = svc != null && svc.camera() != null ? svc.camera().getX() : 0;
+            int cameraY = svc != null && svc.camera() != null ? svc.camera().getY() : 0;
+
+            int xAligned = currentX & 0xFF80;
+            int coarseBack = (cameraX - 0x80) & 0xFF80;
+            int xDistance = (xAligned - coarseBack) & 0xFFFF;
+            if (xDistance > 0x280) {
+                return false;
+            }
+            int yDistance = (currentY - cameraY + 0x80) & 0xFFFF;
+            return yDistance <= 0x200;
         }
 
         private void advanceMovementAndAnimation() {
@@ -735,12 +754,28 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
 
         @Override
         public int getCollisionFlags() {
-            return collisionEnabled ? COLLISION_FLAGS : 0;
+            return collisionEnabled && !deleteNextFrame ? COLLISION_FLAGS : 0;
         }
 
         @Override
         public int getCollisionProperty() {
             return 0;
+        }
+
+        @Override
+        public boolean usesCurrentTouchResponseState() {
+            // loc_86D5E runs MoveSlowFall_AnimateRaw before
+            // Sprite_CheckDeleteTouchXY adds the projectile to the collision
+            // response list, so players observe its post-movement position.
+            return true;
+        }
+
+        @Override
+        public boolean isPersistent() {
+            // loc_86D5E owns this dynamic child's lifetime through
+            // Sprite_CheckDeleteTouchXY; the generic object window must not
+            // release it first.
+            return true;
         }
 
         @Override

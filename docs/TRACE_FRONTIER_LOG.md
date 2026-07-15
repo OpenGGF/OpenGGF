@@ -1,5 +1,43 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- Spiker launchers select players from their own SST coordinates
+
+Branch `feature/ai-trace-animation-verification`, after the regressed-wall-
+angle milestone. Each MGZ Spiker side launcher calls `Find_SonicTails` with
+its own child SST in `a0`; the engine instead selected the nearest player from
+the parent body's centre and only then tested which side of the launcher that
+player occupied. When Tails crossed the left launcher while Sonic remained
+closer to the body, this delayed the native attack by 24 frames and omitted the
+projectile hurt at complete-run frame 23566. Player selection now measures
+from the calling launcher coordinate while the parent-open test retains the
+parent coordinate.
+
+The projectile child also follows its native `loc_86D4A` / `loc_86D5E`
+ownership: its higher SST slot performs allocation-frame movement, publishes
+its post-movement position to the collision-response list, and uses
+`Sprite_CheckDeleteTouchXY`'s coarse X / asymmetric Y bounds plus delayed SST
+release. No trace state, zone/route/frame carve-out, hydration, or comparator
+tolerance was added.
+
+ROM references:
+`docs/skdisasm/sonic3k.asm:178248-178298,179032-179047,182262-182271,185505-185677`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 23566 to frame 24075
+  (`status_byte`, expected `$29` / actual `$09`).
+- MGZ complete-run animation advances from frame 23566 to frame 25258
+  (`player_mapping_frame`, expected `$71` / actual `$70`).
+- `TestSpikerBadnikInstance` passes 9/9, including launcher-coordinate player
+  selection, current-position collision publication, and native delayed
+  projectile deletion.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- FindWall regress keeps the prior collision angle
 
 Branch `feature/ai-trace-animation-verification`, after the shallow-wall
