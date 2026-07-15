@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ Act 2 size workers retain their create-entry phase
+
+Branch `feature/ai-trace-animation-verification`, after the title-card size
+worker milestone. Each of `Change_Act2Sizes`' three child objects executes its
+creation entry before reaching the shared gradual-worker dispatch later in the
+same `Process_Sprites` pass. Retaining that first `$4000` fixed-point step for
+the maximum-X and minimum-Y children, alongside the already retained `$8000`
+maximum-Y half-step, releases the Act 2 horizontal camera bound on the native
+frame. No trace state, zone/route/frame carve-out, hydration, or comparator
+tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:180359-180614`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 16658 to frame 17174
+  (`x_sub`, expected `$2E00` / actual `$0000`).
+- MGZ complete-run animation remains at frame 17293
+  (`player_animation_id`, expected Wait `$00` / actual Walk `$02`).
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ title-card completion starts native Act 2 size workers
 
 Branch `feature/ai-trace-animation-verification`, after the carried-results

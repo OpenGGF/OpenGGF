@@ -453,13 +453,14 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         if (act2SizeChangeArmed && gameState().isEndOfLevelFlag()) {
             act2SizeChangeArmed = false;
             act2SizeChangeActive = true;
-            act2SizeMaxXAccumulator = 0;
-            act2SizeMinYAccumulator = 0;
+            // Each child executes its create entry before joining the shared
+            // gradual-worker dispatch later in the same object pass.
+            act2SizeMaxXAccumulator = 0x4000;
+            act2SizeMinYAccumulator = 0x4000;
             // Child1 creation reaches the later Obj_IncLevEndYGradual
             // slot after its create entry in the same Process_Sprites
             // pass. Seed that create-side half step before the shared
-            // worker dispatch below; the $4000 workers still remain below
-            // their first whole-pixel step.
+            // worker dispatch below.
             act2SizeMaxYAccumulator = 0x8000;
 
             Level level = levelManager().getCurrentLevel();
