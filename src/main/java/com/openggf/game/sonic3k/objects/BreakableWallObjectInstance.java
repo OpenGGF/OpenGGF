@@ -226,7 +226,7 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
             if (result.kind() != com.openggf.game.solid.ContactKind.SIDE) {
                 return;
             }
-        } else if (!result.pushingNow()) {
+        } else if (!result.pushingNow() && !bypassesStandardPushGate(player)) {
             return;
         }
 
@@ -257,6 +257,18 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
             return false;
         }
         return true;
+    }
+
+    private boolean bypassesStandardPushGate(AbstractPlayableSprite player) {
+        if (config.breakMode != BreakMode.STANDARD) {
+            return false;
+        }
+        // Obj_BreakableWall branches around the wall's pushing-bit test for
+        // Super Sonic/Knuckles and for status_secondary's fire-shield bit.
+        // The roll-animation and speed gates still apply to the shield case.
+        return player.isSuperSonic()
+                || isKnuckles()
+                || player.hasShield() && player.getShieldType() == ShieldType.FIRE;
     }
 
     /**

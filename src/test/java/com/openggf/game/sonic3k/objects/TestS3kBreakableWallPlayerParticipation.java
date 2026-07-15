@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.ShieldType;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.PreContactState;
@@ -99,6 +100,28 @@ class TestS3kBreakableWallPlayerParticipation {
                 "Player_1 should receive the ROM-saved x_vel from $30(a0)");
         assertEquals(0, tails.getXSpeed(),
                 "Player_2 must not consume the break when Player_1 satisfies the ROM roll-animation gate");
+    }
+
+    @Test
+    void fireShieldDashBreaksStandardWallWithoutPersistentPushBit() {
+        TestablePlayableSprite sonic = player("sonic", 0x102B, 0x1000);
+        sonic.giveShield(ShieldType.FIRE);
+        TestableBreakableWallObjectInstance wall = new TestableBreakableWallObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic3kObjectIds.BREAKABLE_WALL, 0, 0, false, 0));
+        PlayerSolidContactResult dashContact = new PlayerSolidContactResult(
+                ContactKind.SIDE, false, false, false, false,
+                new PreContactState((short) -0x0800, (short) 0x0038, true, 2), null, 0);
+        wall.setCheckpointBatch(new SolidCheckpointBatch(wall, Map.of(sonic, dashContact)));
+        wall.setServices(queryOnlyServices(sonic, List.of()));
+
+        wall.update(1, sonic);
+
+        assertTrue(wall.isDestroyed(),
+                "The fire-shield status bit should bypass Obj_BreakableWall's persistent push-bit gate");
+        assertEquals(0xF800, sonic.getXSpeed() & 0xFFFF,
+                "Wall breakup should restore the pre-SolidObjectFull fire-dash velocity");
+        assertEquals(0x102F, sonic.getCentreX() & 0xFFFF,
+                "Standard wall breakup should apply the ROM's initial four-pixel x_pos step");
     }
 
     @Test

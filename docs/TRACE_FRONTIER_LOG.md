@@ -1,5 +1,37 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- S3K standard walls honor the fire-shield push bypass
+
+Branch `feature/ai-trace-animation-verification`, after the drilling gradual-
+bound milestone. `Obj_BreakableWall` snapshots the player's pre-contact
+`x_vel` before `SolidObjectFull`, then normally requires the wall's native
+pushing bit before accepting a Roll-speed break. The ROM explicitly branches
+around that push-bit test when `status_secondary` has the fire-shield bit set;
+the engine instead stopped the dash and returned before its existing
+animation/speed checks. The standard wall now recognizes that concrete shield
+state, restores the saved `-$0800` dash speed, applies the native four-pixel
+`x_pos` step, and converts the wall SST into fragments. The Roll and speed
+gates remain in force. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:45657-45766`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 31890 to frame 32308 (`x`,
+  expected `$34D8` / actual `$34D5`; the focused diagnostic run also reports
+  a one-pixel Y mismatch on that frame).
+- MGZ complete-run animation advances from frame 31894 to frame 32308
+  (`player_mapping_frame`, expected `$24` / actual `$B9`).
+- The focused S3K breakable-wall suite passes, including a non-pushing
+  fire-shield dash that restores the ROM-saved velocity and X step.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-16 -- MGZ drilling cleanup allocates its native gradual-bound SST
 
 Branch `feature/ai-trace-animation-verification`, after the drilling setup-
