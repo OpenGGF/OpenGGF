@@ -129,7 +129,7 @@ in the same commit.
 ## Package Cycle Ratchets
 
 `package_slices_are_free_of_cycles`: 1 frozen top-level package cycle cluster.
-`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 124 current
+`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 125 current
 top-level dependency edges inside or adjacent to that cluster.
 
 - `cycle:core-runtime`: 16 top-level slices (`audio`, `camera`, `control`,
@@ -147,6 +147,11 @@ top-level dependency edges inside or adjacent to that cluster.
   These are public mod-SDK/runtime-plan directions, not permission for
   game/level code to depend back on `mods`; decay them only if those contracts move
   to a genuinely lower shared API package without introducing parallel vocabulary.
+- Mod API 2.4 consciously adds `mods -> control` because the creator-facing
+  `GameplayInputFilter` consumes the canonical immutable `PlayerInputState` rather
+  than publishing a parallel input model. The control package does not depend back
+  on mods; decay this edge only if the canonical input value moves to a lower shared
+  API package.
 
 If a temporary package-cycle cluster is accepted later, document it as
 ``cycle:<name>`` with current count, owner package, intended direction, and first

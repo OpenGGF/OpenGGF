@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Mod API 2.4.0: game-start insertion and destination gameplay policies.** Complete
+  zones may declare an exclusive fresh-game destination (last enabled declaration
+  wins without changing stock progression), a launch-only required team that never
+  overwrites the durable data-select/save choice, a deterministic P1 input filter
+  applied after raw input recording and reapplied during replay/rewind, and row-only
+  HUD presentation over existing labels and counters. `PlayerInputState` retains its
+  action-mask-to-jump contract; HUD numeric widths are bounded to 1-9 digits, TIME
+  remains four characters, and warning choices are explicit. Required creator
+  callbacks execute through owner fault boundaries and abort instead of publishing a
+  partial policy set; session teardown restores identity input and the stock HUD. No
+  movement, camera/scroll, world-wrap/rebase, or flight-fatigue framework was added.
+  The strict additive ABI is frozen at 896 engine types / 17,453 canonical entries in
+  `mod-api-signatures-2.4.txt`; the 2.3 snapshot remains byte-for-byte historical.
 - **Mod API 2.3.0: host-adapted additive Sonic 3&K zones.** The mod runtime now
   delegates complete-zone validation/loading to a typed, game-owned `ModZoneAdapter` whose
   creator ABI contains only validation, loading, and runtime-profile selection, instead of

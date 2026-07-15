@@ -1,6 +1,7 @@
 package com.openggf.game.patch;
 
 import com.openggf.game.save.SaveSessionContext;
+import com.openggf.game.save.SaveSessionLaunchTeamAccess;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.GameplayLaunchTeam;
 import com.openggf.game.PlayableCharacterRegistry;
@@ -50,6 +51,6 @@ public final class GameplayTeamAvailability {
             GameplayLaunchTeam requestedTeam, PlayableCharacterRegistry resolvedRegistry) {
         Objects.requireNonNull(context, "context");
         GameplayTeamBootstrap.requireExactTeam(resolvedRegistry, requestedTeam);
-        return context.withLaunchTeam(requestedTeam);
+        return SaveSessionLaunchTeamAccess.withLaunchTeam(context, requestedTeam);
     }
 }

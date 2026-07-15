@@ -1600,7 +1600,8 @@ public class Engine {
 						saveContext, gameId, availableCharacters);
 		SelectedTeam selectedTeam = sanitized.selectedTeam();
 		GameplayLaunchRequest launchRequest =
-				GameplayLaunchRequest.fromSelectedTeam(gameId, selectedTeam);
+				new GameplayLaunchRequest(
+						gameId, selectedTeam.mainCharacter(), selectedTeam.sidekicks());
 		GameModule resolvedModule = consumePatchResolution(
 				moduleResolutionService.resolveForLaunchResult(preparedLaunch, rootModule,
 						launchRequest),
@@ -1612,7 +1613,8 @@ public class Engine {
 				.zoneKey(sanitized.startZone());
 		java.util.Optional<com.openggf.game.GameplayLaunchTeam> contributed =
 				resolvedModule.getGameplayPolicyProvider().launchTeam(destination);
-		com.openggf.game.GameplayLaunchTeam launchTeam = contributed.orElseGet(launchRequest::team);
+		com.openggf.game.GameplayLaunchTeam launchTeam = contributed.orElseGet(
+				() -> toGameplayLaunchTeam(selectedTeam));
 		com.openggf.game.save.SaveSessionContext launchContext;
 		try {
 			launchContext = GameplayTeamAvailability.requireForLaunch(sanitized, launchTeam,
@@ -1708,6 +1710,19 @@ public class Engine {
 			case "s3k" -> List.of("sonic", "tails", "knuckles");
 			default -> List.of("sonic");
 		};
+	}
+
+	private static GameplayLaunchTeam toGameplayLaunchTeam(SelectedTeam team) {
+		return new GameplayLaunchTeam(parseLaunchCharacterKey(team.mainCharacter()),
+				team.sidekicks().stream().map(Engine::parseLaunchCharacterKey).toList());
+	}
+
+	private static CharacterKey parseLaunchCharacterKey(String persisted) {
+		String canonical = persisted.equalsIgnoreCase("sonic")
+				|| persisted.equalsIgnoreCase("tails")
+				|| persisted.equalsIgnoreCase("knuckles")
+				? persisted.toLowerCase(java.util.Locale.ROOT) : persisted;
+		return CharacterKey.parsePersisted(canonical);
 	}
 
 	private void hostTimeAttackRoom(TimeAttackLaunchRequest request, String policy,

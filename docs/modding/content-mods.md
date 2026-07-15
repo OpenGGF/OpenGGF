@@ -4,16 +4,16 @@ This page is the detailed additive-content reference. New creators should start 
 the [handbook index](index.md), which orders the six quickstarts by effort and links
 the format, trust, identity, troubleshooting, and sample references.
 
-OpenGGF Mod API 2.3 supports restart-loaded music packs, code-backed objects,
+OpenGGF Mod API 2.4 supports restart-loaded music packs, code-backed objects,
 baked art, complete Sonic 2 and Sonic 3&K zones, playable characters, and no-ROM
 standalone games. Mods are discovered from the
 process `mods/` directory at restart; executable mods must be enabled and granted
 trust in the Mod Manager before they run.
 
-The public mod API is version `2.3.0` (a deliberate breaking bump from `1.1.0` via
+The public mod API is version `2.4.0` (a deliberate breaking bump from `1.1.0` via
 the additive `1.2.0` step, followed by the additive `2.1.0` ROM-art intake step and
-the additive `2.2.0` playable-subclass rewind capture hooks, then the additive
-`2.3.0` host-adapted S3K zone surface; see
+the additive `2.2.0` playable-subclass rewind capture hooks, the additive `2.3.0`
+host-adapted S3K zone surface, and the additive `2.4.0` gameplay-policy surface; see
 `docs/architecture/mod-api-compatibility.md`). Mods must declare a `2.x` engine range
 such as `>=2.0.0 <3.0.0`. Start with the guide for the contribution you are building:
 
@@ -237,6 +237,74 @@ enabled mod set, so saves store `savedZone.mod.owner/local` identity rather than
 synthetic index. If the owner is later disabled, S3K data select preserves the slot
 but safely falls back to AIZ1; re-enabling the owner makes the tagged destination
 resolvable again.
+
+## Choose a fresh-game destination and presentation
+
+Mod API 2.4 lets a complete-zone patch mark one owned zone as a fresh-game start and
+attach launch-only policies to that tagged destination. Set the trailing
+`ModZoneContribution` component to `true`; the four-argument constructor remains
+compatible and means `gameStart=false`. A mod using these contracts must declare an
+engine range that includes 2.4, such as `>=2.4.0 <3.0.0`:
+
+```java
+var destination = ZoneKey.mod("my-mod", "flappy");
+context.registerZone(new ModZoneContribution(
+        "flappy", new BakedLevelRef("levels/flappy/level.json"), null, null, true));
+context.registerLaunchTeam(new ModLaunchTeamContribution(
+        destination, CharacterKey.TAILS, List.of()));
+```
+
+Game-start selection is exclusive. Enabled patch order is authoritative: the last
+effective declaration wins, each shadowed owner receives `MOD_GAME_START_SHADOWED`,
+and disabling the winner reveals the previous declaration or the host's stock fresh
+destination. This does not insert the zone into results progression. Both New Slot
+and No Save fresh starts use the resolved destination.
+
+The launch-team policy replaces only the copied gameplay-session team after the
+resolved character registry verifies every required identity. It does not mutate
+`config.yaml`, the player's data-select choice, or the durable team saved in an active
+slot. A missing required character aborts launch; the engine never silently substitutes
+a partial team.
+
+An input filter transforms P1's logical snapshot without adding a movement framework:
+
+```java
+context.registerInputFilter(new ModInputFilterContribution(destination, raw ->
+        PlayerInputState.of(
+                raw.heldMask() & ~(AbstractPlayableSprite.INPUT_LEFT
+                        | AbstractPlayableSprite.INPUT_RIGHT),
+                raw.pressedMask() & ~(AbstractPlayableSprite.INPUT_LEFT
+                        | AbstractPlayableSprite.INPUT_RIGHT),
+                raw.actionHeldMask(), raw.actionPressedMask(),
+                raw.startHeld(), raw.startPressed())));
+```
+
+The engine records the raw `InputHandler.logical()` snapshot first, then applies the
+filter downstream. Trace playback and rewind re-simulation therefore replay the same
+raw snapshot and reapply the filter deterministically. `PlayerInputState` reconstructs
+the legacy jump bits from `actionHeldMask` and `actionPressedMask`; preserve those
+action masks when suppressing directions or jump will be lost.
+
+`registerHudProfile(new ModHudProfileContribution(destination, profile))` installs a
+row-only presentation over the existing SCORE, TIME, RINGS, and LIVES labels and
+counters. Each immutable `HudRow` chooses visibility, label, metric, label/value
+coordinates, width, and a `NONE`, `TIMER_FLASH`, or `ZERO_FLASH` warning. Numeric
+metrics accept widths 1 through 9 and saturate non-negative values into that width;
+TIME requires the existing four-character width. A profile can label the RINGS metric
+as SCORE and omit the original score row, but it does not create or replace gameplay
+counters.
+
+These destination policies are required as a set. Creator/provider/filter failures
+run through the owner fault boundary, record `MOD_CALLBACK_FAILED`, pending-disable
+the owner and dependents, persist that decision, and abort rather than continuing with
+a partial launch. With no matching contribution—or after session teardown—the stock
+defaults are the selected team, `GameplayInputFilter.IDENTITY`, and
+`HudProfile.stock()`.
+
+Mod API 2.4 intentionally adds no fixed-forward-movement controller, forced-camera or
+scroll policy, world wrapping/rebasing runtime, or flight-fatigue rule. Fixed-camera
+minigames should keep the player stationary, move and recycle their own obstacles,
+filter unwanted directions, and use already-published character ability state.
 
 ## Make a data-only art reskin
 

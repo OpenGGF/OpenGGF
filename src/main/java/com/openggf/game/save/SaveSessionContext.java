@@ -79,7 +79,7 @@ public final class SaveSessionContext {
     }
 
     /** Copies this context with a launch-local team resolved from tagged policy identities. */
-    public SaveSessionContext withLaunchTeam(com.openggf.game.GameplayLaunchTeam replacement) {
+    SaveSessionContext withLaunchTeam(com.openggf.game.GameplayLaunchTeam replacement) {
         Objects.requireNonNull(replacement, "replacement");
         SelectedTeam launchTeam = new SelectedTeam(replacement.main().persisted(),
                 replacement.sidekicks().stream()

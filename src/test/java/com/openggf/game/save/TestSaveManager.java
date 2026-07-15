@@ -151,8 +151,9 @@ class TestSaveManager {
         sanitized.requestSave(SaveReason.NEW_SLOT_START,
                 RuntimeSaveContext.forGameplayMode(null, sanitized), teamSnapshot, manager);
 
-        SaveSessionContext forcedLaunch = SaveSessionContext.forSlot("s2", 2, original, 0, 0)
-                .withLaunchTeam(new com.openggf.game.GameplayLaunchTeam(
+        SaveSessionContext forcedLaunch = SaveSessionLaunchTeamAccess.withLaunchTeam(
+                SaveSessionContext.forSlot("s2", 2, original, 0, 0),
+                new com.openggf.game.GameplayLaunchTeam(
                         com.openggf.game.CharacterKey.TAILS, java.util.List.of()));
         forcedLaunch.requestSave(SaveReason.NEW_SLOT_START,
                 RuntimeSaveContext.forGameplayMode(null, forcedLaunch), teamSnapshot, manager);

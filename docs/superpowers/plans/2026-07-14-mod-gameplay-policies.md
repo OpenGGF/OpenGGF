@@ -592,7 +592,10 @@ Compile the signature tool, then generate `mods/mod-api-signatures-2.4.txt` with
 
 ```powershell
 mvn "-DskipTests" compile
-java -cp target/classes com.openggf.mods.code.ModApiSignatureSurface --snapshot | Set-Content -Encoding utf8NoBOM src/test/resources/mods/mod-api-signatures-2.4.txt
+mvn dependency:build-classpath "-Dmdep.outputFile=target/mod-api-snapshot-classpath.txt"
+$cp = "target/classes;$((Get-Content target/mod-api-snapshot-classpath.txt -Raw).Trim())"
+java -cp $cp com.openggf.mods.code.ModApiSignatureSurface --snapshot |
+    Set-Content -Encoding utf8NoBOM src/test/resources/mods/mod-api-signatures-2.4.txt
 ```
 
 Keep `mods/mod-api-signatures-2.3.txt` byte-for-byte unchanged as a closed historical baseline. The final 2.4 snapshot must contain every 2.3 line plus:
