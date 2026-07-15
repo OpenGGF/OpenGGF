@@ -16,10 +16,11 @@ They contain only original/generated test assets; built jars are not checked in.
 5. [Standalone game](../../../src/test/resources/mods/sample-standalone-src/README.md)
    — API 1.2 no-ROM module, level, badnik, character/team, streamed music/SFX,
    title launch, namespaced save, and Continue.
-6. [Flappy remix](../../../src/test/resources/mods/sample-flappy-src/README.md) —
-   API 2.1 additive S2 patch — object-controlled minigame gameplay, ROM-art intake,
-   forced scroll, and layout obstacles. See the
-   [build-along guide](../guides/flappy-remix.md) for a narrated walkthrough.
+6. [Native-Tails Flappy](../../../src/test/resources/mods/sample-flappy-src/README.md) —
+   API 2.4 additive S3K patch — an anchorless fresh-game destination with native
+   Tails flight, scoped input/HUD policies, a fixed camera, and rewind-stable
+   recycling pipes. See the
+   [build-along guide](../guides/native-tails-flappy.md) for a narrated walkthrough.
 7. [Standalone platformer](../../../src/test/resources/mods/sample-platformer-src/README.md) —
    API 2.0 no-ROM standalone game — a Tiled-authored (`--from-tmx`) level with a
    namespaced streamed-music track, an original double-jumping character with a

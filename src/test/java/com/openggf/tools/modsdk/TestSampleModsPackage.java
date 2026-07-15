@@ -39,11 +39,12 @@ class TestSampleModsPackage {
     private static final Path ROM_ART_GUIDE = Path.of(
             "docs/modding/guides/rom-art-remix.md");
     private static final Path FLAPPY_GUIDE = Path.of(
-            "docs/modding/guides/flappy-remix.md");
+            "docs/modding/guides/native-tails-flappy.md");
     private static final Path STANDALONE_GUIDE = Path.of(
             "docs/modding/guides/standalone-platformer.md");
     private static final Path AI_ART_GUIDE = Path.of(
             "docs/modding/guides/ai-art.md");
+    private static final String RETIRED_FLAPPY_GUIDE_STEM = "flappy" + "-remix";
     private static final Set<String> EXPECTED_IDS = Set.of(
             "openggf-gallery-music-sample", "phase2-reskin", "phase2-sample",
             "phase3-character", "phase3-standalone", "sample-flappy", "sample-platformer",
@@ -122,7 +123,7 @@ class TestSampleModsPackage {
     }
 
     @Test
-    void romArtGuideIsLinkedWithoutOrphaningRemainingFlappyChapters() throws Exception {
+    void romArtAndNativeTailsGuidesAreLinkedWithoutStaleFlappyRemixReferences() throws Exception {
         assertTrue(Files.isRegularFile(ROM_ART_GUIDE));
         String romArt = Files.readString(ROM_ART_GUIDE);
         assertTrue(romArt.contains("## 3. Request the bounded ROM window"));
@@ -135,20 +136,45 @@ class TestSampleModsPackage {
         String standalone = Files.readString(STANDALONE_GUIDE);
         assertTrue(standalone.contains(
                 "rom-art-remix.md#3-request-the-bounded-rom-window"));
-        assertFalse(standalone.contains(
-                "flappy-remix.md#3-borrowing-tails-from-your-rom"));
 
         assertTrue(Files.isRegularFile(FLAPPY_GUIDE));
+        String nativeTails = Files.readString(FLAPPY_GUIDE);
+        assertTrue(nativeTails.contains("## 4. Level and camera"));
+        assertTrue(nativeTails.contains("## 6. Pipes, score, death, and rewind"));
         String flappyReadme = Files.readString(FLAPPY.getParent().resolve("README.md"));
-        assertTrue(flappyReadme.contains("docs/modding/guides/flappy-remix.md"));
-        assertTrue(standalone.contains("flappy-remix.md#4-the-level"));
+        assertTrue(flappyReadme.contains("docs/modding/guides/native-tails-flappy.md"));
+        String flappyProjectReadme = Files.readString(FLAPPY.resolve("README.md"));
+        assertTrue(flappyProjectReadme.contains("docs/modding/guides/native-tails-flappy.md"));
+        assertTrue(standalone.contains("native-tails-flappy.md#4-level-and-camera"));
         String aiArt = Files.readString(AI_ART_GUIDE);
-        assertTrue(aiArt.contains("flappy-remix.md#6-pipes-score-death"));
+        assertTrue(aiArt.contains("native-tails-flappy.md#6-pipes-score-death-and-rewind"));
 
         String outerReadme = Files.readString(ROM_ART_REMIX.getParent().resolve("README.md"));
         String projectReadme = Files.readString(ROM_ART_REMIX.resolve("README.md"));
         assertTrue(outerReadme.contains("docs/modding/guides/rom-art-remix.md"));
         assertTrue(projectReadme.contains("docs/modding/guides/rom-art-remix.md"));
+
+        assertNoStaleFlappyRemixReferences(Path.of("docs/modding"));
+        assertNoStaleFlappyRemixReferences(Path.of(
+                "src/test/resources/mods/sample-flappy-src"));
+    }
+
+    private static void assertNoStaleFlappyRemixReferences(Path root) throws Exception {
+        try (var paths = Files.walk(root)) {
+            for (Path path : paths.filter(Files::isRegularFile).toList()) {
+                String name = path.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
+                if (!name.endsWith(".md") && !name.endsWith(".java")
+                        && !name.endsWith(".yaml") && !name.endsWith(".json")
+                        && !name.endsWith(".properties") && !name.endsWith(".ps1")
+                        && !name.endsWith(".sh") && !name.endsWith(".xml")
+                        && !name.endsWith(".tmx")) {
+                    continue;
+                }
+                String text = Files.readString(path).toLowerCase(java.util.Locale.ROOT);
+                assertFalse(text.contains(RETIRED_FLAPPY_GUIDE_STEM),
+                        () -> "stale retired Flappy guide reference in " + path);
+            }
+        }
     }
 
     private void materializeMusic(Path output) throws Exception {

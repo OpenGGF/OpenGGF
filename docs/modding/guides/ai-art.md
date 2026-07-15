@@ -9,7 +9,7 @@ convert, read the warning, iterate — for generating original character/badnik/
 art with an image-generation model and getting it through `ggfmod convert art`
 cleanly. It assumes you've already read
 [Standalone platformer build-along](standalone-platformer.md) or
-[Flappy remix](flappy-remix.md) for the surrounding project structure; this guide is
+[Native-Tails Flappy](native-tails-flappy.md) for the surrounding project structure; this guide is
 scoped to the art step alone.
 
 ## 1. Prompting for a converter-ready sprite
@@ -132,7 +132,7 @@ frames:
 
 Each piece's `xOffset`/`yOffset` is its negative half-extent — pieces are
 centre-anchored, the same convention `sample-flappy`'s `pipe-sheet.yaml` documents
-(see [`flappy-remix.md` Chapter 6](flappy-remix.md#6-pipes-score-death)): a 24×32
+(see [`native-tails-flappy.md` Chapter 6](native-tails-flappy.md#6-pipes-score-death-and-rewind)): a 24×32
 piece drawn at `(x, y)` covers `[x-12, x+12) × [y-16, y+16)`, not `(x, y)` as a
 top-left corner. `sourceX`/`sourceY` must be multiples of 8, `widthPixels`/
 `heightPixels` must be positive multiples of 8, and the whole box must lie inside
@@ -205,4 +205,5 @@ tool infers them automatically:
 
 See [Standalone platformer build-along](standalone-platformer.md) for the full
 project this guide's examples are drawn from, and
-[Flappy remix](flappy-remix.md) for the sibling sample's `pipe.png` swap target.
+[Native-Tails Flappy](native-tails-flappy.md) for the sibling sample's `pipe.png`
+swap target.

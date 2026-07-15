@@ -10,6 +10,10 @@ Tails controller. The controller fixes Tails' horizontal position while preservi
 his built-in vertical flight mechanics and refilling the normal flight timer each
 frame. The mod ships only generated sky and pipe assets; it consumes no ROM art.
 
+See the maintained
+[`docs/modding/guides/native-tails-flappy.md`](../../../../../../docs/modding/guides/native-tails-flappy.md)
+for the complete architecture, palette, rewind, build, and presentation trade-offs.
+
 1. Convert ordinary object art with `ggfmod convert art`; `.ggfs` is an object sheet.
 2. Convert `src/main/mod/level-source` with `ggfmod convert level`.
 3. Compile classes and package the build output with `ggfmod package`.

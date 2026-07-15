@@ -25,6 +25,9 @@ such as `>=2.0.0 <3.0.0`. Start with the guide for the contribution you are buil
   characters, music, and SFX that launch without a ROM.
 - [The `ggfmod` CLI](ggfmod.md) — launcher syntax, project scaffolding, and all
   converters.
+- [Native-Tails Flappy](guides/native-tails-flappy.md) — a maintained S3K patch
+  combining the 2.4 fresh-game, team, input, and HUD policies with a fixed-camera
+  dynamic-object minigame.
 
 A creator build needs both release artifacts:
 
@@ -243,6 +246,10 @@ but safely falls back to AIZ1; re-enabling the owner makes the tagged destinatio
 resolvable again.
 
 ## Choose a fresh-game destination and presentation
+
+The maintained [Native-Tails Flappy guide](guides/native-tails-flappy.md) exercises
+this complete policy set against a real S3K launch and shows how the policies stay
+destination-scoped while the gameplay controller remains ordinary mod object code.
 
 Mod API 2.4 lets a complete-zone patch mark one owned zone as a fresh-game start and
 attach launch-only policies to that tagged destination. Set the trailing

@@ -7,10 +7,9 @@ camera, suppresses horizontal input, and keeps Tails' ROM-faithful flight active
 without replacing or hiding the playable sprite. The level contains only a short
 generated sky strip and one controller placement; no ROM-derived art is packaged.
 
-For the existing chapter-by-chapter history of the sample, see
-[`docs/modding/guides/flappy-remix.md`](../../../../../docs/modding/guides/flappy-remix.md)
-in the OpenGGF source tree. Its maintained native-Tails rewrite lands with the
-rest of this sample's gameplay implementation.
+For the maintained chapter-by-chapter tour, see
+[`docs/modding/guides/native-tails-flappy.md`](../../../../../docs/modding/guides/native-tails-flappy.md)
+in the OpenGGF source tree.
 
 ## Build
 

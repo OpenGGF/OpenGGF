@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Sixth gallery sample **`sample-flappy`** has been rebuilt as a Mod API 2.4
+  Sonic 3 & Knuckles patch with a maintained native-Tails guide
+  (`docs/modding/guides/native-tails-flappy.md`). An anchorless fresh-game
+  destination launches Tails alone, filters horizontal input, and relabels the
+  rings counter as score. A pinned camera and six identity-stable recycling pipes
+  replace the former hidden-player, borrowed-ROM-art, forced-scroll, and finite
+  layout design; normal Tails flight receives the ROM-faithful `0xF0` per-frame
+  refill, collision/bounds use crush death, and sparse S3K palette claims preserve
+  host character/HUD colors. Fresh and rewind-recreated sessions, deterministic
+  gap/scoring state, package contents, and the API 2.4 floor are integration-tested.
 - Eighth gallery sample **`sample-rom-art-remix`** plus a source-first guide
   (`docs/modding/guides/rom-art-remix.md`): an additive Sonic 2 patch demonstrating
   bounded ROM-art, mapping, and DPLC intake, launch-memory-only materialization,
@@ -83,13 +93,6 @@ All notable changes to the OpenGGF project are documented in this file.
   default `StockMusic(0)` placeholder — required for any TMX level feeding a
   standalone module (`ModZoneLoader#loadStandalone` requires a namespaced owned
   track). See `docs/modding/ggfmod.md`.
-- Sixth gallery sample **`sample-flappy`** plus a narrated build-along guide
-  (`docs/modding/guides/flappy-remix.md`): an additive Sonic 2 patch demonstrating
-  object-controlled minigame gameplay (full player seize/hide/release), ROM-art
-  intake of Tails' flying frames via `registerRomObjectArt`, per-frame forced camera
-  scroll, and a layout-object obstacle course. `TestSampleFlappyIntegration` adds
-  ROM-gated frame-driven coverage; `TestSampleModsPackage` now builds and validates
-  six sources as one repository. See `docs/modding/samples/index.md`.
 - Mod API 2.1.0: ROM art intake for Sonic 2 patch mods — `ModContext.registerRomObjectArt`
   materializes object art (Nemesis/Kosinski/uncompressed + S2 mappings + optional DPLC)
   from the player's ROM at launch under the mod's namespaced art key.

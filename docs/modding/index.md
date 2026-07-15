@@ -21,9 +21,9 @@ contracts.
 - [ROM-art remix](guides/rom-art-remix.md) — source-first tour of the
   `sample-rom-art-remix` gallery sample: bounded Sonic 2 art, mapping, and DPLC
   intake, launch-memory materialization, decoded-pattern probes, and rewind.
-- [Flappy remix](guides/flappy-remix.md) — build-along tour of the `sample-flappy`
-  gallery sample: object-controlled minigame gameplay, ROM-art intake, forced scroll,
-  and layout obstacles inside a Sonic 2 patch.
+- [Native-Tails Flappy](guides/native-tails-flappy.md) — build-along tour of the
+  `sample-flappy` gallery sample: an anchorless S3K fresh-game destination, scoped
+  Tails/input/HUD policies, fixed camera, and rewind-stable recycling pipes.
 - [Standalone platformer](guides/standalone-platformer.md) — build-along tour of the
   `sample-platformer` gallery sample: a no-ROM standalone game with a Tiled-authored
   level, an original character with a double jump, a patrolling badnik, and a spring
