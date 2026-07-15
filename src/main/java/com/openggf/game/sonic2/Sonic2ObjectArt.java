@@ -1082,8 +1082,8 @@ public class Sonic2ObjectArt {
             return null;
         }
         List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJBD_ADDR);
-        // Palette line 3 = index 2 in engine (palette 0 is universal)
-        return new ObjectSpriteSheet(patterns, mappings, 2, 1);
+        // ROM make_art_tile(ArtTile_ArtNem_WfzBeltPlatform,3,1): palette line 3 (passed directly).
+        return new ObjectSpriteSheet(patterns, mappings, 3, 1);
     }
 
     // ========== WFZ Stick / unused badnik (Object 0xBF) ==========
