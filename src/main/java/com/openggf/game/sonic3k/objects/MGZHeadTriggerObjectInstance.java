@@ -63,10 +63,6 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
 
     // ROM: move.w #60,$32(a0) — recovery delay after a hit.
     private static final int RECOVER_FRAMES = 60;
-    // Inference: add one full animation tick before the hit-triggered blink/spit
-    // cycle restarts so the exposed-state cadence matches the original better.
-    private static final int POST_HIT_RESTART_DELAY = 8;
-
     // ROM: move.w #$C0,$30(a0) — watch-window extent (x and y both $C0).
     private static final int WATCH_X_EXTENT = 0xC0;
     // ROM: addi.w #$80,d0 on Y (cmpi.w #$C0,d0). Player may be up to $80 above
@@ -76,9 +72,6 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
 
     // ROM: mapping_frame(a0) init value 2 (closed-eye face).
     private static final int FACE_FRAME_IDLE = 2;
-    // Verified from the ROM-backed MGZ Misc 2 PLC art and head-trigger mappings:
-    // frame 1 is the exposed red gem.
-    private static final int FACE_FRAME_EXPOSED = 1;
     // ROM: sub2_mapframe init value 6 (3-piece column: capital + shaft + base).
     private static final int BODY_FRAME = 6;
     // ROM: move.b #0,mapping_frame(a0) when the trigger is already spent and again
@@ -141,12 +134,6 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
     private int recoverTimer;
     // Shared touch handling clears collision immediately; the object reacts on its next update.
     private boolean hitPending;
-    // Once the head has fired its first arrow, it stays in the exposed/waiting
-    // state and should not re-arm from proximity alone.
-    private boolean gemExposed;
-    // Non-final hits restart the blink/spit cycle after a short pause.
-    private boolean restartBlinkPending;
-    private int restartBlinkDelay;
 
     // ROM: mapping_frame(a0).
     private int mappingFrame;
@@ -177,9 +164,6 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
         this.animId = ANIM_IDLE_ID;
         this.routine = 0;
         this.hitPending = false;
-        this.gemExposed = false;
-        this.restartBlinkPending = false;
-        this.restartBlinkDelay = 0;
 
         if (Sonic3kLevelTriggerManager.testAny(triggerIndex)) {
             this.triggered = true;
@@ -201,7 +185,7 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
 
         // ROM loc_3438E: proximity check that arms the blink animation only when
         // the current anim is the idle loop.
-        if (!gemExposed && animId == ANIM_IDLE_ID && isPlayerInWatchWindow(playerEntity)) {
+        if (animId == ANIM_IDLE_ID && isPlayerInWatchWindow(playerEntity)) {
             startBlinkSpitCycle();
         }
 
@@ -210,16 +194,6 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
         } else {
             // ROM's collision recovery word at $32 is owned by loc_343C6 and
             // keeps counting while Animate_Sprite advances independently.
-            // Restarting the blink/spit animation must not pause this timer.
-            if (restartBlinkPending) {
-                if (restartBlinkDelay > 0) {
-                    restartBlinkDelay--;
-                }
-                if (restartBlinkDelay == 0) {
-                    restartBlinkPending = false;
-                    startBlinkSpitCycle();
-                }
-            }
             if (recoverTimer > 0) {
                 recoverTimer--;
             }
@@ -227,10 +201,6 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
 
         // ROM loc_3447C: animate, then react to the $FC routine bump.
         advanceAnimation();
-        if (gemExposed && animId == ANIM_IDLE_ID) {
-            mappingFrame = FACE_FRAME_EXPOSED;
-        }
-
         if (routine != 0) {
             // ROM: clr.b routine(a0); jsr (AllocateObjectAfterCurrent).l ...
             routine = 0;
@@ -357,8 +327,6 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
         final int finalVel = xVel;
 
         spawnChild(() -> new MGZHeadTriggerProjectileInstance(finalPx, finalPy, finalVel, flipped));
-        gemExposed = true;
-
         // ROM: moveq #signextendB(sfx_LevelProjectile),d0; jsr (Play_SFX).l
         svc.playSfx(Sonic3kSfx.LEVEL_PROJECTILE.id);
     }
@@ -376,15 +344,12 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
             onFinalHit(svc);
         } else {
             spawnFragment();
-            restartBlinkPending = true;
-            restartBlinkDelay = POST_HIT_RESTART_DELAY;
         }
 
         svc.playSfx(Sonic3kSfx.BOSS_HIT.id);
     }
 
     private void startBlinkSpitCycle() {
-        gemExposed = false;
         if (animId != ANIM_BLINK_ID) {
             animId = ANIM_BLINK_ID;
         }
@@ -443,9 +408,6 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
     /** ROM loc_343FE with collision_property == 0 branch. */
     private void onFinalHit(ObjectServices svc) {
         triggered = true;
-        gemExposed = false;
-        restartBlinkPending = false;
-        restartBlinkDelay = 0;
         mappingFrame = FACE_FRAME_TRIGGERED;
 
         // ROM: move.b #1,(a3,d0.w) — byte-write to Level_trigger_array[idx].

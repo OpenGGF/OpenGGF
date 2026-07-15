@@ -176,10 +176,10 @@ class TestMGZHeadTriggerObjectInstance {
         assertEquals(1, readMappingFrame(head));
 
         runFrames(head, player, 80, 220);
-        assertEquals(1, countProjectiles(services),
-                "Once exposed, the head should wait for a hit instead of rearming from proximity");
+        assertEquals(2, countProjectiles(services),
+                "The idle watch-window check should re-arm the native 82-frame spit cadence");
         assertEquals(1, readMappingFrame(head),
-                "The waiting state should hold on the exposed red gem frame");
+                "The second cycle should reach the exposed red gem frame");
     }
 
     @Test

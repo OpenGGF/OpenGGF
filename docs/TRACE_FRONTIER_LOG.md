@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ head triggers restore native repeated-projectile cadence
+
+Branch `feature/ai-trace-animation-verification`, after the trigger-platform
+activation milestone. `loc_3438E` tests the player watch window whenever the
+head's current animation is idle, and starts animation 1 without consulting a
+one-shot exposed state. When that animation returns to idle through `$FD`, a
+nearby player therefore re-arms the blink/spit cycle immediately. The engine's
+invented `gemExposed` latch and inferred eight-pass post-hit restart delay
+suppressed later arrows and changed the route's damage history; both have been
+removed. No trace state, zone/route/frame carve-out, hydration, or comparator
+tolerance was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:70785-70800,70847-70878`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- Auxiliary complete-run tracing observes repeated projectile starts exactly
+  82 frames apart at 27016/27098 and 27553/27635.
+- MGZ complete-run physics advances from frame 27577 to frame 27867
+  (`tails_cpu_ctrl2_held`, expected `$1A` / actual `$12`).
+- MGZ complete-run animation advances from frame 27577 to frame 31643
+  (`tails_animation_id`, expected Roll / actual Hurt).
+- `TestMGZHeadTriggerObjectInstance` passes 6/6, including the repeated native
+  82-frame spit cadence.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ horizontal trigger begins on its native object pass
 
 Branch `feature/ai-trace-animation-verification`, after the post-move carry-
