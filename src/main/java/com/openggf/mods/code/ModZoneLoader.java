@@ -97,8 +97,9 @@ public final class ModZoneLoader {
                 .build();
     }
 
-    private static List<ObjectSpawn> decodeObjects(ModLevelDefinition definition,
-                                                   boolean allowStockObjects) throws IOException {
+    /** Converts immutable creator entries into engine-owned runtime spawns. */
+    public static List<ObjectSpawn> decodeObjects(ModLevelDefinition definition,
+                                                  boolean allowStockObjects) throws IOException {
         List<ObjectSpawn> objects = new ArrayList<>(definition.objects().size());
         for (ModLevelDefinition.ObjectEntry entry : definition.objects()) {
             if (entry instanceof ModLevelDefinition.StockObjectSpawn stock) {
@@ -118,7 +119,8 @@ public final class ModZoneLoader {
         return List.copyOf(objects);
     }
 
-    private static List<RingSpawn> decodeRings(ModLevelDefinition definition) {
+    /** Converts immutable creator ring entries into engine-owned runtime spawns. */
+    public static List<RingSpawn> decodeRings(ModLevelDefinition definition) {
         return definition.rings().stream()
                 .map(ring -> new RingSpawn(ring.x(), ring.y(), ring.placementId())).toList();
     }

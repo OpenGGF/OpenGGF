@@ -22,6 +22,10 @@ public final class Sonic2ModZoneAdapter implements ModZoneAdapter {
     public void validate(String ownerModId, ModLevelDefinition level) {
         Objects.requireNonNull(ownerModId, "ownerModId");
         Objects.requireNonNull(level, "level");
+        if (level.formatVersion() != 1) {
+            throw new ModRegistrationException(ownerModId,
+                    "Sonic 2 additive zones require formatVersion 1");
+        }
         if (level.blockGridSide() != 8) {
             throw new ModRegistrationException(ownerModId,
                     "Sonic 2 runtime requires blockGridSide 8");

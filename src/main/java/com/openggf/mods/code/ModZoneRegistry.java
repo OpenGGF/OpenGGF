@@ -54,7 +54,9 @@ public final class ModZoneRegistry implements ZoneRegistry {
         this.topology = ZoneProgressionPlan.ZoneTopology.of(metadata);
         ZoneProgressionPlan.Builder builder = ZoneProgressionPlan.builder(topology);
         for (int i = 0; i < contributions.size(); i++) {
-            int anchor = stock.resolveStockZoneAnchor(contributions.get(i).insertAfter());
+            PreparedModZone contribution = contributions.get(i);
+            if (contribution.insertAfter() == null) continue;
+            int anchor = stock.resolveStockZoneAnchor(contribution.insertAfter());
             if (anchor < 0 || anchor >= stock.getZoneCount()) {
                 throw new IllegalArgumentException("Stock progression anchor is outside stock registry");
             }

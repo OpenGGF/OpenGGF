@@ -162,6 +162,15 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         }
     }
 
+    Palette loadActiveMainCharacterPalette() {
+        return loadCharacterPalette(resolveActiveMainCharacterCode());
+    }
+
+    com.openggf.level.rings.RingSpriteSheet loadRingSpriteSheet() throws IOException {
+        if (ringArt == null) ringArt = new Sonic3kRingArt(rom);
+        return ringArt.load();
+    }
+
     @Override
     public AnimatedPatternManager loadAnimatedPatternManager(Level level, int zoneIndex) throws IOException {
         if (level == null) {
@@ -342,10 +351,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         var ringPlacement = new Sonic3kRingPlacement(romReader);
         var ringSpawns = ringPlacement.load(zone, act);
 
-        if (ringArt == null) {
-            ringArt = new Sonic3kRingArt(rom);
-        }
-        var ringSpriteSheet = ringArt.load();
+        var ringSpriteSheet = loadRingSpriteSheet();
 
         LOG.info(String.format("  S3K loaded %d objects, %d rings for zone=%d act=%d",
                 objectSpawns.size(), ringSpawns.size(), zone, act));

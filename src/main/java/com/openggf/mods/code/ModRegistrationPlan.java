@@ -67,7 +67,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
             PreparedModZone prepared = preparedZones.get(i);
             if (!ownerModId.equals(prepared.ownerModId())
                     || !declared.localKey().equals(prepared.localKey())
-                    || !declared.insertAfter().equals(prepared.insertAfter())) {
+                    || !Objects.equals(declared.insertAfter(), prepared.insertAfter())) {
                 throw new IllegalArgumentException("Prepared zones must exactly match declarations");
             }
         }

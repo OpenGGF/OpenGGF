@@ -2,6 +2,7 @@ package com.openggf.mods;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -34,5 +35,11 @@ public final class StockProgressionAnchors {
             throw new IllegalArgumentException("Unknown stock game id: " + gameId);
         }
         return anchors;
+    }
+
+    /** Returns the host-owned default insertion boundary, when one is sequenced. */
+    public static Optional<String> defaultAnchorFor(String gameId) {
+        anchorsFor(gameId);
+        return "s2".equals(gameId) ? Optional.of("mtz3") : Optional.empty();
     }
 }

@@ -177,14 +177,18 @@ public final class ModContext {
 
     public void registerZone(ModZoneContribution contribution) {
         mutate(() -> {
-            if (!"s2".equals(baseGame)) {
-                throw failure("Additive zones are supported only for Sonic 2 in Phase 2");
-            }
+            if (standalone) throw failure("Standalone manifests cannot register additive zones");
             Objects.requireNonNull(contribution, "contribution");
-            ModZoneContribution frozen = contribution.insertAfter() == null
-                    ? contribution.withDefaultAnchor(defaultInsertAfter == null ? "mtz3" : defaultInsertAfter)
-                    : contribution;
-            if (!com.openggf.mods.StockProgressionAnchors.contains("s2", frozen.insertAfter())) {
+            String anchor = contribution.insertAfter();
+            if (anchor == null) anchor = defaultInsertAfter;
+            if (anchor == null) {
+                anchor = com.openggf.mods.StockProgressionAnchors.defaultAnchorFor(baseGame)
+                        .orElse(null);
+            }
+            ModZoneContribution frozen = anchor == null
+                    ? contribution : contribution.withDefaultAnchor(anchor);
+            if (anchor != null
+                    && !com.openggf.mods.StockProgressionAnchors.contains(baseGame, anchor)) {
                 throw failure("Zone insertion anchor is not results-driven: " + frozen.insertAfter());
             }
             if (!zoneKeys.add(frozen.localKey())) {

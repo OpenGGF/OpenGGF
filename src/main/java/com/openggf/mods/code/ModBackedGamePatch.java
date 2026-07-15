@@ -101,6 +101,22 @@ public final class ModBackedGamePatch implements GamePatch {
         return plan.characters();
     }
     @Override public GameModule apply(GameModule base, PatchContext context) {
+        ModZoneAdapter zoneAdapter = plan.preparedZones().isEmpty()
+                ? null : base.getModZoneAdapter();
+        List<PreparedModZone> resolvedZones = plan.preparedZones();
+        if (!resolvedZones.isEmpty()) {
+            if (zoneAdapter.isUnsupported()) {
+                throw new ModRegistrationException(plan.ownerModId(),
+                        "MOD_ZONE_HOST_UNSUPPORTED",
+                        "Host game does not support additive mod zones", null, null);
+            }
+            resolvedZones = resolvedZones.stream().map(zone -> {
+                zoneAdapter.validate(zone.ownerModId(), zone.definition());
+                return zone.withRuntimeProfile(zoneAdapter.runtimeProfile(
+                        zone.ownerModId(), zone.definition()));
+            }).toList();
+        }
+        List<PreparedModZone> publishedZones = resolvedZones;
         List<ModObjectKeyRegistry.Registration> registrations = plan.objectFactories().entrySet().stream()
                 .map(entry -> new ModObjectKeyRegistry.Registration(
                         plan.ownerModId(), entry.getKey(), entry.getValue()))
@@ -155,7 +171,7 @@ public final class ModBackedGamePatch implements GamePatch {
             @Override
             public synchronized com.openggf.game.ZoneRegistry getZoneRegistry() {
                 if (zoneRegistry == null) {
-                    zoneRegistry = ModZoneRegistry.decorate(super.getZoneRegistry(), plan.preparedZones());
+                    zoneRegistry = ModZoneRegistry.decorate(super.getZoneRegistry(), publishedZones);
                 }
                 return zoneRegistry;
             }
@@ -168,11 +184,13 @@ public final class ModBackedGamePatch implements GamePatch {
             @Override
             public com.openggf.level.Level loadLevelOverride(int levelIndex)
                     throws java.io.IOException {
+                if (publishedZones.isEmpty()) return super.loadLevelOverride(levelIndex);
                 com.openggf.game.ZoneRegistry registry = getZoneRegistry();
                 if (registry instanceof ModZoneRegistry mods) {
                     PreparedModZone contribution = mods.levelContribution(levelIndex);
-                    if (contribution != null) return ModZoneLoader.load(
-                            contribution, super.getAdditiveLevelRingSpriteSheet());
+                    if (contribution != null) {
+                        return zoneAdapter.load(contribution.ownerModId(), contribution.definition());
+                    }
                 }
                 return super.loadLevelOverride(levelIndex);
             }
