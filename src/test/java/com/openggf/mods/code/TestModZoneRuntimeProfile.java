@@ -51,6 +51,8 @@ import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 import java.util.Map;
@@ -79,6 +81,36 @@ class TestModZoneRuntimeProfile {
     void sonic3kCustomZonesPublishTheExplicitFlatEmptyProfile() {
         assertEquals(ModZoneRuntimeProfile.flatEmpty(),
                 Sonic3kModZoneRuntimeProfile.flatEmpty());
+    }
+
+    @ParameterizedTest
+    @MethodSource("unsupportedProfiles")
+    void unsupportedRuntimeRequirementsAreRejectedBeforeZonePublication(
+            ModZoneRuntimeProfile unsupported) {
+        GameModule base = mock(GameModule.class);
+        ZoneRegistry stockRegistry = stockRegistry();
+        ModZoneAdapter adapter = adapterFor(unsupported);
+        when(base.getModZoneAdapter()).thenReturn(adapter);
+        when(base.getZoneRegistry()).thenReturn(stockRegistry);
+
+        ModRegistrationException failure = org.junit.jupiter.api.Assertions.assertThrows(
+                ModRegistrationException.class,
+                () -> patchWithoutEvents().apply(base, mock(PatchContext.class)));
+
+        assertEquals("alpha", failure.ownerModId());
+        assertEquals("MOD_ZONE_RUNTIME_PROFILE_UNSUPPORTED", failure.findingCode());
+    }
+
+    private static java.util.stream.Stream<ModZoneRuntimeProfile> unsupportedProfiles() {
+        return java.util.stream.Stream.of(
+                new ModZoneRuntimeProfile(ModZoneRuntimeProfile.ScrollPolicy.FLAT,
+                        true, false, false, false),
+                new ModZoneRuntimeProfile(ModZoneRuntimeProfile.ScrollPolicy.FLAT,
+                        false, true, false, false),
+                new ModZoneRuntimeProfile(ModZoneRuntimeProfile.ScrollPolicy.FLAT,
+                        false, false, true, false),
+                new ModZoneRuntimeProfile(ModZoneRuntimeProfile.ScrollPolicy.FLAT,
+                        false, false, false, true));
     }
 
     @Test
@@ -229,6 +261,10 @@ class TestModZoneRuntimeProfile {
     }
 
     private static ModZoneAdapter flatAdapter() {
+        return adapterFor(Sonic3kModZoneRuntimeProfile.flatEmpty());
+    }
+
+    private static ModZoneAdapter adapterFor(ModZoneRuntimeProfile profile) {
         return new ModZoneAdapter() {
             @Override public void validate(String ownerModId, ModLevelDefinition level) { }
             @Override public Level load(String ownerModId, ModLevelDefinition level) {
@@ -236,7 +272,7 @@ class TestModZoneRuntimeProfile {
             }
             @Override public ModZoneRuntimeProfile runtimeProfile(String ownerModId,
                                                                   ModLevelDefinition level) {
-                return Sonic3kModZoneRuntimeProfile.flatEmpty();
+                return profile;
             }
         };
     }

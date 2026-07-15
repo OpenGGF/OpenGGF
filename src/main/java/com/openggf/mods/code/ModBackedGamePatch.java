@@ -112,8 +112,15 @@ public final class ModBackedGamePatch implements GamePatch {
             }
             resolvedZones = resolvedZones.stream().map(zone -> {
                 zoneAdapter.validate(zone.ownerModId(), zone.definition());
-                return zone.withRuntimeProfile(zoneAdapter.runtimeProfile(
-                        zone.ownerModId(), zone.definition()));
+                ModZoneRuntimeProfile profile = zoneAdapter.runtimeProfile(
+                        zone.ownerModId(), zone.definition());
+                if (!ModZoneRuntimeProfile.flatEmpty().equals(profile)) {
+                    throw new ModRegistrationException(zone.ownerModId(),
+                            "MOD_ZONE_RUNTIME_PROFILE_UNSUPPORTED",
+                            "Host adapter requested unsupported additive-zone runtime features",
+                            null, null);
+                }
+                return zone.withRuntimeProfile(profile);
             }).toList();
         }
         List<PreparedModZone> publishedZones = resolvedZones;
@@ -200,8 +207,13 @@ public final class ModBackedGamePatch implements GamePatch {
             @Override
             public int[] getBackgroundScrollOverride(int levelIndex, int cameraX, int cameraY) {
                 com.openggf.game.ZoneRegistry registry = getZoneRegistry();
-                if (registry instanceof ModZoneRegistry mods && mods.levelContribution(levelIndex) != null) {
-                    return new int[]{cameraX, cameraY};
+                if (registry instanceof ModZoneRegistry mods) {
+                    PreparedModZone contribution = mods.levelContribution(levelIndex);
+                    if (contribution != null) {
+                        return switch (contribution.runtimeProfile().scroll()) {
+                            case FLAT -> new int[]{cameraX, cameraY};
+                        };
+                    }
                 }
                 return super.getBackgroundScrollOverride(levelIndex, cameraX, cameraY);
             }
