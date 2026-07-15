@@ -146,6 +146,7 @@ public final class ModBackedGamePatch implements GamePatch {
             private com.openggf.game.LevelEventProvider levelEvents;
             private com.openggf.game.dataselect.DataSelectHostProfile dataSelectHost;
             private com.openggf.game.dataselect.DataSelectPresentationProvider dataSelectPresentation;
+            private com.openggf.game.GameplayPolicyProvider gameplayPolicies;
 
             @Override
             public synchronized com.openggf.game.PlayableCharacterRegistry getPlayableCharacterRegistry() {
@@ -160,6 +161,39 @@ public final class ModBackedGamePatch implements GamePatch {
                     playableCharacters = registry;
                 }
                 return playableCharacters;
+            }
+
+            @Override
+            public synchronized com.openggf.game.GameplayPolicyProvider getGameplayPolicyProvider() {
+                if (gameplayPolicies == null) {
+                    com.openggf.game.GameplayPolicyProvider inherited =
+                            super.getGameplayPolicyProvider();
+                    gameplayPolicies = new com.openggf.game.GameplayPolicyProvider() {
+                        @Override
+                        public java.util.Optional<com.openggf.game.GameplayLaunchTeam> launchTeam(
+                                com.openggf.game.ZoneKey destination) {
+                            if (destination instanceof com.openggf.game.ZoneKey.Mod mod) {
+                                com.openggf.game.GameplayLaunchTeam contributed =
+                                        plan.launchTeams().get(mod);
+                                if (contributed != null) return java.util.Optional.of(contributed);
+                            }
+                            return inherited.launchTeam(destination);
+                        }
+
+                        @Override
+                        public java.util.Optional<com.openggf.game.GameplayInputFilter> inputFilter(
+                                com.openggf.game.ZoneKey destination) {
+                            return inherited.inputFilter(destination);
+                        }
+
+                        @Override
+                        public java.util.Optional<com.openggf.level.objects.HudProfile> hudProfile(
+                                com.openggf.game.ZoneKey destination) {
+                            return inherited.hudProfile(destination);
+                        }
+                    };
+                }
+                return gameplayPolicies;
             }
 
             @Override

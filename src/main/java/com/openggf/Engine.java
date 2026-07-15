@@ -1599,15 +1599,33 @@ public class Engine {
 				GameplayTeamAvailability.sanitizeForLaunch(
 						saveContext, gameId, availableCharacters);
 		SelectedTeam selectedTeam = sanitized.selectedTeam();
+		GameplayLaunchRequest launchRequest =
+				GameplayLaunchRequest.fromSelectedTeam(gameId, selectedTeam);
 		GameModule resolvedModule = consumePatchResolution(
 				moduleResolutionService.resolveForLaunchResult(preparedLaunch, rootModule,
-						new GameplayLaunchRequest(gameId, selectedTeam.mainCharacter(), selectedTeam.sidekicks())),
+						launchRequest),
 				true);
 		if (resolvedModule == null) {
 			return null;
 		}
+		com.openggf.game.ZoneKey destination = resolvedModule.getZoneRegistry()
+				.zoneKey(sanitized.startZone());
+		java.util.Optional<com.openggf.game.GameplayLaunchTeam> contributed =
+				resolvedModule.getGameplayPolicyProvider().launchTeam(destination);
+		com.openggf.game.GameplayLaunchTeam launchTeam = contributed.orElseGet(launchRequest::team);
+		com.openggf.game.save.SaveSessionContext launchContext;
+		try {
+			launchContext = GameplayTeamAvailability.requireForLaunch(sanitized, launchTeam,
+					resolvedModule.getPlayableCharacterRegistry());
+		} catch (GameplayTeamBootstrap.UnavailableRequiredCharacter unavailable) {
+			String owner = destination instanceof com.openggf.game.ZoneKey.Mod mod
+					? mod.ownerModId()
+					: unavailable.key().ownerModId().orElse("engine");
+			throw new com.openggf.mods.code.ModRegistrationException(owner,
+					"MOD_LAUNCH_CHARACTER_UNAVAILABLE", unavailable.getMessage(), null, unavailable);
+		}
 		return SessionManager.openGameplaySession(
-				rootModule, resolvedModule, dataSource, sanitized);
+				rootModule, resolvedModule, dataSource, launchContext);
 	}
 
 	/**

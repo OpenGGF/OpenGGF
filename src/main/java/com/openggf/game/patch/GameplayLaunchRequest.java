@@ -2,6 +2,9 @@ package com.openggf.game.patch;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.CharacterKey;
+import com.openggf.game.GameplayLaunchTeam;
+import com.openggf.game.save.SelectedTeam;
 
 import java.util.Arrays;
 import java.util.List;
@@ -35,5 +38,25 @@ public record GameplayLaunchRequest(String gameId, String mainCharacter, List<St
                         .filter(value -> !value.isEmpty())
                         .toList();
         return new GameplayLaunchRequest(gameId, main, requestedSidekicks);
+    }
+
+    /** Builds a patch-resolution request from a data-select/save team snapshot. */
+    public static GameplayLaunchRequest fromSelectedTeam(String gameId, SelectedTeam team) {
+        Objects.requireNonNull(team, "team");
+        return new GameplayLaunchRequest(gameId, team.mainCharacter(), team.sidekicks());
+    }
+
+    /** Returns the request as exact character keys for resolved-registry validation. */
+    public GameplayLaunchTeam team() {
+        return new GameplayLaunchTeam(parseKey(mainCharacter),
+                sidekicks.stream().map(GameplayLaunchRequest::parseKey).toList());
+    }
+
+    private static CharacterKey parseKey(String persisted) {
+        String canonical = persisted.equalsIgnoreCase("sonic")
+                || persisted.equalsIgnoreCase("tails")
+                || persisted.equalsIgnoreCase("knuckles")
+                ? persisted.toLowerCase(Locale.ROOT) : persisted;
+        return CharacterKey.parsePersisted(canonical);
     }
 }

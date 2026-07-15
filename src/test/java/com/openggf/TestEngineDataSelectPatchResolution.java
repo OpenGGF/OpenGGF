@@ -8,7 +8,11 @@ import com.openggf.debug.PerformanceProfiler;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameModule;
+import com.openggf.game.CharacterKey;
+import com.openggf.game.GameplayLaunchTeam;
 import com.openggf.game.RomDetectionService;
+import com.openggf.game.ZoneKey;
+import com.openggf.game.ZoneRegistry;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.patch.GamePatch;
 import com.openggf.game.patch.GameplayLaunchRequest;
@@ -19,6 +23,9 @@ import com.openggf.game.patch.PatchContext;
 import com.openggf.game.patch.PatchEnablement;
 import com.openggf.game.patch.PatchOwner;
 import com.openggf.game.patch.RegisteredPatch;
+import com.openggf.mods.code.ModBackedGamePatch;
+import com.openggf.mods.code.ModRegistrationException;
+import com.openggf.mods.code.ModRegistrationPlan;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.recording.RecordingLaunchContext;
@@ -33,6 +40,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -93,6 +101,37 @@ class TestEngineDataSelectPatchResolution {
         assertSame(root, SessionManager.getCurrentWorldSession().rootGameModule());
         assertEquals(List.of("one", "two"),
                 ((PatchTrail) SessionManager.requireCurrentGameModule()).ids());
+    }
+
+    @Test
+    void destinationPolicyReplacesOnlyTheLaunchContextTeam() {
+        LaunchHarness harness = launchHarness(new GameplayLaunchTeam(CharacterKey.TAILS, List.of()));
+        SaveSessionContext durable = SaveSessionContext.noSave("s2",
+                new SelectedTeam("sonic", List.of("tails")), 0, 0);
+
+        var gameplay = harness.engine().openDataSelectPatchSession(durable,
+                List.of("sonic", "tails", "knuckles"), harness.prepared());
+
+        assertEquals(new SelectedTeam("tails", List.of()),
+                gameplay.getWorldSession().getSaveSessionContext().selectedTeam());
+        assertEquals(new SelectedTeam("sonic", List.of("tails")), durable.selectedTeam());
+        assertEquals("sonic", harness.config().getString(
+                com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("tails", harness.config().getString(
+                com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+    }
+
+    @Test
+    void missingContributedCharacterAbortsInsteadOfFallingBack() {
+        LaunchHarness harness = launchHarness(new GameplayLaunchTeam(
+                CharacterKey.mod("missing", "hero"), List.of()));
+        SaveSessionContext durable = SaveSessionContext.noSave("s2",
+                new SelectedTeam("sonic", List.of("tails")), 0, 0);
+
+        assertThrows(ModRegistrationException.class,
+                () -> harness.engine().openDataSelectPatchSession(durable,
+                        List.of("sonic", "tails", "knuckles"), harness.prepared()));
+        assertEquals(new SelectedTeam("sonic", List.of("tails")), durable.selectedTeam());
     }
 
     @Test
@@ -226,5 +265,60 @@ class TestEngineDataSelectPatchResolution {
                 return new Patched();
             }
         };
+    }
+
+    private LaunchHarness launchHarness(GameplayLaunchTeam launchTeam) {
+        previousEngineContext = EngineServices.current();
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE,
+                "sonic");
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE,
+                "tails");
+        ZoneKey.Mod destination = (ZoneKey.Mod) ZoneKey.mod("alpha", "sky");
+        GameModule root = rootWithDestination(destination);
+        ModRegistrationPlan plan = new ModRegistrationPlan(
+                "alpha", "s2", Map.of(), Map.of(), Map.of(), List.of(), List.of(), List.of(),
+                Map.of(), Map.of(), null, Map.of(), Map.of(destination, launchTeam),
+                Map.of(), Map.of());
+        GamePatch content = new ModBackedGamePatch(plan);
+        ModuleResolutionService resolver = new ModuleResolutionService(List.of(),
+                PatchEnablement.ALL_ENABLED, new LogicalRomResolver(() -> null), config,
+                ignored -> new ModuleResolutionService.PatchPlan(List.of(
+                        new RegisteredPatch(new PatchOwner.Mod("alpha"),
+                                "alpha:content", content, 0)), Map.of()));
+        Engine engine = new Engine(new EngineContext(config, mock(GraphicsManager.class),
+                mock(AudioManager.class), mock(RomManager.class), mock(PerformanceProfiler.class),
+                mock(DebugOverlayManager.class), mock(PlaybackDebugManager.class),
+                mock(RomDetectionService.class), mock(CrossGameFeatureProvider.class), resolver));
+        SessionManager.openGameplaySession(root, root, null);
+        return new LaunchHarness(engine, config,
+                resolver.prepareLaunch(ModuleResolutionService.LaunchPolicy.STANDARD));
+    }
+
+    private static GameModule rootWithDestination(ZoneKey.Mod destination) {
+        GameModule stockModule = new Sonic2GameModule();
+        ZoneRegistry stock = stockModule.getZoneRegistry();
+        ZoneRegistry tagged = (ZoneRegistry) java.lang.reflect.Proxy.newProxyInstance(
+                TestEngineDataSelectPatchResolution.class.getClassLoader(),
+                new Class<?>[]{ZoneRegistry.class}, (proxy, method, args) -> {
+                    if (method.getName().equals("zoneKey") && (int) args[0] == 0) {
+                        return destination;
+                    }
+                    if (method.getName().equals("resolveZoneKey") && destination.equals(args[0])) {
+                        return java.util.OptionalInt.of(0);
+                    }
+                    try {
+                        return method.invoke(stock, args);
+                    } catch (java.lang.reflect.InvocationTargetException failure) {
+                        throw failure.getCause();
+                    }
+                });
+        return new DelegatingGameModule(stockModule, "tagged-destination") {
+            @Override public ZoneRegistry getZoneRegistry() { return tagged; }
+        };
+    }
+
+    private record LaunchHarness(Engine engine, SonicConfigurationService config,
+                                 ModuleResolutionService.PreparedLaunch prepared) {
     }
 }

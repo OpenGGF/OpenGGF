@@ -67,6 +67,14 @@ public final class SaveSessionContext {
         return copy;
     }
 
+    /** Copies this context with a launch-local team resolved from tagged policy identities. */
+    public SaveSessionContext withLaunchTeam(com.openggf.game.GameplayLaunchTeam replacement) {
+        Objects.requireNonNull(replacement, "replacement");
+        return withSelectedTeam(new SelectedTeam(replacement.main().persisted(),
+                replacement.sidekicks().stream()
+                        .map(com.openggf.game.CharacterKey::persisted).toList()));
+    }
+
     public void requestSave(SaveReason reason,
                             RuntimeSaveContext context,
                             SaveSnapshotProvider snapshotProvider,
