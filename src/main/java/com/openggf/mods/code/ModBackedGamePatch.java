@@ -194,8 +194,16 @@ public final class ModBackedGamePatch implements GamePatch {
                         @Override
                         public java.util.Optional<com.openggf.level.objects.HudProfile> hudProfile(
                                 com.openggf.game.ZoneKey destination) {
-                            return callGameplayPolicy(destination,
-                                    () -> inherited.hudProfile(destination));
+                            return callGameplayPolicy(destination, () -> {
+                                if (destination instanceof com.openggf.game.ZoneKey.Mod mod) {
+                                    com.openggf.level.objects.HudProfile contributed =
+                                            plan.hudProfiles().get(mod);
+                                    if (contributed != null) {
+                                        return java.util.Optional.of(contributed);
+                                    }
+                                }
+                                return inherited.hudProfile(destination);
+                            });
                         }
 
                         private <T> T callGameplayPolicy(com.openggf.game.ZoneKey destination,

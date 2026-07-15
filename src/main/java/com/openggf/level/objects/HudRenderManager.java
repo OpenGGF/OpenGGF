@@ -10,6 +10,8 @@ import com.openggf.level.PatternDesc;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpritePieceRenderer;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 @com.openggf.game.ModApi
@@ -51,6 +53,7 @@ public class HudRenderManager {
     private Supplier<Palette> livesPaletteOverrideSupplier;
     private boolean routeLivesPaletteOverrideThroughOwnership;
     private boolean bonusStageHudLayout;
+    private HudProfile profile = HudProfile.stock();
 
     public HudRenderManager(GraphicsManager graphicsManager, Camera camera, GameStateManager gameState) {
         this.graphicsManager = graphicsManager;
@@ -73,6 +76,12 @@ public class HudRenderManager {
 
     public void setBonusStageHudLayout(boolean enabled) {
         this.bonusStageHudLayout = enabled;
+    }
+
+    /** Installs the immutable row presentation selected for the active destination. */
+    public void setProfile(HudProfile profile) {
+        this.profile = Objects.requireNonNull(profile, "profile");
+        invalidateCache();
     }
 
     public void setDigitPatternIndex(int digitPatternIndex) {
@@ -177,10 +186,15 @@ public class HudRenderManager {
             }
 
             boolean debugMode = player != null && player.isDebugMode();
+            List<HudRow> rows = debugMode
+                    ? HudProfile.stock().rows() : profile.rows();
 
-            drawStaticFrame(debugMode ? staticHudArtOrNull(true) : staticHudArtOrNull(false), 16, 8);
-            drawStaticFrame(selectTimeFrame(levelGamestate.shouldFlashTimer(), levelGamestate.getFlashCycle()), 16, 24);
-            drawStaticFrame(selectRingsFrame(levelGamestate.getRings(), levelGamestate.getFlashCycle()), 16, 40);
+            for (HudRow row : rows) {
+                if (row.visible() && !isLivesRow(row)) {
+                    drawStaticFrame(selectLabelFrame(row, levelGamestate, debugMode),
+                            row.labelX(), row.labelY());
+                }
+            }
 
             if (debugMode) {
                 int hexStartX = 48;
@@ -191,13 +205,16 @@ public class HudRenderManager {
                 int camX = camera.getX() & 0xFFFF;
                 int camY = camera.getY() & 0xFFFF;
                 drawSmallHexCoordinates(hexStartX, 16, camX, camY);
-            } else {
-                drawScore(gameState.getScore());
+            }
+            for (HudRow row : rows) {
+                if (row.visible() && !isLivesRow(row)
+                        && !(debugMode && row.metric() == HudMetric.SCORE)) {
+                    drawMetric(row, levelGamestate);
+                }
             }
 
-            drawTime(56, 24, levelGamestate.getDisplayTime());
-            drawRings(levelGamestate.getRings(), bonusStageHudLayout ? 8 : 40);
-            boolean paletteOverridden = shouldApplyLivesPaletteOverride();
+            boolean hasLivesRow = hasVisibleLivesRow(rows);
+            boolean paletteOverridden = hasLivesRow && shouldApplyLivesPaletteOverride();
             if (paletteOverridden) {
                 graphicsManager.flushPatternBatch();
                 graphicsManager.flush();
@@ -206,8 +223,13 @@ public class HudRenderManager {
                 graphicsManager.beginPatternBatch();
                 batchOpen = true;
             }
-            drawStaticFrame(staticHudArt != null ? staticHudArt.livesFrame() : null, 16, 200);
-            drawLives(gameState.getLives());
+            for (HudRow row : rows) {
+                if (row.visible() && isLivesRow(row)) {
+                    drawStaticFrame(selectLabelFrame(row, levelGamestate, debugMode),
+                            row.labelX(), row.labelY());
+                    drawMetric(row, levelGamestate);
+                }
+            }
             graphicsManager.flushPatternBatch();
             batchOpen = false;
             if (paletteOverridden) {
@@ -220,11 +242,58 @@ public class HudRenderManager {
         }
     }
 
-    private SpriteMappingFrame staticHudArtOrNull(boolean debugMode) {
+    private static boolean isLivesRow(HudRow row) {
+        return row.label() == HudLabel.LIVES || row.metric() == HudMetric.LIVES;
+    }
+
+    private static boolean hasVisibleLivesRow(List<HudRow> rows) {
+        for (HudRow row : rows) {
+            if (row.visible() && isLivesRow(row)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private SpriteMappingFrame selectLabelFrame(HudRow row, LevelState levelState,
+                                                boolean debugMode) {
         if (staticHudArt == null) {
             return null;
         }
-        return debugMode ? staticHudArt.debugScoreFrame() : staticHudArt.scoreFrame();
+        if (debugMode && row.label() == HudLabel.SCORE) {
+            return staticHudArt.debugScoreFrame();
+        }
+        boolean flash = switch (row.warning()) {
+            case TIMER_FLASH -> levelState.shouldFlashTimer() && levelState.getFlashCycle();
+            case ZERO_FLASH -> metricIsZero(row.metric(), levelState) && levelState.getFlashCycle();
+            case NONE -> false;
+        };
+        return switch (row.label()) {
+            case SCORE -> staticHudArt.scoreFrame();
+            case TIME -> flash ? staticHudArt.timeFlashFrame() : staticHudArt.timeFrame();
+            case RINGS -> flash ? staticHudArt.ringsFlashFrame() : staticHudArt.ringsFrame();
+            case LIVES -> staticHudArt.livesFrame();
+        };
+    }
+
+    private boolean metricIsZero(HudMetric metric, LevelState levelState) {
+        return switch (metric) {
+            case SCORE -> gameState.getScore() == 0;
+            case TIME -> levelState.getElapsedSeconds() == 0;
+            case RINGS -> levelState.getRings() == 0;
+            case LIVES -> gameState.getLives() == 0;
+        };
+    }
+
+    private void drawMetric(HudRow row, LevelState levelState) {
+        switch (row.metric()) {
+            case SCORE -> drawNumberRightAligned(row.valueRightX(), row.valueY(),
+                    gameState.getScore(), row.maxDigits());
+            case TIME -> drawTime(row.valueRightX(), row.valueY(), levelState.getDisplayTime());
+            case RINGS -> drawNumberRightAligned(row.valueRightX(), row.valueY(),
+                    levelState.getRings(), row.maxDigits());
+            case LIVES -> drawLives(gameState.getLives(), row.valueRightX(), row.valueY());
+        }
     }
 
     private void drawBonusStageHud(LevelState levelGamestate) {
@@ -232,19 +301,13 @@ public class HudRenderManager {
         drawRings(levelGamestate.getRings(), 8);
     }
 
-    private void drawScore(int score) {
-        drawNumberRightAligned(64, 8, score, 6);
-    }
-
     private void drawRings(int rings, int y) {
         drawNumberRightAligned(64, y, rings, 3);
     }
 
-    private void drawLives(int lives) {
+    private void drawLives(int lives, int numDrawX, int line2Y) {
         int camX = camera.getXWithShake();
         int camY = camera.getYWithShake();
-        int numDrawX = 56;
-        int line2Y = 208;
 
         if (livesNumbersPatternIndex <= 0) {
             return;

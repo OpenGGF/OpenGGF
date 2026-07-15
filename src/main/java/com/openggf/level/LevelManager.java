@@ -41,8 +41,9 @@ import com.openggf.game.session.WorldSession;
 import com.openggf.game.session.PatternWindowSessionState;
 import com.openggf.mods.code.OwnerAwareGameplayInputFilter;
 import com.openggf.level.rewind.LevelRewindSnapshotAdapter;
-import com.openggf.level.objects.HudRenderManager;
 import com.openggf.level.objects.HudPaletteBridgeAccess;
+import com.openggf.level.objects.HudProfile;
+import com.openggf.level.objects.HudRenderManager;
 import com.openggf.level.objects.HudStaticArt;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.FadeManager;
@@ -209,6 +210,7 @@ public class LevelManager {
     private TouchResponseTable touchResponseTable;
     ObjectRenderManager objectRenderManager;
     HudRenderManager hudRenderManager;
+    private HudProfile activeHudProfile = HudProfile.stock();
     AnimatedPatternManager animatedPatternManager;
     AnimatedPaletteManager animatedPaletteManager;
     private ModZoneRuntimeProfile activeModZoneRuntimeProfile;
@@ -487,8 +489,24 @@ public class LevelManager {
         Level loaded = gameModule.loadLevelOverride(levelIndex);
         if (loaded == null) loaded = game.loadLevel(levelIndex);
         writeCurrentLevel(loaded);
+        installHudProfile();
         rebuildLevelDerivedState();
         return loaded;
+    }
+
+    private void installHudProfile() {
+        HudProfile resolved = HudProfile.stock();
+        if (gameModule != null) {
+            ZoneKey destination = gameModule.getZoneRegistry().zoneKey(currentZone);
+            if (destination instanceof ZoneKey.Mod) {
+                resolved = gameModule.getGameplayPolicyProvider().hudProfile(destination)
+                        .orElse(HudProfile.stock());
+            }
+        }
+        activeHudProfile = resolved;
+        if (hudRenderManager != null) {
+            hudRenderManager.setProfile(activeHudProfile);
+        }
     }
 
     private void installGameplayInputFilter() {
@@ -1330,6 +1348,7 @@ public class LevelManager {
             }
 
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
+            hudRenderManager.setProfile(activeHudProfile);
             hudRenderManager.setHudPalettes(provider.getHudTextPaletteLine(), provider.getHudFlashPaletteLine());
             if (activeModZoneRuntimeContribution != null) {
                 activeCustomZonePaletteBridge = gameModule.createCustomZonePaletteBridge(
@@ -3343,6 +3362,7 @@ public class LevelManager {
         levelRenderer.resetState();
         objectRenderManager = null;
         hudRenderManager = null;
+        activeHudProfile = HudProfile.stock();
         activeModZoneRuntimeContribution = null;
         activeModZoneRuntimeProfile = null;
         activeCustomZonePaletteBridge = null;
