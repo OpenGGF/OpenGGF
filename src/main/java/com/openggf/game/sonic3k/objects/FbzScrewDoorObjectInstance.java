@@ -25,7 +25,9 @@ public final class FbzScrewDoorObjectInstance extends AbstractObjectInstance
     width = SIZE[row][0];
     height = SIZE[row][1];
     trigger = s.subtype() & 0xF;
-    horizontal = (s.subtype() & 0x20) != 0;
+    // loc_3BCB4: bit 5 selects half-speed horizontal movement and bit 6
+    // selects full-speed horizontal movement. Only neither bit is vertical.
+    horizontal = (s.subtype() & 0x60) != 0;
     negative = (s.subtype() & 0x10) != 0;
     legacy = (s.subtype() & 0x80) != 0;
     mappingFrame = FRAMES[Math.min(animation, 5)][0];
@@ -75,7 +77,8 @@ public final class FbzScrewDoorObjectInstance extends AbstractObjectInstance
     if (legacyRestored)
       return spawn.x();
     int d = horizontal ? (negative ? -displacement : displacement) : 0;
-    return spawn.x() + (horizontal ? (animation == 2 ? d / 2 : d) : 0);
+    boolean halfSpeed = (spawn.subtype() & 0x20) != 0;
+    return spawn.x() + (horizontal ? (halfSpeed ? d / 2 : d) : 0);
   }
   public int getY() {
     if (legacyRestored)
@@ -96,6 +99,12 @@ public final class FbzScrewDoorObjectInstance extends AbstractObjectInstance
   }
   public SolidRoutineProfile getSolidRoutineProfile() {
     return SolidRoutineProfile.fullSolid(false);
+  }
+  @Override
+  public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+    // loc_3BCF2 reloads the door's current x_pos into d4 immediately before
+    // SolidObjectFull, so MvSonicOnPtfm receives a zero horizontal delta.
+    return false;
   }
   public int getOutOfRangeReferenceX() { return spawn.x(); }
   public void appendRenderCommands(List<GLCommand> c) {

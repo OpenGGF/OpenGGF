@@ -71,7 +71,7 @@ class TestFbzDisappearingPlatformAndScrewDoor {
             assertEquals(sizes[sizeRow][0], door.nativeWidth());
             assertEquals(sizes[sizeRow][1], door.nativeHeight());
             assertEquals(subtype & 0xF, door.triggerIndex());
-            assertEquals((subtype & 0x20) != 0, door.horizontalMode());
+            assertEquals((subtype & 0x60) != 0, door.horizontalMode());
             assertEquals((subtype & 0x10) != 0, door.negativeDirection());
         }
     }
@@ -159,6 +159,30 @@ class TestFbzDisappearingPlatformAndScrewDoor {
             door.update(i, null);
         }
         assertEquals(1, services.opens);
+    }
+
+    @Test
+    void bit6ScrewDoorUsesTheFullSpeedHorizontalBranch() {
+        var door = new FbzScrewDoorObjectInstance(spawn(0x7A, 0x43));
+        door.setServices(new RecordingServices());
+        Sonic3kLevelTriggerManager.setAll(3);
+
+        int initialY = door.getY();
+        door.update(0, null);
+        assertEquals(0x1001, door.getX(), "bit 6 reaches loc_3BCDE without the bit-5 ASR");
+        assertEquals(initialY, door.getY(), "bit 6 moves X, not the vertical fallback axis");
+        for (int frame = 1; frame < 128; frame++) door.update(frame, null);
+        assertEquals(0x1080, door.getX());
+        assertEquals(initialY, door.getY());
+    }
+
+    @Test
+    void horizontalScrewDoorPassesCurrentXSoRiderGetsNoCarryDelta() {
+        var door = new FbzScrewDoorObjectInstance(spawn(0x7A, 0x43));
+
+        assertFalse(door.carriesRiderOnHorizontalMove(null),
+                "loc_3BCF2 loads current x_pos into d4 immediately before SolidObjectFull, "
+                        + "so MvSonicOnPtfm sees a zero horizontal delta");
     }
 
     @Test

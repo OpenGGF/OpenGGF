@@ -1,13 +1,13 @@
 # Rewind Round-Trip Probe
 
-Generated: 2026-07-14
+Generated: 2026-07-15
 
 ## Summary
 
 | Metric | Value |
 |--------|-------|
-| Total classes discovered | 894 |
-| Probed: | 783 |
+| Total classes discovered | 896 |
+| Probed: | 785 |
 | Skipped/Unprobed: | 111 |
 | Probe coverage | 87.6% |
 | REAL gaps found | 0 |

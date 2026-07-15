@@ -7,11 +7,16 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@ExtendWith(SingletonResetExtension.class)
+@FullReset
 class TestFbzWireCages {
     @Test void countedWireSubtypesDecodeTheRomRanges() {
         for (int subtype : new int[]{0x10, 0x18, 0x98, 0xA4, 0xA6}) {
@@ -108,6 +113,43 @@ class TestFbzWireCages {
         TestSprite p=new TestSprite("sonic");p.setCentreX((short)(0x1000-0x70));p.setCentreY((short)0x800);var cage=new FbzWireCageObjectInstance(spawn(0x6F,0x98));cage.setSlotIndex(22);cage.setServices(new PlayersServices(p,List.of()));cage.update(0,null);p.setLatchedSolidObject(0x6F,cage);p.setCentreY((short)0xA00);cage.update(1,null);
         assertNull(p.getLatchedSolidObjectInstance());assertEquals(0,p.getInteractSlotIndex());assertFalse(p.isOnObject());
         var other=new FbzWireCageObjectInstance(spawn(0x6F,0x98));p.setLatchedSolidObject(0x6F,other);cage.update(2,null);assertSame(other,p.getLatchedSolidObjectInstance(),"stale cage cleanup must not erase a transferred owner");
+    }
+
+    @Test void openingFbz2VerticalCageCapturesAtNativeRightEdgeAndReleasesPastNativeRange() {
+        ObjectSpawn openingSpawn = new ObjectSpawn(0x0480, 0x04C0, 0x6F, 0x98, 0, true, 1);
+        TestSprite player = new TestSprite("sonic");
+        player.setCentreX((short) 0x04F0);
+        player.setCentreY((short) 0x0550);
+        player.setXSpeed((short) 0x300);
+        player.setYSpeed((short) -0x200);
+        player.setAir(true);
+        FbzWireCageObjectInstance cage = new FbzWireCageObjectInstance(openingSpawn);
+        cage.setSlotIndex(41);
+        cage.setServices(new PlayersServices(player, List.of()));
+
+        cage.update(0, null);
+
+        assertTrue(cage.heldByParticipant(0));
+        assertTrue(player.isOnObject());
+        assertFalse(player.getAir());
+        assertTrue(player.isObjectControlled());
+        assertTrue(player.isObjectControlAllowsCpu());
+        assertFalse(player.isObjectControlSuppressesMovement(),
+                "Obj_FBZWireCage writes object_control bits 6+1 ($42), not movement-suppression bit 0");
+        assertTrue(player.isSuppressGroundWallCollision(),
+                "Obj_FBZWireCage object_control bit 6 bypasses Sonic_Move CalcRoomInFront");
+        assertEquals(0x04, cage.angleForParticipant(0));
+        assertEquals(0x04E8, player.getCentreX() & 0xFFFF);
+
+        player.setCentreY((short) 0x0590);
+        cage.update(1, null);
+
+        assertFalse(cage.heldByParticipant(0));
+        assertFalse(player.isOnObject());
+        assertTrue(player.getAir());
+        assertFalse(player.isObjectControlled());
+        assertFalse(player.isSuppressGroundWallCollision(),
+                "wire-cage release restores normal ground-wall collision");
     }
 
     private static final class PlayersServices extends TestObjectServices {

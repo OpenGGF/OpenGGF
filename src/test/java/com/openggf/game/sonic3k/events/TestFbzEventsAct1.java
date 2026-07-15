@@ -1,9 +1,14 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@ExtendWith(SingletonResetExtension.class)
+@FullReset
 class TestFbzEventsAct1 {
     @Test
     void screenInitAtStageStartSelectsOutdoorRegionSixWithoutCopying() {

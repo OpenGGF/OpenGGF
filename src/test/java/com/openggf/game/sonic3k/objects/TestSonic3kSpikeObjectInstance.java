@@ -21,6 +21,16 @@ class TestSonic3kSpikeObjectInstance {
     }
 
     @Test
+    void spikesUseStrictSolidObjectFullRideBoundaryWithoutStickyExtension() {
+        Sonic3kSpikeObjectInstance spikes = new Sonic3kSpikeObjectInstance(
+                new ObjectSpawn(0x0870, 0x0290, Sonic3kObjectIds.SPIKES, 0x00, 0, false, 0));
+
+        assertFalse(spikes.usesStickyContactBuffer(),
+                "SolidObjectFull continued riding clears at its exact d1 bound; the engine's "
+                        + "16px platform tolerance must not collapse the authored gap between FBZ2 spikes");
+    }
+
+    @Test
     void spikesUseSolidObjectFullAirborneStaleStandingBitReturn() {
         Sonic3kSpikeObjectInstance spikes = new Sonic3kSpikeObjectInstance(
                 new ObjectSpawn(0x01D0, 0x05F0, Sonic3kObjectIds.SPIKES, 0x00, 0, false, 0));

@@ -18,7 +18,7 @@ import java.util.Objects;
 /** Event-backed FBZ runtime adapter and sole rewind serializer for FBZ event RAM. */
 public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
     private static final int MAGIC = 0x46425A31;
-    private static final int VERSION = 7;
+    private static final int VERSION = 8;
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
     private final Sonic3kFBZEvents events;
@@ -82,7 +82,7 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
 
     @Override public byte[] captureBytes() {
         List<ObjectRefId> clouds = events.getCloudRewindIds();
-        byte[] retainedPlane = actIndex == 0 ? events.captureRetainedPlaneSnapshot() : new byte[0];
+        byte[] retainedPlane = events.captureRetainedPlaneSnapshot();
         int cloudBytes = clouds.stream().mapToInt(id -> 1 + (id == null ? 0 : 20)).sum();
         ByteBuffer out = ByteBuffer.allocate(200 + retainedPlane.length + cloudBytes);
         out.putInt(MAGIC).putInt(VERSION).putInt(events.getForegroundLayoutRegion());
@@ -143,9 +143,6 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
             }
             byte[] retainedPlane = new byte[retainedPlaneLength];
             in.get(retainedPlane);
-            if (actIndex != 0 && retainedPlaneLength != 0) {
-                throw new IllegalArgumentException("FBZ Act 2 cannot restore a retained Plane-B image");
-            }
             int bob = in.getInt();
             int hScrollAccumulator = in.getInt();
             boolean hScrollSampled = readBool(in, "HScroll accumulator sampled");

@@ -1323,6 +1323,10 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> isFbzS3kl() ? new FbzMineObjectInstance(spawn)
                         : new PlaceholderObjectInstance(spawn,
                                 getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_ELEVATOR,
+                (spawn, registry) -> isFbzS3kl() ? new FbzElevatorObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn,
+                                getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
         factories.put(Sonic3kObjectIds.FBZ_TRAP_SPRING,
                 (spawn, registry) -> isFbzS3kl() ? new FbzTrapSpringObjectInstance(spawn)
                         : new PlaceholderObjectInstance(spawn,

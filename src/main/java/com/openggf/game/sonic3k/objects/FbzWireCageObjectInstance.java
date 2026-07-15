@@ -62,7 +62,7 @@ public final class FbzWireCageObjectInstance extends AbstractObjectInstance impl
             if(p.getAir()){p.setXSpeed((short)0);p.setAir(false);}p.setOnObject(true);p.setLatchedSolidObject(spawn.objectId(),this);p.setDirection(com.openggf.physics.Direction.RIGHT);
             int angle=dx<0?0x80:0;int speed=-p.getYSpeed();if(dy<0){angle=0x40;speed=-speed;}participants.set(i,0,angle);p.setGSpeed((short)(speed==0?1:speed));
             p.setAngle((byte)(dy<0?0x40:0xC0));
-            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(p);p.setAnimationId(1);p.setFlipAngle(0);p.setObjectMappingFrameControl(true);participants.flag(i,2,true);
+            ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(p);p.setSuppressGroundWallCollision(true);p.setAnimationId(1);p.setFlipAngle(0);p.setObjectMappingFrameControl(true);participants.flag(i,2,true);
         }
         dy=(short)(p.getCentreY()-spawn.y());if(((dy+rangePixels)&0xFFFF)>=rangePixels*2){release(p,i);return;}if(!p.isOnObject())return;
         p.setRenderFlips(p.getRenderHFlip(),p.getYSpeed()>=0);
@@ -85,6 +85,7 @@ public final class FbzWireCageObjectInstance extends AbstractObjectInstance impl
         p.setOnObject(false);
         p.setAir(true);
         p.setFlipsRemaining(0);p.setFlipSpeed(4);p.setFlipType(0);if(verticalMode)p.setFlipAngle(1);p.setObjectMappingFrameControl(false);
+        if(verticalMode)p.setSuppressGroundWallCollision(false);
         ObjectControlState.none().applyTo(p);
         if(p.getLatchedSolidObjectInstance()==this){p.setLatchedSolidObject(0,null);p.setInteractSlotIndex(0);}
     }

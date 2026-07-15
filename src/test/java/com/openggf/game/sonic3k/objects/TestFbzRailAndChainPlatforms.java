@@ -89,6 +89,24 @@ class TestFbzRailAndChainPlatforms {
         for(int i=0;i<10;i++){p.update(i,null);assertEquals(acc[i],p.dropAccumulator(),"acc frame "+i);assertEquals(vel[i],p.dropVelocity(),"vel frame "+i);assertEquals(dir[i],p.dropDirection(),"dir frame "+i);assertEquals(0x800+off[i],p.getY(),"y frame "+i);}
     }
 
+    @Test void mode4ReturnsPermanentlyToOrdinarySineAfterFirstDrop() {
+        var p=new FbzFloatingPlatformObjectInstance(spawn(0x71,0x41));
+        SolidObjectListener listener=assertInstanceOf(SolidObjectListener.class,p);
+        TestSprite rider=new TestSprite("sonic");
+        listener.onSolidContact(rider,new SolidContact(true,false,false,false,false,0,false),0);
+        for(int frame=0;frame<10;frame++)p.update(frame,null);
+        assertTrue(p.mode4Completed(),"loc_3A724 replaces callback $40 with loc_3A620 when $34 reaches zero");
+        int completedAccumulator=p.dropAccumulator();
+        int completedAnchor=p.getY();
+        for(int frame=10;frame<0x90;frame++){
+            listener.onSolidContact(rider,new SolidContact(true,false,false,false,false,0,false),frame);
+            p.update(frame,null);
+            assertEquals(0,p.dropVelocity(),"standing must not re-enter loc_3A6D0 after callback replacement");
+            assertEquals(completedAccumulator,p.dropAccumulator(),"ordinary sine must leave the completed drop words untouched");
+            assertTrue(Math.abs(p.getY()-completedAnchor)<=8,"loc_3A620 remains within its native +/-8px sine range");
+        }
+    }
+
     @Test void mode3UsesRadius64AndNegatesFrameCounterBeforeAddingPhaseWhenFlipped() {
         var normal=new FbzFloatingPlatformObjectInstance(spawn(0x71,0x30));normal.update(0,null);assertEquals(0x1000,normal.getX());assertEquals(0x840,normal.getY());
         var flipped=new FbzFloatingPlatformObjectInstance(new ObjectSpawn(0x1000,0x800,0x71,0x38,1,true,2));flipped.update(1,null);

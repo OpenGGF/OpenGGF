@@ -83,6 +83,14 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesStickyContactBuffer() {
+        // S2/S3K Obj36/Obj_Spikes call SolidObjectFull. Its continued-ride
+        // bounds are exact; the engine's platform edge tolerance would keep a
+        // rider attached beyond the native d1 extent.
+        return false;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
         if (player == null) {
             return;

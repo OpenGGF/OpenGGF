@@ -14,6 +14,20 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestFbzMagneticObjects {
     @Test
+    void solidObjectFullOffsetKeepsD3AsAnchorOffsetAndCarriesFromD2Surface() {
+        var platform = new FbzMagneticPlatformObjectInstance(spawn(0x74, 0x0E));
+        var params = platform.getSolidParams();
+
+        assertEquals(8, params.groundHalfHeight(),
+                "loc_3B462 continued ride subtracts d2=$8 from platform Y");
+        assertEquals(-9, params.offsetY(),
+                "SolidObjectFull_Offset d3=-9 shifts the collision anchor, not the surface radius");
+        assertEquals(platform.getY() - 8 - 9 - 0x13,
+                platform.getY() + params.offsetY()
+                        - params.groundHalfHeight() - 0x13);
+    }
+
+    @Test
     void spikeBallSubtypesAndPlatformChainDecodeFromRom() {
         assertEquals(FbzMagneticSpikeBallObjectInstance.Kind.BALL,
                 new FbzMagneticSpikeBallObjectInstance(spawn(0x73, 0)).kind());

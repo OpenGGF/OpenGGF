@@ -226,6 +226,8 @@ public class Sonic3kConstants {
     public static final int MAP_FBZ_MISSILE_LAUNCHER_ADDR = 0x03C78E;
     public static final int MAP_FBZ_WALL_MISSILE_ADDR = 0x03C906;
     public static final int MAP_FBZ_MINE_ADDR = 0x03CA06;
+    /** Locked-on {@code Map_FBZElevator}; S&K-side mapping table. */
+    public static final int MAP_FBZ_ELEVATOR_ADDR = 0x03CB0C;
     public static final int MAP_FBZ_TRAP_SPRING_ADDR = 0x03CC5A;
     public static final int MAP_FBZ_FLAMETHROWER_ADDR = 0x03CFD0;
     public static final int MAP_FBZ_SPIDER_CRANE_ADDR = 0x03D2FC;

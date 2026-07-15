@@ -920,11 +920,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             FbzZoneRuntimeState rebound = new FbzZoneRuntimeState(currentAct, getPlayerCharacter(), fbzEvents);
             rebound.restoreBytes(restoredBytes);
             registry.install(rebound);
-            if (currentAct == 0) fbzEvents.reconcileAct1State();
+            fbzEvents.reconcileRetainedPlaneState();
             return;
         }
         ensureZoneRuntimeStateInstalled();
-        if (currentAct == 0) fbzEvents.reconcileAct1State();
+        fbzEvents.reconcileRetainedPlaneState();
     }
 
     @Override

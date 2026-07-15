@@ -1430,6 +1430,28 @@ public class LevelManager {
         frameRuntimeUpdater.recomputeParallaxOnlyForCurrentFrame();
     }
 
+    /** Engine owner for ROM {@code Reset_TileOffsetPositionActual}. */
+    public void resetTileOffsetPositionActualForFullRefresh() {
+        if (tilemapManager == null) return;
+        tilemapManager.setBgTilemapBaseX(0);
+        tilemapManager.invalidateAllTilemaps();
+    }
+
+    /** Engine owner for ROM {@code Reset_TileOffsetPositionEff}. */
+    public void resetTileOffsetPositionEffectiveForFullRefresh() {
+        if (tilemapManager == null) return;
+        tilemapManager.setBgTilemapBaseX(0);
+        tilemapManager.setBackgroundTilemapDirty(true);
+    }
+
+    /** Rebuilds and publishes both decoded tilemap planes for ROM {@code Refresh_PlaneFull}. */
+    public void refreshFullTilemapPlanesFromCurrentLayout(int backgroundSourceX) {
+        if (tilemapManager == null) return;
+        ensureForegroundTilemapData();
+        tilemapManager.uploadForegroundTilemap();
+        seedBackgroundVdpPlaneFromWorld(backgroundSourceX);
+    }
+
     /**
      * Test-only entry point that delegates to {@link LevelRenderer}'s special
      * render effect dispatch. Retained on {@code LevelManager} because existing

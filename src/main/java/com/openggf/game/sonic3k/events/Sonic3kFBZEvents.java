@@ -45,12 +45,38 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     /** Plane-A chunk-layout copy. Coordinates are byte cells in Level_layout_main. */
     public record LayoutCopy(int sourceX, int sourceY, int destX, int destY, int width, int height) {}
 
+    /**
+     * Observable native initialization effects. The live adapter delegates tilemap work to
+     * {@link com.openggf.level.LevelManager}; tests use a recording surface to pin instruction order.
+     */
+    public interface Act2InitializationEffects {
+        Act2InitializationEffects NONE = new Act2InitializationEffects() { };
+        default void resetActualTileOffsets() { }
+        default void refreshPlaneFull() { }
+        default void copyTopBackgroundLines() { }
+        default void deformNormalBackground() { }
+        default void resetEffectiveTileOffsets() { }
+        default void applyDeformation() { }
+    }
+
+    /** Ordinary FBZ2 traversal words captured as one rewind value snapshot. */
+    public record Act2TraversalState(int layoutRegion, boolean foregroundOutdoor,
+                                     boolean backgroundOutdoor, int foregroundStage,
+                                     int backgroundStage, RedrawDirection redrawDirection,
+                                     int redrawProgress, int redrawPosition,
+                                     int redrawRowCount, int redrawVerticalAnchor,
+                                     DeformMode deformMode, PaletteVariant paletteVariant,
+                                     PaletteTarget paletteTarget) {}
+
     private static final int FG_LAYER = 0;
     private static final int[][] ACT1_LAYOUT_RANGES = {
             {0x400, 0xF00, 0x880, 0xA80}, {0x880, 0x1100, 0x180, 0x300},
             {0x1400, 0x1B80, 0x900, 0xB00}, {0x1A80, 0x2100, 0x80, 0x200},
             {0x2080, 0x2680, 0x100, 0x280}, {0, 0x180, 0x580, 0x780}
     };
+    private static final int[] ACT2_LAYOUT_RANGE = {0xD80, 0x1300, 0xA00, 0xB80};
+    private static final int ACT2_BOSS_SETUP_CAMERA_X = 0x2B30;
+    private static final int ACT2_BOSS_REENTRY_CAMERA_X = 0x2C40;
     private static final int FBZ_BG_INDOOR_PALETTE_ADDR = 0x52DC0;
     private static final int FBZ_BG_OUTDOOR_PALETTE_ADDR = 0x52DD0;
     private static final int ACT_TRANSITION_WORLD_OFFSET_X = -0x2E00;
@@ -69,6 +95,8 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     private int backgroundRedrawVerticalAnchor;
     private int lastRoundedBackgroundY = Integer.MIN_VALUE;
     private boolean planeBFrameTouched;
+    /** This event instance has authored or restored the retained Plane-B image. */
+    private boolean retainedPlaneOwned;
     private DeformMode deformMode = DeformMode.INDOOR;
     private PaletteVariant paletteVariant = PaletteVariant.INDOOR;
     private PaletteTarget paletteTarget = PaletteTarget.NONE;
@@ -108,9 +136,11 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             new StagedBackgroundPlaneRedrawController(new StagedBackgroundPlaneRedrawController.Surface() {
                 @Override public void copyRow(int sx, int sy, int dy) {
                     int dest = 0xE000 + ((dy >>> 3) & 0x1F) * 0x80;
+                    retainedPlaneOwned = true;
                     planeBFrameTouched |= levelManager().copyBackgroundTileRowFromWorldToVdpPlane(sx, sy, dest, 0x21);
                 }
                 @Override public void copyColumn(int sx, int sy, int dx) {
+                    retainedPlaneOwned = true;
                     planeBFrameTouched |= levelManager().copyBackgroundTileColumnsFromWorldToVdpPlane(sx, sy, dx, 1, 0x11);
                 }
             });
@@ -131,6 +161,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         backgroundRedrawVerticalAnchor = 0;
         lastRoundedBackgroundY = Integer.MIN_VALUE;
         planeBFrameTouched = false;
+        retainedPlaneOwned = false;
         deformMode = DeformMode.INDOOR;
         paletteVariant = PaletteVariant.INDOOR;
         paletteTarget = PaletteTarget.NONE;
@@ -174,6 +205,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         if (!act1ScreenInitialized) applyRuntimeCopies(initializeAct1Screen(player.getCentreX()));
         if (!act1BackgroundInitialized) {
             initializeAct1Background(player.getCentreX());
+            retainedPlaneOwned = true;
             levelManager().seedBackgroundVdpPlaneFromWorld(backgroundOutdoor ? 0x200 : 0);
             submitAct1PaletteOwnership();
         }
@@ -182,11 +214,209 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
 
     @Override public void update(int act, int frameCounter) {
         if (act != this.act) throw new IllegalArgumentException("FBZ handler act mismatch: " + act);
-        if (act != 0 || !hasRuntime()) return;
+        if (!hasRuntime()) return;
         AbstractPlayableSprite player = spriteManager().getMainPlayable();
         if (player == null) return;
-        initializeAct1Runtime();
-        updateAct1Frame(player.getCentreX(), player.getCentreY(), player.getDead(), frameCounter);
+        if (act == 0) {
+            initializeAct1Runtime();
+            updateAct1Frame(player.getCentreX(), player.getCentreY(), player.getDead(), frameCounter);
+            return;
+        }
+        initializeAct2Runtime();
+        // FBZ2_ScreenEvent adds Screen_shake_offset to Camera_Y_pos_copy,
+        // leaving the live Camera_Y_pos word untouched.
+        camera().setYCopy((short) (camera().getYCopy() + screenShakeOffset));
+        applyRuntimeCopies(updateAct2ScreenEvent(player.getCentreX(), player.getCentreY(),
+                player.getDead(), camera().getX()));
+        updateAct2BackgroundEvent(player.getCentreX(), player.getCentreY(), player.getDead());
+    }
+
+    /** Locked-on FBZ2_ScreenInit/BackgroundInit ordinary-route setup. */
+    public void initializeAct2Runtime() {
+        requireAct2("runtime initialization");
+        if (!hasRuntime()) return;
+        int cameraX = camera().getX() & 0xFFFF;
+        Act2InitializationEffects effects = liveAct2InitializationEffects();
+        if (!act1ScreenInitialized) initializeAct2Screen(cameraX, effects);
+        if (!act1BackgroundInitialized) {
+            initializeAct2Background(cameraX, effects);
+        }
+        spawnOutdoorMotionController();
+    }
+
+    /**
+     * ROM {@code FBZ2_ScreenInit}. The >=$2C40 boss re-entry preparation is
+     * deliberately represented by its exact routine/min-X words here; the
+     * object/art setup executed by {@code SetUp_FBZ2BossEvent} belongs to the
+     * Task 15 boss/event task.
+     */
+    public void initializeAct2Screen(int cameraX) {
+        initializeAct2Screen(cameraX, Act2InitializationEffects.NONE);
+    }
+
+    void initializeAct2Screen(int cameraX, Act2InitializationEffects effects) {
+        requireAct2("screen initialization");
+        Objects.requireNonNull(effects, "effects");
+        act1ScreenInitialized = true;
+        if ((cameraX & 0xFFFF) >= ACT2_BOSS_REENTRY_CAMERA_X) {
+            act2ForegroundStage = 4;
+            if (hasRuntime()) camera().setMinX((short) ACT2_BOSS_REENTRY_CAMERA_X);
+        }
+        // loc_52E2C is unconditional, including boss re-entry.
+        effects.resetActualTileOffsets();
+        effects.refreshPlaneFull();
+    }
+
+    /** ROM {@code FBZ2_BackgroundInit}; stage zero falls through on first event tick. */
+    public void initializeAct2Background(int cameraX) {
+        initializeAct2Background(cameraX, Act2InitializationEffects.NONE);
+    }
+
+    void initializeAct2Background(int cameraX, Act2InitializationEffects effects) {
+        requireAct2("background initialization");
+        Objects.requireNonNull(effects, "effects");
+        act1BackgroundInitialized = true;
+        backgroundOutdoor = false;
+        deformMode = DeformMode.INDOOR;
+        paletteVariant = PaletteVariant.INDOOR;
+        paletteTarget = PaletteTarget.NONE;
+        lastRoundedBackgroundY = effectiveBackgroundY() & ~0x0F;
+        if ((cameraX & 0xFFFF) >= ACT2_BOSS_REENTRY_CAMERA_X) {
+            bossBackgroundStage = 16;
+            // FBZ2_BackgroundInit copies the top BG line pointer after selecting stage $10.
+            effects.copyTopBackgroundLines();
+            screenShakeActive = true;
+            return;
+        }
+        // loc_53002: FBZ_Deform, Reset_TileOffsetPositionEff,
+        // Refresh_PlaneFull, then ApplyDeformation.
+        effects.deformNormalBackground();
+        effects.resetEffectiveTileOffsets();
+        effects.refreshPlaneFull();
+        effects.applyDeformation();
+    }
+
+    /** Locked-on {@code FBZ2SE_Normal}, through the $2B30 setup handoff. */
+    public List<LayoutCopy> updateAct2ScreenEvent(int playerX, int playerY,
+                                                   boolean dying, int cameraX) {
+        requireAct2("screen event");
+        if (act2ForegroundStage != 0 || dying) return List.of();
+        if (foregroundLayoutRegion == 0) {
+            if (contains(ACT2_LAYOUT_RANGE, playerX, playerY)) foregroundLayoutRegion = 4;
+            // Only FBZ2_NoLayoutMod flows through the $2B30 check.
+            if ((cameraX & 0xFFFF) >= ACT2_BOSS_SETUP_CAMERA_X) act2ForegroundStage = 4;
+            return List.of();
+        }
+        if (!contains(ACT2_LAYOUT_RANGE, playerX, playerY)) {
+            foregroundLayoutRegion = 0;
+            return List.of();
+        }
+        // loc_52F10 is an explicit return path: the inclusive window neither copies
+        // nor reaches FBZ2_NoLayoutMod's camera threshold.
+        if (playerX >= 0xE00 && playerX <= 0x1280) return List.of();
+        boolean nextOutdoor = foregroundOutdoor;
+        if (!foregroundOutdoor && playerY > 0xB0E) nextOutdoor = true;
+        else if (foregroundOutdoor && playerY <= 0xAF2) nextOutdoor = false;
+        if (nextOutdoor == foregroundOutdoor) return List.of();
+        foregroundOutdoor = nextOutdoor;
+        return List.of(act2LayoutCopy(nextOutdoor));
+    }
+
+    /**
+     * FBZ2's sole 14x4 foreground window. The disassembly's {@code $10/$50}
+     * values are byte offsets into four-byte interleaved row-pointer entries,
+     * so they select source row 4 and destination row 20 respectively.
+     */
+    public static LayoutCopy act2LayoutCopy(boolean outdoor) {
+        return new LayoutCopy(112, outdoor ? 4 : 0, 26, 20, 14, 4);
+    }
+
+    /** Locked-on ordinary {@code FBZ2_BackgroundEvent} stages 0/4/8/12. */
+    public void updateAct2BackgroundEvent(int playerX, int playerY, boolean dying) {
+        updateAct2BackgroundEvent(playerX, playerY, dying,
+                hasRuntime() ? liveAct2InitializationEffects() : Act2InitializationEffects.NONE);
+    }
+
+    void updateAct2BackgroundEvent(int playerX, int playerY, boolean dying,
+                                   Act2InitializationEffects effects) {
+        requireAct2("background event");
+        Objects.requireNonNull(effects, "effects");
+        if (bossBackgroundStage == 16 || act2ForegroundStage != 0) {
+            bossBackgroundStage = 16;
+            return;
+        }
+        if (bossBackgroundStage == 0) {
+            // FBZ2BGE_Init copies (a3) into $70/$74/$78/$7C before addq #4.
+            effects.copyTopBackgroundLines();
+            bossBackgroundStage = 4;
+        }
+        if (bossBackgroundStage == 8 || bossBackgroundStage == 12) {
+            checkAct2BackgroundChange(playerY);
+            advanceBackgroundRedraw();
+            if (backgroundRedrawDirection == RedrawDirection.NONE) bossBackgroundStage = 4;
+            drawNormalBackgroundRowIfCrossed();
+            finishPlaneBFrame();
+            return;
+        }
+        if (dying) return;
+        checkAct2BackgroundChange(playerY);
+        if (backgroundRedrawDirection != RedrawDirection.NONE) advanceBackgroundRedraw();
+        drawNormalBackgroundRowIfCrossed();
+        finishPlaneBFrame();
+    }
+
+    private void checkAct2BackgroundChange(int playerY) {
+        if (foregroundLayoutRegion != 4) return;
+        if (!backgroundOutdoor && playerY >= 0xA40) {
+            startAct2BackgroundChange(true, RedrawDirection.BOTTOM_UP, 12);
+        } else if (backgroundOutdoor && playerY <= 0xA40) {
+            startAct2BackgroundChange(false, RedrawDirection.TOP_DOWN, 8);
+        }
+    }
+
+    private void startAct2BackgroundChange(boolean outdoor, RedrawDirection direction, int stage) {
+        backgroundOutdoor = outdoor;
+        deformMode = outdoor ? DeformMode.OUTDOOR : DeformMode.INDOOR;
+        paletteVariant = outdoor ? PaletteVariant.OUTDOOR : PaletteVariant.INDOOR;
+        paletteTarget = PaletteTarget.NORMAL;
+        backgroundRedrawDirection = direction;
+        backgroundRedrawStage = stage;
+        bossBackgroundStage = stage;
+        backgroundRedrawProgress = 0;
+        backgroundRedrawRowCount = 0x0F;
+        backgroundRedrawVerticalAnchor = effectiveBackgroundY() & 0xFF0;
+        submitAct1PaletteOwnership();
+    }
+
+    public Act2TraversalState captureAct2TraversalState() {
+        requireAct2("traversal capture");
+        return new Act2TraversalState(foregroundLayoutRegion, foregroundOutdoor, backgroundOutdoor,
+                act2ForegroundStage, bossBackgroundStage, backgroundRedrawDirection,
+                backgroundRedrawProgress, backgroundRedrawPosition, backgroundRedrawRowCount,
+                backgroundRedrawVerticalAnchor, deformMode, paletteVariant, paletteTarget);
+    }
+
+    public void restoreAct2TraversalState(Act2TraversalState state) {
+        requireAct2("traversal restore");
+        Objects.requireNonNull(state, "state");
+        validateLayoutRegion(1, state.layoutRegion());
+        validateFourStepStage("Act 2 foreground", state.foregroundStage(), 12);
+        validateFourStepStage("Act 2 background", state.backgroundStage(), 16);
+        foregroundLayoutRegion = state.layoutRegion();
+        foregroundOutdoor = state.foregroundOutdoor();
+        backgroundOutdoor = state.backgroundOutdoor();
+        act2ForegroundStage = state.foregroundStage();
+        bossBackgroundStage = state.backgroundStage();
+        backgroundRedrawDirection = Objects.requireNonNull(state.redrawDirection(), "redraw direction");
+        backgroundRedrawStage = state.backgroundStage() == 8 || state.backgroundStage() == 12
+                ? state.backgroundStage() : 0;
+        backgroundRedrawProgress = state.redrawProgress();
+        backgroundRedrawPosition = state.redrawPosition();
+        backgroundRedrawRowCount = state.redrawRowCount();
+        backgroundRedrawVerticalAnchor = state.redrawVerticalAnchor();
+        deformMode = Objects.requireNonNull(state.deformMode(), "deform mode");
+        paletteVariant = Objects.requireNonNull(state.paletteVariant(), "palette variant");
+        paletteTarget = Objects.requireNonNull(state.paletteTarget(), "palette target");
     }
 
     public static int[][] act1LayoutRanges() {
@@ -465,6 +695,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         if (rounded == lastRoundedBackgroundY) return;
         for (int position : normalDrawRowPositions(lastRoundedBackgroundY, rounded)) {
             int dest = 0xE000 + ((position >>> 3) & 0x1F) * 0x80;
+            retainedPlaneOwned = true;
             planeBFrameTouched |= levelManager().copyBackgroundTileRowFromWorldToVdpPlane(
                     backgroundOutdoor ? 0x200 : 0, position, dest, 0x21);
         }
@@ -487,16 +718,22 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         planeBFrameTouched = false;
     }
 
-    public void reconcileAct1State() {
-        if (act != 0 || !hasRuntime()) return;
+    /** Reinstalls the exact event-owned Plane-B image captured by the FBZ runtime codec. */
+    public void reconcileRetainedPlaneState() {
+        if (!hasRuntime()) return;
         if (retainedPlaneSnapshot.length != 0) {
             levelManager().restoreBackgroundVdpPlane(retainedPlaneSnapshot);
             retainedPlaneSnapshot = new byte[0];
-            submitAct1PaletteOwnership();
+            retainedPlaneOwned = true;
+            if (act == 0) submitAct1PaletteOwnership();
             return;
         }
+        // Act 1 predates exact retained-plane snapshotting and retains its
+        // deterministic seed/replay fallback for compatibility with an empty payload.
+        if (act != 0) return;
         int targetOffset = backgroundOutdoor ? 0x200 : 0;
         int seedOffset = backgroundRedrawDirection == RedrawDirection.NONE ? targetOffset : targetOffset ^ 0x200;
+        retainedPlaneOwned = true;
         levelManager().seedBackgroundVdpPlaneFromWorld(seedOffset);
         if (backgroundRedrawDirection != RedrawDirection.NONE && backgroundRedrawProgress > 0) {
             var direction = switch (backgroundRedrawDirection) {
@@ -513,6 +750,11 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             finishPlaneBFrame();
         }
         submitAct1PaletteOwnership();
+    }
+
+    /** Compatibility entry point retained for Act 1 callers and focused tests. */
+    public void reconcileAct1State() {
+        if (act == 0) reconcileRetainedPlaneState();
     }
 
     private void submitAct1PaletteOwnership() {
@@ -557,6 +799,75 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         outdoorMotionAllocationAttempted = true;
         outdoorMotionSpawned = spawnObject(FbzOutdoorBgMotionObjectInstance::new) != null;
     }
+
+    private Act2InitializationEffects liveAct2InitializationEffects() {
+        return new Act2InitializationEffects() {
+            @Override public void resetActualTileOffsets() {
+                levelManager().resetTileOffsetPositionActualForFullRefresh();
+            }
+            @Override public void refreshPlaneFull() {
+                retainedPlaneOwned = true;
+                levelManager().refreshFullTilemapPlanesFromCurrentLayout(0);
+            }
+            @Override public void copyTopBackgroundLines() {
+                applyRuntimeAct2TopBackgroundLineCopy();
+            }
+            @Override public void deformNormalBackground() {
+                // The engine's scroll handler composes FBZ_Deform and ApplyDeformation
+                // into one buffer publication; recomputing here materializes that output.
+                levelManager().recomputeParallaxOnlyForCurrentFrame();
+            }
+            @Override public void resetEffectiveTileOffsets() {
+                levelManager().resetTileOffsetPositionEffectiveForFullRefresh();
+            }
+            @Override public void applyDeformation() {
+                // Already published by recomputeParallaxOnlyForCurrentFrame above.
+            }
+        };
+    }
+
+    private void applyRuntimeAct2TopBackgroundLineCopy() {
+        if (!hasRuntime()) return;
+        Level level = levelManager().getCurrentLevel();
+        if (level == null || level.getMap() == null) return;
+        LayoutMutationContext context = new LayoutMutationContext(LevelMutationSurface.forLevel(level),
+                levelManager()::applyMutationEffects);
+        zoneLayoutMutationPipeline().applyImmediately(
+                ctx -> copyAct2TopBackgroundLine(level.getMap(), ctx.surface()), context);
+    }
+
+    /** ROM pointer copy {@code (a3) -> $70/$74/$78/$7C(a3)} represented in decoded map rows. */
+    public static MutationEffects copyAct2TopBackgroundLine(
+            int[][][] layout, LevelMutationSurface surface) {
+        Objects.requireNonNull(layout, "layout");
+        if (layout.length < 2 || layout[1].length < 32) {
+            throw new IllegalArgumentException("FBZ2 background layout requires 32 rows");
+        }
+        int width = layout[1][0].length;
+        return copyAct2TopBackgroundLine((x, y) -> layout[1][y][x], width, surface);
+    }
+
+    private static MutationEffects copyAct2TopBackgroundLine(Map map, LevelMutationSurface surface) {
+        if (map.getLayerCount() < 2 || map.getHeight() < 32) {
+            throw new IllegalArgumentException("FBZ2 background map requires 2 layers and 32 rows");
+        }
+        return copyAct2TopBackgroundLine((x, y) -> map.getValue(1, x, y) & 0xFF,
+                map.getWidth(), surface);
+    }
+
+    private static MutationEffects copyAct2TopBackgroundLine(
+            BackgroundCellReader source, int width, LevelMutationSurface surface) {
+        int[] topLine = new int[width];
+        for (int x = 0; x < width; x++) topLine[x] = source.read(x, 0);
+        for (int y = 28; y <= 31; y++) {
+            for (int x = 0; x < width; x++) {
+                surface.setBlockInMap(1, x, y, topLine[x]);
+            }
+        }
+        return width == 0 ? MutationEffects.NONE : MutationEffects.redrawAllTilemaps();
+    }
+
+    @FunctionalInterface private interface BackgroundCellReader { int read(int x, int y); }
 
     private void applyRuntimeCopies(List<LayoutCopy> copies) {
         if (copies.isEmpty() || !hasRuntime()) return;
@@ -632,17 +943,17 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     public boolean isOutdoorMotionAllocationAttempted() { return outdoorMotionAllocationAttempted; }
     public boolean isOutdoorMotionSpawned() { return outdoorMotionSpawned; }
     public byte[] captureRetainedPlaneSnapshot() {
-        if (act != 0) return new byte[0];
         if (retainedPlaneSnapshot.length != 0) return retainedPlaneSnapshot.clone();
+        if (!retainedPlaneOwned) return new byte[0];
         return hasRuntime() ? levelManager().captureBackgroundVdpPlane() : new byte[0];
     }
     public void restoreRetainedPlaneSnapshot(byte[] snapshot) {
         Objects.requireNonNull(snapshot, "snapshot");
-        if (act != 0 && snapshot.length != 0) throw new IllegalArgumentException("Act 2 has no retained Plane-B image");
         if (snapshot.length != 0 && snapshot.length != 64 * 32 * 4) {
             throw new IllegalArgumentException("retained Plane-B snapshot must be empty or 8192 bytes");
         }
         retainedPlaneSnapshot = snapshot.clone();
+        retainedPlaneOwned = snapshot.length != 0;
     }
     public void restoreOutdoorMotionAllocationState(boolean attempted, boolean spawned) {
         if (spawned && !attempted) throw new IllegalArgumentException("spawned outdoor motion requires allocation attempt");

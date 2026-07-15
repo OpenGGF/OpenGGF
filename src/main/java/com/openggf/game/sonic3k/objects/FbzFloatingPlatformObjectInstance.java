@@ -24,6 +24,8 @@ public final class FbzFloatingPlatformObjectInstance extends AbstractObjectInsta
     private boolean riderSeen;
     private boolean mode4Waiting;
     private boolean mode4Active;
+    /** ROM callback $40(a0) was permanently replaced with loc_3A620. */
+    private boolean mode4Completed;
     private boolean dropDirection;
     private int dropAccumulator;
     private int dropVelocity;
@@ -40,7 +42,13 @@ public final class FbzFloatingPlatformObjectInstance extends AbstractObjectInsta
             case 1 -> y = anchorY + signedOscillation(0x0A,0x20);
             case 2 -> y = anchorY + signedOscillation(0x1E,0x40);
             case 3 -> { int counter=frameCounter&0xFF;if((spawn.renderFlags()&1)!=0)counter=(-counter)&0xFF;int a=(counter+phase)&0xFF;x=anchorX+(TrigLookupTable.sinHex(a)>>2);y=anchorY+(TrigLookupTable.cosHex(a)>>2); }
-            case 4 -> updateRiderDrop();
+            case 4 -> {
+                if (mode4Completed) {
+                    y = anchorY + (TrigLookupTable.sinHex(localAngle++) >> 5);
+                } else {
+                    updateRiderDrop();
+                }
+            }
             default -> { }
         }
         if (--animationTimer < 0) { animationTimer=1; animationFrame=(animationFrame+1)%3; }
@@ -56,7 +64,7 @@ public final class FbzFloatingPlatformObjectInstance extends AbstractObjectInsta
         if(!dropDirection){dropVelocity+=4;dropAccumulator+=dropVelocity;if((dropAccumulator&0xFF)>=limit)dropDirection=true;}
         else{dropVelocity-=4;dropAccumulator+=dropVelocity;if((dropAccumulator&0xFF)<limit)dropDirection=false;}
         int offset=(dropAccumulator&0xFFFF)>>>6;if((spawn.renderFlags()&1)!=0)offset=-offset;y=anchorY+offset;
-        if(dropVelocity==0){anchorY=y;mode4Active=false;mode4Waiting=false;riderSeen=false;localAngle=0;}
+        if(dropVelocity==0){anchorY=y;mode4Active=false;mode4Waiting=false;riderSeen=false;mode4Completed=true;localAngle=0;}
     }
     @Override public void onSolidContact(PlayableEntity player,SolidContact contact,int frameCounter){if(contact.standing())riderSeen=true;}
     @Override public int getX(){return x;} @Override public int getY(){return y;}
@@ -65,6 +73,7 @@ public final class FbzFloatingPlatformObjectInstance extends AbstractObjectInsta
     @Override public SolidRoutineProfile getSolidRoutineProfile(){return SolidRoutineProfile.fullSolid(false);}
     int movementMode(){return movementMode;} int phase(){return phase;} int romGroundOffset(){return -0x0D;}
     int dropAccumulator(){return dropAccumulator;} int dropVelocity(){return dropVelocity;} boolean dropDirection(){return dropDirection;}
+    boolean mode4Completed(){return mode4Completed;}
     @Override public void appendRenderCommands(List<GLCommand> commands){
         PatternSpriteRenderer r=getRenderer(Sonic3kObjectArtKeys.FBZ_FLOATING_PLATFORM);
         if(r!=null&&r.isReady())r.drawFrameIndex(animationFrame,x,y,false,false);

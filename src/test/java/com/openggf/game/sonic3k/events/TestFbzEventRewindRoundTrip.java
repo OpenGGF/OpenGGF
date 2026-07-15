@@ -30,4 +30,27 @@ class TestFbzEventRewindRoundTrip {
         assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, events.getMagneticPolarity());
         assertArrayEquals(runtimeBytes, runtime.captureBytes());
     }
+
+    @Test
+    void act2ActiveLayoutAndBackgroundRedrawWordsRoundTripThroughRuntimeOwner() {
+        Sonic3kFBZEvents events = new Sonic3kFBZEvents();
+        events.init(1);
+        events.initializeAct2Screen(0x1800);
+        events.initializeAct2Background(0x1800);
+        events.setForegroundLayoutRegion(4);
+        events.updateAct2BackgroundEvent(0xD80, 0xA40, false);
+        Sonic3kFBZEvents.Act2TraversalState expected = events.captureAct2TraversalState();
+
+        FbzZoneRuntimeState runtime = new FbzZoneRuntimeState(
+                1, PlayerCharacter.SONIC_ALONE, events);
+        byte[] snapshot = runtime.captureBytes();
+        for (int i = 0; i < 8; i++) {
+            events.updateAct2BackgroundEvent(0xD80, 0xA41, false);
+        }
+        assertNotEquals(expected, events.captureAct2TraversalState());
+
+        runtime.restoreBytes(snapshot);
+        assertEquals(expected, events.captureAct2TraversalState());
+        assertArrayEquals(snapshot, runtime.captureBytes());
+    }
 }

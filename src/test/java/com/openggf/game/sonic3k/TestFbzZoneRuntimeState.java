@@ -12,17 +12,21 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestFbzZoneRuntimeState {
 
     @Test
-    void act2UsesNormalBackgroundWindowAndCarriesNoRetainedPayload() {
+    void act2UsesNormalBackgroundWindowUntilItsEventOwnsAnExactRetainedPayload() {
         Sonic3kFBZEvents events = new Sonic3kFBZEvents();
         events.init(1);
         FbzZoneRuntimeState state = new FbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, events);
         assertFalse(state.usesPersistentBackgroundVdpPlane());
         assertEquals(0, events.captureRetainedPlaneSnapshot().length);
-        assertThrows(IllegalArgumentException.class,
-                () -> events.restoreRetainedPlaneSnapshot(new byte[64 * 32 * 4]));
+
+        byte[] retained = new byte[64 * 32 * 4];
+        retained[17] = 0x5A;
+        events.restoreRetainedPlaneSnapshot(retained);
         byte[] captured = state.captureBytes();
+        events.restoreRetainedPlaneSnapshot(new byte[0]);
         state.restoreBytes(captured);
-        assertEquals(0, events.captureRetainedPlaneSnapshot().length);
+
+        assertArrayEquals(retained, events.captureRetainedPlaneSnapshot());
     }
 
     @Test

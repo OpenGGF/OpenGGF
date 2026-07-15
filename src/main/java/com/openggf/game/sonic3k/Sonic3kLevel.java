@@ -600,7 +600,11 @@ public class Sonic3kLevel extends AbstractLevel {
         // Derive map dimensions from the actual layout data (like S1),
         // capped at the safety maximums in Sonic3kConstants.
         int mapWidth = Math.max(fgLayoutWidthBlocks, bgLayoutWidthBlocks);
-        int mapHeight = Math.max(fgLayoutHeightBlocks, bgLayoutHeightBlocks);
+        // Retain the complete 32-row layout-pointer workspace even when the header's
+        // gameplay bounds use fewer rows. Zone events write dormant pointer entries
+        // (FBZ2 writes rows 28-31) before full-plane refreshes.
+        int mapHeight = Math.max(Sonic3kConstants.MAP_HEIGHT,
+                Math.max(fgLayoutHeightBlocks, bgLayoutHeightBlocks));
         map = new Map(Sonic3kConstants.MAP_LAYERS, mapWidth, mapHeight);
 
         // Parse FG/BG layout pointers.

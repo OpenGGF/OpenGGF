@@ -1,5 +1,8 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.game.session.SessionManager;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -7,6 +10,18 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestFbzTransitionRewind {
+    @BeforeEach
+    void clearGameplayRuntimeBeforeTest() {
+        // These are pure event-RAM ordering tests. A blank GameplayModeContext
+        // left by an unrelated reset must not opt them into the real Load_Level path.
+        SessionManager.clear();
+    }
+
+    @AfterEach
+    void clearGameplayRuntimeAfterTest() {
+        SessionManager.clear();
+    }
+
     @Test
     void backgroundEventConsumesResultsFlagBeforeOrdinaryTail() {
         Sonic3kFBZEvents events = new Sonic3kFBZEvents();

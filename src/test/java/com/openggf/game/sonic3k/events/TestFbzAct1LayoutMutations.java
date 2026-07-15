@@ -49,6 +49,25 @@ class TestFbzAct1LayoutMutations {
     }
 
     @Test
+    void act2BackgroundInitCopiesTopBackgroundLineToPointerRows28Through31InOrder() {
+        int[][][] layout = new int[2][32][8];
+        for (int x = 0; x < 8; x++) {
+            layout[1][0][x] = 0x40 + x;
+            for (int y = 28; y <= 31; y++) layout[1][y][x] = 0xE0 + y;
+        }
+        RecordingSurface surface = new RecordingSurface();
+
+        Sonic3kFBZEvents.copyAct2TopBackgroundLine(layout, surface);
+
+        List<String> expected = new ArrayList<>();
+        for (int y = 28; y <= 31; y++) {
+            for (int x = 0; x < 8; x++) expected.add("1:" + x + ':' + y + ':' + (0x40 + x));
+        }
+        assertEquals(expected, surface.writes,
+                "(a3) must feed $70/$74/$78/$7C without bypassing the mutation surface");
+    }
+
+    @Test
     void planeBRedrawUsesOneRowOrTwoColumnsAndOneBatchFinish() {
         RecordingPlane surface = new RecordingPlane();
         var controller = new StagedBackgroundPlaneRedrawController(surface);

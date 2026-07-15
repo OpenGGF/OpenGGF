@@ -378,6 +378,7 @@ public final class Sonic3kObjectArtKeys {
     public static final String FBZ_MISSILE_LAUNCHER_COMPANION = "fbz_missile_launcher_companion";
     public static final String FBZ_WALL_MISSILE = "fbz_wall_missile";
     public static final String FBZ_MINE = "fbz_mine";
+    public static final String FBZ_ELEVATOR = "fbz_elevator";
     public static final String FBZ_TRAP_SPRING = "fbz_trap_spring";
     public static final String FBZ_FLAMETHROWER = "fbz_flamethrower";
     public static final String FBZ_SPIDER_CRANE = "fbz_spider_crane";

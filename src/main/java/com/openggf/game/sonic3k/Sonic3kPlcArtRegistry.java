@@ -1346,6 +1346,11 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kObjectArtKeys.FBZ_MINE,
                 Sonic3kConstants.MAP_FBZ_MINE_ADDR,
                 Sonic3kConstants.ARTTILE_FBZ_MISC + 0x91, 0, null));
+        // Obj_FBZElevator car: make_art_tile(ArtTile_FBZMisc2,2,0).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_ELEVATOR,
+                Sonic3kConstants.MAP_FBZ_ELEVATOR_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC2, 2, null));
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.FBZ_TRAP_SPRING,
                 Sonic3kConstants.MAP_FBZ_TRAP_SPRING_ADDR,

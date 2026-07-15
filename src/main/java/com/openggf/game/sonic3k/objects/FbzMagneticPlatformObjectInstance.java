@@ -113,8 +113,16 @@ public final class FbzMagneticPlatformObjectInstance extends AbstractObjectInsta
     @Override public int getPriorityBucket() { return 5; }
     @Override public int getCollisionFlags() { return 0x8D; }
     @Override public int getCollisionProperty() { return 0; }
-    @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x23, 8, -9); }
-    @Override public SolidRoutineProfile getSolidRoutineProfile() { return SolidRoutineProfile.fullSolid(false); }
+    @Override public SolidObjectParams getSolidParams() {
+        // loc_3B462 calls SolidObjectFull_Offset with d2=$8 and d3=-9.
+        // d3 shifts the collision anchor; continued riding still subtracts d2.
+        return new SolidObjectParams(0x23, 8, 8, 0, -9);
+    }
+    @Override public SolidRoutineProfile getSolidRoutineProfile() {
+        // SolidObjectFull_Offset uses an inclusive fresh-contact right edge and
+        // enters its contact resolver without SolidObjectFull's on-screen gate.
+        return SolidRoutineProfile.fullSolid(false, true, true);
+    }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

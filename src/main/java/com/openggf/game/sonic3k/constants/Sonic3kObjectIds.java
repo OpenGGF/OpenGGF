@@ -28,6 +28,7 @@ public final class Sonic3kObjectIds {
     public static final int FBZ_MISSILE_LAUNCHER = 0x7F;
     public static final int FBZ_WALL_MISSILE = 0xE0;
     public static final int FBZ_MINE = 0xE1;
+    public static final int FBZ_ELEVATOR = 0xE2;
     public static final int FBZ_TRAP_SPRING = 0xE3;
     public static final int FBZ_FLAMETHROWER = 0xE4;
     public static final int FBZ_SPIDER_CRANE = 0xE5;

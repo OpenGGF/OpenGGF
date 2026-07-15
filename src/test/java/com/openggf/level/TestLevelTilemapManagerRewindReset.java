@@ -296,6 +296,41 @@ public class TestLevelTilemapManagerRewindReset {
                 "wrap-state latch must be retained");
     }
 
+    @Test
+    public void rewindResetPreservesAnExactlyReconciledAuthoritativeBackgroundPlane() throws Exception {
+        ZoneFeatureProvider zfp = new StubZoneFeatures(true, false, true);
+        LevelTilemapManager manager = new LevelTilemapManager(geometry, graphicsManager, null);
+        manager.setCurrentBgPeriodWidth(PERIOD_PX);
+        manager.ensureBackgroundTilemapData(blockLookup, zfp, 0, null, false);
+        manager.setRetainedBackgroundTileDescriptorAtTilemapCell(7, 9, 0x6A5);
+        byte[] expected = manager.captureRetainedBackgroundVdpRing();
+        manager.restoreRetainedBackgroundTilemapData(expected);
+
+        manager.resetTilemapsForRewindRestore();
+        manager.ensureBackgroundTilemapData(blockLookup, zfp, 0, null, false);
+
+        assertArrayEquals(expected, manager.captureRetainedBackgroundVdpRing());
+        assertFalse(manager.isBackgroundTilemapDirty(),
+                "an exact event-owned restore remains authoritative on the next ensure");
+        assertFalse(getBoolean(manager, "bgLastBuildValid"));
+        assertFalse(getBoolean(manager, "bgWindowShiftCandidate"));
+    }
+
+    @Test
+    public void rewindResetRejectsAnUnreconciledForwardRetainedPlane() throws Exception {
+        ZoneFeatureProvider zfp = new StubZoneFeatures(true, false, true);
+        LevelTilemapManager manager = new LevelTilemapManager(geometry, graphicsManager, null);
+        manager.setCurrentBgPeriodWidth(PERIOD_PX);
+        manager.ensureBackgroundTilemapData(blockLookup, zfp, 0, null, false);
+        manager.setRetainedBackgroundTileDescriptorAtTilemapCell(7, 9, 0x6A5);
+
+        manager.resetTilemapsForRewindRestore();
+
+        assertTrue(manager.isBackgroundTilemapDirty(),
+                "forward event bytes cannot stand in for an earlier snapshot without exact reconciliation");
+        assertFalse(manager.isRetainedBackgroundPlaneAuthoritative());
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static LevelTilemapManager.BlockLookup lookupFor(StubLevel level, int widthPx, int heightPx) {
