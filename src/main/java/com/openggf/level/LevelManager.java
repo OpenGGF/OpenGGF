@@ -38,6 +38,7 @@ import com.openggf.game.session.WorldSession;
 import com.openggf.game.session.PatternWindowSessionState;
 import com.openggf.level.rewind.LevelRewindSnapshotAdapter;
 import com.openggf.level.objects.HudRenderManager;
+import com.openggf.level.objects.HudPaletteBridgeAccess;
 import com.openggf.level.objects.HudStaticArt;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.FadeManager;
@@ -1323,8 +1324,10 @@ public class LevelManager {
                         activePreparedModZone.ownerModId(),
                         activePreparedModZone.ownerModId() + ":" + activePreparedModZone.localKey(),
                         level.getPalette(0), activePreparedModZone.definition().paletteClaims(),
-                        provider.getHudFlashPaletteLine(), provider::getHudLivesPaletteOverride);
-                hudRenderManager.setRouteLivesPaletteOverrideThroughOwnership(true);
+                        provider.getHudFlashPaletteLine(), provider.getHudStaticArt(),
+                        provider.getHudLivesNumbers(), provider::getHudLivesPaletteOverride);
+                HudPaletteBridgeAccess.routeLivesPaletteOverrideThroughOwnership(
+                        hudRenderManager, true);
             }
             // Wire up HUD to unified UI render pipeline
             if (graphicsManager.getUiRenderPipeline() != null) {
@@ -1384,8 +1387,7 @@ public class LevelManager {
                 && !activeModZoneRuntimeProfile.plcLoads() ? null : provider);
     }
 
-    /** Submits host and creator palette ownership for an active custom S3K zone. */
-    public void submitCustomZonePaletteClaims(PaletteOwnershipRegistry registry) {
+    void submitCustomZonePaletteClaimsForEngine(PaletteOwnershipRegistry registry) {
         if (activeCustomZonePaletteBridge != null && registry != null) {
             activeCustomZonePaletteBridge.submitFrameClaims(registry);
         }

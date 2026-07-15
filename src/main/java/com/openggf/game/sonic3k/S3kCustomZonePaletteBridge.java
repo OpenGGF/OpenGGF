@@ -6,6 +6,9 @@ import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.level.Palette;
 import com.openggf.level.Level;
 import com.openggf.level.LevelOrigin;
+import com.openggf.level.Pattern;
+import com.openggf.level.objects.HudStaticArt;
+import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.mods.code.ModPaletteClaim;
 import com.openggf.mods.code.ModRegistrationException;
 
@@ -23,12 +26,14 @@ public final class S3kCustomZonePaletteBridge {
 
     private static final int CHARACTER_PRIORITY = 0;
     private static final int CREATOR_PRIORITY = 10;
-    private static final int HUD_PRIORITY = 20;
+    /** Intrinsic host presentation must win over all established S3K priorities (90-300). */
+    static final int HUD_PRIORITY = 1000;
 
     private final String creatorOwner;
     private final Palette characterPalette;
     private final List<ModPaletteClaim> creatorClaims;
     private final int hudPaletteLine;
+    private final boolean[] hudUsedColors;
     private final Supplier<Palette> hudPaletteSupplier;
 
     /** Whether a level (including an editor snapshot) is a custom S3K level. */
@@ -46,6 +51,8 @@ public final class S3kCustomZonePaletteBridge {
                                       Palette characterPalette,
                                       List<ModPaletteClaim> creatorClaims,
                                       int hudPaletteLine,
+                                      HudStaticArt hudStaticArt,
+                                      Pattern[] hudLivesNumbers,
                                       Supplier<Palette> hudPaletteSupplier) {
         Objects.requireNonNull(ownerModId, "ownerModId");
         this.creatorOwner = Objects.requireNonNull(creatorOwner, "creatorOwner");
@@ -53,24 +60,38 @@ public final class S3kCustomZonePaletteBridge {
         this.creatorClaims = List.copyOf(Objects.requireNonNull(creatorClaims, "creatorClaims"));
         requirePaletteLine(hudPaletteLine);
         this.hudPaletteLine = hudPaletteLine;
+        this.hudUsedColors = deriveHudUsedColors(hudPaletteLine, hudStaticArt, hudLivesNumbers);
         this.hudPaletteSupplier = Objects.requireNonNull(hudPaletteSupplier, "hudPaletteSupplier");
-        validateCreatorClaims(ownerModId, creatorClaims, hudPaletteLine, hudPaletteSupplier.get());
+        validateCreatorClaims(ownerModId, creatorClaims, hudPaletteLine, hudUsedColors);
     }
 
-    /** Validates the host reservations before a creator zone is published. */
+    /** Validates the character-line reservation before a creator zone is published. */
     public static void validateCreatorClaims(String ownerModId,
-                                             List<ModPaletteClaim> creatorClaims,
-                                             int hudPaletteLine,
-                                             Palette hudPaletteOverride) {
+                                             List<ModPaletteClaim> creatorClaims) {
         Objects.requireNonNull(ownerModId, "ownerModId");
         Objects.requireNonNull(creatorClaims, "creatorClaims");
-        requirePaletteLine(hudPaletteLine);
         for (ModPaletteClaim claim : creatorClaims) {
             Objects.requireNonNull(claim, "creator palette claim");
-            if (claim.line() == 0 || (hudPaletteOverride != null && claim.line() == hudPaletteLine)) {
+            if (claim.line() == 0) {
                 throw new ModRegistrationException(ownerModId,
                         "MOD_PALETTE_RESERVED",
                         "Creator palette claim targets host-reserved line " + claim.line()
+                                + ", color " + claim.color(),
+                        null, null);
+            }
+        }
+    }
+
+    private static void validateCreatorClaims(String ownerModId,
+                                              List<ModPaletteClaim> creatorClaims,
+                                              int hudPaletteLine,
+                                              boolean[] hudUsedColors) {
+        validateCreatorClaims(ownerModId, creatorClaims);
+        for (ModPaletteClaim claim : creatorClaims) {
+            if (claim.line() == hudPaletteLine && hudUsedColors[claim.color()]) {
+                throw new ModRegistrationException(ownerModId,
+                        "MOD_PALETTE_RESERVED",
+                        "Creator palette claim targets host HUD-reserved line " + claim.line()
                                 + ", color " + claim.color(),
                         null, null);
             }
@@ -86,10 +107,55 @@ public final class S3kCustomZonePaletteBridge {
             registry.submit(PaletteWrite.normal(creatorOwner, CREATOR_PRIORITY,
                     claim.line(), claim.color(), segaBytes(claim.segaColor())));
         }
-        Palette hudPalette = hudPaletteSupplier.get();
-        if (hudPalette != null) {
-            registry.submit(PaletteWrite.normal(HUD_OWNER, HUD_PRIORITY,
-                    hudPaletteLine, 0, segaBytes(hudPalette)));
+        Palette override = hudPaletteSupplier.get();
+        Palette hudPalette = override != null ? override : characterPalette;
+        for (int color = 1; color < hudUsedColors.length; color++) {
+            if (hudUsedColors[color]) {
+                registry.submit(PaletteWrite.normal(HUD_OWNER, HUD_PRIORITY,
+                        hudPaletteLine, color,
+                        segaBytes(PaletteWriteSupport.segaWordFromColor(hudPalette.getColor(color)))));
+            }
+        }
+    }
+
+    private static boolean[] deriveHudUsedColors(int hudPaletteLine,
+                                                  HudStaticArt staticArt,
+                                                  Pattern[] livesNumbers) {
+        boolean[] used = new boolean[Palette.PALETTE_SIZE];
+        if (staticArt != null && staticArt.livesFrame() != null && staticArt.patterns() != null) {
+            Pattern[] patterns = staticArt.patterns();
+            for (SpriteMappingPiece piece : staticArt.livesFrame().pieces()) {
+                if (piece == null || piece.paletteIndex() != hudPaletteLine) {
+                    continue;
+                }
+                int tileCount = Math.multiplyExact(piece.widthTiles(), piece.heightTiles());
+                for (int tile = 0; tile < tileCount; tile++) {
+                    int patternIndex = Math.addExact(piece.tileIndex(), tile);
+                    if (patternIndex < 0 || patternIndex >= patterns.length) {
+                        throw new IllegalArgumentException(
+                                "HUD lives mapping references missing pattern " + patternIndex);
+                    }
+                    collectNonzeroColors(patterns[patternIndex], used);
+                }
+            }
+        }
+        if (livesNumbers != null) {
+            for (Pattern pattern : livesNumbers) {
+                collectNonzeroColors(Objects.requireNonNull(pattern, "HUD lives number pattern"), used);
+            }
+        }
+        return used;
+    }
+
+    private static void collectNonzeroColors(Pattern pattern, boolean[] used) {
+        Objects.requireNonNull(pattern, "HUD pattern");
+        for (int y = 0; y < Pattern.PATTERN_HEIGHT; y++) {
+            for (int x = 0; x < Pattern.PATTERN_WIDTH; x++) {
+                int color = Byte.toUnsignedInt(pattern.getPixel(x, y));
+                if (color != 0) {
+                    used[color] = true;
+                }
+            }
         }
     }
 

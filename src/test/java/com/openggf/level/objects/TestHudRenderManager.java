@@ -400,7 +400,7 @@ public class TestHudRenderManager {
         hud.setDigitPatternIndex(200);
         hud.setLivesNumbersPatternIndex(220);
         hud.setLivesPaletteOverride(paletteWithColor(12, 0x0E00));
-        hud.setRouteLivesPaletteOverrideThroughOwnership(true);
+        HudPaletteBridgeAccess.routeLivesPaletteOverrideThroughOwnership(hud, true);
 
         hud.draw(levelState, null);
 

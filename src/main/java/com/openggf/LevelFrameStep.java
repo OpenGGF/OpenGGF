@@ -6,6 +6,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.level.LevelManager;
+import com.openggf.level.LevelPaletteBridgeAccess;
 import com.openggf.sprites.managers.SpriteManager;
 
 /**
@@ -126,7 +127,7 @@ public final class LevelFrameStep {
         PaletteOwnershipRegistry paletteRegistry = context.paletteOwnershipRegistry();
         if (paletteRegistry != null) {
             paletteRegistry.beginFrame();
-            levelManager.submitCustomZonePaletteClaims(paletteRegistry);
+            LevelPaletteBridgeAccess.submitCustomZonePaletteClaims(levelManager, paletteRegistry);
         }
 
         // 0. Process dirty regions from MutableLevel (editor mutations).

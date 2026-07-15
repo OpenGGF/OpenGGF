@@ -99,11 +99,7 @@ public class HudRenderManager {
         this.lastAppliedLivesPaletteOverride = null;
     }
 
-    /**
-     * Routes a custom zone's lives palette through the frame palette ownership
-     * model. The stock HUD leaves this disabled and retains its direct upload.
-     */
-    public void setRouteLivesPaletteOverrideThroughOwnership(boolean routed) {
+    void setRouteLivesPaletteOverrideThroughOwnership(boolean routed) {
         routeLivesPaletteOverrideThroughOwnership = routed;
         lastAppliedLivesPaletteOverride = null;
     }
