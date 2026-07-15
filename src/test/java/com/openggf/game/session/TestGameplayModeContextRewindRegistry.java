@@ -6,7 +6,12 @@ import com.openggf.game.BonusStageState;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.GameModule;
+import com.openggf.game.LevelEventProvider;
+import com.openggf.game.LevelEventRewindResolver;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.PlayerCharacter;
+import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.animation.AnimatedTileCachePolicy;
 import com.openggf.game.animation.AnimatedTileChannel;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
@@ -18,6 +23,7 @@ import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.render.AdvancedRenderFrameState;
 import com.openggf.game.render.AdvancedRenderMode;
 import com.openggf.game.render.AdvancedRenderModeContext;
@@ -50,9 +56,11 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for the {@link RewindRegistry} integration on
@@ -312,6 +320,36 @@ class TestGameplayModeContextRewindRegistry {
                 "A zone without an animated pattern manager must not retain the previous zone's animator adapter");
     }
 
+    @Test
+    void decoratedStockEventsRegisterRewindStateAndCustomZonesRemoveIt() {
+        GameplayModeContext ctx = buildAttachedContext();
+        CountingLevelEventManager stockEvents = new CountingLevelEventManager();
+        LevelEventProvider decoratedEvents = new TestEventRewindResolver(stockEvents);
+        GameModule module = mock(GameModule.class);
+        when(module.getLevelEventProvider()).thenReturn(decoratedEvents);
+
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getGameModule()).thenReturn(module);
+        when(levelManager.getCurrentZone()).thenReturn(0, 1);
+        when(levelManager.levelRewindSnapshottable()).thenReturn(new LevelTestSnapshot());
+
+        ctx.registerLevelAdapters(levelManager);
+        CompositeSnapshot stockSnapshot = ctx.getRewindRegistry().capture();
+        assertTrue(stockSnapshot.entries().keySet().containsAll(Set.of("level-event", "event-extra")));
+        ctx.getRewindRegistry().restore(stockSnapshot);
+        assertEquals(1, stockEvents.reconciliations.get(),
+                "The effective stock manager must receive post-restore reconciliation");
+
+        ctx.registerLevelAdapters(levelManager);
+        CompositeSnapshot customSnapshot = ctx.getRewindRegistry().capture();
+        assertFalse(customSnapshot.entries().containsKey("level-event"));
+        assertFalse(customSnapshot.entries().containsKey("event-extra"),
+                "A custom zone must not retain extra rewind adapters from the prior stock zone");
+        ctx.getRewindRegistry().restore(customSnapshot);
+        assertEquals(1, stockEvents.reconciliations.get(),
+                "A custom zone must not retain the prior stock reconciliation callback target");
+    }
+
     private static void attachSharedRegistries(GameplayModeContext ctx) {
         ctx.attachSharedRegistries(
                 new ZoneRuntimeRegistry(),
@@ -437,6 +475,65 @@ class TestGameplayModeContextRewindRegistry {
         @Override
         public void restore(Integer snapshot) {
         }
+    }
+
+    private static final class TestEventRewindResolver
+            implements LevelEventProvider, LevelEventRewindResolver {
+        private final AbstractLevelEventManager stockEvents;
+
+        private TestEventRewindResolver(AbstractLevelEventManager stockEvents) {
+            this.stockEvents = stockEvents;
+        }
+
+        @Override
+        public AbstractLevelEventManager resolveLevelEventRewindManager(int zoneIndex) {
+            return zoneIndex == 0 ? stockEvents : null;
+        }
+
+        @Override public void initLevel(int zone, int act) { }
+        @Override public void update() { }
+    }
+
+    private static final class CountingLevelEventManager extends AbstractLevelEventManager {
+        private final AtomicInteger reconciliations = new AtomicInteger();
+        private final RewindSnapshottable<Integer> extra = new IntSnapshot("event-extra");
+
+        @Override
+        public List<RewindSnapshottable<?>> extraRewindAdapters() {
+            return List.of(extra);
+        }
+
+        @Override
+        public void reconcileAfterRewindRestore() {
+            reconciliations.incrementAndGet();
+        }
+
+        @Override protected int getRoutineStride() { return 2; }
+        @Override protected int getEventDataFgSize() { return 0; }
+        @Override protected int getEventDataBgSize() { return 0; }
+        @Override protected void onInitLevel(int zone, int act) { }
+        @Override protected void onUpdate() { }
+        @Override public PlayerCharacter getPlayerCharacter() { return PlayerCharacter.SONIC_ALONE; }
+    }
+
+    private static final class LevelTestSnapshot implements RewindSnapshottable<LevelSnapshot> {
+        @Override public String key() { return "level"; }
+        @Override public LevelSnapshot capture() {
+            return new LevelSnapshot(0, null, null, null, 0);
+        }
+        @Override public void restore(LevelSnapshot snapshot) { }
+    }
+
+    private static final class IntSnapshot implements RewindSnapshottable<Integer> {
+        private final String key;
+
+        private IntSnapshot(String key) {
+            this.key = key;
+        }
+
+        @Override public String key() { return key; }
+        @Override public Integer capture() { return 0; }
+        @Override public void restore(Integer snapshot) { }
     }
 
     private static final class SnapObjectArtProvider

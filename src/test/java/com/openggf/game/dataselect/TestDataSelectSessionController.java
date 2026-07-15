@@ -16,6 +16,36 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestDataSelectSessionController {
 
     @Test
+    void noSaveStartUsesHostNewGameDestination() {
+        StubHostProfile hostProfile = new StubHostProfile();
+        DataSelectSessionController controller = new DataSelectSessionController(hostProfile);
+        controller.loadAvailableTeams(null);
+        controller.loadSlotSummaries(List.of());
+        controller.menuModel().setSelectedRow(0);
+
+        DataSelectAction action = controller.confirmSelection();
+
+        assertEquals(DataSelectActionType.NO_SAVE_START, action.type());
+        assertEquals(hostProfile.newGameDestination,
+                new DataSelectDestination(action.zone(), action.act()));
+    }
+
+    @Test
+    void newSlotStartUsesHostNewGameDestination() {
+        StubHostProfile hostProfile = new StubHostProfile();
+        DataSelectSessionController controller = new DataSelectSessionController(hostProfile);
+        controller.loadAvailableTeams(null);
+        controller.loadSlotSummaries(List.of(SaveSlotSummary.empty(1)));
+        controller.menuModel().setSelectedRow(1);
+
+        DataSelectAction action = controller.confirmSelection();
+
+        assertEquals(DataSelectActionType.NEW_SLOT_START, action.type());
+        assertEquals(hostProfile.newGameDestination,
+                new DataSelectDestination(action.zone(), action.act()));
+    }
+
+    @Test
     void clearRestartDestinations_comeFromHostProfile() {
         StubHostProfile hostProfile = new StubHostProfile();
         DataSelectSessionController controller = new DataSelectSessionController(hostProfile);
@@ -191,11 +221,17 @@ class TestDataSelectSessionController {
     }
 
     private static final class StubHostProfile implements DataSelectHostProfile {
+        private final DataSelectDestination newGameDestination = new DataSelectDestination(7, 1);
         private final List<DataSelectDestination> clearRestartTargets = List.of(
                 new DataSelectDestination(90, 2),
                 new DataSelectDestination(91, 0)
         );
         private String lastExtraTeamsRaw;
+
+        @Override
+        public DataSelectDestination newGameDestination() {
+            return newGameDestination;
+        }
 
         @Override
         public String gameCode() {

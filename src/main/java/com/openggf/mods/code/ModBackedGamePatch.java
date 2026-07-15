@@ -7,6 +7,10 @@ import com.openggf.game.patch.GameplayLaunchRequest;
 import com.openggf.game.patch.LogicalRom;
 import com.openggf.game.patch.PatchContext;
 import com.openggf.game.patch.DelegatingGameModule;
+import com.openggf.game.modzone.ModZoneAdapter;
+import com.openggf.game.modzone.ModZoneDataSelectDecorator;
+import com.openggf.game.modzone.ModZoneLevelData;
+import com.openggf.game.modzone.ModZoneRuntimeProfile;
 import com.openggf.io.ModInputLimits;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -82,6 +86,11 @@ public final class ModBackedGamePatch implements GamePatch {
         if (!plan.characters().isEmpty() && faultBoundary == null) {
             throw new IllegalArgumentException("Mod characters require an installed fault boundary");
         }
+        if ((!plan.launchTeams().isEmpty() || !plan.inputFilters().isEmpty()
+                || !plan.hudProfiles().isEmpty()) && faultBoundary == null) {
+            throw new IllegalArgumentException(
+                    "Mod gameplay policies require an installed fault boundary");
+        }
     }
 
     public ModRegistrationPlan plan() { return plan; }
@@ -101,6 +110,32 @@ public final class ModBackedGamePatch implements GamePatch {
         return plan.characters();
     }
     @Override public GameModule apply(GameModule base, PatchContext context) {
+        ModZoneAdapter zoneAdapter = plan.preparedZones().isEmpty()
+                ? null : base.getModZoneAdapter();
+        List<PreparedModZone> resolvedZones = plan.preparedZones();
+        if (!resolvedZones.isEmpty()) {
+            if (zoneAdapter == GameModule.EMPTY_MOD_ZONE_ADAPTER) {
+                throw new ModRegistrationException(plan.ownerModId(),
+                        "MOD_ZONE_HOST_UNSUPPORTED",
+                        "Host game does not support additive mod zones", null, null);
+            }
+            resolvedZones = resolvedZones.stream().map(zone -> {
+                ModZoneLevelData hostData = prepareHostData(zone);
+                zoneAdapter.validate(zone.ownerModId(), hostData);
+                ModZoneRuntimeProfile profile = zoneAdapter.runtimeProfile(
+                        zone.ownerModId(), hostData);
+                if (!ModZoneRuntimeProfile.flatEmpty().equals(profile)) {
+                    throw new ModRegistrationException(zone.ownerModId(),
+                            "MOD_ZONE_RUNTIME_PROFILE_UNSUPPORTED",
+                            "Host adapter requested unsupported additive-zone runtime features",
+                            null, null);
+                }
+                return zone.withRuntimeProfile(profile, hostData);
+            }).toList();
+        }
+        List<PreparedModZone> publishedZones = resolvedZones;
+        ModZoneDataSelectDecorator dataSelectDecorator =
+                zoneAdapter instanceof ModZoneDataSelectDecorator decorator ? decorator : null;
         List<ModObjectKeyRegistry.Registration> registrations = plan.objectFactories().entrySet().stream()
                 .map(entry -> new ModObjectKeyRegistry.Registration(
                         plan.ownerModId(), entry.getKey(), entry.getValue()))
@@ -116,6 +151,7 @@ public final class ModBackedGamePatch implements GamePatch {
             private com.openggf.game.LevelEventProvider levelEvents;
             private com.openggf.game.dataselect.DataSelectHostProfile dataSelectHost;
             private com.openggf.game.dataselect.DataSelectPresentationProvider dataSelectPresentation;
+            private com.openggf.game.GameplayPolicyProvider gameplayPolicies;
 
             @Override
             public synchronized com.openggf.game.PlayableCharacterRegistry getPlayableCharacterRegistry() {
@@ -130,6 +166,99 @@ public final class ModBackedGamePatch implements GamePatch {
                     playableCharacters = registry;
                 }
                 return playableCharacters;
+            }
+
+            @Override
+            public synchronized com.openggf.game.GameplayPolicyProvider getGameplayPolicyProvider() {
+                if (gameplayPolicies == null) {
+                    com.openggf.game.GameplayPolicyProvider inherited =
+                            super.getGameplayPolicyProvider();
+                    gameplayPolicies = new com.openggf.game.GameplayPolicyProvider() {
+                        @Override
+                        public java.util.Optional<com.openggf.game.GameplayLaunchTeam> launchTeam(
+                                com.openggf.game.ZoneKey destination) {
+                            if (faultBoundary == null) {
+                                return inherited.launchTeam(destination);
+                            }
+                            return callGameplayPolicy(destination, () -> {
+                                if (destination instanceof com.openggf.game.ZoneKey.Mod mod) {
+                                    com.openggf.game.GameplayLaunchTeam contributed =
+                                            plan.launchTeams().get(mod);
+                                    if (contributed != null) {
+                                        return java.util.Optional.of(contributed);
+                                    }
+                                }
+                                return inherited.launchTeam(destination);
+                            });
+                        }
+
+                        @Override
+                        public java.util.Optional<com.openggf.game.GameplayInputFilter> inputFilter(
+                                com.openggf.game.ZoneKey destination) {
+                            if (faultBoundary == null) {
+                                java.util.Optional<com.openggf.game.GameplayInputFilter> resolved =
+                                        inherited.inputFilter(destination);
+                                if (resolved.isEmpty()
+                                        || resolved.get() == com.openggf.game.GameplayInputFilter.IDENTITY
+                                        || resolved.get() instanceof OwnerAwareGameplayInputFilter) {
+                                    return resolved;
+                                }
+                                throw new IllegalStateException(
+                                        "A raw inherited mod input filter requires an installed fault boundary");
+                            }
+                            return callGameplayPolicy(destination, () -> {
+                                java.util.Optional<com.openggf.game.GameplayInputFilter> resolved;
+                                if (destination instanceof com.openggf.game.ZoneKey.Mod mod) {
+                                    com.openggf.game.GameplayInputFilter contributed =
+                                            plan.inputFilters().get(mod);
+                                    if (contributed != null) {
+                                        resolved = java.util.Optional.of(contributed);
+                                    } else {
+                                        resolved = inherited.inputFilter(destination);
+                                    }
+                                    return resolved.map(filter -> filter ==
+                                                    com.openggf.game.GameplayInputFilter.IDENTITY
+                                                    || filter instanceof OwnerAwareGameplayInputFilter
+                                            ? filter
+                                            : new OwnerAwareGameplayInputFilter(
+                                                    mod.ownerModId(), filter, faultBoundary));
+                                }
+                                return inherited.inputFilter(destination);
+                            });
+                        }
+
+                        @Override
+                        public java.util.Optional<com.openggf.level.objects.HudProfile> hudProfile(
+                                com.openggf.game.ZoneKey destination) {
+                            if (faultBoundary == null) {
+                                return inherited.hudProfile(destination);
+                            }
+                            return callGameplayPolicy(destination, () -> {
+                                if (destination instanceof com.openggf.game.ZoneKey.Mod mod) {
+                                    com.openggf.level.objects.HudProfile contributed =
+                                            plan.hudProfiles().get(mod);
+                                    if (contributed != null) {
+                                        return java.util.Optional.of(contributed);
+                                    }
+                                }
+                                return inherited.hudProfile(destination);
+                            });
+                        }
+
+                        private <T> T callGameplayPolicy(com.openggf.game.ZoneKey destination,
+                                                        java.util.function.Supplier<T> callback) {
+                            if (!(destination instanceof com.openggf.game.ZoneKey.Mod mod)) {
+                                return callback.get();
+                            }
+                            if (faultBoundary == null) {
+                                throw new IllegalStateException(
+                                        "Mod gameplay policies require an installed fault boundary");
+                            }
+                            return faultBoundary.call(mod.ownerModId(), callback);
+                        }
+                    };
+                }
+                return gameplayPolicies;
             }
 
             @Override
@@ -155,7 +284,7 @@ public final class ModBackedGamePatch implements GamePatch {
             @Override
             public synchronized com.openggf.game.ZoneRegistry getZoneRegistry() {
                 if (zoneRegistry == null) {
-                    zoneRegistry = ModZoneRegistry.decorate(super.getZoneRegistry(), plan.preparedZones());
+                    zoneRegistry = ModZoneRegistry.decorate(super.getZoneRegistry(), publishedZones);
                 }
                 return zoneRegistry;
             }
@@ -168,11 +297,13 @@ public final class ModBackedGamePatch implements GamePatch {
             @Override
             public com.openggf.level.Level loadLevelOverride(int levelIndex)
                     throws java.io.IOException {
+                if (publishedZones.isEmpty()) return super.loadLevelOverride(levelIndex);
                 com.openggf.game.ZoneRegistry registry = getZoneRegistry();
                 if (registry instanceof ModZoneRegistry mods) {
                     PreparedModZone contribution = mods.levelContribution(levelIndex);
-                    if (contribution != null) return ModZoneLoader.load(
-                            contribution, super.getAdditiveLevelRingSpriteSheet());
+                    if (contribution != null) {
+                        return zoneAdapter.load(contribution.ownerModId(), contribution.hostData());
+                    }
                 }
                 return super.loadLevelOverride(levelIndex);
             }
@@ -180,8 +311,13 @@ public final class ModBackedGamePatch implements GamePatch {
             @Override
             public int[] getBackgroundScrollOverride(int levelIndex, int cameraX, int cameraY) {
                 com.openggf.game.ZoneRegistry registry = getZoneRegistry();
-                if (registry instanceof ModZoneRegistry mods && mods.levelContribution(levelIndex) != null) {
-                    return new int[]{cameraX, cameraY};
+                if (registry instanceof ModZoneRegistry mods) {
+                    PreparedModZone contribution = mods.levelContribution(levelIndex);
+                    if (contribution != null) {
+                        return switch (contribution.runtimeProfile().scroll()) {
+                            case FLAT -> new int[]{cameraX, cameraY};
+                        };
+                    }
                 }
                 return super.getBackgroundScrollOverride(levelIndex, cameraX, cameraY);
             }
@@ -189,12 +325,12 @@ public final class ModBackedGamePatch implements GamePatch {
             @Override
             public synchronized com.openggf.game.LevelEventProvider getLevelEventProvider() {
                 if (levelEvents == null) {
-                    com.openggf.game.ZoneRegistry registry = getZoneRegistry();
-                    if (!(registry instanceof ModZoneRegistry mods)
-                            || mods.contributions().stream().noneMatch(zone -> zone.eventFactory() != null)) {
+                    if (publishedZones.isEmpty()) {
                         return super.getLevelEventProvider();
                     }
-                    levelEvents = new ModZoneEventProvider(super.getLevelEventProvider(), mods, faultBoundary);
+                    int inheritedZoneCount = super.getZoneRegistry().getZoneCount();
+                    levelEvents = new ModZoneEventProvider(super.getLevelEventProvider(),
+                            inheritedZoneCount, publishedZones, faultBoundary);
                 }
                 return levelEvents;
             }
@@ -203,9 +339,20 @@ public final class ModBackedGamePatch implements GamePatch {
             public synchronized com.openggf.game.dataselect.DataSelectHostProfile getDataSelectHostProfile() {
                 if (plan.preparedZones().isEmpty()) return super.getDataSelectHostProfile();
                 if (dataSelectHost == null) {
-                    dataSelectHost = new com.openggf.game.sonic2.dataselect.S2DataSelectProfile(
-                            this::getZoneRegistry, finding -> saveFindingSink.accept(
-                                    finding.ownerModId() == null ? "s2-save" : finding.ownerModId(), finding));
+                    com.openggf.game.dataselect.DataSelectHostProfile inherited =
+                            super.getDataSelectHostProfile();
+                    com.openggf.game.dataselect.DataSelectHostProfile decorated =
+                            dataSelectDecorator == null ? inherited
+                            : dataSelectDecorator.decorateHostProfile(
+                                    inherited, this::getZoneRegistry,
+                                    (owner, finding) -> saveFindingSink.accept(owner,
+                                            new com.openggf.game.sonic2.dataselect.S2SaveFinding(
+                                                    finding.ownerModId(), finding.code(), finding.detail())));
+                    dataSelectHost = ModGameStartResolver.decorate(decorated, inherited,
+                            (ModZoneRegistry) getZoneRegistry(),
+                            (owner, finding) -> saveFindingSink.accept(owner,
+                                    new com.openggf.game.sonic2.dataselect.S2SaveFinding(
+                                            finding.ownerModId(), finding.code(), finding.detail())));
                 }
                 return dataSelectHost;
             }
@@ -215,9 +362,11 @@ public final class ModBackedGamePatch implements GamePatch {
                     getDataSelectPresentationProvider() {
                 if (plan.preparedZones().isEmpty()) return super.getDataSelectPresentationProvider();
                 if (dataSelectPresentation == null) {
-                    dataSelectPresentation = com.openggf.game.dataselect.CrossGameDataSelectPresentations
-                            .donated(com.openggf.game.dataselect.CrossGameDataSelectPresentations.DONOR_S3K,
-                                    getDataSelectHostProfile());
+                    com.openggf.game.dataselect.DataSelectPresentationProvider inherited =
+                            super.getDataSelectPresentationProvider();
+                    dataSelectPresentation = dataSelectDecorator == null ? inherited
+                            : dataSelectDecorator.decoratePresentationProvider(
+                                    inherited, getDataSelectHostProfile());
                 }
                 return dataSelectPresentation;
             }
@@ -227,5 +376,14 @@ public final class ModBackedGamePatch implements GamePatch {
                 return getDataSelectPresentationProvider();
             }
         };
+    }
+
+    private static ModZoneLevelData prepareHostData(PreparedModZone zone) {
+        try {
+            return ModZoneLoader.prepareHostData(zone.definition());
+        } catch (IOException e) {
+            throw new ModRegistrationException(zone.ownerModId(), "MOD_ZONE_INVALID",
+                    "Unable to prepare additive-zone data", null, e);
+        }
     }
 }

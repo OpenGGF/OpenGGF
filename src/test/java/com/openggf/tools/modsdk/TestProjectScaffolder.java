@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import javax.tools.ToolProvider;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -43,6 +45,22 @@ class TestProjectScaffolder {
                 "src/main/mod/level-source/collision-primary.bin",
                 "src/main/mod/level-source/collision-secondary.bin",
                 "src/main/mod/level-source/palettes.bin"), files);
+
+        ByteBuffer chunks = ByteBuffer.wrap(Files.readAllBytes(project.resolve(
+                "src/main/mod/level-source/chunks.bin"))).order(ByteOrder.BIG_ENDIAN);
+        for (int piece = 0; piece < 4; piece++) {
+            assertEquals(0x2001, Short.toUnsignedInt(chunks.getShort(20 + piece * 2)),
+                    "generated floor must use creator-owned palette line 1");
+        }
+        ByteBuffer palettes = ByteBuffer.wrap(Files.readAllBytes(project.resolve(
+                "src/main/mod/level-source/palettes.bin"))).order(ByteOrder.BIG_ENDIAN);
+        assertEquals(0, Short.toUnsignedInt(palettes.getShort(12 + 2)),
+                "host-owned line 0 must remain a placeholder");
+        assertEquals(0x0EEE, Short.toUnsignedInt(palettes.getShort(12 + 32 + 2)));
+        assertEquals(0x0EEE, Short.toUnsignedInt(palettes.getShort(12 + 32 + 30)));
+        assertTrue(Files.readString(project.resolve("src/main/mod/sample-sheet.yaml"))
+                .contains("paletteLine: 1"),
+                "generated object art must share creator-owned line 1");
 
         var compiler = ToolProvider.getSystemJavaCompiler();
         assertNotNull(compiler);

@@ -8,12 +8,17 @@ import com.openggf.level.Pattern;
 import com.openggf.level.Palette;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.mods.code.ModApiSignatureSurface;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -28,6 +33,184 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class TestHudRenderManager {
+
+    @Test
+    void annotatedRendererDoesNotPublishProfileMutationMethod() {
+        assertThrows(NoSuchMethodException.class,
+                () -> HudRenderManager.class.getMethod("setProfile", HudProfile.class));
+        assertFalse(ModApiSignatureSurface.snapshotLines().stream()
+                .anyMatch(line -> line.contains("HudProfileAccess")),
+                "engine HUD bridge must remain outside the recursive Mod API surface");
+    }
+
+    @Test
+    void hudRowsRejectUnsafeWidthsAndRequireTheSupportedTimeWidth() {
+        assertThrows(IllegalArgumentException.class, () -> new HudRow(
+                true, HudLabel.SCORE, HudMetric.SCORE,
+                16, 8, 64, 8, 0, HudWarningPolicy.NONE));
+        assertThrows(IllegalArgumentException.class, () -> new HudRow(
+                true, HudLabel.SCORE, HudMetric.SCORE,
+                16, 8, 64, 8, 10, HudWarningPolicy.NONE));
+        assertThrows(IllegalArgumentException.class, () -> new HudRow(
+                true, HudLabel.TIME, HudMetric.TIME,
+                16, 24, 56, 24, 3, HudWarningPolicy.NONE));
+    }
+
+    @Test
+    void oneDigitRingMetricSaturatesSeventeenToNine() {
+        HudFixture fixture = hudFixture(0, "0:00", 17, 3, false, false);
+        HudProfileAccess.install(fixture.hud(), singleNumericRow(HudMetric.RINGS, 1));
+
+        fixture.hud().draw(fixture.levelState(), null);
+
+        assertTrue(fixture.draws().contains(new Draw(218, 64, 40)));
+        assertTrue(fixture.draws().contains(new Draw(219, 64, 48)));
+    }
+
+    @Test
+    void sixDigitScoreMetricSaturatesIntegerOverflowToNines() {
+        HudFixture fixture = hudFixture(Integer.MAX_VALUE, "0:00", 0, 3, false, false);
+        HudProfileAccess.install(fixture.hud(), singleNumericRow(HudMetric.SCORE, 6));
+
+        fixture.hud().draw(fixture.levelState(), null);
+
+        assertEquals(List.of(64, 72, 80, 88, 96, 104), fixture.draws().stream()
+                .filter(draw -> draw.patternId() == 218 && draw.y() == 40)
+                .map(Draw::x).toList());
+    }
+
+    @Test
+    void livesMetricHonorsWidthAndSaturatesOverflow() {
+        HudFixture fixture = hudFixture(0, "0:00", 0, 42, false, false);
+        HudProfileAccess.install(fixture.hud(), new HudProfile(List.of(
+                new HudRow(true, HudLabel.LIVES, HudMetric.LIVES,
+                        16, 200, 56, 208, 1, HudWarningPolicy.NONE))));
+
+        fixture.hud().draw(fixture.levelState(), null);
+
+        assertTrue(fixture.draws().contains(new Draw(229, 56, 208)));
+        assertFalse(fixture.draws().contains(new Draw(224, 56, 208)));
+    }
+
+    @Test
+    void negativeNumericMetricsRenderAsZeroWithoutThrowing() {
+        HudFixture fixture = hudFixture(-5, "0:00", -7, -2, false, false);
+        HudProfileAccess.install(fixture.hud(), new HudProfile(List.of(
+                new HudRow(true, HudLabel.SCORE, HudMetric.SCORE,
+                        16, 8, 64, 8, 1, HudWarningPolicy.NONE),
+                new HudRow(true, HudLabel.RINGS, HudMetric.RINGS,
+                        16, 40, 64, 40, 1, HudWarningPolicy.NONE),
+                new HudRow(true, HudLabel.LIVES, HudMetric.LIVES,
+                        16, 200, 56, 208, 1, HudWarningPolicy.NONE))));
+
+        fixture.hud().draw(fixture.levelState(), null);
+
+        assertTrue(fixture.draws().contains(new Draw(200, 64, 8)));
+        assertTrue(fixture.draws().contains(new Draw(200, 64, 40)));
+        assertTrue(fixture.draws().contains(new Draw(220, 56, 208)));
+    }
+
+    @Test
+    void stockProfilePreservesTheExistingOrderedDrawCommands() {
+        HudFixture fixture = hudFixture(123, "0:10", 7, 3, false, false);
+        HudProfileAccess.install(fixture.hud(), HudProfile.stock());
+
+        fixture.hud().draw(fixture.levelState(), null);
+
+        assertEquals(List.of(
+                new Draw(0x28020, 16, 8),
+                new Draw(0x28022, 16, 24),
+                new Draw(0x28024, 16, 40),
+                new Draw(202, 88, 8), new Draw(203, 88, 16),
+                new Draw(204, 96, 8), new Draw(205, 96, 16),
+                new Draw(206, 104, 8), new Draw(207, 104, 16),
+                new Draw(200, 56, 24), new Draw(201, 56, 32),
+                new Draw(220, 64, 24), new Draw(221, 64, 32),
+                new Draw(202, 72, 24), new Draw(203, 72, 32),
+                new Draw(200, 80, 24), new Draw(201, 80, 32),
+                new Draw(214, 80, 40), new Draw(215, 80, 48),
+                new Draw(0x28026, 16, 200),
+                new Draw(223, 56, 208)), fixture.draws());
+    }
+
+    @Test
+    void scoreLabelCanDisplayRingMetricInRingsSlotWithoutStockRowsOrWarning() {
+        HudFixture fixture = hudFixture(999, "4:44", 17, 3, true, true);
+        HudProfileAccess.install(fixture.hud(), new HudProfile(List.of(
+                new HudRow(false, HudLabel.SCORE, HudMetric.SCORE,
+                        16, 8, 64, 8, 6, HudWarningPolicy.NONE),
+                new HudRow(false, HudLabel.TIME, HudMetric.TIME,
+                        16, 24, 56, 24, 4, HudWarningPolicy.TIMER_FLASH),
+                new HudRow(true, HudLabel.SCORE, HudMetric.RINGS,
+                        16, 40, 64, 40, 3, HudWarningPolicy.NONE),
+                new HudRow(false, HudLabel.LIVES, HudMetric.LIVES,
+                        16, 200, 56, 208, 2, HudWarningPolicy.NONE))));
+
+        fixture.hud().draw(fixture.levelState(), null);
+
+        assertEquals(List.of(
+                new Draw(0x28020, 16, 40),
+                new Draw(202, 72, 40), new Draw(203, 72, 48),
+                new Draw(214, 80, 40), new Draw(215, 80, 48)), fixture.draws());
+        assertFalse(fixture.draws().stream().anyMatch(
+                draw -> draw.patternId() == 0x28023 || draw.patternId() == 0x28025));
+    }
+
+    @Test
+    void flappyProfileHidesStockScoreAndRendersRingScoreWithoutZeroFlash() {
+        HudFixture fixture = hudFixture(999, "4:44", 17, 3, true, true);
+        HudProfileAccess.install(fixture.hud(), flappyProfile());
+
+        fixture.hud().draw(fixture.levelState(), null);
+
+        verify(fixture.graphicsManager(), never()).renderPatternWithId(
+                eq(0x28020), any(), eq(16), eq(8));
+        verify(fixture.graphicsManager()).renderPatternWithId(
+                eq(0x28020), any(), eq(16), eq(40));
+        verify(fixture.graphicsManager()).renderPatternWithId(eq(202), any(), eq(72), eq(40));
+        verify(fixture.graphicsManager()).renderPatternWithId(eq(203), any(), eq(72), eq(48));
+        verify(fixture.graphicsManager()).renderPatternWithId(eq(214), any(), eq(80), eq(40));
+        verify(fixture.graphicsManager()).renderPatternWithId(eq(215), any(), eq(80), eq(48));
+        verify(fixture.graphicsManager(), never()).renderPatternWithId(
+                eq(0x28025), any(), eq(16), eq(40));
+    }
+
+    @Test
+    void warningPoliciesUseResolvedMetricAndTimerStateOnlyWhenConfigured() {
+        HudFixture fixture = hudFixture(0, "9:59", 0, 3, true, true);
+        HudProfileAccess.install(fixture.hud(), new HudProfile(List.of(
+                new HudRow(true, HudLabel.TIME, HudMetric.TIME,
+                        16, 24, 56, 24, 4, HudWarningPolicy.TIMER_FLASH),
+                new HudRow(true, HudLabel.RINGS, HudMetric.SCORE,
+                        16, 40, 64, 40, 6, HudWarningPolicy.ZERO_FLASH),
+                new HudRow(true, HudLabel.RINGS, HudMetric.RINGS,
+                        16, 56, 64, 56, 3, HudWarningPolicy.NONE))));
+
+        fixture.hud().draw(fixture.levelState(), null);
+
+        assertTrue(fixture.draws().contains(new Draw(0x28023, 16, 24)),
+                "TIMER_FLASH must use LevelState.shouldFlashTimer plus flash cycle");
+        assertTrue(fixture.draws().contains(new Draw(0x28025, 16, 40)),
+                "ZERO_FLASH must inspect the row's SCORE metric, not rings implicitly");
+        assertTrue(fixture.draws().contains(new Draw(0x28024, 16, 56)),
+                "NONE must stay on normal label art even for a zero metric");
+    }
+
+    @Test
+    void debugHudKeepsStockLayoutWhenTheDestinationProfileHidesEveryRow() {
+        HudFixture fixture = hudFixture(123, "0:10", 7, 3, false, false);
+        HudProfileAccess.install(fixture.hud(), new HudProfile(List.of()));
+        com.openggf.game.PlayableEntity player = mock(com.openggf.game.PlayableEntity.class);
+        when(player.isDebugMode()).thenReturn(true);
+
+        fixture.hud().draw(fixture.levelState(), player);
+
+        assertTrue(fixture.draws().contains(new Draw(0x28021, 16, 8)));
+        assertTrue(fixture.draws().contains(new Draw(0x28022, 16, 24)));
+        assertTrue(fixture.draws().contains(new Draw(0x28024, 16, 40)));
+        assertTrue(fixture.draws().contains(new Draw(0x28026, 16, 200)));
+        assertFalse(fixture.draws().contains(new Draw(0x28020, 16, 8)));
+    }
 
     @Test
     public void bonusStageLayoutShowsOnlyRingsOnTopRow() {
@@ -57,6 +240,7 @@ public class TestHudRenderManager {
         hud.setDigitPatternIndex(200);
         hud.setLivesNumbersPatternIndex(220);
         hud.setStaticHudArt(0x28020, staticArt);
+        HudProfileAccess.install(hud, new HudProfile(List.of()));
         hud.setBonusStageHudLayout(true);
 
         hud.draw(levelState, null);
@@ -382,6 +566,55 @@ public class TestHudRenderManager {
     }
 
     @Test
+    void ownershipRoutedLivesPaletteDoesNotUseDirectUploadOrImmediateFlush() {
+        GraphicsManager graphicsManager = mock(GraphicsManager.class);
+        Camera camera = mock(Camera.class);
+        GameStateManager gameState = mock(GameStateManager.class);
+        LevelState levelState = mock(LevelState.class);
+        when(camera.getXWithShake()).thenReturn((short) 0);
+        when(camera.getYWithShake()).thenReturn((short) 0);
+        when(levelState.getRings()).thenReturn(10);
+        when(levelState.getFlashCycle()).thenReturn(false);
+        when(levelState.shouldFlashTimer()).thenReturn(false);
+        when(levelState.getDisplayTime()).thenReturn("0:10");
+        when(gameState.getScore()).thenReturn(0);
+        when(gameState.getLives()).thenReturn(3);
+
+        HudRenderManager hud = new HudRenderManager(graphicsManager, camera, gameState);
+        hud.setDigitPatternIndex(200);
+        hud.setLivesNumbersPatternIndex(220);
+        hud.setLivesPaletteOverride(paletteWithColor(12, 0x0E00));
+        HudPaletteBridgeAccess.routeLivesPaletteOverrideThroughOwnership(hud, true);
+
+        hud.draw(levelState, null);
+
+        verify(graphicsManager, never()).cachePaletteTexture(any(), anyInt());
+        verify(graphicsManager, never()).flush();
+    }
+
+    @Test
+    void stockDirectModeStillUploadsLivesPaletteOverride() {
+        GraphicsManager graphicsManager = mock(GraphicsManager.class);
+        Camera camera = mock(Camera.class);
+        GameStateManager gameState = mock(GameStateManager.class);
+        LevelState levelState = mock(LevelState.class);
+        when(camera.getXWithShake()).thenReturn((short) 0);
+        when(camera.getYWithShake()).thenReturn((short) 0);
+        when(levelState.getRings()).thenReturn(10);
+        when(levelState.getDisplayTime()).thenReturn("0:10");
+
+        HudRenderManager hud = new HudRenderManager(graphicsManager, camera, gameState);
+        hud.setDigitPatternIndex(200);
+        hud.setLivesNumbersPatternIndex(220);
+        hud.setHudPalettes(1, 3);
+        hud.setLivesPaletteOverride(paletteWithColor(12, 0x0E00));
+
+        hud.draw(levelState, null);
+
+        verify(graphicsManager).cachePaletteTexture(any(Palette.class), eq(3));
+    }
+
+    @Test
     void mappingDrivenRingsFrameUsesFlashVariantInsteadOfHudString() {
         GraphicsManager graphicsManager = mock(GraphicsManager.class);
         Camera camera = mock(Camera.class);
@@ -417,6 +650,67 @@ public class TestHudRenderManager {
         verify(graphicsManager, never()).renderPatternWithId(eq(100), any(), eq(16), eq(40));
     }
 
+    private static HudFixture hudFixture(int score, String time, int rings, int lives,
+                                         boolean shouldFlashTimer, boolean flashCycle) {
+        GraphicsManager graphicsManager = mock(GraphicsManager.class);
+        Camera camera = mock(Camera.class);
+        GameStateManager gameState = mock(GameStateManager.class);
+        LevelState levelState = mock(LevelState.class);
+        when(camera.getXWithShake()).thenReturn((short) 0);
+        when(camera.getYWithShake()).thenReturn((short) 0);
+        when(gameState.getScore()).thenReturn(score);
+        when(gameState.getLives()).thenReturn(lives);
+        when(levelState.getDisplayTime()).thenReturn(time);
+        when(levelState.getRings()).thenReturn(rings);
+        when(levelState.shouldFlashTimer()).thenReturn(shouldFlashTimer);
+        when(levelState.getFlashCycle()).thenReturn(flashCycle);
+
+        HudStaticArt staticArt = new HudStaticArt(
+                new Pattern[] {
+                        new Pattern(), new Pattern(), new Pattern(), new Pattern(),
+                        new Pattern(), new Pattern(), new Pattern()
+                },
+                frame(0), frame(1), frame(2), frame(3), frame(4), frame(5), frame(6));
+        HudRenderManager hud = new HudRenderManager(graphicsManager, camera, gameState);
+        hud.setDigitPatternIndex(200);
+        hud.setLivesNumbersPatternIndex(220);
+        hud.setStaticHudArt(0x28020, staticArt);
+        List<Draw> draws = new java.util.ArrayList<>();
+        org.mockito.Mockito.doAnswer(invocation -> {
+            draws.add(new Draw(invocation.getArgument(0), invocation.getArgument(2),
+                    invocation.getArgument(3)));
+            return null;
+        }).when(graphicsManager).renderPatternWithId(anyInt(), any(), anyInt(), anyInt());
+        return new HudFixture(hud, levelState, graphicsManager, draws);
+    }
+
+    private static HudProfile flappyProfile() {
+        return new HudProfile(List.of(
+                new HudRow(false, HudLabel.SCORE, HudMetric.SCORE,
+                        16, 8, 64, 8, 6, HudWarningPolicy.NONE),
+                new HudRow(true, HudLabel.TIME, HudMetric.TIME,
+                        16, 24, 56, 24, 4, HudWarningPolicy.TIMER_FLASH),
+                new HudRow(true, HudLabel.SCORE, HudMetric.RINGS,
+                        16, 40, 64, 40, 3, HudWarningPolicy.NONE),
+                new HudRow(true, HudLabel.LIVES, HudMetric.LIVES,
+                        16, 200, 56, 208, 2, HudWarningPolicy.NONE)));
+    }
+
+    private static HudProfile singleNumericRow(HudMetric metric, int maxDigits) {
+        return new HudProfile(List.of(new HudRow(true, HudLabel.SCORE, metric,
+                16, 40, 64, 40, maxDigits, HudWarningPolicy.NONE)));
+    }
+
+    private static SpriteMappingFrame frame(int patternId) {
+        return new SpriteMappingFrame(List.of(
+                new SpriteMappingPiece(0, 0, 1, 1, patternId, false, false, 0)));
+    }
+
+    private record Draw(int patternId, int x, int y) { }
+
+    private record HudFixture(HudRenderManager hud, LevelState levelState,
+                              GraphicsManager graphicsManager, List<Draw> draws) { }
+
     private static org.mockito.ArgumentMatcher<Palette> paletteMatches(int r, int g, int b) {
         return palette -> {
             if (palette == null) {
@@ -434,5 +728,12 @@ public class TestHudRenderManager {
         color.r = (byte) r;
         color.g = (byte) g;
         color.b = (byte) b;
+    }
+
+    private static Palette paletteWithColor(int index, int segaWord) {
+        Palette palette = new Palette();
+        palette.getColor(index).fromSegaFormat(
+                new byte[]{(byte) (segaWord >>> 8), (byte) segaWord}, 0);
+        return palette;
     }
 }

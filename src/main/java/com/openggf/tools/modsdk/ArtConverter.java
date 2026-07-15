@@ -105,8 +105,8 @@ public final class ArtConverter {
             for (Piece piece : frame.pieces()) {
                 validatePiece(piece, image);
                 int tileIndex = patterns.size();
-                for (int tileY = 0; tileY < piece.heightPixels(); tileY += 8) {
-                    for (int tileX = 0; tileX < piece.widthPixels(); tileX += 8) {
+                for (int tileX = 0; tileX < piece.widthPixels(); tileX += 8) {
+                    for (int tileY = 0; tileY < piece.heightPixels(); tileY += 8) {
                         Pattern pattern = new Pattern();
                         for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
                             int color = image.getRGB(piece.sourceX() + tileX + x,

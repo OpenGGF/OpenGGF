@@ -5,7 +5,8 @@ finish: a complete, original, no-ROM game — one Tiled-authored act called Bolt
 Plains, a round robot character ("Bolt") with a distinct physics feel and a double
 jump, a patrolling badnik ("ZapBug"), a spring gimmick ("SpringPad"), looping OGG
 music, and WAV sound effects. It exists to demonstrate the standalone-game path end
-to end, including the two seams the flappy-remix guide didn't need: authoring a level
+to end, including two seams the [native-Tails Flappy guide](native-tails-flappy.md)
+doesn't need: authoring a level
 directly in Tiled instead of the in-engine editor, and shipping a genuinely new
 playable character with custom physics and an original ability.
 
@@ -204,7 +205,7 @@ paletteLine: 2
 ```
 
 The rendered CRAM line is `(sheet.paletteLine + piece.paletteIndex) & 3`, exactly
-the arithmetic [`flappy-remix.md` Chapter 3](flappy-remix.md#3-borrowing-tails-from-your-rom)
+the arithmetic [ROM-art remix Chapter 3](rom-art-remix.md#3-request-the-bounded-rom-window)
 introduced for ROM-materialized art — it applies uniformly to baked sheets too.
 Level tile art occupies lines 0–1 in this level's GPAL; the three object sheets share
 line 2 deliberately, so their `palette:` lists must stay byte-for-byte identical to
@@ -222,7 +223,7 @@ fixture). If the requested output directory already exists, the importer fails
 before writing anything rather than overwriting or merging into it.
 
 **Block 0 is handled for you.** Unlike a hand-authored full-level export (where, as
-[`flappy-remix.md` Chapter 4](flappy-remix.md#4-the-level) warns, you must
+[`native-tails-flappy.md` Chapter 4](native-tails-flappy.md#4-level-and-camera) warns, you must
 personally avoid putting real content at block index 0 because `ModLevel` blanks it
 on load), the TMX compiler reserves an all-zero pattern, chunk, and block at index 0
 *before* compiling a single real tile, and every subsequent chunk/block is

@@ -1,10 +1,17 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.modzone.ModPaletteClaim;
+import com.openggf.game.modzone.ModZoneAdapter;
+import com.openggf.game.modzone.ModZoneLevelData;
+import com.openggf.game.modzone.ModZoneRuntimeProfile;
 import com.openggf.game.ZoneKey;
 import com.openggf.game.MusicReference;
 import com.openggf.game.ZoneProgressionPlan;
 import com.openggf.game.ZoneRegistry;
 import com.openggf.game.GameModule;
+import com.openggf.game.dataselect.DataSelectDestination;
+import com.openggf.game.save.SelectedTeam;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.LevelDescriptor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -16,9 +23,54 @@ import java.nio.file.Path;
 import java.nio.file.Files;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TestModZoneLoader {
     @TempDir Path temp;
+    @Test
+    void patchDelegatesPreparedZoneToResolvedModuleAdapter() throws Exception {
+        ModZoneAdapter adapter = mock(ModZoneAdapter.class);
+        ModLevelDefinition definition = minimalDefinition();
+        when(adapter.runtimeProfile(eq("alpha"), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(ModZoneRuntimeProfile.flatEmpty());
+        GameModule host = moduleProxy(stockRegistry(), adapter);
+        GameModule resolved = new ModBackedGamePatch(zonePlan("alpha", "zone", definition))
+                .apply(host, patchContext());
+
+        resolved.loadLevelOverride(definition.levelIndex());
+
+        verify(adapter).validate(eq("alpha"), org.mockito.ArgumentMatchers.any());
+        verify(adapter).load(eq("alpha"), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void unsupportedModuleFailsTheOwnerTransactionBeforePublication() {
+        ModLevelDefinition definition = minimalDefinition();
+        ModBackedGamePatch patch = new ModBackedGamePatch(zonePlan("alpha", "zone", definition));
+
+        ModRegistrationException failure = assertThrows(ModRegistrationException.class,
+                () -> patch.apply(moduleProxy(stockRegistry(), GameModule.EMPTY_MOD_ZONE_ADAPTER),
+                        patchContext()));
+
+        assertEquals("alpha", failure.ownerModId());
+        assertEquals("MOD_ZONE_HOST_UNSUPPORTED", failure.findingCode());
+    }
+
+    @Test
+    void sharedModZoneSelectionContainsNoRawGameNameBranch() throws Exception {
+        for (String path : List.of(
+                "src/main/java/com/openggf/mods/code/ModBackedGamePatch.java",
+                "src/main/java/com/openggf/mods/code/ModZoneLoader.java")) {
+            String source = Files.readString(Path.of(path));
+            assertFalse(source.contains("\"s2\""), path);
+            assertFalse(source.contains("\"s3k\""), path);
+        }
+    }
+
     @Test
     void zoneKeysRetainStableStockAndOwnerLocalIdentity() {
         assertEquals(new ZoneKey.Stock(3), ZoneKey.stock(3));
@@ -45,13 +97,12 @@ class TestModZoneLoader {
     }
 
     @Test
-    void zoneRegistrationDefaultsToMtz3AndRejectsNonSonic2Transactionally() {
+    void zoneRegistrationDefaultsToMtz3WhileAnchorlessHostsDeferToCapabilityValidation() {
         ModZoneContribution declaration = new ModZoneContribution(
                 "zone", new BakedLevelRef("level.json"), null, null);
         assertEquals("mtz3", declaration.withDefaultAnchor("mtz3").insertAfter());
         ModContext wrongGame = new ModContext("alpha", "s1", nullAssets(), null);
-        assertThrows(ModRegistrationException.class, () -> wrongGame.registerZone(declaration));
-        assertThrows(ModRegistrationException.class, wrongGame::freeze);
+        assertDoesNotThrow(() -> wrongGame.registerZone(declaration));
     }
 
     @Test
@@ -84,6 +135,19 @@ class TestModZoneLoader {
     }
 
     @Test
+    void anchorlessDeclarationAndPreparedPayloadMatchNullSafely() {
+        ModZoneContribution declared = new ModZoneContribution(
+                "sky", new BakedLevelRef("level.json"), null, null);
+        PreparedModZone prepared = PreparedModZone.prepared("alpha", declared, minimalDefinition());
+
+        ModRegistrationPlan plan = assertDoesNotThrow(() -> new ModRegistrationPlan(
+                "alpha", "s3k", Map.of(), Map.of(), Map.of(), List.of(),
+                List.of(declared), List.of(prepared)));
+
+        assertNull(plan.preparedZones().getFirst().insertAfter());
+    }
+
+    @Test
     void aggregateRegistryAppendsInEffectiveOwnerOrderAndBuildsIndependentChains() {
         ZoneRegistry stock = stockRegistry();
         List<PreparedModZone> contributions = List.of(
@@ -105,6 +169,23 @@ class TestModZoneLoader {
         assertEquals(new ZoneProgressionPlan.Successor(2, 0), plan.next(topology, 5, 0));
         assertEquals(new ZoneProgressionPlan.Successor(4, 0), plan.next(topology, 0, 0));
         assertEquals(new ZoneProgressionPlan.Successor(1, 0), plan.next(topology, 4, 0));
+    }
+
+    @Test
+    void anchorlessS3kZoneIsAddressableButAddsNoProgressionEdge() {
+        ZoneRegistry stock = stockRegistry();
+        PreparedModZone anchorless = PreparedModZone.metadata(
+                "alpha", "sky", null, "SKY", 0x400, 0x40, 10, 20);
+
+        ZoneRegistry decorated = ModZoneRegistry.decorate(stock, List.of(anchorless));
+        int custom = decorated.resolveZoneKey(ZoneKey.mod("alpha", "sky")).orElseThrow();
+        ZoneProgressionPlan.ProgressionResult terminal = decorated.progressionPlan().next(
+                decorated.progressionTopology(), stock.getZoneCount() - 1, 0);
+
+        assertEquals(ZoneProgressionPlan.Credits.INSTANCE, terminal);
+        assertEquals(stock.getZoneCount(), custom);
+        assertEquals(ZoneKey.mod("alpha", "sky"), decorated.zoneKey(custom));
+        assertTrue(com.openggf.mods.StockProgressionAnchors.anchorsFor("s3k").isEmpty());
     }
 
     @Test
@@ -236,7 +317,8 @@ class TestModZoneLoader {
                     public void update() { throw new IllegalStateException("boom"); }
                 }, "ZONE", 0x400, 0x40, 0, 0);
         ZoneRegistry registry = ModZoneRegistry.decorate(stockRegistry(), List.of(zone));
-        ModZoneEventProvider provider = new ModZoneEventProvider(null, (ModZoneRegistry) registry, boundary);
+        ModZoneEventProvider provider = new ModZoneEventProvider(null, 3,
+                ((ModZoneRegistry) registry).contributions(), boundary);
         provider.initLevel(3, 0);
 
         ModFaultBoundary.CallbackAborted aborted = assertThrows(
@@ -323,6 +405,41 @@ class TestModZoneLoader {
                 betaOnly.getDataSelectHostProfile().resolveSlotPreview(taggedPayload("beta", "b")));
     }
 
+    @Test
+    void s3kZonePatchKeepsNativePresentationWithRegistryAwareProfile() {
+        GameModule base = new com.openggf.game.sonic3k.Sonic3kGameModule();
+        var inheritedPresentation = base.getDataSelectPresentationProvider();
+        GameModule resolved = new ModBackedGamePatch(s3kZonePlan("alpha", "sky"))
+                .apply(base, patchContext());
+        Map<String, Object> clearPayload = Map.of(
+                "zone", Sonic3kZoneIds.ZONE_DEZ,
+                "act", 0,
+                "mainCharacter", "sonic",
+                "sidekicks", List.of("tails"),
+                "chaosEmeralds", List.of(0, 2, 4),
+                "clear", true,
+                "progressCode", 13,
+                "clearState", 1);
+
+        assertEquals("s3k", resolved.getGameCode());
+        assertEquals("s3k", resolved.getDataSelectHostProfile().gameCode());
+        assertInstanceOf(com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile.class,
+                resolved.getDataSelectHostProfile());
+        assertNotSame(base.getDataSelectHostProfile(), resolved.getDataSelectHostProfile());
+        assertTrue(resolved.getDataSelectHostProfile().builtInTeams()
+                .contains(new SelectedTeam("tails", List.of())));
+        assertEquals(base.getDataSelectHostProfile().clearRestartDestinations(clearPayload),
+                resolved.getDataSelectHostProfile().clearRestartDestinations(clearPayload));
+        assertEquals(List.of(
+                        new DataSelectDestination(Sonic3kZoneIds.ZONE_AIZ, 0),
+                        new DataSelectDestination(Sonic3kZoneIds.ZONE_HCZ, 0)),
+                resolved.getDataSelectHostProfile().clearRestartDestinations(clearPayload)
+                        .subList(0, 2));
+        assertNotSame(inheritedPresentation, resolved.getDataSelectPresentationProvider());
+        assertSame(resolved.getDataSelectHostProfile(),
+                resolved.getDataSelectPresentationProvider().controller().hostProfile());
+    }
+
     private static Map<String, Object> taggedPayload(String owner, String local) {
         java.util.LinkedHashMap<String, Object> payload = new java.util.LinkedHashMap<>();
         com.openggf.game.sonic2.dataselect.S2SavedZone.write(payload, ZoneKey.mod(owner, local));
@@ -335,6 +452,25 @@ class TestModZoneLoader {
         PreparedModZone prepared = PreparedModZone.prepared(owner, declared,
                 definitionWithIds(level, zone));
         return new ModRegistrationPlan(owner, "s2", Map.of(), Map.of(), Map.of(), List.of(),
+                List.of(declared), List.of(prepared));
+    }
+
+    private static ModRegistrationPlan zonePlan(String owner, String local,
+                                                ModLevelDefinition definition) {
+        ModZoneContribution declared = new ModZoneContribution(
+                local, new BakedLevelRef(local + "/level.json"), "mtz3", null);
+        PreparedModZone prepared = PreparedModZone.prepared(owner, declared, definition);
+        return new ModRegistrationPlan(owner, "s2", Map.of(), Map.of(), Map.of(), List.of(),
+                List.of(declared), List.of(prepared));
+    }
+
+    private static ModRegistrationPlan s3kZonePlan(String owner, String local) {
+        ModZoneContribution declared = new ModZoneContribution(
+                local, new BakedLevelRef(local + "/level.json"), null, null);
+        PreparedModZone prepared = PreparedModZone.prepared(owner, declared,
+                TestS3kModZoneAdapter.definition(2, null,
+                        List.of(new ModPaletteClaim(2, 0, 0))));
+        return new ModRegistrationPlan(owner, "s3k", Map.of(), Map.of(), Map.of(), List.of(),
                 List.of(declared), List.of(prepared));
     }
 
@@ -360,10 +496,21 @@ class TestModZoneLoader {
     }
 
     private static GameModule moduleProxy(ZoneRegistry registry) {
+        return moduleProxy(registry, new ModZoneAdapter() {
+            public void validate(String owner, ModZoneLevelData level) { }
+            public com.openggf.level.Level load(String owner, ModZoneLevelData level) { return null; }
+            public ModZoneRuntimeProfile runtimeProfile(String owner, ModZoneLevelData level) {
+                return ModZoneRuntimeProfile.flatEmpty();
+            }
+        });
+    }
+
+    private static GameModule moduleProxy(ZoneRegistry registry, ModZoneAdapter adapter) {
         return (GameModule) java.lang.reflect.Proxy.newProxyInstance(
                 TestModZoneLoader.class.getClassLoader(), new Class<?>[]{GameModule.class},
                 (proxy, method, args) -> switch (method.getName()) {
                     case "getZoneRegistry" -> registry;
+                    case "getModZoneAdapter" -> adapter;
                     case "getLevelMusicReference" -> registry.getMusicReference((int) args[0], (int) args[1]);
                     case "loadLevelOverride", "getBackgroundScrollOverride", "getLevelEventProvider",
                          "getObjectArtProvider", "getAdditiveLevelRingSpriteSheet" -> null;

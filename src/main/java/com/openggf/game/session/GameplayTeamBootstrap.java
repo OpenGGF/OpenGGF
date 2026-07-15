@@ -8,6 +8,7 @@ import com.openggf.game.CharacterAvailability;
 import com.openggf.game.CharacterKey;
 import com.openggf.game.PlayableCharacterRegistry;
 import com.openggf.game.SidekickSpawnOffset;
+import com.openggf.game.GameplayLaunchTeam;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -153,6 +154,32 @@ public final class GameplayTeamBootstrap {
 
         SidekickSpawnOffset offset = module.getLevelInitProfile().sidekickSpawnOffset();
         levelManager.spawnSidekicks(offset.xOffset(), offset.yOffset());
+    }
+
+    /** Rejects a required launch-local team unless every exact key is playable. */
+    public static void requireExactTeam(PlayableCharacterRegistry registry,
+                                        GameplayLaunchTeam team) {
+        Objects.requireNonNull(registry, "registry");
+        Objects.requireNonNull(team, "team");
+        requireExactCharacter(registry, team.main());
+        team.sidekicks().forEach(key -> requireExactCharacter(registry, key));
+    }
+
+    private static void requireExactCharacter(PlayableCharacterRegistry registry, CharacterKey key) {
+        if (registry.find(key).isEmpty()) throw new UnavailableRequiredCharacter(key);
+    }
+
+    public static final class UnavailableRequiredCharacter extends IllegalArgumentException {
+        private final CharacterKey key;
+
+        private UnavailableRequiredCharacter(CharacterKey key) {
+            super("Required launch character is unavailable: " + key.persisted());
+            this.key = key;
+        }
+
+        public CharacterKey key() {
+            return key;
+        }
     }
 
     private static ResolvedCharacter resolve(PlayableCharacterRegistry registry,

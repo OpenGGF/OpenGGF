@@ -3,6 +3,72 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **fix: native Tails deaths and initial S3K mod title cards now complete their
+  host lifecycle transitions.** Instant death enters through the canonical player
+  setter, clearing active Tails flight while retaining the stock `-0x700` hop,
+  normal dead-fall gravity, countdown, and restart. Custom S3K palette ownership is
+  also resolved once during level initialization, so the title card receives its
+  red banner color before the first gameplay frame instead of sampling a stale GPU
+  palette from the preceding screen.
+- Sixth gallery sample **`sample-flappy`** has been rebuilt as a Mod API 2.4
+  Sonic 3 & Knuckles patch with a maintained native-Tails guide
+  (`docs/modding/guides/native-tails-flappy.md`). An anchorless fresh-game
+  destination launches Tails alone, filters horizontal input, and relabels the
+  rings counter as score. A pinned camera and six identity-stable recycling pipes
+  replace the former hidden-player, borrowed-ROM-art, forced-scroll, and finite
+  layout design; normal Tails flight receives the ROM-faithful `0xF0` per-frame
+  refill, collision/bounds use crush death, and sparse S3K palette claims preserve
+  host character/HUD colors. Fresh and rewind-recreated sessions, deterministic
+  gap/scoring state, package contents, and the API 2.4 floor are integration-tested.
+- Eighth gallery sample **`sample-rom-art-remix`** plus a source-first guide
+  (`docs/modding/guides/rom-art-remix.md`): an additive Sonic 2 patch demonstrating
+  bounded ROM-art, mapping, and DPLC intake, launch-memory-only materialization,
+  decoded-pattern probes, and generic scalar rewind with the default Sonic team.
+  `TestSampleModsPackage` now builds and validates exactly eight maintained sources;
+  the explicit-ROM integration proves real materialization and package inspection
+  confirms that neither ROM bytes nor a baked borrowed sheet are shipped.
+- **fix: Sonic 2 additive zones now receive the active ROM character palette.**
+  The host replaces only palette line 0 after decoding creator-owned level data,
+  preserving lines 1-3 while restoring the shared Sonic/Tails colors used by
+  ROM-borrowed object art. Cross-game Knuckles launches retain the existing
+  host-compatible indices 2-5 override. The SDK scaffold and maintained Phase 2
+  sample now place creator terrain and object art on line 1 so generated projects
+  remain visible under that host-owned line-0 contract.
+- **Mod API 2.4.0: game-start insertion and destination gameplay policies.** Complete
+  zones may declare an exclusive fresh-game destination (last enabled declaration
+  wins without changing stock progression), a launch-only required team that never
+  overwrites the durable data-select/save choice, a deterministic P1 input filter
+  applied after raw input recording and reapplied during replay/rewind, and row-only
+  HUD presentation over existing labels and counters. `PlayerInputState` retains its
+  action-mask-to-jump contract; HUD numeric widths are bounded to 1-9 digits, TIME
+  remains four characters, and warning choices are explicit. Required creator
+  callbacks execute through owner fault boundaries and abort instead of publishing a
+  partial policy set; session teardown restores identity input and the stock HUD. No
+  movement, camera/scroll, world-wrap/rebase, or flight-fatigue framework was added.
+  The strict additive ABI is frozen at 896 engine types / 17,453 canonical entries in
+  `mod-api-signatures-2.4.txt`; the 2.3 snapshot remains byte-for-byte historical.
+- **Mod API 2.3.0: host-adapted additive Sonic 3&K zones.** The mod runtime now
+  delegates complete-zone validation/loading to a typed, game-owned `ModZoneAdapter` whose
+  creator ABI contains only validation, loading, and runtime-profile selection, instead of
+  selecting behavior through game-name branches. Strict level format v2 adds typed
+  S3K object-set metadata and sparse Genesis palette claims while leaving the Sonic
+  2/standalone format-v1 contract unchanged. Custom S3K zones compose host-owned
+  character line 0 and the exact mixed-palette lives-HUD cells on lines 0 and 1
+  with creator-owned level colors. The live lives-icon override remains isolated
+  to line 0, while reserved line-1 cells use the canonical ROM-derived AIZ host
+  words instead of inheriting line-0 colors. Custom S3K zones use
+  empty flat runtime defaults (no stock events, animation, PLC, or render effects),
+  retain stock object-set identity through mutable/editor/rewind paths, and persist
+  owner/local zone keys in S3K saves with safe AIZ1 fallback when an owner is absent.
+  Neutral `ModZoneLevelData` / `ModZoneRuntimeContribution` payloads and a host
+  palette-bridge interface keep shared gameplay code independent of the private
+  mod parser and concrete S3K palette composer. The exact additive ABI is frozen
+  in `mod-api-signatures-2.3.txt`.
+- **fix: SDK sprite conversion now emits Genesis column-major multi-tile pieces.**
+  `ggfmod convert art` previously wrote each piece row-major even though native
+  mappings and `SpritePieceRenderer` consume columns first, scrambling rectangular
+  gallery art and playable sheets. A non-square marker fixture now locks the shared
+  converter contract used by both ordinary and playable art.
 - **Mod API 2.2.0: playable-subclass rewind capture hooks.** `AbstractPlayableSprite`
   now publishes an overridable `captureSubclassRewindState()` /
   `restoreSubclassRewindState(PlayableSubclassRewindExtra)` pair, carried as a new
@@ -36,13 +102,6 @@ All notable changes to the OpenGGF project are documented in this file.
   default `StockMusic(0)` placeholder — required for any TMX level feeding a
   standalone module (`ModZoneLoader#loadStandalone` requires a namespaced owned
   track). See `docs/modding/ggfmod.md`.
-- Sixth gallery sample **`sample-flappy`** plus a narrated build-along guide
-  (`docs/modding/guides/flappy-remix.md`): an additive Sonic 2 patch demonstrating
-  object-controlled minigame gameplay (full player seize/hide/release), ROM-art
-  intake of Tails' flying frames via `registerRomObjectArt`, per-frame forced camera
-  scroll, and a layout-object obstacle course. `TestSampleFlappyIntegration` adds
-  ROM-gated frame-driven coverage; `TestSampleModsPackage` now builds and validates
-  six sources as one repository. See `docs/modding/samples/index.md`.
 - Mod API 2.1.0: ROM art intake for Sonic 2 patch mods — `ModContext.registerRomObjectArt`
   materializes object art (Nemesis/Kosinski/uncompressed + S2 mappings + optional DPLC)
   from the player's ROM at launch under the mod's namespaced art key.

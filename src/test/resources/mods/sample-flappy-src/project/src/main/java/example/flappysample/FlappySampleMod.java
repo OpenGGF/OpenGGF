@@ -1,29 +1,64 @@
 package example.flappysample;
 
+import com.openggf.control.PlayerInputState;
+import com.openggf.game.CharacterKey;
+import com.openggf.game.ZoneKey;
+import com.openggf.level.objects.HudLabel;
+import com.openggf.level.objects.HudMetric;
+import com.openggf.level.objects.HudProfile;
+import com.openggf.level.objects.HudRow;
+import com.openggf.level.objects.HudWarningPolicy;
+import com.openggf.mods.code.BakedLevelRef;
+import com.openggf.mods.code.BakedSheetRef;
 import com.openggf.mods.code.GgfMod;
 import com.openggf.mods.code.ModContext;
-import com.openggf.mods.code.BakedSheetRef;
-import com.openggf.mods.code.BakedLevelRef;
+import com.openggf.mods.code.ModHudProfileContribution;
+import com.openggf.mods.code.ModInputFilterContribution;
+import com.openggf.mods.code.ModLaunchTeamContribution;
 import com.openggf.mods.code.ModZoneContribution;
-import com.openggf.mods.code.RomArtCompression;
-import com.openggf.mods.code.RomArtRequest;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+
+import java.util.List;
 
 public final class FlappySampleMod implements GgfMod {
-    @Override public void register(ModContext context) {
+    private static final int HORIZONTAL = AbstractPlayableSprite.INPUT_LEFT
+            | AbstractPlayableSprite.INPUT_RIGHT;
+
+    @Override
+    public void register(ModContext context) {
+        ZoneKey flappy = ZoneKey.mod("sample-flappy", "flappy-garden");
         context.registerObject("controller", (spawn, registry) -> new FlappyController(spawn));
         context.registerObject("pipe", (spawn, registry) -> new FlappyPipe(spawn));
         context.registerObjectArt("pipe", new BakedSheetRef("art/pipe.ggfs"));
         context.registerObjectPreview("pipe", "pipe");
-        // Tails' flying body frames, materialized from the player's ROM at launch.
-        // Literals verified against Sonic2Constants.java:112-117 and ART_TILE_TAILS
-        // (0x07A0 -> palette bits 13-14 = line 0). Re-confirm at implementation.
-        context.registerRomObjectArt("bird", new RomArtRequest(
-                0x64320 /* ART_UNC_TAILS_ADDR */, RomArtCompression.UNCOMPRESSED,
-                0xB8C0 /* ART_UNC_TAILS_SIZE */,
-                0x739E2 /* MAP_UNC_TAILS_ADDR */,
-                0x7446C /* MAP_R_UNC_TAILS_ADDR (DPLC) */,
-                0 /* palette line from ART_TILE_TAILS */, 1));
         context.registerZone(new ModZoneContribution("flappy-garden",
-                new BakedLevelRef("levels/flappy/level.json"), "ehz2", null));
+                new BakedLevelRef("levels/flappy/level.json"), null, null, true));
+        context.registerLaunchTeam(new ModLaunchTeamContribution(
+                flappy, CharacterKey.TAILS, List.of()));
+        context.registerInputFilter(new ModInputFilterContribution(
+                flappy, FlappySampleMod::suppressHorizontal));
+        context.registerHudProfile(new ModHudProfileContribution(flappy, flappyHud()));
+    }
+
+    static PlayerInputState suppressHorizontal(PlayerInputState input) {
+        return PlayerInputState.of(
+                input.heldMask() & ~HORIZONTAL,
+                input.pressedMask() & ~HORIZONTAL,
+                input.actionHeldMask(),
+                input.actionPressedMask(),
+                input.startHeld(),
+                input.startPressed());
+    }
+
+    private static HudProfile flappyHud() {
+        return new HudProfile(List.of(
+                new HudRow(false, HudLabel.SCORE, HudMetric.SCORE,
+                        16, 8, 64, 8, 6, HudWarningPolicy.NONE),
+                new HudRow(true, HudLabel.TIME, HudMetric.TIME,
+                        16, 24, 56, 24, 4, HudWarningPolicy.TIMER_FLASH),
+                new HudRow(true, HudLabel.SCORE, HudMetric.RINGS,
+                        16, 40, 64, 40, 3, HudWarningPolicy.NONE),
+                new HudRow(true, HudLabel.LIVES, HudMetric.LIVES,
+                        16, 200, 56, 208, 2, HudWarningPolicy.NONE)));
     }
 }

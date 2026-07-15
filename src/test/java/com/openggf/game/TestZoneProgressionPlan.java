@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestZoneProgressionPlan {
@@ -13,6 +14,15 @@ class TestZoneProgressionPlan {
     private static final int SCZ = 8;
     private static final int MOD_11 = 11;
     private static final int MOD_12 = 12;
+
+    @Test
+    void stockProgressionDefaultsRemainHostOwnedAndS3kHasNoInventedAnchor() {
+        assertEquals(java.util.Optional.of("mtz3"),
+                com.openggf.mods.StockProgressionAnchors.defaultAnchorFor("s2"));
+        assertTrue(com.openggf.mods.StockProgressionAnchors.defaultAnchorFor("s1").isEmpty());
+        assertTrue(com.openggf.mods.StockProgressionAnchors.defaultAnchorFor("s3k").isEmpty());
+        assertTrue(com.openggf.mods.StockProgressionAnchors.anchorsFor("s3k").isEmpty());
+    }
 
     @Test
     void linearPlanAdvancesAcrossVariableActCountsAndThenCredits() {

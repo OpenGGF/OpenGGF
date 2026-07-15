@@ -4,6 +4,7 @@ import com.openggf.game.MusicReference;
 import com.openggf.game.ZoneKey;
 import com.openggf.game.ZoneProgressionPlan;
 import com.openggf.game.ZoneRegistry;
+import com.openggf.game.modzone.ModZoneRuntimeContribution;
 import com.openggf.level.LevelDescriptor;
 
 import java.util.ArrayList;
@@ -54,7 +55,9 @@ public final class ModZoneRegistry implements ZoneRegistry {
         this.topology = ZoneProgressionPlan.ZoneTopology.of(metadata);
         ZoneProgressionPlan.Builder builder = ZoneProgressionPlan.builder(topology);
         for (int i = 0; i < contributions.size(); i++) {
-            int anchor = stock.resolveStockZoneAnchor(contributions.get(i).insertAfter());
+            PreparedModZone contribution = contributions.get(i);
+            if (contribution.insertAfter() == null) continue;
+            int anchor = stock.resolveStockZoneAnchor(contribution.insertAfter());
             if (anchor < 0 || anchor >= stock.getZoneCount()) {
                 throw new IllegalArgumentException("Stock progression anchor is outside stock registry");
             }
@@ -74,7 +77,16 @@ public final class ModZoneRegistry implements ZoneRegistry {
     }
 
     public List<PreparedModZone> contributions() { return contributions; }
+    List<PreparedModZone> gameStartContributions() {
+        return contributions.stream().filter(PreparedModZone::gameStart).toList();
+    }
     public PreparedModZone levelContribution(int levelIndex) { return byLevelIndex.get(levelIndex); }
+
+    @Override
+    public ModZoneRuntimeContribution modZoneRuntimeContribution(int levelIndex) {
+        PreparedModZone zone = byLevelIndex.get(levelIndex);
+        return zone == null ? null : zone.runtimeContribution();
+    }
     public int getZoneCount() { return zones.size(); }
     public int getActCount(int zoneIndex) { return getLevelDataForZone(zoneIndex).size(); }
     public String getZoneName(int zoneIndex) {

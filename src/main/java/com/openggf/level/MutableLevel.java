@@ -188,6 +188,10 @@ public class MutableLevel extends AbstractLevel implements com.openggf.level.obj
                 chunkToBlocks, blockToMapCells);
     }
 
+    Level sourceLevelForEngine() {
+        return sourceLevel;
+    }
+
     // ===== Game-specific overrides =====
 
     @Override

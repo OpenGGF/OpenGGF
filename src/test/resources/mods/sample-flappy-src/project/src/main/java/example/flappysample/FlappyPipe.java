@@ -1,7 +1,6 @@
 package example.flappysample;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -12,43 +11,90 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * Static pipe-pair obstacle. Contact/scoring is owned by {@link FlappyController}, which
+ * Recycling pipe-pair obstacle. Contact/scoring is owned by {@link FlappyController}, which
  * scans the object manager for live {@code FlappyPipe} instances and reads their plain
  * contact-geometry accessors -- this object never touches the player itself and implements
  * no touch/solid marker interface.
  *
- * <p>Gap geometry is derived entirely from the immutable spawn ({@code spawn.x()} and
- * {@code spawn.subtype()} cycling 0-4), so {@code gapCenter} is safe to keep {@code final}:
- * {@link #recreateForRewind} re-derives it from the (unchanged) spawn rather than needing to
- * capture/restore it across a rewind. {@code @RewindTransient} tells the generic capturer (and
- * {@code ModValidator}'s FINAL_SCALAR_REWIND_GAP check) that this final scalar needs no explicit
- * capture/restore -- recreation always reproduces it deterministically from the spawn.
+ * <p>Centre X, subpixel remainder, gap variant, and gate state are deliberately non-final
+ * scalars so the compact rewind schema restores a recycled entry exactly.
  */
 public final class FlappyPipe extends AbstractObjectInstance implements RewindRecreatable {
-    @RewindTransient(reason = "derived deterministically from spawn.subtype(); recreateForRewind "
-            + "re-derives it from the unchanged spawn, so no capture/restore is needed")
-    private final int gapCenter;
+    private int centreX;
+    private int xSubpixelRemainder;
+    private int gapVariant;
+    private boolean gateConsumed;
 
     public FlappyPipe(ObjectSpawn spawn) {
-        super(spawn, "sample-flappy:pipe");
-        this.gapCenter = 64 + (spawn.subtype() % 5) * 24;
+        this(spawn, Math.floorMod(spawn.subtype(), 5));
     }
 
-    public int leftEdge()  { return spawn.x() - 16; }
-    public int rightEdge() { return spawn.x() + 16; }
-    public int gapTop()    { return gapCenter - 48; }
-    public int gapBottom() { return gapCenter + 48; }
+    public FlappyPipe(ObjectSpawn spawn, int gapVariant) {
+        super(spawn, "sample-flappy:pipe");
+        this.centreX = spawn.x();
+        this.gapVariant = Math.floorMod(gapVariant, 5);
+    }
+
+    public int centreX() { return centreX; }
+    public int gapVariant() { return gapVariant; }
+    public boolean gateConsumed() { return gateConsumed; }
+    public int leftEdge()  { return centreX - 16; }
+    public int rightEdge() { return centreX + 16; }
+    public int gapTop()    { return gapCenter() - 48; }
+    public int gapBottom() { return gapCenter() + 48; }
+
+    public void advance(int speed) {
+        int accumulated = xSubpixelRemainder - speed;
+        centreX += Math.floorDiv(accumulated, 0x100);
+        xSubpixelRemainder = Math.floorMod(accumulated, 0x100);
+        updateDynamicSpawn(centreX, getSpawn().y());
+    }
+
+    public void recycleAfter(int x, int nextVariant) {
+        centreX = x;
+        xSubpixelRemainder = 0;
+        gapVariant = Math.floorMod(nextVariant, 5);
+        gateConsumed = false;
+        updateDynamicSpawn(centreX, getSpawn().y());
+    }
+
+    public void consumeGate() {
+        gateConsumed = true;
+    }
+
+    public boolean overlapsPlayableBounds(PlayableEntity player) {
+        int playerLeft = player.getCentreX() - player.getXRadius();
+        int playerRight = player.getCentreX() + player.getXRadius();
+        if (playerRight < leftEdge() || playerLeft > rightEdge()) {
+            return false;
+        }
+        int playerTop = player.getCentreY() - player.getYRadius();
+        int playerBottom = player.getCentreY() + player.getYRadius();
+        return playerTop <= gapTop() || playerBottom >= gapBottom();
+    }
+
+    @Override
+    public boolean isPersistent() {
+        // The controller owns the complete lifecycle of this fixed pool. Several entries
+        // deliberately wait beyond the stock ROM unload window until recycling brings them
+        // on-screen, so ObjectManager must not despawn them first.
+        return true;
+    }
+
+    private int gapCenter() {
+        return 64 + gapVariant * 24;
+    }
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
-        // Static obstacle; contact and scoring are owned by FlappyController.
+        // Controller-owned movement avoids double-stepping dynamic entries.
     }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer("sample-flappy:pipe");
         if (renderer == null) return;
-        int x = spawn.x();
+        int x = centreX;
         // Both piece definitions in pipe-sheet.yaml center-anchor on the (x, y) passed to
         // drawFrameIndex (xOffset/yOffset == -halfWidth/-halfHeight, the same convention
         // sample-sheet.yaml uses), so a tile drawn at y covers [y-halfHeight, y+halfHeight).
@@ -74,7 +120,7 @@ public final class FlappyPipe extends AbstractObjectInstance implements RewindRe
     }
 
     @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new FlappyPipe(ctx.spawn());
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+        return new FlappyPipe(context.dynamicEntry().spawn());
     }
 }

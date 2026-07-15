@@ -108,11 +108,13 @@ public class Sonic3kGameModule implements GameModule {
     private final LevelInitProfile levelInitProfile = new Sonic3kLevelInitProfile(levelEventManager);
     private final SidekickCarryTrigger sidekickCarryTrigger = new Sonic3kCnzCarryTrigger();
     private final CrossGameDonorProvider donorProvider = new Sonic3kCrossGameDonorProvider();
+    private final Sonic3kModZoneAdapter modZoneAdapter = new Sonic3kModZoneAdapter(this);
     private Sonic3kScrollHandlerProvider scrollHandlerProvider;
     private PhysicsProvider physicsProvider;
     private Sonic3kObjectArtProvider objectArtProvider;
     private ObjectRegistry objectRegistry;
     private final Sonic3kBonusStageCoordinator bonusStageCoordinator = new Sonic3kBonusStageCoordinator();
+    private Sonic3k activeGame;
 
     @Override
     public String getIdentifier() {
@@ -127,11 +129,46 @@ public class Sonic3kGameModule implements GameModule {
     @Override
     public Game createGame(Rom rom) {
         try {
-            return new Sonic3k(rom);
+            activeGame = new Sonic3k(rom);
+            return activeGame;
         } catch (java.io.IOException e) {
+            activeGame = null;
             LOGGER.severe("Failed to create S3K game: " + e.getMessage());
             return null;
         }
+    }
+
+    @Override
+    public com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter() {
+        return modZoneAdapter;
+    }
+
+    @Override
+    public com.openggf.game.palette.CustomZonePaletteBridge createCustomZonePaletteBridge(
+            com.openggf.game.modzone.ModZoneRuntimeContribution contribution,
+            com.openggf.level.Level level,
+            ObjectArtProvider objectArtProvider) {
+        if (!S3kCustomZonePaletteBridge.supports(level)) {
+            return null;
+        }
+        return new S3kCustomZonePaletteBridge(
+                contribution.ownerModId(), contribution.ownerModId() + ":" + contribution.localKey(),
+                level.getPalette(0), contribution.levelData().paletteClaims(),
+                objectArtProvider.getHudFlashPaletteLine(), objectArtProvider.getHudStaticArt(),
+                objectArtProvider.getHudLivesNumbers(), objectArtProvider::getHudLivesPaletteOverride);
+    }
+
+    Palette getAdditiveLevelCharacterPalette() {
+        if (activeGame == null) throw new IllegalStateException("S3K game has not been created");
+        return java.util.Objects.requireNonNull(activeGame.loadActiveMainCharacterPalette(),
+                "active character palette");
+    }
+
+    @Override
+    public synchronized com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet()
+            throws java.io.IOException {
+        if (activeGame == null) throw new IllegalStateException("S3K game has not been created");
+        return activeGame.loadRingSpriteSheet();
     }
 
     @Override

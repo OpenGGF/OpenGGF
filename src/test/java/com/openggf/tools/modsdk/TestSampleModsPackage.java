@@ -34,25 +34,46 @@ class TestSampleModsPackage {
     private static final Path STANDALONE = Path.of("src/test/resources/mods/sample-standalone-src/project");
     private static final Path FLAPPY = Path.of("src/test/resources/mods/sample-flappy-src/project");
     private static final Path PLATFORMER = Path.of("src/test/resources/mods/sample-platformer-src/project");
+    private static final Path ROM_ART_REMIX = Path.of(
+            "src/test/resources/mods/sample-rom-art-remix-src/project");
+    private static final Path ROM_ART_GUIDE = Path.of(
+            "docs/modding/guides/rom-art-remix.md");
+    private static final Path FLAPPY_GUIDE = Path.of(
+            "docs/modding/guides/native-tails-flappy.md");
+    private static final Path STANDALONE_GUIDE = Path.of(
+            "docs/modding/guides/standalone-platformer.md");
+    private static final Path AI_ART_GUIDE = Path.of(
+            "docs/modding/guides/ai-art.md");
+    private static final String RETIRED_FLAPPY_GUIDE_STEM = "flappy" + "-remix";
     private static final Set<String> EXPECTED_IDS = Set.of(
             "openggf-gallery-music-sample", "phase2-reskin", "phase2-sample",
-            "phase3-character", "phase3-standalone", "sample-flappy", "sample-platformer");
+            "phase3-character", "phase3-standalone", "sample-flappy", "sample-platformer",
+            "sample-rom-art-remix");
     private static final Map<String, String> EXPECTED_API_RANGES = Map.of(
             "openggf-gallery-music-sample", ">=2.0.0 <3.0.0",
             "phase2-reskin", ">=2.0.0 <3.0.0",
             "phase2-sample", ">=2.0.0 <3.0.0",
             "phase3-character", ">=2.0.0 <3.0.0",
             "phase3-standalone", ">=2.0.0 <3.0.0",
-            "sample-flappy", ">=2.1.0 <3.0.0",
-            "sample-platformer", ">=2.2.0 <3.0.0");
+            "sample-flappy", ">=2.4.0 <3.0.0",
+            "sample-platformer", ">=2.2.0 <3.0.0",
+            "sample-rom-art-remix", ">=2.1.0 <3.0.0");
+    private static final Map<String, String> EXPECTED_PATCH_BASE_GAMES = Map.of(
+            "openggf-gallery-music-sample", "s2",
+            "phase2-reskin", "s2",
+            "phase2-sample", "s2",
+            "phase3-character", "s2",
+            "sample-flappy", "s3k",
+            "sample-rom-art-remix", "s2");
     private static final Set<String> TRUSTED_CODE_SAMPLES = Set.of(
-            "phase2-sample", "phase3-character", "phase3-standalone", "sample-flappy", "sample-platformer");
+            "phase2-sample", "phase3-character", "phase3-standalone", "sample-flappy",
+            "sample-platformer", "sample-rom-art-remix");
     private static final Set<String> STANDALONE_IDS = Set.of("phase3-standalone", "sample-platformer");
 
     @TempDir Path temp;
 
     @Test
-    void exactlySevenMaintainedSourcesBuildThroughRealPackageAndValidateAsOneRepository() throws Exception {
+    void exactlyEightMaintainedSourcesBuildThroughRealPackageAndValidateAsOneRepository() throws Exception {
         List<Sample> samples = List.of(
                 new Sample("music", this::materializeMusic),
                 new Sample("reskin", this::materializeReskin),
@@ -60,8 +81,9 @@ class TestSampleModsPackage {
                 new Sample("character", this::materializeCharacter),
                 new Sample("standalone", this::materializeStandalone),
                 new Sample("flappy", this::materializeFlappy),
-                new Sample("platformer", this::materializePlatformer));
-        assertEquals(7, samples.size(), "The Phase 4 gallery contract is exactly seven source mods");
+                new Sample("platformer", this::materializePlatformer),
+                new Sample("rom-art-remix", this::materializeRomArtRemix));
+        assertEquals(8, samples.size(), "The maintained gallery contract is exactly eight source mods");
 
         Path repository = temp.resolve("repository");
         Files.createDirectory(repository);
@@ -76,10 +98,10 @@ class TestSampleModsPackage {
         }
 
         var scanned = new DefaultModRepositoryScanner().scan(repository.toAbsolutePath().normalize());
-        assertEquals(7, scanned.size());
+        assertEquals(8, scanned.size());
         var validated = new ModCatalogValidator(repository.toAbsolutePath().normalize(),
                 ModInputLimits.production(), (game, stockId) -> true).validate(scanned);
-        assertEquals(7, validated.entries().size());
+        assertEquals(8, validated.entries().size());
         Set<String> ids = new java.util.LinkedHashSet<>();
         for (var entry : validated.entries()) {
             ModDescriptor descriptor = assertInstanceOf(ModDescriptor.class, entry);
@@ -93,10 +115,66 @@ class TestSampleModsPackage {
             boolean standalone = STANDALONE_IDS.contains(id);
             assertEquals(standalone ? ModType.STANDALONE : ModType.PATCH,
                     descriptor.manifest().type(), id + " type");
-            assertEquals(standalone ? null : "s2", descriptor.manifest().baseGame(), id + " base game");
+            assertEquals(standalone ? null : EXPECTED_PATCH_BASE_GAMES.get(id),
+                    descriptor.manifest().baseGame(), id + " base game");
             assertTrue(descriptor.findings().isEmpty(), id + " catalog findings: " + descriptor.findings());
         }
         assertEquals(EXPECTED_IDS, ids);
+    }
+
+    @Test
+    void romArtAndNativeTailsGuidesAreLinkedWithoutStaleFlappyRemixReferences() throws Exception {
+        assertTrue(Files.isRegularFile(ROM_ART_GUIDE));
+        String romArt = Files.readString(ROM_ART_GUIDE);
+        assertTrue(romArt.contains("## 3. Request the bounded ROM window"));
+        assertTrue(romArt.contains("Sonic 2 palette line 0 is Pal_SonicTails"));
+        assertTrue(romArt.contains("target/OpenGGF-0.6.prerelease.jar"));
+        assertTrue(romArt.contains(
+                "target/OpenGGF-0.6.prerelease-openggf-mod-sdk.jar"));
+        assertTrue(romArt.contains("inserted after EHZ2"));
+        assertFalse(romArt.contains("EHZ2 replacement zone"));
+        String standalone = Files.readString(STANDALONE_GUIDE);
+        assertTrue(standalone.contains(
+                "rom-art-remix.md#3-request-the-bounded-rom-window"));
+
+        assertTrue(Files.isRegularFile(FLAPPY_GUIDE));
+        String nativeTails = Files.readString(FLAPPY_GUIDE);
+        assertTrue(nativeTails.contains("## 4. Level and camera"));
+        assertTrue(nativeTails.contains("## 6. Pipes, score, death, and rewind"));
+        String flappyReadme = Files.readString(FLAPPY.getParent().resolve("README.md"));
+        assertTrue(flappyReadme.contains("docs/modding/guides/native-tails-flappy.md"));
+        String flappyProjectReadme = Files.readString(FLAPPY.resolve("README.md"));
+        assertTrue(flappyProjectReadme.contains("docs/modding/guides/native-tails-flappy.md"));
+        assertTrue(standalone.contains("native-tails-flappy.md#4-level-and-camera"));
+        String aiArt = Files.readString(AI_ART_GUIDE);
+        assertTrue(aiArt.contains("native-tails-flappy.md#6-pipes-score-death-and-rewind"));
+
+        String outerReadme = Files.readString(ROM_ART_REMIX.getParent().resolve("README.md"));
+        String projectReadme = Files.readString(ROM_ART_REMIX.resolve("README.md"));
+        assertTrue(outerReadme.contains("docs/modding/guides/rom-art-remix.md"));
+        assertTrue(projectReadme.contains("docs/modding/guides/rom-art-remix.md"));
+
+        assertNoStaleFlappyRemixReferences(Path.of("docs/modding"));
+        assertNoStaleFlappyRemixReferences(Path.of(
+                "src/test/resources/mods/sample-flappy-src"));
+    }
+
+    private static void assertNoStaleFlappyRemixReferences(Path root) throws Exception {
+        try (var paths = Files.walk(root)) {
+            for (Path path : paths.filter(Files::isRegularFile).toList()) {
+                String name = path.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
+                if (!name.endsWith(".md") && !name.endsWith(".java")
+                        && !name.endsWith(".yaml") && !name.endsWith(".json")
+                        && !name.endsWith(".properties") && !name.endsWith(".ps1")
+                        && !name.endsWith(".sh") && !name.endsWith(".xml")
+                        && !name.endsWith(".tmx")) {
+                    continue;
+                }
+                String text = Files.readString(path).toLowerCase(java.util.Locale.ROOT);
+                assertFalse(text.contains(RETIRED_FLAPPY_GUIDE_STEM),
+                        () -> "stale retired Flappy guide reference in " + path);
+            }
+        }
     }
 
     private void materializeMusic(Path output) throws Exception {
@@ -189,6 +267,15 @@ class TestSampleModsPackage {
                 "--palette", PLATFORMER.resolve("src/main/mod/palette.gpal").toString(),
                 "--music", "sample-platformer:zone-theme",
                 "--out", output.resolve("levels/act1").toString());
+    }
+
+    private void materializeRomArtRemix(Path output) throws Exception {
+        copyTree(ROM_ART_REMIX.resolve("src/main/resources"), output);
+        compileJava(ROM_ART_REMIX.resolve("src/main/java"), output);
+        Path level = materializeLevel(
+                ROM_ART_REMIX.resolve("src/main/mod/level-source"), "rom-art-remix-level");
+        assertCli("convert", "level", "--from-export", level.toString(),
+                "--out", output.resolve("levels/rom-art-gallery").toString());
     }
 
     private Path materializeLevel(Path source, String name) throws Exception {

@@ -1599,15 +1599,35 @@ public class Engine {
 				GameplayTeamAvailability.sanitizeForLaunch(
 						saveContext, gameId, availableCharacters);
 		SelectedTeam selectedTeam = sanitized.selectedTeam();
+		GameplayLaunchRequest launchRequest =
+				new GameplayLaunchRequest(
+						gameId, selectedTeam.mainCharacter(), selectedTeam.sidekicks());
 		GameModule resolvedModule = consumePatchResolution(
 				moduleResolutionService.resolveForLaunchResult(preparedLaunch, rootModule,
-						new GameplayLaunchRequest(gameId, selectedTeam.mainCharacter(), selectedTeam.sidekicks())),
+						launchRequest),
 				true);
 		if (resolvedModule == null) {
 			return null;
 		}
+		com.openggf.game.ZoneKey destination = resolvedModule.getZoneRegistry()
+				.zoneKey(sanitized.startZone());
+		java.util.Optional<com.openggf.game.GameplayLaunchTeam> contributed =
+				resolvedModule.getGameplayPolicyProvider().launchTeam(destination);
+		com.openggf.game.GameplayLaunchTeam launchTeam = contributed.orElseGet(
+				() -> toGameplayLaunchTeam(selectedTeam));
+		com.openggf.game.save.SaveSessionContext launchContext;
+		try {
+			launchContext = GameplayTeamAvailability.requireForLaunch(sanitized, launchTeam,
+					resolvedModule.getPlayableCharacterRegistry());
+		} catch (GameplayTeamBootstrap.UnavailableRequiredCharacter unavailable) {
+			String owner = destination instanceof com.openggf.game.ZoneKey.Mod mod
+					? mod.ownerModId()
+					: unavailable.key().ownerModId().orElse("engine");
+			throw new com.openggf.mods.code.ModRegistrationException(owner,
+					"MOD_LAUNCH_CHARACTER_UNAVAILABLE", unavailable.getMessage(), null, unavailable);
+		}
 		return SessionManager.openGameplaySession(
-				rootModule, resolvedModule, dataSource, sanitized);
+				rootModule, resolvedModule, dataSource, launchContext);
 	}
 
 	/**
@@ -1690,6 +1710,19 @@ public class Engine {
 			case "s3k" -> List.of("sonic", "tails", "knuckles");
 			default -> List.of("sonic");
 		};
+	}
+
+	private static GameplayLaunchTeam toGameplayLaunchTeam(SelectedTeam team) {
+		return new GameplayLaunchTeam(parseLaunchCharacterKey(team.mainCharacter()),
+				team.sidekicks().stream().map(Engine::parseLaunchCharacterKey).toList());
+	}
+
+	private static CharacterKey parseLaunchCharacterKey(String persisted) {
+		String canonical = persisted.equalsIgnoreCase("sonic")
+				|| persisted.equalsIgnoreCase("tails")
+				|| persisted.equalsIgnoreCase("knuckles")
+				? persisted.toLowerCase(java.util.Locale.ROOT) : persisted;
+		return CharacterKey.parsePersisted(canonical);
 	}
 
 	private void hostTimeAttackRoom(TimeAttackLaunchRequest request, String policy,

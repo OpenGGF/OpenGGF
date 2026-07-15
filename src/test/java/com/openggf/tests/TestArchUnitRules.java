@@ -191,6 +191,11 @@ class TestArchUnitRules {
             // prepared one-shot SFX cursor implements the same audio-owned boundary used
             // by standalone and patched games.
             "mods -> audio",
+            // Mod API 2.4's GameplayInputFilter intentionally consumes the canonical
+            // control-owned PlayerInputState value. Reusing the immutable engine input
+            // vocabulary avoids a second mod-only input model; control does not depend
+            // back on mods.
+            "mods -> control",
             // OwnerAwareStandaloneModule reads engine ROM/data (com.openggf.data) to
             // build bounded creator asset roots; data never depends back on mods. Phase 3's
             // standalone fault boundary wraps the legacy Game/Rom return surface so creator

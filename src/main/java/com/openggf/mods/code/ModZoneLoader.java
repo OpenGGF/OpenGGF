@@ -1,6 +1,7 @@
 package com.openggf.mods.code;
 
 import com.openggf.game.sonic2.Sonic2Level;
+import com.openggf.game.modzone.ModZoneLevelData;
 import com.openggf.level.Level;
 import com.openggf.level.ModLevel;
 import com.openggf.level.objects.ObjectSpawn;
@@ -19,6 +20,12 @@ public final class ModZoneLoader {
     public static Level load(PreparedModZone contribution, RingSpriteSheet ringSheet) throws IOException {
         Objects.requireNonNull(contribution, "contribution");
         ModLevelDefinition definition = Objects.requireNonNull(contribution.definition(), "prepared definition");
+        return load(definition, ringSheet);
+    }
+
+    /** Builds a playable Sonic 2 level from one published immutable definition. */
+    public static Level load(ModLevelDefinition definition, RingSpriteSheet ringSheet) throws IOException {
+        Objects.requireNonNull(definition, "definition");
         if (definition.blockGridSide() != 8) {
             throw new IOException("Sonic 2 runtime requires blockGridSide 8");
         }
@@ -35,6 +42,22 @@ public final class ModZoneLoader {
                         definition.bounds().minY(), definition.bounds().maxY())
                 .spawns(objects, rings, Objects.requireNonNull(ringSheet, "ringSheet"))
                 .build();
+    }
+
+    /** Converts a private parsed definition into the neutral game-owned host seam. */
+    public static ModZoneLevelData prepareHostData(ModLevelDefinition definition) throws IOException {
+        Objects.requireNonNull(definition, "definition");
+        return new ModZoneLevelData(
+                definition.formatVersion(), definition.zoneIndex(), definition.blockGridSide(),
+                definition.width(), definition.height(), definition.bounds().minX(),
+                definition.bounds().maxX(), definition.bounds().minY(), definition.bounds().maxY(),
+                definition.patternBytes(), definition.chunkBytes(), definition.blockBytes(),
+                definition.foregroundMap(), definition.backgroundMap().orElse(null),
+                definition.solidHeights(), definition.solidWidths(), definition.solidAngles(),
+                definition.primaryCollisionIndices(), definition.secondaryCollisionIndices(),
+                definition.paletteLines(), definition.hostMetadata(), definition.paletteClaims(),
+                decodeObjects(definition, true), decodeRings(definition), definition.patternCount(),
+                definition.chunkCount(), definition.blockCount());
     }
 
     /** Builds a standalone level without consulting a ROM or host game module. */
@@ -91,8 +114,9 @@ public final class ModZoneLoader {
                 .build();
     }
 
-    private static List<ObjectSpawn> decodeObjects(ModLevelDefinition definition,
-                                                   boolean allowStockObjects) throws IOException {
+    /** Converts immutable creator entries into engine-owned runtime spawns. */
+    public static List<ObjectSpawn> decodeObjects(ModLevelDefinition definition,
+                                                  boolean allowStockObjects) throws IOException {
         List<ObjectSpawn> objects = new ArrayList<>(definition.objects().size());
         for (ModLevelDefinition.ObjectEntry entry : definition.objects()) {
             if (entry instanceof ModLevelDefinition.StockObjectSpawn stock) {
@@ -112,7 +136,8 @@ public final class ModZoneLoader {
         return List.copyOf(objects);
     }
 
-    private static List<RingSpawn> decodeRings(ModLevelDefinition definition) {
+    /** Converts immutable creator ring entries into engine-owned runtime spawns. */
+    public static List<RingSpawn> decodeRings(ModLevelDefinition definition) {
         return definition.rings().stream()
                 .map(ring -> new RingSpawn(ring.x(), ring.y(), ring.placementId())).toList();
     }

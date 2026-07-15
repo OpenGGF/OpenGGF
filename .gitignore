@@ -150,3 +150,5 @@ tools/bizhawk/trace_output/
 # Brainstorming visual-companion sessions
 .superpowers/
 /sdd/
+/.worktrees/
+/mods/

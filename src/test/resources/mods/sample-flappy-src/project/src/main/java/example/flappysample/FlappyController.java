@@ -1,157 +1,175 @@
 package example.flappysample;
 
 import com.openggf.audio.GameSound;
-import com.openggf.game.DamageCause;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.SubpixelMotion;
-import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
-/**
- * Seizes the main player, drives flappy-bird-style gravity/flap physics via direct
- * position writes, force-scrolls the camera every frame, renders the Tails "bird" in
- * place of the (hidden) player, scores pipe passes as rings, and hands the player back
- * to engine-owned hurt/death/respawn on contact -- re-seizing once respawn settles.
- *
- * <p>All session state lives in non-final scalar fields so the default compact rewind
- * schema can capture/restore it (final scalar fields trip the FINAL_SCALAR_REWIND_GAP
- * validation); {@link #recreateForRewind} only needs to rebuild the object itself from
- * the (unchanged) spawn, matching {@link FlappyPipe}'s precedent.
- */
+/** Holds visible native Tails at a fixed X while preserving the engine's flight mechanics. */
 public final class FlappyController extends AbstractObjectInstance implements RewindRecreatable {
-    /** ROM Tails mapping-frame indices for the flying pose (TailsAni_Fly: dc.b 1,$5E,$5F,$FF
-     *  -- verified against docs/s2disasm/s2.asm:41625 and the two-piece spinning-tails
-     *  mapping frames Map_Tails_0810/Map_Tails_0822, entries 94/95 of Map_unc_Tails). The
-     *  ROM-baked "sample-flappy:bird" sheet preserves raw mapping-table order 1:1
-     *  (RomArtMaterializer -> S2SpriteDataLoader.loadMappingFrames, DPLC remap keeps frame
-     *  order), so these are also the sheet's own frame indices. */
-    private static final int FLY_FRAME_A = 94;
-    private static final int FLY_FRAME_B = 95;
+    private static final int WAITING = 0;
+    private static final int RUNNING = 1;
+    private static final int PLAYER_SCREEN_X = 96;
+    private static final int PLAYER_SCREEN_Y = 112;
+    private static final int FLIGHT_REFILL = 0xF0;
+    private static final int PIPE_POOL_SIZE = 6;
+    private static final int PIPE_SPACING = 224;
+    private static final int PIPE_SPEED = 0x200;
+    private static final int FIRST_PIPE_LEAD = 64;
 
-    /** Forward speed: 0x200 subpixels/frame = exactly 2px/frame (no fractional carry). */
-    private static final int FORWARD_SPEED = 0x200;
-    /** Flap impulse: matches a snappy upward flick without a hard instant stop. */
-    private static final int FLAP_VELOCITY = -0x400;
-    /** Per-frame gravity accumulation, matching the shared S3K gravity constant used
-     *  elsewhere in the engine for lightweight sprite-style falls. */
-    private static final int GRAVITY = SubpixelMotion.S3K_GRAVITY;
-    /** Terminal fall speed cap. */
-    private static final int MAX_FALL_VELOCITY = 0x800;
-    /** Half-width/half-height of the bird's contact box against a pipe body. */
-    private static final int BIRD_HALF_SIZE = 8;
-    /** Off-level kill bounds (world Y); the level itself is only 256px tall. */
-    private static final int KILL_TOP_Y = 16;
-    private static final int KILL_BOTTOM_Y = 240;
-
-    // routine: 0 = waiting to seize, 1 = flying, 2 = released for hurt/death (waiting to
-    // re-seize once the player is back to a normal, unowned state after respawn).
+    // Non-final gameplay scalars are captured by the generic compact rewind schema.
     private int routine;
-    private int velY;          // subpixels/frame, 0x100 = 1px
-    private int ySub;          // fractional y accumulator
-    private int lastScoredX;   // rightmost pipe left-edge already scored
-    private int bestScore;     // session best, rewind-captured
-    private int animTick;      // bird flying-frame cycle
+    private int anchorX;
+    private boolean poolInitialized;
+    private int generationCounter;
 
-    public FlappyController(ObjectSpawn spawn) { super(spawn, "sample-flappy:controller"); }
+    public FlappyController(ObjectSpawn spawn) {
+        super(spawn, "sample-flappy:controller");
+    }
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        var player = (AbstractPlayableSprite) services().playerQuery().mainPlayerOrNull();
-        if (player == null) return;
-        // Layout objects despawn once they fall out of the camera's tracked range; track
-        // the player's own position every frame so this controller never gets collected
-        // while the level keeps scrolling out from under its original spawn point.
-        updateDynamicSpawn(player.getCentreX(), player.getCentreY());
-
-        switch (routine) {
-            case 0 -> {
-                player.applyObjectControlState(ObjectControlState.NATIVE_BIT_7_FULL_CONTROL);
-                player.setHidden(true);
-                velY = 0;
-                ySub = 0;
-                routine = 1;
-            }
-            case 1 -> {
-                if (player.isJumpJustPressed()) {
-                    velY = FLAP_VELOCITY;
-                }
-                velY = Math.min(velY + GRAVITY, MAX_FALL_VELOCITY);
-
-                SubpixelMotion.State motion =
-                        new SubpixelMotion.State(0, 0, 0, ySub, FORWARD_SPEED, velY);
-                SubpixelMotion.moveSprite2(motion);
-                ySub = motion.ySub;
-                player.shiftX(motion.x);
-                player.shiftY(motion.y);
-
-                int px = player.getCentreX();
-                int py = player.getCentreY();
-                // requestForcedScroll takes the world FOCUS point the camera tracks (same
-                // semantics as a focused sprite's centre -- Camera.java:1302-1319, MHZ
-                // swing-vine precedent). Leading the focus 64px ahead of the bird keeps it
-                // at screen x~=96 instead of dead-center, so oncoming pipes stay visible.
-                services().camera().requestForcedScroll(px + 64, 112);
-
-                scoreAndCollide(player, px, py, frameCounter);
-                animTick++;
-            }
-            case 2 -> {
-                // Engine-owned hurt/death/respawn is in flight. Re-seize once the player is
-                // back to a normal, unowned state (checkpoint respawn resets hurt/dead via
-                // LevelManager, matching neither flag being latched anymore).
-                if (!player.isObjectControlled() && !player.isHurt() && !player.getDead()) {
-                    routine = 0;
-                }
-            }
-        }
-    }
-
-    private void scoreAndCollide(AbstractPlayableSprite player, int px, int py, int frame) {
-        if (py < KILL_TOP_Y || py > KILL_BOTTOM_Y) {
-            release(player, frame);
-            player.applyHurtOrDeath(px, DamageCause.NORMAL, true);
+        AbstractPlayableSprite tails = (AbstractPlayableSprite)
+                services().playerQuery().mainPlayerOrNull();
+        if (tails == null) {
             return;
         }
-        for (FlappyPipe pipe : services().objectManager().activeObjectsOfType(FlappyPipe.class)) {
-            if (px > pipe.rightEdge() && pipe.leftEdge() > lastScoredX) {
-                lastScoredX = pipe.leftEdge();
-                services().levelGamestate().addRings(1);
+
+        ensurePipePool();
+        if (routine == WAITING) {
+            activateNativeRun(tails);
+            return;
+        }
+        if (tails.getDead()) {
+            return;
+        }
+
+        tails.setCentreX((short) anchorX);
+        tails.setXSpeed((short) 0);
+        tails.setGSpeed((short) 0);
+        tails.setDoubleJumpProperty((byte) FLIGHT_REFILL);
+        advanceScoreAndRecyclePipes(tails);
+    }
+
+    private void ensurePipePool() {
+        if (poolInitialized) {
+            return;
+        }
+        int firstLeadX = services().camera().getX()
+                + services().camera().getWidth() + FIRST_PIPE_LEAD;
+        int cameraMidY = services().camera().getY() + PLAYER_SCREEN_Y;
+        for (int slot = 0; slot < PIPE_POOL_SIZE; slot++) {
+            int variant = nextGapVariant();
+            int x = firstLeadX + slot * PIPE_SPACING;
+            ObjectSpawn pipeSpawn = buildSpawnAt(x, cameraMidY);
+            spawnFreeChild(() -> new FlappyPipe(pipeSpawn, variant));
+        }
+        poolInitialized = true;
+    }
+
+    private void advanceScoreAndRecyclePipes(AbstractPlayableSprite tails) {
+        List<FlappyPipe> pipes = services().objectManager()
+                .activeObjectsOfType(FlappyPipe.class);
+        if (pipes.isEmpty()) {
+            return;
+        }
+        RewindIdentityTable identities = services().objectManager()
+                .captureIdentityContext().requireIdentityTable();
+        pipes.sort((left, right) -> compareStableIds(
+                identities.idFor(left), identities.idFor(right)));
+
+        int rightmostX = Integer.MIN_VALUE;
+        for (FlappyPipe pipe : pipes) {
+            pipe.advance(PIPE_SPEED);
+            rightmostX = Math.max(rightmostX, pipe.centreX());
+        }
+        int viewportLeft = services().camera().getX();
+        for (FlappyPipe pipe : pipes) {
+            if (pipe.rightEdge() < viewportLeft) {
+                rightmostX += PIPE_SPACING;
+                pipe.recycleAfter(rightmostX, nextGapVariant());
+            }
+        }
+
+        boolean fatalContact = tails.getCentreY() <= services().camera().getMinY() + 0x10
+                || tails.getCentreY() >= services().camera().getY() + 224;
+        for (FlappyPipe pipe : pipes) {
+            if (!pipe.gateConsumed() && pipe.centreX() < tails.getCentreX()) {
+                var levelState = services().levelGamestate();
+                levelState.setRings(levelState.getRings() + 1);
                 services().playSfx(GameSound.RING);
-                bestScore = Math.max(bestScore, services().levelGamestate().getRings());
+                pipe.consumeGate();
             }
-            boolean insideX = px + BIRD_HALF_SIZE > pipe.leftEdge() && px - BIRD_HALF_SIZE < pipe.rightEdge();
-            boolean insideGap = py - BIRD_HALF_SIZE > pipe.gapTop() && py + BIRD_HALF_SIZE < pipe.gapBottom();
-            if (insideX && !insideGap) {
-                release(player, frame);
-                player.applyHurtOrDeath(px, DamageCause.NORMAL, true);
-                return;
-            }
+            fatalContact |= pipe.overlapsPlayableBounds(tails);
+        }
+        if (fatalContact) {
+            tails.applyCrushDeath();
         }
     }
 
-    private void release(AbstractPlayableSprite player, int frame) {
-        player.setHidden(false);
-        player.releaseFromObjectControl(frame);
-        routine = 2;
+    private int nextGapVariant() {
+        int variant = gapVariantFor(generationCounter);
+        generationCounter++;
+        return variant;
+    }
+
+    private static int gapVariantFor(int generation) {
+        return switch (Math.floorMod(generation, 5)) {
+            case 0 -> 2;
+            case 1 -> 0;
+            case 2 -> 4;
+            case 3 -> 1;
+            default -> 3;
+        };
+    }
+
+    private static int compareStableIds(ObjectRefId left, ObjectRefId right) {
+        if (left == right) {
+            return 0;
+        }
+        if (left == null) {
+            return 1;
+        }
+        if (right == null) {
+            return -1;
+        }
+        int dynamic = Integer.compare(left.dynamicId(), right.dynamicId());
+        if (dynamic != 0) {
+            return dynamic;
+        }
+        int spawn = Integer.compare(left.spawnId(), right.spawnId());
+        if (spawn != 0) {
+            return spawn;
+        }
+        return Integer.compare(left.generation(), right.generation());
+    }
+
+    public int generationCounter() {
+        return generationCounter;
+    }
+
+    private void activateNativeRun(AbstractPlayableSprite tails) {
+        tails.setCentreX((short) (services().camera().getX() + PLAYER_SCREEN_X));
+        tails.setCentreY((short) (services().camera().getY() + PLAYER_SCREEN_Y));
+        anchorX = tails.getCentreX();
+        tails.setXSpeed((short) 0);
+        tails.setGSpeed((short) 0);
+        tails.getTailsFlightController().activate();
+        tails.setDoubleJumpProperty((byte) FLIGHT_REFILL);
+        routine = RUNNING;
     }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (routine != 1) return;
-        PatternSpriteRenderer renderer = getRenderer("sample-flappy:bird");
-        if (renderer == null) return;
-        var player = (AbstractPlayableSprite) services().playerQuery().mainPlayerOrNull();
-        if (player == null) return;
-        int frame = (animTick / 4) % 2 == 0 ? FLY_FRAME_A : FLY_FRAME_B;
-        renderer.drawFrameIndex(frame, player.getCentreX(), player.getCentreY(), false, false);
+        // The controller owns gameplay state only; native Tails renders through the player pipeline.
     }
 
     @Override

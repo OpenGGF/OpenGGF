@@ -139,6 +139,34 @@ class TestSaveManager {
     }
 
     @Test
+    void selectedTeamReplacementIsDurableButLaunchTeamOverrideIsNot() throws Exception {
+        SaveManager manager = new SaveManager(root);
+        SelectedTeam original = new SelectedTeam("sonic", java.util.List.of("tails"));
+        SaveSnapshotProvider teamSnapshot = (reason, runtime) -> java.util.Map.of(
+                "mainCharacter", runtime.saveSessionContext().selectedTeam().mainCharacter(),
+                "sidekicks", runtime.saveSessionContext().selectedTeam().sidekicks());
+
+        SaveSessionContext sanitized = SaveSessionContext.forSlot("s2", 1, original, 0, 0)
+                .withSelectedTeam(new SelectedTeam("knuckles", java.util.List.of()));
+        sanitized.requestSave(SaveReason.NEW_SLOT_START,
+                RuntimeSaveContext.forGameplayMode(null, sanitized), teamSnapshot, manager);
+
+        SaveSessionContext forcedLaunch = SaveSessionLaunchTeamAccess.withLaunchTeam(
+                SaveSessionContext.forSlot("s2", 2, original, 0, 0),
+                new com.openggf.game.GameplayLaunchTeam(
+                        com.openggf.game.CharacterKey.TAILS, java.util.List.of()));
+        forcedLaunch.requestSave(SaveReason.NEW_SLOT_START,
+                RuntimeSaveContext.forGameplayMode(null, forcedLaunch), teamSnapshot, manager);
+
+        assertEquals("knuckles", manager.readSlotSummary("s2", 1).payload()
+                .get("mainCharacter"));
+        assertEquals("sonic", manager.readSlotSummary("s2", 2).payload()
+                .get("mainCharacter"));
+        assertEquals(java.util.List.of("tails"), manager.readSlotSummary("s2", 2).payload()
+                .get("sidekicks"));
+    }
+
+    @Test
     void multipleSlots_independentReadWrite() throws Exception {
         SaveManager manager = new SaveManager(root);
         manager.writeSlot("s3k", 1, Map.of("zone", 0));

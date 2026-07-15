@@ -111,7 +111,7 @@ public final class ProjectScaffolder {
             out.writeShort(8);
             out.writeInt(2);
             for (int i = 0; i < 4; i++) out.writeShort(0);
-            for (int i = 0; i < 4; i++) out.writeShort(1);
+            for (int i = 0; i < 4; i++) out.writeShort((1 << 13) | 1);
         });
         writeBinary(root.resolve("blocks.bin"), out -> {
             out.writeBytes("GBLK");
@@ -169,7 +169,7 @@ public final class ProjectScaffolder {
             out.writeShort(0);
             for (int line = 0; line < 4; line++) {
                 for (int color = 0; color < 16; color++) {
-                    out.writeShort(line == 0 && (color == 1 || color == 15) ? 0x0EEE : 0);
+                    out.writeShort(line == 1 && (color == 1 || color == 15) ? 0x0EEE : 0);
                 }
             }
         });

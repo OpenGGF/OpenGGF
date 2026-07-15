@@ -134,6 +134,24 @@ class TestPlayableSpriteMovementTailsFlight {
     }
 
     @Test
+    void instantDeathClearsActiveFlightWithoutChangingTheStockDeathHop() {
+        tails.getTailsFlightController().activate();
+
+        assertTrue(tails.applyCrushDeath());
+        assertTrue(tails.getDead());
+        assertFalse(tails.getTailsFlightController().isActive(),
+                "the instant-death transition must tear down native flight");
+        assertEquals((short) -0x700, tails.getYSpeed(),
+                "Kill_Character installs the stock upward death velocity");
+
+        movement.handleMovement(false, false, false, false,
+                false, false, false, false);
+
+        assertEquals((short) -0x6C8, tails.getYSpeed(),
+                "the following dead frame must use normal +$38 gravity, not flight gravity");
+    }
+
+    @Test
     void playerResetClearsFlight() {
         tails.getTailsFlightController().activate();
         tails.resetState();

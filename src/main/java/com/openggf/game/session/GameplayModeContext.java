@@ -9,6 +9,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.GameplayInputFilter;
 import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
@@ -29,6 +30,7 @@ import com.openggf.game.rewind.BonusStageCoordinatorRewindAdapter;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.LevelEventProvider;
+import com.openggf.game.LevelEventRewindResolver;
 import com.openggf.game.rewind.snapshot.OscillationStaticAdapter;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.SolidExecutionRegistry;
@@ -47,8 +49,10 @@ import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
 
-import java.util.Optional;
+import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 
 @com.openggf.game.ModApi
 public final class GameplayModeContext implements ModeContext {
@@ -87,6 +91,7 @@ public final class GameplayModeContext implements ModeContext {
     private final GhostRenderRegistry ghostRenderRegistry = new GhostRenderRegistry();
 
     private BonusStageProvider activeBonusStageProvider = NoOpBonusStageProvider.INSTANCE;
+    private GameplayInputFilter gameplayInputFilter = GameplayInputFilter.IDENTITY;
     private boolean managersTornDown;
 
     private PerformanceProfiler profiler;
@@ -94,6 +99,7 @@ public final class GameplayModeContext implements ModeContext {
     private RewindController rewindController;
     private PlaybackController playbackController;
     private RewindBoundaryReporter rewindBoundaryReporter = RewindBoundaryReporter.NO_OP;
+    private final Set<String> levelEventExtraRewindKeys = new LinkedHashSet<>();
 
     public GameplayModeContext(WorldSession worldSession) {
         this(worldSession, 0, 0, null);
@@ -202,6 +208,7 @@ public final class GameplayModeContext implements ModeContext {
         this.managersTornDown = false;
 
         this.rewindRegistry = new RewindRegistry(profiler);
+        this.levelEventExtraRewindKeys.clear();
         this.rewindRegistry.register(camera);
         this.rewindRegistry.register(gameStateManager);
         this.rewindRegistry.register(rng);
@@ -372,6 +379,14 @@ public final class GameplayModeContext implements ModeContext {
         return levelManager;
     }
 
+    GameplayInputFilter currentGameplayInputFilter() {
+        return gameplayInputFilter;
+    }
+
+    void installGameplayInputFilter(GameplayInputFilter filter) {
+        gameplayInputFilter = Objects.requireNonNull(filter, "filter");
+    }
+
     public ObjectManager getObjectManager() {
         return levelManager != null ? levelManager.getObjectManager() : null;
     }
@@ -437,6 +452,10 @@ public final class GameplayModeContext implements ModeContext {
         rewindRegistry.deregister("level-event");
         rewindRegistry.deregister("solid-execution");
         rewindRegistry.deregisterPostRestoreCallback("level-tilemap-event-reconcile");
+        for (String key : levelEventExtraRewindKeys) {
+            rewindRegistry.deregister(key);
+        }
+        levelEventExtraRewindKeys.clear();
         rewindRegistry.register(levelManager.levelRewindSnapshottable());
         if (levelManager.getObjectManager() != null) {
             rewindRegistry.register(levelManager.getObjectManager().rewindSnapshottable());
@@ -448,9 +467,10 @@ public final class GameplayModeContext implements ModeContext {
         AbstractLevelEventManager levelEventManager = null;
         if (levelManager.getGameModule() != null) {
             LevelEventProvider lep = levelManager.getGameModule().getLevelEventProvider();
-            if (lep instanceof AbstractLevelEventManager alem) {
-                levelEventManager = alem;
-                rewindRegistry.register(alem);
+            levelEventManager = LevelEventRewindResolver.resolve(
+                    lep, levelManager.getCurrentZone());
+            if (levelEventManager != null) {
+                rewindRegistry.register(levelEventManager);
             }
         }
         // Register game-specific extra adapters contributed by the level-event manager
@@ -459,6 +479,7 @@ public final class GameplayModeContext implements ModeContext {
             for (com.openggf.game.rewind.RewindSnapshottable<?> extra : levelEventManager.extraRewindAdapters()) {
                 rewindRegistry.deregister(extra.key());
                 rewindRegistry.register(extra);
+                levelEventExtraRewindKeys.add(extra.key());
             }
         }
         // Post-restore reconciliation (runs after all entry restores, i.e. after
@@ -669,6 +690,7 @@ public final class GameplayModeContext implements ModeContext {
             return;
         }
         managersTornDown = true;
+        installGameplayInputFilter(GameplayInputFilter.IDENTITY);
         if (zoneLayoutMutationPipeline != null) {
             zoneLayoutMutationPipeline.clear();
         }
@@ -744,6 +766,7 @@ public final class GameplayModeContext implements ModeContext {
         rewindController = null;
         playbackController = null;
         rewindBoundaryReporter = RewindBoundaryReporter.NO_OP;
+        levelEventExtraRewindKeys.clear();
         rewindRegistry = null;
     }
 

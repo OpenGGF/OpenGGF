@@ -2,7 +2,6 @@ package com.openggf.game.patch;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -36,4 +35,5 @@ public record GameplayLaunchRequest(String gameId, String mainCharacter, List<St
                         .toList();
         return new GameplayLaunchRequest(gameId, main, requestedSidekicks);
     }
+
 }

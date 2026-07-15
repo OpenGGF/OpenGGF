@@ -18,6 +18,10 @@ public interface DataSelectHostProfile {
 
     List<SelectedTeam> builtInTeams();
 
+    default DataSelectDestination newGameDestination() {
+        return new DataSelectDestination(0, 0);
+    }
+
     default List<SelectedTeam> parseExtraTeams(String raw) {
         return List.of();
     }

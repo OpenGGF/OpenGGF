@@ -187,7 +187,9 @@ public class DataSelectSessionController {
             return DataSelectAction.deleteSlot(row);
         }
         if (row == 0) {
-            return new DataSelectAction(DataSelectActionType.NO_SAVE_START, -1, 0, 0, currentTeam());
+            DataSelectDestination start = hostProfile.newGameDestination();
+            return new DataSelectAction(DataSelectActionType.NO_SAVE_START, -1,
+                    start.zone(), start.act(), currentTeam());
         }
         if (row == deleteRowIndex()) {
             model.setDeleteMode(!model.isDeleteMode());
@@ -200,7 +202,9 @@ public class DataSelectSessionController {
         int slot = row;
         SaveSlotSummary summary = slotSummaries.get(slot - 1);
         if (summary.state() == SaveSlotState.EMPTY) {
-            return new DataSelectAction(DataSelectActionType.NEW_SLOT_START, slot, 0, 0, currentTeam());
+            DataSelectDestination start = hostProfile.newGameDestination();
+            return new DataSelectAction(DataSelectActionType.NEW_SLOT_START, slot,
+                    start.zone(), start.act(), currentTeam());
         }
         if (!summary.isLoadable()) {
             return DataSelectAction.none();

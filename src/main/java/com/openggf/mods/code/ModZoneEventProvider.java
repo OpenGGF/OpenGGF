@@ -1,33 +1,46 @@
 package com.openggf.mods.code;
 
 import com.openggf.game.LevelEventProvider;
+import com.openggf.game.AbstractLevelEventManager;
+import com.openggf.game.LevelEventRewindResolver;
 
+import java.util.List;
 import java.util.Objects;
 
 /** Selects stock or mod events at level init and routes creator callbacks through the fault boundary. */
-final class ModZoneEventProvider implements LevelEventProvider {
+final class ModZoneEventProvider implements LevelEventProvider, LevelEventRewindResolver {
     private final LevelEventProvider stock;
-    private final ModZoneRegistry zones;
+    private final int inheritedZoneCount;
+    private final List<PreparedModZone> addedZones;
     private final ModFaultBoundary boundary;
     private LevelEventProvider active;
     private String activeOwner;
 
-    ModZoneEventProvider(LevelEventProvider stock, ModZoneRegistry zones, ModFaultBoundary boundary) {
+    ModZoneEventProvider(LevelEventProvider stock, int inheritedZoneCount,
+                         List<PreparedModZone> addedZones, ModFaultBoundary boundary) {
         this.stock = stock;
-        this.zones = Objects.requireNonNull(zones, "zones");
-        this.boundary = Objects.requireNonNull(boundary, "boundary");
+        if (inheritedZoneCount < 0) {
+            throw new IllegalArgumentException("inheritedZoneCount must be non-negative");
+        }
+        this.inheritedZoneCount = inheritedZoneCount;
+        this.addedZones = List.copyOf(Objects.requireNonNull(addedZones, "addedZones"));
+        this.boundary = this.addedZones.stream().anyMatch(zone -> zone.eventFactory() != null)
+                ? Objects.requireNonNull(boundary, "boundary") : boundary;
     }
 
     @Override
     public void initLevel(int zone, int act) {
-        if (zone < zones.getZoneCount() - zones.contributions().size()) {
+        if (zone < inheritedZoneCount) {
             active = stock;
             activeOwner = null;
             if (stock != null) stock.initLevel(zone, act);
             return;
         }
-        PreparedModZone contribution = zones.contributions().get(
-                zone - (zones.getZoneCount() - zones.contributions().size()));
+        int addedIndex = zone - inheritedZoneCount;
+        if (addedIndex < 0 || addedIndex >= addedZones.size()) {
+            throw new IllegalArgumentException("Zone is outside this mod event provider: " + zone);
+        }
+        PreparedModZone contribution = addedZones.get(addedIndex);
         activeOwner = contribution.ownerModId();
         active = contribution.optionalEventFactory()
                 .map(factory -> boundary.call(activeOwner, factory::create))
@@ -41,6 +54,17 @@ final class ModZoneEventProvider implements LevelEventProvider {
         invoke(LevelEventProvider::updateFixedInLevelObjectsBeforeDynamicObjects);
     }
     @Override public void updateFixedInLevelObjects() { invoke(LevelEventProvider::updateFixedInLevelObjects); }
+
+    @Override
+    public AbstractLevelEventManager resolveLevelEventRewindManager(int zoneIndex) {
+        if (zoneIndex < 0) {
+            return null;
+        }
+        if (zoneIndex < inheritedZoneCount) {
+            return LevelEventRewindResolver.resolve(stock, zoneIndex);
+        }
+        return null;
+    }
 
     private void invoke(java.util.function.Consumer<LevelEventProvider> callback) {
         if (active == null) return;

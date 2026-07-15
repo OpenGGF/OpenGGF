@@ -4,6 +4,7 @@ import com.openggf.level.LevelDescriptor;
 
 import java.util.List;
 import java.util.OptionalInt;
+import com.openggf.game.modzone.ModZoneRuntimeContribution;
 
 /**
  * Interface for game-specific zone/level metadata.
@@ -15,6 +16,10 @@ import java.util.OptionalInt;
  */
 @com.openggf.game.ModApi
 public interface ZoneRegistry {
+    /** Runtime payload for an additive level, or {@code null} for stock content. */
+    default ModZoneRuntimeContribution modZoneRuntimeContribution(int levelIndex) {
+        return null;
+    }
     /**
      * Returns the total number of zones in this game.
      *

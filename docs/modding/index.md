@@ -3,7 +3,11 @@
 OpenGGF's mod workflow is source-first and reproducible: author files, convert them
 with `ggfmod`, validate/package a jar, then enable it in the Mod Manager and restart.
 Choose the smallest quickstart that matches your goal; they are ordered by typical
-effort.
+effort. Mod API 2.4 adds exclusive fresh-game insertion plus destination-scoped,
+launch-only teams, deterministic input filters, and row-only HUD profiles; the
+[content-mod reference](content-mods.md#choose-a-fresh-game-destination-and-presentation)
+defines their ordering, replay, persistence, width, stock-default, and owner-fault
+contracts.
 
 1. [Music pack](quickstarts/music-pack.md)
 2. [Data-only art reskin](quickstarts/reskin.md)
@@ -14,9 +18,12 @@ effort.
 
 ## Follow-along guides
 
-- [Flappy remix](guides/flappy-remix.md) — build-along tour of the `sample-flappy`
-  gallery sample: object-controlled minigame gameplay, ROM-art intake, forced scroll,
-  and layout obstacles inside a Sonic 2 patch.
+- [ROM-art remix](guides/rom-art-remix.md) — source-first tour of the
+  `sample-rom-art-remix` gallery sample: bounded Sonic 2 art, mapping, and DPLC
+  intake, launch-memory materialization, decoded-pattern probes, and rewind.
+- [Native-Tails Flappy](guides/native-tails-flappy.md) — build-along tour of the
+  `sample-flappy` gallery sample: an anchorless S3K fresh-game destination, scoped
+  Tails/input/HUD policies, fixed camera, and rewind-stable recycling pipes.
 - [Standalone platformer](guides/standalone-platformer.md) — build-along tour of the
   `sample-platformer` gallery sample: a no-ROM standalone game with a Tiled-authored
   level, an original character with a double jump, a patrolling badnik, and a spring
@@ -30,7 +37,8 @@ effort.
 - [`ggfmod` command reference](ggfmod.md)
 - [Manifest v1](formats/manifest.md)
 - [Baked art containers](formats/baked-containers.md)
-- [`ModLevelDefinition` v1](formats/level-definition.md)
+- [`ModLevelDefinition` formats v1 and v2](formats/level-definition.md)
+- [Content mods and Mod API 2.4 gameplay policies](content-mods.md)
 - [Audio manifest v1](formats/audio-manifest.md)
 - [Character archetypes](concepts/character-archetypes.md)
 - [Executable-code trust](concepts/trust.md)
@@ -40,5 +48,5 @@ effort.
 - [Deferred-backlog decisions](BACKLOG.md)
 - [GUI tooling evaluation](GUI_TOOLING_EVALUATION.md)
 
-The seven sample sources are built by the default test suite. Treat them as
+The eight sample sources are built by the default test suite. Treat them as
 executable contracts rather than snippets copied out of context.

@@ -23,7 +23,13 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                                   Map<String, String> objectPreviewArtKeys,
                                   Map<CharacterKey, CharacterDefinition> characters,
                                   com.openggf.game.GameModule standaloneModule,
-                                  Map<String, RomArtRequest> romObjectArt) {
+                                  Map<String, RomArtRequest> romObjectArt,
+                                  Map<com.openggf.game.ZoneKey.Mod,
+                                          com.openggf.game.GameplayLaunchTeam> launchTeams,
+                                  Map<com.openggf.game.ZoneKey.Mod,
+                                          com.openggf.game.GameplayInputFilter> inputFilters,
+                                  Map<com.openggf.game.ZoneKey.Mod,
+                                          com.openggf.level.objects.HudProfile> hudProfiles) {
     public ModRegistrationPlan {
         Objects.requireNonNull(ownerModId, "ownerModId");
         if ((standaloneModule == null) == (baseGameId == null)) {
@@ -48,6 +54,15 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 Objects.requireNonNull(characters, "characters")));
         romObjectArt = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
                 Objects.requireNonNull(romObjectArt, "romObjectArt")));
+        launchTeams = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
+                Objects.requireNonNull(launchTeams, "launchTeams")));
+        inputFilters = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
+                Objects.requireNonNull(inputFilters, "inputFilters")));
+        hudProfiles = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
+                Objects.requireNonNull(hudProfiles, "hudProfiles")));
+        validatePolicies(ownerModId, launchTeams, "launch team");
+        validatePolicies(ownerModId, inputFilters, "input filter");
+        validatePolicies(ownerModId, hudProfiles, "HUD profile");
         characters.forEach((key, definition) -> {
             if (!key.equals(definition.key()) || !ownerModId.equals(key.ownerModId().orElse(null))) {
                 throw new IllegalArgumentException("Character contribution owner/key mismatch");
@@ -67,10 +82,42 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
             PreparedModZone prepared = preparedZones.get(i);
             if (!ownerModId.equals(prepared.ownerModId())
                     || !declared.localKey().equals(prepared.localKey())
-                    || !declared.insertAfter().equals(prepared.insertAfter())) {
+                    || !Objects.equals(declared.insertAfter(), prepared.insertAfter())
+                    || declared.gameStart() != prepared.gameStart()) {
                 throw new IllegalArgumentException("Prepared zones must exactly match declarations");
             }
         }
+    }
+
+    private static void validatePolicies(String ownerModId,
+            Map<com.openggf.game.ZoneKey.Mod, ?> policies, String policyName) {
+        for (Map.Entry<com.openggf.game.ZoneKey.Mod, ?> entry : policies.entrySet()) {
+            com.openggf.game.ZoneKey.Mod destination = entry.getKey();
+            if (destination == null || !ownerModId.equals(destination.ownerModId())) {
+                throw new IllegalArgumentException(
+                        "Foreign or null " + policyName + " destination");
+            }
+            if (entry.getValue() == null) {
+                throw new IllegalArgumentException("Null " + policyName + " policy");
+            }
+        }
+    }
+
+    /** Compatibility constructor for the pre-gameplay-policy canonical shape. */
+    public ModRegistrationPlan(String ownerModId, String baseGameId,
+                               Map<String, ObjectFactory> objectFactories,
+                               Map<String, BakedSheetRef> objectArt,
+                               Map<String, BakedSheetReader.BakedSheet> preparedObjectArt,
+                               List<GamePatch> explicitPatches,
+                               List<ModZoneContribution> zones,
+                               List<PreparedModZone> preparedZones,
+                               Map<String, String> objectPreviewArtKeys,
+                               Map<CharacterKey, CharacterDefinition> characters,
+                               com.openggf.game.GameModule standaloneModule,
+                               Map<String, RomArtRequest> romObjectArt) {
+        this(ownerModId, baseGameId, objectFactories, objectArt, preparedObjectArt,
+                explicitPatches, zones, preparedZones, objectPreviewArtKeys, characters,
+                standaloneModule, romObjectArt, Map.of(), Map.of(), Map.of());
     }
 
     /** Compatibility constructor for the pre-ROM-art-intake canonical shape. */
@@ -147,7 +194,8 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
 
     public boolean hasContent() {
         return !objectFactories.isEmpty() || !objectArt.isEmpty() || !zones.isEmpty()
-                || !characters.isEmpty() || !romObjectArt.isEmpty();
+                || !characters.isEmpty() || !romObjectArt.isEmpty()
+                || !launchTeams.isEmpty() || !inputFilters.isEmpty() || !hudProfiles.isEmpty();
     }
 
     /** Resolves and validates all declared sheets before the contribution is published. */
@@ -167,7 +215,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
         }
         return new ModRegistrationPlan(ownerModId, baseGameId, objectFactories, objectArt,
                 prepared, explicitPatches, zones, preparedZones,objectPreviewArtKeys,characters,
-                standaloneModule, romObjectArt);
+                standaloneModule, romObjectArt, launchTeams, inputFilters, hudProfiles);
     }
 
     /** Resolves all level exports while the bounded creator view is still alive. */

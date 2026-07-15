@@ -28,9 +28,9 @@ public final class LevelConverter {
         }
         try (SnapshotModAssetRoot root = ModAssetRoot.snapshotDirectory(source.getParent(), source,
                 ModInputLimits.production(), DirectoryAccess.DEVELOPMENT)) {
-            ModLevelDefinitionParser.read(root, new BakedLevelRef("level.json"));
+            var definition = ModLevelDefinitionParser.read(root, new BakedLevelRef("level.json"));
             Path retained=root.immutableContentPath();
-            validateExactInventory(retained);afterValidation.run();
+            validateExactInventory(retained, definition.formatVersion());afterValidation.run();
 
             Path parent = Objects.requireNonNull(target.getParent(), "level output parent");
             Files.createDirectories(parent);
@@ -60,11 +60,13 @@ public final class LevelConverter {
         }
     }
 
-    private static void validateExactInventory(Path source) throws IOException {
+    private static void validateExactInventory(Path source, int formatVersion) throws IOException {
         Set<String> required = Set.of("level.json", "patterns.bin", "chunks.bin", "blocks.bin",
                 "fg-map.bin", "solid-heights.bin", "solid-widths.bin", "solid-angles.bin",
-                "collision-primary.bin", "collision-secondary.bin", "palettes.bin");
-        Set<String> allowed = new java.util.HashSet<>(required); allowed.add("bg-map.bin");
+                "collision-primary.bin", "collision-secondary.bin");
+        Set<String> versionedRequired = new java.util.HashSet<>(required);
+        if (formatVersion == 1) versionedRequired.add("palettes.bin");
+        Set<String> allowed = new java.util.HashSet<>(versionedRequired); allowed.add("bg-map.bin");
         java.util.HashSet<String> actual = new java.util.HashSet<>();
         try (var paths=Files.walk(source)) {
             for (Path path:paths.filter(p -> !p.equals(source)).toList()) {
@@ -73,7 +75,7 @@ public final class LevelConverter {
                 actual.add(source.relativize(path).toString().replace('\\','/'));
             }
         }
-        if (!actual.containsAll(required) || !allowed.containsAll(actual))
+        if (!actual.containsAll(versionedRequired) || !allowed.containsAll(actual))
             throw new IOException("Level export inventory does not match the exact JSON/binary contract");
     }
 

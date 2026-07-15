@@ -1,5 +1,8 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.modzone.ModObjectZoneSet;
+import com.openggf.game.modzone.ModPaletteClaim;
+import com.openggf.game.modzone.ModZoneHostMetadata;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.StreamReadConstraints;
@@ -25,18 +28,27 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-/** Strict bounded reader for the canonical ModLevelDefinition v1 export. */
+/** Strict bounded reader for canonical ModLevelDefinition exports. */
 public final class ModLevelDefinitionParser {
-    private static final Set<String> ROOT = Set.of("formatVersion", "zoneName", "zoneIndex",
+    private static final Set<String> ROOT_V1 = Set.of("formatVersion", "zoneName", "zoneIndex",
             "levelIndex", "blockGridSide", "width", "height", "bounds", "start", "music",
             "assets", "objects", "rings");
+    private static final Set<String> ROOT_V2 = Set.of("formatVersion", "zoneName", "zoneIndex",
+            "levelIndex", "blockGridSide", "width", "height", "bounds", "start", "music",
+            "assets", "hostMetadata", "paletteClaims", "objects", "rings");
     private static final Set<String> BOUNDS = Set.of("minX", "maxX", "minY", "maxY");
     private static final Set<String> START = Set.of("x", "y");
     private static final Set<String> MUSIC = Set.of("stockId", "trackKey");
     private static final Set<String> TRACK = Set.of("modId", "name");
-    private static final Set<String> ASSETS = Set.of("patterns", "chunks", "blocks",
+    private static final Set<String> ASSETS_V1 = Set.of("patterns", "chunks", "blocks",
             "foregroundMap", "backgroundMap", "solidHeights", "solidWidths", "solidAngles",
             "collisionPrimary", "collisionSecondary", "palettes");
+    private static final Set<String> ASSETS_V2 = Set.of("patterns", "chunks", "blocks",
+            "foregroundMap", "backgroundMap", "solidHeights", "solidWidths", "solidAngles",
+            "collisionPrimary", "collisionSecondary");
+    private static final Set<String> HOST_METADATA = Set.of("s3k");
+    private static final Set<String> S3K_METADATA = Set.of("objectZoneSet");
+    private static final Set<String> PALETTE_CLAIM = Set.of("line", "color", "sega");
     private static final Set<String> STOCK_OBJECT = Set.of("placementId", "x", "y",
             "stockObjectId", "subtype", "renderFlags", "respawnTracked", "rawYWord");
     private static final Set<String> KEYED_OBJECT = Set.of("placementId", "x", "y",
@@ -51,10 +63,10 @@ public final class ModLevelDefinitionParser {
         ModInputLimits limits = root.limits();
         byte[] json = root.readBounded(reference.levelJsonEntry(), limits.maxMetadataBytes());
         JsonNode metadata = parseJson(json, limits);
-        only(metadata, ROOT, "level.json");
-
         int version = integer(required(metadata, "formatVersion"), "formatVersion");
-        if (version != 1) fail("Unsupported level formatVersion: " + version);
+        if (version == 1) only(metadata, ROOT_V1, "level.json");
+        else if (version == 2) only(metadata, ROOT_V2, "level.json");
+        else fail("Unsupported level formatVersion: " + version);
         String zoneName = nonblank(required(metadata, "zoneName"), "zoneName", limits);
         int zoneIndex = ranged(required(metadata, "zoneIndex"), 0x40, Integer.MAX_VALUE, "zoneIndex");
         int levelIndex = ranged(required(metadata, "levelIndex"), 0x400, Integer.MAX_VALUE, "levelIndex");
@@ -68,7 +80,11 @@ public final class ModLevelDefinitionParser {
         ModLevelDefinition.Bounds bounds = parseBounds(required(metadata, "bounds"));
         ModLevelDefinition.Start start = parseStart(required(metadata, "start"), bounds);
         ModLevelDefinition.Music music = parseMusic(required(metadata, "music"), limits);
-        AssetNames names = parseAssets(required(metadata, "assets"), reference, limits);
+        AssetNames names = parseAssets(required(metadata, "assets"), reference, limits, version);
+        ModZoneHostMetadata hostMetadata = version == 2
+                ? parseHostMetadata(required(metadata, "hostMetadata"), limits) : null;
+        List<ModPaletteClaim> paletteClaims = version == 2
+                ? parsePaletteClaims(required(metadata, "paletteClaims"), limits) : List.of();
         List<ModLevelDefinition.ObjectEntry> objects = parseObjects(required(metadata, "objects"), limits);
         List<ModLevelDefinition.RingEntry> rings = parseRings(required(metadata, "rings"), limits);
 
@@ -87,7 +103,8 @@ public final class ModLevelDefinitionParser {
                 "solid angles");
         Collision primary = collision(root, names.primaryCollision(), 0, "primary collision");
         Collision secondary = collision(root, names.secondaryCollision(), 1, "secondary collision");
-        byte[][] palettes = palettes(root, names.palettes());
+        byte[][] palettes = names.palettes().isPresent()
+                ? palettes(root, names.palettes().orElseThrow()) : new byte[0][];
 
         if (foreground.width() != width || foreground.height() != height
                 || (background != null && (background.width() != width || background.height() != height))) {
@@ -102,12 +119,12 @@ public final class ModLevelDefinitionParser {
         validateReferences(patterns.count(), chunks, blocks, heights.count(), primary, secondary,
                 foreground, background);
 
-        return new ModLevelDefinition(1, zoneName, zoneIndex, levelIndex, blockGridSide, width,
+        return new ModLevelDefinition(version, zoneName, zoneIndex, levelIndex, blockGridSide, width,
                 height, bounds, start, music, objects, rings, patterns.payload(), chunks.payload(),
                 blocks.payload(), foreground.cells(), background == null ? null : background.cells(),
                 heights.payload(), widths.payload(), angles.payload(), primary.indices(),
                 secondary.indices(), palettes, patterns.count(), chunks.count(), blocks.count(),
-                heights.count());
+                heights.count(), hostMetadata, paletteClaims);
     }
 
     private static JsonNode parseJson(byte[] json, ModInputLimits limits) throws IOException {
@@ -176,16 +193,59 @@ public final class ModLevelDefinitionParser {
         }
     }
 
-    private static AssetNames parseAssets(JsonNode node, BakedLevelRef ref, ModInputLimits limits)
+    private static AssetNames parseAssets(JsonNode node, BakedLevelRef ref, ModInputLimits limits,
+                                          int version)
             throws IOException {
-        object(node, "assets"); only(node, ASSETS, "assets");
+        object(node, "assets"); only(node, version == 1 ? ASSETS_V1 : ASSETS_V2, "assets");
         return new AssetNames(asset(node, "patterns", ref, limits), asset(node, "chunks", ref, limits),
                 asset(node, "blocks", ref, limits), asset(node, "foregroundMap", ref, limits),
                 node.has("backgroundMap") ? Optional.of(asset(node, "backgroundMap", ref, limits))
                         : Optional.empty(),
                 asset(node, "solidHeights", ref, limits), asset(node, "solidWidths", ref, limits),
                 asset(node, "solidAngles", ref, limits), asset(node, "collisionPrimary", ref, limits),
-                asset(node, "collisionSecondary", ref, limits), asset(node, "palettes", ref, limits));
+                asset(node, "collisionSecondary", ref, limits), version == 1
+                        ? Optional.of(asset(node, "palettes", ref, limits)) : Optional.empty());
+    }
+
+    private static ModZoneHostMetadata parseHostMetadata(JsonNode node,
+            ModInputLimits limits) throws IOException {
+        object(node, "hostMetadata"); only(node, HOST_METADATA, "hostMetadata");
+        JsonNode s3k = required(node, "s3k");
+        object(s3k, "hostMetadata.s3k"); only(s3k, S3K_METADATA, "hostMetadata.s3k");
+        String value = text(required(s3k, "objectZoneSet"),
+                "hostMetadata.s3k.objectZoneSet", limits);
+        try {
+            return new ModZoneHostMetadata(ModObjectZoneSet.valueOf(value));
+        } catch (IllegalArgumentException error) {
+            throw new IOException("hostMetadata.s3k.objectZoneSet must be S3KL or SKL", error);
+        }
+    }
+
+    private static List<ModPaletteClaim> parsePaletteClaims(JsonNode node, ModInputLimits limits)
+            throws IOException {
+        if (!node.isArray() || node.size() > 48 || node.size() > limits.maxCollectionEntries()) {
+            fail("paletteClaims must be an array with at most 48 entries");
+        }
+        List<ModPaletteClaim> claims = new ArrayList<>(node.size());
+        Set<Integer> cells = new HashSet<>();
+        for (JsonNode value : node) {
+            object(value, "palette claim"); only(value, PALETTE_CLAIM, "palette claim");
+            try {
+                ModPaletteClaim claim = new ModPaletteClaim(
+                        integer(required(value, "line"), "palette claim line"),
+                        integer(required(value, "color"), "palette claim color"),
+                        integer(required(value, "sega"), "palette claim sega"));
+                int cell = claim.line() * 16 + claim.color();
+                if (!cells.add(cell)) {
+                    fail("Duplicate palette claim for line " + claim.line()
+                            + ", color " + claim.color());
+                }
+                claims.add(claim);
+            } catch (IllegalArgumentException error) {
+                throw new IOException("Invalid palette claim: " + error.getMessage(), error);
+            }
+        }
+        return List.copyOf(claims);
     }
 
     private static String asset(JsonNode node, String field, BakedLevelRef ref, ModInputLimits limits)
@@ -443,7 +503,8 @@ public final class ModLevelDefinitionParser {
 
     private record AssetNames(String patterns, String chunks, String blocks, String foregroundMap,
             Optional<String> backgroundMap, String solidHeights, String solidWidths,
-            String solidAngles, String primaryCollision, String secondaryCollision, String palettes) {}
+            String solidAngles, String primaryCollision, String secondaryCollision,
+            Optional<String> palettes) {}
     private record Records(int count, byte[] payload) {}
     private record Blocks(int count, int side, byte[] payload) {}
     private record LayerMap(int width, int height, byte[] cells) {}

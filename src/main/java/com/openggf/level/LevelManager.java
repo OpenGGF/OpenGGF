@@ -20,6 +20,10 @@ import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.CustomZonePaletteBridge;
+import com.openggf.game.palette.PaletteWriteSupport;
+import com.openggf.game.modzone.ModZoneRuntimeContribution;
+import com.openggf.game.modzone.ModZoneRuntimeProfile;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.render.AdvancedRenderModeController;
@@ -32,10 +36,14 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.GameplayInputFilterAccess;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
 import com.openggf.game.session.PatternWindowSessionState;
 import com.openggf.level.rewind.LevelRewindSnapshotAdapter;
+import com.openggf.level.objects.HudPaletteBridgeAccess;
+import com.openggf.level.objects.HudProfile;
+import com.openggf.level.objects.HudProfileAccess;
 import com.openggf.level.objects.HudRenderManager;
 import com.openggf.level.objects.HudStaticArt;
 import com.openggf.graphics.GLCommand;
@@ -203,8 +211,12 @@ public class LevelManager {
     private TouchResponseTable touchResponseTable;
     ObjectRenderManager objectRenderManager;
     HudRenderManager hudRenderManager;
+    private HudProfile activeHudProfile = HudProfile.stock();
     AnimatedPatternManager animatedPatternManager;
     AnimatedPaletteManager animatedPaletteManager;
+    private ModZoneRuntimeProfile activeModZoneRuntimeProfile;
+    private ModZoneRuntimeContribution activeModZoneRuntimeContribution;
+    private CustomZonePaletteBridge activeCustomZonePaletteBridge;
     LevelState levelGamestate;
 
     // GPU tilemap lifecycle delegate (build/cache/upload/invalidate)
@@ -469,11 +481,45 @@ public class LevelManager {
      * @return the loaded Level instance (also assigned to {@code this.level})
      */
     public Level loadLevelData(int levelIndex) throws IOException {
+        installGameplayInputFilter();
+        activeModZoneRuntimeContribution = gameModule == null ? null
+                : gameModule.getZoneRegistry().modZoneRuntimeContribution(levelIndex);
+        activeModZoneRuntimeProfile = activeModZoneRuntimeContribution != null
+                ? activeModZoneRuntimeContribution.runtimeProfile() : null;
+        activeCustomZonePaletteBridge = null;
         Level loaded = gameModule.loadLevelOverride(levelIndex);
         if (loaded == null) loaded = game.loadLevel(levelIndex);
         writeCurrentLevel(loaded);
+        installHudProfile();
         rebuildLevelDerivedState();
         return loaded;
+    }
+
+    private void installHudProfile() {
+        HudProfile resolved = HudProfile.stock();
+        if (gameModule != null) {
+            ZoneKey destination = gameModule.getZoneRegistry().zoneKey(currentZone);
+            if (destination instanceof ZoneKey.Mod) {
+                resolved = gameModule.getGameplayPolicyProvider().hudProfile(destination)
+                        .orElse(HudProfile.stock());
+            }
+        }
+        activeHudProfile = resolved;
+        if (hudRenderManager != null) {
+            HudProfileAccess.install(hudRenderManager, activeHudProfile);
+        }
+    }
+
+    private void installGameplayInputFilter() {
+        GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode == null || gameModule == null) {
+            return;
+        }
+        ZoneKey destination = gameModule.getZoneRegistry().zoneKey(currentZone);
+        GameplayInputFilter filter = gameModule.getGameplayPolicyProvider()
+                .inputFilter(destination)
+                .orElse(GameplayInputFilter.IDENTITY);
+        GameplayInputFilterAccess.install(gameplayMode, filter);
     }
 
     /**
@@ -713,14 +759,25 @@ public class LevelManager {
      * Phase H: Initialize zone-specific features (CNZ bumpers, CPZ pylon, water surface, etc.).
      */
     public void initZoneFeatures() throws IOException {
-        zoneFeatureProvider = gameModule.getZoneFeatureProvider();
+        zoneFeatureProvider = activeModZoneRuntimeProfile == null
+                ? gameModule.getZoneFeatureProvider() : null;
         resetZoneScopedRegistriesForLevelLoad();
+        if (activeModZoneRuntimeProfile != null) {
+            var zoneRuntime = GameServices.zoneRuntimeRegistryOrNull();
+            var animatedTiles = GameServices.animatedTileChannelGraphOrNull();
+            if (zoneRuntime != null) {
+                zoneRuntime.clear();
+            }
+            if (animatedTiles != null) {
+                animatedTiles.clear();
+            }
+        }
         applyLevelLoadPaletteOverrides();
         initializeZoneFeatureProvider(zoneFeatureProvider);
     }
 
     void reinitializeZoneFeaturesForActTransition() throws IOException {
-        if (zoneFeatureProvider == null) {
+        if (zoneFeatureProvider == null && activeModZoneRuntimeProfile == null) {
             zoneFeatureProvider = gameModule.getZoneFeatureProvider();
         }
         resetZoneScopedRegistriesForLevelLoad();
@@ -1254,6 +1311,7 @@ public class LevelManager {
     }
 
     private void initObjectArt() {
+        activeCustomZonePaletteBridge = null;
         PatternAtlas patternAtlas = graphicsManager.getPatternAtlas();
         if (patternAtlas != null) {
             patternAtlas.clearRanges();
@@ -1262,19 +1320,22 @@ public class LevelManager {
         ObjectArtProvider provider = gameModule != null ? gameModule.getObjectArtProvider() : null;
         if (provider == null) {
             objectRenderManager = null;
+            registerPlcArtAdapter(null);
             return;
         }
 
         try {
             int zoneIndex = level != null ? level.getZoneIndex() : -1;
-            provider.loadArtForZone(zoneIndex);
+            int artZoneIndex = activeModZoneRuntimeProfile != null
+                    && !activeModZoneRuntimeProfile.plcLoads() ? -1 : zoneIndex;
+            provider.loadArtForZone(artZoneIndex);
 
             objectRenderManager = new ObjectRenderManager(provider);
             LOGGER.info("Initializing Object Art. Base Index: " + OBJECT_PATTERN_BASE);
             objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
 
             // Register level-tile-based object art (must be after level load)
-            provider.registerLevelTileArt(level, zoneIndex);
+            provider.registerLevelTileArt(level, artZoneIndex);
             int objectEndIndex = objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
             if (patternAtlas != null) {
                 patternAtlas.registerRange(
@@ -1283,7 +1344,17 @@ public class LevelManager {
             }
 
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
+            HudProfileAccess.install(hudRenderManager, activeHudProfile);
             hudRenderManager.setHudPalettes(provider.getHudTextPaletteLine(), provider.getHudFlashPaletteLine());
+            if (activeModZoneRuntimeContribution != null) {
+                activeCustomZonePaletteBridge = gameModule.createCustomZonePaletteBridge(
+                        activeModZoneRuntimeContribution, level, provider);
+            }
+            if (activeCustomZonePaletteBridge != null) {
+                primeCustomZonePaletteBridge();
+                HudPaletteBridgeAccess.routeLivesPaletteOverrideThroughOwnership(
+                        hudRenderManager, true);
+            }
             // Wire up HUD to unified UI render pipeline
             if (graphicsManager.getUiRenderPipeline() != null) {
                 graphicsManager.getUiRenderPipeline().setHudRenderManager(hudRenderManager);
@@ -1338,9 +1409,36 @@ public class LevelManager {
             LOGGER.log(SEVERE, "Failed to load object art.", e);
             objectRenderManager = null;
         }
+        registerPlcArtAdapter(activeModZoneRuntimeProfile != null
+                && !activeModZoneRuntimeProfile.plcLoads() ? null : provider);
+    }
+
+    /**
+     * Publishes the initial custom-zone palette before pre-level presentation
+     * (notably the S3K title card) can render against a palette texture left by
+     * the preceding screen. Later gameplay frames resubmit the same immutable
+     * bridge claims through {@link com.openggf.LevelFrameStep}.
+     */
+    private void primeCustomZonePaletteBridge() {
+        PaletteOwnershipRegistry registry = GameServices.paletteOwnershipRegistryOrNull();
+        if (registry == null) {
+            return;
+        }
+        registry.beginFrame();
+        activeCustomZonePaletteBridge.submitFrameClaims(registry);
+        PaletteWriteSupport.resolvePendingFrameWrites(registry, level, null, graphicsManager);
+    }
+
+    void submitCustomZonePaletteClaimsForEngine(PaletteOwnershipRegistry registry) {
+        if (activeCustomZonePaletteBridge != null && registry != null) {
+            activeCustomZonePaletteBridge.submitFrameClaims(registry);
+        }
+    }
+
+    private void registerPlcArtAdapter(ObjectArtProvider provider) {
         com.openggf.game.session.GameplayModeContext gameplayMode =
                 com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (gameplayMode != null && provider != null) {
+        if (gameplayMode != null) {
             gameplayMode.registerPlcArtAdapter(provider);
         }
     }
@@ -1358,7 +1456,13 @@ public class LevelManager {
 
     private void initAnimatedPatterns() {
         animatedPatternManager = null;
+        if (activeModZoneRuntimeProfile != null
+                && !activeModZoneRuntimeProfile.animatedTiles()) {
+            registerPatternAnimatorAdapter(null);
+            return;
+        }
         if (!(game instanceof AnimatedPatternProvider provider)) {
+            registerPatternAnimatorAdapter(null);
             return;
         }
         try {
@@ -1367,15 +1471,23 @@ public class LevelManager {
             LOGGER.log(SEVERE, "Failed to load animated patterns.", e);
             animatedPatternManager = null;
         }
+        registerPatternAnimatorAdapter(animatedPatternManager);
+    }
+
+    private void registerPatternAnimatorAdapter(AnimatedPatternManager manager) {
         com.openggf.game.session.GameplayModeContext gameplayMode =
                 com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null) {
-            gameplayMode.registerPatternAnimatorAdapter(animatedPatternManager);
+            gameplayMode.registerPatternAnimatorAdapter(manager);
         }
     }
 
     private void initAnimatedPalettes() {
         animatedPaletteManager = null;
+        if (activeModZoneRuntimeProfile != null
+                && !activeModZoneRuntimeProfile.animatedTiles()) {
+            return;
+        }
         if (!(game instanceof AnimatedPaletteProvider provider)) {
             return;
         }
@@ -3301,7 +3413,14 @@ public class LevelManager {
         zoneFeatureProvider = null;
         levelRenderer.resetState();
         objectRenderManager = null;
+        if (hudRenderManager != null) {
+            HudProfileAccess.install(hudRenderManager, HudProfile.stock());
+        }
         hudRenderManager = null;
+        activeHudProfile = HudProfile.stock();
+        activeModZoneRuntimeContribution = null;
+        activeModZoneRuntimeProfile = null;
+        activeCustomZonePaletteBridge = null;
         animatedPatternManager = null;
         animatedPaletteManager = null;
         checkpointCoordinator.resetState();
@@ -3322,6 +3441,7 @@ public class LevelManager {
         useShaderBackground = true;
         cacheLevelDimensions();
         levels.clear();
+        activeModZoneRuntimeProfile = null;
     }
 
     /**

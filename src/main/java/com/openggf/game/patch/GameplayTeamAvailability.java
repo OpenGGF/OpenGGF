@@ -1,7 +1,11 @@
 package com.openggf.game.patch;
 
 import com.openggf.game.save.SaveSessionContext;
+import com.openggf.game.save.SaveSessionLaunchTeamAccess;
 import com.openggf.game.save.SelectedTeam;
+import com.openggf.game.GameplayLaunchTeam;
+import com.openggf.game.PlayableCharacterRegistry;
+import com.openggf.game.session.GameplayTeamBootstrap;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -40,5 +44,13 @@ public final class GameplayTeamAvailability {
         LOGGER.warning("Launch team for " + gameId + " requested unavailable characters; "
                 + "using session-only team main=" + main + ", sidekicks=" + sidekicks);
         return context.withSelectedTeam(new SelectedTeam(main, sidekicks));
+    }
+
+    /** Validates and installs one required team into a copied launch context without fallback. */
+    public static SaveSessionContext requireForLaunch(SaveSessionContext context,
+            GameplayLaunchTeam requestedTeam, PlayableCharacterRegistry resolvedRegistry) {
+        Objects.requireNonNull(context, "context");
+        GameplayTeamBootstrap.requireExactTeam(resolvedRegistry, requestedTeam);
+        return SaveSessionLaunchTeamAccess.withLaunchTeam(context, requestedTeam);
     }
 }

@@ -1,0 +1,10 @@
+{"formatVersion":1,"zoneName":"ROM ART GALLERY","zoneIndex":64,"levelIndex":1024,
+"blockGridSide":8,"width":3,"height":2,
+"bounds":{"minX":0,"maxX":384,"minY":0,"maxY":256},
+"start":{"x":64,"y":128},"music":{"stockId":129},
+"assets":{"patterns":"patterns.bin","chunks":"chunks.bin","blocks":"blocks.bin",
+"foregroundMap":"fg-map.bin","solidHeights":"solid-heights.bin","solidWidths":"solid-widths.bin",
+"solidAngles":"solid-angles.bin","collisionPrimary":"collision-primary.bin",
+"collisionSecondary":"collision-secondary.bin","palettes":"palettes.bin"},
+"objects":[{"placementId":1,"x":192,"y":96,"objectKey":"sample-rom-art-remix:tails-flight-art","subtype":0,"renderFlags":0,"respawnTracked":false,"rawYWord":96}],
+"rings":[]}
