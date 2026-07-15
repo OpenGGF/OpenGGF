@@ -114,7 +114,9 @@ adds an internal host-palette bridge that:
 
 - validates creator declarations against character and HUD-reserved entries before
   publication;
-- exposes the S3K HUD provider's required palette entries as host-owned claims;
+- exposes the S3K HUD provider's required palette entries as host-owned claims,
+  keeping the live icon override on line 0 and supplying reserved line-1 cells
+  from the canonical ROM-derived `Pal_AIZ` values rather than creator colors;
 - submits HUD-visible palette writes through `PaletteOwnershipRegistry` at a defined
   host priority instead of using the direct lives-palette upload path; and
 - leaves stock level construction byte-for-byte unchanged when no custom zone is

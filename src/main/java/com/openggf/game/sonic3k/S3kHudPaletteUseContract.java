@@ -12,6 +12,14 @@ final class S3kHudPaletteUseContract {
             0,
             0
     };
+    /**
+     * Canonical line-1 words from {@code Pal_AIZ} (AIZ Main.bin), used by the
+     * {@code $210E} second lives-icon piece in the stock {@code Map_HUD}.
+     */
+    private static final int[] LINE_ONE_SEGA_WORDS = {
+            -1, 0x0EEE, -1, -1, -1, 0x00EE, -1, -1,
+            -1, -1, -1, -1, -1, -1, 0x0ECC, 0x0044
+    };
 
     private S3kHudPaletteUseContract() {
     }
@@ -22,5 +30,13 @@ final class S3kHudPaletteUseContract {
             return false;
         }
         return (RESERVED_COLOR_MASKS[paletteLine] & (1 << color)) != 0;
+    }
+
+    static int hostSegaWord(int paletteLine, int color) {
+        if (paletteLine != 1 || !isReserved(paletteLine, color)) {
+            throw new IllegalArgumentException(
+                    "No fixed S3K HUD host color for line " + paletteLine + ", color " + color);
+        }
+        return LINE_ONE_SEGA_WORDS[color];
     }
 }

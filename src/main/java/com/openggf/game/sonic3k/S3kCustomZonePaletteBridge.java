@@ -33,6 +33,7 @@ public final class S3kCustomZonePaletteBridge implements CustomZonePaletteBridge
     private final String creatorOwner;
     private final Palette characterPalette;
     private final List<ModPaletteClaim> creatorClaims;
+    private final int iconPaletteLine;
     private final boolean[][] hudUsedColors;
     private final Supplier<Palette> hudPaletteSupplier;
 
@@ -59,6 +60,7 @@ public final class S3kCustomZonePaletteBridge implements CustomZonePaletteBridge
         this.characterPalette = Objects.requireNonNull(characterPalette, "characterPalette").deepCopy();
         this.creatorClaims = List.copyOf(Objects.requireNonNull(creatorClaims, "creatorClaims"));
         requirePaletteLine(hudPaletteLine);
+        this.iconPaletteLine = hudPaletteLine;
         this.hudUsedColors = deriveHudUsedColors(hudPaletteLine, hudStaticArt, hudLivesNumbers);
         this.hudPaletteSupplier = Objects.requireNonNull(hudPaletteSupplier, "hudPaletteSupplier");
         validateCreatorClaims(ownerModId, creatorClaims, hudUsedColors);
@@ -106,13 +108,15 @@ public final class S3kCustomZonePaletteBridge implements CustomZonePaletteBridge
                     claim.line(), claim.color(), segaBytes(claim.segaColor())));
         }
         Palette override = hudPaletteSupplier.get();
-        Palette hudPalette = override != null ? override : characterPalette;
+        Palette iconPalette = override != null ? override : characterPalette;
         for (int line = 0; line < hudUsedColors.length; line++) {
             for (int color = 1; color < hudUsedColors[line].length; color++) {
                 if (hudUsedColors[line][color]) {
+                    int segaWord = line == iconPaletteLine
+                            ? PaletteWriteSupport.segaWordFromColor(iconPalette.getColor(color))
+                            : S3kHudPaletteUseContract.hostSegaWord(line, color);
                     registry.submit(PaletteWrite.normal(HUD_OWNER, HUD_PRIORITY,
-                            line, color,
-                            segaBytes(PaletteWriteSupport.segaWordFromColor(hudPalette.getColor(color)))));
+                            line, color, segaBytes(segaWord)));
                 }
             }
         }

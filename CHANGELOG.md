@@ -10,7 +10,9 @@ All notable changes to the OpenGGF project are documented in this file.
   S3K object-set metadata and sparse Genesis palette claims while leaving the Sonic
   2/standalone format-v1 contract unchanged. Custom S3K zones compose host-owned
   character line 0 and the exact mixed-palette lives-HUD cells on lines 0 and 1
-  with creator-owned level colors, use
+  with creator-owned level colors. The live lives-icon override remains isolated
+  to line 0, while reserved line-1 cells use the canonical ROM-derived AIZ host
+  words instead of inheriting line-0 colors. Custom S3K zones use
   empty flat runtime defaults (no stock events, animation, PLC, or render effects),
   retain stock object-set identity through mutable/editor/rewind paths, and persist
   owner/local zone keys in S3K saves with safe AIZ1 fallback when an owner is absent.

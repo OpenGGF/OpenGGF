@@ -259,7 +259,10 @@ Added signatures:
   line 1 second icon piece); level art must claim every other reachable indexed
   color. A ROM-independent fixed mask enforces those reservations before creator
   publication, while runtime art-derived masks route each cell to its piece's
-  actual palette line.
+  actual palette line. The line-0 lives override is never reused as a line-1
+  palette: line 1 receives the canonical host words derived from `Pal_AIZ`, which
+  are verified against the stock ROM but stored internally for ROM-independent
+  creator validation and composition.
 - **`ModZoneRuntimeProfile`** and its `FLAT` scroll policy describe the intentionally
   empty initial runtime: no stock animation, PLC, special-render, or advanced-render
   features.
