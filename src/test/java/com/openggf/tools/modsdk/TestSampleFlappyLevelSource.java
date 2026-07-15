@@ -2,6 +2,7 @@ package com.openggf.tools.modsdk;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.BakedSheetReader;
 
@@ -21,6 +22,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Verifies the sample-flappy level source materializes and converts through the real CLI. */
@@ -57,6 +60,11 @@ class TestSampleFlappyLevelSource {
         assertFalse(level.has("game"));
         assertFalse(level.has("cameraMinX"));
         assertFalse(level.has("visibleHeight"));
+
+        int stockId = level.at("/music/stockId").asInt();
+        Sonic3kMusic music = Sonic3kMusic.fromId(stockId);
+        assertNotNull(music, "the S3K patch must reject unknown stock music IDs");
+        assertSame(Sonic3kMusic.AIZ1, music);
     }
 
     @Test
