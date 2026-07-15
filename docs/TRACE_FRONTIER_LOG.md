@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ drilling escape restores native gradual-bound cadence
+
+Branch `feature/ai-trace-animation-verification`, after the strict quake-edge
+milestone. The drilling Robotnik escape now follows `Move_WaitNoFall` and
+`Obj_Wait` literally: ceiling contact switches routine without consuming the
+wait word, and the cleanup callback fires only after the signed word becomes
+negative. Its replacement camera-bound worker starts on the following object
+pass and adds `$4000` to its longword accumulator each frame, publishing the
+high word to the boundary. This replaces the engine's coarse `$40`-pixel step
+and its same-frame worker execution. No trace state, zone/route/frame carve-out,
+hydration, or comparator tolerance was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:142619-142706,177949-177957,178159-178198`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 18267 to frame 18603
+  (`y_speed`, expected `-$0250` / actual `-$0350`).
+- MGZ complete-run animation remains at frame 18641
+  (`player_animation_id`, expected Walk `$00` / actual Roll `$02`).
+- The focused gradual-worker ordering and rewind-schema tests pass; the
+  Robotnik cleanup assertion covers the signed `Obj_Wait` zero/negative edge.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ quake clamp preserves S3K's strict right edge
 
 Branch `feature/ai-trace-animation-verification`, after the pulley jumping-byte

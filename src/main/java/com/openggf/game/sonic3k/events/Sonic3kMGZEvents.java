@@ -340,11 +340,13 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private MgzDrillingRobotnikInstance activeRobotnik;
     /** Set once activeRobotnik's destruction has been observed and bounds restored. */
     private boolean postFleeUnlockDone;
-    private static final int CAMERA_BOUND_RESTORE_STEP = 0x40;
+    private static final int GRADUAL_UNLOCK_ACCEL = 0x4000;
     private static final int GRADUAL_UNLOCK_NONE = 0;
     private static final int GRADUAL_UNLOCK_MAX_X = 1;
     private static final int GRADUAL_UNLOCK_MIN_X = -1;
     private int gradualUnlockDirection;
+    /** ROM Obj_IncLevEndXGradual / Obj_DecLevStartXGradual longword at $30. */
+    private int gradualUnlockAccumulator;
 
     public Sonic3kMGZEvents() {
         super();
@@ -405,6 +407,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         activeRobotnik = null;
         postFleeUnlockDone = false;
         gradualUnlockDirection = GRADUAL_UNLOCK_NONE;
+        gradualUnlockAccumulator = 0;
     }
 
     public void setEventsFg5(boolean value) {
@@ -603,8 +606,8 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         int playerX = player.getCentreX();
         int playerY = player.getCentreY();
 
-        maybeStartUnlockAfterRobotnikDestroyed();
         updateGradualCameraUnlock();
+        maybeStartUnlockAfterRobotnikDestroyed();
 
         switch (quakeEventRoutine) {
             case QUAKE_CHECK -> quakeEventCheck(playerX, playerY);
@@ -815,6 +818,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         activeRobotnik = null;
         postFleeUnlockDone = false;
         gradualUnlockDirection = GRADUAL_UNLOCK_NONE;
+        gradualUnlockAccumulator = 0;
     }
 
     /**
@@ -831,6 +835,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         setGenericBossFlag(false);
         activeRobotnik = null;
         postFleeUnlockDone = false;
+        gradualUnlockAccumulator = 0;
         // Screen shake is NOT cleared here — the quake-continuous shake persists
         // until MGZ2_ChunkEvent owns the shutdown later in the sequence (ROM:
         // Events_fg_0 stays set across the mini-event release).
@@ -849,6 +854,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         ObjectSpawn spawn = new ObjectSpawn(spawnX, spawnY, 0, 0, 0, false, 0);
         activeRobotnik = spawnObject(() -> new MgzDrillingRobotnikInstance(spawn, flipX));
         postFleeUnlockDone = false;
+        gradualUnlockAccumulator = 0;
         screenShakeActive = true;
         setGenericBossFlag(true);
         LOG.info("MGZ2 drilling Robotnik appearance " + (appearanceIndex + 1)
@@ -865,6 +871,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             case QUAKE_EVENT_2_CONT, QUAKE_EVENT_3_CONT -> GRADUAL_UNLOCK_MIN_X;
             default -> GRADUAL_UNLOCK_NONE;
         };
+        gradualUnlockAccumulator = 0;
         setGenericBossFlag(false);
         activeRobotnik = null;
         postFleeUnlockDone = true;
@@ -874,24 +881,31 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         if (gradualUnlockDirection == GRADUAL_UNLOCK_NONE) {
             return;
         }
+        gradualUnlockAccumulator += GRADUAL_UNLOCK_ACCEL;
+        int delta = gradualUnlockAccumulator >>> 16;
+        if (delta == 0) {
+            return;
+        }
         Camera camera = camera();
         if (gradualUnlockDirection == GRADUAL_UNLOCK_MAX_X) {
             int current = camera.getMaxX() & 0xFFFF;
             if (current >= DEFAULT_CAMERA_MAX_X) {
                 camera.setMaxX((short) DEFAULT_CAMERA_MAX_X);
                 gradualUnlockDirection = GRADUAL_UNLOCK_NONE;
+                gradualUnlockAccumulator = 0;
                 return;
             }
-            camera.setMaxX((short) Math.min(DEFAULT_CAMERA_MAX_X, current + CAMERA_BOUND_RESTORE_STEP));
+            camera.setMaxX((short) Math.min(DEFAULT_CAMERA_MAX_X, current + delta));
             return;
         }
         int current = camera.getMinX() & 0xFFFF;
         if (current <= DEFAULT_CAMERA_MIN_X) {
             camera.setMinX((short) DEFAULT_CAMERA_MIN_X);
             gradualUnlockDirection = GRADUAL_UNLOCK_NONE;
+            gradualUnlockAccumulator = 0;
             return;
         }
-        camera.setMinX((short) Math.max(DEFAULT_CAMERA_MIN_X, current - CAMERA_BOUND_RESTORE_STEP));
+        camera.setMinX((short) Math.max(DEFAULT_CAMERA_MIN_X, current - delta));
     }
 
     private void setGenericBossFlag(boolean active) {
@@ -1705,6 +1719,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         camera().setMaxX((short) DEFAULT_CAMERA_MAX_X);
         camera().setMaxXTarget((short) DEFAULT_CAMERA_MAX_X);
         gradualUnlockDirection = GRADUAL_UNLOCK_NONE;
+        gradualUnlockAccumulator = 0;
         chunkEventRoutine = CHUNK_EVENT_DONE;
     }
 
@@ -2211,4 +2226,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     public void    setPostFleeUnlockDone(boolean v)      { postFleeUnlockDone = v; }
     public int     getGradualUnlockDirection()           { return gradualUnlockDirection; }
     public void    setGradualUnlockDirection(int v)      { gradualUnlockDirection = v; }
+    public int     getGradualUnlockAccumulator()         { return gradualUnlockAccumulator; }
+    public void    setGradualUnlockAccumulator(int v)    { gradualUnlockAccumulator = v; }
 }

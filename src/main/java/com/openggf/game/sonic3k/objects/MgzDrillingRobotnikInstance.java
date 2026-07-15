@@ -1010,7 +1010,6 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (ceiling.distance() < 0) {
             spawnFallingDebris();
             state.routine = ROUTINE_ESCAPE_WAIT;
-            advanceEscapeTimer();
             return;
         }
         applyYVelocity();
@@ -1025,7 +1024,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
 
     private void advanceEscapeTimer() {
         escapeTimer--;
-        if (escapeTimer > 0) {
+        if (escapeTimer >= 0) {
             return;
         }
         restoreMgzPalette();

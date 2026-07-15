@@ -204,6 +204,7 @@ public class TestZoneEventRewindSchemaGuard {
             "bgRiseFinalShakeTimer",
             "bossArenaRoutine",
             "gradualUnlockDirection",
+            "gradualUnlockAccumulator",
             "collapseScrollVelocity",
             "collapseScrollFixedPosition",
             "collapseScrollPosition"

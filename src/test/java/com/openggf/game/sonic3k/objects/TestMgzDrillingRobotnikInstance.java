@@ -160,6 +160,9 @@ class TestMgzDrillingRobotnikInstance {
         boss.getState().routine = staticInt("ROUTINE_ESCAPE_WAIT");
 
         boss.update(1, null);
+        assertFalse(boss.isDestroyed(), "Obj_Wait does not fire its callback when $2E reaches zero");
+        boss.update(2, null);
+        assertTrue(boss.isDestroyed(), "Obj_Wait fires after $2E becomes negative");
 
         assertColorWord(services.paletteLine1, 0, 0x000E);
         assertColorWord(services.paletteLine1, 1, 0x024A);

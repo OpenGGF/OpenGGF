@@ -374,9 +374,15 @@ class TestSonic3kMgz2QuakeEvents {
 
         camera.setMaxX((short) 0x07E0);
         events.update(1, 2);
-
-        assertTrue((camera.getMaxX() & 0xFFFF) > 0x07E0,
-                "destroyed Robotnik should start restoring the camera X bound immediately");
+        assertEquals(0x07E0, camera.getMaxX() & 0xFFFF,
+                "the newly allocated gradual worker starts on the following frame");
+        events.update(1, 3);
+        events.update(1, 4);
+        events.update(1, 5);
+        assertEquals(0x07E0, camera.getMaxX() & 0xFFFF);
+        events.update(1, 6);
+        assertEquals(0x07E1, camera.getMaxX() & 0xFFFF,
+                "the fourth $4000 step publishes the first one-pixel bound increment");
     }
 
     @Test
