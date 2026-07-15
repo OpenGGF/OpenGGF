@@ -1,6 +1,35 @@
 # Trace Frontier Log
 
-+### 2026-07-15 -- MGZ Mantis landing callback retains composed Y
+### 2026-07-15 -- FindFloor regress keeps the prior collision angle
+
+Branch `feature/ai-trace-animation-verification`, after the Mantis landing
+milestone. S3K `FindFloor` stores a regressed tile's angle before sampling its
+height map. When the MGZ top platform crossed a full-tile edge at X `$0C76`,
+the tile above supplied angle `$10` but a zero height sample; the engine kept
+the original tile's `$04` angle instead. The shared object-terrain probe now
+retains the prior collision shape's angle and tile identity whenever that
+shape exists, while an absent shape still preserves the original angle. No
+trace state, zone/route/frame carve-out, hydration, or comparator tolerance
+was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:19187-19305`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 20490 to frame 21922
+  (`tails_y`, expected `$08A2` / actual `$08A1`).
+- MGZ complete-run animation advances from frame 20559 to frame 21922
+  (`tails_animation_id`, expected Roll `$02` / actual Wait `$05`).
+- `TestObjectTerrainUtils` passes its focused run, including the new zero-height
+  prior-collision angle assertion and the absent-shape preservation assertion.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ Mantis landing callback retains composed Y
 
 Branch `feature/ai-trace-animation-verification`, after the global-oscillator
 ownership milestone. The first Mantis at X `$1428` matched the native jump
@@ -30,7 +59,7 @@ Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
   every previously green route stays green.
 
 ### 2026-07-15 -- MGZ moving-spike platform preserves global oscillator ownership
-+### 2026-07-15 -- MGZ moving-spike platform preserves global oscillator ownership
+### 2026-07-15 -- MGZ moving-spike platform preserves global oscillator ownership
 
 Branch `feature/ai-trace-animation-verification`, after the live Mantis-touch
 milestone. `Obj_MGZMovingSpikePlatform` reads

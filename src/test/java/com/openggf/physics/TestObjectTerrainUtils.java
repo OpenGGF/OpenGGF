@@ -77,6 +77,29 @@ class TestObjectTerrainUtils {
 
         // sub_F30C empty path returns 15 - 4, then loc_F2FE subtracts $10.
         assertEquals(-5, result.distance());
+        assertEquals((byte) 0x10, result.angle());
+        assertEquals(3, result.tileIndex());
+    }
+
+    @Test
+    void floorFullTileEdgeKeepsPreviousCollisionAngleWhenItsSampleIsEmpty() throws Exception {
+        LevelManager level = mock(LevelManager.class);
+        ChunkDesc previousDesc = new ChunkDesc(7 | 0x1000);
+        SolidTile previousTile = createFlatHeightTile(7, (byte) 0, (byte) 0x20);
+        SolidTile originalTile = createFlatHeightTile(3, (byte) 16, (byte) 0x10);
+        ChunkDesc originalDesc = new ChunkDesc(3 | 0x1000);
+        int x = 0x2345;
+        int y = 0x1234;
+
+        when(level.getChunkDescAt((byte) 0, x, y - 16)).thenReturn(previousDesc);
+        when(level.getSolidTileForChunkDesc(eq(previousDesc), eq(0x0C), anyBoolean())).thenReturn(previousTile);
+
+        TerrainCheckResult result = invokeFloorEdge(level, originalTile, originalDesc, x, y, false);
+
+        // sub_F30C stores the previous collision shape's angle before its zero-height branch.
+        assertEquals(-5, result.distance());
+        assertEquals((byte) 0x20, result.angle());
+        assertEquals(7, result.tileIndex());
     }
 
     @Test

@@ -113,7 +113,6 @@ public final class ObjectTerrainUtils {
         ChunkDesc desc = lm.getChunkDescAt((byte) 0, x, y);
         SolidTile tile = getSolidTile(lm, desc, SOLIDITY_TOP);
         byte metric = getHeightMetric(tile, desc, x);
-
         if (metric == 0) {
             // No surface - extend 16 pixels down
             return checkFloorExtension(lm, x, y, flipAwareAngle);
@@ -192,18 +191,33 @@ public final class ObjectTerrainUtils {
         int yInTile = y & 0x0F;
         if (metric == 0) {
             int dist = 15 - yInTile - 16;
-            return new TerrainCheckResult(dist, getAngle(origTile, origDesc, flipAwareAngle), getTileIndex(origDesc));
+            return createFloorRegressDefaultResult(
+                    tile, desc, origTile, origDesc, dist, flipAwareAngle);
         }
         if (metric < 0) {
             int adjusted = metric + yInTile;
             if (adjusted >= 0) {
                 int dist = 15 - yInTile - 16;
-                return new TerrainCheckResult(dist, getAngle(origTile, origDesc, flipAwareAngle), getTileIndex(origDesc));
+                return createFloorRegressDefaultResult(
+                        tile, desc, origTile, origDesc, dist, flipAwareAngle);
             }
             int dist = ~yInTile - 16;
             return new TerrainCheckResult(dist, getAngle(tile, desc, flipAwareAngle), getTileIndex(desc));
         }
         return createFloorResult(tile, desc, metric, y, prevY, flipAwareAngle);
+    }
+
+    private static TerrainCheckResult createFloorRegressDefaultResult(
+            SolidTile tile, ChunkDesc desc, SolidTile origTile, ChunkDesc origDesc,
+            int distance, boolean flipAwareAngle) {
+        // ROM sub_F30C writes the prior tile's angle before sampling its height.
+        // Only a missing collision shape leaves the original tile's angle intact.
+        if (tile != null) {
+            return new TerrainCheckResult(
+                    distance, getAngle(tile, desc, flipAwareAngle), getTileIndex(desc));
+        }
+        return new TerrainCheckResult(
+                distance, getAngle(origTile, origDesc, flipAwareAngle), getTileIndex(origDesc));
     }
 
     private static TerrainCheckResult createFloorResult(SolidTile tile, ChunkDesc desc,
