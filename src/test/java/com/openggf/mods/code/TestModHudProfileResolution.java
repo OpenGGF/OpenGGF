@@ -24,6 +24,7 @@ import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.HudLabel;
 import com.openggf.level.objects.HudMetric;
 import com.openggf.level.objects.HudProfile;
+import com.openggf.level.objects.HudProfileAccess;
 import com.openggf.level.objects.HudRenderManager;
 import com.openggf.level.objects.HudRow;
 import com.openggf.level.objects.HudWarningPolicy;
@@ -41,7 +42,6 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestModHudProfileResolution {
@@ -104,16 +104,17 @@ class TestModHudProfileResolution {
         when(module.getGameplayPolicyProvider()).thenReturn(policies);
         LevelManager manager = manager(world);
         setField(manager, "gameModule", module);
-        HudRenderManager hud = mock(HudRenderManager.class);
+        HudRenderManager hud = new HudRenderManager(
+                mock(GraphicsManager.class), mock(Camera.class), mock(GameStateManager.class));
         setField(manager, "hudRenderManager", hud);
 
         manager.loadLevelData(0x400);
-        verify(hud).setProfile(FLAPPY_PROFILE);
+        assertEquals(FLAPPY_PROFILE, HudProfileAccess.current(hud));
 
         world.setCurrentZone(0);
         setField(manager, "currentZone", 0);
         manager.loadLevelData(0);
-        verify(hud).setProfile(HudProfile.stock());
+        assertEquals(HudProfile.stock(), HudProfileAccess.current(hud));
     }
 
     private static LevelManager manager(WorldSession world) {

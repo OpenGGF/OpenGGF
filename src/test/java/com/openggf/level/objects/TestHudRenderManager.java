@@ -8,6 +8,7 @@ import com.openggf.level.Pattern;
 import com.openggf.level.Palette;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.mods.code.ModApiSignatureSurface;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
@@ -16,6 +17,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -33,9 +35,85 @@ import static org.mockito.Mockito.when;
 public class TestHudRenderManager {
 
     @Test
+    void annotatedRendererDoesNotPublishProfileMutationMethod() {
+        assertThrows(NoSuchMethodException.class,
+                () -> HudRenderManager.class.getMethod("setProfile", HudProfile.class));
+        assertFalse(ModApiSignatureSurface.snapshotLines().stream()
+                .anyMatch(line -> line.contains("HudProfileAccess")),
+                "engine HUD bridge must remain outside the recursive Mod API surface");
+    }
+
+    @Test
+    void hudRowsRejectUnsafeWidthsAndRequireTheSupportedTimeWidth() {
+        assertThrows(IllegalArgumentException.class, () -> new HudRow(
+                true, HudLabel.SCORE, HudMetric.SCORE,
+                16, 8, 64, 8, 0, HudWarningPolicy.NONE));
+        assertThrows(IllegalArgumentException.class, () -> new HudRow(
+                true, HudLabel.SCORE, HudMetric.SCORE,
+                16, 8, 64, 8, 10, HudWarningPolicy.NONE));
+        assertThrows(IllegalArgumentException.class, () -> new HudRow(
+                true, HudLabel.TIME, HudMetric.TIME,
+                16, 24, 56, 24, 3, HudWarningPolicy.NONE));
+    }
+
+    @Test
+    void oneDigitRingMetricSaturatesSeventeenToNine() {
+        HudFixture fixture = hudFixture(0, "0:00", 17, 3, false, false);
+        HudProfileAccess.install(fixture.hud(), singleNumericRow(HudMetric.RINGS, 1));
+
+        fixture.hud().draw(fixture.levelState(), null);
+
+        assertTrue(fixture.draws().contains(new Draw(218, 64, 40)));
+        assertTrue(fixture.draws().contains(new Draw(219, 64, 48)));
+    }
+
+    @Test
+    void sixDigitScoreMetricSaturatesIntegerOverflowToNines() {
+        HudFixture fixture = hudFixture(Integer.MAX_VALUE, "0:00", 0, 3, false, false);
+        HudProfileAccess.install(fixture.hud(), singleNumericRow(HudMetric.SCORE, 6));
+
+        fixture.hud().draw(fixture.levelState(), null);
+
+        assertEquals(List.of(64, 72, 80, 88, 96, 104), fixture.draws().stream()
+                .filter(draw -> draw.patternId() == 218 && draw.y() == 40)
+                .map(Draw::x).toList());
+    }
+
+    @Test
+    void livesMetricHonorsWidthAndSaturatesOverflow() {
+        HudFixture fixture = hudFixture(0, "0:00", 0, 42, false, false);
+        HudProfileAccess.install(fixture.hud(), new HudProfile(List.of(
+                new HudRow(true, HudLabel.LIVES, HudMetric.LIVES,
+                        16, 200, 56, 208, 1, HudWarningPolicy.NONE))));
+
+        fixture.hud().draw(fixture.levelState(), null);
+
+        assertTrue(fixture.draws().contains(new Draw(229, 56, 208)));
+        assertFalse(fixture.draws().contains(new Draw(224, 56, 208)));
+    }
+
+    @Test
+    void negativeNumericMetricsRenderAsZeroWithoutThrowing() {
+        HudFixture fixture = hudFixture(-5, "0:00", -7, -2, false, false);
+        HudProfileAccess.install(fixture.hud(), new HudProfile(List.of(
+                new HudRow(true, HudLabel.SCORE, HudMetric.SCORE,
+                        16, 8, 64, 8, 1, HudWarningPolicy.NONE),
+                new HudRow(true, HudLabel.RINGS, HudMetric.RINGS,
+                        16, 40, 64, 40, 1, HudWarningPolicy.NONE),
+                new HudRow(true, HudLabel.LIVES, HudMetric.LIVES,
+                        16, 200, 56, 208, 1, HudWarningPolicy.NONE))));
+
+        fixture.hud().draw(fixture.levelState(), null);
+
+        assertTrue(fixture.draws().contains(new Draw(200, 64, 8)));
+        assertTrue(fixture.draws().contains(new Draw(200, 64, 40)));
+        assertTrue(fixture.draws().contains(new Draw(220, 56, 208)));
+    }
+
+    @Test
     void stockProfilePreservesTheExistingOrderedDrawCommands() {
         HudFixture fixture = hudFixture(123, "0:10", 7, 3, false, false);
-        fixture.hud().setProfile(HudProfile.stock());
+        HudProfileAccess.install(fixture.hud(), HudProfile.stock());
 
         fixture.hud().draw(fixture.levelState(), null);
 
@@ -58,7 +136,7 @@ public class TestHudRenderManager {
     @Test
     void scoreLabelCanDisplayRingMetricInRingsSlotWithoutStockRowsOrWarning() {
         HudFixture fixture = hudFixture(999, "4:44", 17, 3, true, true);
-        fixture.hud().setProfile(new HudProfile(List.of(
+        HudProfileAccess.install(fixture.hud(), new HudProfile(List.of(
                 new HudRow(false, HudLabel.SCORE, HudMetric.SCORE,
                         16, 8, 64, 8, 6, HudWarningPolicy.NONE),
                 new HudRow(false, HudLabel.TIME, HudMetric.TIME,
@@ -81,7 +159,7 @@ public class TestHudRenderManager {
     @Test
     void warningPoliciesUseResolvedMetricAndTimerStateOnlyWhenConfigured() {
         HudFixture fixture = hudFixture(0, "9:59", 0, 3, true, true);
-        fixture.hud().setProfile(new HudProfile(List.of(
+        HudProfileAccess.install(fixture.hud(), new HudProfile(List.of(
                 new HudRow(true, HudLabel.TIME, HudMetric.TIME,
                         16, 24, 56, 24, 4, HudWarningPolicy.TIMER_FLASH),
                 new HudRow(true, HudLabel.RINGS, HudMetric.SCORE,
@@ -102,7 +180,7 @@ public class TestHudRenderManager {
     @Test
     void debugHudKeepsStockLayoutWhenTheDestinationProfileHidesEveryRow() {
         HudFixture fixture = hudFixture(123, "0:10", 7, 3, false, false);
-        fixture.hud().setProfile(new HudProfile(List.of()));
+        HudProfileAccess.install(fixture.hud(), new HudProfile(List.of()));
         com.openggf.game.PlayableEntity player = mock(com.openggf.game.PlayableEntity.class);
         when(player.isDebugMode()).thenReturn(true);
 
@@ -143,7 +221,7 @@ public class TestHudRenderManager {
         hud.setDigitPatternIndex(200);
         hud.setLivesNumbersPatternIndex(220);
         hud.setStaticHudArt(0x28020, staticArt);
-        hud.setProfile(new HudProfile(List.of()));
+        HudProfileAccess.install(hud, new HudProfile(List.of()));
         hud.setBonusStageHudLayout(true);
 
         hud.draw(levelState, null);
@@ -585,6 +663,11 @@ public class TestHudRenderManager {
             return null;
         }).when(graphicsManager).renderPatternWithId(anyInt(), any(), anyInt(), anyInt());
         return new HudFixture(hud, levelState, draws);
+    }
+
+    private static HudProfile singleNumericRow(HudMetric metric, int maxDigits) {
+        return new HudProfile(List.of(new HudRow(true, HudLabel.SCORE, metric,
+                16, 40, 64, 40, maxDigits, HudWarningPolicy.NONE)));
     }
 
     private static SpriteMappingFrame frame(int patternId) {

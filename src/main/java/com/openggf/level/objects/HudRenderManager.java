@@ -31,18 +31,8 @@ public class HudRenderManager {
     private HudStaticArt staticHudArt;
     private int staticHudPatternIndex;
 
-    // Cached HUD values for performance - avoid String.valueOf() and parsing each frame
-    private int cachedScore = -1;
-    private int cachedRings = -1;
-    private int cachedLives = -1;
-    private String cachedTime = null;
-    // Pre-computed digit arrays to avoid allocation each frame
-    private final int[] scoreDigits = new int[6];
-    private final int[] ringDigits = new int[3];
-    private final int[] livesDigits = new int[3];
-    private int scoreDigitCount = 0;
-    private int ringDigitCount = 0;
-    private int livesDigitCount = 0;
+    // One bounded scratch array serves every numeric row synchronously.
+    private final int[] numericDigits = new int[9];
 
     // Icon/flash palette and HUD text palette — configurable per game
     private PatternDesc iconPatternDesc = new PatternDesc(0x8000);
@@ -78,10 +68,13 @@ public class HudRenderManager {
         this.bonusStageHudLayout = enabled;
     }
 
-    /** Installs the immutable row presentation selected for the active destination. */
-    public void setProfile(HudProfile profile) {
+    void installProfile(HudProfile profile) {
         this.profile = Objects.requireNonNull(profile, "profile");
         invalidateCache();
+    }
+
+    HudProfile currentProfile() {
+        return profile;
     }
 
     public void setDigitPatternIndex(int digitPatternIndex) {
@@ -128,13 +121,6 @@ public class HudRenderManager {
      * Call this when loading a new level or when HUD state needs full refresh.
      */
     public void invalidateCache() {
-        cachedScore = -1;
-        cachedRings = -1;
-        cachedLives = -1;
-        cachedTime = null;
-        scoreDigitCount = 0;
-        ringDigitCount = 0;
-        livesDigitCount = 0;
         lastAppliedLivesPaletteOverride = null;
     }
 
@@ -292,7 +278,8 @@ public class HudRenderManager {
             case TIME -> drawTime(row.valueRightX(), row.valueY(), levelState.getDisplayTime());
             case RINGS -> drawNumberRightAligned(row.valueRightX(), row.valueY(),
                     levelState.getRings(), row.maxDigits());
-            case LIVES -> drawLives(gameState.getLives(), row.valueRightX(), row.valueY());
+            case LIVES -> drawLives(gameState.getLives(), row.valueRightX(), row.valueY(),
+                    row.maxDigits());
         }
     }
 
@@ -305,19 +292,16 @@ public class HudRenderManager {
         drawNumberRightAligned(64, y, rings, 3);
     }
 
-    private void drawLives(int lives, int numDrawX, int line2Y) {
+    private void drawLives(int lives, int numDrawX, int line2Y, int maxDigits) {
         int camX = camera.getXWithShake();
         int camY = camera.getYWithShake();
 
         if (livesNumbersPatternIndex <= 0) {
             return;
         }
-        if (lives != cachedLives) {
-            cachedLives = lives;
-            livesDigitCount = numberToDigits(lives, livesDigits);
-        }
-        for (int i = 0; i < livesDigitCount; i++) {
-            int digit = livesDigits[i];
+        int digitCount = numberToDigits(saturateNumeric(lives, maxDigits), numericDigits);
+        for (int i = 0; i < digitCount; i++) {
+            int digit = numericDigits[i];
             renderSafe(livesNumbersPatternIndex + digit, iconPatternDesc, numDrawX + camX + (i * 8), line2Y + camY);
         }
     }
@@ -464,49 +448,29 @@ public class HudRenderManager {
     private void drawNumberRightAligned(int startX, int y, int value, int maxDigits) {
         int camX = camera.getXWithShake();
         int camY = camera.getYWithShake();
-
-        int[] digitArray;
-        int digitCount;
-
-        if (maxDigits == 6) {
-            if (value != cachedScore) {
-                cachedScore = value;
-                scoreDigitCount = numberToDigits(value, scoreDigits);
-            }
-            digitArray = scoreDigits;
-            digitCount = scoreDigitCount;
-        } else if (maxDigits == 3 && value <= 999) {
-            if (value != cachedRings) {
-                cachedRings = value;
-                ringDigitCount = numberToDigits(value, ringDigits);
-            }
-            digitArray = ringDigits;
-            digitCount = ringDigitCount;
-        } else {
-            digitArray = new int[maxDigits];
-            digitCount = numberToDigits(value, digitArray);
-        }
-
+        int digitCount = numberToDigits(saturateNumeric(value, maxDigits), numericDigits);
         int padding = maxDigits - digitCount;
-        if (padding < 0) {
-            padding = 0;
-        }
 
         for (int i = 0; i < digitCount; i++) {
-            int digit = digitArray[i];
+            int digit = numericDigits[i];
             int xPos = startX + (padding + i) * 8;
             renderSafe(digitPatternIndex + (digit * 2), hudPatternDesc, xPos + camX, y + camY);
             renderSafe(digitPatternIndex + (digit * 2) + 1, hudPatternDesc, xPos + camX, y + camY + 8);
         }
     }
 
-    private void drawTime(int x, int y, String timeStr) {
-        if (timeStr == null || timeStr.equals(cachedTime)) {
-            cachedTime = timeStr;
-        } else {
-            cachedTime = timeStr;
+    private static int saturateNumeric(int value, int maxDigits) {
+        if (maxDigits < 1 || maxDigits > 9) {
+            throw new IllegalArgumentException("numeric HUD width must be between 1 and 9");
         }
+        int maximum = 0;
+        for (int i = 0; i < maxDigits; i++) {
+            maximum = maximum * 10 + 9;
+        }
+        return Math.max(0, Math.min(value, maximum));
+    }
 
+    private void drawTime(int x, int y, String timeStr) {
         int camX = camera.getXWithShake();
         int camY = camera.getYWithShake();
         for (int i = 0; i < timeStr.length(); i++) {

@@ -43,6 +43,7 @@ import com.openggf.mods.code.OwnerAwareGameplayInputFilter;
 import com.openggf.level.rewind.LevelRewindSnapshotAdapter;
 import com.openggf.level.objects.HudPaletteBridgeAccess;
 import com.openggf.level.objects.HudProfile;
+import com.openggf.level.objects.HudProfileAccess;
 import com.openggf.level.objects.HudRenderManager;
 import com.openggf.level.objects.HudStaticArt;
 import com.openggf.graphics.GLCommand;
@@ -505,7 +506,7 @@ public class LevelManager {
         }
         activeHudProfile = resolved;
         if (hudRenderManager != null) {
-            hudRenderManager.setProfile(activeHudProfile);
+            HudProfileAccess.install(hudRenderManager, activeHudProfile);
         }
     }
 
@@ -1348,7 +1349,7 @@ public class LevelManager {
             }
 
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
-            hudRenderManager.setProfile(activeHudProfile);
+            HudProfileAccess.install(hudRenderManager, activeHudProfile);
             hudRenderManager.setHudPalettes(provider.getHudTextPaletteLine(), provider.getHudFlashPaletteLine());
             if (activeModZoneRuntimeContribution != null) {
                 activeCustomZonePaletteBridge = gameModule.createCustomZonePaletteBridge(
