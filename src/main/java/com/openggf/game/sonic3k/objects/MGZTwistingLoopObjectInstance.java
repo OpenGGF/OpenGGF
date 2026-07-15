@@ -258,16 +258,18 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         if (speedMagnitude < MIN_GROUND_SPEED) {
             speedMagnitude = MIN_GROUND_SPEED;
         }
-        if (speedMagnitude > MAX_GROUND_SPEED) {
+        if (speedMagnitude >= MAX_GROUND_SPEED) {
             speedMagnitude = MAX_GROUND_SPEED;
+            // loc_33E2A/loc_33EDA publish y_vel only when the maximum clamp
+            // is taken. Below that threshold the player movement routine's
+            // live projected y_vel remains visible to the loop calculation.
+            player.setYSpeed((short) MAX_GROUND_SPEED);
         }
 
         int adjustedGroundSpeed = speedSign * speedMagnitude;
-        int adjustedYSpeed = speedMagnitude;
         player.setGSpeed((short) adjustedGroundSpeed);
         player.setXSpeed((short) 0);
-        player.setYSpeed((short) adjustedYSpeed);
-        return adjustedYSpeed;
+        return player.getYSpeed();
     }
 
     private void applyTwistFrame(AbstractPlayableSprite player, int phaseBase) {

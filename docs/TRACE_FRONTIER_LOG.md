@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ twisting-loop minimum clamp preserves live `y_vel`
+
+Branch `feature/ai-trace-animation-verification`, after the vertical-trigger-
+platform milestone. `Obj_MGZTwistingLoop` clamps `ground_vel` to a minimum
+magnitude of `$400`, but its minimum branch does not write `y_vel`; the live
+velocity projected by the preceding player movement routine remains the input
+to the private spiral-position calculation. The engine instead copied the
+clamped ground-speed magnitude into `y_vel` every loop pass, replacing native
+values such as `$03FD` and `$03A0` with `$0400` and shifting both position and
+twist-frame cadence. The loop now writes positive `$C00` `y_vel` only on the
+native maximum-clamp branch. No trace state, zone/route/frame carve-out,
+hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:70298-70452`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 25250 to frame 27157
+  (`y_speed`, expected `$04F8` / actual `-$04F8`).
+- MGZ complete-run animation advances from frame 25258 to frame 27164
+  (`player_animation_id`, expected Walk / actual Roll).
+- `TestS3kMgzTwistingLoopObject` passes 10/10, including separate minimum-
+  clamp retention and maximum-clamp publication assertions.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ vertical trigger platforms restore native sibling SST order
 
 Branch `feature/ai-trace-animation-verification`, after the Spiker-launcher

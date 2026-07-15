@@ -90,7 +90,7 @@ class TestS3kMgzTwistingLoopObject {
         assertTrue(player.getYSubpixelRaw() != 0,
                 "MGZ loop should continue carrying subpixel progress while the player is captured");
 
-        for (int frame = 2; frame <= 12 && player.isObjectControlled(); frame++) {
+        for (int frame = 2; frame <= 24 && player.isObjectControlled(); frame++) {
             loop.update(frame, player);
         }
 
@@ -101,19 +101,37 @@ class TestS3kMgzTwistingLoopObject {
     }
 
     @Test
-    void mgzTwistingLoopNegativeEntrySpeed_keepsNegativeMinimumGroundSpeed() {
+    void mgzTwistingLoopMinimumGroundClamp_keepsLiveProjectedYSpeed() {
         MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
                 new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
         TestablePlayableSprite player = createDirectEntryPlayer();
         player.setGSpeed((short) -8);
+        player.setYSpeed((short) 0x03FD);
 
         loop.update(0, player); // capture
         loop.update(1, player); // first active frame
 
         assertEquals(-0x0400, player.getGSpeed(),
                 "MGZ loop should preserve a negative entry direction when clamping to minimum speed");
-        assertEquals(0x0400, player.getYSpeed() & 0xFFFF,
-                "MGZ loop should still use the minimum downward carry speed");
+        assertEquals(0x03FD, player.getYSpeed() & 0xFFFF,
+                "The minimum ground-speed clamp must leave the physics-produced y_vel untouched");
+    }
+
+    @Test
+    void mgzTwistingLoopMaximumGroundClampPublishesMaximumDownwardSpeed() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite player = createDirectEntryPlayer();
+        player.setGSpeed((short) -0x0C01);
+        player.setYSpeed((short) 0x03A0);
+
+        loop.update(0, player); // capture
+        loop.update(1, player); // first active frame
+
+        assertEquals(-0x0C00, player.getGSpeed(),
+                "MGZ loop should retain ground direction when applying its maximum clamp");
+        assertEquals(0x0C00, player.getYSpeed() & 0xFFFF,
+                "The maximum clamp explicitly publishes positive $C00 y_vel");
     }
 
     @Test
