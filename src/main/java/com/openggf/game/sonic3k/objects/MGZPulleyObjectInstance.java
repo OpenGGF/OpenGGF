@@ -268,11 +268,8 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         NativePositionOps.writeXPosPreserveSubpixel(player, handleX);
         NativePositionOps.writeYPosPreserveSubpixel(player, handleY);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
-        player.setOnObject(false);
-        player.setAir(true);
         player.setAnimationId(PLAYER_HANG_ANIM);
         player.setDirection(flipped ? Direction.LEFT : Direction.RIGHT);
-        clearRidingObject(player);
 
         launchRecovery = LAUNCH_RECOVERY_FRAMES;
         services().playSfx(Sonic3kSfx.PULLEY_GRAB.id);

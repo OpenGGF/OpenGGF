@@ -76,6 +76,8 @@ class TestS3kMgzPulleyAndMantis {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x01DA, (short) 0x012E);
         player.setSubpixelRaw(0x2E00, 0xA600);
         player.setXSpeed((short) -0x100);
+        player.setOnObject(true);
+        player.setAir(false);
         player.setJumpInputPressed(false);
 
         pulley.update(0, player);
@@ -89,6 +91,10 @@ class TestS3kMgzPulleyAndMantis {
                 "ROM pulley capture writes y_pos without clearing y_sub");
         assertTrue(player.isObjectControlAllowsCpu(),
                 "Pulley writes positive object_control bit 0 rather than the signed bit-7 gate");
+        assertTrue(player.isOnObject(),
+                "Pulley capture does not clear the native standing-object status bit");
+        assertFalse(player.getAir(),
+                "Pulley capture does not force Status_InAir before a jump release");
         assertEquals(Sonic3kAnimationIds.GET_UP.id(), player.getAnimationId());
         assertTrue(services.playedSfx.contains(Sonic3kSfx.PULLEY_GRAB.id));
 

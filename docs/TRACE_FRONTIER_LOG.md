@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ pulley capture retains its existing solid status
+
+Branch `feature/ai-trace-animation-verification`, after the pulley fractional
+position milestone. The capture path at `loc_34AD6` writes player velocity,
+position, animation, facing, and positive object control, but does not modify
+`Status_OnObj` or `Status_InAir`. The engine now leaves those bits—and the
+current riding-object owner—untouched until the pulley's explicit jump-release
+path. The camera consequently performs its native grounded six-pixel step from
+the newly written handle position on the capture frame. No trace state,
+zone/route/frame carve-out, hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:71329-71381`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 17174 to frame 17240 (`x`,
+  expected `$04EA` / actual `$04E5`).
+- MGZ complete-run animation remains at frame 17293
+  (`player_animation_id`, expected Wait `$00` / actual Walk `$02`).
+- `TestS3kMgzPulleyAndMantis` passes 9/9, including capture status, fractional
+  position, and positive object-control assertions.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ pulley capture preserves native position fractions
 
 Branch `feature/ai-trace-animation-verification`, after the Act 2 size-worker
