@@ -9,6 +9,7 @@ import com.openggf.game.GameRng;
 import com.openggf.game.GameplayInputFilter;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.GameplayInputFilterAccess;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.graphics.FadeManager;
@@ -34,6 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -63,7 +65,7 @@ class TestSpriteManagerGameplayInputFilter {
     void filterSuppressesHorizontalOnceAndPreservesJumpForMovementAndEvents() {
         AtomicInteger calls = new AtomicInteger();
         AtomicReference<PlayerInputState> filtered = new AtomicReference<>();
-        gameplay.setGameplayInputFilter(raw -> {
+        GameplayInputFilterAccess.install(gameplay, raw -> {
             calls.incrementAndGet();
             PlayerInputState result = PlayerInputState.of(
                     raw.heldMask() & ~(AbstractPlayableSprite.INPUT_LEFT
@@ -113,16 +115,31 @@ class TestSpriteManagerGameplayInputFilter {
     }
 
     @Test
-    void spriteAndContextResetRestoreIdentityFiltering() {
+    void changingPolicyBetweenEventPublishAndMovementDoesNotReuseTheOldSnapshot() {
+        GameplayInputFilterAccess.install(gameplay, raw -> PlayerInputState.neutral());
+        CapturingPlayable player = new CapturingPlayable();
+        sprites.addSprite(player);
+        InputHandler input = input(PlayerInputState.of(
+                AbstractPlayableSprite.INPUT_LEFT, 0, 0, 0, false, false));
+
+        sprites.publishHeldInputForLevelEvents(input);
+        GameplayInputFilterAccess.install(gameplay, GameplayInputFilter.IDENTITY);
+        sprites.update(input);
+
+        assertTrue(player.movementLeft,
+                "movement must be recomputed when the active destination policy changes");
+    }
+
+    @Test
+    void spriteResetKeepsSessionPolicyAndContextTeardownRestoresIdentity() {
         GameplayInputFilter suppress = raw -> PlayerInputState.neutral();
-        gameplay.setGameplayInputFilter(suppress);
-        assertSame(suppress, gameplay.getGameplayInputFilter());
-        assertSame(suppress, sprites.getGameplayInputFilter());
+        GameplayInputFilterAccess.install(gameplay, suppress);
+        assertSame(suppress, GameplayInputFilterAccess.current(gameplay));
 
         sprites.resetState();
-        assertSame(GameplayInputFilter.IDENTITY, sprites.getGameplayInputFilter());
+        assertSame(suppress, GameplayInputFilterAccess.current(gameplay));
         gameplay.tearDownManagers();
-        assertSame(GameplayInputFilter.IDENTITY, gameplay.getGameplayInputFilter());
+        assertSame(GameplayInputFilter.IDENTITY, GameplayInputFilterAccess.current(gameplay));
     }
 
     @Test
@@ -133,6 +150,20 @@ class TestSpriteManagerGameplayInputFilter {
         assertEquals("alpha", owned.ownerModId());
         assertEquals(PlayerInputState.neutral(), owned.filter(PlayerInputState.of(
                 AbstractPlayableSprite.INPUT_LEFT, 0, 0, 0, false, false)));
+    }
+
+    @Test
+    void annotatedRuntimeTypesDoNotPublishInputFilterMutationMethods() {
+        assertThrows(NoSuchMethodException.class,
+                () -> GameplayModeContext.class.getMethod("getGameplayInputFilter"));
+        assertThrows(NoSuchMethodException.class,
+                () -> GameplayModeContext.class.getMethod(
+                        "setGameplayInputFilter", GameplayInputFilter.class));
+        assertThrows(NoSuchMethodException.class,
+                () -> SpriteManager.class.getMethod("getGameplayInputFilter"));
+        assertThrows(NoSuchMethodException.class,
+                () -> SpriteManager.class.getMethod(
+                        "setGameplayInputFilter", GameplayInputFilter.class));
     }
 
     private static InputHandler input(PlayerInputState playerOne) {

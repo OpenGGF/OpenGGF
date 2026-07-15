@@ -240,7 +240,6 @@ public final class GameplayModeContext implements ModeContext {
         this.collisionSystem = Objects.requireNonNull(collisionSystem, "collisionSystem");
         this.spriteManager = Objects.requireNonNull(spriteManager, "spriteManager");
         this.levelManager = Objects.requireNonNull(levelManager, "levelManager");
-        this.spriteManager.setGameplayInputFilter(gameplayInputFilter);
 
         if (rewindRegistry != null) {
             rewindRegistry.deregister("parallax");
@@ -380,17 +379,12 @@ public final class GameplayModeContext implements ModeContext {
         return levelManager;
     }
 
-    /** Returns the deterministic P1 transform installed for the active destination. */
-    public GameplayInputFilter getGameplayInputFilter() {
+    GameplayInputFilter currentGameplayInputFilter() {
         return gameplayInputFilter;
     }
 
-    /** Installs the active destination's deterministic P1 transform. */
-    public void setGameplayInputFilter(GameplayInputFilter filter) {
+    void installGameplayInputFilter(GameplayInputFilter filter) {
         gameplayInputFilter = Objects.requireNonNull(filter, "filter");
-        if (spriteManager != null) {
-            spriteManager.setGameplayInputFilter(gameplayInputFilter);
-        }
     }
 
     public ObjectManager getObjectManager() {
@@ -696,7 +690,7 @@ public final class GameplayModeContext implements ModeContext {
             return;
         }
         managersTornDown = true;
-        setGameplayInputFilter(GameplayInputFilter.IDENTITY);
+        installGameplayInputFilter(GameplayInputFilter.IDENTITY);
         if (zoneLayoutMutationPipeline != null) {
             zoneLayoutMutationPipeline.clear();
         }

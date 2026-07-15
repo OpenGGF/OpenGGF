@@ -15,6 +15,7 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.GameplayInputFilter;
+import com.openggf.game.session.GameplayInputFilterAccess;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.camera.Camera;
@@ -101,13 +102,13 @@ public class SpriteManager {
 	private int frameCounter;
 	private boolean inputSuppressed;
 	private boolean playbackInputSuppressed;
-	private GameplayInputFilter gameplayInputFilter = GameplayInputFilter.IDENTITY;
 	// publishHeldInputForLevelEvents() and update() are two phases of one frame. Retain the
 	// already-filtered immutable P1 snapshot so level events and movement cannot observe two
 	// callback results for the same raw live/replay input row.
 	private InputHandler publishedInputHandler;
 	private PlayerInputState publishedRawPlayerOne;
 	private PlayerInputState publishedEffectivePlayerOne;
+	private GameplayInputFilter publishedGameplayInputFilter;
 	private final IdentityHashMap<AbstractPlayableSprite, Integer> playableUpdateOrder = new IdentityHashMap<>();
 	// Reused per-frame scratch for buildPlayableUpdateOrderInto(); valid only
 	// for the duration of one update()/updateWithoutInput() call.
@@ -270,7 +271,7 @@ public class SpriteManager {
 		playableAvailableScratch.clear();
 		activePlayableUpdate = null;
 		playableFrameActive = false;
-		setGameplayInputFilter(GameplayInputFilter.IDENTITY);
+		clearPublishedPlayerOne();
 	}
 
 	/**
@@ -419,8 +420,9 @@ public class SpriteManager {
 		PlayerInputState raw = handler.logical().player1();
 		publishedInputHandler = handler;
 		publishedRawPlayerOne = raw;
+		publishedGameplayInputFilter = GameplayInputFilterAccess.currentSessionFilter();
 		publishedEffectivePlayerOne = null;
-		publishedEffectivePlayerOne = filterPlayerOne(raw);
+		publishedEffectivePlayerOne = filterPlayerOne(raw, publishedGameplayInputFilter);
 		PlayerInputState p1 = publishedEffectivePlayerOne;
 		int p1Held = !suppressInput ? p1.heldMask() : 0;
 		boolean up = (p1Held & AbstractPlayableSprite.INPUT_UP) != 0;
@@ -616,16 +618,18 @@ public class SpriteManager {
 
 	private PlayerInputState effectivePlayerOneForUpdate(InputHandler handler) {
 		PlayerInputState raw = handler.logical().player1();
+		GameplayInputFilter currentFilter = GameplayInputFilterAccess.currentSessionFilter();
 		PlayerInputState effective = handler == publishedInputHandler && raw == publishedRawPlayerOne
+				&& currentFilter == publishedGameplayInputFilter
 				&& publishedEffectivePlayerOne != null
 				? publishedEffectivePlayerOne
-				: filterPlayerOne(raw);
+				: filterPlayerOne(raw, currentFilter);
 		clearPublishedPlayerOne();
 		return effective;
 	}
 
-	private PlayerInputState filterPlayerOne(PlayerInputState raw) {
-		return Objects.requireNonNull(gameplayInputFilter.filter(raw),
+	private PlayerInputState filterPlayerOne(PlayerInputState raw, GameplayInputFilter filter) {
+		return Objects.requireNonNull(filter.filter(raw),
 				"gameplay input filter result");
 	}
 
@@ -633,15 +637,7 @@ public class SpriteManager {
 		publishedInputHandler = null;
 		publishedRawPlayerOne = null;
 		publishedEffectivePlayerOne = null;
-	}
-
-	public GameplayInputFilter getGameplayInputFilter() {
-		return gameplayInputFilter;
-	}
-
-	public void setGameplayInputFilter(GameplayInputFilter filter) {
-		gameplayInputFilter = Objects.requireNonNull(filter, "filter");
-		clearPublishedPlayerOne();
+		publishedGameplayInputFilter = null;
 	}
 
 	public void advanceFixedSkidDustAfterObjectExecution() {

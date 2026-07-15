@@ -35,6 +35,7 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.GameplayInputFilterAccess;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
 import com.openggf.game.session.PatternWindowSessionState;
@@ -504,7 +505,7 @@ public class LevelManager {
                 && !(filter instanceof OwnerAwareGameplayInputFilter)) {
             filter = new OwnerAwareGameplayInputFilter(mod.ownerModId(), filter);
         }
-        gameplayMode.setGameplayInputFilter(filter);
+        GameplayInputFilterAccess.install(gameplayMode, filter);
     }
 
     /**
