@@ -1521,6 +1521,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         arcFlagsLo = table[entryStart + 2] & 0xFF;
         int destX = table[entryStart + 3];
         int destY = table[entryStart + 4];
+        int linearDestY = destY;
         int deltaY = table[entryStart + 5];
         if ((arcFlagsLo & 0x7F) != 0) {
             destY -= deltaY;
@@ -1538,7 +1539,10 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         arcLimit = 0;
         arcTimer = 0;
         syncMotionSubpixelsToArc();
-        computeArcLinearVelocity(destX, destY);
+        // ROM sub_35666 keeps d5 as the original destination Y for the initial
+        // linear approach. Only d0 (stored to $32) receives the delta adjustment
+        // used later as the arc centre by sub_35868.
+        computeArcLinearVelocity(destX, linearDestY);
     }
 
     private int[] waypointTableForCurrentAct() {

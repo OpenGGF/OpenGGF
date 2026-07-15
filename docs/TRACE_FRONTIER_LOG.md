@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ waypoint approach retains the raw destination Y
+
+Branch `feature/ai-trace-animation-verification`, after the carried-wall
+milestone. `sub_35666` keeps the waypoint's original destination Y in `d5` for
+the initial constant-speed approach, while applying the optional delta only to
+`d0` before storing the later arc centre at object word `$32`. The engine used
+the adjusted arc-centre Y for both roles, turning MGZ2's shallow left/up
+approach into a steep climb. The two native register roles are now represented
+separately. No trace state, zone/route/frame carve-out, hydration, or comparator
+tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:72497-72633`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 22451 to frame 22669
+  (`x_speed`, expected `$0BE8` / actual `$0000`).
+- MGZ complete-run animation advances from frame 22590 to frame 22688
+  (`player_animation_id`, expected Hurt / actual Walk).
+- `TestS3kMgzTopPlatformParityHeadless` passes 27/27, including an explicit
+  raw-destination approach / adjusted-arc-centre regression.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ carried wall feedback follows SST order and non-zero d0
 
 Branch `feature/ai-trace-animation-verification`, after the lightning-attraction

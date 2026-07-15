@@ -606,6 +606,29 @@ class TestS3kMgzTopPlatformParityHeadless {
     }
 
     @Test
+    void waypointApproachUsesRawDestinationBeforeArcCentreAdjustment() throws Exception {
+        MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(0x1768, 0x06C4, 0x5B, 0, 0, false, 0));
+        setIntField(platform, "groundVel", -0x0C00);
+        int[] waypoint = {
+                0,
+                0x1760, 0x06C5, 0x8181, 0x16C0, 0x06A6, 0x0140, 0x1760, 0x0546
+        };
+
+        Method activateArc = MGZTopPlatformObjectInstance.class
+                .getDeclaredMethod("activateArc", int[].class, int.class);
+        activateArc.setAccessible(true);
+        activateArc.invoke(platform, waypoint, 1);
+
+        assertEquals(-0x0C00, getIntField(platform, "xVel"),
+                "sub_35666 should calculate the linear approach against d5's raw destination Y");
+        assertEquals(-0x0224, getIntField(platform, "yVel"),
+                "The raw destination should produce the ROM's shallow initial MGZ2 approach slope");
+        assertEquals(0x0566, getIntField(platform, "homeY"),
+                "Only the stored arc centre should receive the waypoint delta-Y adjustment");
+    }
+
+    @Test
     void releasedFlight_clearsOccupiedSecondaryRiderStandingState() throws Exception {
         MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
                 new ObjectSpawn(0, 0, 0x5B, 0, 0, false, 0));
