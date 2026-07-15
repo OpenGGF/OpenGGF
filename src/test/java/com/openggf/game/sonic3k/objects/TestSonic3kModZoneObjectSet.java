@@ -14,6 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestSonic3kModZoneObjectSet {
 
@@ -49,6 +52,30 @@ class TestSonic3kModZoneObjectSet {
                 0, 0, false, 0);
 
         assertInstanceOf(AizMinibossInstance.class, registry.create(spawn));
+    }
+
+    @Test
+    void mutableStockSnapshotPreservesRealRomZoneIdentity() {
+        com.openggf.game.sonic3k.Sonic3kLevel stock =
+                mock(com.openggf.game.sonic3k.Sonic3kLevel.class);
+        when(stock.hasStockRomZoneIdentity()).thenReturn(true);
+        when(stock.getObjectZoneSet()).thenReturn(S3kZoneSet.SKL);
+        when(stock.getZoneIndex()).thenReturn(
+                com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_MHZ);
+        for (int line = 0; line < 4; line++) {
+            when(stock.getPalette(line)).thenReturn(new com.openggf.level.Palette());
+        }
+        when(stock.getMap()).thenReturn(new com.openggf.level.Map(1, 1, 1, new byte[1]));
+        when(stock.getObjects()).thenReturn(java.util.List.of());
+        when(stock.getRings()).thenReturn(java.util.List.of());
+        com.openggf.level.MutableLevel snapshot = com.openggf.level.MutableLevel.snapshot(stock);
+
+        assertSame(stock, com.openggf.level.LevelOrigin.original(snapshot));
+        assertInstanceOf(MhzMushroomPlatformObjectInstance.class,
+                new LevelBackedRegistry(snapshot).create(
+                        new com.openggf.level.objects.ObjectSpawn(
+                                10, 20, Sonic3kObjectIds.MHZ_MUSHROOM_PLATFORM,
+                                0, 0, false, 1)));
     }
 
     @Test
@@ -125,6 +152,19 @@ class TestSonic3kModZoneObjectSet {
         boolean inheritedFactorySubstrateContains(int objectId) {
             ensureLoaded();
             return factories.containsKey(objectId);
+        }
+    }
+
+    private static final class LevelBackedRegistry extends Sonic3kObjectRegistry {
+        private final com.openggf.level.Level level;
+
+        private LevelBackedRegistry(com.openggf.level.Level level) {
+            this.level = level;
+        }
+
+        @Override
+        protected com.openggf.level.Level currentLevel() {
+            return level;
         }
     }
 }

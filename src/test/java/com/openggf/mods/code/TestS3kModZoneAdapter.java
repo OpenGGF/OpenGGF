@@ -89,6 +89,17 @@ class TestS3kModZoneAdapter {
             assertEquals(palette.getColor(1).g, level.getPalette(0).getColor(1).g);
             assertEquals(palette.getColor(1).b, level.getPalette(0).getColor(1).b);
 
+            com.openggf.level.MutableLevel nestedSnapshot =
+                    com.openggf.level.MutableLevel.snapshot(
+                            com.openggf.level.MutableLevel.snapshot(level));
+            assertSame(level, com.openggf.level.LevelOrigin.original(nestedSnapshot));
+            var snapshotRegistry = new LevelBackedRegistry(nestedSnapshot);
+            assertInstanceOf(com.openggf.level.objects.PlaceholderObjectInstance.class,
+                    snapshotRegistry.create(new com.openggf.level.objects.ObjectSpawn(
+                            10, 20,
+                            com.openggf.game.sonic3k.constants.Sonic3kObjectIds.LBZ_PIPE_PLUG,
+                            0, 0, false, 1)));
+
             Sonic3kLevel s3kl = assertInstanceOf(Sonic3kLevel.class,
                     module.getModZoneAdapter().load("alpha", definition(2,
                             new ModLevelDefinition.S3kMetadata(
@@ -174,5 +185,19 @@ class TestS3kModZoneAdapter {
 
     private static List<ModPaletteClaim> backdropClaim() {
         return List.of(new ModPaletteClaim(2, 0, 0));
+    }
+
+    private static final class LevelBackedRegistry
+            extends com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry {
+        private final com.openggf.level.Level level;
+
+        private LevelBackedRegistry(com.openggf.level.Level level) {
+            this.level = level;
+        }
+
+        @Override
+        protected com.openggf.level.Level currentLevel() {
+            return level;
+        }
     }
 }

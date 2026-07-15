@@ -50,6 +50,7 @@ import com.openggf.level.objects.ObjectFactory;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
+import com.openggf.level.LevelOrigin;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1337,7 +1338,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     }
 
     private S3kObjectCreationContext currentCreationContext() {
-        if (currentLevel() instanceof Sonic3kLevel level) {
+        com.openggf.level.Level current = currentLevel();
+        if (current != null && LevelOrigin.original(current) instanceof Sonic3kLevel level) {
             if (!level.hasStockRomZoneIdentity()) {
                 return S3kObjectCreationContext.custom(level.getObjectZoneSet());
             }
