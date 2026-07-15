@@ -35,6 +35,12 @@ public final class ModContext {
     private final List<GamePatch> patches = new ArrayList<>();
     private final List<ModZoneContribution> zones = new ArrayList<>();
     private final java.util.Set<String> zoneKeys = new java.util.HashSet<>();
+    private final Map<com.openggf.game.ZoneKey.Mod, com.openggf.game.GameplayLaunchTeam> launchTeams
+            = new LinkedHashMap<>();
+    private final Map<com.openggf.game.ZoneKey.Mod, com.openggf.game.GameplayInputFilter> inputFilters
+            = new LinkedHashMap<>();
+    private final Map<com.openggf.game.ZoneKey.Mod, com.openggf.level.objects.HudProfile> hudProfiles
+            = new LinkedHashMap<>();
     private final String defaultInsertAfter;
     private final java.util.Set<String> patchIds = new java.util.HashSet<>();
     private final Map<com.openggf.game.CharacterKey, com.openggf.game.CharacterDefinition> characters
@@ -193,6 +199,48 @@ public final class ModContext {
         });
     }
 
+    public void registerLaunchTeam(ModLaunchTeamContribution contribution) {
+        mutate(() -> {
+            Objects.requireNonNull(contribution, "contribution");
+            com.openggf.game.ZoneKey.Mod destination = requireOwnedDestination(
+                    contribution.destination());
+            if (launchTeams.putIfAbsent(destination, contribution.team()) != null) {
+                throw failure("Duplicate launch-team policy for " + destination);
+            }
+        });
+    }
+
+    public void registerInputFilter(ModInputFilterContribution contribution) {
+        mutate(() -> {
+            Objects.requireNonNull(contribution, "contribution");
+            com.openggf.game.ZoneKey.Mod destination = requireOwnedDestination(
+                    contribution.destination());
+            if (inputFilters.putIfAbsent(destination, contribution.filter()) != null) {
+                throw failure("Duplicate input-filter policy for " + destination);
+            }
+        });
+    }
+
+    public void registerHudProfile(ModHudProfileContribution contribution) {
+        mutate(() -> {
+            Objects.requireNonNull(contribution, "contribution");
+            com.openggf.game.ZoneKey.Mod destination = requireOwnedDestination(
+                    contribution.destination());
+            if (hudProfiles.putIfAbsent(destination, contribution.profile()) != null) {
+                throw failure("Duplicate HUD-profile policy for " + destination);
+            }
+        });
+    }
+
+    private com.openggf.game.ZoneKey.Mod requireOwnedDestination(
+            com.openggf.game.ZoneKey destination) {
+        if (!(destination instanceof com.openggf.game.ZoneKey.Mod mod)
+                || !owner.equals(mod.ownerModId())) {
+            throw failure("Gameplay policy destination must be an owner-scoped mod zone");
+        }
+        return mod;
+    }
+
     private String resolveZoneAnchor(ModZoneContribution contribution) {
         if (contribution.insertAfter() != null) return contribution.insertAfter();
         if (defaultInsertAfter != null) return defaultInsertAfter;
@@ -233,7 +281,8 @@ public final class ModContext {
             }
             frozen = true;
             return new ModRegistrationPlan(owner, baseGame, objects, art, Map.of(), patches,
-                    zones, prepared,objectPreviewArtKeys,characters,gameModule,romArt);
+                    zones, prepared,objectPreviewArtKeys,characters,gameModule,romArt,
+                    launchTeams, inputFilters, hudProfiles);
         } catch (java.io.IOException | RuntimeException rejected) {
             if (rejected instanceof ModRegistrationException registration) poison = registration;
             else poison = new ModRegistrationException(owner, "MOD_LEVEL_ASSET_INVALID",

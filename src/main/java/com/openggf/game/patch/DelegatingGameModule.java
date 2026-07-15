@@ -73,6 +73,10 @@ public class DelegatingGameModule implements GameModule {
         return base.getModZoneAdapter();
     }
 
+    @Override public GameplayPolicyProvider getGameplayPolicyProvider() {
+        return base.getGameplayPolicyProvider();
+    }
+
     @Override public CustomZonePaletteBridge createCustomZonePaletteBridge(
             ModZoneRuntimeContribution contribution, com.openggf.level.Level level,
             ObjectArtProvider objectArtProvider) {

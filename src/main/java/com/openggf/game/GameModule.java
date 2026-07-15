@@ -78,6 +78,11 @@ public interface GameModule {
         return EMPTY_MOD_ZONE_ADAPTER;
     }
 
+    /** Returns destination-scoped policies contributed to this resolved module. */
+    default GameplayPolicyProvider getGameplayPolicyProvider() {
+        return GameplayPolicyProvider.EMPTY;
+    }
+
     /** Creates any host-specific palette composition required by one additive zone. */
     default CustomZonePaletteBridge createCustomZonePaletteBridge(
             ModZoneRuntimeContribution contribution,
