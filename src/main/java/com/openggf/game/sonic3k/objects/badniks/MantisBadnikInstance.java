@@ -107,6 +107,14 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
         child = null;
     }
 
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        // S3K Collision_response_list retains this Mantis SST pointer after its
+        // MoveSprite update. The following player slot reads the live y_pos,
+        // not the engine's older pre-update coordinate copy.
+        return true;
+    }
+
     private void initialize() {
         child = spawnChild(() -> new MantisChild(this));
         mappingFrame = WAIT_FRAME;

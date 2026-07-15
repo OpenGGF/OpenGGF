@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ Mantis touch reads its live SST position
+
+Branch `feature/ai-trace-animation-verification`, after the drilling gradual-
+unlock milestone. `Obj_Mantis` publishes itself to S3K's
+`Collision_response_list` after its upward `MoveSprite` step. The list retains
+the SST pointer, so the following player slot reads the live `x_pos`/`y_pos`;
+the engine instead used the older copied pre-update coordinate and missed an
+exact-edge Roll attack. Mantis now declares that native live-pointer contract,
+allowing `Touch_EnemyNormal` to destroy it and add `$100` to Sonic's upward
+velocity on the correct frame. No trace state, zone/route/frame carve-out,
+hydration, or comparator tolerance was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:20610-20712,20945-20993,185695-185840`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 18603 to frame 19089 (the next
+  block is the shared landing transition: expected zero vertical speed versus
+  actual `$0030`, with Y three pixels low in frontier-only comparison).
+- MGZ complete-run animation advances from frame 18641 to frame 19089
+  (`player_animation_id`, expected Walk `$00` / actual Roll `$02`).
+- The focused Mantis live-touch contract test passes, along with the existing
+  previous-list membership/captured-position tests 4/4.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ drilling escape restores native gradual-bound cadence
 
 Branch `feature/ai-trace-animation-verification`, after the strict quake-edge
