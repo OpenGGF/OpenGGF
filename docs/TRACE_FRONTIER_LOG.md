@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ head-trigger recovery runs beside animation restart
+
+Branch `feature/ai-trace-animation-verification`, after the twisting-loop
+velocity milestone. A non-final MGZ head-trigger hit clears `collision_flags`
+and starts its `$32` recovery word; `loc_343C6` decrements that word every
+object pass independently of the head's animation. The engine's short
+blink/spit restart delay instead paused recovery for eight passes, so the head
+was still intangible when the ROM re-armed it and Sonic missed the native
+nonzero-`collision_property` rebound. Recovery and animation restart now
+advance concurrently. No trace state, zone/route/frame carve-out, hydration,
+or comparator tolerance was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:20911-20922,70752-70848`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 27157 to frame 27165 (`x`,
+  expected `$1FB1` / actual `$1FAF`).
+- MGZ complete-run animation advances from frame 27164 to frame 27165
+  (`player_animation_id`, expected Balance / actual Walk).
+- `TestMGZHeadTriggerObjectInstance` passes 6/6, including an exact 60-tick
+  recovery assertion while the blink restart advances.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-15 -- MGZ twisting-loop minimum clamp preserves live `y_vel`
 
 Branch `feature/ai-trace-animation-verification`, after the vertical-trigger-

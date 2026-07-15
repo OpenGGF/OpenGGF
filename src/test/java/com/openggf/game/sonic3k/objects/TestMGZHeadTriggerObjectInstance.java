@@ -98,6 +98,28 @@ class TestMGZHeadTriggerObjectInstance {
     }
 
     @Test
+    void nonFinalHitRecoveryCountsWhileBlinkRestartAdvances() {
+        RecordingServices services = new RecordingServices();
+        MGZHeadTriggerObjectInstance head = new MGZHeadTriggerObjectInstance(
+                new ObjectSpawn(0x180, 0x100, Sonic3kObjectIds.MGZ_HEAD_TRIGGER, 0x02, 0, false, 0));
+        head.setServices(services);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x140, (short) 0x100);
+
+        head.onPlayerAttack(player, ENEMY_HIT);
+        head.update(0, player);
+        for (int frame = 1; frame < 60; frame++) {
+            head.update(frame, player);
+        }
+        assertEquals(0, head.getCollisionFlags(),
+                "The head remains intangible through the 59th recovery tick");
+
+        head.update(60, player);
+
+        assertEquals(0x17, head.getCollisionFlags(),
+                "The independent 60-frame recovery must re-arm collision on time");
+    }
+
+    @Test
     void thirdHitSetsLevelTriggerAndLeavesTriggeredFrameVisible() throws Exception {
         RecordingServices services = new RecordingServices();
         MGZHeadTriggerObjectInstance head = new MGZHeadTriggerObjectInstance(

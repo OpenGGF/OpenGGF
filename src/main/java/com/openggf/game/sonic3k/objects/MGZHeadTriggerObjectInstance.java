@@ -207,16 +207,22 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
 
         if (hitPending) {
             processPendingHit();
-        } else if (restartBlinkPending) {
-            if (restartBlinkDelay > 0) {
-                restartBlinkDelay--;
+        } else {
+            // ROM's collision recovery word at $32 is owned by loc_343C6 and
+            // keeps counting while Animate_Sprite advances independently.
+            // Restarting the blink/spit animation must not pause this timer.
+            if (restartBlinkPending) {
+                if (restartBlinkDelay > 0) {
+                    restartBlinkDelay--;
+                }
+                if (restartBlinkDelay == 0) {
+                    restartBlinkPending = false;
+                    startBlinkSpitCycle();
+                }
             }
-            if (restartBlinkDelay == 0) {
-                restartBlinkPending = false;
-                startBlinkSpitCycle();
+            if (recoverTimer > 0) {
+                recoverTimer--;
             }
-        } else if (recoverTimer > 0) {
-            recoverTimer--;
         }
 
         // ROM loc_3447C: animate, then react to the $FC routine bump.
