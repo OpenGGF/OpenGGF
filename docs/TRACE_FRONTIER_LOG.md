@@ -1,5 +1,43 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ title-card completion starts native Act 2 size workers
+
+Branch `feature/ai-trace-animation-verification`, after the carried-results
+milestone. MGZ's in-place `Load_Level` holds the gameplay counter while the
+retained `Obj_TitleCard` parent and children continue through
+`Process_Sprites`. Headless replay treated those rows as physics-free VBlank
+rows but did not dispatch the title owner, and the rebuilt object manager had
+also lost the retained `Obj_EndSignControlDoStart` owner that waits for the
+new title-card `End_of_level_flag` before calling `Change_Act2Sizes`.
+
+Held-counter replay rows now advance only title owners that explicitly carry
+the results-time level-gamestate reset contract. MGZ retains the end-sign
+handoff, consumes the shared results transition signal, and on the later title
+completion publishes Act 2's bottom-bound target plus the three native gradual
+size workers (`Obj_IncLevEndXGradual`, `Obj_DecLevStartYGradual`, and
+`Obj_IncLevEndYGradual`) with their independent fixed-point rates and SST
+dispatch phases. The transition request can preserve `Level_end_flag` without
+also retaining the already-consumed `End_of_level_flag`. No trace state,
+zone/route/frame carve-out, hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:62214-62279`,
+`106312-106360`, `178159-178230`, and `180359-180614`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 16656 to frame 16658
+  (`camera_x`, expected `$0001` / actual `$0000`).
+- MGZ complete-run animation advances from frame 16860 to frame 17293
+  (`player_animation_id`, expected Wait `$00` / actual Walk `$02`).
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+- Focused S3K level-event rewind, in-level title-card, and title-card object
+  execution guards pass 39/39 (23 ROM-dependent cases skipped in that run).
+
 ### 2026-07-15 -- MGZ carried-results frontiers advance through title display
 
 Branch `feature/ai-trace-animation-verification`, after the seamless-reload

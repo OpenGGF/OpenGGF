@@ -265,6 +265,17 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     /** ROM: Kos_modules_left workload queued by MGZ1BGE_Normal. */
     private int transitionKosDrainFrames;
 
+    /**
+     * Retained Obj_EndSignControlDoStart ownership after the Act 1 reload.
+     * The native object waits for the in-level title card to publish
+     * End_of_level_flag before calling Change_Act2Sizes.
+     */
+    private boolean act2SizeChangeArmed;
+    private boolean act2SizeChangeActive;
+    private int act2SizeMaxXAccumulator;
+    private int act2SizeMinYAccumulator;
+    private int act2SizeMaxYAccumulator;
+
     /** ROM: Events_bg+$10 — MGZ2 quake event state machine counter. */
     private int quakeEventRoutine;
 
@@ -346,6 +357,11 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         eventsFg5 = false;
         transitionRequested = false;
         transitionKosDrainFrames = 0;
+        act2SizeChangeArmed = false;
+        act2SizeChangeActive = false;
+        act2SizeMaxXAccumulator = 0;
+        act2SizeMinYAccumulator = 0;
+        act2SizeMaxYAccumulator = 0;
         quakeEventRoutine = QUAKE_CHECK;
         appearance1Complete = false;
         appearance2Complete = false;
@@ -400,6 +416,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         if (act == 0) {
             updateAct1Bg();
         } else if (act == 1) {
+            updateAct2LevelSizeChange();
             updateAct2QuakeEvent();
             updateAct2ChunkEvent();
             updateAct2BossBgScroll();
@@ -409,6 +426,95 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             updateAct2Rumble(frameCounter);
             applyScreenShake(frameCounter);
         }
+    }
+
+    /**
+     * Carries the native EndSignControl owner across the engine's manager
+     * rebuild. Its DoStart routine is driven by End_of_level_flag, which the
+     * in-level title card sets only after its timer and children have finished.
+     */
+    public void armAct2LevelSizeChange() {
+        act2SizeChangeArmed = true;
+        LOG.info("MGZ2: armed retained Change_Act2Sizes owner; end flag="
+                + gameState().isEndOfLevelFlag());
+    }
+
+    /** Advances only the retained title-card/end-sign object work on a held level-counter row. */
+    public void advanceInLevelTitleCardState() {
+        updateAct2LevelSizeChange();
+    }
+
+    /**
+     * Ports Change_Act2Sizes and Child1_Act2LevelSize for the MGZ1 -> MGZ2
+     * reload: publish Act 2's bottom target immediately, then run the three
+     * independent gradual boundary workers at their native 16:16 rates.
+     */
+    private void updateAct2LevelSizeChange() {
+        if (act2SizeChangeArmed && gameState().isEndOfLevelFlag()) {
+            act2SizeChangeArmed = false;
+            act2SizeChangeActive = true;
+            act2SizeMaxXAccumulator = 0;
+            act2SizeMinYAccumulator = 0;
+            // Child1 creation reaches the later Obj_IncLevEndYGradual
+            // slot after its create entry in the same Process_Sprites
+            // pass. Seed that create-side half step before the shared
+            // worker dispatch below; the $4000 workers still remain below
+            // their first whole-pixel step.
+            act2SizeMaxYAccumulator = 0x8000;
+
+            Level level = levelManager().getCurrentLevel();
+            if (level != null) {
+                camera().setMaxYTarget((short) level.getMaxY());
+            }
+            LOG.info("MGZ2: title card completed; starting Change_Act2Sizes workers");
+        }
+        if (!act2SizeChangeActive) {
+            return;
+        }
+
+        Level level = levelManager().getCurrentLevel();
+        if (level == null) {
+            act2SizeChangeActive = false;
+            return;
+        }
+
+        Camera camera = camera();
+        act2SizeMaxXAccumulator += 0x4000;
+        int maxXStep = act2SizeMaxXAccumulator >> 16;
+        int maxX = camera.getMaxX() & 0xFFFF;
+        int targetMaxX = level.getMaxX();
+        boolean maxXDone = maxX >= targetMaxX;
+        if (!maxXDone && maxXStep != 0) {
+            int next = maxX + maxXStep;
+            maxXDone = next >= targetMaxX;
+            camera.setMaxX((short) Math.min(next, targetMaxX));
+        }
+
+        act2SizeMinYAccumulator += 0x4000;
+        int minYStep = act2SizeMinYAccumulator >> 16;
+        int minY = camera.getMinY();
+        int targetMinY = level.getMinY();
+        boolean minYDone = minY <= targetMinY;
+        if (!minYDone && minYStep != 0) {
+            int next = minY - minYStep;
+            minYDone = next <= targetMinY;
+            camera.setMinY((short) Math.max(next, targetMinY));
+        }
+
+        act2SizeMaxYAccumulator += 0x8000;
+        int maxYStep = act2SizeMaxYAccumulator >> 16;
+        int maxY = camera.getMaxY() & 0xFFFF;
+        int targetMaxY = level.getMaxY();
+        boolean maxYDone = maxY >= targetMaxY;
+        if (!maxYDone && maxYStep != 0) {
+            int next = maxY + maxYStep;
+            maxYDone = next > targetMaxY;
+            short dynamicTarget = camera.getMaxYTarget();
+            camera.setMaxY((short) Math.min(next, targetMaxY));
+            camera.setMaxYTarget(dynamicTarget);
+        }
+
+        act2SizeChangeActive = !(maxXDone && minYDone && maxYDone);
     }
 
     /**
@@ -1972,7 +2078,10 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                         // Obj_LevelResults and its ring/time globals remain live
                         // while MGZ1BGE_Transition reloads the act behind them.
                         .preserveLevelGamestate(true)
-                        .preserveEndOfLevelState(true)
+                        // The live results owner keeps Level_end_flag, while
+                        // Load_Level clears the old End_of_level_flag before
+                        // Obj_TitleCardWait2 publishes the new completion edge.
+                        .preserveEndOfLevelActive(true)
                         // Title card skipped during the results path for seamless
                         // transitions; show it after the reload completes.
                         .showInLevelTitleCard(true)
@@ -1981,6 +2090,11 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                         // its twelve child SST create/render entries precede
                         // Obj_TitleCardWait's display-time gamestate reset.
                         .inLevelTitleCardResetAdditionalDispatches(12)
+                        // The retained Obj_EndSignControl parent occupies an
+                        // earlier SST slot than Obj_TitleCardWait2. Ten parent
+                        // dispatches remain after the visual children finish
+                        // before the completion flag reaches DoStart.
+                        .inLevelTitleCardExitAdditionalDispatches(10)
                         // Native code subtracts the offsets from the live camera
                         // and all four bounds; it does not recenter after Load_Level.
                         .preserveOffsetCameraPosition(true)

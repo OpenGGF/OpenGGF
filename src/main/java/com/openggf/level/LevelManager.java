@@ -3168,6 +3168,10 @@ public class LevelManager {
         return transitions.consumeInLevelTitleCardLevelGamestateResetRequest();
     }
 
+    public boolean hasPendingInLevelTitleCardHeldCounterDispatch() {
+        return transitions.hasPendingInLevelTitleCardHeldCounterDispatch();
+    }
+
     public int consumeInLevelTitleCardResetAdditionalDispatches() {
         return transitions.consumeInLevelTitleCardResetAdditionalDispatches();
     }

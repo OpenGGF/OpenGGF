@@ -32,8 +32,10 @@ final class LevelActTransitionExecutor {
         boolean endOfLevelActive = gameState.isEndOfLevelActive();
         boolean endOfLevelFlag = gameState.isEndOfLevelFlag();
         gameState.resetForLevel();
-        if (request.preserveEndOfLevelState()) {
+        if (request.preserveEndOfLevelActive()) {
             gameState.setEndOfLevelActive(endOfLevelActive);
+        }
+        if (request.preserveEndOfLevelFlag()) {
             gameState.setEndOfLevelFlag(endOfLevelFlag);
         }
 

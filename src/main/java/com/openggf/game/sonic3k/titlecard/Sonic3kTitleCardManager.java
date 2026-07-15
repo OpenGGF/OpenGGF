@@ -117,6 +117,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private boolean inLevelMode;  // No black background, control released immediately
     private boolean resetLevelGamestateOnInLevelDisplay;
     private int resetLevelGamestateCountdown;
+    private boolean heldLevelCounterDispatchOwned;
     private boolean inLevelPlayerControlLockOwned;
     private int inLevelExitDelayFrames;
     private boolean bonusMode;  // 2-element "BONUS STAGE" layout
@@ -178,6 +179,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     public void requestLevelGamestateResetAtInLevelDisplay() {
         if (inLevelMode) {
             resetLevelGamestateOnInLevelDisplay = true;
+            heldLevelCounterDispatchOwned = true;
             int modulePhase = GameServices.level().getObjectManager().getVblaCounter() & 3;
             // The slotless manager reaches its predicted display point after
             // 26 updates. At module phase 1 the native children are not live
@@ -205,6 +207,11 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         if (inLevelMode) {
             inLevelPlayerControlLockOwned = true;
         }
+    }
+
+    @Override
+    public boolean advancesOnHeldLevelCounter() {
+        return inLevelMode && heldLevelCounterDispatchOwned && isOverlayActive();
     }
 
     @Override
@@ -275,6 +282,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         this.inLevelMode = inLevel;
         this.resetLevelGamestateOnInLevelDisplay = false;
         this.resetLevelGamestateCountdown = 0;
+        this.heldLevelCounterDispatchOwned = false;
         this.inLevelPlayerControlLockOwned = false;
         this.inLevelExitDelayFrames = 0;
         this.state = Sonic3kTitleCardState.SLIDE_IN;
@@ -459,6 +467,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         inLevelMode = false;
         resetLevelGamestateOnInLevelDisplay = false;
         resetLevelGamestateCountdown = 0;
+        heldLevelCounterDispatchOwned = false;
         inLevelExitDelayFrames = 0;
         inLevelPlayerControlLockOwned = false;
         bonusMode = false;

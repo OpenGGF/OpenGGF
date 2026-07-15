@@ -55,6 +55,14 @@ public interface TitleCardProvider {
     }
 
     /**
+     * Whether an active in-level title owner still dispatches on replay rows
+     * whose level gameplay counter is held. Normal level-title overlays do not.
+     */
+    default boolean advancesOnHeldLevelCounter() {
+        return false;
+    }
+
+    /**
      * Initializes the title card for a bonus stage entry.
      * S3K shows "BONUS STAGE" text; S1/S2 have no bonus stages so this is a no-op.
      */

@@ -16,7 +16,8 @@ public final class SeamlessLevelTransitionRequest {
     private final boolean deactivateLevelNow;
     private final boolean preserveMusic;
     private final boolean preserveLevelGamestate;
-    private final boolean preserveEndOfLevelState;
+    private final boolean preserveEndOfLevelActive;
+    private final boolean preserveEndOfLevelFlag;
     private final boolean showInLevelTitleCard;
     private final boolean resetLevelGamestateAtInLevelTitleCardDisplay;
     private final int inLevelTitleCardResetAdditionalDispatches;
@@ -43,7 +44,8 @@ public final class SeamlessLevelTransitionRequest {
         this.deactivateLevelNow = builder.deactivateLevelNow;
         this.preserveMusic = builder.preserveMusic;
         this.preserveLevelGamestate = builder.preserveLevelGamestate;
-        this.preserveEndOfLevelState = builder.preserveEndOfLevelState;
+        this.preserveEndOfLevelActive = builder.preserveEndOfLevelActive;
+        this.preserveEndOfLevelFlag = builder.preserveEndOfLevelFlag;
         this.showInLevelTitleCard = builder.showInLevelTitleCard;
         this.resetLevelGamestateAtInLevelTitleCardDisplay =
                 builder.resetLevelGamestateAtInLevelTitleCardDisplay;
@@ -92,7 +94,15 @@ public final class SeamlessLevelTransitionRequest {
     }
 
     public boolean preserveEndOfLevelState() {
-        return preserveEndOfLevelState;
+        return preserveEndOfLevelActive && preserveEndOfLevelFlag;
+    }
+
+    public boolean preserveEndOfLevelActive() {
+        return preserveEndOfLevelActive;
+    }
+
+    public boolean preserveEndOfLevelFlag() {
+        return preserveEndOfLevelFlag;
     }
 
     public boolean showInLevelTitleCard() {
@@ -178,7 +188,8 @@ public final class SeamlessLevelTransitionRequest {
         private boolean deactivateLevelNow;
         private boolean preserveMusic = true;
         private boolean preserveLevelGamestate;
-        private boolean preserveEndOfLevelState;
+        private boolean preserveEndOfLevelActive;
+        private boolean preserveEndOfLevelFlag;
         private boolean showInLevelTitleCard;
         private boolean resetLevelGamestateAtInLevelTitleCardDisplay;
         private int inLevelTitleCardResetAdditionalDispatches;
@@ -229,7 +240,14 @@ public final class SeamlessLevelTransitionRequest {
          * the resource reload and still own those globals afterward.
          */
         public Builder preserveEndOfLevelState(boolean preserveEndOfLevelState) {
-            this.preserveEndOfLevelState = preserveEndOfLevelState;
+            this.preserveEndOfLevelActive = preserveEndOfLevelState;
+            this.preserveEndOfLevelFlag = preserveEndOfLevelState;
+            return this;
+        }
+
+        /** Keeps Level_end_flag while allowing End_of_level_flag to reset. */
+        public Builder preserveEndOfLevelActive(boolean preserveEndOfLevelActive) {
+            this.preserveEndOfLevelActive = preserveEndOfLevelActive;
             return this;
         }
 

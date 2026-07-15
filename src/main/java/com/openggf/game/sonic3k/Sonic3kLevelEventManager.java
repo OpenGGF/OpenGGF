@@ -388,6 +388,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (aizEvents != null && currentZone == Sonic3kZoneIds.ZONE_AIZ) {
             aizEvents.advanceVblankOnlyState();
         }
+        if (mgzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MGZ && currentAct == 1) {
+            mgzEvents.advanceInLevelTitleCardState();
+        }
     }
 
     /**
@@ -1059,7 +1062,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
-    public void restorePendingPostResultsPlayerControl() {
+    public boolean restorePendingPostResultsPlayerControl() {
+        boolean titleCardCompletionFlagStillOwned = hczPendingPostTransitionCutscene;
         if (hczPendingPostTransitionCutscene && hczEvents != null) {
             hczEvents.restorePostResultsPlayerControl();
         }
@@ -1070,6 +1074,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             // ScreenEvents dispatch.
             releasePendingMgzPostTransition();
         }
+        return titleCardCompletionFlagStillOwned;
     }
 
     @Override
@@ -1108,6 +1113,15 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             return;
         }
         mgzPendingPostTransitionRelease = false;
+        if (mgzEvents != null) {
+            // The retained EndSignControl next waits for the in-level title
+            // card's End_of_level_flag before running Change_Act2Sizes. The
+            // engine's shared results exit publishes that flag to trigger
+            // seamless handlers; native MGZ1 results does not retain it after
+            // Load_Level, so clear that consumed transition signal here.
+            GameServices.gameState().setEndOfLevelFlag(false);
+            mgzEvents.armAct2LevelSizeChange();
+        }
 
         AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
         if (player != null) {

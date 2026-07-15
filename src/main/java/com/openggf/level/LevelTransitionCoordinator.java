@@ -270,6 +270,10 @@ public class LevelTransitionCoordinator {
         return requested;
     }
 
+    public boolean hasPendingInLevelTitleCardHeldCounterDispatch() {
+        return inLevelTitleCardRequested && inLevelTitleCardLevelGamestateResetRequested;
+    }
+
     public int consumeInLevelTitleCardResetAdditionalDispatches() {
         int dispatches = inLevelTitleCardResetAdditionalDispatches;
         inLevelTitleCardResetAdditionalDispatches = 0;

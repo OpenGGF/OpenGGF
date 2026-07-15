@@ -5,8 +5,9 @@ public interface S3kTransitionEventBridge {
 
     void requestHczPostTransitionCutscene();
 
-    default void restorePendingPostResultsPlayerControl() {
+    default boolean restorePendingPostResultsPlayerControl() {
         // Only transitions with a retained native end-sign owner consume it.
+        return false;
     }
 
     void requestMgzPostTransitionRelease();
