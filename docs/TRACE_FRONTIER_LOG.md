@@ -1,5 +1,40 @@
 # Trace Frontier Log
 
++### 2026-07-15 -- MGZ moving-spike platform preserves global oscillator ownership
+
+Branch `feature/ai-trace-animation-verification`, after the live Mantis-touch
+milestone. `Obj_MGZMovingSpikePlatform` reads
+`Oscillating_table+$12` during its object slot, but the engine port also
+called the global oscillator updater there. Once the first moving-spike
+platform entered the active window at frame 10660, that object-local call and
+the normal `LevelLoop` tail advanced the shared table twice under different
+frame counters. The later frame-19089 floating platform was consequently 46
+pixels away from its native position and missed Sonic's landing. The object now
+only reads the table; the level loop remains its sole update owner. No trace
+state, zone/route/frame carve-out, hydration, or comparator tolerance was
+added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:7909,71029-71072`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 19089 to frame 19646
+  (`y_speed`, expected `-$038D` / actual `-$048D`).
+- MGZ complete-run animation advances from frame 19089 to frame 19720
+  (`player_animation_id`, expected Roll `$02` / actual Walk `$00`).
+- The focused object regression proves that a moving-spike update leaves the
+  complete global oscillator table unchanged while still consuming the current
+  `Oscillating_table+$12` byte.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+- Remote and local `develop` were both `a6e43419a`; merging local
+  `develop` reported that this branch was already up to date.
+
+### 2026-07-15 -- MGZ Mantis touch reads its live SST position
 ### 2026-07-15 -- MGZ Mantis touch reads its live SST position
 
 Branch `feature/ai-trace-animation-verification`, after the drilling gradual-

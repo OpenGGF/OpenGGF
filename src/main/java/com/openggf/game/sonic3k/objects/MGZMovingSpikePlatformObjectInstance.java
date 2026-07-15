@@ -103,8 +103,10 @@ public class MGZMovingSpikePlatformObjectInstance extends AbstractObjectInstance
         }
 
         // ROM: move.b (Oscillating_table+$12).w,d0 / add.w $32(a0),d0 / move.w d0,y_pos(a0).
-        // The oscillator is driven globally; ensure it has ticked this frame.
-        OscillationManager.update(frameCounter);
+        // This routine only reads the global table. OscillateNumDo runs once at
+        // the LevelLoop tail after every object slot (sonic3k.asm:7909,
+        // 71069-71072), so an object-local update would double-advance every
+        // oscillator while this platform is active.
         int oscByte = OscillationManager.getByte(OSC_OFFSET) & 0xFF;
         currentY = baseY + oscByte;
 

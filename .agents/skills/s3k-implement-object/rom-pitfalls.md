@@ -1250,6 +1250,33 @@ ROM-backed profile as well as the shared animator helper.
 
 ---
 
++## P35 -- Objects that read global oscillators must not advance them
+
+**Symptom.** Every oscillating platform or hazard in the level changes phase
+while one particular object is active. The target object can look locally
+plausible, but a later unrelated platform is hundreds of oscillator ticks away
+from ROM.
+
+**Root cause.** The object port calls the engine's global oscillator update
+before reading the table. ROM object routines read `Oscillating_table` only;
+`OscillateNumDo` advances the shared table once at the level-loop tail after
+all object slots. An object-local update therefore adds a second tick per frame,
+and a different counter domain can defeat frame-number deduplication entirely.
+
+**What to check.** When an object reads `Oscillating_table+N`, port only the
+read and local position calculation. Keep the single global update under the
+level loop's owner. Add a test that snapshots the complete oscillator table,
+executes the object once, and proves the table is unchanged.
+
+**ROM citation.** S3K calls `OscillateNumDo` once after
+`Process_Sprites` at the `LevelLoop` tail, while
+`Obj_MGZMovingSpikePlatform` only reads `Oscillating_table+$12`
+(`docs/skdisasm/sonic3k.asm:7909,71029-71072`).
+
+**Originating commit.** `<pending: MGZ moving-spike oscillator ownership milestone>`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
