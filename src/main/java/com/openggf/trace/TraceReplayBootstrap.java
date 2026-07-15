@@ -638,7 +638,40 @@ public final class TraceReplayBootstrap {
         if (isSonic3kTransitionModeFrozenRow(trace, previous, current)) {
             return TraceExecutionPhase.VBLANK_ONLY;
         }
-        return TraceExecutionModel.forGame(trace.metadata().game()).phaseFor(previous, current);
+        TraceExecutionPhase counterPhase =
+                TraceExecutionModel.forGame(trace.metadata().game()).phaseFor(previous, current);
+        if (counterPhase == TraceExecutionPhase.VBLANK_ONLY
+                && hasSidekickCpuExecutionHookOnInputEdge(trace, previous, current)) {
+            // A Tails CPU normal-step event is emitted from inside the native
+            // player/object loop, so it is direct execution evidence. Some S3K
+            // captures expose a plateaued gameplay counter and a VBlank-byte
+            // change on the same row as a fresh input edge while the main player
+            // is stationary; counter/state-only classification would call that
+            // row VBlank-only even though the CPU routine, animation scripts, and
+            // object logic all ran. A lag-counter advance remains authoritative:
+            // recorder hook data on such rows belongs to the preceding completed
+            // loop. Promote only input-edge rows carrying the execution hook --
+            // sampled cpu_state values alone are not sufficient -- and keep trace
+            // data comparison-only.
+            return TraceExecutionPhase.FULL_LEVEL_FRAME;
+        }
+        return counterPhase;
+    }
+
+    private static boolean hasSidekickCpuExecutionHookOnInputEdge(
+            TraceData trace, TraceFrame previous, TraceFrame current) {
+        if (trace == null || previous == null || current == null
+                || current.input() == previous.input()
+                || (current.lagCounter() >= 0 && previous.lagCounter() >= 0
+                        && current.lagCounter() > previous.lagCounter())) {
+            return false;
+        }
+        for (TraceEvent event : trace.getEventsForFrame(current.frame())) {
+            if (event instanceof TraceEvent.TailsCpuNormalStep) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isS3kCompleteRunInitialHandoffRow(TraceData trace,

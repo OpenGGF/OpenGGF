@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-15 -- MGZ complete-run execution frontier advances to frame 8799
+
+Branch `feature/ai-trace-animation-verification`, after aligning the MGZ
+complete-run frontiers at frame 5918. An S3K row can expose a stationary main
+player, a plateaued gameplay counter, and a changed VBlank byte while the full
+player/object loop still ran. At MGZ frame 5917, the native
+`tails_cpu_normal_step` execution hook and a fresh controller-input edge prove
+that `TailsCPU_Control`, Sonic's zero-delay Spindash script, and object logic all
+executed. Replay had classified that row as VBlank-only, skipping one engine
+gameplay update and leaving both Sonic's mapping sequence and the shared Tails
+CPU respawn word one tick late. The replay execution model now promotes only a
+counter-classified VBlank row that carries both that native CPU execution hook
+and a fresh input edge; an advancing lag counter remains authoritative. Trace
+values stay comparison-only and no route, zone, frame, hydration, or tolerance
+condition was added.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 5918 to frame 8799
+  (`tails_g_speed`), while animation advances to frame 8800
+  (`tails_mapping_frame`). The former Spindash mapping and CPU respawn-counter
+  groups are removed.
+- AIZ and HCZ complete-run physics and animation remain green. The focused
+  execution-policy regression passes.
+- The full animation sweep remains 42/58 green routes / 16 established reds.
+  The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- MGZ standalone remains unchanged at physics frame 1538 and animation frame
+  1574.
+
 ### 2026-07-15 -- MGZ complete-run frontiers aligned at frame 5918
 
 Branch `feature/ai-trace-animation-verification`, after restoring the HCZ
