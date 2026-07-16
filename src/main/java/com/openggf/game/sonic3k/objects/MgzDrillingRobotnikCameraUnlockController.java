@@ -14,9 +14,9 @@ import java.util.List;
  * allocated when a drilling-Robotnik appearance finishes fleeing.
  *
  * <p>This remains a real dynamic object because its slot and execution phase
- * matter: the boss allocates it after its own slot, so it receives its first
- * {@code $4000} accumulator step later in the same {@code ExecuteObjects}
- * pass, before the camera scroll.</p>
+ * matter: a worker allocated into a later slot receives its first
+ * {@code $4000} accumulator step in the same {@code ExecuteObjects} pass,
+ * while one allocated into an already-visited slot starts on the next pass.</p>
  */
 final class MgzDrillingRobotnikCameraUnlockController extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
@@ -27,7 +27,6 @@ final class MgzDrillingRobotnikCameraUnlockController extends AbstractObjectInst
     // Non-final so generic rewind capture can restore the constructor variant.
     private boolean decrementMinX;
     private int accumulator;
-    private boolean skipFirstUpdate;
 
     MgzDrillingRobotnikCameraUnlockController(boolean decrementMinX) {
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "MGZDrillCameraUnlock");
@@ -55,10 +54,6 @@ final class MgzDrillingRobotnikCameraUnlockController extends AbstractObjectInst
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
-        if (skipFirstUpdate) {
-            skipFirstUpdate = false;
-            return;
-        }
         accumulator += ACCELERATION;
         int step = accumulator >>> 16;
         if (decrementMinX) {
@@ -66,14 +61,6 @@ final class MgzDrillingRobotnikCameraUnlockController extends AbstractObjectInst
         } else {
             updateMaxX(step);
         }
-    }
-
-    void preserveWrappedAllocationSetupPass(int parentSlot) {
-        // The split Java boss routine reaches cleanup one execution pass ahead
-        // of the native slot replacement. When AllocateObject wraps to a slot
-        // already visited this pass, retain that setup pass; a later slot will
-        // execute in the current pass and needs no compensation.
-        skipFirstUpdate = getSlotIndex() >= 0 && getSlotIndex() < parentSlot;
     }
 
     private void updateMinX(int step) {

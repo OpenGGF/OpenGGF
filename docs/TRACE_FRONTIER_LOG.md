@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ drill hurt becomes visible after its movement routine
+
+Branch `feature/ai-trace-animation-verification`, after the title-card exit
+milestone and an up-to-date merge check against `develop` at `1b1a5efee`.
+`Obj_MGZ2DrillingRobotnik` dispatches its movement routine before
+`MGZ2_SpecialCheckHit`. On the complete-run route Sonic first overlaps the
+drill during its hang routine; publishing the hurt bit before that routine
+made the engine enter the ceiling escape one object pass early. The mini-event
+now retains a touch-reported hit until its current movement routine completes.
+With the boss cleanup on its native pass, the gradual camera worker relies
+directly on `AllocateObject` slot order: a wrapped lower slot starts next pass,
+without an additional synthetic setup skip. Standalone's slot-4 worker and the
+complete-run's slot-5 worker now both release the first quake arena on their
+recorded camera frame. No trace hydration, zone/route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:142389-142436,142620-142706,178159-178198`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 16055 to frame 16292 (`tails_y`,
+  expected `$05E9` / actual `$05EF`), with physics errors reduced from 4243
+  to 4242.
+- MGZ standalone animation remains at frame 16304 (`tails_animation_id`,
+  expected `$00` / actual `$02`) with 547 errors.
+- The focused post-routine hit-visibility contract passes.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ title-card exit accounts for phase-owned wait dispatches
 
 Branch `feature/ai-trace-animation-verification`, after the title-card reset

@@ -334,6 +334,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     /** Mirrors the ROM's $3A child-pose byte used by loc_6CEB0/loc_6CF20. */
     private int drillChildPose;
     private int escapeTimer;
+    /** Hit reported by touch processing, published after the current ROM routine. */
+    private boolean pendingMiniHit;
     private int airAttackPhase;
     private int airAttackPatternCounter;
     private int airAttackPatternOffset;
@@ -402,6 +404,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         palettesLoaded = false;
         bossMusicPlayed = false;
         hit = false;
+        pendingMiniHit = false;
         floorImpactTriggered = false;
         renderTick = 0;
         swingHalfCyclesRemaining = SWING_HALF_CYCLES;
@@ -512,6 +515,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         }
 
         updateFallingDebris();
+        publishPendingMiniHit();
         updateCustomFlash();
 
         state.xFixed = state.x << 16;
@@ -1087,11 +1091,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         // finds a lower slot and waits for the next pass; the third finds a
         // later slot and executes immediately. That slot-relative distinction
         // is observable in the camera frontier.
-        MgzDrillingRobotnikCameraUnlockController unlockWorker =
-                spawnFreeChild(() -> new MgzDrillingRobotnikCameraUnlockController(flipX));
-        if (unlockWorker != null) {
-            unlockWorker.preserveWrappedAllocationSetupPass(getSlotIndex());
-        }
+        spawnFreeChild(() -> new MgzDrillingRobotnikCameraUnlockController(flipX));
         S3kMgzEventWriteSupport.completeDrillingRobotnikFlee(services());
         setDestroyed(true);
         LOG.fine(() -> "MGZ2 Drilling Robotnik cleanup completed at y=" + state.y);
@@ -1199,7 +1199,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
      */
     @Override
     public void onPlayerAttack(PlayableEntity playerEntity, TouchResponseResult result) {
-        if (state.invulnerable || state.defeated || isInitialHiddenWait()) {
+        if (state.invulnerable || pendingMiniHit || state.defeated || isInitialHiddenWait()) {
             return;
         }
         if (endBossMode) {
@@ -1215,6 +1215,20 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
             }
             return;
         }
+        pendingMiniHit = true;
+    }
+
+    /**
+     * ROM {@code Obj_MGZ2DrillingRobotnik} dispatches its movement routine
+     * before {@code MGZ2_SpecialCheckHit}. Touch processing may report the
+     * overlap before this Java object's update, so retain the hit until the
+     * routine has completed instead of exposing it to {@link #updateHang()}.
+     */
+    private void publishPendingMiniHit() {
+        if (endBossMode || !pendingMiniHit) {
+            return;
+        }
+        pendingMiniHit = false;
         hit = true;
         state.invulnerable = true;
         state.invulnerabilityTimer = INVULNERABILITY_TIME;

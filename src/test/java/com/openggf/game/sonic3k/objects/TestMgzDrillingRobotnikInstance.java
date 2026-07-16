@@ -133,6 +133,25 @@ class TestMgzDrillingRobotnikInstance {
     }
 
     @Test
+    void hangRoutineObservesHitOnFollowingObjectPass() throws Exception {
+        RecordingServices services = new RecordingServices(camera);
+        MgzDrillingRobotnikInstance boss = createBoss(services);
+        boss.update(0, null);
+
+        setPrivateInt(boss, "waitTimer", 0);
+        boss.getState().routine = staticInt("ROUTINE_HANG");
+
+        boss.onPlayerAttack(null, null);
+        boss.update(1, null);
+        assertEquals(staticInt("ROUTINE_HANG"), boss.getState().routine,
+                "MGZ2_SpecialCheckHit runs after the current movement routine");
+
+        boss.update(2, null);
+        assertEquals(staticInt("ROUTINE_CEILING_ESCAPE"), boss.getState().routine,
+                "The published hurt bit should drive the next object pass");
+    }
+
+    @Test
     void ceilingEscapeUsesEscapePodFrameAndThrusterFlame() throws Exception {
         RecordingServices services = new RecordingServices(camera);
         MgzDrillingRobotnikInstance boss = createBoss(services);
