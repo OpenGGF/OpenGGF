@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Carry release consumes the pre-body logical input
+
+Branch `feature/ai-trace-animation-verification`, after the end-boss air-entry
+milestone. Native `Tails_FlyingSwimming` consumes the current
+`Ctrl_2_logical` direction before the later `Tails_Carry_Sonic` call observes
+Sonic's A/B/C press and releases him. The engine prepared that release before
+carrier movement and cleared the transient direction, so the release pass ran
+apex drag without its preceding Right acceleration. Jump release now restores
+the already-published logical input for that carrier body and clears the latch
+on the following released-cooldown pass. No trace hydration, route/frame
+predicate, comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:27553-27570,27186-27268`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 36535 to frame 36640 (`x`,
+  expected `$3DA3` / actual `$3D94`; 1,012 errors, down from 1,021), aligning
+  its frontier with animation.
+- MGZ complete-run animation remains at frame 36640 with 145 errors.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused sidekick-carry suite passes, including the release-pass logical
+  input regression.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
 ### 2026-07-16 -- MGZ end-boss air entry preserves composite SST phases
 
 Branch `feature/ai-trace-animation-verification`, after the flying-carry-order

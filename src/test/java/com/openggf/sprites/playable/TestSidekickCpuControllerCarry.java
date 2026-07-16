@@ -557,6 +557,36 @@ class TestSidekickCpuControllerCarry {
     }
 
     @Test
+    void mgzJumpReleasePreservesPreBodyLogicalDirectionForOnePass() {
+        AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
+        AbstractPlayableSprite sonic = pair[0];
+        AbstractPlayableSprite tails = pair[1];
+        fixture.camera().setY((short) 0x0600);
+        tails.setCentreY((short) 0x0690);
+        controller.update(1);
+        controller.update(2);
+
+        sonic.setDirectionalInputPressed(false, false, false, true);
+        controller.update(3);
+        assertTrue(controller.getInputRight());
+
+        sonic.setJumpInputPressed(false);
+        sonic.setJumpInputPressed(true);
+        controller.update(4);
+
+        assertTrue(controller.getInputRight(),
+                "Tails_FlyingSwimming consumes the prior Ctrl_2 direction before Tails_Carry_Sonic releases Sonic");
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT, controller.getDiagnosticGeneratedHeldInput());
+
+        sonic.setJumpInputPressed(false);
+        controller.update(5);
+
+        assertFalse(controller.getInputRight());
+        assertEquals(0, controller.getDiagnosticGeneratedHeldInput(),
+                "The released-carry cooldown publishes an empty Ctrl_2 logical word on its following pass");
+    }
+
+    @Test
     void mgzCarryReleasesSonicWhenTailsIsHurt() {
         AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
         AbstractPlayableSprite sonic = pair[0];

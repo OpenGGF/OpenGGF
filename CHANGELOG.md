@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Tails carry jump release now consumes the pre-body `Ctrl_2_logical` direction before clearing it:** the carrier receives its native same-pass Right acceleration before `Tails_Carry_Sonic` releases Sonic, advancing MGZ complete-run physics from frame 36535 to 36640 and aligning it with animation (`docs/skdisasm/sonic3k.asm:27553-27570,27186-27268`).
 - **MGZ end-boss air entry now preserves the composite drill children's two SST phases:** the live touch anchor no longer reaches the post-collapse approach two object passes early, advancing complete-run physics from frame 36084 to 36535 and animation from 36109 to 36640 (`docs/skdisasm/sonic3k.asm:142900-142970`).
 - **CPU flying carry now applies `Tails_Move_FlySwim` before horizontal input acceleration:** the apex `-$08` to zero vertical step precedes the negative-Y drag gate, preserving the native full `$18` horizontal acceleration and advancing MGZ complete-run physics from frame 35940 to 36084 (`docs/skdisasm/sonic3k.asm:27553-27639,28330-28401`).
 - **Tails carry now publishes the native shared animation bytes and raw carry mapping pass:** pickup writes carried `$22` to both current/previous animation, resets the shared frame/timer, and the post-movement `AniRaw_Tails_Carry` pass immediately publishes `$91`, advancing MGZ complete-run animation from frame 35787 to 36109 and CNZ complete-run animation from frame 1 to 108 (`docs/skdisasm/sonic3k.asm:27186-27330,27382-27415`).

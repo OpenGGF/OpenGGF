@@ -424,6 +424,13 @@ public class SidekickCpuController {
 
         clearInputs();
         carryController().setParentagePending(false);
+        if (releasedCarryCooldown) {
+            // The release-side logical direction remains visible through the
+            // current Tails body, then the following CPU pass publishes an
+            // empty Ctrl_2_logical while loc_14534 counts down.
+            diagnosticCtrl2HeldLatch = 0;
+            diagnosticCtrl2PressedLatch = 0;
+        }
         if ((controller2Held & MANUAL_HELD_MASK) != 0) {
             controlCounter = MANUAL_CONTROL_FRAMES;
         }
@@ -3388,6 +3395,12 @@ public class SidekickCpuController {
 
         // 3. A/B/C just-pressed (release path B)
         if (leader.isJumpJustPressed()) {
+            // Tails_FlyingSwimming consumes the already-latched Ctrl_2_logical
+            // before Tails_Carry_Sonic observes Ctrl_1_pressed and releases
+            // Sonic. The engine prepares the release before carrier movement,
+            // so restore that pre-body logical input after update() cleared its
+            // transient booleans.
+            restorePreCarryBodyLogicalInput();
             carryController().setParentagePending(false);
             performJumpRelease();
             return;
@@ -4015,6 +4028,16 @@ public class SidekickCpuController {
         leader.setRollingFlagPreserveRadii(true);
         leader.setRollingJump(false);
         releaseCarry(carryTrigger.carryJumpReleaseCooldownFrames());
+    }
+
+    private void restorePreCarryBodyLogicalInput() {
+        int held = diagnosticCtrl2HeldLatch & MANUAL_HELD_MASK;
+        inputUp = (held & AbstractPlayableSprite.INPUT_UP) != 0;
+        inputDown = (held & AbstractPlayableSprite.INPUT_DOWN) != 0;
+        inputLeft = (held & AbstractPlayableSprite.INPUT_LEFT) != 0;
+        inputRight = (held & AbstractPlayableSprite.INPUT_RIGHT) != 0;
+        inputJump = (held & AbstractPlayableSprite.INPUT_JUMP) != 0;
+        inputJumpPress = (diagnosticCtrl2PressedLatch & AbstractPlayableSprite.INPUT_JUMP) != 0;
     }
 
     private void releaseCarry(int cooldownFrames) {
