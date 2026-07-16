@@ -88,12 +88,13 @@ class TestSonic3kMgz2BgRiseEvents {
 
     /**
      * Simulates one frame of MGZ Act 2 event processing. ROM-equivalent to
-     * Obj_MGZ2BGMoveSonic running in the object phase (pre-physics) and the
-     * remaining MGZ screen events running later in the frame. BG rise moved
-     * to a pre-physics hook to keep FindFloor aligned with the lift.
+     * the background event publishing collision state before the player pass,
+     * Obj_MGZ2BGMoveSonic consuming the resulting player position afterward,
+     * and the remaining MGZ screen events running later in the frame.
      */
     private static void tick(Sonic3kMGZEvents events, int frame) {
         events.updatePrePhysics(1);
+        events.updateBgRiseObjectAfterPlayerPhysics(1);
         events.update(1, frame);
     }
 
@@ -199,6 +200,27 @@ class TestSonic3kMgz2BgRiseEvents {
 
         assertTrue(events.getBgRiseOffset() > 0,
                 "after a few frames past the threshold, offset should be > 0");
+    }
+
+    @Test
+    void sonicRise_thresholdCrossingIsConsumedAfterCurrentPlayerMovement() {
+        AbstractPlayableSprite player = placePlayer(0x3500, 0x0850);
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        events.setBgRiseLoadStateInitialised(true);
+        events.setBgRiseRoutine(BG_RISE_SONIC);
+
+        events.updatePrePhysics(1);
+        assertFalse(events.isBgRiseMotionStarted(),
+                "the background-event bridge sees the prior player position");
+
+        player.setCentreX((short) 0x36D1);
+        player.setCentreY((short) 0x0A81);
+        events.updateBgRiseObjectAfterPlayerPhysics(1);
+
+        assertTrue(events.isBgRiseMotionStarted());
+        assertEquals(0x6000, events.getBgRiseSubpixelAccum(),
+                "threshold entry falls through to the first accumulator step on the same object pass");
     }
 
     @Test

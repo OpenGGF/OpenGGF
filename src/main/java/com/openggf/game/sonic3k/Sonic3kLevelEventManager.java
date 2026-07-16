@@ -321,6 +321,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (hczEvents != null) {
             hczEvents.updateRetainedCarrierObjectPass(currentAct);
         }
+        if (mgzEvents != null) {
+            mgzEvents.updateBgRiseObjectAfterPlayerPhysics(currentAct);
+        }
     }
 
     private void installFixedDynamicObjects(int zone) {

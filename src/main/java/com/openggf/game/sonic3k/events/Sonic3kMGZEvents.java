@@ -28,6 +28,7 @@ import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.SidekickCarryTrigger;
@@ -1068,11 +1069,10 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             // SST slot while the plane refresh is in progress.
             gameState().setBackgroundCollisionFlag(false);
             bgRiseRefreshFramesRemaining--;
-            updateBgRiseSonicObject(player, playerX, playerY);
         } else {
             switch (bgRiseRoutine) {
                 case BG_RISE_NORMAL -> bgRiseNormal(playerX, playerY);
-                case BG_RISE_SONIC -> bgRiseSonic(player, playerX, playerY);
+                case BG_RISE_SONIC -> bgRiseSonic(playerX, playerY);
                 case BG_RISE_AFTER_MOVE -> bgRiseAfterMove(playerX, playerY);
                 default -> {
                 }
@@ -1172,7 +1172,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
      * at X>=$3D50 (ROM: loc_51B6C) and flips from subpixel accumulator to
      * integer +1 pixel/frame.
      */
-    private void bgRiseSonic(AbstractPlayableSprite player, int playerX, int playerY) {
+    private void bgRiseSonic(int playerX, int playerY) {
         gameState().setBackgroundCollisionFlag(true);
         // MGZ2_BGEventTrigger state-8 transition logic:
         //   Y < $800 AND X >= $3900 → state C
@@ -1190,7 +1190,28 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             gameState().setBackgroundCollisionFlag(false);
             return;
         }
-        updateBgRiseSonicObject(player, playerX, playerY);
+    }
+
+    /**
+     * Runs the independently allocated {@code Obj_MGZ2BGMoveSonic} after both
+     * player slots and before dynamic level objects. Unlike the background
+     * event's collision-flag publication, this object consumes the positions
+     * produced by the current frame's player movement. Its threshold-entry
+     * path falls straight through to the first {@code $6000} accumulator step.
+     */
+    public void updateBgRiseObjectAfterPlayerPhysics(int act) {
+        if (act != 1 || bgRiseRoutine != BG_RISE_SONIC) {
+            return;
+        }
+        AbstractPlayableSprite player = camera().getFocusedSprite();
+        if (player == null) {
+            return;
+        }
+        updateBgRiseSonicObject(player, player.getCentreX(), player.getCentreY());
+        MgzZoneRuntimeState runtimeState = currentMgzRuntimeState();
+        if (runtimeState != null) {
+            runtimeState.syncBgRiseToScrollHandler();
+        }
     }
 
     /** ROM: independently allocated Obj_MGZ2BGMoveSonic SST body. */
@@ -1268,7 +1289,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                 () -> sidekicks);
         for (PlayableEntity passenger : playerQuery.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (passenger instanceof AbstractPlayableSprite playable) {
-                playable.setCentreY((short) (playable.getCentreY() - delta));
+                NativePositionOps.addYPosPreserveSubpixel(playable, -delta);
             }
         }
     }

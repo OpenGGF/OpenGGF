@@ -244,9 +244,14 @@ class TestS3kMgz2BgRiseHeadless {
         teleport(0x3500, 0x0850);
         fixture.stepIdleFrames(1);
 
-        // Teleport past motion + accel thresholds so the rise uses +1/frame
-        // and completes in <= 464 frames.
-        teleport(0x3E00, 0x0A90);
+        // Cross the motion threshold first, then the later acceleration
+        // threshold. Obj_MGZ2BGMoveSonic consumes the post-player position, so
+        // this mirrors the route instead of asking one teleport to cross both
+        // gates before the player slot has resolved terrain.
+        teleport(0x3800, 0x0A90);
+        fixture.stepIdleFrames(1);
+        assertTrue(mgzEvents().isBgRiseMotionStarted(), "precondition: rise object has started");
+        teleport(0x3E00, sprite.getCentreY());
         for (int frame = 0; frame < 600; frame++) {
             fixture.stepIdleFrames(1);
         }

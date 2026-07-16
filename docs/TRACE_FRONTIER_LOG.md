@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ rise object consumes the completed player pass
+
+Branch `feature/ai-trace-animation-verification`, after the empty-background-
+row milestone. `Obj_MGZ2BGMoveSonic` is an independently allocated SST that
+runs after both fixed player slots. When Sonic first crosses `x_pos > $36D0`,
+its setup falls straight through to the first `$6000` accumulator update on
+that same object pass. The engine had combined this work with the earlier
+background-event collision bridge, so it observed the crossing one frame late.
+The rise object now runs after player physics and subtracts each integer lift
+delta through `NativePositionOps`, preserving the players' 16-bit subpixels as
+the ROM's word-only `y_pos` writes do. No trace hydration, route/frame
+predicate, comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:107241-107323`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 32945 to frame 33319
+  (`tails_x`, expected `$3B27` / actual `$3B28`).
+- MGZ complete-run animation advances from frame 32951 to frame 33375
+  (`tails_animation_id`, expected `Wait` / actual `Duck`).
+- The focused MGZ BG-rise event, headless integration, and rewind-schema suite
+  passes all 47 tests.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- S3K background collision honors empty layout rows
 
 Branch `feature/ai-trace-animation-verification`, after the collision-
