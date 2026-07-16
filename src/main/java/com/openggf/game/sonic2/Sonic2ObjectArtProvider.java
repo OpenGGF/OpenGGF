@@ -265,12 +265,16 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
      * Loads a Sonic 2 PLC on demand, matching runtime event-triggered PLC requests.
      * Re-requesting an already loaded PLC is harmless because individual art keys
      * are skipped when present.
+     *
+     * @return {@code true} when the request registered at least one new sprite sheet
      */
-    public void requestPlc(int plcId) throws IOException {
+    public boolean requestPlc(int plcId) throws IOException {
         ensureArtLoader();
         Rom rom = GameServices.rom().getRom();
+        int sheetCountBefore = sheetOrder.size();
         loadPlcEntries(rom, plcId);
         loadEpoch++;
+        return sheetOrder.size() > sheetCountBefore;
     }
 
     /**
@@ -682,13 +686,8 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
         return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(loadEpoch);
     }
 
-    /**
-     * Restore is a no-op for v1: all PLC art is loaded at zone-load time and
-     * does not change per-frame. The epoch is recorded in the snapshot as a
-     * diagnostic check but is not re-applied here.
-     */
     @Override
     public void restore(com.openggf.game.rewind.snapshot.PlcProgressSnapshot snap) {
-        // No per-frame PLC state to restore in v1.
+        loadEpoch = snap.loadEpoch();
     }
 }
