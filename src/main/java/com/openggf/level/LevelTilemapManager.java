@@ -451,21 +451,12 @@ public class LevelTilemapManager {
                 * LevelConstants.CHUNK_HEIGHT;
         long deltaX = (long) alignedX - persistentBgAlignedX;
         long deltaY = (long) alignedY - persistentBgAlignedY;
-        boolean sourceWrapDiscontinuity = false;
-        if (persistentBgBaselineValid && deltaX != 0) {
-            BgBuildParams previousParams = persistentBuildParams(zoneFeatureProvider, currentZone,
-                    persistentBgAlignedX, persistentBgAlignedY);
-            BgBuildParams nextParams = persistentBuildParams(zoneFeatureProvider, currentZone,
-                    alignedX, alignedY);
-            sourceWrapDiscontinuity = (long) nextParams.xQueryOffset()
-                    - previousParams.xQueryOffset() != deltaX;
-        }
         TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
         boolean rendererBaselineLost = persistentBgBaselineValid && renderer != null
                 && (persistentBgPublishedData == null
                 || !renderer.hasBackgroundBaseline(persistentBgPublishedData,
                 BG_RING_WIDTH_TILES, BG_RING_HEIGHT_TILES));
-        if (!persistentBgBaselineValid || rendererBaselineLost || sourceWrapDiscontinuity
+        if (!persistentBgBaselineValid || rendererBaselineLost
                 || Math.abs(deltaX) > LevelConstants.CHUNK_WIDTH
                 || Math.abs(deltaY) > LevelConstants.CHUNK_HEIGHT) {
             seedPersistentBgNametable(blockLookup, zoneFeatureProvider, currentZone,

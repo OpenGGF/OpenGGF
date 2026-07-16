@@ -265,22 +265,44 @@ class TestPersistentBgNametable {
     }
 
     @Test
-    void normalWrapReseedsAtPositiveAndNegativeContiguousWidthBoundaries() {
+    void normalWrapCrossesPositiveAndNegativeContiguousWidthBoundariesIncrementally() throws Exception {
         useContiguousWidth(512);
 
+        RecordingRenderer positiveRenderer = new RecordingRenderer();
+        injectRenderer(positiveRenderer);
         LevelTilemapManager positive = newManager();
         ensurePersistent(positive, 496, 0);
+        byte[] positivePhysicalTexture = new byte[RING_WIDTH_TILES * RING_HEIGHT_TILES * 4];
+        positiveRenderer.applyPendingBackgroundUploadForTest(positivePhysicalTexture);
+        byte[] positiveBefore = positive.getPersistentBgRingCopy();
         assertRingMatchesWrappedSourceWindow(positive, 496, 0, 512);
         ensurePersistent(positive, 512, 0);
-        assertEquals(2, positive.persistentBgFullPublicationCount,
-                "effective source wrap invalidates all retained columns");
-        assertRingMatchesSourceWindow(positive, 0, 0);
+        assertEquals(1, positive.persistentBgFullPublicationCount);
+        assertEquals(1, positive.persistentBgIncrementalPublicationCount);
+        assertEquals(2, positive.getPersistentBgOriginXTiles());
+        assertEquals(2 * RING_HEIGHT_TILES * 4,
+                positiveRenderer.getPendingBackgroundUploadBytes(),
+                "only the two incoming physical columns should be published");
+        assertNoPhysicalColumnsOutsideChanged(
+                positiveBefore, positive.getPersistentBgRingCopy(), 0, 1);
+        assertRingMatchesWrappedSourceWindow(positive, 0, 0, 512);
 
+        RecordingRenderer negativeRenderer = new RecordingRenderer();
+        injectRenderer(negativeRenderer);
         LevelTilemapManager negative = newManager();
         ensurePersistent(negative, 0, 0);
+        byte[] negativePhysicalTexture = new byte[RING_WIDTH_TILES * RING_HEIGHT_TILES * 4];
+        negativeRenderer.applyPendingBackgroundUploadForTest(negativePhysicalTexture);
+        byte[] negativeBefore = negative.getPersistentBgRingCopy();
         ensurePersistent(negative, -16, 0);
-        assertEquals(2, negative.persistentBgFullPublicationCount,
-                "negative effective source wrap invalidates all retained columns");
+        assertEquals(1, negative.persistentBgFullPublicationCount);
+        assertEquals(1, negative.persistentBgIncrementalPublicationCount);
+        assertEquals(62, negative.getPersistentBgOriginXTiles());
+        assertEquals(2 * RING_HEIGHT_TILES * 4,
+                negativeRenderer.getPendingBackgroundUploadBytes(),
+                "only the two incoming physical columns should be published");
+        assertNoPhysicalColumnsOutsideChanged(
+                negativeBefore, negative.getPersistentBgRingCopy(), 62, 63);
         assertRingMatchesWrappedSourceWindow(negative, 496, 0, 512);
     }
 
@@ -463,6 +485,20 @@ class TestPersistentBgNametable {
             }
         }
         assertTrue(changed > 0);
+    }
+
+    private static void assertNoPhysicalColumnsOutsideChanged(byte[] before, byte[] after,
+                                                               int... columns) {
+        boolean[] allowed = new boolean[RING_WIDTH_TILES];
+        for (int column : columns) allowed[column] = true;
+        for (int y = 0; y < RING_HEIGHT_TILES; y++) {
+            for (int x = 0; x < RING_WIDTH_TILES; x++) {
+                if (!allowed[x]) {
+                    assertFalse(descriptorDiffers(before, after, x, y),
+                            "unexpected changed slot (" + x + "," + y + ")");
+                }
+            }
+        }
     }
 
     private static void assertOnlyPhysicalRowsChanged(byte[] before, byte[] after, int... rows) {
