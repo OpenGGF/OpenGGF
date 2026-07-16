@@ -142,6 +142,32 @@ class TestS3kMgzTriggerPlatformObject {
     }
 
     @Test
+    void slowVerticalSubtypeConsumesPriorPassWriteFromLaterDashTriggerSlot() {
+        Sonic3kLevelTriggerManager.reset();
+        MGZTriggerPlatformObjectInstance platform = new MGZTriggerPlatformObjectInstance(
+                new ObjectSpawn(0x09C0, 0x0E54, Sonic3kObjectIds.MGZ_TRIGGER_PLATFORM,
+                        0x14, 0x01, false, 0));
+        MGZDashTriggerObjectInstance dash = new MGZDashTriggerObjectInstance(
+                new ObjectSpawn(0x0950, 0x0E04, Sonic3kObjectIds.MGZ_DASH_TRIGGER,
+                        0x04, 0x00, false, 0));
+        platform.setSlotIndex(6);
+        dash.setSlotIndex(11);
+        ObjectServices services = mock(ObjectServices.class);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(services.objectManager()).thenReturn(objectManager);
+        when(objectManager.activeObjectsOfType(MGZDashTriggerObjectInstance.class))
+                .thenReturn(List.of(dash));
+        platform.setServices(services);
+
+        // The later dash slot published this byte on the preceding ExecuteObjects
+        // pass; the earlier platform slot must consume it immediately now.
+        Sonic3kLevelTriggerManager.setAll(0x04);
+        platform.update(0, null);
+
+        assertEquals(0x0E53, platform.getY());
+    }
+
+    @Test
     void subtypeOneLandingRechecksReversedEarlierSlotSubtypeTwoSibling() {
         MGZTriggerPlatformObjectInstance landing = new MGZTriggerPlatformObjectInstance(
                 new ObjectSpawn(0x1D20, 0x0354, Sonic3kObjectIds.MGZ_TRIGGER_PLATFORM,

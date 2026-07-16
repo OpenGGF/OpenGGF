@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ slow trigger platform consumes prior-pass dash writes
+
+Branch `feature/ai-trace-animation-verification`, after complete-run animation
+reached green. The standalone route's subtype-`$14` platform occupies an
+earlier live SST slot than its matching dash trigger. When the platform next
+observes a nonzero `Level_trigger_array` byte, that value necessarily survived
+from the preceding `ExecuteObjects` pass and `loc_3466E` moves immediately.
+The engine's platform-local activation latch added a second delay even though
+the real later-slot ordering had already supplied the native one-pass
+visibility delay. Matching live dash-trigger ownership and relative SST order
+now establish that a later-source byte is actionable immediately, while the
+slow earlier-source arrangement retains its required bridge. No trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:51473-51608,70910-71029`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ standalone physics advances from frame 1538 to frame 2475
+  (`y_speed`, expected `-$0108` / actual `$0108`).
+- MGZ standalone animation advances from frame 1574 to frame 2496
+  (`player_animation_id`, expected Roll / actual Walk).
+- The focused trigger-platform suite passes all 11 tests, including explicit
+  earlier- and later-dash-slot visibility contracts.
+- MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ complete-run animation reaches green
 
 Branch `feature/ai-trace-animation-verification`, after the two-pass carry

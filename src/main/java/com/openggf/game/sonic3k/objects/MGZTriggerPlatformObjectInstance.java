@@ -129,14 +129,16 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         }
 
         // Horizontal triggers are published before this native SST slot and
-        // loc_34600 moves on the same pass. The vertical trigger sources run
-        // after their platform slots in the common layout, so their newly visible
-        // byte belongs to the following pass. The fast $2x variant also occurs
-        // after its matching dash trigger in the live SST table; in that ordering
-        // loc_3466E observes the write and moves on the same ExecuteObjects pass.
+        // loc_34600 moves on the same pass. A vertical dash trigger can sit on
+        // either side of the platform in the live SST table. If it is later, a
+        // nonzero byte observed by this earlier platform necessarily survived
+        // from the preceding pass and is actionable immediately. The fast $2x
+        // variant also consumes an earlier source on the same pass. A slow $1x
+        // platform allocated after its source retains the one-pass bridge: that
+        // engine ordering can be the reverse of the native SST order.
         boolean activationVisibleThisPass = wasActivated
                 || (mode == Mode.HORIZONTAL_DELETE && activated)
-                || (activated && stepPerFrame == 2 && hasEarlierDashTriggerSlot());
+                || (activated && hasDashTriggerVisibleThisPass());
         if (!completed && activationVisibleThisPass) {
             advanceActiveMotion();
             applyScreenShake(frameCounter);
@@ -147,7 +149,7 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         updateDynamicSpawn(currentX, currentY);
     }
 
-    private boolean hasEarlierDashTriggerSlot() {
+    private boolean hasDashTriggerVisibleThisPass() {
         var svc = tryServices();
         if (svc == null || svc.objectManager() == null || getSlotIndex() < 0) {
             return false;
@@ -156,7 +158,8 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
                 svc.objectManager().activeObjectsOfType(MGZDashTriggerObjectInstance.class)) {
             if (trigger.triggerIndex() == triggerIndex
                     && trigger.getSlotIndex() >= 0
-                    && trigger.getSlotIndex() < getSlotIndex()) {
+                    && (trigger.getSlotIndex() > getSlotIndex()
+                    || (stepPerFrame == 2 && trigger.getSlotIndex() < getSlotIndex()))) {
                 return true;
             }
         }
