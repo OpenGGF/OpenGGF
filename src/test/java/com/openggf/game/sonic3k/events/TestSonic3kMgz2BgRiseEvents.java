@@ -109,15 +109,27 @@ class TestSonic3kMgz2BgRiseEvents {
     }
 
     @Test
-    void playerInsideSonicTriggerBox_advancesToSonicRise() {
+    void playerInsideSonicTriggerBox_refreshesPlaneBeforeEnablingBgCollision() {
         placePlayer(0x3500, 0x850);
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
+        events.setBgRiseLoadStateInitialised(true);
 
         tick(events, 0);
 
         assertEquals(BG_RISE_SONIC, events.getBgRiseRoutine());
-        assertTrue(GameServices.gameState().isBackgroundCollisionFlag());
+        assertFalse(GameServices.gameState().isBackgroundCollisionFlag(),
+                "state-0 trigger leaves BG collision clear while MGZ2BGE_Refresh redraws the plane");
+        assertEquals(7, events.getBgRiseRefreshFramesRemaining(),
+                "trigger frame consumes the first two of the ROM's sixteen delayed rows");
+        for (int frame = 1; frame <= 7; frame++) {
+            tick(events, frame);
+            assertFalse(GameServices.gameState().isBackgroundCollisionFlag(),
+                    "refresh frame " + frame + " must skip MGZ2_BGEventTrigger");
+        }
+        tick(events, 8);
+        assertTrue(GameServices.gameState().isBackgroundCollisionFlag(),
+                "the first normal background-event call after refresh enables state-8 collision");
         assertEquals(0, events.getBgRiseOffset(), "rise hasn't started moving yet");
     }
 

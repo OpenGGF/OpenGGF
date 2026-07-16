@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ background rise retains its plane-refresh delay
+
+Branch `feature/ai-trace-animation-verification`, after the fire-shield wall
+milestone. `MGZ2BGE_Normal` clears `Background_collision_flag` when state zero
+promotes `Events_bg` to state eight, then switches `Events_routine_bg` to the
+vertical plane-refresh handler. That handler consumes two of the fifteen
+delayed rows per `ScreenEvents` call and skips `MGZ2_BGEventTrigger`, leaving
+background collision disabled for seven following frames. The engine now
+retains that concrete refresh phase before state eight enables collision while
+continuing to update the independently allocated BG-rise Sonic object. No
+trace hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:103535-103605,107045-107130`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 32308 to frame 32314 (`y`,
+  expected `$08BC` / actual `$08BE`).
+- MGZ complete-run animation advances from frame 32308 to frame 32314
+  (`player_mapping_frame`, expected `$22` / actual `$B7`).
+- The focused MGZ BG-rise event, headless integration, and rewind-schema tests
+  pass.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
 ### 2026-07-16 -- S3K standard walls honor the fire-shield push bypass
 
 Branch `feature/ai-trace-animation-verification`, after the drilling gradual-

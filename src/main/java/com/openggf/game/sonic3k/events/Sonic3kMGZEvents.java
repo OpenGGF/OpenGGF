@@ -255,6 +255,14 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private static final int BG_RISE_REENTRY_X_MIN = 0x3A40;
     /** ROM: loc_51B1C — target reached: Screen_shake_flag = $E (timed countdown). */
     private static final int BG_RISE_FINAL_SHAKE_FRAMES = 0x0E;
+    /**
+     * ROM: state 0 -> 8 branches through MGZ2BGE_Refresh with
+     * Draw_delayed_rowcount=$F. Draw_PlaneVertBottomUpComplex consumes two rows
+     * per ScreenEvents call, so seven further frames remain after the trigger
+     * frame's first pair. MGZ2_BGEventTrigger is skipped throughout the refresh,
+     * leaving Background_collision_flag clear until the following normal call.
+     */
+    private static final int BG_RISE_REFRESH_FOLLOWUP_FRAMES = 7;
     private int bgRoutine;
 
     /** ROM: Events_fg_5 — set by Obj_LevelResultsCreate to trigger BG act transition. */
@@ -321,6 +329,8 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private boolean bgRiseAccelLatched;
     /** ROM: Screen_shake_flag timed countdown ($E frames) armed when target reached. */
     private int bgRiseFinalShakeTimer;
+    /** ROM: Events_routine_bg=8 / Draw_delayed_rowcount refresh after entering state 8. */
+    private int bgRiseRefreshFramesRemaining;
     /** One-shot MGZ2_BackgroundInit parity path for late checkpoint/death loads. */
     private boolean bgRiseLoadStateInitialised;
     /** ROM: Dynamic_resize_routine for the MGZ2 end-boss arena gate. */
@@ -401,6 +411,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         bgRiseMotionStarted = false;
         bgRiseAccelLatched = false;
         bgRiseFinalShakeTimer = 0;
+        bgRiseRefreshFramesRemaining = 0;
         bgRiseLoadStateInitialised = false;
         bossArenaRoutine = 0;
         bossSpawned = false;
@@ -1029,10 +1040,11 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     /**
      * ROM: MGZ2_BGEventTrigger (sonic3k.asm:107117-107222) + Obj_MGZ2BGMoveSonic
-     * (sonic3k.asm:107241-107323). Runs before player physics so that
-     * {@code Background_collision_flag} and the player lift land before
-     * {@code FindFloor}. The ROM runs this in the object phase (before
-     * ExecuteObjects resolves physics), same as {@code HCZWaterTunnelHandler}.
+     * (sonic3k.asm:107241-107323). The engine's shared frame step calls this
+     * bridge before player physics so the state published by the preceding ROM
+     * object/background-event cadence is visible to the corresponding terrain
+     * probes. The delayed-refresh counter below preserves the interval where
+     * MGZ2_BackgroundEvent deliberately skips MGZ2_BGEventTrigger.
      */
     public void updatePrePhysics(int act) {
         if (act != 1) {
@@ -1048,11 +1060,21 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         }
         int playerX = player.getCentreX();
         int playerY = player.getCentreY();
-        switch (bgRiseRoutine) {
-            case BG_RISE_NORMAL -> bgRiseNormal(playerX, playerY);
-            case BG_RISE_SONIC -> bgRiseSonic(player, playerX, playerY);
-            case BG_RISE_AFTER_MOVE -> bgRiseAfterMove(playerX, playerY);
-            default -> {
+        if (bgRiseRoutine == BG_RISE_SONIC && bgRiseRefreshFramesRemaining > 0) {
+            // MGZ2BGE_Refresh does not call MGZ2_BGEventTrigger, so the flag
+            // remains in the clear state written by the state-0 trigger. The
+            // separately allocated Obj_MGZ2BGMoveSonic still executes from its
+            // SST slot while the plane refresh is in progress.
+            gameState().setBackgroundCollisionFlag(false);
+            bgRiseRefreshFramesRemaining--;
+            updateBgRiseSonicObject(player, playerX, playerY);
+        } else {
+            switch (bgRiseRoutine) {
+                case BG_RISE_NORMAL -> bgRiseNormal(playerX, playerY);
+                case BG_RISE_SONIC -> bgRiseSonic(player, playerX, playerY);
+                case BG_RISE_AFTER_MOVE -> bgRiseAfterMove(playerX, playerY);
+                default -> {
+                }
             }
         }
         MgzZoneRuntimeState runtimeState = currentMgzRuntimeState();
@@ -1128,7 +1150,11 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             bgRiseSubpixelAccum = 0;
             bgRiseMotionStarted = false;
             bgRiseAccelLatched = false;
-            gameState().setBackgroundCollisionFlag(true);
+            bgRiseRefreshFramesRemaining = BG_RISE_REFRESH_FOLLOWUP_FRAMES;
+            // MGZ2_BGEventTrigger state 0 clears the flag before changing
+            // Events_bg+$00 to 8, then the background event enters its delayed
+            // plane refresh without visiting the state-8 flag write.
+            gameState().setBackgroundCollisionFlag(false);
             LOG.info(String.format(
                     "MGZ BG-rise: state 0 -> SONIC at player (0x%04X, 0x%04X)",
                     playerX, playerY));
@@ -1163,6 +1189,11 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             gameState().setBackgroundCollisionFlag(false);
             return;
         }
+        updateBgRiseSonicObject(player, playerX, playerY);
+    }
+
+    /** ROM: independently allocated Obj_MGZ2BGMoveSonic SST body. */
+    private void updateBgRiseSonicObject(AbstractPlayableSprite player, int playerX, int playerY) {
         // Obj_MGZ2BGMoveSonic body runs while state remains 8, decoupled from
         // the trigger's transition check. Motion start requires crossing both
         // BG_RISE_MOTION_X_MIN and BG_RISE_MOTION_Y_MIN (ROM: loc_51AF2).
@@ -2225,6 +2256,8 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     public void    setBgRiseAccelLatched(boolean v)      { bgRiseAccelLatched = v; }
     public int     getBgRiseFinalShakeTimerRaw()         { return bgRiseFinalShakeTimer; }
     public void    setBgRiseFinalShakeTimer(int v)       { bgRiseFinalShakeTimer = v; }
+    public int     getBgRiseRefreshFramesRemaining()     { return bgRiseRefreshFramesRemaining; }
+    public void    setBgRiseRefreshFramesRemaining(int v){ bgRiseRefreshFramesRemaining = v; }
     public boolean isBgRiseLoadStateInitialised()        { return bgRiseLoadStateInitialised; }
     public void    setBgRiseLoadStateInitialised(boolean v){ bgRiseLoadStateInitialised = v; }
     public int     getBossArenaRoutine()                 { return bossArenaRoutine; }

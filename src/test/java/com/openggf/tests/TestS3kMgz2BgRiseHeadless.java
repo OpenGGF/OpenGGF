@@ -161,15 +161,24 @@ class TestS3kMgz2BgRiseHeadless {
     }
 
     @Test
-    void teleportIntoTriggerBox_armsSonicRiseAndTurnsOnBgCollision() {
+    void teleportIntoTriggerBox_armsSonicRiseAndRefreshesBeforeBgCollision() {
+        // Let MGZ2_BackgroundInit observe the real level-start position first;
+        // otherwise the teleport is intentionally classified as a late load.
+        fixture.stepIdleFrames(1);
         teleport(0x3500, 0x0850);
         fixture.stepIdleFrames(1);
 
         Sonic3kMGZEvents events = mgzEvents();
         assertEquals(8, events.getBgRiseRoutine(),
                 "teleport into the MGZ2 rise trigger box should arm state 8");
+        assertFalse(GameServices.gameState().isBackgroundCollisionFlag(),
+                "MGZ2BGE_Refresh should leave Background_collision_flag clear after the trigger");
+        fixture.stepIdleFrames(7);
+        assertFalse(GameServices.gameState().isBackgroundCollisionFlag(),
+                "all seven follow-up refresh frames should keep BG collision clear");
+        fixture.stepIdleFrames(1);
         assertTrue(GameServices.gameState().isBackgroundCollisionFlag(),
-                "state 8 should enable Background_collision_flag");
+                "state 8 should enable BG collision after the delayed plane refresh completes");
         assertEquals(0, events.getBgRiseOffset(),
                 "arming alone should not advance the offset");
     }
