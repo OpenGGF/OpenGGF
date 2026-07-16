@@ -1,6 +1,7 @@
 # WFZ Ending Sky→Space Background Transition — Design Spec
 
-> **Status:** Design spec for review. Implementation plan (TDD tasks) included at the end.
+> **Status:** Original background bridge implemented. Visual-parity follow-up approved
+> 2026-07-16; see Section 7 and the linked follow-up implementation plan.
 > **For agentic workers:** once approved, use superpowers:subagent-driven-development or
 > superpowers:executing-plans to implement the tasks. Steps use checkbox (`- [ ]`) syntax.
 
@@ -85,9 +86,10 @@ the WFZ BG layout (the actual starfield is the separate DEZ intro, `SwScrl_DEZ`,
 hard cut). So this is the **wiring task** below (Tasks 1–3), **not** a BG-layout/tile-load
 task. Gate **passes**.
 
-**Residual visual detail (confirm after implementing, via `dev.cmd`):** whether the revealed
-top renders as flat black or a dark "space" gradient depends on the WFZ VDP backdrop / top
-palette line. This does not change the wiring approach; it's the final human visual check.
+**Follow-up correction (2026-07-16):** headless capture plus an authoritative reference frame
+show that the revealed transparent rows must resolve to black during the escape phase. The
+original implementation correctly advances the horizon geometry, but leaves the normal WFZ
+blue backdrop active. Section 7 defines the state-driven correction.
 
 ---
 
@@ -349,3 +351,68 @@ Review resolution (round 2, 2026-07-16):
   layers from `bgCamera.getBgXPos()`. `WfzRuntimeState` now exposes `bgXPos()` too, `SwScrlWfz`
   reads the view at `:97/:102/:141`, and the integration test asserts both the VScroll and the
   HScroll word (§4.2, Task 2, §5.3).
+
+---
+
+## 7. Approved visual-parity follow-up (2026-07-16)
+
+Headless capture of the implemented bridge exposed three remaining ROM-parity defects. The
+foreground Tornado/getaway-ship rendering and Sonic's grab animation are correct and are
+explicitly outside this follow-up.
+
+### 7.1 Boss laser-wall display cadence
+
+The two ObjC5 laser-wall children use the correct solid-yellow mapping frame `$0C`, but the
+ROM toggles their display bit every active frame in `ObjC5_LaserWallWaitDelete`. `SolidObject`
+still runs on hidden frames. The engine currently renders the wall continuously until its
+defeat-delete animation begins.
+
+Add an explicit wall-local `visibleThisFrame` phase. Toggle it on every non-defeat update and
+gate only `appendRenderCommands`; do not gate `getSolidParams()` or alter the art/palette.
+The scalar is covered by generic rewind capture, and a graph rewind test must prove that the
+cadence resumes from the restored phase. Defeat rendering continues to use the ROM's nested
+animation counters, with the visibility latch making the display decision explicit rather
+than inferred from a signed counter alone.
+
+### 7.2 Plane-B cache follows the live WFZ background X position
+
+The event-spawned `$58` thrusters are independent sprites. Their associated small getaway-ship
+hull is Plane-B content in WFZ background rows 0-1, columns `$53..$68`, selected by the
+transition table's layer-offset `$04` spans. `SwScrlWfz.update()` correctly uses live
+`WfzRuntimeState.bgXPos()` for the H-scroll words, but it does not override
+`ZoneScrollHandler#getBgCameraX()`. The tilemap cache therefore remains anchored to the
+sentinel/fallback camera window and may omit the hull while its sprite thrusters remain visible.
+
+Override `SwScrlWfz#getBgCameraX()` to return the same live runtime-state X value used by
+`update()`, falling back to `BackgroundCamera` when no gameplay runtime/view is installed.
+This keeps tile residency and per-line scrolling on one source of truth and requires no new
+state or snapshot field.
+
+### 7.3 Escape-phase black backdrop
+
+The implemented vertical scroll and horizon geometry match the reference. The differing pixels
+are the transparent top rows: the engine resolves them through WFZ palette line 2/color 0
+(`$0044`, blue), while the escape reference resolves them to black. No WFZ palette-cycle or
+register change supplies a different color, so the engine needs an explicit cutscene-state
+backdrop requirement.
+
+Add `ZoneRuntimeState#forceBlackBackdrop()` with a default of `false`, mirroring the existing
+generic `requiresFullWidthBgTilemap()` predicate. `WfzRuntimeStateView` returns true once the
+event enters primary routine 6, the ROM-driven reverse/escape phase set by ObjB2. `LevelManager`
+consults the current runtime state before its legacy `ZoneFeatureProvider` fallback. This is
+state-driven (not a zone/frame/route carve-out), keeps MCZ's existing provider behavior, and
+turns only transparent pixels black; opaque horizon/sky tiles remain unchanged.
+
+### 7.4 Verification and acceptance
+
+- Unit-test draw/skip/draw laser-wall cadence and unchanged solidity.
+- Extend the existing boss graph rewind test to restore the wall visibility phase.
+- Unit-test `SwScrlWfz#getBgCameraX()` against a live custom `WfzRuntimeState` and fallback.
+- Unit-test the generic runtime-state backdrop predicate, WFZ routine-6 activation, and the
+  existing MCZ provider fallback.
+- Run the focused WFZ scroll/runtime/boss/rewind suites and both S2 WFZ/DEZ ending trace replays.
+- Capture the ending headlessly and extract consecutive barrier frames, the small-hull interval,
+  and the final horizon frame. No desktop/computer control is required.
+
+The task-by-task TDD procedure is in
+`docs/superpowers/plans/2026-07-16-wfz-ending-visual-parity-followup.md`.
