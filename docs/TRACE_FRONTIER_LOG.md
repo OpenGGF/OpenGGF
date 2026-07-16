@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ rise acceleration starts after its latch dispatch
+
+Branch `feature/ai-trace-animation-verification`, after the late Tails push-
+grace milestone. `Obj_MGZ2BGMoveSonic` tests its `$39` acceleration latch at
+`loc_51B44`; only the initially-clear path later compares the player against
+X=`$3D50` and sets the latch at `loc_51B6C`. The threshold-crossing dispatch
+therefore still adds `$6000` to the subpixel accumulator, and the one-pixel
+path begins on the following object pass. The engine tested the newly written
+latch immediately and lifted both player slots one extra pixel. No trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:107276-107323`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 33440 to frame 34231 (`air`,
+  expected `1` / actual `0`).
+- MGZ complete-run animation remains at frame 34264 (`player_mapping_frame`,
+  expected `$06` / actual `$05`).
+- The focused MGZ BG-rise event and headless integration suites pass all 29
+  tests.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- Late S3K push grace yields to the native follow nudge
 
 Branch `feature/ai-trace-animation-verification`, after the rise-object phase

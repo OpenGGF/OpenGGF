@@ -1255,11 +1255,15 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         if (bgRiseOffset >= BG_RISE_TARGET_SONIC) {
             return;
         }
-        if (!bgRiseAccelLatched && playerX >= BG_RISE_ACCEL_X_MIN) {
+        boolean accelWasLatched = bgRiseAccelLatched;
+        if (!accelWasLatched && playerX >= BG_RISE_ACCEL_X_MIN) {
             bgRiseAccelLatched = true;
         }
         int newOffset;
-        if (bgRiseAccelLatched) {
+        // ROM loc_51B44 tests $39 before loc_51B6C sets it, so the threshold
+        // crossing still consumes one final $6000 accumulator step. The
+        // one-pixel path begins on the following object dispatch.
+        if (accelWasLatched) {
             newOffset = bgRiseOffset + 1;
         } else {
             bgRiseSubpixelAccum += BG_RISE_SUBPIXEL_VELOCITY;
