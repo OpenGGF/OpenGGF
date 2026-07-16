@@ -624,6 +624,17 @@ final class ObjectTouchResponseController {
             }
 
             buildingSet.add(instance);
+            // S3K's Insta-Shield pass temporarily sets Status_Invincible before
+            // scanning the 48x48 box. Touch_ChkHurt therefore returns without
+            // damaging Sonic, and TouchResponse exits without a second normal-
+            // sized pass (sonic3k.asm:20620-20640, 21003-21047). Preserve that
+            // control flow for child-region composites as well as ordinary
+            // single-region objects.
+            if (category == TouchCategory.HURT
+                    && instaShieldActive
+                    && player == currentPlayer) {
+                return true;
+            }
             // ROM: HURT is continuous (same as BOSS) — see processCollisionLoop comment
             boolean shouldTrigger = category == TouchCategory.BOSS
                     || category == TouchCategory.HURT

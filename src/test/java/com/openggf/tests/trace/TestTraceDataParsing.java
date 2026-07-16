@@ -596,6 +596,36 @@ public class TestTraceDataParsing {
     }
 
     @Test
+    void s3kLifeCountCaptureUsesBk2OffsetForVIntRunCounterPhase() throws IOException {
+        Path dir = Files.createTempDirectory("s3k-vint-handler-word");
+        Files.writeString(dir.resolve("metadata.json"), """
+            {
+              "game": "s3k",
+              "zone": "mgz",
+              "zone_id": 2,
+              "act": 1,
+              "bk2_frame_offset": 58653,
+              "ring_floor_check_counter_phase": 3,
+              "trace_frame_count": 2,
+              "start_x": "0x0080",
+              "start_y": "0x03A0",
+              "trace_schema": 6,
+              "csv_version": 4
+            }
+            """);
+        Files.writeString(dir.resolve("physics.csv"), """
+            frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,vblank_counter,lag_counter
+            0000,0000,0080,03A0,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0000,00,0000,00,0800,0000
+            0001,0000,0080,03A1,0000,0038,0000,00,1,0,0,0000,3800,02,0000,0000,0000,02,0000,00,0800,0000
+            """);
+
+        TraceData data = TraceData.load(dir);
+
+        assertEquals(0x0800, data.initialVblankCounter());
+        assertEquals(1, data.initialVIntRunCounterPhaseOffset());
+    }
+
+    @Test
     void parsesCheckpointEvent() {
         TraceEvent event = TraceEvent.parseJsonLine(
             """

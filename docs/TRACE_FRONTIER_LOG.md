@@ -1,5 +1,40 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- S3K V-int phase and multi-region Insta-Shield touch
+
+Branch `feature/ai-trace-animation-verification`, after the floating-platform
+milestone. Schema-v6 S3K recordings sampled `$FFFFFE12`, the life-count word,
+instead of `V_int_run_count` at `$FFFFFE0C`; the resulting stable `$0800` /
+`$0900` / `$0A00` values cannot seed object routines whose draw-and-touch
+cadence reads `V_int_run_count+3`. Replay now reconstructs only that missing
+low-bit phase from the BK2 VBlank cursor while retaining the established
+general object clock and lost-ring floor cadence. The corrected phase exposed
+a shared collision omission: the 48x48 Insta-Shield scan temporarily sets
+`Status_Invincible`, but multi-region touch providers did not honor the same
+HURT early-return already implemented for ordinary objects. Multi-region
+providers now follow the native early return, so the drilling-Robotnik flame
+children neither hurt an active Insta-Shield nor lose their real alternating
+touch phase. No trace hydration, route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:543,20610-20640,21003-21047,
+142844-142850`; `docs/skdisasm/sonic3k.lst:1382,3641`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35373 to frame 35425
+  (`tails_x_sub`, expected `$EB00` / actual `$0000`).
+- MGZ complete-run animation advances from frame 35373 to frame 35425
+  (`tails_animation_id`, expected `Hurt` / actual `Walk`). Physics and
+  animation remain aligned.
+- The trace parsing, shared touch-response, and drilling-Robotnik focused
+  suites pass, including the corrected V-int phase and multi-region
+  Insta-Shield regression cases.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ floating platforms use the native SolidObjectTop surface
 
 Branch `feature/ai-trace-animation-verification`, after the reversed trigger-

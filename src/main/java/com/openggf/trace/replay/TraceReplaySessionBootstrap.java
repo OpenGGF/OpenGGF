@@ -228,6 +228,8 @@ public final class TraceReplaySessionBootstrap {
                     trace.metadata().ringFloorCheckCounterPhase() != null
                             ? trace.metadata().ringFloorCheckCounterPhase()
                             : 0);
+            objectManager.initVIntRunCounterPhaseOffset(
+                    trace.initialVIntRunCounterPhaseOffset());
             objectPreludeFrames = s2TornadoObjectPreludeFrames(trace, objectManager);
             if (objectPreludeFrames == 0) {
                 objectPreludeFrames = TraceReplayBootstrap

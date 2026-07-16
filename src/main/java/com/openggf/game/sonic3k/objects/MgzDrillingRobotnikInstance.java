@@ -1732,11 +1732,15 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     }
 
     private boolean shouldDrawThrusterFlamesForFrame(int frameCounter) {
-        return frameCounter >= 0 && (frameCounter & 1) == 0;
+        return frameCounter >= 0 && (vIntRunCounter(frameCounter) & 1) == 0;
     }
 
     private boolean shouldDrawShipFlame() {
-        return state.lastUpdatedFrame >= 0 && (state.lastUpdatedFrame & 1) == 0;
+        return state.lastUpdatedFrame >= 0 && (vIntRunCounter(state.lastUpdatedFrame) & 1) == 0;
+    }
+
+    private int vIntRunCounter(int objectUpdateCounter) {
+        return objectUpdateCounter + services().objectManager().getVIntRunCounterPhaseOffset();
     }
 
     /**

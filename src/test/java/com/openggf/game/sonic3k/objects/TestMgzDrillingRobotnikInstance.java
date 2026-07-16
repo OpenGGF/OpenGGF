@@ -319,6 +319,21 @@ class TestMgzDrillingRobotnikInstance {
     }
 
     @Test
+    void thrusterFlamesApplyVIntRunCounterPhaseIndependentlyOfObjectClock() throws Exception {
+        RecordingServices services = new RecordingServices(camera);
+        services.objectManager.initVIntRunCounterPhaseOffset(1);
+        MgzDrillingRobotnikInstance boss = createBoss(services);
+        boss.update(0, null);
+
+        setPrivateInt(boss, "waitTimer", 0);
+        boss.getState().routine = staticInt("ROUTINE_DRILL_DROP");
+        boss.appendRenderCommands(new ArrayList<>());
+
+        verify(services.drillRenderer, never())
+                .drawFrameIndex(eq(0x19), anyInt(), anyInt(), eq(false), eq(false), eq(0));
+    }
+
+    @Test
     void spawnFallingDebrisImmediatelyEnablesDebrisRendering() throws Exception {
         RecordingServices services = new RecordingServices(camera);
         MgzDrillingRobotnikInstance boss = createBoss(services);

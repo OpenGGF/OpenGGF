@@ -139,6 +139,7 @@ public class ObjectManager {
     private int s2LatchedObjectManagerCameraX = Integer.MIN_VALUE;
     private int twoAxisCameraYCoarse = Integer.MIN_VALUE;
     private int ringFloorCheckCounterPhase;
+    private int vIntRunCounterPhaseOffset;
 
     // ROM parity: Tracks child slots reserved by objects with getReservedChildSlotCount() > 0.
     // In S1, ring objects (obj25) allocate child ring slots via FindFreeObj. These slots
@@ -2398,6 +2399,20 @@ public class ObjectManager {
 
     public int getRingFloorCheckCounterPhase() {
         return ringFloorCheckCounterPhase;
+    }
+
+    /**
+     * Sets the phase difference between the general object-update clock and
+     * S3K's {@code V_int_run_count}. They normally advance together, but old
+     * trace schemas captured the adjacent life-count word instead of the
+     * run counter and therefore need an independently reconstructed low bit.
+     */
+    public void initVIntRunCounterPhaseOffset(int phaseOffset) {
+        vIntRunCounterPhaseOffset = phaseOffset;
+    }
+
+    public int getVIntRunCounterPhaseOffset() {
+        return vIntRunCounterPhaseOffset;
     }
 
     public boolean isRemembered(ObjectSpawn spawn) {

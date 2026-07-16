@@ -2954,6 +2954,9 @@ public class LevelManager {
         // that clock, so carry it across the manager rebuild even though the
         // per-act object execution counter intentionally restarts.
         int inheritedVblaCounter = objectManager != null ? objectManager.getVblaCounter() : 0;
+        int inheritedVIntRunCounterPhaseOffset = objectManager != null
+                ? objectManager.getVIntRunCounterPhaseOffset()
+                : 0;
 
         // Rebuild ObjectManager with the new act's object spawns
         objectManager = new ObjectManager(level.getObjects(),
@@ -2982,6 +2985,7 @@ public class LevelManager {
         collisionSystem.setObjectManager(objectManager);
         objectManager.reset(cameraX);
         objectManager.initVblaCounter(inheritedVblaCounter);
+        objectManager.initVIntRunCounterPhaseOffset(inheritedVIntRunCounterPhaseOffset);
 
         // Rebuild RingManager with the new act's ring spawns
         RingSpriteSheet ringSpriteSheet = level.getRingSpriteSheet();

@@ -737,6 +737,23 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void s3kInstaShieldSuppressesMultiRegionHurtDuringExpandedPass() {
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
+        when(player.getDoubleJumpFlag()).thenReturn(1);
+        when(player.getShieldType()).thenReturn(null);
+        when(player.hasShield()).thenReturn(false);
+
+        MockMultiRegionTouchObject flame = new MockMultiRegionTouchObject(
+                new TouchResponseProvider.TouchRegion(143, 112, 0x88, 0));
+        setupTableSize(8, 8, 8);
+        objectManager.addDynamicObject(flame);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        verify(player, never()).applyHurtOrDeath(anyInt(), any(DamageCause.class), anyBoolean());
+    }
+
+    @Test
     public void realShieldDeflectsShieldReactiveHurtObject() {
         when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
         when(player.getDoubleJumpFlag()).thenReturn(0);
