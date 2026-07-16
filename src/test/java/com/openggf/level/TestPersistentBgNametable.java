@@ -264,8 +264,114 @@ class TestPersistentBgNametable {
         assertDescriptorAtLogical(manager, logicalX, logicalY, 16, 16);
     }
 
+    @Test
+    void normalWrapReseedsAtPositiveAndNegativeContiguousWidthBoundaries() {
+        useContiguousWidth(512);
+
+        LevelTilemapManager positive = newManager();
+        ensurePersistent(positive, 496, 0);
+        assertRingMatchesWrappedSourceWindow(positive, 496, 0, 512);
+        ensurePersistent(positive, 512, 0);
+        assertEquals(2, positive.persistentBgFullPublicationCount,
+                "effective source wrap invalidates all retained columns");
+        assertRingMatchesSourceWindow(positive, 0, 0);
+
+        LevelTilemapManager negative = newManager();
+        ensurePersistent(negative, 0, 0);
+        ensurePersistent(negative, -16, 0);
+        assertEquals(2, negative.persistentBgFullPublicationCount,
+                "negative effective source wrap invalidates all retained columns");
+        assertRingMatchesWrappedSourceWindow(negative, 496, 0, 512);
+    }
+
+    @Test
+    void linearRowOverflowKeepsRawXAcrossNormalWrapBoundary() {
+        useContiguousWidth(512);
+        zoneFeatures = new WrappingZoneFeatures(true);
+        LevelTilemapManager manager = newManager();
+        ensurePersistent(manager, 496, 0);
+
+        ensurePersistent(manager, 512, 0);
+
+        assertEquals(1, manager.persistentBgFullPublicationCount);
+        assertEquals(1, manager.persistentBgIncrementalPublicationCount);
+        assertEquals(2, manager.getPersistentBgOriginXTiles());
+        assertDescriptorAtLogical(manager, 0, 0, 512, 0);
+        assertDescriptorAtLogical(manager, 63, 31, 512 + 63 * 8, 31 * 8);
+    }
+
+    @Test
+    void physicalDescriptorFullPublicationPreservesOriginsBaselineAndMutation() throws Exception {
+        RecordingRenderer renderer = new RecordingRenderer();
+        injectRenderer(renderer);
+        LevelTilemapManager manager = newManager();
+        ensurePersistent(manager, 0, 0);
+        byte[] physicalTexture = new byte[RING_WIDTH_TILES * RING_HEIGHT_TILES * 4];
+        renderer.applyPendingBackgroundUploadForTest(physicalTexture);
+        ensurePersistent(manager, 16, 16);
+        renderer.applyPendingBackgroundUploadForTest(physicalTexture);
+        int originX = manager.getPersistentBgOriginXTiles();
+        int originY = manager.getPersistentBgOriginYTiles();
+        int fulls = manager.persistentBgFullPublicationCount;
+        int generation = renderer.getBackgroundContentGeneration();
+        int descriptor = 0xE5A5;
+
+        assertTrue(manager.setBackgroundTileDescriptorAtTilemapCell(10, 11, descriptor));
+        manager.uploadBackgroundTilemap();
+
+        assertEquals(originX, renderer.getBackgroundRingBaseXTiles());
+        assertEquals(originY, renderer.getBackgroundRingBaseYTiles());
+        assertTrue(renderer.getBackgroundContentGeneration() > generation);
+        renderer.applyPendingBackgroundUploadForTest(physicalTexture);
+        assertArrayEquals(manager.getPersistentBgRingCopy(), physicalTexture);
+        ensurePersistent(manager, 16, 16);
+        assertEquals(fulls, manager.persistentBgFullPublicationCount,
+                "stationary ensure must not reseed after a physical full publication");
+        assertTrue(manager.isPersistentBgBaselineValid());
+        assertEquals(originX, manager.getPersistentBgOriginXTiles());
+        assertEquals(originY, manager.getPersistentBgOriginYTiles());
+        assertPhysicalDescriptor(manager.getPersistentBgRingCopy(), 10, 11, descriptor);
+    }
+
+    @Test
+    void everyDiagonalDirectionUpdatesTheExpectedRingOrigins() {
+        int[][] directions = { { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } };
+        for (int[] direction : directions) {
+            LevelTilemapManager manager = newManager();
+            ensurePersistent(manager, 32, 32);
+            int targetX = 32 + direction[0] * 16;
+            int targetY = 32 + direction[1] * 16;
+
+            ensurePersistent(manager, targetX, targetY);
+
+            assertEquals(direction[0] > 0 ? 2 : 62, manager.getPersistentBgOriginXTiles());
+            assertEquals(direction[1] > 0 ? 2 : 30, manager.getPersistentBgOriginYTiles());
+            assertRingMatchesSourceWindow(manager, targetX, targetY);
+        }
+    }
+
+    @Test
+    void negativePersistentAnchorIsSubtractedFromRenderSamplingCoordinates() {
+        LevelTilemapManager manager = newManager();
+        ensurePersistent(manager, -16, -16);
+
+        LevelRenderer.BackgroundTilemapSampling sampling =
+                LevelRenderer.backgroundTilemapSampling(manager, -16);
+
+        assertEquals(-16, sampling.compositorWorldAnchorX());
+        assertEquals(0, sampling.tilePassWorldOffsetY());
+        assertDescriptorAtLogical(manager, 0, 0, -16, -16);
+    }
+
     private LevelTilemapManager newManager() {
         return new LevelTilemapManager(geometry, graphicsManager, null);
+    }
+
+    private void useContiguousWidth(int contiguousWidthPx) {
+        geometry = new LevelGeometry(level,
+                MAP_WIDTH_PX, MAP_HEIGHT_PX,
+                MAP_WIDTH_PX, contiguousWidthPx, MAP_HEIGHT_PX,
+                BLOCK_PX, 8);
     }
 
     private void ensurePersistent(LevelTilemapManager manager, int bgX, int bgY) {
@@ -307,6 +413,42 @@ class TestPersistentBgNametable {
         int patternX = Math.floorMod(worldX, 16) / 8;
         int patternY = Math.floorMod(worldY, 16) / 8;
         return chunk.getPatternDesc(patternX, patternY);
+    }
+
+    private void assertRingMatchesSourceWindow(LevelTilemapManager manager,
+                                               int sourceX, int sourceY) {
+        for (int logicalY = 0; logicalY < RING_HEIGHT_TILES; logicalY++) {
+            for (int logicalX = 0; logicalX < RING_WIDTH_TILES; logicalX++) {
+                assertDescriptorAtLogical(manager, logicalX, logicalY,
+                        sourceX + logicalX * 8, sourceY + logicalY * 8);
+            }
+        }
+    }
+
+    private void assertRingMatchesWrappedSourceWindow(LevelTilemapManager manager,
+                                                      int sourceX, int sourceY,
+                                                      int wrapWidthPx) {
+        for (int logicalY = 0; logicalY < RING_HEIGHT_TILES; logicalY++) {
+            for (int logicalX = 0; logicalX < RING_WIDTH_TILES; logicalX++) {
+                assertDescriptorAtLogical(manager, logicalX, logicalY,
+                        Math.floorMod(sourceX + logicalX * 8, wrapWidthPx),
+                        sourceY + logicalY * 8);
+            }
+        }
+    }
+
+    private static void assertPhysicalDescriptor(byte[] ring, int physicalX, int physicalY,
+                                                 int descriptor) {
+        int offset = (physicalY * RING_WIDTH_TILES + physicalX) * 4;
+        int patternIndex = descriptor & 0x7FF;
+        int expectedG = ((patternIndex >>> 8) & 7)
+                | (((descriptor >>> 13) & 3) << 3)
+                | ((descriptor & 0x800) != 0 ? 0x20 : 0)
+                | ((descriptor & 0x1000) != 0 ? 0x40 : 0)
+                | ((descriptor & 0x8000) != 0 ? 0x80 : 0);
+        assertEquals(patternIndex & 0xFF, ring[offset] & 0xFF);
+        assertEquals(expectedG, ring[offset + 1] & 0xFF);
+        assertEquals(255, ring[offset + 3] & 0xFF);
     }
 
     private static void assertOnlyPhysicalColumnsChanged(byte[] before, byte[] after, int... columns) {
@@ -454,7 +596,20 @@ class TestPersistentBgNametable {
     }
 
     private static final class WrappingZoneFeatures implements ZoneFeatureProvider {
+        private final boolean linearOverflow;
+
+        private WrappingZoneFeatures() {
+            this(false);
+        }
+
+        private WrappingZoneFeatures(boolean linearOverflow) {
+            this.linearOverflow = linearOverflow;
+        }
+
         @Override public boolean bgWrapsHorizontally() { return true; }
+        @Override public boolean useLinearBackgroundLayoutOverflow(int zoneIndex) {
+            return linearOverflow;
+        }
         @Override public void initZoneFeatures(Rom rom, int zoneIndex, int actIndex, int cameraX) { }
         @Override public void update(AbstractPlayableSprite player, int cameraX, int zoneIndex) { }
         @Override public void reset() { }

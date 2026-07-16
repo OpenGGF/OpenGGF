@@ -168,7 +168,8 @@ public class LevelTilemapManager {
             int xQueryOffset,
             int yQueryOffset,
             int builtWidthPx,
-            int builtHeightPx) {
+            int builtHeightPx,
+            int xQueryWrapWidthPx) {
     }
 
     /**
@@ -450,12 +451,21 @@ public class LevelTilemapManager {
                 * LevelConstants.CHUNK_HEIGHT;
         long deltaX = (long) alignedX - persistentBgAlignedX;
         long deltaY = (long) alignedY - persistentBgAlignedY;
+        boolean sourceWrapDiscontinuity = false;
+        if (persistentBgBaselineValid && deltaX != 0) {
+            BgBuildParams previousParams = persistentBuildParams(zoneFeatureProvider, currentZone,
+                    persistentBgAlignedX, persistentBgAlignedY);
+            BgBuildParams nextParams = persistentBuildParams(zoneFeatureProvider, currentZone,
+                    alignedX, alignedY);
+            sourceWrapDiscontinuity = (long) nextParams.xQueryOffset()
+                    - previousParams.xQueryOffset() != deltaX;
+        }
         TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
         boolean rendererBaselineLost = persistentBgBaselineValid && renderer != null
                 && (persistentBgPublishedData == null
                 || !renderer.hasBackgroundBaseline(persistentBgPublishedData,
                 BG_RING_WIDTH_TILES, BG_RING_HEIGHT_TILES));
-        if (!persistentBgBaselineValid || rendererBaselineLost
+        if (!persistentBgBaselineValid || rendererBaselineLost || sourceWrapDiscontinuity
                 || Math.abs(deltaX) > LevelConstants.CHUNK_WIDTH
                 || Math.abs(deltaY) > LevelConstants.CHUNK_HEIGHT) {
             seedPersistentBgNametable(blockLookup, zoneFeatureProvider, currentZone,
@@ -558,10 +568,18 @@ public class LevelTilemapManager {
                                                 int alignedX,
                                                 int alignedY) {
         BgBuildParams normal = computeBuildParams((byte) 1, zoneFeatureProvider, currentZone);
+        int xQueryOffset = alignedX;
+        if (normal.bgWrap() && !normal.bgLinearRowOverflow()) {
+            int contiguousWidthPx = geometry.bgContiguousWidthPx();
+            xQueryOffset = contiguousWidthPx > 0
+                    ? Math.floorMod(alignedX, contiguousWidthPx) : 0;
+        }
         return new BgBuildParams(normal.bgWrap(), normal.bgLinearRowOverflow(),
-                alignedX, alignedY,
+                xQueryOffset, alignedY,
                 BG_RING_WIDTH_TILES * Pattern.PATTERN_WIDTH,
-                BG_RING_HEIGHT_TILES * Pattern.PATTERN_HEIGHT);
+                BG_RING_HEIGHT_TILES * Pattern.PATTERN_HEIGHT,
+                normal.bgWrap() && !normal.bgLinearRowOverflow()
+                        ? Math.max(0, geometry.bgContiguousWidthPx()) : 0);
     }
 
     private void fillPersistentChunk(BlockLookup blockLookup,
@@ -569,7 +587,8 @@ public class LevelTilemapManager {
                                      BgBuildParams params,
                                      int logicalChunkX,
                                      int logicalChunkY) {
-        int queryX = params.xQueryOffset() + logicalChunkX * LevelConstants.CHUNK_WIDTH;
+        int queryX = normalizeBgQueryX(params,
+                params.xQueryOffset() + logicalChunkX * LevelConstants.CHUNK_WIDTH);
         int queryY = params.yQueryOffset() + logicalChunkY * LevelConstants.CHUNK_HEIGHT;
         int targetTileX = Math.floorMod(persistentBgOriginXTiles
                 + logicalChunkX * CHUNK_TILE_SPAN, BG_RING_WIDTH_TILES);
@@ -578,6 +597,11 @@ public class LevelTilemapManager {
         writeChunkAt(persistentBgRing, BG_RING_WIDTH_TILES, BG_RING_HEIGHT_TILES,
                 (byte) 1, targetTileX, targetTileY, queryX, queryY,
                 params, blockLookup, level, geometry.blockPixelSize());
+    }
+
+    private static int normalizeBgQueryX(BgBuildParams params, int queryX) {
+        return params.xQueryWrapWidthPx() > 0
+                ? Math.floorMod(queryX, params.xQueryWrapWidthPx()) : queryX;
     }
 
     private void rebuildPersistentLogicalUploadView() {
@@ -830,7 +854,7 @@ public class LevelTilemapManager {
         int builtHeight = bgLoopBand ? BG_LOOP_BAND_HEIGHT_PX : levelHeight;
 
         return new BgBuildParams(bgWrap, bgLinearRowOverflow, bgXQueryOffset, bgYQueryOffset,
-                levelWidth, builtHeight);
+                levelWidth, builtHeight, 0);
     }
 
     private TilemapData buildTilemapData(byte layerIndex, BlockLookup blockLookup,
@@ -870,7 +894,7 @@ public class LevelTilemapManager {
         int chunkHeight = LevelConstants.CHUNK_HEIGHT;
         int chunkX = localX / chunkWidth;
         // Query the map at the offset position (wrapping handled by blockLookup)
-        int queryX = localX + params.xQueryOffset();
+        int queryX = normalizeBgQueryX(params, localX + params.xQueryOffset());
 
         for (int y = 0; y < params.builtHeightPx(); y += chunkHeight) {
             int chunkY = y / chunkHeight;
@@ -1065,7 +1089,7 @@ public class LevelTilemapManager {
         int widthTiles = foregroundTilemapWidthTiles;
         int heightTiles = foregroundTilemapHeightTiles;
         BgBuildParams ringParams = new BgBuildParams(false, false, xQueryOffset, 0,
-                FG_RING_WIDTH_PX, heightTiles * Pattern.PATTERN_HEIGHT);
+                FG_RING_WIDTH_PX, heightTiles * Pattern.PATTERN_HEIGHT, 0);
         fillChunkColumn(foregroundTilemapData, widthTiles, heightTiles, (byte) 0, localX,
                 ringParams, blockLookup, level, geometry.blockPixelSize());
     }
@@ -1289,8 +1313,16 @@ public class LevelTilemapManager {
             return;
         }
         ensurePatternLookupData();
-        renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, backgroundTilemapData,
-                backgroundTilemapWidthTiles, backgroundTilemapHeightTiles);
+        if (lastBgTilemapUpdateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32
+                && persistentBgBaselineValid && backgroundTilemapData == persistentBgRing) {
+            renderer.setBackgroundTilemapDataPhysical(persistentBgRing,
+                    BG_RING_WIDTH_TILES, BG_RING_HEIGHT_TILES,
+                    persistentBgOriginXTiles, persistentBgOriginYTiles);
+            persistentBgPublishedData = persistentBgRing;
+        } else {
+            renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, backgroundTilemapData,
+                    backgroundTilemapWidthTiles, backgroundTilemapHeightTiles);
+        }
         renderer.setPatternLookupData(patternLookupData, patternLookupSize);
     }
 
@@ -1310,11 +1342,16 @@ public class LevelTilemapManager {
         int offset = (tileY * backgroundTilemapWidthTiles + tileX) * 4;
         boolean changed = writeTilemapDescriptor(backgroundTilemapData, offset, descriptor);
         if (changed) {
-            // The live array no longer matches a from-scratch build; a later window
-            // step must take the full rebuild path (which, as today, discards these
-            // runtime overlay writes) rather than shifting the modified bytes.
+            // The stateless live array no longer matches a from-scratch build, so
+            // it may not take the static incremental-window path. A persistent
+            // nametable instead retains the physical mutation and refreshes the
+            // logical strip-upload view below.
             bgLastBuildValid = false;
             bgWindowShiftCandidate = false;
+            if (lastBgTilemapUpdateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32
+                    && persistentBgBaselineValid && backgroundTilemapData == persistentBgRing) {
+                rebuildPersistentLogicalUploadView();
+            }
         }
         return changed;
     }

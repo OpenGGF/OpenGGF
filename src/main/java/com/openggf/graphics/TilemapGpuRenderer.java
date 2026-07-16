@@ -195,6 +195,27 @@ public class TilemapGpuRenderer {
     }
 
     /**
+     * Publishes a complete physical Plane B texture while retaining its logical
+     * X/Y ring origins. Unlike {@link #setTilemapData}, this does not reinterpret
+     * physical slot zero as logical slot zero.
+     */
+    public void setBackgroundTilemapDataPhysical(byte[] data, int widthTiles, int heightTiles,
+                                                 int originXTiles, int originYTiles) {
+        this.backgroundData = data;
+        this.backgroundWidthTiles = widthTiles;
+        this.backgroundHeightTiles = heightTiles;
+        this.backgroundDirty = true;
+        this.backgroundIncrementalDirty = false;
+        this.backgroundPendingColumnCount = 0;
+        this.backgroundPendingRowCount = 0;
+        this.backgroundRingBaseXTiles = widthTiles > 0
+                ? Math.floorMod(originXTiles, widthTiles) : 0;
+        this.backgroundRingBaseYTiles = heightTiles > 0
+                ? Math.floorMod(originYTiles, heightTiles) : 0;
+        this.backgroundContentGeneration++;
+    }
+
+    /**
      * Registers a logical background-window shift. The CPU array remains in
      * normal left-to-right order; the texture retains old columns in a ring and
      * only receives the newly entering columns.
