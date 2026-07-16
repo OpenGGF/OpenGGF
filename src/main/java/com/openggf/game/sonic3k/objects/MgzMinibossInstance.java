@@ -706,6 +706,16 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     }
 
     @Override
+    public boolean usesCurrentTouchResponseState() {
+        // Obj_MGZMiniboss runs its movement routine before
+        // Draw_And_Touch_Sprite publishes the SST pointer. The following player
+        // pass dereferences that live post-movement y_pos, rather than the
+        // frame-start coordinate retained by the generic snapshot.
+        // docs/skdisasm/sonic3k.asm:184817-184834,20656-20708.
+        return true;
+    }
+
+    @Override
     protected boolean usesBaseHitHandler() {
         return false;
     }

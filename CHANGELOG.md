@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **MGZ miniboss collision now dereferences its live post-movement SST position:** `Obj_MGZMiniboss` moves before `Draw_And_Touch_Sprite` publishes the collision-list pointer, restoring Sonic's exact-edge boss rebound and advancing standalone physics from frame 12821 to 14424 and animation from frame 12863 to 16304 (`docs/skdisasm/sonic3k.asm:184817-184834,20656-20708,20895-20922`).
 - **MGZ standalone replay now restores the complete native Obj37 slot cadence:** reconstructing the missing schema-v6 `V_int_run_count` low bits from observed SST bounce order prevents a stale frame-12457 ring collection and advances standalone physics to frame 12821 (`docs/skdisasm/sonic3k.asm:543,35593-35645,35965-35980`).
 - **MGZ stomp bridges now preserve `SolidObjectTop`'s relative landing result:** the bridge seats a top-platform-carried player using the live enlarged radius before `Player_TouchFloor` restores ordinary radii, advancing standalone MGZ physics from frame 10842 to 12457 (`docs/skdisasm/sonic3k.asm:24335-24390,41982-42039,45170-45218`).
 - **Shared S3K trace fixtures now retain elemental-shield object lifecycles:** replacement playable rosters are rebound to the retained object manager, restoring lightning double-jump spark slots and advancing standalone MGZ physics from frame 10589 to 10842 and animation from frame 10590 to 12863 (`docs/skdisasm/sonic3k.asm:34742-34858`).

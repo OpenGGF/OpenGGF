@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ miniboss touch uses its live post-movement SST position
+
+Branch `feature/ai-trace-animation-verification`, after the lost-ring cadence
+milestone. `Obj_MGZMiniboss` dispatches its movement routine before calling
+`Draw_And_Touch_Sprite`, so the collision-response list contains an SST
+pointer whose coordinates are dereferenced after the boss has moved. At trace
+frame 12821 the boss moves from Y=`$0E84` to `$0E83` before publishing that
+pointer; the generic frame-start touch snapshot retained `$0E84` and missed
+Sonic's exact-edge attack. Opting this boss into live touch state restores the
+native S3K boss rebound, including the X/Y/ground-speed negation. No trace
+hydration, zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:184817-184834,20656-20708,20895-20922`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 12821 to frame 14424 (`rings`,
+  expected `0` / actual `3`), with physics errors reduced from 5882 to 4246.
+- MGZ standalone animation advances from frame 12863 to frame 16304
+  (`tails_animation_id`, expected `$00` / actual `$02`), with 547 animation
+  errors remaining.
+- The focused S3K boss touch-response profile suite passes 7/7; the shared
+  touch-response and lost-ring ordering suites remain green.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ lost-ring phase is reconstructed from native slot cadence
 
 Branch `feature/ai-trace-animation-verification`, after the stomp-bridge

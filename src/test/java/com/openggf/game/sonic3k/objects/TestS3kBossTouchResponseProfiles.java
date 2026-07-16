@@ -69,6 +69,15 @@ class TestS3kBossTouchResponseProfiles {
     }
 
     @Test
+    void mgzMinibossPublishesLivePostMovementTouchPosition() {
+        MgzMinibossInstance boss = new MgzMinibossInstance(
+                new ObjectSpawn(0x2F00, 0x0E60, 0x9F, 0, 0, false, 0));
+
+        assertTrue(boss.usesCurrentTouchResponseState(),
+                "Draw_And_Touch_Sprite publishes the MGZ miniboss SST after its movement routine");
+    }
+
+    @Test
     void hczMinibossDeclaresDynamicMultiRegionTouchResponseProfile() {
         HczMinibossInstance boss = new HczMinibossInstance(
                 new ObjectSpawn(0x3600, 0x0500, 0x99, 0, 0, false, 0));
