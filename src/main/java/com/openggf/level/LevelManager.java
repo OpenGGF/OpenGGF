@@ -23,6 +23,7 @@ import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
+import com.openggf.game.rewind.snapshot.LevelTilemapSnapshot;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
@@ -36,6 +37,7 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
 import com.openggf.level.rewind.LevelRewindSnapshotAdapter;
+import com.openggf.level.rewind.LevelTilemapRewindAdapter;
 import com.openggf.level.objects.HudRenderManager;
 import com.openggf.level.objects.HudStaticArt;
 import com.openggf.graphics.GLCommand;
@@ -3610,5 +3612,10 @@ public class LevelManager {
      */
     public RewindSnapshottable<LevelSnapshot> levelRewindSnapshottable() {
         return LevelRewindSnapshotAdapter.create(this);
+    }
+
+    /** Returns the rewind adapter for the history-dependent persistent Plane B nametable. */
+    public RewindSnapshottable<LevelTilemapSnapshot> levelTilemapRewindSnapshottable() {
+        return new LevelTilemapRewindAdapter(tilemapManager);
     }
 }

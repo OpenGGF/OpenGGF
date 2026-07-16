@@ -5,6 +5,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
+import com.openggf.game.rewind.snapshot.LevelTilemapSnapshot;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlas;
 import com.openggf.graphics.TilemapGpuRenderer;
@@ -94,6 +95,7 @@ public class LevelTilemapManager {
     private int persistentBgAlignedX;
     private int persistentBgAlignedY;
     private boolean persistentBgBaselineValid;
+    private boolean persistentBgRestoreUploadPending;
     private BgTilemapUpdateMode lastBgTilemapUpdateMode = BgTilemapUpdateMode.STATIC_WINDOW;
     int persistentBgFullPublicationCount;
     int persistentBgIncrementalPublicationCount;
@@ -1237,12 +1239,9 @@ public class LevelTilemapManager {
     }
 
     /**
-     * Convenience hook for the rewind system: invalidates the BG incremental-shift
-     * window after a rewind restore. The integrator registers this as a single
-     * post-restore callback; held rewind fires it on EVERY backward step, so it
-     * must stay cheap. The BG window is a pure function of the restored camera-X
-     * plus static layout — this only invalidates; the next-frame
-     * {@code ensureBackgroundTilemapData} full-build path does the actual rebuild.
+     * Convenience hook for the rewind system. Stateless Plane B invalidates its
+     * camera-derived incremental baseline, while persistent Plane B publishes the
+     * already-restored physical ring exactly once without rebuilding it.
      * <p>
      * The foreground tilemap needs NO rewind invalidation: a flat FG tilemap is a
      * pure function of the static layout (rewound layout mutations are covered by
@@ -1252,7 +1251,94 @@ public class LevelTilemapManager {
      * jumps of at least the ring width degenerate to a full re-seed).
      */
     public void resetTilemapsForRewindRestore() {
-        resetBgIncrementalShiftBaseline();
+        if (lastBgTilemapUpdateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32) {
+            finishPersistentRestoreUpload();
+        } else {
+            resetBgIncrementalShiftBaseline();
+        }
+    }
+
+    /** Captures the retained physical Plane B ring, or an invalid snapshot in stateless mode. */
+    public LevelTilemapSnapshot capturePersistentBgNametableSnapshot() {
+        if (lastBgTilemapUpdateMode != BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32
+                || persistentBgRing == null || !persistentBgBaselineValid) {
+            return LevelTilemapSnapshot.invalid();
+        }
+        return new LevelTilemapSnapshot(persistentBgRing,
+                persistentBgOriginXTiles, persistentBgOriginYTiles,
+                persistentBgAlignedX, persistentBgAlignedY,
+                persistentBgBaselineValid);
+    }
+
+    /**
+     * Installs a captured physical Plane B ring without consulting the current
+     * camera or rebuilding any descriptors from the live layout.
+     */
+    public void restorePersistentBgNametableSnapshot(LevelTilemapSnapshot snapshot) {
+        if (snapshot == null) {
+            throw new NullPointerException("snapshot");
+        }
+        byte[] descriptors = snapshot.descriptors();
+        int expectedBytes = BG_RING_WIDTH_TILES * BG_RING_HEIGHT_TILES * 4;
+        if (!snapshot.baselineValid() || descriptors.length != expectedBytes) {
+            persistentBgRestoreUploadPending = false;
+            if (lastBgTilemapUpdateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32) {
+                lastBgTilemapUpdateMode = BgTilemapUpdateMode.STATIC_WINDOW;
+                persistentBgRing = null;
+                persistentBgUploadView = null;
+                persistentBgPublishedData = null;
+                persistentBgOriginXTiles = 0;
+                persistentBgOriginYTiles = 0;
+                persistentBgAlignedX = 0;
+                persistentBgAlignedY = 0;
+                persistentBgBaselineValid = false;
+                backgroundTilemapData = null;
+                backgroundTilemapWidthTiles = 0;
+                backgroundTilemapHeightTiles = 0;
+                resetBgIncrementalShiftBaseline();
+            }
+            return;
+        }
+
+        lastBgTilemapUpdateMode = BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32;
+        persistentBgRing = descriptors;
+        persistentBgUploadView = null;
+        persistentBgPublishedData = null;
+        persistentBgOriginXTiles = snapshot.originXTiles();
+        persistentBgOriginYTiles = snapshot.originYTiles();
+        persistentBgAlignedX = snapshot.alignedBgX();
+        persistentBgAlignedY = snapshot.alignedBgY();
+        persistentBgBaselineValid = snapshot.baselineValid();
+        persistentBgRestoreUploadPending = true;
+
+        backgroundTilemapData = persistentBgRing;
+        backgroundTilemapWidthTiles = BG_RING_WIDTH_TILES;
+        backgroundTilemapHeightTiles = BG_RING_HEIGHT_TILES;
+        backgroundTilemapDirty = false;
+        bgWindowShiftCandidate = false;
+        bgLastBuildValid = false;
+        recomputeBgVdpWrapHeight();
+    }
+
+    /** Publishes one restored physical ring to the GPU, preserving both ring origins. */
+    public void finishPersistentRestoreUpload() {
+        if (!persistentBgRestoreUploadPending
+                || lastBgTilemapUpdateMode != BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32
+                || persistentBgRing == null || !persistentBgBaselineValid) {
+            return;
+        }
+        persistentBgRestoreUploadPending = false;
+        ensurePatternLookupData();
+        TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
+        if (renderer != null) {
+            renderer.setBackgroundTilemapDataPhysical(persistentBgRing,
+                    BG_RING_WIDTH_TILES, BG_RING_HEIGHT_TILES,
+                    persistentBgOriginXTiles, persistentBgOriginYTiles);
+            renderer.setBgVdpWrapHeight(backgroundVdpWrapHeightTiles);
+            renderer.setPatternLookupData(patternLookupData, patternLookupSize);
+            persistentBgPublishedData = persistentBgRing;
+            persistentBgFullPublicationCount++;
+        }
     }
 
     /**
@@ -1263,6 +1349,7 @@ public class LevelTilemapManager {
     public void invalidateAllTilemaps() {
         backgroundTilemapDirty = true;
         persistentBgBaselineValid = false;
+        persistentBgRestoreUploadPending = false;
         persistentBgPublishedData = null;
         bgWindowShiftCandidate = false;
         foregroundTilemapDirty = true;
@@ -1620,6 +1707,7 @@ public class LevelTilemapManager {
         persistentBgAlignedX = 0;
         persistentBgAlignedY = 0;
         persistentBgBaselineValid = false;
+        persistentBgRestoreUploadPending = false;
         lastBgTilemapUpdateMode = BgTilemapUpdateMode.STATIC_WINDOW;
         persistentBgFullPublicationCount = 0;
         persistentBgIncrementalPublicationCount = 0;
