@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- S3K background collision honors empty layout rows
+
+Branch `feature/ai-trace-animation-verification`, after the collision-
+publication milestone. S3K's `Find_Tile_BG` selects one of 32 background
+layout rows from the 12-bit collision Y coordinate; it does not wrap that
+selection through the smaller visual background height. MGZ2 declares seven
+visual rows and leaves the remaining interleaved background row pointers zero,
+so wrapping the negative state-eight collision coordinate produced a false
+solid row beneath Sonic and Tails. The level now retains which ROM row pointers
+are present, and background probes ignore absent rows. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:19115-19154,102196-102209` and
+the MGZ2 layout header/row-pointer table selected by the locked-on ROM.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 32315 to frame 32945
+  (`tails_y`, expected `$0AD1` / actual `$0AD2`).
+- MGZ complete-run animation advances from frame 32315 to frame 32951
+  (`player_animation_id`, expected `Wait` / actual `Walk`).
+- The focused S3K level-loading, ground-sensor, mutable-level, MGZ BG-rise,
+  headless integration, and rewind-schema suite passes all 109 tests.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ collision publication follows the refreshed player pass
 
 Branch `feature/ai-trace-animation-verification`, after the BG-rise plane-

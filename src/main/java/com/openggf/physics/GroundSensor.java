@@ -217,6 +217,10 @@ public class GroundSensor extends Sensor {
         // Convert FG probe coordinates to BG space
         short bgX = (short) (fgX - cameraDiffX);
         short bgY = (short) (fgY - cameraDiffY);
+        var currentLevel = lm.getCurrentLevel();
+        if (currentLevel != null && !currentLevel.hasBackgroundCollisionRowAt(bgY)) {
+            return null;
+        }
 
         // Perform the scan using the BG-adjusted coordinates. Do not bail out
         // early on an empty first tile: the ROM still runs the extension pass
