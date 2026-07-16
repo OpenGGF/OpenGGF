@@ -388,31 +388,58 @@ Override `SwScrlWfz#getBgCameraX()` to return the same live runtime-state X valu
 This keeps tile residency and per-line scrolling on one source of truth and requires no new
 state or snapshot field.
 
-### 7.3 Escape-phase black backdrop
+### 7.3 Escape-phase horizon and Plane-B period correction
 
-The implemented vertical scroll and horizon geometry match the reference. The differing pixels
-are the transparent top rows: the engine resolves them through WFZ palette line 2/color 0
-(`$0044`, blue), while the escape reference resolves them to black. No WFZ palette-cycle or
-register change supplies a different color, so the engine needs an explicit cutscene-state
-backdrop requirement.
+Headless replay of the accepted implementation disproved the earlier backdrop hypothesis. At
+capture frame 13824 the event is still in routine 4 and `forceBlackBackdrop()` is false, yet late
+black horizon content is already visible. The cause is horizontal sampling: after the Plane-B
+cache began following live WFZ background X, the handler retained the engine's default 512-pixel
+period even though the static/ship and cloud layers can be more than 4,000 pixels apart. The
+static snapshot therefore wraps non-repeating WFZ layout content and aliases late black rows into
+the earlier blue-sky scene.
 
-Add `ZoneRuntimeState#forceBlackBackdrop()` with a default of `false`, mirroring the existing
-generic `requiresFullWidthBgTilemap()` predicate. `WfzRuntimeStateView` returns true once the
-event enters primary routine 6, the ROM-driven reverse/escape phase set by ObjB2. `LevelManager`
-consults the current runtime state before its legacy `ZoneFeatureProvider` fallback. This is
-state-driven (not a zone/frame/route carve-out), keeps MCZ's existing provider behavior, and
-turns only transparent pixels black; opaque horizon/sky tiles remain unchanged.
+`SwScrlWfz#getBgPeriodWidth()` must cover the full live spread between every active layer plus the
+320-pixel viewport. Round the required width up to a power of two with a 512-pixel minimum and cap
+it at the full 8192-pixel WFZ background-map extent, following the established GHZ static-cache
+pattern. For the ending state where the ship/static layer is near `$2AE3` and the fastest cloud
+layer is near `$1B00`, the returned period is 8192 pixels.
 
-### 7.4 Verification and acceptance
+The ROM does not change VDP register 7 or palette line 2/color 0 during this ending. Its late
+horizon is authored as opaque Plane-B blocks `$9D/$9E/$9F` in rows 0-1. Remove the WFZ
+`eventRoutine >= 6` black-backdrop override and the generic runtime predicate added solely for it;
+retain the pre-existing `ZoneFeatureProvider` fallback used by MCZ. With correct Plane-B coverage,
+the early scene remains blue and the authored black horizon enters naturally at the ROM vertical
+scroll timing.
+
+### 7.4 Background ship-thruster lifetime
+
+The flames attached to the small Plane-B ship are placed ObjBC objects, not the later ObjB2 `$58`
+children. ObjBC deliberately has no `MarkObjGone` call in the ROM: it derives X from
+`Camera_BG_X_offset`, flickers, and deletes itself only when that offset reaches `$380`. The engine
+currently applies generic Sonic 2 off-screen culling before ObjBC updates, destroying both flames
+around capture frame 13600; the ROM retains them through frame 13929 while the hull is visible and
+deletes them at frame 13930.
+
+Make `WFZShipFireObjectInstance` persistent so generic placement culling cannot shorten its
+lifetime. Its existing `$380` event-offset check remains the sole deletion owner and prevents the
+object carrying into DEZ. Do not render ObjB2 subtype `$56`, whose ROM routine is an intentionally
+invisible grabber, and do not alter the later `$58` foreground-ship flames.
+
+### 7.5 Verification and acceptance
 
 - Unit-test draw/skip/draw laser-wall cadence and unchanged solidity.
 - Extend the existing boss graph rewind test to restore the wall visibility phase.
 - Unit-test `SwScrlWfz#getBgCameraX()` against a live custom `WfzRuntimeState` and fallback.
-- Unit-test the generic runtime-state backdrop predicate, WFZ routine-6 activation, and the
-  existing MCZ provider fallback.
+- Unit-test WFZ period sizing at the ending's live layer spread and its 8192-pixel map cap.
+- Unit-test that ObjBC bypasses generic off-screen deletion until its own `$380` threshold.
+- Remove the obsolete runtime-state backdrop tests while retaining coverage for the existing MCZ
+  provider fallback.
 - Run the focused WFZ scroll/runtime/boss/rewind suites and both S2 WFZ/DEZ ending trace replays.
-- Capture the ending headlessly and extract consecutive barrier frames, the small-hull interval,
-  and the final horizon frame. No desktop/computer control is required.
+- Capture the ending headlessly and extract the small-hull interval plus early-blue and late-black
+  horizon frames. The ship hull and both ObjBC thrusters must overlap visibly. No desktop/computer
+  control is required.
 
-The task-by-task TDD procedure is in
-`docs/superpowers/plans/2026-07-16-wfz-ending-visual-parity-followup.md`.
+The original follow-up procedure is in
+`docs/superpowers/plans/2026-07-16-wfz-ending-visual-parity-followup.md`; the approved corrective
+procedure for Sections 7.3-7.5 is in
+`docs/superpowers/plans/2026-07-16-wfz-ending-late-horizon-thrusters.md`.
