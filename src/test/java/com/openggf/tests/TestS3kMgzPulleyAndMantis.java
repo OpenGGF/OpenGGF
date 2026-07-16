@@ -253,12 +253,13 @@ class TestS3kMgzPulleyAndMantis {
         player.setCentreX((short) 0x0210);
         player.setCentreY((short) 0x0100);
 
-        mantis.update(0, player); // init
-        mantis.update(1, player);
-        mantis.update(2, player); // begin prep
+        mantis.refreshPostCameraRenderState();
+        mantis.update(0, player); // Obj_WaitOffscreen restores the Mantis operation
+        mantis.update(1, player); // init
+        mantis.update(2, player); // detect player and begin prep
         assertEquals("PREPARE", readMantisState(mantis));
 
-        for (int frame = 3; frame <= 9; frame++) {
+        for (int frame = 3; frame <= 10; frame++) {
             mantis.update(frame, player);
         }
 
@@ -276,17 +277,15 @@ class TestS3kMgzPulleyAndMantis {
         player.setCentreX((short) 0x0210);
         player.setCentreY((short) 0x0100);
 
-        mantis.update(0, player); // init
-        mantis.update(1, player); // detect player, enter prep
+        mantis.refreshPostCameraRenderState();
+        mantis.update(0, player); // Obj_WaitOffscreen restores the Mantis operation
+        mantis.update(1, player); // init
+        mantis.update(2, player); // detect player, enter prep
         assertEquals("PREPARE", readMantisState(mantis));
         assertEquals(0, readMantisMappingFrame(mantis));
         assertEquals(0x0100, mantis.getY());
 
-        mantis.update(2, player); // first Animate_RawNoSSTMultiDelay tick
-        assertEquals(1, readMantisMappingFrame(mantis));
-        assertEquals(0x00FB, mantis.getY());
-
-        mantis.update(3, player); // delay 2: hold
+        mantis.update(3, player); // first Animate_RawNoSSTMultiDelay tick
         assertEquals(1, readMantisMappingFrame(mantis));
         assertEquals(0x00FB, mantis.getY());
 
@@ -294,11 +293,15 @@ class TestS3kMgzPulleyAndMantis {
         assertEquals(1, readMantisMappingFrame(mantis));
         assertEquals(0x00FB, mantis.getY());
 
-        mantis.update(5, player); // next frame in script
+        mantis.update(5, player); // delay 2: hold
+        assertEquals(1, readMantisMappingFrame(mantis));
+        assertEquals(0x00FB, mantis.getY());
+
+        mantis.update(6, player); // next frame in script
         assertEquals(2, readMantisMappingFrame(mantis));
         assertEquals(0x00E8, mantis.getY());
 
-        mantis.update(6, player); // $F4 callback arms the jump, movement starts next frame
+        mantis.update(7, player); // $F4 callback arms the jump, movement starts next frame
         assertEquals("LAUNCH", readMantisState(mantis));
         assertEquals(0x00E8, mantis.getY());
     }
@@ -313,9 +316,11 @@ class TestS3kMgzPulleyAndMantis {
         player.setCentreX((short) 0x0210);
         player.setCentreY((short) 0x0160);
 
-        mantis.update(0, player); // init
-        mantis.update(1, player); // detect player, enter prep
-        for (int frame = 2; frame <= 6; frame++) {
+        mantis.refreshPostCameraRenderState();
+        mantis.update(0, player); // Obj_WaitOffscreen restores the Mantis operation
+        mantis.update(1, player); // init
+        mantis.update(2, player); // detect player, enter prep
+        for (int frame = 3; frame <= 7; frame++) {
             mantis.update(frame, player);
         }
 
@@ -328,7 +333,7 @@ class TestS3kMgzPulleyAndMantis {
         // only gate on X visibility.
         AbstractObjectInstance.updateCameraBounds(0, 0x00E9, 1024, 0x0200, 0);
 
-        mantis.update(7, player);
+        mantis.update(8, player);
 
         assertNotEquals(0x00E8, mantis.getY(),
                 "Mantis should keep moving through its jump arc even when only vertically off-screen");

@@ -50,7 +50,9 @@ class TestMantisBadnikInstance {
         MantisBadnikInstance mantis = new MantisBadnikInstance(
                 new ObjectSpawn(0x0200, 0x0100, 0x9D, 0, 0, false, 0));
         mantis.setServices(new StubObjectServices());
+        mantis.refreshPostCameraRenderState();
         mantis.update(0, null);
+        mantis.update(1, null);
         AbstractObjectInstance child = (AbstractObjectInstance) readField(mantis, "child");
 
         child.onUnload();
@@ -75,7 +77,14 @@ class TestMantisBadnikInstance {
         assertEquals(0, mantis.getCollisionFlags());
 
         AbstractObjectInstance.updateCameraBounds(0, 0x0400, 320, 0x04E0, 0);
+        mantis.refreshPostCameraRenderState();
         mantis.update(2, null);
+
+        assertFalse((boolean) readField(mantis, "initialized"),
+                "Obj_WaitOffscreen only restores the saved Mantis operation on this pass");
+        assertNull(readField(mantis, "child"));
+
+        mantis.update(3, null);
 
         assertTrue((boolean) readField(mantis, "initialized"));
         assertNotNull(readField(mantis, "child"));

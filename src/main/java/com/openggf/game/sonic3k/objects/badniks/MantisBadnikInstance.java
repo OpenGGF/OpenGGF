@@ -66,6 +66,8 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
     private int animIndex = -1;
     private int animTimer;
     private MantisChild child;
+    private boolean waitPlaceholderRenderFlag;
+    private boolean waitingForOnscreen = true;
 
     public MantisBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Mantis",
@@ -84,12 +86,13 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
         // placement already bridges the visible restore dispatch, so initialize
         // on the first live pass inside those bounds. Once initialized, the jump
         // arc continues above the viewport; Sprite_CheckDeleteTouch owns only X.
-        if (!initialized && !isWithinRenderSpriteBounds(
-                WAIT_PLACEHOLDER_X_MARGIN, WAIT_PLACEHOLDER_Y_MARGIN)) {
-            return;
-        }
-
-        if (!isOnScreenX()) {
+        if (!initialized && waitingForOnscreen) {
+            if (!waitPlaceholderRenderFlag) {
+                return;
+            }
+            // Obj_WaitOffscreen restores the saved operation and returns. The
+            // restored Mantis initializer runs on this SST's following pass.
+            waitingForOnscreen = false;
             return;
         }
 
@@ -100,6 +103,10 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
             initialize();
             initialized = true;
             updateDynamicSpawn(currentX, currentY);
+            return;
+        }
+
+        if (!isOnScreenX()) {
             return;
         }
 
@@ -142,6 +149,14 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
         animTimer = 0;
         currentY = spawn.y();
         yVelocity = 0;
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (!initialized) {
+            waitPlaceholderRenderFlag = isWithinRenderSpriteBounds(
+                    WAIT_PLACEHOLDER_X_MARGIN, WAIT_PLACEHOLDER_Y_MARGIN);
+        }
     }
 
     private void updateWait(AbstractPlayableSprite player) {

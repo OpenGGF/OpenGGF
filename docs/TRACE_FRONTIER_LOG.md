@@ -1,5 +1,41 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- MGZ Mantis restores its operation before child initialization
+
+Branch `feature/ai-trace-animation-verification`, after commit `20f5153c8`.
+At this requested checkpoint, a fresh fetch again confirmed local and remote
+`develop` at `1b1a5efee`; merging `develop` reported `Already up to date`.
+
+The frame-23562 ring miss came from Obj37's native SST phase, but the first
+upstream occupancy difference was an older Mantis. Native `Obj_WaitOffscreen`
+observes the placeholder's retained `render_flags.on_screen` bit, restores the
+saved Mantis operation, and returns; `Obj_Mantis` initializes and allocates its
+visual child on that SST's following pass. The engine additionally required the
+Mantis center to enter the viewport, delaying initialization by four passes.
+That omitted child let the same-frame swinging-platform helpers take an earlier
+slot, shifting the first two later Obj37 rings and their `d7` floor cadence.
+
+Mantis now latches the post-camera placeholder render flag, preserves the
+restore-only pass, and initializes on the next pass without the extra center
+gate. This restores the actual ROM state and allocation order; no trace
+hydration, zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference:
+`docs/skdisasm/sonic3k.asm:180266-180298,185700-185840,35965-35980`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 23562 to frame 23891
+  (`g_speed`, expected `$0000` / actual `$00BC`), with errors reduced from
+  3110 to 3109.
+- MGZ standalone animation remains at frame 23897
+  (`player_mapping_frame`, expected `$96` / actual `$9A`) with 531 errors.
+- Focused Mantis lifecycle and MGZ pulley/Mantis suites pass 14/14.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
 ### 2026-07-16 -- Deferred Obj37 owner clears rings on its SST pass
 
 Branch `feature/ai-trace-animation-verification`, after commit `8e1ec19f6`.
