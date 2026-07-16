@@ -434,7 +434,9 @@ public class SidekickCpuController {
             case APPROACHING          -> updateApproaching();
             case NORMAL               -> updateNormal();
             case PANIC                -> updatePanic();
-            case MGZ_RESCUE_WAIT      -> clearInputs();
+            // loc_140C6 clears the full Ctrl_2_logical word, including the
+            // trace-visible held/pressed latches (sonic3k.asm:26976-26978).
+            case MGZ_RESCUE_WAIT      -> clearController2LogicalLatch();
             case CARRY_INIT           -> updateCarryInit();
             case CARRYING             -> updateCarrying();
             case CARRY_FLYOFF         -> updateCarryFlyoff();

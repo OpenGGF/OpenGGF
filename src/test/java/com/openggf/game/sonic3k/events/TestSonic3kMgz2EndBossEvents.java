@@ -831,6 +831,12 @@ class TestSonic3kMgz2EndBossEvents {
                 "loc_16384 writes Tails_CPU_routine=$12 before testing the $168-frame timer");
         assertEquals((short) 0x0701, tails.getCentreY(),
                 "the live Tails slot is not repositioned until the timer reaches zero");
+
+        controller.setController2Input(AbstractPlayableSprite.INPUT_RIGHT, 0);
+        controller.update(1);
+
+        assertEquals(0, controller.getDiagnosticGeneratedHeldInput(),
+                "Tails CPU routine $12 executes loc_140C6's full Ctrl_2_logical word clear");
     }
 
     @Test

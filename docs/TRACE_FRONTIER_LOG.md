@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ rescue-wait routine clears the logical input word
+
+Branch `feature/ai-trace-animation-verification`, after the rescue-wait phase
+milestone. Native CPU routine `$12` dispatches `loc_140C6`, whose only action
+is clearing the complete `Ctrl_2_logical` word. The engine cleared Tails'
+movement booleans but retained the trace-visible held/pressed logical latches,
+so Right survived after the routine transition. `MGZ_RESCUE_WAIT` now uses the
+existing logical-word clear path. No trace hydration, route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:26976-26978`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35611 to frame 35631
+  (`tails_cpu_interact`, expected `$05` / actual `$02`; 1,526 errors).
+- MGZ complete-run animation remains at frame 35741 (`tails_animation_id`,
+  expected `Duck` / actual `Skid`; 315 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The MGZ end-boss event suite plus rewind coverage, static-state rewind
+  coverage, and trace-invariant guards pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ rescue wait publishes before the transition timer gate
 
 Branch `feature/ai-trace-animation-verification`, after the rescue-clamp
