@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ reversed trigger replay follows placement direction
+
+Branch `feature/ai-trace-animation-verification`, after the background-terrain
+release milestone. The trigger-platform sibling checkpoint compensates for a
+backwards `Load_Sprites` allocation: a right-hand subtype-`$1x` landing
+platform can execute before its left-hand subtype-`$2x` sibling even when the
+engine's placement slots have the opposite order. The compensation was also
+replaying right-hand siblings, whose ordinary forward-order `SolidObjectFull`
+had already executed; at the raised-terrain pair this published
+`Status_Push` one frame early. The checkpoint now consumes the placement
+direction that actually distinguishes the reversed allocation. No trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:37640-37762,41370-41534,
+70910-71029`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 34344 to frame 34610
+  (`tails_y`, expected `$0771` / actual `$0770`).
+- MGZ complete-run animation remains at frame 35373 (`tails_animation_id`,
+  expected `Roll` / actual `Hurt`).
+- `TestS3kMgzTriggerPlatformObject` passes all 10 tests, including both the
+  reversed left-sibling and already-executed right-sibling cases.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ background deform releases terrain-overlapping riders
 
 Branch `feature/ai-trace-animation-verification`, after the delayed rise-

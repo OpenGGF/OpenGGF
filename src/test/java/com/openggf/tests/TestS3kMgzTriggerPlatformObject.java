@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -162,6 +163,31 @@ class TestS3kMgzTriggerPlatformObject {
                 new SolidContact(true, false, false, true, false), 0);
 
         verify(objectManager).processImmediateInlineSolidCheckpoint(laterNativeSibling, player, List.of());
+    }
+
+    @Test
+    void subtypeOneLandingDoesNotReplayAlreadyExecutedRightSibling() {
+        MGZTriggerPlatformObjectInstance landing = new MGZTriggerPlatformObjectInstance(
+                new ObjectSpawn(0x3860, 0x0894, Sonic3kObjectIds.MGZ_TRIGGER_PLATFORM,
+                        0x1B, 0x00, false, 210));
+        MGZTriggerPlatformObjectInstance earlierNativeSibling = new MGZTriggerPlatformObjectInstance(
+                new ObjectSpawn(0x38A0, 0x0854, Sonic3kObjectIds.MGZ_TRIGGER_PLATFORM,
+                        0x2B, 0x00, false, 211));
+        landing.setSlotIndex(10);
+        earlierNativeSibling.setSlotIndex(9);
+        ObjectServices services = mock(ObjectServices.class);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        com.openggf.game.PlayableEntity player = mock(com.openggf.game.PlayableEntity.class);
+        when(services.objectManager()).thenReturn(objectManager);
+        when(objectManager.activeObjectsOfType(MGZTriggerPlatformObjectInstance.class))
+                .thenReturn(List.of(earlierNativeSibling, landing));
+        landing.setServices(services);
+
+        landing.onSolidContact(player,
+                new SolidContact(true, false, false, true, false), 0);
+
+        verify(objectManager, never())
+                .processImmediateInlineSolidCheckpoint(earlierNativeSibling, player, List.of());
     }
 
     @Test

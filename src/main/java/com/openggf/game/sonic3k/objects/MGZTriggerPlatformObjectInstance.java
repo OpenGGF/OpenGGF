@@ -284,12 +284,14 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // The two vertical variants are adjacent placements, but FindFreeObj's
-        // live SST landscape can allocate the subtype-$1x landing platform
-        // before a subtype-$2x sibling even when the engine's placement slots
-        // are reversed. The later native SolidObjectFull sees the just-grounded
-        // player and may publish Status_Push. Re-run only those reversed,
-        // earlier-engine-slot $2x siblings after this landing checkpoint.
+        // The two vertical variants are adjacent placements, but a backwards
+        // Load_Sprites pass can allocate the right-hand subtype-$1x landing
+        // platform before its left-hand subtype-$2x sibling even when the
+        // engine's placement slots are reversed. The later native
+        // SolidObjectFull then sees the just-grounded player and may publish
+        // Status_Push. A right-hand sibling was loaded in the ordinary forward
+        // order and has already executed in both engines, so it must not be
+        // replayed after the landing.
         // sonic3k.asm:70910-71029,41370-41534.
         int landingSlot = getSlotIndex();
         ObjectManager objectManager = services().objectManager();
@@ -298,7 +300,8 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
             if (sibling.getSlotIndex() >= landingSlot) {
                 break;
             }
-            if ((sibling.getSpawn().subtype() & 0xF0) == 0x20) {
+            if ((sibling.getSpawn().subtype() & 0xF0) == 0x20
+                    && sibling.getSpawn().x() < getSpawn().x()) {
                 objectManager.processImmediateInlineSolidCheckpoint(sibling, playerEntity, List.of());
             }
         }
