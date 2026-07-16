@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ air-attack wait retains folded child publication phases
+
+Branch `feature/ai-trace-animation-verification`, after the shared auto-fly
+timer milestone. Native `loc_6C646` configures the end boss and starts a `$1F`
+parent wait, after which the drill graph's later SST slots publish the refreshed
+child positions before the next player touch scan. The engine folds that graph
+into the parent and exposed its touch regions two passes early, producing an
+early boss rebound. The composite wait now retains those two concrete child-
+publication phases. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:142929-142960,143210-143321`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 36923 to frame 36974
+  (`tails_x_speed`, expected `$200` / actual `$000`; 515 errors, down from
+  844).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`; 129 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused 49-test MGZ drilling-boss suite passes with explicit configured-
+  attack publication-delay coverage.
+- AIZ and HCZ complete-run physics and animation remain fully green; the full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
 ### 2026-07-16 -- MGZ carry preserves the shared auto-fly timer across CPU routines
 
 Branch `feature/ai-trace-animation-verification`, after the transition-rearm

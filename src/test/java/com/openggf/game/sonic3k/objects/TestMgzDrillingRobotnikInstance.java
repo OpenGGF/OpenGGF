@@ -1125,6 +1125,8 @@ class TestMgzDrillingRobotnikInstance {
         assertEquals(0x0670, boss.getState().y);
         assertEquals(0x0200, getPrivateInt(boss, "xVel"));
         assertEquals(0, getPrivateInt(boss, "yVel"));
+        assertEquals(0x21, getPrivateInt(boss, "waitTimer"),
+                "The folded drill graph retains the two later native child-publication phases after loc_6C646's $1F wait");
     }
 
     @Test
