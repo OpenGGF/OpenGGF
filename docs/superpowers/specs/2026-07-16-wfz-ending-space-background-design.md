@@ -65,19 +65,29 @@ correct `Sonic2WFZEvents.bgYPos` is never consumed.
 
 ---
 
-## 3. Key risk to resolve first (Phase 0 spike)
+## 3. Phase 0 gate — RESOLVED 2026-07-16: PASS
 
-**Does the loaded WFZ background plane actually contain the space/star tiles up top?**
-The ROM reveals them by scrolling `Camera_BG_Y_pos` into the upper rows of the WFZ BG
-plane. If the engine's WFZ BG tilemap is only built to a limited height, wiring the scroll
-will reveal blank/garbage instead of space, and the scope grows to a BG-layout/tile-load task.
+**Question:** does the loaded WFZ background plane have room for the revealed "space" region,
+or is it only a short sky band (which would make this a BG-layout task)?
 
-Note: the WFZ pattern **supplement** (`ArtKos_WFZ`) was only just wired up
-(`fix(s2): load WFZ foreground pattern supplement`, develop `c3ac45aad`). The space tiles
-may live in that supplement and now be available — Phase 0 must confirm.
+**Findings** (from a throwaway `SharedLevel.load(SONIC_2, 9, 0)` probe, since removed):
+- The WFZ background is **layer 1 of a 128×16-block, 2-layer map — 2048px (`$800`) tall**,
+  exactly matching the ROM's `Camera_BG_Y_pos & $7FF` segment structure. It is **not** a
+  256px sky band, and `computeBuildParams` builds the **full** BG height for WFZ
+  (`bgLoopBand` is false; `LevelTilemapManager.java:605`).
+- Sampling the BG plane (layer 1) top-to-bottom: **rows 0–3 (the top ~512px, the region the
+  ending scroll reveals) are blank (block 0)**; rows 4–15 are the repeating sky/cloud
+  background (a 4-block period of indices `$25/$00/$50/$1F`).
 
-**Phase 0 must answer before Phase 1 wiring begins.** If the tiles are absent, stop and
-re-scope (separate BG-layout task); do not ship a scroll that reveals garbage.
+**Conclusion:** the "space" is the **VDP backdrop revealed above the sky** as the plane
+scrolls up — the blank top rows show the backdrop colour. It is **not** a star-tile region in
+the WFZ BG layout (the actual starfield is the separate DEZ intro, `SwScrl_DEZ`, after the
+hard cut). So this is the **wiring task** below (Tasks 1–3), **not** a BG-layout/tile-load
+task. Gate **passes**.
+
+**Residual visual detail (confirm after implementing, via `dev.cmd`):** whether the revealed
+top renders as flat black or a dark "space" gradient depends on the WFZ VDP backdrop / top
+palette line. This does not change the wiring approach; it's the final human visual check.
 
 ---
 
@@ -165,16 +175,14 @@ the S2 level-load path once per level, guarded so non-S2 / test contexts stay nu
 
 ## Implementation Plan (TDD, bite-sized)
 
-### Task 0: Phase 0 spike — confirm the space tiles are in the WFZ BG plane
+### Task 0: Phase 0 spike — confirm the WFZ BG plane supports the reveal — DONE (PASS)
 
-**Files:** none committed (throwaway diagnostic) — or a temporary `@Disabled` probe test.
+Resolved 2026-07-16 (see Section 3). The WFZ background is a 2048px-tall plane whose blank
+top rows are revealed as the sky scrolls up (backdrop = "space"); the engine builds the full
+height. This is a wiring task, not a BG-layout task. Proceed to Task 1.
 
-- [ ] **Step 1:** In a scratch harness (mirror `TestWfzSupplementArt`'s `SharedLevel.load(SONIC_2, 9, 0)`),
-      load WFZ and inspect the background tilemap's upper rows (the region revealed when
-      `Camera_BG_Y_pos` decreases). Determine whether they decode to space/star chunks or blank.
-- [ ] **Step 2:** Record the finding in this spec. **Decision gate:** if the space tiles are
-      present → proceed to Task 1. If absent → STOP; open a separate BG-layout/tile-load
-      spec (the scroll wiring alone will not fix the visual).
+- [x] Probe WFZ BG plane dimensions + top-row content via `SharedLevel.load(SONIC_2, 9, 0)`.
+- [x] Record finding + gate decision (PASS) in Section 3.
 
 ---
 
