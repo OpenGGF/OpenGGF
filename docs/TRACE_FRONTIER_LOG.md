@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- CPU carry owns both native raw-animation passes
+
+Branch `feature/ai-trace-animation-verification`, after the carry-rearm reset
+milestone. Native `object_control=$03` skips Sonic's ordinary animation call;
+the shared animation timer is instead decremented once by the CPU routine's
+pre-movement `Tails_Carry_Sonic` pass and again by the post-flight pass. The
+engine had accidentally obtained the same two early ticks from one ordinary
+Sonic animation plus one carry call, then slowed to one tick after a late
+regrab transferred explicit mapping ownership. Carried mapping ownership now
+starts at attachment and the CPU controller executes both native carry passes.
+No trace hydration, route/frame predicate, comparator tolerance, or physics-
+state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:26208-26247,26903-27070,
+27222-27330,27553-27587`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics remains fully green.
+- MGZ complete-run animation advances from frame 36667 to frame 37411, leaving
+  two mismatches: Tails mapping `$A1` / `$A0` on that frame and Sonic mapping
+  `$91` / `$99` through frame 37412.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused carry and MGZ handoff suites pass.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  fleet verification retains 44/58 green physics routes and 42/58 green
+  animation routes.
+
 ### 2026-07-16 -- MGZ carry rearm resets the raw animation phase
 
 Branch `feature/ai-trace-animation-verification`, after complete-run physics

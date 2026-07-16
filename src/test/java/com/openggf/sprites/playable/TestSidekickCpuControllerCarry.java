@@ -254,13 +254,16 @@ class TestSidekickCpuControllerCarry {
         controller.update(1);  // INIT -> CARRY_INIT
         controller.update(2);  // sub_1459E resets anim_frame/timer
 
-        assertEquals(0x98, sonic.getMappingFrame(),
-                "pickup itself leaves the mapping published by Sonic's earlier Animate pass");
-        controller.finishCarryAfterCarrierMovement();
         assertEquals(0x91, sonic.getMappingFrame(),
-                "same-frame Tails_Carry_Sonic fall-through publishes AniRaw_Tails_Carry[0]");
+                "CPU routine $14 falls through to its pre-movement Tails_Carry_Sonic pass");
         assertEquals(1, sonic.getAnimationFrameIndex());
         assertEquals(0x0B, sonic.getAnimationTick());
+
+        controller.finishCarryAfterCarrierMovement();
+        assertEquals(0x91, sonic.getMappingFrame(),
+                "the later Tails_FlyingSwimming pass advances the same raw carry animator");
+        assertEquals(1, sonic.getAnimationFrameIndex());
+        assertEquals(0x0A, sonic.getAnimationTick());
     }
 
     @Test
@@ -278,14 +281,14 @@ class TestSidekickCpuControllerCarry {
         controller.setInitialState(SidekickCpuController.State.CARRY_INIT);
         controller.update(3);
 
-        assertEquals(0, sonic.getAnimationFrameIndex(),
-                "native sub_1459E clears anim_frame on every routine-$14 pass");
-        assertEquals(0, sonic.getAnimationTick(),
-                "native sub_1459E clears anim_frame_timer even after an earlier regrab");
-        assertEquals(0x90, sonic.getMappingFrame(),
-                "sub_1459E leaves mapping_frame for the later raw carry pass");
+        assertEquals(1, sonic.getAnimationFrameIndex(),
+                "native sub_1459E clears anim_frame before the CPU raw carry pass");
+        assertEquals(0x0B, sonic.getAnimationTick(),
+                "the refreshed CPU pass restarts AniRaw_Tails_Carry after an earlier regrab");
+        assertEquals(0x91, sonic.getMappingFrame());
         controller.finishCarryAfterCarrierMovement();
         assertEquals(0x91, sonic.getMappingFrame());
+        assertEquals(0x0A, sonic.getAnimationTick());
     }
 
     @Test

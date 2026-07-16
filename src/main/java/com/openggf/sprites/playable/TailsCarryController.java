@@ -89,6 +89,10 @@ public final class TailsCarryController {
         main.setAnimationTick(0);
         main.setAnimationFrameIndex(0);
         main.setForcedAnimationId(carriedAnimationId);
+        // Native object_control=$03 skips Sonic's ordinary Animate_Sonic call;
+        // both shared animation-byte ticks instead come from the CPU and
+        // post-flight Tails_Carry_Sonic passes.
+        main.setObjectMappingFrameControl(true);
         // sub_1459E writes object_control=$03: bits 0-6 suppress normal
         // movement but do not take the bit-7 TouchResponse bypass.
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(main);

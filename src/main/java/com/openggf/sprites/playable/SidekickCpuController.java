@@ -3452,7 +3452,7 @@ public class SidekickCpuController {
         }
 
         if (mgzBossTransitionCarry) {
-            carryController().setParentagePending(true);
+            runCpuCarryParentagePassBeforeMovement();
             return;
         }
 
@@ -3475,7 +3475,18 @@ public class SidekickCpuController {
         // loc_13FFA body only injects a right press every 32 frames, letting
         // normal Tails flight movement raise x_vel ($118/$130/$148...).
         mirrorCarryDiagnosticInput();
-        carryController().setParentagePending(true);
+        runCpuCarryParentagePassBeforeMovement();
+    }
+
+    private void runCpuCarryParentagePassBeforeMovement() {
+        // Every active CPU carry routine reaches Tails_Carry_Sonic from
+        // Tails_CPU_Control before Player 2 movement, then reaches it again
+        // from Tails_FlyingSwimming after collision. Both passes decrement the
+        // carried player's shared raw-animation timer.
+        carryController().updateAfterTailsCollision(0);
+        if (carryController().isCarryingMainCharacter()) {
+            carryController().setParentagePending(true);
+        }
     }
 
     private void updateMgzBossTransitionCarryInput() {
