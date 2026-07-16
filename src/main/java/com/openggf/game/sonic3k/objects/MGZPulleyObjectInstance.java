@@ -165,9 +165,14 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
 
     private void updateExtensionAndFrame() {
         int motionDirection = 0;
-        boolean anyGrabbed = grabbed[0] || grabbed[1];
+        // ROM tests only $38(a0), the P1 grab byte, even though the adjacent
+        // $39(a0) byte independently tracks P2.  Therefore a P2-only rider
+        // does not hold the pulley retracted: loc_34900 takes the ordinary
+        // target-extension path while sub_349A2 still carries P2 at the moving
+        // handle (sonic3k.asm:71178-71224,71242-71345).
+        boolean primaryPlayerGrabbed = grabbed[0];
 
-        if (!anyGrabbed) {
+        if (!primaryPlayerGrabbed) {
             if (currentExtension < targetExtension) {
                 currentExtension += 2;
                 motionDirection = -1;

@@ -181,6 +181,43 @@ class TestS3kMgzPulleyAndMantis {
     }
 
     @Test
+    void mgzPulleyRelaxesAndCarriesP2AfterP1Releases() throws Exception {
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0236, (short) 0x014E);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0236, (short) 0x014E);
+        main.setXSpeed((short) 0x100);
+        nativeP2.setXSpeed((short) 0x100);
+
+        RecordingServices services = new QueryOnlyPlayerServices(main, List.of(nativeP2));
+        MGZPulleyObjectInstance pulley = createPulley(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.MGZ_PULLEY, 0x04, 0x01, false, 0));
+        pulley.setServices(services);
+
+        pulley.update(0, main);
+        assertTrue(main.isObjectControlled());
+        assertTrue(nativeP2.isObjectControlled());
+
+        for (int frame = 1; frame <= 26; frame++) {
+            pulley.update(frame, main);
+        }
+        assertEquals(0, readCurrentExtension(pulley));
+
+        main.setJumpInputPressed(true);
+        pulley.update(27, main);
+        main.setJumpInputPressed(false);
+        int p2XBeforeRelax = nativeP2.getCentreX();
+        int p2YBeforeRelax = nativeP2.getCentreY();
+
+        pulley.update(28, main);
+
+        assertFalse(main.isObjectControlled());
+        assertTrue(nativeP2.isObjectControlled());
+        assertEquals(2, readCurrentExtension(pulley),
+                "ROM loc_34900 consults only the P1 grab byte when choosing extension motion");
+        assertEquals(p2XBeforeRelax + 1, nativeP2.getCentreX());
+        assertEquals(p2YBeforeRelax + 2, nativeP2.getCentreY());
+    }
+
+    @Test
     void mgzPulleyOnUnloadDestroysChainChildAndReleasesGrabbedPlayer() throws Exception {
         RecordingServices services = new RecordingServices();
         MGZPulleyObjectInstance pulley = createPulley(services,

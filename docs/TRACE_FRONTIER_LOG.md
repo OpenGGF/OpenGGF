@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ pulley keeps extension motion owned by P1's grab byte
+
+Branch `feature/ai-trace-animation-verification`, after the waiting-Mantis
+collision milestone. At standalone frame 21695 Sonic jumps from the MGZ pulley
+while Tails remains attached. Native `loc_34900` tests only `$38(a0)`, the P1
+grab byte, when choosing extension motion; it does not aggregate the adjacent
+P2 byte at `$39(a0)`. With P1 released, the pulley therefore relaxes toward
+its subtype extension by two pixels per object pass. The later P2 half of
+`sub_349A2` still sees `$39(a0)` and moves Tails with the handle, producing the
+recorded +1 X / +2 Y whole-position writes while preserving his subpixels and
+zero velocities. The engine had treated either player as holding the extension
+retracted. No trace hydration, zone/route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:71178-71345`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 21696 to frame 21734 (`tails_x`,
+  expected `$186D` / actual `$186C`), with errors reduced from 4312 to 3290.
+- MGZ standalone animation advances from frame 21765 to frame 21767
+  (`tails_animation_id`, expected `$0B` / actual `$00`), with errors reduced
+  from 1116 to 571.
+- `TestS3kMgzPulleyAndMantis` passes 10/10, including P1 release while P2
+  remains grabbed and follows the relaxing handle.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
 ### 2026-07-16 -- Waiting MGZ Mantis keeps collision_flags clear
 
 Branch `feature/ai-trace-animation-verification`, after the Mantis
