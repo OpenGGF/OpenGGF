@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
@@ -46,5 +47,25 @@ class TestFloatingPlatformObjectInstance {
         assertFalse(platform.isCustomOutOfRange(0x0800),
                 "The widened $380 range keeps the sweep platform alive where the shared $280 check would delete it");
         assertTrue(platform.isCustomOutOfRange(0x0500));
+    }
+
+    @Test
+    void solidObjectTopCallIsGatedByObjectRenderFlagBounds() {
+        FloatingPlatformObjectInstance platform = ObjectConstructionContext.construct(
+                new StubObjectServices(),
+                () -> new FloatingPlatformObjectInstance(
+                        new ObjectSpawn(0x20B0, 0x06A0, 0x51, 0, 0, false, 0)));
+
+        try {
+            AbstractObjectInstance.updateCameraBounds(0x1F49, 0x0609, 0x2089, 0x06E9, 0);
+            assertFalse(platform.isSolidFor(null),
+                    "loc_255F4 skips SolidObjectTop while render_flags bit 7 is clear");
+
+            AbstractObjectInstance.updateCameraBounds(0x1F80, 0x0609, 0x20C0, 0x06E9, 0);
+            assertTrue(platform.isSolidFor(null),
+                    "the platform becomes solid once its width_pixels box overlaps the viewport");
+        } finally {
+            AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        }
     }
 }

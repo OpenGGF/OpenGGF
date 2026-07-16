@@ -1,5 +1,37 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Floating platform gates SolidObjectTop on object render_flags
+
+Branch `feature/ai-trace-animation-verification`, after the collapsing-bridge
+push-release milestone. At standalone frames 23045-23047, native MGZ floating
+platform slot 20 remains at `$20B0,$06A0` with `render_flags=$04`. Its
+`loc_255F4` caller tests the sign bit and skips `SolidObjectTop`, so the
+airborne Tails continues past it. The engine treated all top-only callers as
+unconditionally solid and installed a false ride at the same position.
+
+`FloatingPlatformObjectInstance` now gates solidity on the existing
+BuildSprites-equivalent object bounds and exposes its exact ROM
+`width_pixels`/`height_pixels` values for that calculation. This models the
+caller's explicit render check rather than changing the shared top-solid
+helper, whose native entry has no such gate. No trace hydration,
+zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:50758-50853`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 23046 to frame 23264 (`rings`,
+  expected `7` / actual `6`), with errors reduced from 3283 to 3111.
+- MGZ standalone animation advances from frame 23047 to frame 23897
+  (`player_mapping_frame`, expected `$96` / actual `$9A`), with errors reduced
+  from 557 to 531.
+- `TestFloatingPlatformObjectInstance` passes 3/3, including explicit off/on
+  screen solidity coverage.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
 ### 2026-07-16 -- Collapsing bridge wave release clears Status_Push
 
 Branch `feature/ai-trace-animation-verification`, after commit `0601222` and
