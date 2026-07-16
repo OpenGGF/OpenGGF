@@ -1447,7 +1447,9 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         boolean playerBelowTransition = bossTransitionY < (player.getCentreY() & 0xFFFF);
 
         if (!carrying && playerBelowTransition) {
-            player.setCentreY((short) bossTransitionY);
+            // Obj_MGZ2_BossTransition uses move.w d0,y_pos(a1), preserving
+            // the fractional word (sonic3k.asm:30225-30231).
+            NativePositionOps.writeYPosPreserveSubpixel(player, bossTransitionY);
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
             player.setGSpeed((short) 0);

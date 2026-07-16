@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ boss-transition clamp preserves player subpixel Y
+
+Branch `feature/ai-trace-animation-verification`, after the collapse-standing
+milestone. `Obj_MGZ2_BossTransition` clamps a falling Sonic to its own
+`y_pos` with a word write, leaving the low fractional word of Sonic's 16:16
+position untouched. The engine used a full centre-position setter and erased
+that fraction at the first rescue clamp. The event now routes the native
+`y_pos` write through `NativePositionOps`, with focused coverage for the
+retained `$1000` fraction. No trace hydration, route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:30225-30231`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35596 to frame 35610
+  (`tails_cpu_routine`, expected `$12` / actual `$06`; 1,571 errors).
+- MGZ complete-run animation remains at frame 35635 (`tails_animation_id`,
+  expected `Skid` / actual `Roll`; 173 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The MGZ end-boss event suite plus rewind coverage, static-state rewind
+  coverage, and trace-invariant guards pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ collapse carriers retain SST standing state while scrolling
 
 Branch `feature/ai-trace-animation-verification`, after the pending-scroll

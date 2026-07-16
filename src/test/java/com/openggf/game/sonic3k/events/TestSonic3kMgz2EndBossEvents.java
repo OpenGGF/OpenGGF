@@ -324,6 +324,7 @@ class TestSonic3kMgz2EndBossEvents {
         camera.setY((short) 0x0600);
         AbstractPlayableSprite sonic = camera.getFocusedSprite();
         sonic.setCentreY((short) 0x0760);
+        sonic.setSubpixelRaw(0, 0x1000);
         sonic.setXSpeed((short) 0x0120);
         sonic.setYSpeed((short) 0x0340);
         sonic.setGSpeed((short) 0x0400);
@@ -333,6 +334,8 @@ class TestSonic3kMgz2EndBossEvents {
         events.update(1, 0);
 
         assertEquals((short) 0x0700, sonic.getCentreY());
+        assertEquals(0x1000, sonic.getYSubpixelRaw(),
+                "ROM move.w to y_pos preserves Sonic's fractional position word");
         assertEquals((short) 0, sonic.getXSpeed());
         assertEquals((short) 0, sonic.getYSpeed());
         assertEquals((short) 0, sonic.getGSpeed());
