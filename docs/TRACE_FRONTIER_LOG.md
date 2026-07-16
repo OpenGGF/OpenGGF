@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ horizontal boss body publishes its live collision-list position
+
+Branch `feature/ai-trace-animation-verification`, after the positive carry-
+control milestone. The ROM's horizontal air-attack parent publishes a pointer
+to its live SST entry in `Collision_response_list`; the later player touch pass
+therefore observes the parent after the remaining object/V-int movement phases.
+The engine folds the composite drill graph into one provider queried from its
+retained parent phase. Pattern-zero body touch now projects those two native
+phases, while diagonal body positions and the separately phased drill children
+retain their existing publication rules. This restores Sonic's exact boss-body
+rebound at frame 37920 without changing attack cadence. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:142969-143017,143271-143321`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 37920 to frame 38184
+  (`tails_cpu_ctrl2_held`, expected Right / actual neutral; 131 errors).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`; its downstream tail
+  falls from 110 to 68 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused 52-test MGZ drilling-boss suite passes, including explicit live
+  horizontal-body and horizontal/diagonal child publication coverage.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
 ### 2026-07-16 -- Carried Sonic retains native positive object control
 
 Branch `feature/ai-trace-animation-verification`, after the carrier-hurt

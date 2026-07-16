@@ -1298,7 +1298,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         int childAnchorY = foldedChildTouchAnchorY();
         int flameFlags = shouldDrawThrusterFlames() ? THRUSTER_FLAME_COLLISION_FLAGS : 0;
         return new TouchResponseProvider.TouchRegion[] {
-                new TouchResponseProvider.TouchRegion(state.x, state.y, getCollisionFlags()),
+                new TouchResponseProvider.TouchRegion(
+                        foldedBodyTouchAnchorX(), foldedBodyTouchAnchorY(), getCollisionFlags()),
                 new TouchResponseProvider.TouchRegion(
                         childAnchorX + renderOffsetX(drillHead.offX()),
                         childAnchorY + drillHead.offY(),
@@ -1665,6 +1666,26 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
             return state.y;
         }
         return (((state.y << 8) | (ySubpixel & 0xFF)) + yVel) >> 8;
+    }
+
+    /**
+     * The native parent publishes its collision-list pointer before the player
+     * touch pass, then advances through the remaining object/V-int phases. The
+     * folded provider is queried from the earlier retained parent phase, so its
+     * body region must expose the position the live native pointer observes.
+     */
+    private int foldedBodyTouchAnchorX() {
+        if (state.routine != ROUTINE_END_ATTACK_MOVE || airAttackPatternOffset != 0) {
+            return state.x;
+        }
+        return (((state.x << 8) | (xSubpixel & 0xFF)) + (xVel * 2)) >> 8;
+    }
+
+    private int foldedBodyTouchAnchorY() {
+        if (state.routine != ROUTINE_END_ATTACK_MOVE || airAttackPatternOffset != 0) {
+            return state.y;
+        }
+        return (((state.y << 8) | (ySubpixel & 0xFF)) + (yVel * 2)) >> 8;
     }
 
     private DrillPart angledDrillPiece() {

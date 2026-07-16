@@ -1104,6 +1104,26 @@ class TestMgzDrillingRobotnikInstance {
     }
 
     @Test
+    void movingAirAttackPublishesFoldedBodyFromLiveCollisionListPosition() throws Exception {
+        RecordingServices services = new RecordingServices(camera);
+        MgzEndBossInstance boss = createEndBoss(services);
+        boss.update(0, null);
+        boss.getState().routine = staticInt("ROUTINE_END_ATTACK_MOVE");
+        boss.getState().x = 0x3D40;
+        boss.getState().y = 0x0710;
+        setPrivateInt(boss, "xSubpixel", 0);
+        setPrivateInt(boss, "ySubpixel", 0);
+        setPrivateInt(boss, "xVel", 0x0200);
+        setPrivateInt(boss, "yVel", 0);
+
+        TouchResponseProvider.TouchRegion[] regions = boss.getMultiTouchRegions();
+
+        assertEquals(0x3D44, regions[0].x(),
+                "the native collision-list pointer is live across the remaining parent/V-int phases");
+        assertEquals(0x0710, regions[0].y());
+    }
+
+    @Test
     void enteringAirPhaseUsesRomChildPoseForLowerDrillPiecesAndHurtRegions() throws Exception {
         RecordingServices services = new RecordingServices(camera);
         MgzEndBossInstance boss = createEndBoss(services);
