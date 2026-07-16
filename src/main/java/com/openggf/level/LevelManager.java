@@ -1283,10 +1283,13 @@ public class LevelManager {
             throw new IllegalStateException("Object render manager is not initialized");
         }
         int count = objectRenderManager.getRegularPatternCount();
-        int prospectiveEnd = Math.addExact(OBJECT_PATTERN_BASE, count);
-        if (prospectiveEnd > PatternAtlasRange.OBJECTS.endExclusive()) {
+        if (count < 0) {
+            throw new IllegalStateException("Invalid regular object pattern count: " + count);
+        }
+        if (count > PatternAtlasRange.OBJECTS.size()) {
             throw new IllegalStateException("Object patterns exceed reserved atlas range: " + count);
         }
+        int prospectiveEnd = Math.addExact(OBJECT_PATTERN_BASE, count);
         int actualEnd = objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
         if (actualEnd != prospectiveEnd) {
             throw new IllegalStateException("Object pattern preflight/cache mismatch: "

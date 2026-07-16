@@ -74,6 +74,33 @@ class TestObjectArtPatternCapacity {
     }
 
     @Test
+    void refreshRejectsNegativeCountBeforeAnyRendererCaches() {
+        RecordingProvider provider = new RecordingProvider(graphics, -1);
+        LevelManager manager = manager(provider);
+        manager.objectRenderManager = new ObjectRenderManager(provider);
+
+        IllegalStateException error = assertThrows(
+                IllegalStateException.class, manager::refreshObjectArtPatterns);
+
+        assertEquals("Invalid regular object pattern count: -1", error.getMessage());
+        assertEquals(0, provider.ensureCalls());
+    }
+
+    @Test
+    void refreshRejectsHugeCountBeforeAdditionOrRendererCache() {
+        RecordingProvider provider = new RecordingProvider(graphics, Integer.MAX_VALUE);
+        LevelManager manager = manager(provider);
+        manager.objectRenderManager = new ObjectRenderManager(provider);
+
+        IllegalStateException error = assertThrows(
+                IllegalStateException.class, manager::refreshObjectArtPatterns);
+
+        assertEquals("Object patterns exceed reserved atlas range: " + Integer.MAX_VALUE,
+                error.getMessage());
+        assertEquals(0, provider.ensureCalls());
+    }
+
+    @Test
     void successfulRefreshEndMatchesPreflightEnd() {
         RecordingProvider provider = new RecordingProvider(graphics, 24);
         LevelManager manager = manager(provider);
@@ -160,7 +187,7 @@ class TestObjectArtPatternCapacity {
 
         RecordingProvider(GraphicsManager graphics, int patternCount) {
             this.patternCount = patternCount;
-            int rendererPatternCount = Math.min(patternCount, 24);
+            int rendererPatternCount = Math.max(0, Math.min(patternCount, 24));
             Pattern[] patterns = new Pattern[rendererPatternCount];
             for (int i = 0; i < patterns.length; i++) {
                 patterns[i] = new Pattern();
