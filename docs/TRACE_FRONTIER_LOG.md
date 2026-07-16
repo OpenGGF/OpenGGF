@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ capped columns continue until the full collapse completes
+
+Branch `feature/ai-trace-animation-verification`, after the terminal-overshoot
+milestone. `MGZ2_LevelCollapse` advances all ten HScroll-table velocity and
+position longwords on every active dispatch, including columns whose temporary
+draw displacement has already reached `$2E0`. The engine instead froze each
+column independently at the cap, so column zero stopped eight frames before the
+last delayed column completed. Raw carrier motion now continues for the full
+routine lifetime while the draw values stay capped. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:106515-106565`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35733 to frame 35740
+  (`tails_y`, expected `$0A4C` / actual `$0A51`; 1,437 errors).
+- MGZ complete-run animation remains at frame 35741 (`tails_animation_id`,
+  expected `Duck` / actual `Skid`; 313 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The focused capped-column lifetime coverage plus the MGZ collapse/end-boss
+  suites, rewind guards, and trace-invariant guard pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ collapse carriers retain terminal accumulator overshoot
 
 Branch `feature/ai-trace-animation-verification`, after the native SST-order

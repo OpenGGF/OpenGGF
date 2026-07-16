@@ -2043,15 +2043,14 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         collapseFrameCounter++;
         boolean allColumnsFinished = true;
         for (int i = 0; i < COLLAPSE_COLUMN_COUNT; i++) {
-            if (collapseScrollPosition[i] >= COLLAPSE_MAX_SCROLL) {
-                continue;
-            }
-            allColumnsFinished = false;
             if (collapseDelayCounter >= COLLAPSE_SCROLL_DELAYS[i]) {
                 collapseScrollVelocity[i] += COLLAPSE_SCROLL_ACCEL;
                 collapseScrollFixedPosition[i] += collapseScrollVelocity[i];
                 collapseScrollPosition[i] = Math.min(COLLAPSE_MAX_SCROLL,
                         collapseScrollFixedPosition[i] >>> 16);
+            }
+            if (collapseScrollPosition[i] < COLLAPSE_MAX_SCROLL) {
+                allColumnsFinished = false;
             }
         }
         if (!allColumnsFinished) {
@@ -2137,7 +2136,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         if (screenEventRoutine != SCREEN_EVENT_COLLAPSE
                 || !collapseInitialized
                 || collapseFinished
-                || collapseScrollPosition[column] >= COLLAPSE_MAX_SCROLL
                 || collapseFrameCounter < COLLAPSE_SCROLL_DELAYS[column]) {
             return current;
         }

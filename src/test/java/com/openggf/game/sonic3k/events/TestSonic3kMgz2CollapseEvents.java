@@ -359,6 +359,36 @@ class TestSonic3kMgz2CollapseEvents {
     }
 
     @Test
+    void cappedColumnKeepsAcceleratingUntilEveryColumnFinishes() {
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        events.setScreenEventRoutine(4);
+        events.setCollapseInitialized(true);
+        events.setCollapseFrameCounter(0x20);
+
+        int[] velocity = new int[10];
+        int[] fixedPosition = new int[10];
+        int[] visualPosition = new int[10];
+        velocity[0] = 0x60500;
+        fixedPosition[0] = 0x2E50500;
+        visualPosition[0] = 0x2E0;
+        events.setCollapseScrollVelocity(velocity);
+        events.setCollapseScrollFixedPosition(fixedPosition);
+        events.setCollapseScrollPosition(visualPosition);
+
+        assertEquals(0x2EB, events.getCollapseSolidObjectPassScrollForTest(0),
+                "an early capped column still projects its next raw carrier position");
+
+        events.update(1, 0);
+
+        assertEquals(0x2E0, events.getCollapseScrollPositionCopy()[0]);
+        assertEquals(0x2EB, events.getCollapseScrollFixedPositionCopy()[0] >>> 16,
+                "loc_5142A advances all raw accumulators until d1 reports every column complete");
+        assertTrue(events.isCollapseActive(),
+                "later delayed columns must keep the collapse routine active");
+    }
+
+    @Test
     void collapseVScrollLeavesNonCollapseScreenColumnsUnshifted() {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
