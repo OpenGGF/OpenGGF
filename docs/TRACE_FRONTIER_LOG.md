@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Directional carry release retains both native cooldown probes
+
+Branch `feature/ai-trace-animation-verification`, after the fractional attack
+milestone. Native `Tails_Carry_Sonic` initially writes `$12` on an A/B/C jump
+release, then replaces it with `$3C` whenever any direction is held in the high
+byte of `Ctrl_1`; only Left/Right additionally overwrite `x_vel`. While the
+carry flag is clear, the CPU routine reaches `loc_14534` before movement and
+`Tails_FlyingSwimming` reaches it again afterwards, consuming two cooldown
+ticks per frame. The engine always selected `$12` and counted only the first
+probe. It therefore accepted the f37408 pickup geometry three frames before
+the ROM. The release now reads the live held-direction state and the released
+MGZ carry retains the post-movement countdown/proximity pass. No trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:27186-27376,27553-27587`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 37408 to frame 37411
+  (`tails_x_speed`, expected `$0200` / actual `$0000`; 384 errors, down from
+  389). The successful pickup now occurs on the native frame.
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`) while its downstream
+  tail falls from 122 to 120 errors.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused sidekick-carry suite passes with vertical-direction `$3C`
+  selection coverage.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
 ### 2026-07-16 -- MGZ configured attacks retain native fractional position
 
 Branch `feature/ai-trace-animation-verification`, after the folded-child

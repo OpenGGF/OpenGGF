@@ -3515,6 +3515,9 @@ public class SidekickCpuController {
         // same frame continues into the proximity pickup test.
         if (carryController().cooldown() > 0) {
             if (carryController().decrementCooldown() > 0) {
+                // The later Tails_FlyingSwimming call reaches loc_14534 a
+                // second time after carrier movement on this same frame.
+                carryController().setParentagePending(true);
                 return;
             }
         }
@@ -4004,6 +4007,13 @@ public class SidekickCpuController {
         }
         if (!carryController().isCarryingMainCharacter()) {
             carryController().setParentagePending(false);
+            // Tails_CPU_Control reaches loc_14534 before movement, and
+            // Tails_FlyingSwimming reaches it again afterwards. Count the
+            // second native cooldown tick at this post-movement hook.
+            if (carryController().cooldown() > 0
+                    && carryController().decrementCooldown() > 0) {
+                return;
+            }
             if (carryController().cooldown() == 0 && canRegrabLeaderInPickupRange()) {
                 pickupLeaderForCarry();
                 // This loc_14542 pickup occurs after Sonic's normal Animate
@@ -4038,7 +4048,14 @@ public class SidekickCpuController {
         leader.applyRollingRadii(false);
         leader.setRollingFlagPreserveRadii(true);
         leader.setRollingJump(false);
-        releaseCarry(carryTrigger.carryJumpReleaseCooldownFrames());
+        // loc_14404 first publishes the short $12 delay, then replaces it
+        // with $3C when any direction is held in Ctrl_1's high byte. Only
+        // Left/Right alter x_vel; Up/Down still select the longer delay.
+        boolean directionHeld = leader.isUpPressed() || leader.isDownPressed()
+                || leader.isLeftPressed() || leader.isRightPressed();
+        releaseCarry(directionHeld
+                ? carryTrigger.carryLatchReleaseCooldownFrames()
+                : carryTrigger.carryJumpReleaseCooldownFrames());
     }
 
     private void restorePreCarryBodyLogicalInput() {

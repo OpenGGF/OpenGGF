@@ -505,6 +505,25 @@ class TestSidekickCpuControllerCarry {
 
         assertEquals((short) 0x0200, sonic.getXSpeed(),
                 "ROM high-byte right press applies the carry jump-release x_vel override");
+        assertEquals(0x3C, controller.getReleaseCooldownForTest(),
+                "any held direction replaces the short jump-release cooldown with $3C");
+    }
+
+    @Test
+    void jumpPressWithVerticalDirectionUsesLongCooldownWithoutChangingXVelocity() {
+        AbstractPlayableSprite[] pair = prepareCarry();
+        AbstractPlayableSprite sonic = pair[0];
+        controller.update(1);
+        controller.update(2);
+
+        sonic.setDirectionalInputPressed(true, false, false, false);
+        sonic.setJumpInputPressed(false);
+        sonic.setJumpInputPressed(true);
+        controller.update(3);
+
+        assertEquals((short) 0x0100, sonic.getXSpeed(),
+                "Up selects the long delay but does not alter carried x_vel");
+        assertEquals(0x3C, controller.getReleaseCooldownForTest());
     }
 
     @Test
