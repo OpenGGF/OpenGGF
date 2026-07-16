@@ -1,7 +1,8 @@
 # WFZ Ending Sky→Space Background Transition — Design Spec
 
-> **Status:** Original background bridge implemented. Visual-parity follow-up approved
-> 2026-07-16; see Section 7 and the linked follow-up implementation plan.
+> **Status:** Original background bridge implemented. Visual-parity follow-up corrected and
+> approved 2026-07-16; Section 7 supersedes the failed 8192-pixel Plane-B workaround and adds
+> the missing Tornado rocket-booster correction.
 > **For agentic workers:** once approved, use superpowers:subagent-driven-development or
 > superpowers:executing-plans to implement the tasks. Steps use checkbox (`- [ ]`) syntax.
 
@@ -388,30 +389,53 @@ Override `SwScrlWfz#getBgCameraX()` to return the same live runtime-state X valu
 This keeps tile residency and per-line scrolling on one source of truth and requires no new
 state or snapshot field.
 
-### 7.3 Escape-phase horizon and Plane-B period correction
+### 7.3 Superseding diagnosis: Plane B is a persistent nametable, not a wide map
 
-Headless replay of the accepted implementation disproved the earlier backdrop hypothesis. At
-capture frame 13824 the event is still in routine 4 and `forceBlackBackdrop()` is false, yet late
-black horizon content is already visible. The cause is horizontal sampling: after the Plane-B
-cache began following live WFZ background X, the handler retained the engine's default 512-pixel
-period even though the static/ship and cloud layers can be more than 4,000 pixels apart. The
-static snapshot therefore wraps non-repeating WFZ layout content and aliases late black rows into
-the earlier blue-sky scene.
+The 8192-pixel period correction was disproved by the replacement headless capture and an aligned
+stable-retro replay of the checked-in WFZ BK2 (`bk2_frame_offset = 2845`). The engine shows
+rectangular space/horizon regions around capture frames 14820-15000 (4:07-4:10), whereas the ROM
+shows blue sky at frames 14820, 14920, 15000, and 15840. The ROM horizon first enters at the
+top-right around frame 15850; black first reaches that point around frame 15870 (4:24.5).
 
-`SwScrlWfz#getBgPeriodWidth()` must cover the full live spread between every active layer plus the
-320-pixel viewport. Round the required width up to a power of two with a 512-pixel minimum and cap
-it at the full 8192-pixel WFZ background-map extent, following the established GHZ static-cache
-pattern. For the ending state where the ship/static layer is near `$2AE3` and the fastest cloud
-layer is near `$1B00`, the returned period is 8192 pixels.
+The cause is the update model, not insufficient width. The ROM owns one persistent 64x32-cell
+(512x256-pixel) Plane-B nametable. `SwScrl_WFZ` derives row H-scroll values from the static/ship
+and cloud accumulators, but only `Camera_BG_X_pos_diff`/`Camera_BG_Y_pos_diff` and the resulting
+scroll flags cause `Draw_BG1` to replace crossed 16-pixel columns or rows. Cloud H-scroll never
+loads a separate distant map window. Every scanline addresses the same retained 512-pixel ring.
 
-The ROM does not change VDP register 7 or palette line 2/color 0 during this ending. Its late
-horizon is authored as opaque Plane-B blocks `$9D/$9E/$9F` in rows 0-1. Remove the WFZ
-`eventRoutine >= 6` black-backdrop override and the generic runtime predicate added solely for it;
-retain the pre-existing `ZoneFeatureProvider` fallback used by MCZ. With correct Plane-B coverage,
-the early scene remains blue and the authored black horizon enters naturally at the ROM vertical
-scroll timing.
+The engine's 8192-pixel static texture instead lets each row sample arbitrary global layout
+columns. The active layer spread reaches roughly 8,950 pixels, so it still exceeds the cap; more
+importantly, even an unbounded snapshot would expose map content that the VDP nametable has not
+loaded. This aliases future ending blocks into the earlier sky and makes them sweep in and out as
+the layer values change. The dynamic `SwScrlWfz#getBgPeriodWidth()` override and its 8192-pixel
+tests are therefore removed.
 
-### 7.4 Background ship-thruster lifetime
+### 7.4 Persistent WFZ Plane-B nametable
+
+Add an opt-in Plane-B update mode to the existing scroll/tilemap boundary. The default remains the
+current stateless background window for every other zone. WFZ selects a persistent Genesis
+nametable mode with fixed dimensions of 64x32 cells:
+
+- Seed the retained ring through the same logical map lookup used by the normal level-start Plane-B
+  draw, anchored to the live `WfzRuntimeState.bgXPos()`/`bgVscrollFactor()` values.
+- Track the previous 16-pixel-aligned BG X/Y positions and update only the entering column and/or
+  row when those positions cross a cell boundary. A one-frame 16-pixel movement performs one
+  strip update; a larger discontinuity or invalid baseline performs a complete deterministic seed.
+- Keep physical ring slots stable and advance their logical origins modulo 64 columns and 32 rows.
+  The shader continues to consume per-scanline H-scroll, but samples this one 512-pixel ring; cloud
+  values do not change residency or enlarge the period.
+- Upload the changed descriptors after each strip update. No new renderer or special draw pass is
+  introduced; the implementation stays inside the existing `LevelTilemapManager`/scroll-handler
+  ownership boundary.
+- Treat the retained descriptors, logical origins, and previous aligned BG position as rewind
+  state. Restoring a keyframe must restore the ring before the next render rather than rebuilding
+  a wide/static view from only the restored camera position. Level/session reset clears the
+  baseline and performs a fresh seed.
+
+This is deliberately a generic opt-in capability whose behavior is selected by the WFZ handler,
+not a frame, route, or zone-name branch in shared rendering code.
+
+### 7.5 Background ship-thruster lifetime and video cadence
 
 The flames attached to the small Plane-B ship are placed ObjBC objects, not the later ObjB2 `$58`
 children. ObjBC deliberately has no `MarkObjGone` call in the ROM: it derives X from
@@ -425,21 +449,65 @@ lifetime. Its existing `$380` event-offset check remains the sole deletion owner
 object carrying into DEZ. Do not render ObjB2 subtype `$56`, whose ROM routine is an intentionally
 invisible grabber, and do not alter the later `$58` foreground-ship flames.
 
-### 7.5 Verification and acceptance
+The ObjBC flames intentionally alternate visible/hidden every source frame. The canonical capture
+remains lossless FFV1 at 60 fps. Some 30-fps previews select only the hidden parity, so also produce
+a clearly labelled cadence-safe review copy using a repeating visible-visible-hidden-hidden source
+selection at 60 fps. It preserves duration and the on/off duty cycle while presenting the flicker
+at 15 Hz. The review copy is visual evidence, not a replacement for the canonical timing capture.
+
+### 7.6 Tornado rocket-booster runtime PLC readiness
+
+Aligned stable-retro frame 14760 shows ObjB2 subtype `$5C` as a large gray rocket pod beneath the
+Tornado with a bright orange/white flame extending left. Engine auxiliary state proves the child
+is alive, positioned at `(parentX-$0C, parentY+$28)`, and animating; nevertheless, the engine frame
+contains neither pod nor flame.
+
+The ROM's initial WFZ PLC includes the Tornado body but not `ArtNem_TornadoThruster`. Runtime
+`PLCID_Tornado` registers the `TORNADO_THRUSTER` sheet during `LevEvents_WFZ_Routine6`, increments
+the object-art load epoch, and creates a new `PatternSpriteRenderer`. The renderer is never passed
+through `ObjectRenderManager.ensurePatternsCached(...)`, leaving `patternBase == -1` and
+`isReady() == false`; `TornadoObjectInstance.appendRenderCommands()` consequently skips it.
+
+Make runtime Sonic 2 PLC intake finish the existing object-art registration contract: after a PLC
+adds sheets, refresh the active `ObjectRenderManager` from the same stable object pattern base used
+at level initialization. Existing renderers retain their deterministic bases, newly appended
+renderers receive non-overlapping bases, and a no-op/repeated PLC request does not reallocate or
+duplicate art. Keep this centralized in the Sonic 2 runtime PLC path; do not special-case subtype
+`$5C` or bypass `PatternSpriteRenderer.isReady()`.
+
+Failures remain non-fatal as they are today: an unavailable runtime/level defers the request, and
+an IO/runtime load failure logs and leaves the renderer unavailable. A successful request must
+make the new renderer ready before the same gameplay frame's render pass. Rewind restoration keeps
+the PLC load epoch and renderer cache coherent; it must not create a second pattern allocation.
+
+### 7.7 Verification and acceptance
 
 - Unit-test draw/skip/draw laser-wall cadence and unchanged solidity.
 - Extend the existing boss graph rewind test to restore the wall visibility phase.
 - Unit-test `SwScrlWfz#getBgCameraX()` against a live custom `WfzRuntimeState` and fallback.
-- Unit-test WFZ period sizing at the ending's live layer spread and its 8192-pixel map cap.
+- Replace the WFZ 8192-period test with a 512x256 persistent-ring test proving cloud H-scroll does
+  not change map residency, crossed strips update once, wrap slots remain stable, and reset reseeds.
+- Rewind a WFZ ending frame across row/column crossings and assert the retained Plane-B descriptors
+  and next rendered frame match the pre-rewind state.
 - Unit-test that ObjBC bypasses generic off-screen deletion until its own `$380` threshold.
+- Request `PLCID_Tornado` through the production runtime path and assert the newly registered
+  `TORNADO_THRUSTER` renderer becomes ready without moving existing pattern bases; repeat the
+  request and assert idempotence.
+- Render the live `$5C` child after the PLC request and assert both body mappings and alternating
+  flame mappings produce commands at the ROM-relative position.
 - Remove the obsolete runtime-state backdrop tests while retaining coverage for the existing MCZ
   provider fallback.
 - Run the focused WFZ scroll/runtime/boss/rewind suites and both S2 WFZ/DEZ ending trace replays.
-- Capture the ending headlessly and extract the small-hull interval plus early-blue and late-black
-  horizon frames. The ship hull and both ObjBC thrusters must overlap visibly. No desktop/computer
-  control is required.
+- Capture the ending headlessly and compare engine frames with the aligned stable-retro gates:
+  frames 14820, 14920, 15000, and 15840 remain blue; the horizon begins around 15850-15870; frame
+  14760 contains the Tornado rocket pod and left-facing flame. The small Plane-B hull and both
+  ObjBC flames must overlap visibly during their interval.
+- Deliver the canonical 60-fps FFV1 capture and the labelled cadence-safe review copy. All capture,
+  screenshots, and video inspection remain headless; no desktop/computer control is required.
 
 The original follow-up procedure is in
 `docs/superpowers/plans/2026-07-16-wfz-ending-visual-parity-followup.md`; the approved corrective
 procedure for Sections 7.3-7.5 is in
 `docs/superpowers/plans/2026-07-16-wfz-ending-late-horizon-thrusters.md`.
+Those plan sections describe the superseded 8192-pixel approach and must not be re-executed. A new
+implementation plan will cover Sections 7.3-7.7 after this corrected spec is approved.
