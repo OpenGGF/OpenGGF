@@ -531,7 +531,10 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
 
         private static final int COLLISION_FLAGS = 0xC0 | COLLISION_SIZE_INDEX;
         private SpikerBadnikInstance parent;
-        private int cooldown;
+        /** ROM $2E wait word; negative means loc_88D98 has restored collision. */
+        private int cooldown = -1;
+        /** Engine touch runs before this child slot; ROM installs Obj_Wait in that slot. */
+        private boolean cooldownSetupPass;
 
         private SpikerTopSpikeChild(SpikerBadnikInstance parent) {
             super(parent.getSpawn(), "SpikerTopSpike");
@@ -564,14 +567,16 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
                 setDestroyed(true);
                 return;
             }
-            if (cooldown > 0) {
+            if (cooldownSetupPass) {
+                cooldownSetupPass = false;
+            } else if (cooldown >= 0) {
                 cooldown--;
             }
         }
 
         @Override
         public int getCollisionFlags() {
-            return cooldown > 0 || parent.isDestroyed() ? 0 : COLLISION_FLAGS;
+            return cooldown >= 0 || parent.isDestroyed() ? 0 : COLLISION_FLAGS;
         }
 
         @Override
@@ -596,7 +601,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
 
         @Override
         public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
-            if (cooldown > 0 || !(playerEntity instanceof AbstractPlayableSprite player) || parent.isDestroyed()) {
+            if (cooldown >= 0 || !(playerEntity instanceof AbstractPlayableSprite player) || parent.isDestroyed()) {
                 return;
             }
 
@@ -617,6 +622,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
             }
 
             cooldown = TOP_SPIKE_COOLDOWN;
+            cooldownSetupPass = true;
             parent.beginTopSpikeCompression(player);
         }
 

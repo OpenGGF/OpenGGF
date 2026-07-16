@@ -201,6 +201,20 @@ class TestSpikerBadnikInstance {
         assertEquals("OPEN", readState(spiker));
         assertEquals(0x0A, spiker.getCollisionFlags(), "Parent hurtbox should restore after the launch anim");
         assertEquals(0, provider.getCollisionFlags(), "Top spike should still be in cooldown");
+
+        for (int frame = 23; frame <= 38; frame++) {
+            topSpike.update(frame, player);
+        }
+        assertEquals(0, provider.getCollisionFlags(),
+                "Obj_Wait keeps collision cleared when the $10 counter reaches zero");
+
+        topSpike.update(39, player);
+        assertEquals(0, provider.getCollisionFlags(),
+                "The touch frame installs Obj_Wait without decrementing its new counter");
+
+        topSpike.update(40, player);
+        assertEquals(0xCA, provider.getCollisionFlags(),
+                "loc_88D98 restores collision only after the wait word underflows");
     }
 
     @Test

@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ Spiker top spring retains its Obj_Wait setup pass
+
+Branch `feature/ai-trace-animation-verification`, after the drilling-Robotnik
+hurt-visibility milestone. Spiker's top child clears collision, writes `$10`
+to its wait word, and installs `Obj_Wait` only after `Check_PlayerCollision`
+selects the touching player. Because the engine reports that touch during the
+earlier player slot, it was decrementing the new wait word again when the
+child slot ran later in the same object pass. It then restored `$CA` when the
+word reached zero rather than after signed underflow. Retaining the setup pass
+and the zero-valued wait frame prevents Tails from retriggering the spring at
+the exact edge as it reopens. Tails now continues falling and reaches the
+native landing/idle animation. No trace hydration, zone/route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:185465-185563,177949-177959`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 16292 to frame 17092 (`y`,
+  expected `$04BA` / actual `$04B9`), with errors reduced from 4242 to 4112.
+- MGZ standalone animation advances from frame 16304 to frame 17119
+  (`tails_animation_id`, expected `$00` / actual `$20`), with errors reduced
+  from 547 to 485.
+- The focused Spiker top-spring setup/underflow lifecycle contract passes.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ drill hurt becomes visible after its movement routine
 
 Branch `feature/ai-trace-animation-verification`, after the title-card exit
