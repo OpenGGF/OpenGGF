@@ -23,6 +23,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -156,9 +157,15 @@ public class TestFbzAct2TraversalPreboss {
      * the capsule/results handoff, and the production request for Sandopolis Act 0.
      */
     public static void assertNativeStartFixedInputsReachSafeLateFrontierWithAllRouteMilestones() {
+        assertNativeStartFixedInputsReachSafeLateFrontierWithAllRouteMilestones(fixture -> { });
+    }
+
+    public static void assertNativeStartFixedInputsReachSafeLateFrontierWithAllRouteMilestones(
+            Consumer<HeadlessTestFixture> startAssertion) {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 1)
                 .build();
+        startAssertion.accept(fixture);
         ObjectManager objects = GameServices.level().getObjectManager();
         Set<Class<?>> encounteredFamilies = new LinkedHashSet<>();
         Set<Class<?>> executedFamilies = new LinkedHashSet<>();
