@@ -18,7 +18,7 @@ class TestSonic2WfzBgScroll {
 
     @BeforeEach
     void setUp() {
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
         GameServices.camera().resetState();
         camera = GameServices.camera();
         events = new Sonic2WFZEvents();
