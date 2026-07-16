@@ -6,6 +6,8 @@ import java.nio.ByteBuffer;
 import com.openggf.game.sonic2.runtime.CnzRuntimeStateView;
 import com.openggf.game.sonic2.runtime.HtzRuntimeState;
 import com.openggf.game.sonic2.runtime.HtzRuntimeStateView;
+import com.openggf.game.sonic2.runtime.WfzRuntimeState;
+import com.openggf.game.sonic2.runtime.WfzRuntimeStateView;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
@@ -138,6 +140,11 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         } else if (registry.currentAs(CnzRuntimeState.class).isPresent()) {
             registry.clear();
         }
+        if (zone == ZONE_WFZ) {
+            installOwnedRuntimeState(registry, new WfzRuntimeStateView(zone, act, wfzEvents));
+        } else if (registry.currentAs(WfzRuntimeState.class).isPresent()) {
+            registry.clear();
+        }
     }
 
     private static void installOwnedRuntimeState(ZoneRuntimeRegistry registry, ZoneRuntimeState state) {
@@ -147,7 +154,9 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
     }
 
     private static boolean isOwnedSonic2RuntimeState(ZoneRuntimeState state) {
-        return state instanceof HtzRuntimeState || state instanceof CnzRuntimeState;
+        return state instanceof HtzRuntimeState
+                || state instanceof CnzRuntimeState
+                || state instanceof WfzRuntimeState;
     }
 
     @Override
