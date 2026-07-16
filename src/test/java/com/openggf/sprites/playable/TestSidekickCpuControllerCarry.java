@@ -586,6 +586,8 @@ class TestSidekickCpuControllerCarry {
 
         assertTrue(sonic.isObjectControlled(),
                 "Tails_Carry_Sonic must recheck pickup range after current carrier movement");
+        assertTrue(sonic.isObjectMappingFrameControl(),
+                "the post-movement pickup transfers mapping ownership to AniRaw_Tails_Carry");
     }
 
     @Test

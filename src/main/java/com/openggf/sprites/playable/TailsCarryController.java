@@ -240,6 +240,7 @@ public final class TailsCarryController {
             ObjectControlState.none().applyTo(main);
             main.setControlLocked(false);
             main.setForcedAnimationId(-1);
+            main.setObjectMappingFrameControl(false);
         }
         carrying = false;
         parentagePending = false;

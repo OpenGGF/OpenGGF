@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Late released-carry pickup now transfers mapping ownership to `AniRaw_Tails_Carry`:** `object_control=$03` suppresses the carried player's normal animation path until release, advancing MGZ complete-run animation from frame 36641 to 36654 (`docs/skdisasm/sonic3k.asm:21973-22019,27222-27330`).
 - **Released Tails carry now rechecks pickup proximity after current carrier movement:** a pre-body miss retains native `loc_14542`'s post-`Tails_FlyingSwimming` probe while an already-in-range pickup remains immediate, advancing MGZ complete-run physics from frame 36640 to 36650 and animation from 36640 to 36641 (`docs/skdisasm/sonic3k.asm:27186-27330,27553-27570`).
 - **Tails carry jump release now consumes the pre-body `Ctrl_2_logical` direction before clearing it:** the carrier receives its native same-pass Right acceleration before `Tails_Carry_Sonic` releases Sonic, advancing MGZ complete-run physics from frame 36535 to 36640 and aligning it with animation (`docs/skdisasm/sonic3k.asm:27553-27570,27186-27268`).
 - **MGZ end-boss air entry now preserves the composite drill children's two SST phases:** the live touch anchor no longer reaches the post-collapse approach two object passes early, advancing complete-run physics from frame 36084 to 36535 and animation from 36109 to 36640 (`docs/skdisasm/sonic3k.asm:142900-142970`).

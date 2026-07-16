@@ -4009,6 +4009,11 @@ public class SidekickCpuController {
             carryController().setParentagePending(false);
             if (carryController().cooldown() == 0 && canRegrabLeaderInPickupRange()) {
                 pickupLeaderForCarry();
+                // This loc_14542 pickup occurs after Sonic's normal Animate
+                // pass and after the carrier body. Until release, the later
+                // Tails_Carry_Sonic raw pass exclusively owns mapping_frame
+                // and its shared timer/frame bytes.
+                leader.setObjectMappingFrameControl(true);
                 mgzReleasedChaseLatched = false;
             }
             return;

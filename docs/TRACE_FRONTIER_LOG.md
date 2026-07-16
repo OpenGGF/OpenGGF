@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Late carry pickup transfers raw-animation ownership
+
+Branch `feature/ai-trace-animation-verification`, after the post-movement
+pickup milestone. A successful released-carry `loc_14542` probe at the end of
+the carrier body writes `object_control=$03`: Sonic's already-completed normal
+animation pass must not advance the shared animation bytes again on following
+frames, leaving `AniRaw_Tails_Carry` as the mapping owner. The post-movement
+pickup now publishes that ownership until carry release, which restores the
+normal player animation path. No trace hydration, route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:21973-22019,27222-27330`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run animation advances from frame 36641 to frame 36654
+  (`tails_animation_id`, expected `$23` / actual `$22`; 189 errors, down from
+  204).
+- MGZ complete-run physics remains at frame 36650 with 1,533 errors.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused Tails-carry and sidekick-carry suites pass.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
 ### 2026-07-16 -- Released carry rechecks pickup after carrier movement
 
 Branch `feature/ai-trace-animation-verification`, after the carry-release input
