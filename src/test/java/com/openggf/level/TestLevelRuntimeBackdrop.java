@@ -2,9 +2,9 @@ package com.openggf.level;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic2.Sonic2LevelEventManager;
 import com.openggf.game.sonic2.Sonic2ZoneFeatureProvider;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
-import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -39,18 +38,6 @@ class TestLevelRuntimeBackdrop {
     }
 
     @Test
-    void zoneRuntimeStateDefaultsToNotForcingBlackBackdrop() {
-        assertFalse(new DefaultRuntimeState().forceBlackBackdrop());
-    }
-
-    @Test
-    void runtimeStateCanForceBlackBackdrop() {
-        GameServices.zoneRuntimeRegistry().install(new BlackBackdropRuntimeState());
-
-        assertBlack(levelManager.resolveLevelBackdropColor());
-    }
-
-    @Test
     void legacyMczProviderStillForcesBlackBackdrop() throws IOException {
         GameServices.zoneRuntimeRegistry().clear();
         Sonic2ZoneFeatureProvider provider = new Sonic2ZoneFeatureProvider();
@@ -60,22 +47,22 @@ class TestLevelRuntimeBackdrop {
         assertBlack(levelManager.resolveLevelBackdropColor());
     }
 
+    @Test
+    void wfzEscapeRuntimeDoesNotOverrideLevelBackdrop() {
+        Sonic2LevelEventManager eventManager = new Sonic2LevelEventManager();
+        eventManager.initLevel(Sonic2LevelEventManager.ZONE_WFZ, 0);
+        eventManager.setEventRoutine(6);
+
+        Palette.Color resolved = levelManager.resolveLevelBackdropColor();
+
+        assertEquals(LEVEL_BACKDROP.r, resolved.r);
+        assertEquals(LEVEL_BACKDROP.g, resolved.g);
+        assertEquals(LEVEL_BACKDROP.b, resolved.b);
+    }
+
     private static void assertBlack(Palette.Color color) {
         assertEquals(0, color.r & 0xFF);
         assertEquals(0, color.g & 0xFF);
         assertEquals(0, color.b & 0xFF);
-    }
-
-    private static class DefaultRuntimeState implements ZoneRuntimeState {
-        @Override public String gameId() { return "test"; }
-        @Override public int zoneIndex() { return 0; }
-        @Override public int actIndex() { return 0; }
-    }
-
-    private static final class BlackBackdropRuntimeState extends DefaultRuntimeState {
-        @Override
-        public boolean forceBlackBackdrop() {
-            return true;
-        }
     }
 }

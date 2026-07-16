@@ -18,14 +18,6 @@ public interface ZoneRuntimeState {
     }
 
     /**
-     * Whether transparent level pixels should reveal a black backdrop instead
-     * of the backdrop colour supplied by the loaded level.
-     */
-    default boolean forceBlackBackdrop() {
-        return false;
-    }
-
-    /**
      * Captures gameplay-relevant per-zone runtime state as a byte buffer for
      * rewind. Default returns an empty array (no state to capture).
      * Implementations override and serialize their fields deterministically.

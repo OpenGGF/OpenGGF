@@ -49,6 +49,17 @@ class TestSwScrlWfz {
     }
 
     @Test
+    void endingLayerSpreadUsesFullWfzBackgroundPeriod() throws IOException {
+        SwScrlWfz handler = new SwScrlWfz(
+                new ParallaxTables(TestEnvironment.currentRom()), new BackgroundCamera());
+        GameServices.zoneRuntimeRegistry().install(new TestWfzState(0x58C, 0x2AE3));
+
+        handler.update(new int[M68KMath.VISIBLE_LINES], 0x2C00, 0, 0x35FF, 0);
+
+        assertEquals(8192, handler.getBgPeriodWidth());
+    }
+
+    @Test
     void wfzScrollTablesAreLoadedFromRomOffsets() throws IOException {
         Rom rom = TestEnvironment.currentRom();
         ParallaxTables tables = new ParallaxTables(rom);

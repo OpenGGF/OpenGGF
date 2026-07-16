@@ -3258,10 +3258,6 @@ public class LevelManager {
     }
 
     private boolean isForceBlackBackdrop() {
-        if (GameServices.hasRuntime()
-                && GameServices.zoneRuntimeRegistry().current().forceBlackBackdrop()) {
-            return true;
-        }
         ZoneFeatureProvider zfp = zoneFeatureProvider;
         return zfp != null && zfp.isForceBlackBackdrop();
     }

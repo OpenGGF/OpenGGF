@@ -239,6 +239,27 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
         return currentBgXPos();
     }
 
+    @Override
+    public int getBgPeriodWidth() {
+        int minScroll = Short.MAX_VALUE;
+        int maxScroll = Short.MIN_VALUE;
+        for (int scrollWord : layerScrollWord) {
+            int signedScroll = (short) scrollWord;
+            minScroll = Math.min(minScroll, signedScroll);
+            maxScroll = Math.max(maxScroll, signedScroll);
+        }
+
+        // The ROM's persistent nametable receives live column updates for each
+        // scroll block. The engine rebuilds one static snapshot, so its period
+        // must cover the current layer spread plus one visible 320px screen.
+        int requiredWidth = maxScroll - minScroll + 320;
+        int periodWidth = 512;
+        while (periodWidth < requiredWidth && periodWidth < 8192) {
+            periodWidth <<= 1;
+        }
+        return Math.min(periodWidth, 8192);
+    }
+
     private void fillFallback(int[] horizScrollBuf, int cameraX) {
         short fgScroll = M68KMath.negWord(cameraX);
         short bgScroll = M68KMath.negWord(cameraX >> 4);

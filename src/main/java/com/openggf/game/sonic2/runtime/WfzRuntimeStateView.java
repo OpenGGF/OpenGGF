@@ -34,9 +34,4 @@ public final class WfzRuntimeStateView implements WfzRuntimeState {
     public int bgXPos() {
         return events.getBgXPos();
     }
-
-    @Override
-    public boolean forceBlackBackdrop() {
-        return events.getEventRoutine() >= 6;
-    }
 }
