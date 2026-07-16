@@ -14,6 +14,13 @@ public final class SpillAnimationState {
 
     public void reset() { counter = INITIAL_COUNTER; accum = 0; frame = 0; }
 
+    /**
+     * ROM writes {@code #$FF} only to {@code Ring_spill_anim_counter} when an
+     * attracted ring loses its lightning shield and becomes Obj_Bouncing_Ring.
+     * The shared accumulator and mapping frame are deliberately preserved.
+     */
+    public void restartCounter() { counter = INITIAL_COUNTER; }
+
     /** Advance the shared spin one frame (no-op once the counter reaches 0). */
     public void tick() {
         if (counter > 0) {

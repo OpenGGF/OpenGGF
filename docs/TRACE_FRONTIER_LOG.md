@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Attracted rings become bouncing rings after shield loss
+
+Branch `feature/ai-trace-animation-verification`, after the Tunnelbot live-
+touch milestone. Native `Obj_Attracted_Ring` runs `AttractedRing_Move`, then
+checks Player 1's lightning-shield bit. If the shield is gone, it changes the
+same SST code pointer to `Obj_Bouncing_Ring`, selects routine 2, and restarts
+only `Ring_spill_anim_counter`; its slot, fixed-point position, and velocities
+survive. The engine instead kept flying that ring toward Sonic indefinitely,
+so the third ring attracted near frame 5467 was incorrectly collected at frame
+5548 instead of becoming the native bouncing ring when Sonic lost the shield.
+The subsystem-backed attracted ring now transfers its reserved dynamic slot and
+motion state to the shared Obj37 path, while preserving the spill accumulator
+and mapping frame. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:35639-35846`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ standalone physics advances from frame 5548 to frame 6457 (`x_speed`,
+  expected `$0538` / actual `$0544`).
+- MGZ standalone animation remains at frame 6465 (`player_mapping_frame`,
+  expected `$08` / actual `$01`).
+- The 24-test focused ring-manager suite passes, including SST transfer,
+  fixed-point motion retention, and counter-only spill-animation restart.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- Tunnelbot touch uses its live post-movement SST position
 
 Branch `feature/ai-trace-animation-verification`, after the slow trigger-

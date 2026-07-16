@@ -767,6 +767,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private void updateAttractedRings(AbstractPlayableSprite player, int frameCounter, int cameraX) {
         int pcx = player.getCentreX();
         int pcy = player.getCentreY();
+        boolean lightningShieldActive = lightningShieldEnabled(player)
+                && player.getShieldType() == ShieldType.LIGHTNING;
         for (AttractedRing ar : activeAttractedRingsInSlotOrder()) {
             if (!ar.active) continue;
 
@@ -821,8 +823,36 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
             if (attractedRingOutsideObjectWindow(ar, cameraX)) {
                 deactivateAttractedRing(ar);
+            } else if (!lightningShieldActive) {
+                convertAttractedRingToBouncingRing(ar);
             }
         }
+    }
+
+    /**
+     * ROM loc_1A88C changes an active Obj_Attracted_Ring into
+     * Obj_Bouncing_Ring routine 2 after movement when Player 1 no longer has a
+     * lightning shield. The same SST slot and full motion state are retained.
+     */
+    private void convertAttractedRingToBouncingRing(AttractedRing ar) {
+        ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
+        if (objectManager == null || ar.objectSlotIndex < 0) {
+            deactivateAttractedRing(ar);
+            return;
+        }
+
+        int slotIndex = ar.objectSlotIndex;
+        int phaseOffset = LostRingPool.phaseOffsetForSlot(objectManager, slotIndex);
+        lostRings.spillAnimation.restartCounter();
+        LostRingObjectInstance bouncingRing = LostRingObjectInstance.fromAttractedRing(
+                ar.x, ar.y, ar.xSub, ar.ySub, ar.xVel, ar.yVel,
+                phaseOffset, lostRings.spillAnimation);
+
+        // The native object changes code pointer in place; keep the reservation
+        // while transferring ownership from the subsystem-backed attracted ring
+        // to the dynamic Obj37 object.
+        clearAttractedRing(ar);
+        objectManager.spawnLostRingObjectAtSlot(bouncingRing, slotIndex);
     }
 
     private static boolean attractedRingOutsideObjectWindow(AttractedRing ring, int cameraX) {
@@ -905,6 +935,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (objectManager != null && ar.objectSlotIndex >= 0) {
             objectManager.releaseDynamicSlot(ar.objectSlotIndex);
         }
+        clearAttractedRing(ar);
+    }
+
+    private static void clearAttractedRing(AttractedRing ar) {
         ar.active = false;
         ar.sourceIndex = 0;
         ar.x = 0;

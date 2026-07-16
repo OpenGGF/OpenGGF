@@ -136,6 +136,21 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         return ring;
     }
 
+    /**
+     * Converts the fixed-point state retained by S3K Obj_Attracted_Ring into
+     * Obj_Bouncing_Ring routine 2 state. The native object changes its code
+     * pointer in place, so position fractions and both velocities survive.
+     */
+    public static LostRingObjectInstance fromAttractedRing(
+            int xPixel, int yPixel, int xFraction, int yFraction,
+            int xVel, int yVel, int phaseOffset, SpillAnimationState spillAnimation) {
+        LostRingObjectInstance ring = spawn(
+                xPixel, yPixel, xVel, yVel, phaseOffset, 0xFF, spillAnimation);
+        ring.xSubpixel = (xPixel << 8) | ((xFraction >>> 8) & 0xFF);
+        ring.ySubpixel = (yPixel << 8) | ((yFraction >>> 8) & 0xFF);
+        return ring;
+    }
+
     /** Inject the shared spill-spin owner (frame source for rendering). */
     public void setSpillAnimation(SpillAnimationState spillAnimation) {
         this.spillAnimation = spillAnimation;
