@@ -3,6 +3,7 @@
   "zone": "mgz",
   "zone_id": 2,
   "act": 1,
+  "ring_floor_check_counter_phase": 3,
   "bk2_frame_offset": 2602,
   "trace_frame_count": 35912,
   "pre_trace_osc_frames": 0,

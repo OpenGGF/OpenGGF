@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ standalone restores its captured Obj37 V-int phase
+
+Branch `feature/ai-trace-animation-verification`, after the moving-spike hurt
+milestone. The schema-v6 standalone recording captured the word adjacent to
+S3K's byte-sized `V_int_run_count+2`, so its Obj37 floor-probe low bits cannot
+be reconstructed from the CSV counter alone. Recording the missing initial
+phase as `3`, through the existing trace-start clock-state metadata, prevents a
+slot-16 attracted ring from taking a false terrain bounce: it now falls below
+the active camera boundary and deletes on the native frame instead of returning
+on-screen for Tails to collect. This initializes the replay clock once; no
+per-frame trace hydration, zone/route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:543,35593-35645,35965-35980`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 9962 to frame 10589 (`x`,
+  expected `$266D` / actual `$267E`).
+- MGZ standalone animation holds at frame 9880 (`player_animation_id`,
+  expected `$05` / actual `$0C`).
+- The focused ring, lost-ring, and trace-metadata suites pass.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ moving spike hurt rewinds vertical movement
 
 Branch `feature/ai-trace-animation-verification`, after the reused-interact-slot

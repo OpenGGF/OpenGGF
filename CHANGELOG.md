@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **MGZ standalone replay now restores its captured Obj37 V-int low-bit phase:** schema-v6 recorded the adjacent V-int word rather than S3K's byte counter, so trace-start phase metadata prevents a false lost-ring terrain bounce and advances standalone physics from frame 9962 to 10589 (`docs/skdisasm/sonic3k.asm:543,35593-35645,35965-35980`).
 - **MGZ moving-spike hurt now restores the native pre-movement Y position:** `sub_24280` subtracts `y_vel<<8` from the full 16:16 `y_pos` before `HurtCharacter`, preserving the exact integer/subpixel position through the rolling-radius reset and advancing standalone MGZ physics from frame 9838 to 9962 and animation from 9879 to 9880 (`docs/skdisasm/sonic3k.asm:49180-49219,71029-71114`).
 - **S3K Tails follow nudges now ignore unrelated objects that reuse a released interact slot:** the fast-leader spring/wall suppression applies only when the live slot object is the support Tails actually latched, restoring native `loc_13E34` movement and advancing standalone MGZ physics from frame 7582 to 9838 (`docs/skdisasm/sonic3k.asm:26690-26741`).
 - **MGZ top-platform riders now observe the native pre-movement solid pass:** ordinary riders receive neither post-move horizontal carry nor post-move Y seating, while Tails' edge-balance check reads the platform's actual `$18` width; standalone MGZ advances from physics frame 7346 to 7582 and animation frame 7366 to 9879 (`docs/skdisasm/sonic3k.asm:71475-71584,71729-71763,72045-72064`).
