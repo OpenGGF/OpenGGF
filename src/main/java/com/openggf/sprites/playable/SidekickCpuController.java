@@ -2340,6 +2340,7 @@ public class SidekickCpuController {
                         && dy >= -JUMP_HEIGHT_THRESHOLD;
         suppressLocalGraceFollowNudge =
                 suppressLocalGraceFollowNudge && !fastLeaderNoLiveObjectNudge && !smallDxDelayedInputNudge;
+        ObjectInstance fastLeaderInteractObject = currentInteractSlotObject();
         boolean suppressFastLeaderTinyFollowNudge =
                 collisionRules != null
                         && collisionRules.sidekickSuppressesFastLeaderTinyFollowNudge()
@@ -2350,7 +2351,13 @@ public class SidekickCpuController {
                         // rule. With no latched support, loc_13E0A/loc_13E34
                         // still applies its native +/-1 x_pos nudge
                         // (sonic3k.asm:26707-26741).
-                        && hasLiveInteractSlotObject(currentInteractSlotObject())
+                        && hasLiveInteractSlotObject(fastLeaderInteractObject)
+                        // The bridge belongs to the support object Tails
+                        // actually latched. A recycled slot containing an
+                        // unrelated live object does not exist at the native
+                        // interact pointer and must not suppress loc_13E34's
+                        // +/-1 x_pos nudge.
+                        && fastLeaderInteractObject == sidekick.getLatchedSolidObjectInstance()
                         && Math.abs(sidekick.getGSpeed()) < 0x100
                         && localGraceAbsDx < followSnapThreshold
                         && dy < -JUMP_HEIGHT_THRESHOLD

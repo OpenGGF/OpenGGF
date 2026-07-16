@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Reused interact slots do not suppress Tails follow nudges
+
+Branch `feature/ai-trace-animation-verification`, after the MGZ top-platform
+surface milestone. S3K's fast-leader spring/wall bridge suppresses the native
+`loc_13E0A/loc_13E34` one-pixel follow nudge only while the live interact-slot
+object is the same support object Tails latched. Once that support is destroyed,
+an unrelated object reusing the engine slot no longer suppresses the ROM nudge.
+At standalone MGZ frame 7582 this restores `addq.w #1,x_pos` while preserving
+the already-matching `$0084->$0078` speed update. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:26690-26741`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 7582 to frame 9838 (`y`, expected
+  `$089F` / actual `$089C`).
+- MGZ standalone animation holds at frame 9879 (`player_animation_id`, expected
+  `$00` / actual `$1A`).
+- The focused reused-interact-slot sidekick CPU regression test passes.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ top-platform riders use the pre-movement surface
 
 Branch `feature/ai-trace-animation-verification`, after the speed-shoes phase

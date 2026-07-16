@@ -2435,6 +2435,57 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s3kReusedInteractSlotDoesNotSuppressFastLeaderFollowNudge() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic3kGameModule());
+            installEmptyObjectManager();
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setAir(false);
+            tails.setObjectControlled(false);
+            tails.setCentreX((short) 0x1B0D);
+            tails.setCentreY((short) 0x0CC0);
+            tails.setDirection(Direction.RIGHT);
+            tails.setGSpeed((short) 0x0084);
+
+            LiveRideObject releasedSupport = new LiveRideObject(0x5B);
+            releasedSupport.setSlotIndex(36);
+            releasedSupport.setDestroyed(true);
+            tails.setLatchedSolidObject(0x5B, releasedSupport);
+
+            LiveRideObject unrelatedReplacement = new LiveRideObject(0x6B);
+            unrelatedReplacement.setSlotIndex(36);
+            GameServices.level().getObjectManager().addDynamicObject(unrelatedReplacement);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x1B35);
+            Arrays.fill(yHistory, (short) 0x097F);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+            sonic.setGSpeed((short) 0x0800);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+            controller.update(0x1D9E);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                    () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                            "A different live object reusing the released interact slot must not suppress loc_13E34"),
+                    () -> assertEquals(0x1B0E, tails.getCentreX() & 0xFFFF));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
     void s2FastLeaderTinyDxStillAppliesFollowNudgeWhenLocalGraceIsPresent() throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
