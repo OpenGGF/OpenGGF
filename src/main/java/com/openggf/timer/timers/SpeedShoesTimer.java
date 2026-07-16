@@ -18,29 +18,21 @@ import com.openggf.timer.AbstractTimer;
  * (s2.asm:36008-36025); S3K uses a byte timer counting from
  * {@code (20*60)/8 = 150} and decremented only on every 8th level frame —
  * {@code Sonic_ChkShoes} gates {@code subq.b} on
- * {@code (Level_frame_counter+1) & 7 == 0} (sonic3k.asm:22072-22078; init
+ * the low byte at {@code Level_frame_counter+1} being divisible by 8
+ * (sonic3k.asm:22072-22078; init
  * sonic3k.asm:40818). Both expire after 1200 wall-clock frames.
  */
 public class SpeedShoesTimer extends AbstractTimer {
     public static final int ROM_DURATION_FRAMES = 0x4B0; // speedshoes_time(a0)
 
     /**
-     * Offset aligning the engine level frame counter to the ROM
-     * {@code Level_frame_counter} the S3K decrement gate reads.
-     *
-     * <p>ROM decrements when {@code (Level_frame_counter+1) & 7 == 0} (i.e.
-     * {@code Level_frame_counter & 7 == 7}). The engine's {@code LevelManager}
-     * frame counter, read at the pre-physics {@code TimerManager.update()}
-     * point where this timer decrements, leads ROM {@code Level_frame_counter}
-     * by 2 (mod 8) — a constant seed-phase offset. So the engine decrements when
-     * {@code frameCounter & 7 == 1}, i.e. {@code (frameCounter + 7) & 7 == 0}.
-     *
-     * <p>This offset is measured against compared trace fields (S3K CNZ speed
-     * shoes via x_speed); the {@code AizFlippingBridge} {@code (frameCounter+3)&7}
-     * gate is NOT a valid phase reference because it only drives an SFX, which
-     * trace replay does not compare.
+     * Offset aligning the engine level frame counter to the ROM's byte-addressed
+     * S3K decrement gate. {@code (Level_frame_counter+1).w} is 68k syntax for
+     * reading the low byte at label address plus one; it does not add one to the
+     * counter value. The native gate therefore decrements when the visible low
+     * byte is divisible by eight, matching {@code frameCounter & 7 == 0} here.
      */
-    static final int LEVEL_FRAME_PHASE_OFFSET = 7;
+    static final int LEVEL_FRAME_PHASE_OFFSET = 0;
 
     private final AbstractPlayableSprite sprite;
     /** Decrement cadence in level frames; a power of two (1 or 8). */

@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- S3K speed-shoes cadence reads the counter's low byte
+
+Branch `feature/ai-trace-animation-verification`, after the hurt-routine timer
+milestone. The existing cadence treated `(Level_frame_counter+1).w` as an
+arithmetic counter increment and gated engine counter low bits at one. In 68k
+absolute-address syntax, `+1` instead selects the second byte of the word—the
+counter's low byte—so the native `andi.b #7` gate fires when that byte is zero.
+Aligning the shared S3K byte timer to low-byte zero makes the final decrement
+visible before the next movement pass. No duration compensation, trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:22067-22095`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 6496 to frame 7346 (`tails_x`,
+  expected `$1999` / actual `$199A`).
+- MGZ standalone animation advances from frame 6524 to frame 7366
+  (`tails_animation_id`, expected `$06` / actual `$05`).
+- A/B verification of the already-red CNZ route retains its frame-0 frontier
+  and 4,581 physics errors under both phases.
+- The five-test speed-shoes timer suite passes with the low-byte-zero cadence.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- Speed-shoes countdown pauses outside the normal player routine
 
 Branch `feature/ai-trace-animation-verification`, after the attracted-ring
