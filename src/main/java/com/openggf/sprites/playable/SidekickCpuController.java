@@ -5249,8 +5249,11 @@ public class SidekickCpuController {
             case NORMAL -> 0x06;
             case PANIC -> 0x08;
             case DORMANT_MARKER -> 0x0A;
-            case CARRY_INIT -> 0x0C;
-            case CARRYING -> 0x0E;
+            case CARRY_INIT -> carryTrigger != null && carryTrigger.usesMgzBossTransitionControl()
+                    ? 0x14 : 0x0C;
+            case CARRYING -> carryTrigger != null && carryTrigger.usesMgzBossTransitionControl()
+                    ? (mgzCarryIntroAscend ? 0x16 : 0x18)
+                    : 0x0E;
             case CARRY_FLYOFF -> 0x10;
             case MGZ_RESCUE_WAIT -> 0x12;
             default -> -1;

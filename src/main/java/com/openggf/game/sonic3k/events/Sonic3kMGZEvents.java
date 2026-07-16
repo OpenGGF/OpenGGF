@@ -34,7 +34,6 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.SidekickCarryTrigger;
 import com.openggf.sprites.playable.SidekickCpuController;
-import com.openggf.sprites.playable.TailsCarryController;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
 
@@ -1613,11 +1612,10 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     private void startBossTransitionCarry(AbstractPlayableSprite player, AbstractPlayableSprite tails) {
         restoreBossTransitionPlayerRoutine(player);
-        tails.setCentreX((short) bossTransitionX);
-        tails.setCentreY((short) bossTransitionY);
+        NativePositionOps.writeXPosPreserveSubpixel(tails, bossTransitionX);
+        NativePositionOps.writeYPosPreserveSubpixel(tails, bossTransitionY);
         ObjectControlState.none().applyTo(tails);
         tails.setSpindash(false);
-        tails.setAir(true);
         // Obj_MGZ2_BossTransition writes Player_2 routine=2 before CPU routine $14,
         // which exits Tails's hurt routine even if he was hit during the rescue.
         tails.setHurt(false);
@@ -1630,7 +1628,10 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             tails.setCpuController(controller);
         }
         controller.setCarryTrigger(mgzBossTransitionCarryTrigger());
-        tails.getTailsCarryController().forceScriptedCarry(TailsCarryController.CarryContext.MGZ_BOSS);
+        // The transition SST only publishes CPU routine $14 here. loc_140CE
+        // attaches Sonic and sets Flying_carrying_Sonic_flag on the following
+        // Player_2 pass; doing that from this later object slot moves both
+        // players one frame early.
         controller.setInitialState(SidekickCpuController.State.CARRY_INIT);
     }
 

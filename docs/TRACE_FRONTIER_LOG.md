@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ carry begins from CPU routine `$14`
+
+Branch `feature/ai-trace-animation-verification`, after the rescue-countdown
+milestone. The transition object's later SST pass only writes Tails's native
+word position and CPU routine `$14`; it preserves fractional position/status
+and leaves `Flying_carrying_Sonic_flag` clear. The engine instead attached
+Sonic immediately, cleared Tails's subpixels, and exposed generic carry routine
+`$0C`. The object-slot write is now separate from the following Player 2 pass,
+where `loc_140CE` performs the attachment and advances to routine `$16`.
+MGZ's existing ascent/flight states now publish their native `$14/$16/$18`
+routine words. No trace hydration, route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:26979-27014,30247-30270`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 35786 to frame 35787
+  (`y_speed`, expected `$0008` / actual `$0000`; 1,419 errors).
+- MGZ complete-run animation remains at frame 35787, now at
+  `player_animation_id` (expected carried `$22` / actual Roll `$02`; 312
+  errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green; the full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+- The focused MGZ end-boss and carry-controller suites pass.
+
 ### 2026-07-16 -- MGZ rescue waits for its allocated transition SST pass
 
 Branch `feature/ai-trace-animation-verification`, after the cleared-interact-
