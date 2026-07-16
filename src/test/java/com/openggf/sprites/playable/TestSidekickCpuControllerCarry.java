@@ -246,6 +246,24 @@ class TestSidekickCpuControllerCarry {
     }
 
     @Test
+    void scriptedPickupRunsRawCarryAnimatorAfterCarrierMovement() {
+        AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
+        AbstractPlayableSprite sonic = pair[0];
+        sonic.setMappingFrame(0x98);
+
+        controller.update(1);  // INIT -> CARRY_INIT
+        controller.update(2);  // sub_1459E resets anim_frame/timer
+
+        assertEquals(0x98, sonic.getMappingFrame(),
+                "pickup itself leaves the mapping published by Sonic's earlier Animate pass");
+        controller.finishCarryAfterCarrierMovement();
+        assertEquals(0x91, sonic.getMappingFrame(),
+                "same-frame Tails_Carry_Sonic fall-through publishes AniRaw_Tails_Carry[0]");
+        assertEquals(1, sonic.getAnimationFrameIndex());
+        assertEquals(0x0B, sonic.getAnimationTick());
+    }
+
+    @Test
     void carryingCopiesPostMovementTailsDirectionToSonic() {
         AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
         AbstractPlayableSprite sonic = pair[0];

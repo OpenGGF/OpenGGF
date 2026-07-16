@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Tails carry publishes native shared raw animation state
+
+Branch `feature/ai-trace-animation-verification`, after the literal-airborne-
+status milestone. `sub_1459E` writes the carried id to both `anim` and
+`prev_anim` and clears the shared animation frame/timer bytes. Scripted pickup
+then falls through to `Tails_Carry_Sonic`, whose `AniRaw_Tails_Carry` pass
+shares those bytes with Sonic's earlier normal animation pass and immediately
+publishes mapping `$91`. The carry controller now exposes both writes in their
+native phases and advances the raw carry sequence after carrier movement. No
+trace hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:27186-27330,27382-27415`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run animation advances from frame 35787 to frame 36109
+  (`player_animation_id`, expected Roll `$02` / actual carried `$22`; 188
+  errors, down from 213).
+- MGZ complete-run physics remains at frame 35940 (`tails_x_speed`, expected
+  `$00E7` / actual `$00E0`; 1,274 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- CNZ complete-run animation also advances from frame 1 to frame 108
+  (`player_animation_id`, expected Walk `$00` / actual carried `$22`; 2,598
+  errors, down from 2,602); its physics and standalone frontiers are unchanged.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The focused carry-controller suites pass; full sweeps retain 43/58 green
+  physics routes and 42/58 green animation routes.
+
 ### 2026-07-16 -- MGZ routine `$14` writes literal airborne status
 
 Branch `feature/ai-trace-animation-verification`, after the deferred rescue-

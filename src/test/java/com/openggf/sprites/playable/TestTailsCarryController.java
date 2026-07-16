@@ -124,6 +124,9 @@ class TestTailsCarryController {
         sonic.setYSpeed((short) 9);
         sonic.setGSpeed((short) 11);
         sonic.setAngle((byte) 37);
+        sonic.setAnimationId(2);
+        sonic.setAnimationFrameIndex(4);
+        sonic.setAnimationTick(7);
         sonic.setAir(true);
         sonic.setObjectControlled(false);
         sonic.setHurt(false);
@@ -140,8 +143,13 @@ class TestTailsCarryController {
         assertEquals(0, sonic.getGSpeed());
         assertEquals(0, sonic.getAngle());
         assertTrue(sonic.isObjectControlled());
-        assertEquals(sonic.resolveAnimationId(com.openggf.game.CanonicalAnimation.TAILS_CARRIED),
-                sonic.getForcedAnimationId());
+        int carriedAnimationId = sonic.resolveAnimationId(
+                com.openggf.game.CanonicalAnimation.TAILS_CARRIED);
+        assertEquals(carriedAnimationId, sonic.getForcedAnimationId());
+        assertEquals(carriedAnimationId, sonic.getAnimationId(),
+                "native attachment publishes the carried animation in the same frame");
+        assertEquals(0, sonic.getAnimationFrameIndex());
+        assertEquals(0, sonic.getAnimationTick());
 
         carry.restore(new TailsCarryController.Snapshot((short) 0, (short) 0,
                 false, false, 0, TailsCarryController.CarryContext.NONE));

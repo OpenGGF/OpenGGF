@@ -12,6 +12,12 @@ import java.util.Objects;
 
 /** ROM-accurate shared owner for manual and scripted Tails carry state. */
 public final class TailsCarryController {
+    private static final int CARRIED_FRAME_DELAY = 0x0B;
+    private static final int[] CARRIED_MAPPING_FRAMES = {
+            0x91, 0x91, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
+            0x92, 0x92, 0x92, 0x92, 0x92, 0x92, 0x91, 0x91
+    };
+
     public enum CarryContext { NONE, MANUAL, CNZ, MGZ_BOSS }
 
     public record Snapshot(short latchX, short latchY, boolean carrying,
@@ -73,7 +79,16 @@ public final class TailsCarryController {
         int yOffset = isReverseGravity() ? -0x1C : 0x1C;
         NativePositionOps.writeYPosPreserveSubpixel(main, carrier.getCentreY() + yOffset);
         main.setDirection(carrier.getDirection());
-        main.setForcedAnimationId(main.resolveAnimationId(CanonicalAnimation.TAILS_CARRIED));
+        int carriedAnimationId = main.resolveAnimationId(CanonicalAnimation.TAILS_CARRIED);
+        // Tails_Carry_Sonic writes the carried id to both anim and prev_anim,
+        // then clears anim_frame_timer and anim_frame in the carrier's slot.
+        // That happens after Sonic's Animate call, so publish the native fields
+        // immediately rather than waiting for the next player update.
+        main.setAnimationId(carriedAnimationId);
+        main.getAnimationManager().publishPreviousAnimationId(carriedAnimationId);
+        main.setAnimationTick(0);
+        main.setAnimationFrameIndex(0);
+        main.setForcedAnimationId(carriedAnimationId);
         ObjectControlState.nativeBit7FullControl().applyTo(main);
         main.setAir(true);
         main.setRollingJump(false);
@@ -135,6 +150,7 @@ public final class TailsCarryController {
         int yOffset = isReverseGravity() ? -0x1C : 0x1C;
         NativePositionOps.writeYPosPreserveSubpixel(main, carrier.getCentreY() + yOffset);
         main.setDirection(carrier.getDirection());
+        updateCarriedMapping(main);
         main.setXSpeed(carrier.getXSpeed());
         main.setYSpeed(carrier.getYSpeed());
         CollisionSystem collision = main.currentCollisionSystemOrNull();
@@ -157,6 +173,31 @@ public final class TailsCarryController {
         latchX = main.getXSpeed();
         latchY = main.getYSpeed();
         parentagePending = false;
+    }
+
+    /**
+     * Advances {@code AniRaw_Tails_Carry}, which runs from
+     * {@code Tails_Carry_Sonic} after the main player's normal Animate pass.
+     * Both routines share the native animation timer and frame bytes.
+     */
+    private void updateCarriedMapping(AbstractPlayableSprite main) {
+        int remaining = main.getAnimationTick() - 1;
+        if (remaining >= 0) {
+            main.setAnimationTick(remaining);
+            return;
+        }
+
+        main.setAnimationTick(CARRIED_FRAME_DELAY);
+        int frameIndex = main.getAnimationFrameIndex();
+        if (frameIndex < 0 || frameIndex >= CARRIED_MAPPING_FRAMES.length) {
+            // Native reads the terminal $FF after incrementing anim_frame,
+            // then resets anim_frame to zero and displays the first entry.
+            main.setAnimationFrameIndex(0);
+            main.setMappingFrame(CARRIED_MAPPING_FRAMES[0]);
+            return;
+        }
+        main.setMappingFrame(CARRIED_MAPPING_FRAMES[frameIndex]);
+        main.setAnimationFrameIndex(frameIndex + 1);
     }
 
     private void performJumpRelease(AbstractPlayableSprite main, int input) {
