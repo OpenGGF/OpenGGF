@@ -81,6 +81,14 @@ public class SpeedShoesTimer extends AbstractTimer {
 
     @Override
     public void decrementTick() {
+        // The countdown is owned by the playable character's normal control
+        // routine, not by the global level loop. Sonic_ChkShoes is reached from
+        // Sonic_Display (routine 2); hurt routine 4 draws directly and does not
+        // visit the shoes check. Keep the timer frozen until normal control
+        // resumes, matching the same routine gate as the native display timer.
+        if (sprite != null && sprite.isHurt()) {
+            return;
+        }
         // ROM decrements only on aligned level frames (every `decimation`-th
         // frame). For decimation == 1 this is every frame, so S1/S2 are
         // unchanged. Gate on the global level frame counter so expiry lands on

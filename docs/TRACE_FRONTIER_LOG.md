@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Speed-shoes countdown pauses outside the normal player routine
+
+Branch `feature/ai-trace-animation-verification`, after the attracted-ring
+lifetime milestone. Native `Sonic_ChkShoes` is called by `Sonic_Display` only
+from player routine 2. Hurt routine 4 uses its own direct draw path, so its
+44-frame span in standalone MGZ skips five globally aligned speed-shoes timer
+decrements. The engine's manager-owned timer continued decrementing through
+that state and removed the boosted acceleration 40 frames early. The timer now
+uses the existing playable hurt/routine state to freeze until normal control
+resumes. No duration compensation, trace hydration, route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:21886-21899,21940-22022,
+22037-22095`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 6457 to frame 6496 (`y_speed`,
+  expected `-$0074` / actual `-$0073`).
+- MGZ standalone animation advances from frame 6465 to frame 6524
+  (`player_mapping_frame`, expected `$08` / actual `$07`).
+- The five-test speed-shoes timer suite passes, including hurt-routine freeze
+  and normal-control resume coverage.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- Attracted rings become bouncing rings after shield loss
 
 Branch `feature/ai-trace-animation-verification`, after the Tunnelbot live-

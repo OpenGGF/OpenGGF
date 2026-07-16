@@ -60,9 +60,8 @@ class TestSpeedShoesTimer {
     }
 
     @Test
-    void constructorUsesDefaultRulesWhenGameRulesMissing() {
+    void constructorUsesS3kDecimationRules() {
         AbstractPlayableSprite sprite = mock(AbstractPlayableSprite.class);
-        when(sprite.getGameRules()).thenReturn(null);
         when(sprite.getGameRules()).thenReturn(GameRules.SONIC_3K);
 
         SpeedShoesTimer timer = new SpeedShoesTimer("speed-shoes", sprite);
@@ -70,5 +69,22 @@ class TestSpeedShoesTimer {
         assertEquals(SpeedShoesTimer.ROM_DURATION_FRAMES
                         / GameRules.SONIC_3K.powerUp().speedShoesTimerDecimation(),
                 timer.getTicks());
+    }
+
+    @Test
+    void hurtRoutineFreezesCountdownUntilNormalControlResumes() {
+        AbstractPlayableSprite sprite = mock(AbstractPlayableSprite.class);
+        when(sprite.getGameRules()).thenReturn(GameRules.SONIC_3K);
+        when(sprite.isHurt()).thenReturn(true, false);
+        SpeedShoesTimer timer = new SpeedShoesTimer("speed-shoes", sprite);
+
+        int initialTicks = timer.getTicks();
+        timer.decrementTick();
+        assertEquals(initialTicks, timer.getTicks(),
+                "native hurt routine bypasses Sonic_ChkShoes");
+
+        timer.decrementTick();
+        assertEquals(initialTicks - 1, timer.getTicks(),
+                "countdown resumes with the normal control routine");
     }
 }
