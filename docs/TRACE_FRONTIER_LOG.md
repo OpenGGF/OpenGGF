@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ collapse carriers retain ScreenEvents and Full2 phase
+
+Branch `feature/ai-trace-animation-verification`, after the visible-Tails
+handoff milestone. The boss SST's `Events_fg_4` write, the positive
+`Screen_shake_flag` owner, `MGZ2SE_Collapse`, and the newly allocated carrier
+SSTs are distinct native phases. The engine consumed the flag, decremented the
+new `$14` counter, cleared the layout, and exposed carriers too early. It also
+treated the deliberately invisible carriers as ordinary `SolidObjectFull`
+objects, so their new-contact path was suppressed by the render gate. Collapse
+startup now preserves the intervening ScreenEvents observations, and the
+carriers use their real `SolidObjectFull2` inclusive-edge/off-screen profile.
+No trace hydration, route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:41065-41084,106412-106512,
+106955-106970,142844-142866`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35445 to frame 35514 (`y`,
+  expected `$0765` / actual `$0764`).
+- MGZ complete-run animation advances from frame 35445 to frame 35635
+  (`tails_animation_id`, expected `Skid` / actual `Roll`).
+- The 12 collapse-event tests pass, including request/counter phase, invisible
+  `SolidObjectFull2`, layout-clear, scroll, and rewind-recreation coverage.
+- Rewind coverage, static-state rewind coverage, and trace-invariant guards pass.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ boss transition preserves visible Tails
 
 Branch `feature/ai-trace-animation-verification`, after the V-int touch-phase

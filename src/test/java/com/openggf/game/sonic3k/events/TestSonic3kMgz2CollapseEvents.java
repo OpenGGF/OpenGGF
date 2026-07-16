@@ -48,6 +48,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TestSonic3kMgz2CollapseEvents {
 
+    private static final int COLLAPSE_STARTUP_EVENT_CALLS = 0x17;
+
     @BeforeEach
     void setUp() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
@@ -68,6 +70,9 @@ class TestSonic3kMgz2CollapseEvents {
         events.requestLevelCollapse();
 
         events.update(1, 0);
+        assertFalse(events.isCollapseActive(),
+                "The boss SST's Events_fg_4 write becomes visible on the following screen-event dispatch");
+        events.update(1, 1);
 
         SyntheticMgzCollapseLevel level = (SyntheticMgzCollapseLevel) GameServices.level().getCurrentLevel();
         assertTrue(events.isCollapseActive());
@@ -83,7 +88,7 @@ class TestSonic3kMgz2CollapseEvents {
         events.init(1);
         events.requestLevelCollapse();
 
-        for (int frame = 0; frame < 0x14; frame++) {
+        for (int frame = 0; frame < COLLAPSE_STARTUP_EVENT_CALLS; frame++) {
             events.update(1, frame);
         }
 
@@ -104,7 +109,7 @@ class TestSonic3kMgz2CollapseEvents {
         events.init(1);
         events.requestLevelCollapse();
 
-        for (int frame = 0; frame < 0x14; frame++) {
+        for (int frame = 0; frame < COLLAPSE_STARTUP_EVENT_CALLS; frame++) {
             events.update(1, frame);
         }
 
@@ -123,7 +128,7 @@ class TestSonic3kMgz2CollapseEvents {
         events.init(1);
         events.requestLevelCollapse();
 
-        for (int frame = 0; frame < 0x14; frame++) {
+        for (int frame = 0; frame < COLLAPSE_STARTUP_EVENT_CALLS; frame++) {
             events.update(1, frame);
         }
 
@@ -139,7 +144,7 @@ class TestSonic3kMgz2CollapseEvents {
         events.init(1);
         events.requestLevelCollapse();
 
-        for (int frame = 0; frame < 0x14; frame++) {
+        for (int frame = 0; frame < COLLAPSE_STARTUP_EVENT_CALLS; frame++) {
             events.update(1, frame);
         }
         assertEquals(1, events.getCollapseMutationCount());
@@ -147,7 +152,7 @@ class TestSonic3kMgz2CollapseEvents {
 
         events.requestLevelCollapse();
         for (int frame = 0; frame < 0x14; frame++) {
-            events.update(1, 0x14 + frame);
+            events.update(1, COLLAPSE_STARTUP_EVENT_CALLS + frame);
         }
 
         assertTrue(events.isCollapseActive());
@@ -187,6 +192,10 @@ class TestSonic3kMgz2CollapseEvents {
                 0x3C90, 0x05C0, () -> 0, () -> delete[0]);
 
         assertTrue(solid.isSolidFor(null));
+        assertTrue(solid.bypassesOffscreenSolidGate(),
+                "Obj_MGZ2LevelCollapseSolid calls SolidObjectFull2 even though its sprite is always invisible");
+        assertTrue(solid.usesInclusiveRightEdge(),
+                "SolidObjectFull2 accepts the exact d1*2 right edge");
 
         delete[0] = true;
 
@@ -200,7 +209,7 @@ class TestSonic3kMgz2CollapseEvents {
         Sonic3kMGZEvents events = activeMgzEvents();
         events.requestLevelCollapse();
 
-        for (int frame = 0; frame < 0x14; frame++) {
+        for (int frame = 0; frame < COLLAPSE_STARTUP_EVENT_CALLS; frame++) {
             events.update(1, frame);
         }
         ArrayList<Mgz2LevelCollapseSolidInstance> capturedSolids = liveCollapseSolids(objectManager);
@@ -292,16 +301,16 @@ class TestSonic3kMgz2CollapseEvents {
         events.init(1);
         events.requestLevelCollapse();
 
-        for (int frame = 0; frame < 0x14; frame++) {
+        for (int frame = 0; frame < COLLAPSE_STARTUP_EVENT_CALLS; frame++) {
             events.update(1, frame);
         }
-        events.update(1, 0x14); // first active tick: column 6 has zero delay
+        events.update(1, COLLAPSE_STARTUP_EVENT_CALLS); // first active tick: column 6 has zero delay
 
         assertNull(events.buildCollapseForegroundVScrollOverride(0x3C80),
                 "ROM adds $500 to a 16:16 velocity accumulator; the first active tick has not moved a full pixel");
 
         for (int frame = 0; frame < 15; frame++) {
-            events.update(1, 0x15 + frame);
+            events.update(1, COLLAPSE_STARTUP_EVENT_CALLS + 1 + frame);
         }
         short[] override = events.buildCollapseForegroundVScrollOverride(0x3C80);
 
@@ -320,11 +329,11 @@ class TestSonic3kMgz2CollapseEvents {
         events.init(1);
         events.requestLevelCollapse();
 
-        for (int frame = 0; frame < 0x14; frame++) {
+        for (int frame = 0; frame < COLLAPSE_STARTUP_EVENT_CALLS; frame++) {
             events.update(1, frame);
         }
         for (int frame = 0; frame < 16; frame++) {
-            events.update(1, 0x14 + frame);
+            events.update(1, COLLAPSE_STARTUP_EVENT_CALLS + frame);
         }
 
         short[] override = events.buildCollapseForegroundVScrollOverride(0x3C70);

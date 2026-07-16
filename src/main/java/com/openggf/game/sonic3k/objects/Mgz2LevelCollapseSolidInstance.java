@@ -86,6 +86,23 @@ public final class Mgz2LevelCollapseSolidInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj_MGZ2LevelCollapseSolid jumps to SolidObjectFull2. Its entry X
+        // gate rejects only values above d1*2, so the exact right edge remains
+        // eligible (sonic3k.asm:41065-41067,106955-106970).
+        return true;
+    }
+
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // SolidObjectFull2_1P falls directly into SolidObject_cont when the
+        // standing bit is clear. Unlike SolidObjectFull_1P it never tests the
+        // render flag, which is essential here because this carrier is always
+        // invisible (sonic3k.asm:41065-41067,106955-106970).
+        return true;
+    }
+
+    @Override
     public boolean isPersistent() {
         return true;
     }

@@ -296,6 +296,8 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private int chunkEventDelay;
     private int screenEventRoutine;
     private boolean collapseRequested;
+    /** Events_fg_4 is consumed by the screen-event pass after the boss SST publishes it. */
+    private boolean collapseRequestObserved;
     private boolean collapseInitialized;
     private boolean collapseFinished;
     private int collapseMutationCount;
@@ -387,6 +389,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         chunkEventDelay = 0;
         screenEventRoutine = SCREEN_EVENT_NORMAL;
         collapseRequested = false;
+        collapseRequestObserved = false;
         collapseInitialized = false;
         collapseFinished = false;
         collapseMutationCount = 0;
@@ -1963,18 +1966,30 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     private void updateAct2Collapse() {
         if (collapseRequested && screenEventRoutine == SCREEN_EVENT_NORMAL) {
+            // Obj_MGZEndBoss publishes Events_fg_4 from its SST. MGZ2SE_Normal
+            // consumes that write on the following screen-event dispatch; it
+            // then loads Screen_shake_flag=$14 after ShakeScreen_Setup has
+            // already run, so the new positive countdown is not decremented
+            // on its arm frame (sonic3k.asm:106412-106427,142844-142866).
+            if (!collapseRequestObserved) {
+                collapseRequestObserved = true;
+                return;
+            }
             screenEventRoutine = SCREEN_EVENT_COLLAPSE;
             screenShakeActive = true;
             collapseStartupShakeTimer = COLLAPSE_STARTUP_SHAKE_FRAMES;
+            return;
         }
         if (screenEventRoutine != SCREEN_EVENT_COLLAPSE || collapseFinished) {
             return;
         }
         if (collapseStartupShakeTimer > 0) {
             collapseStartupShakeTimer--;
-            if (collapseStartupShakeTimer > 0) {
-                return;
-            }
+            // Keep the zero written by the timed-shake owner invisible to the
+            // collapse dispatch until its next ScreenEvents observation. This
+            // preserves the separate ShakeScreen_Setup / MGZ2SE_Collapse phase
+            // instead of falling through in the same Java call.
+            return;
         }
         if (!collapseInitialized) {
             snapshotForegroundTilemapBeforeCollapseClear();
