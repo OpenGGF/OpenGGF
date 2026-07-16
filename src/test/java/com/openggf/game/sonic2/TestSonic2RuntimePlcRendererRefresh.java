@@ -3,11 +3,14 @@ package com.openggf.game.sonic2;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.events.Sonic2ZoneEvents;
+import com.openggf.game.sonic2.events.Sonic2WFZEvents;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
@@ -27,9 +30,15 @@ import org.junit.jupiter.api.parallel.Isolated;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -142,6 +151,113 @@ class TestSonic2RuntimePlcRendererRefresh {
     }
 
     @Test
+    void realWfzOneShotRestoresAndReplaysThroughGameplayRegistry() {
+        Sonic2LevelEventManager levelEvents =
+                (Sonic2LevelEventManager) GameServices.module().getLevelEventProvider();
+        Sonic2WFZEvents wfz = levelEvents.getWfzEvents();
+        levelEvents.initLevel(Sonic2LevelEventManager.ZONE_WFZ, 0);
+        wfz.setWfzSubRoutine(2);
+        GameServices.camera().setY((short) 0x500);
+
+        RewindRegistry registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        SessionManager.getCurrentGameplayMode().registerPlcArtAdapter(provider);
+        registry.deregister("level-event");
+        registry.register(levelEvents);
+        CompositeSnapshot beforeTornado = registry.capture();
+        assertNotNull(beforeTornado.get("level-event"));
+        assertNotNull(beforeTornado.get("s2-plc-art"));
+        assertEquals(0, levelEvents.getEventRoutine());
+
+        int epochBefore = provider.capture().loadEpoch();
+        levelEvents.update();
+
+        PatternSpriteRenderer first = provider.getRenderer(Sonic2ObjectArtKeys.TORNADO_THRUSTER);
+        assertNotNull(first);
+        assertTrue(first.isReady());
+        int firstBase = first.getPatternBase();
+        int firstPatternCount = provider.getRegularPatternCount();
+        int epochAfter = provider.capture().loadEpoch();
+        assertEquals(epochBefore + 1, epochAfter);
+        assertEquals(2, levelEvents.getEventRoutine());
+        assertEquals(4, wfz.getWfzSubRoutine());
+        assertEquals(Sonic2Constants.PLC_TORNADO, wfz.getLastRequestedPlcIdForTest());
+        verify(levelManager, times(1)).refreshObjectArtPatterns();
+
+        registry.restore(beforeTornado);
+        assertEquals(0, levelEvents.getEventRoutine());
+        assertEquals(2, wfz.getWfzSubRoutine(),
+                "whole-registry restore must re-arm the WFZ Tornado one-shot");
+        assertEquals(epochBefore, provider.capture().loadEpoch());
+
+        levelEvents.update();
+
+        assertEquals(2, levelEvents.getEventRoutine());
+        assertEquals(4, wfz.getWfzSubRoutine());
+        assertEquals(epochAfter, provider.capture().loadEpoch());
+        assertSame(first, provider.getRenderer(Sonic2ObjectArtKeys.TORNADO_THRUSTER));
+        assertTrue(first.isReady());
+        assertEquals(firstBase, first.getPatternBase());
+        assertEquals(firstPatternCount, provider.getRegularPatternCount());
+        verify(levelManager, times(1)).refreshObjectArtPatterns();
+    }
+
+    @Test
+    void preflightFailureAfterRealWfzTriggerIsLoggedAndNeverRetried() throws Exception {
+        OverflowingSonic2ObjectArtProvider overflowingProvider =
+                new OverflowingSonic2ObjectArtProvider();
+        Sonic2RuntimeFixture fixture = installSonic2RuntimeWithProvider(overflowingProvider);
+        Sonic2WFZEvents wfz = fixture.levelEvents().getWfzEvents();
+        fixture.levelEvents().initLevel(Sonic2LevelEventManager.ZONE_WFZ, 0);
+        wfz.setWfzSubRoutine(2);
+        GameServices.camera().setY((short) 0x500);
+        int epochBefore = overflowingProvider.capture().loadEpoch();
+        int patternCountBefore = overflowingProvider.getRegularPatternCount();
+        int rendererCountBefore = overflowingProvider.getRendererKeys().size();
+        overflowingProvider.enableOverflow();
+        RecordingLogHandler logHandler = new RecordingLogHandler();
+        Logger logger = Logger.getLogger(Sonic2ZoneEvents.class.getName());
+        java.util.logging.Level previousLevel = logger.getLevel();
+        logger.setLevel(java.util.logging.Level.FINE);
+        logger.addHandler(logHandler);
+        try {
+            assertDoesNotThrow(fixture.levelEvents()::update);
+        } finally {
+            logger.removeHandler(logHandler);
+            logger.setLevel(previousLevel);
+        }
+
+        PatternSpriteRenderer failedRenderer =
+                overflowingProvider.getRenderer(Sonic2ObjectArtKeys.TORNADO_THRUSTER);
+        int epochAfterFailure = overflowingProvider.capture().loadEpoch();
+        int allocatedPatternCount = overflowingProvider.actualRegularPatternCount();
+        assertNotNull(failedRenderer, "successful PLC loading keeps its immutable renderer allocation");
+        assertFalse(failedRenderer.isReady(), "failed preflight must not publish the new renderer");
+        assertEquals(-1, failedRenderer.getPatternBase());
+        assertEquals(epochBefore + 1, epochAfterFailure);
+        assertTrue(allocatedPatternCount > patternCountBefore,
+                "successful PLC loading must retain the newly registered sheets");
+        int rendererCountAfterFailure = overflowingProvider.getRendererKeys().size();
+        assertTrue(rendererCountAfterFailure > rendererCountBefore,
+                "the failed publication must not roll back newly registered sheet keys");
+        assertEquals(4, wfz.getWfzSubRoutine());
+        assertTrue(logHandler.messages().stream().anyMatch(message ->
+                        message.contains("S2 PLC request " + Sonic2Constants.PLC_TORNADO)
+                                && message.contains("Object patterns exceed reserved atlas range")),
+                "the event path should log the non-fatal preflight failure");
+        verify(fixture.levelManager(), times(1)).refreshObjectArtPatterns();
+
+        assertDoesNotThrow(fixture.levelEvents()::update);
+
+        assertEquals(4, wfz.getWfzSubRoutine(), "the one-shot must not retry after advancing");
+        assertEquals(epochAfterFailure, overflowingProvider.capture().loadEpoch());
+        assertSame(failedRenderer,
+                overflowingProvider.getRenderer(Sonic2ObjectArtKeys.TORNADO_THRUSTER));
+        assertEquals(allocatedPatternCount, overflowingProvider.actualRegularPatternCount());
+        assertEquals(rendererCountAfterFailure, overflowingProvider.getRendererKeys().size());
+        verify(fixture.levelManager(), times(1)).refreshObjectArtPatterns();
+    }
+
+    @Test
     void requestWithoutGameplayRuntimeReturnsWithoutLoading() {
         SessionManager.clear();
 
@@ -200,6 +316,34 @@ class TestSonic2RuntimePlcRendererRefresh {
         return new RuntimeFixture(manager);
     }
 
+    private static Sonic2RuntimeFixture installSonic2RuntimeWithProvider(
+            Sonic2ObjectArtProvider artProvider) throws Exception {
+        GameModule module = mock(GameModule.class, delegatesTo(GameServices.module()));
+        when(module.getObjectArtProvider()).thenReturn(artProvider);
+        GameplayModeContext gameplay = SessionManager.openGameplaySession(module);
+        TestEnvironment.activeGameplayMode();
+        artProvider.loadArtForZone(Sonic2ZoneConstants.ROM_ZONE_WFZ);
+        LevelManager manager = spy(gameplay.getLevelManager());
+        setObjectRenderManager(manager, new ObjectRenderManager(artProvider));
+        gameplay.attachLevelManagers(
+                gameplay.getWaterSystem(),
+                gameplay.getParallaxManager(),
+                gameplay.getTerrainCollisionManager(),
+                gameplay.getCollisionSystem(),
+                gameplay.getSpriteManager(),
+                manager);
+        setCurrentLevel(manager, gameplay, mock(Level.class));
+        manager.refreshObjectArtPatterns();
+        clearInvocations(manager);
+        gameplay.registerPlcArtAdapter(artProvider);
+        Sonic2LevelEventManager levelEvents =
+                (Sonic2LevelEventManager) module.getLevelEventProvider();
+        RewindRegistry registry = gameplay.getRewindRegistry();
+        registry.deregister("level-event");
+        registry.register(levelEvents);
+        return new Sonic2RuntimeFixture(manager, levelEvents);
+    }
+
     private static void setObjectRenderManager(LevelManager manager, ObjectRenderManager renderManager)
             throws ReflectiveOperationException {
         Field field = LevelManager.class.getDeclaredField("objectRenderManager");
@@ -226,5 +370,49 @@ class TestSonic2RuntimePlcRendererRefresh {
     }
 
     private record RuntimeFixture(LevelManager levelManager) {
+    }
+
+    private record Sonic2RuntimeFixture(
+            LevelManager levelManager,
+            Sonic2LevelEventManager levelEvents) {
+    }
+
+    private static final class OverflowingSonic2ObjectArtProvider extends Sonic2ObjectArtProvider {
+        private boolean overflow;
+
+        private void enableOverflow() {
+            overflow = true;
+        }
+
+        private int actualRegularPatternCount() {
+            return super.getRegularPatternCount();
+        }
+
+        @Override
+        public int getRegularPatternCount() {
+            return overflow ? com.openggf.graphics.PatternAtlasRange.OBJECTS.size() + 1
+                    : super.getRegularPatternCount();
+        }
+    }
+
+    private static final class RecordingLogHandler extends Handler {
+        private final List<String> messages = new ArrayList<>();
+
+        @Override
+        public void publish(LogRecord record) {
+            messages.add(record.getMessage());
+        }
+
+        @Override
+        public void flush() {
+        }
+
+        @Override
+        public void close() {
+        }
+
+        private List<String> messages() {
+            return List.copyOf(messages);
+        }
     }
 }
