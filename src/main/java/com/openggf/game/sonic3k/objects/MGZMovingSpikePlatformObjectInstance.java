@@ -15,6 +15,7 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 
@@ -150,6 +151,14 @@ public class MGZMovingSpikePlatformObjectInstance extends AbstractObjectInstance
         int playerY = playerEntity.getCentreY();
         if (playerY - currentY + HURT_Y_THRESHOLD < 0) {
             return;
+        }
+
+        // sub_24280 rewinds the full 16:16 y_pos by the current 8:8 y_vel
+        // before calling HurtCharacter. The platform runs after the player
+        // slot, so this restores the pre-movement position (including the
+        // subpixel fraction) before Player_TouchFloor changes rolling radii.
+        if (playerEntity instanceof AbstractPlayableSprite sprite) {
+            sprite.move((short) 0, (short) -sprite.getYSpeed());
         }
 
         int sourceX = currentX;

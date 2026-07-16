@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ moving spike hurt rewinds vertical movement
+
+Branch `feature/ai-trace-animation-verification`, after the reused-interact-slot
+milestone. `Obj_MGZMovingSpikePlatform` routes a qualifying solid contact
+through `sub_24280`, which subtracts the current 8:8 `y_vel` from the complete
+16:16 `y_pos` longword before calling `HurtCharacter`. Mirroring that rewind
+restores Sonic's pre-movement integer and subpixel Y before
+`Player_TouchFloor` changes the rolling radii. No trace hydration, route/frame
+predicate, comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:49180-49219,71029-71114`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 9838 to frame 9962 (`rings`,
+  expected `110` / actual `111`).
+- MGZ standalone animation advances from frame 9879 to frame 9880
+  (`player_animation_id`, expected `$05` / actual `$0C`).
+- The focused MGZ moving-spike fixed-point rewind test passes.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- Reused interact slots do not suppress Tails follow nudges
 
 Branch `feature/ai-trace-animation-verification`, after the MGZ top-platform

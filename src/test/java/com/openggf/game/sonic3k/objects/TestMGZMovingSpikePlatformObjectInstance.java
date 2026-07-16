@@ -1,7 +1,10 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.DamageCause;
 import com.openggf.game.OscillationManager;
+import com.openggf.game.sonic1.objects.TestPlayableSprite;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidContact;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -30,5 +33,35 @@ class TestMGZMovingSpikePlatformObjectInstance {
                         + "OscillateNumDo runs once at the LevelLoop tail");
         assertEquals(0x0600 + OscillationManager.getByte(0x10), platform.getY(),
                 "The platform still applies the current Oscillating_table+$12 byte");
+    }
+
+    @Test
+    void spikeHurtRewindsFullFixedPointYBeforeHurtCharacter() {
+        MGZMovingSpikePlatformObjectInstance platform =
+                new MGZMovingSpikePlatformObjectInstance(
+                        new ObjectSpawn(0x2108, 0x08C5, 0x56, 0, 0, false, 0));
+        RecordingPlayer player = new RecordingPlayer();
+        player.setCentreY((short) 0x08A1);
+        player.setSubpixelRaw(0, 0x8900);
+        player.setYSpeed((short) -0x031D);
+
+        platform.onSolidContact(player,
+                new SolidContact(false, true, false, false, false), 9838);
+
+        assertEquals(0x08A4, player.hurtY);
+        assertEquals(0xA600, player.hurtYSub,
+                "sub_24280 subtracts y_vel<<8 from the complete y_pos longword");
+    }
+
+    private static final class RecordingPlayer extends TestPlayableSprite {
+        private int hurtY = -1;
+        private int hurtYSub = -1;
+
+        @Override
+        public boolean applyHurtOrDeath(int sourceX, DamageCause cause, boolean hadRings) {
+            hurtY = getCentreY() & 0xFFFF;
+            hurtYSub = getYSubpixelRaw();
+            return true;
+        }
     }
 }
