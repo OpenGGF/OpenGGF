@@ -1,0 +1,469 @@
+package com.openggf.level;
+
+import com.openggf.camera.Camera;
+import com.openggf.data.Rom;
+import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.session.SessionManager;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.TilemapGpuRenderer;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.rings.RingSpawn;
+import com.openggf.level.rings.RingSpriteSheet;
+import com.openggf.level.scroll.BgTilemapUpdateMode;
+import com.openggf.level.scroll.ZoneScrollHandler;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.TestEnvironment;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class TestPersistentBgNametable {
+    private static final int BLOCK_PX = 128;
+    private static final int MAP_WIDTH_BLOCKS = 8;
+    private static final int MAP_HEIGHT_BLOCKS = 4;
+    private static final int MAP_WIDTH_PX = MAP_WIDTH_BLOCKS * BLOCK_PX;
+    private static final int MAP_HEIGHT_PX = MAP_HEIGHT_BLOCKS * BLOCK_PX;
+    private static final int RING_WIDTH_TILES = 64;
+    private static final int RING_HEIGHT_TILES = 32;
+
+    private GraphicsManager graphicsManager;
+    private FixtureLevel level;
+    private LevelGeometry geometry;
+    private LevelTilemapManager.BlockLookup blockLookup;
+    private ZoneFeatureProvider zoneFeatures;
+
+    @BeforeEach
+    void setUp() {
+        GraphicsManager.destroyForReinit();
+        TestEnvironment.resetAll();
+        graphicsManager = GraphicsManager.getInstance();
+        graphicsManager.initHeadless();
+        level = new FixtureLevel();
+        geometry = new LevelGeometry(level,
+                MAP_WIDTH_PX, MAP_HEIGHT_PX,
+                MAP_WIDTH_PX, MAP_WIDTH_PX, MAP_HEIGHT_PX,
+                BLOCK_PX, 8);
+        blockLookup = this::lookup;
+        zoneFeatures = new WrappingZoneFeatures();
+    }
+
+    @AfterEach
+    void tearDown() {
+        SessionManager.clear();
+        GraphicsManager.destroyForReinit();
+    }
+
+    @Test
+    void defaultHandlerAndMissingHandlerUseStaticWindowMode() {
+        assertEquals(BgTilemapUpdateMode.STATIC_WINDOW, new TestScrollHandler(false).getBgTilemapUpdateMode());
+        assertEquals(BgTilemapUpdateMode.STATIC_WINDOW, new ParallaxManager().getBgTilemapUpdateMode());
+    }
+
+    @Test
+    void invalidBaselineSeedsFullRingAtFloorAlignedPosition() throws Exception {
+        RecordingRenderer renderer = new RecordingRenderer();
+        injectRenderer(renderer);
+        LevelTilemapManager manager = newManager();
+
+        ensurePersistent(manager, -1, -1);
+
+        assertEquals(RING_WIDTH_TILES * RING_HEIGHT_TILES * 4,
+                manager.getPersistentBgRingCopy().length);
+        assertEquals(0, manager.getPersistentBgOriginXTiles());
+        assertEquals(0, manager.getPersistentBgOriginYTiles());
+        assertEquals(-16, manager.getPersistentBgAlignedX());
+        assertEquals(-16, manager.getPersistentBgAlignedY());
+        assertTrue(manager.isPersistentBgBaselineValid());
+        assertEquals(1, manager.persistentBgFullPublicationCount);
+        assertEquals(0, manager.persistentBgIncrementalPublicationCount);
+        assertEquals(RING_WIDTH_TILES * RING_HEIGHT_TILES * 4,
+                renderer.getPendingBackgroundUploadBytes());
+        assertDescriptorAtLogical(manager, 0, 0, -16, -16);
+        assertDescriptorAtLogical(manager, 63, 31, -16 + 63 * 8, -16 + 31 * 8);
+    }
+
+    @Test
+    void positiveAndNegativeXCrossingsRotateOriginAndRewriteOnlyEnteringColumns() {
+        LevelTilemapManager forward = newManager();
+        ensurePersistent(forward, 0, 0);
+        byte[] beforeForward = forward.getPersistentBgRingCopy();
+        ensurePersistent(forward, 16, 0);
+        assertEquals(2, forward.getPersistentBgOriginXTiles());
+        assertEquals(0, forward.getPersistentBgOriginYTiles());
+        assertOnlyPhysicalColumnsChanged(beforeForward, forward.getPersistentBgRingCopy(), 0, 1);
+        assertDescriptorAtLogical(forward, 62, 0, 16 + 62 * 8, 0);
+        assertDescriptorAtLogical(forward, 63, 31, 16 + 63 * 8, 31 * 8);
+
+        LevelTilemapManager backward = newManager();
+        ensurePersistent(backward, 16, 0);
+        byte[] beforeBackward = backward.getPersistentBgRingCopy();
+        ensurePersistent(backward, 0, 0);
+        assertEquals(62, backward.getPersistentBgOriginXTiles());
+        assertOnlyPhysicalColumnsChanged(beforeBackward, backward.getPersistentBgRingCopy(), 62, 63);
+        assertDescriptorAtLogical(backward, 0, 0, 0, 0);
+        assertDescriptorAtLogical(backward, 1, 31, 8, 31 * 8);
+    }
+
+    @Test
+    void positiveAndNegativeYCrossingsRotateOriginAndRewriteOnlyEnteringRows() {
+        LevelTilemapManager forward = newManager();
+        ensurePersistent(forward, 0, 0);
+        byte[] beforeForward = forward.getPersistentBgRingCopy();
+        ensurePersistent(forward, 0, 16);
+        assertEquals(0, forward.getPersistentBgOriginXTiles());
+        assertEquals(2, forward.getPersistentBgOriginYTiles());
+        assertOnlyPhysicalRowsChanged(beforeForward, forward.getPersistentBgRingCopy(), 0, 1);
+        assertDescriptorAtLogical(forward, 0, 30, 0, 16 + 30 * 8);
+        assertDescriptorAtLogical(forward, 63, 31, 63 * 8, 16 + 31 * 8);
+
+        LevelTilemapManager backward = newManager();
+        ensurePersistent(backward, 0, 16);
+        byte[] beforeBackward = backward.getPersistentBgRingCopy();
+        ensurePersistent(backward, 0, 0);
+        assertEquals(30, backward.getPersistentBgOriginYTiles());
+        assertOnlyPhysicalRowsChanged(beforeBackward, backward.getPersistentBgRingCopy(), 30, 31);
+        assertDescriptorAtLogical(backward, 0, 0, 0, 0);
+        assertDescriptorAtLogical(backward, 63, 1, 63 * 8, 8);
+    }
+
+    @Test
+    void simultaneousCrossingUpdatesBothStripsAndCorner() {
+        LevelTilemapManager manager = newManager();
+        ensurePersistent(manager, 0, 0);
+        byte[] before = manager.getPersistentBgRingCopy();
+
+        ensurePersistent(manager, 16, 16);
+
+        assertEquals(2, manager.getPersistentBgOriginXTiles());
+        assertEquals(2, manager.getPersistentBgOriginYTiles());
+        assertOnlyPhysicalCrossChanged(before, manager.getPersistentBgRingCopy(), 0, 1, 0, 1);
+        assertDescriptorAtLogical(manager, 62, 30, 16 + 62 * 8, 16 + 30 * 8);
+        assertDescriptorAtLogical(manager, 63, 31, 16 + 63 * 8, 16 + 31 * 8);
+    }
+
+    @Test
+    void originsWrapOnBothAxes() {
+        LevelTilemapManager manager = newManager();
+        ensurePersistent(manager, 0, 0);
+        for (int step = 1; step <= 32; step++) {
+            ensurePersistent(manager, step * 16, step * 16);
+        }
+        assertEquals(0, manager.getPersistentBgOriginXTiles());
+        assertEquals(0, manager.getPersistentBgOriginYTiles());
+        assertEquals(512, manager.getPersistentBgAlignedX());
+        assertEquals(512, manager.getPersistentBgAlignedY());
+        assertDescriptorAtLogical(manager, 63, 31, 512 + 63 * 8, 512 + 31 * 8);
+    }
+
+    @Test
+    void largeDeltaAndExplicitInvalidationReseedDeterministically() {
+        LevelTilemapManager manager = newManager();
+        ensurePersistent(manager, 0, 0);
+        ensurePersistent(manager, 32, 0);
+        assertEquals(2, manager.persistentBgFullPublicationCount);
+        assertEquals(0, manager.getPersistentBgOriginXTiles());
+        assertEquals(0, manager.getPersistentBgOriginYTiles());
+
+        ensurePersistent(manager, 32, 32);
+        assertEquals(3, manager.persistentBgFullPublicationCount);
+        assertEquals(0, manager.getPersistentBgOriginXTiles());
+        assertEquals(0, manager.getPersistentBgOriginYTiles());
+
+        byte[] firstSeed = manager.getPersistentBgRingCopy();
+        manager.invalidateAllTilemaps();
+        ensurePersistent(manager, 32, 32);
+        assertEquals(4, manager.persistentBgFullPublicationCount);
+        assertArrayEquals(firstSeed, manager.getPersistentBgRingCopy());
+    }
+
+    @Test
+    void hscrollOnlyFramesDoNotChangePersistentResidencyOrPublishUploads() {
+        TestScrollHandler handler = new TestScrollHandler(true);
+        LevelTilemapManager manager = newManager();
+        handler.update(new int[224], 0, 0, 1, 0);
+        ensurePersistent(manager, handler.getBgCameraX(), handler.getVscrollFactorBG());
+        byte[] baseline = manager.getPersistentBgRingCopy();
+        int fulls = manager.persistentBgFullPublicationCount;
+        int incrementals = manager.persistentBgIncrementalPublicationCount;
+
+        int[] changedCloudHscroll = new int[224];
+        handler.update(changedCloudHscroll, 0, 0, 37, 0);
+        assertFalse(Arrays.stream(changedCloudHscroll).allMatch(value -> value == 0));
+        ensurePersistent(manager, handler.getBgCameraX(), handler.getVscrollFactorBG());
+
+        assertArrayEquals(baseline, manager.getPersistentBgRingCopy());
+        assertEquals(0, manager.getPersistentBgOriginXTiles());
+        assertEquals(0, manager.getPersistentBgOriginYTiles());
+        assertEquals(fulls, manager.persistentBgFullPublicationCount);
+        assertEquals(incrementals, manager.persistentBgIncrementalPublicationCount);
+    }
+
+    @Test
+    void staticModeKeepsExistingWindowBuilderAndDoesNotCreateRing() {
+        LevelTilemapManager manager = newManager();
+        ensurePersistent(manager, 0, 0);
+        assertTrue(manager.isPersistentBgBaselineValid());
+        manager.setCurrentBgPeriodWidth(512);
+        manager.setBgTilemapBaseX(0);
+        manager.ensureBackgroundTilemapData(blockLookup, zoneFeatures, 0, null, false);
+        byte[] baseline = manager.getBackgroundTilemapData().clone();
+
+        manager.requestBgWindowBaseX(16);
+        manager.ensureBackgroundTilemapData(blockLookup, zoneFeatures, 0, null, false);
+
+        assertNull(manager.getPersistentBgRingCopy());
+        assertFalse(manager.isPersistentBgBaselineValid());
+        assertEquals(64, manager.getBackgroundTilemapWidthTiles());
+        assertEquals(64, manager.getBackgroundTilemapHeightTiles());
+        assertEquals(1, manager.bgIncrementalShiftCount);
+        assertFalse(Arrays.equals(baseline, manager.getBackgroundTilemapData()));
+    }
+
+    @Test
+    void physicalCpuRingMatchesGpuOriginsAndIncrementalTextureContents() throws Exception {
+        RecordingRenderer renderer = new RecordingRenderer();
+        injectRenderer(renderer);
+        LevelTilemapManager manager = newManager();
+        ensurePersistent(manager, 0, 0);
+        byte[] physicalTexture = new byte[RING_WIDTH_TILES * RING_HEIGHT_TILES * 4];
+        renderer.applyPendingBackgroundUploadForTest(physicalTexture);
+
+        ensurePersistent(manager, 16, 16);
+
+        assertEquals(manager.getPersistentBgOriginXTiles(), renderer.getBackgroundRingBaseXTiles());
+        assertEquals(manager.getPersistentBgOriginYTiles(), renderer.getBackgroundRingBaseYTiles());
+        assertEquals((2 * RING_HEIGHT_TILES + 2 * RING_WIDTH_TILES) * 4,
+                renderer.getPendingBackgroundUploadBytes());
+        renderer.applyPendingBackgroundUploadForTest(physicalTexture);
+        assertArrayEquals(manager.getPersistentBgRingCopy(), physicalTexture);
+    }
+
+    @Test
+    void nonzeroPersistentAnchorIsSubtractedFromRenderSamplingCoordinates() {
+        LevelTilemapManager manager = newManager();
+        ensurePersistent(manager, 16, 16);
+
+        LevelRenderer.BackgroundTilemapSampling sampling =
+                LevelRenderer.backgroundTilemapSampling(manager, 16);
+
+        assertEquals(16, sampling.compositorWorldAnchorX());
+        assertEquals(0, sampling.tilePassWorldOffsetY());
+        int logicalX = Math.floorDiv(16 - sampling.compositorWorldAnchorX(), 8);
+        int logicalY = Math.floorDiv(sampling.tilePassWorldOffsetY(), 8);
+        assertDescriptorAtLogical(manager, logicalX, logicalY, 16, 16);
+    }
+
+    private LevelTilemapManager newManager() {
+        return new LevelTilemapManager(geometry, graphicsManager, null);
+    }
+
+    private void ensurePersistent(LevelTilemapManager manager, int bgX, int bgY) {
+        manager.ensureBackgroundTilemapData(blockLookup, zoneFeatures, 0, null,
+                BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32, bgX, bgY, false);
+    }
+
+    private Block lookup(byte layer, int x, int y) {
+        int wrappedX = Math.floorMod(x, MAP_WIDTH_PX);
+        int wrappedY = Math.floorMod(y, MAP_HEIGHT_PX);
+        int blockIndex = level.getMap().getValue(layer,
+                wrappedX / BLOCK_PX, wrappedY / BLOCK_PX) & 0xFF;
+        return level.getBlock(blockIndex);
+    }
+
+    private void assertDescriptorAtLogical(LevelTilemapManager manager, int logicalX, int logicalY,
+                                           int worldX, int worldY) {
+        byte[] ring = manager.getPersistentBgRingCopy();
+        assertNotNull(ring);
+        int physicalX = Math.floorMod(manager.getPersistentBgOriginXTiles() + logicalX, RING_WIDTH_TILES);
+        int physicalY = Math.floorMod(manager.getPersistentBgOriginYTiles() + logicalY, RING_HEIGHT_TILES);
+        int offset = (physicalY * RING_WIDTH_TILES + physicalX) * 4;
+        PatternDesc expected = expectedDescriptor(worldX, worldY);
+        assertEquals(expected.getPatternIndex() & 0xFF, ring[offset] & 0xFF);
+        int expectedG = ((expected.getPatternIndex() >>> 8) & 7)
+                | (expected.getPaletteIndex() << 3)
+                | (expected.getHFlip() ? 0x20 : 0)
+                | (expected.getVFlip() ? 0x40 : 0)
+                | (expected.getPriority() ? 0x80 : 0);
+        assertEquals(expectedG, ring[offset + 1] & 0xFF);
+        assertEquals(255, ring[offset + 3] & 0xFF);
+    }
+
+    private PatternDesc expectedDescriptor(int worldX, int worldY) {
+        Block block = lookup((byte) 1, worldX, worldY);
+        int chunkX = Math.floorMod(worldX, BLOCK_PX) / 16;
+        int chunkY = Math.floorMod(worldY, BLOCK_PX) / 16;
+        Chunk chunk = level.getChunk(block.getChunkDesc(chunkX, chunkY).getChunkIndex());
+        int patternX = Math.floorMod(worldX, 16) / 8;
+        int patternY = Math.floorMod(worldY, 16) / 8;
+        return chunk.getPatternDesc(patternX, patternY);
+    }
+
+    private static void assertOnlyPhysicalColumnsChanged(byte[] before, byte[] after, int... columns) {
+        boolean[] allowed = new boolean[RING_WIDTH_TILES];
+        for (int column : columns) allowed[column] = true;
+        int changed = 0;
+        for (int y = 0; y < RING_HEIGHT_TILES; y++) {
+            for (int x = 0; x < RING_WIDTH_TILES; x++) {
+                boolean differs = descriptorDiffers(before, after, x, y);
+                if (differs) changed++;
+                assertEquals(allowed[x], differs, "unexpected changed slot (" + x + "," + y + ")");
+            }
+        }
+        assertTrue(changed > 0);
+    }
+
+    private static void assertOnlyPhysicalRowsChanged(byte[] before, byte[] after, int... rows) {
+        boolean[] allowed = new boolean[RING_HEIGHT_TILES];
+        for (int row : rows) allowed[row] = true;
+        int changed = 0;
+        for (int y = 0; y < RING_HEIGHT_TILES; y++) {
+            for (int x = 0; x < RING_WIDTH_TILES; x++) {
+                boolean differs = descriptorDiffers(before, after, x, y);
+                if (differs) changed++;
+                assertEquals(allowed[y], differs, "unexpected changed slot (" + x + "," + y + ")");
+            }
+        }
+        assertTrue(changed > 0);
+    }
+
+    private static void assertOnlyPhysicalCrossChanged(byte[] before, byte[] after,
+                                                       int columnA, int columnB, int rowA, int rowB) {
+        int changed = 0;
+        for (int y = 0; y < RING_HEIGHT_TILES; y++) {
+            for (int x = 0; x < RING_WIDTH_TILES; x++) {
+                boolean differs = descriptorDiffers(before, after, x, y);
+                if (differs) changed++;
+                assertEquals(x == columnA || x == columnB || y == rowA || y == rowB, differs,
+                        "unexpected changed slot (" + x + "," + y + ")");
+            }
+        }
+        assertTrue(changed > 0);
+    }
+
+    private static boolean descriptorDiffers(byte[] before, byte[] after, int x, int y) {
+        int offset = (y * RING_WIDTH_TILES + x) * 4;
+        for (int i = 0; i < 4; i++) {
+            if (before[offset + i] != after[offset + i]) return true;
+        }
+        return false;
+    }
+
+    private void injectRenderer(TilemapGpuRenderer renderer) throws Exception {
+        Field field = GraphicsManager.class.getDeclaredField("tilemapGpuRenderer");
+        field.setAccessible(true);
+        field.set(graphicsManager, renderer);
+    }
+
+    private static final class RecordingRenderer extends TilemapGpuRenderer {
+        @Override public int getPendingBackgroundUploadBytes() {
+            return super.getPendingBackgroundUploadBytes();
+        }
+        @Override public void applyPendingBackgroundUploadForTest(byte[] physicalTexture) {
+            super.applyPendingBackgroundUploadForTest(physicalTexture);
+        }
+    }
+
+    private static final class TestScrollHandler implements ZoneScrollHandler {
+        private final boolean persistent;
+        private int frame;
+
+        private TestScrollHandler(boolean persistent) {
+            this.persistent = persistent;
+        }
+
+        @Override public void update(int[] horizScrollBuf, int cameraX, int cameraY,
+                                     int frameCounter, int actId) {
+            frame = frameCounter;
+            Arrays.fill(horizScrollBuf, frameCounter);
+        }
+        @Override public short getVscrollFactorBG() { return 0; }
+        @Override public int getMinScrollOffset() { return frame; }
+        @Override public int getMaxScrollOffset() { return frame; }
+        @Override public int getBgCameraX() { return 0; }
+        @Override public BgTilemapUpdateMode getBgTilemapUpdateMode() {
+            return persistent ? BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32
+                    : ZoneScrollHandler.super.getBgTilemapUpdateMode();
+        }
+    }
+
+    private static final class FixtureLevel extends AbstractLevel {
+        FixtureLevel() {
+            super(0);
+            palettes = new Palette[] { new Palette(), new Palette(), new Palette(), new Palette() };
+            patternCount = 2048;
+            patterns = new Pattern[0];
+            chunkCount = 1024;
+            chunks = new Chunk[chunkCount];
+            for (int index = 0; index < chunkCount; index++) {
+                Chunk chunk = new Chunk();
+                for (int y = 0; y < 2; y++) {
+                    for (int x = 0; x < 2; x++) {
+                        int pattern = 2 + Math.floorMod(index * 4 + y * 2 + x, 1800);
+                        int descriptor = pattern | ((index & 3) << 13)
+                                | ((index & 4) != 0 ? 0x800 : 0)
+                                | ((index & 8) != 0 ? 0x1000 : 0)
+                                | ((index & 16) != 0 ? 0x8000 : 0);
+                        chunk.setPatternDesc(x, y, new PatternDesc(descriptor));
+                    }
+                }
+                chunks[index] = chunk;
+            }
+            blockCount = MAP_WIDTH_BLOCKS * MAP_HEIGHT_BLOCKS;
+            blocks = new Block[blockCount];
+            for (int blockIndex = 0; blockIndex < blockCount; blockIndex++) {
+                Block block = new Block(8);
+                for (int y = 0; y < 8; y++) {
+                    for (int x = 0; x < 8; x++) {
+                        int chunkIndex = Math.floorMod(blockIndex * 61 + y * 8 + x, chunkCount);
+                        block.setChunkDesc(x, y, new ChunkDesc(chunkIndex));
+                    }
+                }
+                blocks[blockIndex] = block;
+            }
+            solidTileCount = 0;
+            solidTiles = new SolidTile[0];
+            map = new Map(2, MAP_WIDTH_BLOCKS, MAP_HEIGHT_BLOCKS);
+            for (int y = 0; y < MAP_HEIGHT_BLOCKS; y++) {
+                for (int x = 0; x < MAP_WIDTH_BLOCKS; x++) {
+                    map.setValue(1, x, y, (byte) (y * MAP_WIDTH_BLOCKS + x));
+                }
+            }
+            objects = List.of();
+            rings = List.of();
+            minX = 0;
+            maxX = MAP_WIDTH_PX;
+            minY = 0;
+            maxY = MAP_HEIGHT_PX;
+        }
+
+        @Override public SolidTile getSolidTile(int index) { return null; }
+        @Override public List<ObjectSpawn> getObjects() { return List.of(); }
+        @Override public List<RingSpawn> getRings() { return List.of(); }
+        @Override public RingSpriteSheet getRingSpriteSheet() { return null; }
+    }
+
+    private static final class WrappingZoneFeatures implements ZoneFeatureProvider {
+        @Override public boolean bgWrapsHorizontally() { return true; }
+        @Override public void initZoneFeatures(Rom rom, int zoneIndex, int actIndex, int cameraX) { }
+        @Override public void update(AbstractPlayableSprite player, int cameraX, int zoneIndex) { }
+        @Override public void reset() { }
+        @Override public boolean hasCollisionFeatures(int zoneIndex) { return false; }
+        @Override public boolean hasWater(int zoneIndex) { return false; }
+        @Override public int getWaterLevel(int zoneIndex, int actIndex) { return 0; }
+        @Override public void render(Camera camera, int frameCounter) { }
+        @Override public int ensurePatternsCached(GraphicsManager graphicsManager, int baseIndex) {
+            return baseIndex;
+        }
+    }
+}

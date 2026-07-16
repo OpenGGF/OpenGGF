@@ -1180,10 +1180,12 @@ public final class LevelRenderer {
         lm.ensureBackgroundTilemapData();
 
         int bgPeriodWidthPixels = lm.tilemapManager.getBackgroundTilemapWidthTiles() * Pattern.PATTERN_WIDTH;
-        // Pass bgTilemapBaseX to the shader so it offsets worldX before wrapping.
+        // Pass the tilemap's source anchor to the shader so it offsets worldX before wrapping.
         // Shader: fboWorldOffsetX = -ScrollMidpoint - ExtraBuffer
-        // We want fboWorldOffsetX = bgTilemapBaseX, so ScrollMidpoint = -bgTilemapBaseX.
-        int shaderScrollMidpoint = -lm.tilemapManager.getBgTilemapBaseX();
+        // We want fboWorldOffsetX = sourceX, so ScrollMidpoint = -sourceX.
+        BackgroundTilemapSampling sourceSampling = backgroundTilemapSampling(
+                lm.tilemapManager, 0);
+        int shaderScrollMidpoint = -sourceSampling.compositorWorldAnchorX();
         int shaderExtraBuffer = 0;
         float bgTilemapWorldOffsetX = 0.0f;
         boolean perLineScrollActive = false;
@@ -1275,6 +1277,8 @@ public final class LevelRenderer {
         // The parallax shader shifts the FBO sampling by (actualBgScrollY - alignedBgY)
         // so we must shift the waterline by the same amount to keep it steady on screen
         int vOffset = actualBgScrollY - alignedBgY;
+        BackgroundTilemapSampling sampling = backgroundTilemapSampling(
+                lm.tilemapManager, alignedBgY);
         float fboWaterlineY = (float) ((waterLevelWorldY - camera.getY()) + vOffset);
 
         // Compute screen-space waterline for BG parallax shimmer
@@ -1285,7 +1289,7 @@ public final class LevelRenderer {
         pendingBgTilePassRenderHeight = renderHeight;
         pendingBgTilePassHasWater = hasWater && !suppressUnderwaterPalette;
         pendingBgTilePassFboWaterlineY = fboWaterlineY;
-        pendingBgTilePassAlignedBgY = alignedBgY;
+        pendingBgTilePassAlignedBgY = sampling.tilePassWorldOffsetY();
         pendingBgTilePassBgTilemapWorldOffsetX = bgTilemapWorldOffsetX;
         pendingBgTilePassPerLineScroll = perLineScrollActive;
         // Per-column BG VScroll is screen-column VSRAM state, so the parallax
@@ -1327,6 +1331,16 @@ public final class LevelRenderer {
             pendingBgPerLineScroll = perLineScrollActive;
             lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.BG_RENDER));
         }
+    }
+
+    record BackgroundTilemapSampling(int compositorWorldAnchorX, int tilePassWorldOffsetY) {
+    }
+
+    static BackgroundTilemapSampling backgroundTilemapSampling(
+            LevelTilemapManager tilemapManager, int alignedBgY) {
+        return new BackgroundTilemapSampling(
+                tilemapManager.getBackgroundTilemapSourceX(),
+                alignedBgY - tilemapManager.getBackgroundTilemapSourceY());
     }
 
     /**

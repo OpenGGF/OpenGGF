@@ -55,6 +55,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpriteSheet;
+import com.openggf.level.scroll.BgTilemapUpdateMode;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.physics.CollisionSystem;
@@ -1405,9 +1406,21 @@ public class LevelManager {
     void ensureBackgroundTilemapData() {
         if (tilemapManager != null) {
             int bgCameraX = parallaxManager != null ? parallaxManager.getBgCameraX() : Integer.MIN_VALUE;
+            int bgCameraY = parallaxManager != null ? parallaxManager.getVscrollFactorBG() : 0;
+            BgTilemapUpdateMode updateMode = parallaxManager != null
+                    ? parallaxManager.getBgTilemapUpdateMode()
+                    : BgTilemapUpdateMode.STATIC_WINDOW;
             applyBackgroundTilemapWindowSelection(bgCameraX);
-            tilemapManager.ensureBackgroundTilemapData(this::getBlockAtPosition,
-                    zoneFeatureProvider, currentZone, parallaxManager, verticalWrapEnabled);
+            if (updateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32) {
+                tilemapManager.ensureBackgroundTilemapData(this::getBlockAtPosition,
+                        zoneFeatureProvider, currentZone, parallaxManager,
+                        updateMode, bgCameraX, bgCameraY, verticalWrapEnabled);
+            } else {
+                // Preserve the existing stateless virtual-dispatch seam used by
+                // ad-hoc tilemap writers and focused LevelManager tests.
+                tilemapManager.ensureBackgroundTilemapData(this::getBlockAtPosition,
+                        zoneFeatureProvider, currentZone, parallaxManager, verticalWrapEnabled);
+            }
         }
     }
 
@@ -1422,6 +1435,9 @@ public class LevelManager {
         if (tilemapManager == null) {
             return false;
         }
+        BgTilemapUpdateMode updateMode = parallaxManager != null
+                ? parallaxManager.getBgTilemapUpdateMode()
+                : BgTilemapUpdateMode.STATIC_WINDOW;
         boolean fullWidthPerLineTilemap = zoneFeatureProvider != null
                 && zoneFeatureProvider.useFullWidthBackgroundTilemapWindow(
                 currentZone, currentAct, bgCameraX, cachedBgContiguousWidthPx);
@@ -1434,14 +1450,16 @@ public class LevelManager {
                 tilemapManager.setBackgroundTilemapDirty(true);
             }
             newBgPeriodWidth = cachedBgContiguousWidthPx;
-        } else if (bgCameraX != Integer.MIN_VALUE
+        } else if (updateMode == BgTilemapUpdateMode.STATIC_WINDOW
+                && bgCameraX != Integer.MIN_VALUE
                 && zoneFeatureProvider != null && zoneFeatureProvider.bgWrapsHorizontally()) {
             int newBase = Math.floorDiv(bgCameraX, 16) * 16;
             if (newBase != tilemapManager.getBgTilemapBaseX()) {
                 // Window-only change: eligible for the incremental one-column shift.
                 tilemapManager.requestBgWindowBaseX(newBase);
             }
-        } else if (tilemapManager.getBgTilemapBaseX() != 0) {
+        } else if (updateMode == BgTilemapUpdateMode.STATIC_WINDOW
+                && tilemapManager.getBgTilemapBaseX() != 0) {
             tilemapManager.setBgTilemapBaseX(0);
             tilemapManager.setBackgroundTilemapDirty(true);
         }
