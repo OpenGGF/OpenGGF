@@ -230,6 +230,20 @@ public final class TailsCarryController {
         release(0x3C);
     }
 
+    /**
+     * Releases the main player when damage enters the carrier's hurt routine.
+     * <p>
+     * S3K clears Player_1 {@code object_control} and then clears the full
+     * {@code Flying_carrying_Sonic_flag} word, including its cooldown byte
+     * (sonic3k.asm:29187-29192). This must happen with the hurt transition,
+     * before the main player's next touch-response pass.
+     */
+    public void releaseAfterCarrierHurt() {
+        if (carrying) {
+            release(0);
+        }
+    }
+
     void releaseWithCooldown(int releaseCooldown) {
         release(releaseCooldown);
     }

@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Carrier hurt clears the native carry word immediately
+
+Branch `feature/ai-trace-animation-verification`, after merging current
+`develop` and advancing the folded drill-child touch. Native Tails' hurt path
+clears Player 1's `object_control` byte and the complete
+`Flying_carrying_Sonic_flag` word during the damage transition. The engine
+waited for Tails' later CPU update and installed a `$3C` release cooldown,
+leaving Sonic touch-suppressed when the boss drill reached him. Successful
+carrier damage now releases Sonic immediately and clears the cooldown byte as
+the native `clr.w` does. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:29187-29192`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics remains at frame 37412 but advances from a missed
+  hurt response to the final position phase (`y`, expected `$06E7` / actual
+  `$06E6`; 153 errors, down from 154).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`) while its downstream
+  tail falls from 112 to 110 errors.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused Tails carry/CPU-carry suites pass with immediate unlock and
+  zero-cooldown coverage.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
 ### 2026-07-16 -- MGZ folded drill children publish from their later SST phase
 
 Branch `feature/ai-trace-animation-verification`, after the directional carry

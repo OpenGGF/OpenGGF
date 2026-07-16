@@ -653,10 +653,16 @@ class TestSidekickCpuControllerCarry {
                 "Precondition: MGZ carry should own Sonic before Tails takes damage");
 
         tails.applyHurt(sonic.getCentreX());
-        controller.update(3);
 
         assertFalse(sonic.isObjectControlled(),
-                "ROM Tails hurt routine clears Player_1 object_control and Flying_carrying_Sonic_flag");
+                "ROM Tails hurt routine clears Player_1 object_control on the damage transition");
+        assertFalse(tails.getTailsCarryController().isCarryingMainCharacter(),
+                "ROM Tails hurt routine clears Flying_carrying_Sonic_flag immediately");
+        assertEquals(0, tails.getTailsCarryController().capture().cooldown(),
+                "clr.w clears the adjacent native carry cooldown byte too");
+
+        controller.update(3);
+
         assertFalse(controller.isFlyingCarrying(),
                 "Tails must stop actively carrying Sonic as soon as the carrier is hurt");
         assertFalse(controller.usesFlyingCarryMovement(),
