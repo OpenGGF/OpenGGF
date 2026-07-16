@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 
@@ -24,7 +25,7 @@ import java.util.function.IntSupplier;
  * visually deforming floor columns while they drop away.
  */
 public final class Mgz2LevelCollapseSolidInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RomObjectCodePointerProvider, RewindRecreatable {
 
     private static final int OBJECT_ID = 0xFF;
     private static final int HALF_WIDTH = 0x1B;
@@ -118,6 +119,12 @@ public final class Mgz2LevelCollapseSolidInstance extends AbstractObjectInstance
         // dynamic spawn therefore cannot be the latch key because it changes
         // along with y_pos; retain the bit on the live carrier instance.
         return true;
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_MGZ2LevelCollapseSolid runs at $0005180A in the locked-on ROM.
+        return 0x0005;
     }
 
     @Override

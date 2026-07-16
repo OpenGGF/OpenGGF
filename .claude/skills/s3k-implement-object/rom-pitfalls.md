@@ -1277,6 +1277,36 @@ executes the object once, and proves the table is unchanged.
 
 ---
 
++## P36 -- S3K rideable objects must expose their operation-pointer high word
+
+**S3K-specific.**
+
+**Symptom.** CPU Tails lands on the correct live solid with matching position,
+standing bit, and SST slot, but `Tails_CPU_interact` retains the preceding
+object's value. The next off-screen `sub_13EFC` comparison can then despawn
+Tails incorrectly, and trace replay first reports an interact-word mismatch.
+
+**Root cause.** S3K stores the high word of the stood-on object's operation
+pointer, not its object ID, in `Tails_CPU_interact`. An engine solid that does
+not implement `RomObjectCodePointerProvider` cannot refresh that latch even
+when the ride instance is otherwise correct.
+
+**What to check.** Every S3K object that can set Player 2's standing bit must
+expose the high word of its live locked-on-ROM operation pointer through
+`RomObjectCodePointerProvider`. Use the pointer for the exact routine installed
+in word 0 of that SST state; do not substitute the object ID or zone name. Add a
+focused assertion for the returned word.
+
+**ROM citation.** `TailsCPU_UpdateObjInteract` copies `(a3)` into
+`Tails_CPU_interact`, and `sub_13EFC` compares that word against the current
+stood-on slot (`docs/skdisasm/sonic3k.asm:26816-26843`).
+`Obj_MGZ2LevelCollapseSolid` runs at `$0005180A`
+(`docs/skdisasm/sonic3k.asm:106955-106970`), so its high word is `$0005`.
+
+**Originating commit.** `<pending: MGZ collapse-carrier interact milestone>`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

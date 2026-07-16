@@ -200,6 +200,8 @@ class TestSonic3kMgz2CollapseEvents {
                 "A jumping rider must take SolidObjectFull2_1P's stale-standing-bit return, not its upward lift");
         assertTrue(solid.usesInstanceSolidStateLatchKey(),
                 "The native standing bit must survive this carrier's per-frame dynamic-spawn Y rewrite");
+        assertEquals(0x0005, solid.romObjectCodePointerHighWord(),
+                "Tails_CPU_interact stores Obj_MGZ2LevelCollapseSolid's $0005180A pointer high word");
 
         delete[0] = true;
 

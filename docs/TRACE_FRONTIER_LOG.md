@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ collapse carriers publish Tails' interact pointer word
+
+Branch `feature/ai-trace-animation-verification`, after the rescue-logical-
+input milestone. S3K's `TailsCPU_UpdateObjInteract` latches the high word of
+the stood-on SST's operation pointer, not its object ID. The live collapse
+carrier contact was correct, but the carrier did not implement the shared ROM
+pointer contract, so Tails retained `$0002` from an older solid instead of
+`Obj_MGZ2LevelCollapseSolid`'s `$0005180A` high word `$0005`. The carrier now
+exposes that native word. The reusable S3K object pitfall catalogue now records
+this requirement as P36 in both skill trees. No trace hydration, route/frame
+predicate, comparator tolerance, or physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:26816-26843,106955-106970`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35631 to frame 35652
+  (`y_speed`, expected `$0000` / actual `$00A8`; 1,464 errors).
+- MGZ complete-run animation remains at frame 35741 (`tails_animation_id`,
+  expected `Duck` / actual `Skid`; 315 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The MGZ collapse-event suite plus rewind coverage, static-state rewind
+  coverage, and trace-invariant guards pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ rescue-wait routine clears the logical input word
 
 Branch `feature/ai-trace-animation-verification`, after the rescue-wait phase
