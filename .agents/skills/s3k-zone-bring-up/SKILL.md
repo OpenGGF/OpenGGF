@@ -242,6 +242,12 @@ Proceed with implementation? [Y/n]
 
 If `--skip-review` was passed, skip this step and proceed directly to Step 3.
 
+### Step 2.5: Green the Spec and Implementation Plan Before Dispatch
+
+The human review flag does not waive independent review. Before any implementation worker starts, delegate a spec-compliance review of the analysis and inventory. Require a binary PASS/RED result for every locked-on handler, route event, placement count, dynamic spawn, object/badnik/boss family, visual and PLC owner, checkpoint, transition, audio cue, and lifecycle concern. Fix every RED finding and repeat with an independent reviewer until the specification is GREEN.
+
+Then build the route-wave implementation plan and delegate a separate plan review. The reviewer must check dependency order, disjoint ownership, test-first RED commands, verification commands, integration points, trace-last ordering, visual evidence, compatibility matrices, documentation, and final acceptance gates. Fix every RED finding and repeat until the plan is GREEN. Only then dispatch implementation agents. `--skip-review` skips only the user-facing analysis pause; it never skips these two green loops.
+
 ### Step 3: Determine Feature Scope
 
 Read the analysis spec and decide which features apply to this zone. Not every zone needs every feature -- some have `rts` stubs for AnPal (no palette cycling), some share a parallax handler with another zone, some have no animated tiles.
@@ -291,7 +297,7 @@ Order work by playable dependency:
 3. Act 2 traversal blockers/hazards and boss prerequisites
 4. End-boss event, boss, defeat, exit, capsule, and next-zone transition
 5. Remaining reachable objects/badniks and visual/audio polish
-6. Late complete-run trace and stable-retro validation
+6. Stable-retro visual checkpoints, then late BizHawk complete-run trace polish
 7. Multi-sidekick, widescreen, and cross-game donation audit
 8. Native-parity regression with compatibility features disabled
 
@@ -386,13 +392,13 @@ Dispatch an agent with the `s3k-zone-validate` skill for the target zone:
 Use /s3k-zone-validate {ZONE}
 ```
 
-The validation agent captures reference screenshots from stable-retro and compares them against the engine's output for feature presence (parallax layers, palette cycling, animated tiles, camera locks). Review the validation report and flag any FAIL results for manual investigation.
+The validation agent captures reference screenshots from stable-retro and compares them against the engine's output for feature presence (parallax layers, palette cycling, animated tiles, camera locks). Create an explicit checkpoint manifest spanning both act starts, every visual/event mode, representative traversal objects and hazards, PLC/VRAM handoffs, bosses, act transition, exit, and next-zone handoff. Each required row must retain reference and engine evidence plus capture provenance and sidecar metadata; missing evidence is FAIL, never SKIP or an inferred PASS. Review the validation report and investigate every FAIL.
 
 Focused/headless tests remain the normal development loop. Do not start token-intensive complete-run trace capture/replay while major route events, reachable objects, bosses, or visual systems are placeholders.
 
 ### Step 8: Run Late Complete-Run Trace Polish
 
-Only after both acts and all reachable content are broadly implemented, record/install the target complete-run BK2 segment and add fixture/replay tests. Replay controller input only: trace state is comparison context and must never hydrate engine state. Move the first divergence through disassembly-backed fixes. Never add tolerance masking, zone/route/frame carve-outs, or known-trace exceptions. Update `docs/TRACE_FRONTIER_LOG.md` whenever the frontier moves or a prior green regresses.
+Only after both acts and all reachable content are broadly implemented, use BizHawk to record or validate the target complete-run BK2, retain its emulator/movie/ROM provenance and hashes, install the exact zone segment, and add fixture/replay tests. Derive segment boundaries and row counts from the recorder contract; never invent or duplicate a row to satisfy a planned count. Replay controller input only: trace state is comparison context and must never hydrate engine state. Move the first divergence through disassembly-backed fixes. Never add tolerance masking, zone/route/frame carve-outs, or known-trace exceptions. Update `docs/TRACE_FRONTIER_LOG.md` whenever the frontier moves or a prior green regresses.
 
 ### Step 9: Audit Compatibility Modes
 
@@ -402,11 +408,19 @@ After native parity and late trace/visual polish, run mandatory final audits:
 - **Widescreen:** every supported viewport width; verify world-coordinate gates, camera locks/releases, spawning/culling, hazards, boss arenas, screen-edge transitions, and prevention of premature activation or unsafe falls.
 - **Cross-game donation:** donor off plus every external donor supported by the host; complete mandatory routes and identify mechanics requiring unavailable abilities. Add only explicit semantic capability/profile workarounds with the blocked route and rationale documented. Preserve native behavior when donation is off.
 
+Any required Sonic 1 workaround must carry a production comment beginning `S1 donation compatibility:` while its branch remains gated by the semantic capability/profile, never by a raw game name.
+
 Rerun the strict locked-on native suite after compatibility work with donation and extension modes disabled.
 
-The compatibility report is invalid unless it explicitly records multi-sidekick shared-state results and, for every widescreen width, world-coordinate event-threshold results, boss-arena containment, premature event/object activation, unsafe falls/deaths, and camera-lock/release behavior. Do not collapse these into a generic “route passed” result.
+The compatibility report is invalid unless it explicitly records multi-sidekick shared-state results; for every widescreen width, world-coordinate event-threshold results, boss-arena containment, premature event/object activation, unsafe falls/deaths, and camera-lock/release behavior; and every S1 donation workaround's `S1 donation compatibility:` production-comment location plus semantic capability gate. Do not collapse these into a generic “route passed” result.
 
 Compatibility claims must be executable at the owning feature boundary. Boss coverage, for example, should prove that extra sidekicks cannot acquire native-only activation authority, camera locks remain world-coordinate constants at wide viewports, donation-neutral traversal does not assume Spindash, and an object-manager/session reset recreates a pristine family with no static control-bit or graph leakage. Rerun the exact native route after these extension cases.
+
+### Step 10: Final Integration, Review, and Documentation Gate
+
+After compatibility changes, rerun the native routes, complete-run replay, and required visual checkpoints so extension fixes cannot silently regress locked-on parity. Then delegate a whole-zone spec review and, only after spec GREEN, a fresh whole-zone quality/architecture review. Fix every RED finding and repeat the relevant review stage until both are GREEN.
+
+Update `docs/s3k-zones/{zone}-analysis.md`, `{zone}-object-inventory.md`, `{zone}-validation.md`, and `{zone}-compatibility.md`; update `docs/TRACE_FRONTIER_LOG.md`, changelog/discrepancy records, and test/RED-GREEN evidence when applicable. Feed reusable architectural or false-green lessons back into the relevant skills. Keep `.agents/skills` and `.claude/skills` mirrors byte-identical and validate every changed skill before completion.
 
 ### Complete Definition of Done
 
@@ -416,7 +430,10 @@ Compatibility claims must be executable at the owning feature boundary. Boss cov
 - Both acts and all native character routes complete without debug bypasses.
 - Late complete-run replay is comparison-only and green; mandatory stable-retro checkpoints are PASS.
 - Multi-sidekick, widescreen, and cross-game donation audits pass.
+- Every required S1 donation workaround is capability-gated and visibly labelled `S1 donation compatibility:` in production code.
 - Native locked-on tests are rerun after compatibility changes, and existing regression baselines are preserved.
+- Post-compatibility trace and visual checkpoints remain green; final delegated spec and quality reviews are GREEN.
+- Analysis, inventory, validation, compatibility, trace-frontier, changelog/discrepancy, and applicable mirrored skill documentation are current.
 
 ## Shared File Conflict Resolution
 
@@ -455,3 +472,7 @@ Five files are touched by multiple feature agents. All changes are additive (new
 10. **Skipping compatibility or testing it before native parity.** Prove locked-on behavior first, audit extensions second, then rerun native parity with extensions disabled.
 
 11. **Assuming AnPal means palette cycling.** AnPal can mutate gameplay state. Audit all writes and consumers, preserve the native state domain and frame phase, and test consecutive edges plus lifecycle restoration before accepting it.
+
+12. **Dispatching before the spec and plan are independently green.** A plausible analysis or plan is not acceptance. Loop delegated review and fixes for the spec first, then the implementation plan, before starting implementation workers.
+
+13. **Stopping at feature-test green.** Re-run trace and visual evidence after compatibility work, loop final whole-zone reviews to GREEN, and update the durable zone, trace, discrepancy, changelog, and mirrored skill documentation.
