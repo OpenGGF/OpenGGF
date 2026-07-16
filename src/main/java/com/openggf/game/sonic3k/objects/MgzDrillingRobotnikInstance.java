@@ -770,6 +770,14 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     }
 
     private void updateWaitForResultsFlag() {
+        // ROM loc_6C8F4 pins Camera_min_X_pos to Camera_X_pos on every retained
+        // boss-waiter pass while _unkFAA8 says the capsule/results flow is still
+        // active (sonic3k.asm:143186-143190). This write is independent of the
+        // older quake-event gradual-boundary child and must therefore be
+        // republished after that child runs rather than left solely to the
+        // fixed-slot boss-transition event.
+        Camera camera = services().camera();
+        camera.setMinX(camera.getX());
         if (services().gameState() == null || !services().gameState().isEndOfLevelFlag()) {
             return;
         }

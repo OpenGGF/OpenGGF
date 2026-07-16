@@ -1394,6 +1394,11 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             return;
         }
         restoreBossTransitionPlayerRoutine(player);
+        // The engine can already have applied its death-camera freeze before
+        // the later transition SST cancels that same-frame pit death. Release
+        // only that cancelled-death freeze; ordinary routine restoration must
+        // not clear the post-results Scroll_lock owned by loc_6C8F4.
+        camera().setFrozen(false);
         if (player.getYSpeed() == PIT_DEATH_BOUNCE_Y_SPEED) {
             player.setYSpeed((short) 0);
         }
@@ -1648,7 +1653,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         player.setDeathCountdown(0);
         player.setForcedAnimationId(-1);
         player.setHighPriority(false);
-        camera().setFrozen(false);
     }
 
     private void lockBossTransitionCamera() {

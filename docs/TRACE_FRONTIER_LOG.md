@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ results retain the boss camera handoff
+
+Branch `feature/ai-trace-animation-verification`, after the carry-input
+milestone. Native `loc_6C8F4` keeps publishing
+`Camera_min_X_pos=Camera_X_pos` while the retained boss waiter polls the
+capsule/results flag, then sets `Scroll_lock` instead of restoring the level's
+normal camera bounds when results finish. The generic engine results exit
+briefly restored those bounds after the earlier fixed transition-object pass,
+allowing one capped X/Y camera step before the transition relocked it next
+frame. The MGZ results variant now retains its arena bounds and asserts the
+post-results scroll lock, while the boss waiter republishes its native left
+boundary. Restoring Sonic's routine no longer changes camera state. No trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:143159-143199`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 38993 to frame 39023
+  (`tails_x`, expected `$3D96` / actual `$3C9C`; 51 errors, down from 53).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`; 46 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- Focused retained-boss-waiter and MGZ results-exit tests pass, covering the
+  pinned left boundary, retained arena bounds, and `Scroll_lock` handoff.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain the established 43/58 green physics and 42/58 green animation
+  route baselines.
+
 ### 2026-07-16 -- MGZ carry input advances before jump release
 
 Branch `feature/ai-trace-animation-verification`, after the live boss-body

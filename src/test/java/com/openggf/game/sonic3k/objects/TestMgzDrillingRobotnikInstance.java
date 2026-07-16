@@ -583,8 +583,15 @@ class TestMgzDrillingRobotnikInstance {
         verify(gameState).setCurrentBossId(0);
         verify(levelEvents).setBossActive(false);
 
-        when(gameState.isEndOfLevelFlag()).thenReturn(true);
+        camera.setX((short) 0x3C80);
+        camera.setMinX((short) 0x3C60);
         boss.update(122, null);
+
+        assertEquals(0x3C80, camera.getMinX() & 0xFFFF,
+                "loc_6C8F4 must repin the left boundary while the MGZ results flag remains active");
+
+        when(gameState.isEndOfLevelFlag()).thenReturn(true);
+        boss.update(123, null);
 
         assertTrue(services.objectManager().getActiveObjects().stream()
                         .anyMatch(Mgz2PostBossPaletteFadeController.class::isInstance),
@@ -853,6 +860,9 @@ class TestMgzDrillingRobotnikInstance {
         tails.setCpuController(controller);
         setMgzCarryActive(tails);
         services.withSidekicks(java.util.List.of(tails));
+        camera.setX((short) 0x3C80);
+        camera.setMinX((short) 0x3C80);
+        camera.setMaxX((short) 0x3C80);
         Mgz2EndEggCapsuleInstance capsule = Mgz2EndEggCapsuleInstance.createForCamera(0x3C80, 0x0600);
         capsule.setServices(services);
         setPrivateBoolean(capsule, "opened", true);
@@ -873,6 +883,12 @@ class TestMgzDrillingRobotnikInstance {
                 "MGZ results exit must not clear the Tails-carry object_control state before loc_6D104");
         assertTrue(tails.isObjectControlled(),
                 "Tails must keep owning the carry/fly-off state while the palette fade runs");
+        assertTrue(camera.getFrozen(),
+                "loc_6C8F4 sets Scroll_lock while the MGZ post-results fly-off remains active");
+        assertEquals(0x3C80, camera.getMinX() & 0xFFFF,
+                "MGZ results exit must retain the boss arena left boundary");
+        assertEquals(0x3C80, camera.getMaxX() & 0xFFFF,
+                "MGZ results exit must retain the boss arena right boundary");
     }
 
     @Test

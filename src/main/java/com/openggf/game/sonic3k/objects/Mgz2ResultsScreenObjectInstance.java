@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -32,5 +33,20 @@ public class Mgz2ResultsScreenObjectInstance extends S3kResultsScreenObjectInsta
     @Override
     protected boolean shouldRestorePlayerControlsOnExit() {
         return false;
+    }
+
+    @Override
+    protected boolean shouldRestoreCameraBoundsOnExit(int zone, int act) {
+        // ROM loc_6C8F4 retains the MGZ boss camera boundary and hands the
+        // post-results flight to Scroll_lock instead of restoring level bounds
+        // (sonic3k.asm:143186-143199).
+        return false;
+    }
+
+    @Override
+    protected void applyCameraFollowExitState(Camera camera, boolean lbzAct2PostBossHandoff) {
+        // ROM loc_6C8F4 writes Scroll_lock=1 at the MGZ results exit while the
+        // carried Sonic/Tails fly-off and palette transition remain active.
+        camera.setScrollLocked(true);
     }
 }

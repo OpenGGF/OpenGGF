@@ -625,9 +625,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // to the pre-boss area (ROM: loc_694D4 uses Obj_IncLevEndXGradual).
         boolean iczAct2EndBossHandoff = zone == 0x05 && act == 1;
         var cam = services().camera();
-        if (!lbzAct2PostBossHandoff) {
-            cam.setFrozen(false);
-        }
+        applyCameraFollowExitState(cam, lbzAct2PostBossHandoff);
         if (shouldRestoreCameraBoundsOnExit(zone, act)
                 && !Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
             var level = services().currentLevel();
@@ -744,6 +742,18 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     protected boolean shouldRestoreCameraBoundsOnExit(int zone, int act) {
         return shouldRestoreLevelCameraBoundsOnExit(zone, act);
+    }
+
+    /**
+     * Applies the route-specific camera-follow state at the results handoff.
+     * Most routes resume normal following; retained boss/cutscene owners can
+     * preserve or assert the ROM {@code Scroll_lock} state instead.
+     */
+    protected void applyCameraFollowExitState(com.openggf.camera.Camera camera,
+                                              boolean lbzAct2PostBossHandoff) {
+        if (!lbzAct2PostBossHandoff) {
+            camera.setFrozen(false);
+        }
     }
 
     protected boolean shouldRestorePlayerControlsOnExit() {
