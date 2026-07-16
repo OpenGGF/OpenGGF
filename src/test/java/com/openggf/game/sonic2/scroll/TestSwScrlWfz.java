@@ -1,10 +1,14 @@
 package com.openggf.game.sonic2.scroll;
 
 import com.openggf.data.Rom;
+import com.openggf.game.GameServices;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic2.runtime.WfzRuntimeState;
 import com.openggf.level.scroll.M68KMath;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -16,6 +20,33 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_2)
 class TestSwScrlWfz {
+
+    @AfterEach
+    void tearDown() {
+        SessionManager.clear();
+    }
+
+    @Test
+    void bgCacheCameraUsesLiveWfzRuntimeX() throws IOException {
+        BackgroundCamera fallback = new BackgroundCamera();
+        fallback.setBgXPos(0x111);
+        SwScrlWfz handler = new SwScrlWfz(
+                new ParallaxTables(TestEnvironment.currentRom()), fallback);
+        GameServices.zoneRuntimeRegistry().install(new TestWfzState(0x222, 0x3456));
+
+        assertEquals(0x3456, handler.getBgCameraX());
+    }
+
+    @Test
+    void bgCacheCameraFallsBackOutsideGameplayRuntime() throws IOException {
+        BackgroundCamera fallback = new BackgroundCamera();
+        fallback.setBgXPos(0x456);
+        SwScrlWfz handler = new SwScrlWfz(
+                new ParallaxTables(TestEnvironment.currentRom()), fallback);
+        SessionManager.clear();
+
+        assertEquals(0x456, handler.getBgCameraX());
+    }
 
     @Test
     void wfzScrollTablesAreLoadedFromRomOffsets() throws IOException {
@@ -124,5 +155,20 @@ class TestSwScrlWfz {
             }
         }
         return false;
+    }
+
+    private record TestWfzState(
+            int bgVscrollFactor,
+            int bgXPos) implements WfzRuntimeState {
+
+        @Override
+        public int zoneIndex() {
+            return 9;
+        }
+
+        @Override
+        public int actIndex() {
+            return 0;
+        }
     }
 }

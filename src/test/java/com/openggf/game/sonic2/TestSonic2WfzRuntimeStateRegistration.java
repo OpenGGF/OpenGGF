@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -52,6 +53,19 @@ class TestSonic2WfzRuntimeStateRegistration {
         WfzRuntimeState second = registry().currentAs(WfzRuntimeState.class).orElseThrow();
         assertNotSame(first, second);
         assertEquals(1, second.actIndex());
+    }
+
+    @Test
+    void wfzViewForcesBlackBackdropOnlyInEscapeRoutine() {
+        Sonic2LevelEventManager manager = new Sonic2LevelEventManager();
+        manager.initLevel(Sonic2LevelEventManager.ZONE_WFZ, 0);
+        WfzRuntimeState state = registry().currentAs(WfzRuntimeState.class).orElseThrow();
+
+        manager.setEventRoutine(4);
+        assertFalse(state.forceBlackBackdrop());
+
+        manager.setEventRoutine(6);
+        assertTrue(state.forceBlackBackdrop());
     }
 
     @Test

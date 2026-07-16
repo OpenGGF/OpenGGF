@@ -94,9 +94,7 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
         resetScrollTracking();
         composer.reset();
 
-        WfzRuntimeState runtimeState = GameServices.hasRuntime()
-                ? GameServices.zoneRuntimeRegistry().currentAs(WfzRuntimeState.class).orElse(null)
-                : null;
+        WfzRuntimeState runtimeState = currentRuntimeState();
         int bgYPos = runtimeState != null ? runtimeState.bgVscrollFactor() : bgCamera.getBgYPos();
         int bgXPos = runtimeState != null ? runtimeState.bgXPos() : bgCamera.getBgXPos();
 
@@ -223,6 +221,22 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
         vscrollFactorBG = composer.getVscrollFactorBG();
         minScrollOffset = composer.getMinScrollOffset();
         maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    private WfzRuntimeState currentRuntimeState() {
+        return GameServices.hasRuntime()
+                ? GameServices.zoneRuntimeRegistry().currentAs(WfzRuntimeState.class).orElse(null)
+                : null;
+    }
+
+    private int currentBgXPos() {
+        WfzRuntimeState runtimeState = currentRuntimeState();
+        return runtimeState != null ? runtimeState.bgXPos() : bgCamera.getBgXPos();
+    }
+
+    @Override
+    public int getBgCameraX() {
+        return currentBgXPos();
     }
 
     private void fillFallback(int[] horizScrollBuf, int cameraX) {
