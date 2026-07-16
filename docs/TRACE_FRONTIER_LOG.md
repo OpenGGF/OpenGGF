@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Carried Sonic retains native positive object control
+
+Branch `feature/ai-trace-animation-verification`, after the carrier-hurt
+transition milestone. Native `sub_1459E` writes `object_control=$03`: bit 0
+suppresses Sonic's movement, bit 1 suppresses his normal animator, but the
+`$A0` mask still permits TouchResponse. The engine encoded carry as a negative
+bit-7 takeover, so Sonic could not receive the later drill touch. Carry now
+uses the positive bits-0-to-6 control state, and Tails clears the carry word on
+the following hurt-routine entry, after Sonic's earlier player slot has run.
+The folded boss also retains pattern zero's already-published horizontal child
+position while diagonal attack patterns continue to project their later child
+slots, preventing the newly-visible touch path from inventing an earlier hit.
+No trace hydration, route/frame predicate, comparator tolerance, or physics-
+state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:21973-22022,27222-27415,
+29180-29192,142969-143017,143271-143321`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 37412 to frame 37920
+  (`x_speed`, expected `-$25` / actual `$25`; 114 errors, down from 153).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`; 110 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused 51-test MGZ drilling-boss suite and 58 carry/object-control tests
+  pass, covering positive-control touch eligibility and both horizontal and
+  diagonal child publication phases.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
 ### 2026-07-16 -- Carrier hurt clears the native carry word immediately
 
 Branch `feature/ai-trace-animation-verification`, after merging current

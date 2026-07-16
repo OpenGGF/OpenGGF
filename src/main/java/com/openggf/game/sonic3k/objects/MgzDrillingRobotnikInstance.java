@@ -1646,20 +1646,22 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
 
     /**
      * The ROM's drill children occupy later SST slots than Obj_MGZEndBoss. During
-     * the moving air attack they refresh from the parent's post-MoveSprite2
-     * position before adding themselves to Collision_response_list. The engine
-     * folds those children into the parent whose list entry spans the retained
-     * publication phase, so expose the position that their later slots observe.
+     * the moving diagonal air attacks they refresh from the parent's
+     * post-MoveSprite2 position before adding themselves to
+     * Collision_response_list. Pattern zero's horizontal sweep already enters
+     * the retained collision list at that post-move phase; the later diagonal
+     * configurations enter from the folded parent's preceding phase and need
+     * the child-slot projection.
      */
     private int foldedChildTouchAnchorX() {
-        if (state.routine != ROUTINE_END_ATTACK_MOVE) {
+        if (state.routine != ROUTINE_END_ATTACK_MOVE || airAttackPatternOffset == 0) {
             return state.x;
         }
         return (((state.x << 8) | (xSubpixel & 0xFF)) + xVel) >> 8;
     }
 
     private int foldedChildTouchAnchorY() {
-        if (state.routine != ROUTINE_END_ATTACK_MOVE) {
+        if (state.routine != ROUTINE_END_ATTACK_MOVE || airAttackPatternOffset == 0) {
             return state.y;
         }
         return (((state.y << 8) | (ySubpixel & 0xFF)) + yVel) >> 8;

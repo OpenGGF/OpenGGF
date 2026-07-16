@@ -89,7 +89,9 @@ public final class TailsCarryController {
         main.setAnimationTick(0);
         main.setAnimationFrameIndex(0);
         main.setForcedAnimationId(carriedAnimationId);
-        ObjectControlState.nativeBit7FullControl().applyTo(main);
+        // sub_1459E writes object_control=$03: bits 0-6 suppress normal
+        // movement but do not take the bit-7 TouchResponse bypass.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(main);
         main.setAir(true);
         main.setRollingJump(false);
         main.setSpindash(false);
@@ -122,9 +124,13 @@ public final class TailsCarryController {
             release(0x3C);
             return;
         }
-        if (carrier.isHurt() || carrier.getDead() || carrier.isObjectControlled()
+        if (carrier.isHurt()) {
+            releaseAfterCarrierHurt();
+            return;
+        }
+        if (carrier.getDead() || carrier.isObjectControlled()
                 || main.isHurt() || main.getDead()
-                || !main.isObjectControlled() || main.isObjectControlAllowsCpu()) {
+                || !main.isObjectControlled()) {
             release(0x3C);
             return;
         }

@@ -2622,10 +2622,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
 
                 hurt = true;
-                TailsCarryController carryController = getTailsCarryController();
-                if (carryController != null) {
-                        carryController.releaseAfterCarrierHurt();
-                }
                 doubleJumpFlag = 0;
                 doubleJumpProperty = 0;
                 objectMappingFrameControl = false;

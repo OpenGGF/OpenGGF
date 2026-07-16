@@ -150,6 +150,11 @@ class TestTailsCarryController {
                 "native attachment publishes the carried animation in the same frame");
         assertEquals(0, sonic.getAnimationFrameIndex());
         assertEquals(0, sonic.getAnimationTick());
+        assertTrue(sonic.isObjectControlAllowsCpu(),
+                "native object_control=$03 keeps the bits-0-to-6 execution semantics");
+        assertTrue(sonic.isObjectControlSuppressesMovement());
+        assertFalse(sonic.isTouchResponseSuppressedByObjectControl(),
+                "only object_control bit 7 suppresses TouchResponse");
 
         carry.restore(new TailsCarryController.Snapshot((short) 0, (short) 0,
                 false, false, 0, TailsCarryController.CarryContext.NONE));

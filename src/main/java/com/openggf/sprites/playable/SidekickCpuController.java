@@ -3611,7 +3611,7 @@ public class SidekickCpuController {
 
     private void releaseCarryForCarrierDisabled() {
         boolean mgzBossTransitionCarry = carryTrigger != null && carryTrigger.usesMgzBossTransitionControl();
-        carryController().releaseWithCooldown(0);
+        carryController().releaseAfterCarrierHurt();
         mgzCarryIntroAscend = false;
         mgzReleasedChaseLatched = false;
         if (!mgzBossTransitionCarry) {

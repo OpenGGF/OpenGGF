@@ -654,15 +654,17 @@ class TestSidekickCpuControllerCarry {
 
         tails.applyHurt(sonic.getCentreX());
 
-        assertFalse(sonic.isObjectControlled(),
-                "ROM Tails hurt routine clears Player_1 object_control on the damage transition");
-        assertFalse(tails.getTailsCarryController().isCarryingMainCharacter(),
-                "ROM Tails hurt routine clears Flying_carrying_Sonic_flag immediately");
-        assertEquals(0, tails.getTailsCarryController().capture().cooldown(),
-                "clr.w clears the adjacent native carry cooldown byte too");
+        assertTrue(sonic.isObjectControlled(),
+                "Touch_Hurt changes Tails' routine after Sonic's earlier player slot has run");
+        assertTrue(tails.getTailsCarryController().isCarryingMainCharacter(),
+                "the carry flag survives until Tails enters the hurt routine on the next frame");
 
         controller.update(3);
 
+        assertFalse(sonic.isObjectControlled(),
+                "Tails' hurt routine clears Player_1 object_control before hurt movement");
+        assertEquals(0, tails.getTailsCarryController().capture().cooldown(),
+                "clr.w clears the adjacent native carry cooldown byte too");
         assertFalse(controller.isFlyingCarrying(),
                 "Tails must stop actively carrying Sonic as soon as the carrier is hurt");
         assertFalse(controller.usesFlyingCarryMovement(),

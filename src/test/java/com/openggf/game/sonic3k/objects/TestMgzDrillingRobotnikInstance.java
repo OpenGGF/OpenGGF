@@ -1073,11 +1073,34 @@ class TestMgzDrillingRobotnikInstance {
         setPrivateInt(boss, "xVel", 0x0200);
         setPrivateInt(boss, "yVel", -0x0200);
         setPrivateInt(boss, "endBossAngle", 0x0C);
+        setPrivateInt(boss, "airAttackPatternOffset", 4);
 
         TouchResponseProvider.TouchRegion[] regions = boss.getMultiTouchRegions();
 
         assertEquals(0x06E2, regions[1].y(),
                 "loc_6C9E8 refreshes after the parent MoveSprite2 slot, so the folded drill tip publishes from y-$34");
+    }
+
+    @Test
+    void horizontalAirAttackRetainsItsAlreadyPublishedChildSlotPosition() throws Exception {
+        RecordingServices services = new RecordingServices(camera);
+        MgzEndBossInstance boss = createEndBoss(services);
+        boss.update(0, null);
+        boss.getState().routine = staticInt("ROUTINE_END_ATTACK_MOVE");
+        boss.getState().x = 0x3CFA;
+        boss.getState().y = 0x0710;
+        setPrivateInt(boss, "xSubpixel", 0x80);
+        setPrivateInt(boss, "ySubpixel", 0x30);
+        setPrivateInt(boss, "xVel", 0x0200);
+        setPrivateInt(boss, "yVel", 0);
+        setPrivateInt(boss, "endBossAngle", 0);
+        setPrivateInt(boss, "airAttackPatternOffset", 0);
+        setPrivateBoolean(boss, "flipX", true);
+
+        TouchResponseProvider.TouchRegion[] regions = boss.getMultiTouchRegions();
+
+        assertEquals(0x3D2D, regions[1].x(),
+                "the horizontal sweep's retained child slot must not project a second parent MoveSprite2 step");
     }
 
     @Test
