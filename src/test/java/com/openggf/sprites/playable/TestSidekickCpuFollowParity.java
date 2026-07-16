@@ -1859,6 +1859,43 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s3kLateTerrainPushGraceFallsThroughToFollowLeft() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x3B28);
+        tails.setCentreY((short) 0x0AA4);
+        tails.setDirection(Direction.LEFT);
+        tails.setGSpeed((short) 0xFF9A);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x3B13);
+        Arrays.fill(yHistory, (short) 0x0AA8);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 6);
+
+        controller.update(0x8227);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("follow_steering", diagnostics.followBranch(),
+                        "MGZ's late terrain-only grace has no ROM-visible Status_Push at the CPU slot"),
+                () -> assertFalse(diagnostics.skipFollowSteering()),
+                () -> assertEquals(-1, diagnostics.appliedFollowNudge(),
+                        "loc_13E0A must apply its native one-pixel left nudge"),
+                () -> assertEquals(0x3B27, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
     void s3kStaleCurrentPushFarBelowTargetFallsThroughToFollowLeftAfterAizReload() throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");

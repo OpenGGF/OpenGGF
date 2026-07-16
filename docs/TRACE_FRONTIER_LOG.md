@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Late S3K push grace yields to the native follow nudge
+
+Branch `feature/ai-trace-animation-verification`, after the rise-object phase
+milestone. `Tails_CPU_Normal` tests the current `Status_Push` bit before its
+ordinary history-target steering and `loc_13E0A` one-pixel position nudge. At
+MGZ frame 33319, the ROM's current Tails status is clear, but the engine still
+treated the final portion of its terrain-inferred push continuity as a live
+push and bypassed the follow tail. The early continuity window remains intact
+for delayed object-publication cases; its last six frames now fall through to
+the native steering path when there is no live push. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:26683-26741`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 33319 to frame 33440 (`y`,
+  expected `$0A59` / actual `$0A58`).
+- MGZ complete-run animation advances from frame 33375 to frame 34264
+  (`player_mapping_frame`, expected `$06` / actual `$05`).
+- The focused sidekick CPU follow-parity suite passes all 99 tests.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ rise object consumes the completed player pass
 
 Branch `feature/ai-trace-animation-verification`, after the empty-background-

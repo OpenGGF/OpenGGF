@@ -51,7 +51,7 @@ public class SidekickCpuController {
     private static final int PUSH_STATUS_GRACE_FRAMES = 16;
     private static final int LOCAL_BELOW_TARGET_PUSH_BRIDGE_MAX_GRACE =
             PUSH_STATUS_GRACE_FRAMES - 4;
-    private static final int LOCAL_BELOW_TARGET_PUSH_BRIDGE_MIN_GRACE = 3;
+    private static final int LOCAL_BELOW_TARGET_PUSH_BRIDGE_MIN_GRACE = 7;
     private static final int RIDING_OBJECT_PUSH_BRIDGE_MIN_GRACE =
             PUSH_STATUS_GRACE_FRAMES - 2;
     private static final int OBJECT_ORDER_PUSH_BRIDGE_MIN_GRACE = 4;
