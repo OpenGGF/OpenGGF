@@ -3523,11 +3523,13 @@ public class SidekickCpuController {
 
         if (canRegrabLeaderInPickupRange()) {
             pickupLeaderForCarry();
-            carryController().setCarrying(true);
-            carryController().setParentagePending(true);
             mgzReleasedChaseLatched = false;
             return;
         }
+
+        // When the pre-body position is outside the window, retain a second
+        // loc_14542 probe for the live post-movement carrier position.
+        carryController().setParentagePending(true);
     }
 
     /**
@@ -4000,8 +4002,15 @@ public class SidekickCpuController {
      */
     public void finishCarryAfterCarrierMovement() {
         if (!carryController().parentagePending() || state != State.CARRYING
-                || !carryController().isCarryingMainCharacter()
                 || leader == null || carryTrigger == null) {
+            return;
+        }
+        if (!carryController().isCarryingMainCharacter()) {
+            carryController().setParentagePending(false);
+            if (carryController().cooldown() == 0 && canRegrabLeaderInPickupRange()) {
+                pickupLeaderForCarry();
+                mgzReleasedChaseLatched = false;
+            }
             return;
         }
         carryController().updateAfterTailsCollision(0);

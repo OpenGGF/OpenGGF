@@ -547,6 +547,7 @@ class TestSidekickCpuControllerCarry {
         }
 
         controller.update(4 + 0x11);
+        controller.finishCarryAfterCarrierMovement();
 
         assertTrue(sonic.isObjectControlled(),
                 "When the cooldown decrement reaches zero, MGZ Tails_Carry_Sonic should run the proximity grab on that frame");
@@ -554,6 +555,37 @@ class TestSidekickCpuControllerCarry {
         assertEquals((short) tails.getCentreX(), (short) sonic.getCentreX());
         assertEquals((short) (tails.getCentreY() + Sonic3kConstants.CARRY_DESCEND_OFFSET_Y),
                 (short) sonic.getCentreY());
+    }
+
+    @Test
+    void mgzReleasedCarryRechecksPickupRangeAfterCarrierMovement() {
+        AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
+        AbstractPlayableSprite sonic = pair[0];
+        AbstractPlayableSprite tails = pair[1];
+        fixture.camera().setY((short) 0x0600);
+        tails.setCentreY((short) 0x0690);
+        controller.update(1);
+        controller.update(2);
+        sonic.setJumpInputPressed(false);
+        sonic.setJumpInputPressed(true);
+        controller.update(3);
+
+        sonic.setJumpInputPressed(false);
+        tails.getTailsCarryController().setCooldown(0);
+        tails.setCentreX((short) 0x1000);
+        tails.setCentreY((short) 0x0690);
+        sonic.setCentreX((short) 0x1000);
+        sonic.setCentreY((short) 0x06C1);
+        sonic.setAir(true);
+        controller.update(4);
+
+        assertFalse(sonic.isObjectControlled(),
+                "The pre-body position is one pixel below loc_14542's pickup window");
+        tails.setCentreY((short) 0x0695);
+        controller.finishCarryAfterCarrierMovement();
+
+        assertTrue(sonic.isObjectControlled(),
+                "Tails_Carry_Sonic must recheck pickup range after current carrier movement");
     }
 
     @Test

@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Released carry rechecks pickup after carrier movement
+
+Branch `feature/ai-trace-animation-verification`, after the carry-release input
+milestone. Native `Tails_FlyingSwimming` moves Tails before the later
+`Tails_Carry_Sonic` `loc_14542` proximity probe. When the engine's pre-body
+probe was one pixel outside the pickup window, it discarded the probe instead
+of checking the live post-movement carrier position. Released carry now retains
+that second probe while preserving the immediate path when the pre-body
+position is already inside the window. No trace hydration, route/frame
+predicate, comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:27186-27330,27553-27570`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 36640 to frame 36650 (`tails_x`,
+  expected `$3D93` / actual `$3DA0`; 1,533 errors, with the larger tail exposed
+  by the newly reached carry path).
+- MGZ complete-run animation advances from frame 36640 to frame 36641
+  (`player_mapping_frame`, expected `$91` / actual `$90`; 204 errors, with the
+  larger tail exposed by the newly reached carry path).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused sidekick-carry suite passes, including both immediate and
+  post-movement released-carry pickup paths.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
 ### 2026-07-16 -- Carry release consumes the pre-body logical input
 
 Branch `feature/ai-trace-animation-verification`, after the end-boss air-entry
