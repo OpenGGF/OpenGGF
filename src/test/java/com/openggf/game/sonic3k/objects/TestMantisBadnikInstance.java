@@ -9,7 +9,9 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestMantisBadnikInstance {
@@ -55,6 +57,27 @@ class TestMantisBadnikInstance {
 
         assertNull(readField(mantis, "child"),
                 "A retired child must not remain reachable after its rewind id is unregistered");
+    }
+
+    @Test
+    void waitOffscreenDefersInitializationUntilPlaceholderIsVisible() throws Exception {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        MantisBadnikInstance mantis = new MantisBadnikInstance(
+                new ObjectSpawn(0x0100, 0x0490, 0x9D, 0, 0, false, 0));
+        mantis.setServices(new StubObjectServices());
+
+        mantis.update(0, null);
+        mantis.update(1, null);
+
+        assertFalse((boolean) readField(mantis, "initialized"));
+        assertNull(readField(mantis, "child"));
+        assertEquals(0x0490, mantis.getY());
+
+        AbstractObjectInstance.updateCameraBounds(0, 0x0400, 320, 0x04E0, 0);
+        mantis.update(2, null);
+
+        assertTrue((boolean) readField(mantis, "initialized"));
+        assertNotNull(readField(mantis, "child"));
     }
 
     private static Object readField(Object target, String name) throws Exception {

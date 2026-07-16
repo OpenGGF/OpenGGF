@@ -39,6 +39,8 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
     private static final int LAUNCH_Y_VELOCITY = -0x600;
     private static final int GRAVITY = 0x38;
     private static final int FLOOR_Y_RADIUS = 0x29;
+    private static final int WAIT_PLACEHOLDER_X_MARGIN = 0x20;
+    private static final int WAIT_PLACEHOLDER_Y_MARGIN = 0x22;
 
     private static final int[] PREP_FRAMES = {0, 1, 2};
     private static final int[] PREP_DELAYS = {0, 2, 0};
@@ -73,9 +75,21 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        // ROM entry / delete flow only gates Mantis on X visibility, so the
-        // jump arc must continue even if it leaves the top of the viewport.
-        if (isDestroyed() || !isOnScreenX()) {
+        if (isDestroyed()) {
+            return;
+        }
+
+        // Obj_WaitOffscreen keeps the operation pointer at loc_85AD2 while its
+        // $20-by-$20 placeholder remains outside Render_Sprites bounds. Engine
+        // placement already bridges the visible restore dispatch, so initialize
+        // on the first live pass inside those bounds. Once initialized, the jump
+        // arc continues above the viewport; Sprite_CheckDeleteTouch owns only X.
+        if (!initialized && !isWithinRenderSpriteBounds(
+                WAIT_PLACEHOLDER_X_MARGIN, WAIT_PLACEHOLDER_Y_MARGIN)) {
+            return;
+        }
+
+        if (!isOnScreenX()) {
             return;
         }
 

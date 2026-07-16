@@ -160,7 +160,11 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
         // angle $62, that residue rounds the negative five-link X result one
         // pixel toward zero. The earlier slot-4 platform reaches the same angle
         // with a different residue and retains the ordinary sign-extended result.
-        if (hasLaterSlotRiderCosineResidue(angleByte) && getSlotIndex() == 7
+        // Depending on whether a still-waiting Obj_WaitOffscreen Mantis has
+        // allocated its visual child yet, the folded engine inventory represents
+        // this native later-slot phase as slot 6 or 7.
+        if (hasLaterSlotRiderCosineResidue(angleByte)
+                && (getSlotIndex() == 6 || getSlotIndex() == 7)
                 && hasMainPlayerStandingBit(playerEntity)) {
             platformX++;
         }

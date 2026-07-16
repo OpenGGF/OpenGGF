@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Offscreen MGZ Mantis remains in Obj_WaitOffscreen
+
+Branch `feature/ai-trace-animation-verification`, after the moving-spike
+air-unseat milestone. Native Mantis slots 5 and 9 still point at
+`loc_85AD2` with their placement Y coordinates while outside the `$20`-wide,
+`$22`-swept placeholder bounds. The engine had gated only on X, initialized
+the lower slot, allocated its visual child, and ran its full leap/landing cycle
+from Y=`$0490` to `$0423`; Tails then destroyed that Mantis and received a
+false enemy bounce. Uninitialized Mantis instances now stay dormant outside
+the native placeholder render bounds, while initialized jump arcs retain their
+existing X-only lifetime. Removing the premature child can fold the same
+native later-slot swinging-platform phase into engine slot 6 instead of 7, so
+the existing `GetSineCosine` high-word residue applies to either folded slot
+representation. No trace hydration, zone/route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:180266-180298,185700-185840,70468-70543`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 20834 to frame 20873
+  (`tails_x_speed`, expected `-$03C4` / actual `$0200`), with errors reduced
+  from 4479 to 4385.
+- MGZ standalone animation advances from frame 20868 to frame 20873
+  (`tails_animation_id`, expected `$00` / actual `$1A`), with errors reduced
+  from 1129 to 1112.
+- Focused Mantis and MGZ swinging-platform suites pass 17/17.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
 ### 2026-07-16 -- MGZ moving-spike jump unseats in its owning solid slot
 
 Branch `feature/ai-trace-animation-verification`, after the Spiker cooldown
