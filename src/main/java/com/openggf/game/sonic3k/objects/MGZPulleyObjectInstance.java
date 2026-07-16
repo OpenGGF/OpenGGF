@@ -294,7 +294,16 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
     }
 
     private boolean isPlayerOffScreen(AbstractPlayableSprite player) {
-        return services().camera() != null && !services().camera().isOnScreen(player);
+        // ROM sub_349BA consumes the sign bit already published in the
+        // playable's render_flags byte, not a fresh point-in-camera test
+        // (sonic3k.asm:71246-71249). BuildSprites keeps a player visible across
+        // its width/height margin, which matters while a pulley carries P2
+        // just below the nominal 224px viewport.
+        if (player.hasRenderFlagOnScreenState()) {
+            return !player.isRenderFlagOnScreen();
+        }
+        return services().camera() != null
+                && !services().camera().isVisibleForRenderFlag(player);
     }
 
     private void releasePlayer(AbstractPlayableSprite player, int slot, int frameCounter, boolean launch) {

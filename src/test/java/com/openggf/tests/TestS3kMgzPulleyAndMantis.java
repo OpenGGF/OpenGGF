@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.GroundMode;
 import com.openggf.game.session.SessionManager;
@@ -206,6 +207,8 @@ class TestS3kMgzPulleyAndMantis {
         main.setJumpInputPressed(false);
         int p2XBeforeRelax = nativeP2.getCentreX();
         int p2YBeforeRelax = nativeP2.getCentreY();
+        nativeP2.setRenderFlagOnScreen(true);
+        services.camera = new Camera();
 
         pulley.update(28, main);
 
@@ -388,6 +391,7 @@ class TestS3kMgzPulleyAndMantis {
 
     private static class RecordingServices extends StubObjectServices {
         private final List<Integer> playedSfx = new ArrayList<>();
+        private Camera camera;
 
         private RecordingServices() {
             withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
@@ -396,6 +400,11 @@ class TestS3kMgzPulleyAndMantis {
         @Override
         public void playSfx(int soundId) {
             playedSfx.add(soundId);
+        }
+
+        @Override
+        public Camera camera() {
+            return camera;
         }
     }
 

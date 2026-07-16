@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ pulley grab consumes playable render_flags
+
+Branch `feature/ai-trace-animation-verification`, after commit `04b9e3cc8` and
+the requested checkpoint merge check. `origin/develop` and local `develop`
+were both still at `1b1a5efee`, so merging `develop` reported `Already up to
+date`. At standalone frame 21734 Tails is just below the nominal 224-pixel
+viewport but native BuildSprites still publishes `render_flags=$85`. The
+pulley's `sub_349BA` tests that sign bit and continues carrying P2; the engine
+instead used the stricter `Camera.isOnScreen` point test and released Tails
+before applying the next handle position. The pulley now consumes the existing
+playable render-flag state, falling back to the same BuildSprites-equivalent
+camera calculation only before that state has been initialized. No new margin,
+trace hydration, zone/route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:36336-36364,71242-71286`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 21734 to frame 21808
+  (`tails_y_speed`, expected `$0000` / actual `$05BC`), with 3304 errors in
+  the newly reached route tail.
+- MGZ standalone animation advances from frame 21767 to frame 21809
+  (`tails_animation_id`, expected `$08` / actual `$00`), with errors reduced
+  from 571 to 566.
+- `TestS3kMgzPulleyAndMantis` passes 10/10, including a P2-only grab whose
+  published render flag remains on-screen outside the strict camera point.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
 ### 2026-07-16 -- MGZ pulley keeps extension motion owned by P1's grab byte
 
 Branch `feature/ai-trace-animation-verification`, after the waiting-Mantis
