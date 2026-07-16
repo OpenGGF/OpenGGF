@@ -622,6 +622,13 @@ class TestSidekickCpuControllerCarry {
         sonic.setDirectionalInputPressed(false, false, false, true);
         controller.update(3);
         assertTrue(controller.getInputRight());
+        SidekickCpuRewindExtra beforeRelease = controller.captureRewindState();
+        controller.restoreRewindState(withMgzControlScalars(
+                beforeRelease,
+                false, 0x20,
+                beforeRelease.mgzReleasedChaseLatched(),
+                beforeRelease.mgzReleasedChaseXAccel(),
+                beforeRelease.mgzReleasedChaseYAccel()));
 
         sonic.setJumpInputPressed(false);
         sonic.setJumpInputPressed(true);
@@ -630,6 +637,8 @@ class TestSidekickCpuControllerCarry {
         assertTrue(controller.getInputRight(),
                 "Tails_FlyingSwimming consumes the prior Ctrl_2 direction before Tails_Carry_Sonic releases Sonic");
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT, controller.getDiagnosticGeneratedHeldInput());
+        assertEquals(0x21, controller.captureRewindState().mgzCarryFlapTimer(),
+                "routine $18 advances Tails_CPU_auto_fly_timer before the later jump-release check");
 
         sonic.setJumpInputPressed(false);
         controller.update(5);

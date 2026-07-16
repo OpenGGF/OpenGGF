@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ carry input advances before jump release
+
+Branch `feature/ai-trace-animation-verification`, after the live boss-body
+publication milestone. Native routine `$18` is part of
+`Tails_FlyingSwimming`, so it advances the shared
+`Tails_CPU_auto_fly_timer` and writes `Ctrl_2_logical` before the later
+`Tails_Carry_Sonic` jump-release checks. The engine performed those release
+checks first, skipping one timer tick on Sonic's jump-out frame and delaying a
+later `$58` A/B/C flap. MGZ carry input generation now runs before every leader
+release path, while the later parentage/cooldown decisions retain their native
+order. No trace hydration, route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:26996-27070,27186-27376,
+27553-27639`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 38184 to frame 38993
+  (`camera_x`, expected `$3C80` / actual `$3C68`; 53 errors, down from 131).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`; its downstream tail
+  falls from 68 to 46 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused 35-test Tails carry suite passes with an explicit assertion that
+  the auto-flight timer advances on the jump-release frame.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
 ### 2026-07-16 -- MGZ horizontal boss body publishes its live collision-list position
 
 Branch `feature/ai-trace-animation-verification`, after the positive carry-

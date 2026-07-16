@@ -3378,6 +3378,16 @@ public class SidekickCpuController {
             return;
         }
 
+        boolean mgzBossTransitionCarry = carryTrigger.usesMgzBossTransitionControl();
+        if (mgzBossTransitionCarry) {
+            // ROM routine $18 runs as part of Tails_FlyingSwimming before the
+            // later Tails_Carry_Sonic release checks. In particular, a leader
+            // jump-out still advances Tails_CPU_auto_fly_timer and publishes
+            // Ctrl_2_logical on its release frame.
+            updateMgzBossTransitionCarryInput();
+            mirrorCarryDiagnosticInput();
+        }
+
         // 1. Hurt/dead (Sonic routine >= 4)
         if (leader.isHurt() || leader.getDead()) {
             carryController().setParentagePending(false);
@@ -3438,9 +3448,7 @@ public class SidekickCpuController {
             return;
         }
 
-        if (carryTrigger.usesMgzBossTransitionControl()) {
-            updateMgzBossTransitionCarryInput();
-            mirrorCarryDiagnosticInput();
+        if (mgzBossTransitionCarry) {
             carryController().setParentagePending(true);
             return;
         }
@@ -3500,6 +3508,13 @@ public class SidekickCpuController {
         }
     }
 
+    /**
+     * The native player-2 CPU slot runs before the later touch-response pass
+     * that changes Tails to his hurt routine. Inline engine touch can expose
+     * that hurt routine at the start of the next CPU update instead. Preserve
+     * the already-owed routine-$18 timer/logical-input publication without
+     * applying carry movement to the hurt sprite.
+     */
     private void updateMgzReleasedCarry() {
         sidekick.setAir(true);
         sidekick.setDoubleJumpProperty((byte) 0xF0);
