@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ floating platforms use the native SolidObjectTop surface
+
+Branch `feature/ai-trace-animation-verification`, after the reversed trigger-
+platform milestone. `Obj_FloatingPlatform` loads `height_pixels`, increments
+the value, and passes that `height+1` surface as `d3` to `SolidObjectTop`.
+The engine instead tested the unincremented height, then applied a
+`PlatformObject_ChkYRange`-style absolute snap after the landing reset. That
+compensation produced the right result for ordinary rolling landings but
+placed a non-rolling Tails with stale rolling radii one pixel high. Floating
+platforms now expose the real `SolidObjectTop` profile: `height+1` participates
+in the contact itself, exact `d0=0` is rejected, and the relative
+`y_pos += d0 + 3` result survives. No trace hydration, route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:50826-50843,41982-42035`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 34610 to frame 35373
+  (`tails_x_speed`, expected `$01C0` / actual `-$0200`).
+- MGZ complete-run animation remains at frame 35373 (`tails_animation_id`,
+  expected `Roll` / actual `Hurt`). Physics and animation are now aligned.
+- `TestFloatingPlatformObjectInstance` passes all 2 tests, including the
+  native surface, zero-boundary, and relative-snap profile assertions.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ reversed trigger replay follows placement direction
 
 Branch `feature/ai-trace-animation-verification`, after the background-terrain

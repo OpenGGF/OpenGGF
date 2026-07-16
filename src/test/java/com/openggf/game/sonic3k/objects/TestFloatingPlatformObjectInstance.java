@@ -23,6 +23,12 @@ class TestFloatingPlatformObjectInstance {
                         + "before square-path movement (sonic3k.asm:50810-50835)");
         assertFalse(platform.usesCustomOutOfRangeCheck(),
                 "Subtype 8 keeps ROM's normal $280 deletion range and only needs the saved anchor");
+        assertTrue(platform.usesGroundHalfHeightForTopSolidContact(),
+                "Obj_FloatingPlatform passes height_pixels+1 as SolidObjectTop d3");
+        assertTrue(platform.rejectsZeroDistanceTopSolidLanding(),
+                "SolidObjectTop rejects the exact d0=0 surface boundary");
+        assertFalse(platform.usesPlatformObjectLandingSnap(),
+                "SolidObjectTop keeps its relative entry-radius landing result");
         assertEquals(0x0002, platform.romObjectCodePointerHighWord());
     }
 

@@ -226,7 +226,29 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
-        return SolidRoutineProfile.topSolid(usesStickyContactBuffer());
+        return SolidRoutineProfile.fromProvider(this);
+    }
+
+    @Override
+    public boolean usesGroundHalfHeightForTopSolidContact() {
+        // Obj_FloatingPlatform increments d3 after loading height_pixels, then
+        // passes that height+1 surface to SolidObjectTop.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // SolidObjectTop reaches loc_1E45A, where the unsigned comparison
+        // accepts only the negative overlap band [-$10,-1]. Exact d0=0
+        // returns without installing a ride.
+        return true;
+    }
+
+    @Override
+    public boolean usesPlatformObjectLandingSnap() {
+        // The native caller uses SolidObjectTop's relative y_pos += d0 + 3
+        // result. It does not run PlatformObject_ChkYRange's absolute snap.
+        return false;
     }
 
     @Override
