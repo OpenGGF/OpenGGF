@@ -247,6 +247,15 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
                         SonicConfigurationService.getInstance())
                         .mainSprite();
             }
+            if (sharedLevel != null
+                    && !needsSharedLevelReload
+                    && GameServices.module().getRules().playerCapability().elementalShieldsEnabled()) {
+                // resetPerTest() replaces the playable roster while retaining
+                // the shared level's ObjectManager. Rebind the new sprites so
+                // elemental shield objects and their dynamic children use that
+                // retained manager just as they do after a fresh load.
+                GameServices.level().refreshPlayablePowerUpSpawners();
+            }
             if (sprite.getAnimationProfile() == null && GameServices.level() != null) {
                 GameServices.level().refreshPlayableSpriteArt();
             }

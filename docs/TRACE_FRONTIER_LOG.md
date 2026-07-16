@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ shared replay restores lightning-shield spark slots
+
+Branch `feature/ai-trace-animation-verification`, after the attracted-ring
+allocation milestone. Shared-level replay fixtures replace the playable roster
+after retaining the already-loaded `ObjectManager`; the replacement S3K team
+therefore had the lightning-shield status but no bound power-up spawner or
+fixed shield object. Native `Obj_LightningShield_CreateSpark` allocates four
+diagonal spark objects for 21 object passes on every double jump. Rebinding the
+replacement team through the existing elemental-shield capability restores
+those dynamic slots. In particular, the trace-frame-5017 spark burst remains
+live while the frame-5036 star post and nearby objects load, preventing the
+downstream MGZ platform/wall slot cascade. The production fresh-load path now
+exposes the same rebinding operation used by the fixture. No trace hydration,
+zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:34742-34858`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 10589 to frame 10842 (`y`,
+  expected `$0AA4` / actual `$0ABC`).
+- MGZ standalone animation advances from frame 10590 to frame 12863
+  (`player_animation_id`, expected `$00` / actual `$02`).
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ attracted-ring sparkle preserves SST allocation order
 
 Branch `feature/ai-trace-animation-verification`, after the moving-spike balance

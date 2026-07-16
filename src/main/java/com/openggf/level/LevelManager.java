@@ -562,7 +562,7 @@ public class LevelManager {
         collisionSystem.setObjectManager(objectManager);
 
         // Inject PowerUpSpawner into all playable sprites
-        injectPowerUpSpawner();
+        refreshPlayablePowerUpSpawners();
     }
 
     /**
@@ -573,7 +573,17 @@ public class LevelManager {
         return ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
     }
 
-    private void injectPowerUpSpawner() {
+    /**
+     * Rebinds the active playable roster to the current object manager's
+     * power-up spawner.
+     *
+     * <p>The normal level-load path calls this when it creates the object
+     * manager. Headless shared-level fixtures replace the sprite roster while
+     * retaining that manager, so they call it again after registering the new
+     * team. This keeps fixed shield objects and their ROM-allocated children on
+     * the same lifecycle path as production gameplay.</p>
+     */
+    public void refreshPlayablePowerUpSpawners() {
         DefaultPowerUpSpawner spawner = new DefaultPowerUpSpawner(objectManager);
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         if (player instanceof AbstractPlayableSprite playable) {
