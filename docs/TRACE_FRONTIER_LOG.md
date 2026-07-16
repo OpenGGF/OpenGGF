@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Waiting MGZ Mantis keeps collision_flags clear
+
+Branch `feature/ai-trace-animation-verification`, after the Mantis
+`Obj_WaitOffscreen` position/lifecycle milestone. A second waiting Mantis at
+slot 9 correctly remained at X=`$1E20`, Y=`$04B0`, but the shared badnik base
+still exposed collision `$1A`. Native `loc_85AD2` has not reached
+`SetUp_ObjAttributes`, so the freshly loaded SST's `collision_flags` byte is
+zero. Mantis now publishes no touch response until its first visible
+initialization pass, when collision `$1A` and the visual child are installed
+together. Tails therefore continues its native ground movement instead of
+entering the hurt routine. No trace hydration, zone/route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:180266-180298,185700-185729`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 20873 to frame 21696 (`tails_x`,
+  expected `$1847` / actual `$1846`), with errors reduced from 4385 to 4312.
+- MGZ standalone animation advances from frame 20873 to frame 21765
+  (`tails_animation_id`, expected `$0B` / actual `$00`), with 1116 errors
+  visible across the newly reached route tail.
+- Focused Mantis and MGZ swinging-platform suites pass 17/17.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
 ### 2026-07-16 -- Offscreen MGZ Mantis remains in Obj_WaitOffscreen
 
 Branch `feature/ai-trace-animation-verification`, after the moving-spike

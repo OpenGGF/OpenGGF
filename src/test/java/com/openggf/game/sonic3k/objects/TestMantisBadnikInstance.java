@@ -72,12 +72,14 @@ class TestMantisBadnikInstance {
         assertFalse((boolean) readField(mantis, "initialized"));
         assertNull(readField(mantis, "child"));
         assertEquals(0x0490, mantis.getY());
+        assertEquals(0, mantis.getCollisionFlags());
 
         AbstractObjectInstance.updateCameraBounds(0, 0x0400, 320, 0x04E0, 0);
         mantis.update(2, null);
 
         assertTrue((boolean) readField(mantis, "initialized"));
         assertNotNull(readField(mantis, "child"));
+        assertEquals(0x1A, mantis.getCollisionFlags());
     }
 
     private static Object readField(Object target, String name) throws Exception {

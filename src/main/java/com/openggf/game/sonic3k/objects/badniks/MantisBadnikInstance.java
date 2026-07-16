@@ -127,6 +127,14 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
         return true;
     }
 
+    @Override
+    public int getCollisionFlags() {
+        // Obj_WaitOffscreen has not reached SetUp_ObjAttributes yet, so the
+        // freshly loaded SST's collision_flags byte remains zero until the
+        // first visible Obj_Mantis initialization pass.
+        return initialized ? super.getCollisionFlags() : 0;
+    }
+
     private void initialize() {
         child = spawnChild(() -> new MantisChild(this));
         mappingFrame = WAIT_FRAME;
