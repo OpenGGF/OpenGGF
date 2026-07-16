@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ folded drill children publish from their later SST phase
+
+Branch `feature/ai-trace-animation-verification`, after the directional carry
+cooldown milestone. The ROM's drill-tip and lower drill children occupy later
+SST slots than `Obj_MGZEndBoss`: during routine `$20`, the parent runs
+`MoveSprite2`, then `loc_6C948`/`loc_6C9E8` refresh the child coordinates from
+that moved parent before adding the children to `Collision_response_list`.
+The engine folds those children into the parent, so their touch regions used
+the retained parent publication position and remained two vertical pixels
+behind. Folded child touch anchors now project the parent's native 8.8 motion
+for that moving routine only; the boss body keeps its own parent-slot position.
+No trace hydration, route/frame predicate, comparator tolerance, or physics
+state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:142969-142997,143271-143321`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 37411 to frame 37412 (`y`,
+  expected `$06E7` / actual `$06EC`; 154 errors, down from 384). Tails now
+  receives the native drill-tip hurt response at frame 37411.
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`) while its downstream
+  tail falls from 120 to 112 errors.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused 50-test MGZ drilling-boss suite passes with explicit moving-child
+  publication coverage.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
 ### 2026-07-16 -- Directional carry release retains both native cooldown probes
 
 Branch `feature/ai-trace-animation-verification`, after the fractional attack

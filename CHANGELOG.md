@@ -5299,3 +5299,4 @@ correct way. No graphics have yet been implemented so it's a moving white box on
 
 A moving black box. This version will be complete when we have an unskinned box that can traverse
 terrain in the same way Sonic would in the original game.
+- **MGZ folded drill touch regions now publish from the later native child slots:** during the moving air attack, the drill children observe the parent's post-`MoveSprite2` position before joining `Collision_response_list`, advancing complete-run physics from frame 37411 to 37412 and reducing its remaining errors from 384 to 154 (`docs/skdisasm/sonic3k.asm:142969-142997,143271-143321`).

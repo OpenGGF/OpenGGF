@@ -1294,21 +1294,23 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         DrillPart drillHead = drillHeadPart();
         DrillPart firstFlame = thrusterFlamePart(0);
         DrillPart secondFlame = thrusterFlamePart(1);
+        int childAnchorX = foldedChildTouchAnchorX();
+        int childAnchorY = foldedChildTouchAnchorY();
         int flameFlags = shouldDrawThrusterFlames() ? THRUSTER_FLAME_COLLISION_FLAGS : 0;
         return new TouchResponseProvider.TouchRegion[] {
                 new TouchResponseProvider.TouchRegion(state.x, state.y, getCollisionFlags()),
                 new TouchResponseProvider.TouchRegion(
-                        state.x + renderOffsetX(drillHead.offX()),
-                        state.y + drillHead.offY(),
+                        childAnchorX + renderOffsetX(drillHead.offX()),
+                        childAnchorY + drillHead.offY(),
                         DRILL_HEAD_COLLISION_FLAGS),
                 new TouchResponseProvider.TouchRegion(
-                        state.x + renderOffsetX(firstFlame.offX()),
-                        state.y + firstFlame.offY(),
+                        childAnchorX + renderOffsetX(firstFlame.offX()),
+                        childAnchorY + firstFlame.offY(),
                         flameFlags,
                         THRUSTER_FLAME_SHIELD_REACTION),
                 new TouchResponseProvider.TouchRegion(
-                        state.x + renderOffsetX(secondFlame.offX()),
-                        state.y + secondFlame.offY(),
+                        childAnchorX + renderOffsetX(secondFlame.offX()),
+                        childAnchorY + secondFlame.offY(),
                         flameFlags,
                         THRUSTER_FLAME_SHIELD_REACTION),
         };
@@ -1640,6 +1642,27 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
 
     private int renderOffsetX(int offX) {
         return flipX ? -offX : offX;
+    }
+
+    /**
+     * The ROM's drill children occupy later SST slots than Obj_MGZEndBoss. During
+     * the moving air attack they refresh from the parent's post-MoveSprite2
+     * position before adding themselves to Collision_response_list. The engine
+     * folds those children into the parent whose list entry spans the retained
+     * publication phase, so expose the position that their later slots observe.
+     */
+    private int foldedChildTouchAnchorX() {
+        if (state.routine != ROUTINE_END_ATTACK_MOVE) {
+            return state.x;
+        }
+        return (((state.x << 8) | (xSubpixel & 0xFF)) + xVel) >> 8;
+    }
+
+    private int foldedChildTouchAnchorY() {
+        if (state.routine != ROUTINE_END_ATTACK_MOVE) {
+            return state.y;
+        }
+        return (((state.y << 8) | (ySubpixel & 0xFF)) + yVel) >> 8;
     }
 
     private DrillPart angledDrillPiece() {
