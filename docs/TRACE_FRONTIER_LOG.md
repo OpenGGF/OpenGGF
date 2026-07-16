@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- S3K balance dereferences a cleared persistent interact slot
+
+Branch `feature/ai-trace-animation-verification`, after the terminal carrier-
+deletion milestone. Tails retains both `Status_OnObj` and the byte index in
+`interact(a0)` after slot 15 is deleted. Native `Tails_InputAcceleration_Path`
+still dereferences that cleared SST, reading zero status, width, and X words;
+its signed object-edge comparison therefore selects `Balance`. The engine's
+ride table retained a destroyed Java object reference and skipped balance.
+Object-edge balance now gives the persistent empty interact slot priority and
+models the cleared-SST words for this shared stale-status interval. No trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:27811-27869,106955-106970`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run animation advances from frame 35741 to frame 35786
+  (`player_animation_id`, expected Roll `$02` / actual carried `$22`; 313
+  errors).
+- MGZ complete-run physics remains at frame 35785 (`tails_x`, expected `$3C90`
+  / actual `$3CC0`; 1,437 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- Focused cleared-interact-slot balance coverage plus the MGZ collapse/end-boss
+  suites, rewind guards, and trace-invariant guard pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ terminal collapse carriers delete before their final snap
 
 Branch `feature/ai-trace-animation-verification`, after the all-columns lifetime

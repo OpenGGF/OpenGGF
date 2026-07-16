@@ -14,6 +14,7 @@ import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.Sonic2SuperStateController;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.physics.CollisionSystem;
@@ -1342,6 +1343,58 @@ public class TestPlayableSpriteMovement {
 
                 assertFalse((boolean) computeBalance.invoke(manager),
                                 "held input only reaches Balance through the exact deceleration-to-zero branch");
+        }
+
+        @Test
+        public void s3kStaleOnObjectReadsClearedInteractSlotForBalance() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setGameRulesForTest(GameRules.SONIC_3K);
+                Field objectManagerField = GameServices.level().getClass().getDeclaredField("objectManager");
+                objectManagerField.setAccessible(true);
+                objectManagerField.set(GameServices.level(), new ObjectManager(List.of(), null, 0, null, null));
+
+                mockSprite.setCentreX((short) 0x3C90);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setOnObject(true);
+                mockSprite.setInteractSlotIndex(15);
+                mockSprite.setDirection(Direction.RIGHT);
+
+                Method updateBalance = PlayableSpriteMovement.class.getDeclaredMethod("updateBalanceState");
+                updateBalance.setAccessible(true);
+                updateBalance.invoke(manager);
+
+                assertTrue(mockSprite.getBalanceState() > 0,
+                                "Tails_InputAcceleration_Path reads width/x/status zero from a cleared interact SST");
+                assertEquals(Direction.RIGHT, mockSprite.getDirection());
+        }
+
+        @Test
+        public void s3kLiveLatchedSupportDoesNotReadAsClearedInteractSlot() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setGameRulesForTest(GameRules.SONIC_3K);
+                Field objectManagerField = GameServices.level().getClass().getDeclaredField("objectManager");
+                objectManagerField.setAccessible(true);
+                objectManagerField.set(GameServices.level(), new ObjectManager(List.of(), null, 0, null, null));
+
+                ObjectInstance liveSupport = mock(ObjectInstance.class);
+                mockSprite.setCentreX((short) 0x00D2);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setOnObject(true);
+                mockSprite.setLatchedSolidObject(0, liveSupport);
+                mockSprite.setInteractSlotIndex(17);
+
+                Method updateBalance = PlayableSpriteMovement.class.getDeclaredMethod("updateBalanceState");
+                updateBalance.setAccessible(true);
+                updateBalance.invoke(manager);
+
+                assertEquals(0, mockSprite.getBalanceState(),
+                                "a live manager-owned support is not a zeroed SST just because slot lookup is synthetic");
         }
 
         @Test

@@ -16,6 +16,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.physics.CollisionSystem;
@@ -4248,6 +4249,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (objectManager == null) {
 			return;
 		}
+		int interactSlot = sprite.getInteractSlotIndex();
+		ObjectInstance latchedObject = sprite.getLatchedSolidObjectInstance();
+		if (interactSlot >= 0
+				&& objectManager.objectIdInSlot(interactSlot) < 0
+				&& (latchedObject == null || latchedObject.isDestroyed())) {
+			checkClearedInteractSlotEdgeBalance(objectManager);
+			return;
+		}
 
 		var ridingObject = objectManager.getRidingObject(sprite);
 		if (ridingObject == null) {
@@ -4339,6 +4348,42 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int leftThreshold = balanceShift;
 		int d2 = (objectWidth * 2) - balanceShift;
 
+		applyObjectEdgeBalance(d1, d2, leftThreshold, extended, singleFacingBalanceSet);
+	}
+
+	/**
+	 * ROM object-edge balance dereferences {@code interact(a0)} whenever
+	 * {@code Status_OnObj} remains set, even after DeleteObject has cleared that
+	 * SST. The cleared slot contributes status/width/x words of zero; retaining
+	 * this read matters for the one or more player passes before another routine
+	 * clears the stale status bit.
+	 */
+	private void checkClearedInteractSlotEdgeBalance(ObjectManager objectManager) {
+		int interactSlot = sprite.getInteractSlotIndex();
+		if (interactSlot < 0 || objectManager.objectIdInSlot(interactSlot) >= 0) {
+			return;
+		}
+
+		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
+		boolean extended = animationRules != null && animationRules.extendedEdgeBalance();
+		boolean singleFacingBalanceSet = usesSingleFacingBalance(animationRules);
+		int balanceShift;
+		if (!extended) {
+			balanceShift = 4;
+		} else {
+			PhysicsProfile profile = sprite.getPhysicsProfile();
+			balanceShift = profile != null ? profile.onObjectBalanceShift() : 2;
+		}
+
+		// Cleared SST: width_pixels=0 and x_pos=0. Keep both calculations
+		// word-sized so high level coordinates retain the 68000 signed branches.
+		int d1 = (short) sprite.getCentreX();
+		int d2 = (short) -balanceShift;
+		applyObjectEdgeBalance(d1, d2, balanceShift, extended, singleFacingBalanceSet);
+	}
+
+	private void applyObjectEdgeBalance(int d1, int d2, int leftThreshold, boolean extended,
+			boolean singleFacingBalanceSet) {
 		boolean facingRight = sprite.getDirection() == Direction.RIGHT;
 
 		if (d1 < leftThreshold) {
