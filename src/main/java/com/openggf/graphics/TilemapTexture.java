@@ -38,17 +38,17 @@ public class TilemapTexture {
     }
 
     public void upload(byte[] data, int widthTiles, int heightTiles) {
-        long requiredBytes = (long) widthTiles * heightTiles * 4L;
+        int requiredBytes = checkedTilemapByteCount(widthTiles, heightTiles);
         if (data == null || widthTiles <= 0 || heightTiles <= 0
-                || requiredBytes > data.length || requiredBytes > Integer.MAX_VALUE) {
+                || requiredBytes < 0 || requiredBytes > data.length) {
             return;
         }
         if (textureId == 0 || this.widthTiles != widthTiles || this.heightTiles != heightTiles) {
             init(widthTiles, heightTiles);
         }
-        ensureUploadCapacity(data.length);
+        ensureUploadCapacity(requiredBytes);
         uploadBuffer.clear();
-        uploadBuffer.put(data);
+        uploadBuffer.put(data, 0, requiredBytes);
         uploadBuffer.flip();
         glBindTexture(GL_TEXTURE_2D, textureId);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, widthTiles, heightTiles,
@@ -63,16 +63,17 @@ public class TilemapTexture {
      */
     public boolean uploadColumns(byte[] data, int sourceWidthTiles, int heightTiles,
             int sourceColumn, int destinationColumn, int columnCount) {
-        long requiredSourceBytes = (long) sourceWidthTiles * heightTiles * 4L;
+        int requiredSourceBytes = checkedTilemapByteCount(sourceWidthTiles, heightTiles);
+        int uploadBytes = checkedTilemapByteCount(columnCount, heightTiles);
         if (data == null || sourceWidthTiles <= 0 || heightTiles <= 0 || columnCount <= 0
                 || sourceColumn < 0 || columnCount > sourceWidthTiles
                 || sourceColumn > sourceWidthTiles - columnCount
                 || destinationColumn < 0 || destinationColumn > sourceWidthTiles - columnCount
-                || requiredSourceBytes > data.length || requiredSourceBytes > Integer.MAX_VALUE
+                || requiredSourceBytes < 0 || requiredSourceBytes > data.length
+                || uploadBytes < 0
                 || !hasStorage(sourceWidthTiles, heightTiles)) {
             return false;
         }
-        int uploadBytes = columnCount * heightTiles * 4;
         ensureUploadCapacity(uploadBytes);
         uploadBuffer.clear();
         int sourceRowBytes = sourceWidthTiles * 4;
@@ -97,22 +98,21 @@ public class TilemapTexture {
     /** Uploads contiguous full-width logical rows into physical texture rows. */
     public boolean uploadRows(byte[] data, int widthTiles, int sourceHeightTiles,
             int sourceRow, int destinationRow, int rowCount) {
-        long requiredSourceBytes = (long) widthTiles * sourceHeightTiles * 4L;
-        long uploadBytes = (long) widthTiles * rowCount * 4L;
+        int requiredSourceBytes = checkedTilemapByteCount(widthTiles, sourceHeightTiles);
+        int uploadBytes = checkedTilemapByteCount(widthTiles, rowCount);
         if (data == null || widthTiles <= 0 || sourceHeightTiles <= 0 || rowCount <= 0
                 || sourceRow < 0 || rowCount > sourceHeightTiles
                 || sourceRow > sourceHeightTiles - rowCount
                 || destinationRow < 0 || destinationRow > sourceHeightTiles - rowCount
-                || requiredSourceBytes > data.length || requiredSourceBytes > Integer.MAX_VALUE
-                || uploadBytes > Integer.MAX_VALUE
+                || requiredSourceBytes < 0 || requiredSourceBytes > data.length
+                || uploadBytes < 0
                 || !hasStorage(widthTiles, sourceHeightTiles)) {
             return false;
         }
-        int uploadLength = (int) uploadBytes;
         int sourceOffset = sourceRow * widthTiles * 4;
-        ensureUploadCapacity(uploadLength);
+        ensureUploadCapacity(uploadBytes);
         uploadBuffer.clear();
-        uploadBuffer.put(data, sourceOffset, uploadLength);
+        uploadBuffer.put(data, sourceOffset, uploadBytes);
         uploadBuffer.flip();
         uploadRowsSubImage(destinationRow, widthTiles, rowCount, uploadBuffer);
         return true;
@@ -128,6 +128,17 @@ public class TilemapTexture {
 
     public boolean hasStorage(int widthTiles, int heightTiles) {
         return textureId != 0 && this.widthTiles == widthTiles && this.heightTiles == heightTiles;
+    }
+
+    private static int checkedTilemapByteCount(int widthTiles, int heightTiles) {
+        if (widthTiles <= 0 || heightTiles <= 0) {
+            return -1;
+        }
+        try {
+            return Math.multiplyExact(Math.multiplyExact(widthTiles, heightTiles), 4);
+        } catch (ArithmeticException overflow) {
+            return -1;
+        }
     }
 
     private void ensureUploadCapacity(int capacity) {

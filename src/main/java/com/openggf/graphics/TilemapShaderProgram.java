@@ -128,7 +128,17 @@ public class TilemapShaderProgram extends ShaderProgram {
         }
     }
 
+    /** @deprecated use {@link #setTilemapRingBase(float, float)}. */
+    @Deprecated
+    public void setTilemapRingBase(float baseXTiles) {
+        setTilemapRingBase(baseXTiles, 0.0f);
+    }
+
     public void setTilemapRingBase(float baseXTiles, float baseYTiles) {
+        applyTilemapRingBaseUniforms(baseXTiles, baseYTiles);
+    }
+
+    protected void applyTilemapRingBaseUniforms(float baseXTiles, float baseYTiles) {
         if (tilemapRingBaseXLocation >= 0) {
             glUniform1f(tilemapRingBaseXLocation, baseXTiles);
         }

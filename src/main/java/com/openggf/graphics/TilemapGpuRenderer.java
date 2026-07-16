@@ -211,12 +211,12 @@ public class TilemapGpuRenderer {
      */
     public void setBackgroundTilemapDataIncremental(byte[] data, int widthTiles, int heightTiles,
             int shiftXTiles, int shiftYTiles) {
-        long requiredBytes = (long) widthTiles * heightTiles * 4L;
+        int requiredBytes = checkedTilemapByteCount(widthTiles, heightTiles);
         if (data == null || widthTiles <= 0 || heightTiles <= 0
                 || (shiftXTiles == 0 && shiftYTiles == 0)
                 || shiftXTiles <= -widthTiles || shiftXTiles >= widthTiles
                 || shiftYTiles <= -heightTiles || shiftYTiles >= heightTiles
-                || requiredBytes > data.length || requiredBytes > Integer.MAX_VALUE
+                || requiredBytes < 0 || requiredBytes > data.length
                 || backgroundData == null
                 || backgroundWidthTiles != widthTiles
                 || backgroundHeightTiles != heightTiles
@@ -735,10 +735,18 @@ public class TilemapGpuRenderer {
         if (backgroundDirty) {
             return backgroundData == null ? 0 : backgroundData.length;
         }
-        return backgroundIncrementalDirty
-                ? (backgroundPendingColumnCount * backgroundHeightTiles
-                        + backgroundPendingRowCount * backgroundWidthTiles) * 4
-                : 0;
+        if (!backgroundIncrementalDirty) {
+            return 0;
+        }
+        int columnBytes = backgroundPendingColumnCount == 0 ? 0
+                : checkedTilemapByteCount(backgroundPendingColumnCount, backgroundHeightTiles);
+        int rowBytes = backgroundPendingRowCount == 0 ? 0
+                : checkedTilemapByteCount(backgroundWidthTiles, backgroundPendingRowCount);
+        if (columnBytes < 0 || rowBytes < 0) {
+            return Integer.MAX_VALUE;
+        }
+        long totalBytes = (long) columnBytes + rowBytes;
+        return totalBytes > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) totalBytes;
     }
 
     protected int getPendingBackgroundUploadCallCount() {
@@ -774,6 +782,23 @@ public class TilemapGpuRenderer {
         backgroundIncrementalDirty = false;
         backgroundPendingColumnCount = 0;
         backgroundPendingRowCount = 0;
+    }
+
+    /** Applies the real pending texture-upload plan to a headless recording texture. */
+    protected boolean applyPendingBackgroundUploadForTest(TilemapTexture texture) {
+        if (texture == null || backgroundData == null) {
+            return false;
+        }
+        if (backgroundDirty) {
+            texture.upload(backgroundData, backgroundWidthTiles, backgroundHeightTiles);
+            if (!texture.hasStorage(backgroundWidthTiles, backgroundHeightTiles)) {
+                return false;
+            }
+        } else if (backgroundIncrementalDirty && !uploadPendingBackgroundSpans(texture)) {
+            return false;
+        }
+        consumePendingBackgroundUploadForTest();
+        return true;
     }
 
     /** Applies the pending upload plan to a CPU texture image for headless parity tests. */
@@ -818,6 +843,17 @@ public class TilemapGpuRenderer {
                         physicalTexture,
                         (destinationRow * backgroundWidthTiles + physicalColumn) * 4, 4);
             }
+        }
+    }
+
+    private static int checkedTilemapByteCount(int widthTiles, int heightTiles) {
+        if (widthTiles <= 0 || heightTiles <= 0) {
+            return -1;
+        }
+        try {
+            return Math.multiplyExact(Math.multiplyExact(widthTiles, heightTiles), 4);
+        } catch (ArithmeticException overflow) {
+            return -1;
         }
     }
 
