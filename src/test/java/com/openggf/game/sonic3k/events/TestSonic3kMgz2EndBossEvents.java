@@ -71,7 +71,7 @@ class TestSonic3kMgz2EndBossEvents {
     }
 
     private void runBossTransitionTimer(Sonic3kMGZEvents events) {
-        for (int frame = 0; frame < 0x168; frame++) {
+        for (int frame = 0; frame <= 0x168; frame++) {
             events.update(1, frame);
         }
     }
@@ -428,7 +428,7 @@ class TestSonic3kMgz2EndBossEvents {
         assertTrue(tails.isHurt(),
                 "Tails-alone routine restoration is delayed until loc_163F4's timer reaches zero");
 
-        for (int frame = 1; frame < 0x168; frame++) {
+        for (int frame = 1; frame <= 0x168; frame++) {
             events.update(1, frame);
         }
 
@@ -826,6 +826,11 @@ class TestSonic3kMgz2EndBossEvents {
         for (int frame = 0; frame < 0x168; frame++) {
             events.update(1, frame);
         }
+
+        assertEquals(SidekickCpuController.State.MGZ_RESCUE_WAIT, tails.getCpuController().getState(),
+                "the lower transition SST cannot consume its countdown on the allocating boss pass");
+
+        events.update(1, 0x168);
 
         assertEquals(SidekickCpuController.State.CARRY_INIT, tails.getCpuController().getState(),
                 "Obj_MGZ2_BossTransition switches Tails from CPU routine $12 to $14 after the $168-frame wait");

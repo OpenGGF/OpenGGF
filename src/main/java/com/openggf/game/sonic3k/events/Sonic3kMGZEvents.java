@@ -208,6 +208,13 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private static final int BOSS_BG_SCROLL_ACCEL = 0x800;
     private static final int BOSS_BG_SCROLL_MAX = 0x50000;
     private static final int BOSS_TRANSITION_WAIT_FRAMES = 0x168;
+    /**
+     * The end-boss SST publishes the transition allocation after the engine's
+     * fixed-object bridge has already passed its lower native slot. The newly
+     * allocated {@code Obj_MGZ2_BossTransition} therefore starts its native
+     * {@code $168} countdown on the following object pass.
+     */
+    private static final int BOSS_TRANSITION_ALLOCATION_PENDING_PASSES = 1;
     private static final int BOSS_TRANSITION_SPAWN_OFFSET_X = 0x40;
     private static final int BOSS_TRANSITION_SPAWN_OFFSET_Y = 0x100;
     private static final String BOSS_TRANSITION_TEMP_TAILS_CODE = "mgz2_boss_tails";
@@ -1374,7 +1381,8 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         bossTransitionCameraY = camera.getY() & 0xFFFF;
         bossTransitionX = bossTransitionCameraX + BOSS_TRANSITION_SPAWN_OFFSET_X;
         bossTransitionY = bossTransitionCameraY + BOSS_TRANSITION_SPAWN_OFFSET_Y;
-        bossTransitionTimer = BOSS_TRANSITION_WAIT_FRAMES;
+        bossTransitionTimer = BOSS_TRANSITION_WAIT_FRAMES
+                + BOSS_TRANSITION_ALLOCATION_PENDING_PASSES;
         bossTransitionActive = true;
         bossTransitionDeathPlaneDisabled = true;
         lockBossTransitionCamera();

@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ rescue waits for its allocated transition SST pass
+
+Branch `feature/ai-trace-animation-verification`, after the cleared-interact-
+slot milestone. `Obj_MGZEndBoss` allocates `Obj_MGZ2_BossTransition` into an
+earlier SST slot after that slot's current object pass has already elapsed.
+The manager bridge started the native `$168` countdown immediately from the
+allocation request, promoting Tails from rescue-wait one pass early. The
+countdown now includes that concrete pending allocation pass, so native slot
+14 remains at `loc_16334` through frame 35785 and reaches `loc_16340` on frame
+35786. No trace hydration, route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:30200-30270,142849-142866`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 35785 to frame 35786 (`x`,
+  expected `$3CCB` / actual `$3CC0`; 1,419 errors).
+- MGZ complete-run animation advances from frame 35786 to frame 35787
+  (`tails_animation_id`, expected carried `$22` / actual Balance `$06`; 309
+  errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green; the full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+- The focused MGZ end-boss event suite passes.
+- The remote checkpoint found local `develop` and `origin/develop` both at
+  `7ed40f0cdcde`; no merge was required.
+
 ### 2026-07-16 -- S3K balance dereferences a cleared persistent interact slot
 
 Branch `feature/ai-trace-animation-verification`, after the terminal carrier-
