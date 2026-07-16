@@ -567,8 +567,11 @@ public class LevelTilemapManager {
             xQueryOffset = contiguousWidthPx > 0
                     ? Math.floorMod(alignedX, contiguousWidthPx) : 0;
         }
+        // Draw_BG retains the row immediately above the visible window. When
+        // scrolling upward, that offscreen row is the one the ROM redraws
+        // (docs/s2disasm/s2.asm:18712-18719,18748-18756).
         return new BgBuildParams(normal.bgWrap(), normal.bgLinearRowOverflow(),
-                xQueryOffset, alignedY,
+                xQueryOffset, alignedY - LevelConstants.CHUNK_HEIGHT,
                 BG_RING_WIDTH_TILES * Pattern.PATTERN_WIDTH,
                 BG_RING_HEIGHT_TILES * Pattern.PATTERN_HEIGHT,
                 normal.bgWrap() && !normal.bgLinearRowOverflow()
@@ -1764,7 +1767,9 @@ public class LevelTilemapManager {
 
     int getBackgroundTilemapSourceY() {
         return lastBgTilemapUpdateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32
-                && persistentBgBaselineValid ? persistentBgAlignedY : 0;
+                && persistentBgBaselineValid
+                // Keep visible alignedBgY at logical row 2 after the leading row.
+                ? persistentBgAlignedY - LevelConstants.CHUNK_HEIGHT : 0;
     }
 
     public byte[] getForegroundTilemapData() {

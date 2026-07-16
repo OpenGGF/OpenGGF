@@ -89,8 +89,8 @@ class TestPersistentBgNametable {
         assertEquals(0, manager.persistentBgIncrementalPublicationCount);
         assertEquals(RING_WIDTH_TILES * RING_HEIGHT_TILES * 4,
                 renderer.getPendingBackgroundUploadBytes());
-        assertDescriptorAtLogical(manager, 0, 0, -16, -16);
-        assertDescriptorAtLogical(manager, 63, 31, -16 + 63 * 8, -16 + 31 * 8);
+        assertDescriptorAtLogical(manager, 0, 0, -16, -32);
+        assertDescriptorAtLogical(manager, 63, 31, -16 + 63 * 8, -32 + 31 * 8);
     }
 
     @Test
@@ -102,8 +102,8 @@ class TestPersistentBgNametable {
         assertEquals(2, forward.getPersistentBgOriginXTiles());
         assertEquals(0, forward.getPersistentBgOriginYTiles());
         assertOnlyPhysicalColumnsChanged(beforeForward, forward.getPersistentBgRingCopy(), 0, 1);
-        assertDescriptorAtLogical(forward, 62, 0, 16 + 62 * 8, 0);
-        assertDescriptorAtLogical(forward, 63, 31, 16 + 63 * 8, 31 * 8);
+        assertDescriptorAtLogical(forward, 62, 0, 16 + 62 * 8, -16);
+        assertDescriptorAtLogical(forward, 63, 31, 16 + 63 * 8, -16 + 31 * 8);
 
         LevelTilemapManager backward = newManager();
         ensurePersistent(backward, 16, 0);
@@ -111,8 +111,8 @@ class TestPersistentBgNametable {
         ensurePersistent(backward, 0, 0);
         assertEquals(62, backward.getPersistentBgOriginXTiles());
         assertOnlyPhysicalColumnsChanged(beforeBackward, backward.getPersistentBgRingCopy(), 62, 63);
-        assertDescriptorAtLogical(backward, 0, 0, 0, 0);
-        assertDescriptorAtLogical(backward, 1, 31, 8, 31 * 8);
+        assertDescriptorAtLogical(backward, 0, 0, 0, -16);
+        assertDescriptorAtLogical(backward, 1, 31, 8, -16 + 31 * 8);
     }
 
     @Test
@@ -124,8 +124,8 @@ class TestPersistentBgNametable {
         assertEquals(0, forward.getPersistentBgOriginXTiles());
         assertEquals(2, forward.getPersistentBgOriginYTiles());
         assertOnlyPhysicalRowsChanged(beforeForward, forward.getPersistentBgRingCopy(), 0, 1);
-        assertDescriptorAtLogical(forward, 0, 30, 0, 16 + 30 * 8);
-        assertDescriptorAtLogical(forward, 63, 31, 63 * 8, 16 + 31 * 8);
+        assertDescriptorAtLogical(forward, 0, 30, 0, 30 * 8);
+        assertDescriptorAtLogical(forward, 63, 31, 63 * 8, 31 * 8);
 
         LevelTilemapManager backward = newManager();
         ensurePersistent(backward, 0, 16);
@@ -133,8 +133,53 @@ class TestPersistentBgNametable {
         ensurePersistent(backward, 0, 0);
         assertEquals(30, backward.getPersistentBgOriginYTiles());
         assertOnlyPhysicalRowsChanged(beforeBackward, backward.getPersistentBgRingCopy(), 30, 31);
-        assertDescriptorAtLogical(backward, 0, 0, 0, 0);
-        assertDescriptorAtLogical(backward, 63, 1, 63 * 8, 8);
+        assertDescriptorAtLogical(backward, 0, 0, 0, -16);
+        assertDescriptorAtLogical(backward, 63, 1, 63 * 8, -8);
+    }
+
+    @Test
+    void upwardCrossingRetainsTheRomLeadingRowAheadOfTheVisibleWindow() {
+        LevelTilemapManager manager = newManager();
+        ensurePersistent(manager, 0, 16);
+        byte[] before = manager.getPersistentBgRingCopy();
+
+        ensurePersistent(manager, 0, 0);
+
+        assertEquals(30, manager.getPersistentBgOriginYTiles());
+        assertOnlyPhysicalRowsChanged(before, manager.getPersistentBgRingCopy(), 30, 31);
+        assertDescriptorAtLogical(manager, 0, 0, 0, -16);
+        assertDescriptorAtLogical(manager, 63, 1, 63 * 8, -8);
+    }
+
+    @Test
+    void upwardWrapSourcesTheBottomLayoutRowInsteadOfWrappedRowZero() {
+        blockLookup = (layer, x, y) -> {
+            int wrappedY = Math.floorMod(y, 2048);
+            int sentinelBlock = wrappedY == 0 ? 0 : wrappedY >= 1920 ? 24 : 8;
+            return level.getBlock(sentinelBlock);
+        };
+        LevelTilemapManager manager = newManager();
+        ensurePersistent(manager, 0, -2032);
+
+        ensurePersistent(manager, 0, -2048);
+
+        assertDescriptorAtLogical(manager, 0, 0, 0, -2064);
+        PatternDesc rowZeroSentinel = expectedDescriptor(0, -2048);
+        assertLogicalDescriptorDoesNotEqual(manager, 0, 0, rowZeroSentinel);
+    }
+
+    @Test
+    void downwardCrossingKeepsTheBottomOfTheLeadingRowWindowCurrent() {
+        LevelTilemapManager manager = newManager();
+        ensurePersistent(manager, 0, 0);
+        byte[] before = manager.getPersistentBgRingCopy();
+
+        ensurePersistent(manager, 0, 16);
+
+        assertEquals(2, manager.getPersistentBgOriginYTiles());
+        assertOnlyPhysicalRowsChanged(before, manager.getPersistentBgRingCopy(), 0, 1);
+        assertDescriptorAtLogical(manager, 0, 30, 0, 240);
+        assertDescriptorAtLogical(manager, 63, 31, 63 * 8, 248);
     }
 
     @Test
@@ -148,8 +193,8 @@ class TestPersistentBgNametable {
         assertEquals(2, manager.getPersistentBgOriginXTiles());
         assertEquals(2, manager.getPersistentBgOriginYTiles());
         assertOnlyPhysicalCrossChanged(before, manager.getPersistentBgRingCopy(), 0, 1, 0, 1);
-        assertDescriptorAtLogical(manager, 62, 30, 16 + 62 * 8, 16 + 30 * 8);
-        assertDescriptorAtLogical(manager, 63, 31, 16 + 63 * 8, 16 + 31 * 8);
+        assertDescriptorAtLogical(manager, 62, 30, 16 + 62 * 8, 30 * 8);
+        assertDescriptorAtLogical(manager, 63, 31, 16 + 63 * 8, 31 * 8);
     }
 
     @Test
@@ -163,7 +208,7 @@ class TestPersistentBgNametable {
         assertEquals(0, manager.getPersistentBgOriginYTiles());
         assertEquals(512, manager.getPersistentBgAlignedX());
         assertEquals(512, manager.getPersistentBgAlignedY());
-        assertDescriptorAtLogical(manager, 63, 31, 512 + 63 * 8, 512 + 31 * 8);
+        assertDescriptorAtLogical(manager, 63, 31, 512 + 63 * 8, 496 + 31 * 8);
     }
 
     @Test
@@ -258,10 +303,43 @@ class TestPersistentBgNametable {
                 LevelRenderer.backgroundTilemapSampling(manager, 16);
 
         assertEquals(16, sampling.compositorWorldAnchorX());
-        assertEquals(0, sampling.tilePassWorldOffsetY());
+        assertEquals(16, sampling.tilePassWorldOffsetY());
         int logicalX = Math.floorDiv(16 - sampling.compositorWorldAnchorX(), 8);
         int logicalY = Math.floorDiv(sampling.tilePassWorldOffsetY(), 8);
         assertDescriptorAtLogical(manager, logicalX, logicalY, 16, 16);
+    }
+
+    @Test
+    void persistentSourceAnchorIncludesLeadingRowWithoutShiftingVisibleWorldMapping() {
+        LevelTilemapManager manager = newManager();
+        ensurePersistent(manager, 16, 32);
+
+        LevelRenderer.BackgroundTilemapSampling sampling =
+                LevelRenderer.backgroundTilemapSampling(manager, 32);
+
+        assertEquals(32, manager.getPersistentBgAlignedY(),
+                "the retained baseline remains the live aligned camera Y");
+        assertEquals(16, manager.getBackgroundTilemapSourceY(),
+                "the texture source starts one ROM redraw row above the baseline");
+        assertEquals(16, sampling.tilePassWorldOffsetY(),
+                "visible world Y must sample logical row 2, not shift upward on screen");
+        assertDescriptorAtLogical(manager, 0, 0, 16, 16);
+        assertDescriptorAtLogical(manager, 0, 2, 16, 32);
+    }
+
+    @Test
+    void statelessSourceAnchorsRemainUnchanged() {
+        LevelTilemapManager manager = newManager();
+        manager.setBgTilemapBaseX(48);
+        manager.ensureBackgroundTilemapData(blockLookup, zoneFeatures, 0, null, false);
+
+        LevelRenderer.BackgroundTilemapSampling sampling =
+                LevelRenderer.backgroundTilemapSampling(manager, 32);
+
+        assertEquals(48, manager.getBackgroundTilemapSourceX());
+        assertEquals(0, manager.getBackgroundTilemapSourceY());
+        assertEquals(48, sampling.compositorWorldAnchorX());
+        assertEquals(32, sampling.tilePassWorldOffsetY());
     }
 
     @Test
@@ -275,7 +353,7 @@ class TestPersistentBgNametable {
         byte[] positivePhysicalTexture = new byte[RING_WIDTH_TILES * RING_HEIGHT_TILES * 4];
         positiveRenderer.applyPendingBackgroundUploadForTest(positivePhysicalTexture);
         byte[] positiveBefore = positive.getPersistentBgRingCopy();
-        assertRingMatchesWrappedSourceWindow(positive, 496, 0, 512);
+        assertRingMatchesWrappedSourceWindow(positive, 496, -16, 512);
         ensurePersistent(positive, 512, 0);
         assertEquals(1, positive.persistentBgFullPublicationCount);
         assertEquals(1, positive.persistentBgIncrementalPublicationCount);
@@ -285,7 +363,7 @@ class TestPersistentBgNametable {
                 "only the two incoming physical columns should be published");
         assertNoPhysicalColumnsOutsideChanged(
                 positiveBefore, positive.getPersistentBgRingCopy(), 0, 1);
-        assertRingMatchesWrappedSourceWindow(positive, 0, 0, 512);
+        assertRingMatchesWrappedSourceWindow(positive, 0, -16, 512);
 
         RecordingRenderer negativeRenderer = new RecordingRenderer();
         injectRenderer(negativeRenderer);
@@ -303,7 +381,7 @@ class TestPersistentBgNametable {
                 "only the two incoming physical columns should be published");
         assertNoPhysicalColumnsOutsideChanged(
                 negativeBefore, negative.getPersistentBgRingCopy(), 62, 63);
-        assertRingMatchesWrappedSourceWindow(negative, 496, 0, 512);
+        assertRingMatchesWrappedSourceWindow(negative, 496, -16, 512);
     }
 
     @Test
@@ -318,8 +396,8 @@ class TestPersistentBgNametable {
         assertEquals(1, manager.persistentBgFullPublicationCount);
         assertEquals(1, manager.persistentBgIncrementalPublicationCount);
         assertEquals(2, manager.getPersistentBgOriginXTiles());
-        assertDescriptorAtLogical(manager, 0, 0, 512, 0);
-        assertDescriptorAtLogical(manager, 63, 31, 512 + 63 * 8, 31 * 8);
+        assertDescriptorAtLogical(manager, 0, 0, 512, -16);
+        assertDescriptorAtLogical(manager, 63, 31, 512 + 63 * 8, -16 + 31 * 8);
     }
 
     @Test
@@ -368,7 +446,7 @@ class TestPersistentBgNametable {
 
             assertEquals(direction[0] > 0 ? 2 : 62, manager.getPersistentBgOriginXTiles());
             assertEquals(direction[1] > 0 ? 2 : 30, manager.getPersistentBgOriginYTiles());
-            assertRingMatchesSourceWindow(manager, targetX, targetY);
+            assertRingMatchesSourceWindow(manager, targetX, targetY - LevelConstants.CHUNK_HEIGHT);
         }
     }
 
@@ -381,8 +459,9 @@ class TestPersistentBgNametable {
                 LevelRenderer.backgroundTilemapSampling(manager, -16);
 
         assertEquals(-16, sampling.compositorWorldAnchorX());
-        assertEquals(0, sampling.tilePassWorldOffsetY());
-        assertDescriptorAtLogical(manager, 0, 0, -16, -16);
+        assertEquals(16, sampling.tilePassWorldOffsetY());
+        assertDescriptorAtLogical(manager, 0, 0, -16, -32);
+        assertDescriptorAtLogical(manager, 0, 2, -16, -16);
     }
 
     private LevelTilemapManager newManager() {
@@ -428,13 +507,29 @@ class TestPersistentBgNametable {
     }
 
     private PatternDesc expectedDescriptor(int worldX, int worldY) {
-        Block block = lookup((byte) 1, worldX, worldY);
+        Block block = blockLookup.lookup((byte) 1, worldX, worldY);
         int chunkX = Math.floorMod(worldX, BLOCK_PX) / 16;
         int chunkY = Math.floorMod(worldY, BLOCK_PX) / 16;
         Chunk chunk = level.getChunk(block.getChunkDesc(chunkX, chunkY).getChunkIndex());
         int patternX = Math.floorMod(worldX, 16) / 8;
         int patternY = Math.floorMod(worldY, 16) / 8;
         return chunk.getPatternDesc(patternX, patternY);
+    }
+
+    private void assertLogicalDescriptorDoesNotEqual(LevelTilemapManager manager,
+                                                     int logicalX,
+                                                     int logicalY,
+                                                     PatternDesc unexpected) {
+        byte[] ring = manager.getPersistentBgRingCopy();
+        assertNotNull(ring);
+        int physicalX = Math.floorMod(manager.getPersistentBgOriginXTiles() + logicalX,
+                RING_WIDTH_TILES);
+        int physicalY = Math.floorMod(manager.getPersistentBgOriginYTiles() + logicalY,
+                RING_HEIGHT_TILES);
+        int offset = (physicalY * RING_WIDTH_TILES + physicalX) * 4;
+        int actualPattern = (ring[offset] & 0xFF) | ((ring[offset + 1] & 7) << 8);
+        assertFalse(actualPattern == unexpected.getPatternIndex(),
+                "the entering row must not use the wrapped row-zero sentinel");
     }
 
     private void assertRingMatchesSourceWindow(LevelTilemapManager manager,
