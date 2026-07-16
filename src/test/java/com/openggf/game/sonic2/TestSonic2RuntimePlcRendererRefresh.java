@@ -18,12 +18,14 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.api.parallel.Isolated;
@@ -55,6 +57,7 @@ import static org.mockito.Mockito.when;
 @Isolated
 @Execution(ExecutionMode.SAME_THREAD)
 @RequiresRom(SonicGame.SONIC_2)
+@ExtendWith(SingletonResetExtension.class)
 class TestSonic2RuntimePlcRendererRefresh {
     private Sonic2ObjectArtProvider provider;
     private LevelManager levelManager;

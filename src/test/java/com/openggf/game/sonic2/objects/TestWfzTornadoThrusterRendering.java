@@ -28,12 +28,14 @@ import com.openggf.level.render.SpriteFrame;
 import com.openggf.level.render.SpriteFramePiece;
 import com.openggf.physics.Sensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.api.parallel.Isolated;
@@ -53,6 +55,7 @@ import static org.mockito.Mockito.mock;
 @Isolated
 @Execution(ExecutionMode.SAME_THREAD)
 @RequiresRom(SonicGame.SONIC_2)
+@ExtendWith(SingletonResetExtension.class)
 class TestWfzTornadoThrusterRendering {
     private static final int ROM_PARENT_X = 0x3192;
     private static final int ROM_PARENT_Y = 0x0472;
