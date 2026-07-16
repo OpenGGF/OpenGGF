@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ stomp bridge retains SolidObjectTop's relative landing
+
+Branch `feature/ai-trace-animation-verification`, after the lightning-shield
+spark-slot milestone. The MGZ type-2 collapsing bridge calls
+`SolidObjectTop`, which seats the carried player with `y_pos += d0 + 3` while
+the top platform's enlarged `y_radius` is still live. `Player_TouchFloor`
+then restores the ordinary radius without changing that native `y_pos`. The
+engine correctly calculated `$0AA4`, but its default PlatformObject-style
+absolute re-seat ran after the radius reset and overwrote the result with
+`$0ABC`. Declaring the bridge's actual solid routine preserves the relative
+landing and the same-pass stomp breakup. No trace hydration,
+zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:24335-24390,41982-42039,45170-45218`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 10842 to frame 12457 (`rings`,
+  expected `0` / actual `1`).
+- MGZ standalone animation remains at frame 12863 (`player_animation_id`,
+  expected `$00` / actual `$02`).
+- The focused collapsing-bridge suite passes 10/10.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ shared replay restores lightning-shield spark slots
 
 Branch `feature/ai-trace-animation-verification`, after the attracted-ring

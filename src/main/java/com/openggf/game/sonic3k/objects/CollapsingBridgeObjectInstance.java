@@ -597,6 +597,15 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesPlatformObjectLandingSnap() {
+        // Obj_CollapsingBridge calls SolidObjectTop (sonic3k.asm:45170-45175),
+        // whose loc_1E45A landing writes y_pos += d0 + 3 before
+        // Player_TouchFloor restores the default radii (41996-42039). It does
+        // not use PlatformObject_ChkYRange's absolute surface re-seat.
+        return false;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         // ROM: once the platform enters Obj_PlatformCollapseWaitHandlePlayer it stops
         // calling SolidObjectTop entirely. Only riders already standing on it remain

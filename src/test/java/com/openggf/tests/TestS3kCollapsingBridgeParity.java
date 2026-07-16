@@ -94,6 +94,14 @@ class TestS3kCollapsingBridgeParity {
     }
 
     @Test
+    void topContact_usesSolidObjectTopRelativeLandingSnap() throws Exception {
+        CollapsingBridgeObjectInstance bridge = newMgzBridge(0x20);
+
+        assertFalse(bridge.usesPlatformObjectLandingSnap(),
+                "SolidObjectTop must retain its y_pos += d0 + 3 result when Player_TouchFloor resets custom radii");
+    }
+
+    @Test
     void collapsedParent_offscreenDeleteAllowsPlacementRespawn() throws Exception {
         CollapsingBridgeObjectInstance bridge = newMgzBridge(0x00);
         setIntField(bridge, "state", 3);
