@@ -103,6 +103,24 @@ public final class Mgz2LevelCollapseSolidInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // SolidObjectFull2_1P tests its retained standing bit before entering
+        // SolidObject_cont. If the rider has jumped, loc_1DCF0 clears the bit
+        // and returns d4=0; it must not fall through to loc_1E154's upward
+        // position lift (sonic3k.asm:41065-41084,41608-41637).
+        return true;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // The ROM standing bit lives in this carrier's SST while its y_pos is
+        // rewritten from the collapse scroll word every frame. The engine's
+        // dynamic spawn therefore cannot be the latch key because it changes
+        // along with y_pos; retain the bit on the live carrier instance.
+        return true;
+    }
+
+    @Override
     public boolean isPersistent() {
         return true;
     }

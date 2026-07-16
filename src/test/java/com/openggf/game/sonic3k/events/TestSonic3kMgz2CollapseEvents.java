@@ -196,6 +196,10 @@ class TestSonic3kMgz2CollapseEvents {
                 "Obj_MGZ2LevelCollapseSolid calls SolidObjectFull2 even though its sprite is always invisible");
         assertTrue(solid.usesInclusiveRightEdge(),
                 "SolidObjectFull2 accepts the exact d1*2 right edge");
+        assertTrue(solid.airborneStaleStandingBitReturnsNoContact(null),
+                "A jumping rider must take SolidObjectFull2_1P's stale-standing-bit return, not its upward lift");
+        assertTrue(solid.usesInstanceSolidStateLatchKey(),
+                "The native standing bit must survive this carrier's per-frame dynamic-spawn Y rewrite");
 
         delete[0] = true;
 

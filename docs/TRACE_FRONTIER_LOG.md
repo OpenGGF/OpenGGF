@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ collapse carriers retain SST standing state while scrolling
+
+Branch `feature/ai-trace-animation-verification`, after the pending-scroll
+milestone. `Obj_MGZ2LevelCollapseSolid` rewrites its `y_pos` from the collapse
+scroll word every SST pass, but its Player 1/2 standing bits remain in that
+same live SST `status` byte. The engine keyed those bits through the carrier's
+moving dynamic-spawn record, so the key changed with Y and a jump-off lost the
+retained bit before `SolidObjectFull2_1P` could consume it. Collapse carriers
+now keep their standing latch on the live instance and use the full-solid
+stale-airborne return: `loc_1DCF0` clears the bit and returns `d4=0` instead of
+falling through to `loc_1E154`'s one-pixel upward lift. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:41065-41084,41608-41637,
+106955-106970`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35531 to frame 35596
+  (`y_sub`, expected `$1000` / actual `$0000`).
+- MGZ complete-run animation remains at frame 35635 (`tails_animation_id`,
+  expected `Skid` / actual `Roll`).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The collapse-event suite plus rewind coverage, static-state rewind coverage,
+  and trace-invariant guards pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ collapse carriers read the pending ScreenEvents scroll
 
 Branch `feature/ai-trace-animation-verification`, after the collapse-carrier
