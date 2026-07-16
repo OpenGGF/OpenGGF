@@ -264,6 +264,37 @@ class TestSonic3kMgz2EndBossEvents {
     }
 
     @Test
+    void mgz2BossCollapseHandoff_leavesVisibleTailsInCurrentRoutine() {
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x3C80);
+        camera.setY((short) 0x0600);
+        Tails tails = new Tails("tails", (short) 0x3C9C, (short) 0x0711);
+        tails.setCpuControlled(true);
+        SidekickCpuController controller = new SidekickCpuController(tails, camera.getFocusedSprite());
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+        tails.setCpuController(controller);
+        tails.setHurt(true);
+        tails.setXSpeed((short) 0xFE00);
+        tails.setYSpeed((short) 0x0560);
+        tails.setRenderFlagOnScreen(true);
+        GameServices.sprites().addSprite(tails, "tails");
+        short initialX = tails.getCentreX();
+        short initialY = tails.getCentreY();
+
+        events.triggerBossCollapseHandoff();
+
+        assertEquals(initialX, tails.getCentreX());
+        assertEquals(initialY, tails.getCentreY());
+        assertEquals((short) 0xFE00, tails.getXSpeed());
+        assertEquals((short) 0x0560, tails.getYSpeed());
+        assertTrue(tails.isHurt());
+        assertEquals(SidekickCpuController.State.NORMAL, tails.getCpuController().getState(),
+                "Obj_MGZ2_BossTransition branches past Player_2 setup while render_flags.on_screen is set");
+    }
+
+    @Test
     void mgz2BossCollapseHandoff_reusesExistingTailsEvenWithoutSidekickNameMetadata() {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);

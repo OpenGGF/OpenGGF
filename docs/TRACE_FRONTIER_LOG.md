@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ boss transition preserves visible Tails
+
+Branch `feature/ai-trace-animation-verification`, after the V-int touch-phase
+milestone. `Obj_MGZ2_BossTransition` tests Player 2's live
+`render_flags.on_screen` bit before writing the transition coordinate, object
+entry, or `Tails_CPU_routine=$12`. The engine instead reinitialised every
+existing Tails slot, teleporting a still-visible hurt Tails out of his native
+fall on the boss-impact frame. The handoff now leaves a visible Player 2 slot
+untouched and only prepares an off-screen or absent Tails for the later rescue.
+No trace hydration, route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:30200-30221`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35425 to frame 35445
+  (`tails_air`, expected grounded / actual airborne).
+- MGZ complete-run animation advances from frame 35425 to frame 35445
+  (`tails_mapping_frame`, expected `$01` / actual `$07`). Physics and
+  animation remain aligned.
+- `TestSonic3kMgz2EndBossEvents` passes all 32 tests, including the visible-
+  Tails preservation and off-screen rescue preparation cases.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- S3K V-int phase and multi-region Insta-Shield touch
 
 Branch `feature/ai-trace-animation-verification`, after the floating-platform

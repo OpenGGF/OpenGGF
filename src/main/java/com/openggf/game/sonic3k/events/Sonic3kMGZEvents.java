@@ -1375,6 +1375,16 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                 .findFirst()
                 .orElse(null);
         if (existingTails != null) {
+            // ROM Obj_MGZ2_BossTransition tests Player_2.render_flags before it
+            // writes the transition position or CPU routine $12. A visible
+            // Tails keeps running his current routine until he naturally
+            // leaves the screen; only an off-screen slot is reinitialised.
+            boolean tailsOnScreen = existingTails.hasRenderFlagOnScreenState()
+                    ? existingTails.isRenderFlagOnScreen()
+                    : camera().isVisibleForRenderFlag(existingTails);
+            if (tailsOnScreen) {
+                return;
+            }
             prepareBossTransitionTails(existingTails, player, spawnX, spawnY);
             return;
         }
