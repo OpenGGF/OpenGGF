@@ -11,7 +11,9 @@ the background should scroll gradually from the WFZ sky up into space, exactly a
 does — a vertical background scroll driven by `Camera_BG_Y_offset`, not a palette fade.
 
 **Non-goals:** No change to the DEZ starfield credits (`SwScrl_DEZ`); no change to the
-WFZ→DEZ hard cut timing; no new render subsystem. This is a wiring + one-method-rewrite fix.
+WFZ→DEZ hard cut timing; no new render subsystem. Sections 1-6 describe the original
+wiring + one-method-rewrite bridge; the approved Section 7 follow-up extends the existing
+tilemap and runtime-object-art paths without adding a parallel renderer.
 
 ---
 
@@ -357,9 +359,9 @@ Review resolution (round 2, 2026-07-16):
 
 ## 7. Approved visual-parity follow-up (2026-07-16)
 
-Headless capture of the implemented bridge exposed three remaining ROM-parity defects. The
-foreground Tornado/getaway-ship rendering and Sonic's grab animation are correct and are
-explicitly outside this follow-up.
+Headless capture of the implemented bridge exposed additional ROM-parity defects. The foreground
+Tornado body and Sonic's grab animation are correct and remain outside this follow-up; the separate
+ObjB2 `$5C` rocket pod/flame is missing and is explicitly included in Section 7.6.
 
 ### 7.1 Boss laser-wall display cadence
 
@@ -421,16 +423,22 @@ nametable mode with fixed dimensions of 64x32 cells:
 - Track the previous 16-pixel-aligned BG X/Y positions and update only the entering column and/or
   row when those positions cross a cell boundary. A one-frame 16-pixel movement performs one
   strip update; a larger discontinuity or invalid baseline performs a complete deterministic seed.
-- Keep physical ring slots stable and advance their logical origins modulo 64 columns and 32 rows.
-  The shader continues to consume per-scanline H-scroll, but samples this one 512-pixel ring; cloud
+- Keep physical ring slots stable and advance explicit X and Y logical origins modulo 64 columns
+  and 32 rows. Each 16-pixel crossing replaces two 8-pixel pattern columns and/or two pattern rows.
+  Extend the existing GPU ring metadata from X-only to X+Y tile origins, add partial-row uploads,
+  and remap both shader tile coordinates through those origins before the modulo lookup. The
+  shader continues to consume per-scanline H-scroll, but samples this one 512x256 ring; cloud
   values do not change residency or enlarge the period.
-- Upload the changed descriptors after each strip update. No new renderer or special draw pass is
-  introduced; the implementation stays inside the existing `LevelTilemapManager`/scroll-handler
-  ownership boundary.
-- Treat the retained descriptors, logical origins, and previous aligned BG position as rewind
-  state. Restoring a keyframe must restore the ring before the next render rather than rebuilding
-  a wide/static view from only the restored camera position. Level/session reset clears the
-  baseline and performs a fresh seed.
+- Upload only the changed descriptors after a normal strip update; a seed or rewind restore uses
+  one coherent full-ring upload. No new renderer or special draw pass is introduced; the
+  implementation stays inside the existing `LevelTilemapManager`/`TilemapGpuRenderer`/
+  scroll-handler ownership boundary.
+- Add a gameplay-scoped `LevelTilemapManager` rewind adapter alongside the existing level rewind
+  adapters. It captures the 64x32 descriptors, X/Y logical origins, and previous aligned BG X/Y
+  baseline. Restore installs those values, suppresses the current camera/layout-pure BG rebuild
+  callback for persistent mode, and completes the full GPU upload before the next draw. The
+  existing stateless zones keep `resetTilemapsForRewindRestore()` unchanged. Level/session reset
+  clears the persistent baseline and performs a fresh seed.
 
 This is deliberately a generic opt-in capability whose behavior is selected by the WFZ handler,
 not a frame, route, or zone-name branch in shared rendering code.
@@ -468,17 +476,28 @@ the object-art load epoch, and creates a new `PatternSpriteRenderer`. The render
 through `ObjectRenderManager.ensurePatternsCached(...)`, leaving `patternBase == -1` and
 `isReady() == false`; `TornadoObjectInstance.appendRenderCommands()` consequently skips it.
 
-Make runtime Sonic 2 PLC intake finish the existing object-art registration contract: after a PLC
-adds sheets, refresh the active `ObjectRenderManager` from the same stable object pattern base used
-at level initialization. Existing renderers retain their deterministic bases, newly appended
-renderers receive non-overlapping bases, and a no-op/repeated PLC request does not reallocate or
-duplicate art. Keep this centralized in the Sonic 2 runtime PLC path; do not special-case subtype
-`$5C` or bypass `PatternSpriteRenderer.isReady()`.
+Make runtime Sonic 2 PLC intake finish the existing object-art registration contract. Add a
+`LevelManager`-owned object-art refresh method that reuses its package-owned
+`OBJECT_PATTERN_BASE` and reruns `ObjectRenderManager.ensurePatternsCached(...)`. At level
+initialization, register the full fixed `PatternAtlasRange.OBJECTS` governance range once instead
+of registering only the currently used prefix. Before any runtime cache write, the refresh asks
+the active object-art provider/manager for its ordered regular-sheet pattern count, computes the
+prospective end index, and rejects a value beyond `PatternAtlasRange.OBJECTS.endExclusive()`.
+Only after that preflight passes does it call `ensurePatternsCached(...)`; the returned end must
+equal the preflight value. The refresh does not register a second/overlapping range. Call it from
+the successful Sonic 2 runtime PLC path after a PLC adds sheets.
+Existing renderers retain their deterministic bases, newly appended renderers receive
+non-overlapping bases, and a no-op/repeated PLC request does not reallocate or duplicate art. Do
+not expose/copy the base constant, special-case subtype `$5C`, or bypass
+`PatternSpriteRenderer.isReady()`.
 
-Failures remain non-fatal as they are today: an unavailable runtime/level defers the request, and
-an IO/runtime load failure logs and leaves the renderer unavailable. A successful request must
-make the new renderer ready before the same gameplay frame's render pass. Rewind restoration keeps
-the PLC load epoch and renderer cache coherent; it must not create a second pattern allocation.
+Failures remain non-fatal as they are today: an unavailable runtime/level drops the request, and
+an IO/runtime load failure logs and leaves the renderer unavailable. No pending-PLC queue is added.
+A successful request must make the new renderer ready before the same gameplay frame's render
+pass. `Sonic2ObjectArtProvider.restore()` must restore the captured `loadEpoch`; immutable loaded
+sheets/renderers may remain monotonic. Rewinding to before the one-shot request and replaying it
+must reuse the same renderer identity and pattern base, advance the restored epoch through the
+same value again, and never create a second pattern allocation.
 
 ### 7.7 Verification and acceptance
 
@@ -488,20 +507,27 @@ the PLC load epoch and renderer cache coherent; it must not create a second patt
 - Replace the WFZ 8192-period test with a 512x256 persistent-ring test proving cloud H-scroll does
   not change map residency, crossed strips update once, wrap slots remain stable, and reset reseeds.
 - Rewind a WFZ ending frame across row/column crossings and assert the retained Plane-B descriptors
-  and next rendered frame match the pre-rewind state.
+  and X/Y ring origins are restored, the camera-derived rebuild is suppressed, and the next
+  rendered frame matches the pre-rewind state.
 - Unit-test that ObjBC bypasses generic off-screen deletion until its own `$380` threshold.
 - Request `PLCID_Tornado` through the production runtime path and assert the newly registered
   `TORNADO_THRUSTER` renderer becomes ready without moving existing pattern bases; repeat the
   request and assert idempotence.
+- Assert the single registered `PatternAtlasRange.OBJECTS` range contains all newly appended
+  patterns, the preflight rejects an overflow before any atlas/cache write, the post-cache end
+  equals the preflight end, and a repeated/no-op PLC request adds no range registration.
+- Rewind to before `PLCID_Tornado`, replay the one-shot request, and assert restored load-epoch
+  parity plus stable renderer identity and pattern base.
 - Render the live `$5C` child after the PLC request and assert both body mappings and alternating
   flame mappings produce commands at the ROM-relative position.
 - Remove the obsolete runtime-state backdrop tests while retaining coverage for the existing MCZ
   provider fallback.
 - Run the focused WFZ scroll/runtime/boss/rewind suites and both S2 WFZ/DEZ ending trace replays.
 - Capture the ending headlessly and compare engine frames with the aligned stable-retro gates:
-  frames 14820, 14920, 15000, and 15840 remain blue; the horizon begins around 15850-15870; frame
-  14760 contains the Tornado rocket pod and left-facing flame. The small Plane-B hull and both
-  ObjBC flames must overlap visibly during their interval.
+  uncovered background at frames 14820, 14920, 15000, and 15840 remains blue; the first horizon
+  pixels enter around 15850-15860; black first appears around 15870. Frame 14760 contains the
+  Tornado rocket pod and left-facing flame. The small Plane-B hull and both ObjBC flames must
+  overlap visibly during their interval.
 - Deliver the canonical 60-fps FFV1 capture and the labelled cadence-safe review copy. All capture,
   screenshots, and video inspection remain headless; no desktop/computer control is required.
 
