@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ collapse carriers read the pending ScreenEvents scroll
+
+Branch `feature/ai-trace-animation-verification`, after the collapse-carrier
+allocation milestone. Native `MGZ2_LevelCollapse` advances each HScroll-table
+column before `Obj_MGZ2LevelCollapseSolid` reads that word for its collision Y.
+The engine's canonical event call occurs after dynamic objects, so carriers
+were resolving contact against the preceding one-pixel column position. Their
+event-owned supplier now projects exactly the pending accumulator step during
+the object pass; the event publishes the same result later in the frame, so
+stored and rendered collapse state remains single-writer. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:106515-106545,106955-106970`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35514 to frame 35531 (`y`,
+  expected `$0782` / actual `$0783`).
+- MGZ complete-run animation remains at frame 35635 (`tails_animation_id`,
+  expected `Skid` / actual `Roll`).
+- The collapse-event suite plus rewind coverage, static-state rewind coverage,
+  and trace-invariant guards pass.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ collapse carriers retain ScreenEvents and Full2 phase
 
 Branch `feature/ai-trace-animation-verification`, after the visible-Tails

@@ -2066,7 +2066,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             collapseSolids[solidIndex] = new Mgz2LevelCollapseSolidInstance(
                     x,
                     COLLAPSE_SOLID_HIGH_BASE_Y,
-                    () -> collapseScrollPosition[scrollColumn],
+                    () -> collapseSolidObjectPassScroll(scrollColumn),
                     this::isCollapseSolidDeleteState);
             spawnObject(collapseSolids[solidIndex]);
             solidIndex++;
@@ -2074,7 +2074,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             collapseSolids[solidIndex] = new Mgz2LevelCollapseSolidInstance(
                     x,
                     COLLAPSE_SOLID_LOW_BASE_Y,
-                    () -> collapseScrollPosition[scrollColumn],
+                    () -> collapseSolidObjectPassScroll(scrollColumn),
                     this::isCollapseSolidDeleteState);
             spawnObject(collapseSolids[solidIndex]);
             solidIndex++;
@@ -2085,6 +2085,27 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     private boolean isCollapseSolidDeleteState() {
         return screenEventRoutine == SCREEN_EVENT_MOVE_BG || collapseFinished;
+    }
+
+    /**
+     * Scroll word visible when Obj_MGZ2LevelCollapseSolid executes this frame.
+     * The ROM's ScreenEvents owner advances the HScroll-table longword before
+     * the carrier reads it. The engine's canonical event update is later than
+     * dynamic objects, so project exactly that pending accumulator step without
+     * publishing it early to the event/render state.
+     */
+    private int collapseSolidObjectPassScroll(int column) {
+        int current = collapseScrollPosition[column];
+        if (screenEventRoutine != SCREEN_EVENT_COLLAPSE
+                || !collapseInitialized
+                || collapseFinished
+                || current >= COLLAPSE_MAX_SCROLL
+                || collapseFrameCounter < COLLAPSE_SCROLL_DELAYS[column]) {
+            return current;
+        }
+        int nextVelocity = collapseScrollVelocity[column] + COLLAPSE_SCROLL_ACCEL;
+        int nextFixedPosition = collapseScrollFixedPosition[column] + nextVelocity;
+        return Math.min(COLLAPSE_MAX_SCROLL, nextFixedPosition >>> 16);
     }
 
     /**
@@ -2109,7 +2130,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         Mgz2LevelCollapseSolidInstance solid = new Mgz2LevelCollapseSolidInstance(
                 anchorX,
                 baseY,
-                () -> collapseScrollPosition[scrollColumn],
+                () -> collapseSolidObjectPassScroll(scrollColumn),
                 this::isCollapseSolidDeleteState);
         // createCollapseSolids() registers the high solid first (index even) then
         // the low solid (index odd) per column; mirror that mapping here.
