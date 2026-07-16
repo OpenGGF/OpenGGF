@@ -2133,17 +2133,26 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
      * publishing it early to the event/render state.
      */
     private int collapseSolidObjectPassScroll(int column) {
-        int current = collapseScrollPosition[column];
+        int current = collapseScrollFixedPosition[column] >>> 16;
         if (screenEventRoutine != SCREEN_EVENT_COLLAPSE
                 || !collapseInitialized
                 || collapseFinished
-                || current >= COLLAPSE_MAX_SCROLL
+                || collapseScrollPosition[column] >= COLLAPSE_MAX_SCROLL
                 || collapseFrameCounter < COLLAPSE_SCROLL_DELAYS[column]) {
             return current;
         }
         int nextVelocity = collapseScrollVelocity[column] + COLLAPSE_SCROLL_ACCEL;
         int nextFixedPosition = collapseScrollFixedPosition[column] + nextVelocity;
-        return Math.min(COLLAPSE_MAX_SCROLL, nextFixedPosition >>> 16);
+        // loc_51436 clamps only d3, the temporary displacement used by the
+        // VScroll draw and completion count. The HScroll-table longword itself
+        // keeps its overshooting 16:16 accumulator, and the later collapse-solid
+        // SST reads that raw high word at loc_51818. On the terminal pass this
+        // can place a carrier below the visual $2E0 cap (for example $2E5).
+        return nextFixedPosition >>> 16;
+    }
+
+    int getCollapseSolidObjectPassScrollForTest(int column) {
+        return collapseSolidObjectPassScroll(column);
     }
 
     /**

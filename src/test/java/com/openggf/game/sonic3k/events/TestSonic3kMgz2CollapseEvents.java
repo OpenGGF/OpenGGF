@@ -330,6 +330,35 @@ class TestSonic3kMgz2CollapseEvents {
     }
 
     @Test
+    void collapseSolidReadsRawAccumulatorPastVisualScrollCap() {
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        events.setScreenEventRoutine(4);
+        events.setCollapseInitialized(true);
+        events.setCollapseFrameCounter(0x20);
+
+        int[] velocity = new int[10];
+        int[] fixedPosition = new int[10];
+        int[] visualPosition = new int[10];
+        velocity[0] = 0x60000;
+        fixedPosition[0] = 0x2DF0000;
+        visualPosition[0] = 0x2DF;
+        events.setCollapseScrollVelocity(velocity);
+        events.setCollapseScrollFixedPosition(fixedPosition);
+        events.setCollapseScrollPosition(visualPosition);
+
+        assertEquals(0x2E5, events.getCollapseSolidObjectPassScrollForTest(0),
+                "Obj_MGZ2LevelCollapseSolid reads the raw high word after the pending $500 acceleration");
+
+        events.update(1, 0);
+
+        assertEquals(0x2E0, events.getCollapseScrollPositionCopy()[0],
+                "loc_51436 caps only the draw displacement and completion comparison");
+        assertEquals(0x2E5, events.getCollapseScrollFixedPositionCopy()[0] >>> 16,
+                "the HScroll-table 16:16 accumulator must retain its terminal overshoot");
+    }
+
+    @Test
     void collapseVScrollLeavesNonCollapseScreenColumnsUnshifted() {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
