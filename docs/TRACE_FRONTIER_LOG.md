@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ lost-ring phase is reconstructed from native slot cadence
+
+Branch `feature/ai-trace-animation-verification`, after the stomp-bridge
+milestone. The standalone schema-v6 recording stored the word adjacent to
+S3K's byte-sized `V_int_run_count+2`, so its Obj37 floor-probe low bits must be
+restored from trace-start metadata. The earlier phase `3` avoided the first
+false bounce but did not reproduce the native slot cadence. The ROM trace
+shows slot 28 bouncing at frame 12425; because `Process_Sprites` supplies
+`d7=109-slot`, slot 26's matching eight-frame probe falls six frames later,
+not on the engine's former frame 12426. Restoring the captured phase as `6`
+lets that ring pass the solid edge before its next probe and prevents its
+stale frame-12457 collection. This is one-time clock bootstrap only; no
+per-frame trace hydration, zone/route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:543,35593-35645,35965-35980`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 12457 to frame 12821
+  (`g_speed`, expected `-$0098` / actual `$0098`).
+- MGZ standalone animation remains at frame 12863 (`player_animation_id`,
+  expected `$00` / actual `$02`).
+- The focused trace-metadata and lost-ring suites pass 74/74.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ stomp bridge retains SolidObjectTop's relative landing
 
 Branch `feature/ai-trace-animation-verification`, after the lightning-shield
