@@ -1201,16 +1201,13 @@ public class LevelManager {
             provider.loadArtForZone(zoneIndex);
 
             objectRenderManager = new ObjectRenderManager(provider);
-            LOGGER.info("Initializing Object Art. Base Index: " + OBJECT_PATTERN_BASE);
-            objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
-
             // Register level-tile-based object art (must be after level load)
             provider.registerLevelTileArt(level, zoneIndex);
-            int objectEndIndex = objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
             if (patternAtlas != null) {
-                patternAtlas.registerRange(
-                    OBJECT_PATTERN_BASE, objectEndIndex - OBJECT_PATTERN_BASE, "Objects");
+                patternAtlas.registerRange(PatternAtlasRange.OBJECTS);
             }
+            LOGGER.info("Initializing Object Art. Base Index: " + OBJECT_PATTERN_BASE);
+            refreshObjectArtPatterns();
 
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
             hudRenderManager.setHudPalettes(provider.getHudTextPaletteLine(), provider.getHudFlashPaletteLine());
@@ -1273,6 +1270,29 @@ public class LevelManager {
         if (gameplayMode != null && provider != null) {
             gameplayMode.registerPlcArtAdapter(provider);
         }
+    }
+
+    /**
+     * Validates and caches the regular object-art allocation within its fixed
+     * virtual-pattern governance range.
+     *
+     * @return the first virtual pattern index after the cached regular object art
+     */
+    public int refreshObjectArtPatterns() {
+        if (objectRenderManager == null) {
+            throw new IllegalStateException("Object render manager is not initialized");
+        }
+        int count = objectRenderManager.getRegularPatternCount();
+        int prospectiveEnd = Math.addExact(OBJECT_PATTERN_BASE, count);
+        if (prospectiveEnd > PatternAtlasRange.OBJECTS.endExclusive()) {
+            throw new IllegalStateException("Object patterns exceed reserved atlas range: " + count);
+        }
+        int actualEnd = objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
+        if (actualEnd != prospectiveEnd) {
+            throw new IllegalStateException("Object pattern preflight/cache mismatch: "
+                    + prospectiveEnd + " != " + actualEnd);
+        }
+        return actualEnd;
     }
 
     boolean isHudSuppressed() {

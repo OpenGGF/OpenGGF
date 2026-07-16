@@ -3539,6 +3539,11 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     }
 
     @Override
+    public int getRegularPatternCount() {
+        return sheetOrder.stream().mapToInt(sheet -> sheet.getPatterns().length).sum();
+    }
+
+    @Override
     public int ensurePatternsCached(GraphicsManager graphicsManager, int baseIndex) {
         int next = baseIndex;
         for (int i = 0; i < rendererOrder.size(); i++) {

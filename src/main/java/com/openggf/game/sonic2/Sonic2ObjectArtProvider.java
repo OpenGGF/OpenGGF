@@ -569,6 +569,11 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
     }
 
     @Override
+    public int getRegularPatternCount() {
+        return sheetOrder.stream().mapToInt(sheet -> sheet.getPatterns().length).sum();
+    }
+
+    @Override
     public int ensurePatternsCached(GraphicsManager graphicsManager, int basePatternIndex) {
         int next = basePatternIndex;
         for (int i = 0; i < rendererOrder.size(); i++) {
