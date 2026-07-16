@@ -1497,7 +1497,11 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         }
 
         boolean tailsBelowTransition = bossTransitionY < (tails.getCentreY() & 0xFFFF);
-        if (tailsBelowTransition && !carrying) {
+        // loc_16384 is independent of Flying_carrying_Sonic_flag: once Sonic
+        // is off-screen and Tails falls below the transition SST, it writes
+        // CPU routine $14 even if the flag is still set. The earlier loc_16340
+        // player clamp is the only branch gated by the carry flag.
+        if (tailsBelowTransition) {
             if (!isBossTransitionPlayerReadyForCarry(player)) {
                 return;
             }

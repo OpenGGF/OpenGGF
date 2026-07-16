@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ transition rearms an active carrier below its SST
+
+Branch `feature/ai-trace-animation-verification`, after the late carry-animation
+ownership milestone. The engine incorrectly applied
+`Flying_carrying_Sonic_flag` to both halves of `Obj_MGZ2_BossTransition`.
+Native `loc_16340` gates only Sonic's transition-line clamp with that flag;
+the later `loc_16384` off-screen-player/Tails-height branch writes CPU routine
+`$14` independently, even when the current carry flag remains set. The event
+now restarts that concrete carry-init phase whenever its native render/routine/
+height predicates pass. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:30225-30270`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 36650 to frame 36786
+  (`tails_cpu_ctrl2_held`, expected `$14` / actual `$04`; 692 errors, down from
+  1,533).
+- MGZ complete-run animation advances from frame 36654 to frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`; 128 errors, down from
+  189).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused MGZ2 end-boss event suite passes with active- and released-carry
+  rearm coverage.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
 ### 2026-07-16 -- Late carry pickup transfers raw-animation ownership
 
 Branch `feature/ai-trace-animation-verification`, after the post-movement

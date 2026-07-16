@@ -523,7 +523,7 @@ class TestSonic3kMgz2EndBossEvents {
     }
 
     @Test
-    void mgz2BossTransition_keepsActiveCarryWhenCarrierFallsBelowTransitionHeight() {
+    void mgz2BossTransition_restartsCarryInitWhenActiveCarrierFallsBelowTransitionHeight() {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
         Camera camera = GameServices.camera();
@@ -538,9 +538,10 @@ class TestSonic3kMgz2EndBossEvents {
         tails.setCentreY((short) 0x0720);
         events.update(1, 0);
 
-        assertEquals((short) 0x0720, tails.getCentreY(),
-                "While Flying_carrying_Sonic_flag is set, Tails should stay in the active carry path");
-        assertEquals(SidekickCpuController.State.CARRYING, controller.getState());
+        assertEquals((short) 0x0700, tails.getCentreY(),
+                "loc_16384 re-places Tails even while Flying_carrying_Sonic_flag is set");
+        assertEquals(SidekickCpuController.State.CARRY_INIT, controller.getState(),
+                "loc_16384 writes CPU routine $14 independently of the carry flag");
         assertTrue(controller.isFlyingCarrying());
     }
 
@@ -727,7 +728,7 @@ class TestSonic3kMgz2EndBossEvents {
     }
 
     @Test
-    void mgz2BossTransition_doesNotRestartAscentWhileTailsIsAlreadyCarryingSonic() {
+    void mgz2BossTransition_restartsAscentWhenActiveCarrierFallsBelowTransition() {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
         Camera camera = GameServices.camera();
@@ -751,8 +752,9 @@ class TestSonic3kMgz2EndBossEvents {
         sonic.setDirectionalInputPressed(false, false, true, false);
         controller.update(5);
 
-        assertTrue(controller.getInputLeft(),
-                "Once Flying_carrying_Sonic_flag is set, the transition object must not keep restarting routine $14 and suppress P1 steering");
+        assertFalse(controller.getInputLeft(),
+                "the unconditional loc_16384 routine-$14 write restarts the ascent input phase");
+        assertEquals(SidekickCpuController.State.CARRYING, controller.getState());
     }
 
     @Test
