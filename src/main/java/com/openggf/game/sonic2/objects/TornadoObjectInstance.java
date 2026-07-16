@@ -685,7 +685,10 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     private void wfzJumpToShip(AbstractPlayableSprite player) {
-        applyWaitingAnimation(player);
+        // ROM ObjB2_Jump_to_ship (s2.asm:79082-79085) forces NO animation in this
+        // state, so the invisible grabber's HANG (set once on catch) survives through
+        // the DEZ ascent. State $C (wfzApproachingShip) still applies WAIT; re-forcing
+        // WAIT here every frame overwrote the hang animation with the standing pose.
         wfzJumpToShipCommon();
     }
 
@@ -808,7 +811,11 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         player.setAnimationId(Sonic2AnimationIds.HANG);
         player.setAnimationFrameIndex(0);
         player.setAnimationTick(0);
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        // ROM writes obj_control = 1 (bit 0 only, bit 7 CLEAR) here (s2.asm:79217): movement
+        // is suppressed but TouchResponse still runs, so the ship plating (ObjC1) can still
+        // grab the hanging player. nativeBit7FullControl set bit 7, which suppressed the whole
+        // touch pass and stopped the ObjC1 grab from ever firing.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setControlLocked(true);
         ownsPlayerControl = true;
     }
