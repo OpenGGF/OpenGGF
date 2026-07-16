@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ carry rearm resets the raw animation phase
+
+Branch `feature/ai-trace-animation-verification`, after complete-run physics
+reached green. Native CPU carry-init routines `$0C` and `$14` call
+`sub_1459E` unconditionally before setting the active carry flag. MGZ can
+publish routine `$14` while a proximity regrab is already active; the engine
+previously skipped the initializer in that state and retained Sonic's earlier
+raw carry-animation frame/timer. Carry init now refreshes the attachment and
+shared animation bytes regardless of the current carry flag. No trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:26903-27014,27382-27415`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics remains fully green.
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`), with its remaining
+  error groups reduced from 38 to 9.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused carry, MGZ handoff, and required S3K regression suites pass.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  fleet verification retains 44/58 green physics routes and 42/58 green
+  animation routes.
+
 ### 2026-07-16 -- MGZ complete-run physics reaches green
 
 Branch `feature/ai-trace-animation-verification`, after the retained-results

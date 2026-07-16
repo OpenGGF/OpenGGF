@@ -264,6 +264,31 @@ class TestSidekickCpuControllerCarry {
     }
 
     @Test
+    void carryInitRefreshResetsRawAnimatorEvenWhenCarryIsAlreadyActive() {
+        AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
+        AbstractPlayableSprite sonic = pair[0];
+
+        controller.update(1);
+        controller.update(2);
+        controller.finishCarryAfterCarrierMovement();
+        sonic.setAnimationFrameIndex(8);
+        sonic.setAnimationTick(5);
+        sonic.setMappingFrame(0x90);
+
+        controller.setInitialState(SidekickCpuController.State.CARRY_INIT);
+        controller.update(3);
+
+        assertEquals(0, sonic.getAnimationFrameIndex(),
+                "native sub_1459E clears anim_frame on every routine-$14 pass");
+        assertEquals(0, sonic.getAnimationTick(),
+                "native sub_1459E clears anim_frame_timer even after an earlier regrab");
+        assertEquals(0x90, sonic.getMappingFrame(),
+                "sub_1459E leaves mapping_frame for the later raw carry pass");
+        controller.finishCarryAfterCarrierMovement();
+        assertEquals(0x91, sonic.getMappingFrame());
+    }
+
+    @Test
     void carryingCopiesPostMovementTailsDirectionToSonic() {
         AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
         AbstractPlayableSprite sonic = pair[0];

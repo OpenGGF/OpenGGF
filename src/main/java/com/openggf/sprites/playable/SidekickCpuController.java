@@ -3337,11 +3337,14 @@ public class SidekickCpuController {
         // that input must remain visible to Tails_Move_FlySwim.
         sidekick.setControlLocked(false);
         sidekick.setForcedAnimationId(flyAnimId);
-        if (!carryController().isCarryingMainCharacter()) {
-            carryController().forceScriptedCarry(mgzBossTransitionCarry
-                    ? TailsCarryController.CarryContext.MGZ_BOSS
-                    : TailsCarryController.CarryContext.CNZ);
-        }
+        // Both native init routines call sub_1459E unconditionally before
+        // setting Flying_carrying_Sonic_flag. In particular, MGZ may publish
+        // CPU routine $14 while a proximity regrab is already active; that
+        // second initialization must still reset Sonic's shared raw-animation
+        // frame/timer bytes as well as refreshing the velocity latches.
+        carryController().forceScriptedCarry(mgzBossTransitionCarry
+                ? TailsCarryController.CarryContext.MGZ_BOSS
+                : TailsCarryController.CarryContext.CNZ);
 
         // Initialize the latch
         mgzCarryIntroAscend = mgzBossTransitionCarry;
