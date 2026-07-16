@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- S3K collision-response list retains explicit off-camera publishers
+
+Branch `feature/ai-trace-animation-verification`, after the floating-platform
+render-gate milestone. At standalone MGZ frame 23264, CPU Tails is ahead of
+the camera beside spilled-ring slot 24. Native `Obj_Bouncing_Ring` publishes
+that SST pointer unconditionally, and `Add_SpriteToCollisionResponseList`
+checks only the `$7E`-byte capacity. The engine added an unrelated camera
+window while rebuilding the prior-frame list, so Tails never scanned the ring
+even though its position and collection flags matched the native object.
+
+The shared S3K collision-response list now relies on each object's explicit
+publication predicate and preserves native SST order/capacity without an
+extra camera filter. No trace hydration, zone/route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:21200-21210,35616-35645`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ standalone physics advances from frame 23264 to frame 23462 (`rings`,
+  expected `11` / actual `0`), while the total remains 3111 errors.
+- MGZ standalone animation remains at frame 23897
+  (`player_mapping_frame`, expected `$96` / actual `$9A`) with 531 errors.
+- Focused previous-list and lost-ring touch tests pass 13/13, including an
+  explicit publisher positioned beyond the former camera window.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
 ### 2026-07-16 -- Floating platform gates SolidObjectTop on object render_flags
 
 Branch `feature/ai-trace-animation-verification`, after the collapsing-bridge

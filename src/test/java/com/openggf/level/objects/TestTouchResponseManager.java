@@ -1032,6 +1032,18 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void testS3kCollisionResponseListKeepsPublisherAheadOfCamera() {
+        MockSnapshotAttackableEnemy enemy = new MockSnapshotAttackableEnemy(0x0300, 112, 0x02);
+        ObjectCollisionResponseList responseList = new ObjectCollisionResponseList();
+
+        responseList.captureForNextFrame(List.of(enemy));
+        responseList.setUsePrevious(true);
+
+        assertEquals(List.of(enemy), responseList.touchResponseObjects(List.of()),
+                "Add_SpriteToCollisionResponseList accepts an explicit publisher regardless of camera distance");
+    }
+
+    @Test
     public void testS2InlineTouchUsesFrameStartObjectPositionForAttackableEnemies() {
         when(player.getCentreX()).thenReturn((short) 168);
         when(player.getCentreY()).thenReturn((short) 112);

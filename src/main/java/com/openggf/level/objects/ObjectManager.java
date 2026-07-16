@@ -644,7 +644,7 @@ public class ObjectManager {
                 syncActiveSpawnsLoad(true);
             }
         }
-        captureCollisionResponseListForNextFrame(cameraX);
+        captureCollisionResponseListForNextFrame();
     }
 
     private void runAfterExecBeforePlacement(Runnable afterExecBeforePlacement) {
@@ -1535,9 +1535,9 @@ public class ObjectManager {
 
     boolean touchUsesPreviousCollisionResponseList() { return collisionResponseList.usesPrevious(); }
 
-    private void captureCollisionResponseListForNextFrame(int cameraX) {
+    private void captureCollisionResponseListForNextFrame() {
         rebuildActiveObjectCaches();
-        collisionResponseList.captureForNextFrame(cameraX, cachedTouchResponseObjects);
+        collisionResponseList.captureForNextFrame(cachedTouchResponseObjects);
     }
 
     private void rebuildActiveObjectCaches() {
