@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ terminal collapse carriers delete before their final snap
+
+Branch `feature/ai-trace-animation-verification`, after the all-columns lifetime
+milestone. The production ScreenEvents bridge publishes after dynamic objects,
+so the raw scroll supplier already projected the pending event step but the
+carrier deletion predicate did not project the accompanying all-columns
+completion. On the transition frame the carrier therefore applied one extra
+ride snap before `SCREEN_EVENT_MOVE_BG` became visible. The same concrete
+pending accumulator state now drives both projections: if the next collapse
+dispatch completes all ten columns, the carrier deletes before contact. No
+trace hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:106515-106595,106955-106970`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35740 to frame 35785
+  (`tails_x`, expected `$3C90` / actual `$3CC0`; 1,437 errors).
+- MGZ complete-run animation remains at frame 35741 (`tails_animation_id`,
+  expected `Duck` / actual `Skid`; 313 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The focused pending-completion deletion coverage plus the MGZ collapse/end-
+  boss suites, rewind guards, and trace-invariant guard pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ capped columns continue until the full collapse completes
 
 Branch `feature/ai-trace-animation-verification`, after the terminal-overshoot

@@ -389,6 +389,30 @@ class TestSonic3kMgz2CollapseEvents {
     }
 
     @Test
+    void carrierDeletesWhenPendingStepCompletesLastDelayedColumn() {
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        events.setScreenEventRoutine(4);
+        events.setCollapseInitialized(true);
+        events.setCollapseFrameCounter(0x120);
+
+        int[] velocity = new int[10];
+        int[] fixedPosition = new int[10];
+        int[] visualPosition = new int[10];
+        java.util.Arrays.fill(velocity, 0x60000);
+        java.util.Arrays.fill(fixedPosition, 0x2E00000);
+        java.util.Arrays.fill(visualPosition, 0x2E0);
+        fixedPosition[8] = 0x2DF0000;
+        visualPosition[8] = 0x2DF;
+        events.setCollapseScrollVelocity(velocity);
+        events.setCollapseScrollFixedPosition(fixedPosition);
+        events.setCollapseScrollPosition(visualPosition);
+
+        assertTrue(events.isCollapseSolidDeleteStateForTest(),
+                "the carrier pass must observe that the pending event step completes all ten columns");
+    }
+
+    @Test
     void collapseVScrollLeavesNonCollapseScreenColumnsUnshifted() {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);

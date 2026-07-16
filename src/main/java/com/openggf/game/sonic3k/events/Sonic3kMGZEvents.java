@@ -2121,7 +2121,34 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     private boolean isCollapseSolidDeleteState() {
-        return screenEventRoutine == SCREEN_EVENT_MOVE_BG || collapseFinished;
+        return screenEventRoutine == SCREEN_EVENT_MOVE_BG
+                || collapseFinished
+                || collapseFinishesOnPendingEventStep();
+    }
+
+    /**
+     * The engine's ScreenEvents bridge publishes after dynamic objects, while
+     * the native next object pass already observes the routine selected by the
+     * preceding collapse dispatch. Project the same pending all-columns test as
+     * the scroll supplier so a carrier deletes instead of applying one final
+     * ride snap on the transition frame.
+     */
+    private boolean collapseFinishesOnPendingEventStep() {
+        if (screenEventRoutine != SCREEN_EVENT_COLLAPSE
+                || !collapseInitialized
+                || collapseFinished) {
+            return false;
+        }
+        for (int i = 0; i < COLLAPSE_COLUMN_COUNT; i++) {
+            int projectedFixedPosition = collapseScrollFixedPosition[i];
+            if (collapseFrameCounter >= COLLAPSE_SCROLL_DELAYS[i]) {
+                projectedFixedPosition += collapseScrollVelocity[i] + COLLAPSE_SCROLL_ACCEL;
+            }
+            if ((projectedFixedPosition >>> 16) < COLLAPSE_MAX_SCROLL) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -2151,6 +2178,10 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     int getCollapseSolidObjectPassScrollForTest(int column) {
         return collapseSolidObjectPassScroll(column);
+    }
+
+    boolean isCollapseSolidDeleteStateForTest() {
+        return isCollapseSolidDeleteState();
     }
 
     /**
