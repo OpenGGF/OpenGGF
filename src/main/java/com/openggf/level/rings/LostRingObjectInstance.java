@@ -70,6 +70,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private int sparkleStartFrame = -1;
     private int lastFrameCounter;
     private boolean romRenderFlagForFloorProbe = true;
+    private boolean clearMainPlayerRingsOnFirstUpdate;
 
     /**
      * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
@@ -154,6 +155,15 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     /** Inject the shared spill-spin owner (frame source for rendering). */
     public void setSpillAnimation(SpillAnimationState spillAnimation) {
         this.spillAnimation = spillAnimation;
+    }
+
+    /**
+     * Defers Obj37_Init's Ring_count clear until this owner SST first executes.
+     * Used when an object-slot hurt allocates the owner into an earlier slot
+     * that Process_Sprites has already passed.
+     */
+    public void clearMainPlayerRingsOnFirstUpdate() {
+        clearMainPlayerRingsOnFirstUpdate = true;
     }
 
     @Override
@@ -262,6 +272,12 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     public void update(int frameCounter, PlayableEntity player) {
         if (isDestroyed()) {
             return;
+        }
+        if (clearMainPlayerRingsOnFirstUpdate) {
+            if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite playable) {
+                playable.setRingCount(0);
+            }
+            clearMainPlayerRingsOnFirstUpdate = false;
         }
         // ROM Obj37 RLoss_Sparkle/RLoss_Delete advances per ExecuteObjects pass, NOT per
         // VBlank. The object-loop passes the VBlank counter (ObjectManager.java:667), which

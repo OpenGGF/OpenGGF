@@ -1,5 +1,37 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Deferred Obj37 owner clears rings on its SST pass
+
+Branch `feature/ai-trace-animation-verification`, after commit `8e1ec19f6`.
+At the requested checkpoint, a fresh fetch confirmed local and remote
+`develop` were both still at `1b1a5efee`; merging `develop` reported `Already
+up to date`. At standalone MGZ frame 23462, spike slot 20 hurts Sonic and
+allocates the Obj37 owner into free slot 14. Because Process_Sprites has
+already passed slot 14, native `Obj37_Init` and its `Ring_count=0` write do not
+run until the next object pass. The engine cleared rings immediately when the
+slot was allocated, one frame ahead of the native write.
+
+The object manager now exposes whether a reserved slot lies behind its live
+SST cursor. When that occurs, the Obj37 owner retains a rewind-captured pending
+clear and performs the write at the start of its first execution, before its
+movement. Owners allocated before the loop or into later slots keep their
+existing same-pass behavior. No trace hydration, zone/route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:21065-21110,35549-35616`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ standalone physics advances from frame 23462 to frame 23562 (`rings`,
+  expected `1` / actual `0`), with errors reduced from 3111 to 3110.
+- MGZ standalone animation remains at frame 23897
+  (`player_mapping_frame`, expected `$96` / actual `$9A`) with 531 errors.
+- Lost-ring, SST child-allocation, and ring-manager suites pass 59/59,
+  including both earlier/later cursor placement and deferred Ring_count clear.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
 ### 2026-07-16 -- S3K collision-response list retains explicit off-camera publishers
 
 Branch `feature/ai-trace-animation-verification`, after the floating-platform

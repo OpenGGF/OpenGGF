@@ -58,6 +58,8 @@ public class TestObjectManagerChildSlotAllocation {
 
         assertNotNull(parent.child);
         assertTrue(parent.child.getSlotIndex() > parent.getSlotIndex());
+        assertFalse(parent.childWaitsForNextPass,
+                "a child in a later SST slot remains executable in the current pass");
         assertEquals(1, parent.child.updateCount);
     }
 
@@ -160,6 +162,8 @@ public class TestObjectManagerChildSlotAllocation {
         assertNotNull(parent.child);
         assertEquals(32, parent.child.getSlotIndex());
         assertTrue(parent.child.getSlotIndex() < parent.getSlotIndex());
+        assertTrue(parent.childWaitsForNextPass,
+                "a first-free child behind the live SST cursor waits for the next pass");
         assertEquals(0, parent.child.updateCount,
                 "FindFreeObj child in an earlier slot should not run again this frame");
 
@@ -249,6 +253,7 @@ public class TestObjectManagerChildSlotAllocation {
 
     private static final class ParentObject extends AbstractObjectInstance {
         private ChildObject child;
+        private boolean childWaitsForNextPass;
 
         private ParentObject(ObjectSpawn spawn) {
             super(spawn, "Parent");
@@ -258,6 +263,8 @@ public class TestObjectManagerChildSlotAllocation {
         public void update(int frameCounter, PlayableEntity player) {
             if (child == null) {
                 child = spawnChild(() -> new ChildObject(buildSpawnAt(spawn.x(), spawn.y())));
+                childWaitsForNextPass = services().objectManager()
+                        .reservedSlotWaitsForNextObjectPass(child.getSlotIndex());
             }
         }
 
@@ -326,6 +333,7 @@ public class TestObjectManagerChildSlotAllocation {
 
     private static final class FindFreeParentObject extends AbstractObjectInstance {
         private FindFreeChildObject child;
+        private boolean childWaitsForNextPass;
 
         private FindFreeParentObject(ObjectSpawn spawn) {
             super(spawn, "FindFreeParent");
@@ -335,6 +343,8 @@ public class TestObjectManagerChildSlotAllocation {
         public void update(int frameCounter, PlayableEntity player) {
             if (child == null) {
                 child = spawnFreeChild(() -> new FindFreeChildObject(buildSpawnAt(spawn.x(), spawn.y())));
+                childWaitsForNextPass = services().objectManager()
+                        .reservedSlotWaitsForNextObjectPass(child.getSlotIndex());
             }
         }
 
@@ -410,4 +420,3 @@ public class TestObjectManagerChildSlotAllocation {
         }
     }
 }
-

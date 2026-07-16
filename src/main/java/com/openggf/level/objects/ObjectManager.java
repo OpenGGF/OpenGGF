@@ -1919,6 +1919,18 @@ public class ObjectManager {
     }
 
     /**
+     * Returns whether a newly reserved SST slot is behind the live object-loop
+     * cursor and therefore cannot execute until the next Process_Sprites pass.
+     */
+    public boolean reservedSlotWaitsForNextObjectPass(int slotIndex) {
+        if (!updating || currentExecSlot < 0 || !isManagedDynamicSlot(slotIndex)) {
+            return false;
+        }
+        int execIndex = execIndexForSlot(slotIndex);
+        return execIndex >= 0 && execIndex <= currentExecSlot;
+    }
+
+    /**
      * Reassigns an already-loaded placement object through the ROM's first-free
      * allocator. This is used when a widened engine placement window materializes
      * an initializer before its native camera gate; once that gate succeeds, the

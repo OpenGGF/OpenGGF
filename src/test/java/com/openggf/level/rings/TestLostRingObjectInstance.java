@@ -42,6 +42,23 @@ import static org.mockito.Mockito.verify;
 class TestLostRingObjectInstance {
 
     @Test
+    void deferredObj37OwnerClearsRingsOnItsFirstExecution() {
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+        player.setRingCount(11);
+        LostRingObjectInstance owner = LostRingObjectInstance.forTest(
+                0x100, 0x100, 0, 0, 0, 0xFF);
+        owner.clearMainPlayerRingsOnFirstUpdate();
+
+        assertEquals(11, player.getRingCount(),
+                "allocation into an already-passed SST slot must not clear Ring_count immediately");
+
+        owner.update(1, player);
+
+        assertEquals(0, player.getRingCount(),
+                "Obj37_Init clears Ring_count when the deferred owner slot first executes");
+    }
+
+    @Test
     void obj37DoesNotUseSharedXAxisOutOfRangeMacro() {
         // S1 Obj37 RLoss_Bounce does not call the shared out_of_range macro; it deletes only when the
         // shared spill animation timer expires or y_pos passes v_limitbtm2 + 224

@@ -1567,6 +1567,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             if (preallocateOwnerSlot && firstReservedSlot < 0) {
                 firstReservedSlot = objectManager.allocateDynamicSlot();
             }
+            boolean deferRingCountClear = objectManager != null
+                    && firstReservedSlot >= 0
+                    && objectManager.reservedSlotWaitsForNextObjectPass(firstReservedSlot);
             int previousSlot = firstReservedSlot;
             int spawned = 0;
             for (int i = 0; i < toSpawn; i++) {
@@ -1622,6 +1625,13 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     LostRingObjectInstance ringObject = LostRingObjectInstance.spawn(
                             x, y, xVel, yVel,
                             phase, LIFETIME_FRAMES, spillAnimation);
+                    if (i == 0 && deferRingCountClear) {
+                        // Obj37_Init clears Ring_count when the owner SST runs.
+                        // An owner allocated behind the live Process_Sprites
+                        // cursor remains routine 0 until the following pass
+                        // (docs/skdisasm/sonic3k.asm:21065-21088,35549-35616).
+                        ringObject.clearMainPlayerRingsOnFirstUpdate();
+                    }
                     objectManager.spawnLostRingObjectAtSlot(ringObject, slotIndex);
                     if (applyInitialObjectStep && appliesInitialObj37Step(slotIndex, firstReservedSlot)) {
                         ringObject.updateMovement();
@@ -1634,7 +1644,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 angle = -angle;
             }
 
-            player.setRingCount(0);
+            if (!deferRingCountClear) {
+                player.setRingCount(0);
+            }
             audioManager.playSfx(GameSound.RING_SPILL);
         }
 
