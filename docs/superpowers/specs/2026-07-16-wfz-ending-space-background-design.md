@@ -102,40 +102,61 @@ int dy = clamp16(camera().getY() - bgYPos - bgYOffset);
 bgXPosDiff = dx; bgYPosDiff = dy;
 bgXPos += dx;    bgYPos += dy;
 ```
-**Seeding:** `bgXPos`/`bgYPos` init to `0` and are only meaningful once seeded to the
-camera. The current code snaps every frame so init is irrelevant; a chase from `0` would
-scroll the BG into place over many frames at level start (visible corruption + trace risk).
-Add a `bgSeeded` flag; on the first `syncBgDiffs()` call seed `bgXPos = camera().getX()`,
-`bgYPos = camera().getY()`, then chase. Reset `bgSeeded = false` in `init(act)` and capture
-it in the rewind snapshot (`captureSnapshot`/`restoreSnapshot`, `Sonic2WFZEvents.java:198-214`).
+**Seeding — no new flag needed.** `bgXPos`/`bgYPos` are already seeded to the camera by the
+existing `primaryRoutine0_initBgSync()` (`Sonic2WFZEvents.java:243-247`: `bgXPos = camera().getX()`,
+`bgYPos = camera().getY()`), which runs before routine 2/4/6 ever calls `syncBgDiffs()`. So
+the `ScrollBG` chase starts from the seeded position; there is **no `bgSeeded` flag** and
+**no rewind-snapshot change** (`SNAPSHOT_BYTES` stays `Integer.BYTES * 8`; `bgXPos`/`bgYPos`/
+`bgYOffset`/`bgXOffset`/`bgXPosDiff`/`bgYPosDiff` are already in those 8 ints). *(An earlier
+draft added a `bgSeeded` flag — dropped: it was redundant with routine 0 and would have both
+discarded camera movement between init and the first routine-2 frame and overflowed the
+fixed 8-int snapshot buffer.)*
 
 **Trace safety:** during normal play `bgXOffset = bgYOffset = 0` and the S2 camera moves
 ≤16 px/frame, so `dy = clamp16(cameraY − bgYPos)` keeps `bgYPos == cameraY` — identical to
 the current snap. The clamp/offset only diverge during the ending ramp. This is why the
 rewrite must NOT regress the WFZ or DEZ-ending traces (see verification).
 
-### 4.2 The event→scroll bridge (Gap B) — RECOMMENDED: inject at level load
+### 4.2 The event→scroll bridge (Gap B) — a live `WfzRuntimeStateView` (mirrors HTZ)
 
-`Sonic2WFZEvents` cannot currently reach the `bgCamera` that `SwScrlWfz` reads, and the
-game-agnostic `ScrollHandlerProvider` interface must not expose S2's `BackgroundCamera`.
-Three options were considered:
+`SwScrlWfz` must consume the event-owned BG position without any cross-lifetime reference.
+An earlier draft proposed injecting the session-owned `BackgroundCamera` into the
+module-owned `Sonic2LevelEventManager` — **rejected** on review: (a) the event manager
+survives gameplay-context rebuilds while each `Sonic2ScrollHandlerProvider` creates a *new*
+session-owned `BackgroundCamera`, so a retained reference goes stale after an editor/session
+rebuild; (b) exposing `BackgroundCamera` through `ParallaxManager` violates that manager's
+game-agnostic boundary; (c) the duplicated BG position leaves the rendered VScroll stale for
+one frame after a rewind restore (the post-restore parallax recompute runs before the next
+event frame re-pushes).
 
-| Option | Approach | Verdict |
-|--------|----------|---------|
-| A (recommended) | Inject the `BackgroundCamera` into `Sonic2LevelEventManager`/`Sonic2WFZEvents` once at level load (where both the event manager and the S2 scroll provider are in scope). The event pushes `bgXPos`/`bgYPos` into it at the end of `syncBgDiffs()`. | Clean; matches ROM ownership (the level-event handler / `ScrollBG` owns `Camera_BG_pos`); no per-frame lookup or cast. |
-| B | Per-frame: `Sonic2WFZEvents.update()` reaches `bgCamera` via `GameServices.parallax()` → new `ParallaxManager.getBgCamera()` (downcast to `Sonic2ScrollHandlerProvider`). | Works but adds a per-frame lookup + an S2 downcast on a shared manager. |
-| C | `SwScrlWfz` pulls the WFZ event's `bgYPos` at the start of its own update. | Rejected: `SwScrlWfz` has no event access and adding it inverts the intended data flow (event owns scroll state). |
+**Use the existing zone-runtime-state pattern instead.** `SwScrlHtz` already consumes a
+**live** `HtzRuntimeStateView` (over `Sonic2HTZEvents`) via
+`GameServices.zoneRuntimeRegistry().currentAs(HtzRuntimeState.class)`
+(`HtzRuntimeStateView.java`, `SwScrlHtz.java:61-63`; registered at
+`Sonic2LevelEventManager.java:132`). Mirror it exactly:
+
+- **`WfzRuntimeState`** (interface, `com.openggf.game.sonic2.runtime`, extends
+  `ZoneRuntimeState`): `int bgVscrollFactor();` (and `int bgXPos();` if the FBO path needs it).
+- **`WfzRuntimeStateView implements WfzRuntimeState`**: a **live** view holding a
+  `Sonic2WFZEvents` reference — `bgVscrollFactor() { return events.getBgYPos(); }`. No copied
+  state.
+- **Register** it in `Sonic2LevelEventManager` alongside HTZ/CNZ
+  (`installOwnedRuntimeState(registry, new WfzRuntimeStateView(zone, act, wfzEvents))`,
+  next to `:132`), so it is (re)installed per session with the current event manager — no
+  durable→session retention.
+- **`SwScrlWfz`** reads `GameServices.zoneRuntimeRegistry().currentAs(WfzRuntimeState.class)`
+  for the VScroll factor instead of `bgCamera.getBgYPos()` (`SwScrlWfz.java:97`, and the
+  segment-select `bgY` at `:141`).
+
+**Why this fixes the three P1 issues:** no session-owned object is retained in the durable
+event manager and no S2 type leaks through `ParallaxManager` (P1#1); the view reads
+`Sonic2WFZEvents` **live**, so after a rewind restore of the event's `bgYPos` (already in the
+snapshot) the very next parallax recompute reads the restored value — no duplicate state, no
+stale frame (P1#2); and there is no new snapshot field (P1#3, see §4.1).
 
 **Ordering (verified):** `LevelFrameStep` runs `levelEvents.update()` (`LevelFrameStep.java:248`)
-before the parallax/scroll pass, so a value pushed during the event update is visible to
-`SwScrlWfz` the same frame. No reordering needed.
-
-**Injection point for Option A:** the S2 scroll provider owns `bgCamera`
-(`Sonic2ScrollHandlerProvider.getBgCamera()`, `:200`); `ParallaxManager` holds the single
-provider instance (`ParallaxManager.java:129`) and initialises it per zone
-(`initForZone`, `:147`). Wire `Sonic2LevelEventManager.setBackgroundCamera(bgCamera)` from
-the S2 level-load path once per level, guarded so non-S2 / test contexts stay null-safe
-(the event manager no-ops the push when the reference is null).
+before the parallax/scroll pass, so the event's `bgYPos` for the frame is set before
+`SwScrlWfz` reads the view. (Live read means even out-of-order restore is correct.)
 
 ### 4.3 What does NOT change
 - The offset ramp (`primaryRoutine6_reverse`) — already correct.
@@ -150,14 +171,21 @@ the S2 level-load path once per level, guarded so non-S2 / test contexts stay nu
 2. **Unit test** for the `ScrollBG` math: given camera/offset/BG-pos inputs, assert the
    clamped diff and advanced `bgXPos`/`bgYPos` (drives `bgYPos` toward `cameraY − bgYOffset`
    at ≤16/frame; equals `cameraY` when offset 0).
-3. **Bridge test:** after an event update with a non-zero `bgYOffset`, assert the injected
-   `BackgroundCamera.getBgYPos()` equals the event's `bgYPos`.
+3. **Bridge integration test (through the real context, not a direct setter):** boot a WFZ
+   gameplay context, drive the WFZ event to a non-zero `bgYOffset`, run one
+   `LevelFrameStep`/`ParallaxManager` pass, and assert the **rendered VScroll factor** (what
+   `SwScrlWfz` wrote) equals `Sonic2WFZEvents.getBgYPos()`. This exercises the actual
+   `ZoneRuntimeRegistry` registration + `SwScrlWfz` read — a direct `WfzRuntimeStateView`
+   unit test alone would pass even if the level-load registration were missing.
 4. **Trace regression gate (release-blocking):** `TestS2WfzLevelSelectTraceReplay` and
    `TestS2DezEndingLevelSelectTraceReplay` must stay green
    (`mvn -Ptrace-replay "-Dtest=…" test`). This is the primary guard that normal-play BG
    scroll is unchanged and the ending path doesn't desync.
-5. **Rewind:** a WFZ-ending rewind round-trip must restore `bgSeeded`/`bgXPos`/`bgYPos`
-   (extend the existing `Sonic2WFZEvents` snapshot coverage).
+5. **Rewind:** the view is live over `Sonic2WFZEvents`, and `bgXPos`/`bgYPos`/`bgYOffset` are
+   already in the `Sonic2WFZEvents` snapshot (`SNAPSHOT_BYTES`, unchanged). A WFZ-ending
+   rewind round-trip must restore those and then render the restored VScroll on the very
+   next parallax pass — assert the rendered VScroll after restore (guards P1#2). No new
+   snapshot field, and no separate `BackgroundCamera` state to reconcile.
 6. **Visual (manual):** ride the ship at the WFZ ending via `dev.cmd`; the sky should
    scroll up into space. Headless can't confirm this — the trace gate + unit tests cover
    correctness; the visual is the final human check.
@@ -186,36 +214,39 @@ height. This is a wiring task, not a BG-layout task. Proceed to Task 1.
 
 ---
 
-### Task 1: Implement `ScrollBG` math + seeding in `syncBgDiffs()`
+### Task 1: Implement the ROM `ScrollBG` chase in `syncBgDiffs()`
 
 **Files:**
-- Modify: `src/main/java/com/openggf/game/sonic2/events/Sonic2WFZEvents.java` (`syncBgDiffs`, field `bgSeeded`, `init`, snapshot)
+- Modify: `src/main/java/com/openggf/game/sonic2/events/Sonic2WFZEvents.java` (`syncBgDiffs`; add public `getBgXPos()`/`getBgYPos()` accessors for the view in Task 2). No `bgSeeded`, no `init`/snapshot change (routine 0 seeds; §4.1).
 - Test: `src/test/java/com/openggf/game/sonic2/TestSonic2WfzBgScroll.java` (new)
 
 **Interfaces:**
-- Produces: `Sonic2WFZEvents` exposes existing `getBgXPos()`/`getBgYPos()` (add if absent, package/test-visible) returning the post-`ScrollBG` BG position; `bgYPos` chases `cameraY − bgYOffset` at ≤16/frame.
+- Produces: `Sonic2WFZEvents#getBgXPos()` / `#getBgYPos()` (public) returning the post-`ScrollBG` BG position; after routine 0 seeds them to the camera, `bgYPos` chases `cameraY − bgYOffset` at ≤16 px/frame.
 
-- [ ] **Step 1: Write the failing test** (offset ramp scrolls BG up; zero offset = camera-locked):
+- [ ] **Step 1: Write the failing test.** Two cases: (a) with `bgYOffset` set, `bgYPos` moves toward `cameraY − bgYOffset` at ≤16/frame; (b) **regression for P2#1** — camera moves between routine 0 (seed) and the first routine-2 `syncBgDiffs`, and `bgYPos` tracks it (no reseed discards it). Drive through the real routine dispatch (`update()` with `eventRoutine` 0 then 2), using the existing `setBgYOffsetForTest` (`:189`) and a stubbed/advanced `camera()`.
 ```java
 @Test
 void scrollBgChasesCameraMinusOffsetClampedTo16() throws Exception {
-    Sonic2WFZEvents ev = new Sonic2WFZEvents(/* test ctor / seams as existing tests use */);
-    ev.init(0);
-    ev.setBgYOffsetForTest(0x100);            // ramp active
-    // seed frame: bgYPos <- cameraY; then one step
-    ev.stepBgForTest(/* cameraX */ 0x200, /* cameraY */ 0x180);
-    ev.stepBgForTest(0x200, 0x180);
-    // With offset 0x100, target = cameraY - 0x100; bgYPos moves down toward it at <=16/frame
-    assertEquals(0x180 - 16, ev.getBgYPos());  // seeded to 0x180, then -16 toward 0x080
+    Sonic2WFZEvents ev = newWfzEventsWithCamera(cam);   // existing test seam
+    cam.set(0x200, 0x180); ev.runRoutine(0);            // routine 0 seeds bgYPos=0x180
+    ev.setBgYOffsetForTest(0x100);
+    ev.runRoutine(2);                                    // one ScrollBG step
+    assertEquals(0x180 - 16, ev.getBgYPos());            // chases toward 0x080 at 16/frame
+}
+
+@Test
+void seedFromRoutine0ThenCameraMovesBeforeFirstScrollBg() throws Exception {
+    Sonic2WFZEvents ev = newWfzEventsWithCamera(cam);
+    cam.set(0x200, 0x180); ev.runRoutine(0);            // seed at 0x180
+    cam.set(0x200, 0x188);                               // camera moved +8 before routine 2
+    ev.runRoutine(2);
+    assertEquals(0x188, ev.getBgYPos());                 // tracks (offset 0, ≤16 move) — NOT reseeded/discarded
 }
 ```
-*(Adapt to the existing `Sonic2WFZEvents` test seams — `setBgYOffsetForTest` already exists at `:189`; add a minimal `stepBgForTest` that calls the private `syncBgDiffs` with a stubbed `camera()` or drive via `update()`.)*
-
 - [ ] **Step 2: Run test to verify it fails** — `mvn -o "-Dtest=com.openggf.game.sonic2.TestSonic2WfzBgScroll" test` → FAIL (current snap ignores offset).
-- [ ] **Step 3: Implement** — add `private boolean bgSeeded;`, reset in `init(act)`, and rewrite `syncBgDiffs()`:
+- [ ] **Step 3: Implement** — rewrite `syncBgDiffs()` (no flag):
 ```java
 private void syncBgDiffs() {
-    if (!bgSeeded) { bgXPos = camera().getX(); bgYPos = camera().getY(); bgSeeded = true; }
     int dx = clamp16(camera().getX() - bgXPos - bgXOffset);
     int dy = clamp16(camera().getY() - bgYPos - bgYOffset);
     bgXPosDiff = dx; bgYPosDiff = dy;
@@ -223,41 +254,46 @@ private void syncBgDiffs() {
 }
 private static int clamp16(int v) { return v > 16 ? 16 : (v < -16 ? -16 : v); }
 ```
-- [ ] **Step 4:** Add `bgSeeded` to `captureSnapshot`/`restoreSnapshot` (`:198-214`).
-- [ ] **Step 5: Run test to verify it passes.**
+Add public `getBgXPos()`/`getBgYPos()`.
+- [ ] **Step 4: Run tests to verify they pass** (both cases).
+- [ ] **Step 5: Run the trace gate** (`TestS2WfzLevelSelectTraceReplay` + `TestS2DezEndingLevelSelectTraceReplay`) → still green (normal play: offset 0, camera ≤16/frame ⇒ behaviourally identical to the old snap).
 - [ ] **Step 6: Commit** (`fix(s2): WFZ ScrollBG chase for BG scroll ...`, `Changelog: updated`).
 
 ---
 
-### Task 2: Bridge the WFZ event BG position into the scroll handler's `BackgroundCamera`
+### Task 2: `WfzRuntimeStateView` bridge — `SwScrlWfz` consumes the live event BG position
 
 **Files:**
-- Modify: `src/main/java/com/openggf/game/sonic2/Sonic2LevelEventManager.java` (add `setBackgroundCamera` + pass-through), `Sonic2WFZEvents.java` (push in `syncBgDiffs` tail; hold a nullable `BackgroundCamera`)
-- Modify: the S2 level-load wiring that has both the event manager and `Sonic2ScrollHandlerProvider.getBgCamera()` in scope (candidate: `ParallaxManager.initForZone` S2 path, or `Sonic2`/`LevelManager` load). Confirm exact site during Task 2.
-- Test: `src/test/java/com/openggf/game/sonic2/TestSonic2WfzBgScroll.java` (extend)
+- Create: `src/main/java/com/openggf/game/sonic2/runtime/WfzRuntimeState.java` (interface extends `ZoneRuntimeState`)
+- Create: `src/main/java/com/openggf/game/sonic2/runtime/WfzRuntimeStateView.java` (live view over `Sonic2WFZEvents`)
+- Modify: `src/main/java/com/openggf/game/sonic2/Sonic2LevelEventManager.java:~132` (install the WFZ view next to HTZ/CNZ)
+- Modify: `src/main/java/com/openggf/game/sonic2/scroll/SwScrlWfz.java:97,141` (read the registry view instead of `bgCamera.getBgYPos()`)
+- Test: `src/test/java/com/openggf/game/sonic2/TestSonic2WfzBgBridgeIntegration.java` (new — real context)
 
 **Interfaces:**
-- Consumes: `Sonic2ScrollHandlerProvider.getBgCamera()` (`:200`), `Sonic2WFZEvents.getBgXPos()/getBgYPos()`.
-- Produces: `Sonic2WFZEvents#setBackgroundCamera(BackgroundCamera)` — null-safe; when set, `syncBgDiffs()` writes `bgCamera.setBgXPos(bgXPos)` / `setBgYPos(bgYPos)` after the chase.
+- Consumes: `Sonic2WFZEvents#getBgYPos()` (Task 1), `GameServices.zoneRuntimeRegistry()`, the HTZ/CNZ registration idiom (`installOwnedRuntimeState`, `Sonic2LevelEventManager.java:132-145`), `HtzRuntimeStateView` as the template.
+- Produces: `WfzRuntimeState#bgVscrollFactor()` returning `Sonic2WFZEvents.getBgYPos()` live; installed in `ZoneRuntimeRegistry` when WFZ loads; read by `SwScrlWfz`.
 
-- [ ] **Step 1: Write the failing test:**
+- [ ] **Step 1: Write the failing integration test** (through the real context, per §5.3 — NOT a direct setter):
 ```java
+// Boot a WFZ gameplay context (mirror an existing SharedLevel / context-boot test),
+// drive the WFZ event to routine 6 with a non-zero bgYOffset for a few frames, run one
+// LevelFrameStep + ParallaxManager pass, and assert SwScrlWfz's written VScroll factor
+// tracks Sonic2WFZEvents.getBgYPos() (scrolls up), not the frozen bgCamera value.
 @Test
-void eventPushesBgPositionIntoBackgroundCamera() throws Exception {
-    BackgroundCamera bg = new BackgroundCamera();
-    Sonic2WFZEvents ev = /* construct */;
-    ev.init(0);
-    ev.setBackgroundCamera(bg);
-    ev.setBgYOffsetForTest(0x100);
-    ev.stepBgForTest(0x200, 0x180);
-    ev.stepBgForTest(0x200, 0x180);
-    assertEquals(ev.getBgYPos(), bg.getBgYPos());
-}
+void wfzEndingScrollReachesRenderedVscrollThroughRuntimeRegistry() { /* ... */ }
 ```
-- [ ] **Step 2: Run to verify it fails.**
-- [ ] **Step 3: Implement** the nullable `BackgroundCamera` field + push in `syncBgDiffs()` tail; add `Sonic2LevelEventManager.setBackgroundCamera(...)` delegating to the WFZ events; wire it from the confirmed level-load site (guarded for null / non-S2).
+- [ ] **Step 2: Run to verify it fails** (SwScrlWfz still reads the frozen `bgCamera`).
+- [ ] **Step 3: Implement.** Create `WfzRuntimeState` (`int bgVscrollFactor();`) and
+  `WfzRuntimeStateView` (live over `Sonic2WFZEvents`, mirroring `HtzRuntimeStateView`);
+  install it in `Sonic2LevelEventManager` beside HTZ/CNZ; change `SwScrlWfz` to read
+  `GameServices.zoneRuntimeRegistry().currentAs(WfzRuntimeState.class)` (fall back to the
+  existing `bgCamera` value if the view is absent, for non-WFZ/test safety).
 - [ ] **Step 4: Run to verify it passes.**
-- [ ] **Step 5: Commit** (`Changelog: updated`).
+- [ ] **Step 5: Rewind check** — a WFZ-ending rewind restores the event `bgYPos`; assert the
+  rendered VScroll on the next parallax pass equals the restored value (guards P1#2).
+- [ ] **Step 6: Trace gate** (`TestS2WfzLevelSelectTraceReplay` + `TestS2DezEndingLevelSelectTraceReplay`) green.
+- [ ] **Step 7: Commit** (`Changelog: updated`).
 
 ---
 
@@ -275,8 +311,23 @@ void eventPushesBgPositionIntoBackgroundCamera() throws Exception {
 ---
 
 ## Self-review notes
-- Spec coverage: Gap A → Task 1; Gap B → Task 2; star-tile risk → Task 0 (gate); trace safety → Task 3.
-- Open item to confirm during Task 2: the exact S2 level-load site with both the event
-  manager and the scroll provider's `bgCamera` in scope (candidates listed).
-- Biggest risk remains Task 0 (star tiles). If it fails, this spec's scope does not deliver
-  the visual and a follow-up BG-layout spec is required.
+- Spec coverage: Gap A → Task 1; Gap B → Task 2; Phase 0 gate → resolved (§3, PASS);
+  trace/rewind safety → Task 3 + each task's gates.
+- Phase 0 gate resolved: the BG plane is 2048px tall and the "space" is the backdrop revealed
+  above the sky (§3) — wiring task, not BG-layout task.
+
+## Review resolution (Codex, 2026-07-16)
+All five items verified against the codebase and folded in:
+- **P1 (cross-lifetime injection):** dropped the `BackgroundCamera` injection; switched to a
+  live `WfzRuntimeStateView` in `ZoneRuntimeRegistry`, mirroring `HtzRuntimeStateView`/`SwScrlHtz`
+  (verified `Sonic2LevelEventManager.java:132`, `HtzRuntimeStateView.java`, `SwScrlHtz.java:61`). §4.2.
+- **P1 (rewind stale):** resolved by the same change — the view is live, so the snapshot-restored
+  event `bgYPos` is read on the next parallax pass; no duplicate state. §4.2/§5.5.
+- **P1 (snapshot bytes):** moot — the `bgSeeded` field is gone (§4.1), so `SNAPSHOT_BYTES`
+  (`Integer.BYTES * 8`) is unchanged (verified `Sonic2WFZEvents.java:30`,
+  `Sonic2LevelEventManager.java:49-54,311`).
+- **P2 (routine 0 already seeds):** verified `primaryRoutine0_initBgSync()`
+  (`Sonic2WFZEvents.java:243-247`); dropped `bgSeeded`; added the movement-between-init
+  regression test (Task 1 case b).
+- **P2 (bridge test bypassed production):** Task 2's test is now an integration test through the
+  real gameplay context/registry asserting rendered VScroll (§5.3).
