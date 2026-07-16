@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ end-boss air entry preserves composite SST phases
+
+Branch `feature/ai-trace-animation-verification`, after the flying-carry-order
+milestone. The engine owns the drilling boss's later-slot child objects inside
+one composite instance. Publishing the post-collapse air approach immediately
+after the parent rise therefore put its live touch anchor two SST phases ahead
+of the ROM: at the first recorded attack it was two pixels left and six pixels
+above the native parent, causing Sonic's velocity-negate bounce one player pass
+early. The air-rise wait now retains those two composite object phases before
+publishing the approach, without shifting the already-matched collapse encounter.
+No trace hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:142900-142970`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 36084 to frame 36535
+  (`tails_x_speed`, expected `$025D` / actual `$0246`; 1,021 errors, down from
+  1,226).
+- MGZ complete-run animation advances from frame 36109 to frame 36640
+  (`player_animation_id`, expected carried `$22` / actual Roll `$02`; 145
+  errors, down from 188).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused 49-test drilling-Robotnik suite passes.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
 ### 2026-07-16 -- Flying carry updates vertical speed before horizontal drag
 
 Branch `feature/ai-trace-animation-verification`, after the shared raw-carry-

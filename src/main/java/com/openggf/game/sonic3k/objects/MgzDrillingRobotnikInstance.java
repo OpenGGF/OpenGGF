@@ -615,7 +615,11 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
             case ROUTINE_END_AIR_WAIT -> {
                 if (--waitTimer < 0) {
                     yVel = -0x400;
-                    waitTimer = 0x1F;
+                    // The engine's composite boss owns the drill children inline,
+                    // while the ROM reaches loc_6C598 after their two later SST
+                    // slots have completed the recovery handoff. Preserve those
+                    // two object-pass phases before publishing the air approach.
+                    waitTimer = 0x21;
                     state.routine = ROUTINE_END_AIR_RISE;
                 }
             }
