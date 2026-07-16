@@ -497,6 +497,32 @@ class TestSonic3kMgz2EndBossEvents {
     }
 
     @Test
+    void mgz2BossTransition_fixedObjectPassClampsBeforeLaterDynamicObjects() {
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x3C80);
+        camera.setY((short) 0x0600);
+        AbstractPlayableSprite sonic = camera.getFocusedSprite();
+
+        events.triggerBossCollapseHandoff();
+        sonic.setCentreY((short) 0x0780);
+        sonic.setYSpeed((short) 0x0340);
+        sonic.setAir(false);
+        sonic.setOnObject(true);
+
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
+
+        assertEquals((short) 0x0700, sonic.getCentreY(),
+                "Obj_MGZ2_BossTransition must execute before later collapse-solid SST slots");
+        assertEquals((short) 0, sonic.getYSpeed());
+        assertFalse(sonic.getAir(),
+                "The native routine=2 write does not synthesize Status_InAir");
+        assertTrue(sonic.isOnObject(),
+                "The native routine=2 write leaves Status_OnObj for later solid SST slots");
+    }
+
+    @Test
     void mgz2BossTransition_keepsActiveCarryWhenCarrierFallsBelowTransitionHeight() {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);

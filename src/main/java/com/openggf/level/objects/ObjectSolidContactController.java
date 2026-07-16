@@ -4271,12 +4271,14 @@ final class ObjectSolidContactController {
             return SolidContact.CEILING;
         }
 
-        // ROM: Solid_Below — only correct position when ySpeed < 0 (moving upward into object).
-        // When ySpeed > 0 (falling) or ySpeed == 0 with air, ROM's Solid_TopBtmAir returns
-        // d4=-1 without correcting position or zeroing speed. This lets the player fall
-        // through the bottom of the object naturally, preventing spikes from trapping Sonic
-        // by continuously pushing him back into the collision box.
-        if (apply && player.getYSpeed() < 0) {
+        // S1/S2 Solid_Below correct only a player moving upward into the object.
+        // S3K loc_1E0E0 instead routes every airborne bottom overlap through
+        // loc_1E0F6/loc_1E0FC: it clears ground speed, applies the vertical
+        // separation, and zeros y_vel even when y_vel is zero or positive
+        // (sonic3k.asm:41558-41577). This is a game-wide shared-solid branch,
+        // owned by CollisionRules rather than an MGZ carrier exception.
+        boolean alwaysSeparatesAirBottomHit = alwaysSeparatesAirBottomSolidHit(player);
+        if (apply && (player.getYSpeed() < 0 || alwaysSeparatesAirBottomHit)) {
             int newCenterY = playerCenterY - distY;
             int newY = newCenterY - (player.getHeight() / 2);
             player.setY((short) newY);
@@ -4444,6 +4446,17 @@ final class ObjectSolidContactController {
                 && rules != null
                 && rules.air() != null
                 && rules.air().bottomSolidHitClearsGroundSpeed();
+    }
+
+    private boolean alwaysSeparatesAirBottomSolidHit(PlayableEntity player) {
+        if (player == null) {
+            return false;
+        }
+        CollisionRules rules = collisionRulesOrNull(player);
+        return player.getAir()
+                && rules != null
+                && rules.air() != null
+                && rules.air().bottomSolidHitAlwaysSeparates();
     }
 
     private boolean usesCurrentYRadiusOnlyForFullSolidBottomOverlap(PlayableEntity player) {

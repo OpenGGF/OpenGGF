@@ -1645,6 +1645,33 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void sonic3kAirborneFullSolidSeparatesZeroVelocityBottomOverlap() {
+        SolidObjectParams params = new SolidObjectParams(0x1B, 0x40, 0x40);
+        TestSolidObject object = new TestSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.setWidth(28);
+        player.setHeight(38);
+        player.setAir(true);
+        player.setRolling(true);
+        player.setYSpeed((short) 0);
+        player.setGSpeed((short) 0x0123);
+        player.setCentreX((short) 100);
+        player.setCentreY((short) 176);
+
+        manager.updateSolidContacts(player);
+
+        assertEquals(183, player.getCentreY(),
+                "S3K loc_1E0E0 separates an airborne bottom overlap even when y_vel is zero");
+        assertEquals(0, player.getYSpeed());
+        assertEquals(0, player.getGSpeed());
+        assertTrue(player.getAir());
+        assertFalse(player.isOnObject());
+    }
+
+    @Test
     public void testSonic1TopSolidEdgeLandingZoneRejectionAndAcceptance() {
         GameModule previous = GameModuleRegistry.getCurrent();
         GameModuleRegistry.setCurrent(new Sonic1GameModule());

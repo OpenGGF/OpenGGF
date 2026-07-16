@@ -433,6 +433,19 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
+        update(act, frameCounter, true);
+    }
+
+    /**
+     * Production post-object ScreenEvents pass. {@link #update(int, int)} keeps
+     * the transition object inline for focused callers, while the level frame
+     * bridge executes that native SST owner before later dynamic objects.
+     */
+    public void updateAfterDynamicObjects(int act, int frameCounter) {
+        update(act, frameCounter, false);
+    }
+
+    private void update(int act, int frameCounter, boolean includeBossTransitionObject) {
         if (act == 0) {
             updateAct1Bg();
         } else if (act == 1) {
@@ -441,10 +454,22 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             updateAct2ChunkEvent();
             updateAct2BossBgScroll();
             updateAct2Collapse();
-            updateBossTransition();
+            if (includeBossTransitionObject) {
+                updateBossTransition();
+            }
             updateAct2BossArena();
             updateAct2Rumble(frameCounter);
             applyScreenShake(frameCounter);
+        }
+    }
+
+    /**
+     * Executes the native {@code Obj_MGZ2_BossTransition} SST pass after the
+     * player slots but before later dynamic objects such as the collapse solids.
+     */
+    public void updateBossTransitionObjectBeforeDynamicObjects(int act) {
+        if (act == 1) {
+            updateBossTransition();
         }
     }
 
@@ -1454,7 +1479,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             player.setYSpeed((short) 0);
             player.setGSpeed((short) 0);
             player.setSpindash(false);
-            player.setAir(true);
             restoreBossTransitionPlayerRoutine(player);
             if (isBossTransitionCarryRoutine(controller)) {
                 bossTransitionX = player.getCentreX() & 0xFFFF;

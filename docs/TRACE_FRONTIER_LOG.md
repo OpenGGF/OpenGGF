@@ -1,5 +1,40 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ transition and collapse solids execute in native SST order
+
+Branch `feature/ai-trace-animation-verification`, after the collapse-carrier
+interact-pointer milestone. `Obj_MGZ2_BossTransition` occupies native slot 14,
+before the collapse solids allocated into slots 15 onward. The engine modeled
+the transition as a post-object event, so its clamp erased later collapse-solid
+separation and also synthesized `Status_InAir` while writing Player 1 routine
+`$02`. The transition now runs through the fixed-object phase after player
+physics and before dynamic objects, and its routine write leaves the player's
+status bits untouched. The later carrier therefore sees the clamped position
+and can preserve native standing/pushing state.
+
+This exposed the shared S3K `SolidObject_cont` underside branch: unlike S1/S2,
+S3K `loc_1E0E0` separates every airborne bottom overlap and clears `y_vel`
+even when the incoming velocity is zero or positive. The existing typed
+air-collision rules now own that game-wide difference; no MGZ-specific solid
+exception was added. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:30225-30246,41065-41084,
+41541-41577,41608-41637,106955-106970`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35652 to frame 35732
+  (`tails_y`, expected `$0A26` / actual `$0A21`; 1,437 errors).
+- MGZ complete-run animation remains at frame 35741 (`tails_animation_id`,
+  expected `Duck` / actual `Skid`; 313 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- Focused shared solid-object coverage and the MGZ end-boss/collapse suites plus rewind coverage,
+  static-state rewind coverage, and trace-invariant guards pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ collapse carriers publish Tails' interact pointer word
 
 Branch `feature/ai-trace-animation-verification`, after the rescue-logical-

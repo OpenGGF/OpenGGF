@@ -323,6 +323,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (mgzEvents != null) {
             mgzEvents.updateBgRiseObjectAfterPlayerPhysics(currentAct);
+            mgzEvents.updateBossTransitionObjectBeforeDynamicObjects(currentAct);
         }
     }
 
@@ -375,7 +376,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             lbzEvents.update(currentAct, frameCounter);
         }
         if (mgzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MGZ) {
-            mgzEvents.update(currentAct, frameCounter);
+            mgzEvents.updateAfterDynamicObjects(currentAct, frameCounter);
             mgzEvents.updateBackgroundCollisionObjectRelease(currentAct);
         }
         if (mhzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MHZ) {
