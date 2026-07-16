@@ -3162,6 +3162,16 @@ public class LevelManager {
                 resetAdditionalDispatches, lockPlayerControl, exitAdditionalDispatches);
     }
 
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches,
+                                        int resetPhaseOneDispatchOverlap,
+                                        boolean lockPlayerControl,
+                                        int exitAdditionalDispatches) {
+        transitions.requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay,
+                resetAdditionalDispatches, resetPhaseOneDispatchOverlap,
+                lockPlayerControl, exitAdditionalDispatches);
+    }
+
     /** @see LevelTransitionCoordinator#isTitleCardRequested() */
     public boolean isTitleCardRequested() { return transitions.isTitleCardRequested(); }
 
@@ -3188,6 +3198,10 @@ public class LevelManager {
 
     public int consumeInLevelTitleCardResetAdditionalDispatches() {
         return transitions.consumeInLevelTitleCardResetAdditionalDispatches();
+    }
+
+    public int consumeInLevelTitleCardResetPhaseOneDispatchOverlap() {
+        return transitions.consumeInLevelTitleCardResetPhaseOneDispatchOverlap();
     }
 
     public boolean consumeInLevelTitleCardPlayerControlLockRequest() {

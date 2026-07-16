@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **MGZ's retained results-to-title-card handoff now avoids double-counting phase-owned child dispatches:** seamless title requests carry an explicit phase-one overlap, so `Obj_TitleCardWait` resets rings/timer on frame 14424 in standalone replay without shifting the phase-0 MGZ complete-run or HCZ handoffs, advancing standalone physics to frame 14529 (`docs/skdisasm/sonic3k.asm:62214-62235,62708-62720,106307-106345`).
 - **MGZ miniboss collision now dereferences its live post-movement SST position:** `Obj_MGZMiniboss` moves before `Draw_And_Touch_Sprite` publishes the collision-list pointer, restoring Sonic's exact-edge boss rebound and advancing standalone physics from frame 12821 to 14424 and animation from frame 12863 to 16304 (`docs/skdisasm/sonic3k.asm:184817-184834,20656-20708,20895-20922`).
 - **MGZ standalone replay now restores the complete native Obj37 slot cadence:** reconstructing the missing schema-v6 `V_int_run_count` low bits from observed SST bounce order prevents a stale frame-12457 ring collection and advances standalone physics to frame 12821 (`docs/skdisasm/sonic3k.asm:543,35593-35645,35965-35980`).
 - **MGZ stomp bridges now preserve `SolidObjectTop`'s relative landing result:** the bridge seats a top-platform-carried player using the live enlarged radius before `Player_TouchFloor` restores ordinary radii, advancing standalone MGZ physics from frame 10842 to 12457 (`docs/skdisasm/sonic3k.asm:24335-24390,41982-42039,45170-45218`).

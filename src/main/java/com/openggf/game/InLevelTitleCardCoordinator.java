@@ -27,7 +27,8 @@ public final class InLevelTitleCardCoordinator {
                 levelManager.getInLevelTitleCardAct());
         if (levelManager.consumeInLevelTitleCardLevelGamestateResetRequest()) {
             provider.requestLevelGamestateResetAtInLevelDisplay(
-                    levelManager.consumeInLevelTitleCardResetAdditionalDispatches());
+                    levelManager.consumeInLevelTitleCardResetAdditionalDispatches(),
+                    levelManager.consumeInLevelTitleCardResetPhaseOneDispatchOverlap());
         }
         if (levelManager.consumeInLevelTitleCardPlayerControlLockRequest()) {
             provider.requestInLevelPlayerControlLock();

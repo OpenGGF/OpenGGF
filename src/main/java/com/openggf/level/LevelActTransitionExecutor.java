@@ -111,6 +111,7 @@ final class LevelActTransitionExecutor {
                     levelManager.currentAct,
                     request.resetLevelGamestateAtInLevelTitleCardDisplay(),
                     request.inLevelTitleCardResetAdditionalDispatches(),
+                    request.inLevelTitleCardResetPhaseOneDispatchOverlap(),
                     request.lockPlayerControlForInLevelTitleCard(),
                     request.inLevelTitleCardExitAdditionalDispatches());
         }

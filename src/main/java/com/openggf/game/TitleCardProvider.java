@@ -34,6 +34,11 @@ public interface TitleCardProvider {
         requestLevelGamestateResetAtInLevelDisplay();
     }
 
+    default void requestLevelGamestateResetAtInLevelDisplay(
+            int additionalDispatches, int phaseOneDispatchOverlap) {
+        requestLevelGamestateResetAtInLevelDisplay(additionalDispatches);
+    }
+
     default void requestInLevelPlayerControlLock() {
         // No-op unless an in-level title card owns the native controller lock.
     }

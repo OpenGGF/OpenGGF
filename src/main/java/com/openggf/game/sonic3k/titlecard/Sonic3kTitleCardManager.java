@@ -196,9 +196,17 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
 
     @Override
     public void requestLevelGamestateResetAtInLevelDisplay(int additionalDispatches) {
+        requestLevelGamestateResetAtInLevelDisplay(additionalDispatches, 0);
+    }
+
+    @Override
+    public void requestLevelGamestateResetAtInLevelDisplay(
+            int additionalDispatches, int phaseOneDispatchOverlap) {
+        int modulePhase = GameServices.level().getObjectManager().getVblaCounter() & 3;
         requestLevelGamestateResetAtInLevelDisplay();
         if (resetLevelGamestateOnInLevelDisplay) {
-            resetLevelGamestateCountdown += Math.max(0, additionalDispatches);
+            int overlap = modulePhase == 1 ? Math.max(0, phaseOneDispatchOverlap) : 0;
+            resetLevelGamestateCountdown += Math.max(0, additionalDispatches - overlap);
         }
     }
 
