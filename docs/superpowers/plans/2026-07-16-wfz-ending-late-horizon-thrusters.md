@@ -224,4 +224,3 @@ Extract frames during the small-hull pass and around the early/late horizon tran
 - [ ] **Step 6: Run final diff and repository checks**
 
 Run `git status --short`, review `git diff`/recent commits, verify no ROM, trace, video, or generated target artifacts are tracked, and request final spec-compliance plus code-quality review over both implementation commits.
-
