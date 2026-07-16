@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **CPU flying carry now applies `Tails_Move_FlySwim` before horizontal input acceleration:** the apex `-$08` to zero vertical step precedes the negative-Y drag gate, preserving the native full `$18` horizontal acceleration and advancing MGZ complete-run physics from frame 35940 to 36084 (`docs/skdisasm/sonic3k.asm:27553-27639,28330-28401`).
 - **Tails carry now publishes the native shared animation bytes and raw carry mapping pass:** pickup writes carried `$22` to both current/previous animation, resets the shared frame/timer, and the post-movement `AniRaw_Tails_Carry` pass immediately publishes `$91`, advancing MGZ complete-run animation from frame 35787 to 36109 and CNZ complete-run animation from frame 1 to 108 (`docs/skdisasm/sonic3k.asm:27186-27330,27382-27415`).
 - **MGZ rescue carry-init now applies `loc_140CE`'s literal airborne status byte:** stale standing/facing/roll/water state and the detached engine ride are cleared before flight physics, advancing complete-run physics from frame 35787 to 35940 and reducing the animation error tail (`docs/skdisasm/sonic3k.asm:26979-27014`).
 - **MGZ rescue attachment now begins from native CPU routine `$14` on the following Player 2 pass:** the transition object's later SST slot preserves Tails's status/subpixels and leaves the carry flag clear, then `loc_140CE` attaches Sonic and advances through `$16/$18`, moving complete-run physics from frame 35786 to 35787 (`docs/skdisasm/sonic3k.asm:26979-27014,30247-30270`).

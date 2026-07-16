@@ -102,7 +102,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean inputUp, inputDown, inputLeft, inputRight;
 	private boolean inputJump, inputJumpPress;
 	private boolean inputRawLeft, inputRawRight;
-	private boolean manualTailsFlightUpdatedThisFrame;
+	private boolean tailsFlightVerticalUpdatedThisFrame;
 	private boolean slopeResistAppliedThisFrame;
 	private boolean directionalBrakeReachedZero;
 	private boolean facingFlipForcesPushClearAfterGroundWall;
@@ -440,7 +440,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// distinguish "fresh slip honour the air state" from "stale move_lock
 		// from an earlier slip".
 		sprite.setSlopeRepelJustSlipped(false);
-		manualTailsFlightUpdatedThisFrame = false;
+		tailsFlightVerticalUpdatedThisFrame = false;
 
 		// Invalidate the pre-friction inertia snapshot at frame start; doGroundMove
 		// repopulates it before updateCrouchState consumes it (see field comment).
@@ -883,6 +883,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (!hurt) {
 			doJumpHeight();
 			updateManualTailsFlight();
+			if (!tailsFlightVerticalUpdatedThisFrame
+					&& sidekickCpu != null
+					&& sidekickCpu.usesFlyingCarryMovement()) {
+				// Tails_FlyingSwimming calls Tails_Move_FlySwim before
+				// Tails_InputAcceleration_Freespace. An apex step from
+				// y_vel=-$08 to zero must precede its negative-y drag test.
+				sidekickCpu.applyFlyingCarryVerticalVelocity();
+				tailsFlightVerticalUpdatedThisFrame = true;
+			}
 			doChgJumpDir();
 			doLevelBoundary();
 		}
@@ -1305,7 +1314,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				&& sprite.getTailsCarryController().isCarryingMainCharacter();
 		sprite.getTailsFlightController().updateVertical(
 				inputJumpPress, carryingMainCharacter, romVisibleLevelFrameCounter());
-		manualTailsFlightUpdatedThisFrame = true;
+		tailsFlightVerticalUpdatedThisFrame = true;
 	}
 
 	private boolean isManualTailsFlightActive() {
@@ -2722,7 +2731,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// Tails_FlyingSwimming applies Tails_Move_FlySwim before
 			// MoveSprite_TestGravity2, so the carry controller owns the
 			// carrier's per-frame vertical flight velocity here.
-			if (!manualTailsFlightUpdatedThisFrame) {
+			if (!tailsFlightVerticalUpdatedThisFrame) {
 				cpu.applyFlyingCarryVerticalVelocity();
 			}
 			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
@@ -2734,7 +2743,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// apply +$38 air gravity (that's MoveSprite_TestGravity's job), and
 			// since Tails_Move_FlySwim already advanced y_vel by +0x08, the
 			// movement step uses the post-gravity y_vel.
-			if (!manualTailsFlightUpdatedThisFrame) {
+			if (!tailsFlightVerticalUpdatedThisFrame) {
 				applyGravity();
 			}
 			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());

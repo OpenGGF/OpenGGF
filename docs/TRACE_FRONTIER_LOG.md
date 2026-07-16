@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Flying carry updates vertical speed before horizontal drag
+
+Branch `feature/ai-trace-animation-verification`, after the shared raw-carry-
+animation milestone. Native `Tails_FlyingSwimming` calls
+`Tails_Move_FlySwim` before `Tails_InputAcceleration_Freespace`. At the flight
+apex this changes `y_vel` from `-$08` to zero before the horizontal drag test,
+so a right-input step retains its full `$18` acceleration. The engine ran the
+CPU carry's vertical controller later, causing the stale negative speed to
+subtract `$07` from both Tails and carried Sonic. The concrete flying-carry
+path now updates vertical state before airborne steering and reuses the result
+for movement. No trace hydration, route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:27553-27639,28330-28401`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 35940 to frame 36084
+  (`y_speed`, expected `$02A0` / actual `-$02A0`; 1,226 errors, down from
+  1,274).
+- MGZ complete-run animation remains at frame 36109 with 188 errors.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
 ### 2026-07-16 -- Tails carry publishes native shared raw animation state
 
 Branch `feature/ai-trace-animation-verification`, after the literal-airborne-
