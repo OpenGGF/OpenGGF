@@ -35,7 +35,8 @@ public final class InLevelTitleCardCoordinator {
             controlLock.accept(true);
         }
         provider.requestInLevelExitAdditionalDispatches(
-                levelManager.consumeInLevelTitleCardExitAdditionalDispatches());
+                levelManager.consumeInLevelTitleCardExitAdditionalDispatches(),
+                levelManager.consumeInLevelTitleCardExitPhaseOneDispatchOverlap());
         return true;
     }
 }

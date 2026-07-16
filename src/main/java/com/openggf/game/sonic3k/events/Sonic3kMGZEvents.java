@@ -2351,6 +2351,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                         // dispatches remain after the visual children finish
                         // before the completion flag reaches DoStart.
                         .inLevelTitleCardExitAdditionalDispatches(10)
+                        .inLevelTitleCardExitPhaseOneDispatchOverlap(5)
                         // Native code subtracts the offsets from the live camera
                         // and all four bounds; it does not recenter after Load_Level.
                         .preserveOffsetCameraPosition(true)

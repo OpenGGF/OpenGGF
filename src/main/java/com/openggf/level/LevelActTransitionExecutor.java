@@ -113,7 +113,8 @@ final class LevelActTransitionExecutor {
                     request.inLevelTitleCardResetAdditionalDispatches(),
                     request.inLevelTitleCardResetPhaseOneDispatchOverlap(),
                     request.lockPlayerControlForInLevelTitleCard(),
-                    request.inLevelTitleCardExitAdditionalDispatches());
+                    request.inLevelTitleCardExitAdditionalDispatches(),
+                    request.inLevelTitleCardExitPhaseOneDispatchOverlap());
         }
     }
 

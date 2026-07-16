@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ title-card exit accounts for phase-owned wait dispatches
+
+Branch `feature/ai-trace-animation-verification`, after the title-card reset
+milestone. MGZ's seamless transition supplies ten retained
+`Obj_EndSignControl`/title-parent dispatches after the visible title children
+retire. When the transparent title card starts at object-module phase 1, its
+generic owner already contributes five of those wait entries. Counting both
+budgets held `End_of_level_flag` for 15 updates and delayed normal camera
+tracking. Seamless title requests can now declare the concrete phase-one
+overlap for their exit budget as well as their display reset; MGZ declares
+five while HCZ's separate seven/five-dispatch handoff declares no overlap.
+The phase-0 MGZ complete-run path therefore retains all ten entries. No trace
+hydration, zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:62244-62279,62708-62720,106307-106345`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 14529 to frame 16055
+  (`camera_x`, expected `$07E1` / actual `$07E0`), with physics errors reduced
+  from 4245 to 4243.
+- MGZ standalone animation remains at frame 16304 (`tails_animation_id`,
+  expected `$00` / actual `$02`) with 547 errors.
+- The focused transition-coordinator and headless in-level title-card suites
+  pass; standalone/complete-run HCZ and MGZ retain their established timing.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ title-card reset accounts for phase-owned child dispatches
 
 Branch `feature/ai-trace-animation-verification`, after the live miniboss

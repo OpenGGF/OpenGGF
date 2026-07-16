@@ -59,6 +59,11 @@ public interface TitleCardProvider {
         // No-op unless the title card models SST child retirement dispatches.
     }
 
+    default void requestInLevelExitAdditionalDispatches(
+            int dispatches, int phaseOneDispatchOverlap) {
+        requestInLevelExitAdditionalDispatches(dispatches);
+    }
+
     /**
      * Whether an active in-level title owner still dispatches on replay rows
      * whose level gameplay counter is held. Normal level-title overlays do not.

@@ -12,7 +12,7 @@ class TestLevelTransitionCoordinator {
     void inLevelTitleCardCarriesDisplayResetIntentAndDispatchOffset() {
         LevelTransitionCoordinator transitions = new LevelTransitionCoordinator();
 
-        transitions.requestInLevelTitleCard(1, 1, true, 7, 3, true, 5);
+        transitions.requestInLevelTitleCard(1, 1, true, 7, 3, true, 5, 2);
 
         assertTrue(transitions.consumeInLevelTitleCardRequest());
         assertTrue(transitions.consumeInLevelTitleCardLevelGamestateResetRequest());
@@ -20,11 +20,13 @@ class TestLevelTransitionCoordinator {
         assertEquals(3, transitions.consumeInLevelTitleCardResetPhaseOneDispatchOverlap());
         assertTrue(transitions.consumeInLevelTitleCardPlayerControlLockRequest());
         assertEquals(5, transitions.consumeInLevelTitleCardExitAdditionalDispatches());
+        assertEquals(2, transitions.consumeInLevelTitleCardExitPhaseOneDispatchOverlap());
         assertFalse(transitions.consumeInLevelTitleCardRequest());
         assertFalse(transitions.consumeInLevelTitleCardLevelGamestateResetRequest());
         assertEquals(0, transitions.consumeInLevelTitleCardResetAdditionalDispatches());
         assertEquals(0, transitions.consumeInLevelTitleCardResetPhaseOneDispatchOverlap());
         assertFalse(transitions.consumeInLevelTitleCardPlayerControlLockRequest());
         assertEquals(0, transitions.consumeInLevelTitleCardExitAdditionalDispatches());
+        assertEquals(0, transitions.consumeInLevelTitleCardExitPhaseOneDispatchOverlap());
     }
 }

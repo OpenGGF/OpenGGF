@@ -24,6 +24,7 @@ public final class SeamlessLevelTransitionRequest {
     private final int inLevelTitleCardResetPhaseOneDispatchOverlap;
     private final boolean lockPlayerControlForInLevelTitleCard;
     private final int inLevelTitleCardExitAdditionalDispatches;
+    private final int inLevelTitleCardExitPhaseOneDispatchOverlap;
     private final boolean forceAirOnStaleObjectSupportLoss;
     private final boolean preserveOffsetCameraPosition;
     private final Integer postTransitionMinX;
@@ -57,6 +58,8 @@ public final class SeamlessLevelTransitionRequest {
         this.lockPlayerControlForInLevelTitleCard = builder.lockPlayerControlForInLevelTitleCard;
         this.inLevelTitleCardExitAdditionalDispatches =
                 builder.inLevelTitleCardExitAdditionalDispatches;
+        this.inLevelTitleCardExitPhaseOneDispatchOverlap =
+                builder.inLevelTitleCardExitPhaseOneDispatchOverlap;
         this.forceAirOnStaleObjectSupportLoss = builder.forceAirOnStaleObjectSupportLoss;
         this.preserveOffsetCameraPosition = builder.preserveOffsetCameraPosition;
         this.postTransitionMinX = builder.postTransitionMinX;
@@ -132,6 +135,10 @@ public final class SeamlessLevelTransitionRequest {
         return inLevelTitleCardExitAdditionalDispatches;
     }
 
+    public int inLevelTitleCardExitPhaseOneDispatchOverlap() {
+        return inLevelTitleCardExitPhaseOneDispatchOverlap;
+    }
+
     public boolean forceAirOnStaleObjectSupportLoss() {
         return forceAirOnStaleObjectSupportLoss;
     }
@@ -203,6 +210,7 @@ public final class SeamlessLevelTransitionRequest {
         private int inLevelTitleCardResetPhaseOneDispatchOverlap;
         private boolean lockPlayerControlForInLevelTitleCard;
         private int inLevelTitleCardExitAdditionalDispatches;
+        private int inLevelTitleCardExitPhaseOneDispatchOverlap;
         private boolean forceAirOnStaleObjectSupportLoss;
         private boolean preserveOffsetCameraPosition;
         private Integer postTransitionMinX;
@@ -286,6 +294,11 @@ public final class SeamlessLevelTransitionRequest {
 
         public Builder inLevelTitleCardExitAdditionalDispatches(int dispatches) {
             this.inLevelTitleCardExitAdditionalDispatches = Math.max(0, dispatches);
+            return this;
+        }
+
+        public Builder inLevelTitleCardExitPhaseOneDispatchOverlap(int dispatches) {
+            this.inLevelTitleCardExitPhaseOneDispatchOverlap = Math.max(0, dispatches);
             return this;
         }
 
