@@ -3,6 +3,8 @@ import com.openggf.level.objects.BoxObjectInstance;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.debug.DebugOverlayManager;
+import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
@@ -298,8 +300,15 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        // Only render in debug mode (invisible in normal gameplay)
+        // Invisible trigger: draw the debug box only when the debug subsystem is
+        // enabled AND the live debug overlay (F1) is toggled on. Previously this
+        // only checked the DEBUG_VIEW_ENABLED config, so the box kept rendering
+        // with debug tools enabled but the overlay HUD hidden.
         if (!config().getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED)) {
+            return;
+        }
+        DebugOverlayManager overlay = services().debugOverlay();
+        if (overlay == null || !overlay.isEnabled(DebugOverlayToggle.OVERLAY)) {
             return;
         }
 

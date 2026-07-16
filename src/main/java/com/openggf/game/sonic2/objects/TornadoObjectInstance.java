@@ -491,9 +491,11 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 yVel = 0x100;
             }
             case 4 -> {
-                // ObjB2_Main_WFZ_Start_shot_down
+                // ObjB2_Main_WFZ_Start_shot_down: ROM plays SndID_Scatter ($EB) every
+                // $20 frames as the Tornado is gunned down (s2.asm:78890-78895), not the
+                // ring-loss/RingSpill sound ($C6). SndID_Scatter aliases SndID_LaserFloor.
                 if ((frameCounter & WFZ_SCATTER_SFX_MASK) == 0) {
-                    services().playSfx(Sonic2Sfx.RING_SPILL.id);
+                    services().playSfx(Sonic2Sfx.LASER_FLOOR.id);
                 }
 
                 scriptTimer--;
@@ -682,6 +684,10 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     private void wfzJumpToShip(AbstractPlayableSprite player) {
+        // ROM ObjB2_Jump_to_ship (s2.asm:79082-79085) forces NO animation in this
+        // state, so the invisible grabber's HANG (set once on catch) survives through
+        // the DEZ ascent. State $C (wfzApproachingShip) still applies WAIT; re-forcing
+        // WAIT here every frame overwrote the hang animation with the standing pose.
         wfzJumpToShipCommon();
     }
 
@@ -802,7 +808,11 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         player.setAir(false);
         player.setRolling(false);
         player.setAnimationId(Sonic2AnimationIds.HANG);
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        // ROM writes obj_control = 1 (bit 0 only, bit 7 CLEAR) here (s2.asm:79217): movement
+        // is suppressed but TouchResponse still runs, so the ship plating (ObjC1) can still
+        // grab the hanging player. nativeBit7FullControl set bit 7, which suppressed the whole
+        // touch pass and stopped the ObjC1 grab from ever firing.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         if (services().zoneFeatureProvider() instanceof Sonic2ZoneFeatureProvider sonic2) {
             sonic2.setWfzWindTunnelHolding(true);
         }
