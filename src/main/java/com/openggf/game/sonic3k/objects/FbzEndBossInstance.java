@@ -9,8 +9,10 @@ import com.openggf.game.sonic3k.Sonic3kPlcLoader;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.objects.*;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
@@ -55,6 +57,7 @@ public final class FbzEndBossInstance extends AbstractBossInstance
             0x1F,0x20,0x20,0x20,0x20,0x20,0x20,0x20};
 
     public enum RootChildRole { LEFT_ARM, RIGHT_ARM, WEAPON }
+    public enum ForcedExitInput { RIGHT, A_RIGHT_HELD_RIGHT, A_RIGHT }
     public record RootChildSpec(RootChildRole role, int dx, int dy) { }
     public record Position(int x, int y) { }
     public record Fixed8(int position, int fraction) { }
@@ -70,6 +73,7 @@ public final class FbzEndBossInstance extends AbstractBossInstance
     private boolean facingRight;
     private boolean graphSpawned;
     private boolean exitArtQueued;
+    private boolean exitArtConsumersPublished;
     private boolean armTrigger;
     /** Native root {@code $38} bit 0: attack countdown/proximity latch. */
     private boolean attackLatch;
@@ -161,6 +165,7 @@ public final class FbzEndBossInstance extends AbstractBossInstance
         facingRight = true;
         graphSpawned = false;
         exitArtQueued = false;
+        exitArtConsumersPublished = false;
         armTrigger = false;
         attackLatch = false;
         weaponTrigger = false;
@@ -196,7 +201,7 @@ public final class FbzEndBossInstance extends AbstractBossInstance
             case DEFEAT_HIDE_WAIT -> updateDefeatHideWait();
             case DEFEAT_CAPSULE_DELAY -> updateDefeatCapsuleDelay();
             case CAPSULE_WAIT -> updateCapsuleWait();
-            case EXIT_READY -> { }
+            case EXIT_READY -> updateExitReady();
         }
         updateNativeHitHandler();
     }
@@ -398,8 +403,76 @@ public final class FbzEndBossInstance extends AbstractBossInstance
         services().camera().setMaxXTarget((short) 0x3738);
         spawnAfterCurrentSibling(() -> new S3kIncLevelEndXGradualInstance(state.x, state.y));
         queueExitArt();
+        timer = 0;
         phaseOrdinal = Phase.EXIT_READY.ordinal();
     }
+
+    private void publishExitArtConsumersIfQueueIdle() {
+        var queue=services().kosinskiModuleQueue();
+        if (queue!=null && !queue.isIdle()) return;
+        publishExitArtConsumers();
+    }
+
+    private boolean publishExitArtConsumers() {
+        if (exitArtConsumersPublished) return true;
+        if (services().renderManager()==null
+                || !(services().renderManager().getArtProvider() instanceof Sonic3kObjectArtProvider provider)
+                || services().currentLevel()==null) {
+            exitArtConsumersPublished=true;
+            return true;
+        }
+        try {
+            var rom=services().rom();
+            if (rom==null) {
+                exitArtConsumersPublished=true;
+                return true;
+            }
+            provider.registerFbzExitArtSheets(services().currentLevel(),rom);
+            services().renderManager().ensurePatternsCached(
+                    services().graphicsManager(),PatternAtlasRange.OBJECTS.base());
+            exitArtConsumersPublished=true;
+            return true;
+        } catch (IOException failure) {
+            exitArtQueueFailure="Could not publish exit consumers: "+failure.getMessage();
+            LOG.log(Level.WARNING,"Could not publish FBZ exit art consumers",failure);
+            return false;
+        }
+    }
+
+    /** {@code loc_7092A -> loc_86334}: forced walk and raw {@code StartNewLevel #$0800}. */
+    private void updateExitReady() {
+        publishExitArtConsumersIfQueueIdle();
+        if ((services().camera().getY() & 0xFFFF) >= exitCameraThreshold()) {
+            services().requestSessionSave(com.openggf.game.save.SaveReason.PROGRESSION_SAVE);
+            services().requestZoneAndAct(exitZone(), exitAct(), true);
+            ObjectLifetimeOps.destroyLatched(this);
+            return;
+        }
+        AbstractPlayableSprite main = services().playerQuery() != null
+                && services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite sprite
+                ? sprite : null;
+        if (main != null) {
+            ForcedExitInput input = forcedExitInput(main.getPushing(), timer);
+            if (input == ForcedExitInput.A_RIGHT) timer = 0x1F;
+            else if (timer != 0) timer--;
+            int mask = AbstractPlayableSprite.INPUT_RIGHT
+                    | (input == ForcedExitInput.RIGHT ? 0 : AbstractPlayableSprite.INPUT_JUMP);
+            boolean jumpPress = input == ForcedExitInput.A_RIGHT;
+            main.setForcedInputMask(mask);
+            main.writeLogicalInputAndCurrentFollowerHistory(mask, jumpPress);
+        }
+    }
+
+    public static ForcedExitInput forcedExitInput(boolean pushing, int holdTimer) {
+        if (pushing) return ForcedExitInput.A_RIGHT;
+        return holdTimer != 0 ? ForcedExitInput.A_RIGHT_HELD_RIGHT : ForcedExitInput.RIGHT;
+    }
+
+    public static int exitCameraThreshold() { return 0x720; }
+    public static int exitZone() { return Sonic3kZoneIds.ZONE_SOZ; }
+    public static int exitAct() { return 0; }
+    void updateExitReadyForTest() { updateExitReady(); }
+    void clearExitInputTimerForTest() { timer = 0; }
 
     private void relockPlayersForExitReady() {
         if (services().playerQuery() == null) return;

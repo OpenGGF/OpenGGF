@@ -1066,6 +1066,17 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new FbzEndBossInstance(spawn);
                 });
+        factories.put(Sonic3kObjectIds.FBZ_EXIT_HALL,
+                (spawn, registry) -> new FbzExitHallInstance(spawn));
+        factories.put(Sonic3kObjectIds.FBZ_EXIT_DOOR,
+                (spawn, registry) -> getCurrentZoneSet() == S3kZoneSet.S3KL ? new FbzExitDoorInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_EGG_PRISON,
+                (spawn, registry) -> getCurrentZoneSet() == S3kZoneSet.S3KL ? new FbzEggPrisonInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        factories.put(Sonic3kObjectIds.FBZ_SPRING_PLUNGER,
+                (spawn, registry) -> getCurrentZoneSet() == S3kZoneSet.S3KL ? new FbzSpringPlungerInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
         factories.put(Sonic3kObjectIds.CLAMER,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();

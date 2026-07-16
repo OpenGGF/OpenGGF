@@ -78,10 +78,26 @@ class TestFbzTechnoSqueek {
         assertEquals("MOVING", falling.stateName());
         assertEquals(startX - 0x30, falling.getX());
         assertEquals(startY - 0x29, falling.getY());
-        assertEquals(0x400, falling.xVelocityRaw());
+        assertEquals(-0x400, falling.xVelocityRaw());
         assertEquals(0, falling.yVelocityRaw());
         assertSame(child, falling.attachment());
         verify(manager, times(1)).addDynamicObjectAfterCurrent(any(TechnoSqueekAttachmentObjectInstance.class));
+    }
+
+    @Test void fallingLandingDirectionComesFromSignedLaunchVelocityOnBothSides() {
+        for (boolean launchLeft : new boolean[]{true, false}) {
+            ObjectManager manager = mock(ObjectManager.class);
+            TechnoSqueekBadnikInstance falling = TechnoSqueekBadnikInstance.falling(spawn(0, 0), launchLeft);
+            falling.setServices(new Services(manager));
+            falling.update(0, null);
+            try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+                terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), eq(7)))
+                        .thenReturn(new TerrainCheckResult(-1, (byte) 0, 1));
+                for (int frame = 1; frame <= 24; frame++) falling.update(frame, null);
+            }
+            assertEquals(launchLeft ? -0x400 : 0x400, falling.xVelocityRaw());
+            assertEquals(launchLeft, falling.badnikFacingLeft());
+        }
     }
 
     @Test void childCreationIsRawThenNextUpdateAppliesBothPlacementFlipAxes() {

@@ -280,6 +280,28 @@ public final class Sonic3kPlcArtRegistry {
     }
 
     /**
+     * Render consumers published only after {@code PLCKosM_FBZEndBoss_Exit}
+     * finishes writing its native door/hall VRAM windows.
+     */
+    public static List<LevelArtEntry> fbzExitLevelArtEntries() {
+        return List.of(
+                new LevelArtEntry(
+                        Sonic3kObjectArtKeys.FBZ_EXIT_DOOR,
+                        Sonic3kConstants.MAP_FBZ_EXIT_DOOR_ADDR,
+                        Sonic3kConstants.ART_TILE_FBZ_EXIT_DOOR, 2, null, 1),
+                // Obj_FBZExitHall subtype $00 uses the hall mapping's frame 0
+                // with the door PLC tile base; it is not Obj_FBZExitDoor's map.
+                new LevelArtEntry(
+                        Sonic3kObjectArtKeys.FBZ_EXIT_HALL_DOOR_SCENERY,
+                        Sonic3kConstants.MAP_FBZ_EXIT_HALL_ADDR,
+                        Sonic3kConstants.ART_TILE_FBZ_EXIT_DOOR, 2, null, 2),
+                new LevelArtEntry(
+                        Sonic3kObjectArtKeys.FBZ_EXIT_HALL,
+                        Sonic3kConstants.MAP_FBZ_EXIT_HALL_ADDR,
+                        Sonic3kConstants.ART_TILE_FBZ_EXIT_HALL, 2, null, 2));
+    }
+
+    /**
      * Adds zone-specific art entries to the given lists.
      * Populated in subsequent tasks with per-zone badnik and object art.
      *
@@ -1501,16 +1523,6 @@ public final class Sonic3kPlcArtRegistry {
                     Sonic3kConstants.ART_NEM_EGG_CAPSULE_ADDR,
                     CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_EGG_CAPSULE_SIZE,
                     Sonic3kConstants.MAP_EGG_CAPSULE_ADDR, 0, -1));
-            // PLCKosM_FBZEndBoss_Exit queues these into their native level VRAM
-            // destinations after the end boss; consumers reference those slots.
-            levelArt.add(new LevelArtEntry(
-                    Sonic3kObjectArtKeys.FBZ_EXIT_DOOR,
-                    Sonic3kConstants.MAP_FBZ_EXIT_DOOR_ADDR,
-                    Sonic3kConstants.ART_TILE_FBZ_EXIT_DOOR, 2, null));
-            levelArt.add(new LevelArtEntry(
-                    Sonic3kObjectArtKeys.FBZ_EXIT_HALL,
-                    Sonic3kConstants.MAP_FBZ_EXIT_HALL_ADDR,
-                    Sonic3kConstants.ART_TILE_FBZ_EXIT_HALL, 2, null));
         }
 
         // Cork Floor: ArtTile_FBZMisc + $C1

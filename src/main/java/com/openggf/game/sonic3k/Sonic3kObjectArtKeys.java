@@ -249,6 +249,8 @@ public final class Sonic3kObjectArtKeys {
     public static final String FBZ_BOSS_PILLAR = "fbz_boss_pillar";
     public static final String FBZ_END_BOSS = "fbz_end_boss";
     public static final String FBZ_EXIT_DOOR = "fbz_exit_door";
+    /** Obj_FBZExitHall subtype $00: hall mapping frame 0 over the exit-door PLC tiles. */
+    public static final String FBZ_EXIT_HALL_DOOR_SCENERY = "fbz_exit_hall_door_scenery";
     public static final String FBZ_EXIT_HALL = "fbz_exit_hall";
     public static final String FBZ_EGG_CAPSULE = "fbz_egg_capsule";
 

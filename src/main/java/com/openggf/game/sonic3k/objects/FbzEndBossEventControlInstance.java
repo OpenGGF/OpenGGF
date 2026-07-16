@@ -203,6 +203,9 @@ public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
     }
 
     private Phase phase() { return Phase.values()[phaseOrdinal]; }
+    // Obj_FBZEndBossEventControl reaches SolidObjectTop on every native path,
+    // including COMPLETE; it never calls out_of_range, MarkObjGone, or DeleteObject.
+    @Override public boolean isPersistent() { return true; }
     @Override public SolidObjectParams getSolidParams() { return SOLID_PARAMS; }
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }

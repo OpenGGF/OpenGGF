@@ -1,14 +1,14 @@
 # Rewind Round-Trip Probe
 
-Generated: 2026-07-15
+Generated: 2026-07-16
 
 ## Summary
 
 | Metric | Value |
 |--------|-------|
-| Total classes discovered | 921 |
-| Probed: | 810 |
-| Skipped/Unprobed: | 111 |
+| Total classes discovered | 934 |
+| Probed: | 821 |
+| Skipped/Unprobed: | 113 |
 | Probe coverage | 87.9% |
 | REAL gaps found | 0 |
 
@@ -105,6 +105,8 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 | CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Ins... |
 | CutsceneKnucklesRockChild | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | CutsceneKnuxCnz2WallInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallIns... |
+| FbzEggPrisonButtonInstance | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| FbzEndEggCapsuleButtonInstance | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | FireShieldObjectInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.FireShieldObjectInstanc... |
 | HCZCGZFanObjectInstance$FanPlatformChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance... |
 | HCZConveyorBeltObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |

@@ -19,6 +19,7 @@ import com.openggf.level.render.SpriteFramePiece;
 import com.openggf.level.render.SpriteSheet;
 import com.openggf.level.resources.KosinskiModuleQueue;
 import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -92,7 +93,6 @@ class TestFbzEndBossFormalCorrections {
         assertEquals(camera.getX(), camera.getMinX(),
                 "loc_708AA pins Camera_min_X_pos while _unkFAA8 is active");
 
-        set(boss, "exitArtQueued", true);
         gameState.setEndOfLevelActive(false);
         invoke(boss, "updateCapsuleWait");
 
@@ -105,6 +105,19 @@ class TestFbzEndBossFormalCorrections {
         assertEquals(0x1000, camera.getMaxYTarget() & 0xFFFF);
         assertEquals(0x3738, camera.getMaxXTarget() & 0xFFFF);
         assertEquals(2, manager.activeObjectsOfType(S3kIncLevelEndXGradualInstance.class).size());
+
+        services.queue.restore(new KosinskiModuleQueue.Snapshot(List.of(
+                new KosinskiModuleQueue.ArchiveState(0x165BCA,0x165BCC,0x7CA0,
+                        0x200,1,1,0x100,-1,true)),
+                KosinskiModuleQueue.Phase.READY_TO_START,null,List.of(),List.of()));
+        boss.clearExitInputTimerForTest();
+        invoke(boss,"updateExitReady");
+        assertEquals(FbzEndBossInstance.Phase.EXIT_READY,boss.phase(),
+                "Kos_modules_left must not suppress the native forced-exit task");
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT,p1.getLogicalInputState());
+        services.queue.clear();
+        invoke(boss,"updateExitReady");
+        assertEquals(FbzEndBossInstance.Phase.EXIT_READY,boss.phase());
 
         AbstractObjectInstance p2Lock = manager.getActiveObjects().stream()
                 .filter(AbstractObjectInstance.class::isInstance)

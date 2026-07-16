@@ -4,13 +4,25 @@ import com.openggf.game.sonic3k.events.Sonic3kFBZEvents;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.LevelEventProvider;
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.sonic3k.events.FbzObjectEventBridge;
 import com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState;
 import com.openggf.camera.Camera;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.level.objects.ObjectSlotLayout;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.SolidObjectParams;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -73,8 +85,74 @@ class TestFbzPlaneTransition {
         FbzEndBossEventControlInstance controller = new FbzEndBossEventControlInstance();
         assertEquals(new SolidObjectParams(0x4C0, 0x11, 0x11), controller.getSolidParams());
         assertTrue(controller.isTopSolidOnly());
+        assertTrue(controller.isPersistent(),
+                "the native routine remains live through COMPLETE and has no unload tail");
         assertTrue(controller.seedsNewRideCarryFromPreUpdateX(),
                 "shared SolidObjectTop must consume the pre-update d4 carry reference");
+    }
+
+    @Test
+    void nativeSubbossActiveSetupWindowRetainsBossApproachObjectsAcrossRewindAndLaterTrigger() {
+        Sonic3kFBZEvents events = new Sonic3kFBZEvents();
+        events.init(1);
+        Camera camera = new Camera();
+        camera.setX((short) 0x2B36);
+        camera.setY((short) 0x03C);
+        RecordingControllerBridge bridge = new RecordingControllerBridge();
+        // FBZ2SE_Normal advances to stage 4 at this camera crossing even when
+        // Obj_FBZ2Subboss is still in its native release/cull sequence.
+        bridge.foregroundStage = 4;
+        AtomicInteger playerX = new AtomicInteger(0x2BD6);
+        PlayableEntity player = mock(PlayableEntity.class);
+        when(player.getCentreX()).thenAnswer(ignored -> (short) playerX.get());
+        when(player.getCentreY()).thenReturn((short) 0x300);
+
+        ObjectRegistry registry = new ObjectRegistry() {
+            @Override public ObjectInstance create(ObjectSpawn spawn) { return null; }
+            @Override public void reportCoverage(List<ObjectSpawn> spawns) { }
+            @Override public String getPrimaryName(int objectId) { return "FBZ boss approach"; }
+            @Override public ObjectSlotLayout objectSlotLayout() { return ObjectSlotLayout.SONIC_3K; }
+        };
+        ObjectManager[] holder = new ObjectManager[1];
+        StubObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+            @Override public LevelEventProvider levelEventProvider() { return bridge; }
+        };
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> player, List::of));
+        services.zoneRuntimeRegistry().install(new FbzZoneRuntimeState(
+                1, PlayerCharacter.SONIC_ALONE, events));
+        holder[0] = new ObjectManager(List.of(), registry, 0, null, null,
+                GraphicsManager.getInstance(), camera, services);
+        ObjectManager manager = holder[0];
+        manager.addDynamicObject(new FbzEndBossEventControlInstance());
+        manager.addDynamicObject(new FbzBossPillarInstance());
+
+        manager.update(camera.getX() & 0xFFFF, player, List.of(), 0, false);
+
+        assertEquals(1, manager.activeObjectsOfType(FbzEndBossEventControlInstance.class).size(),
+                "Obj_FBZEndBossEventControl has no native out_of_range tail");
+        assertEquals(1, manager.activeObjectsOfType(FbzBossPillarInstance.class).size(),
+                "Obj_FBZBossPillar has no native out_of_range tail");
+
+        RewindRegistry rewind = new RewindRegistry();
+        rewind.register(manager.rewindSnapshottable());
+        CompositeSnapshot beforeTrigger = rewind.capture();
+        playerX.set(0x2E80);
+        manager.update(camera.getX() & 0xFFFF, player, List.of(), 1, false);
+        assertTrue(bridge.collisionActive, "released P1 must start the native boss-approach motion");
+
+        rewind.restore(beforeTrigger);
+        bridge.collisionActive = false;
+        playerX.set(0x2BD6);
+        manager.update(camera.getX() & 0xFFFF, player, List.of(), 2, false);
+        assertFalse(bridge.collisionActive, "rewind must restore the pre-trigger controller phase");
+        assertEquals(1, manager.activeObjectsOfType(FbzEndBossEventControlInstance.class).size());
+        assertEquals(1, manager.activeObjectsOfType(FbzBossPillarInstance.class).size());
+
+        playerX.set(0x2E80);
+        manager.update(camera.getX() & 0xFFFF, player, List.of(), 3, false);
+        assertTrue(bridge.collisionActive, "the rewound controller must still progress after release");
     }
 
     @Test
@@ -203,6 +281,7 @@ class TestFbzPlaneTransition {
         assertEquals(0x28, FbzBossPillarInstance.nativeRightBoundOffset(true));
         FbzBossPillarInstance pillar = new FbzBossPillarInstance();
         assertFalse(pillar.isTopSolidOnly());
+        assertTrue(pillar.isPersistent(), "the native pillar routine has no unload tail");
         assertEquals(new SolidObjectParams(0x2B, 0x100, 0x100), pillar.getSolidParams());
     }
 

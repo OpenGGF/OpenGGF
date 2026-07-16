@@ -82,6 +82,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x6A, // InvisibleHurtBlockH
             0x6B, // InvisibleHurtBlockV
             0x80, // HiddenMonitor
+            0x8A, // FBZExitHall (same pointer in both SK sets)
             0x85  // SSEntryRing
     );
 
@@ -95,6 +96,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x2F, 0x33, 0x34, 0x3D, 0x6A, 0x6B,
             0x6F, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78,
             0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F, 0xE0, 0xE1,
+            0x8A, 0xCE, 0xCF, 0xD0,
             0xE2, 0xE3, 0xE4, 0xE5, 0xFF,
             0x80, 0x85, 0xA8, 0xA9, 0xAA, 0xAB
     );
@@ -215,7 +217,10 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0xC8, // LBZKnuxPillar
                 0xC9, // LBZMiniboss
                 0xCA, // LBZFinalBoss1
-                0xCB  // LBZEndBoss
+                0xCB, // LBZEndBoss
+                0xCE, // FBZExitDoor
+                0xCF, // FBZEggPrison
+                0xD0  // FBZSpringPlunger
         ));
         S3KL_IMPLEMENTED_IDS = Set.copyOf(s3kl);
         var lbz = new HashSet<>(S3KL_IMPLEMENTED_IDS);

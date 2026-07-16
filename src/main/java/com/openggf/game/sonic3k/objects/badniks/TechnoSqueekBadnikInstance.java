@@ -174,12 +174,14 @@ public final class TechnoSqueekBadnikInstance extends AbstractS3kBadnikInstance
         if (yVelocity < 0) return;
         TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, 7);
         if (floor.foundSurface() && floor.distance() < 0) {
+            boolean landedMovingLeft = xVelocity < 0;
             currentY += floor.distance();
             state = State.MOVING;
             fallingEntry = false;
-            xVelocity = facingLeft ? -MAX_VELOCITY : MAX_VELOCITY;
+            facingLeft = landedMovingLeft;
+            xVelocity = landedMovingLeft ? -MAX_VELOCITY : MAX_VELOCITY;
             yVelocity = 0;
-            positiveDirection = facingLeft;
+            positiveDirection = landedMovingLeft;
         }
     }
 

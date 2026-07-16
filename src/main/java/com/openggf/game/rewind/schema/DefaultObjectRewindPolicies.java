@@ -120,6 +120,12 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossFlameChild", "weapon"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossShipExplosionController", "ship"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossShipFlameChild", "ship"), RewindFieldPolicy.CAPTURED),
+            // The prison button is a separate SST object. Preserve its exact parent
+            // identity through the compact ObjectReferenceCodec; never infer a parent
+            // from coordinates or neighbouring slots after restore.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEggPrisonButtonInstance", "parentRef"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndEggCapsuleButtonInstance", "parentRef"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzExitHallInstance", "hallRecord"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.level.objects.boss.AbstractBossInstance", "childComponents"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance", "grabbingBoss"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance", "cylinders"), RewindFieldPolicy.TRANSIENT),

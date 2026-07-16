@@ -67,6 +67,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private int sparkleStartFrame = -1;
     private int lastFrameCounter;
     private boolean romRenderFlagForFloorProbe = true;
+    private boolean deferFirstPhysicsUpdate;
 
     /**
      * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
@@ -136,6 +137,16 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     /** Inject the shared spill-spin owner (frame source for rendering). */
     public void setSpillAnimation(SpillAnimationState spillAnimation) {
         this.spillAnimation = spillAnimation;
+    }
+
+    /** Native Obj_Bouncing_Ring phase is derived from the allocated SST slot. */
+    public void setSpillPhaseOffset(int slotIndex) {
+        this.phaseOffset = slotIndex & 7;
+    }
+
+    /** Creation-SST seam for Obj_Bouncing_Ring callers whose init routine draws before physics. */
+    public void deferFirstPhysicsUpdate() {
+        deferFirstPhysicsUpdate = true;
     }
 
     @Override
@@ -258,6 +269,12 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
         if (collected && collectedSparkleFinished(executedFrame)) {
             setDestroyed(true);
+            return;
+        }
+
+        if (deferFirstPhysicsUpdate) {
+            deferFirstPhysicsUpdate = false;
+            refreshRomRenderFlagForFloorProbe();
             return;
         }
 

@@ -6,17 +6,18 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
 /**
- * Behavioral Task-14 route-wave owner.
+ * Native fixed-input FBZ2 route acceptance.
  *
- * <p>These deterministic, production-loop waves deliberately make no claim
- * that P1 has crossed the final vertical section or entered the arena. Complete
- * start-to-arena controller validation belongs to the Task-20 BK2 trace polish
- * gate; the focused subboss suite independently owns placed-$AB behavior.</p>
+ * <p>The main wave starts at the act spawn and advances only through the
+ * production frame loop. It traverses every placed mechanic on the route,
+ * completes all seven subboss beam cycles, rides the end-boss event plane,
+ * lands eight ordinary player attacks, opens the real capsule, and stops only
+ * when the boss-owned exit requests Sandopolis Act 0.</p>
  */
 @RequiresRom(SonicGame.SONIC_3K)
-class TestFbzAct2RouteToBossHeadless {
+class TestFbzAct2RouteHeadless {
     @Test
-    void nativeStartWaveExecutesEveryMechanicThroughThe11900FrameFrontier() {
+    void nativeStartWaveCompletesFbz2AndRequestsSandopolisAct0() {
         TestFbzAct2TraversalPreboss
                 .assertNativeStartFixedInputsReachSafeLateFrontierWithAllRouteMilestones();
     }

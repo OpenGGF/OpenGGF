@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.CheckpointState;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.objects.ObjectInstance;
@@ -36,10 +37,24 @@ public class TestFbzAct2TraversalPreboss {
      * decisions: object or physics cadence drift makes the route fail.
      */
     private static final String PREBOSS_INPUT_PROGRAM =
-            "43:8,433:0,103:8,7:0,8:2,4:12,4:10,20:0,9:2,6:12,2:2,124:0,18:4,45:0,19:4,1:8,33:18,11:8,239:0,52:8,8:18,133:8,14:0,66:2,6:12,49:2,2:a,53:8,10:0,4:10,9:14,5:4,73:0,14:4,7:14,6:4,6:0,24:8,4:0,16:4,8:14,25:4,205:0,14:4,7:0,6:4,30:0,9:8,18:18,28:0,8:4,4:0,3:8,11:0,8:2,25:12,5:2,42:0,11:4,11:14,32:4,29:8,4:0,21:4,6:0,5:2,6:12,1:2,29:0,166:4,9:14,18:4,14:8,51:0,12:8,19:0,11:8,11:0,15:4,262:0,42:8,13:0,29:8,13:18,6:0,19:4,5:0,232:8,8:4,1:8,210:0,41:4,4:8,1:4,10:0,481:4,5:8,1:4,313:0,92:8,12:4,21:0,4:8,27:0,4:4,45:0,1:8,119:0,299:8,31:4,3:8,1:4,235:0,333:8,45:4,26:0,1373:8,31:18,12:8,13:4,2:8,1:4,45:0,39:4,1200:8,25:18,25:8,16:4,2:8,1:4,110:0,1:8,20:18,63:8,1:18,12:8,31:4,16:8,3:4,1:8,1:4,359:0,33:4,42:8,20:18,24:8,4:4,1:8,9:18,49:8,1:18,81:8,50:4,4:8,1:4,215:0,26:8,29:18,63:8,102:0,1:18,1:8,15:18,37:8,12:18,49:8,66:0,1:14,38:4,45:8,4:4,1:8,1:4,206:0,117:4,5:8,1:4,633:0,343:4,5:8,1:4,218:0,84:8,12:0,94:8,8:4,17:18,14:14,20:4,22:14,196:4,6:8,1:4,1:8,1:4,234:0,31:18,24:8,9:4,2:8,1:4,192:0,35:8,1:18,42:8,4:18,12:8,17:4,117:8,11:18,19:8";
-    private static final List<InputRun> PREBOSS_INPUT_RUNS = parseInputProgram();
-    private static final int NATIVE_ROUTE_FRONTIER_FRAMES = 11_900;
+            "43:8,433:0,103:8,7:0,8:2,4:12,4:10,20:0,9:2,6:12,2:2,124:0,18:4,45:0,19:4,1:8,33:18,11:8,239:0,52:8,8:18,133:8,14:0,66:2,6:12,49:2,2:a,53:8,10:0,4:10,9:14,5:4,73:0,14:4,7:14,6:4,6:0,24:8,4:0,16:4,8:14,25:4,205:0,14:4,7:0,6:4,30:0,9:8,18:18,28:0,8:4,4:0,3:8,11:0,8:2,25:12,5:2,42:0,11:4,11:14,32:4,29:8,4:0,21:4,6:0,5:2,6:12,1:2,29:0,166:4,9:14,18:4,14:8,51:0,12:8,19:0,11:8,11:0,15:4,262:0,42:8,13:0,29:8,13:18,6:0,19:4,5:0,232:8,8:4,1:8,210:0,41:4,4:8,1:4,10:0,237:4,20:14,224:4,5:8,1:4,80:0,130:4,318:0,92:8,12:4,21:0,4:8,27:0,4:4,45:0,1:8,119:0,299:8,31:4,3:8,1:4,235:0,40:8,20:18,273:8,45:4,26:0,1373:8,31:18,12:8,13:4,2:8,1:4,45:0,39:4,740:8,25:4,105:0,80:8,60:a,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,9:8,16:4,2:8,1:4,110:0,1:8,20:18,63:8,1:18,12:8,31:4,16:8,3:4,1:8,1:4,359:0,33:4,42:8,20:18,24:8,4:4,1:8,9:18,49:8,1:18,81:8,50:4,4:8,1:4,215:0,6:8,20:18,29:14,20:4,20:8,30:18,10:8,8:2,4:12,4:2,4:12,4:2,19:8,42:0,45:8,10:4,208:0,16:8,40:18,1600:0,1:18,1:8,15:18,37:8,12:18,49:8,66:0,1:14,38:4,45:8,4:4,1:8,1:4,206:0,117:4,5:8,1:4,20:0,30:18,583:0,343:4,5:8,1:4,218:0,190:0,8:4,17:18,14:14,20:4,22:14,196:4,6:8,1:4,1:8,1:4,234:0,31:18,24:8,9:4,2:8,1:4,192:0,35:8,1:18,42:8,4:18,12:8,17:4,98:8,20:18,100:8";
+    private static final List<InputRun> NATIVE_START_TO_POST_SPIKES = parseInputProgram();
+    private static final int NATIVE_ROUTE_FRONTIER_FRAMES = 15_010;
     private static final List<InputRun> LATE_STARPOST_INPUT_RUNS = List.of(new InputRun(120, 0x4));
+    private static final List<InputRun> CRANE_APPROACH_CYCLE = List.of(
+            new InputRun(20, 0x18), new InputRun(40, 0x8));
+    private static final List<InputRun> CRANE_CAPTURE_AND_RELEASE = List.of(
+            new InputRun(40, 0x4), new InputRun(500, 0x0));
+    private static final List<InputRun> MAGNETIC_CHAIN_TRANSFERS_AND_LOWER_DOOR = List.of(
+            new InputRun(20, 0x18), new InputRun(40, 0x8),
+            new InputRun(20, 0x18), new InputRun(148, 0x8),
+            new InputRun(20, 0x18), new InputRun(140, 0x8),
+            new InputRun(20, 0x14), new InputRun(8, 0x4),
+            new InputRun(20, 0x8), new InputRun(200, 0x0));
+    private static final List<InputRun> LOWER_BACKTRACK_CYCLE = List.of(
+            new InputRun(20, 0x14), new InputRun(20, 0x4));
+    private static final List<InputRun> LOWER_BACKTRACK_FINAL_CYCLE = List.of(
+            new InputRun(30, 0x0), new InputRun(20, 0x14), new InputRun(20, 0x4));
 
     @Test
     void a80Subtype16DownwardPathSwitchSelectsCollisionPathCD() throws IOException {
@@ -119,50 +134,26 @@ public class TestFbzAct2TraversalPreboss {
         assertEquals(Math.min(state.getSavedCameraY(), fixture.camera().getMaxY() & 0xFFFF),
                 fixture.camera().getY() & 0xFFFF,
                 "checkpoint restart camera must use the game-owned FBZ2 vertical clamp");
-        Set<ObjectInstance> previousFrame = Collections.newSetFromMap(new IdentityHashMap<>());
-        boolean platformObserved = false;
-        boolean platformExecuted = false;
-        boolean chainObserved = false;
-        boolean chainExecuted = false;
-        int frames = 0;
-        for (InputRun run : LATE_STARPOST_INPUT_RUNS) {
-            for (int i = 0; i < run.frames(); i++) {
-                Set<ObjectInstance> active = Collections.newSetFromMap(new IdentityHashMap<>());
-                active.addAll(GameServices.level().getObjectManager().getActiveObjects().stream()
-                        .filter(object -> !object.isDestroyed()).toList());
-                for (ObjectInstance object : active) {
-                    boolean lowerPlatform = object instanceof FbzMagneticPlatformObjectInstance platform
-                            && platform.getX() == 0x2840 && platform.getY() >= 0x0A00;
-                    boolean lowerChain = object instanceof FbzMagneticPlatformChainObjectInstance chain
-                            && chain.parentMember() != null
-                            && chain.parentMember().getX() == 0x2840
-                            && chain.parentMember().getY() >= 0x0A00;
-                    if (lowerPlatform) {
-                        platformObserved = true;
-                        platformExecuted |= previousFrame.contains(object);
-                    }
-                    if (lowerChain) {
-                        chainObserved = true;
-                        chainExecuted |= previousFrame.contains(object);
-                    }
-                }
-                stepMask(fixture, run.mask());
-                frames++;
-                assertFalse(fixture.sprite().isHurt() || fixture.sprite().getDead(),
-                        "fixed checkpoint section took damage at frame " + frames);
-                previousFrame = active;
-            }
-        }
-        assertTrue(platformObserved, "late starpost did not materialize the lower $2840 platform");
-        assertTrue(platformExecuted, "lower $2840 platform did not survive into its next execution pass");
-        assertTrue(chainObserved, "lower $2840 platform did not allocate its real chain child");
-        assertTrue(chainExecuted, "lower magnetic chain did not survive into its next execution pass");
+        LateStarpostMilestones milestones = new LateStarpostMilestones();
+        FixedInputRunner runner = new FixedInputRunner(
+                fixture, GameServices.level().getObjectManager(), milestones::observe);
+        runner.run(LATE_STARPOST_INPUT_RUNS, (frame, player) ->
+                assertFalse(player.isHurt() || player.getDead(),
+                        () -> "fixed checkpoint section took damage at frame " + frame.frames()));
+
+        assertTrue(milestones.platformObserved,
+                "late starpost did not materialize the lower $2840 platform");
+        assertTrue(milestones.platformExecuted,
+                "lower $2840 platform did not survive into its next execution pass");
+        assertTrue(milestones.chainObserved,
+                "lower $2840 platform did not allocate its real chain child");
+        assertTrue(milestones.chainExecuted,
+                "lower magnetic chain did not survive into its next execution pass");
     }
 
     /**
-     * Continuous native-start completion to $2B30 is intentionally deferred to
-     * Task20's final BK2 trace validation. {@code TestFbzEventsAct2} owns the
-     * exact $2B30 foreground/background stage semantics in the focused suite.
+     * Runs the fixed native-start route through every traversal stage, both bosses,
+     * the capsule/results handoff, and the production request for Sandopolis Act 0.
      */
     public static void assertNativeStartFixedInputsReachSafeLateFrontierWithAllRouteMilestones() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
@@ -171,39 +162,156 @@ public class TestFbzAct2TraversalPreboss {
         ObjectManager objects = GameServices.level().getObjectManager();
         Set<Class<?>> encounteredFamilies = new LinkedHashSet<>();
         Set<Class<?>> executedFamilies = new LinkedHashSet<>();
-        Set<ObjectInstance> previousFrame = Collections.newSetFromMap(new IdentityHashMap<>());
         RouteMilestones milestones = new RouteMilestones();
-        int frames = 0;
+        FixedInputRunner runner = new FixedInputRunner(fixture, objects,
+                (active, previous, player, manager) -> observeActiveObjects(
+                        active, previous, encounteredFamilies, executedFamilies,
+                        milestones, player, manager));
+        FrameCheck alive = (frame, player) ->
+                assertFalse(player.getDead(),
+                        () -> routeEvidence(fixture, frame.frames(), milestones));
 
-        route:
-        for (InputRun run : PREBOSS_INPUT_RUNS) {
-            for (int i = 0; i < run.frames(); i++) {
-                AbstractPlayableSprite player = fixture.sprite();
-                Set<ObjectInstance> active = Collections.newSetFromMap(new IdentityHashMap<>());
-                active.addAll(objects.getActiveObjects().stream()
-                        .filter(object -> !object.isDestroyed()).toList());
-                observeActiveObjects(active, previousFrame, encounteredFamilies,
-                        executedFamilies, milestones, player, objects);
-                stepMask(fixture, run.mask());
-                frames++;
-                assertFalse(player.getDead(), routeEvidence(fixture, frames, milestones));
-                previousFrame = active;
-                if (frames == NATIVE_ROUTE_FRONTIER_FRAMES) break route;
-            }
+        runner.run(NATIVE_START_TO_POST_SPIKES, alive);
+        assertEquals(NATIVE_ROUTE_FRONTIER_FRAMES, runner.frames(), "fixed frontier length changed");
+        for (int cycle = 0; cycle < 100; cycle++) {
+            runner.run(CRANE_APPROACH_CYCLE, alive);
         }
-
-        assertEquals(NATIVE_ROUTE_FRONTIER_FRAMES, frames, "fixed frontier length changed");
+        runner.run(CRANE_CAPTURE_AND_RELEASE, alive);
+        runner.run(MAGNETIC_CHAIN_TRANSFERS_AND_LOWER_DOOR, alive);
+        for (int cycle = 0; cycle < 9; cycle++) {
+            List<InputRun> cycleRuns = cycle == 8
+                    ? LOWER_BACKTRACK_FINAL_CYCLE : LOWER_BACKTRACK_CYCLE;
+            runner.run(cycleRuns, (frame, player) -> {
+                alive.afterFrame(frame, player);
+                assertEquals(6, GameServices.level().getLevelGamestate().getRings(),
+                        () -> routeEvidence(fixture, frame.frames(), milestones));
+            });
+        }
+        List<InputRun> elevatorSubbossBossAndExit = List.of(
+                new InputRun(20, 0x18), new InputRun(180, 0x0),
+                new InputRun(20, 0x18), new InputRun(45, 0x8),
+                new InputRun(200, 0x0), new InputRun(20, 0x18),
+                new InputRun(200, 0x8), new InputRun(15, 0x4),
+                new InputRun(330, 0x0), new InputRun(20, 0x18),
+                new InputRun(5, 0x4), new InputRun(205, 0x0),
+                new InputRun(1, 0x8), new InputRun(3, 0x2),
+                new InputRun(1, 0x12), new InputRun(1, 0x2),
+                new InputRun(1, 0x12), new InputRun(1, 0x2),
+                new InputRun(1, 0x12), new InputRun(1, 0x2),
+                new InputRun(2, 0x8), new InputRun(20, 0x18),
+                new InputRun(416, 0x8), new InputRun(70, 0x4),
+                new InputRun(263, 0x0), new InputRun(70, 0x8),
+                new InputRun(265, 0x0), new InputRun(70, 0x4),
+                new InputRun(265, 0x0), new InputRun(70, 0x8),
+                new InputRun(265, 0x0), new InputRun(70, 0x4),
+                new InputRun(265, 0x0), new InputRun(70, 0x8),
+                new InputRun(265, 0x0), new InputRun(70, 0x4),
+                new InputRun(600, 0x0), new InputRun(300, 0x8),
+                new InputRun(20, 0x18), new InputRun(300, 0x8),
+                new InputRun(3000, 0x0), new InputRun(100, 0x8),
+                new InputRun(120, 0x0),
+                new InputRun(30, 0x18), new InputRun(30, 0x8),
+                new InputRun(40, 0x4), new InputRun(20, 0x14),
+                new InputRun(40, 0x4), new InputRun(20, 0x14),
+                new InputRun(40, 0x4), new InputRun(20, 0x14),
+                new InputRun(40, 0x4), new InputRun(20, 0x14),
+                new InputRun(40, 0x4), new InputRun(20, 0x14),
+                new InputRun(40, 0x4), new InputRun(20, 0x14),
+                new InputRun(40, 0x4), new InputRun(20, 0x14),
+                new InputRun(30, 0x18), new InputRun(30, 0x8),
+                new InputRun(20, 0x8), new InputRun(20, 0x18),
+                new InputRun(40, 0x8), new InputRun(20, 0x18),
+                new InputRun(30, 0x4),
+                new InputRun(20, 0x8),
+                new InputRun(30, 0x14), new InputRun(30, 0x4),
+                new InputRun(40, 0x8),
+                new InputRun(1, 0x4), new InputRun(3, 0x2),
+                new InputRun(1, 0x12), new InputRun(1, 0x2),
+                new InputRun(1, 0x12), new InputRun(1, 0x2),
+                new InputRun(1, 0x12), new InputRun(1, 0x2),
+                new InputRun(2, 0x4), new InputRun(40, 0x4),
+                new InputRun(20, 0x18), new InputRun(60, 0x8),
+                new InputRun(1, 0x8),
+                new InputRun(20, 0x18), new InputRun(40, 0x8),
+                new InputRun(1, 0x8),
+                new InputRun(20, 0x18), new InputRun(40, 0x8),
+                new InputRun(1, 0x8), new InputRun(20, 0x18), new InputRun(40, 0x8),
+                new InputRun(1, 0x8), new InputRun(20, 0x18), new InputRun(40, 0x8),
+                new InputRun(1, 0x8), new InputRun(20, 0x18), new InputRun(40, 0x8),
+                new InputRun(1, 0x8), new InputRun(20, 0x18), new InputRun(40, 0x8),
+                new InputRun(1, 0x8), new InputRun(20, 0x18), new InputRun(40, 0x8),
+                new InputRun(1, 0x8), new InputRun(20, 0x18), new InputRun(40, 0x8),
+                new InputRun(1, 0x8), new InputRun(20, 0x18), new InputRun(40, 0x8),
+                new InputRun(1, 0x8), new InputRun(20, 0x14), new InputRun(40, 0x4),
+                new InputRun(30, 0x8),
+                new InputRun(1, 0x8), new InputRun(20, 0x18), new InputRun(40, 0x8),
+                new InputRun(1, 0x8), new InputRun(20, 0x14), new InputRun(40, 0x4),
+                new InputRun(1, 0x8), new InputRun(20, 0x14), new InputRun(40, 0x4),
+                new InputRun(1, 0x4), new InputRun(20, 0x14), new InputRun(40, 0x4),
+                new InputRun(1, 0x4), new InputRun(20, 0x14), new InputRun(40, 0x4),
+                new InputRun(1, 0x4), new InputRun(20, 0x14), new InputRun(40, 0x4),
+                new InputRun(1, 0x4), new InputRun(20, 0x14), new InputRun(40, 0x4),
+                new InputRun(1, 0x4), new InputRun(20, 0x14), new InputRun(40, 0x4),
+                new InputRun(1, 0x4), new InputRun(20, 0x14), new InputRun(40, 0x4),
+                new InputRun(1, 0x4), new InputRun(20, 0x14), new InputRun(40, 0x4),
+                new InputRun(1, 0x4), new InputRun(20, 0x14), new InputRun(40, 0x4),
+                new InputRun(1, 0x4), new InputRun(20, 0x14), new InputRun(40, 0x4),
+                new InputRun(1, 0x4), new InputRun(20, 0x18), new InputRun(40, 0x8),
+                new InputRun(1, 0x8), new InputRun(20, 0x14), new InputRun(40, 0x4),
+                new InputRun(55, 0x4),
+                new InputRun(20, 0x18), new InputRun(40, 0x8),
+                new InputRun(69, 0x4),
+                new InputRun(20, 0x18), new InputRun(40, 0x8),
+                new InputRun(40, 0x4),
+                new InputRun(20, 0x14), new InputRun(60, 0x4),
+                new InputRun(400, 0x8),
+                new InputRun(20, 0x18), new InputRun(200, 0x8),
+                new InputRun(1000, 0x0));
+        boolean forcedExitRequested = runner.runUntil(elevatorSubbossBossAndExit,
+                (frame, player) -> {
+                    assertFalse(player.getDead(),
+                            () -> routeEvidence(fixture, frame.frames(), milestones));
+                    assertTrue(GameServices.level().getLevelGamestate().getRings() >= 6,
+                            () -> routeEvidence(fixture, frame.frames(), milestones)
+                                    + " subboss=" + objects.activeObjectsOfType(Fbz2SubbossInstance.class)
+                                    .stream().map(boss -> boss.phaseName() + "/" + boss.cyclesRemaining())
+                                    .toList()
+                                    + " laser=" + objects.activeObjectsOfType(Fbz2SubbossLaserChild.class)
+                                    .stream().map(laser -> laser.getX() + ":" + laser.getY()).toList()
+                                    + " boss=" + objects.activeObjectsOfType(FbzEndBossInstance.class)
+                                    .stream().map(boss -> boss.phase() + "/" + boss.getCollisionProperty())
+                                    .toList());
+                }, () -> GameServices.level().getRequestedZone() == Sonic3kZoneIds.ZONE_SOZ
+                        && GameServices.level().getRequestedAct() == 0);
         assertTrue(executedFamilies.containsAll(encounteredFamilies),
                 () -> "encountered family missed its next execution pass: "
                         + difference(encounteredFamilies, executedFamilies));
         assertTrue(milestones.cageCapture, "opening wire cage never captured P1");
+        assertTrue(milestones.prisonOpened, "placed $CF prison never opened on the route");
         assertTrue(milestones.elevatorRide, "no real $E2 car carried P1");
         assertTrue(milestones.launcherRide, "floor launcher never received a standing P1 contact");
+        assertTrue(milestones.flamethrowerRide,
+                "route never stood on the $1B28 flamethrower to suppress its flames");
         assertTrue(milestones.magneticPlatformRide, "magnetic platform route never carried P1");
         assertTrue(milestones.chainControl, "chain-link transport never controlled P1");
         assertTrue(milestones.spiderControl, "spider-crane transport never controlled P1");
         assertTrue(executedFamilies.contains(FbzScrewDoorObjectInstance.class),
                 "placed screw-door family never executed on the route");
+        assertTrue(fixture.camera().getX() >= 0x2B30,
+                "route has not reached the native FBZ2 subboss event: "
+                        + routeEvidence(fixture, runner.frames(), milestones));
+        assertTrue(forcedExitRequested,
+                "boss-owned forced exit never requested SOZ act 0: "
+                        + routeEvidence(fixture, runner.frames(), milestones));
+        assertEquals(Sonic3kZoneIds.ZONE_SOZ, GameServices.level().getRequestedZone());
+        assertEquals(0, GameServices.level().getRequestedAct());
+        for (String key : List.of(Sonic3kObjectArtKeys.FBZ_EXIT_DOOR,
+                Sonic3kObjectArtKeys.FBZ_EXIT_HALL_DOOR_SCENERY,
+                Sonic3kObjectArtKeys.FBZ_EXIT_HALL)) {
+            var renderer=GameServices.level().getObjectRenderManager().getRenderer(key);
+            assertNotNull(renderer,"post-capsule PLC did not publish "+key);
+            assertTrue(renderer.isReady(),"post-capsule PLC consumer was not cached: "+key);
+        }
     }
 
     private static void observeActiveObjects(
@@ -213,8 +321,7 @@ public class TestFbzAct2TraversalPreboss {
         for (ObjectInstance object : active) {
             boolean excluded = object.getSpawn() != null
                     && (object.getSpawn().x() >= 0x2B30
-                    || object.getSpawn().objectId() == 0
-                    || object.getSpawn().objectId() == 0xCF);
+                    || object.getSpawn().objectId() == 0);
             assertTrue(!(object instanceof PlaceholderObjectInstance) || excluded,
                     () -> "mechanical placeholder entered fixed FBZ2 route: "
                             + object.getClass().getName() + " spawn=" + object.getSpawn());
@@ -223,14 +330,21 @@ public class TestFbzAct2TraversalPreboss {
             if (object instanceof FbzWireCageObjectInstance cage && cage.heldByParticipant(0)) {
                 milestones.cageCapture = true;
             }
+            if (object instanceof FbzEggPrisonFragmentInstance
+                    || object instanceof FbzEggPrisonExplosionController) {
+                milestones.prisonOpened = true;
+            }
         }
 
         ObjectInstance riding = objects.getRidingObject(player);
         milestones.elevatorRide |= riding instanceof FbzElevatorObjectInstance.Car;
         milestones.launcherRide |= riding instanceof FbzDezPlayerLauncherObjectInstance;
+        boolean onFlamethrower = riding instanceof FbzFlamethrowerObjectInstance flame
+                && flame.mappingFrame() == 2;
+        milestones.flamethrowerRide |= onFlamethrower;
         milestones.magneticPlatformRide |= riding instanceof FbzMagneticPlatformObjectInstance;
-        if (!player.isObjectControlled()) return;
         int playerX = player.getCentreX() & 0xFFFF;
+        if (!player.isObjectControlled()) return;
         milestones.chainControl |= active.stream().anyMatch(object ->
                 object instanceof FbzChainLinkObjectInstance
                         && Math.abs(object.getX() - playerX) < 0x100);
@@ -272,22 +386,133 @@ public class TestFbzAct2TraversalPreboss {
                 + ",$" + Integer.toHexString(player.getCentreY() & 0xFFFF) + ')'
                 + " speed=($" + Integer.toHexString(player.getXSpeed() & 0xFFFF)
                 + ",$" + Integer.toHexString(player.getYSpeed() & 0xFFFF) + ')'
+                + " rings=" + GameServices.level().getLevelGamestate().getRings()
+                + " hurt=" + player.isHurt() + " dead=" + player.getDead()
                 + " milestones=" + milestones;
+    }
+
+    @FunctionalInterface
+    private interface FrameObserver {
+        void observe(Set<ObjectInstance> active, Set<ObjectInstance> previous,
+                     AbstractPlayableSprite player, ObjectManager objects);
+    }
+
+    @FunctionalInterface
+    private interface FrameCheck {
+        void afterFrame(FixedInputRunner runner, AbstractPlayableSprite player);
+    }
+
+    @FunctionalInterface
+    private interface StopCondition {
+        boolean reached();
+    }
+
+    /**
+     * Executes immutable fixed-input runs while reusing exactly two identity sets
+     * for current/previous object-lifetime observations across every frame.
+     */
+    private static final class FixedInputRunner {
+        private static final StopCondition NEVER_STOP = () -> false;
+
+        private final HeadlessTestFixture fixture;
+        private final ObjectManager objects;
+        private final FrameObserver observer;
+        private Set<ObjectInstance> activeFrame =
+                Collections.newSetFromMap(new IdentityHashMap<>());
+        private Set<ObjectInstance> previousFrame =
+                Collections.newSetFromMap(new IdentityHashMap<>());
+        private int frames;
+
+        private FixedInputRunner(
+                HeadlessTestFixture fixture, ObjectManager objects, FrameObserver observer) {
+            this.fixture = fixture;
+            this.objects = objects;
+            this.observer = observer;
+        }
+
+        private void run(List<InputRun> runs, FrameCheck check) {
+            assertFalse(runUntil(runs, check, NEVER_STOP), "non-stopping input run stopped");
+        }
+
+        private boolean runUntil(
+                List<InputRun> runs, FrameCheck check, StopCondition stopCondition) {
+            for (InputRun run : runs) {
+                for (int i = 0; i < run.frames(); i++) {
+                    activeFrame.clear();
+                    for (ObjectInstance object : objects.getActiveObjects()) {
+                        if (!object.isDestroyed()) activeFrame.add(object);
+                    }
+                    AbstractPlayableSprite player = fixture.sprite();
+                    observer.observe(activeFrame, previousFrame, player, objects);
+                    stepMask(fixture, run.mask());
+                    frames++;
+                    if (stopCondition.reached()) {
+                        swapFrameSets();
+                        return true;
+                    }
+                    check.afterFrame(this, player);
+                    swapFrameSets();
+                }
+            }
+            return false;
+        }
+
+        private void swapFrameSets() {
+            Set<ObjectInstance> reusable = previousFrame;
+            previousFrame = activeFrame;
+            activeFrame = reusable;
+        }
+
+        private int frames() {
+            return frames;
+        }
+    }
+
+    private static final class LateStarpostMilestones {
+        private boolean platformObserved;
+        private boolean platformExecuted;
+        private boolean chainObserved;
+        private boolean chainExecuted;
+
+        private void observe(
+                Set<ObjectInstance> active, Set<ObjectInstance> previous,
+                AbstractPlayableSprite player, ObjectManager objects) {
+            for (ObjectInstance object : active) {
+                boolean lowerPlatform = object instanceof FbzMagneticPlatformObjectInstance platform
+                        && platform.getX() == 0x2840 && platform.getY() >= 0x0A00;
+                boolean lowerChain = object instanceof FbzMagneticPlatformChainObjectInstance chain
+                        && chain.parentMember() != null
+                        && chain.parentMember().getX() == 0x2840
+                        && chain.parentMember().getY() >= 0x0A00;
+                if (lowerPlatform) {
+                    platformObserved = true;
+                    platformExecuted |= previous.contains(object);
+                }
+                if (lowerChain) {
+                    chainObserved = true;
+                    chainExecuted |= previous.contains(object);
+                }
+            }
+        }
     }
 
     private record InputRun(int frames, int mask) { }
 
     private static final class RouteMilestones {
         private boolean cageCapture;
+        private boolean prisonOpened;
         private boolean elevatorRide;
         private boolean launcherRide;
+        private boolean flamethrowerRide;
         private boolean magneticPlatformRide;
         private boolean chainControl;
         private boolean spiderControl;
 
         @Override public String toString() {
-            return "{cage=" + cageCapture + ",elevator=" + elevatorRide
-                    + ",launcher=" + launcherRide + ",magnetic=" + magneticPlatformRide
+            return "{cage=" + cageCapture + ",prison=" + prisonOpened
+                    + ",elevator=" + elevatorRide
+                    + ",launcher=" + launcherRide + ",flame=" + flamethrowerRide
+                    + ",magnetic=" + magneticPlatformRide
                     + ",chain=" + chainControl + ",spider=" + spiderControl + '}';
         }
     }
