@@ -2485,6 +2485,37 @@ public class ObjectManager {
         placement.removeFromActive(spawn);
     }
 
+    /**
+     * Clears a placement's loaded/active bit while leaving its current object
+     * instance alive.
+     * <p>
+     * Some ROM objects transform their original SST slot into a fragment and
+     * then clear {@code respawn_addr} bit 7. Object placement may therefore
+     * create a fresh copy while the transformed instance is still falling.
+     * This is deliberately different from {@link #removeFromActiveSpawns},
+     * which records an in-window destruction latch.
+     */
+    public void releaseSpawnForRespawn(ObjectInstance transformedInstance, ObjectSpawn spawn) {
+        if (transformedInstance == null || spawn == null) {
+            return;
+        }
+        ObjectInstance activeInstance = activeObjects.get(spawn);
+        if (activeInstance != transformedInstance) {
+            return;
+        }
+        activeObjects.remove(spawn);
+        instanceToSpawn.remove(transformedInstance);
+        dynamicObjects.add(transformedInstance);
+        placement.removeFromActiveForUnload(spawn);
+        if (slotLayout.twoAxisCursorPlacement()) {
+            // S3K's Camera_Y load pass re-scans entries already between the X
+            // cursors when a newly exposed vertical strip reaches them.
+            placement.markDeferredVerticalLoad(spawn);
+        }
+        bucketsDirty = true;
+        activeObjectsCacheDirty = true;
+    }
+
     private void captureExecStartPlayerCentreY(PlayableEntity player,
             List<? extends PlayableEntity> sidekicks) {
         execStartPlayerCentreY.clear();

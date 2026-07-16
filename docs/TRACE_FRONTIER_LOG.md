@@ -1,5 +1,42 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- S3K collapsing bridges release placement lifetime on fragmentation
+
+Branch `feature/ai-trace-animation-verification`, after the MGZ pulley
+render-flag milestone. Native `ObjPlatformCollapse_SmashObject` converts the
+original bridge SST into fragment zero, then clears bit 7 through its
+`respawn_addr`; the transformed object continues falling while `Load_Sprites`
+is free to allocate a fresh copy of the same layout entry. The engine kept the
+falling parent in the placement-keyed active map, so its equivalent placement
+bit could never clear and MGZ's Camera-Y pass at frame 21792 could not recreate
+the bridge at `$1900,$0340` for Tails to land on.
+
+The shared lifetime API now detaches an in-place transformed object from its
+layout key without releasing its SST slot or destroying it. For S3K two-axis
+placement, the entry remains eligible for the next Camera-Y strip scan.
+Standard and MGZ-stomp bridge paths use that operation after fragmentation;
+trigger-mode bridges retain the ROM's distinct `clr.w respawn_addr` behavior,
+which deliberately leaves the placement bit set. No trace hydration,
+zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:45125-45420`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 21808 to frame 21890
+  (`tails_status_byte`, expected `$07` / actual `$27`), with errors reduced
+  from 3304 to 3284.
+- MGZ standalone animation advances from frame 21809 to frame 23047
+  (`tails_animation_id`, expected `$1A` / actual `$00`), with errors reduced
+  from 566 to 557.
+- `TestObjectManagerVerticalPlacement` passes 9/9, including coexistence of
+  the transformed bridge and its fresh placement instance; the existing
+  `TestS3kCollapsingBridgeParity` suite passes 10/10.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
 ### 2026-07-16 -- MGZ pulley grab consumes playable render_flags
 
 Branch `feature/ai-trace-animation-verification`, after commit `04b9e3cc8` and

@@ -96,6 +96,14 @@ public final class ObjectLifetimeOps {
         }
     }
 
+    public static void releaseSpawnForRespawn(ObjectManager objectManager,
+                                              ObjectInstance transformedInstance,
+                                              ObjectSpawn spawn) {
+        if (objectManager != null && transformedInstance != null && spawn != null) {
+            objectManager.releaseSpawnForRespawn(transformedInstance, spawn);
+        }
+    }
+
     public static void releaseParentSlotKeepingChildren(ObjectManager objectManager,
                                                        AbstractObjectInstance parent) {
         if (objectManager != null && parent != null) {

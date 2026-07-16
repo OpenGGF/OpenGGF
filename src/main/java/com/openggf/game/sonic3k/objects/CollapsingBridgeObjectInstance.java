@@ -14,6 +14,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractFallingFragment;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
@@ -811,6 +812,15 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
         spawnFragments();
 
+        // ObjPlatformCollapse_SmashObject clears respawn_addr bit 7 after
+        // converting the original SST slot into fragment zero. The live
+        // fragment remains, but ObjPosLoad may now materialize a fresh bridge.
+        // Trigger-mode bridges instead clear respawn_addr itself before the
+        // smash so their placement bit deliberately remains set.
+        if (mode != CollapseMode.TRIGGER) {
+            releasePlacementForRespawn();
+        }
+
         // Enter wave-collapse state
         state = 2;
         fragmented = true;
@@ -890,6 +900,10 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         fragmented = true;
         collapseWaveRiders.clear();
 
+        // loc_20A24 follows BreakObjectToPieces by clearing respawn_addr bit 7,
+        // while the transformed parent and its debris continue to execute.
+        releasePlacementForRespawn();
+
         // Release the player from the object without forcing InAir. loc_209FC
         // clears only Status_OnObj after SolidObjectTop has already landed the
         // player this frame; unlike Check_CollapsePlayerRelease, this stomp
@@ -953,6 +967,14 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
         // Enter falling state directly
         state = 3;
+    }
+
+    private void releasePlacementForRespawn() {
+        try {
+            ObjectLifetimeOps.releaseSpawnForRespawn(services().objectManager(), this, getSpawn());
+        } catch (Exception e) {
+            // Focused reflection tests may instantiate the bridge without services.
+        }
     }
 
     private void clearMgzStompStandingState(AbstractPlayableSprite player) {
