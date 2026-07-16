@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Collapsing bridge wave release clears Status_Push
+
+Branch `feature/ai-trace-animation-verification`, after commit `0601222` and
+the requested checkpoint merge check. A fresh fetch confirmed local and remote
+`develop` were both still at `1b1a5efee`; merging `develop` therefore reported
+`Already up to date`. At standalone frame 21890, Tails's rolling ground-wall
+probe correctly zeroes his ground speed and temporarily sets `Status_Push`
+while he still has `Status_OnObj`. The collapsing bridge executes later in the
+object pass. Native `Check_CollapsePlayerRelease` clears both bits before
+setting `Status_InAir`; the engine release path cleared only `Status_OnObj`, so
+the transient push bit survived into the trace snapshot.
+
+The bridge release now clears pushing in the same block that clears on-object,
+sets air, and publishes `prev_anim=Run`. No trace hydration, zone/route/frame
+predicate, comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:45349-45383`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 21890 to frame 23046
+  (`tails_g_speed`, expected `$0000` / actual `$0200`), with errors reduced
+  from 3284 to 3283.
+- MGZ standalone animation remains at frame 23047
+  (`tails_animation_id`, expected `$1A` / actual `$00`) with 557 errors.
+- `TestS3kCollapsingBridgeParity` passes 10/10, including the explicit
+  `Status_Push` clear on wave release.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
 ### 2026-07-16 -- S3K collapsing bridges release placement lifetime on fragmentation
 
 Branch `feature/ai-trace-animation-verification`, after the MGZ pulley

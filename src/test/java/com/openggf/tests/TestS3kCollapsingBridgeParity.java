@@ -78,11 +78,14 @@ class TestS3kCollapsingBridgeParity {
     void collapseWaveRelease_publishesNativePreviousAnimationSentinel() throws Exception {
         CollapsingBridgeObjectInstance bridge = newMgzBridge(0x00);
         rider.getAnimationManager().publishPreviousAnimationId(2);
+        rider.setPushing(true);
 
         invokeReleaseCollapseRider(bridge, rider);
 
         assertEquals(1, rider.getAnimationManager().captureRewindState().lastAnimationId(),
                 "Check_CollapsePlayerRelease writes prev_anim=1");
+        assertFalse(rider.getPushing(),
+                "Check_CollapsePlayerRelease clears Status_Push together with Status_OnObj");
     }
 
     @Test
