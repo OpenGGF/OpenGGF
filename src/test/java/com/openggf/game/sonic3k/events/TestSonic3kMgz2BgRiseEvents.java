@@ -120,16 +120,16 @@ class TestSonic3kMgz2BgRiseEvents {
         assertEquals(BG_RISE_SONIC, events.getBgRiseRoutine());
         assertFalse(GameServices.gameState().isBackgroundCollisionFlag(),
                 "state-0 trigger leaves BG collision clear while MGZ2BGE_Refresh redraws the plane");
-        assertEquals(7, events.getBgRiseRefreshFramesRemaining(),
-                "trigger frame consumes the first two of the ROM's sixteen delayed rows");
-        for (int frame = 1; frame <= 7; frame++) {
+        assertEquals(8, events.getBgRiseRefreshFramesRemaining(),
+                "the pre-physics bridge retains the seven refresh calls plus the publishing ScreenEvents call");
+        for (int frame = 1; frame <= 8; frame++) {
             tick(events, frame);
             assertFalse(GameServices.gameState().isBackgroundCollisionFlag(),
-                    "refresh frame " + frame + " must skip MGZ2_BGEventTrigger");
+                    "player pass " + frame + " must precede the normal ScreenEvents flag publication");
         }
-        tick(events, 8);
+        tick(events, 9);
         assertTrue(GameServices.gameState().isBackgroundCollisionFlag(),
-                "the first normal background-event call after refresh enables state-8 collision");
+                "the player pass after normal ScreenEvents observes state-8 collision");
         assertEquals(0, events.getBgRiseOffset(), "rise hasn't started moving yet");
     }
 

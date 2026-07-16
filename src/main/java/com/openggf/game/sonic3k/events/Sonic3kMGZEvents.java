@@ -258,11 +258,12 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     /**
      * ROM: state 0 -> 8 branches through MGZ2BGE_Refresh with
      * Draw_delayed_rowcount=$F. Draw_PlaneVertBottomUpComplex consumes two rows
-     * per ScreenEvents call, so seven further frames remain after the trigger
-     * frame's first pair. MGZ2_BGEventTrigger is skipped throughout the refresh,
-     * leaving Background_collision_flag clear until the following normal call.
+     * per ScreenEvents call, so seven further ScreenEvents refresh calls remain
+     * after the trigger frame's first pair. This bridge runs before player
+     * physics, while the normal ScreenEvents call publishes the flag afterward,
+     * so eight following player passes must still observe the cleared flag.
      */
-    private static final int BG_RISE_REFRESH_FOLLOWUP_FRAMES = 7;
+    private static final int BG_RISE_REFRESH_FOLLOWUP_FRAMES = 8;
     private int bgRoutine;
 
     /** ROM: Events_fg_5 — set by Obj_LevelResultsCreate to trigger BG act transition. */

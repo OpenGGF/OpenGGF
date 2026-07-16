@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ collision publication follows the refreshed player pass
+
+Branch `feature/ai-trace-animation-verification`, after the BG-rise plane-
+refresh milestone. The delayed draw really does consume its remaining fourteen
+rows across seven `ScreenEvents` calls, but the event bridge executes before
+player physics whereas `MGZ2BGE_Normal` publishes state-eight background
+collision afterward. Retaining the cleared flag for that eighth following
+player pass prevents `CalcRoomInFront` from seeing the newly selected BG plane
+one dispatch early. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:103560-103605,107045-107130`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 32314 to frame 32315 (`x`,
+  expected `$3509` / actual `$34F5`).
+- MGZ complete-run animation advances from frame 32314 to frame 32315
+  (`player_mapping_frame`, expected `$23` / actual `$B8`).
+- The focused MGZ BG-rise event, headless integration, and rewind-schema tests
+  pass (46 support tests plus the expected frontier failure).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full physics and animation sweeps retain their established green routes;
+  the MGZ-only phase change introduces no new failing trace.
+
 ### 2026-07-16 -- MGZ background rise retains its plane-refresh delay
 
 Branch `feature/ai-trace-animation-verification`, after the fire-shield wall

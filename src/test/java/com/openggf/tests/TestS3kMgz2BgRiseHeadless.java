@@ -173,9 +173,9 @@ class TestS3kMgz2BgRiseHeadless {
                 "teleport into the MGZ2 rise trigger box should arm state 8");
         assertFalse(GameServices.gameState().isBackgroundCollisionFlag(),
                 "MGZ2BGE_Refresh should leave Background_collision_flag clear after the trigger");
-        fixture.stepIdleFrames(7);
+        fixture.stepIdleFrames(8);
         assertFalse(GameServices.gameState().isBackgroundCollisionFlag(),
-                "all seven follow-up refresh frames should keep BG collision clear");
+                "all refresh calls and the normal ScreenEvents publication pass should keep collision clear pre-physics");
         fixture.stepIdleFrames(1);
         assertTrue(GameServices.gameState().isBackgroundCollisionFlag(),
                 "state 8 should enable BG collision after the delayed plane refresh completes");
