@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ top-platform riders use the pre-movement surface
+
+Branch `feature/ai-trace-animation-verification`, after the speed-shoes phase
+milestone. `Obj_MGZTopPlatform` calls its per-player `SolidObjectFull_1P` state
+machine before moving the platform body. Consequently an ordinary standing
+rider sees zero horizontal carry and remains seated on the pre-movement Y for
+that frame; the later `sub_35202` post-sync only copies positions once the
+object-local player state reaches the grabbed path. The platform also exposes
+its native `width_pixels=$18` to Tails' on-object balance check rather than the
+generic full-solid width. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:71475-71584,71729-71763,
+72045-72064`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 7346 to frame 7582 (`tails_x`,
+  expected `$1B0E` / actual `$1B0D`).
+- MGZ standalone animation advances from frame 7366 to frame 9879
+  (`player_animation_id`, expected `$00` / actual `$1A`).
+- The focused MGZ top-platform parity suite passes.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- S3K speed-shoes cadence reads the counter's low byte
 
 Branch `feature/ai-trace-animation-verification`, after the hurt-routine timer

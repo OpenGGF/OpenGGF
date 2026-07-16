@@ -263,10 +263,36 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Tails_Move reads width_pixels(a1), which Obj_MGZTopPlatform sets to
+        // $18. The full-solid collision helper is wider (width+$B), while the
+        // generic full-solid fallback of 16 is narrower; neither is the ROM
+        // edge-balance width.
+        return WIDTH_PIXELS;
+    }
+
+    @Override
     public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
         // ROM loc_34C54 calls sub_34EEC for P1/P2 before the platform body moves
         // (sonic3k.asm:71508-71525); the post-motion player snap happens later
         // at loc_34D62/sub_35202 (sonic3k.asm:71576-71584,72045-72064).
+        return true;
+    }
+
+    @Override
+    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        // sub_34EEC passes the platform's current x_pos to SolidObjectFull_1P
+        // before MoveSprite2 advances the body, so MvSonicOnPtfm sees no X
+        // delta. The post-move sub_35202 path only copies X while a player is
+        // grabbed (state >= 4); an ordinary standing rider is not carried.
+        return false;
+    }
+
+    @Override
+    public boolean usesPreUpdateYForContinuedRide(PlayableEntity player) {
+        // The same pre-MoveSprite2 SolidObjectFull_1P call re-seats an ordinary
+        // rider on the old Y. sub_35202 does not apply a post-move correction
+        // until the object-local player state reaches the grabbed path.
         return true;
     }
 

@@ -100,6 +100,20 @@ class TestS3kMgzTopPlatformParityHeadless {
     }
 
     @Test
+    void ordinaryStandingRider_isNotCarriedByPostMoveHorizontalDelta() {
+        MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(START_PIXEL_X, START_PIXEL_Y, 0x5B, 0, 0, false, 0));
+
+        assertTrue(platform.usesPreUpdatePositionForSolidContact(sprite));
+        assertEquals(0x18, platform.getBalanceWidthPixels(),
+                "Tails edge balance must read Obj_MGZTopPlatform width_pixels");
+        assertFalse(platform.carriesRiderOnHorizontalMove(sprite),
+                "Obj_MGZTopPlatform moves after SolidObjectFull_1P, so an ordinary rider sees zero X carry");
+        assertTrue(platform.usesPreUpdateYForContinuedRide(sprite),
+                "The ordinary rider must remain seated on the pre-move surface Y");
+    }
+
+    @Test
     void grabbedPlatform_usesTrueObjectControlledOwnership() {
         MGZTopPlatformObjectInstance platform = runUntilGrabbedHoldingLeft();
 
