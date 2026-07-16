@@ -54,13 +54,8 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             0, 6, 12, 13, 14, 15, 15, 14, 15, 15, 10, 11, 6, 7, 1, 1
     };
     private static final AnimalType[] ENDING_ANIMAL_ORDER = {
-            AnimalType.FLICKY,
-            AnimalType.RABBIT,
-            AnimalType.PENGUIN,
-            AnimalType.SEAL,
-            AnimalType.PIG,
-            AnimalType.CHICKEN,
-            AnimalType.SQUIRREL
+            AnimalType.FLICKY, AnimalType.RABBIT, AnimalType.PENGUIN, AnimalType.SEAL,
+            AnimalType.PIG, AnimalType.CHICKEN, AnimalType.SQUIRREL
     };
     private static final AnimalType[] DEFAULT_ANIMALS = { AnimalType.RABBIT, AnimalType.FLICKY };
     private static final AnimalType[][] ZONE_ANIMALS = {
