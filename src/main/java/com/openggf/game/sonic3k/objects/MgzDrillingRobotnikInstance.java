@@ -836,11 +836,11 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private void advanceAirAttackWait() {
         if (airAttackPhase == 0) {
             // loc_6C646 configures the parent with a literal $1F Obj_Wait,
-            // then the native drill graph's two later SST phases publish the
+            // then the native drill graph's later SST phase publishes the
             // refreshed child positions before the next player touch scan.
             // The engine folds those children into this parent, so retain the
-            // two observable publication phases alongside the parent wait.
-            waitTimer = 0x21;
+            // observable publication phase alongside the parent wait.
+            waitTimer = 0x20;
             airAttackPhase = 1;
             configureAirAttackFromCamera();
             return;
@@ -922,8 +922,9 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         int[] pattern = airAttackPattern();
         state.x = (cameraX + pattern[0]) & 0xFFFF;
         state.y = (cameraY + pattern[1]) & 0xFFFF;
-        xSubpixel = 0;
-        ySubpixel = 0;
+        // loc_6D710 writes the x_pos/y_pos words only. Their fractional words
+        // retain the approach/sweep phase and therefore affect the first
+        // collision-list position published by the configured attack.
         xVel = pattern[2];
         yVel = pattern[3];
         endBossAngle = pattern[4];

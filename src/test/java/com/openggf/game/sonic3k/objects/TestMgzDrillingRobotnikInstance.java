@@ -1116,6 +1116,8 @@ class TestMgzDrillingRobotnikInstance {
         boss.getState().routine = staticInt("ROUTINE_END_ATTACK_WAIT");
         boss.getState().x = 0x3E00;
         boss.getState().y = 0x0700;
+        setPrivateInt(boss, "xSubpixel", 0x80);
+        setPrivateInt(boss, "ySubpixel", 0x40);
 
         boss.update(1, null);
 
@@ -1125,8 +1127,12 @@ class TestMgzDrillingRobotnikInstance {
         assertEquals(0x0670, boss.getState().y);
         assertEquals(0x0200, getPrivateInt(boss, "xVel"));
         assertEquals(0, getPrivateInt(boss, "yVel"));
-        assertEquals(0x21, getPrivateInt(boss, "waitTimer"),
-                "The folded drill graph retains the two later native child-publication phases after loc_6C646's $1F wait");
+        assertEquals(0x80, getPrivateInt(boss, "xSubpixel"),
+                "loc_6D710's x_pos word write preserves the native fractional position");
+        assertEquals(0x40, getPrivateInt(boss, "ySubpixel"),
+                "loc_6D710's y_pos word write preserves the native fractional position");
+        assertEquals(0x20, getPrivateInt(boss, "waitTimer"),
+                "The folded drill graph retains its later native child-publication phase after loc_6C646's $1F wait");
     }
 
     @Test

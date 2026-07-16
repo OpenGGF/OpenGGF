@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ configured attacks retain native fractional position
+
+Branch `feature/ai-trace-animation-verification`, after the folded-child
+publication milestone. Native `loc_6D710` writes only the integer words of
+`x_pos` and `y_pos`; the fractional words survive from the preceding air sweep.
+The engine instead cleared both fractions while configuring the folded boss,
+leaving the pre-player collision-list position one horizontal half-step behind
+the ROM. The configured attack now retains those fractions, and the folded
+child delay is refined from two phases to the single later SST publication
+phase. Tails consequently receives the native boss-body hurt response at the
+exact boundary. No trace hydration, route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:142975-143017,144769-144842`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 36974 to frame 37408 (`y`,
+  expected `$06F1` / actual `$06ED`; 389 errors, down from 515).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`; 122 errors, down from
+  129 through the later corrected boss contact).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused 49-test MGZ drilling-boss suite passes with fractional-position
+  preservation coverage.
+- AIZ and HCZ complete-run physics and animation remain fully green; the full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
 ### 2026-07-16 -- MGZ air-attack wait retains folded child publication phases
 
 Branch `feature/ai-trace-animation-verification`, after the shared auto-fly
