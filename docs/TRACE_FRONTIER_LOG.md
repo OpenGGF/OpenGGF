@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ routine `$14` writes literal airborne status
+
+Branch `feature/ai-trace-animation-verification`, after the deferred rescue-
+attachment milestone. `loc_140CE` writes `Status_InAir` as a literal byte
+before attaching Sonic, clearing Tails's stale standing/facing/roll/water bits
+and detached engine ride entry. The engine only set the air bit, so the deleted
+collapse carrier's standing state immediately grounded Tails and suppressed the
+native flight-gravity/carry pass. The MGZ carry-init path now performs the
+literal status transition while the generic CNZ `$0C` path retains its own
+status ownership. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:26979-27014`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 35787 to frame 35940
+  (`tails_x_speed`, expected `$00E7` / actual `$00E0`; 1,274 errors).
+- MGZ complete-run animation remains at frame 35787
+  (`player_animation_id`, expected carried `$22` / actual Roll `$02`), with
+  its error tail reduced from 312 to 213.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green; the
+  established 43/58 physics and 42/58 animation fleet baselines are unchanged.
+- The focused MGZ end-boss and carry-controller suites pass.
+
 ### 2026-07-16 -- MGZ carry begins from CPU routine `$14`
 
 Branch `feature/ai-trace-animation-verification`, after the rescue-countdown

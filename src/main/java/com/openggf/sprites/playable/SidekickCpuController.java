@@ -3303,7 +3303,22 @@ public class SidekickCpuController {
 
     /** ROM routine 0x0C. Mirrors sub_1459E (pickup) then falls through to 0x20. */
     private void updateCarryInit() {
+        boolean mgzBossTransitionCarry = carryTrigger.usesMgzBossTransitionControl();
         // Tails's per-carry state
+        if (mgzBossTransitionCarry) {
+            // loc_140CE writes status=Status_InAir as a literal byte. Besides
+            // entering air, that clears the stale carrier standing bit and
+            // facing/roll/water bits left by the deleted collapse SST.
+            sidekick.clearRollingFlagPreserveRadii();
+            sidekick.clearUnderwaterStatusPreserveWaterPhysics();
+            sidekick.setOnObject(false);
+            sidekick.setPushing(false);
+            sidekick.setDirection(Direction.RIGHT);
+            LevelManager levelManager = sidekick.currentLevelManagerIfAvailable();
+            if (levelManager != null && levelManager.getObjectManager() != null) {
+                levelManager.getObjectManager().clearRidingObject(sidekick);
+            }
+        }
         sidekick.setAir(true);
         sidekick.setXSpeed(carryTrigger.carryInitXVel());
         sidekick.setYSpeed((short) 0);
@@ -3316,13 +3331,13 @@ public class SidekickCpuController {
         sidekick.setControlLocked(false);
         sidekick.setForcedAnimationId(flyAnimId);
         if (!carryController().isCarryingMainCharacter()) {
-            carryController().forceScriptedCarry(carryTrigger.usesMgzBossTransitionControl()
+            carryController().forceScriptedCarry(mgzBossTransitionCarry
                     ? TailsCarryController.CarryContext.MGZ_BOSS
                     : TailsCarryController.CarryContext.CNZ);
         }
 
         // Initialize the latch
-        mgzCarryIntroAscend = carryTrigger.usesMgzBossTransitionControl();
+        mgzCarryIntroAscend = mgzBossTransitionCarry;
         mgzCarryFlapTimer = 0;
         carryController().setCooldown(0);
 
