@@ -136,17 +136,23 @@ event frame re-pushes).
 `Sonic2LevelEventManager.java:132`). Mirror it exactly:
 
 - **`WfzRuntimeState`** (interface, `com.openggf.game.sonic2.runtime`, extends
-  `ZoneRuntimeState`): `int bgVscrollFactor();` (and `int bgXPos();` if the FBO path needs it).
+  `ZoneRuntimeState`): **both** axes of the ROM `ScrollBG` — `int bgVscrollFactor();`
+  (= `Camera_BG_Y_pos`) **and** `int bgXPos();` (= `Camera_BG_X_pos`). Both are required:
+  `LevEvents_WFZ_Routine4` ramps `Camera_BG_X_offset` to `-$2C0` as well as the Y offset, and
+  `SwScrlWfz` drives the static-BG and getaway-ship layers from the X position (line 102 →
+  layers 0/1 at `:118-119`).
 - **`WfzRuntimeStateView implements WfzRuntimeState`**: a **live** view holding a
-  `Sonic2WFZEvents` reference — `bgVscrollFactor() { return events.getBgYPos(); }`. No copied
-  state.
+  `Sonic2WFZEvents` reference — `bgVscrollFactor() { return events.getBgYPos(); }`,
+  `bgXPos() { return events.getBgXPos(); }`. No copied state.
 - **Register** it in `Sonic2LevelEventManager` alongside HTZ/CNZ
   (`installOwnedRuntimeState(registry, new WfzRuntimeStateView(zone, act, wfzEvents))`,
   next to `:132`), so it is (re)installed per session with the current event manager — no
   durable→session retention.
 - **`SwScrlWfz`** reads `GameServices.zoneRuntimeRegistry().currentAs(WfzRuntimeState.class)`
-  for the VScroll factor instead of `bgCamera.getBgYPos()` (`SwScrlWfz.java:97`, and the
-  segment-select `bgY` at `:141`).
+  instead of `bgCamera` for **all three** BG-position reads: the VScroll factor
+  (`SwScrlWfz.java:97`), the `bgXPosLong` static/ship horizontal scroll (`:102`), and the
+  segment-select `bgY` (`:141`). (Bridging only the Y reads would leave the horizontal half
+  of `ScrollBG` frozen on `bgCamera`.)
 
 **Why this fixes the three P1 issues:** no session-owned object is retained in the durable
 event manager and no S2 type leaks through `ParallaxManager` (P1#1); the view reads
@@ -172,11 +178,13 @@ before the parallax/scroll pass, so the event's `bgYPos` for the frame is set be
    clamped diff and advanced `bgXPos`/`bgYPos` (drives `bgYPos` toward `cameraY − bgYOffset`
    at ≤16/frame; equals `cameraY` when offset 0).
 3. **Bridge integration test (through the real context, not a direct setter):** boot a WFZ
-   gameplay context, drive the WFZ event to a non-zero `bgYOffset`, run one
-   `LevelFrameStep`/`ParallaxManager` pass, and assert the **rendered VScroll factor** (what
-   `SwScrlWfz` wrote) equals `Sonic2WFZEvents.getBgYPos()`. This exercises the actual
-   `ZoneRuntimeRegistry` registration + `SwScrlWfz` read — a direct `WfzRuntimeStateView`
-   unit test alone would pass even if the level-load registration were missing.
+   gameplay context, drive the WFZ event to non-zero `bgYOffset` **and** `bgXOffset`, run one
+   `LevelFrameStep`/`ParallaxManager` pass, and assert **both** rendered axes: the VScroll
+   factor equals `Sonic2WFZEvents.getBgYPos()` and the static/ship HScroll word equals
+   `Sonic2WFZEvents.getBgXPos()` (what `SwScrlWfz` wrote). This exercises the actual
+   `ZoneRuntimeRegistry` registration + `SwScrlWfz` read on both axes — a direct
+   `WfzRuntimeStateView` unit test alone would pass even if the level-load registration were
+   missing, and a Y-only assertion would miss the frozen horizontal half of `ScrollBG`.
 4. **Trace regression gate (release-blocking):** `TestS2WfzLevelSelectTraceReplay` and
    `TestS2DezEndingLevelSelectTraceReplay` must stay green
    (`mvn -Ptrace-replay "-Dtest=…" test`). This is the primary guard that normal-play BG
@@ -267,28 +275,31 @@ Add public `getBgXPos()`/`getBgYPos()`.
 - Create: `src/main/java/com/openggf/game/sonic2/runtime/WfzRuntimeState.java` (interface extends `ZoneRuntimeState`)
 - Create: `src/main/java/com/openggf/game/sonic2/runtime/WfzRuntimeStateView.java` (live view over `Sonic2WFZEvents`)
 - Modify: `src/main/java/com/openggf/game/sonic2/Sonic2LevelEventManager.java:~132` (install the WFZ view next to HTZ/CNZ)
-- Modify: `src/main/java/com/openggf/game/sonic2/scroll/SwScrlWfz.java:97,141` (read the registry view instead of `bgCamera.getBgYPos()`)
+- Modify: `src/main/java/com/openggf/game/sonic2/scroll/SwScrlWfz.java:97,102,141` (read the registry view instead of `bgCamera` for VScroll (`:97`), `bgXPosLong` (`:102`), and segment-select `bgY` (`:141`))
 - Test: `src/test/java/com/openggf/game/sonic2/TestSonic2WfzBgBridgeIntegration.java` (new — real context)
 
 **Interfaces:**
-- Consumes: `Sonic2WFZEvents#getBgYPos()` (Task 1), `GameServices.zoneRuntimeRegistry()`, the HTZ/CNZ registration idiom (`installOwnedRuntimeState`, `Sonic2LevelEventManager.java:132-145`), `HtzRuntimeStateView` as the template.
-- Produces: `WfzRuntimeState#bgVscrollFactor()` returning `Sonic2WFZEvents.getBgYPos()` live; installed in `ZoneRuntimeRegistry` when WFZ loads; read by `SwScrlWfz`.
+- Consumes: `Sonic2WFZEvents#getBgYPos()`/`#getBgXPos()` (Task 1), `GameServices.zoneRuntimeRegistry()`, the HTZ/CNZ registration idiom (`installOwnedRuntimeState`, `Sonic2LevelEventManager.java:132-145`), `HtzRuntimeStateView` as the template.
+- Produces: `WfzRuntimeState#bgVscrollFactor()` (= `getBgYPos()`) and `#bgXPos()` (= `getBgXPos()`), live; installed in `ZoneRuntimeRegistry` when WFZ loads; read by `SwScrlWfz` for both axes.
 
 - [ ] **Step 1: Write the failing integration test** (through the real context, per §5.3 — NOT a direct setter):
 ```java
 // Boot a WFZ gameplay context (mirror an existing SharedLevel / context-boot test),
-// drive the WFZ event to routine 6 with a non-zero bgYOffset for a few frames, run one
-// LevelFrameStep + ParallaxManager pass, and assert SwScrlWfz's written VScroll factor
-// tracks Sonic2WFZEvents.getBgYPos() (scrolls up), not the frozen bgCamera value.
+// drive the WFZ event to routine 6 with non-zero bgYOffset AND bgXOffset for a few frames,
+// run one LevelFrameStep + ParallaxManager pass, and assert BOTH axes of the rendered scroll:
+//  - the VScroll factor tracks Sonic2WFZEvents.getBgYPos() (scrolls up), and
+//  - the static-BG/ship HScroll word tracks Sonic2WFZEvents.getBgXPos() (from the -$2C0 ramp),
+// not the frozen bgCamera values.
 @Test
-void wfzEndingScrollReachesRenderedVscrollThroughRuntimeRegistry() { /* ... */ }
+void wfzEndingScrollReachesRenderedVscrollAndHscrollThroughRuntimeRegistry() { /* ... */ }
 ```
-- [ ] **Step 2: Run to verify it fails** (SwScrlWfz still reads the frozen `bgCamera`).
-- [ ] **Step 3: Implement.** Create `WfzRuntimeState` (`int bgVscrollFactor();`) and
-  `WfzRuntimeStateView` (live over `Sonic2WFZEvents`, mirroring `HtzRuntimeStateView`);
+- [ ] **Step 2: Run to verify it fails** (SwScrlWfz still reads the frozen `bgCamera` for both axes).
+- [ ] **Step 3: Implement.** Create `WfzRuntimeState` (`int bgVscrollFactor();` + `int bgXPos();`)
+  and `WfzRuntimeStateView` (live over `Sonic2WFZEvents`, mirroring `HtzRuntimeStateView`);
   install it in `Sonic2LevelEventManager` beside HTZ/CNZ; change `SwScrlWfz` to read
-  `GameServices.zoneRuntimeRegistry().currentAs(WfzRuntimeState.class)` (fall back to the
-  existing `bgCamera` value if the view is absent, for non-WFZ/test safety).
+  `GameServices.zoneRuntimeRegistry().currentAs(WfzRuntimeState.class)` for VScroll (`:97`),
+  `bgXPosLong` (`:102`), and segment-select `bgY` (`:141`) (fall back to the existing
+  `bgCamera` value if the view is absent, for non-WFZ/test safety).
 - [ ] **Step 4: Run to verify it passes.**
 - [ ] **Step 5: Rewind check** — a WFZ-ending rewind restores the event `bgYPos`; assert the
   rendered VScroll on the next parallax pass equals the restored value (guards P1#2).
@@ -331,3 +342,10 @@ All five items verified against the codebase and folded in:
   regression test (Task 1 case b).
 - **P2 (bridge test bypassed production):** Task 2's test is now an integration test through the
   real gameplay context/registry asserting rendered VScroll (§5.3).
+
+Review resolution (round 2, 2026-07-16):
+- **P2 (bridge the X axis too):** `ScrollBG` advances `bgXPos` as well (the `-$2C0`
+  `Camera_BG_X_offset` ramp), and `SwScrlWfz.java:102` drives the static-BG/getaway-ship
+  layers from `bgCamera.getBgXPos()`. `WfzRuntimeState` now exposes `bgXPos()` too, `SwScrlWfz`
+  reads the view at `:97/:102/:141`, and the integration test asserts both the VScroll and the
+  HScroll word (§4.2, Task 2, §5.3).
