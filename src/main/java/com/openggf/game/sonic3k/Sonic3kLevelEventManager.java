@@ -376,6 +376,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (mgzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MGZ) {
             mgzEvents.update(currentAct, frameCounter);
+            mgzEvents.updateBackgroundCollisionObjectRelease(currentAct);
         }
         if (mhzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MHZ) {
             mhzEvents.update(currentAct, frameCounter);

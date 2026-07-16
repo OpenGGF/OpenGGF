@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ background deform releases terrain-overlapping riders
+
+Branch `feature/ai-trace-animation-verification`, after the delayed rise-
+acceleration milestone. MGZ2's normal background deform checks the live
+`Background_collision_flag` after its object pass and dispatches
+`Go_CheckPlayerRelease`. For each native object standing bit,
+`CheckPlayerReleaseFromObj` runs `SonicOnObjHitFloor`; a zero or negative floor
+distance clears `Status_OnObj`, sets `Status_InAir`, and clears the object's
+standing bit. The engine now exposes that operation through the shared solid-
+contact owner and calls it from MGZ's post-object event phase under the existing
+ROM-derived background-collision flag. No trace hydration, route/frame
+predicate, comparator tolerance, or physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:42120-42134,107060-107075,
+115079-115096`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 34231 to frame 34344
+  (`status_byte`, expected `$08` / actual `$28`).
+- MGZ complete-run animation advances from frame 34264 to frame 35373
+  (`tails_animation_id`, expected `Roll` / actual `Hurt`).
+- The focused shared release tests and MGZ BG-rise event/headless suites pass
+  all 31 selected tests.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ rise acceleration starts after its latch dispatch
 
 Branch `feature/ai-trace-animation-verification`, after the late Tails push-

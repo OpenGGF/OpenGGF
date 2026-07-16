@@ -2542,6 +2542,14 @@ public class ObjectManager {
     }
 
     /**
+     * Run the shared ROM {@code CheckPlayerReleaseFromObj} terrain-release
+     * operation for the player's current solid-object ride.
+     */
+    public boolean checkPlayerReleaseFromObjectFloor(PlayableEntity player) {
+        return solidContacts.checkPlayerReleaseFromObjectFloor(player);
+    }
+
+    /**
      * Clear support established by an earlier solid slot after a later controller
      * object has made the player airborne in the same ExecuteObjects pass.
      */

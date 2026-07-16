@@ -873,6 +873,41 @@ final class ObjectSolidContactController {
     }
 
     /**
+     * ROM {@code CheckPlayerReleaseFromObj}: while an object's native standing
+     * bit is set, probe the terrain under the rider and detach it when the floor
+     * distance is zero or negative.
+     *
+     * <p>The caller owns the native dispatch gate and phase (for example
+     * MGZ2's background-collision deform pass). Keeping the contact mutation
+     * here makes the operation use the same riding and standing-bit state as
+     * {@code SolidObjectFull} instead of reconstructing it in a zone handler.
+     */
+    boolean checkPlayerReleaseFromObjectFloor(PlayableEntity player) {
+        if (player == null) {
+            return false;
+        }
+        RidingState state = ridingStates.get(player);
+        if (state == null || state.object == null
+                || !hasObjectStandingBit(player, state.object, state.pieceIndex)) {
+            return false;
+        }
+        TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(
+                player.getCentreX(), player.getCentreY(), player.getYRadius());
+        if (floor.distance() > 0) {
+            return false;
+        }
+
+        clearObjectStandingBit(player, state.object, state.pieceIndex);
+        ridingStates.remove(player);
+        inlineSupportedPlayers.remove(player);
+        latestStandingSnapshots.remove(player);
+        forceAirOnStaleSupportLoss.remove(player);
+        player.setOnObject(false);
+        player.setAir(true);
+        return true;
+    }
+
+    /**
      * Clears the native standing state left by an earlier solid pass when a later
      * controller object makes the player airborne in the same object-slot pass.
      */

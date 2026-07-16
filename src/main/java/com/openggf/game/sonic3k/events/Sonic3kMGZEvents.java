@@ -25,6 +25,7 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
@@ -441,6 +442,33 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             updateAct2BossArena();
             updateAct2Rumble(frameCounter);
             applyScreenShake(frameCounter);
+        }
+    }
+
+    /**
+     * ROM {@code MGZ2BGE_Normal}: after objects and the BG deform pass, a live
+     * {@code Background_collision_flag} dispatches {@code Go_CheckPlayerRelease}
+     * for both player slots. The engine calls this from the post-object level
+     * event phase, using the same ROM-derived collision flag published before
+     * player physics.
+     */
+    public void updateBackgroundCollisionObjectRelease(int act) {
+        if (act != 1 || !gameState().isBackgroundCollisionFlag()) {
+            return;
+        }
+        LevelManager levelManager = GameServices.levelOrNull();
+        ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
+        AbstractPlayableSprite mainPlayer = camera().getFocusedSprite();
+        if (objectManager == null || mainPlayer == null) {
+            return;
+        }
+        List<AbstractPlayableSprite> sidekicks = List.copyOf(GameServices.sprites().getSidekicks());
+        ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(
+                () -> mainPlayer,
+                () -> sidekicks);
+        for (PlayableEntity player : playerQuery.playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            objectManager.checkPlayerReleaseFromObjectFloor(player);
         }
     }
 

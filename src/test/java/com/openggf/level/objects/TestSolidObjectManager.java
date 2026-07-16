@@ -17,6 +17,8 @@ import com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzTrapDoorInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.physics.Sensor;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
@@ -25,6 +27,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.tests.TestEnvironment;
 import java.lang.reflect.Field;
 import java.util.List;
+import org.mockito.MockedStatic;
+import static org.mockito.Mockito.mockStatic;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -77,6 +81,50 @@ public class TestSolidObjectManager {
         manager.update(0, player, List.of(), 0, false, true, false);
 
         assertEquals(1, object.compatibilityCallbackCount);
+    }
+
+    @Test
+    public void nativeFloorReleaseDetachesRideAtNonPositiveDistance() {
+        TestPlayableSprite player = createStandingProbePlayer();
+        TestSolidObject object = new TestSolidObject(
+                100, 100, new SolidObjectParams(16, 8, 8));
+        ObjectManager manager = buildManager(object);
+        manager.forceRidingObjectForBootstrap(player, object);
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(
+                            player.getCentreX(), player.getCentreY(), player.getYRadius()))
+                    .thenReturn(new TerrainCheckResult(0, (byte) 0, 1));
+
+            assertTrue(manager.checkPlayerReleaseFromObjectFloor(player));
+        }
+
+        assertFalse(manager.isRidingObject(player));
+        assertFalse(manager.hasObjectStandingBit(player, object));
+        assertFalse(player.isOnObject());
+        assertTrue(player.getAir());
+    }
+
+    @Test
+    public void nativeFloorReleaseKeepsRideAtPositiveDistance() {
+        TestPlayableSprite player = createStandingProbePlayer();
+        TestSolidObject object = new TestSolidObject(
+                100, 100, new SolidObjectParams(16, 8, 8));
+        ObjectManager manager = buildManager(object);
+        manager.forceRidingObjectForBootstrap(player, object);
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(
+                            player.getCentreX(), player.getCentreY(), player.getYRadius()))
+                    .thenReturn(new TerrainCheckResult(1, (byte) 0, 1));
+
+            assertFalse(manager.checkPlayerReleaseFromObjectFloor(player));
+        }
+
+        assertTrue(manager.isRidingObject(player));
+        assertTrue(manager.hasObjectStandingBit(player, object));
+        assertTrue(player.isOnObject());
+        assertFalse(player.getAir());
     }
 
     @Test
