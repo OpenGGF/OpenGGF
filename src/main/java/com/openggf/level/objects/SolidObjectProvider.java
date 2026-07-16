@@ -193,6 +193,18 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether an airborne rider must retain this object's riding record until
+     * this same object's inline solid checkpoint consumes its standing bit.
+     *
+     * <p>Use this for native routines whose post-{@code SolidObjectFull}
+     * behavior depends on the per-object {@code a0.d6} result. An earlier
+     * object's solid checkpoint must not consume that state on its behalf.
+     */
+    default boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether a stale riding record that would be consumed by this object's
      * airborne standing-bit branch is also ineligible for pre-movement
      * ground-recovery support.

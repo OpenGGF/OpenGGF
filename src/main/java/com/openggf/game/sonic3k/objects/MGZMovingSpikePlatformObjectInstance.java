@@ -143,6 +143,14 @@ public class MGZMovingSpikePlatformObjectInstance extends AbstractObjectInstance
         return HALF_WIDTH;
     }
 
+    @Override
+    public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
+        // Obj_MGZMovingSpikePlatform consumes SolidObjectFull's d6 result in
+        // this slot before running its spike-hurt branch. Preserve the native
+        // per-object standing bit until this platform's own checkpoint runs.
+        return true;
+    }
+
     // ===== SolidObjectListener =====
 
     @Override

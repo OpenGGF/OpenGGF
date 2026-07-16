@@ -1326,6 +1326,8 @@ final class ObjectSolidContactController {
         // the helper that clears Status_OnObj/d6 for airborne riders
         // (docs/skdisasm/sonic3k.asm:41006-41010 before 41021-41034).
         if (ridingObject != null && player.getAir()
+                && (instance == ridingObject
+                    || !airborneRiderUnseatRequiresOwnCheckpoint(player, ridingObject))
                 && !preserveAirborneRideForEarlierPieces
                 && !carriesAirborneRiderAfterExitPlatform(ridingObject)
                 && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)
@@ -1997,6 +1999,12 @@ final class ObjectSolidContactController {
     private boolean carriesAirborneRiderAfterExitPlatform(ObjectInstance object) {
         return object instanceof SolidObjectProvider provider
                 && provider.getSolidRoutineProfile().carriesAirborneRiderAfterExitPlatform();
+    }
+
+    private boolean airborneRiderUnseatRequiresOwnCheckpoint(
+            PlayableEntity player, ObjectInstance object) {
+        return object instanceof SolidObjectProvider provider
+                && provider.airborneRiderUnseatRequiresOwnCheckpoint(player);
     }
 
     private boolean shouldResolveEarlierMultiPieceSiblingsBeforeRidingPiece(

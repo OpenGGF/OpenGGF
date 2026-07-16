@@ -1970,6 +1970,44 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void earlierSolidCannotConsumeAnotherObjectsAirborneRidingState() {
+        SolidObjectParams supportParams = new SolidObjectParams(0x2B, 0x30, 0x31);
+        TestSolidObject earlierSolid = new TestSolidObject(0, 0,
+                new SolidObjectParams(16, 8, 8));
+        TestSolidObject movingSupport = new OwnCheckpointAirUnseatSolidObject(
+                100, 100, supportParams);
+        ObjectManager manager = buildManager(earlierSolid);
+        manager.addDynamicObject(movingSupport);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(28);
+        player.setCentreX((short) 100);
+        player.setCentreY((short) (100 - supportParams.groundHalfHeight()
+                - player.getYRadius()));
+        manager.forceRidingObjectForBootstrap(player, movingSupport);
+
+        player.setAir(true);
+        player.setYSpeed((short) 0xF980);
+        int jumpCentreY = player.getCentreY();
+
+        manager.processImmediateInlineSolidCheckpoint(earlierSolid, player, List.of());
+
+        assertTrue(manager.isRidingObject(player),
+                "An earlier slot cannot consume a different object's native standing bit");
+        assertTrue(player.isOnObject());
+
+        manager.processImmediateInlineSolidCheckpoint(movingSupport, player, List.of());
+
+        assertEquals(jumpCentreY, player.getCentreY(),
+                "The ridden object's air-unseat must return before a fresh-contact Y snap");
+        assertFalse(manager.isRidingObject(player));
+        assertFalse(player.isOnObject());
+        assertTrue(player.getAir());
+    }
+
+    @Test
     public void unifiedRideExitClearsOnObjectWithoutForcingAirSameFrame() {
         GameModule previous = GameModuleRegistry.getCurrent();
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
@@ -2253,6 +2291,17 @@ public class TestSolidObjectManager {
 
         @Override
         public boolean usesInclusiveRightEdge() {
+            return true;
+        }
+    }
+
+    private static final class OwnCheckpointAirUnseatSolidObject extends TestSolidObject {
+        private OwnCheckpointAirUnseatSolidObject(int x, int y, SolidObjectParams params) {
+            super(x, y, params);
+        }
+
+        @Override
+        public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
             return true;
         }
     }

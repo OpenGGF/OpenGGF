@@ -1,5 +1,37 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ moving-spike jump unseats in its owning solid slot
+
+Branch `feature/ai-trace-animation-verification`, after the Spiker cooldown
+milestone. On the recorded jump, Sonic changes from standing to rolling radii
+at Y=`$04BA` while Obj56 moves from Y=`$04F9` to `$04F8`. An earlier floating
+platform checkpoint was consuming Obj56's riding record before Obj56 ran, so
+the later `SolidObjectFull` pass treated the exact surface boundary as a fresh
+contact and applied a one-pixel upward correction. Solid providers whose
+post-helper behavior depends on their own native standing bit can now retain
+the airborne rider until that same object's checkpoint. The MGZ moving-spike
+platform declares that concrete routine contract; vanished and ordinary stale
+supports retain their established cleanup behavior. No trace hydration,
+zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:41017-41035,41066-41084,71029-71114`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 17092 to frame 20834
+  (`tails_y_speed`, expected `$00B8` / actual `-$00B8`), with errors changing
+  from 4112 to 4479 as the newly reached route tail becomes visible.
+- MGZ standalone animation advances from frame 17119 to frame 20868
+  (`tails_animation_id`, expected `$00` / actual `$02`), with errors changing
+  from 485 to 1129 across the newly reached route tail.
+- The focused earlier-slot/owning-slot airborne-unseat contract passes.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+- At this checkpoint, `origin/develop` and local `develop` were both
+  `1b1a5efee`; merging `develop` reported `Already up to date`.
+
 ### 2026-07-16 -- MGZ Spiker top spring retains its Obj_Wait setup pass
 
 Branch `feature/ai-trace-animation-verification`, after the drilling-Robotnik
