@@ -218,6 +218,14 @@ public class MGZMovingSpikePlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOutOfRangeReferenceX() {
+        // ROM loc_347F6 reloads the fixed origin from $30(a0) before
+        // tail-calling Sprite_OnScreen_Test2. The live platform can be up to
+        // $50 pixels away from that origin when the unload decision runs.
+        return baseX;
+    }
+
+    @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(PRIORITY_BUCKET);
     }

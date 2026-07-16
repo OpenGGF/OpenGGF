@@ -485,8 +485,20 @@ public class TestRingManager {
                 "Attracted-ring sparkle should keep occupying the dynamic slot before Ani_RingSparkle finishes");
 
         ringManager.update(0, player, 2);
+        assertEquals(1, objectManager.getAllocatedSlotCount(),
+                "The second sparkle mapping keeps the attracted-ring slot occupied");
+
+        ringManager.update(0, player, 3);
+        assertEquals(1, objectManager.getAllocatedSlotCount(),
+                "Animate_Sprite retains each mapping for delay+1 object passes");
+
+        ringManager.update(0, player, 4);
+        assertEquals(1, objectManager.getAllocatedSlotCount(),
+                "$FC only advances the attracted ring to its delete routine");
+
+        ringManager.update(0, player, 5);
         assertEquals(0, objectManager.getAllocatedSlotCount(),
-                "Attracted-ring sparkle should release its dynamic slot when the sparkle routine deletes");
+                "The object pass after $FC releases the attracted-ring slot");
     }
 
     @Test

@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ attracted-ring sparkle preserves SST allocation order
+
+Branch `feature/ai-trace-animation-verification`, after the moving-spike balance
+milestone. `Obj_Attracted_Ring` reuses the custom attract routine's
+`anim_frame_timer` when it changes in place to `loc_1A920`; each sparkle mapping
+therefore lasts the native `delay+1` object passes. The terminal `$FC` command
+only increments `routine`, leaving deletion to the following SST pass. Keeping
+that final pass prevents the next player-slot attraction from reusing a slot
+which native still occupies: the attraction at trace frame 1089 now allocates
+slot 19, and the frame-1103 StillSprite placement correctly receives slot 11.
+The accompanying MGZ carrier/wall and falling-fragment ordering changes model
+their prior-pass render flags, fixed-point movement, and relative SST ordering.
+No trace hydration, route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:35710-35841,36157-36231,45317-45445`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics holds at frame 10589 (`x`, expected `$266D` / actual
+  `$267E`) while its first known placement-slot divergence advances beyond
+  trace frame 1103.
+- MGZ standalone animation holds at frame 10590 (`player_mapping_frame`,
+  expected `$21` / actual `$06`).
+- The focused ring, rewind-snapshot, collapsing-bridge, breakable-wall, and
+  moving-spike suites pass.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ moving spike exposes its native balance width
 
 Branch `feature/ai-trace-animation-verification`, after the standalone Obj37

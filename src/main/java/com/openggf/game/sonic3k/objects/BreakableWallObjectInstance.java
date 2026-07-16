@@ -409,7 +409,8 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
                 int xVel = velTable[0][0];
                 int yVel = velTable[0][1];
                 BreakableWallFragment firstFragment = new BreakableWallFragment(
-                        x, y, brokenFrameIndex, 0, xVel, yVel, config.artKey);
+                        x, y, brokenFrameIndex, 0, xVel, yVel, config.artKey,
+                        config.halfWidth, config.halfHeight);
                 ObjectLifetimeOps.addReplacementAtTransferredSlot(
                         objectManager, firstFragment, transferredSlot);
                 // The ROM immediately falls through to loc_21692 after the
@@ -423,7 +424,8 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
             int xVel = velTable[i][0];
             int yVel = velTable[i][1];
             BreakableWallFragment fragment = new BreakableWallFragment(
-                    x, y, brokenFrameIndex, i, xVel, yVel, config.artKey);
+                    x, y, brokenFrameIndex, i, xVel, yVel, config.artKey,
+                    config.halfWidth, config.halfHeight);
             spawnDynamicObject(fragment);
         }
     }
@@ -553,11 +555,22 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         private int fragmentFrameIndex;
         private int pieceIndex;
         private String artKey;
+        private int renderHalfWidth;
+        private int renderHalfHeight;
+        private boolean romRenderFlag = true;
         private final SubpixelMotion.State motionState;
 
         public BreakableWallFragment(int parentX, int parentY,
                                      int fragmentFrameIndex, int pieceIndex,
                                      int xVel, int yVel, String artKey) {
+            this(parentX, parentY, fragmentFrameIndex, pieceIndex, xVel, yVel,
+                    artKey, 0x10, 0x28);
+        }
+
+        public BreakableWallFragment(int parentX, int parentY,
+                                     int fragmentFrameIndex, int pieceIndex,
+                                     int xVel, int yVel, String artKey,
+                                     int renderHalfWidth, int renderHalfHeight) {
             super(new ObjectSpawn(parentX, parentY, Sonic3kObjectIds.BREAKABLE_WALL,
                     0, 0, false, 0), "BreakableWallFragment");
             this.currentX = parentX;
@@ -565,6 +578,8 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
             this.fragmentFrameIndex = fragmentFrameIndex;
             this.pieceIndex = pieceIndex;
             this.artKey = artKey;
+            this.renderHalfWidth = renderHalfWidth;
+            this.renderHalfHeight = renderHalfHeight;
             this.motionState = new SubpixelMotion.State(
                     currentX, currentY, 0, 0, xVel, yVel);
         }
@@ -606,9 +621,26 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
             currentX = motionState.x;
             currentY = motionState.y;
 
-            if (!isOnScreen(128)) {
+            // loc_21692 consumes the render_flags sign bit retained from the
+            // preceding Render_Sprites pass, after applying this tick's motion.
+            if (!romRenderFlag) {
                 setDestroyed(true);
             }
+        }
+
+        @Override
+        public int getOnScreenHalfWidth() {
+            return renderHalfWidth;
+        }
+
+        @Override
+        public int getOnScreenHalfHeight() {
+            return renderHalfHeight;
+        }
+
+        @Override
+        public void refreshPostCameraRenderState() {
+            romRenderFlag = isWithinRenderSpriteBounds(renderHalfWidth, renderHalfHeight);
         }
 
         @Override

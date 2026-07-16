@@ -48,6 +48,21 @@ class TestMGZMovingSpikePlatformObjectInstance {
     }
 
     @Test
+    void outOfRangeCheckUsesSavedOriginRatherThanMovingPosition() {
+        MGZMovingSpikePlatformObjectInstance platform =
+                new MGZMovingSpikePlatformObjectInstance(
+                        new ObjectSpawn(0x2000, 0x0600, 0x56, 0, 0, false, 0));
+
+        for (int i = 0; i < 0x30; i++) {
+            platform.update(i, null);
+        }
+
+        assertEquals(0x2030, platform.getX());
+        assertEquals(0x2000, platform.getOutOfRangeReferenceX(),
+                "Sprite_OnScreen_Test2 reads the saved $30 origin");
+    }
+
+    @Test
     void spikeHurtRewindsFullFixedPointYBeforeHurtCharacter() {
         MGZMovingSpikePlatformObjectInstance platform =
                 new MGZMovingSpikePlatformObjectInstance(

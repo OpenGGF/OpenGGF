@@ -341,6 +341,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     private int velY;   // Y velocity (subpixels)
     private int xFrac;  // X subpixel fraction
     private int yFrac;  // Y subpixel fraction
+    private boolean romRenderFlag = true;
 
     // ===== Constructor =====
 
@@ -662,7 +663,6 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-
         if (mode == CollapseMode.MGZ_STOMP && state == 0 && !fragmented) {
             SolidCheckpointBatch batch = checkpointAll();
             ArrayList<AbstractPlayableSprite> standingPlayers = new ArrayList<>();
@@ -714,18 +714,27 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
                 updateWaveCollapse(player);
             }
             case 3 -> { // Parent falling
+                // Obj_PlatformCollapseFall consumes the render_flags sign bit
+                // retained from the preceding Render_Sprites pass before it
+                // calls MoveSprite (sonic3k.asm:45317-45326).
+                if (!romRenderFlag) {
+                    setDestroyedByOffscreen();
+                    return;
+                }
+
                 // Standard collapse: MoveSprite with $38 gravity (Y only)
                 // MGZ stomp: MoveSprite2 (no engine gravity) + manual $18 gravity
                 // ROM: Obj_PlatformCollapseFall uses MoveSprite ($38)
                 // ROM: loc_20A56 uses MoveSprite2 + addi.w #$18,y_vel
                 int grav = (mode == CollapseMode.MGZ_STOMP) ? MGZ_GRAVITY : GRAVITY;
-                velY += grav;
 
-                // Update Y position with subpixel accuracy
+                // MoveSprite adds the old velocity to position, then applies
+                // gravity for the following frame (sonic3k.asm:36032-36049).
                 int y32 = (y << 16) | (yFrac & 0xFFFF);
                 y32 += ((int) (short) velY) << 8;
                 y = y32 >> 16;
                 yFrac = y32 & 0xFFFF;
+                velY = (short) (velY + grav);
 
                 // MGZ stomp parent also moves in X (has initial velocity from BreakObjectToPieces)
                 if (mode == CollapseMode.MGZ_STOMP) {
@@ -735,15 +744,23 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
                     xFrac = x32 & 0xFFFF;
                 }
 
-                if (!isOnScreen(128)) {
-                    // ObjPlatformCollapse_SmashObject clears respawn_addr bit 7
-                    // when the bridge fragments, so its later off-screen delete
-                    // remains eligible for a fresh placement load on camera
-                    // re-entry (sonic3k.asm:45435-45445).
-                    setDestroyedByOffscreen();
-                }
             }
         }
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return halfWidth;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return displayHeight;
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        romRenderFlag = isWithinRenderSpriteBounds(halfWidth, displayHeight);
     }
 
     // ===== Collapse mechanics =====
@@ -824,7 +841,8 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         for (int i = 1; i < maxFragments; i++) {
             int delay = activeDelays[i];
             BridgeFragment fragment = new BridgeFragment(
-                    x, y, fragmentFrameIndex, i, delay, artKey, hFlip, highPriorityArt);
+                    x, y, fragmentFrameIndex, i, delay, artKey, hFlip,
+                    highPriorityArt, halfWidth, displayHeight);
             spawnDynamicObject(fragment);
         }
     }
@@ -1108,11 +1126,23 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         private String artKey;
         private boolean hFlip;
         private boolean highPriority;
+        private int renderHalfWidth;
+        private int renderHalfHeight;
+        private boolean romRenderFlag = true;
 
         public BridgeFragment(int parentX, int parentY,
                               int fragmentFrameIndex, int pieceIndex,
                               int delay, String artKey, boolean hFlip,
                               boolean highPriority) {
+            this(parentX, parentY, fragmentFrameIndex, pieceIndex, delay,
+                    artKey, hFlip, highPriority, 0x40, 0x20);
+        }
+
+        public BridgeFragment(int parentX, int parentY,
+                              int fragmentFrameIndex, int pieceIndex,
+                              int delay, String artKey, boolean hFlip,
+                              boolean highPriority, int renderHalfWidth,
+                              int renderHalfHeight) {
             super(new ObjectSpawn(parentX, parentY, Sonic3kObjectIds.COLLAPSING_BRIDGE,
                     0, hFlip ? 1 : 0, false, 0), "BridgeFragment", delay, PRIORITY);
             this.fragmentFrameIndex = fragmentFrameIndex;
@@ -1120,6 +1150,8 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
             this.artKey = artKey;
             this.hFlip = hFlip;
             this.highPriority = highPriority;
+            this.renderHalfWidth = renderHalfWidth;
+            this.renderHalfHeight = renderHalfHeight;
         }
 
         private BridgeFragment() {
@@ -1139,6 +1171,34 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         @Override
         public boolean isHighPriority() {
             return highPriority;
+        }
+
+        @Override
+        public int getOnScreenHalfWidth() {
+            return renderHalfWidth;
+        }
+
+        @Override
+        public int getOnScreenHalfHeight() {
+            return renderHalfHeight;
+        }
+
+        @Override
+        protected boolean shouldDeleteBeforeFall() {
+            // Obj_PlatformCollapseFall tests the previous Draw_Sprite result
+            // before MoveSprite, exactly like the sibling collapsing-platform
+            // fragment routine (sonic3k.asm:45317-45326).
+            return !romRenderFlag;
+        }
+
+        @Override
+        protected boolean shouldDeleteAfterFall() {
+            return false;
+        }
+
+        @Override
+        public void refreshPostCameraRenderState() {
+            romRenderFlag = isWithinRenderSpriteBounds(renderHalfWidth, renderHalfHeight);
         }
 
         @Override

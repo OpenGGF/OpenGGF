@@ -435,7 +435,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
 
         // Draw attracted rings and their collected sparkle phase.
-        int attractSpinFrame = renderer.getSpinFrameIndex(frameCounter);
         for (AttractedRing ar : attractedRings) {
             if (!ar.active) {
                 continue;
@@ -446,7 +445,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     renderer.drawFrameIndex(sparkleFrame, ar.x, ar.y);
                 }
             } else {
-                renderer.drawFrameIndex(attractSpinFrame, ar.x, ar.y);
+                renderer.drawFrameIndex(ar.mappingFrame, ar.x, ar.y);
             }
         }
     }
@@ -751,6 +750,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 ar.objectSlotIndex = objectSlotIndex;
                 ar.collected = false;
                 ar.sparkleStartFrame = -1;
+                ar.mappingFrame = 0;
+                ar.animationFrameTimer = 0;
+                ar.sparkleAnimationFrame = 0;
                 ar.active = true;
                 return true;
             }
@@ -773,7 +775,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             if (!ar.active) continue;
 
             if (ar.collected) {
-                if (attractedSparkleFinished(ar, frameCounter)) {
+                if (advanceAttractedRingSparkle(ar)) {
                     deactivateAttractedRing(ar);
                 }
                 continue;
@@ -820,6 +822,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             yLong += ar.yVel << 8;
             ar.y = yLong >> 16;
             ar.ySub = yLong & 0xFFFF;
+
+            advanceAttractedRingSpin(ar);
 
             if (attractedRingOutsideObjectWindow(ar, cameraX)) {
                 deactivateAttractedRing(ar);
@@ -899,26 +903,48 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     private int attractedSparkleFrame(AttractedRing ar, int frameCounter) {
-        if (!ar.collected || renderer == null || renderer.getSparkleFrameCount() <= 0) {
+        if (!ar.collected || renderer == null) {
             return -1;
         }
-        int elapsed = Math.max(0, frameCounter - ar.sparkleStartFrame);
-        int offset = elapsed / renderer.getSparkleFrameDelay();
-        if (offset >= renderer.getSparkleFrameCount()) {
-            return -1;
-        }
-        return renderer.getSparkleStartIndex() + offset;
+        return ar.mappingFrame;
     }
 
-    private boolean attractedSparkleFinished(AttractedRing ar, int frameCounter) {
-        if (!ar.collected) {
-            return false;
+    private static void advanceAttractedRingSpin(AttractedRing ar) {
+        ar.animationFrameTimer = (ar.animationFrameTimer - 1) & 0xFF;
+        if ((byte) ar.animationFrameTimer < 0) {
+            ar.animationFrameTimer = 3;
+            ar.mappingFrame = (ar.mappingFrame + 1) & 3;
         }
+    }
+
+    /**
+     * Runs one pass of {@code Animate_Sprite(Ani_RingSparkle)} for the attracted
+     * ring's in-place routine transition. The preceding attract routine owns the
+     * same SST bytes, so its custom {@code anim_frame_timer} value must carry into
+     * the sparkle instead of starting a fresh elapsed-time animation.
+     */
+    private boolean advanceAttractedRingSparkle(AttractedRing ar) {
         if (renderer == null || renderer.getSparkleFrameCount() <= 0) {
             return true;
         }
-        int elapsed = Math.max(0, frameCounter - ar.sparkleStartFrame);
-        return elapsed / renderer.getSparkleFrameDelay() >= renderer.getSparkleFrameCount();
+        if (ar.sparkleAnimationFrame > renderer.getSparkleFrameCount()) {
+            // loc_1A934 runs on the object slot pass after $FC increments routine.
+            return true;
+        }
+        int previousTimer = ar.animationFrameTimer & 0xFF;
+        ar.animationFrameTimer = (previousTimer - 1) & 0xFF;
+        if (previousTimer != 0) {
+            return false;
+        }
+
+        ar.animationFrameTimer = renderer.getSparkleFrameDelay();
+        if (ar.sparkleAnimationFrame >= renderer.getSparkleFrameCount()) {
+            ar.sparkleAnimationFrame++;
+            return false; // $FC advances routine; the next object pass deletes.
+        }
+        ar.mappingFrame = renderer.getSparkleStartIndex() + ar.sparkleAnimationFrame;
+        ar.sparkleAnimationFrame++;
+        return false;
     }
 
     private void releaseAttractedRingSlots() {
@@ -950,6 +976,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         ar.objectSlotIndex = -1;
         ar.collected = false;
         ar.sparkleStartFrame = -1;
+        ar.mappingFrame = 0;
+        ar.animationFrameTimer = 0;
+        ar.sparkleAnimationFrame = 0;
         ar.listedForTouchThisFrame = false;
     }
 
@@ -992,7 +1021,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             atEntries.add(new RingSnapshot.AttractedRingEntry(
                     true, ar.sourceIndex, ar.x, ar.y,
                     ar.xSub, ar.ySub, ar.xVel, ar.yVel, i,
-                    ar.objectSlotIndex, ar.collected, ar.sparkleStartFrame));
+                    ar.objectSlotIndex, ar.collected, ar.sparkleStartFrame,
+                    ar.mappingFrame, ar.animationFrameTimer, ar.sparkleAnimationFrame));
         }
 
         return new RingSnapshot(
@@ -1056,6 +1086,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             ar.objectSlotIndex = objectSlotIndex;
             ar.collected = ar.active && entry.collected();
             ar.sparkleStartFrame = entry.sparkleStartFrame();
+            ar.mappingFrame = entry.mappingFrame();
+            ar.animationFrameTimer = entry.animationFrameTimer();
+            ar.sparkleAnimationFrame = entry.sparkleAnimationFrame();
         }
     }
 
@@ -1078,6 +1111,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         int objectSlotIndex = -1;
         boolean collected;
         int sparkleStartFrame = -1;
+        int mappingFrame;
+        int animationFrameTimer;
+        int sparkleAnimationFrame;
         boolean listedForTouchThisFrame;
         boolean active;
     }

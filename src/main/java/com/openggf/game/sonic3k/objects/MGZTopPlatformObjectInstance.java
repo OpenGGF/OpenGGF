@@ -135,6 +135,9 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         boolean deferredWallStopReady;
         int deferredWallClampX;
         int deferredWallClampXSub;
+        int deferredWallSourceX;
+        boolean deferredWallPreserveSubpixel;
+        boolean deferredWallBoundaryRight;
         boolean projectedWallSubpixelValid;
         int projectedWallSubpixel;
 
@@ -143,6 +146,8 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             return new Snapshot(routine, entrySideBias, standingNow, jumpHeldAtGrab, grabbed, xSub, ySub,
                     deferredWallClampPending, deferredWallStopReady,
                     deferredWallClampX, deferredWallClampXSub,
+                    deferredWallSourceX,
+                    deferredWallPreserveSubpixel, deferredWallBoundaryRight,
                     projectedWallSubpixelValid, projectedWallSubpixel);
         }
 
@@ -159,6 +164,9 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             deferredWallStopReady = state.deferredWallStopReady();
             deferredWallClampX = state.deferredWallClampX();
             deferredWallClampXSub = state.deferredWallClampXSub();
+            deferredWallSourceX = state.deferredWallSourceX();
+            deferredWallPreserveSubpixel = state.deferredWallPreserveSubpixel();
+            deferredWallBoundaryRight = state.deferredWallBoundaryRight();
             projectedWallSubpixelValid = state.projectedWallSubpixelValid();
             projectedWallSubpixel = state.projectedWallSubpixel();
         }
@@ -175,6 +183,9 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
                 boolean deferredWallStopReady,
                 int deferredWallClampX,
                 int deferredWallClampXSub,
+                int deferredWallSourceX,
+                boolean deferredWallPreserveSubpixel,
+                boolean deferredWallBoundaryRight,
                 boolean projectedWallSubpixelValid,
                 int projectedWallSubpixel) {
         }
@@ -406,6 +417,36 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         }
         if (candidate instanceof BreakableWallObjectInstance wall
                 && contact.touchSide()
+                && !wall.isDestroyed()
+                && getExecutionSlotIndex() < wall.getExecutionSlotIndex()) {
+            PlayerGrabState state = playerStates.computeIfAbsent(player, key -> new PlayerGrabState());
+            // The later wall publishes status_tertiary after this carrier has
+            // finished. Retain that flag for the carrier's next SST turn and
+            // keep re-publishing it while SolidObjectFull reports contact.
+            if (state.deferredWallPreserveSubpixel
+                    && !state.deferredWallClampPending
+                    && !state.deferredWallStopReady
+                    && movingAwayFromDeferredWall(player, state)) {
+                return;
+            }
+            state.deferredWallBoundaryRight = wall.getX() >= player.getCentreX();
+            if (fractionalStepLeavesWall(player, state)) {
+                state.deferredWallClampPending = false;
+                state.deferredWallStopReady = false;
+                return;
+            }
+            state.deferredWallClampPending = true;
+            state.deferredWallStopReady = !player.isCpuControlled();
+            state.deferredWallClampX = player.getCentreX();
+            state.deferredWallClampXSub = player.getXSubpixelRaw();
+            state.deferredWallSourceX = wall.getX();
+            state.deferredWallPreserveSubpixel = true;
+            return;
+        }
+        if (candidate instanceof BreakableWallObjectInstance wall
+                && contact.touchSide()
+                && !wall.isDestroyed()
+                && getExecutionSlotIndex() > wall.getExecutionSlotIndex()
                 // A zero-distance boundary only needs deferred replay while
                 // the carrier's later word-only snap would put the player
                 // beyond that boundary. Once the platform itself has returned
@@ -423,6 +464,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             // visible to the controller on the following native tick.
             state.deferredWallClampPending = true;
             state.deferredWallClampX = player.getCentreX();
+            state.deferredWallSourceX = wall.getX();
             if (state.projectedWallSubpixelValid) {
                 state.deferredWallClampXSub = state.projectedWallSubpixel;
             } else if (!player.isCpuControlled()) {
@@ -450,6 +492,13 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             PlayableEntity player, ObjectInstance candidate) {
         if (player == null) {
             return null;
+        }
+        if (candidate instanceof BreakableWallObjectInstance wall
+                && getExecutionSlotIndex() < wall.getExecutionSlotIndex()) {
+            // This carrier slot has already completed its MoveSprite2 and
+            // post-sync before the later wall runs. There is no pending carrier
+            // displacement for SolidObjectFull to project into the wall check.
+            return 0;
         }
         if (candidate instanceof BreakableWallObjectInstance wall
                 && player instanceof AbstractPlayableSprite sprite
@@ -487,15 +536,18 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public void onObjectControlledSolidContactInvalidated(
             PlayableEntity player, ObjectInstance candidate) {
-        if (!(candidate instanceof BreakableWallObjectInstance)) {
+        if (!(candidate instanceof BreakableWallObjectInstance wall)) {
             return;
         }
         PlayerGrabState state = playerStates.get(player);
-        if (state != null) {
+        if (state != null && state.deferredWallSourceX == wall.getX()) {
             state.deferredWallClampPending = false;
             state.deferredWallStopReady = false;
             state.deferredWallClampX = 0;
             state.deferredWallClampXSub = 0;
+            state.deferredWallSourceX = 0;
+            state.deferredWallPreserveSubpixel = false;
+            state.deferredWallBoundaryRight = false;
             state.projectedWallSubpixelValid = false;
         }
     }
@@ -884,7 +936,10 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         // if the platform has x_vel, face per its sign (Facing bit reflects platform drift).
         // The player is object-controlled so the normal facing-from-gSpeed update doesn't
         // run — we set it explicitly here.
-        if (!player.isLeftPressed() && !player.isRightPressed() && xVel != 0) {
+        int logicalInput = player.getLogicalInputState();
+        boolean logicalLeft = (logicalInput & AbstractPlayableSprite.INPUT_LEFT) != 0;
+        boolean logicalRight = (logicalInput & AbstractPlayableSprite.INPUT_RIGHT) != 0;
+        if (!logicalLeft && !logicalRight && xVel != 0) {
             player.setDirection(xVel < 0 ? Direction.LEFT : Direction.RIGHT);
         }
 
@@ -970,10 +1025,19 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         if (state == null || !state.deferredWallClampPending) {
             return;
         }
-        NativePositionOps.writeXPosPreserveSubpixel(player, state.deferredWallClampX);
-        player.setSubpixelRaw(state.deferredWallClampXSub, player.getYSubpixelRaw());
+        boolean leavingWall = state.deferredWallPreserveSubpixel
+                && (integerPositionLeavesWall(player, state)
+                        || fractionalStepLeavesWall(player, state));
+        if (!leavingWall) {
+            NativePositionOps.writeXPosPreserveSubpixel(player, state.deferredWallClampX);
+        }
+        if (!state.deferredWallPreserveSubpixel) {
+            player.setSubpixelRaw(state.deferredWallClampXSub, player.getYSubpixelRaw());
+        }
         player.setXSpeed((short) 0);
-        player.setGSpeed((short) 0);
+        if (!state.deferredWallPreserveSubpixel || !leavingWall) {
+            player.setGSpeed((short) 0);
+        }
         // SolidObject's airborne side branch corrects position without setting
         // Status_Push. P2 remains airborne throughout this carry path.
         if (!player.getAir()) {
@@ -982,7 +1046,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         state.deferredWallClampPending = false;
         // loc_35048 returns immediately for Player_2; only P1 reaches the
         // carrier's status_tertiary consumption at loc_350A6.
-        state.deferredWallStopReady = !player.isCpuControlled();
+        state.deferredWallStopReady = !player.isCpuControlled() && !leavingWall;
     }
 
     private void shareDeferredWallClampWithGrabbedSidekick(
@@ -1006,6 +1070,9 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         sidekickState.deferredWallClampPending = true;
         sidekickState.deferredWallClampX = primaryState.deferredWallClampX;
         sidekickState.deferredWallClampXSub = sidekick.getXSubpixelRaw();
+        sidekickState.deferredWallSourceX = primaryState.deferredWallSourceX;
+        sidekickState.deferredWallPreserveSubpixel = primaryState.deferredWallPreserveSubpixel;
+        sidekickState.deferredWallBoundaryRight = primaryState.deferredWallBoundaryRight;
     }
 
     private void clearDepartedWallPush(AbstractPlayableSprite player) {
@@ -1026,12 +1093,42 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         }
         state.deferredWallClampX = 0;
         state.deferredWallClampXSub = 0;
+        state.deferredWallSourceX = 0;
+        state.deferredWallPreserveSubpixel = false;
+        state.deferredWallBoundaryRight = false;
+    }
+
+    private boolean fractionalStepLeavesWall(
+            AbstractPlayableSprite player, PlayerGrabState state) {
+        int speed = player.getGSpeed();
+        int subpixel = player.getXSubpixelRaw() & 0xFFFF;
+        if (state.deferredWallBoundaryRight && speed < 0) {
+            return subpixel <= ((-speed) << 8);
+        }
+        return !state.deferredWallBoundaryRight
+                && speed > 0
+                && subpixel >= 0x10000 - (speed << 8);
+    }
+
+    private boolean movingAwayFromDeferredWall(
+            AbstractPlayableSprite player, PlayerGrabState state) {
+        int speed = player.getGSpeed();
+        return state.deferredWallBoundaryRight ? speed < 0 : speed > 0;
+    }
+
+    private boolean integerPositionLeavesWall(
+            AbstractPlayableSprite player, PlayerGrabState state) {
+        int currentX = player.getCentreX();
+        return state.deferredWallBoundaryRight
+                ? currentX < state.deferredWallClampX
+                : currentX > state.deferredWallClampX;
     }
 
     private int previewPlayerGroundSpeed(AbstractPlayableSprite player) {
         int speed = player.getGSpeed();
-        boolean right = player.isRightPressed();
-        boolean left = player.isLeftPressed();
+        int logicalInput = player.getLogicalInputState();
+        boolean right = (logicalInput & AbstractPlayableSprite.INPUT_RIGHT) != 0;
+        boolean left = (logicalInput & AbstractPlayableSprite.INPUT_LEFT) != 0;
         if (left && !right) {
             if (speed > 0) {
                 return speed < PLAYER_SKID ? -PLAYER_SKID : speed - PLAYER_SKID;
@@ -1065,8 +1162,9 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     /** ROM sub_35504: accumulate player ground_vel from input (accel $C, skid $80, max $600). */
     private void runPlayerGroundMotion(AbstractPlayableSprite player) {
         int gSpeed = player.getGSpeed();
-        boolean right = player.isRightPressed();
-        boolean left = player.isLeftPressed();
+        int logicalInput = player.getLogicalInputState();
+        boolean right = (logicalInput & AbstractPlayableSprite.INPUT_RIGHT) != 0;
+        boolean left = (logicalInput & AbstractPlayableSprite.INPUT_LEFT) != 0;
 
         if (left && !right) {
             if (gSpeed > 0) {

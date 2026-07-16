@@ -2,6 +2,8 @@ package com.openggf.tests;
 
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.sprites.playable.Sonic;
@@ -96,12 +98,63 @@ class TestS3kCollapsingBridgeParity {
         CollapsingBridgeObjectInstance bridge = newMgzBridge(0x00);
         setIntField(bridge, "state", 3);
         setIntField(bridge, "y", 0x7000);
+        bridge.refreshPostCameraRenderState();
 
         bridge.update(0, rider);
 
         assertTrue(bridge.isDestroyed());
         assertTrue(bridge.isDestroyedRespawnable(),
                 "ObjPlatformCollapse_SmashObject clears the placement respawn latch");
+    }
+
+    @Test
+    void collapsedParent_consumesPriorRenderFlagBeforeMoveSprite() throws Exception {
+        CollapsingBridgeObjectInstance bridge = newMgzBridge(0x00);
+        setIntField(bridge, "state", 3);
+        setIntField(bridge, "y", 0x80);
+        setIntField(bridge, "velY", 0x100);
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        try {
+            bridge.refreshPostCameraRenderState();
+            bridge.update(0, rider);
+
+            assertFalse(bridge.isDestroyed());
+            assertEquals(0x81, bridge.getY(),
+                    "MoveSprite must add the old y_vel before applying gravity");
+            assertEquals(0x138, getIntField(bridge, "velY"));
+
+            AbstractObjectInstance.updateCameraBounds(0x1000, 0, 0x1140, 224, 0);
+            bridge.refreshPostCameraRenderState();
+            bridge.update(1, rider);
+            assertTrue(bridge.isDestroyed(),
+                    "Obj_PlatformCollapseFall deletes before another movement step");
+        } finally {
+            AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        }
+    }
+
+    @Test
+    void bridgeFragment_consumesPriorRenderFlagBeforeMoveSprite() {
+        CollapsingBridgeObjectInstance.BridgeFragment fragment =
+                new CollapsingBridgeObjectInstance.BridgeFragment(
+                        0x80, 0x80, 0, 0, 0,
+                        Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_MGZ,
+                        false, false);
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        try {
+            fragment.refreshPostCameraRenderState();
+            AbstractObjectInstance.updateCameraBounds(0x1000, 0, 0x1140, 224, 0);
+
+            fragment.update(0, null);
+            assertFalse(fragment.isDestroyed(),
+                    "fall dispatch must retain the preceding Render_Sprites result");
+
+            fragment.refreshPostCameraRenderState();
+            fragment.update(1, null);
+            assertTrue(fragment.isDestroyed());
+        } finally {
+            AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        }
     }
 
     @Test

@@ -11,6 +11,7 @@ import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -29,6 +31,29 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 class TestS3kBreakableWallPlayerParticipation {
+
+    @Test
+    void fragmentDeletionUsesPriorBuildSpritesRenderFlag() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        BreakableWallObjectInstance.BreakableWallFragment fragment =
+                new BreakableWallObjectInstance.BreakableWallFragment(
+                        100, 100, 0, 0, 0, 0, "test", 0x20, 0x28);
+        try {
+            fragment.refreshPostCameraRenderState();
+            AbstractObjectInstance.updateCameraBounds(1000, 1000, 1320, 1224, 0);
+
+            fragment.update(1, null);
+            assertFalse(fragment.isDestroyed(),
+                    "loc_21692 must consume the preceding BuildSprites on-screen bit");
+
+            fragment.refreshPostCameraRenderState();
+            fragment.update(2, null);
+            assertTrue(fragment.isDestroyed(),
+                    "The following tick must delete once BuildSprites clears render_flags bit 7");
+        } finally {
+            AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        }
+    }
 
     @Test
     void breakableWallKeepsRomInclusiveRightContactEdge() {
