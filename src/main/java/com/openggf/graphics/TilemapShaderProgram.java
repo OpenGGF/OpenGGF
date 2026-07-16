@@ -18,7 +18,8 @@ public class TilemapShaderProgram extends ShaderProgram {
     private int underwaterPaletteLocation = -1;
     private int tilemapWidthLocation = -1;
     private int tilemapHeightLocation = -1;
-    private int tilemapRingBaseLocation = -1;
+    private int tilemapRingBaseXLocation = -1;
+    private int tilemapRingBaseYLocation = -1;
     private int atlasWidthLocation = -1;
     private int atlasHeightLocation = -1;
     private int lookupSizeLocation = -1;
@@ -65,7 +66,8 @@ public class TilemapShaderProgram extends ShaderProgram {
         underwaterPaletteLocation = glGetUniformLocation(programId, "UnderwaterPalette");
         tilemapWidthLocation = glGetUniformLocation(programId, "TilemapWidth");
         tilemapHeightLocation = glGetUniformLocation(programId, "TilemapHeight");
-        tilemapRingBaseLocation = glGetUniformLocation(programId, "TilemapRingBase");
+        tilemapRingBaseXLocation = glGetUniformLocation(programId, "TilemapRingBaseX");
+        tilemapRingBaseYLocation = glGetUniformLocation(programId, "TilemapRingBaseY");
         atlasWidthLocation = glGetUniformLocation(programId, "AtlasWidth");
         atlasHeightLocation = glGetUniformLocation(programId, "AtlasHeight");
         lookupSizeLocation = glGetUniformLocation(programId, "LookupSize");
@@ -126,9 +128,12 @@ public class TilemapShaderProgram extends ShaderProgram {
         }
     }
 
-    public void setTilemapRingBase(float baseTiles) {
-        if (tilemapRingBaseLocation >= 0) {
-            glUniform1f(tilemapRingBaseLocation, baseTiles);
+    public void setTilemapRingBase(float baseXTiles, float baseYTiles) {
+        if (tilemapRingBaseXLocation >= 0) {
+            glUniform1f(tilemapRingBaseXLocation, baseXTiles);
+        }
+        if (tilemapRingBaseYLocation >= 0) {
+            glUniform1f(tilemapRingBaseYLocation, baseYTiles);
         }
     }
 

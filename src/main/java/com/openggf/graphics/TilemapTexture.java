@@ -65,8 +65,9 @@ public class TilemapTexture {
             int sourceColumn, int destinationColumn, int columnCount) {
         long requiredSourceBytes = (long) sourceWidthTiles * heightTiles * 4L;
         if (data == null || sourceWidthTiles <= 0 || heightTiles <= 0 || columnCount <= 0
-                || sourceColumn < 0 || sourceColumn + columnCount > sourceWidthTiles
-                || destinationColumn < 0 || destinationColumn + columnCount > sourceWidthTiles
+                || sourceColumn < 0 || columnCount > sourceWidthTiles
+                || sourceColumn > sourceWidthTiles - columnCount
+                || destinationColumn < 0 || destinationColumn > sourceWidthTiles - columnCount
                 || requiredSourceBytes > data.length || requiredSourceBytes > Integer.MAX_VALUE
                 || !hasStorage(sourceWidthTiles, heightTiles)) {
             return false;
@@ -90,6 +91,38 @@ public class TilemapTexture {
         glBindTexture(GL_TEXTURE_2D, textureId);
         glTexSubImage2D(GL_TEXTURE_2D, 0, destinationColumn, 0, columnCount, heightTiles,
                 GL_RGBA, GL_UNSIGNED_BYTE, packedRows);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    /** Uploads contiguous full-width logical rows into physical texture rows. */
+    public boolean uploadRows(byte[] data, int widthTiles, int sourceHeightTiles,
+            int sourceRow, int destinationRow, int rowCount) {
+        long requiredSourceBytes = (long) widthTiles * sourceHeightTiles * 4L;
+        long uploadBytes = (long) widthTiles * rowCount * 4L;
+        if (data == null || widthTiles <= 0 || sourceHeightTiles <= 0 || rowCount <= 0
+                || sourceRow < 0 || rowCount > sourceHeightTiles
+                || sourceRow > sourceHeightTiles - rowCount
+                || destinationRow < 0 || destinationRow > sourceHeightTiles - rowCount
+                || requiredSourceBytes > data.length || requiredSourceBytes > Integer.MAX_VALUE
+                || uploadBytes > Integer.MAX_VALUE
+                || !hasStorage(widthTiles, sourceHeightTiles)) {
+            return false;
+        }
+        int uploadLength = (int) uploadBytes;
+        int sourceOffset = sourceRow * widthTiles * 4;
+        ensureUploadCapacity(uploadLength);
+        uploadBuffer.clear();
+        uploadBuffer.put(data, sourceOffset, uploadLength);
+        uploadBuffer.flip();
+        uploadRowsSubImage(destinationRow, widthTiles, rowCount, uploadBuffer);
+        return true;
+    }
+
+    protected void uploadRowsSubImage(int destinationRow, int widthTiles,
+            int rowCount, ByteBuffer contiguousRows) {
+        glBindTexture(GL_TEXTURE_2D, textureId);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, destinationRow, widthTiles, rowCount,
+                GL_RGBA, GL_UNSIGNED_BYTE, contiguousRows);
         glBindTexture(GL_TEXTURE_2D, 0);
     }
 

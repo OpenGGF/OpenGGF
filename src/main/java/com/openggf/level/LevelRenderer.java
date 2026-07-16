@@ -150,7 +150,8 @@ public final class LevelRenderer {
     // Mutable state for the pre-allocated BG tile pass command.
     private int pendingBgTilePassRenderWidth;
     private int pendingBgTilePassRenderHeight;
-    private int pendingBgTilePassRingBaseTiles;
+    private int pendingBgTilePassRingBaseXTiles;
+    private int pendingBgTilePassRingBaseYTiles;
     private int pendingBgTilePassContentGeneration;
     private int completedBgTilePassFrame = Integer.MIN_VALUE;
     private int completedBgTilePassSourceGeneration = -1;
@@ -424,7 +425,9 @@ public final class LevelRenderer {
                             pendingBgTilePassUpperBandWrapHeightPx,
                             pendingBgTilePassUpperBandWrapWidthTiles);
                     tilemapRenderer.setBackgroundRenderRingBaseOverride(
-                            pendingBgTilePassRingBaseTiles, pendingBgTilePassContentGeneration);
+                            pendingBgTilePassRingBaseXTiles,
+                            pendingBgTilePassRingBaseYTiles,
+                            pendingBgTilePassContentGeneration);
                     tilemapRenderer.render(
                             TilemapGpuRenderer.Layer.BACKGROUND,
                             pendingBgTilePassRenderWidth,
@@ -525,7 +528,7 @@ public final class LevelRenderer {
 
         private final FrameCommandPool pool;
         private final int[] viewport = new int[4];
-        private final int[] ints = new int[21];
+        private final int[] ints = new int[22];
         private final float[] floats = new float[18];
         private final boolean[] bools = new boolean[8];
         private final Object[] refs = new Object[8];
@@ -583,8 +586,9 @@ public final class LevelRenderer {
             ints[16] = r.pendingBgTilePassRenderHeight;
             ints[17] = r.pendingBgTilePassAlignedBgY;
             ints[18] = r.currentShimmerStyle;
-            ints[19] = r.pendingBgTilePassRingBaseTiles;
-            ints[20] = r.pendingBgTilePassContentGeneration;
+            ints[19] = r.pendingBgTilePassRingBaseXTiles;
+            ints[20] = r.pendingBgTilePassRingBaseYTiles;
+            ints[21] = r.pendingBgTilePassContentGeneration;
             floats[0] = r.pendingWaterlineScreenY;
             floats[1] = r.pendingFgWorldOffsetX_low;
             floats[2] = r.pendingFgWorldOffsetY_low;
@@ -663,8 +667,9 @@ public final class LevelRenderer {
             r.pendingBgTilePassRenderHeight = ints[16];
             r.pendingBgTilePassAlignedBgY = ints[17];
             r.currentShimmerStyle = ints[18];
-            r.pendingBgTilePassRingBaseTiles = ints[19];
-            r.pendingBgTilePassContentGeneration = ints[20];
+            r.pendingBgTilePassRingBaseXTiles = ints[19];
+            r.pendingBgTilePassRingBaseYTiles = ints[20];
+            r.pendingBgTilePassContentGeneration = ints[21];
             r.pendingWaterlineScreenY = floats[0];
             r.pendingFgWorldOffsetX_low = floats[1];
             r.pendingFgWorldOffsetY_low = floats[2];
@@ -1293,10 +1298,12 @@ public final class LevelRenderer {
         pendingBgTilePassUpperBandWrapHeightPx = upperBandWrapHeightPx;
         pendingBgTilePassUpperBandWrapWidthTiles = upperBandWrapWidthTiles;
         TilemapGpuRenderer tilemapRenderer = lm.graphicsManager.getTilemapGpuRenderer();
-        pendingBgTilePassRingBaseTiles = tilemapRenderer != null
-                ? tilemapRenderer.getBackgroundRingBaseTiles() : 0;
-        pendingBgTilePassContentGeneration = tilemapRenderer != null
-                ? tilemapRenderer.getBackgroundContentGeneration() : 0;
+        TilemapGpuRenderer.BackgroundRenderState bgRenderState = tilemapRenderer != null
+                ? tilemapRenderer.captureBackgroundRenderState()
+                : new TilemapGpuRenderer.BackgroundRenderState(0, 0, 0);
+        pendingBgTilePassRingBaseXTiles = bgRenderState.ringBaseXTiles();
+        pendingBgTilePassRingBaseYTiles = bgRenderState.ringBaseYTiles();
+        pendingBgTilePassContentGeneration = bgRenderState.contentGeneration();
         lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.BG_TILE));
 
         // 5. Set shimmer state on BG renderer for parallax compositing pass

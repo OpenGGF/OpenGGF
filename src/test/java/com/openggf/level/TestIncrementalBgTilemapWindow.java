@@ -435,6 +435,51 @@ public class TestIncrementalBgTilemapWindow {
     }
 
     @Test
+    public void twoAxisShiftPublishesIndependentRingOriginsAndUploadSpans() {
+        RecordingTilemapGpuRenderer renderer = new RecordingTilemapGpuRenderer();
+        byte[] initial = syntheticRows(64, 32, 0);
+        renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, initial, 64, 32);
+        renderer.applyPendingBackgroundUploadForTest(new byte[initial.length]);
+
+        byte[] shifted = syntheticRows(64, 32, 50);
+        renderer.setBackgroundTilemapDataIncremental(shifted, 64, 32, 2, -2);
+
+        assertEquals(2, renderer.getBackgroundRingBaseXTiles());
+        assertEquals(30, renderer.getBackgroundRingBaseYTiles());
+        assertEquals(2, renderer.getPendingBackgroundColumnCount());
+        assertEquals(2, renderer.getPendingBackgroundRowCount());
+    }
+
+    @Test
+    public void retainedDrawResolvesBothRingOriginsWithOneContentGeneration() {
+        RecordingTilemapGpuRenderer renderer = new RecordingTilemapGpuRenderer();
+        byte[] initial = syntheticRows(8, 4, 0);
+        renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, initial, 8, 4);
+        renderer.applyPendingBackgroundUploadForTest(new byte[initial.length]);
+        renderer.setBackgroundTilemapDataIncremental(syntheticRows(8, 4, 30), 8, 4, 2, -1);
+
+        TilemapGpuRenderer.BackgroundRenderState captured =
+                renderer.captureBackgroundRenderState();
+        assertEquals(2, captured.ringBaseXTiles());
+        assertEquals(3, captured.ringBaseYTiles());
+
+        byte[] newest = syntheticRows(8, 4, 60);
+        renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, newest, 8, 4);
+        renderer.setBackgroundRenderRingBaseOverride(
+                captured.ringBaseXTiles(), captured.ringBaseYTiles(), captured.contentGeneration());
+        renderer.render(
+                TilemapGpuRenderer.Layer.BACKGROUND,
+                8, 8, 0, 0, 8, 8,
+                0, 0, 1, 1, 0, 0, 0,
+                -1, false, false, false, 0);
+
+        assertEquals(newest.length, renderer.getPendingBackgroundUploadBytes(),
+                "a stale retained draw must not consume the newer texture generation");
+        assertTrue(!renderer.hasPendingOneShotRenderState(),
+                "the X/Y/generation override must be consumed as one draw token");
+    }
+
+    @Test
     public void retainedFrameCommandCannotPairOldRingBaseWithNewTextureGeneration() {
         RecordingTilemapGpuRenderer renderer = new RecordingTilemapGpuRenderer();
         byte[] first = syntheticRow(8, 0);
@@ -571,6 +616,23 @@ public class TestIncrementalBgTilemapWindow {
             int calls = texture.calls;
             assertTrue(!texture.uploadColumns(new byte[4], 4, 2, 0, 0, 1));
             assertEquals(calls, texture.calls, "short source must not issue a subrect upload");
+        } finally {
+            texture.cleanup();
+        }
+    }
+
+    @Test
+    public void tilemapTextureUploadsContiguousLogicalRowsAtRequestedPhysicalRow() {
+        RecordingTilemapTexture texture = new RecordingTilemapTexture(4, 4);
+        byte[] source = syntheticRows(4, 4, 0);
+        try {
+            assertTrue(texture.uploadRows(source, 4, 4, 1, 2, 2));
+            assertEquals(2, texture.lastRowDestination);
+            assertEquals(4, texture.lastRowWidth);
+            assertEquals(2, texture.lastRowCount);
+            byte[] expected = new byte[4 * 2 * 4];
+            System.arraycopy(source, 4 * 4, expected, 0, expected.length);
+            assertArrayEquals(expected, texture.lastRowPayload);
         } finally {
             texture.cleanup();
         }
@@ -756,6 +818,12 @@ public class TestIncrementalBgTilemapWindow {
         @Override public boolean hasPendingOneShotRenderState() {
             return super.hasPendingOneShotRenderState();
         }
+        @Override protected int getPendingBackgroundColumnCount() {
+            return super.getPendingBackgroundColumnCount();
+        }
+        @Override protected int getPendingBackgroundRowCount() {
+            return super.getPendingBackgroundRowCount();
+        }
     }
 
     private static final class RecordingTilemapTexture extends TilemapTexture {
@@ -767,6 +835,10 @@ public class TestIncrementalBgTilemapWindow {
         private int lastHeight;
         private byte[] lastPayload;
         private ByteBuffer lastBuffer;
+        private int lastRowDestination;
+        private int lastRowWidth;
+        private int lastRowCount;
+        private byte[] lastRowPayload;
 
         private RecordingTilemapTexture(int width, int height) {
             this.width = width;
@@ -787,6 +859,16 @@ public class TestIncrementalBgTilemapWindow {
             lastPayload = new byte[packedRows.remaining()];
             packedRows.get(lastPayload);
             packedRows.rewind();
+        }
+
+        @Override protected void uploadRowsSubImage(int destinationRow, int widthTiles,
+                int rowCount, ByteBuffer contiguousRows) {
+            lastRowDestination = destinationRow;
+            lastRowWidth = widthTiles;
+            lastRowCount = rowCount;
+            lastRowPayload = new byte[contiguousRows.remaining()];
+            contiguousRows.get(lastRowPayload);
+            contiguousRows.rewind();
         }
     }
 
