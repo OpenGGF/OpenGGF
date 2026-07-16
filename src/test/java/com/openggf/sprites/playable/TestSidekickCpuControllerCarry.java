@@ -516,6 +516,9 @@ class TestSidekickCpuControllerCarry {
                 "Tails_Carry_Sonic jump release clears Status_RollJump");
         assertEquals(0x12, controller.getReleaseCooldownForTest(),
                 "Jump release cooldown is 0x12 (~18 frames)");
+        controller.finishCarryAfterCarrierMovement();
+        assertEquals(0x11, controller.getReleaseCooldownForTest(),
+                "the later Tails_FlyingSwimming carry probe consumes the first cooldown tick");
     }
 
     @Test

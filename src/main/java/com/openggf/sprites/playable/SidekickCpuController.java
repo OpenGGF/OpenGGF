@@ -4100,6 +4100,13 @@ public class SidekickCpuController {
     private void releaseCarry(int cooldownFrames) {
         boolean mgzBossTransitionCarry = carryTrigger != null && carryTrigger.usesMgzBossTransitionControl();
         carryController().releaseWithCooldown(cooldownFrames);
+        if (cooldownFrames > 0) {
+            // A release from the CPU-side Tails_Carry_Sonic call does not skip
+            // Tails_FlyingSwimming's later call. With the carry flag now clear,
+            // that post-movement pass immediately consumes the first cooldown
+            // tick and may move the eventual proximity regrab to the CPU pass.
+            carryController().setParentagePending(true);
+        }
         sidekick.setControlLocked(false);
         sidekick.setForcedAnimationId(mgzBossTransitionCarry ? flyAnimId : -1);
         mgzCarryIntroAscend = false;

@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ complete-run animation reaches green
+
+Branch `feature/ai-trace-animation-verification`, after the two-pass carry
+ownership milestone. When the CPU-side `Tails_Carry_Sonic` call releases
+Sonic, native `Tails_FlyingSwimming` still reaches the routine a second time
+after movement; with the carry flag clear, that call immediately decrements
+the cooldown. The engine suppressed the post-flight hook on the release frame,
+leaving the cooldown one tick late and moving a later proximity pickup from
+the CPU pass to the post-movement pass. Retaining that pending call restores
+the native pre-movement regrab, Tails flight mapping, and same-frame raw Sonic
+mapping. No trace hydration, route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:27186-27376,27553-27587`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics and animation are fully green across all recorded
+  frames.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused carry and MGZ handoff suites pass.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  fleet verification retains 44/58 green physics routes and advances
+  animation from 42/58 to 43/58 green routes.
+
 ### 2026-07-16 -- CPU carry owns both native raw-animation passes
 
 Branch `feature/ai-trace-animation-verification`, after the carry-rearm reset
