@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- Tunnelbot touch uses its live post-movement SST position
+
+Branch `feature/ai-trace-animation-verification`, after the slow trigger-
+platform milestone. `Obj_Tunnelbot` runs its movement routine and then calls
+`Sprite_CheckDeleteTouch`, which adds its SST address—not a coordinate copy—to
+`Collision_response_list`. The following player pass therefore reads the last
+post-movement `x_pos/y_pos`. The engine instead used its generic pre-update
+snapshot, leaving the rising body one pixel lower. That created an inclusive-
+edge attack overlap absent in the ROM and `Touch_Enemy_Part2` falsely negated
+both Sonic velocities. Tunnelbot now opts into the shared live touch-state
+contract already used by moving S3K collision-list objects. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:184710-184723,20656-20708,
+21200-21210`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ standalone physics advances from frame 2475 to frame 5548 (`rings`,
+  expected 87 / actual 88).
+- MGZ standalone animation advances from frame 2496 to frame 6465
+  (`player_mapping_frame`, expected `$08` / actual `$01`).
+- The focused Tunnelbot touch-state regression passes.
+- MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ slow trigger platform consumes prior-pass dash writes
 
 Branch `feature/ai-trace-animation-verification`, after complete-run animation
