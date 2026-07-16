@@ -806,6 +806,34 @@ class TestSonic3kMgz2EndBossEvents {
     }
 
     @Test
+    void mgz2BossTransition_entersRescueWaitBeforeRomDelayExpires() {
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x3C80);
+        camera.setY((short) 0x0600);
+        AbstractPlayableSprite sonic = camera.getFocusedSprite();
+        sonic.setRenderFlagOnScreen(false);
+
+        Tails tails = new Tails("tails", (short) 0x3C90, (short) 0x0710);
+        tails.setCpuControlled(true);
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+        tails.setCpuController(controller);
+        tails.setRenderFlagOnScreen(true);
+        GameServices.sprites().addSprite(tails, "tails");
+
+        events.triggerBossCollapseHandoff();
+        tails.setCentreY((short) 0x0701);
+        events.update(1, 0);
+
+        assertEquals(SidekickCpuController.State.MGZ_RESCUE_WAIT, controller.getState(),
+                "loc_16384 writes Tails_CPU_routine=$12 before testing the $168-frame timer");
+        assertEquals((short) 0x0701, tails.getCentreY(),
+                "the live Tails slot is not repositioned until the timer reaches zero");
+    }
+
+    @Test
     void mgz2BossTransition_waitsForSonicToLeaveScreenBeforeStartingTailsCarry() {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);

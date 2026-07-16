@@ -1461,13 +1461,25 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             }
         }
 
-        if (tails == null || bossTransitionTimer > 0) {
+        if (tails == null) {
             return;
         }
 
         boolean tailsBelowTransition = bossTransitionY < (tails.getCentreY() & 0xFFFF);
         if (tailsBelowTransition && !carrying) {
             if (!isBossTransitionPlayerReadyForCarry(player)) {
+                return;
+            }
+            // loc_16384 publishes Tails_CPU_routine=$12 before testing the
+            // transition object's $30 wait timer (sonic3k.asm:30247-30259).
+            if (controller == null) {
+                controller = new SidekickCpuController(tails, player);
+                tails.setCpuController(controller);
+            }
+            if (controller.getState() != SidekickCpuController.State.MGZ_RESCUE_WAIT) {
+                controller.setInitialState(SidekickCpuController.State.MGZ_RESCUE_WAIT);
+            }
+            if (bossTransitionTimer > 0) {
                 return;
             }
             startBossTransitionCarry(player, tails);

@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ rescue wait publishes before the transition timer gate
+
+Branch `feature/ai-trace-animation-verification`, after the rescue-clamp
+subpixel milestone and the requested remote-develop check (`develop` and
+`origin/develop` both at `7ed40f0cdcde`, already merged). Once Sonic is
+off-screen and Tails has fallen below the transition object's `y_pos`, native
+`loc_16384` writes `Tails_CPU_routine=$12` before it tests the object's still-
+running `$168` timer. The engine tested the timer first, leaving Tails in
+normal follow routine `$06` with stale logical input. The event now publishes
+the rescue-wait routine at that native phase without repositioning Tails until
+the timer expires. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:30247-30264`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35610 to frame 35611
+  (`tails_cpu_ctrl2_held`, expected `$00` / actual `$08`; 1,527 errors).
+- MGZ complete-run animation advances from frame 35635 to frame 35741
+  (`tails_animation_id`, expected `Duck` / actual `Skid`; 315 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The MGZ end-boss event suite plus rewind coverage, static-state rewind
+  coverage, and trace-invariant guards pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ boss-transition clamp preserves player subpixel Y
 
 Branch `feature/ai-trace-animation-verification`, after the collapse-standing
