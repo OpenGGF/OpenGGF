@@ -3345,7 +3345,6 @@ public class SidekickCpuController {
 
         // Initialize the latch
         mgzCarryIntroAscend = mgzBossTransitionCarry;
-        mgzCarryFlapTimer = 0;
         carryController().setCooldown(0);
 
         state = State.CARRYING;
@@ -3483,7 +3482,6 @@ public class SidekickCpuController {
             if (camera != null
                     && ((camera.getY() & 0xFFFF) + 0x90) >= (sidekick.getCentreY() & 0xFFFF)) {
                 mgzCarryIntroAscend = false;
-                mgzCarryFlapTimer = 0;
             }
             return;
         }
@@ -3612,7 +3610,6 @@ public class SidekickCpuController {
         boolean mgzBossTransitionCarry = carryTrigger != null && carryTrigger.usesMgzBossTransitionControl();
         carryController().releaseWithCooldown(0);
         mgzCarryIntroAscend = false;
-        mgzCarryFlapTimer = 0;
         mgzReleasedChaseLatched = false;
         if (!mgzBossTransitionCarry) {
             state = State.NORMAL;
@@ -4060,7 +4057,6 @@ public class SidekickCpuController {
         sidekick.setControlLocked(false);
         sidekick.setForcedAnimationId(mgzBossTransitionCarry ? flyAnimId : -1);
         mgzCarryIntroAscend = false;
-        mgzCarryFlapTimer = 0;
         mgzReleasedChaseLatched = false;
         if (mgzBossTransitionCarry) {
             state = State.CARRYING;
@@ -5184,7 +5180,6 @@ public class SidekickCpuController {
         objectOrderGracePushBypassThisFrame = false;
         if (state != State.CARRYING && state != State.CARRY_INIT) {
             mgzCarryIntroAscend = false;
-            mgzCarryFlapTimer = 0;
             mgzReleasedChaseLatched = false;
         }
     }

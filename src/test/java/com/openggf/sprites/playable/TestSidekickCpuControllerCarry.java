@@ -967,6 +967,39 @@ class TestSidekickCpuControllerCarry {
     }
 
     @Test
+    void mgzCpuRoutineTransitionsPreserveInheritedAutoFlyTimerForPlayerSteeredFlight() {
+        AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
+        AbstractPlayableSprite tails = pair[1];
+        fixture.camera().setY((short) 0x0600);
+        tails.setCentreY((short) 0x0690);
+        controller.update(1);  // INIT -> CARRY_INIT
+
+        SidekickCpuRewindExtra beforeCarryInit = controller.captureRewindState();
+        controller.restoreRewindState(withMgzControlScalars(
+                beforeCarryInit,
+                false, 0x3C,
+                beforeCarryInit.mgzReleasedChaseLatched(),
+                beforeCarryInit.mgzReleasedChaseXAccel(),
+                beforeCarryInit.mgzReleasedChaseYAccel()));
+
+        controller.setInitialState(SidekickCpuController.State.MGZ_RESCUE_WAIT);
+        assertEquals(0x3C, controller.captureRewindState().mgzCarryFlapTimer(),
+                "ROM routine $12 does not clear the shared Tails_CPU_auto_fly_timer global");
+        controller.setInitialState(SidekickCpuController.State.CARRY_INIT);
+        controller.update(2);  // CARRY_INIT -> CARRYING; routine $16 reaches Camera_Y+$90
+
+        assertEquals(0x3C, controller.captureRewindState().mgzCarryFlapTimer(),
+                "ROM routines $14/$16 leave Tails_CPU_auto_fly_timer untouched");
+
+        fixture.sprite().setDirectionalInputPressed(true, false, false, false);
+        controller.update(3);
+
+        assertTrue(controller.getInputJumpPress(),
+                "The inherited timer must trigger the first routine $18 Up flap immediately");
+        assertEquals(0, controller.captureRewindState().mgzCarryFlapTimer());
+    }
+
+    @Test
     void mgzCarryUpInputUsesRomTwentyFrameFlightPulseThreshold() {
         AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
         AbstractPlayableSprite tails = pair[1];

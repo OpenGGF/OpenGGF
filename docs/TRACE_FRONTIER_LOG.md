@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ carry preserves the shared auto-fly timer across CPU routines
+
+Branch `feature/ai-trace-animation-verification`, after the transition-rearm
+milestone. `Tails_CPU_auto_fly_timer` is a shared ROM global: the released
+rescue chase can leave it nonzero, and the transition object's intervening CPU
+routine `$12` plus carry routines `$14/$16` do not clear it. The engine treated
+the value as carry-local state and reset it on release, rescue wait, carry init,
+and the `$16->$18` handoff. Those transitions now preserve the counter, so the
+inherited `$3C` value reaches routine `$18` and immediately satisfies P1 Up's
+native `$20` flap threshold. No trace hydration, route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:26976-27070,27142-27268`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 36786 to frame 36923
+  (`x_speed`, expected `-$13C` / actual `$13C`; 844 errors, with a new
+  downstream carry-direction tail exposed).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`) while its reported
+  tail falls from 128 to 122 errors.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused sidekick-carry suite passes with explicit
+  `$12->$14->$16->$18` inherited-timer coverage.
+- AIZ and HCZ complete-run physics and animation remain fully green; the full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
 ### 2026-07-16 -- MGZ transition rearms an active carrier below its SST
 
 Branch `feature/ai-trace-animation-verification`, after the late carry-animation
