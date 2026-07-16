@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.scroll;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.runtime.WfzRuntimeState;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.BgTilemapUpdateMode;
 import com.openggf.level.scroll.FrameScrollAccumulator;
 import com.openggf.level.scroll.M68KMath;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
@@ -240,24 +241,8 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
     }
 
     @Override
-    public int getBgPeriodWidth() {
-        int minScroll = Short.MAX_VALUE;
-        int maxScroll = Short.MIN_VALUE;
-        for (int scrollWord : layerScrollWord) {
-            int signedScroll = (short) scrollWord;
-            minScroll = Math.min(minScroll, signedScroll);
-            maxScroll = Math.max(maxScroll, signedScroll);
-        }
-
-        // The ROM's persistent nametable receives live column updates for each
-        // scroll block. The engine rebuilds one static snapshot, so its period
-        // must cover the current layer spread plus one visible 320px screen.
-        int requiredWidth = maxScroll - minScroll + 320;
-        int periodWidth = 512;
-        while (periodWidth < requiredWidth && periodWidth < 8192) {
-            periodWidth <<= 1;
-        }
-        return Math.min(periodWidth, 8192);
+    public BgTilemapUpdateMode getBgTilemapUpdateMode() {
+        return BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32;
     }
 
     private void fillFallback(int[] horizScrollBuf, int cameraX) {

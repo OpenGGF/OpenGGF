@@ -4,6 +4,7 @@ import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.runtime.WfzRuntimeState;
+import com.openggf.level.scroll.BgTilemapUpdateMode;
 import com.openggf.level.scroll.M68KMath;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
@@ -49,14 +50,16 @@ class TestSwScrlWfz {
     }
 
     @Test
-    void endingLayerSpreadUsesFullWfzBackgroundPeriod() throws IOException {
+    void wfzUsesPersistentHardwareSizedPlaneBResidency() throws IOException {
         SwScrlWfz handler = new SwScrlWfz(
                 new ParallaxTables(TestEnvironment.currentRom()), new BackgroundCamera());
         GameServices.zoneRuntimeRegistry().install(new TestWfzState(0x58C, 0x2AE3));
 
         handler.update(new int[M68KMath.VISIBLE_LINES], 0x2C00, 0, 0x35FF, 0);
 
-        assertEquals(8192, handler.getBgPeriodWidth());
+        assertEquals(BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32,
+                handler.getBgTilemapUpdateMode());
+        assertEquals(512, handler.getBgPeriodWidth());
     }
 
     @Test
