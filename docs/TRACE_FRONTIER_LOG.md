@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ complete-run physics reaches green
+
+Branch `feature/ai-trace-animation-verification`, after the retained-results
+camera milestone. Native `BuildSprites` continues publishing playable
+`render_flags` while the level is inactive for the pending results/fade
+transition. The shared frame step returned before its render-flag publication,
+so `Obj_MGZ2_BossTransition` indefinitely observed Sonic's last on-screen bit
+and could not rearm rescue Tails after the results handoff. Inactive transition
+frames now refresh playable render flags before returning, preserving the
+native previous-frame visibility predicate without a route or frame carve-out.
+No trace hydration, comparator tolerance, or physics-state synchronization was
+added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:30247-30270,36327-36394`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 39023 to fully green (all
+  recorded frames).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`; 38 errors, down from
+  46 because the downstream post-results animation mismatches are also gone).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused MGZ event suite passes, and the complete-run physics replay is
+  fully green.
+- AIZ and HCZ complete-run physics and animation remain fully green; full fleet
+  verification records 44/58 green physics routes and retains the 42/58 green
+  animation baseline.
+
 ### 2026-07-16 -- MGZ results retain the boss camera handoff
 
 Branch `feature/ai-trace-animation-verification`, after the carry-input

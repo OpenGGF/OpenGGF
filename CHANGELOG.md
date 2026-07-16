@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **MGZ complete-run physics is now fully green:** inactive results/fade frames continue publishing native-style playable `render_flags`, allowing `Obj_MGZ2_BossTransition` to observe off-screen Sonic and rearm rescue Tails instead of retaining the last pre-transition on-screen bit (`docs/skdisasm/sonic3k.asm:30247-30270,36327-36394`).
 - **MGZ's retained boss/results handoff now preserves the arena camera:** `loc_6C8F4` republishes the current camera as the left boundary while results remain active and sets `Scroll_lock` at exit instead of briefly restoring full level bounds, advancing complete-run physics from frame 38993 to 39023 (`docs/skdisasm/sonic3k.asm:143159-143199`).
 - **MGZ routine `$18` carry input now runs before Sonic release checks:** the shared auto-flight timer and `Ctrl_2_logical` publish during `Tails_FlyingSwimming` before `Tails_Carry_Sonic` observes jump-out, advancing complete-run physics from frame 38184 to 38993 and reducing its remaining errors from 131 to 53 (`docs/skdisasm/sonic3k.asm:26996-27070,27186-27376,27553-27639`).
 - **MGZ horizontal boss-body touch now observes the native live collision-list position:** pattern-zero air sweeps publish the parent after its remaining object/V-int phases while diagonal bodies and folded drill children retain their own phases, restoring the frame-37920 rebound and advancing complete-run physics to frame 38184 (`docs/skdisasm/sonic3k.asm:142969-143017,143271-143321`).

@@ -1620,7 +1620,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     private void startBossTransitionCarry(AbstractPlayableSprite player, AbstractPlayableSprite tails) {
-        restoreBossTransitionPlayerRoutine(player);
         NativePositionOps.writeXPosPreserveSubpixel(tails, bossTransitionX);
         NativePositionOps.writeYPosPreserveSubpixel(tails, bossTransitionY);
         ObjectControlState.none().applyTo(tails);
