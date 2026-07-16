@@ -135,6 +135,14 @@ public class MGZMovingSpikePlatformObjectInstance extends AbstractObjectInstance
         return HALF_WIDTH;
     }
 
+    @Override
+    public int getBalanceWidthPixels() {
+        // Sonic_Move/Tails_Move read width_pixels(a1) directly. The platform's
+        // full-solid pass uses width+$B, while the shared fallback is only $10;
+        // neither represents the native $18 edge-balance surface.
+        return HALF_WIDTH;
+    }
+
     // ===== SolidObjectListener =====
 
     @Override

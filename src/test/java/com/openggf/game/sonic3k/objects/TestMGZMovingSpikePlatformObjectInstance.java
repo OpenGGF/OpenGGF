@@ -36,6 +36,18 @@ class TestMGZMovingSpikePlatformObjectInstance {
     }
 
     @Test
+    void balanceUsesNativeWidthPixelsRatherThanFullSolidPadding() {
+        MGZMovingSpikePlatformObjectInstance platform =
+                new MGZMovingSpikePlatformObjectInstance(
+                        new ObjectSpawn(0x2000, 0x0600, 0x56, 0, 0, false, 0));
+
+        assertEquals(0x18, platform.getBalanceWidthPixels(),
+                "player balance reads the object's $18 width_pixels byte");
+        assertEquals(0x23, platform.getSolidParams().halfWidth(),
+                "SolidObjectFull independently adds the native $B side padding");
+    }
+
+    @Test
     void spikeHurtRewindsFullFixedPointYBeforeHurtCharacter() {
         MGZMovingSpikePlatformObjectInstance platform =
                 new MGZMovingSpikePlatformObjectInstance(

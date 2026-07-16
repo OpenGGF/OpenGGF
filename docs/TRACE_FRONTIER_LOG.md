@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+### 2026-07-16 -- MGZ moving spike exposes its native balance width
+
+Branch `feature/ai-trace-animation-verification`, after the standalone Obj37
+clock-phase milestone. `Obj_MGZMovingSpikePlatform` stores `$18` in its SST
+`width_pixels` byte. Sonic's on-object balance path reads that byte directly,
+not the `$23` width passed to `SolidObjectFull` after its `$B` side padding and
+not the engine's generic `$10` fallback. Exposing the native width prevents a
+false left-edge Balance2 selection immediately after Sonic recovers from the
+platform's spike hurt. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:22440-22487,71029-71114`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone animation advances from frame 9880 to frame 10590
+  (`player_mapping_frame`, expected `$21` / actual `$06`).
+- MGZ standalone physics holds at frame 10589 (`x`, expected `$266D` / actual
+  `$267E`).
+- The focused MGZ moving-spike suite passes with an explicit balance-width
+  assertion.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
 ### 2026-07-16 -- MGZ standalone restores its captured Obj37 V-int phase
 
 Branch `feature/ai-trace-animation-verification`, after the moving-spike hurt
