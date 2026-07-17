@@ -357,11 +357,17 @@ class TestAiz2BossEndSequenceObjects {
                 "ROM loc_8662A compares against Camera_X_pos+$110 before adding $3A; equality "
                         + "does not reverse or clamp the capsule this frame (sonic3k.asm:181604-181625)");
         assertEquals(1, getIntField(capsule, "xDirection"));
+        assertEquals(0x4910, capsule.getPieceX(0),
+                "The parent SolidObjectFull call uses the x_pos saved before routine movement");
+        assertEquals(0x4911, capsule.getPieceX(1),
+                "The separate button child refreshes from the moved parent x_pos");
 
         capsule.update(1, null);
 
         assertEquals(0x4910, capsule.getX());
         assertEquals(-1, getIntField(capsule, "xDirection"));
+        assertEquals(0x4911, capsule.getPieceX(0));
+        assertEquals(0x4910, capsule.getPieceX(1));
 
         setField(capsule, "currentX", 0x4830);
         setField(capsule, "xDirection", -1);
@@ -371,6 +377,25 @@ class TestAiz2BossEndSequenceObjects {
         assertEquals(0x4831, capsule.getX(),
                 "The negative-$3A branch reverses only once x_pos reaches Camera_X_pos+$30");
         assertEquals(1, getIntField(capsule, "xDirection"));
+    }
+
+    @Test
+    void mgzFloatingCapsuleUsesRaisedRoute8HoverTarget() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setX((short) 0x3C80);
+        camera.setY((short) 0x0100);
+
+        Mgz2EndEggCapsuleInstance capsule = new Mgz2EndEggCapsuleInstance(0x3D20, 0x0130);
+        capsule.setServices(new TestObjectServices()
+                .withCamera(camera)
+                .withGameState(new GameStateManager()));
+        setField(capsule, "xDirection", 0);
+
+        capsule.update(0, null);
+
+        assertEquals(0x7000, getIntField(capsule, "ySubpixel"),
+                "MGZ loc_8664E subtracts $20 from the shared camera+$40 target before its $4000 Y step");
     }
 
     @Test

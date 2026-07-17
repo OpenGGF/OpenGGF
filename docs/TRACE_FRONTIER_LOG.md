@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- MGZ floating capsule reaches full physics and animation parity
+
+Branch `feature/ai-trace-animation-verification`, on top of `bf3704da2`.
+At standalone MGZ frame 35200, the engine's route-8 egg capsule hovered about
+`$20` pixels below its native parent SST and falsely side-collided with flying
+CPU Tails, clearing Tails' X velocity. `loc_8664E` derives the ordinary hover
+target from `Camera_Y_pos+$40`, then raises it by `$20` while
+`Current_zone=MGZ`. The MGZ capsule profile now supplies that target offset.
+The collapsed parent/button object also preserves the parent X saved before
+routine movement for `SolidObjectFull`, while its separately refreshed button
+child uses the moved X. No trace state, route/frame predicate, comparator
+tolerance, or physics synchronization was added.
+
+ROM references:
+
+- `docs/skdisasm/sonic3k.asm:181501-181545` (saved parent X and solid call)
+- `docs/skdisasm/sonic3k.asm:181626-181637` (MGZ hover-target adjustment)
+- `docs/skdisasm/sonic3k.asm:181739-181767` (button child refresh)
+
+Verification with the root-level locked-on S3K ROM:
+
+- The focused floating-capsule object suite passes, including saved parent-X,
+  refreshed button-X, and MGZ raised-target contracts.
+- Standalone MGZ physics advances from frame 35200 / 43 errors to fully green.
+- Standalone MGZ animation advances from frame 35279 / 29 errors to fully green.
+- MGZ complete-run physics and animation remain fully green.
+- Full trace fleets advance from 44/58 to 45/58 green physics routes and from
+  43/58 to 44/58 green animation routes. The remaining failure sets contain no
+  newly regressed routes; AIZ/HCZ/MGZ complete-run physics and animation remain
+  green.
+
 ### 2026-07-17 -- Released MGZ carry publishes its generated flap input
 
 Branch `feature/ai-trace-animation-verification`, on top of `7b2faf957`.
