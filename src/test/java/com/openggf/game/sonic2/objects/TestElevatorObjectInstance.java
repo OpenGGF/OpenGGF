@@ -50,14 +50,4 @@ class TestElevatorObjectInstance {
         assertTrue(elevator.skipsNewContactWhilePlayerAlreadyOnObject(null));
     }
 
-    @Test
-    void cnzElevatorLeavesDeepWaitInterruptOwnedByPlayerRoutine() {
-        ElevatorObjectInstance elevator = new ElevatorObjectInstance(
-                new ObjectSpawn(0x20B0, 0x0398, Sonic2ObjectIds.CNZ_ELEVATOR, 0, 0, false, 0),
-                "Elevator");
-
-        assertTrue(elevator.allowsDeepWaitPlayerRoutineWhileRidden(null),
-                "ObjD5 never writes player anim/object_control, so grounded Sonic still runs "
-                        + "Obj01_MdNormal_Checks while riding");
-    }
 }

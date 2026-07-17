@@ -1,5 +1,19 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- Review finding 6: dead deep-wait provider hook removed
+
+Branch `feature/ai-trace-animation-verification`, on top of `018467c0e`.
+`allowsDeepWaitPlayerRoutineWhileRidden` and its Elevator/Tornado overrides
+were deleted rather than reconnected. S2 `Obj01_MdNormal_Checks` owns the
+grounded Wait/Blink transition regardless of `Status_OnObj`, and the shared
+movement tests already cover ordinary riders plus the CNZ elevator's stale
+movement-input split. The removed object tests asserted a hook with no caller.
+
+Eight narrowed movement/object tests passed. The full ROM-backed
+`*TraceReplay` checkpoint completed 92 tests: 53 passed, 37 failed, 1 errored,
+and 1 skipped. Its testcase statuses and first failure/error messages exactly
+matched the `018467c0e` reference, so no trace frontier moved.
+
 ### 2026-07-17 -- Review finding 5: live S3K ring-counter phase restored
 
 Branch `feature/ai-trace-animation-verification`, on top of `41b3cfee8`.

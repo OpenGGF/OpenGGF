@@ -961,13 +961,6 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean allowsDeepWaitPlayerRoutineWhileRidden(PlayableEntity player) {
-        // ObjB2 keeps Sonic in his normal grounded player slot while the plane
-        // supplies support, so Obj01_MdNormal_Checks still owns deep Wait/Blink.
-        return routine == ROUTINE_SCZ_MAIN;
-    }
-
-    @Override
     public SolidExecutionMode solidExecutionMode() {
         return SolidExecutionMode.MANUAL_CHECKPOINT;
     }

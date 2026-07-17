@@ -99,8 +99,6 @@ public class TestTornadoObjectInstance {
         TornadoObjectInstance tornado = createTornado(100, 0x100, 0x50);
         assertEquals(0x60, tornado.getBalanceWidthPixels(),
                 "ObjB2 balancing uses its native width_pixels, not its smaller SolidObject width");
-        assertTrue(tornado.allowsDeepWaitPlayerRoutineWhileRidden(null),
-                "SCZ ObjB2 keeps the native player-slot Wait/Blink owner active while riding");
         TestPlayableSprite main = new TestPlayableSprite("main", (short) 200, (short) 100);
 
         invokePrivate(tornado, "moveObeyPlayer",

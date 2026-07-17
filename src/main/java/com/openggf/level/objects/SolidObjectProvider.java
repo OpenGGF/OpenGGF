@@ -17,16 +17,6 @@ public interface SolidObjectProvider {
         return true;
     }
 
-    /**
-     * Whether S2's deep Wait/Blink player routine remains active while riding
-     * this object. Ordinary platforms retain their object-local rider cadence;
-     * scripted carriers may opt in when the player slot still owns the native
-     * Wait progression during the ride.
-     */
-    default boolean allowsDeepWaitPlayerRoutineWhileRidden(PlayableEntity player) {
-        return false;
-    }
-
     default boolean isTopSolidOnly() {
         return false;
     }
