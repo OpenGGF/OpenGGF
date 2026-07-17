@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- Obj37 defers collision clear until its SST executes
+
+Branch `feature/ai-trace-animation-verification`, on top of `134b73c4c`.
+Standalone MGZ's two players overlap lost-ring slots 28 and 42 together near
+frame 30753. Native P1 `Touch_ChkValue` writes routine 4 to slot 28 and returns,
+but leaves `collision_flags=$47` until that Obj37 SST executes later in the
+same object pass. P2 therefore encounters the same first ring and also returns;
+slot 42 is collected on the following frame. The engine marked slot 28
+collected and exposed zero collision flags immediately, allowing P2 to skip it
+and collect slot 42 one frame early. Lost rings now retain `$47` through the
+remaining player slots and clear it when their collection routine begins. No
+zone, route, frame, trace-hydration, or tolerance condition was added.
+
+ROM references:
+
+- `docs/skdisasm/sonic3k.asm:20656-20789` (`Touch_Loop` / `Touch_ChkValue`)
+- `docs/skdisasm/sonic3k.asm:35520-35676` (`Obj_Bouncing_Ring` routines 2/4/6)
+
+Verification with the root-level locked-on S3K ROM:
+
+- Focused two-player pending-ring ordering contract passed.
+- Standalone MGZ physics advances from frame 30753 / 46 errors to frame 34404
+  / 45 errors. The new frontier is a later CPU Tails logical-input publication
+  mismatch (expected held `$10`, actual `$00`).
+- Standalone MGZ animation remains at frame 35279 / 29 errors.
+- MGZ complete-run physics and animation both remain fully green.
+- Full trace fleets retain their established baselines: physics 44/58 green
+  and animation 43/58 green. AIZ/HCZ/MGZ complete-run physics and animation
+  remain green.
+
 ### 2026-07-17 -- S3K lost rings scan the active background collision plane
 
 Branch `feature/ai-trace-animation-verification`, after the checkpoint merge of

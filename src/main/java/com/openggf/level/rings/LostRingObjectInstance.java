@@ -69,6 +69,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private int lifetime;
     private int phaseOffset;
     private boolean collected;
+    private boolean collectionRoutineStarted;
     private int sparkleStartFrame = -1;
     private int lastFrameCounter;
     private boolean romRenderFlagForFloorProbe = true;
@@ -291,6 +292,14 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         // using v_vbla_byte separately via resolveVblaCounter() (ROM RLoss_Bounce spread).
         int executedFrame = resolveExecutedFrameCounter(frameCounter);
         lastFrameCounter = executedFrame;
+
+        // Touch_ChkValue only writes routine=4 and returns. Until this Obj37 SST
+        // executes later in the object pass, collision_flags remains $47, so a
+        // following player slot sees the same first ring and returns instead of
+        // skipping ahead to another overlapping ring.
+        if (collected && !collectionRoutineStarted) {
+            collectionRoutineStarted = true;
+        }
         if (collected && collectedSparkleFinished(executedFrame)) {
             setDestroyed(true);
             return;
@@ -592,7 +601,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     public int getCollisionFlags() {
         // ROM Obj37: collision_flags = $47 while collectible; cleared on collection
         // (mirrors Sonic1RingInstance.java:167).
-        return collected ? 0 : LOST_RING_COLLISION_FLAGS;
+        return collectionRoutineStarted ? 0 : LOST_RING_COLLISION_FLAGS;
     }
 
     @Override
