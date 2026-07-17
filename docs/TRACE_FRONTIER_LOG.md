@@ -1,5 +1,17 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- Review finding 9: dead Walk-selector branch removed
+
+Branch `feature/ai-trace-animation-verification`, on top of `981131999`.
+The final nonzero-speed branch in `ScriptedVelocityAnimationProfile` returned
+Walk for both values of `pressingDirection`; the unreachable distinction was
+removed without changing the selector result.
+
+All 27 profile tests passed. The full ROM-backed `*TraceReplay` checkpoint
+completed 92 tests: 53 passed, 37 failed, 1 errored, and 1 skipped. Its
+testcase statuses and first failure/error messages exactly matched the
+`018467c0e` reference, so no trace frontier moved.
+
 ### 2026-07-17 -- Review finding 8: landing Walk publication de-duplicated
 
 Branch `feature/ai-trace-animation-verification`, on top of `d3bc77241`.

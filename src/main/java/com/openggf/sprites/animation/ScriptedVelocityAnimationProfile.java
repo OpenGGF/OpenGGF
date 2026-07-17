@@ -465,9 +465,6 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             return idleAnimId;
         }
 
-        if (pressingDirection) {
-            return walkAnimId;
-        }
         return walkAnimId;
     }
 
