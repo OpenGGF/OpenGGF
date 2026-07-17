@@ -3062,11 +3062,29 @@ public class TestPlayableSpriteMovement {
 
                 Method method = PlayableSpriteMovement.class.getDeclaredMethod("resetOnFloor");
                 method.setAccessible(true);
-                method.invoke(manager);
+                boolean resetOwnedWalkPublication = (boolean) method.invoke(manager);
 
                 assertFalse(mockSprite.getRolling());
+                assertTrue(resetOwnedWalkPublication,
+                                "the rolling-clear branch owns the landing's single Walk publication");
                 assertEquals(0, mockSprite.getAnimationId(),
                                 "S1 Sonic_ResetOnFloor writes id_Walk when it clears Status_Roll");
+        }
+
+        @Test
+        public void testS1NonRollingResetLeavesWalkPublicationToTerrainLanding() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_1);
+                mockSprite.setAnimationId(5);
+                mockSprite.setRolling(false);
+                mockSprite.setAir(true);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("resetOnFloor");
+                method.setAccessible(true);
+                boolean resetOwnedWalkPublication = (boolean) method.invoke(manager);
+
+                assertFalse(resetOwnedWalkPublication);
+                assertEquals(5, mockSprite.getAnimationId(),
+                                "non-rolling ResetOnFloor leaves Sonic_Floor to publish Walk");
         }
 
         @Test

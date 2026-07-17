@@ -1,5 +1,19 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- Review finding 8: landing Walk publication de-duplicated
+
+Branch `feature/ai-trace-animation-verification`, on top of `d3bc77241`.
+`resetOnFloor` now reports when its rolling-clear branch owned the native Walk
+write. Normal and direct terrain landing wrappers publish their unconditional
+`Sonic_Floor` Walk only when that inner owner did not, eliminating the second
+write without merging the distinct rolling, pinball, and spindash guards.
+
+Five focused landing tests passed, covering rolling and non-rolling ownership,
+pinball roll preservation, and the live S2 spindash alias. The full ROM-backed
+`*TraceReplay` checkpoint completed 92 tests: 53 passed, 37 failed, 1 errored,
+and 1 skipped. Its testcase statuses and first failure/error messages exactly
+matched the `018467c0e` reference, so no trace frontier moved.
+
 ### 2026-07-17 -- Review finding 7: push special-handler ownership consolidated
 
 Branch `feature/ai-trace-animation-verification`, on top of `2018ae1cf`.

@@ -3208,12 +3208,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	// LANDING
 	// ========================================
 
-	/** Sonic_ResetOnFloor: Clear landing-related flags (s2.asm:37744) */
-	private void resetOnFloor() {
+	/**
+	 * Sonic_ResetOnFloor: clear landing-related flags (s2.asm:37744).
+	 *
+	 * @return whether the rolling-clear branch owned the landing's Walk write
+	 */
+	private boolean resetOnFloor() {
 		// Don't reset states if player is controlled by an object (e.g., LauncherSpring).
 		// The controlling object manages these states directly.
 		if (sprite.isObjectControlSuppressesMovement()) {
-			return;
+			return false;
 		}
 
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
@@ -3279,6 +3283,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setFlipsRemaining(0);
 		// ROM: s2.asm:37772 - reset look delay counter on landing
 		sprite.setLookDelayCounter((short) 0);
+		return clearsRolling;
 	}
 
 	private void setWalkAnimationAfterRollingLanding(AbstractPlayableSprite sprite) {
@@ -3310,7 +3315,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Save doubleJumpFlag BEFORE resetOnFloor() clears it via setAir(false).
 		// ROM (s3.asm:21849-21859) tests the flag before clearing.
 		int savedDoubleJumpFlag = sprite.getDoubleJumpFlag();
-		resetOnFloor();
+		boolean resetOwnedWalkPublication = resetOnFloor();
 		if (forcedHurtFall) {
 			// Object/event owners use the engine forced slot to retain a native
 			// HurtFall byte through the airborne player passes. Player_TouchFloor
@@ -3323,7 +3328,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// through the air. Object/platform landings do not pass through this
 		// terrain owner and retain their separate post-animation timing (S1
 		// 01 Sonic.asm:1527-1602).
-		if (!sprite.getPinballMode()) {
+		if (!resetOwnedWalkPublication && !sprite.getPinballMode()) {
 			setWalkAnimationAfterRollingLanding(sprite);
 		}
 		if (wasHurt) {
@@ -3406,8 +3411,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
     private void calculateDirectFloorLanding(AbstractPlayableSprite sprite) {
         boolean wasHurt = sprite.isHurt();
         int savedDoubleJumpFlag = sprite.getDoubleJumpFlag();
-        resetOnFloor();
-        if (!sprite.getPinballMode()) {
+        boolean resetOwnedWalkPublication = resetOnFloor();
+        if (!resetOwnedWalkPublication && !sprite.getPinballMode()) {
             setWalkAnimationAfterRollingLanding(sprite);
         }
         if (wasHurt) {
