@@ -54,9 +54,6 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private static final int RING_Y_RADIUS = 8;
     /** ROM Obj37_Init sets width_pixels(a1) = 8 for BuildSprites' X gate. */
     private static final int RING_RENDER_HALF_WIDTH = 8;
-    /** BuildSprites assumed-height path uses a 32 px Y band when render_flags bit 4 is clear. */
-    private static final int BUILDSPRITES_ASSUMED_Y_MARGIN = 32;
-
     private int xSubpixel;
     private int ySubpixel;
     private int xVel;
@@ -365,7 +362,20 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     private void refreshRomRenderFlagForFloorProbe() {
         romRenderFlagForFloorProbe = isWithinRenderSpriteBounds(
-                RING_RENDER_HALF_WIDTH, BUILDSPRITES_ASSUMED_Y_MARGIN);
+                RING_RENDER_HALF_WIDTH, resolveLostRingRenderVerticalMargin());
+    }
+
+    /**
+     * Vertical extent used by the renderer that latches {@code render_flags} bit 7.
+     * S1/S2 use BuildSprites' 32-pixel approximate-height path for Obj37, while
+     * S3K Render_Sprites reads the cleared {@code height_pixels} field and therefore
+     * uses no vertical margin (sonic3k.asm:36337-36370).
+     */
+    protected int resolveLostRingRenderVerticalMargin() {
+        RingRules rules = resolveRingRules();
+        return rules != null
+                ? rules.lostRingRenderVerticalMargin()
+                : GameRules.SONIC_2.ring().lostRingRenderVerticalMargin();
     }
 
     protected boolean ringFloorProbeRequiresRenderFlag() {

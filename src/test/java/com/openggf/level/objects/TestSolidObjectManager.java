@@ -21,6 +21,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.tests.TestEnvironment;
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -1399,6 +1400,102 @@ public class TestSolidObjectManager {
         assertFalse(player.isOnObject());
         assertFalse(manager.isRidingObject(player));
         assertEquals(0x0038, player.getYSpeed() & 0xFFFF);
+    }
+
+    @Test
+    public void unrelatedEarlierSolidCannotConsumeAnotherObjectsAirborneRideLatch() {
+        SolidObjectParams params = new SolidObjectParams(0x2B, 8, 9);
+        TestSolidObject ridden = new StaleStandingBitFullSolidObject(100, 100, params);
+        TestSolidObject earlier = new StaleStandingBitFullSolidObject(300, 100, params);
+        ObjectManager manager = buildManager(ridden);
+        manager.addDynamicObject(earlier);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(28);
+        player.setCentreX((short) 100);
+        player.setCentreY((short) (100 - params.groundHalfHeight() - player.getYRadius()));
+        manager.forceRidingObjectForBootstrap(player, ridden);
+        player.setAir(true);
+        player.setOnObject(true);
+
+        manager.processImmediateInlineSolidCheckpoint(earlier, player, List.of());
+
+        assertTrue(manager.isRidingObject(player),
+                "only the ridden object's own SolidObjectFull call may consume its a0.d6 latch");
+        assertTrue(player.isOnObject(),
+                "an unrelated earlier SST slot cannot clear Status_OnObj before the ridden slot runs");
+        assertTrue(player.getAir());
+    }
+
+    @Test
+    public void objectOwnedReleaseClearsItsStandingLatchAndFoldedRideRecord() {
+        SolidObjectParams params = new SolidObjectParams(0x1B, 8, 9);
+        TestSolidObject object = new TestSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_3K);
+
+        manager.forceRidingObjectForBootstrap(player, object);
+        assertTrue(manager.isRidingObject(player, object));
+        assertTrue(manager.hasObjectStandingBit(player, object));
+
+        manager.releaseRidingObject(player, object);
+
+        assertFalse(manager.isRidingObject(player));
+        assertFalse(manager.hasObjectStandingBit(player, object));
+    }
+
+    @Test
+    public void laterSolidCheckpointClearsDeadRiderWhenRideRecordOutlivesStandingLatch()
+            throws Exception {
+        SolidObjectParams params = new SolidObjectParams(0x23, 8, 8, 0, -9);
+        TestSolidObject object = new TestSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(38);
+        player.setCentreX((short) 100);
+        player.setCentreY((short) (100 - 9 - 8 - player.getYRadius()));
+        manager.forceRidingObjectForBootstrap(player, object);
+
+        assertTrue(manager.isRidingObject(player));
+        assertTrue(manager.hasObjectStandingBit(player, object));
+        assertTrue(player.isOnObject());
+
+        // Generic folded-runtime edge: an earlier solid checkpoint may consume
+        // the emulated object standing latch while the authoritative ride record
+        // still identifies the later solid that ROM will execute this frame.
+        clearEmulatedStandingLatches(manager, player);
+        assertTrue(manager.isRidingObject(player));
+        assertFalse(manager.hasObjectStandingBit(player, object));
+        assertTrue(player.isOnObject());
+
+        player.applyCrushDeath();
+        manager.processImmediateInlineSolidCheckpoint(object, player, List.of());
+
+        assertFalse(player.isOnObject(),
+                "later SolidObjectFull loc_1DC98 equivalent must clear Status_OnObj");
+        assertFalse(manager.isRidingObject(player));
+        assertFalse(manager.hasObjectStandingBit(player, object));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void clearEmulatedStandingLatches(
+            ObjectManager manager, PlayableEntity player) throws Exception {
+        Field contactsField = ObjectManager.class.getDeclaredField("solidContacts");
+        contactsField.setAccessible(true);
+        ObjectSolidContactController contacts =
+                (ObjectSolidContactController) contactsField.get(manager);
+        Field standingBitsField = ObjectSolidContactController.class
+                .getDeclaredField("objectStandingBitSet");
+        standingBitsField.setAccessible(true);
+        Map<PlayableEntity, ?> standingBits =
+                (Map<PlayableEntity, ?>) standingBitsField.get(contacts);
+        standingBits.remove(player);
     }
 
     @Test

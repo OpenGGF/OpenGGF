@@ -172,6 +172,12 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     /** Object-produced intent, published to collision only in the post-camera event phase. */
     private boolean bossCollisionIntentActive;
     private int bossPlaneRefreshRows;
+    private FbzZoneRuntimeState.S1DonationLowerLoopAssistState s1DonationLowerLoopAssistState =
+            FbzZoneRuntimeState.S1DonationLowerLoopAssistState.ARMED;
+    private FbzZoneRuntimeState.S1DonationUpperLoopAssistState s1DonationUpperLoopAssistState =
+            FbzZoneRuntimeState.S1DonationUpperLoopAssistState.ARMED;
+    private FbzZoneRuntimeState.S1DonationSqueezeAssistState s1DonationSqueezeAssistState =
+            FbzZoneRuntimeState.S1DonationSqueezeAssistState.ARMED;
     private final StagedBackgroundPlaneRedrawController planeBRedraw =
             new StagedBackgroundPlaneRedrawController(new StagedBackgroundPlaneRedrawController.Surface() {
                 @Override public void copyRow(int sx, int sy, int dy) {
@@ -227,6 +233,12 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         bossLoadPositionAdjustmentPending = false;
         Arrays.fill(cloudRewindIds, null);
         cloudCleanupTerminal = false;
+        s1DonationLowerLoopAssistState =
+                FbzZoneRuntimeState.S1DonationLowerLoopAssistState.ARMED;
+        s1DonationUpperLoopAssistState =
+                FbzZoneRuntimeState.S1DonationUpperLoopAssistState.ARMED;
+        s1DonationSqueezeAssistState =
+                FbzZoneRuntimeState.S1DonationSqueezeAssistState.ARMED;
         planeAssignmentMode = PlaneAssignmentMode.NORMAL;
         collisionMode = CollisionMode.FOREGROUND_ONLY;
         collisionCameraDiffX = 0;
@@ -268,6 +280,18 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             return;
         }
         initializeAct2Runtime();
+        // S1 donation compatibility: two independently authored FBZ2 loop
+        // approaches require spindash releases that S1 rules intentionally
+        // remove. Each helper is narrowly gated to P1, its exact approach,
+        // ordinary left running, and the absence of the spindash capability.
+        zoneRuntimeRegistry().currentAs(FbzZoneRuntimeState.class)
+                .filter(runtime -> runtime.isBackedBy(this))
+                .ifPresent(runtime -> {
+                    FbzS1DonationUpperLoopAssist.applyToMainPlayer(player, runtime);
+                    FbzS1DonationLowerLoopAssist.applyToMainPlayer(player, runtime);
+                    FbzS1DonationSqueezeAssist.applyToMainPlayer(
+                            player, runtime, levelManager().getObjectManager());
+                });
         // FBZ2_ScreenEvent adds Screen_shake_offset to Camera_Y_pos_copy,
         // leaving the live Camera_Y_pos word untouched.
         bossForegroundVScroll = (short) (camera().getYCopy() + screenShakeOffset);
@@ -890,9 +914,24 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     }
 
     private void spawnOutdoorMotionController() {
+        ObjectManager objectManager = levelManager().getObjectManager();
+        if (objectManager != null && objectManager.getActiveObjects().stream()
+                .anyMatch(object -> object instanceof FbzOutdoorBgMotionObjectInstance
+                        && !object.isDestroyed())) {
+            outdoorMotionAllocationAttempted = true;
+            outdoorMotionSpawned = true;
+            return;
+        }
         if (outdoorMotionAllocationAttempted) return;
         outdoorMotionAllocationAttempted = true;
         outdoorMotionSpawned = spawnObject(FbzOutdoorBgMotionObjectInstance::new) != null;
+    }
+
+    /** Recreates the ScreenInit allocation after a placement reset clears dynamic SST. */
+    public void restoreOutdoorMotionAfterPlacementReset() {
+        outdoorMotionAllocationAttempted = false;
+        outdoorMotionSpawned = false;
+        spawnOutdoorMotionController();
     }
 
     /**
@@ -1514,6 +1553,33 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     public int getBossPlaneRefreshRows() { return bossPlaneRefreshRows; }
     public boolean isBossEventSetupAttempted() { return bossEventSetupAttempted; }
     public boolean isBossCollisionIntentActive() { return bossCollisionIntentActive; }
+    public FbzZoneRuntimeState.S1DonationLowerLoopAssistState
+            getS1DonationLowerLoopAssistState() {
+        return s1DonationLowerLoopAssistState;
+    }
+    public void setS1DonationLowerLoopAssistState(
+            FbzZoneRuntimeState.S1DonationLowerLoopAssistState state) {
+        requireAct2("S1 donation lower-loop assist state");
+        s1DonationLowerLoopAssistState = Objects.requireNonNull(state, "state");
+    }
+    public FbzZoneRuntimeState.S1DonationUpperLoopAssistState
+            getS1DonationUpperLoopAssistState() {
+        return s1DonationUpperLoopAssistState;
+    }
+    public void setS1DonationUpperLoopAssistState(
+            FbzZoneRuntimeState.S1DonationUpperLoopAssistState state) {
+        requireAct2("S1 donation upper-loop assist state");
+        s1DonationUpperLoopAssistState = Objects.requireNonNull(state, "state");
+    }
+    public FbzZoneRuntimeState.S1DonationSqueezeAssistState
+            getS1DonationSqueezeAssistState() {
+        return s1DonationSqueezeAssistState;
+    }
+    public void setS1DonationSqueezeAssistState(
+            FbzZoneRuntimeState.S1DonationSqueezeAssistState state) {
+        requireAct2("S1 donation squeeze assist state");
+        s1DonationSqueezeAssistState = Objects.requireNonNull(state, "state");
+    }
     public void restoreBossPlaneRefreshRows(int rows) {
         requireAct2("boss plane refresh rows");
         if (rows < 0 || rows > 16) throw new IllegalArgumentException("boss plane refresh rows: " + rows);

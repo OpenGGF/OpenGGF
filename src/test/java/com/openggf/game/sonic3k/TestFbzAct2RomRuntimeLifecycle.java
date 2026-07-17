@@ -7,6 +7,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kFBZEvents;
+import com.openggf.game.sonic3k.objects.FbzOutdoorBgMotionObjectInstance;
 import com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
@@ -25,6 +26,32 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestFbzAct2RomRuntimeLifecycle {
+    @Test
+    void act2LevelEventInitializationClaimsNativeFirstDynamicSlotBeforePlacement() throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
+        GraphicsManager.getInstance().initHeadless();
+        Sonic sonic = new Sonic(config.getString(SonicConfiguration.MAIN_CHARACTER_CODE),
+                (short) 0xD80, (short) 0xA40);
+        GameServices.sprites().addSprite(sonic);
+        Camera camera = GameServices.camera();
+        camera.setFocusedSprite(sonic);
+        camera.setFrozen(false);
+
+        LevelManager levels = GameServices.level();
+        levels.loadZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 1);
+
+        var motions = levels.getObjectManager().getActiveObjects().stream()
+                .filter(FbzOutdoorBgMotionObjectInstance.class::isInstance)
+                .map(FbzOutdoorBgMotionObjectInstance.class::cast)
+                .toList();
+        assertEquals(1, motions.size(),
+                "Act 2 runtime installation must create the persistent outdoor motion controller");
+        FbzOutdoorBgMotionObjectInstance motion = motions.getFirst();
+        assertEquals(4, motion.getSlotIndex(),
+                "Obj_FBZOutdoorBGMotion must occupy native Dynamic_object_RAM slot 4 before ObjPosLoad");
+    }
+
     @Test
     void priorAuthoritativePlaneDoesNotLeakOwnershipIntoFreshAct2EventState() throws Exception {
         SonicConfigurationService config = SonicConfigurationService.getInstance();

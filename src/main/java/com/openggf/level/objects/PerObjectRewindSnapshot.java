@@ -369,7 +369,8 @@ public record PerObjectRewindSnapshot(
             boolean springing, int springingFrames,
             boolean dead, boolean drowningDeath, int drownPreDeathTimer,
             boolean hurt, int deathCountdown,
-            int invulnerableFrames, boolean suppressNextInvulnerabilityDecrement, int invincibleFrames,
+            int invulnerableFrames, boolean suppressNextInvulnerabilityDecrement,
+            boolean invulnerabilityDisplayTimerDecrementedThisFrame, int invincibleFrames,
             // Player abilities
             boolean spindash, short spindashCounter,
             boolean crouching, boolean lookingUp, short lookDelayCounter,

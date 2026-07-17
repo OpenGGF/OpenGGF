@@ -63,5 +63,6 @@ public final class FbzSnakePlatformObjectInstance extends AbstractObjectInstance
     @Override public SolidObjectParams getSolidParams(){return new SolidObjectParams(0x17,0x0C,0x0D);}
     @Override public boolean isSolidFor(PlayableEntity player){return delayRemaining==0&&!isDestroyed();}
     @Override public SolidRoutineProfile getSolidRoutineProfile(){return SolidRoutineProfile.fullSolid(false);}
+    @Override public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player){return true;}
     @Override public void appendRenderCommands(List<GLCommand> commands){PatternSpriteRenderer r=getRenderer(Sonic3kObjectArtKeys.FBZ_SNAKE_PLATFORM);if(r!=null&&r.isReady())r.drawFrameIndex(0,x,y,false,false);}
 }

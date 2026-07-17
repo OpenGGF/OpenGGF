@@ -18,6 +18,8 @@ public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
     private static final int Y_STEP_16_16 = 0xA000;
     private static final int X_ENDPOINT = 0x45C;
     private static final int Y_ENDPOINT = 0x5D0;
+    private static final int NATIVE_SCREEN_WIDTH = 320;
+    private static final int NATIVE_PLAYER_WIDTH = 24;
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x4C0, 0x11, 0x11);
 
     public enum Phase { WAIT_P1_TRIGGER, MOVING, WAIT_CAMERA_Y_LOCK, WAIT_ARENA_LOCK, WAIT_BOSS_STAGE, COMPLETE }
@@ -142,7 +144,18 @@ public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
 
         if (reachesArenaLockTail(phase())) {
             if (mainPlayer != null && (mainPlayer.getCentreY() & 0xFFFF) < 0x280) {
-                services().camera().setMinX(services().camera().getX());
+                // Widescreen support: the player boundary remains the ROM-authored
+                // Camera_max_X_pos + 320 - 24.  Above a 592px viewport, centring P1
+                // at that fixed world edge leaves Camera_X_pos short of Camera_max_X_pos,
+                // so the native equality wait can never finish.  Once P1 has genuinely
+                // reached that same native boundary, close Camera_min_X_pos at the
+                // existing ROM maximum.  Camera_max_X_pos remains exactly $32B8;
+                // native 320px behaviour is untouched.
+                if (widescreenCameraCannotReachNativeMax(mainPlayer)) {
+                    services().camera().setMinX(services().camera().getMaxX());
+                } else {
+                    services().camera().setMinX(services().camera().getX());
+                }
             }
             if (services().camera().getMinY() == services().camera().getMaxY()
                     && services().camera().getMinX() == services().camera().getMaxX()) {
@@ -169,6 +182,15 @@ public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
         return phase == Phase.MOVING
                 || phase == Phase.WAIT_CAMERA_Y_LOCK
                 || phase == Phase.WAIT_ARENA_LOCK;
+    }
+
+    private boolean widescreenCameraCannotReachNativeMax(PlayableEntity mainPlayer) {
+        int viewportWidth = services().camera().getWidth() & 0xFFFF;
+        if (viewportWidth <= 2 * (NATIVE_SCREEN_WIDTH - NATIVE_PLAYER_WIDTH)) return false;
+        int maxX = services().camera().getMaxX() & 0xFFFF;
+        int nativePlayerBoundary = maxX + NATIVE_SCREEN_WIDTH - NATIVE_PLAYER_WIDTH;
+        return (mainPlayer.getCentreX() & 0xFFFF) >= nativePlayerBoundary
+                && (services().camera().getX() & 0xFFFF) < maxX;
     }
 
     private void initializeNativeBounds() {

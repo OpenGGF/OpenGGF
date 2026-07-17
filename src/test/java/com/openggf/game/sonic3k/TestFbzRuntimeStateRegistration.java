@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.events.Sonic3kFBZEvents;
 import com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.zone.ZoneRuntimeState;
@@ -41,7 +42,7 @@ class TestFbzRuntimeStateRegistration {
         var act1Handler = manager.getFbzEvents();
         var act1State = assertInstanceOf(FbzZoneRuntimeState.class, GameServices.zoneRuntimeRegistry().current());
 
-        manager.initLevel(Sonic3kZoneIds.ZONE_FBZ, 1); // seamless act reload
+        manager.initLevel(Sonic3kZoneIds.ZONE_FBZ, 1); // direct replacement-adapter probe
         var act2Handler = manager.getFbzEvents();
         var act2State = assertInstanceOf(FbzZoneRuntimeState.class, GameServices.zoneRuntimeRegistry().current());
         assertNotSame(act1Handler, act2Handler);
@@ -52,6 +53,79 @@ class TestFbzRuntimeStateRegistration {
         var restarted = assertInstanceOf(FbzZoneRuntimeState.class, GameServices.zoneRuntimeRegistry().current());
         assertNotSame(act2Handler, manager.getFbzEvents());
         assertTrue(restarted.isBackedBy(manager.getFbzEvents()));
+    }
+
+    @Test
+    void coldAct2LoadStartsWithTheRomGlobalMagneticByteCleared() {
+        Sonic3kLevelEventManager manager =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        manager.initLevel(Sonic3kZoneIds.ZONE_HCZ, 0);
+
+        manager.initLevel(Sonic3kZoneIds.ZONE_FBZ, 1);
+
+        FbzZoneRuntimeState state = assertInstanceOf(
+                FbzZoneRuntimeState.class, GameServices.zoneRuntimeRegistry().current());
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE,
+                state.magneticPolarity());
+        assertEquals(0, state.magneticTimerPhase());
+        assertFalse(state.magneticEdgeObserved());
+        assertEquals(0, state.magneticLastEdgeFrame());
+    }
+
+    @Test
+    void manualSequentialActInitializationDoesNotCarryRomGlobalMagneticState() {
+        Sonic3kLevelEventManager manager =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        manager.initLevel(Sonic3kZoneIds.ZONE_FBZ, 0);
+        FbzZoneRuntimeState act1 = assertInstanceOf(
+                FbzZoneRuntimeState.class, GameServices.zoneRuntimeRegistry().current());
+        act1.restoreMagneticTransitionState(new FbzZoneRuntimeState.MagneticTransitionState(
+                Sonic3kFBZEvents.MagneticPolarity.ACTIVE, 0xFE, true, 0x1200));
+
+        manager.initLevel(Sonic3kZoneIds.ZONE_FBZ, 1);
+
+        FbzZoneRuntimeState act2 = assertInstanceOf(
+                FbzZoneRuntimeState.class, GameServices.zoneRuntimeRegistry().current());
+        assertNotSame(act1, act2);
+        assertTrue(act2.isBackedBy(manager.getFbzEvents()));
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE,
+                act2.magneticPolarity());
+        assertEquals(0, act2.magneticTimerPhase());
+        assertFalse(act2.magneticEdgeObserved());
+        assertEquals(0, act2.magneticLastEdgeFrame());
+    }
+
+    @Test
+    void sequentialInitializationWithoutGameplayRuntimeIsSafe() {
+        Sonic3kLevelEventManager manager =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        com.openggf.game.session.SessionManager.clear();
+
+        assertDoesNotThrow(() -> {
+            manager.initLevel(Sonic3kZoneIds.ZONE_FBZ, 0);
+            manager.initLevel(Sonic3kZoneIds.ZONE_FBZ, 1);
+        });
+    }
+
+    @Test
+    void act2DeathReloadDoesNotCarryThePreviousAct2MagneticState() {
+        Sonic3kLevelEventManager manager =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        manager.initLevel(Sonic3kZoneIds.ZONE_FBZ, 1);
+        FbzZoneRuntimeState first = assertInstanceOf(
+                FbzZoneRuntimeState.class, GameServices.zoneRuntimeRegistry().current());
+        first.restoreMagneticTransitionState(new FbzZoneRuntimeState.MagneticTransitionState(
+                Sonic3kFBZEvents.MagneticPolarity.ACTIVE, 0x73, true, 0x1200));
+
+        manager.initLevel(Sonic3kZoneIds.ZONE_FBZ, 1);
+
+        FbzZoneRuntimeState restarted = assertInstanceOf(
+                FbzZoneRuntimeState.class, GameServices.zoneRuntimeRegistry().current());
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE,
+                restarted.magneticPolarity());
+        assertEquals(0, restarted.magneticTimerPhase());
+        assertFalse(restarted.magneticEdgeObserved());
+        assertEquals(0, restarted.magneticLastEdgeFrame());
     }
 
     @Test

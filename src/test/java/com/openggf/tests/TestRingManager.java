@@ -628,6 +628,7 @@ public class TestRingManager {
                 ringRules.ringFloorCheckMask(),
                 ringRules.ringFloorCheckCounterPhase(),
                 ringRules.ringFloorProbeRequiresRenderFlag(),
+                ringRules.lostRingRenderVerticalMargin(),
                 ringCollisionHalfSize,
                 ringCollisionHalfSize,
                 ringRules.stageRingsUseObjectTouchCollection(),

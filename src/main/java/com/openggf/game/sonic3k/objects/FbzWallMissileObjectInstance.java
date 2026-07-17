@@ -27,7 +27,10 @@ public final class FbzWallMissileObjectInstance
       coarseCull();
       return;
     }
-    if (isOnScreen(0x20) && --timer < 0) {
+    // ROM loc_3C828 gates the countdown on render_flags bit 7 from
+    // Render_Sprites. Obj_FBZWallMissile sets width_pixels=$10 and
+    // height_pixels=4; the renderer's right/bottom edges are exclusive.
+    if (isWithinRenderSpriteBounds(0x10, 4) && --timer < 0) {
       timer = interval;
       short xv = (short)(((spawn.renderFlags() & 1) != 0) ? 0x400 : -0x400);
       FbzWallMissileProjectileObjectInstance made = spawnAfterCurrentSibling(

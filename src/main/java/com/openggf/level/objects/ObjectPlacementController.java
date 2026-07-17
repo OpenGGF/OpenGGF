@@ -747,8 +747,18 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * future placement scans can re-create it.
      */
     void removeFromActiveForUnload(ObjectSpawn spawn) {
+        int index = getSpawnIndex(spawn);
         active.remove(spawn);
         clearCursorLoadState(spawn);
+        if (twoAxisCursorPlacement && index >= leftCursorIndex && index < cursorIndex) {
+            // S3K Load_Sprites' Y-camera pass scans the layout entries between
+            // the horizontal cursors. An out_of_range delete clears the live
+            // respawn bit, but it does not move either cursor; keep the layout
+            // entry eligible for a later newly-exposed Y strip. Entries truly
+            // outside the horizontal cursor range are reconsidered only when
+            // an X cursor crosses them again.
+            deferredVerticalLoad.set(index);
+        }
     }
 
     /**

@@ -161,6 +161,14 @@ public final class HeadlessGameBoot implements AutoCloseable {
      * the fully bound loop ready to be stepped.
      */
     public GameLoop boot(Path romPath, int zone, int act) throws IOException {
+        return boot(romPath, zone, act, null);
+    }
+
+    /**
+     * Boots gameplay with an optional deterministic RNG seed applied after the
+     * replay subsystem reset and before team/level initialization.
+     */
+    public GameLoop boot(Path romPath, int zone, int act, Long initialRngSeed) throws IOException {
         // Process-wide services were configured in initGl(); resolve them via
         // the EngineServices locator rather than raw singletons.
         EngineContext services = EngineServices.current();
@@ -219,6 +227,9 @@ public final class HeadlessGameBoot implements AutoCloseable {
         // which cascades into a player-path desync (e.g. AIZ landing at trace
         // ~2170 lands 3px off and snowballs).
         TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay();
+        if (initialRngSeed != null) {
+            GameServices.rng().setSeed(initialRngSeed);
+        }
 
         // --- team + level -----------------------------------------------
         // Register the active team BEFORE loadZoneAndAct so the level load's

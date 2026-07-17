@@ -54,7 +54,7 @@ class TestFbzBlaster {
         int startX = falling.getX(), startY = falling.getY();
         falling.update(0, null);
         try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
-            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), eq(7)))
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), eq(0x0E)))
                     .thenReturn(new TerrainCheckResult(-3, (byte) 0, 1));
             for (int frame = 1; frame <= 16; frame++) falling.update(frame, null);
         }
@@ -70,6 +70,27 @@ class TestFbzBlaster {
         assertArrayEquals(new int[]{0,4,4,5,0xF4}, BlasterAttackEffectObjectInstance.animationScript());
         assertArrayEquals(new int[]{1,5,6,0xFC}, BlasterProjectileObjectInstance.primaryAnimation());
         assertArrayEquals(new int[]{2,7,8,9,0xA,0xFC}, BlasterProjectileObjectInstance.secondaryAnimation());
+    }
+
+    @Test void patrolFloorProbeUsesObjHitFloor2PredictedNextCentreX() {
+        PlayableEntity target = player(0x1400, 0x900);
+        var blaster = new BlasterBadnikInstance(spawn(0x20, 0));
+        blaster.setServices(new Services(null, target, List.of(), null));
+        blaster.update(0, target);
+        blaster.update(1, target);
+        assertEquals(0x80, blaster.xVelocityRaw());
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), eq(0)))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x1001, 0x080E, 0))
+                    .thenReturn(new TerrainCheckResult(0, (byte) 0, 1));
+
+            blaster.update(2, target);
+
+            terrain.verify(() -> ObjectTerrainUtils.checkFloorDist(0x1001, 0x080E, 0));
+            assertEquals("PATROL", blaster.stateName());
+        }
     }
 
     @Test void projectileDeleteTouchXyUsesExactUnsignedCoarseBoundaries() {
@@ -112,6 +133,61 @@ class TestFbzBlaster {
         assertEquals(6, primary.mappingFrame());
     }
 
+    @Test void attackCarriesLongPatrolFrameDelayAndDoesNotFireSecondPrimaryEarly() {
+        ObjectManager manager = mock(ObjectManager.class);
+        int[] targetX = {0x1400};
+        PlayableEntity target = mutablePlayer(targetX, 0x800);
+        var blaster = new BlasterBadnikInstance(spawn(0x20, 0));
+        blaster.setServices(new Services(manager, target, List.of(), null));
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), eq(0)))
+                    .thenReturn(new TerrainCheckResult(0, (byte) 0, 1));
+            for (int frame = 0; frame <= 11; frame++) blaster.update(frame, target);
+        }
+        String[] patrol = blaster.magneticResumeSignature().split(":");
+        assertEquals("0", patrol[4], "patrol $FC restarts anim_frame at zero");
+        assertEquals("17", patrol[5], "long frame-0 delay has counted down to $11");
+
+        targetX[0] = 0x1040;
+        blaster.update(12, target);
+        for (int frame = 13; frame <= 29; frame++) blaster.update(frame, target);
+        assertEquals("ATTACK", blaster.stateName());
+        String[] fired = blaster.magneticResumeSignature().split(":");
+        assertEquals("0", fired[4], "loc_8957A preserves anim_frame");
+        assertEquals("17", fired[5], "loc_8957A preserves anim_frame_timer");
+        verify(manager, times(2)).addDynamicObjectAfterCurrent(any());
+
+        for (int frame = 30; frame <= 88; frame++) blaster.update(frame, target);
+        verify(manager, times(3)).addDynamicObjectAfterCurrent(any());
+    }
+
+    @Test void attackCarriesShortPatrolFrameIndexAndTimer() {
+        ObjectManager manager = mock(ObjectManager.class);
+        int[] targetX = {0x1400};
+        PlayableEntity target = mutablePlayer(targetX, 0x800);
+        var blaster = new BlasterBadnikInstance(spawn(0x20, 0));
+        blaster.setServices(new Services(manager, target, List.of(), null));
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), eq(0)))
+                    .thenReturn(new TerrainCheckResult(0, (byte) 0, 1));
+            for (int frame = 0; frame <= 2; frame++) blaster.update(frame, target);
+        }
+        String[] patrol = blaster.magneticResumeSignature().split(":");
+        assertEquals("2", patrol[4], "byte_8975E selects frame 1 at anim_frame 2");
+        assertEquals("2", patrol[5]);
+
+        targetX[0] = 0x1040;
+        blaster.update(3, target);
+        for (int frame = 4; frame <= 20; frame++) blaster.update(frame, target);
+        assertEquals("ATTACK", blaster.stateName());
+        String[] fired = blaster.magneticResumeSignature().split(":");
+        assertEquals("2", fired[4], "loc_8957A preserves the short-delay anim_frame");
+        assertEquals("2", fired[5], "loc_8957A preserves the short-delay timer");
+        verify(manager, times(2)).addDynamicObjectAfterCurrent(any());
+    }
+
     @Test void secondarySpawnsAtRawOffsetSixAfterFrameZeroLongDelayLoads() {
         ObjectManager manager = mock(ObjectManager.class);
         PlayableEntity p1 = player(0x1040, 0x800);
@@ -127,6 +203,25 @@ class TestFbzBlaster {
         verify(manager, times(2)).addDynamicObjectAfterCurrent(any());
         blaster.update(28, p1);
         verify(manager, times(3)).addDynamicObjectAfterCurrent(any());
+    }
+
+    @Test void attackCompletionPreservesTheInterruptedPatrolCountdown() {
+        Sonic3kFBZEvents events = new Sonic3kFBZEvents();
+        events.init(0);
+        FbzZoneRuntimeState runtime = new FbzZoneRuntimeState(
+                0, PlayerCharacter.SONIC_ALONE, events);
+        PlayableEntity target = player(0x1040, 0x800);
+        BlasterBadnikInstance blaster = prepareRoutine("ATTACK", target, runtime);
+
+        int frame = 21;
+        while (blaster.stateName().equals("ATTACK") && frame < 100) {
+            blaster.update(frame++, target);
+        }
+
+        assertEquals("PATROL", blaster.stateName());
+        assertEquals("64", blaster.magneticResumeSignature().split(":")[2],
+                "loc_8956A returns to routine 2 without rewriting $2E; only "
+                        + "the turn callback loc_8955A reloads the recurring countdown");
     }
 
     @Test void waitOffscreenAndRestoreDispatchRenderNothingUntilInitializationFrame() {
@@ -270,6 +365,13 @@ class TestFbzBlaster {
     private static PlayableEntity player(int x, int y) {
         PlayableEntity player = mock(PlayableEntity.class);
         when(player.getCentreX()).thenReturn((short) x);
+        when(player.getCentreY()).thenReturn((short) y);
+        return player;
+    }
+
+    private static PlayableEntity mutablePlayer(int[] x, int y) {
+        PlayableEntity player = mock(PlayableEntity.class);
+        when(player.getCentreX()).thenAnswer(ignored -> (short) x[0]);
         when(player.getCentreY()).thenReturn((short) y);
         return player;
     }

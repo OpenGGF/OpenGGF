@@ -22,6 +22,16 @@ public final class FbzDezPlayerLauncherObjectInstance extends AbstractObjectInst
     @Override public void update(int frameCounter,PlayableEntity ignored){
         stepMotion();
         updateDynamicSpawn(x,spawn.y());
+        // loc_3B9AC tests the standing bits before SolidObjectTop runs. A
+        // player who first lands this frame is therefore not anchored or used
+        // to start the launcher until the following object pass.
+        ObjectPlayerQuery query=services().playerQuery();
+        query.visitPlayers(participationPolicy(),this,(launcher,player)->{
+            if(launcher.services().solidExecutionRegistry().previousStanding(launcher,player).standing()){
+                launcher.applyStandingRider(player,frameCounter);
+            }
+        });
+        checkpointAll();
         // Sprite_OnScreen_Test2 reads the saved anchor at $44, never the moving
         // x_pos. The native-width limit remains exactly $280; widescreen extends
         // only the visible-screen term of $80 + screen width + $C0.
@@ -47,6 +57,10 @@ public final class FbzDezPlayerLauncherObjectInstance extends AbstractObjectInst
     private void beginLaunch(){if(launchTimer!=0||returning)return;xVelocity=(spawn.renderFlags()&1)!=0?-0x100:0x100;launchTimer=0x0C;doubleTimer=4;services().playSfx(com.openggf.game.sonic3k.audio.Sonic3kSfx.FLOOR_LAUNCHER.id);}
     @Override public void onSolidContact(PlayableEntity player,SolidContact contact,int frameCounter){
         if(!contact.standing() || !(player instanceof AbstractPlayableSprite p))return;
+        applyStandingRider(p,frameCounter);
+    }
+    private void applyStandingRider(PlayableEntity player,int frameCounter){
+        if(!(player instanceof AbstractPlayableSprite p))return;
         // loc_3BA4A always branches directly to SolidObjectTop. Even when its
         // equality case selects loc_3B97A for the next frame, sub_3B9D8 must
         // remain suppressed for this frame.
@@ -66,7 +80,9 @@ public final class FbzDezPlayerLauncherObjectInstance extends AbstractObjectInst
     }
     void beginLaunchForTest(){xVelocity=(spawn.renderFlags()&1)!=0?-0x100:0x100;launchTimer=0x0C;doubleTimer=4;} void stepMotionForTest(){stepMotion();}int xVelocity(){return xVelocity;}boolean returning(){return returning;}
     ObjectPlayerParticipationPolicy participationPolicy(){return ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;}
+    @Override public SolidExecutionMode solidExecutionMode(){return SolidExecutionMode.MANUAL_CHECKPOINT;}
     @Override public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player){return returning;}
+    @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player){return returning;}
     @Override public int getX(){return x;}@Override public SolidObjectParams getSolidParams(){return new SolidObjectParams(0x10,3,3);}@Override public boolean isTopSolidOnly(){return true;}@Override public SolidRoutineProfile getSolidRoutineProfile(){return SolidRoutineProfile.topSolid(false);}
     @Override public int getPriorityBucket(){return 5;}
     @Override public void appendRenderCommands(List<GLCommand> commands){PatternSpriteRenderer r=getRenderer(Sonic3kObjectArtKeys.FBZ_DEZ_PLAYER_LAUNCHER);if(r!=null&&r.isReady())r.drawFrameIndex(0,x,spawn.y(),(spawn.renderFlags()&1)!=0,false);}

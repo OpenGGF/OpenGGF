@@ -221,6 +221,15 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
+    void levelManagersRegisterSharedCollisionAngleOutputsForRewind() {
+        GameplayModeContext ctx = buildAttachedContext();
+        attachLevelManagers(ctx);
+
+        assertTrue(ctx.getRewindRegistry().capture().containsKey("collision-system"),
+                "Primary_Angle/Secondary_Angle are shared gameplay state and must cross rewind boundaries");
+    }
+
+    @Test
     void tearDownClearsAllAttachedSharedRegistryState() {
         GameplayModeContext ctx = buildAttachedContext();
         ZoneRuntimeRegistry zoneRuntime = new ZoneRuntimeRegistry();

@@ -43,6 +43,12 @@ public final class FbzMissileLauncherCompanionObjectInstance
       anchorX = 0x7F00;
       updateDynamicSpawn(anchorX, spawn.y());
     }
+    // loc_3C636 always reaches SolidObjectFull after the destruction branch
+    // relocates x_pos to $7F00, then Sprite_OnScreen_Test2 recycles the slot
+    // (docs/skdisasm/sonic3k.asm:80231-80269). Resolve every participant while
+    // this object is still live so native P1/P2 standing bits and all extension
+    // sidekick latches are released before the same-callback cull.
+    services().solidExecution().resolveSolidNowAll();
     coarseXCull(anchorX, 0x280);
   }
   static int[] explosionOffsets() { return OFFSETS.clone(); }
@@ -53,6 +59,9 @@ public final class FbzMissileLauncherCompanionObjectInstance
   }
   public SolidRoutineProfile getSolidRoutineProfile() {
     return SolidRoutineProfile.fullSolid(false);
+  }
+  @Override public SolidExecutionMode solidExecutionMode() {
+    return SolidExecutionMode.MANUAL_CHECKPOINT;
   }
   public int getPriorityBucket() { return 2; }
   public boolean isHighPriority() { return true; }

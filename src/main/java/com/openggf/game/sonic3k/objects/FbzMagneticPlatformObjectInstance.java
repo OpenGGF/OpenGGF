@@ -29,6 +29,7 @@ public final class FbzMagneticPlatformObjectInstance extends AbstractObjectInsta
     private int yVelocity;
     private int collisionRadius = 0x0F;
     private boolean rising;
+    private boolean restingOnFloor;
     private boolean tensionLatched;
     private boolean chainAllocationAttempted;
     private boolean lastMagneticActive;
@@ -73,7 +74,18 @@ public final class FbzMagneticPlatformObjectInstance extends AbstractObjectInsta
             }
             if (!active) {
                 rising = false;
+                restingOnFloor = false;
                 tensionLatched = false;
+                // loc_3B450 restores y_radius to $F before the platform
+                // returns to the falling routine at loc_3B3C0.
+                collisionRadius = 0x0F;
+            }
+        } else if (restingOnFloor) {
+            // loc_3B3EC is the post-landing wait routine. It does not call
+            // MoveSprite2 or ObjCheckFloorDist again until magnetism changes.
+            if (active) {
+                rising = true;
+                restingOnFloor = false;
             }
         } else {
             moveVertical();
@@ -85,8 +97,12 @@ public final class FbzMagneticPlatformObjectInstance extends AbstractObjectInsta
                 yFixed += floor.distance() << 16;
                 yVelocity = 0;
                 collisionRadius = 0x10;
+                restingOnFloor = true;
             }
-            if (active) rising = true;
+            if (active) {
+                rising = true;
+                restingOnFloor = false;
+            }
         }
         updateDynamicSpawn(spawn.x(), y);
     }
@@ -110,6 +126,16 @@ public final class FbzMagneticPlatformObjectInstance extends AbstractObjectInsta
     int collisionRadius() { return collisionRadius; }
     @Override public int getX() { return spawn.x(); }
     @Override public int getY() { return y; }
+    @Override public int getBalanceWidthPixels() {
+        // Obj_FBZMagneticPlatform initializes width_pixels(a0)=$18
+        // (sonic3k.asm:78930). Sonic_Move reads that byte directly for the
+        // on-object d1 edge test (sonic3k.asm:22455-22473), independently of
+        // SolidObjectFull_Offset's d1=$23 collision width below. FBZ f13930
+        // places Sonic at d1==2: native does not take the signed BLT left-edge
+        // balance branch, while the engine's old default width $10 produced
+        // d1=-6 and incorrectly flipped Status_Facing left.
+        return 0x18;
+    }
     @Override public int getPriorityBucket() { return 5; }
     @Override public int getCollisionFlags() { return 0x8D; }
     @Override public int getCollisionProperty() { return 0; }
@@ -122,6 +148,20 @@ public final class FbzMagneticPlatformObjectInstance extends AbstractObjectInsta
         // SolidObjectFull_Offset uses an inclusive fresh-contact right edge and
         // enters its contact resolver without SolidObjectFull's on-screen gate.
         return SolidRoutineProfile.fullSolid(false, true, true);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        FbzZoneRuntimeState state = tryServices() != null
+                && services().zoneRuntimeState() instanceof FbzZoneRuntimeState runtime
+                        ? runtime : null;
+        return String.format("motion=%s vel=%04X frac=%04X radius=%02X mag=%s phase=%02X",
+                rising ? "rise" : "fall",
+                yVelocity & 0xFFFF,
+                yFixed & 0xFFFF,
+                collisionRadius,
+                state != null ? state.magneticPolarity() : "none",
+                state != null ? state.magneticTimerPhase() : 0);
     }
 
     @Override

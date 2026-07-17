@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.openggf.camera.Camera;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.*;
@@ -35,6 +36,7 @@ class TestFbzMissileFamilyGraphRewind {
   }
   private void assertLauncherFamilyRestore(boolean inPlace) {
     ObjectManager[] holder = new ObjectManager[1];
+    int[] explosionSfx = {0};
     Camera camera = new Camera() {
       public short getX() { return 0x0E00; }
       public short getY() { return 0; }
@@ -47,6 +49,10 @@ class TestFbzMissileFamilyGraphRewind {
       public Camera camera() { return camera; }
       public GraphicsManager graphicsManager() {
         return GraphicsManager.getInstance();
+      }
+      public void playSfx(int id) {
+        if (id == Sonic3kSfx.EXPLODE.id)
+          explosionSfx[0]++;
       }
     };
     ObjectManager manager =
@@ -97,11 +103,35 @@ class TestFbzMissileFamilyGraphRewind {
         live(manager, FbzMissileLauncherProjectileObjectInstance.class)
             .getFirst();
     int slot = missile.getSlotIndex();
+    int impactY = missile.getY();
     missile.impact();
+    assertFalse(missile.isDestroyed(),
+        "impact installs loc_3C768 for the next callback");
+    CompositeSnapshot pendingImpactSnapshot = registry.capture();
+
+    // Diverge through conversion, then restore the installed callback. This
+    // proves pendingImpact itself is captured, not merely reconstructed from
+    // the projectile's subtype/position.
+    missile.update(0x92, null);
+    assertEquals(1, explosionSfx[0]);
+    registry.restore(pendingImpactSnapshot);
+    explosionSfx[0] = 0;
+    assertTrue(live(manager, ExplosionObjectInstance.class).isEmpty());
+    missile = live(manager, FbzMissileLauncherProjectileObjectInstance.class)
+        .getFirst();
+    assertEquals(slot, missile.getSlotIndex());
+    assertEquals(impactY, missile.getY());
+
+    missile.update(0x93, null);
     ExplosionObjectInstance explosion =
         live(manager, ExplosionObjectInstance.class).getFirst();
     assertEquals(slot, explosion.getSlotIndex());
+    assertEquals(impactY + 4, explosion.getY());
+    assertEquals(1, explosionSfx[0]);
     assertTrue(missile.isDestroyed());
+    missile.update(0x94, null);
+    assertEquals(1, live(manager, ExplosionObjectInstance.class).size());
+    assertEquals(1, explosionSfx[0], "pending callback converts exactly once");
   }
   private static void assertFamily(ObjectManager manager,
                                    FbzMissileLauncherObjectInstance parent,

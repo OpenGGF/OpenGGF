@@ -155,6 +155,16 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
 
     public Sonic3kTitleCardManager() {}
 
+    /** Read-only evidence/debug view; title-card behavior remains owned by this manager. */
+    public String getStateName() {
+        return state.name();
+    }
+
+    /** Read-only evidence/debug view of the current native title-card timer. */
+    public int getStateTimer() {
+        return stateTimer;
+    }
+
     // ---- TitleCardProvider interface ----
 
     @Override

@@ -699,11 +699,22 @@ public class ObjectManager {
             }
         }
 
-        ObjectSolidExecutionContext.Resolver resolver =
-                mode == SolidExecutionMode.MANUAL_CHECKPOINT
-                        ? () -> solidContacts.processManualCheckpoint(
-                                instance, player, sidekicks, solidPostMovement)
-                        : null;
+        ObjectSolidExecutionContext.Resolver resolver = null;
+        if (mode == SolidExecutionMode.MANUAL_CHECKPOINT) {
+            resolver = new ObjectSolidExecutionContext.Resolver() {
+                @Override
+                public SolidCheckpointBatch resolveNow() {
+                    return solidContacts.processManualCheckpoint(
+                            instance, player, sidekicks, solidPostMovement);
+                }
+
+                @Override
+                public SolidCheckpointBatch resolvePlayer(PlayableEntity participant) {
+                    return solidContacts.processManualCheckpoint(
+                            instance, participant, List.of(), solidPostMovement);
+                }
+            };
+        }
         registry.beginObject(instance, resolver);
         try {
             instance.update(vblaCounter, player);
@@ -2505,6 +2516,14 @@ public class ObjectManager {
     }
 
     /**
+     * Release one object's native standing ownership and its folded ride record.
+     * Other objects' standing latches and rides are left untouched.
+     */
+    public void releaseRidingObject(PlayableEntity player, ObjectInstance owner) {
+        solidContacts.releaseRidingObject(player, owner);
+    }
+
+    /**
      * One-time native bootstrap for route starts that begin with the player
      * already riding a ROM solid object.
      *
@@ -2927,20 +2946,28 @@ public class ObjectManager {
         instance.onUnload();
         if (spawn != null) {
             freeAllReservedChildSlots(spawn);
-            boolean clearsRespawnState = instance.clearsRespawnStateOnCounterBasedOutOfRange();
-            if (clearsRespawnState) {
-                placement.clearCounterForSpawn(spawn);
-                // ROM parity: RememberState clears bit 7 but the cursor may
-                // still be between this spawn's entry and the current window
-                // edge, so keep it dormant until ObjPosLoad reprocesses it.
-                placement.markDormant(spawn);
+            if (!placement.isCounterBasedRespawn()) {
+                // S2/S3K MarkObjGone clears the live respawn bit and removes
+                // the instance. S2 waits for an X-cursor crossing; S3K may
+                // reconsider an entry still between the X cursors from the
+                // next newly exposed Y strip.
+                placement.removeFromActiveForUnload(spawn);
             } else {
-                // ROM parity: direct DeleteObject tails skip RememberState,
-                // leaving ObjPosLoad's bset-tested counter bit latched. Remove
-                // the stale placement entry so the later bset-skip cannot be
-                // materialized by syncActiveSpawnsLoad.
-                placement.forgetCounterForSpawn(spawn);
-                placement.removeFromActivePreservingCounterState(spawn);
+                boolean clearsRespawnState = instance.clearsRespawnStateOnCounterBasedOutOfRange();
+                if (clearsRespawnState) {
+                    placement.clearCounterForSpawn(spawn);
+                    // ROM parity: RememberState clears bit 7 but the cursor may
+                    // still be between this spawn's entry and the current window
+                    // edge, so keep it dormant until ObjPosLoad reprocesses it.
+                    placement.markDormant(spawn);
+                } else {
+                    // ROM parity: direct DeleteObject tails skip RememberState,
+                    // leaving ObjPosLoad's bset-tested counter bit latched. Remove
+                    // the stale placement entry so the later bset-skip cannot be
+                    // materialized by syncActiveSpawnsLoad.
+                    placement.forgetCounterForSpawn(spawn);
+                    placement.removeFromActivePreservingCounterState(spawn);
+                }
             }
             removeActiveObject(spawn);
         } else {

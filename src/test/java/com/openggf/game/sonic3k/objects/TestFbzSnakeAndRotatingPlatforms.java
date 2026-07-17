@@ -1,8 +1,13 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.camera.Camera;
+import com.openggf.game.rules.GameRules;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectSpawn;
 import org.junit.jupiter.api.Test;
 import com.openggf.game.rewind.RewindRoundTripHarness;
+import com.openggf.physics.Sensor;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -11,6 +16,7 @@ import org.mockito.ArgumentCaptor;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.AbstractObjectInstance;
+import java.lang.reflect.Field;
 import java.util.List;
 import com.openggf.level.objects.TouchResponseProvider;
 
@@ -44,6 +50,56 @@ class TestFbzSnakeAndRotatingPlatforms {
         assertEquals(0x800,FbzRotatingPlatformObjectInstance.positionY(0x800,0x44,0));
         assertEquals(0x1000,FbzRotatingPlatformObjectInstance.positionX(0x1000,0x44,0x40));
         assertEquals(0x800+0x44,FbzRotatingPlatformObjectInstance.positionY(0x800,0x44,0x40));
+    }
+
+    @Test void rotatingMembersKeepSolidStateInTheirLiveNativeSlot() {
+        var rotating = new FbzRotatingPlatformObjectInstance(spawn(0x77, 0x0C));
+        assertTrue(rotating.usesInstanceSolidStateLatchKey(),
+                "Obj77 rewrites its dynamic spawn while ROM keeps standing/pushing bits in each live SST slot");
+    }
+
+    @Test void rotatingMovementDoesNotOrphanThePriorPushLatch() throws Exception {
+        final int cameraX = 0x0F60;
+        Camera camera = new Camera() {
+            @Override public short getX() { return (short) cameraX; }
+            @Override public short getY() { return (short) 0x0780; }
+            @Override public short getWidth() { return 320; }
+            @Override public short getHeight() { return 224; }
+        };
+        ObjectManager[] holder = new ObjectManager[1];
+        TestObjectServices services = new TestObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+            @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
+        };
+        ObjectManager manager = new ObjectManager(List.of(), new Sonic3kObjectRegistry(),
+                0, null, null, GraphicsManager.getInstance(), camera, services);
+        holder[0] = manager;
+        manager.reset(cameraX);
+        FbzRotatingPlatformObjectInstance rotating = manager.createDynamicObject(
+                () -> new FbzRotatingPlatformObjectInstance(spawn(0x77, 0x0C)));
+        // Isolate the first native member: child allocation is independently
+        // covered above, while this regression targets one SST status owner.
+        Field childrenSpawned = FbzRotatingPlatformObjectInstance.class
+                .getDeclaredField("childrenSpawned");
+        childrenSpawned.setAccessible(true);
+        childrenSpawned.setBoolean(rotating, true);
+
+        SolidProbePlayer player = new SolidProbePlayer();
+        player.setCentreX((short) (0x1044 - 0x17));
+        player.setCentreY((short) 0x0800);
+        player.setAir(false);
+        manager.update(cameraX, player, List.of(), 0, false, true, false);
+        assertTrue(player.getPushing());
+        assertTrue(manager.hasObjectPushingBit(player));
+
+        // The next Obj77 callback changes angle and updateDynamicSpawn replaces
+        // its coordinate-bearing ObjectSpawn. loc_1E0A2 must still find and
+        // clear the bit owned by this same live SST slot.
+        player.setCentreX((short) 0x0F00);
+        manager.update(cameraX, player, List.of(), 1, false, true, false);
+        assertFalse(player.getPushing());
+        assertFalse(manager.hasObjectPushingBit(player));
     }
 
     @Test void carrierFamiliesExposeCompletePrimitiveRewindState() {
@@ -86,6 +142,12 @@ class TestFbzSnakeAndRotatingPlatforms {
         assertTrue(snake.isCustomOutOfRange(0x2000));
     }
 
+    @Test void snakeSolidObjectFullConsumesAnAirborneStaleStandingBitBeforeReseating() {
+        var snake = new FbzSnakePlatformObjectInstance(spawn(0x75, 3));
+        assertTrue(snake.airborneStaleStandingBitReturnsNoContact(null),
+                "SolidObjectFull loc_1DC98 must return after clearing an airborne rider");
+    }
+
     @Test void subtype0CSpecialFirstMemberHasNativeMagneticTouchRoleOnly() {
         var special=new FbzRotatingPlatformObjectInstance(spawn(0x77,0x0C));
         TouchResponseProvider touch=assertInstanceOf(TouchResponseProvider.class,special);
@@ -125,6 +187,25 @@ class TestFbzSnakeAndRotatingPlatforms {
     }
 
     private static final class ManagerServices extends TestObjectServices {private final ObjectManager manager;ManagerServices(ObjectManager manager){this.manager=manager;}@Override public ObjectManager objectManager(){return manager;}}
+
+    private static final class SolidProbePlayer extends AbstractPlayableSprite {
+        private SolidProbePlayer() {
+            super("FBZ_ROTATING_PLATFORM_SOLID_TEST", (short) 0, (short) 0);
+            setWidth(20);
+            setHeight(38);
+            setGameRulesForTest(GameRules.SONIC_3K);
+        }
+        @Override protected void defineSpeeds() {
+            runAccel=0;runDecel=0;friction=0;max=0;jump=0;angle=0;
+            slopeRunning=0;slopeRollingDown=0;slopeRollingUp=0;rollDecel=0;
+            minStartRollSpeed=0;minRollSpeed=0;maxRoll=0;rollHeight=28;runHeight=38;
+            standXRadius=9;standYRadius=19;rollXRadius=7;rollYRadius=14;
+        }
+        @Override protected void createSensorLines() {
+            groundSensors=new Sensor[0];ceilingSensors=new Sensor[0];pushSensors=new Sensor[0];
+        }
+        @Override public void draw() { }
+    }
 
     private static ObjectSpawn spawn(int id, int subtype) {
         return new ObjectSpawn(0x1000, 0x800, id, subtype, 0, true, 3);

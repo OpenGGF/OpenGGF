@@ -2,8 +2,10 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidExecutionMode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -13,6 +15,12 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.game.solid.ObjectSolidExecutionContext;
+import com.openggf.game.solid.PlayerStandingState;
+import com.openggf.game.solid.SolidCheckpointBatch;
+import com.openggf.game.solid.SolidExecutionRegistry;
+
+import java.util.List;
 
 class TestFbzPlayerTransportObjects {
     @AfterEach void resetObjectCameraBounds() {
@@ -26,6 +34,10 @@ class TestFbzPlayerTransportObjects {
             assertEquals(expected[subtype][0] + 0x0B, pipe.getSolidParams().halfWidth());
             assertEquals(expected[subtype][1], pipe.getSolidParams().airHalfHeight());
             assertEquals(expected[subtype][1] + 1, pipe.getSolidParams().groundHalfHeight());
+            assertEquals(expected[subtype][0], pipe.getBalanceWidthPixels(),
+                    "Sonic_Balance reads width_pixels, not SolidObjectFull's d1 extension");
+            assertTrue(pipe.getSolidRoutineProfile().inclusiveRightEdge(),
+                    "loc_3B718 reaches SolidObject_cont, whose unsigned BHI keeps equality solid");
             assertEquals(subtype, pipe.mappingFrame());
             assertEquals(4,pipe.getPriorityBucket());
         }
@@ -85,6 +97,20 @@ class TestFbzPlayerTransportObjects {
                 "loc_3B97A clears x_vel before the terminal MoveSprite2 call");
         assertEquals(0, launcher.xVelocity());
         assertTrue(launcher.returning());
+    }
+
+    @Test void launcherUsesCurrentXAsOutwardSolidCarryReferenceButSavedXWhileReturning() {
+        var launcher = new FbzDezPlayerLauncherObjectInstance(spawn(0x78, 0, 0));
+        TestSprite rider = new TestSprite();
+        launcher.beginLaunchForTest();
+        launcher.stepMotionForTest();
+        assertFalse(launcher.carriesRiderOnHorizontalMove(rider),
+                "loc_3B97A passes the current x_pos in d4 after MoveSprite2");
+
+        for (int i = 1; i < 12; i++) launcher.stepMotionForTest();
+        assertTrue(launcher.returning());
+        assertTrue(launcher.carriesRiderOnHorizontalMove(rider),
+                "loc_3BA4A saves pre-move x_pos on the stack for SolidObjectTop");
     }
 
     @Test void launcherReturnContactDoesNotReEjectOrZeroRiderVelocity() {
@@ -213,6 +239,34 @@ class TestFbzPlayerTransportObjects {
         assertEquals(1,services.count,"12-tick phase plays once");
     }
 
+    @Test void launcherDefersItsRiderRoutineUntilTheStandingBitWasSetOnAPriorFrame() {
+        var launcher = new FbzDezPlayerLauncherObjectInstance(spawn(0x78, 0, 0));
+        RecordingServices services = new RecordingServices();
+        TestSprite rider = new TestSprite();
+        rider.setCentreX((short) 0x0080);
+        rider.setXSpeed((short) 0x0060);
+        rider.setGSpeed((short) 0x0060);
+        PriorStandingRegistry standing = new PriorStandingRegistry(launcher, rider);
+        services.withCamera(focusedCamera(rider)).withSolidExecutionRegistry(standing);
+        launcher.setServices(services);
+
+        launcher.update(202, rider);
+
+        assertEquals(0x0080, rider.getCentreX(),
+                "loc_3B9AC runs before SolidObjectTop, so a new landing is not anchored immediately");
+        assertEquals(0x0060, rider.getXSpeed());
+        assertEquals(0, services.count);
+
+        standing.standing = true;
+        launcher.update(203, rider);
+
+        assertEquals(launcher.getX() + 4, rider.getCentreX());
+        assertEquals(0, rider.getXSpeed(),
+                "the next frame observes the prior standing bit before starting the launcher");
+        assertEquals(1, services.count);
+        assertEquals(SolidExecutionMode.MANUAL_CHECKPOINT, launcher.solidExecutionMode());
+    }
+
     @Test void launcherNormalRoutineWritesFacingOnRiderContact() {
         TestSprite p=new TestSprite();var right=new FbzDezPlayerLauncherObjectInstance(spawn(0x78,0,0));right.setServices(new RecordingServices());right.onSolidContact(p,new SolidContact(true,false,false,false,false,0,false),0);assertEquals(com.openggf.physics.Direction.RIGHT,p.getDirection());
         var left=new FbzDezPlayerLauncherObjectInstance(spawn(0x78,0,1));left.setServices(new RecordingServices());left.onSolidContact(p,new SolidContact(true,false,false,false,false,0,false),1);assertEquals(com.openggf.physics.Direction.LEFT,p.getDirection());
@@ -254,6 +308,39 @@ class TestFbzPlayerTransportObjects {
             @Override public short getX() { return (short) x; }
             @Override public short getY() { return (short) y; }
         };
+    }
+
+    private static Camera focusedCamera(PlayableEntity focused) {
+        return new Camera() {
+            @Override public AbstractPlayableSprite getFocusedSprite() {
+                return (AbstractPlayableSprite) focused;
+            }
+        };
+    }
+
+    private static final class PriorStandingRegistry implements SolidExecutionRegistry {
+        private final ObjectInstance object;
+        private final PlayableEntity player;
+        private boolean standing;
+
+        private PriorStandingRegistry(ObjectInstance object, PlayableEntity player) {
+            this.object = object;
+            this.player = player;
+        }
+
+        @Override public void beginFrame(int frameCounter, List<? extends PlayableEntity> players) {}
+        @Override public void beginObject(ObjectInstance object, ObjectSolidExecutionContext.Resolver resolver) {}
+        @Override public ObjectSolidExecutionContext currentObject() { return ObjectSolidExecutionContext.inert(); }
+        @Override public PlayerStandingState previousStanding(ObjectInstance object, PlayableEntity player) {
+            return new PlayerStandingState(
+                    com.openggf.game.solid.ContactKind.NONE,
+                    standing && object == this.object && player == this.player,
+                    false);
+        }
+        @Override public void publishCheckpoint(SolidCheckpointBatch batch) {}
+        @Override public void endObject(ObjectInstance object) {}
+        @Override public void finishFrame() {}
+        @Override public void clearTransientState() {}
     }
 
     private static ObjectSpawn spawn(int id, int subtype, int flags) {

@@ -2638,7 +2638,18 @@ public class LevelManager {
                 // is initialized before the snap; replaying OPL_Main from the
                 // snapped camera drops early route objects from the SST window.
                 // S3K also needs this for its separate Y-camera placement pass.
-                objectManager.reset(camera.getX());
+                LevelEventProvider levelEvents = activeGameModule().getLevelEventProvider();
+                if (levelEvents != null
+                        && levelEvents.defersInitialObjectPlacementUntilAfterLevelEvents(
+                                currentZone, currentAct)) {
+                    // The zone's ScreenInit owns one or more allocations before
+                    // the first Load_Sprites pass. Clear and position the cursors,
+                    // but let level-event initialization claim those SST slots
+                    // before the first object update materializes placements.
+                    objectManager.resetForSynchronousActTransition(camera.getX());
+                } else {
+                    objectManager.reset(camera.getX());
+                }
             }
             // ROM parity: only when Get_LevelSizeStart had to clamp the camera
             // Y down to Camera_max_Y_pos does the immediately-following
@@ -3559,10 +3570,29 @@ public class LevelManager {
 
     /** Executes a ScreenEvents-owned reload before that same frame's tail work. */
     public void applySynchronousScreenEventTransition(SeamlessLevelTransitionRequest request) {
+        if (request == null) {
+            return;
+        }
         // The owning ScreenEvents routine marks the post boundary only after
         // its native post-Load_Level tail has completed. Marking here would
         // expose a half-finished FBZ1BGE_Normal frame to LiveRewindManager.
-        applySeamlessTransition(request, false);
+        transitions.beginSynchronousScreenEventTransition(currentZone, currentAct, request);
+        try {
+            applySeamlessTransition(request, false);
+        } finally {
+            transitions.endSynchronousScreenEventTransition();
+        }
+    }
+
+    /**
+     * Returns whether the current call stack owns the exact synchronous
+     * ScreenEvents reload. This is execution context, not persistent level
+     * state, and is consumed only while replacement event handlers initialize.
+     */
+    public boolean isApplyingSynchronousScreenEventTransition(
+            int sourceZone, int sourceAct, int targetZone, int targetAct) {
+        return transitions.isApplyingSynchronousScreenEventTransition(
+                sourceZone, sourceAct, targetZone, targetAct);
     }
 
     public void markSynchronousSeamlessTransitionBoundary() {

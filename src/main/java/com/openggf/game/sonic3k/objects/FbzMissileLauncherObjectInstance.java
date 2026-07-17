@@ -46,7 +46,12 @@ public final class FbzMissileLauncherObjectInstance
       return;
     }
     if (!armed) {
-      if (((frame + phase) & 0xFF) != 0 || !isOnScreen(0x20)) {
+      // loc_3C534 reads the low byte of (Level_frame_counter+1), not the
+      // free-running VBla counter used to execute ObjectManager callbacks.
+      // Keeping these clock domains separate preserves the native projectile
+      // burst phase across trace bootstrap, lag, and seamless transitions.
+      int levelFrame = resolveLevelFrameCounter(frame);
+      if (((levelFrame + phase) & 0xFF) != 0 || !isOnScreen(0x20)) {
         coarseCull();
         return;
       }
@@ -77,6 +82,12 @@ public final class FbzMissileLauncherObjectInstance
       }
     }
     coarseCull();
+  }
+  private int resolveLevelFrameCounter(int fallbackFrameCounter) {
+    ObjectServices objectServices = tryServices();
+    return objectServices != null && objectServices.levelManager() != null
+        ? objectServices.levelManager().getFrameCounter() + 1
+        : fallbackFrameCounter;
   }
   private void coarseCull() { coarseXCull(spawn.x(), 0x280); }
   void missileImpacted() {

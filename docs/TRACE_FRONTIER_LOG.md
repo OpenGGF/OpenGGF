@@ -39002,3 +39002,445 @@ A/B against the same worktree with only this change reverted:
   / f2270 tails_x / f1072 rings / f2920 tails_status_byte) — pre-existing
   frontiers, not moved by this fix. Note these differ from older log entries
   (e.g. mgz f738): the recorded frontiers were already stale on develop.
+
+### 2026-07-16 -- FBZ complete-run capture and initial frontier advance
+
+Task 20 is running on `feature/ai-fbz-complete-execution` at base
+`7634ba053` with uncommitted Task 19/20 implementation, fixture, test, skill,
+and documentation changes. BizHawk 2.11 was restored from the official release
+archive (SHA-256
+`722B5AAC5E1D89F890B2875B0150F4A86F5762D211F7CD47029CAC70434955C0`)
+and `tools/bizhawk/s3k_complete_run_recorder.lua` replayed the authoritative
+`s3k-complete-sonic-tails.bk2` against the verified locked-on ROM SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`.
+
+FBZ arms at BK2 frame 237913 and records frames 237914 through 282194. The
+fixture therefore contains **44,281 physics rows**; BK2 frame 282195 is the SOZ
+arm frame. The earlier 44,282 estimate incorrectly counted the recorder's FBZ
+arm callback even though that callback deliberately returns before writing a
+physics row. Existing complete-run segments obey the same
+`next_offset - offset - 1` convention.
+
+The strict comparison-only replay began at **f202 / 5,037 errors / 0 warnings**
+(`x_speed`, ROM `$0060`, engine `$0000`). The disassembly-backed frontier loop
+has advanced as follows:
+
+- **f202 -> f204; 5,037 -> 5,031 errors.** `Obj_FBZDEZPlayerLauncher`
+  consumes prior standing bits in `sub_3B9D8` before `SolidObjectTop`; the port
+  had reacted to a newly established contact in the same frame. It now uses a
+  manual solid checkpoint ordered prior-standing callback then helper.
+- **f204 -> f346; 5,031 -> 4,931 errors.** Outward `loc_3B97A` passes current
+  `x_pos` in d4 (zero horizontal carry), while return `loc_3BA4A` saves pre-move
+  X (full carry). The provider now selects the matching carry reference.
+- **f346 -> f611.** Stationary wire cage `loc_3A2F0` writes
+  `object_control=$42`, so bit 0 does not suppress movement. The port now keeps
+  movement active, models bit 6's forward-probe suppression, and publishes the
+  cage's `RideObject_SetRide` ownership so the shared finalizer preserves
+  `Status_OnObj`.
+- **f611 -> f634.** Floating platform `loc_3A5DA` passes
+  `SolidObjectFull_Offset` d2=`$C`, d3=`-$D`; the port had mistaken d3 for a
+  second half-height. The collision anchor, inclusive edge, and offset-helper
+  off-screen semantics now match the ROM.
+- **f634 -> f681.** `Sonic_Balance` reads the floating platform's native
+  `width_pixels=$20`, not its d1=`$2B` collision half-width. The object-local
+  balance width prevents a false right-edge facing flip.
+- **f681 -> f868; 6,734 -> 5,701 errors.** Mode-4 floating-platform
+  `cmp.b $32(a0),d2` reads the high byte of the big-endian word accumulator.
+  The port compared its low byte and reversed the drop acceleration early.
+
+- **f868 -> f1175; 5,701 -> 5,458 errors.** ROM aux proves slot 12 Blaster
+  `$A8` at `$064D,$08BD` rewrites to `Obj_Explosion` on f868, producing the
+  normal badnik attack bounce. Engine diagnostics showed its Blaster still
+  patrolling at `$0626,$08CD`. `ObjHitFloor2_DoRoutine` probes the predicted
+  next centre X (`x_pos + x_vel<<8`) with y-radius `$E`; the port instead
+  probed `currentX +/- $18`, falsely turned at a ledge, and missed the
+  collision. The focused RED observed expected probe `$1001,$080E` versus
+  actual `$1018,$080E`; the predicted-centre implementation is GREEN.
+- **f1175 -> f1209; 5,458 -> 5,453 errors.** Horizontal chain-link
+  `sub_3AA7E` branches from `loc_3AB3E` directly to `loc_3ABBE` while hand-step
+  byte `4(a2)` is non-zero. It therefore retains the current facing while the
+  four-step hand animation is active instead of sampling a newly pressed
+  opposite direction. The focused RED observed expected LEFT versus actual
+  RIGHT; moving status/render-facing writes under the idle-step gate is GREEN.
+
+- **f1209 -> f1642.** At the end of `loc_3ABBE`, `loc_3AC26` clears timer byte
+  `6(a2)` even when no direction is held. The port retained the just-reloaded
+  `$07`, delaying the next horizontal-chain hand cycle by eight frames. The
+  focused RED now covers the unconditional byte clear and immediate next-cycle
+  cadence.
+- **f1642 -> f1658.** Horizontal-chain completion now preserves the ROM's
+  endpoint, facing, logical-input sampling, and signed boundary semantics. A
+  trace-only false green was rejected after checking the next free-player
+  update instead of stopping on the release frame.
+- **f1658 -> f2038; 5,411 -> 5,314 errors.** `loc_3ACEA` quantizes the relative
+  X coordinate to a `$20`-pixel cell and excludes the orientation-selected
+  outer capture cell. The port had released at the correct endpoint and then
+  immediately re-captured Sonic with zero cooldown. The positional exclusion
+  is now covered independently of cooldown state.
+
+The next strict frontier was **f2038 / 5,314 errors / 0 warnings**, where ROM
+destroyed slot-23 TechnoSqueek and bounced y-speed `$0508 -> -$0508`, while the
+engine missed. Compact generic diagnostics proved Sonic's Insta-Shield was
+still active (`double_jump_flag=1`, 48x48 box) and TechnoSqueek was present in
+the 22-entry prior collision-response list. The engine nevertheless tested its
+two-frame-old snapshot X `$04CA`; the SST pointer's live frame-start X was
+`$04C8`, exactly the inclusive hitbox edge. `Touch_Process` stores prior-pass
+membership as pointers but reads `x_pos(a1)` / `y_pos(a1)` live. A strict
+generic RED now models that pointer movement at an inclusive Insta-Shield edge,
+and the minimal previous-list coordinate rule is GREEN across all 56
+`TestTouchResponseManager` tests.
+
+The authoritative post-fix replay advances the strict frontier to
+**f2641 / 5,196 errors / 0 warnings**. ROM and engine agree through the
+TechnoSqueek destruction/bounce and another 602 frames. At f2641 Sonic lands
+on an FBZ floating platform with exact X, subpixels, velocities, status, and
+camera; engine Y is `$0A79` versus ROM `$0A7A`. ROM reports `onObj=$05`, while
+engine diagnostics show its corresponding floating-platform ride at engine
+slot 4 (`$08C5,$0AA6`, pre-update Y `$0AA7`). This new platform landing/seat
+frontier is recorded for the next trace loop; no further fix was attempted in
+the same validation run.
+
+- **f2641 -> f2795; 5,196 -> 5,195 errors.** The landing-seat delta was
+  already exact: ROM platform Y `$0AA7` produced Sonic Y `$0A7A`, while the
+  engine platform's one-step-early Y `$0AA6` produced Sonic Y `$0A79` with the
+  same `$2D` delta. Floating-platform mode 3 (`loc_3A664`) explicitly reads
+  `(Level_frame_counter+1).w`; the port instead used ObjectManager's
+  free-running VBlank execution argument. It now reads the current
+  Process_Sprites-visible gameplay counter through injected ObjectServices
+  (`LevelManager.frameCounter + 1`) and retains the update argument only as an
+  isolated-test fallback. A deliberate differing-clock RED and all 22
+  `TestFbzRailAndChainPlatforms` tests are GREEN.
+
+The next strict frontier is **f2795 / 5,195 errors / 0 warnings**. ROM lands
+from the exact shared airborne state onto floating platform slot 7, subtype
+`$10`, at `$09C0,$0A9D`: status becomes `$09`, Y becomes `$0A70`, and inertia
+copies exact X velocity `$0139`. Engine retains the exact X velocity and
+subpixels but remains airborne/rolling at Y `$0A74`, so its old airborne
+inertia `$00C0` is the first reported field. This is a missed platform contact,
+not a grounded acceleration, slope, or landing-seat arithmetic mismatch.
+
+A property-gated compact diagnostic proved the subtype `$10` placement is
+loaded (camera `$0781,$0A0C`, anchor `$09C0,$0AA0`) and remains alive. Its
+engine Y instead alternates between `$0A80` and `$0B7F`, putting it outside the
+contact. The port passes ROM offsets `$0A`/`$1E` directly to
+`OscillationManager`, whose byte API intentionally addresses the oscillator
+data *after* the two-byte control word. Other S3K ports already subtract two;
+FBZ therefore reads a delta high byte (`$00`/`$FF`) instead of the intended
+value high byte (ROM about `$1D` at this frontier). The temporary diagnostic
+instrumentation was removed; strict table-addressing and FBZ movement REDs
+cover the next fix.
+
+- **f2795 -> f3062; 5,195 -> 5,191 errors; 0 warnings.** The FBZ floating
+  platform now translates the ROM's `Oscillating_table+$0A` and `+$1E`
+  addresses to the engine data-payload offsets `$08` and `$1C`, excluding the
+  ROM table's two-byte control word. A generic snapshot test uses deliberately
+  distinct value and delta high bytes to prove the address contract, and the
+  FBZ movement test consumes those literal ROM-format bytes. The subtype `$10`
+  platform therefore occupies its intended position, and the replay matches
+  the ROM through the landing and another 267 frames.
+
+The next strict frontier is **f3062 / 5,191 errors / 0 warnings**. The first
+reported mismatch is `y_sub`: ROM `$1600`, engine `$9600`. Static diagnosis of
+the exact object/terrain/contact state finds f3061 is still exact: both sides
+release Sonic from horizontal chain Obj72 with position
+`$0AE8.6700,$0A32.9600`, velocity `$0200,-$0380`, ground speed zero, status
+`$06`, and no standing owner. ROM `Ctrl_1_logical` is `$1810` on that release
+frame (Right+B held, B press), then `$1800` at f3062 (held, no press). At f3062
+the engine has no ride or standing snapshot, both ground probes report empty
+tile zero at distance 31, and chain participant 0 is ungrabbed with cooldown
+59. Nevertheless its post-move velocity becomes `$0800,$0038` with ground
+speed `$0800`: the exact Fire Shield dash writes (`x_vel=ground_vel=$0800`,
+`y_vel=0`) followed by gravity. `PlayableSpriteMovement` returned before its
+jump edge latch while object control suppressed movement, so the held B was
+manufactured as a second press on the first free frame. A generic regression
+now covers an object-controlled press followed by a held free frame; the edge
+latch is synchronized on the suppressed movement path so the controlling
+object's consumed press cannot replay as an elemental-shield ability. The
+focused RED reproduced `double_jump_flag=1`; restoring the raw held-state latch
+makes the same focused test pass 1/1 with Maven exit zero. The authoritative
+replay advances **f3062 -> f3199; 5,191 -> 5,125 errors; 0 warnings**, proving
+the held release no longer replays as a Fire Shield dash.
+
+At the new f3199 frontier, f3198 is exact: Sonic is grounded on ROM slot-10
+FBZ floating platform subtype `$30`, at `$0BCA.8A00,$0A54.7E00`, with
+`x_vel=ground_vel=$043C`, `y_vel=0`, status `$08`, camera `$0B2A,$09F4`.
+The f3199 Right+B press initiates the normal jump. ROM and engine agree on X
+and both subpixel words, velocities (`$043C,-$0680`), ground speed, status
+`$06`, animation, and camera; only engine Y is `$0A58` versus ROM `$0A59`.
+Both terrain probes are empty tile zero (distance 24), with no surviving engine
+ride or standing snapshot after the object pass. The ROM platform is
+`$0BBD,$0A80` after its update and clears its P1 standing bit (`status $09 ->
+$01`) on the jump frame.
+
+The exact one-word-only `-$1` signature identifies the S3K
+`SolidObject_cont -> loc_1E154` upward-velocity lift (`subq.w #1,y_pos`)
+rather than jump velocity, radius conversion, subpixel integration, terrain,
+or camera motion. The first proposed multi-solid ordering regression remained
+green and was rejected. Static key inspection exposed the actual ownership
+loss: `FbzFloatingPlatformObjectInstance.updateDynamicSpawn(...)` replaces the
+immutable `ObjectSpawn` value whenever mode 3 moves, while the default solid
+standing latch uses that coordinate-bearing spawn as its key. The platform
+moves from X `$0BBB` to `$0BBD` on f3199, so the new value cannot observe the
+standing bit stored under the prior coordinate. ROM keeps that bit in the same
+live Obj71 SST status byte regardless of movement.
+
+The strict Obj71 profile RED failed 1/1 (`expected true, was false`) until the
+platform opted into the existing moving-solid
+`usesInstanceSolidStateLatchKey()` capability; the full FBZ platform plus
+generic solid-contact focused suite then passed 69/69. The authoritative
+replay advances **f3199 -> f3222; 5,125 -> 5,541 errors; 0 warnings**. The
+larger total reflects the changed downstream cascade shape, while the strict
+first-error frontier advances by 23 frames and the one-pixel Sonic jump error
+is gone.
+
+At f3222, Sonic remains exact. The next mismatch is Tails failing to land on
+ROM Obj71 slot `$0B` subtype `$38`: ROM has position `$0BA3.4D00,$0ACE.B900`,
+`x_vel=ground_vel=$0108`, `y_vel=0`, status `$08`, and interact pointer `$0003`.
+The engine has the same X and subpixel words but Y `$0AD5`, `y_vel=$0940`,
+ground speed zero, status `$06`, and no interact owner. The ROM platform is at
+`$0BA0,$0AF7` with its P2 standing bit set (`status $11`). Full engine
+diagnostics prove the subtype `$38` instance is absent entirely at f3220-f3222;
+only subtype `$10` at `$0B10,$0A81` and subtype `$30` at `$0BDF,$0A88` remain
+near Tails. Tails' trajectory is exact through f3221, so the next strict branch
+is Obj71 lifetime/placement loss before the landing, not collision geometry,
+CPU acceleration, or leader drift.
+
+### 2026-07-17 -- FBZ missile rising-path and delayed-impact frontier
+
+The FBZ launcher projectile now follows `loc_3C6CC..loc_3C768`: the rising
+branch skips the target/floor impact tails, enables collision `$9E` on the
+callback that reaches zero vertical speed, and continues through the shared
+horizontal-movement tail. A detected impact installs the next callback rather
+than converting immediately; that callback adds four pixels to Y, converts the
+same object slot to an explosion, clears collision, and emits the explosion
+SFX. Target impacts decrement the companion's live-impact byte on detection;
+ordinary floor impacts do not. Rewind coverage captures the installed pending
+callback and proves one same-slot conversion and one SFX after restore. The
+launcher phase gate also reads the ROM-visible `(Level_frame_counter+1)` clock
+instead of the object VBlank execution argument. Focused missile and rewind
+suites pass **17/17**, and an independent disassembly re-review is **GREEN**.
+
+The authoritative strict replay advances **f15235 -> f15331; 4,105 -> 4,083
+errors; 0 warnings**. The new first mismatch is `tails_status_byte`: ROM
+`$00`, engine `$20`. This entry records the measured frontier only; no diagnosis
+of the next branch was attempted in the validation run.
+
+### 2026-07-17 -- FBZ Obj77 live-slot push-latch frontier
+
+FBZ rotating-platform members now keep solid standing/pushing ownership on the
+live object instance. Each member is a distinct native SST slot whose
+`status(a0)` survives its circular position update, while the engine's
+`updateDynamicSpawn(...)` replaces the coordinate-bearing spawn before the
+post-update `SolidObjectFull` checkpoint. At f15331 the ROM special member
+clears its P2-pushing bit (`$C0->$80`) and `sub_1E0C2` clears Tails'
+`Status_Push`; the old engine key remained under the member's prior Y `$0186`
+after it moved to `$0184`. The Obj77 provider now uses instance-scoped solid
+state ownership. A real two-frame ObjectManager regression proves a side push,
+member movement, and subsequent no-contact cleanup release both player status
+and the native push latch. The focused suite passes **14/14**, and independent
+disassembly/lifecycle review is **GREEN**.
+
+The authoritative strict replay advances **f15331 -> f15414; 4,083 -> 4,082
+errors; 0 warnings**. The new first mismatch is
+`tails_cpu_respawn_counter`: ROM `$002C`, engine `$0000`. This entry records the
+measured frontier only; no diagnosis of the next branch was attempted in the
+validation run.
+
+### 2026-07-17 -- S3K zero-reaching invulnerability blink frontier
+
+The f15414 counter is the shared `Tails_CPU_flight_timer`, not a separate
+catch-up-only value. ROM aux state shows timer `$002A/$002B/$002C` at
+f15412/f15413/f15414 while `render_flags` stays `$04` through the CPU calls;
+f15414's later renderer changes the sampled flag to `$84`, and f15415 resets
+the timer. `Tails_Display` copies the pre-decrement invulnerability timer,
+decrements storage, and tests copied bit 2 before calling `Draw_Sprite`. The
+`$01->$00` frame therefore remains blink-hidden and retains the prior render
+flag; only the following steady-zero frame refreshes it. The engine previously
+treated stored zero as immediately visible and reset the CPU timer one frame
+early.
+
+Playable render eligibility now retains whether the display timer actually
+decremented this frame, reconstructs the ROM's copied pre-decrement value, and
+keeps that decision through the post-camera render-flag refresh. The bit is
+per-playable and captured in `PlayerRewindExtra`, so arbitrary sidekicks and an
+immediate rewind restore preserve the same blink decision. Focused CPU/render
+and rewind suites pass **72/72**. An independent review initially found the
+missing rewind field; after schema capture/restore and a `$01->$00` round-trip
+regression, the re-review is **GREEN**. The trace-debugging skill now documents
+that a sampled on-screen flag may be newer than the CPU logic that consumed it.
+
+The authoritative frontier-only strict replay advances **f15414 -> f16682;
+4,082 -> 8 reported frontier-window errors; 0 warnings**. The new first
+mismatch is `air`: ROM `1`, engine `0`. At the same frame both characters show
+the paired status mismatch ROM `$03` versus engine `$09`; this entry records
+the measured frontier before diagnosis of the next branch.
+
+### 2026-07-17 -- FBZ missile-companion release and on-object tilt frontier
+
+The FBZ missile-launcher companion now preserves the exact `loc_3C636` solid
+checkpoint before its same-entry cull. When the parent live-impact byte reaches
+zero, the object relocates to `$7F00`, then still executes `SolidObjectFull`
+before `Sprite_OnScreen_Test2` deletes it. The engine companion therefore owns
+a manual all-playable solid checkpoint so the native pair and every additional
+sidekick release their standing state before the object disappears. Focused
+missile tests pass **17/17**, including exact P1/P2/extra-sidekick release order,
+and independent review is **GREEN**. The S3K object skill now records this
+same-entry solid-before-delete pitfall in both mirrored skill trees.
+
+The authoritative frontier-only replay first advanced **f16682 -> f16686; 1
+error; 0 warnings**. The released players' air/status mismatch was closed; the
+new first mismatch was Sonic's facing bit, ROM status `$01` versus engine `$00`.
+
+The follow-up correction models the native `AnglePos` on-object fast path shared
+by S1, S2, and S3K. While `Status_OnObj` is set, all three games clear both tilt
+angle globals and return instead of terrain-scanning beneath the rider. The
+engine now publishes zero into both per-playable tilt latches on that path,
+preventing a stale empty-edge sentinel from making `Sonic_Balance` flip one
+frame early after release. The focused RED/GREEN regression passes **1/1** and
+the complete playable-movement suite passes **124/124**; independent cross-game
+review is **GREEN**.
+
+The exact authoritative command was:
+
+`mvn "-Dmse=off" "-Dsurefire.argLine=-Xmx4g -Dnet.bytebuddy.experimental=true" "-Dsurefire.forkCount=1" "-Dtrace.frontierOnly=true" "-Dtrace.context.radius=24" "-Dtest=com.openggf.tests.trace.s3k.TestS3kFbzCompleteRunTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" test`
+
+The fresh Surefire XML reports **1 test, 1 failure, 0 errors** and the fresh
+frontier report advances **f16686 -> f16687; 1 error; 0 warnings** across
+16,702 executed frames. Sonic's status now matches. The new first and only
+mismatch is `tails_status_byte`: ROM `$00`, engine `$01`. This entry records the
+measured frontier before diagnosis of that Tails-facing branch.
+
+### 2026-07-17 -- FBZ airborne angle-output regression audit
+
+The f16687 Tails mismatch traced to the native airborne collision helpers'
+angle outputs. `Tails_DoLevelCollision` reaches `Sonic_CheckFloor`, which writes
+the right foot's angle to `Primary_Angle` and the left foot's angle to
+`Secondary_Angle`; the Tails dispatch tail copies those bytes to
+`next_tilt`/`tilt`, and the following zero-input balance pass consumes them.
+The shared collision system now exposes its already-computed paired probes
+synchronously, without a post-snap rescan, and each playable copies the angles
+into its rewind-captured latches. A scoped listener preserves the established
+virtual collision-test seam and restores nested or exceptional calls. The
+quadrant `$40`/`$C0` rising branches also skip both the floor scan and its angle
+publication unless the native wind-tunnel force-floor gate is active.
+
+Focused landing and rising-diagonal RED/GREEN regressions pass, and the full
+movement plus collision suites pass **190/190**. The first independent review
+found the missing rising gate; after the two native branches and a skipped-floor
+regression were added, independent re-review was **GREEN**.
+
+The subsequent authoritative frontier-only strict replay nevertheless regressed
+**f16687 -> f16686; 1 error; 0 warnings** across 16,701 executed frames. Fresh
+Surefire XML reports **1 test, 1 failure, 0 errors**. The first and only mismatch
+is Sonic `status_byte`: ROM `$01`, engine `$00`. This is the earlier one-frame
+early facing flip; Tails f16687 is not observable because frontier-only replay
+stops at the preceding Sonic error. The regression is recorded before comparing
+the exact f16685 Sonic landing probe offsets, angles, and dispatch-tail ordering;
+no character, zone, route, or frame exception is justified.
+
+### 2026-07-17 -- Shared native angle bytes and FBZ wire-cage frontier
+
+Targeted BizHawk tracing confirmed that `Primary_Angle` and `Secondary_Angle`
+are shared gameplay bytes, not independent per-playable collision results.
+Empty probes retain the previous byte; dual-plane probes can write foreground,
+then background, then restore the foreground result when it wins; wall helpers
+can publish before an early return. Grounded `AnglePos` seeds both bytes to
+`$03` (or `$00` on an object), applies the right and left probe writes, and the
+common playable-dispatch tail copies the resulting shared values. This tail
+also runs for object-controlled movement and the spindash paths.
+
+`CollisionSystem` now owns and rewind-captures those two shared bytes.
+`SensorResult` carries the native write history needed to reproduce the
+foreground/background ordering, while `PlayableSpriteMovement` has one common
+tail for every dispatch path. The focused ground-sensor, collision, movement,
+rewind, and gameplay-registry suites pass **238/238**. Independent review first
+found the object-control and spindash bypasses; after centralizing publication
+and the dispatch tail, re-review was **GREEN**. Both mirrored
+`trace-replay-bug-fixing` and `s3k-zone-bring-up` skills now document this
+shared-byte, rewind, multi-sidekick, and early-return contract; skill validation
+is **GREEN**.
+
+The authoritative strict replay reports **1 test, 1 failure, 0 errors** and
+advances **f16686 -> f16878 (+192 frames); 3,720 errors; 0 warnings**. At the
+new frontier Sonic is expected at `$2991,$03EF` with velocity
+`$1100,$0300`, but the engine remains at `$2980,$03EC` with
+`$0E01,$0000`; camera position consequently differs. ROM state has Sonic
+standing on object slot `$09`, while the engine reports object control with
+the expected slot missing beside an `FBZWireCageStationary` object. This is a
+new wire-cage/on-object interaction frontier, recorded before diagnosis.
+
+The f16878 mismatch was the stationary cage's exact zero-phase curve entry.
+Native `loc_3A3B4` can write zero to the participant track and still branches
+unconditionally to `loc_3A480`, which adds `ground_vel<<8` and maps the player
+onto the curve in the same object call. The port had used numeric track zero as
+the control-flow gate and therefore left Sonic on the straight section. A local
+`advanceTrack` flag now records entry through either native direction without
+adding persistent or rewind state. The focused regression reproduces the exact
+`$000E0100` track, `$1011,$1003` position, `$1100,$0300` velocity, and `$70`
+mapping frame for both the main player and an extra sidekick; a reverse-entry
+case covers `loc_3A3F2`. The focused test passes **1/1**, the full wire-cage
+suite passes **21/21**, and independent design plus implementation reviews are
+both **GREEN**.
+
+The next authoritative strict replay reports **1 test, 1 failure, 0 errors**
+and advances **f16878 -> f16894 (+16 frames); 3,714 errors; 0 warnings**. The
+f16878 main-player curve transform is now exact. At f16894 ROM Tails remains at
+`$299F,$03EF` with velocity `$0DF5,$0000`, ground speed `$0DF5`, status `$08`,
+object control `$42`, and on-object slot `$09`; the engine maps Tails to
+`$29A0,$03F2` with velocity `$0100,$0300` on the corresponding stationary
+cage. This is a new participant-specific cage execution/phase frontier,
+recorded before diagnosis.
+
+BizHawk PC hooks at f16894 established that this is the retail two-player
+register-clobber path, not independent participant physics. P1 changes its
+Obj70 mapping `$74->$75`; the non-empty player DPLC leaves d6 at
+`$00100000`, and the unpatched `addq.b #1,d6` therefore makes P2 test, set,
+and clear object-status bit 1 instead of its ordinary standing bit 4. When P1's
+mapping is unchanged, `Perform_Player_DPLC` returns before clobbering d6 and
+the same increment restores `$03->$04`. The stationary cage now models the
+normal and contaminated native-P2 latches independently, selecting exactly one
+for each invocation. Their aggregate still owns P2, while additional engine
+sidekicks retain ordinary independent participant latches and never inherit
+the native two-slot register bug.
+
+The focused TDD loop covers dirty capture, clean capture, delayed release,
+extra-sidekick isolation, recursive curve entry, and rewind with both native-P2
+latches set. A post-restore ownership transfer initially exposed a missing
+identity relink; `clearStandingOwner` now rebinds the complete canonical
+P1/P2/extended query before interpreting slot 1. The full wire-cage suite passes
+**24/24**. A separate real-ROM regression loads the Sonic, Tails, and Knuckles
+DPLC tables and proves that every Obj70 mapping frame `$49`, `$52-$54`, and
+`$6C-$77` has a non-empty request list. The same independent reviewer that
+found the rewind-transfer hole re-reviewed the final production, test, and
+skill changes as **GREEN**.
+
+The final authoritative full strict replay reports **1 test, 1 failure, 0
+errors** and advances **f16894 -> f18257 (+1,363 frames); 3,448 errors; 0
+warnings** across 44,132 compared frames. The first mismatch is now `rings`:
+ROM `1`, engine `0`. At f18257 Sonic's position, subpixels, routine, status,
+camera, and velocities remain exact at `$2ACC,$07CB`; nearby live objects are
+the Obj74 magnetic-platform/spike-ball family. This is a new ring-collection
+frontier, recorded before diagnosis.
+
+The f18257 ring mismatch was caused by earlier SST occupancy, not lost-ring
+physics. Native FBZ stationary wire cages end in coarse-X-only
+`Delete_Sprite_If_Not_In_Range`; the engine used a two-dimensional visibility
+test plus a held-participant exemption. Native therefore retained cages in
+slots 5 and 9 that the engine had removed, shifting every later allocation.
+The native lost-ring spill occupied slots 6, 7, 13-15, 23, and 41-61 while the
+engine occupied 5, 6, 12-14, 22, and 39-59. That changed the slot-derived d7
+velocity ordinal and placed the corresponding engine ring 18 pixels too high
+for Tails to collect. The stationary cage now uses its placement X anchor and
+the exact unsigned coarse boundary, culls a held cage like ROM, remains
+vertical-position agnostic, preserves respawnability, and scales only the
+viewport term for widescreen. Focused stationary-cage tests pass **26/26** and
+generic vertical-placement cleanup tests pass **10/10**; independent design
+and implementation reviews are both **GREEN**.
+
+The next authoritative strict replay, run with a 4 GiB fork after the 1 GiB
+attempt exhausted heap, reports **1 test, 1 failure, 0 errors** and advances
+**f18257 -> f18766 (+509 frames); 9 errors; 0 warnings**. The ring mismatch is
+gone. The first mismatch is Tails Y: ROM `$085B`, engine `$085A`; engine Tails
+has entered hurt routine 4 with `$FE00,$FC00` velocity, while ROM Tails remains
+rolling in routine 2 with `$FBF9,$07B8`. This is a new Blaster projectile and
+touch-order frontier, recorded before implementation.

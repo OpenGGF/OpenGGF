@@ -1165,6 +1165,1116 @@ entry (`docs/skdisasm/sonic3k.asm:179032-179047,179136-179139`).
 
 ---
 
+## P33 -- Standing-bit consumers can run before the solid helper
+
+**Symptom.** A launcher, switch, or platform reacts on the exact landing frame,
+anchoring or accelerating the player one frame before the ROM.
+
+**Root cause.** The object routine tests its existing p1/p2 standing bits before
+calling `SolidObjectTop` or `SolidObjectFull`. A compatibility callback after the
+engine resolves contact observes the newly established bit instead. Use a manual
+solid checkpoint: consume `previousStanding` first, then resolve the helper.
+
+**What to check.** Preserve the instruction order around every standing-bit test
+and solid-helper call. Do not treat an object-local standing test as a post-contact
+listener unless the disassembly actually calls the helper first.
+
+**ROM citation.** FBZ/DEZ player launcher `loc_3B97A` calls `sub_3B9D8` for both
+players before `SolidObjectTop` (`docs/skdisasm/sonic3k.asm:79415-79427`).
+
+**Originating commit.** `<pending: FBZ complete-run trace f202>`.
+
+---
+
+## P34 -- Byte access to a word field selects a big-endian half
+
+**Symptom.** A word accumulator reverses, clamps, or changes phase far too early,
+although its word-sized integration and final position formula look correct.
+
+**Root cause.** A 68k byte instruction at the word field's base address reads the
+word's high byte. Java `value & 0xFF` reads the low byte instead. For a word at
+`$32(a0)`, `cmp.b $32(a0),d2` compares `(value >>> 8) & 0xFF`.
+
+**What to check.** Record both the operand size and the exact SST address for every
+mixed byte/word access. Model 16-bit wrapping separately from selecting the high or
+low byte; never infer the byte half from the Java variable name.
+
+**ROM citation.** FBZ floating-platform drop routine integrates word `$32(a0)` but
+compares byte `$32(a0)` at `loc_3A6D0` (`docs/skdisasm/sonic3k.asm:78267-78316`).
+
+**Originating commit.** `<pending: FBZ complete-run trace f681>`.
+
+---
+
+## P35 -- Predictive terrain helpers probe the next centre, not a sprite edge
+
+**Symptom.** A walking badnik turns at a nonexistent ledge, patrols in the wrong
+direction, and misses a later player collision even though its velocity and timers
+match the disassembly.
+
+**Root cause.** `ObjHitFloor2_DoRoutine` predicts one additional X integration
+(`x_pos + x_vel << 8`) and passes that centre X to `ObjCheckFloorDist2`. Replacing
+it with `currentX +/- width_pixels` changes both the coordinate and the cadence.
+
+**What to check.** Follow the exact helper body before choosing a generic patrol
+probe. Preserve its fixed-point prediction, centre/edge semantics, y-radius use,
+and signed acceptance band (`-1 <= distance < $C`).
+
+**ROM citation.** `ObjHitFloor2_DoRoutine` and `ObjCheckFloorDist2`
+(`docs/skdisasm/sonic3k.asm:177986-178007,20054-20068`); FBZ Blaster calls it at
+`loc_89512` (`docs/skdisasm/sonic3k.asm:186458-186472`).
+
+**Originating commit.** `<pending: FBZ complete-run trace f868>`.
+
+---
+
+## P36 -- Directional grab endpoints can exclude a capture cell
+
+**Symptom.** A player releases from a horizontal grab at the correct endpoint,
+then is re-captured on the next frame even though the ROM remains free.
+
+**Root cause.** The same subtype/orientation bit that selects the endpoint can
+also exclude one quantized capture cell. Porting only the endpoint release test
+leaves the generic capture box active at that boundary. The ROM aligns the
+relative coordinate to a $20-pixel cell before testing the one-sided exclusion.
+
+**What to check.** Trace both the release branch and the subsequent capture
+routine. Preserve signed relative-coordinate wrapping, the exact
+`(delta + range) & ~$1F` quantization, and which outer cell is rejected for
+each orientation. Keep this separate from any generic post-release cooldown;
+the exclusion is positional and remains valid when the cooldown is zero.
+
+**ROM citation.** FBZ horizontal chain capture `loc_3ACEA` quantizes the
+relative X coordinate and rejects the leftmost or rightmost cell according to
+subtype bit 6 / status bit 0
+(`docs/skdisasm/sonic3k.asm:78783-78818`).
+
+**Originating commit.** `<pending: FBZ complete-run trace f1658>`.
+
+---
+
+## P37 -- A prior collision list can still expose live object coordinates
+
+**Symptom.** A moving object is present in the expected collision-response
+list, but a player misses it by one movement step at an exact hitbox edge.
+
+**Root cause.** S3K's `Collision_response_list` preserves prior-pass
+membership as SST pointers, not copied position records. When the player slot
+runs before the next object pass, dereferencing the pointer reads the object's
+live frame-start `x_pos` / `y_pos`. Pairing the prior membership with an
+older engine pre-update snapshot makes coordinates two object passes stale.
+
+**What to check.** Separate list membership timing from pointed-to state timing.
+For pointer lists, preserve which objects were published by the prior pass but
+read fields from the live object at the consuming slot. Use a retained
+pre-update position only for pipelines whose list/snapshot contract actually
+copies coordinates. Include inclusive-edge tests because a one-step error can
+otherwise remain invisible.
+
+**ROM citation.** `Touch_Process` reads an SST pointer from
+`Collision_response_list`, then reads `x_pos(a1)` and `y_pos(a1)` live
+(`docs/skdisasm/sonic3k.asm:20661-20717`). FBZ complete-run f2038 exposes
+the distinction with a TechnoSqueek moving from $04CA to $04C8 at the
+Insta-Shield's inclusive 48x48 edge.
+
+**Originating commit.** `<pending: FBZ complete-run trace f2038>`.
+
+---
+
+## P38 -- Object update counters are not automatically `Level_frame_counter`
+
+**Symptom.** A globally phased moving object is consistently one step ahead or
+behind the ROM, and a player receives an otherwise-correct landing or ride-seat
+offset from that displaced surface.
+
+**Root cause.** `ObjectManager` passes its free-running VBlank-style execution
+counter to `ObjectInstance.update(...)`. A disassembly routine that explicitly
+reads `Level_frame_counter` must instead use the gameplay counter exposed by the
+injected level manager. Treating both clocks as interchangeable can survive
+unit tests that call `update(frame, ...)` directly, then drift after replay
+bootstrap, title-card preludes, lag frames, or seamless transitions.
+
+**What to check.** Identify the exact ROM counter symbol and whether the object
+runs before the engine's late-frame gameplay-counter increment. For S3K
+`Process_Sprites`, `services().levelManager().getFrameCounter() + 1` is the
+currently visible `Level_frame_counter`; keep the update argument only as an
+isolated-test fallback. Do not introduce a zone, route, or trace-frame phase
+offset. Add a test whose update argument deliberately differs from the injected
+gameplay counter.
+
+**ROM citation.** FBZ floating platform mode 3 reads
+`(Level_frame_counter+1).w` at `loc_3A664`
+(`docs/skdisasm/sonic3k.asm:78229-78243`). FBZ complete-run f2641 shows the
+engine platform at Y `$0AA6` while its retained prior position and the ROM's
+current position are `$0AA7`; both solid routines apply the correct `$2D`
+landing-seat delta.
+
+**Originating commit.** `<pending: FBZ complete-run trace f2641>`.
+
+---
+
+## P39 -- `Oscillating_table` addresses include a two-byte control word
+
+**Symptom.** An oscillating object jumps between extreme positions, misses an
+otherwise-valid ride contact, or appears to read `$00`/`$FF` where the ROM
+uses a smoothly changing oscillator value.
+
+**Root cause.** S3K labels the complete structure `Oscillating_table`: a
+two-byte control word followed by interleaved oscillator values and deltas.
+The engine's `OscillationManager.getByte(...)` and `getWord(...)` address only
+the data payload after that control word. Passing a raw disassembly address
+such as `Oscillating_table+$0A` therefore reads payload offset `$0A` instead of
+the correct `$08`, commonly selecting a delta high byte rather than the value
+high byte.
+
+**What to check.** Establish whether the abstraction accepts an address into
+the complete ROM table or into its payload. For `OscillationManager`, subtract
+two from an `Oscillating_table+offset` expression. Use a test snapshot whose
+value and delta high bytes are intentionally different; default oscillator
+data can hide the error when adjacent bytes happen to agree. Prefer named
+constants documenting both the ROM expression and the translated payload
+offset.
+
+**ROM citation.** FBZ floating platform modes 1 and 2 read
+`Oscillating_table+$0A` and `Oscillating_table+$1E` at `loc_3A63A` and
+`loc_3A646` (`docs/skdisasm/sonic3k.asm:78211-78228`). The engine payload
+offsets are `$08` and `$1C`. FBZ complete-run f2795 exposed the incorrect raw
+offsets as a subtype `$10` platform alternating between Y `$0A80` and `$0B7F`
+instead of presenting the ROM landing surface near `$0A9D`.
+
+**Originating commit.** `<pending: FBZ complete-run trace f2795>`.
+
+---
+
+## P40 -- Object-controlled frames still advance global controller edges
+
+**Symptom.** A player correctly escapes an object by pressing jump, but on the
+first free frame an elemental-shield move, flight, glide, or another
+second-press action fires even though the button was only held.
+
+**Root cause.** The ROM's V-int controller update derives `Ctrl_1_Press` from
+the global held-state transition every frame. `object_control` can skip the
+player movement routine, but it does not pause that controller edge detector.
+An engine-local movement edge latch that returns before observing input during
+object control remains stale; when movement resumes, the still-held button is
+mistaken for a new press.
+
+**What to check.** Separate controller edge generation from whether normal
+player physics runs. On every object-controlled movement-suppression frame,
+advance the held-state latch used to derive the next press edge. Do not replay
+or synthesize a press when the button remains held after the object consumes
+it. Test a press on the final controlled frame followed by the same held input
+on the first uncontrolled frame, using a visible second-press ability so the
+failure cannot hide as an internal boolean.
+
+**ROM citation.** FBZ horizontal chain Obj72 tests the A/B/C press bits in
+`Ctrl_1_logical` and releases the player in `sub_3AA7E`
+(`docs/skdisasm/sonic3k.asm:78513-78568`). In the complete run, f3061 has
+`Ctrl_1_logical=$1810` and performs the chain jump; f3062 has `$1800`, so the
+held B is not a second press. The stale engine edge instead invoked Fire Shield
+dash and wrote `x_vel=ground_vel=$0800`, `y_vel=0`.
+
+**Originating commit.** `<pending: FBZ complete-run trace f3062>`.
+
+---
+
+
+## P41 -- Moving solids need a stable live-SST latch owner
+
+**Symptom.** A jump from a moving platform receives S3K's one-pixel
+upward-contact lift, or a continuing rider loses standing/pushing ownership,
+even though the previous frame ended on the same object instance.
+
+**Root cause.** ROM standing and pushing bits live in the object's SST status
+byte, so moving the object does not change their owner. In the engine,
+`AbstractObjectInstance.updateDynamicSpawn(...)` replaces `getSpawn()` with
+an immutable `ObjectSpawn` containing the new coordinates. The generic solid
+latch normally uses that spawn value as its key. A moving object that does not
+opt into an instance-scoped key therefore publishes each coordinate as a new
+latch owner; the next `SolidObjectFull` pass cannot observe the prior standing
+bit and can fall through into new-contact classification.
+
+**What to check.** Any solid that calls `updateDynamicSpawn` while it can carry
+or push a player should declare `usesInstanceSolidStateLatchKey() == true`.
+This is a provider/profile decision, not a zone or trace-frame branch. Add a
+contract test alongside the object's movement-profile tests. Do not globally
+replace spawn keys with instance keys: placed-object latches intentionally use
+stable spawn identity across unload/reload, while a live moving SST slot owns
+its transient status locally.
+
+**ROM citation.** FBZ Obj71 updates `x_pos`/`y_pos` through its movement
+callbacks and then calls `SolidObjectFull_Offset`
+(`docs/skdisasm/sonic3k.asm:78164-78299`); its standing bits remain in that
+same object's `status(a0)`. At complete-run f3199, the subtype `$30` platform
+moved from X `$0BBB` to `$0BBD`. Losing the old coordinate-keyed standing
+bit let `SolidObject_cont -> loc_1E154` apply `subq.w #1,y_pos` to Sonic's
+otherwise exact jump. Instance-scoped ownership advanced the strict frontier
+to f3222.
+
+The same rule applies independently to every real child/member SST slot. FBZ
+Obj77 rotating-platform members update their circular `x_pos`/`y_pos` and call
+`SolidObjectFull` from `loc_3B86A`/`loc_3B8C2`
+(`docs/skdisasm/sonic3k.asm:79333-79388`). At complete-run f15331 the special
+member's native P2-pushing bit clears in its unchanged slot status byte
+(`$C0->$80`), and `sub_1E0C2` clears Tails' `Status_Push`. A coordinate-keyed
+engine latch instead remained under the member's prior dynamic spawn after it
+moved from Y `$0186` to `$0184`. Instance-scoped ownership lets the same live
+member clear its old push bit without conflating sibling members.
+
+**Originating commits.** `<pending: FBZ complete-run traces f3199 and f15331>`.
+
+---
+
+## P42 -- SolidObject_cont's unsigned BHI keeps the exact right edge solid
+
+**Symptom.** A player at the precise right-hand boundary of a platform or trap
+fails to stand or push for one frame, while positions one pixel farther inward
+behave correctly.
+
+**Root cause.** The shared ROM routine compares the unsigned horizontal
+distance and rejects it with `bhi`, not `bhs`. Equality therefore remains
+inside the solid span. Expressing the test as a conventional half-open range
+silently excludes the exact boundary.
+
+**What to check.** Read the branch mnemonic at the shared solid callsite and
+encode its equality semantics in the object's `SolidRoutineProfile`. Add a
+test at exactly `d1 * 2`, not only at interior and exterior coordinates.
+
+**ROM citation.** FBZ ObjE4 passes `d1=$1B` to `SolidObjectFull`; the shared
+`SolidObject_cont` rejects only with unsigned `bhi`
+(`docs/skdisasm/sonic3k.asm:41399-41407`). Complete-run f3637 exposed the
+incorrect half-open right edge.
+
+**Originating commit.** `<pending: FBZ complete-run trace f3637>`.
+
+---
+
+## P43 -- Manual RideObject_SetRide must perform the complete native reset
+
+**Symptom.** A player lands on a manually controlled carrier at the correct
+position but retains stale airborne velocity, status, or flip state, causing a
+later transfer or launch to diverge.
+
+**Root cause.** `RideObject_SetRide` is a state transition, not merely a
+standing-bit assignment. A hand-written carrier path that sets ownership while
+omitting the routine's velocity and movement-state resets leaves state that the
+ROM clears atomically.
+
+**What to check.** When an object reproduces `RideObject_SetRide` outside the
+shared solid path, mirror every native write before publishing the ride
+relationship. Test the player's velocities and status immediately after
+landing and through a transfer to another carrier. If `Status_OnObj` was set,
+clear the previous `interact` object's standing bit and the engine's scoped
+ride record before installing the new carrier; clearing only same-family
+participant tables leaves ordinary solids live.
+
+**ROM citation.** FBZ wire-cage handling reaches `RideObject_SetRide` from
+`sub_39F7E` after its custom surface check
+(`docs/skdisasm/sonic3k.asm:77203-77241`). Complete-run f3887 retained stale
+state until the full reset was mirrored.
+
+**Originating commit.** `<pending: FBZ complete-run trace f3887>`.
+
+---
+
+## P44 -- Unsigned two-branch landing ranges can deliberately exclude zero
+
+**Symptom.** A player lands one frame early when their feet are exactly flush
+with a moving carrier's surface.
+
+**Root cause.** Translating a pair of unsigned 68k branches into an intuitive
+inclusive range can change its endpoints. In FBZ's cage routine, `bhi`
+rejects positive gaps and the following unsigned `blo` also rejects zero.
+The accepted band is `-$10..-$01`, not `-$10..$00`.
+
+**What to check.** Evaluate each comparison in 16-bit unsigned ordering and
+write boundary tests for `-$11`, `-$10`, `-$01`, `$00`, and `$01`.
+Do not infer inclusivity from the geometric meaning of the values.
+
+**ROM citation.** `sub_39F7E` performs `bhi` followed by
+`cmpi.w #-$10,d0; blo` before `RideObject_SetRide`
+(`docs/skdisasm/sonic3k.asm:77203-77241`). A BizHawk state probe at
+complete-run f3936 confirmed that an exact zero gap is rejected until f3937.
+
+**Originating commit.** `<pending: FBZ complete-run trace f3936>`.
+
+---
+
+## P45 -- S3K rideables must publish the native Tails_CPU_interact pointer bank
+
+**Symptom.** Sonic remains exact while CPU Tails later diverges around an
+object that Tails previously rode, often long after the object has left the
+screen.
+
+**Root cause.** S3K stores the high word of the interacting object's code
+pointer in `Tails_CPU_interact`. The value can persist beyond the contact and
+affect the CPU routine. A rideable object without
+`RomObjectCodePointerProvider` leaves the engine bank word at zero even when
+all visible solid behavior is correct.
+
+**What to check.** For objects that can become Tails' native interaction
+target, implement `RomObjectCodePointerProvider` with the disassembly code
+bank and test it on every counted subtype/family. Preserve the latch according
+to native lifetime; do not clear it merely because contact ended. Separate
+active standing/control cleanup from persistent `interact`: a dismount routine
+that never writes `interact(a0)` must retain the last object identity and slot.
+
+**ROM citation.** FBZ Obj71 executes at `$0003A5DA`, and the complete-run ROM
+latched `Tails_CPU_interact=$0003` at f1053 and retained it through f3990.
+The floating platform and both wire-cage families therefore publish bank
+`$0003`.
+
+**Originating commit.** `<pending: FBZ complete-run trace f3990>`.
+
+---
+
+## P46 -- Object cadence may read Level_frame_counter+1, not the update clock
+
+**Symptom.** Periodic child objects are consistently phase-shifted even though
+their interval and movement math are correct, producing hazards at positions
+that never exist in the ROM.
+
+**Root cause.** The object gates allocation on the low byte at
+`(Level_frame_counter+1).w`. A manager-supplied update counter is a different
+clock and can be one or more phases away during trace playback.
+
+**What to check.** Preserve the exact counter address and byte selection from
+the disassembly. When an engine API exposes the stored level counter, apply the
+native `+1` explicitly and mask to a byte before cadence tests. Use a unit
+test where the manager clock is divisible by the interval but the native
+counter byte is not.
+
+**ROM citation.** FBZ ObjE4 reads `(Level_frame_counter+1).w` at
+`loc_3CD4C` and `loc_3CDD0` before its four-frame flame allocations
+(`docs/skdisasm/sonic3k.asm:80708-80772`). FBZ Obj7F independently reads the
+same native clock at `loc_3C534` before arming a ballistic-projectile burst
+(`docs/skdisasm/sonic3k.asm:80160-80174`); using ObjectManager's VBla clock
+removes the `$9E` projectile that hurts Tails at complete-run f15235. Focused
+regressions deliberately make the object-update and native clock gates
+disagree, proving that only the native byte may allocate children.
+
+**Originating commit.** `<pending: FBZ exact-cadence regression>`.
+
+---
+
+## P47 -- GetSineCosine callers may deliberately consume d1 cosine
+
+**Symptom.** A rotating or lateral child follows a plausible orbit, but its
+horizontal offset and velocity are near zero at the exact frame where the ROM
+places it near the orbit's horizontal extreme.
+
+**Root cause.** `GetSineCosine` returns sine in `d0` and cosine in `d1`.
+Treating the helper as a scalar sine lookup ignores which output register the
+caller subsequently moves or scales. The resulting motion can look coherent
+while being phase-shifted by a quarter turn.
+
+**What to check.** Follow data flow from both output registers after every
+trigonometric helper call. Test a discriminating angle where sine and cosine
+differ substantially, including the spawned coordinate after its first native
+movement update.
+
+**ROM citation.** FBZ ObjE4's `sub_3CEC0` and `loc_3CF4C` consume `d1` after
+`GetSineCosine` (`docs/skdisasm/sonic3k.asm:80856-80911`). At complete-run
+f4262, angles `$7C/$FC` therefore produce the ROM child X coordinates
+`$097C/$09A2`; using sine instead produced a near-centre flame and the f4276
+Tails damage divergence.
+
+**Originating commit.** `<pending: FBZ complete-run trace f4276>`.
+
+---
+
+## P48 -- Keep native width_pixels separate from expanded solid-call widths
+
+**Symptom.** Standing collision is correct, but the player faces the wrong
+direction or enters a balancing animation at the wrong point on an object.
+
+**Root cause.** An object may widen the `d1` argument passed to
+`SolidObjectFull` without changing its stored `width_pixels`. Shared player
+logic such as `Sonic_Balance` reads the stored object field, so reusing the
+expanded collision span changes later behavior.
+
+**What to check.** Track the source of every width independently: mapping
+dimensions, `width_pixels`, render bounds, and each solid-routine argument.
+Expose separate engine values when the disassembly does. Add a regression at
+a coordinate that changes the sign of the balance calculation between the two
+widths.
+
+**ROM citation.** FBZ Obj78 loads `width_pixels` from `byte_3B6D8`, while
+`loc_3B718` adds `$B` only to the `SolidObjectFull` width
+(`docs/skdisasm/sonic3k.asm:79240-79272`). At complete-run f4545, subtype 2
+must use native width `$18`; the expanded width incorrectly flipped Sonic's
+facing bit.
+
+**Originating commit.** `<pending: FBZ complete-run trace f4545>`.
+
+---
+
+## P49 -- render_flags bit 7 gates use the render box, not the object centre
+
+**Symptom.** An on-screen-gated hazard or sound has the correct cadence but is
+consistently phase-shifted as the camera approaches it from an edge.
+
+**Root cause.** The disassembly tests `render_flags` bit 7, which
+`Render_Sprites` derives from the object's `width_pixels` and
+`height_pixels` extents. A centre-point viewport test becomes true later on
+entry and false earlier on exit.
+
+**What to check.** When a routine tests the sign of `render_flags`, use the
+engine's ROM-style render-box predicate with the object's native extents and
+the correct previous-render-pass timing. Add a boundary test with the centre
+outside the viewport but the sprite box overlapping it.
+
+**ROM citation.** FBZ ObjE4 tests `render_flags(a0)` before allocating flames
+at `loc_3CD6E` and `loc_3CDEC`, after setting `width_pixels=$10`
+(`docs/skdisasm/sonic3k.asm:80654-80772`). A centre-point check delayed the
+complete-run flame phase by 16 pixels/frames and caused the f5882 sidekick
+hurt divergence.
+
+**Originating commit.** `<pending: FBZ complete-run trace f5882>`.
+
+---
+
+## P50 -- only the ridden solid may consume an airborne ride latch
+
+**Symptom.** A jumping player is pulled down by one pixel or freshly lands on
+a moving platform after an unrelated, earlier SST solid slot runs.
+
+**Root cause.** `SolidObjectFull` processes objects in slot order, but the
+standing ownership belongs to one specific object. Letting any solid clear the
+player's airborne ride record consumes the ridden object's native standing
+latch before its own routine executes.
+
+**What to check.** Couple airborne unseat logic to identity equality between
+the executing solid and the recorded riding object. Regress with two solids in
+slot order: an unrelated earlier solid followed by the actual ridden platform.
+
+**ROM citation.** S3K `SolidObjectFull_1P` clears `Status_OnObj` and the
+object's standing bit only while executing that object's own state
+(`docs/skdisasm/sonic3k.asm:41017-41035`). The complete-run FBZ snake-platform
+case at f5857 exposed the folded-engine ordering bug.
+
+**Originating commit.** `<pending: FBZ complete-run trace f5857>`.
+
+---
+
+## P51 -- S3K SolidObjectFull accepts its exact right X boundary
+
+**Symptom.** A player is separated to the correct solid edge and has zero
+velocity, but loses the pushing bit on the next frame while remaining at that
+same coordinate.
+
+**Root cause.** S3K `SolidObjectFull` rejects horizontal range with unsigned
+`BHI`, so `relX == d1*2` is still inside. A shared profile with an exclusive
+right edge resolves the inbound frame but reports no contact once equality is
+reached.
+
+**What to check.** For every direct S3K `SolidObjectFull` caller, preserve its
+inclusive right edge independently of the object's stored render width. Regress
+the provider profile and a stationary grounded contact at exact equality.
+
+**ROM citation.** FBZ Egg Prison `sub_89D9C` passes `d1=$2B` directly to
+`SolidObjectFull` (`docs/skdisasm/sonic3k.asm:187185-187191`). At complete-run
+f5916, Sonic reaches `x_pos = prison_x + $2B`; ROM retains both P1 pushing
+bits while an exclusive engine profile cleared them.
+
+**Originating commit.** `<pending: FBZ complete-run trace f5917>`.
+
+---
+
+## P52 -- Do not carry S2's approximate render height into S3K
+
+**S3K-specific:**
+
+**Symptom.** A moving object that should fall just below the screen remains
+collision-active, bounces on terrain outside the visible area, and later
+returns to affect gameplay.
+
+**Root cause.** S2 `BuildSprites` uses a 32-pixel approximate vertical band
+when `render_flags` bit 4 is clear. S3K `Render_Sprites` instead always reads
+the object's `height_pixels`. Reusing S2's margin in S3K keeps
+`render_flags` bit 7 set below the native bottom edge.
+
+**What to check.** Identify which game's sprite renderer latches the on-screen
+bit and which object field or fallback it reads. Put the difference in a typed
+per-game rule. Regress the exact bottom-edge coordinate and consume the
+latched bit on the following object update.
+
+**ROM citation.** S3K Obj_Bouncing_Ring initializes radii and
+`width_pixels=8` but leaves cleared `height_pixels=0`, and its floor probe is
+gated by `render_flags` (`docs/skdisasm/sonic3k.asm:35579-35591,
+35624-35650`). S3K `Render_Sprites` reads `height_pixels` directly
+(`sonic3k.asm:36337-36370`), unlike S2's 32-pixel approximate path
+(`docs/s2disasm/s2.asm:30560-30611`). At FBZ complete-run f7333, the extra
+margin let one spilled ring bounce back and be collected.
+
+**Originating commit.** `<pending: FBZ complete-run trace f7333>`.
+
+---
+
+## P53 -- Allocate ScreenInit-owned objects before initial placement
+
+**S3K-specific:**
+
+**Symptom.** Fresh zone load assigns every placed object one SST slot earlier
+than the ROM, so later slot-sensitive interactions and persistent object
+identities diverge even though every placed object exists.
+
+**Root cause.** Some S3K zone `ScreenInit` routines allocate a persistent
+event-owned object before `Load_Sprites` performs its initial placement pass.
+Creating the controller after placement changes native allocation order.
+Trace replay or manager reset can expose a second bug by deleting that owner
+without letting the event runtime reconcile it.
+
+**What to check.** Audit the zone's `ScreenInit` and event-entry routines for
+`Create_New_Sprite` calls. When present, defer initial object placement until
+the event runtime has created or adopted the owner. Make reset reconciliation
+an event-provider lifecycle hook driven by zone state, not by trace route or
+frame. Regress fresh load, act transition, and placement-manager reset: the
+owner must retain one identity and the native slot without duplication.
+
+**ROM citation.** FBZ `ScreenInit_FBZ` creates `Obj_FBZOutdoorBGMotion`
+before its initial sprite placement. Native FBZ1 therefore has the motion
+controller in SST slot 4; allocating it after placement shifted the engine to
+slots 6/7 and moved the complete-run lost-ring allocation at f7340.
+
+**Originating commit.** `<pending: FBZ complete-run trace f7340>`.
+
+---
+
+## P54 -- render_flags consumers observe the previous render pass
+
+**Symptom.** An on-screen-gated countdown starts one frame or several pixels
+too early even after its width and height extents match the ROM.
+
+**Root cause.** Object update reads the `render_flags` value latched by the
+previous `Render_Sprites` pass. Replacing it with a fresh, expanded
+`isOnScreen` query changes both the native bounds and the phase at which the
+countdown becomes active.
+
+**What to check.** Trace where the disassembly last wrote `render_flags` and
+which render pass produced bit 7. Reproduce the exact render box, including
+right/bottom exclusivity and native `width_pixels`/`height_pixels`, and preserve
+previous-pass timing. Add boundary tests immediately outside each edge.
+
+**ROM citation.** FBZ wall-missile launcher `loc_3C828` gates its countdown on
+the prior `render_flags` value produced with width `$10` and height `4`. The
+engine's `$20`-margin query began the countdown 17 frames early, causing the
+sidekick to be hit at complete-run f7409.
+
+**Originating commit.** `<pending: FBZ complete-run trace f7409>`.
+
+---
+
+## P55 -- Direction and render flip bits are separate native state
+
+**Symptom.** A captured player is placed on the opposite side of a rotating
+object for one frame even though the engine has already set the intended
+logical direction.
+
+**Root cause.** ROM code may clear `render_flags` flip bits directly before a
+position helper runs. In the engine, changing the direction field does not
+necessarily clear cached horizontal/vertical render flips, and that stale
+render state can negate a freshly computed offset.
+
+**What to check.** Follow every native write to `render_flags` bits 0-1
+independently of status-facing and logical direction. If the routine masks or
+clears those bits, mirror the cached render-flip write before the same-frame
+position calculation. Regress capture while entering with the opposite facing
+and render flip.
+
+**ROM citation.** FBZ spinning pole `loc_3C0DC` clears `render_flags` bits 0-1
+before placing the player at angle `$E0`. Retaining the engine's cached
+horizontal flip changed the native `pole_x + $A` placement to `pole_x - $A`
+at complete-run f7849.
+
+**Originating commit.** `<pending: FBZ complete-run trace f7849>`.
+
+---
+
+## P56 -- Preserve routine-pointer wait states that stop shared movement
+
+**Symptom.** A moving object reaches the correct surface once, then shifts by
+one pixel on a later frame even though its gravity, radii, and floor-distance
+math all match the disassembly.
+
+**Root cause.** The native collision branch changes the object's routine
+pointer to a dedicated wait state. That state no longer falls through the
+shared movement, gravity, or terrain-probe code. A folded engine boolean such
+as `rising=false` can look equivalent while continuing to execute the falling
+branch every frame, so a second probe with post-landing radii moves the object
+to a coordinate the ROM never visits.
+
+**What to check.** Treat every native routine/address write as a control-flow
+transition, not merely a descriptive mode. List which helpers each destination
+routine calls and model a distinct engine state whenever a destination omits
+movement or collision work. Regress the first landing and then verify that the
+next wait update performs no terrain interaction until its actual activation
+condition changes.
+
+**ROM citation.** FBZ magnetic platform `loc_3B3C0` changes its routine to
+`loc_3B3EC` after the first negative `ObjCheckFloorDist`. `loc_3B3EC` only
+waits for magnetic activation; it does not call `MoveSprite2`, gravity, or a
+second floor probe. Re-running the falling branch with radius `$10` moved the
+engine platform from native Y `$0370` to `$036F`, causing the complete-run
+player landing divergence at f8909.
+
+**Originating commit.** `<pending: FBZ complete-run trace f8909>`.
+
+---
+
+## P57 -- Engine ordering bridges must prove local contact, not pointer liveness
+
+**Symptom.** A CPU sidekick misses a native one-pixel follow correction even
+though its speed, facing, delayed leader sample, and object-control byte all
+match the disassembly.
+
+**Root cause.** An engine-only ordering bridge uses a live `interact` object as
+evidence that the sidekick is still locally supported. Native interact pointers
+can remain latched after the object is hundreds of pixels away. Pointer
+liveness alone therefore suppresses behavior that the ROM routine does not
+gate on that pointer.
+
+**What to check.** Separate native pointer semantics from engine-only collision
+bridges. If a bridge exists solely to preserve a same-frame or prior-pass local
+contact, require the native contact state or a bounded spatial overlap in
+addition to object liveness. Regress both a genuinely local support and a live
+but vertically remote stale pointer; do not special-case a zone, route, object
+ID, or trace frame.
+
+**ROM citation.** S3K `loc_13E0A`/`loc_13E34` gates the grounded +/-1 `x_pos`
+nudge on ground speed, facing, and `object_control` bit 0, not `interact(a0)`
+(`docs/skdisasm/sonic3k.asm:26707-26741`). At FBZ complete-run f9389, Tails'
+live button pointer was `$574` pixels vertically remote; treating it as local
+support suppressed the native +1 correction. The same bridge remains valid for
+the proven AIZ local-contact case inside its existing `$80`-pixel band.
+
+**Originating commit.** `<pending: FBZ complete-run trace f9389>`.
+
+---
+
+## P58 -- Preserve SolidObjectFull_Offset's symmetric live-radius lower bound
+
+**S3K-specific:**
+
+**Symptom.** A rolling player receives a side push from a full-solid object one
+frame before the ROM, then returns to the native coordinate on the following
+frame. Object position, horizontal width, and upper overlap boundary are exact.
+
+**Root cause.** The shared resolver applies normal `SolidObject_cont` vertical
+geometry to a `SolidObjectFull_Offset_1P` caller. The offset routine adds the
+player's live `y_radius` to d2 and doubles that sum for the lower reject bound;
+it does not add `default_y_radius` for the lower half. Using the normal lower
+half makes a rolling player's collision box one pixel too tall at the boundary.
+
+**What to check.** Identify the exact solid routine, including `_Offset` and
+one-player variants, before selecting a shared geometry profile. Preserve d2
+and d3 roles independently, and expose a provider capability when the shared
+resolver otherwise uses `default_y_radius`. Regress exact equality at the lower
+reject boundary and the next entering frame.
+
+**ROM citation.** FBZ Obj71 calls `SolidObjectFull_Offset_1P`; after adding live
+`y_radius(a1)` to d2, the routine copies and doubles d2 to form the symmetric
+vertical span (`docs/skdisasm/sonic3k.asm:41294-41317`). At complete-run f9624,
+normal-solid geometry side-pushed rolling Tails from `$1486` to `$148B` one
+frame early; the ROM performs that push at f9625.
+
+**Originating commit.** `<pending: FBZ complete-run trace f9624>`.
+
+---
+
+## P59 -- Resume routines preserve state unless the destination reloads it
+
+**Symptom.** A badnik completes an attack or interrupt at the correct frame,
+then walks farther than the ROM before its next turn even though its velocity,
+turn delay, and recurring timer constant are individually correct.
+
+**Root cause.** The engine treats a return to a named state as a fresh state
+entry and reloads a countdown. The native continuation routine only changes
+the routine byte and callback pointer, preserving the partially consumed
+countdown from before the interrupt. A reload exists, but only in a different
+turn-completion callback.
+
+**What to check.** For every attack, magnetism, hurt, and wait-state return,
+list the exact fields written by the destination label. Do not infer
+initialization from the semantic state name. Preserve timers and accumulators
+that the label does not write, and test both the resume frame and the later
+callback that legitimately reloads them.
+
+**ROM citation.** FBZ Blaster `loc_8956A` writes routine 2 and restores the
+turn callback, but does not copy recurring `$3A` into patrol countdown `$2E`;
+that reload occurs only in `loc_8955A` (`docs/skdisasm/sonic3k.asm:186475-186486`).
+At complete-run f9965, resetting `$2E` from 64 to 128 after the attack let the
+engine Blaster walk to `$1406` instead of turning near the ROM's `$13E0`, where
+it incorrectly hurt Tails.
+
+**Originating commit.** `<pending: FBZ complete-run trace f9965>`.
+
+---
+
+## P60 -- Apply Player_TouchFloor radius deltas from the pre-resize native centre
+
+**Symptom.** A rolling player lands on an object at the correct frame and keeps
+the correct subpixel fraction, but the engine's centre Y is exactly twice the
+rolling-to-standing radius difference away from the ROM (10 pixels for Sonic).
+
+**Root cause.** `Player_TouchFloor` saves the live `y_radius`, installs the
+default radii, then adds `live_y_radius - default_y_radius` once to native
+`y_pos`. Engine `setRolling(false)` also changes top-left-backed sprite
+dimensions, moving `getCentreY()` in the opposite direction before an object
+applies the ROM delta. Computing from that already-shifted centre therefore
+inverts and doubles the error.
+
+**What to check.** When a custom object calls `RideObject_SetRide` or otherwise
+reproduces `Player_TouchFloor`, capture native centre Y and live Y radius before
+clearing rolling state. After installing standing dimensions, write
+`capturedCentreY + liveYRadius - standYRadius` through
+`NativePositionOps.writeYPosPreserveSubpixel(...)`. Do not derive the write
+from the centre returned after `setRolling(false)`.
+
+**ROM citation.** `Player_TouchFloor` saves `y_radius`, installs
+`default_y_radius`, subtracts the default from the saved value, and adds the
+result to `y_pos` (`docs/skdisasm/sonic3k.asm:24335-24363`). FBZ wire cage
+`sub_39F7E` seats the player and calls `RideObject_SetRide`, which invokes that
+floor reset only when clearing `Status_InAir`
+(`docs/skdisasm/sonic3k.asm:77618-77659`, `42027-42049`). At complete-run
+f10499, native rolling Sonic moves from the cage's pre-reset `$AED` to `$AE8`;
+the engine moved to `$AF2` before this correction.
+
+**Originating commit.** `<pending: FBZ complete-run trace f10499>`.
+
+---
+
+## P61 -- Preserve native sign-bit sentinels that preempt shared thresholds
+
+**S3K-specific:**
+
+**Symptom.** Shared movement reaches the same numerical threshold as the ROM
+and changes animation, facing, sound, or child-object state, but a player owned
+by a transport object should have kept the prior state. The first mismatch is
+often a one-bit status difference followed by position drift from a later
+direction-dependent branch.
+
+**Root cause.** The threshold port is numerically correct but omits a native
+signed-byte guard immediately before the threshold's effects. Objects publish
+negative sentinel values such as `$80`; the native `BMI` treats that state as
+authoritative and returns before otherwise-valid shared logic runs.
+
+**What to check.** Audit every `tst.b field / bmi` or `bpl` adjacent to a shared
+threshold. Preserve the field's sign bit as a semantic runtime state and place
+the guard at the same effect boundary: after calculations the ROM still
+performs, but before animation, facing, SFX, dust/child allocation, or state
+transition writes. Prefer the native state field over zone, object-id, route,
+or frame conditions.
+
+**ROM citation.** S3K `sub_14C20`/`sub_14CAC` perform the retail high-byte skid
+threshold comparison, then test `flip_type(a0)` and return on `BMI` before
+writing Stop animation, facing, SFX, or dust
+(`docs/skdisasm/sonic3k.asm:28041-28167`). FBZ moving wire cage writes
+`flip_type=$80`; at complete-run f11804, omitting the sentinel guard flipped
+Tails left despite native status remaining `$08`, causing the next frame's
+direction-dependent follow nudge.
+
+**Originating commit.** `<pending: FBZ complete-run trace f11804>`.
+
+---
+
+## P62 -- Do not translate signed 68K arithmetic shifts as Java division
+
+**Symptom.** An object moving at half speed matches the ROM on positive and
+even negative displacements, but is one pixel behind on every odd negative
+displacement. The position error can change a boundary collision or leave a
+native per-player solid latch active for one extra frame.
+
+**Root cause.** 68K `asr.w #1` sign-extends and rounds an odd negative word
+toward negative infinity. Java integer `/ 2` truncates toward zero. They agree
+for positive and even values but differ for values such as `-$03`: native ASR
+produces `-$02`, while Java division produces `-$01`.
+
+**What to check.** When porting a signed `asr.w` object displacement, use a
+signed arithmetic shift (`value >> 1`) after preserving the native word-width
+semantics. Do not replace it with `/ 2`. Keep logical shifts (`lsr`) distinct,
+and add odd-negative, even-negative, and positive boundary cases to the focused
+test whenever the shifted coordinate participates in collision.
+
+**ROM citation.** FBZ screw door `loc_3BCB4` negates negative-direction
+displacement before `asr.w #1` in both the bit-5 half-speed horizontal branch
+and the vertical branch (`docs/skdisasm/sonic3k.asm:79688-79710`). At complete-
+run f12435 the native subtype `$12` door moved from Y `$846` to `$845`, clearing
+its Player 2 pushing bit and Tails' `Status_Push`; Java `/ 2` left the door at
+`$846` for one extra frame.
+
+**Originating commit.** `<pending: FBZ complete-run trace f12435>`.
+
+---
+
+## P63 -- Keep delayed native status snapshots separate from live contact state
+
+**S3K-specific:**
+
+**Symptom.** A push-driven object moves one frame early even though its live
+solid contact and the player's Push bit both appear correct. The premature
+whole-pixel move can also erase a non-zero subpixel fraction and create a
+camera mismatch on the same frame.
+
+**Root cause.** The object routine combines two different temporal samples:
+object standing/pushing bits left by the prior SolidObject pass, and player
+status bytes explicitly saved before that pass. Reading the player's current
+Push flag collapses those samples and admits movement one frame early. A
+separate error is translating a native `addq.w` position write with a setter
+that resets the fractional word.
+
+**What to check.** Model every saved status byte (`$3E/$3F`-style scratch) as
+its own rewindable per-participant latch. Consume native P1/P2 in ROM order,
+then process additional engine sidekicks as a labelled extension. Snapshot
+current player status at the same pre-SolidObject point, and use
+`NativePositionOps` for word-only `x_pos`/`y_pos` writes so subpixels survive.
+
+**ROM citation.** S3K subtype-$03 `Obj_Spikes` reads the prior object's
+pushing bits and saved Player 1/2 status bytes in `loc_24356`/`sub_2438A`, then
+refreshes `$3E/$3F` before the current `SolidObjectFull` calls
+(`docs/skdisasm/sonic3k.asm:49239-49343`). Its successful push uses
+`addq.w #1,x_pos` for both spike and player. At FBZ complete-run f13766, using
+live Push moved the spike/player one frame early and reset Sonic's `$A300`
+fraction; native first moves them on f13767 with the fraction preserved.
+
+**Originating commit.** `<pending: FBZ complete-run trace f13766>`.
+
+---
+
+## P64 -- Manual solid checkpoints return same-entry contact state; they do not emit compatibility callbacks
+
+**Symptom.** A player visibly lands on an object during its solid pass, but the
+object-local reaction in the next instruction does not run until a later frame
+or never runs. The resolved player may be grounded with zero vertical speed
+while the native routine would already have launched or released them.
+
+**Root cause.** `MANUAL_CHECKPOINT` deliberately exposes the current
+`SolidCheckpointBatch` to the executing object without invoking
+`SolidObjectListener` compatibility callbacks. Ignoring the returned batch and
+waiting for `onSolidContact(...)` therefore loses the standing/pushing bits that
+the ROM reads immediately after its `SolidObjectFull` call.
+
+**What to check.** When a native SST routine calls a solid helper and then tests
+its standing/pushing bits in the same entry, consume `standingNow()` or
+`pushingNow()` from the returned manual checkpoint at that exact program point.
+Treat that fresh batch as authoritative: never fall back to an older listener
+latch when a participant result is absent. The checkpoint and player-query
+identity sets must match exactly (or fail closed before reactions), so neither a
+query-only nor batch-only participant is silently ignored. Keep native P1/P2
+reaction order before labelled multi-sidekick extensions. If
+the reaction launches or transfers a rider, release the exact ride owner through
+`ObjectManager.releaseRidingObject(...)` so the folded engine ride record and
+the object's native standing bit clear together. Test through the real
+post-movement `ObjectManager` pipeline; direct listener calls are supplemental
+only.
+
+**ROM citation.** FBZ spring plunger `loc_89C86` calls `sub_86A3E`
+(`SolidObjectFull` with d1=$1B, d2=$04, d3=$06), then immediately tests Player 1
+and Player 2 standing bits and calls `sub_8635E` to launch each at y-speed
+`-$0A00` (`docs/skdisasm/sonic3k.asm:187094-187119`). At complete-run f14411,
+the engine landed both players but ignored the checkpoint batch, leaving
+P1 y-speed zero instead of launching in the same SST entry.
+
+**Originating commit.** `<pending: FBZ complete-run trace f14411>`.
+
+---
+
+## P65 -- Preserve observable 68K register clobbers between sequential tests
+
+**Symptom.** Native P1 reacts correctly, but P2 does not react even though the
+disassembly's following `btst` appears to test an object status bit that is not
+set for P2. Replacing the routine with independent per-player booleans looks
+cleaner but disagrees with retail behavior.
+
+**Root cause.** A subroutine between the two tests can overwrite the data
+register that originally held object status. The later test observes the
+clobbered register value, not a fresh status read. If a bit in an SFX id,
+constant, return code, or helper scratch value aliases the later mask, the
+second branch becomes coupled to the first branch's execution.
+
+**What to check.** Track live 68K registers across every `jsr`/tail `jmp` and
+subsequent conditional test. Do not assume the compiler-like intent was to keep
+an earlier field value unless the assembly saves or reloads it. Model an
+observable clobber in the smallest object-local owner, cite the exact constant
+bit, and add a complete truth table. Keep extension-only players outside native
+register accidents unless the ROM has a corresponding slot.
+
+**ROM citation.** FBZ `Obj_FBZSpringPlunger` loads `status(a0)` into d0, tests
+P1, and calls `sub_8635E`. That helper replaces d0 with `sfx_Spring=$B1` before
+tail-jumping `Play_SFX`; on return, `loc_89CC4` tests P2 standing bit 4 in the
+clobbered `$B1`, whose bit 4 is set. Consequently P1 standing launches both
+players even when plunger status is only `$08` and P2's interact pointer names
+another object (`docs/skdisasm/sonic3k.asm:187098-187116`, `181311-181320`;
+`docs/skdisasm/sonic3k.constants.asm:1622`). FBZ complete-run f14411 exposes
+this retail quirk.
+
+The clobber can also change which persistent object-status bit a helper reads,
+sets, or clears. Do not reduce that case to "skip P2 on dirty frames": retain
+independent latches for the intended and aliased bits, select exactly one from
+the observed register value for each native P2 invocation, and let capture and
+release mutate only the selected latch. Aggregate lifetime/ownership may need
+to count either latch. Rewind-capture every persistent aliased bit, but keep
+same-call register dirtiness invocation-local. Additional engine sidekicks use
+deterministic extended-P2 state and must not inherit a retail two-slot register
+accident.
+
+FBZ `Obj_FBZWireCageStationary` calls P1 with d6=standing bit 3, then—when
+`FixBugs` is disabled—only increments d6 before P2. A changed non-empty P1
+player DPLC leaves d6 at the player-art base (low bits zero), so P2 receives
+bit 1 rather than standing bit 4. `sub_3A270` uses that same bit for its entry
+`btst`, `RideObject_SetRide` uses it for `bset status(a0)`, and both release
+paths use it for `bclr`. BizHawk at complete-run f16894 records
+`$00100000->$00100001`; unchanged P1 mapping returns before the clobber and
+restores d6 `$03->$04` on the next call
+(`docs/skdisasm/sonic3k.asm:77875-77890,77896-78137,42027-42048`).
+
+**Originating commit.** `<pending: FBZ complete-run trace f14411 P2>`.
+
+---
+
+## P66 -- Preserve branches that skip shared collision and impact tails
+
+**Symptom.** A launched projectile is missing long before the player reaches
+its later collision point, even though launch cadence, velocity, gravity, hurt
+flags, and descending impact math all look correct in isolation.
+
+**Root cause.** The native rising branch jumps past the shared target/floor
+impact tail. A flattened port updates rising velocity and then falls through
+that tail on every frame, so the projectile collides with the launch surface it
+is specifically meant to pass through and deletes itself immediately.
+
+**What to check.** Draw the control-flow edges around every movement sign test,
+not just the arithmetic in each block. Record which branches reach target,
+terrain, collision-list, draw, and delete tails. Test a deliberately penetrated
+surface throughout the full sign transition: the last negative-velocity call
+must still skip the impact helper even when its gravity add reaches zero; the
+next call, which enters with zero/nonnegative velocity, may run the helper.
+Apply the same branch oracle to special target-height and ordinary terrain
+paths rather than testing only one subtype. If impact installs a new callback,
+keep the detection frame live through every shared tail it still reaches and
+convert on the next object callback. Audit parent counters separately: a target
+branch may decrement family state immediately while an ordinary floor branch
+only installs the pending callback.
+
+**ROM citation.** FBZ missile child `loc_3C6CC` calls `MoveSprite2`, then its
+negative `y_vel` branch adds `$18` and jumps directly to `loc_3C740`. Only the
+nonnegative entry at `loc_3C6F4` adds `$10` and reaches the target-height or
+`ObjCheckFloorDist` impact paths. Both install `loc_3C768` and continue through
+`loc_3C740`; target impact also decrements parent `$40` immediately. On the next
+callback, `loc_3C768` adds Y+4 and converts the same slot to `Obj_Explosion`
+(`docs/skdisasm/sonic3k.asm:80282-80348`). At complete-run f15235, flattening
+those branches removed all three native projectiles before slot 9's `$9E` hurt
+overlap with Tails.
+
+**Originating commit.** `<pending: FBZ complete-run trace f15235>`.
+
+---
+
+## P67 -- Solid checkpoints before same-entry deletion require manual execution
+
+**Symptom.** A player remains grounded and `Status_OnObj` stays set after the
+solid beneath them explodes or moves off screen, even though the native object
+slot is recycled on that same callback. Position and velocity may remain frozen
+because the engine deletes the object before its ordinary post-update solid
+pass can release the rider.
+
+**Root cause.** The native routine relocates or mutates the object, calls
+`SolidObjectFull`, and only then executes its delete/cull tail. Engine
+`AUTO_AFTER_UPDATE` resolution is structurally later than that tail and is
+suppressed once `isDestroyed()` becomes true, so the native release pass never
+runs.
+
+**What to check.** Trace every collision helper and delete/cull edge in exact
+instruction order. When a solid helper precedes possible same-entry deletion,
+use `MANUAL_CHECKPOINT` and resolve the all-participant batch at the native
+program point before culling, on both destructive and ordinary callbacks. Do
+not also leave the automatic pass enabled. Preserve native P1 then P2 ordering,
+then process labelled multi-sidekick extensions, and test through the real
+`ObjectManager` path that every standing/on-object/ride latch clears and Air
+is set before the object becomes destroyed.
+
+**ROM citation.** FBZ missile-launcher companion `loc_3C636` moves
+`x_pos(a0)` and cull anchor `$44(a0)` to `$7F00` when parent `$40` is zero;
+regardless of that branch, it calls `SolidObjectFull` and then tail-jumps to
+`Sprite_OnScreen_Test2`
+(`docs/skdisasm/sonic3k.asm:80231-80269`). At complete-run f16682, both native
+players changed from grounded/on-object to Air before slot 16 was recycled; the
+engine culled first and left both latched.
+
+**Originating commit.** `<pending: FBZ complete-run trace f16682>`.
+
+---
+
+## P68 -- Native coarse-X culling is part of SST allocation order
+
+**Symptom.** A later dynamic system diverges even though its own movement and
+collision math are exact. Lost rings, child objects, explosions, or other
+`FindFreeObj` users can occupy consistently earlier slots than ROM, changing a
+slot-derived loop counter, velocity ordinal, or update order.
+
+**Root cause.** An earlier object used a convenient two-dimensional visibility
+test or a held/ridden exemption where the native tail used
+`Delete_Sprite_If_Not_In_Range`. The engine therefore removed an SST occupant
+because it was vertically off screen, or retained it because a participant was
+attached, while native lifetime depended only on the coarse X anchor. The
+apparently unrelated slot drift then propagated into later allocation.
+
+**What to check.** Port the exact delete tail separately from rendering
+visibility. For `Delete_Sprite_If_Not_In_Range`, compare the spawn/cull anchor
+with the camera using native unsigned `$80` chunks and the `$280` horizontal
+window; do not add a Y test or a held-player exemption. Extend only the visible
+viewport term for widescreen, retain the coarse margins, and destroy placement
+objects through the respawnable offscreen path. Before changing a later
+slot-sensitive system, compare the complete native and engine SST occupancy and
+identify the first missing or extra occupant.
+
+**ROM citation.** FBZ stationary wire cage `loc_3A164` ends with
+`Delete_Sprite_If_Not_In_Range`; it does not call a two-dimensional on-screen
+test and does not exempt an active rider. In the complete run near f18257, two
+vertically distant cages remained in native slots 5 and 9 but were absent in
+the engine. Every later object shifted earlier, so lost-ring slot/d7 cadence
+selected a velocity ordinal 18 pixels above the native ring and Tails missed
+it even though the lost-ring implementation itself was correct.
+
+**Originating commit.** `<pending: FBZ complete-run trace f18257>`.
+
+---
+
+## P69 -- Routine changes do not implicitly reset raw-animation state
+
+**Symptom.** An object performs the correct attack once, then repeats it too
+early or too late. A duplicate child can appear on an otherwise exact
+trajectory because the parent returned to its detection routine before ROM.
+
+**Root cause.** The port treated a routine transition as a new animation and
+cleared its animation index/timer, even though the native transition wrote only
+`routine`, `mapping_frame`, or a separate wait counter. S3K raw-animation state
+is stored in independent SST fields; it survives until an explicit script
+setup, terminal command, or clear. A carried delay from the prior routine can
+therefore be intentional timing state for the next routine.
+
+**What to check.** List every SST field written on each transition and preserve
+all others. Model both `anim_frame` and `anim_frame_timer`; preserving only the
+timer is insufficient when entry can occur during more than one source frame.
+Port terminal commands separately: for `Animate_RawNoSSTMultiDelay`, `$FC`
+restarts at the setup pair, while `$F4` clears the timer, invokes the callback,
+and then clears the animation index. Test entry from every reachable source
+pair, not only the trace-observed delay, and count child allocations through a
+complete return-to-detection cycle.
+
+**ROM citation.** FBZ Blaster `loc_89528` starts its attack wait by writing
+routine 6, mapping frame 0, and counter `$39=$10`; `loc_8957A` enters routine 8
+and creates children without clearing `anim_frame` or `anim_frame_timer`.
+Consequently `byte_89768` first consumes the carried `byte_8975E` state. Near
+complete-run f18766, clearing a carried `$11` timer ended the engine attack 17
+frames early and produced a second primary projectile that native did not
+create until f18783.
+
+**Originating commit.** `<pending: FBZ complete-run trace f18766>`.
+
+---
+
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

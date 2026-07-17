@@ -141,7 +141,8 @@ class TestLostRingObjectInstance {
         // previously latched bit, not a same-step visibility recomputation after movement.
         AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
         LatchedRenderProbeRing ring = new LatchedRenderProbeRing(
-                0x100, 0x00FF, 0, 0x0200);
+                0x100, 0x00FF, 0, 0x0200,
+                GameRules.SONIC_2.ring().lostRingRenderVerticalMargin());
 
         ring.update(0, null);
 
@@ -154,6 +155,29 @@ class TestLostRingObjectInstance {
 
         assertEquals(1, ring.floorProbeCount,
                 "the next object step must consume the latched clear bit and skip terrain");
+    }
+
+    @Test
+    void s3kLostRingRenderFlagUsesZeroHeightPixelsAtBottomEdge() {
+        // S3K Render_Sprites always reads height_pixels (sonic3k.asm:36337-36370).
+        // Obj_Bouncing_Ring leaves that field clear, so bit 7 clears exactly when
+        // the ring centre reaches the 224-pixel bottom edge, unlike S2's +32 band.
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        LatchedRenderProbeRing ring = new LatchedRenderProbeRing(
+                0x100, 0x00DE, 0, 0x0200,
+                GameRules.SONIC_3K.ring().lostRingRenderVerticalMargin());
+
+        ring.update(0, null);
+
+        assertEquals(1, ring.floorProbeCount,
+                "Obj37_Init starts with render_flags=$84, so the first cadence hit may probe");
+        assertFalse(ring.renderFlagForTest(),
+                "S3K height_pixels=0 must clear bit 7 at relative centre Y=224");
+
+        ring.update(1, null);
+
+        assertEquals(1, ring.floorProbeCount,
+                "the next S3K object step must consume the latched clear bit and skip terrain");
     }
 
     @Test
@@ -289,10 +313,13 @@ class TestLostRingObjectInstance {
 
     private static final class LatchedRenderProbeRing extends LostRingObjectInstance {
         int floorProbeCount;
+        private final int renderVerticalMargin;
 
-        private LatchedRenderProbeRing(int xPixel, int yPixel, int xVel, int yVel) {
+        private LatchedRenderProbeRing(int xPixel, int yPixel, int xVel, int yVel,
+                                       int renderVerticalMargin) {
             super(new ObjectSpawn(xPixel & 0xFFFF, yPixel & 0xFFFF, 0x37, 0, 0, false, 0));
             initFixedPointForTest(xPixel, yPixel, xVel, yVel, 0, 0xFF);
+            this.renderVerticalMargin = renderVerticalMargin;
         }
 
         boolean renderFlagForTest() {
@@ -302,6 +329,11 @@ class TestLostRingObjectInstance {
         @Override
         protected int resolveFloorCheckMask() {
             return GameRules.SONIC_2.ring().ringFloorCheckMask();
+        }
+
+        @Override
+        protected int resolveLostRingRenderVerticalMargin() {
+            return renderVerticalMargin;
         }
 
         @Override

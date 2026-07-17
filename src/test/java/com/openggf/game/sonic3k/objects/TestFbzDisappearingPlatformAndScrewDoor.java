@@ -70,6 +70,12 @@ class TestFbzDisappearingPlatformAndScrewDoor {
             assertEquals(animation, door.animationIndex());
             assertEquals(sizes[sizeRow][0], door.nativeWidth());
             assertEquals(sizes[sizeRow][1], door.nativeHeight());
+            assertEquals(door.nativeWidth(), door.getBalanceWidthPixels(),
+                    "Sonic_Balance must read Obj_FBZScrewDoor width_pixels");
+            assertEquals(door.nativeWidth(), door.getOnScreenHalfWidth(),
+                    "Render_Sprites must read Obj_FBZScrewDoor width_pixels");
+            assertEquals(door.nativeHeight(), door.getOnScreenHalfHeight(),
+                    "Render_Sprites must read Obj_FBZScrewDoor height_pixels");
             assertEquals(subtype & 0xF, door.triggerIndex());
             assertEquals((subtype & 0x60) != 0, door.horizontalMode());
             assertEquals((subtype & 0x10) != 0, door.negativeDirection());
@@ -174,6 +180,33 @@ class TestFbzDisappearingPlatformAndScrewDoor {
         for (int frame = 1; frame < 128; frame++) door.update(frame, null);
         assertEquals(0x1080, door.getX());
         assertEquals(initialY, door.getY());
+    }
+
+    @Test
+    void negativeHalfSpeedScrewDoorUsesSignedWordArithmeticShift() {
+        var vertical = new FbzScrewDoorObjectInstance(spawn(0x7A, 0x12));
+        vertical.setServices(new RecordingServices());
+        Sonic3kLevelTriggerManager.setAll(2);
+
+        vertical.update(0, null);
+
+        assertEquals(0x7FF, vertical.getY(),
+                "neg.w followed by asr.w #1 rounds an odd negative displacement down");
+        vertical.update(1, null);
+        assertEquals(0x7FF, vertical.getY(),
+                "the following even negative displacement keeps the same half-speed pixel");
+
+        var horizontal = new FbzScrewDoorObjectInstance(spawn(0x7A, 0x30));
+        horizontal.setServices(new RecordingServices());
+        Sonic3kLevelTriggerManager.setAll(0);
+
+        horizontal.update(0, null);
+
+        assertEquals(0x0FFF, horizontal.getX(),
+                "bit-5 half-speed horizontal motion uses the same signed ASR semantics");
+        horizontal.update(1, null);
+        assertEquals(0x0FFF, horizontal.getX(),
+                "horizontal even negative displacement remains unchanged by the ASR correction");
     }
 
     @Test

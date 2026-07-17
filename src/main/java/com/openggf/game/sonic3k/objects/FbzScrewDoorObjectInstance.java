@@ -78,13 +78,16 @@ public final class FbzScrewDoorObjectInstance extends AbstractObjectInstance
       return spawn.x();
     int d = horizontal ? (negative ? -displacement : displacement) : 0;
     boolean halfSpeed = (spawn.subtype() & 0x20) != 0;
-    return spawn.x() + (horizontal ? (halfSpeed ? d / 2 : d) : 0);
+    // loc_3BCDC uses asr.w #1, which rounds odd negative words down.
+    // Java division truncates them toward zero and leaves a negative-moving
+    // door one pixel behind the ROM on every odd displacement.
+    return spawn.x() + (horizontal ? (halfSpeed ? d >> 1 : d) : 0);
   }
   public int getY() {
     if (legacyRestored)
       return spawn.y() + 0x40;
     int d = !horizontal ? (negative ? -displacement : displacement) : 0;
-    return spawn.y() + (!horizontal ? d / 2 : 0);
+    return spawn.y() + (!horizontal ? d >> 1 : 0);
   }
   int animationIndex() { return animation; }
   int mappingFrame() { return mappingFrame; }
@@ -99,6 +102,20 @@ public final class FbzScrewDoorObjectInstance extends AbstractObjectInstance
   }
   public SolidRoutineProfile getSolidRoutineProfile() {
     return SolidRoutineProfile.fullSolid(false);
+  }
+  @Override
+  public int getBalanceWidthPixels() {
+    // Sonic_Balance reads the object's width_pixels field directly.
+    return width;
+  }
+  @Override
+  public int getOnScreenHalfWidth() {
+    // Render_Sprites uses the same decoded width_pixels value.
+    return width;
+  }
+  @Override
+  public int getOnScreenHalfHeight() {
+    return height;
   }
   @Override
   public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {

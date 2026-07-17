@@ -153,6 +153,24 @@ class TestFbzPolePropellerPistonAndBlocks {
     assertEquals(p.getStandYRadius(), p.getYRadius());
   }
   @Test
+  void poleCaptureClearsRenderFlagsBeforeApplyingInitialAngleOffset() {
+    TestSprite p = new TestSprite();
+    p.setCentreX((short)0x1000);
+    p.setCentreY((short)0x790);
+    p.setDirection(com.openggf.physics.Direction.LEFT);
+    p.setRenderFlips(true, true);
+    var pole = new FbzSpinningPoleObjectInstance(spawn(0x7B, 0x14));
+    pole.setServices(new PlayersServices(p, List.of()));
+
+    pole.update(0, null);
+
+    assertEquals(0x100A, p.getCentreX(),
+        "angle $E0 uses the unmirrored +$A offset after render_flags is cleared");
+    assertFalse(p.getRenderHFlip());
+    assertFalse(p.getRenderVFlip());
+    assertEquals(com.openggf.physics.Direction.RIGHT, p.getDirection());
+  }
+  @Test
   void
   poleLaunchChangesToCharacterRollingRadiiWithoutMovingNativeYOrSubpixel() {
     TestSprite p = new TestSprite();

@@ -271,12 +271,16 @@ public final class TraceReplaySessionBootstrap {
             // ObjPosLoad window from the current camera before title-card
             // object ticks, so prelude state comes from object code rather
             // than recorded SST data.
-            objectManager.reset(cameraX);
-            if (TraceReplayBootstrap.isS3kCompleteRunSegment(trace)) {
-                var levelEventProvider = GameServices.module().getLevelEventProvider();
-                if (levelEventProvider instanceof Sonic3kLevelEventManager s3kLem) {
-                    s3kLem.restoreCompleteRunSegmentObjectsAfterPreludeReset();
-                }
+            var levelEventProvider = GameServices.module().getLevelEventProvider();
+            if (levelEventProvider != null
+                    && levelEventProvider.defersInitialObjectPlacementUntilAfterLevelEvents(
+                            levelManager.getCurrentZone(), levelManager.getCurrentAct())) {
+                objectManager.resetForSynchronousActTransition(cameraX);
+            } else {
+                objectManager.reset(cameraX);
+            }
+            if (levelEventProvider != null) {
+                levelEventProvider.restoreEventOwnedObjectsAfterPlacementReset();
             }
             AbstractPlayableSprite player = fixture != null ? fixture.sprite() : null;
             List<AbstractPlayableSprite> sidekicks = gameplayMode.getSpriteManager() != null

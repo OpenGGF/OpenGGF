@@ -409,6 +409,6 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
     static int preLaserWaitUpdates() { return 0x40; }
     static int cycleWaitUpdates() { return 0x80; }
     static int defeatWaitUpdates() { return 0x60; }
-    String phaseName() { return phase().name(); }
+    public String phaseName() { return phase().name(); }
     private static boolean bit(int bits, int bit) { return (bits & (1 << bit)) != 0; }
 }

@@ -17,7 +17,7 @@ public final class FbzMissileLauncherProjectileObjectInstance
     implements TouchResponseProvider, RewindRecreatable {
   private FbzMissileLauncherObjectInstance parent;
   private int familySlot = -1, x, y, xFixed, yFixed, yVel = -0x600, xDelta;
-  private boolean damaging, impacted;
+  private boolean damaging, pendingImpact, converted;
   FbzMissileLauncherProjectileObjectInstance(ObjectSpawn s,
                                              FbzMissileLauncherObjectInstance p,
                                              int xv) {
@@ -31,31 +31,37 @@ public final class FbzMissileLauncherProjectileObjectInstance
     xDelta = xv;
   }
   public void update(int f, PlayableEntity p) {
-    if (impacted)
+    if (converted)
       return;
+    if (pendingImpact) {
+      convertToExplosion();
+      return;
+    }
     yFixed += yVel;
     y = yFixed >> 8;
-    if (yVel < 0) {
+    boolean rising = yVel < 0;
+    if (rising) {
       yVel += 0x18;
       if (yVel >= 0)
         damaging = true;
-    } else
+    } else {
       yVel += 0x10;
-    if ((spawn.subtype() & 0x80) != 0 && parent != null && parent.targeting() &&
-        y > parent.getY() - 0x44) {
-      y = parent.getY() - 0x44;
-      yFixed = y << 8;
-      impact();
-      return;
-    }
-    if ((spawn.subtype() & 0x80) == 0 || parent == null ||
-        !parent.targeting()) {
-      TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(x, y, 0xC);
-      if (floor.foundSurface() && floor.distance() < 0) {
-        y += floor.distance();
+      if ((spawn.subtype() & 0x80) != 0 && parent != null &&
+          parent.targeting() && y > parent.getY() - 0x44) {
+        y = parent.getY() - 0x44;
         yFixed = y << 8;
-        impact();
-        return;
+        scheduleImpact();
+        // loc_3C716 decrements the companion's live-impact byte on the
+        // detection frame, before this projectile converts next callback.
+        parent.missileImpacted();
+      } else if ((spawn.subtype() & 0x80) == 0 || parent == null ||
+          !parent.targeting()) {
+        TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(x, y, 0xC);
+        if (floor.foundSurface() && floor.distance() < 0) {
+          y += floor.distance();
+          yFixed = y << 8;
+          scheduleImpact();
+        }
       }
     }
     if (Math.abs(yVel) < 0x1D0)
@@ -63,19 +69,27 @@ public final class FbzMissileLauncherProjectileObjectInstance
     x = xFixed >> 8;
     updateDynamicSpawn(x, y);
   }
-  void impact() {
-    if (impacted)
+  void impact() { scheduleImpact(); }
+  private void scheduleImpact() {
+    if (pendingImpact || converted)
       return;
-    impacted = true;
-    if (parent != null)
-      parent.missileImpacted();
+    pendingImpact = true;
+  }
+  private void convertToExplosion() {
+    if (converted)
+      return;
+    pendingImpact = false;
+    converted = true;
+    damaging = false;
+    y += 4;
+    yFixed = y << 8;
     services().playSfx(Sonic3kSfx.EXPLODE.id);
     int slot = ObjectLifetimeOps.detachSlotForTransfer(this);
     ObjectLifetimeOps.deleteNoRespawn(this);
     ObjectLifetimeOps.addReplacementAtTransferredSlot(
         services().objectManager(),
         new com.openggf.level.objects.ExplosionObjectInstance(
-            0, x, y + 4, services().renderManager()),
+            0, x, y, services().renderManager()),
         slot);
   }
   public int getCollisionFlags() { return damaging ? 0x9E : 0; }

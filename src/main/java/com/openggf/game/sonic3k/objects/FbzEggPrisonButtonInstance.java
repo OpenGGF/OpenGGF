@@ -47,6 +47,11 @@ public final class FbzEggPrisonButtonInstance extends AbstractObjectInstance
     }
 
     @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x1B, 4, 6); }
+    @Override public SolidRoutineProfile getSolidRoutineProfile() {
+        // sub_86A3E is another direct S3K SolidObjectFull caller and retains
+        // contact at relX == d1*2 (unsigned BHI rejection only).
+        return SolidRoutineProfile.fullSolid(false, true, false);
+    }
     @Override public boolean isSolidFor(PlayableEntity player) { return routineEntries >= 2; }
     @Override public int getX() { return spawn.x(); }
     @Override public int getY() { return spawn.y(); }

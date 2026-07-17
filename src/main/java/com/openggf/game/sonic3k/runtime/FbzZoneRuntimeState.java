@@ -18,7 +18,23 @@ import java.util.Objects;
 /** Event-backed FBZ runtime adapter and sole rewind serializer for FBZ event RAM. */
 public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
     private static final int MAGIC = 0x46425A31;
-    private static final int VERSION = 11;
+    private static final int VERSION = 14;
+    /** ROM-global {@code _unkF7C1} plus the AnPal edge guard carried by FBZ1 -> FBZ2. */
+    public record MagneticTransitionState(
+            Sonic3kFBZEvents.MagneticPolarity polarity,
+            int phase,
+            boolean edgeObserved,
+            int lastEdgeFrame) {
+        public MagneticTransitionState {
+            Objects.requireNonNull(polarity, "polarity");
+            if (phase < 0 || phase > 0xFF) {
+                throw new IllegalArgumentException("magnetic timer phase: " + phase);
+            }
+        }
+    }
+    public enum S1DonationLowerLoopAssistState { ARMED, CONSUMED }
+    public enum S1DonationUpperLoopAssistState { ARMED, CONSUMED }
+    public enum S1DonationSqueezeAssistState { ARMED, CONSUMED }
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
     private final Sonic3kFBZEvents events;
@@ -55,7 +71,18 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
     }
     public Sonic3kFBZEvents.MagneticPolarity magneticPolarity() { return events.getMagneticPolarity(); }
     public int magneticTimerPhase() { return events.getMagneticTimerPhase(); }
+    public boolean magneticEdgeObserved() { return events.isMagneticEdgeObserved(); }
+    public int magneticLastEdgeFrame() { return events.getMagneticLastEdgeFrame(); }
     public void advanceMagneticPhase(int frameCounter) { events.advanceMagneticPhase(frameCounter); }
+    public MagneticTransitionState captureMagneticTransitionState() {
+        return new MagneticTransitionState(magneticPolarity(), magneticTimerPhase(),
+                magneticEdgeObserved(), magneticLastEdgeFrame());
+    }
+    public void restoreMagneticTransitionState(MagneticTransitionState state) {
+        Objects.requireNonNull(state, "state");
+        events.restoreMagneticState(state.polarity(), state.phase(),
+                state.edgeObserved(), state.lastEdgeFrame());
+    }
     public boolean pendulumOrientationBit(int layoutIndex) { return events.getPendulumOrientationBit(layoutIndex); }
     public void setPendulumOrientationBit(int layoutIndex, boolean value) {
         events.setPendulumOrientationBit(layoutIndex, value);
@@ -78,6 +105,24 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
     public int bossPlaneRefreshRows() { return events.getBossPlaneRefreshRows(); }
     public boolean bossEventSetupAttempted() { return events.isBossEventSetupAttempted(); }
     public boolean bossCollisionIntentActive() { return events.isBossCollisionIntentActive(); }
+    public S1DonationLowerLoopAssistState s1DonationLowerLoopAssistState() {
+        return events.getS1DonationLowerLoopAssistState();
+    }
+    public void setS1DonationLowerLoopAssistState(S1DonationLowerLoopAssistState state) {
+        events.setS1DonationLowerLoopAssistState(state);
+    }
+    public S1DonationUpperLoopAssistState s1DonationUpperLoopAssistState() {
+        return events.getS1DonationUpperLoopAssistState();
+    }
+    public void setS1DonationUpperLoopAssistState(S1DonationUpperLoopAssistState state) {
+        events.setS1DonationUpperLoopAssistState(state);
+    }
+    public S1DonationSqueezeAssistState s1DonationSqueezeAssistState() {
+        return events.getS1DonationSqueezeAssistState();
+    }
+    public void setS1DonationSqueezeAssistState(S1DonationSqueezeAssistState state) {
+        events.setS1DonationSqueezeAssistState(state);
+    }
 
     @Override public BackgroundPlaneCollisionProvider.State backgroundPlaneCollisionStateOrNull() {
         return events.getCollisionMode() == Sonic3kFBZEvents.CollisionMode.FOREGROUND_ONLY
@@ -89,7 +134,7 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
         List<ObjectRefId> clouds = events.getCloudRewindIds();
         byte[] retainedPlane = events.captureRetainedPlaneSnapshot();
         int cloudBytes = clouds.stream().mapToInt(id -> 1 + (id == null ? 0 : 20)).sum();
-        ByteBuffer out = ByteBuffer.allocate(214 + retainedPlane.length + cloudBytes);
+        ByteBuffer out = ByteBuffer.allocate(226 + retainedPlane.length + cloudBytes);
         out.putInt(MAGIC).putInt(VERSION).putInt(events.getForegroundLayoutRegion());
         out.put(bool(events.isForegroundOutdoor())).put(bool(events.isBackgroundOutdoor()));
         out.putInt(events.getBackgroundRedrawStage()).putInt(events.getBackgroundRedrawDirection().ordinal());
@@ -119,6 +164,9 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
                 .putInt(events.getScreenShakeLastOffset()).putInt(events.getScreenShakePhase())
                 .putInt(events.getBossForegroundVScroll());
         out.put(bool(events.isEventsFg5()));
+        out.putInt(events.getS1DonationLowerLoopAssistState().ordinal());
+        out.putInt(events.getS1DonationUpperLoopAssistState().ordinal());
+        out.putInt(events.getS1DonationSqueezeAssistState().ordinal());
         out.putInt(events.getBossPlaneRefreshRows());
         out.put(bool(events.isBossEventSetupAttempted())).put(bool(events.isBossCollisionIntentActive()));
         if (out.hasRemaining()) throw new IllegalStateException("FBZ rewind size mismatch: " + out.remaining());
@@ -175,6 +223,12 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
             int shakeOffset = in.getInt(), shakeLastOffset = in.getInt(), shakePhase = in.getInt();
             int bossForegroundVScroll = in.getInt();
             boolean eventsFg5 = readBool(in, "Events_fg_5");
+            var lowerLoopAssistState = enumAt(S1DonationLowerLoopAssistState.values(),
+                    in.getInt(), "S1 donation lower-loop assist state");
+            var upperLoopAssistState = enumAt(S1DonationUpperLoopAssistState.values(),
+                    in.getInt(), "S1 donation upper-loop assist state");
+            var squeezeAssistState = enumAt(S1DonationSqueezeAssistState.values(),
+                    in.getInt(), "S1 donation squeeze assist state");
             int bossPlaneRefreshRows = in.getInt();
             boolean bossEventSetupAttempted = readBool(in, "boss setup attempted");
             boolean bossCollisionIntentActive = readBool(in, "boss collision intent active");
@@ -189,7 +243,9 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
                     foregroundStage, bossStage, bossX, bossY, adjustment,
                     Collections.unmodifiableList(clouds), cleanupTerminal, plane, collision, diffX, diffY,
                     shakeActive, shakeOffset, shakeLastOffset, shakePhase, bossForegroundVScroll,
-                    eventsFg5, bossPlaneRefreshRows, bossEventSetupAttempted, bossCollisionIntentActive);
+                    eventsFg5, lowerLoopAssistState, upperLoopAssistState,
+                    squeezeAssistState, bossPlaneRefreshRows,
+                    bossEventSetupAttempted, bossCollisionIntentActive);
         } catch (BufferUnderflowException e) {
             throw new IllegalArgumentException("truncated FBZ rewind state", e);
         }
@@ -227,6 +283,9 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
             target.restoreBossPlaneRefreshRows(s.bossPlaneRefreshRows());
             target.restoreBossControllerEventState(
                     s.bossEventSetupAttempted(), s.bossCollisionIntentActive());
+            target.setS1DonationLowerLoopAssistState(s.lowerLoopAssistState());
+            target.setS1DonationUpperLoopAssistState(s.upperLoopAssistState());
+            target.setS1DonationSqueezeAssistState(s.squeezeAssistState());
         } else if (s.foregroundStage() != 0 || s.bossStage() != 0 || s.bossX() != 0 || s.bossY() != 0) {
             throw new IllegalArgumentException("Act 2 FBZ state present in Act 1 snapshot");
         } else if (s.adjustment() || s.cleanupTerminal() || s.clouds().stream().anyMatch(Objects::nonNull)
@@ -235,7 +294,10 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
                 || s.diffX() != 0 || s.diffY() != 0 || s.shakeActive()
                 || s.shakeOffset() != 0 || s.shakeLastOffset() != 0 || s.shakePhase() != 0
                 || s.bossForegroundVScroll() != 0 || s.bossPlaneRefreshRows() != 0
-                || s.bossEventSetupAttempted() || s.bossCollisionIntentActive()) {
+                || s.bossEventSetupAttempted() || s.bossCollisionIntentActive()
+                || s.lowerLoopAssistState() != S1DonationLowerLoopAssistState.ARMED
+                || s.upperLoopAssistState() != S1DonationUpperLoopAssistState.ARMED
+                || s.squeezeAssistState() != S1DonationSqueezeAssistState.ARMED) {
             throw new IllegalArgumentException("Act 2-only FBZ state present in Act 1 snapshot");
         }
         target.setEventsFg5(s.eventsFg5());
@@ -281,6 +343,9 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
                             Sonic3kFBZEvents.CollisionMode collision, int diffX, int diffY,
                             boolean shakeActive, int shakeOffset, int shakeLastOffset, int shakePhase,
                             int bossForegroundVScroll, boolean eventsFg5,
+                            S1DonationLowerLoopAssistState lowerLoopAssistState,
+                            S1DonationUpperLoopAssistState upperLoopAssistState,
+                            S1DonationSqueezeAssistState squeezeAssistState,
                             int bossPlaneRefreshRows, boolean bossEventSetupAttempted,
                             boolean bossCollisionIntentActive) { }
 }

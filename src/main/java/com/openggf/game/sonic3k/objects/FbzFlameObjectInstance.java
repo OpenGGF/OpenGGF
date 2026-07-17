@@ -52,10 +52,12 @@ public final class FbzFlameObjectInstance extends AbstractObjectInstance
 
     static FbzFlameObjectInstance rotating(ObjectSpawn spawn, int angle, int animationFrame) {
         FbzFlameObjectInstance flame = new FbzFlameObjectInstance(spawn);
-        int sine = TrigLookupTable.sinHex(angle);
-        flame.xVelocity = sine << 2;
+        // GetSineCosine returns sine in d0 and cosine in d1. sub_3CEC0
+        // deliberately consumes d1 for both the spawn offset and x_vel.
+        int cosine = TrigLookupTable.cosHex(angle);
+        flame.xVelocity = cosine << 2;
         flame.priorityBucket = (byte) angle < 0 ? 1 : 4;
-        flame.x += sine >> 4;
+        flame.x += cosine >> 4;
         flame.xFixed = flame.x << 8;
         flame.animationFrame = animationFrame;
         return flame;
@@ -63,8 +65,9 @@ public final class FbzFlameObjectInstance extends AbstractObjectInstance
 
     static FbzFlameObjectInstance lateral(ObjectSpawn spawn, int angle, int animationFrame, boolean left) {
         FbzFlameObjectInstance flame = new FbzFlameObjectInstance(spawn);
-        int sine = TrigLookupTable.sinHex(angle);
-        flame.xVelocity = sine + (sine >> 1) + 0x280;
+        // loc_3CF4C uses the same d1 cosine component.
+        int cosine = TrigLookupTable.cosHex(angle);
+        flame.xVelocity = cosine + (cosine >> 1) + 0x280;
         flame.x += left ? -0x10 : 0x10;
         if (left) flame.xVelocity = -flame.xVelocity;
         flame.xFixed = flame.x << 8;

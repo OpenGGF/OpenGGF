@@ -7,6 +7,8 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -37,13 +39,28 @@ public final class FbzFlamethrowerObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity ignored) {
         updateFlameAnimation();
-        if (mappingFrame != 2 && (frameCounter & 3) == 0) {
-            if ((frameCounter & 0xF) == 0 && (isLateral() || isOnScreen(0))) {
+        int levelFrameCounter = resolveLevelFrameCounter(frameCounter) & 0xFF;
+        if (mappingFrame != 2 && (levelFrameCounter & 3) == 0) {
+            // loc_3CD4C/loc_3CDD0 read render_flags bit 7 from the previous
+            // Render_Sprites pass. That flag uses the object's $10-pixel
+            // render extents, not a centre-point viewport check.
+            boolean renderBoxOnScreen = isWithinSolidContactBounds();
+            if ((levelFrameCounter & 0xF) == 0 && (isLateral() || renderBoxOnScreen)) {
                 services().playSfx(Sonic3kSfx.FLAMETHROWER_LOUD.id);
             }
-            if (isOnScreen(0)) spawnFlames();
+            if (renderBoxOnScreen) spawnFlames();
         }
         applyStandingCheckpoint(checkpointAll());
+    }
+
+    private int resolveLevelFrameCounter(int fallbackFrameCounter) {
+        ObjectServices objectServices = tryServices();
+        // loc_3CD4C/loc_3CDD0 read the low byte at
+        // (Level_frame_counter+1).w. ObjectManager's update clock is not that
+        // byte and can be phase-shifted relative to the gameplay counter.
+        return objectServices != null && objectServices.levelManager() != null
+                ? objectServices.levelManager().getFrameCounter() + 1
+                : fallbackFrameCounter;
     }
 
     private void updateFlameAnimation() {
@@ -74,8 +91,16 @@ public final class FbzFlamethrowerObjectInstance extends AbstractObjectInstance
         for (int slot = 0; slot < riders.size(); slot++) {
             riders.flag(slot, 0, false);
         }
-        contacts.perPlayer().forEach((player, contact) ->
-                riders.flag(riders.slot(player), 0, contact.standingNow()));
+        ObjectManager objects = services().objectManager();
+        contacts.perPlayer().forEach((player, contact) -> {
+            // SolidObjectFull skips offscreen Player_2 before entering its
+            // one-player helper, leaving the object's p2_standing_bit intact.
+            // sub_3CE1A drives the trap timer from that persistent status bit,
+            // not solely from this frame's helper result.
+            boolean standing = contact.standingNow()
+                    || (objects != null && objects.hasObjectStandingBit(player, this));
+            riders.flag(riders.slot(player), 0, standing);
+        });
         updateStandingTrap();
     }
 
@@ -105,6 +130,12 @@ public final class FbzFlamethrowerObjectInstance extends AbstractObjectInstance
         int slot = flame.riders.slot(player);
         if (!flame.riders.flag(slot, 0)) return;
         flame.riders.flag(slot, 0, false);
+        ObjectManager objects = flame.services().objectManager();
+        if (objects != null) {
+            // sub_3CE1A clears this flamethrower's p1/p2 standing bit before
+            // sub_3CBCE launches the corresponding player.
+            objects.releaseRidingObject(player, flame);
+        }
         FbzTrapSpringObjectInstance.launchPlayer(player, flame.spawn.subtype(), flame.services());
     }
 
@@ -118,7 +149,11 @@ public final class FbzFlamethrowerObjectInstance extends AbstractObjectInstance
     @Override public int getY() { return spawn.y(); }
     @Override public int getPriorityBucket() { return 3; }
     @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x1B, 8, 9); }
-    @Override public SolidRoutineProfile getSolidRoutineProfile() { return SolidRoutineProfile.fullSolid(false); }
+    @Override public SolidRoutineProfile getSolidRoutineProfile() {
+        // SolidObject_cont rejects relX only with unsigned BHI, so the exact
+        // right boundary (relX == d1 * 2) remains solid.
+        return SolidRoutineProfile.fullSolid(false, true, false);
+    }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
 
     @Override
@@ -143,13 +178,15 @@ public final class FbzFlamethrowerObjectInstance extends AbstractObjectInstance
                         spawn.x() + (left ? -8 : 8), spawn.y(), flipX, false);
                 renderer.drawFrameIndex(0x11, spawn.x(), spawn.y(), flipX, false);
             } else {
-                int sine = com.openggf.physics.TrigLookupTable.sinHex(flameAngle) >> 5;
+                // sub_3CE7A consumes d1 from GetSineCosine (cosine), matching
+                // the component used by the emitted flames in sub_3CEC0.
+                int cosine = com.openggf.physics.TrigLookupTable.cosHex(flameAngle) >> 5;
                 int unsignedAngle = flameAngle & 0xFF;
                 int firstFrame = unsignedAngle < 0xC0 ? 0x10 : 0;
                 int secondFrame = unsignedAngle < 0xC0 ? 0 : 0x10;
-                renderer.drawFrameIndex(firstFrame, spawn.x() + sine, spawn.y(), flipX, false);
+                renderer.drawFrameIndex(firstFrame, spawn.x() + cosine, spawn.y(), flipX, false);
                 renderer.drawFrameIndex(0x11, spawn.x(), spawn.y(), flipX, false);
-                renderer.drawFrameIndex(secondFrame, spawn.x() - sine, spawn.y(), flipX, false);
+                renderer.drawFrameIndex(secondFrame, spawn.x() - cosine, spawn.y(), flipX, false);
             }
         }
     }

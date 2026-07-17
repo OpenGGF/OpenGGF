@@ -569,6 +569,29 @@ class TestAbstractPlayableSpriteRewindCapture {
     }
 
     @Test
+    void zeroReachingInvulnerabilityBlinkRenderDecisionRoundTrips() {
+        Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
+        sonic.setInvulnerableFrames(1);
+        sonic.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
+        sonic.endOfTick();
+
+        assertEquals(0, sonic.getInvulnerableFrames());
+        assertFalse(sonic.shouldRefreshRenderFlagThisFrame(),
+                "the captured frame must retain Tails_Display's pre-decrement d0=1 decision");
+        PerObjectRewindSnapshot snapshot = sonic.captureRewindState();
+        assertTrue(snapshot.playerExtra().invulnerabilityDisplayTimerDecrementedThisFrame());
+
+        sonic.captureOnObjectAtFrameStart();
+        assertTrue(sonic.shouldRefreshRenderFlagThisFrame(),
+                "a steady-zero frame would normally call Draw_Sprite");
+
+        sonic.restoreRewindState(snapshot);
+
+        assertFalse(sonic.shouldRefreshRenderFlagThisFrame(),
+                "rewind restore must recover the zero-reaching blink frame's skipped Draw_Sprite decision");
+    }
+
+    @Test
     void compactCaptureCanOmitFollowHistoryWhenNoSidekickDependsOnIt() {
         Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
 

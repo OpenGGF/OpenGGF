@@ -14,6 +14,17 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestFbzMagneticObjects {
     @Test
+    void platformBalanceUsesNativeWidthPixelsAtLeftBoundary() {
+        FbzMagneticPlatformObjectInstance platform = new FbzMagneticPlatformObjectInstance(
+                new ObjectSpawn(0x2540, 0x0570, 0x74, 0x0F, 0, false, 1));
+
+        assertEquals(0x18, platform.getBalanceWidthPixels(),
+                "Obj_FBZMagneticPlatform initializes width_pixels=$18 for Sonic_Move balance");
+        assertEquals(2, 0x252A + platform.getBalanceWidthPixels() - platform.getX(),
+                "FBZ f13930 must land exactly on Sonic's non-balancing d1==2 boundary");
+    }
+
+    @Test
     void solidObjectFullOffsetKeepsD3AsAnchorOffsetAndCarriesFromD2Surface() {
         var platform = new FbzMagneticPlatformObjectInstance(spawn(0x74, 0x0E));
         var params = platform.getSolidParams();
@@ -68,7 +79,7 @@ class TestFbzMagneticObjects {
     }
 
     @Test
-    void platformUsesRadiusFUntilFirstLandingThenRadius10ForFloorAndCeiling() throws Exception {
+    void platformStopsFallingAfterFirstLandingAndUsesRadius10ForCeiling() throws Exception {
         FbzMagneticPlatformObjectInstance platform =
                 new FbzMagneticPlatformObjectInstance(spawn(0x74, 0x0F));
         ObjectServices services = org.mockito.Mockito.mock(ObjectServices.class);
@@ -83,10 +94,11 @@ class TestFbzMagneticObjects {
             assertEquals(0x6FF, platform.getY(), "the initial one-pixel landing seam must use radius $0F");
             assertEquals(0x10, platform.collisionRadius());
 
-            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x1000, 0x6FF, 0x10))
-                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.clearInvocations();
             platform.update(1, null);
-            terrain.verify(() -> ObjectTerrainUtils.checkFloorDist(0x1000, 0x6FF, 0x10));
+            terrain.verifyNoInteractions();
+            assertEquals(0x6FF, platform.getY(),
+                    "loc_3B3EC must wait without a second falling-floor probe");
 
             setField(platform, "rising", true);
             terrain.when(() -> ObjectTerrainUtils.checkCeilingDist(
@@ -99,6 +111,44 @@ class TestFbzMagneticObjects {
                     org.mockito.ArgumentMatchers.eq(0x1000),
                     org.mockito.ArgumentMatchers.anyInt(),
                     org.mockito.ArgumentMatchers.eq(0x10)));
+        }
+    }
+
+    @Test
+    void returningToTheFallingRoutineRestoresTheNativeRadiusF() throws Exception {
+        Sonic3kFBZEvents events = new Sonic3kFBZEvents();
+        events.init(0);
+        FbzZoneRuntimeState runtime = new FbzZoneRuntimeState(
+                0, PlayerCharacter.SONIC_AND_TAILS, events);
+        ObjectServices services = org.mockito.Mockito.mock(ObjectServices.class);
+        org.mockito.Mockito.when(services.zoneRuntimeState()).thenReturn(runtime);
+        FbzMagneticPlatformObjectInstance platform =
+                new FbzMagneticPlatformObjectInstance(spawn(0x74, 0x0F));
+        platform.setServices(services);
+        setField(platform, "chainAllocationAttempted", true);
+
+        try (MockedStatic<ObjectTerrainUtils> terrain =
+                org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x1000, 0x700, 0x0F))
+                    .thenReturn(new TerrainCheckResult(-1, (byte) 0, 1));
+            platform.update(0, null);
+            assertEquals(0x10, platform.collisionRadius());
+
+            events.setMagneticState(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, 1);
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x1000, 0x6FF, 0x10))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            platform.update(1, null);
+
+            events.setMagneticState(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, 2);
+            terrain.when(() -> ObjectTerrainUtils.checkCeilingDist(
+                            org.mockito.ArgumentMatchers.eq(0x1000),
+                            org.mockito.ArgumentMatchers.anyInt(),
+                            org.mockito.ArgumentMatchers.eq(0x10)))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            platform.update(2, null);
+
+            assertEquals(0x0F, platform.collisionRadius(),
+                    "loc_3B450 restores y_radius=$F before returning to loc_3B3C0");
         }
     }
 

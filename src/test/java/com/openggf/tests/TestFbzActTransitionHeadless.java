@@ -16,6 +16,7 @@ import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.Sonic3kFBZEvents;
+import com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState;
 import com.openggf.game.sonic3k.objects.FbzMinibossInstance;
 import com.openggf.game.sonic3k.objects.FbzOutdoorBgMotionObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance;
@@ -49,6 +50,87 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Full real-runtime FBZ1BGE_Normal reload contract. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestFbzActTransitionHeadless {
+    @Test
+    void synchronousReloadCarriesRomGlobalMagneticStateAndConsumesOneShotContext()
+            throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 0)
+                .startPosition((short) 0x2EE1, (short) 0x0540)
+                .startPositionIsCentre()
+                .build();
+        Sonic3kLevelEventManager manager = (Sonic3kLevelEventManager)
+                GameServices.module().getLevelEventProvider();
+        Sonic3kFBZEvents act1Events = manager.getFbzEvents();
+        FbzZoneRuntimeState act1 = assertInstanceOf(
+                FbzZoneRuntimeState.class, GameServices.zoneRuntimeRegistry().current());
+        act1.restoreMagneticTransitionState(new FbzZoneRuntimeState.MagneticTransitionState(
+                Sonic3kFBZEvents.MagneticPolarity.ACTIVE, 0xFE, true, 0x1200));
+
+        act1Events.setEventsFg5(true);
+        act1Events.updateAct1BackgroundEvent(fixture.sprite().getCentreX(),
+                fixture.sprite().getCentreY(), false);
+
+        assertEquals(1, GameServices.level().getCurrentAct());
+        assertNotSame(act1Events, manager.getFbzEvents());
+        FbzZoneRuntimeState act2 = assertInstanceOf(
+                FbzZoneRuntimeState.class, GameServices.zoneRuntimeRegistry().current());
+        assertNotSame(act1, act2);
+        assertTrue(act2.isBackedBy(manager.getFbzEvents()));
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, act2.magneticPolarity());
+        assertEquals(0xFE, act2.magneticTimerPhase());
+        assertTrue(act2.magneticEdgeObserved());
+        assertEquals(0x1200, act2.magneticLastEdgeFrame());
+
+        act2.advanceMagneticPhase(0x12FF);
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, act2.magneticPolarity());
+        assertEquals(0xFF, act2.magneticTimerPhase());
+        act2.advanceMagneticPhase(0x1300);
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, act2.magneticPolarity());
+        assertEquals(0, act2.magneticTimerPhase());
+        assertEquals(0x1300, act2.magneticLastEdgeFrame());
+        act2.advanceMagneticPhase(0x1300);
+        assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, act2.magneticPolarity(),
+                "the same AnPal frame must not toggle the carried byte twice");
+
+        assertFalse(GameServices.level().isApplyingSynchronousScreenEventTransition(
+                        Sonic3kZoneIds.ZONE_FBZ, 0, Sonic3kZoneIds.ZONE_FBZ, 1),
+                "the one-shot transition context must be cleared before control returns");
+    }
+
+    @Test
+    void synchronousReloadCarriesAndReadoptsTheExactOutdoorMotionSlot() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 0)
+                .startPosition((short) 0x2EE1, (short) 0x0540)
+                .startPositionIsCentre()
+                .build();
+        ObjectManager act1Objects = GameServices.level().getObjectManager();
+        FbzOutdoorBgMotionObjectInstance act1Motion = act1Objects.getActiveObjects().stream()
+                .filter(FbzOutdoorBgMotionObjectInstance.class::isInstance)
+                .map(FbzOutdoorBgMotionObjectInstance.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(4, act1Motion.getSlotIndex());
+
+        Sonic3kLevelEventManager manager = (Sonic3kLevelEventManager)
+                GameServices.module().getLevelEventProvider();
+        Sonic3kFBZEvents act1Events = manager.getFbzEvents();
+        act1Events.setEventsFg5(true);
+        act1Events.updateAct1BackgroundEvent(fixture.sprite().getCentreX(),
+                fixture.sprite().getCentreY(), false);
+
+        ObjectManager act2Objects = GameServices.level().getObjectManager();
+        var act2Motions = act2Objects.getActiveObjects().stream()
+                .filter(FbzOutdoorBgMotionObjectInstance.class::isInstance)
+                .map(FbzOutdoorBgMotionObjectInstance.class::cast)
+                .toList();
+        assertEquals(1, act2Motions.size(),
+                "FBZ2 runtime initialization must adopt the carried controller without allocating a duplicate");
+        assertSame(act1Motion, act2Motions.getFirst());
+        assertEquals(4, act2Motions.getFirst().getSlotIndex());
+        assertTrue(manager.getFbzEvents().isOutdoorMotionSpawned(),
+                "the replacement typed runtime must own the carried slot-4 controller");
+    }
+
     @Test
     void allLiveReloadRegistersOwnerCreatedInstaShieldThatWasNotInCarrySnapshot()
             throws Exception {

@@ -229,7 +229,14 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// When rolling, Sonic's center shifts down by ~5px due to height change.
 		// Subtract 5 from the Y delta to prevent camera jolt.
 		// Tails is 4 pixels shorter, so only subtract 1 for Tails.
-		if (focusedSprite.getRolling()) {
+		// loc_1BFEC does not merely substitute two coordinates into Player_1.
+		// It repoints a0 at Scroll_forced_X_pos-x_pos, a synthetic RAM record whose
+		// status and ground-velocity fields are zero for this model. Consequently a
+		// traversal object may set Player_1 airborne while forced MoveCameraY still
+		// follows the grounded path (FBZ spinning-pole capture is the observable
+		// four-pixel case). Do not leak the real player's movement state into it.
+		boolean forcedCoordinateRecord = forcedScrollRequested;
+		if (!forcedCoordinateRecord && focusedSprite.getRolling()) {
 			focusedSpriteRealY -= 5;
 			if (focusedSprite instanceof Tails) {
 				focusedSpriteRealY += 4; // Net: subtract 1 for Tails
@@ -237,7 +244,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		}
 
 		// Vertical scroll logic (ROM: ScrollVerti)
-		if (focusedSprite.getAir()) {
+		if (!forcedCoordinateRecord && focusedSprite.getAir()) {
 			// ROM: Airborne uses ±0x20 window around bias
 			// Upper bound: bias - 32, Lower bound: bias + 32
 			short upperBound = (short) (yPosBias - AIRBORNE_WINDOW_HALF);
@@ -271,7 +278,9 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 					tolerance = 2;
 				} else {
 					// Bias is normal (96) - check inertia for medium vs fast
-					short absInertia = (short) Math.abs(focusedSprite.getGSpeed());
+					short absInertia = forcedCoordinateRecord
+							? 0
+							: (short) Math.abs(focusedSprite.getGSpeed());
 					if (fastVerticalScrollRequested || absInertia >= FAST_SCROLL_INERTIA_THRESHOLD) {
 						// ROM: .doScroll_fast - player moving very fast on ground
 						// S2: 16px cap, S3K: 24px cap

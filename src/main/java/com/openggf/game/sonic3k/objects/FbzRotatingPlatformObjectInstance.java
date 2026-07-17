@@ -51,5 +51,6 @@ public final class FbzRotatingPlatformObjectInstance extends AbstractObjectInsta
     @Override public int getOutOfRangeReferenceX(){return anchorX;}
     @Override public int getCollisionFlags(){return special?0x86:0;}@Override public int getCollisionProperty(){return 0;}
     @Override public SolidObjectParams getSolidParams(){return new SolidObjectParams(0x17,0x0C,0x0D);}@Override public SolidRoutineProfile getSolidRoutineProfile(){return SolidRoutineProfile.fullSolid(false);}
+    @Override public boolean usesInstanceSolidStateLatchKey(){return true;}
     @Override public void appendRenderCommands(List<GLCommand> commands){PatternSpriteRenderer r=getRenderer(special?Sonic3kObjectArtKeys.FBZ_ROTATING_PLATFORM_SPECIAL:Sonic3kObjectArtKeys.FBZ_ROTATING_PLATFORM);if(r!=null&&r.isReady())r.drawFrameIndex(renderFrameIndex(),x,y,false,false);}
 }

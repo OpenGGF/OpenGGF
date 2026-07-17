@@ -71,6 +71,8 @@ class TestFbzZoneRuntimeState {
         events.setCollisionMode(Sonic3kFBZEvents.CollisionMode.FOREGROUND_AND_BACKGROUND, 0x20, -0x10);
         events.restoreScreenShakePipelineState(true, -3, 5, 0x22, 0x404);
         events.setEventsFg5(true);
+        events.setS1DonationSqueezeAssistState(
+                FbzZoneRuntimeState.S1DonationSqueezeAssistState.CONSUMED);
 
         FbzZoneRuntimeState state = new FbzZoneRuntimeState(1, PlayerCharacter.KNUCKLES, events);
         byte[] expected = state.captureBytes();
@@ -105,6 +107,8 @@ class TestFbzZoneRuntimeState {
         assertEquals(0x22, state.screenShakePhase());
         assertEquals(0x404, state.bossForegroundVScroll());
         assertTrue(state.isActTransitionFlagActive());
+        assertEquals(FbzZoneRuntimeState.S1DonationSqueezeAssistState.CONSUMED,
+                state.s1DonationSqueezeAssistState());
     }
 
     @Test
@@ -150,6 +154,58 @@ class TestFbzZoneRuntimeState {
         assertTrue(events.isBossEventSetupAttempted());
         assertTrue(events.isBossCollisionIntentActive());
         assertArrayEquals(captured, state.captureBytes());
+    }
+
+    @Test
+    void donationLowerLoopAssistStateResetsAndRoundTripsThroughTheTypedRuntimeOwner() {
+        Sonic3kFBZEvents events = new Sonic3kFBZEvents();
+        events.init(1);
+        FbzZoneRuntimeState state = new FbzZoneRuntimeState(
+                1, PlayerCharacter.SONIC_ALONE, events);
+        assertEquals(FbzZoneRuntimeState.S1DonationLowerLoopAssistState.ARMED,
+                state.s1DonationLowerLoopAssistState());
+
+        state.setS1DonationLowerLoopAssistState(
+                FbzZoneRuntimeState.S1DonationLowerLoopAssistState.CONSUMED);
+        byte[] consumed = state.captureBytes();
+        events.init(1);
+        assertEquals(FbzZoneRuntimeState.S1DonationLowerLoopAssistState.ARMED,
+                state.s1DonationLowerLoopAssistState(),
+                "fresh FBZ runtime initialization must rearm the compatibility impulse");
+
+        state.restoreBytes(consumed);
+        assertEquals(FbzZoneRuntimeState.S1DonationLowerLoopAssistState.CONSUMED,
+                state.s1DonationLowerLoopAssistState());
+        assertArrayEquals(consumed, state.captureBytes());
+    }
+
+    @Test
+    void donationUpperLoopAssistStateIsIndependentAndRoundTripsThroughTheTypedRuntimeOwner() {
+        Sonic3kFBZEvents events = new Sonic3kFBZEvents();
+        events.init(1);
+        FbzZoneRuntimeState state = new FbzZoneRuntimeState(
+                1, PlayerCharacter.SONIC_ALONE, events);
+        assertEquals(FbzZoneRuntimeState.S1DonationLowerLoopAssistState.ARMED,
+                state.s1DonationLowerLoopAssistState());
+        assertEquals(FbzZoneRuntimeState.S1DonationUpperLoopAssistState.ARMED,
+                state.s1DonationUpperLoopAssistState());
+
+        state.setS1DonationUpperLoopAssistState(
+                FbzZoneRuntimeState.S1DonationUpperLoopAssistState.CONSUMED);
+        byte[] consumed = state.captureBytes();
+        assertEquals(FbzZoneRuntimeState.S1DonationLowerLoopAssistState.ARMED,
+                state.s1DonationLowerLoopAssistState(),
+                "upper-loop consumption must not consume the later lower-loop assist");
+
+        events.init(1);
+        assertEquals(FbzZoneRuntimeState.S1DonationUpperLoopAssistState.ARMED,
+                state.s1DonationUpperLoopAssistState());
+        state.restoreBytes(consumed);
+        assertEquals(FbzZoneRuntimeState.S1DonationUpperLoopAssistState.CONSUMED,
+                state.s1DonationUpperLoopAssistState());
+        assertEquals(FbzZoneRuntimeState.S1DonationLowerLoopAssistState.ARMED,
+                state.s1DonationLowerLoopAssistState());
+        assertArrayEquals(consumed, state.captureBytes());
     }
 
     @Test

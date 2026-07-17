@@ -75,6 +75,23 @@ public class TestCameraForcedScroll {
     }
 
     @Test
+    public void testForcedScrollUsesSyntheticCoordinateRecordStatus() {
+        // loc_1BFEC repoints a0 at Scroll_forced_X_pos-x_pos, not Player_1.
+        // MoveCameraY therefore reads the synthetic record's zero status/ground
+        // speed bytes. A player made airborne by the same object must not make
+        // forced scrolling use the normal airborne +/-$20 dead zone.
+        camera.setY((short) 0x018C);
+        when(mockSprite.getAir()).thenReturn(true);
+        when(mockSprite.getCentreY()).thenReturn((short) 0x01E8);
+
+        camera.requestForcedScroll(0x0A08, 0x01E8);
+        camera.updatePosition();
+
+        assertEquals(0x0188, camera.getY(),
+                "forced coordinate records use grounded MoveCameraY semantics");
+    }
+
+    @Test
     public void testForcedScrollZeroesHorizontalScrollFrameOffset() {
         // A pending horizontal scroll delay (ROM H_scroll_frame_offset) must be
         // zeroed by a forced-scroll frame (ROM loc_1BFB8 move.w #0,H_scroll...).

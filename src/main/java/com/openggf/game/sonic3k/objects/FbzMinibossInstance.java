@@ -399,6 +399,7 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
     public int scriptedImpactCount() { return scriptedImpacts; }
     public boolean isDefeated() { return defeated; }
     public boolean isPlungerStarted() { return rootBit(ROOT_FIGHT_STARTED); }
+    public String phaseName() { return phase().name(); }
     boolean isFightActive() { return phase() == Phase.ACTIVE; }
     boolean hasConvertedToEndSign() { return bossSlotConverted; }
     boolean signSpawned() { return signSpawned; }

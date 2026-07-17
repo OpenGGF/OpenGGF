@@ -1,5 +1,11 @@
 # Flying Battery Zone Complete Implementation Plan
 
+> **Integration checkpoint (2026-07-17):** execution paused for branch
+> integration before the final parity gates. The exact remaining trace,
+> compatibility, S1-donation, visual, and cleanup work is tracked in
+> `docs/s3k-zones/fbz-outstanding-actions.md`. This plan is not complete, and
+> pending tasks must not be relabelled green from focused evidence.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` to execute this plan task-by-task. Every implementation task also uses the named S3K specialist skill, `superpowers:test-driven-development`, and two fresh review passes (spec compliance, then code quality). Fix and re-review until both are GREEN before advancing.
 
 **Goal:** Implement locked-on Sonic 3 & Knuckles Flying Battery Zone Acts 1 and 2 completely and pixel-accurately, then prove native parity, late complete-run trace parity, multi-sidekick safety, widescreen safety, and cross-game donation compatibility.
@@ -639,7 +645,7 @@ mvn "-Dtest=TestFbzObjectRewind,TestFbzBossGraphRewind,TestFbzCheckpointRoutes,T
 
 1. Only now download `https://github.com/TASEmulators/BizHawk/releases/download/2.11/BizHawk-2.11-win-x64.zip`. Require size `91,301,556` and SHA-256 `722B5AAC5E1D89F890B2875B0150F4A86F5762D211F7CD47029CAC70434955C0`; extract under ignored `docs/BizHawk-2.11-win-x64` and verify `EmuHawk.exe`.
 2. Record the BK2 through `tools/bizhawk/s3k_complete_run_recorder.lua` and install the segment by metadata offset, never directory-name assumptions.
-3. RED/GREEN fixture assertions: `game=s3k`, `zone=fbz`, `zone_id=4`, `act=1`, `bk2_frame_offset=237913`, `trace_frame_count=44282` (frames 237913-282194), next-zone frame 282195, `source_bk2=s3k-complete-sonic-tails.bk2`, `characters=[sonic,tails]`, `main_character=sonic`, `sidekicks=[tails]`, schema/CSV 5, complete-run profile, recorder `6.28-s3k-completerun`, BizHawk 2.11, Genplus-gx, ROM checksum `C5B1C655C19F462ADE0AC4E17A844D10`, gzipped physics/aux files only, and catalog discovery.
+3. RED/GREEN fixture assertions: `game=s3k`, `zone=fbz`, `zone_id=4`, `act=1`, `bk2_frame_offset=237913`, `trace_frame_count=44281` (the arm/bootstrap frame 237913 is not a CSV row; recorded movie frames are 237914-282194), next-zone frame 282195, `source_bk2=s3k-complete-sonic-tails.bk2`, `characters=[sonic,tails]`, `main_character=sonic`, `sidekicks=[tails]`, schema/CSV 5, complete-run profile, recorder `6.28-s3k-completerun`, BizHawk 2.11, Genplus-gx, ROM checksum `C5B1C655C19F462ADE0AC4E17A844D10`, gzipped physics/aux files only, and catalog discovery. Derive this count from the recorder boundary contract; never duplicate the bootstrap frame to satisfy the former planning estimate.
 4. Replay controller input only. Fix the first divergence using disassembly-backed state. Reject hydration, tolerance masking, and zone/route/frame exceptions.
 5. Acceptance is zero errors and zero warnings. Update the frontier log whenever the frontier moves or an existing green trace regresses; rerun all previously green S3K complete-run traces after shared fixes.
 6. Late in this task, run every `known_red` test class from the frozen JSON manifest. Expected Maven failures are allowed only to produce fresh `target/trace-reports/*_report.json` files. Then run `TestTraceBaselineRegression`, which fails for a missing/stale report, an earlier first-error frame, or—when the first frame is equal—a larger error count or warning count. A later frontier or fewer divergences is an improvement and must update `TRACE_FRONTIER_LOG.md`; trace data remains read-only.

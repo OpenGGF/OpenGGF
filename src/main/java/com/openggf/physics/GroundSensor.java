@@ -99,9 +99,7 @@ public class GroundSensor extends Sensor {
             // strictly smaller. When FG wins, the angle register is restored from
             // Primary_Angle_save; when BG wins, both distance and angle come from
             // the BG scan.
-            if (bgResult != null && (fgResult == null || bgResult.distance() <= fgResult.distance())) {
-                return bgResult;
-            }
+            return combineDualPlaneResults(fgResult, bgResult);
         }
 
         return fgResult;
@@ -138,9 +136,41 @@ public class GroundSensor extends Sensor {
                 solidityBit, globalDirection,
                 globalDirection == Direction.UP || globalDirection == Direction.DOWN,
                 provider, collisionState);
-        return background != null && (foreground == null || background.distance() <= foreground.distance())
-                ? background
-                : foreground;
+        return combineDualPlaneResults(foreground, background);
+    }
+
+    /**
+     * Apply FindFloor/FindWall's foreground-save, background-scan, and optional
+     * foreground-restore semantics to the selected pooled result.
+     *
+     * <p>The returned distance/tile still belongs to the winning plane. The
+     * attached primitive write trace separately preserves every mutation of
+     * the caller-provided angle byte. This distinction matters when FG writes
+     * an angle, BG returns an equal-distance empty result, and BG therefore
+     * wins without overwriting the earlier FG angle.</p>
+     */
+    private static SensorResult combineDualPlaneResults(SensorResult foreground,
+                                                        SensorResult background) {
+        boolean foregroundWritten = foreground != null && foreground.foregroundAngleWritten();
+        byte foregroundAngle = foreground != null ? foreground.foregroundAngle() : 0;
+        boolean backgroundWritten = background != null && background.foregroundAngleWritten();
+        byte backgroundAngle = background != null ? background.foregroundAngle() : 0;
+
+        // Native compare: BG wins on equality (ble); FG is restored only when
+        // its saved distance is strictly smaller.
+        boolean backgroundWins = background != null
+                && (foreground == null || background.distance() <= foreground.distance());
+        SensorResult selected = backgroundWins ? background : foreground;
+        if (selected == null) {
+            return null;
+        }
+        return selected.setNativeAngleWriteTrace(
+                foregroundWritten,
+                foregroundAngle,
+                true,
+                backgroundWritten,
+                backgroundAngle,
+                !backgroundWins);
     }
 
     // ========================================

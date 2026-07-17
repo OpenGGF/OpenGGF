@@ -123,6 +123,10 @@ Before accepting an AnPal-backed state transition:
 
 Before scheduling object-family work, require the object analysis to trace every tail-jumped shared routine, callback/function pointer field, field width, and competing consumer before naming a timer or animation semantic. Calculate native signed predecrement edges exactly: `subq.w #1` plus `bmi` fires on update `N+1`, after the word passes from zero to `$FFFF`. When raw animation `$F4` and `Obj_Wait` share a callback, compare both paths from the real entry state and implement the earliest reachable path.
 
+Treat every explicitly addressed global counter as a separate clock domain. In particular, `ObjectInstance.update(...)` receives ObjectManager's free-running VBla-style counter; it is not an alias for the Process_Sprites-visible `(Level_frame_counter+1)`. When a cadence, movement, or allocation gate reads the latter, resolve `LevelManager.getFrameCounter()+1` through injected services and retain the update argument only as an isolated-test fallback. Require a RED test in which the two clocks select opposite branches, and cover periodic child allocation as well as parent movement so a dephased hazard cannot disappear while player physics still looks exact.
+
+Preserve the native reachability of shared tails. For each sign/status branch before a common movement, terrain, touch-list, draw, or delete label, record whether that branch falls through, branches around it, or tail-jumps into it. A flattened state machine must not execute a floor/target impact helper on a rising path that jumps directly to collision publication. Test the last call entering with a negative word separately from the first call entering with zero/nonnegative state; a gravity add that reaches zero does not retroactively change which native branch was taken.
+
 Require a focused RED test across the last non-firing and exact firing updates, plus the competing consumer's later boundary. If the code, comments, and disassembly oracle disagree, pause implementation for independent disassembly adjudication; do not weaken the expectation or choose the locally convenient interpretation.
 
 ### Seamless Same-Event Transition Gate
@@ -181,7 +185,7 @@ Zones listed in recommended bring-up order. This order favors playable route clo
 | 4 | ICZ | IceCap Zone | Events, parallax, palette cycling exist | Active object work; snowboarding, ice objects, Freezer, validation of palette/PLC state |
 | 5 | LBZ | Launch Base Zone | Events, parallax, palette cycling exist | Complex events (rising water, dual acts), validate existing palette cycling |
 | 6 | LRZ | Lava Reef Zone | Palette cycling exists | Lava mechanics, visual payoff, validate existing palette cycling; no dedicated event handler or scroll handler yet |
-| 7 | FBZ | Flying Battery Zone | Palette cycling placeholder | Flying Battery mechanics, palette cycling may be stub; no dedicated event handler or scroll handler yet |
+| 7 | FBZ | Flying Battery Zone | Events, parallax, animated tiles, palette cycling, route objects, badniks, and bosses implemented | Complete-run trace and compatibility stabilization active; preserve seamless transition, retained-plane, carrier, and dynamic-family contracts |
 | 8 | MHZ | Mushroom Hill Zone | Events, parallax exist | Time-of-season (act color changes); no palette cycling yet |
 | 9 | SOZ | Sandopolis Zone | None | Time-of-day system, ghosts, complex zone |
 | 10 | SSZ | Sky Sanctuary Zone | None | Short zone, unique sky mechanics |
@@ -303,9 +307,38 @@ Order work by playable dependency:
 
 No reachable placeholder is acceptable after wave 5. Each wave must name disjoint file ownership, dependencies, tests, verification commands, and reviewer checks.
 
+Before wave 1, audit every zone `ScreenInit`/act-init allocation relative to the
+first `Load_Sprites` pass. Event-owned startup objects must claim their native
+SST slots before placement when the disassembly does, be adopted rather than
+duplicated across seamless act transitions, and be reconciled after generic
+object-placement resets through provider lifecycle hooks driven by native zone
+state. Test fresh load, transition, reset, and rewind identities; never repair
+allocation order with a trace-route or frame exception.
+
 ### Test-First Gate for Every Behavior Task
 
 Every behavior task follows RED-GREEN-REFACTOR: write one focused failing test, run and record the expected RED failure, implement the minimum disassembly-backed behavior, run focused and regression tests to GREEN, then obtain spec-compliance and code-quality review. Do not accept tests added only after implementation. Freeze known-red trace baselines before shared changes and reject regressions by first-error frame/error/warning comparison.
+
+For SST routines that call a solid helper and immediately consume standing or
+pushing bits, the RED test must execute the real post-movement `ObjectManager`
+pipeline. A `MANUAL_CHECKPOINT` owner consumes `standingNow()`/`pushingNow()`
+from its returned `SolidCheckpointBatch` at the native program point; it must
+not wait for `SolidObjectListener` compatibility callbacks or fall back to a
+stale callback latch when a fresh entry is absent. Require exact identity-set
+agreement between the checkpoint batch and the player query, failing closed on
+query-only or batch-only participants before any reaction. Preserve native
+P1/P2 reaction order before labelled extra-sidekick handling, and release the
+exact ride owner when the reaction launches or transfers a participant. Direct
+listener invocation is supplemental coverage only; see
+`s3k-implement-object/rom-pitfalls.md` P64.
+
+The disassembly review must also track live 68K data/address registers across
+every helper call before translating sequential branches into independent
+booleans. If a called helper overwrites a register that a later `btst`/compare
+still reads, preserve the observable clobber in the smallest object-local owner
+and require a complete native-slot truth table. Do not extend native register
+accidents to additional engine sidekicks; see
+`s3k-implement-object/rom-pitfalls.md` P65.
 
 ### Mandatory Two-Stage Review Rubric
 
@@ -394,6 +427,16 @@ Use /s3k-zone-validate {ZONE}
 
 The validation agent captures reference screenshots from stable-retro and compares them against the engine's output for feature presence (parallax layers, palette cycling, animated tiles, camera locks). Create an explicit checkpoint manifest spanning both act starts, every visual/event mode, representative traversal objects and hazards, PLC/VRAM handoffs, bosses, act transition, exit, and next-zone handoff. Each required row must retain reference and engine evidence plus capture provenance and sidecar metadata; missing evidence is FAIL, never SKIP or an inferred PASS. Review the validation report and investigate every FAIL.
 
+Before freezing that manifest or binding its hash into tooling, prove that every
+reference state has an executable acquisition path. A natural movie frame may
+own a natural-route checkpoint. A synthetic reverse crossing, exact boss/event
+graph, PLC boundary, or pre-transition hook requires an implemented and
+fail-closed savestate branch that asserts its preconditions and postconditions;
+a coordinate-only recipe or nearest movie frame is not executable evidence.
+Audit the validator's active-group accounting at the same time so historical or
+superseded rows cannot be counted as current failures. Do not create a mandatory
+gate that the checked-in capture tooling cannot physically satisfy.
+
 Focused/headless tests remain the normal development loop. Do not start token-intensive complete-run trace capture/replay while major route events, reachable objects, bosses, or visual systems are placeholders.
 
 ### Step 8: Run Late Complete-Run Trace Polish
@@ -406,7 +449,7 @@ After native parity and late trace/visual polish, run mandatory final audits:
 
 - **Multi-sidekicks:** 0-3 sidekicks plus duplicate-character banks; explicitly test participant policy and shared mutable zone/event/boss state with three or more characters, plus solids/hazards, carriers, forced movement, bosses, transitions, and full-route completion.
 - **Widescreen:** every supported viewport width; verify world-coordinate gates, camera locks/releases, spawning/culling, hazards, boss arenas, screen-edge transitions, and prevention of premature activation or unsafe falls.
-- **Cross-game donation:** donor off plus every external donor supported by the host; complete mandatory routes and identify mechanics requiring unavailable abilities. Add only explicit semantic capability/profile workarounds with the blocked route and rationale documented. Preserve native behavior when donation is off.
+- **Cross-game donation:** donor off plus every external donor supported by the host; complete mandatory routes and identify mechanics requiring unavailable abilities. These are fail-closed acceptance rows: a missing required donor ROM fails validation and must never silently skip its row. Add only explicit semantic capability/profile workarounds with the blocked route and rationale documented. Preserve native behavior when donation is off.
 
 Any required Sonic 1 workaround must carry a production comment beginning `S1 donation compatibility:` while its branch remains gated by the semantic capability/profile, never by a raw game name.
 
@@ -459,7 +502,7 @@ Five files are touched by multiple feature agents. All changes are additive (new
 
 4. **Forgetting palette cycling validation for already-implemented zones.** HCZ, CNZ, ICZ, LBZ, and LRZ already have palette cycling implemented (check `Sonic3kPaletteCycler` for the current set). The palette cycling agent should run in `--validate-only` mode for these zones, verifying the existing code against the disassembly rather than reimplementing from scratch. Skipping this validation misses opportunities to catch discrepancies in the existing implementation.
 
-5. **Dispatching all 4 feature agents unconditionally.** The decision flowchart in Step 3 exists for a reason. MGZ already has parallax implemented -- dispatching a parallax agent will create a conflicting second implementation. FBZ may have an `rts` stub for AniPLC -- dispatching an animated tiles agent will produce a no-op handler that clutters the codebase.
+5. **Dispatching all 4 feature agents unconditionally.** The decision flowchart in Step 3 exists for a reason. MGZ already has parallax implemented -- dispatching a parallax agent will create a conflicting second implementation. A zone with a proven `rts` AniPLC stub needs no animated-tile handler, while FBZ's five real AniPLC channels require implementation and validation.
 
 6. **Ignoring cross-cutting concerns from the analysis.** The analysis spec's "Cross-Cutting Concerns" section flags water systems, screen shake, character branching, and dynamic tilemap changes. These affect multiple features (e.g., water level changes in events affect parallax water-split logic). Review cross-cutting concerns before dispatch and include relevant notes in each agent's prompt.
 
@@ -476,3 +519,35 @@ Five files are touched by multiple feature agents. All changes are additive (new
 12. **Dispatching before the spec and plan are independently green.** A plausible analysis or plan is not acceptance. Loop delegated review and fixes for the spec first, then the implementation plan, before starting implementation workers.
 
 13. **Stopping at feature-test green.** Re-run trace and visual evidence after compatibility work, loop final whole-zone reviews to GREEN, and update the durable zone, trace, discrepancy, changelog, and mirrored skill documentation.
+
+14. **Freezing an unexecutable visual manifest.** Review every reference recipe
+against the actual emulator/exporter before hash-binding it. Natural-route
+capture, synthetic savestate branches, engine capture, comparison sidecars, and
+active-group accounting must all exist for every mandatory row; schema-only
+recipes remain planning artifacts, not acceptance tests.
+
+15. **Treating collision angles as per-player final sensor values.** Native
+`Primary_Angle`/`Secondary_Angle` are shared retained outputs: empty
+`FindFloor`/`FindWall` paths do not write, grounded `Player_AnglePos` seeds
+`$03/$03` (or `$00/$00` on an object), and later playables can inherit earlier
+writes in the same frame. Dual-plane collision also has observable FG-write,
+BG-write, and strict-FG-restore ordering that a selected final tile cannot
+represent. Zone bring-up changes that expose a balance/facing frontier must use
+the gameplay-scoped collision owner, explicit sensor write metadata, rewind
+capture, a guaranteed all-dispatch player tail, centralized grounded AnglePos
+(including spindash), wall early-return coverage, and sequential multi-sidekick
+tests; never add a zone or character exception. See `trace-replay-bug-fixing` section
+“Empty collision probes retain shared angle-output bytes.”
+
+16. **Cleaning up observable P1-to-P2 register dirtiness.** Retail S3K object
+routines sometimes reuse a helper-clobbered register when selecting the native
+P2 standing/status bit. Trace the register through every call and tail jump.
+If the clobber aliases another persistent object bit, model the intended and
+aliased bits independently: each native P2 invocation reads, sets, or clears
+only the bit selected by the real register value, aggregate lifetime counts
+either, and rewind captures both. Keep the register scratch same-call-local,
+and never apply the two-slot accident to additional sidekicks. FBZ stationary
+wire cage is the canonical case: a changed non-empty P1 DPLC turns d6
+`$03->$00100000->$00100001`, selecting object bit 1 instead of P2 standing bit
+4; an unchanged frame returns early and selects bit 4 normally. See
+`s3k-implement-object/rom-pitfalls.md` P65.

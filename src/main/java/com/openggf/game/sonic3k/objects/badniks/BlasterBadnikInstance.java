@@ -21,6 +21,7 @@ public final class BlasterBadnikInstance extends AbstractS3kBadnikInstance
     private static final int[] ATTACK_ANIMATION = {0, 1, 0, 1, 2, 5, 0, 0x1F, 0xF4};
     private static final int COLLISION_SIZE = 0x0A;
     private static final int PRIORITY = 5;
+    private static final int Y_RADIUS = 0x0E;
 
     enum State { WAIT_OFFSCREEN, INIT, PATROL, WAIT_TURN, ATTACK_WAIT, ATTACK, MAGNET_RISE, MAGNET_WAIT, MAGNET_FALL, FALLING_INIT, FALLING }
 
@@ -132,8 +133,11 @@ public final class BlasterBadnikInstance extends AbstractS3kBadnikInstance
         }
         animatePatrol();
         moveWithVelocity();
+        // ObjHitFloor2_DoRoutine predicts the next centre position before
+        // ObjCheckFloorDist2; it does not probe an offset in the facing direction.
+        int predictedX = (((currentX << 8) | (xSubpixel & 0xFF)) + xVelocity) >> 8;
         TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(
-                currentX + (facingLeft ? -0x18 : 0x18), currentY + 0x0E, 0);
+                predictedX, currentY + Y_RADIUS, 0);
         if (!floor.foundSurface() || floor.distance() < -1 || floor.distance() >= 12) {
             xVelocity = 0;
             state = State.WAIT_TURN;
@@ -158,8 +162,6 @@ public final class BlasterBadnikInstance extends AbstractS3kBadnikInstance
     private void updateAttackWait() {
         if (--waitTimer >= 0) return;
         state = State.ATTACK;
-        rawAnimIndex = 0;
-        rawAnimTimer = 0;
         childrenAttempted = true;
         BlasterAttackEffectObjectInstance effect = spawnAfterCurrentSibling(
                 () -> new BlasterAttackEffectObjectInstance(buildSpawnAt(currentX - (facingLeft ? 0x1B : -0x1B), currentY - 0x16), this));
@@ -177,8 +179,8 @@ public final class BlasterBadnikInstance extends AbstractS3kBadnikInstance
         rawAnimIndex += 2;
         if (rawAnimIndex >= ATTACK_ANIMATION.length - 1) {
             state = State.PATROL;
-            patrolTimer = recurringPatrolTimer;
             rawAnimIndex = 0;
+            rawAnimTimer = 0;
             secondaryAttempted = false;
             return;
         }
@@ -195,8 +197,16 @@ public final class BlasterBadnikInstance extends AbstractS3kBadnikInstance
 
     private void animatePatrol() {
         if (--rawAnimTimer >= 0) return;
-        mappingFrame = mappingFrame == 0 ? 1 : 0;
-        rawAnimTimer = mappingFrame == 0 ? 0x17 : 2;
+        rawAnimIndex += 2;
+        if (rawAnimIndex >= PATROL_ANIMATION.length - 1) {
+            // byte_8975E $FC restarts the raw script at its setup pair.
+            rawAnimIndex = 0;
+            mappingFrame = PATROL_ANIMATION[0];
+            rawAnimTimer = PATROL_ANIMATION[1];
+            return;
+        }
+        mappingFrame = PATROL_ANIMATION[rawAnimIndex];
+        rawAnimTimer = PATROL_ANIMATION[rawAnimIndex + 1];
     }
 
     private PlayableEntity closestAttackTarget(PlayableEntity updatePlayer) {
@@ -225,7 +235,7 @@ public final class BlasterBadnikInstance extends AbstractS3kBadnikInstance
     private void updateMagnetRise() {
         yVelocity -= 0x20;
         moveWithVelocity();
-        TerrainCheckResult ceiling = ObjectTerrainUtils.checkCeilingDist(currentX, currentY, 0x0E);
+        TerrainCheckResult ceiling = ObjectTerrainUtils.checkCeilingDist(currentX, currentY, Y_RADIUS);
         if (ceiling.foundSurface() && ceiling.distance() < 0) {
             currentY += ceiling.distance();
             yVelocity = 0;
@@ -249,7 +259,10 @@ public final class BlasterBadnikInstance extends AbstractS3kBadnikInstance
         moveWithVelocity();
         yVelocity += 0x20;
         if (yVelocity < 0) return;
-        TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, 7);
+        // loc_89666 sets y_radius=$0E before loc_8968A reaches
+        // ObjHitFloor_DoRoutine; the landing probe therefore uses the full
+        // Blaster radius, just like the ordinary patrol path.
+        TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, Y_RADIUS);
         if (floor.foundSurface() && floor.distance() < 0) {
             currentY += floor.distance();
             state = State.PATROL;
@@ -295,4 +308,9 @@ public final class BlasterBadnikInstance extends AbstractS3kBadnikInstance
     }
     PlayableEntity selectedTarget() { return targetCandidate; }
     static int[] patrolAnimation() { return PATROL_ANIMATION.clone(); }
+    @Override public String traceDebugDetails() {
+        return "state="+state+" vel="+String.format("%04X,%04X",xVelocity&0xFFFF,yVelocity&0xFFFF)
+                +" timers="+patrolTimer+","+waitTimer+","+rawAnimTimer
+                +" sub="+String.format("%02X",spawn.subtype()&0xFF)+" faceL="+facingLeft;
+    }
 }

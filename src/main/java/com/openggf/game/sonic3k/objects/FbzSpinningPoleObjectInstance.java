@@ -56,6 +56,9 @@ public final class FbzSpinningPoleObjectInstance
       p.setXSpeed((short)0);
       p.setYSpeed((short)0);
       p.setGSpeed((short)0);
+      // loc_3C0DC clears render_flags bits 0-1 before sub_3C010 reads
+      // the horizontal flip to apply the initial angle offset.
+      p.setRenderFlips(false, false);
       int nativeY = p.getCentreY();
       int oldYRadius = p.getYRadius();
       boolean wasRolling = p.getRolling();
