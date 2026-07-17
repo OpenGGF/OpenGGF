@@ -1048,9 +1048,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         int offset = isVisualShakeActive()
                 ? SCREEN_SHAKE_CONTINUOUS[frameCounter & 0x3F]
                 : 0;
-        if (offset == 0) {
-            state.clearScreenShakeOffset();
-        } else {
+        if (offset != 0) {
             state.requestScreenShakeOffset(offset);
         }
     }

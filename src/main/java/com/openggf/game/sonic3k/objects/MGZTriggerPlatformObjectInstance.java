@@ -119,7 +119,6 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (isDestroyed()) {
-            clearScreenShake();
             return;
         }
 
@@ -141,9 +140,9 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
                 || (activated && hasDashTriggerVisibleThisPass());
         if (!completed && activationVisibleThisPass) {
             advanceActiveMotion();
-            applyScreenShake(frameCounter);
-        } else {
-            clearScreenShake();
+            if (!completed) {
+                applyScreenShake(frameCounter);
+            }
         }
 
         updateDynamicSpawn(currentX, currentY);
@@ -179,7 +178,6 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         }
 
         completed = true;
-        clearScreenShake();
 
         if (mode == Mode.HORIZONTAL_DELETE) {
             markRemembered();
@@ -201,14 +199,11 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         if (mgzState == null) {
             return;
         }
-        mgzState.requestScreenShakeOffset(SCREEN_SHAKE_CONTINUOUS[frameCounter & SCREEN_SHAKE_MASK]);
-    }
-
-    private void clearScreenShake() {
-        MgzZoneRuntimeState mgzState = resolveMgzRuntimeState();
-        if (mgzState != null) {
-            mgzState.clearScreenShakeOffset();
-        }
+        // Object updates receive native Level_frame_counter + 2 in this frame
+        // pipeline, while Camera_Y_pos_copy consumes the sample prepared by
+        // ShakeScreen_Setup on the preceding native frame.
+        mgzState.requestScreenShakeOffset(
+                SCREEN_SHAKE_CONTINUOUS[(frameCounter - 3) & SCREEN_SHAKE_MASK]);
     }
 
     private MgzZoneRuntimeState resolveMgzRuntimeState() {
@@ -217,11 +212,6 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
             return null;
         }
         return S3kRuntimeStates.currentMgz(svc.zoneRuntimeRegistry()).orElse(null);
-    }
-
-    @Override
-    public void onUnload() {
-        clearScreenShake();
     }
 
     @Override

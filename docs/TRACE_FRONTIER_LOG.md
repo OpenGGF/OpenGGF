@@ -1,5 +1,42 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- MGZ trigger-platform shake follows native camera-copy phase
+
+Branch `feature/ai-trace-animation-verification`, after commit `34bd8d32f`.
+At frame 27335, CPU Tails had crossed the lower BuildSprites boundary in the
+ROM but remained visible in the engine, delaying the off-screen flight timer.
+The active horizontal trigger platform correctly wrote the continuous
+`Screen_shake_flag`, but the later MGZ event pass cleared that shared request
+and the sprite camera copy therefore used the raw camera Y.
+
+`MGZ1_ScreenEvent` applies the previously prepared `Screen_shake_offset` to
+`Camera_Y_pos_copy`, while the later background event calls
+`ShakeScreen_Setup` for the following frame. The engine's object callback is
+two counts ahead of the native level-frame counter exposed at that point, so
+the platform selects the continuous-shake sample three counts behind its
+callback. Inactive platform routines no longer clear another SST's live
+request, and a platform that finishes movement no longer publishes the
+constant flag that its native completion path clears on the same pass. No
+trace hydration, zone/route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM reference:
+`docs/skdisasm/sonic3k.asm:70910-71029,104188-104234,106257-106309`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ standalone physics advances from frame 27335 to frame 28207
+  (`tails_y`, expected `$071C` / actual `$071D`), with errors reduced from
+  1476 to 1114.
+- MGZ standalone animation remains at frame 28207
+  (`tails_animation_id`, expected `$1A` / actual `$02`), with errors reduced
+  from 263 to 259 as the corrected visibility phase removes downstream
+  mismatches.
+- The focused trigger-platform suite passes 11/11.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
 ### 2026-07-17 -- MGZ swinging-platform residue follows the native SST slot
 
 Branch `feature/ai-trace-animation-verification`, after commit `500be0fda`.
