@@ -52,6 +52,21 @@ class TestWFZShipFireObjectInstance {
                 "ObjBC deletes at Camera_BG_X_offset >= $380 using the WFZ event-owned offset");
     }
 
+    @Test
+    void shipFireBypassesGenericCullingUntilItsRomDeleteThreshold() {
+        Sonic2LevelEventManager events = wfzEventsWithBgXOffset(0x037F);
+        ParallaxManager parallax = mock(ParallaxManager.class);
+        WFZShipFireObjectInstance fire = shipFire(events, parallax);
+
+        assertTrue(fire.isPersistent(),
+                "ObjBC never calls MarkObjGone; its Camera_BG_X_offset check owns deletion");
+
+        fire.update(0, player());
+        fire.update(1, player());
+
+        assertFalse(fire.isDestroyed());
+    }
+
     private static WFZShipFireObjectInstance shipFire(Sonic2LevelEventManager events, ParallaxManager parallax) {
         WFZShipFireObjectInstance fire = new WFZShipFireObjectInstance(
                 new ObjectSpawn(0x1000, 0x0500, Sonic2ObjectIds.WFZ_SHIP_FIRE, 0x7C, 0, false, 0));

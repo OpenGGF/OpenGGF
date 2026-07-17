@@ -43,6 +43,10 @@ public class ObjectRenderManager {
         return provider.ensurePatternsCached(graphicsManager, basePatternIndex);
     }
 
+    public int getRegularPatternCount() {
+        return provider.getRegularPatternCount();
+    }
+
     public boolean isReady() {
         return provider.isReady();
     }

@@ -139,7 +139,8 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     };
 
     // Level layout patch written when Sonic lands on the plane in WFZ end.
-    private static final int LAYOUT_WIDTH = 256;
+    private static final int LAYOUT_ROW_BYTES = 256;
+    private static final int LAYOUT_LAYER_WIDTH = 128;
     private static final int[] LAYOUT_PATCH_OFFSETS = {0x0D2, 0x1D2, 0xBD6, 0xCD6};
     private static final int[][] LAYOUT_PATCH_BYTES = {
             {0x50, 0x1F, 0x00, 0x25},
@@ -1397,13 +1398,16 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 final int[] patchBytes = LAYOUT_PATCH_BYTES[i];
                 for (int j = 0; j < patchBytes.length; j++) {
                     final int offset = baseOffset + j;
-                    final int x = offset % LAYOUT_WIDTH;
-                    final int y = offset / LAYOUT_WIDTH;
-                    try {
-                        effects = context.surface().setBlockInMap(0, x, y, patchBytes[j] & 0xFF);
-                    } catch (IllegalArgumentException ignored) {
-                        // Some layouts may differ; keep behavior best-effort.
-                    }
+                    final int withinRow = offset % LAYOUT_ROW_BYTES;
+                    final int layer = withinRow >= LAYOUT_LAYER_WIDTH ? 1 : 0;
+                    final int x = withinRow & (LAYOUT_LAYER_WIDTH - 1);
+                    final int y = offset / LAYOUT_ROW_BYTES;
+                    // Level_LoadBlockMap stores each row as 128 foreground bytes followed by
+                    // 128 background bytes (docs/s2disasm/s2.asm:20145-20158). ObjB2 writes
+                    // raw Level_Layout offsets here (s2.asm:79035-79042), so decode the
+                    // interleaved RAM address before mutating the engine's split map layers.
+                    effects = context.surface().setBlockInMapWithoutRedraw(
+                            layer, x, y, patchBytes[j] & 0xFF);
                 }
             }
             return effects;

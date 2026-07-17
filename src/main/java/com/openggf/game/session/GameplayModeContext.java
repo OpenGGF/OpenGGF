@@ -426,11 +426,13 @@ public final class GameplayModeContext implements ModeContext {
             return;
         }
         rewindRegistry.deregister("level");
+        rewindRegistry.deregister("level-tilemap");
         rewindRegistry.deregister("object-manager");
         rewindRegistry.deregister("level-event");
         rewindRegistry.deregister("solid-execution");
         rewindRegistry.deregisterPostRestoreCallback("level-tilemap-event-reconcile");
         rewindRegistry.register(levelManager.levelRewindSnapshottable());
+        rewindRegistry.register(levelManager.levelTilemapRewindSnapshottable());
         if (levelManager.getObjectManager() != null) {
             rewindRegistry.register(levelManager.getObjectManager().rewindSnapshottable());
         }

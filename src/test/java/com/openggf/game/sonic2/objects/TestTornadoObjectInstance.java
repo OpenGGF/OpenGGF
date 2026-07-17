@@ -16,6 +16,10 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.save.SaveReason;
+import com.openggf.game.mutation.DirectLevelMutationSurface;
+import com.openggf.game.mutation.LayoutMutationContext;
+import com.openggf.game.mutation.MutationEffects;
+import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
@@ -32,6 +36,7 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelManager;
+import com.openggf.level.Level;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -42,12 +47,16 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @Isolated
 @Execution(ExecutionMode.SAME_THREAD)
@@ -287,6 +296,51 @@ public class TestTornadoObjectInstance {
                 "ObjB2_Align_plane still moves the plane later in the same routine");
         assertEquals(0x05FE, tornado.getY(),
                 "ObjB2_Align_plane still applies y_vel after Sonic placement");
+    }
+
+    @Test
+    public void wfzJumpToPlanePatchDecodesInterleavedLayoutOffsetsIntoBackgroundLayer() throws Exception {
+        com.openggf.level.Map map = new com.openggf.level.Map(2, 128, 13);
+        int[][] starts = {{82, 0}, {82, 1}, {86, 11}, {86, 12}};
+        int[][] expected = {
+                {0x50, 0x1F, 0x00, 0x25},
+                {0x25, 0x00, 0x1F, 0x50},
+                {0x50, 0x1F, 0x00, 0x25},
+                {0x25, 0x00, 0x1F, 0x50}
+        };
+        for (int[] start : starts) {
+            for (int x = start[0]; x < start[0] + 4; x++) {
+                map.setValue(0, x, start[1], (byte) 0x6A);
+            }
+        }
+
+        Level level = mock(Level.class);
+        when(level.getMap()).thenReturn(map);
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getCurrentLevel()).thenReturn(level);
+        ZoneLayoutMutationPipeline pipeline = new ZoneLayoutMutationPipeline();
+        TestObjectServices services = new TestObjectServices()
+                .withLevelManager(levelManager)
+                .withZoneLayoutMutationPipeline(pipeline);
+        TornadoObjectInstance tornado = createTornado(0x2EC4, 0x0600, 0x54, services);
+
+        invokePrivate(tornado, "applyJumpToPlaneLayoutPatch", new Class<?>[0]);
+        List<MutationEffects> effects = new ArrayList<>();
+        pipeline.flush(new LayoutMutationContext(new DirectLevelMutationSurface(level), effects::add));
+
+        for (int i = 0; i < starts.length; i++) {
+            int startX = starts[i][0];
+            int y = starts[i][1];
+            for (int j = 0; j < expected[i].length; j++) {
+                assertEquals(expected[i][j], map.getValue(1, startX + j, y) & 0xFF,
+                        "Level_Layout patch byte should target the interleaved background half-row");
+                assertEquals(0x6A, map.getValue(0, startX + j, y) & 0xFF,
+                        "ObjB2 layout patch must leave the matching foreground cell unchanged");
+            }
+        }
+        assertEquals(1, effects.size());
+        assertSame(MutationEffects.NONE, effects.get(0),
+                "ROM Level_Layout writes must not invalidate the retained Plane-B nametable");
     }
 
     @Test
