@@ -1,5 +1,20 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- Review finding 5: live S3K ring-counter phase restored
+
+Branch `feature/ai-trace-animation-verification`, on top of `41b3cfee8`.
+S3K's live `RingRules` once again supplies the four-count phase between the
+gameplay-scoped object clock and the ROM-visible V-int byte read by Obj37.
+Replay-only absolute phase metadata is normalized into an offset from that
+live baseline at trace-session bootstrap, preserving old fixtures without
+making ordinary gameplay depend on comparison data. Focused rule and
+normalization tests pass.
+
+The full ROM-backed `*TraceReplay` checkpoint completed 92 tests: 53 passed,
+37 failed, 1 errored, and 1 skipped. An isolated run of preceding commit
+`41b3cfee8` produced identical testcase statuses and first failure/error
+messages, so no trace frontier moved.
+
 ### 2026-07-17 -- Review finding 4 rejected: level-entry forced-animation reset
 
 Branch `feature/ai-trace-animation-verification`, on top of `3a1114049`.

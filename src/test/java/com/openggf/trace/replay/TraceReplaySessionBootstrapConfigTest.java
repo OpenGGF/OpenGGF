@@ -28,6 +28,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  */
 class TraceReplaySessionBootstrapConfigTest {
 
+    @Test
+    void recordedRingPhaseIsNormalizedAgainstLiveGameBaseline() {
+        assertEquals(-4, TraceReplaySessionBootstrap.ringFloorCheckRuntimeOffset(null, 4));
+        assertEquals(-2, TraceReplaySessionBootstrap.ringFloorCheckRuntimeOffset(2, 4));
+        assertEquals(-1, TraceReplaySessionBootstrap.ringFloorCheckRuntimeOffset(3, 4));
+        assertEquals(2, TraceReplaySessionBootstrap.ringFloorCheckRuntimeOffset(6, 4));
+    }
+
     private SonicConfigurationService config;
     private Object savedMain;
     private Object savedSidekick;

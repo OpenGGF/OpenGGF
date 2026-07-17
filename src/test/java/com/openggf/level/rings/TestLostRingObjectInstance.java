@@ -120,8 +120,8 @@ class TestLostRingObjectInstance {
     void s3kObj37CounterPhaseModelsNativeVIntVisibility() {
         assertEquals(0, GameRules.SONIC_1.ring().ringFloorCheckCounterPhase());
         assertEquals(0, GameRules.SONIC_2.ring().ringFloorCheckCounterPhase());
-        assertEquals(0, GameRules.SONIC_3K.ring().ringFloorCheckCounterPhase(),
-                "S3K Obj37 reads the aligned global V_int_run_count clock directly");
+        assertEquals(4, GameRules.SONIC_3K.ring().ringFloorCheckCounterPhase(),
+                "live S3K Obj37 starts four V-int counts ahead of the gameplay-scoped object clock");
     }
 
     @Test

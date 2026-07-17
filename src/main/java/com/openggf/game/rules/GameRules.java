@@ -361,7 +361,7 @@ public record GameRules(
             ),
             new RingRules(
                     7,
-                    0,
+                    4,
                     true,
                     0,
                     6,

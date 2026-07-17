@@ -225,9 +225,8 @@ public final class TraceReplaySessionBootstrap {
                 && gameplayMode.getLevelManager().getObjectManager() != null) {
             ObjectManager objectManager = gameplayMode.getLevelManager().getObjectManager();
             gameplayMode.getLevelManager().initRingFloorCheckCounterPhase(
-                    trace.metadata().ringFloorCheckCounterPhase() != null
-                            ? trace.metadata().ringFloorCheckCounterPhase()
-                            : 0);
+                    ringFloorCheckRuntimeOffset(
+                            trace.metadata().ringFloorCheckCounterPhase(), liveRingFloorCheckPhase()));
             objectManager.initVIntRunCounterPhaseOffset(
                     trace.initialVIntRunCounterPhaseOffset());
             objectPreludeFrames = s2TornadoObjectPreludeFrames(trace, objectManager);
@@ -694,9 +693,8 @@ public final class TraceReplaySessionBootstrap {
         if (GameServices.levelOrNull() != null
                 && GameServices.levelOrNull().getObjectManager() != null) {
             GameServices.levelOrNull().initRingFloorCheckCounterPhase(
-                    trace.metadata().ringFloorCheckCounterPhase() != null
-                            ? trace.metadata().ringFloorCheckCounterPhase()
-                            : 0);
+                    ringFloorCheckRuntimeOffset(
+                            trace.metadata().ringFloorCheckCounterPhase(), liveRingFloorCheckPhase()));
         }
         int completeRunSeed = s3kCompleteRunFrameCounterSeedForReplayStart(trace, replayStart);
         if (completeRunSeed >= 0) {
@@ -709,6 +707,23 @@ public final class TraceReplaySessionBootstrap {
             return;
         }
         alignFrameCountersForReplayStart(previousDriveFrame, firstDriveFrame);
+    }
+
+    /**
+     * Converts a legacy trace's absolute Obj37 low-bit phase into an offset
+     * from the live per-game baseline. Normal gameplay never calls this path:
+     * S3K retains its native four-count level-start phase in {@code RingRules}.
+     * Older replay fixtures either record a reconstructed absolute phase or
+     * historically assume zero, so normalizing here preserves their one-time
+     * start-clock state without changing the live default.
+     */
+    static int ringFloorCheckRuntimeOffset(Integer recordedAbsolutePhase, int liveDefaultPhase) {
+        int replayAbsolutePhase = recordedAbsolutePhase != null ? recordedAbsolutePhase : 0;
+        return replayAbsolutePhase - liveDefaultPhase;
+    }
+
+    private static int liveRingFloorCheckPhase() {
+        return GameServices.module().getRules().ring().ringFloorCheckCounterPhase();
     }
 
     public static int s3kCompleteRunFrameCounterSeedForReplayStart(
