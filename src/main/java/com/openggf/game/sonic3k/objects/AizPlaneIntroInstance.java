@@ -380,6 +380,12 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
     }
 
     @Override
+    public int getPriorityBucket() {
+        // ROM: loc_674AC writes priority(a0) = $280.
+        return 5;
+    }
+
+    @Override
     public void onUnload() {
         if (activeIntroInstance == this) {
             activeIntroInstance = null;
