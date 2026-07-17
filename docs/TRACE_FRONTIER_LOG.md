@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- MGZ invisible-block left contact clears residual ground speed
+
+Branch `feature/ai-trace-animation-verification`, after commit `01018be5c`.
+At this requested checkpoint, `git fetch origin develop:develop` confirmed
+local and remote `develop` at `1b1a5efee`; merging `develop` reported
+`Already up to date`.
+
+At frame 23891, Sonic falls beside the subtype-$02 invisible block at
+`$1FC4,$07B4`. Native `SolidObjectFull2` applies the recorded four-pixel
+left separation and routes `x_vel == 0` through `loc_1E056`, clearing both
+`x_vel` and the residual `$00BC` `ground_vel`; only a negative X velocity is
+treated as moving away from that left edge. The engine already applied the
+same position correction but used a strict-positive moving-into predicate,
+so it retained the stale ground speed and shifted the falling animation.
+
+The S3K invisible block now opts into the shared zero-speed left-side stop
+semantics. No trace hydration, zone/route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:41468-41483,42656-42691`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 23891 to frame 24211
+  (`x_speed`, expected `$0200` / actual `$0000`), with errors reduced from
+  3109 to 3108.
+- MGZ standalone animation advances from frame 23897 to frame 24211
+  (`player_animation_id`, expected `$1A` / actual `$02`), with errors reduced
+  from 531 to 523.
+- The focused invisible-block contract test passes 1/1.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
 ### 2026-07-17 -- MGZ Mantis restores its operation before child initialization
 
 Branch `feature/ai-trace-animation-verification`, after commit `20f5153c8`.

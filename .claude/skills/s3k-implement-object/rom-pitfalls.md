@@ -1307,8 +1307,43 @@ stood-on slot (`docs/skdisasm/sonic3k.asm:26816-26843`).
 
 ---
 
-## How to add a new entry
 
+## P37 -- A zero velocity is not symmetric across SolidObject side branches
+
+**Symptom.** An airborne player is separated from the left edge of a full
+solid at the correct pixel, but retains a stale nonzero `ground_vel` even
+though native `x_vel` is zero. Physics and fall-animation cadence then diverge
+together despite matching position and vertical velocity.
+
+**Root cause.** S3K `SolidObject_cont` uses sign branches, not an abstract
+strict "moving into" test. On the object's left edge (`d0 > 0`), only
+`x_vel < 0` skips `loc_1E056`; therefore `x_vel == 0` clears both
+`ground_vel` and `x_vel`. On the right edge (`d0 < 0`), `x_vel == 0`
+does skip the clear. Treating zero identically on both sides preserves stale
+ground speed on left-side contacts.
+
+**What to check.** For every full-solid port that reaches the standard S3K
+left/right branch:
+
+1. Preserve the exact signed branch boundaries from the helper, including
+   whether zero falls through or branches away.
+2. If the shared engine predicate keeps legacy strict-sign behavior, opt the
+   concrete provider into `zeroXSpeedStopsOnLeftSideContact()` with a citation.
+3. Test `x_vel == 0` with nonzero `ground_vel`; asserting position alone will
+   miss the bug.
+4. Do not make the right-side zero case symmetric unless that object's ROM
+   routine uses a different helper.
+
+**ROM citation.** S3K `SolidObject_cont` left/right classification and stop
+path at `docs/skdisasm/sonic3k.asm:41468-41483`. The MGZ invisible block calls
+`SolidObjectFull2` at `docs/skdisasm/sonic3k.asm:42656-42691`.
+
+**Originating commit.** `<pending: MGZ invisible-block zero-speed side-stop
+milestone>`.
+
+---
+
+## How to add a new entry
 When a trace-replay-bug-fixing iteration commits an object fix whose root
 cause is a class of bug (not a one-off):
 
