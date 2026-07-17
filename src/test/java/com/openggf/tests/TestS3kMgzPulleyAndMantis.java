@@ -268,6 +268,25 @@ class TestS3kMgzPulleyAndMantis {
     }
 
     @Test
+    void mantisRunsRestoredRoutineOutsideStrictViewportAndDetectsP2() throws Exception {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0140, (short) 0x0100);
+        RecordingServices services = new QueryOnlyPlayerServices(main, List.of(nativeP2));
+        MantisBadnikInstance mantis = new MantisBadnikInstance(
+                new ObjectSpawn(0x015E, 0x0100, Sonic3kObjectIds.MANTIS, 0x00, 0x00, false, 0));
+        mantis.setServices(services);
+
+        mantis.refreshPostCameraRenderState();
+        mantis.update(0, main); // Obj_WaitOffscreen restores the Mantis operation
+        mantis.update(1, main); // init just inside the placeholder's render margin
+        mantis.update(2, main); // native routine runs although its centre is beyond x=320
+
+        assertEquals("PREPARE", readMantisState(mantis),
+                "The restored routine must detect native P2 before the Mantis centre enters the strict viewport");
+    }
+
+    @Test
     void mantisPrepSequenceMatchesDisassemblyTiming() throws Exception {
         MantisBadnikInstance mantis = new MantisBadnikInstance(
                 new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.MANTIS, 0x00, 0x00, false, 0));

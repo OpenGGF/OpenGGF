@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- Restored MGZ Mantis routines run beyond the strict viewport
+
+Branch `feature/ai-trace-animation-verification`, after commit `776555553`.
+At frame 24875, native Mantis slot 8 has already seen CPU Tails enter its
+64-pixel detection range, completed its prep animation, and leapt above the
+floor before Tails reaches it. The engine restored and initialized the Mantis
+on the native passes, but then stopped dispatching its routine until the
+Mantis centre entered the strict viewport. That delayed its target scan until
+Sonic arrived and left the Mantis near the floor for a false Tails contact.
+
+After `Obj_WaitOffscreen` restores the operation pointer, `Obj_Mantis`
+dispatches on every SST pass. Its trailing `Sprite_CheckDeleteTouch` owns
+unload and collision-list work; it is not a strict-viewport routine gate. The
+engine now preserves that distinction, including native-P2 target selection,
+without trace hydration, zone/route/frame predicates, comparator tolerance,
+or physics-state synchronization.
+
+ROM reference:
+`docs/skdisasm/sonic3k.asm:180266-180298,185700-185840`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 24875 to frame 25759
+  (`x`, expected `$2A83` / actual `$2A84`), with errors reduced from 1505 to
+  1504.
+- MGZ standalone animation remains at frame 28207
+  (`tails_animation_id`, expected `$1A` / actual `$02`) with 263 errors.
+- Focused Mantis and MGZ pulley/Mantis tests pass 16/16, including restored
+  routine dispatch beyond the strict viewport and native-P2 detection.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+- S3K AIZ skip, level-loading, bootstrap-resolver, and decoding guards pass.
+
 ### 2026-07-17 -- MGZ head-trigger projectile publishes post-move touch state
 
 Branch `feature/ai-trace-animation-verification`, after commit `9bfc9c657`.

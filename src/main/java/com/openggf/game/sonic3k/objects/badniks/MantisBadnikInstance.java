@@ -84,8 +84,9 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
         // Obj_WaitOffscreen keeps the operation pointer at loc_85AD2 while its
         // $20-by-$20 placeholder remains outside Render_Sprites bounds. Engine
         // placement already bridges the visible restore dispatch, so initialize
-        // on the first live pass inside those bounds. Once initialized, the jump
-        // arc continues above the viewport; Sprite_CheckDeleteTouch owns only X.
+        // on the first live pass inside those bounds. Once restored, Obj_Mantis
+        // dispatches every SST pass; Sprite_CheckDeleteTouch only owns the later
+        // unload/touch work and is not a strict viewport update gate.
         if (!initialized && waitingForOnscreen) {
             if (!waitPlaceholderRenderFlag) {
                 return;
@@ -103,10 +104,6 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
             initialize();
             initialized = true;
             updateDynamicSpawn(currentX, currentY);
-            return;
-        }
-
-        if (!isOnScreenX()) {
             return;
         }
 
