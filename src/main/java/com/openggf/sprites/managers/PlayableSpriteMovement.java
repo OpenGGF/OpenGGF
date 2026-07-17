@@ -767,6 +767,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		applyMissedDetachSlopeResist();
 		doSlopeRepel();
+		if (applyFatalBackgroundFloorOverlap()) return;
 		collisionSystem().resolvePostMovementBackgroundWallClamp(
 				FrameCollisionPlan.terrainOnly(), sprite);
 		updateCrouchState();
@@ -792,8 +793,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		doSlopeRepel();
+		if (applyFatalBackgroundFloorOverlap()) return;
 		collisionSystem().resolvePostMovementBackgroundWallClamp(
 				FrameCollisionPlan.terrainOnly(), sprite);
+	}
+
+	private boolean applyFatalBackgroundFloorOverlap() {
+		if (!collisionSystem().hasFatalPostMovementBackgroundFloorOverlap(
+				FrameCollisionPlan.terrainOnly(), sprite)) {
+			return false;
+		}
+		SidekickCpuController cpuController = sprite.getCpuController();
+		if (sprite.isCpuControlled() && cpuController != null) {
+			cpuController.despawn(SidekickCpuController.DespawnCause.LEVEL_BOUNDARY);
+		} else {
+			sprite.applyCrushDeath();
+		}
+		return true;
 	}
 
 	private boolean romPinballModeBlocksRollingJump() {

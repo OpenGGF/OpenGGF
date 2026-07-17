@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- S3K grounded BG collision restores fatal floor-overlap tail
+
+Branch `feature/ai-trace-animation-verification`, after commit `a26e17819`.
+At frame 30178, native CPU Tails enters `Kill_Character` with routine `$06`,
+death animation `$18`, and upward velocity `-$0700`, while the engine remains
+in the normal grounded path. A direct BizHawk probe confirmed both runtimes
+had `Camera_max_Y=$1000`; this was not a bottom-boundary death.
+
+After grounded `AnglePos`/slope handling, S3K checks
+`Background_collision_flag`, calls `sub_F846`, and probes `FindFloor` at
+`x_pos,y_pos-4`. A negative dual-plane result jumps to `Kill_Character`
+before the following background left/right wall clamps. The shared collision
+pipeline now models that missing probe for both stand and roll paths and
+routes CPU sidekicks through the existing native level-boundary kill state.
+No trace hydration, zone/route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM reference:
+`docs/skdisasm/sonic3k.asm:19946-19973,27520-27548,27732-27760`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 30178 to frame 30714
+  (`rings`, expected `1` / actual `0`), with errors reduced from 920 to 49.
+- MGZ standalone animation advances from frame 30178 to frame 35279
+  (`tails_animation_id`, expected `$23` / actual `$22`), with errors reduced
+  from 156 to 29.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
 ### 2026-07-17 -- MGZ continuous shake uses the global level counter
 
 Branch `feature/ai-trace-animation-verification`, after commit `41b06bd7a`.

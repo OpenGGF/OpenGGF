@@ -403,6 +403,25 @@ public class CollisionSystem {
      * {@code x_pos} only; unlike CalcRoomInFront they do not alter velocity or
      * Status_Push (sonic3k.asm:27529-27548,27741-27760).
      */
+    public boolean hasFatalPostMovementBackgroundFloorOverlap(
+            FrameCollisionPlan plan, AbstractPlayableSprite sprite) {
+        requireTerrainOnlyPlan(plan, "hasFatalPostMovementBackgroundFloorOverlap");
+        var gameState = GameServices.gameStateOrNull();
+        if (sprite == null || gameState == null || !gameState.isBackgroundCollisionFlag()) {
+            return false;
+        }
+
+        // ROM sub_F846 probes FindFloor at (x_pos, y_pos-4) with a3=$10 and
+        // the player's live lrb_solid_bit. A negative result is an embedded
+        // dual-plane floor and the grounded stand/roll path jumps directly to
+        // Kill_Character before running the following wall clamps.
+        calcRoomProbe.sprite = sprite;
+        SensorResult floor = calcRoomProbe.scanWorld(
+                Direction.DOWN, (short) 0, (short) -4,
+                (short) 0, (short) 0, sprite.getLrbSolidBit());
+        return floor != null && floor.distance() < 0;
+    }
+
     public void resolvePostMovementBackgroundWallClamp(
             FrameCollisionPlan plan, AbstractPlayableSprite sprite) {
         requireTerrainOnlyPlan(plan, "resolvePostMovementBackgroundWallClamp");
