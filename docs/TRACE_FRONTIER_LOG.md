@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- Released MGZ carry publishes its generated flap input
+
+Branch `feature/ai-trace-animation-verification`, on top of `7b2faf957`.
+At standalone MGZ frame 34404, native routine `$18` is in the released-rescue
+path at `loc_142E2`: `Tails_CPU_auto_fly_timer` advances from `$57` to zero and
+generates A/B/C in `Ctrl_2_logical`. The engine already matched the timer and
+used the generated flap for Tails' movement, but only active-carry routine
+`$18` mirrored generated inputs into the ROM-visible logical latch; the
+released chase left its latch at zero. The released body now publishes its
+existing input decision before the cooldown/regrab pass. No trace state is
+copied into gameplay and no zone, route, frame, or tolerance carve-out was
+added.
+
+ROM references:
+
+- `docs/skdisasm/sonic3k.asm:27024-27067` (active routine `$18` input)
+- `docs/skdisasm/sonic3k.asm:27138-27160` (`loc_142E2` released flap)
+
+Verification with the root-level locked-on S3K ROM:
+
+- Focused released-carry threshold/`Ctrl_2_logical` publication contract
+  passed.
+- Standalone MGZ physics advances from frame 34404 / 45 errors to frame 35200
+  / 43 errors. The new frontier is Tails X velocity (expected `-$1B2`, actual
+  zero) during the later released-rescue chase.
+- Standalone MGZ animation remains at frame 35279 / 29 errors.
+- MGZ complete-run physics and animation both remain fully green.
+- Full trace fleets remain at physics 44/58 green and animation 43/58 green;
+  AIZ/HCZ/MGZ complete-run physics and animation remain green.
+
 ### 2026-07-17 -- Obj37 defers collision clear until its SST executes
 
 Branch `feature/ai-trace-animation-verification`, on top of `134b73c4c`.

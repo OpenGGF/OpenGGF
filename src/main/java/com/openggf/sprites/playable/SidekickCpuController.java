@@ -3545,6 +3545,7 @@ public class SidekickCpuController {
         // ROM loc_142E2 runs Tails's released rescue/chase body before
         // falling through to Tails_Carry_Sonic's cooldown/proximity probe.
         updateMgzReleasedCarryChase();
+        mirrorCarryDiagnosticInput();
 
         // ROM loc_14534: if byte 1(a2) is nonzero, decrement and return
         // only while it remains nonzero. When the decrement reaches zero, the

@@ -680,6 +680,36 @@ class TestSidekickCpuControllerCarry {
     }
 
     @Test
+    void mgzReleasedChasePublishesAutoFlapIntoCtrl2Logical() {
+        AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
+        AbstractPlayableSprite sonic = pair[0];
+        AbstractPlayableSprite tails = pair[1];
+        fixture.camera().setY((short) 0x0600);
+        tails.setCentreY((short) 0x0690);
+        controller.update(1);
+        controller.update(2);
+
+        sonic.setJumpInputPressed(true);
+        controller.update(3);
+        sonic.setJumpInputPressed(false);
+        SidekickCpuRewindExtra released = controller.captureRewindState();
+        controller.restoreRewindState(withMgzControlScalars(
+                released,
+                false, 0x57,
+                false,
+                released.mgzReleasedChaseXAccel(),
+                released.mgzReleasedChaseYAccel()));
+
+        controller.update(4);
+
+        assertTrue(controller.getInputJumpPress(),
+                "loc_142E2 should generate the threshold flap while the carry is released");
+        assertEquals(AbstractPlayableSprite.INPUT_JUMP,
+                controller.getDiagnosticGeneratedHeldInput(),
+                "the released chase must publish its generated A/B/C pulse into Ctrl_2_logical");
+    }
+
+    @Test
     void mgzCarryReleasesSonicWhenTailsIsHurt() {
         AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
         AbstractPlayableSprite sonic = pair[0];
