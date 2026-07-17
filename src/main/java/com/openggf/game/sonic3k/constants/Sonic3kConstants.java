@@ -21,6 +21,8 @@ import com.openggf.level.Pattern;
  * </ul>
  */
 public class Sonic3kConstants {
+    /** Obj_FBZCloud stores exactly ten stable addresses at FBZ_cloud_addr. */
+    public static final int FBZ_CLOUD_REWIND_SLOT_COUNT = 10;
 
     private Sonic3kConstants() {}
 
@@ -208,6 +210,31 @@ public class Sonic3kConstants {
     public static final int MAP_LBZ_PIPE_PLUG_ADDR = 0x226854;
     public static final int MAP_TUNNEL_EXHAUST_ADDR = 0x029C8A; // Map_TunnelExhaust (2 frames, S&K-side)
     public static final int MAP_FBZ_CORK_FLOOR_ADDR = 0x2A920;    // Map_FBZCorkFloor (2 frames, 2/4 pieces, in sonic3k.asm)
+    public static final int MAP_FBZ_FLOATING_PLATFORM_ADDR = 0x03A742;
+    public static final int MAP_FBZ_CHAIN_LINK_ADDR = 0x03AD8A;
+    public static final int MAP_FBZ_MAGNETIC_SPIKE_BALL_ADDR = 0x03B25C;
+    public static final int MAP_FBZ_MAGNETIC_PLATFORM_ADDR = 0x03B4DE;
+    public static final int MAP_FBZ_SNAKE_PLATFORM_ADDR = 0x03B6CE;
+    public static final int MAP_FBZ_BENT_PIPE_ADDR = 0x03B73C;
+    public static final int MAP_FBZ_ROTATING_PLATFORM_ADDR = 0x03B91A;
+    public static final int MAP_FBZ_DISAPPEARING_PLATFORM_ADDR = 0x03BBBE;
+    public static final int MAP_FBZ_SCREW_DOOR_ADDR = 0x03BD8E;
+    public static final int MAP_FBZ_SPINNING_POLE_ADDR = 0x03C19C;
+    public static final int MAP_FBZ_PROPELLER_ADDR = 0x03C20C;
+    public static final int MAP_FBZ_PISTON_ADDR = 0x03C328;
+    public static final int MAP_FBZ_PLATFORM_BLOCKS_ADDR = 0x03C416;
+    public static final int MAP_FBZ_MISSILE_LAUNCHER_ADDR = 0x03C78E;
+    public static final int MAP_FBZ_WALL_MISSILE_ADDR = 0x03C906;
+    public static final int MAP_FBZ_MINE_ADDR = 0x03CA06;
+    /** Locked-on {@code Map_FBZElevator}; S&K-side mapping table. */
+    public static final int MAP_FBZ_ELEVATOR_ADDR = 0x03CB0C;
+    public static final int MAP_FBZ_TRAP_SPRING_ADDR = 0x03CC5A;
+    public static final int MAP_FBZ_FLAMETHROWER_ADDR = 0x03CFD0;
+    public static final int MAP_FBZ_SPIDER_CRANE_ADDR = 0x03D2FC;
+    public static final int MAP_FBZ_MAGNETIC_PENDULUM_ADDR = 0x03D9AE;
+    public static final int ARTTILE_FBZ_OUTDOORS = 0x02E5;
+    public static final int ARTTILE_FBZ_MISC2 = 0x02D2;
+    public static final int MAP_FBZ_DEZ_PLAYER_LAUNCHER_ADDR = 0x03BA8A;
 
     // ===== Breakable Wall mappings (Obj_BreakableWall, ID 0x0D) =====
     // Each zone has its own mapping table: even frames = intact, odd frames = broken fragments.
@@ -866,6 +893,10 @@ public class Sonic3kConstants {
     // Verified by S&K ROM search for the first inline record:
     // 00 06 03 2A F8 00 56 40 10 09 ...
     public static final int ANIPLC_CNZ_ADDR = 0x028882;
+    /** AniPLC_FBZ1, S&K-side listing address (sonic3k.lst:66267). */
+    public static final int ANIPLC_FBZ1_ADDR = 0x028906;
+    /** AniPLC_FBZ2, S&K-side listing address (sonic3k.lst:66330). */
+    public static final int ANIPLC_FBZ2_ADDR = 0x028948;
 
     // AniPLC_ICZ: 1 script (indoor ice background shimmer, both acts)
     // Verified by S&K ROM search for:
@@ -1473,6 +1504,33 @@ public class Sonic3kConstants {
     public static final int ARTTILE_LRZ2_BUTTON = 0x0429; // ArtTile_LRZ2Misc + $1C
     public static final int ARTTILE_FBZ_SPIKES = 0x0200;
     public static final int ARTTILE_FBZ_BUTTON = 0x0500;
+    // FBZ consumer art/mappings, verified from the S&K-side sonic3k.lst symbol table.
+    public static final int ART_KOSM_FBZ_MINIBOSS_ADDR = 0x1652B4;
+    /** Pal_FBZMiniboss, locked-on S&K-side bytes (32-byte palette line). */
+    public static final int PAL_FBZ_MINIBOSS_ADDR = 0x06FAC0;
+    public static final int PAL_FBZ2_SUBBOSS_ADDR = 0x070420;
+    public static final int PAL_FBZ_END_BOSS_ADDR = 0x070F94;
+    public static final int ART_NEM_FBZ2_SUBBOSS_ADDR = 0x0DBDDE;
+    public static final int ART_NEM_FBZ2_SUBBOSS_SIZE = 2368;
+    public static final int ART_KOSM_FBZ_CLOUD_ADDR = 0x165826;
+    public static final int ART_KOSM_FBZ_BOSS_PILLAR_ADDR = 0x165AB8;
+    public static final int ART_NEM_FBZ_END_BOSS_ADDR = 0x0DC2E0;
+    public static final int ART_NEM_FBZ_END_BOSS_SIZE = 1536;
+    public static final int ART_KOSM_FBZ_EXIT_DOOR_ADDR = 0x165BCA;
+    public static final int ART_KOSM_FBZ_EXIT_HALL_ADDR = 0x1651D2;
+    public static final int ART_NEM_FBZ_EGG_CAPSULE_ADDR = 0x165C6C;
+    public static final int ART_TILE_FBZ_CLOUD = 0x03A3;
+    public static final int ART_TILE_FBZ_BOSS_PILLAR = 0x03D5;
+    public static final int ART_TILE_FBZ_EXIT_DOOR = 0x03E5;
+    public static final int ART_TILE_FBZ_EXIT_HALL = 0x03F4;
+    public static final int MAP_FBZ_MINIBOSS_ADDR = 0x06FAF8;
+    public static final int MAP_FBZ2_SUBBOSS_ADDR = 0x070440;
+    public static final int MAP_SPRITE_MASK_ADDR = 0x18595E;
+    public static final int MAP_FBZ2_PREBOSS_ADDR = 0x053518;
+    public static final int MAP_FBZ_END_BOSS_ADDR = 0x070FB4;
+    public static final int MAP_FBZ_EXIT_DOOR_ADDR = 0x070F7E;
+    public static final int MAP_FBZ_EXIT_HALL_ADDR = 0x086D2A;
+    public static final int MAP_FBZ_EGG_CAPSULE_ADDR = 0x1871E8;
     public static final int ARTTILE_BLASTER = 0x0506;
     public static final int ARTTILE_TECHNOSQUEEK = 0x052E;
 
@@ -1936,6 +1994,30 @@ public class Sonic3kConstants {
     public static final int ART_NEM_FBZ_ROBOTNIK_RUN_SIZE = 2784;
     public static final int MAP_FBZ_ROBOTNIK_RUN_ADDR = 0x06837E;
     public static final int ART_TILE_FBZ_ROBOTNIK_RUN = 0x04A9;
+    public static final int ART_NEM_FBZ_ROBOTNIK_HEAD_ADDR = 0x0D7C7A;
+    public static final int ART_NEM_FBZ_ROBOTNIK_HEAD_SIZE = 1024;
+    public static final int MAP_FBZ_ROBOTNIK_HEAD_ADDR = 0x068454;
+    public static final int ART_TILE_FBZ_ROBOTNIK_HEAD = 0x0430;
+    public static final int ART_KOSM_FBZ_EGGROBO_HEAD_ADDR = 0x15FDDC;
+    public static final int ART_KOSM_FBZ_EGGROBO_HEAD_SIZE = 1024;
+    public static final int MAP_FBZ_EGGROBO_HEAD_ADDR = 0x0681D4;
+    public static final int ART_NEM_FBZ_ROBOTNIK_STAND_ADDR = 0x0D7EEC;
+    public static final int ART_NEM_FBZ_ROBOTNIK_STAND_SIZE = 2144;
+    public static final int MAP_FBZ_ROBOTNIK_STAND_ADDR = 0x06847C;
+    public static final int ART_TILE_FBZ_ROBOTNIK_STAND = 0x0466;
+    public static final int ART_NEM_FBZ_EGGROBO_RUN_ADDR = 0x15FFBE;
+    public static final int ART_NEM_FBZ_EGGROBO_RUN_SIZE = 2208;
+    public static final int MAP_FBZ_EGGROBO_RUN_ADDR = 0x186C20;
+    public static final int ART_NEM_FBZ_EGGROBO_STAND_ADDR = 0x160340;
+    public static final int ART_NEM_FBZ_EGGROBO_STAND_SIZE = 1984;
+    public static final int MAP_FBZ_EGGROBO_STAND_ADDR = 0x186BB0;
+    public static final int ART_NEM_FBZ_END_BOSS_FLAME_ADDR = 0x0DDFE6;
+    public static final int ART_NEM_FBZ_END_BOSS_FLAME_SIZE = 2176;
+    public static final int MAP_FBZ_END_BOSS_FLAME_ADDR = 0x071090;
+    public static final int ART_TILE_FBZ_END_BOSS_FLAME = 0x0450;
+    public static final int ART_NEM_ROBOTNIK_SHIP_SIZE = 2624;
+    public static final int ART_NEM_BOSS_EXPLOSION_SIZE = 1472;
+    public static final int ART_NEM_EGG_CAPSULE_SIZE = 2240;
     public static final int PLC_LBZ2_FINAL_BOSS_1 = 0x71;
     public static final int PLC_LBZ2_EGGMAN = 0x77;
     // LBZ2 Death Egg terrain swap data queued by Dynamic_resize_routine.

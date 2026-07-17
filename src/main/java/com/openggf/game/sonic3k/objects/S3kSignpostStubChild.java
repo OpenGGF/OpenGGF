@@ -7,9 +7,11 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -23,7 +25,8 @@ import java.util.logging.Logger;
  * representing the post/pole beneath the spinning sign face.
  * Self-destroys when the parent signpost is destroyed.
  */
-public class S3kSignpostStubChild extends AbstractObjectInstance implements RewindRecreatable {
+public class S3kSignpostStubChild extends AbstractObjectInstance
+        implements RewindRecreatable, RomWorldPositionedObject {
 
     private static final Logger LOG = Logger.getLogger(S3kSignpostStubChild.class.getName());
 
@@ -61,10 +64,16 @@ public class S3kSignpostStubChild extends AbstractObjectInstance implements Rewi
     }
 
     @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        currentX = (currentX + offsetX) & 0xFFFF;
+        currentY = (currentY + offsetY) & 0xFFFF;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (parent == null || parent.isDestroyed()) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
             return;
         }
         syncPosition();

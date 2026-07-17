@@ -387,6 +387,66 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void zeroReachingInvulnerabilityBlinkSkipsRenderFlagRefreshUntilNextFrame() {
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setRenderFlagOnScreen(false);
+        tails.setInvulnerableFrames(1);
+
+        tails.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
+        tails.endOfTick();
+
+        assertEquals(0, tails.getInvulnerableFrames());
+        assertFalse(tails.shouldRefreshRenderFlagThisFrame(),
+                "Tails_Display reads d0=1 before decrementing the timer to zero, then skips Draw_Sprite");
+
+        tails.captureOnObjectAtFrameStart();
+        tails.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
+        tails.endOfTick();
+
+        assertTrue(tails.shouldRefreshRenderFlagThisFrame(),
+                "the following frame reads d0=0 and must call Draw_Sprite");
+    }
+
+    @Test
+    void s3kPanicDespawnCounterKeepsZeroReachingBlinkFrameRenderState() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setRenderFlagOnScreen(false);
+        tails.setInvulnerableFrames(1);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x08, 0, 42, 0, false, 0x2160, 0x016C);
+
+        controller.update(15413);
+        assertEquals(43, controller.getDiagnosticRespawnCounter());
+        tails.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
+        tails.endOfTick();
+        if (tails.shouldRefreshRenderFlagThisFrame()) {
+            tails.setRenderFlagOnScreen(true);
+        }
+
+        tails.captureOnObjectAtFrameStart();
+        controller.update(15414);
+
+        assertEquals(44, controller.getDiagnosticRespawnCounter(),
+                "FBZ f15414: sub_13EFC must still see the retained $04 render flag before Draw_Sprite restores $84");
+
+        tails.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
+        tails.endOfTick();
+        if (tails.shouldRefreshRenderFlagThisFrame()) {
+            tails.setRenderFlagOnScreen(true);
+        }
+        tails.captureOnObjectAtFrameStart();
+        controller.update(15415);
+
+        assertEquals(0, controller.getDiagnosticRespawnCounter(),
+                "the steady-zero timer frame calls Draw_Sprite, so the next CPU tick resets the shared word");
+    }
+
+    @Test
     void s3kDespawnMarkerReturnsToCatchUpFlightRoutine() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -1491,6 +1551,8 @@ class TestSidekickCpuDespawnParity {
         tails.setRenderFlagOnScreen(false);
         sprites.addSprite(tails);
 
+        tails.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
+        tails.endOfTick();
         sprites.refreshPlayableRenderFlags(camera);
 
         assertFalse(tails.isRenderFlagOnScreen(),
@@ -1498,21 +1560,27 @@ class TestSidekickCpuDespawnParity {
 
         tails.setInvulnerableFrames(0x04);
 
+        tails.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
+        tails.endOfTick();
         sprites.refreshPlayableRenderFlags(camera);
 
         assertTrue(tails.isRenderFlagOnScreen(),
                 "Blink-visible frames enqueue Draw_Sprite and refresh render_flags bit 7 from camera visibility");
 
-        tails.setInvulnerableFrames(0x47);
+        tails.setInvulnerableFrames(0x48);
         tails.setRenderFlagOnScreen(false);
 
+        tails.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
+        tails.endOfTick();
         sprites.refreshPlayableRenderFlags(camera);
 
         assertFalse(tails.isRenderFlagOnScreen(),
                 "AIZ f2679 stores the post-decrement timer ($47), but ROM tested pre-decrement $48 and skipped Draw_Sprite");
 
-        tails.setInvulnerableFrames(0x46);
+        tails.setInvulnerableFrames(0x47);
 
+        tails.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
+        tails.endOfTick();
         sprites.refreshPlayableRenderFlags(camera);
 
         assertTrue(tails.isRenderFlagOnScreen(),

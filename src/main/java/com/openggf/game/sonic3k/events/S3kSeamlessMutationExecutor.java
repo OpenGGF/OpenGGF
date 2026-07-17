@@ -36,6 +36,8 @@ public final class S3kSeamlessMutationExecutor {
     public static final String MUTATION_AIZ1_FIRE_TRANSITION_STAGE = "s3k.aiz1.fire_transition_stage";
     public static final String MUTATION_AIZ1_FIRE_TERRAIN_READY = "s3k.aiz1.fire_terrain_ready";
     public static final String MUTATION_AIZ1_POST_RELOAD_ACT2 = "s3k.aiz1.post_reload_act2";
+    public static final String MUTATION_FBZ1_POST_RELOAD_ACT2 = "s3k.fbz1.post_reload_act2";
+    private static final int PAL_POINTER_FBZ2_INDEX = 0x13;
     private static final int LLB_PRIMARY_ART = 0;
     private static final int LLB_SECONDARY_ART = 4;
     private static final int LLB_PRIMARY_CHUNKS = 8;
@@ -64,8 +66,14 @@ public final class S3kSeamlessMutationExecutor {
             case MUTATION_AIZ1_FIRE_TRANSITION_STAGE -> applyAiz1FireTransitionStage(levelManager);
             case MUTATION_AIZ1_FIRE_TERRAIN_READY -> applyAiz1FireTerrainReady(levelManager);
             case MUTATION_AIZ1_POST_RELOAD_ACT2 -> applyAiz1PostReloadAct2(levelManager);
+            case MUTATION_FBZ1_POST_RELOAD_ACT2 -> applyFbz1PostReloadAct2();
             default -> LOG.warning("Unknown S3K seamless mutation key: " + mutationKey);
         }
+    }
+
+    private static void applyFbz1PostReloadAct2() {
+        Sonic3kZoneEvents.loadPaletteFromPalPointers(PAL_POINTER_FBZ2_INDEX);
+        LOG.info("Applied FBZ2 PalPointers #$13 after the in-frame act reload");
     }
 
     private static void applyAiz1FireTerrainReady(LevelManager levelManager) {

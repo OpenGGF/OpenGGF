@@ -6,15 +6,17 @@ import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.ShieldType;
-import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
+import com.openggf.game.sonic3k.objects.FbzMagneticPlatformObjectInstance;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.Sonic2SuperStateController;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.FrameCollisionPlan;
@@ -23,6 +25,7 @@ import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
+import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 import com.openggf.tests.FullReset;
 import com.openggf.tests.SingletonResetExtension;
@@ -150,6 +153,350 @@ public class TestPlayableSpriteMovement {
                 for (int i = 0; i < 7; i++) {
                         GameServices.gameState().markSuperEmeraldCollected(i);
                 }
+        }
+
+        @Test
+        public void fbzMagneticPlatformSonicBalanceUsesNativeWidthBoundary() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setGameRulesForTest(GameRules.SONIC_3K);
+                FbzMagneticPlatformObjectInstance platform = addMagneticPlatformForBalance();
+                ObjectManager objects = GameServices.level().getObjectManager();
+                objects.forceRidingObjectForBootstrap(mockSprite, platform);
+                mockSprite.setAir(false);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setDirection(Direction.RIGHT);
+
+                mockSprite.setCentreX((short) 0x252A); // d1=$252A+$18-$2540=2
+                invokeUpdateBalanceState(manager);
+                assertEquals(Direction.RIGHT, mockSprite.getDirection(),
+                                "Sonic d1==2 must fail the signed BLT left-edge balance test");
+                assertEquals(0, mockSprite.getBalanceState());
+
+                mockSprite.setCentreX((short) 0x2529); // d1=1, just inside branch
+                invokeUpdateBalanceState(manager);
+                assertEquals(Direction.LEFT, mockSprite.getDirection());
+                assertTrue(mockSprite.getBalanceState() != 0);
+        }
+
+        @Test
+        public void fbzMagneticPlatformTailsUsesNativeFourPixelBalanceShift() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                Tails tails = new Tails("tails_p2", (short) 0, (short) 0);
+                PlayableSpriteMovement tailsMovement = new PlayableSpriteMovement(tails);
+                FbzMagneticPlatformObjectInstance platform = addMagneticPlatformForBalance();
+                ObjectManager objects = GameServices.level().getObjectManager();
+                objects.forceRidingObjectForBootstrap(tails, platform);
+                tails.setAir(false);
+                tails.setAngle((byte) 0);
+                tails.setGSpeed((short) 0);
+                tails.setDirection(Direction.RIGHT);
+
+                tails.setCentreX((short) 0x252C); // d1=4, Tails' non-balancing boundary
+                invokeUpdateBalanceState(tailsMovement);
+                assertEquals(Direction.RIGHT, tails.getDirection());
+                assertEquals(0, tails.getBalanceState());
+
+                tails.setCentreX((short) 0x252B); // d1=3, just inside Tails' branch
+                invokeUpdateBalanceState(tailsMovement);
+                assertEquals(Direction.LEFT, tails.getDirection());
+                assertTrue(tails.getBalanceState() != 0);
+        }
+
+        private FbzMagneticPlatformObjectInstance addMagneticPlatformForBalance() throws Exception {
+                ObjectManager objects = GameServices.level().getObjectManager();
+                if (objects == null) {
+                        objects = new ObjectManager(List.of(), null, 0, null, null);
+                        Field objectManagerField = GameServices.level().getClass().getDeclaredField("objectManager");
+                        objectManagerField.setAccessible(true);
+                        objectManagerField.set(GameServices.level(), objects);
+                }
+                FbzMagneticPlatformObjectInstance platform = new FbzMagneticPlatformObjectInstance(
+                                new ObjectSpawn(0x2540, 0x0570, Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM,
+                                                0x0F, 0, false, 0));
+                objects.addDynamicObject(platform);
+                return platform;
+        }
+
+        private static void invokeUpdateBalanceState(PlayableSpriteMovement movement) throws Exception {
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("updateBalanceState");
+                method.setAccessible(true);
+                method.invoke(movement);
+        }
+
+        @Test
+        public void onObjectAnglePosClearsSharedOutputsSeenByNextAirbornePlayable()
+                        throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setGameRulesForTest(GameRules.SONIC_3K);
+
+                CollisionSystem collisionSystem = new CollisionSystem(new TerrainCollisionManager());
+                PlayableSpriteMovement sonicMovement = new PlayableSpriteMovement(
+                                mockSprite, collisionSystem, GameServices.gameState());
+                mockSprite.setOnObject(true);
+                invokeCaptureTiltAnglesForGroundDispatch(sonicMovement);
+
+                PlayableSpriteMovement.RewindState state = sonicMovement.captureRewindState();
+                assertEquals(0, state.latchedNextTilt(),
+                                "Player_AnglePos clears Primary_Angle while Status_OnObj is set");
+                assertEquals(0, state.latchedTilt(),
+                                "Player_AnglePos clears Secondary_Angle while Status_OnObj is set");
+
+                Tails tails = new Tails("tails_p2", (short) 0, (short) 0);
+                setGameRulesForTest(tails, GameRules.SONIC_3K);
+                tails.setGroundSensors(emptyFloorSensors(tails));
+                prepareFallingPlayable(tails);
+                PlayableSpriteMovement tailsMovement = new PlayableSpriteMovement(
+                                tails, collisionSystem, GameServices.gameState());
+                invokeDoLevelCollision(tailsMovement);
+
+                state = tailsMovement.captureRewindState();
+                assertEquals(0, state.latchedNextTilt(),
+                                "an empty right probe must retain the shared Primary_Angle clear");
+                assertEquals(0, state.latchedTilt(),
+                                "an empty left probe must retain the shared Secondary_Angle clear");
+        }
+
+        @Test
+        public void emptyAirProbeRetainsSharedAngleOutputsAcrossSonicAndTailsDispatches()
+                        throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                CollisionSystem collisionSystem = new CollisionSystem(new TerrainCollisionManager());
+
+                Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
+                setGameRulesForTest(sonic, GameRules.SONIC_3K);
+                sonic.setGroundSensors(rightEdgeFloorSensors(sonic));
+                prepareFallingPlayable(sonic);
+                PlayableSpriteMovement sonicMovement = new PlayableSpriteMovement(
+                                sonic, collisionSystem, GameServices.gameState());
+                invokeDoLevelCollision(sonicMovement);
+
+                assertFalse(sonic.getAir(), "the exact air-collision path must land Sonic");
+                PlayableSpriteMovement.RewindState sonicState = sonicMovement.captureRewindState();
+                assertEquals(0, sonicState.latchedNextTilt(),
+                                "FindFloor must not replace the initial shared Primary_Angle on an empty right probe");
+                assertEquals(0xFF, sonicState.latchedTilt(),
+                                "the solid left probe must write Secondary_Angle");
+
+                // On the next grounded dispatch Player_AnglePos seeds both shared
+                // outputs to 3 before probing. The empty right side retains that 3,
+                // while the solid left side writes FF.
+                invokeCaptureTiltAnglesForGroundDispatch(sonicMovement);
+                sonicState = sonicMovement.captureRewindState();
+                assertEquals(3, sonicState.latchedNextTilt());
+                assertEquals(0xFF, sonicState.latchedTilt());
+
+                // Tails runs later in the same native frame. Sonic_CheckFloor does
+                // not seed the globals, so Tails' empty right probe must inherit the
+                // Primary_Angle=3 left by Sonic's grounded AnglePos.
+                Tails tails = new Tails("tails_p2", (short) 0, (short) 0);
+                setGameRulesForTest(tails, GameRules.SONIC_3K);
+                tails.setGroundSensors(rightEdgeFloorSensors(tails));
+                prepareFallingPlayable(tails);
+                tails.setDirection(Direction.LEFT);
+                PlayableSpriteMovement tailsMovement = new PlayableSpriteMovement(
+                                tails, collisionSystem, GameServices.gameState());
+                invokeDoLevelCollision(tailsMovement);
+
+                assertFalse(tails.getAir(), "the exact air-collision path must land Tails");
+                PlayableSpriteMovement.RewindState state = tailsMovement.captureRewindState();
+                assertEquals(3, state.latchedNextTilt(),
+                                "Tails' empty right probe must retain Sonic's shared Primary_Angle");
+                assertEquals(0xFF, state.latchedTilt(),
+                                "Tails' solid left probe must write native Secondary_Angle");
+
+                invokeUpdateBalanceState(tailsMovement);
+                assertEquals(Direction.RIGHT, tails.getDirection(),
+                                "the next zero-input ground dispatch must consume next_tilt=3");
+        }
+
+        @Test
+        public void risingDiagonalAirCollisionKeepsCeilingAnglesWhenNativeFloorCheckIsSkipped()
+                        throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                Tails tails = new Tails("tails_p2", (short) 0, (short) 0);
+                setGameRulesForTest(tails, GameRules.SONIC_3K);
+                tails.setCeilingSensors(new Sensor[] {
+                                fixedSensor(tails, Direction.UP, (byte) 0x11, (byte) 16),
+                                fixedSensor(tails, Direction.UP, (byte) 0x22, (byte) 16)
+                });
+                tails.setGroundSensors(new Sensor[] {
+                                fixedSensor(tails, Direction.DOWN, (byte) 0x33, (byte) -1),
+                                fixedSensor(tails, Direction.DOWN, (byte) 0x44, (byte) -1)
+                });
+                tails.setAir(true);
+                tails.setGroundMode(GroundMode.GROUND);
+                tails.setXSpeed((short) 0x0100);
+                tails.setYSpeed((short) -0x0100); // quadrant $C0, rising
+
+                CollisionSystem collisionSystem = new CollisionSystem(new TerrainCollisionManager());
+                PlayableSpriteMovement tailsMovement = new PlayableSpriteMovement(
+                                tails, collisionSystem, GameServices.gameState());
+                Method collide = PlayableSpriteMovement.class
+                                .getDeclaredMethod("doLevelCollision", boolean.class);
+                collide.setAccessible(true);
+                collide.invoke(tailsMovement, false);
+
+                assertTrue(tails.getAir(), "rising Tails must not run the native floor helper");
+                PlayableSpriteMovement.RewindState state = tailsMovement.captureRewindState();
+                assertEquals(0x22, state.latchedNextTilt(),
+                                "right ceiling probe must remain the final Primary_Angle output");
+                assertEquals(0x11, state.latchedTilt(),
+                                "left ceiling probe must remain the final Secondary_Angle output");
+        }
+
+        @Test
+        public void airWallWritePublishesPrimaryAngleBeforeNativeEarlyReturn() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic2GameModule());
+                Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
+                setGameRulesForTest(sonic, GameRules.SONIC_2);
+                sonic.setPushSensors(new Sensor[] {
+                                fixedSensor(sonic, Direction.LEFT, (byte) 0x40, (byte) -1),
+                                fixedSensor(sonic, Direction.RIGHT, (byte) 0x00, (byte) 16, 0)
+                });
+                sonic.setCeilingSensors(new Sensor[] {
+                                fixedSensor(sonic, Direction.UP, (byte) 0x20, (byte) -1),
+                                fixedSensor(sonic, Direction.UP, (byte) 0x20, (byte) -1)
+                });
+                sonic.setGroundSensors(emptyFloorSensors(sonic));
+                sonic.setAir(true);
+                sonic.setGroundMode(GroundMode.GROUND);
+                sonic.setXSpeed((short) -0x0200);
+                sonic.setYSpeed((short) -0x0100); // quadrant $40
+
+                CollisionSystem collisionSystem = new CollisionSystem(new TerrainCollisionManager());
+                PlayableSpriteMovement movement = new PlayableSpriteMovement(
+                                sonic, collisionSystem, GameServices.gameState());
+                invokeDoLevelCollision(movement);
+
+                PlayableSpriteMovement.RewindState state = movement.captureRewindState();
+                assertEquals(0x40, state.latchedNextTilt(),
+                                "CheckLeftWallDist writes Primary_Angle before S2 returns on the wall hit");
+                assertEquals(0, state.latchedTilt(),
+                                "the early return must leave the untouched shared Secondary_Angle intact");
+        }
+
+        @Test
+        public void objectControlledSidekickStillCopiesSharedAngleOutputsAtPlayerTail() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                CollisionSystem collisionSystem = new CollisionSystem(new TerrainCollisionManager());
+                installRuntimeCollisionSystem(collisionSystem);
+                collisionSystem.publishGroundAngleOutputs(false,
+                                new SensorResult((byte) 0xFF, (byte) -1, 0xFF, Direction.DOWN),
+                                new SensorResult((byte) 3, (byte) 16, 0, Direction.DOWN));
+
+                Tails tails = new Tails("tails_p2", (short) 0, (short) 0);
+                setGameRulesForTest(tails, GameRules.SONIC_3K);
+                tails.setObjectControlled(true);
+                PlayableSpriteMovement movement = new PlayableSpriteMovement(
+                                tails, collisionSystem, GameServices.gameState());
+
+                movement.handleMovement(false, false, false, false, false, false, false, false);
+
+                PlayableSpriteMovement.RewindState state = movement.captureRewindState();
+                assertEquals(3, state.latchedNextTilt(),
+                                "the object-control early return must still execute the native player-tail copy");
+                assertEquals(0xFF, state.latchedTilt(),
+                                "a later sidekick must observe the shared Secondary_Angle without moving");
+        }
+
+        @Test
+        public void spindashAnglePosPublishesGroundSeedAndOnObjectClearAtPlayerTail() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                CollisionSystem collisionSystem = new CollisionSystem(new TerrainCollisionManager());
+                installRuntimeCollisionSystem(collisionSystem);
+                Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
+                setGameRulesForTest(sonic, GameRules.SONIC_3K);
+                sonic.setGroundSensors(rightEdgeFloorSensors(sonic));
+                sonic.setAir(false);
+                sonic.setGroundMode(GroundMode.GROUND);
+                sonic.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setDuckAnimId(8)
+                                .setSpindashAnimId(9)
+                                .setRollAnimId(2));
+                sonic.setAnimationId(8);
+                sonic.setCrouching(true);
+                PlayableSpriteMovement movement = new PlayableSpriteMovement(
+                                sonic, collisionSystem, GameServices.gameState());
+
+                movement.handleMovement(false, true, false, false, true, false, false, false);
+
+                assertTrue(sonic.getSpindash(), "Down plus a fresh jump press must enter the charge path");
+                PlayableSpriteMovement.RewindState state = movement.captureRewindState();
+                assertEquals(3, state.latchedNextTilt(),
+                                "charge-frame AnglePos seeds Primary_Angle before the empty right probe");
+                assertEquals(0xFF, state.latchedTilt(),
+                                "charge-frame AnglePos publishes the solid left angle");
+
+                sonic.setOnObject(true);
+                movement.handleMovement(false, false, false, false, false, false, false, false);
+
+                assertFalse(sonic.getSpindash(), "releasing Down must take the spindash release path");
+                state = movement.captureRewindState();
+                assertEquals(0, state.latchedNextTilt(),
+                                "release-frame AnglePos clears Primary_Angle on Status_OnObj");
+                assertEquals(0, state.latchedTilt(),
+                                "release-frame AnglePos clears Secondary_Angle on Status_OnObj");
+        }
+
+        private static Sensor fixedSensor(AbstractPlayableSprite sprite, Direction direction,
+                                          byte angle, byte distance) {
+                return fixedSensor(sprite, direction, angle, distance, 1);
+        }
+
+        private static Sensor fixedSensor(AbstractPlayableSprite sprite, Direction direction,
+                                          byte angle, byte distance, int tileId) {
+                return new Sensor(sprite, direction, (byte) 0, (byte) 0, true) {
+                        @Override
+                        protected SensorResult doScan(short dx, short dy) {
+                                return new SensorResult(angle, distance, tileId, direction);
+                        }
+                };
+        }
+
+        private static Sensor[] rightEdgeFloorSensors(AbstractPlayableSprite sprite) {
+                return new Sensor[] {
+                                new Sensor(sprite, Direction.DOWN, (byte) -9, (byte) 15, true) {
+                                        @Override
+                                        protected SensorResult doScan(short dx, short dy) {
+                                                return dx >= 9
+                                                                ? new SensorResult((byte) 3, (byte) 16, 0,
+                                                                                Direction.DOWN)
+                                                                : new SensorResult((byte) 0xFF, (byte) -1, 0xFF,
+                                                                                Direction.DOWN);
+                                        }
+                                },
+                                fixedSensor(sprite, Direction.DOWN, (byte) 3, (byte) 16, 0)
+                };
+        }
+
+        private static Sensor[] emptyFloorSensors(AbstractPlayableSprite sprite) {
+                return new Sensor[] {
+                                fixedSensor(sprite, Direction.DOWN, (byte) 3, (byte) 16, 0),
+                                fixedSensor(sprite, Direction.DOWN, (byte) 3, (byte) 16, 0)
+                };
+        }
+
+        private static void prepareFallingPlayable(AbstractPlayableSprite sprite) {
+                sprite.setAir(true);
+                sprite.setGroundMode(GroundMode.GROUND);
+                sprite.setXSpeed((short) 0);
+                sprite.setYSpeed((short) 0x00A8);
+        }
+
+        private static void invokeDoLevelCollision(PlayableSpriteMovement movement) throws Exception {
+                Method collide = PlayableSpriteMovement.class
+                                .getDeclaredMethod("doLevelCollision", boolean.class);
+                collide.setAccessible(true);
+                collide.invoke(movement, false);
+        }
+
+        private static void invokeCaptureTiltAnglesForGroundDispatch(PlayableSpriteMovement movement)
+                        throws Exception {
+                Method method = PlayableSpriteMovement.class
+                                .getDeclaredMethod("captureTiltAnglesForGroundDispatch");
+                method.setAccessible(true);
+                method.invoke(movement);
         }
 
         private void installCurrentModuleLevelState() {
@@ -418,6 +765,75 @@ public class TestPlayableSpriteMovement {
 
                 assertEquals((short) 0x0001, mockSprite.getCentreY(),
                                 "S3K Sonic_Control still applies Screen_Y_wrap_value after object_control skips movement");
+        }
+
+        @Test
+        public void objectControlledJumpReleaseDoesNotManufactureSecondPressWhenMovementResumes() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setGameRulesForTest(GameRules.SONIC_3K);
+                mockSprite.giveShield(ShieldType.FIRE);
+                mockSprite.setAir(true);
+                mockSprite.setRolling(true);
+                mockSprite.setJumping(true);
+                mockSprite.setXSpeed((short) 0x0200);
+                mockSprite.setYSpeed((short) -0x0380);
+                mockSprite.setDoubleJumpFlag(0);
+                setMovementField("jumpReleasedSinceJump", true);
+
+                // ROM Ctrl_1_logical=$1810: Right+B are held and B's press bit
+                // is consumed by the controlling object while Sonic_Control is
+                // skipped by object_control bit 0. SpriteManager publishes the
+                // raw held input to objects but passes a control-filtered false
+                // to normal movement.
+                mockSprite.setObjectControlled(true);
+                mockSprite.setJumpInputPressed(true);
+                manager.handleMovement(false, false, false, false, false, false, false, false);
+
+                // ROM next frame Ctrl_1_logical=$1800: B remains held but its
+                // press bit is clear, so Sonic_ShieldMoves must not run.
+                mockSprite.setObjectControlled(false);
+                Method storeInput = PlayableSpriteMovement.class.getDeclaredMethod("storeInputState",
+                                boolean.class, boolean.class, boolean.class, boolean.class, boolean.class);
+                storeInput.setAccessible(true);
+                storeInput.invoke(manager, false, false, false, true, true);
+                Method jumpHeight = PlayableSpriteMovement.class.getDeclaredMethod("doJumpHeight");
+                jumpHeight.setAccessible(true);
+                jumpHeight.invoke(manager);
+
+                assertEquals(0, mockSprite.getDoubleJumpFlag(),
+                                "a jump press consumed during object control must not be replayed as a shield ability");
+                assertFalse(mockSprite.getXSpeed() == (short) 0x0800,
+                                "held B after object release must not manufacture the Fire Shield dash");
+        }
+
+        @Test
+        public void objectControlledCpuPressIsConsumedWithoutReplayingAfterRelease() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setGameRulesForTest(GameRules.SONIC_3K);
+                mockSprite.setCpuControlled(true);
+                mockSprite.giveShield(ShieldType.FIRE);
+                mockSprite.setAir(true);mockSprite.setRolling(true);mockSprite.setJumping(true);
+                mockSprite.setXSpeed((short)0x0200);mockSprite.setYSpeed((short)-0x0380);
+                mockSprite.setDoubleJumpFlag(0);setMovementField("jumpReleasedSinceJump",true);
+
+                // SpriteManager publishes the CPU's one-frame Ctrl_2_logical
+                // press through forcedJumpPress before the movement call.
+                mockSprite.setObjectControlled(true);
+                mockSprite.setForcedJumpPress(true);
+                manager.handleMovement(false,false,false,false,true,false,false,false);
+                assertFalse(mockSprite.isForcedJumpPress(),
+                                "the CPU press remains available in logicalJumpPressState but must not stay latched for movement");
+
+                mockSprite.setObjectControlled(false);
+                Method storeInput=PlayableSpriteMovement.class.getDeclaredMethod("storeInputState",
+                                boolean.class,boolean.class,boolean.class,boolean.class,boolean.class);
+                storeInput.setAccessible(true);storeInput.invoke(manager,false,false,false,false,true);
+                Method jumpHeight=PlayableSpriteMovement.class.getDeclaredMethod("doJumpHeight");
+                jumpHeight.setAccessible(true);jumpHeight.invoke(manager);
+
+                assertEquals(0,mockSprite.getDoubleJumpFlag());
+                assertFalse(mockSprite.getXSpeed()==(short)0x0800,
+                                "a CPU press consumed by the controlling object must not fire a shield ability after release");
         }
 
         @Test
@@ -1227,6 +1643,32 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void s3kNegativeFlipTypeSuppressesGroundSkidAndFacingFlip() throws Exception {
+                // S3K TurnLeft/TurnRight test flip_type with BMI after the retail
+                // high-byte threshold bug but before entering Stop/skid. FBZ's
+                // moving wire cage writes $80 while it owns the player.
+                mockSprite.setGSpeed((short) -0x0389);
+                mockSprite.setAngle((byte) 0x00);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setDirection(Direction.RIGHT);
+                mockSprite.setFlipType(0x80);
+
+                setInputState(false, true, false, false, false);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doGroundMove");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertEquals((short) -0x0309, mockSprite.getGSpeed());
+                assertEquals(Direction.RIGHT, mockSprite.getDirection(),
+                        "negative flip_type exits before Stop changes Status_Facing");
+                assertFalse(mockSprite.getSkidding());
+                assertFalse(mockSprite.isFixedSkidDustActive(),
+                        "the flip_type exit occurs before skid SFX/dust handling");
+        }
+
+        @Test
         public void testRightInputDoesNotSkidAtTruncatedMinusThreePixels() throws Exception {
                 mockSprite.setGSpeed((short) -0x0380);
                 mockSprite.setAngle((byte) 0x00);
@@ -1632,6 +2074,24 @@ public class TestPlayableSpriteMovement {
                 assertFalse(mockSprite.getPushing(), "Jump clears Status_Push");
                 assertTrue(mockSprite.isOnObject(),
                                 "S1/S2/S3K jump routines leave Status_OnObj for the next SolidObject pass");
+        }
+
+        @Test
+        public void s3kStandingJumpMovesNativeCentreByExactRadiusDifference() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
+                sonic.setCentreY((short) 0x036D);
+                sonic.setAir(false);
+                sonic.setAngle((byte) 0);
+                PlayableSpriteMovement movement = new PlayableSpriteMovement(sonic);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doJump");
+                method.setAccessible(true);
+                assertTrue((Boolean) method.invoke(movement));
+
+                assertEquals(0x0372, sonic.getCentreY() & 0xFFFF,
+                                "Sonic_Jump adds default_y_radius($13)-roll_y_radius($E) to y_pos");
+                assertEquals(0x0E, sonic.getYRadius());
         }
 
         @Test

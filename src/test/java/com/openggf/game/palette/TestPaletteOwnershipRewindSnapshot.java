@@ -83,4 +83,40 @@ class TestPaletteOwnershipRewindSnapshot {
         assertEquals(byte[].class, components.get("ownerIds"));
         assertEquals(String[].class, components.get("ownerTable"));
     }
+
+    @Test
+    void targetPaletteBytesAndOwnersRoundTripDefensively() {
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        byte[] patch = {0x00, 0x22, 0x00, 0x44};
+        registry.applyTargetPatch("fbz.background", 3, 2, patch);
+        PaletteOwnershipSnapshot snapshot = registry.capture();
+
+        registry.clear();
+        registry.applyTargetPatch("later", 3, 2, new byte[]{0x00, 0x66, 0x00, (byte) 0x88});
+        byte[] leaked = snapshot.targetSegaData();
+        leaked[3 * 32 + 4] = 0x7F;
+        registry.restore(snapshot);
+
+        assertArrayEquals(patch, registry.targetSegaData(3, 2, 2));
+        assertEquals("fbz.background", registry.targetOwnerAt(3, 2));
+        assertArrayEquals(patch, java.util.Arrays.copyOfRange(snapshot.targetSegaData(), 3 * 32 + 4, 3 * 32 + 8));
+    }
+
+    @Test
+    void malformedTargetSnapshotIsRejected() {
+        PaletteOwnershipSnapshot snapshot = new PaletteOwnershipRegistry().capture();
+        assertThrows(IllegalArgumentException.class, () -> new PaletteOwnershipSnapshot(
+                snapshot.ownerIds(), snapshot.ownerTable(), false,
+                new byte[127], snapshot.targetOwnerIds(), snapshot.targetOwnerTable()));
+    }
+
+    @Test
+    void packedSnapshotRejectsDuplicateAndOversizedOwnerTables() {
+        byte[] ids = new byte[128];
+        assertThrows(IllegalArgumentException.class, () -> new PaletteOwnershipSnapshot(
+                ids, new String[]{"duplicate", "duplicate"}, false));
+        String[] oversized = new String[256];
+        for (int i = 0; i < oversized.length; i++) oversized[i] = "owner-" + i;
+        assertThrows(IllegalArgumentException.class, () -> new PaletteOwnershipSnapshot(ids, oversized, false));
+    }
 }

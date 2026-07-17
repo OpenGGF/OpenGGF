@@ -80,6 +80,7 @@ class TestRewindBenchmarkSizeEstimator {
         CompositeSnapshot snapshot = new CompositeSnapshot(Map.of(
                 "camera", new CameraSnapshot(
                         (short) 1, (short) 2,
+                        (short) 20, (short) 21,
                         (short) 3, (short) 4,
                         (short) 5, (short) 6,
                         (short) 7, (short) 8,
@@ -89,7 +90,7 @@ class TestRewindBenchmarkSizeEstimator {
                         true, 14,
                         false, false, false, (short) 0, true, false,
                         15, 16, false,
-                        (short) 17, (short) 18, (short) 19)));
+                        (short) 17, (short) 18, (short) 19, false)));
 
         long bytes = RewindBenchmark.estimateStructuralSize(snapshot);
 

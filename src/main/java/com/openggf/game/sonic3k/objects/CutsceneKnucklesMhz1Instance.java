@@ -168,7 +168,7 @@ public final class CutsceneKnucklesMhz1Instance extends AbstractObjectInstance
             return;
         }
         themeTransitionSpawned = true;
-        spawnDynamicObject(new SongFadeTransitionInstance(2 * 60, Sonic3kMusic.KNUCKLES.id));
+        spawnDynamicObject(SongFadeTransitionInstance.transitionTo(Sonic3kMusic.KNUCKLES.id));
     }
 
     private void routineWaitBeforeWalk() {

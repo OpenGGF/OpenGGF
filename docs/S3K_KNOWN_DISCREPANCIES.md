@@ -606,24 +606,18 @@ captured parent ring by `ObjectRefId` and reapplies the flash scalars.
 `MhzMinibossEscapeShardInstance` likewise restores through graph-tested `RewindRecreatable`
 generic recreate with exact/compact parent relink instead of a dynamic codec.
 
-## Batch-4 Rewind: Transient Cosmetic Children Not Rewound
+## Batch-4 Rewind: AIZ Intro Plane Children
 
-`AizIntroEmeraldGlowChild` is intentionally **not** given its own rewind codec (its
-`#recreate` and `#finalScalar#xOffset` / `#finalScalar#yOffset` keys stay in
-`src/test/resources/rewind/coverage-baseline.txt`). It is the AIZ1 intro-biplane emerald
-glow — a purely cosmetic 3-frame cycle that does **not** even render
-(`AizIntroPlaneChild.appendRenderCommands` omits it) and holds no player, score, or
-terrain state. More importantly it is never a dynamic-object snapshot entry: the two glow
-children are created with raw `new` and held only as `glowChild1`/`glowChild2` fields on
-`AizIntroPlaneChild` (already enrolled as structural sub-object refs in
-`DefaultObjectRewindPolicies.STRUCTURAL_OBJECT_FIELD_NAMES`); they are never passed to
-`addDynamicObject`, so there is no `DynamicObjectEntry` / `entry.spawn()` to drive an
-`exactSpawnCodec` or relink codec. The coverage-baseline keys are over-approximation false
-positives from the spawnable-class scan. Restoring the glow follows transitively for free
-from the owning `AizIntroPlaneChild` relink codec (which re-creates its boosters and is
-relinked to the live `AizPlaneIntroInstance`), so no separate codec is warranted.
+`AizIntroEmeraldGlowChild` now models the two animated AIZ1 intro-plane pieces as real,
+slot-owning dynamic SST objects, matching `CreateChild1_Normal` and preserving later
+allocation pressure. Each child implements `RewindRecreatable`, relinks to the restored
+`AizIntroPlaneChild`, and exposes its variant and offsets to generic compact scalar capture.
+The three former coverage gaps therefore require neither a baseline exception nor a
+zone-specific rewind codec. The children also render through the shared intro-plane art,
+so their animation and slot identities survive backward seeks together with the parent
+graph.
 
-This mirrors the AIZ2/Batch-2 transient-children precedent above: capture is only
+The remaining AIZ2/Batch-2 transient-children precedent above is narrower: capture is only
 worthwhile when a dropped object would otherwise visibly re-emit and play forward.
 
 The other batch-4 HCZ end-boss scene objects (`HczEndBossInstance`,

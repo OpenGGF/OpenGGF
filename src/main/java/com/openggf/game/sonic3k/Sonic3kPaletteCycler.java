@@ -8,6 +8,7 @@ import com.openggf.game.palette.PaletteWrite;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
@@ -75,8 +76,15 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 cycle.tick(level, paletteRegistry);
             }
         }
+        // AnPal_FBZ changes gameplay state before Process_Sprites in the ROM.
+        // Sonic3kLevelEventManager advances it in the fixed-object prelude so
+        // dynamic objects observe the new bit on the exact $0100/$0200 edges.
         paletteRegistry.resolveInto(levelPalettes(), resolveUnderwaterPalettes(),
                 GameServices.graphics(), level.getPalette(0));
+    }
+
+    static void dispatchFbzMagneticPhase(FbzZoneRuntimeState state, int frameCounter) {
+        state.advanceMagneticPhase(frameCounter);
     }
 
     private Palette[] levelPalettes() {

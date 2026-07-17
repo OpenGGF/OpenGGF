@@ -45,7 +45,6 @@ public final class MhzEndBossWeatherMachineChild extends AbstractObjectInstance
     private static final int MAPPING_FRAME = 4;
     private static final int RENDER_HALF_WIDTH = 0x80;
     private static final int RENDER_HALF_HEIGHT = 0x80;
-    private static final int BOSS_MUSIC_FADE_FRAMES = 2 * 60;
     private static final int DESTRUCTION_WAIT_FRAMES = 0x3F;
 
     @RewindTransient(reason = "Structural parent link; parent state carries the ROM $38 signal.")
@@ -131,7 +130,7 @@ public final class MhzEndBossWeatherMachineChild extends AbstractObjectInstance
                 parent.getCustomFlag(PARENT_SIGNAL_FLAG_OFFSET) | PARENT_SIGNAL_FLAG);
         byte[][] targetPalette = buildPostWeatherMachineTargetPalette();
         spawnFreeChild(() -> new MhzEndBossPaletteFadeController(targetPalette));
-        spawnFreeChild(() -> new SongFadeTransitionInstance(BOSS_MUSIC_FADE_FRAMES, Sonic3kMusic.BOSS.id));
+        spawnFreeChild(() -> SongFadeTransitionInstance.transitionTo(Sonic3kMusic.BOSS.id));
         spawnChild(() -> new S3kBossExplosionChild(x, y));
         clearSeasonFlag();
     }

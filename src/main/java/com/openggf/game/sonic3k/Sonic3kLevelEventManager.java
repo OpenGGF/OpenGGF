@@ -13,10 +13,15 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.AizObjectEventBridge;
 import com.openggf.game.sonic3k.events.CnzObjectEventBridge;
 import com.openggf.game.sonic3k.events.HczObjectEventBridge;
+import com.openggf.game.sonic3k.events.FbzObjectEventBridge;
+import com.openggf.game.sonic3k.objects.FbzBossEventRewindLinks;
+import com.openggf.game.sonic3k.events.FbzCloudRecreationBatchFactory;
+import com.openggf.game.sonic3k.events.FbzCloudIdentityResolver;
 import com.openggf.game.sonic3k.events.MgzObjectEventBridge;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kHCZEvents;
+import com.openggf.game.sonic3k.events.Sonic3kFBZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kICZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kLBZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kMHZEvents;
@@ -25,6 +30,7 @@ import com.openggf.game.sonic3k.events.S3kTransitionEventBridge;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.IczZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
@@ -85,6 +91,7 @@ import java.util.logging.Logger;
 public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         implements CheckpointRuntimeStateProvider,
         AizObjectEventBridge, CnzObjectEventBridge, HczObjectEventBridge, MgzObjectEventBridge,
+        FbzObjectEventBridge,
         S3kTransitionEventBridge {
     private static final Logger LOG = Logger.getLogger(Sonic3kLevelEventManager.class.getName());
     private static final int PACHINKO_TOP_EXIT_Y = -0x20;
@@ -99,6 +106,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private Sonic3kAIZEvents aizEvents;
     private Sonic3kCNZEvents cnzEvents;
     private Sonic3kHCZEvents hczEvents;
+    private Sonic3kFBZEvents fbzEvents;
+    private FbzCloudRecreationBatchFactory fbzCloudRecreationBatchFactory;
     private Sonic3kICZEvents iczEvents;
     private Sonic3kLBZEvents lbzEvents;
     private Sonic3kMGZEvents mgzEvents;
@@ -165,11 +174,15 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     @Override
     protected void onInitLevel(int zone, int act) {
+        fbzCloudRecreationBatchFactory = null;
         bootstrap = Sonic3kBootstrapResolver.resolve(zone, act);
         introFallActiveOnPlayer = false;
         introFallActiveOnSidekick = false;
         boolean seamlessActAdvance = fixedAirCountdownZone == zone
                 && fixedAirCountdownAct + 1 == act;
+        // Capture before replacing the Act-1 handler and its typed adapter.
+        FbzZoneRuntimeState.MagneticTransitionState fbzMagneticTransitionState =
+                captureFbzMagneticTransitionState(zone, act);
         if (!seamlessActAdvance) {
             fixedAirCountdownManager.reset();
         }
@@ -211,6 +224,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         } else {
             hczEvents = null;
         }
+        if (zone == Sonic3kZoneIds.ZONE_FBZ) {
+            fbzEvents = new Sonic3kFBZEvents();
+            fbzEvents.init(act);
+        } else {
+            fbzEvents = null;
+        }
         if (zone == Sonic3kZoneIds.ZONE_ICZ) {
             iczEvents = new Sonic3kICZEvents();
             iczEvents.init(act);
@@ -240,12 +259,72 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // Uses getActiveRuntime() to avoid the mode-checking side effects of
         // getCurrent() which can destroy the runtime during level loading.
         installZoneRuntimeState(zone, act);
+        restoreFbzMagneticTransitionState(fbzMagneticTransitionState);
         installFixedDynamicObjects(zone);
+    }
+
+    private FbzZoneRuntimeState.MagneticTransitionState captureFbzMagneticTransitionState(
+            int zone, int act) {
+        if (zone != Sonic3kZoneIds.ZONE_FBZ || act != 1 || fbzEvents == null) {
+            return null;
+        }
+        var levelManager = GameServices.levelOrNull();
+        if (levelManager == null
+                || !levelManager.isApplyingSynchronousScreenEventTransition(
+                        Sonic3kZoneIds.ZONE_FBZ, 0, Sonic3kZoneIds.ZONE_FBZ, 1)) {
+            return null;
+        }
+        // _unkF7C1 is outside event RAM and survives FBZ1's synchronous
+        // Load_Level swap. Capture only the exact installed Act-1 adapter that
+        // still owns the live handler; cold Act 2 and Act-2 death reloads have
+        // no eligible source.
+        return GameServices.zoneRuntimeRegistry().currentAs(FbzZoneRuntimeState.class)
+                .filter(state -> state.actIndex() == 0)
+                .filter(state -> state.isBackedBy(fbzEvents))
+                .map(FbzZoneRuntimeState::captureMagneticTransitionState)
+                .orElse(null);
+    }
+
+    private void restoreFbzMagneticTransitionState(
+            FbzZoneRuntimeState.MagneticTransitionState transitionState) {
+        if (transitionState == null) {
+            return;
+        }
+        FbzZoneRuntimeState replacement = GameServices.zoneRuntimeRegistry()
+                .currentAs(FbzZoneRuntimeState.class)
+                .filter(state -> state.actIndex() == 1)
+                .filter(state -> state.isBackedBy(fbzEvents))
+                .orElseThrow(() -> new IllegalStateException(
+                        "FBZ1 -> FBZ2 magnetic handoff has no replacement runtime"));
+        replacement.restoreMagneticTransitionState(transitionState);
     }
 
     @Override
     public void updateFixedInLevelObjects() {
         fixedAirCountdownManager.update();
+    }
+
+    @Override
+    public boolean defersInitialObjectPlacementUntilAfterLevelEvents(int zone, int act) {
+        // FBZ1_ScreenInit and FBZ2_ScreenInit allocate
+        // Obj_FBZOutdoorBGMotion before the first Load_Sprites pass.
+        return zone == Sonic3kZoneIds.ZONE_FBZ;
+    }
+
+    @Override
+    public void updateFixedInLevelObjectsBeforeDynamicObjects() {
+        var levelManager = GameServices.levelOrNull();
+        if (fbzEvents != null && levelManager != null) {
+            // ROM LevelLoop increments Level_frame_counter, runs AnPal_FBZ,
+            // then Process_Sprites. ObjectManager receives this same +1 frame.
+            var fade = GameServices.fadeOrNull();
+            fbzEvents.advanceMagneticPhase(
+                    levelManager.getFrameCounter() + 1,
+                    fade != null && fade.isActive());
+        }
+        if (hczEvents != null) {
+            hczEvents.updateRetainedCarrierObjectPass(currentAct);
+        }
     }
 
     @Override
@@ -303,6 +382,16 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new CnzZoneRuntimeState(act, playerCharacter, cnzEvents));
         } else if (zone == Sonic3kZoneIds.ZONE_HCZ && hczEvents != null) {
             registry.install(new HczZoneRuntimeState(act, playerCharacter, hczEvents));
+        } else if (zone == Sonic3kZoneIds.ZONE_FBZ && fbzEvents != null) {
+            registry.install(new FbzZoneRuntimeState(act, playerCharacter, fbzEvents));
+            if (act == 0) {
+                fbzEvents.initializeAct1Runtime();
+            } else if (act == 1) {
+                // FBZ2_ScreenInit runs before the first Act 2 Load_Sprites pass.
+                // This lets Obj_FBZOutdoorBGMotion retain the first allocatable
+                // SST slot, matching the native ScreenInit allocation order.
+                fbzEvents.initializeAct2Runtime();
+            }
         } else if (zone == Sonic3kZoneIds.ZONE_MGZ && mgzEvents != null) {
             registry.install(new MgzZoneRuntimeState(act, playerCharacter, mgzEvents));
         } else if (zone == Sonic3kZoneIds.ZONE_ICZ && iczEvents != null) {
@@ -313,13 +402,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new LbzZoneRuntimeState(act, playerCharacter));
         } else {
             registry.clear();
-        }
-    }
-
-    @Override
-    public void updateFixedInLevelObjectsBeforeDynamicObjects() {
-        if (hczEvents != null) {
-            hczEvents.updateRetainedCarrierObjectPass(currentAct);
         }
     }
 
@@ -354,6 +436,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // Clear intro-fall forced animation when players land
         updateIntroFallState();
 
+        // ROM ScreenEvents (sonic3k.asm:102233-102235) copies both live
+        // foreground camera words immediately before dispatching the zone's
+        // foreground and background event handlers. Keep these as independent
+        // words: transition/deform code can subsequently mutate the copies.
+        camera().copyLivePositionToScreenEventWords();
+
         // ROM: ScreenEvents dispatches to both FG and BG handlers each frame.
         // Boss_flag gates FG events during boss fights.
         if (aizEvents != null && currentZone == Sonic3kZoneIds.ZONE_AIZ) {
@@ -364,6 +452,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (hczEvents != null && currentZone == Sonic3kZoneIds.ZONE_HCZ) {
             hczEvents.update(currentAct, frameCounter);
+        }
+        if (fbzEvents != null && currentZone == Sonic3kZoneIds.ZONE_FBZ) {
+            fbzEvents.update(currentAct, frameCounter);
         }
         if (iczEvents != null && currentZone == Sonic3kZoneIds.ZONE_ICZ) {
             iczEvents.update(currentAct, frameCounter);
@@ -547,7 +638,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         releaseCompleteRunSegmentStartupLatchesAfterTitleCard();
     }
 
-    public void restoreCompleteRunSegmentObjectsAfterPreludeReset() {
+    @Override
+    public void restoreEventOwnedObjectsAfterPlacementReset() {
         if (currentZone == Sonic3kZoneIds.ZONE_AIZ && currentAct == 0 && aizEvents != null) {
             aizEvents.restoreIntroObjectAfterPreludeReset();
         }
@@ -556,6 +648,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (currentZone == Sonic3kZoneIds.ZONE_LBZ && currentAct == 0) {
             spawnLbz1GroundLaunchIntroForSetupPrelude();
+        }
+        if (currentZone == Sonic3kZoneIds.ZONE_FBZ && fbzEvents != null) {
+            fbzEvents.restoreOutdoorMotionAfterPlacementReset();
         }
     }
 
@@ -732,11 +827,18 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         return aizEvents;
     }
 
+    /** Returns the canonical FBZ event workspace, or null outside FBZ. */
+    public Sonic3kFBZEvents getFbzEvents() { return fbzEvents; }
+
     @Override
     public void reconcileAfterRewindRestore() {
         if (aizEvents != null) {
             aizEvents.reconcileSequenceAfterRewindRestore();
         }
+        // ZoneRuntimeRegistry restores FBZ's authoritative handler fields.
+        // Reconcile only the adapter binding here; never restore a second sidecar.
+        reconcileFbzRuntimeStateAfterRestore();
+        reconcileFbzCloudsAfterObjectRestore();
     }
 
     @Override
@@ -826,6 +928,128 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public void setMagneticState(Sonic3kFBZEvents.MagneticPolarity polarity, int timerPhase) {
+        if (fbzEvents != null) fbzEvents.setMagneticState(polarity, timerPhase);
+    }
+
+    @Override
+    public void setCloudRewindId(int index, com.openggf.game.rewind.identity.ObjectRefId id) {
+        if (fbzEvents != null) fbzEvents.setCloudRewindId(index, id);
+    }
+
+    @Override
+    public void setCloudCleanupTerminal(boolean value) {
+        if (fbzEvents != null) fbzEvents.setCloudCleanupTerminal(value);
+    }
+
+    /** Installs the deterministic ROM-table cloud recreation implementation used after rewind restore. */
+    public void installFbzCloudRecreationBatchFactory(FbzCloudRecreationBatchFactory factory) {
+        this.fbzCloudRecreationBatchFactory = java.util.Objects.requireNonNull(factory, "factory");
+    }
+
+    private void reconcileFbzCloudsAfterObjectRestore() {
+        if (fbzEvents == null || currentZone != Sonic3kZoneIds.ZONE_FBZ || currentAct != 1
+                || !GameServices.hasRuntime()) return;
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        final class LiveResolver implements FbzCloudIdentityResolver {
+            private com.openggf.game.rewind.identity.RewindIdentityTable identities;
+            private LiveResolver() { refresh(); }
+            @Override public boolean isLive(com.openggf.game.rewind.identity.ObjectRefId id) {
+                return identities != null && identities.resolve(id) != null;
+            }
+            @Override public void refresh() {
+                identities = objectManager == null ? null
+                        : objectManager.captureIdentityContext().requireIdentityTable();
+            }
+        }
+        FbzCloudRecreationBatchFactory factory = fbzCloudRecreationBatchFactory != null
+                ? fbzCloudRecreationBatchFactory
+                : FbzBossEventRewindLinks.recreationFactory(objectManager);
+        fbzEvents.reconcileCloudsAfterObjectRestore(new LiveResolver(), factory);
+    }
+
+    void reconcileFbzRuntimeStateAfterRestore() {
+        if (fbzEvents == null || currentZone != Sonic3kZoneIds.ZONE_FBZ || !GameServices.hasRuntime()) {
+            ensureZoneRuntimeStateInstalled();
+            return;
+        }
+        var registry = GameServices.zoneRuntimeRegistry();
+        var current = registry.current();
+        if (current instanceof FbzZoneRuntimeState restored
+                && restored.zoneIndex() == currentZone && restored.actIndex() == currentAct
+                && !restored.isBackedBy(fbzEvents)) {
+            byte[] restoredBytes = restored.captureBytes();
+            FbzZoneRuntimeState rebound = new FbzZoneRuntimeState(currentAct, getPlayerCharacter(), fbzEvents);
+            rebound.restoreBytes(restoredBytes);
+            registry.install(rebound);
+            fbzEvents.reconcileRetainedPlaneState();
+            return;
+        }
+        ensureZoneRuntimeStateInstalled();
+        fbzEvents.reconcileRetainedPlaneState();
+    }
+
+    @Override
+    public void setBossLoadPositionAdjustmentPending(boolean value) {
+        if (fbzEvents != null) fbzEvents.setBossLoadPositionAdjustmentPending(value);
+    }
+
+    @Override
+    public int getAct2ForegroundStage() {
+        return fbzEvents == null ? 0 : fbzEvents.getAct2ForegroundStage();
+    }
+
+    @Override
+    public void setAct2ForegroundStage(int stage) {
+        if (fbzEvents != null) fbzEvents.setAct2ForegroundStage(stage);
+    }
+
+    @Override
+    public int getBossBackgroundOffsetX() {
+        return fbzEvents == null ? 0 : fbzEvents.getBossBackgroundOffsetX();
+    }
+
+    @Override
+    public int getBossBackgroundOffsetY() {
+        return fbzEvents == null ? 0 : fbzEvents.getBossBackgroundOffsetY();
+    }
+
+    @Override
+    public void setBossBackgroundOffsets(int x, int y) {
+        if (fbzEvents != null) fbzEvents.setBossBackgroundOffsets(x, y);
+    }
+
+    @Override
+    public void setBossApproachMotionState(int x, int y, boolean collisionActive) {
+        if (fbzEvents != null) fbzEvents.setBossApproachMotionState(x, y, collisionActive);
+    }
+
+    @Override
+    public void setPlaneAssignmentMode(Sonic3kFBZEvents.PlaneAssignmentMode plane) {
+        if (fbzEvents != null) fbzEvents.setPlaneAssignmentMode(plane);
+    }
+
+    @Override
+    public void setCollisionMode(Sonic3kFBZEvents.CollisionMode collision, int cameraDiffX, int cameraDiffY) {
+        if (fbzEvents != null) fbzEvents.setCollisionMode(collision, cameraDiffX, cameraDiffY);
+    }
+
+    @Override
+    public void setScreenShakeState(boolean active, int offset, int phase) {
+        if (fbzEvents != null) fbzEvents.setScreenShakeState(active, offset, phase);
+    }
+
+    @Override
+    public void setScreenShakeActive(boolean active) {
+        if (fbzEvents != null) fbzEvents.setScreenShakeActive(active);
+    }
+
+    @Override
+    public boolean isScreenShakeActive() {
+        return fbzEvents != null && fbzEvents.isScreenShakeActive();
+    }
+
+    @Override
     public void setPendingArenaChunkDestruction(int chunkWorldX, int chunkWorldY) {
         if (cnzEvents != null) {
             cnzEvents.setPendingArenaChunkDestruction(chunkWorldX, chunkWorldY);
@@ -880,6 +1104,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                     state instanceof CnzZoneRuntimeState cnzState && cnzState.isBackedBy(cnzEvents);
             case Sonic3kZoneIds.ZONE_HCZ ->
                     state instanceof HczZoneRuntimeState hczState && hczState.isBackedBy(hczEvents);
+            case Sonic3kZoneIds.ZONE_FBZ ->
+                    state instanceof FbzZoneRuntimeState fbzState && fbzState.isBackedBy(fbzEvents);
             case Sonic3kZoneIds.ZONE_MGZ ->
                     state instanceof MgzZoneRuntimeState mgzState && mgzState.isBackedBy(mgzEvents);
             case Sonic3kZoneIds.ZONE_ICZ ->
@@ -999,6 +1225,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (hczEvents != null) {
             hczEvents.setEventsFg5(true);
+        }
+        if (fbzEvents != null) {
+            fbzEvents.setEventsFg5(true);
         }
         if (mgzEvents != null) {
             mgzEvents.setEventsFg5(true);
@@ -1391,6 +1620,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     public Sonic3kAIZEvents getAizEventsForTest()  { return aizEvents; }
     /** Accessor for test/diagnostic use — returns the S3K zone event handler for HCZ. */
     public Sonic3kHCZEvents getHczEventsForTest()  { return hczEvents; }
+    public Sonic3kFBZEvents getFbzEventsForTest()  { return fbzEvents; }
     /** Accessor for test/diagnostic use — returns the S3K zone event handler for CNZ. */
     public Sonic3kCNZEvents getCnzEventsForTest()  { return cnzEvents; }
     /** Accessor for test/diagnostic use — returns the S3K zone event handler for MGZ. */

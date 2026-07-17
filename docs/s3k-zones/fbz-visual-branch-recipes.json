@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "manifest_sha256": "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",
+  "source_contract": {
+    "rom_sha1": "CFBF98C36C776677290A872547AC47C53D2761D6",
+    "bizhawk": "2.11",
+    "core": "Genplus-gx",
+    "movie": "src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2",
+    "policy": "A branch is authoritative only when the source hashes, savestate source, every precondition, every mutation readback, the complete execution sequence, every hook observation, and every postcondition pass. A failed assertion deletes the PNG and emits only a rejection sidecar."
+  },
+  "ram_symbols": {
+    "Player_1.x_pos": "0xB010:u16be",
+    "Player_1.y_pos": "0xB014:u16be",
+    "Camera_X_pos": "0xEE78:u16be",
+    "Camera_Y_pos": "0xEE7C:u16be",
+    "Events_routine_fg": "0xEEC0:u16be",
+    "Events_routine_bg": "0xEEC2:u16be",
+    "Events_bg+00": "0xEED2:u16be",
+    "Events_bg+02": "0xEED4:u16be (st writes the high byte, so logical $FF is raw $FF00)",
+    "Events_bg+04": "0xEED6:u16be (st writes the high byte, so logical $FF is raw $FF00)",
+    "Events_bg+06": "0xEED8:u16be (st writes the high byte, so logical $FF is raw $FF00)",
+    "Background_collision_flag": "0xF664:u8",
+    "Boss_flag": "0xF7AA:u8",
+    "Anim_Counters": "0xF7F0:bytes[16]",
+    "Level_frame_counter": "0xFE04:u16be",
+    "Current_zone_and_act": "0xFE10:u16be"
+  },
+  "hook_symbols": {
+    "Add_To_DMA_Queue": "M68K execute 0x001526; observe D1=ROM source, D2=VRAM byte destination, D3=word count"
+  },
+  "recipes": [
+    {
+      "checkpoint": "fbz1-boundary-1-outdoor",
+      "status": "schema-only",
+      "source_state": {"kind": "complete-run-savestate", "candidate_trace_frame": 3072, "candidate_bk2_frame": 240986},
+      "preconditions": [
+        {"symbol": "Current_zone_and_act", "equals": "0x0400"},
+        {"symbol": "Player_1.x_pos", "equals": "0x0AFF"},
+        {"symbol": "Player_1.y_pos", "equals": "0x09BF"},
+        {"symbol": "Events_bg+00", "equals": "0x0004"},
+        {"symbol": "Events_bg+02", "equals": "0x0000"},
+        {"symbol": "Events_bg+04", "equals": "0x0000"},
+        {"symbol": "Events_routine_bg", "equals": "0x0000"}
+      ],
+      "mutations": [],
+      "execution": [
+        {"phase": "post-camera FBZ event", "input": "none", "frames": 1, "expected_intent": "remain indoors at y=$09BF"},
+        {"phase": "crossing", "write": {"Player_1.y_pos": "0x09C0"}, "input": "none", "frames": 1, "expected_intent": "indoor-to-outdoor threshold crossing"}
+      ],
+      "postconditions": [
+        {"symbol": "Events_bg+04", "equals": "0xFF00"},
+        {"symbol": "Events_routine_bg", "eventually_equals": "0x0000", "after_observing_one_of": ["0x0004", "0x0008"]}
+      ],
+      "branch_order_proof": "At x_pos=$0AFF the locked-on FBZ1_BGChange1 routine takes the x < $0B00 branch and compares y_pos with $09C0 (sonic3k.asm:108952-108959). The reviewed manifest correction therefore preserves the indoor pre-state at y=$09BF and triggers outdoors only on the requested one-step crossing to y=$09C0."
+    },
+    {
+      "checkpoint": "fbz1-aniplc-200",
+      "status": "designed-unexecuted",
+      "source_state": {"kind": "complete-run-savestate", "candidate_trace_frame": 1680, "candidate_bk2_frame": 239594},
+      "preconditions": [
+        {"symbol": "Current_zone_and_act", "equals": "0x0400"},
+        {"symbol": "Player_1.x_pos", "equals": "0x0400"},
+        {"symbol": "Player_1.y_pos", "equals": "0x0900"},
+        {"symbol": "Events_bg+04", "equals": "0x0000"}
+      ],
+      "mutations": [{"symbol": "Anim_Counters+6", "write_bytes": [0, 0], "readback_equals": [0, 0]}],
+      "execution": [{"phase": "one existing post-event AnimateTiles_DoAniPLC phase", "input": "none", "frames": 1}],
+      "hook_assertions": [{"hook": "Add_To_DMA_Queue", "exact_count": 1, "registers": {"D1": "0x000B9CC0", "D2": "0x00004000", "D3": "0x00000080"}}],
+      "postconditions": [{"symbol": "Anim_Counters+6", "equals_bytes": [7, 1]}],
+      "capture": {"after_postconditions": true, "native_dimensions": [320, 224]}
+    },
+    {
+      "checkpoint": "fbz1-aniplc-208",
+      "status": "designed-unexecuted",
+      "source_state": {"kind": "complete-run-savestate", "candidate_trace_frame": 909, "candidate_bk2_frame": 238823},
+      "preconditions": [
+        {"symbol": "Current_zone_and_act", "equals": "0x0400"},
+        {"symbol": "Player_1.x_pos", "equals": "0x0600"},
+        {"symbol": "Player_1.y_pos", "equals": "0x0900"},
+        {"symbol": "Events_bg+04", "equals": "0x0000"}
+      ],
+      "mutations": [{"symbol": "Anim_Counters+8", "write_bytes": [0, 0], "readback_equals": [0, 0]}],
+      "execution": [{"phase": "one existing post-event AnimateTiles_DoAniPLC phase", "input": "none", "frames": 1}],
+      "hook_assertions": [{"hook": "Add_To_DMA_Queue", "exact_count": 1, "registers": {"D1": "0x000B9EC0", "D2": "0x00004100", "D3": "0x00000080"}}],
+      "postconditions": [{"symbol": "Anim_Counters+8", "equals_bytes": [7, 1]}],
+      "capture": {"after_postconditions": true, "native_dimensions": [320, 224]}
+    },
+    {
+      "checkpoint": "fbz1-aniplc-210",
+      "status": "designed-unexecuted",
+      "source_state": {"kind": "complete-run-savestate", "candidate_trace_frame": 2443, "candidate_bk2_frame": 240357},
+      "preconditions": [
+        {"symbol": "Current_zone_and_act", "equals": "0x0400"},
+        {"symbol": "Player_1.x_pos", "equals": "0x0800"},
+        {"symbol": "Player_1.y_pos", "equals": "0x0900"},
+        {"symbol": "Events_bg+04", "equals": "0x0000"}
+      ],
+      "mutations": [{"symbol": "Anim_Counters+0", "write_bytes": [0, 0], "readback_equals": [0, 0]}],
+      "execution": [{"phase": "one existing post-event AnimateTiles_DoAniPLC phase", "input": "none", "frames": 1}],
+      "hook_assertions": [{"hook": "Add_To_DMA_Queue", "exact_count": 1, "registers": {"D1": "0x000B69C0", "D2": "0x00004200", "D3": "0x00000200"}}],
+      "postconditions": [{"symbol": "Anim_Counters+0", "equals_bytes": [63, 1]}],
+      "capture": {"after_postconditions": true, "native_dimensions": [320, 224]}
+    },
+    {
+      "checkpoint": "fbz1-aniplc-230",
+      "status": "designed-unexecuted",
+      "source_state": {"kind": "complete-run-savestate", "candidate_trace_frame": 2836, "candidate_bk2_frame": 240750},
+      "preconditions": [
+        {"symbol": "Current_zone_and_act", "equals": "0x0400"},
+        {"symbol": "Player_1.x_pos", "equals": "0x0A00"},
+        {"symbol": "Player_1.y_pos", "equals": "0x0900"},
+        {"symbol": "Events_bg+04", "equals": "0x0000"}
+      ],
+      "mutations": [{"symbol": "Anim_Counters+2", "write_bytes": [0, 0], "readback_equals": [0, 0]}],
+      "execution": [{"phase": "one existing post-event AnimateTiles_DoAniPLC phase", "input": "none", "frames": 1}],
+      "hook_assertions": [{"hook": "Add_To_DMA_Queue", "exact_count": 1, "registers": {"D1": "0x000B89C0", "D2": "0x00004600", "D3": "0x00000080"}}],
+      "postconditions": [{"symbol": "Anim_Counters+2", "equals_bytes": [7, 1]}],
+      "capture": {"after_postconditions": true, "native_dimensions": [320, 224]}
+    },
+    {
+      "checkpoint": "fbz1-aniplc-238",
+      "status": "designed-unexecuted",
+      "source_state": {"kind": "complete-run-savestate", "candidate_trace_frame": 3211, "candidate_bk2_frame": 241125},
+      "preconditions": [
+        {"symbol": "Current_zone_and_act", "equals": "0x0400"},
+        {"symbol": "Player_1.x_pos", "equals": "0x0C00"},
+        {"symbol": "Player_1.y_pos", "equals": "0x0900"},
+        {"symbol": "Events_bg+04", "equals": "0x0000"}
+      ],
+      "mutations": [{"symbol": "Anim_Counters+4", "write_bytes": [0, 0], "readback_equals": [0, 0]}],
+      "execution": [{"phase": "one existing post-event AnimateTiles_DoAniPLC phase", "input": "none", "frames": 1}],
+      "hook_assertions": [{"hook": "Add_To_DMA_Queue", "exact_count": 1, "registers": {"D1": "0x000B8CC0", "D2": "0x00004700", "D3": "0x00000100"}}],
+      "postconditions": [{"symbol": "Anim_Counters+4", "equals_bytes": [1, 1]}],
+      "capture": {"after_postconditions": true, "native_dimensions": [320, 224]}
+    },
+    {"checkpoint":"fbz1-boundary-2-outdoor","status":"schema-only","required_proof":["preconditions","both threshold directions","redraw routine transient and return","palette/deform postconditions"]},
+    {"checkpoint":"fbz1-boundary-3-outdoor","status":"schema-only","required_proof":["preconditions","both threshold directions","redraw routine transient and return","palette/deform postconditions"]},
+    {"checkpoint":"fbz1-boundary-4-horizontal","status":"schema-only","required_proof":["preconditions","both horizontal directions","left-right/right-left redraw completion","no stale columns"]},
+    {"checkpoint":"fbz1-boundary-5-outdoor","status":"schema-only","required_proof":["preconditions","both threshold directions","bottom-up reverse completion","palette mutation"]},
+    {"checkpoint":"fbz1-boundary-6-outdoor","status":"schema-only","required_proof":["preconditions","both threshold directions","direct refresh completion","outdoor/indoor presentation"]},
+    {"checkpoint":"fbz1-miniboss","status":"schema-only","required_proof":["exact camera bounds","boss object identity and active routine","six-hit state","KosinskiM queue empty","palette/art ownership"]},
+    {"checkpoint":"fbz-seamless-transition","status":"schema-only","required_proof":["pre-injection $2E60 player X","Current_zone_and_act $0401","-$2E00 translation","no title card","first complete FBZ2 event/AniPLC frame"]},
+    {"checkpoint":"fbz2-boundary-outdoor","status":"schema-only","required_proof":["preconditions","both $A40 directions","routine returns to $04","outdoor palette/deform"]},
+    {"checkpoint":"fbz2-subboss","status":"schema-only","required_proof":["character-selected raw PLC","exact camera lock","boss identity and active routine","post-defeat handoff"]},
+    {"checkpoint":"fbz2-plane-transition-entry","status":"schema-only","required_proof":["pre-threshold camera","one-pixel crossing","event-control and pillar identities","exact ten cloud slots","no earlier allocation"]},
+    {"checkpoint":"fbz2-plane-reversal-steady","status":"schema-only","required_proof":["event routine $04/$10","BG collision $FF","plane assignment FG=B/BG=A","shake $FF","cloud accumulator/deform"]},
+    {"checkpoint":"fbz2-end-boss","status":"schema-only","required_proof":["event routine $0C/$10","exact camera max $32B8","PLC $6F complete","boss identity and active eight-hit state","shake cleared"]},
+    {"checkpoint":"fbz2-exit","status":"schema-only","required_proof":["boss defeated","exit PLC complete","door/hall identities","Events_routine_fg=$0C","Events_routine_bg=$10","plane assignment FG=B/BG=A retained through level transition","safe camera release"]},
+    {"checkpoint":"fbz2-capsule","status":"schema-only","required_proof":["generic EggCapsule identity distinct from $CF","camera Y exactly $720","pre-StartNewLevel PC hook","requested destination $0800"]}
+  ]
+}

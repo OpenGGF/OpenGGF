@@ -599,8 +599,12 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
             // Issue 16: ROM does NOT advance Dynamic_Resize_Routine here.
             services().playMusic(Sonic2Music.WING_FORTRESS.id);
             Camera camera = services().camera();
-            camera.setMaxYAfterNextUpdate((short) CAMERA_MAX_Y_DEFEAT);
-            services().gameState().setCurrentBossId(0);
+            if (camera != null) {
+                camera.setMaxYAfterNextUpdate((short) CAMERA_MAX_Y_DEFEAT);
+            }
+            if (services().gameState() != null) {
+                services().gameState().setCurrentBossId(0);
+            }
             ObjectLifetimeOps.markSpawnRemembered(services().objectManager(), spawn);
             setDestroyed(true);
             return;
@@ -946,6 +950,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         private int wallAnimFrame; // ROM anim_frame byte
         private int wallAnimFrameDuration; // ROM anim_frame_duration byte
         private int wallDeleteCounter; // ROM objoff_30 byte
+        private boolean visibleThisFrame; // ROM objoff_2F display phase
 
         WFZLaserWall(Sonic2WFZBossInstance parent, int wallX, int wallY) {
             super(parent, "Laser Wall", 4, Sonic2ObjectIds.WFZ_BOSS);
@@ -955,6 +960,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
             this.wallAnimFrame = 0;
             this.wallAnimFrameDuration = 0;
             this.wallDeleteCounter = 0;
+            this.visibleThisFrame = true;
             updateDynamicSpawn();
         }
 
@@ -969,6 +975,11 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
                 return null;
             }
             ObjectSpawn spawn = ctx.spawn();
+            if (spawn == null) {
+                // Drop, don't throw, on an absent spawn — match the sibling scans
+                // (e.g. findRestoredPlatformForHurt). Prevents an NPE on spawn.x().
+                return null;
+            }
             WFZLaserWall wall = new WFZLaserWall(boss, spawn.x(), spawn.y());
             relinkWallForRewind(boss, wall);
             return wall;
@@ -981,12 +992,15 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
-            AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             if (!beginUpdate(frameCounter)) {
                 return;
             }
             if (defeatSignaled) {
                 updateDefeatDelete();
+            } else {
+                // ROM ObjC5_LaserWallWaitDelete: bchg #0,objoff_2F gates
+                // DisplaySprite without changing the following SolidObject call.
+                visibleThisFrame = !visibleThisFrame;
             }
             updateDynamicSpawn();
         }
@@ -995,6 +1009,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
             // ROM ObjC5_LaserWallDelete: nested anim_frame_duration /
             // objoff_30 byte counters. The wall remains allocated and solid until
             // anim_frame reaches 5 and DeleteObject runs.
+            visibleThisFrame = false;
             wallAnimFrameDuration = (wallAnimFrameDuration - 1) & 0xFF;
             if (signedByte(wallAnimFrameDuration) >= 0) {
                 return;
@@ -1015,6 +1030,9 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
                     wallAnimFrameDuration = nextFrame;
                 }
             }
+            // Every non-returning path reaches ObjC5_LaserWallDisplay, which
+            // clears the active flicker bit and displays this frame.
+            visibleThisFrame = true;
         }
 
         private static int signedByte(int value) {
@@ -1033,12 +1051,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
-            if (isDestroyed()) {
-                return;
-            }
-            // ROM ObjC5_LaserWallWaitDelete toggles objoff_2F before the delete
-            // state; once deletion starts, display depends on the nested counter.
-            if (defeatSignaled && signedByte(wallAnimFrameDuration) >= 0) {
+            if (isDestroyed() || !visibleThisFrame) {
                 return;
             }
             ObjectRenderManager renderManager =
@@ -1052,6 +1065,10 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
                 return;
             }
             renderer.drawFrameIndex(FRAME_WALL, currentX, currentY, false, false);
+        }
+
+        boolean isVisibleThisFrameForTest() {
+            return visibleThisFrame;
         }
 
         // ROM: ObjC5_LaserWall calls SolidObject with d1=$13, d2=$40, d3=$80
@@ -1261,6 +1278,11 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
                 return null;
             }
             ObjectSpawn spawn = ctx.spawn();
+            if (spawn == null) {
+                // Drop, don't throw, on an absent spawn — match the sibling scans
+                // (e.g. findRestoredPlatformForHurt). Prevents an NPE on spawn.x().
+                return null;
+            }
             WFZFloatingPlatform platform = new WFZFloatingPlatform(boss, spawn.x(), spawn.y());
             relinkPlatformForRewind(boss, platform);
             return platform;
@@ -1474,7 +1496,12 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         private int yOffset;
 
         WFZLaserShooter(Sonic2WFZBossInstance parent) {
-            super(parent, "Laser Shooter", 3, Sonic2ObjectIds.WFZ_BOSS);
+            // ROM ObjC5_SubObjData3 gives the lens/shooter sprite priority 5 (behind
+            // the case at priority 4), so the closed cover occludes it and the open
+            // frame reveals it. Bucket 3 drew the lens in FRONT of the cover, breaking
+            // both the layering and the "cover opens to expose the lens" reveal.
+            // s2.asm:82031-82032 (case pri 4), 82036-82038 (shooter pri 5).
+            super(parent, "Laser Shooter", 5, Sonic2ObjectIds.WFZ_BOSS);
             this.yOffset = 0;
         }
 
@@ -1554,7 +1581,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
      * Flicker via bchg #0,objoff_2F toggles visibility each frame.
      * Signals parent when fully extended.
      */
-    static class WFZLaser extends AbstractBossChild implements RewindRecreatable {
+    static class WFZLaser extends AbstractBossChild implements TouchResponseProvider, RewindRecreatable {
         private static final int[] LASER_MAPPING_FRAMES = {0x0E, 0x0F, 0x10, 0x11, 0x12};
         private static final int[] LASER_COLLISION_FLAGS = {0x86, 0xAB, 0xAC, 0xAD, 0xAE};
         /** ROM: ObjC5_LaseNext - move.w #$40,objoff_2A(a0) */
@@ -1577,6 +1604,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         private int waitTimer;
         private int shootStage; // 0-4 for the 5 extension stages
         private boolean forceHide; // During flash phase, alternates visibility
+        private int currentCollisionFlags; // ROM collision_flags(a0): 0 until shooting
 
         WFZLaser(Sonic2WFZBossInstance parent) {
             super(parent, "Laser", 4, Sonic2ObjectIds.WFZ_BOSS);
@@ -1588,6 +1616,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
             this.waitTimer = 0;
             this.shootStage = 0;
             this.forceHide = false;
+            this.currentCollisionFlags = 0; // ROM ObjC5_LaserInit: collision_flags = 0
         }
 
         @Override
@@ -1672,6 +1701,10 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
                     } else {
                         currentY += 0x10;
                         currentMappingFrame = LASER_MAPPING_FRAMES[shootStage];
+                        // ROM ObjC5_LaserShoot: collision_flags = ObjC5_LaserCollisionData[stage]
+                        // (s2.asm:81876,81895-81901). Retained through STATE_MOVE (ROM never
+                        // clears it after LaseShotOut), so the fully-extended beam keeps hurting.
+                        currentCollisionFlags = LASER_COLLISION_FLAGS[shootStage];
                     }
                 }
                 case STATE_MOVE -> {
@@ -1686,6 +1719,22 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
             flickerToggle = !flickerToggle;
 
             updateDynamicSpawn();
+        }
+
+        @Override
+        public int getCollisionFlags() {
+            // ROM keeps collision_flags(a0) live independent of the display flicker
+            // (bchg #0,objoff_2F only gates DisplaySprite, s2.asm:81811-81813), so the
+            // beam hurts every frame it is set, even on flicker-hidden frames.
+            if (isDestroyed()) {
+                return 0;
+            }
+            return currentCollisionFlags;
+        }
+
+        @Override
+        public int getCollisionProperty() {
+            return 0;
         }
 
         @Override

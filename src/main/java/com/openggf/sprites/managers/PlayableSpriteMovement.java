@@ -455,6 +455,21 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	@Override
 	public void handleMovement(boolean up, boolean down, boolean left, boolean right, boolean jump, boolean testKey,
 			boolean speedUp, boolean slowDown) {
+		try {
+			handleMovementDispatch(up, down, left, right, jump, testKey, speedUp, slowDown);
+		} finally {
+			// Sonic/Tails main always copy the shared Primary_Angle and
+			// Secondary_Angle bytes at the player-routine tail, including object
+			// control and other branches that skipped movement/collision entirely.
+			CollisionSystem collisionSystem = collisionSystem();
+			if (collisionSystem != null) {
+				captureTiltAnglesFromCollisionSystem(collisionSystem);
+			}
+		}
+	}
+
+	private void handleMovementDispatch(boolean up, boolean down, boolean left, boolean right,
+			boolean jump, boolean testKey, boolean speedUp, boolean slowDown) {
 		// Note: Raw input state for objects is now stored in SpriteManager BEFORE filtering,
 		// so objects can query button state even when control is locked (ROM: obj_control).
 		// The parameters here are already filtered by control lock state.
@@ -491,6 +506,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		if (sprite.isObjectControlSuppressesMovement()) {
+			// Ctrl_1_Press is generated from the controller's global held-state
+			// transition even while object_control bit 0 skips Sonic_Control. Keep
+			// the local edge detector synchronized so a press consumed by the
+			// controlling object is not manufactured again when normal movement
+			// resumes with the button still held (FBZ Obj72 sub_3AA7E).
+			jumpPrevious = sprite.isJumpPressed();
+			// CPU Ctrl_2_logical press is already published separately on the
+			// playable for later-slot object routines. forcedJumpPress is only the
+			// one-shot bridge into this movement manager; leaving it set here would
+			// replay the same press after the controlling object releases the CPU.
+			if (sprite.isCpuControlled()) {
+				sprite.setForcedJumpPress(false);
+			}
 			applyScreenYWrapValueAfterControl();
 			return;
 		}
@@ -2973,7 +3001,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int quadrant = TrigLookupTable.calcMovementQuadrant(sprite.getXSpeed(), sprite.getYSpeed());
 		Consumer<AbstractPlayableSprite> landingHandler =
 				usesDirectHitFloorLanding(quadrant) ? this::calculateDirectFloorLanding : this::calculateLanding;
-		collisionSystem().resolveAirCollision(FrameCollisionPlan.terrainOnly(), sprite, landingHandler, forceFloorCheck);
+		CollisionSystem collisionSystem = collisionSystem();
+		// Keep the established virtual overload as the collision seam. The shared
+		// owner publishes wall/floor/ceiling writes during native execution; the
+		// player tail copies the final global pair after the dispatch returns.
+		collisionSystem.resolveAirCollision(FrameCollisionPlan.terrainOnly(), sprite,
+				landingHandler, forceFloorCheck);
+		captureTiltAnglesFromCollisionSystem(collisionSystem);
 	}
 
 	private static boolean usesDirectHitFloorLanding(int quadrant) {
@@ -3389,9 +3423,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// so marginal counter-direction movement flips facing on the same frame
 		// as the ROM.
 		short compareSpeed = (short) (adjustedGSpeed & 0xFF00);
-		return turningRight
+		boolean crossesSkidThreshold = turningRight
 				? compareSpeed <= -SKID_SPEED_THRESHOLD
 				: compareSpeed >= SKID_SPEED_THRESHOLD;
+		if (!crossesSkidThreshold) {
+			return false;
+		}
+
+		// S3K MoveLeft/MoveRight test flip_type with BMI after the retail
+		// high-byte threshold comparison and before writing Stop animation,
+		// facing, SFX, or dust (sonic3k.asm sub_14C20/sub_14CAC).  S1/S2 do
+		// not publish this state; the engine's flip_type writers are S3K
+		// object ports, so the native sign bit is the smallest accurate gate.
+		return (sprite.getFlipType() & 0x80) == 0;
 	}
 
 	// ========================================
@@ -3985,17 +4029,34 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
 		sprite.updateSensors(originalX, originalY);
-		doAnglePos();
+		doPublishedAnglePos();
 	}
 
 	/** Sensor update + angle positioning */
 	private void doAnglePosWithSensorUpdate(short originalX, short originalY) {
 		sprite.updateSensors(originalX, originalY);
+		doPublishedAnglePos();
+	}
+
+	private void doPublishedAnglePos() {
 		captureTiltAnglesForGroundDispatch();
 		doAnglePos();
 	}
 
 	private void captureTiltAnglesForGroundDispatch() {
+		// Every native AnglePos variant clears both shared angle outputs and
+		// returns while Status_OnObj is set (S1 `Sonic AnglePos.asm`:8-13;
+		// S2 s2.asm:43013-43018; S3K sonic3k.asm:18736-18741). The player-tail
+		// copy therefore publishes 0/0 for the following dispatch. Sampling the
+		// terrain below a platform here leaks an empty-side sentinel (3) through
+		// an airborne release and makes the first grounded balance pass flip
+		// facing one frame before ROM.
+		CollisionSystem collisionSystem = collisionSystem();
+		if (sprite.isOnObject()) {
+			collisionSystem.publishGroundAngleOutputs(true, null, null);
+			captureTiltAnglesFromCollisionSystem(collisionSystem);
+			return;
+		}
 		Sensor[] groundSensors = sprite.getGroundSensors();
 		if (groundSensors == null || groundSensors.length < 2) {
 			return;
@@ -4003,15 +4064,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Player_AnglePos leaves the two FindFloor angle outputs in the global
 		// Primary_Angle/Secondary_Angle bytes. The player tail copies them to
 		// next_tilt/tilt only after the movement dispatch (S3K Tails:
-		// sonic3k.asm:26215-26244). Airborne landing does not run this ground
-		// AnglePos path, so the first grounded control frame must still consume
-		// the previous values; these latches update only here, after that frame's
-		// ground attachment pass. Sample before doAnglePos can snap the player:
-		// the ROM globals retain the angles produced by that routine's probes.
-		SensorResult left = groundSensors[0].scan();
+		// sonic3k.asm:26215-26244). Grounded AnglePos publishes through this path;
+		// airborne collision publishes directly through CollisionSystem. Sample before doAnglePos can
+		// snap the player: the ROM globals retain the angles produced by that
+		// routine's probes.
 		SensorResult right = groundSensors[1].scan();
-		latchedNextTilt = right == null ? 3 : right.angle() & 0xFF;
-		latchedTilt = left == null ? 3 : left.angle() & 0xFF;
+		SensorResult left = groundSensors[0].scan();
+		collisionSystem.publishGroundAngleOutputs(false, left, right);
+		captureTiltAnglesFromCollisionSystem(collisionSystem);
+	}
+
+	private void captureTiltAnglesFromCollisionSystem(CollisionSystem collisionSystem) {
+		latchedNextTilt = collisionSystem.getPrimaryAngleOutput();
+		latchedTilt = collisionSystem.getSecondaryAngleOutput();
 	}
 
 	// ========================================

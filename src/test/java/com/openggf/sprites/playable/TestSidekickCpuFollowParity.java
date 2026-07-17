@@ -65,7 +65,11 @@ class TestSidekickCpuFollowParity {
 
     private static final class LiveRideObject extends AbstractObjectInstance {
         private LiveRideObject(int objectId) {
-            super(new ObjectSpawn(0x1200, 0x0800, objectId, 0, 0, false, 0), "LiveRideObject");
+            this(objectId, 0x1200, 0x0800);
+        }
+
+        private LiveRideObject(int objectId, int x, int y) {
+            super(new ObjectSpawn(x, y, objectId, 0, 0, false, 0), "LiveRideObject");
         }
 
         @Override
@@ -2355,7 +2359,7 @@ class TestSidekickCpuFollowParity {
             tails.setCentreY((short) 0x02FF);
             tails.setDirection(Direction.RIGHT);
             tails.setGSpeed((short) 0x0018);
-            LiveRideObject rideObject = new LiveRideObject(0x07);
+            LiveRideObject rideObject = new LiveRideObject(0x07, 0x0240, 0x033C);
             rideObject.setSlotIndex(36);
             GameServices.level().getObjectManager().addDynamicObject(rideObject);
             tails.setLatchedSolidObject(0x07, rideObject);
@@ -2385,6 +2389,56 @@ class TestSidekickCpuFollowParity {
                                     + "interact slot. The delayed RIGHT control word still accelerates "
                                     + "Tails, but applying the +1 nudge moves him into the spring-wall "
                                     + "push one frame before ROM."));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
+    void s3kDistantStaleInteractSlotDoesNotSuppressFastLeaderFollowNudge() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic3kGameModule());
+            installEmptyObjectManager();
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
+            tails.setAir(false);
+            tails.setOnObject(false);
+            tails.setCentreX((short) 0x142B);
+            tails.setCentreY((short) 0x08F0);
+            tails.setDirection(Direction.RIGHT);
+            tails.setGSpeed((short) 0x008C);
+
+            LiveRideObject staleInteract = new LiveRideObject(0x33, 0x1410, 0x037C);
+            staleInteract.setSlotIndex(5);
+            GameServices.level().getObjectManager().addDynamicObjectAtSlot(staleInteract, 5);
+            tails.setLatchedSolidObject(0x33, staleInteract);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x145A);
+            Arrays.fill(yHistory, (short) 0x03BE);
+            Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+            sonic.setGSpeed((short) 0x08B6);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+            controller.update(0x24AD);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                    () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                            "FBZ1 f9389 retains a distant stale button interact slot, but native "
+                                    + "loc_13E34 gates the +1 x_pos nudge only on ground_vel, facing, "
+                                    + "and object_control bit 0 (sonic3k.asm:26734-26741)."),
+                    () -> assertEquals(0x142C, tails.getCentreX() & 0xFFFF));
         } finally {
             installStandaloneGameModule(previous);
         }

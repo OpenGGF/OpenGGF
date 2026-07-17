@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.debug.DebugColor;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
@@ -804,6 +805,22 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
         float grabG = (player1Grabbed || player2Grabbed) ? 0.0f : 0.5f;
         ctx.drawLine(x - 8, currentY - 8, x + 8, currentY + 8, grabR, grabG, 0.0f);
         ctx.drawLine(x + 8, currentY - 8, x - 8, currentY + 8, grabR, grabG, 0.0f);
+
+        // Object bounding box (ROM Obj80_Init: width_pixels $10, y_radius $80; s2.asm:56659-56661).
+        int boxLeft = x - 0x10;
+        int boxRight = x + 0x10;
+        int boxTop = currentY - 0x80;
+        int boxBottom = currentY + 0x80;
+        ctx.drawLine(boxLeft, boxTop, boxRight, boxTop, 0.9f, 0.9f, 0.2f);
+        ctx.drawLine(boxRight, boxTop, boxRight, boxBottom, 0.9f, 0.9f, 0.2f);
+        ctx.drawLine(boxRight, boxBottom, boxLeft, boxBottom, 0.9f, 0.9f, 0.2f);
+        ctx.drawLine(boxLeft, boxBottom, boxLeft, boxTop, 0.9f, 0.9f, 0.2f);
+
+        // Label anchored at the bottom of the object (the hook, ~currentY+0x94) and
+        // rendered one line below (+1 offset) instead of above the anchor.
+        ctx.drawWorldLabel(x, currentY + 0x94, 1,
+                String.format("MovingVine ext%d/%d", currentExtension, maxExtension),
+                DebugColor.CYAN);
     }
 
 }

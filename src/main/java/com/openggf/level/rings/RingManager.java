@@ -4,6 +4,9 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
+import com.openggf.game.LevelState;
+import com.openggf.physics.BackgroundPlaneCollisionProvider;
+import com.openggf.physics.Direction;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SolidTile;
@@ -52,6 +55,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private final RingRenderer renderer;
     private final LostRingPool lostRings;
     private final LevelManager levelManager;
+    private final BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider;
     private final AudioManager audioManager;
     private final boolean stageRingsUseObjectTouchCollection;
     private PatternSpriteRenderer.FrameBounds spinBounds;
@@ -77,8 +81,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 ? new RingRenderer(spriteSheet)
                 : null;
         this.levelManager = levelManager;
+        BackgroundPlaneCollisionProvider collisionProvider = GameServices.backgroundPlaneCollisionOrNull();
+        this.backgroundPlaneCollisionProvider = collisionProvider != null
+                ? collisionProvider : BackgroundPlaneCollisionProvider.FOREGROUND_ONLY;
         this.audioManager = audioManager;
-        this.lostRings = new LostRingPool(levelManager, this.renderer, touchResponseTable, audioManager);
+        this.lostRings = new LostRingPool(levelManager, this.renderer, touchResponseTable, audioManager,
+                backgroundPlaneCollisionProvider);
         this.stageRingsUseObjectTouchCollection =
                 ringRules != null && ringRules.stageRingsUseObjectTouchCollection();
         this.attractedRings = new AttractedRing[MAX_ATTRACTED_RINGS];
@@ -1365,6 +1373,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         private final RingRenderer renderer;
         private final TouchResponseTable touchResponseTable;
         private final AudioManager audioManager;
+        private final BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider;
         private final LostRing[] ringPool = new LostRing[MAX_LOST_RINGS];
         private int activeRingCount = 0;
         // Shared spilled-ring spin owner (ROM Ring_spill_anim_counter/accum/frame,
@@ -1376,11 +1385,13 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         private final SpillAnimationState spillAnimation = new SpillAnimationState();
 
         private LostRingPool(LevelManager levelManager, RingRenderer renderer, TouchResponseTable touchResponseTable,
-                             AudioManager audioManager) {
+                             AudioManager audioManager,
+                             BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider) {
             this.levelManager = levelManager;
             this.renderer = renderer;
             this.touchResponseTable = touchResponseTable;
             this.audioManager = audioManager;
+            this.backgroundPlaneCollisionProvider = backgroundPlaneCollisionProvider;
             for (int i = 0; i < MAX_LOST_RINGS; i++) {
                 ringPool[i] = new LostRing();
             }
@@ -1517,7 +1528,17 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 angle = -angle;
             }
 
-            player.setRingCount(0);
+            // S3K Obj_Bouncing_Ring clears Ring_count and Extra_life_flags in
+            // the owner init (sonic3k.asm:35617-35621). Keep this named loss
+            // transition separate from setRings(0): rewind/checkpoint restore
+            // writes the two captured fields independently and must not erase
+            // the restored flags as a side effect.
+            LevelState levelState = levelManager != null ? levelManager.getLevelGamestate() : null;
+            if (levelState != null) {
+                levelState.resetRingsForLoss();
+            } else {
+                player.setRingCount(0);
+            }
             audioManager.playSfx(GameSound.RING_SPILL);
         }
 
@@ -1651,24 +1672,34 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             if (levelManager == null) {
                 return 0;
             }
-            ChunkDesc chunkDesc = levelManager.getChunkDescAt((byte) 0, x, y);
+            RingTerrainResult foreground = ringCheckFloorDist((byte) 0, x, y);
+            BackgroundPlaneCollisionProvider.State state = backgroundPlaneCollisionProvider.state(levelManager);
+            if (!state.active()) return foreground.distance();
+            RingTerrainResult background = ringCheckFloorDist((byte) 1,
+                    backgroundPlaneCollisionProvider.backgroundX(state, x, Direction.DOWN),
+                    backgroundPlaneCollisionProvider.backgroundY(state, y));
+            return nearer(foreground, background).distance();
+        }
+
+        private RingTerrainResult ringCheckFloorDist(byte layer, int x, int y) {
+            ChunkDesc chunkDesc = levelManager.getChunkDescAt(layer, x, y);
             SolidTile tile = getSolidTile(chunkDesc, SOLIDITY_TOP);
             SensorMetric metric = getMetric(tile, chunkDesc, x, y);
             if (metric.metric == 0) {
-                return 0;
+                return RingTerrainResult.NONE;
             }
             if (metric.metric == 16) {
                 // ROM: sub.w a3,d2 with a3=$10 → check tile above
                 int prevY = y - 16;
-                ChunkDesc prevDesc = levelManager.getChunkDescAt((byte) 0, x, prevY);
+                ChunkDesc prevDesc = levelManager.getChunkDescAt(layer, x, prevY);
                 SolidTile prevTile = getSolidTile(prevDesc, SOLIDITY_TOP);
                 SensorMetric prevMetric = getMetric(prevTile, prevDesc, x, prevY);
                 if (prevMetric.metric > 0 && prevMetric.metric < 16) {
-                    return calculateDistance(prevMetric.metric, x, y, prevY);
+                    return new RingTerrainResult(true, calculateDistance(prevMetric.metric, x, y, prevY));
                 }
-                return calculateDistance(metric.metric, x, y, y);
+                return new RingTerrainResult(true, calculateDistance(metric.metric, x, y, y));
             }
-            return calculateDistance(metric.metric, x, y, y);
+            return new RingTerrainResult(true, calculateDistance(metric.metric, x, y, y));
         }
 
         /**
@@ -1680,24 +1711,40 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             if (levelManager == null) {
                 return 0;
             }
-            ChunkDesc chunkDesc = levelManager.getChunkDescAt((byte) 0, x, y);
+            RingTerrainResult foreground = ringCheckCeilingDist((byte) 0, x, y);
+            BackgroundPlaneCollisionProvider.State state = backgroundPlaneCollisionProvider.state(levelManager);
+            if (!state.active()) return foreground.distance();
+            RingTerrainResult background = ringCheckCeilingDist((byte) 1,
+                    backgroundPlaneCollisionProvider.backgroundX(state, x, Direction.UP),
+                    backgroundPlaneCollisionProvider.backgroundY(state, y));
+            return nearer(foreground, background).distance();
+        }
+
+        private RingTerrainResult ringCheckCeilingDist(byte layer, int x, int y) {
+            ChunkDesc chunkDesc = levelManager.getChunkDescAt(layer, x, y);
             SolidTile tile = getSolidTile(chunkDesc, SOLIDITY_TOP);
             SensorMetric metric = getMetric(tile, chunkDesc, x, y);
             if (metric.metric == 0) {
-                return 0;
+                return RingTerrainResult.NONE;
             }
             if (metric.metric == 16) {
                 // ROM: sub.w a3,d2 with a3=-$10 → check tile below
                 int nextY = y + 16;
-                ChunkDesc nextDesc = levelManager.getChunkDescAt((byte) 0, x, nextY);
+                ChunkDesc nextDesc = levelManager.getChunkDescAt(layer, x, nextY);
                 SolidTile nextTile = getSolidTile(nextDesc, SOLIDITY_TOP);
                 SensorMetric nextMetric = getMetric(nextTile, nextDesc, x, nextY);
                 if (nextMetric.metric > 0 && nextMetric.metric < 16) {
-                    return calculateDistance(nextMetric.metric, x, y, nextY);
+                    return new RingTerrainResult(true, calculateDistance(nextMetric.metric, x, y, nextY));
                 }
-                return calculateDistance(metric.metric, x, y, y);
+                return new RingTerrainResult(true, calculateDistance(metric.metric, x, y, y));
             }
-            return calculateDistance(metric.metric, x, y, y);
+            return new RingTerrainResult(true, calculateDistance(metric.metric, x, y, y));
+        }
+
+        private RingTerrainResult nearer(RingTerrainResult foreground, RingTerrainResult background) {
+            if (!background.found()) return foreground;
+            if (!foreground.found() || background.distance() <= foreground.distance()) return background;
+            return foreground;
         }
 
         private SolidTile getSolidTile(ChunkDesc chunkDesc, int solidityBitIndex) {
@@ -1739,6 +1786,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
 
         private record SensorMetric(byte metric) {
+        }
+
+        private record RingTerrainResult(boolean found, int distance) {
+            private static final RingTerrainResult NONE = new RingTerrainResult(false, 0);
         }
     }
 }

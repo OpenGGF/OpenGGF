@@ -68,6 +68,11 @@ public class PatternSpriteRenderer {
         return patternBase >= 0;
     }
 
+    /** Returns the allocated virtual pattern base, or {@code -1} before caching. */
+    public int getPatternBase() {
+        return patternBase;
+    }
+
     public FrameBounds getFrameBoundsForIndex(int frameIndex) {
         if (frameIndex < 0 || frameIndex >= frameBoundsCache.length) {
             return new FrameBounds(0, 0, 0, 0);

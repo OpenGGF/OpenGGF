@@ -12,6 +12,8 @@ import java.util.Objects;
 public record CameraSnapshot(
         short x,
         short y,
+        short xCopy,
+        short yCopy,
         short minX,
         short minY,
         short maxX,
@@ -36,5 +38,6 @@ public record CameraSnapshot(
         boolean lastFrameWrapped,
         short wrapDeltaY,
         short yPosBias,
-        short fastScrollCap) {
+        short fastScrollCap,
+        boolean customMaxXBoundaryEasingClaimed) {
 }

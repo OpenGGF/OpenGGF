@@ -20,6 +20,8 @@ class TestCameraRewindSnapshot {
         // Set up initial state
         camera.setX((short) 100);
         camera.setY((short) 200);
+        camera.setXCopy((short) 0x1234);
+        camera.setYCopy((short) 0x0567);
         camera.setMinX((short) 0);
         camera.setMinY((short) 0);
         camera.setMaxX((short) 2000);
@@ -42,6 +44,8 @@ class TestCameraRewindSnapshot {
         // Mutate state
         camera.setX((short) 500);
         camera.setY((short) 600);
+        camera.setXCopy((short) 0x2222);
+        camera.setYCopy((short) 0x0333);
         camera.setMinX((short) 100);
         camera.setFrozen(false);
         camera.setLevelStarted(true);
@@ -53,6 +57,8 @@ class TestCameraRewindSnapshot {
         // Verify all fields match captured state
         assertEquals((short) 100, camera.getX());
         assertEquals((short) 200, camera.getY());
+        assertEquals((short) 0x1234, camera.getXCopy());
+        assertEquals((short) 0x0567, camera.getYCopy());
         assertEquals((short) 0, camera.getMinX());
         assertEquals((short) 0, camera.getMinY());
         assertEquals((short) 2000, camera.getMaxX());
@@ -90,5 +96,26 @@ class TestCameraRewindSnapshot {
         camera.restore(snapshot);
         // Verify easing state is restored
         assertEquals(snapshot.maxYChanging(), camera.isMaxYChanging());
+    }
+
+    @Test
+    void screenEventCopyWordsAreIndependentFromLivePositionAndResetExplicitly() {
+        camera.setX((short) 0x2EA0);
+        camera.setY((short) 0x0540);
+        camera.setXCopy((short) 0x1111);
+        camera.setYCopy((short) 0x0222);
+
+        camera.setX((short) 0x2EA2);
+        camera.setY((short) 0x0542);
+        assertEquals(0x1111, camera.getXCopy() & 0xFFFF);
+        assertEquals(0x0222, camera.getYCopy() & 0xFFFF);
+
+        camera.copyLivePositionToScreenEventWords();
+        assertEquals(0x2EA2, camera.getXCopy() & 0xFFFF);
+        assertEquals(0x0542, camera.getYCopy() & 0xFFFF);
+
+        camera.resetState();
+        assertEquals(0, camera.getXCopy());
+        assertEquals(0, camera.getYCopy());
     }
 }

@@ -47,6 +47,13 @@ public class LevelTransitionCoordinator {
     // ── Seamless transitions ───────────────────────────────────────────
     private boolean seamlessTransitionRequested;
     private SeamlessLevelTransitionRequest pendingSeamlessTransitionRequest;
+    private SynchronousScreenEventTransitionContext synchronousScreenEventTransitionContext;
+
+    private record SynchronousScreenEventTransitionContext(
+            int sourceZone,
+            int sourceAct,
+            SeamlessLevelTransitionRequest request) {
+    }
 
     // ── Credits ────────────────────────────────────────────────────────
     private boolean creditsRequested;
@@ -569,6 +576,35 @@ public class LevelTransitionCoordinator {
         this.levelInactiveForTransition = inactive;
     }
 
+    void beginSynchronousScreenEventTransition(
+            int sourceZone, int sourceAct, SeamlessLevelTransitionRequest request) {
+        if (synchronousScreenEventTransitionContext != null) {
+            throw new IllegalStateException("nested synchronous screen-event transition");
+        }
+        if (request == null) {
+            throw new IllegalArgumentException("synchronous transition request");
+        }
+        synchronousScreenEventTransitionContext =
+                new SynchronousScreenEventTransitionContext(sourceZone, sourceAct, request);
+    }
+
+    void endSynchronousScreenEventTransition() {
+        synchronousScreenEventTransitionContext = null;
+    }
+
+    boolean isApplyingSynchronousScreenEventTransition(
+            int sourceZone, int sourceAct, int targetZone, int targetAct) {
+        SynchronousScreenEventTransitionContext context =
+                synchronousScreenEventTransitionContext;
+        return context != null
+                && context.request().type()
+                        == SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL
+                && context.sourceZone() == sourceZone
+                && context.sourceAct() == sourceAct
+                && context.request().targetZone() == targetZone
+                && context.request().targetAct() == targetAct;
+    }
+
     // ================================================================
     //  Bulk reset
     // ================================================================
@@ -606,5 +642,6 @@ public class LevelTransitionCoordinator {
         requestedZone = -1;
         requestedAct = -1;
         pendingSeamlessTransitionRequest = null;
+        synchronousScreenEventTransitionContext = null;
     }
 }

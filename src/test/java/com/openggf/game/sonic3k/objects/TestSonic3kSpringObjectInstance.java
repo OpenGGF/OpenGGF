@@ -10,7 +10,14 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.solid.ContactKind;
+import com.openggf.game.solid.DefaultSolidExecutionRegistry;
+import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.camera.Camera;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
@@ -25,6 +32,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -68,6 +76,60 @@ class TestSonic3kSpringObjectInstance {
         @Override
         public List<PlayableEntity> sidekicks() {
             return List.of();
+        }
+    }
+
+    private static final class SideCorrectingCheckpointSpring extends Sonic3kSpringObjectInstance {
+        private final AbstractPlayableSprite player;
+
+        SideCorrectingCheckpointSpring(ObjectSpawn spawn, AbstractPlayableSprite player) {
+            super(spawn);
+            this.player = player;
+        }
+
+        @Override
+        protected PlayerSolidContactResult checkpointPlayer(PlayableEntity participant) {
+            if (participant != player) {
+                return null;
+            }
+            // Lower spring SolidObjectFull2 side correction at FBZ trace f12917:
+            // x_pos $200B -> $2013 before sub_23190 applies its own -8 nudge.
+            player.setCentreXPreserveSubpixel((short) (player.getCentreX() + 8));
+            PlayerSolidContactResult side = new PlayerSolidContactResult(
+                    ContactKind.SIDE, false, false, true, false,
+                    null, null, -8);
+            return side;
+        }
+    }
+
+    private static final class ScriptedCheckpointSpring extends Sonic3kSpringObjectInstance {
+        private Map<PlayableEntity, PlayerSolidContactResult> results = Map.of();
+
+        ScriptedCheckpointSpring(ObjectSpawn spawn) {
+            super(spawn);
+        }
+
+        void setResults(Map<PlayableEntity, PlayerSolidContactResult> results) {
+            this.results = results;
+        }
+
+        @Override
+        protected PlayerSolidContactResult checkpointPlayer(PlayableEntity player) {
+            return results.get(player);
+        }
+    }
+
+    private static final class RecordingCheckpointSpring extends Sonic3kSpringObjectInstance {
+        private final List<PlayableEntity> checkpointOrder = new java.util.ArrayList<>();
+
+        RecordingCheckpointSpring(ObjectSpawn spawn) {
+            super(spawn);
+        }
+
+        @Override
+        protected PlayerSolidContactResult checkpointPlayer(PlayableEntity player) {
+            checkpointOrder.add(player);
+            return super.checkpointPlayer(player);
         }
     }
 
@@ -179,6 +241,114 @@ class TestSonic3kSpringObjectInstance {
         assertEquals(0x1000, player.getGSpeed() & 0xFFFF);
         assertEquals(15, player.getMoveLockTimer());
         assertFalse(player.getAir(), "Horizontal springs keep the player grounded");
+    }
+
+    @Test
+    void stackedHorizontalSpringsResolveSolidBeforeProactiveTrigger() throws Exception {
+        TestableSprite player = new TestableSprite("sonic");
+        player.setCentreX((short) 0x2013);
+        player.setCentreY((short) 0x08AC);
+        player.setSubpixelRaw(0x2D00, 0);
+        player.setXSpeed((short) 0xFE54);
+        player.setGSpeed((short) 0xFE54);
+
+        Sonic3kSpringObjectInstance upper = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x2000, 0x0890, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
+        upper.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        invoke(upper, "ensureInitialized");
+        invoke(upper, "applyHorizontalSpring",
+                new Class<?>[]{AbstractPlayableSprite.class}, player);
+        assertEquals(0x200B, player.getCentreX() & 0xFFFF,
+                "Upper spring sub_23190 supplies the first -8 x_pos nudge");
+
+        Sonic3kSpringObjectInstance lower = new SideCorrectingCheckpointSpring(
+                new ObjectSpawn(0x2000, 0x08B0, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0), player);
+        lower.setServices(new QueryBackedServices(player, List.of())
+                .withGameState(new GameStateManager()));
+
+        lower.update(0, player);
+
+        assertEquals(0x200B, player.getCentreX() & 0xFFFF,
+                "Obj_Spring_Horizontal must run SolidObjectFull2 before sub_2326C: "
+                        + "the lower spring's +8 side correction and -8 launch nudge cancel");
+        assertEquals(0x2D00, player.getXSubpixelRaw());
+        assertEquals(0x1000, player.getXSpeed() & 0xFFFF);
+        assertEquals(0x1000, player.getGSpeed() & 0xFFFF);
+    }
+
+    @Test
+    void objectManagerStackedHorizontalSpringsPreserveNativePushNudgeCancellation() {
+        TestableSprite player = fbzFrontierPlayer("sonic", 0x2013, 0x08AC);
+        TestableSprite nativeP2 = fbzFrontierPlayer("tails_p2", 0x2153, 0x0878);
+        TestableSprite extraSidekick = fbzFrontierPlayer("knuckles_p3", 0x2300, 0x0800);
+
+        Sonic3kSpringObjectInstance upper = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x2000, 0x0890, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
+        Sonic3kSpringObjectInstance lower = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x2000, 0x08B0, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
+        ObjectManager manager = objectManagerWith(upper, lower);
+
+        manager.update(0, player, List.of(nativeP2, extraSidekick), 0,
+                false, true, true);
+
+        assertEquals(0x200B, player.getCentreX() & 0xFFFF,
+                "Real SolidObjectFull2 resolution must cancel the lower spring's launch nudge");
+        assertEquals(0x2D00, player.getXSubpixelRaw());
+        assertEquals(0x1000, player.getXSpeed() & 0xFFFF);
+        assertEquals(0x1000, player.getGSpeed() & 0xFFFF);
+        assertEquals(0x2153, nativeP2.getCentreX() & 0xFFFF,
+                "Distant native P2 must not participate in the stacked-spring contact");
+        assertEquals(0x2300, extraSidekick.getCentreX() & 0xFFFF,
+                "Distant extension sidekicks must not perturb native spring ordering");
+    }
+
+    @Test
+    void extraSidekickSolidReactionCannotSuppressNativeProactiveTrigger() {
+        TestableSprite main = fbzFrontierPlayer("sonic", 0x2020, 0x0100);
+        main.setGSpeed((short) 0x0400);
+        TestableSprite nativeP2 = fbzFrontierPlayer("tails_p2", 0x0300, 0x0100);
+        TestableSprite extra = fbzFrontierPlayer("knuckles_p3", 0x2013, 0x0100);
+
+        ScriptedCheckpointSpring spring = new ScriptedCheckpointSpring(
+                new ObjectSpawn(0x2000, 0x0100, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
+        PlayerSolidContactResult extraSide = new PlayerSolidContactResult(
+                ContactKind.SIDE, false, false, true, false, null, null, -8);
+        spring.setResults(Map.of(extra, extraSide));
+        spring.setServices(new QueryBackedServices(main, List.of(nativeP2, extra))
+                .withGameState(new GameStateManager()));
+
+        spring.update(0, main);
+
+        assertEquals(0x2018, main.getCentreX() & 0xFFFF,
+                "Native P1 sub_2326C must run before extension-only checkpoint reactions");
+        assertEquals(0x1000, main.getXSpeed() & 0xFFFF);
+        assertEquals(0x200B, extra.getCentreX() & 0xFFFF,
+                "Extra sidekicks retain their labelled post-native solid spring reaction");
+    }
+
+    @Test
+    void objectManagerPairsRealSolidReactionInP1P2ThenExtraOrderExactlyOnce() {
+        TestableSprite p1 = fbzFrontierPlayer("sonic", 0x2013, 0x0100);
+        TestableSprite p2 = fbzFrontierPlayer("tails_p2", 0x2012, 0x0100);
+        TestableSprite extra = fbzFrontierPlayer("knuckles_p3", 0x2011, 0x0100);
+        p1.setGSpeed((short) 0x0400);
+        p2.setGSpeed((short) 0x0400);
+        extra.setGSpeed((short) 0x0400);
+        RecordingCheckpointSpring spring = new RecordingCheckpointSpring(
+                new ObjectSpawn(0x2000, 0x0100, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
+        ObjectManager manager = objectManagerWithPlayers(p1, List.of(p2, extra), spring);
+
+        manager.update(0x1F00, p1, List.of(p2, extra), 0,
+                false, true, true);
+
+        assertEquals(List.of(p1, p2, extra), spring.checkpointOrder,
+                "Obj_Spring_Horizontal must pair one real solid pass/reaction per participant in native order");
+        assertEquals(0x200B, p1.getCentreX() & 0xFFFF);
+        assertEquals(0x200B, p2.getCentreX() & 0xFFFF);
+        assertEquals(0x200B, extra.getCentreX() & 0xFFFF);
+        assertEquals(0x1000, p1.getXSpeed() & 0xFFFF);
+        assertEquals(0x1000, p2.getXSpeed() & 0xFFFF);
+        assertEquals(0x1000, extra.getXSpeed() & 0xFFFF);
     }
 
     @Test
@@ -409,5 +579,69 @@ class TestSonic3kSpringObjectInstance {
         Method method = target.getClass().getDeclaredMethod(methodName, argTypes);
         method.setAccessible(true);
         return method.invoke(target, args);
+    }
+
+    private static TestableSprite fbzFrontierPlayer(String code, int x, int y) {
+        TestableSprite player = new TestableSprite(code);
+        player.setWidth(18);
+        player.setHeight(38);
+        player.setCentreX((short) x);
+        player.setCentreY((short) y);
+        player.setSubpixelRaw(0x2D00, 0);
+        player.setXSpeed((short) 0xFE54);
+        player.setGSpeed((short) 0xFE54);
+        player.setAir(false);
+        return player;
+    }
+
+    private static ObjectManager objectManagerWith(ObjectInstance... instances) {
+        ObjectRegistry registry = new ObjectRegistry() {
+            @Override
+            public ObjectInstance create(ObjectSpawn spawn) {
+                return instances[0];
+            }
+
+            @Override
+            public void reportCoverage(List<ObjectSpawn> spawns) {
+            }
+
+            @Override
+            public String getPrimaryName(int objectId) {
+                return "Spring";
+            }
+        };
+        ObjectManager manager = new ObjectManager(List.of(), registry, 0, null, null);
+        manager.reset(0);
+        for (ObjectInstance instance : instances) {
+            manager.addDynamicObject(instance);
+        }
+        return manager;
+    }
+
+    private static ObjectManager objectManagerWithPlayers(
+            PlayableEntity main, List<PlayableEntity> sidekicks, ObjectInstance... instances) {
+        Camera camera = new Camera() {
+            @Override public short getX() { return 0x1F00; }
+            @Override public short getY() { return 0; }
+            @Override public short getWidth() { return 320; }
+            @Override public short getHeight() { return 224; }
+            @Override public boolean isVerticalWrapEnabled() { return false; }
+        };
+        QueryBackedServices services = new QueryBackedServices(main, sidekicks);
+        services.withCamera(camera)
+                .withGameState(new GameStateManager())
+                .withSolidExecutionRegistry(new DefaultSolidExecutionRegistry());
+        ObjectRegistry registry = new ObjectRegistry() {
+            @Override public ObjectInstance create(ObjectSpawn spawn) { return instances[0]; }
+            @Override public void reportCoverage(List<ObjectSpawn> spawns) { }
+            @Override public String getPrimaryName(int objectId) { return "Spring"; }
+        };
+        ObjectManager manager = new ObjectManager(List.of(), registry, 0,
+                null, null, null, camera, services);
+        manager.reset(0);
+        for (ObjectInstance instance : instances) {
+            manager.addDynamicObject(instance);
+        }
+        return manager;
     }
 }

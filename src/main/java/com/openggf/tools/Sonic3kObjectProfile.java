@@ -57,6 +57,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     // zone-set-specific ids (where the same numeric id maps to different
     // objects in S3KL vs SKL) stay out of the cross-zoneset allowlist.
     public static final Set<Integer> SHARED_IMPLEMENTED_IDS = Set.of(
+            0x00, // Ring
             0x01, // Monitor
             0x02, // PathSwap
             0x04, // CollapsingPlatform
@@ -74,17 +75,31 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x33, // Button
             0x34, // StarPost
             0x3C, // Door
+            0x3D, // RetractingSpring
             0x4F, // SinkingMud
             0x51, // FloatingPlatform
             0x6C, // TensionBridge
             0x6A, // InvisibleHurtBlockH
             0x6B, // InvisibleHurtBlockV
             0x80, // HiddenMonitor
+            0x8A, // FBZExitHall (same pointer in both SK sets)
             0x85  // SSEntryRing
     );
 
     // S3KL-only implementations (zones 0-6: AIZ through LBZ)
     private static final Set<Integer> S3KL_IMPLEMENTED_IDS;
+    // FBZ completion gate: only factories proven concrete for FBZ's S3KL mappings.
+    // Keep this zone-specific so SKL factories for remapped ids (notably A8/A9)
+    // cannot make the FBZ audit report a false positive.
+    private static final Set<Integer> FBZ_IMPLEMENTED_IDS = Set.of(
+            0x00, 0x01, 0x02, 0x07, 0x08, 0x0F, 0x26, 0x28, 0x2A,
+            0x2F, 0x33, 0x34, 0x3D, 0x6A, 0x6B,
+            0x6F, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78,
+            0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F, 0xE0, 0xE1,
+            0x8A, 0xCE, 0xCF, 0xD0,
+            0xE2, 0xE3, 0xE4, 0xE5, 0xFF,
+            0x80, 0x85, 0xA8, 0xA9, 0xAA, 0xAB
+    );
     // LBZ-only implementations from S3KL ids that map to different zone objects elsewhere.
     private static final Set<Integer> LBZ_IMPLEMENTED_IDS;
     // SKL-only implementations (zones 7-13: MHZ through DDZ)
@@ -202,7 +217,10 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0xC8, // LBZKnuxPillar
                 0xC9, // LBZMiniboss
                 0xCA, // LBZFinalBoss1
-                0xCB  // LBZEndBoss
+                0xCB, // LBZEndBoss
+                0xCE, // FBZExitDoor
+                0xCF, // FBZEggPrison
+                0xD0  // FBZSpringPlunger
         ));
         S3KL_IMPLEMENTED_IDS = Set.copyOf(s3kl);
         var lbz = new HashSet<>(S3KL_IMPLEMENTED_IDS);
@@ -392,7 +410,11 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
         if (zoneSetForLevel(level) == S3kZoneSet.SKL) {
             return SKL_IMPLEMENTED_IDS;
         }
-        return za[0] == Sonic3kZoneIds.ZONE_LBZ ? LBZ_IMPLEMENTED_IDS : S3KL_IMPLEMENTED_IDS;
+        return switch (za[0]) {
+            case Sonic3kZoneIds.ZONE_FBZ -> FBZ_IMPLEMENTED_IDS;
+            case Sonic3kZoneIds.ZONE_LBZ -> LBZ_IMPLEMENTED_IDS;
+            default -> S3KL_IMPLEMENTED_IDS;
+        };
     }
     @Override public Map<String, List<ObjectDiscoveryTool.DynamicBoss>> getDynamicBosses() { return DYNAMIC_BOSSES; }
 

@@ -16,6 +16,10 @@ import com.openggf.sprites.playable.Tails;
 public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private short x = 0;
 	private short y = 0;
+	// ROM ScreenEvents snapshots. These are independent words: zone event/deform
+	// code may offset them without changing the live scroll position (and vice versa).
+	private short xCopy = 0;
+	private short yCopy = 0;
 
 	private short minX;
 	private short minY;
@@ -59,6 +63,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	// This is separate from horizScrollDelayFrames which only affects horizontal scroll.
 	private boolean frozen = false;
 	private boolean deferHorizontalBoundaryClampOnce = false;
+	private boolean customMaxXBoundaryEasingClaimed = false;
 	private boolean deferMaxYWriteUntilAfterUpdate = false;
 	private short deferredMaxYValue = 0;
 
@@ -225,7 +230,14 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// When rolling, Sonic's center shifts down by ~5px due to height change.
 		// Subtract 5 from the Y delta to prevent camera jolt.
 		// Tails is 4 pixels shorter, so only subtract 1 for Tails.
-		if (focusedSprite.getRolling()) {
+		// loc_1BFEC does not merely substitute two coordinates into Player_1.
+		// It repoints a0 at Scroll_forced_X_pos-x_pos, a synthetic RAM record whose
+		// status and ground-velocity fields are zero for this model. Consequently a
+		// traversal object may set Player_1 airborne while forced MoveCameraY still
+		// follows the grounded path (FBZ spinning-pole capture is the observable
+		// four-pixel case). Do not leak the real player's movement state into it.
+		boolean forcedCoordinateRecord = forcedScrollRequested;
+		if (!forcedCoordinateRecord && focusedSprite.getRolling()) {
 			focusedSpriteRealY -= 5;
 			if (focusedSprite instanceof Tails) {
 				focusedSpriteRealY += 4; // Net: subtract 1 for Tails
@@ -233,7 +245,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		}
 
 		// Vertical scroll logic (ROM: ScrollVerti)
-		if (focusedSprite.getAir()) {
+		if (!forcedCoordinateRecord && focusedSprite.getAir()) {
 			// ROM: Airborne uses ±0x20 window around bias
 			// Upper bound: bias - 32, Lower bound: bias + 32
 			short upperBound = (short) (yPosBias - AIRBORNE_WINDOW_HALF);
@@ -267,7 +279,9 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 					tolerance = 2;
 				} else {
 					// Bias is normal (96) - check inertia for medium vs fast
-					short absInertia = (short) Math.abs(focusedSprite.getGSpeed());
+					short absInertia = forcedCoordinateRecord
+							? 0
+							: (short) Math.abs(focusedSprite.getGSpeed());
 					if (fastVerticalScrollRequested || absInertia >= FAST_SCROLL_INERTIA_THRESHOLD) {
 						// ROM: .doScroll_fast - player moving very fast on ground
 						// S2: 16px cap, S3K: 24px cap
@@ -713,8 +727,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			}
 		}
 
+		// A native Obj_IncLevEndXGradual worker owns this frame's max-X movement.
+		boolean customMaxXEasing = customMaxXBoundaryEasingClaimed;
+		customMaxXBoundaryEasingClaimed = false;
 		// Ease maxX toward target
-		if (maxX != maxXTarget) {
+		if (!customMaxXEasing && maxX != maxXTarget) {
 			short diff = (short) (maxXTarget - maxX);
 			if (diff > 0) {
 				maxX += Math.min(diff, BOUNDARY_EASE_STEP);
@@ -845,6 +862,35 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		this.y = y;
 	}
 
+	/** Returns ROM {@code Camera_X_pos_copy}, captured at the head of S3K ScreenEvents. */
+	public short getXCopy() {
+		return xCopy;
+	}
+
+	/** Writes ROM {@code Camera_X_pos_copy} without changing live camera X. */
+	public void setXCopy(short xCopy) {
+		this.xCopy = xCopy;
+	}
+
+	/** Returns ROM {@code Camera_Y_pos_copy}, captured at the head of S3K ScreenEvents. */
+	public short getYCopy() {
+		return yCopy;
+	}
+
+	/** Writes ROM {@code Camera_Y_pos_copy} without changing live camera Y. */
+	public void setYCopy(short yCopy) {
+		this.yCopy = yCopy;
+	}
+
+	/**
+	 * Mirrors the first two writes in S3K {@code ScreenEvents}: copy the live
+	 * camera position words before foreground/background event dispatch.
+	 */
+	public void copyLivePositionToScreenEventWords() {
+		xCopy = x;
+		yCopy = y;
+	}
+
 	/**
 	 * Sets the screen shake offsets (ROM: applied to Camera_X_pos_copy and Camera_Y_pos_copy).
 	 * These offsets are used by the rendering system to shake both foreground tiles and sprites.
@@ -906,6 +952,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		this.minXTarget = minX;
 	}
 
+	/** Writes only ROM {@code Camera_min_X_pos}, preserving its stored target. */
+	public void setMinXCurrent(short minX) {
+		this.minX = minX;
+	}
+
 	/**
 	 * Sets minX target for smooth easing.
 	 * Current minX will ease toward this value at 2px/frame.
@@ -934,6 +985,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void setMinY(short minY) {
 		this.minY = minY;
 		this.minYTarget = minY;
+	}
+
+	/** Writes only ROM {@code Camera_min_Y_pos}, preserving its stored target. */
+	public void setMinYCurrent(short minY) {
+		this.minY = minY;
 	}
 
 	/**
@@ -1029,6 +1085,17 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		this.maxXBeforeBoundaryEasing = maxX;
 	}
 
+	/** Writes only ROM {@code Camera_max_X_pos}, preserving its stored target. */
+	public void setMaxXCurrent(short maxX) {
+		this.maxX = maxX;
+		this.maxXBeforeBoundaryEasing = maxX;
+	}
+
+	/** Claims the current frame's max-X easing for a ROM object worker. */
+	public void claimCustomMaxXBoundaryEasing() {
+		customMaxXBoundaryEasingClaimed = true;
+	}
+
 	/**
 	 * Sets maxX target for smooth easing.
 	 * Current maxX will ease toward this value at 2px/frame.
@@ -1052,6 +1119,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void setMaxY(short maxY) {
 		this.maxY = maxY;
 		this.maxYTarget = maxY;
+	}
+
+	/** Writes only ROM {@code Camera_max_Y_pos}, preserving its stored target. */
+	public void setMaxYCurrent(short maxY) {
+		this.maxY = maxY;
 	}
 
 	/**
@@ -1233,10 +1305,13 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void resetState() {
 		x = 0;
 		y = 0;
+		xCopy = 0;
+		yCopy = 0;
 		minX = 0;
 		minY = 0;
 		maxX = 0;
 		maxXBeforeBoundaryEasing = 0;
+		customMaxXBoundaryEasingClaimed = false;
 		maxY = 0;
 		shakeOffsetX = 0;
 		shakeOffsetY = 0;
@@ -1326,19 +1401,22 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	@Override
 	public CameraSnapshot capture() {
 		return new CameraSnapshot(
-				x, y, minX, minY, maxX, maxY,
+				x, y, xCopy, yCopy, minX, minY, maxX, maxY,
 				shakeOffsetX, shakeOffsetY,
 				minXTarget, minYTarget, maxXTarget, maxYTarget, maxXBeforeBoundaryEasing,
 				maxYChanging, horizScrollDelayFrames, frozen, deferHorizontalBoundaryClampOnce,
 				deferMaxYWriteUntilAfterUpdate, deferredMaxYValue, levelStarted,
 				verticalWrapEnabled, verticalWrapRange, verticalWrapMask,
-				lastFrameWrapped, wrapDeltaY, yPosBias, fastScrollCap);
+				lastFrameWrapped, wrapDeltaY, yPosBias, fastScrollCap,
+				customMaxXBoundaryEasingClaimed);
 	}
 
 	@Override
 	public void restore(CameraSnapshot snapshot) {
 		x = snapshot.x();
 		y = snapshot.y();
+		xCopy = snapshot.xCopy();
+		yCopy = snapshot.yCopy();
 		minX = snapshot.minX();
 		minY = snapshot.minY();
 		maxX = snapshot.maxX();
@@ -1364,6 +1442,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		wrapDeltaY = snapshot.wrapDeltaY();
 		yPosBias = snapshot.yPosBias();
 		fastScrollCap = snapshot.fastScrollCap();
+		customMaxXBoundaryEasingClaimed = snapshot.customMaxXBoundaryEasingClaimed();
 		// Re-resolve focused sprite via SpriteManager after restore. Object instances
 		// are rebuilt during rewind; this ensures Camera tracks the live main player
 		// sprite rather than a stale or null reference (Track C / H.1).

@@ -6,6 +6,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
+import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.graphics.GraphicsManager;
@@ -134,6 +135,7 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
         private int bk2FrameOffset;
         private boolean startPositionIsCentre;
         private boolean customStartPositionProvided;
+        private String crossGameDonorCode;
 
         private Builder() {}
 
@@ -175,6 +177,15 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             return this;
         }
 
+        /**
+         * Reinitializes an explicitly configured donor after the fixture's
+         * mandatory transient-state reset and before the playable team exists.
+         */
+        public Builder withCrossGameDonation(String donorCode) {
+            this.crossGameDonorCode = donorCode;
+            return this;
+        }
+
         public HeadlessTestFixture build() {
             if (sharedLevel == null && zone < 0) {
                 throw new IllegalStateException(
@@ -184,6 +195,14 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             // 1. Reset transient per-test state
             TestEnvironment.resetPerTest();
             GraphicsManager.getInstance().initHeadless();
+            if (crossGameDonorCode != null && !crossGameDonorCode.isBlank()) {
+                try {
+                    CrossGameFeatureProvider.getInstance().initialize(crossGameDonorCode);
+                } catch (IOException e) {
+                    throw new UncheckedIOException(
+                            "Failed to initialize cross-game donor " + crossGameDonorCode, e);
+                }
+            }
 
             // 2. Shared-level tests rely on the config snapshot that was active
             // when the level was originally loaded. @RequiresRom rebuilds the

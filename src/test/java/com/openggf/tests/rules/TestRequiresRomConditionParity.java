@@ -75,6 +75,7 @@ class TestRequiresRomConditionParity {
                 new Class[]{ExtensionContext.class},
                 (proxy, method, args) -> switch (method.getName()) {
                     case "getRequiredTestClass" -> testClass;
+                    case "getTestMethod" -> Optional.empty();
                     case "getStore" -> storeFor(stores, (ExtensionContext.Namespace) args[0]);
                     case "getParent" -> Optional.empty();
                     case "getRoot" -> proxy;
@@ -141,5 +142,4 @@ class TestRequiresRomConditionParity {
     private record TestTarget(Class<?> testClass, String expectedModuleId, Rom rom) {
     }
 }
-
 

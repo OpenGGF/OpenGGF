@@ -459,13 +459,19 @@ final class ObjectTouchResponseController {
 
             // ROM parity: ReactToItem/TouchResponse runs in the player slot
             // before dynamic objects update. S3K's previous collision-response
-            // list stores object RAM pointers, but those pointers still hold
-            // frame-start x/y at this phase.
+            // list stores object RAM pointers, so membership is from the prior
+            // object pass but x_pos/y_pos are read live at this player slot.
+            // The retained pre-update snapshot is one object pass older here
+            // because snapshotTouchResponseState(true) intentionally preserves
+            // the list without refreshing that snapshot.
             boolean useCurrentTouchState = usesCurrentTouchState(instance);
+            boolean useFrameStartSnapshot = usePreUpdateState
+                    && !usePreviousCollisionResponseList
+                    && !useCurrentTouchState;
             int objX = objectCallbacks.call(instance,
-                    usePreUpdateState && !useCurrentTouchState ? instance::getPreUpdateX : instance::getX);
+                    useFrameStartSnapshot ? instance::getPreUpdateX : instance::getX);
             int objY = objectCallbacks.call(instance,
-                    usePreUpdateState && !useCurrentTouchState ? instance::getPreUpdateY : instance::getY);
+                    useFrameStartSnapshot ? instance::getPreUpdateY : instance::getY);
             if (category == TouchCategory.HURT
                     && tryShieldDeflect(player, instance, provider, touchProfile,
                             objX, objY, width, height)) {

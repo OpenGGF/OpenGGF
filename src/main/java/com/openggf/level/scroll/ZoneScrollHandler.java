@@ -10,6 +10,14 @@ package com.openggf.level.scroll;
 public interface ZoneScrollHandler {
 
     /**
+     * Selects the Plane B tilemap residency model used by this handler.
+     * Existing handlers retain the stateless window builder by default.
+     */
+    default BgTilemapUpdateMode getBgTilemapUpdateMode() {
+        return BgTilemapUpdateMode.STATIC_WINDOW;
+    }
+
+    /**
      * Fill the horizontal scroll buffer for this zone.
      * 
      * This method should populate the 224-entry buffer with packed scroll values

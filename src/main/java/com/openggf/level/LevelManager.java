@@ -26,6 +26,7 @@ import com.openggf.game.modzone.ModZoneRuntimeContribution;
 import com.openggf.game.modzone.ModZoneRuntimeProfile;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
+import com.openggf.game.rewind.snapshot.LevelTilemapSnapshot;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
@@ -41,6 +42,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
 import com.openggf.game.session.PatternWindowSessionState;
 import com.openggf.level.rewind.LevelRewindSnapshotAdapter;
+import com.openggf.level.rewind.LevelTilemapRewindAdapter;
 import com.openggf.level.objects.HudPaletteBridgeAccess;
 import com.openggf.level.objects.HudProfile;
 import com.openggf.level.objects.HudProfileAccess;
@@ -58,12 +60,14 @@ import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindClassResolver;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpriteSheet;
+import com.openggf.level.scroll.BgTilemapUpdateMode;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.physics.CollisionSystem;
@@ -90,6 +94,20 @@ import static org.lwjgl.opengl.GL11.glClearColor;
  */
 @com.openggf.game.ModApi
 public class LevelManager {
+    private SeamlessLevelTransitionRequest executingSeamlessTransitionRequest;
+
+    void beginSeamlessTransitionLoad(SeamlessLevelTransitionRequest request) {
+        executingSeamlessTransitionRequest = request;
+    }
+
+    void endSeamlessTransitionLoad() {
+        executingSeamlessTransitionRequest = null;
+    }
+
+    public SeamlessLevelTransitionRequest getExecutingSeamlessTransitionRequest() {
+        return executingSeamlessTransitionRequest;
+    }
+
     static final Logger LOGGER = Logger.getLogger(LevelManager.class.getName());
     static final int OBJECT_PATTERN_BASE = PatternAtlasRange.OBJECTS.base();
     private static final int HUD_PATTERN_BASE = PatternAtlasRange.HUD.base();
@@ -207,6 +225,7 @@ public class LevelManager {
         if (objectManager != null) objectManager.setRewindClassResolver(resolver);
     }
     RingManager ringManager;
+    private boolean pendingTransitionRingInitialization;
     ZoneFeatureProvider zoneFeatureProvider;
     private TouchResponseTable touchResponseTable;
     ObjectRenderManager objectRenderManager;
@@ -422,6 +441,10 @@ public class LevelManager {
     }
 
     private void resetRewindBufferAfterLevelBoundary() {
+        if (executingSeamlessTransitionRequest != null
+                && executingSeamlessTransitionRequest.suppressLevelLoadRewindBoundary()) {
+            return;
+        }
         markRewindLevelLoadBoundary();
     }
 
@@ -746,6 +769,7 @@ public class LevelManager {
     public void initRings() {
         RingSpriteSheet ringSpriteSheet = level.getRingSpriteSheet();
         ringManager = new RingManager(level.getRings(), ringSpriteSheet, this, touchResponseTable, audioManager);
+        pendingTransitionRingInitialization = false;
         ringManager.reset(camera.getX());
         ringManager.ensurePatternsCached(graphicsManager, level.getPatternCount());
         com.openggf.game.session.GameplayModeContext gameplayMode =
@@ -1170,6 +1194,14 @@ public class LevelManager {
             playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
         }
         if (ringManager != null) {
+            if (pendingTransitionRingInitialization) {
+                // S3K Load_Rings follows ScreenEvents later in the same frame.
+                // The synchronous reload binds the Act 2 source first; only this
+                // canonical ring phase clears status and windows it from the
+                // post-transition camera position.
+                ringManager.reset(camera.getX());
+                pendingTransitionRingInitialization = false;
+            }
             ringManager.update(camera.getX(), playable, frameCounter + 1, false);
             // Per-ring spilled-ring physics now runs in the object exec loop
             // (LostRingObjectInstance); this only advances the shared decelerating
@@ -1331,17 +1363,13 @@ public class LevelManager {
             provider.loadArtForZone(artZoneIndex);
 
             objectRenderManager = new ObjectRenderManager(provider);
-            LOGGER.info("Initializing Object Art. Base Index: " + OBJECT_PATTERN_BASE);
-            objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
-
             // Register level-tile-based object art (must be after level load)
             provider.registerLevelTileArt(level, artZoneIndex);
-            int objectEndIndex = objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
             if (patternAtlas != null) {
-                patternAtlas.registerRange(
-                    OBJECT_PATTERN_BASE,
-                    alignPatternRangeSize(objectEndIndex - OBJECT_PATTERN_BASE), "Objects");
+                patternAtlas.registerRange(PatternAtlasRange.OBJECTS);
             }
+            LOGGER.info("Initializing Object Art. Base Index: " + OBJECT_PATTERN_BASE);
+            refreshObjectArtPatterns();
 
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
             HudProfileAccess.install(hudRenderManager, activeHudProfile);
@@ -1443,9 +1471,30 @@ public class LevelManager {
         }
     }
 
-    private static int alignPatternRangeSize(int size) {
-        int positiveSize = Math.max(size, 1);
-        return Math.multiplyExact(Math.floorDiv(Math.addExact(positiveSize, 0xFFF), 0x1000), 0x1000);
+    /**
+     * Validates and caches the regular object-art allocation within its fixed
+     * virtual-pattern governance range.
+     *
+     * @return the first virtual pattern index after the cached regular object art
+     */
+    public int refreshObjectArtPatterns() {
+        if (objectRenderManager == null) {
+            throw new IllegalStateException("Object render manager is not initialized");
+        }
+        int count = objectRenderManager.getRegularPatternCount();
+        if (count < 0) {
+            throw new IllegalStateException("Invalid regular object pattern count: " + count);
+        }
+        if (count > PatternAtlasRange.OBJECTS.size()) {
+            throw new IllegalStateException("Object patterns exceed reserved atlas range: " + count);
+        }
+        int prospectiveEnd = Math.addExact(OBJECT_PATTERN_BASE, count);
+        int actualEnd = objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
+        if (actualEnd != prospectiveEnd) {
+            throw new IllegalStateException("Object pattern preflight/cache mismatch: "
+                    + prospectiveEnd + " != " + actualEnd);
+        }
+        return actualEnd;
     }
 
     boolean isHudSuppressed() {
@@ -1583,6 +1632,38 @@ public class LevelManager {
     }
 
     /**
+     * Recomputes only the current frame's deform/parallax output. This is used
+     * by synchronous native event tails that reload level data and must publish
+     * the replacement act's scroll tables before returning, without advancing
+     * animated-pattern or palette state a second time.
+     */
+    public void recomputeParallaxOnlyForCurrentFrame() {
+        frameRuntimeUpdater.recomputeParallaxOnlyForCurrentFrame();
+    }
+
+    /** Engine owner for ROM {@code Reset_TileOffsetPositionActual}. */
+    public void resetTileOffsetPositionActualForFullRefresh() {
+        if (tilemapManager == null) return;
+        tilemapManager.setBgTilemapBaseX(0);
+        tilemapManager.invalidateAllTilemaps();
+    }
+
+    /** Engine owner for ROM {@code Reset_TileOffsetPositionEff}. */
+    public void resetTileOffsetPositionEffectiveForFullRefresh() {
+        if (tilemapManager == null) return;
+        tilemapManager.setBgTilemapBaseX(0);
+        tilemapManager.setBackgroundTilemapDirty(true);
+    }
+
+    /** Rebuilds and publishes both decoded tilemap planes for ROM {@code Refresh_PlaneFull}. */
+    public void refreshFullTilemapPlanesFromCurrentLayout(int backgroundSourceX) {
+        if (tilemapManager == null) return;
+        ensureForegroundTilemapData();
+        tilemapManager.uploadForegroundTilemap();
+        seedBackgroundVdpPlaneFromWorld(backgroundSourceX);
+    }
+
+    /**
      * Test-only entry point that delegates to {@link LevelRenderer}'s special
      * render effect dispatch. Retained on {@code LevelManager} because existing
      * reflection-based unit tests expect the method to live here.
@@ -1596,9 +1677,21 @@ public class LevelManager {
     void ensureBackgroundTilemapData() {
         if (tilemapManager != null) {
             int bgCameraX = parallaxManager != null ? parallaxManager.getBgCameraX() : Integer.MIN_VALUE;
+            int bgCameraY = parallaxManager != null ? parallaxManager.getVscrollFactorBG() : 0;
+            BgTilemapUpdateMode updateMode = parallaxManager != null
+                    ? parallaxManager.getBgTilemapUpdateMode()
+                    : BgTilemapUpdateMode.STATIC_WINDOW;
             applyBackgroundTilemapWindowSelection(bgCameraX);
-            tilemapManager.ensureBackgroundTilemapData(this::getBlockAtPosition,
-                    zoneFeatureProvider, currentZone, parallaxManager, verticalWrapEnabled);
+            if (updateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32) {
+                tilemapManager.ensureBackgroundTilemapData(this::getBlockAtPosition,
+                        zoneFeatureProvider, currentZone, parallaxManager,
+                        updateMode, bgCameraX, bgCameraY, verticalWrapEnabled);
+            } else {
+                // Preserve the existing stateless virtual-dispatch seam used by
+                // ad-hoc tilemap writers and focused LevelManager tests.
+                tilemapManager.ensureBackgroundTilemapData(this::getBlockAtPosition,
+                        zoneFeatureProvider, currentZone, parallaxManager, verticalWrapEnabled);
+            }
         }
     }
 
@@ -1613,6 +1706,9 @@ public class LevelManager {
         if (tilemapManager == null) {
             return false;
         }
+        BgTilemapUpdateMode updateMode = parallaxManager != null
+                ? parallaxManager.getBgTilemapUpdateMode()
+                : BgTilemapUpdateMode.STATIC_WINDOW;
         boolean fullWidthPerLineTilemap = zoneFeatureProvider != null
                 && zoneFeatureProvider.useFullWidthBackgroundTilemapWindow(
                 currentZone, currentAct, bgCameraX, cachedBgContiguousWidthPx);
@@ -1625,14 +1721,17 @@ public class LevelManager {
                 tilemapManager.setBackgroundTilemapDirty(true);
             }
             newBgPeriodWidth = cachedBgContiguousWidthPx;
-        } else if (bgCameraX != Integer.MIN_VALUE
+        } else if (updateMode == BgTilemapUpdateMode.STATIC_WINDOW
+                && !usesPersistentBackgroundVdpPlane()
+                && bgCameraX != Integer.MIN_VALUE
                 && zoneFeatureProvider != null && zoneFeatureProvider.bgWrapsHorizontally()) {
             int newBase = Math.floorDiv(bgCameraX, 16) * 16;
             if (newBase != tilemapManager.getBgTilemapBaseX()) {
                 // Window-only change: eligible for the incremental one-column shift.
                 tilemapManager.requestBgWindowBaseX(newBase);
             }
-        } else if (tilemapManager.getBgTilemapBaseX() != 0) {
+        } else if (updateMode == BgTilemapUpdateMode.STATIC_WINDOW
+                && tilemapManager.getBgTilemapBaseX() != 0) {
             tilemapManager.setBgTilemapBaseX(0);
             tilemapManager.setBackgroundTilemapDirty(true);
         }
@@ -1652,6 +1751,12 @@ public class LevelManager {
             tilemapManager.setBackgroundTilemapDirty(true);
         }
         return fullWidthPerLineTilemap;
+    }
+
+    private static boolean usesPersistentBackgroundVdpPlane() {
+        var registry = GameServices.zoneRuntimeRegistryOrNull();
+        return registry != null && registry.current() != null
+                && registry.current().usesPersistentBackgroundVdpPlane();
     }
 
     void ensureForegroundTilemapData() {
@@ -2195,7 +2300,19 @@ public class LevelManager {
      * 16x16 source block row.
      */
     public boolean copyBackgroundTileRowFromWorldToVdpPlane(int sourceWorldX, int sourceWorldY,
-                                                            int destVramAddress, int longWordCount) {
+                                                             int destVramAddress, int longWordCount) {
+        return copyTileRowFromLayerToRetainedPlane(1, sourceWorldX, sourceWorldY,
+                destVramAddress, longWordCount);
+    }
+
+    /**
+     * Generic retained-plane row copy for native events which temporarily draw
+     * either level layer into physical Plane B (FBZ2's boss approach draws FG).
+     */
+    public boolean copyTileRowFromLayerToRetainedPlane(int sourceLayer,
+                                                       int sourceWorldX, int sourceWorldY,
+                                                       int destVramAddress, int longWordCount) {
+        if (sourceLayer < 0 || sourceLayer > 1) throw new IllegalArgumentException("sourceLayer");
         if (tilemapManager == null || longWordCount <= 0) {
             return false;
         }
@@ -2221,12 +2338,64 @@ public class LevelManager {
                 if (destTileX >= bgWidthTiles || destTileY >= bgHeightTiles) {
                     continue;
                 }
-                int descriptor = getBackgroundTileDescriptorAtWorld(sourceStartX + i * Pattern.PATTERN_WIDTH,
-                        sourceRowY);
-                changed |= tilemapManager.setBackgroundTileDescriptorAtTilemapCell(destTileX, destTileY, descriptor);
+                int sourceX = sourceStartX + i * Pattern.PATTERN_WIDTH;
+                int descriptor = sourceLayer == 0
+                        ? getForegroundTileDescriptorAtWorld(sourceX, sourceRowY)
+                        : getBackgroundTileDescriptorAtWorld(sourceX, sourceRowY);
+                changed |= tilemapManager.setRetainedBackgroundTileDescriptorAtTilemapCell(destTileX, destTileY, descriptor);
             }
         }
         return changed;
+    }
+
+    /** Copies retained Plane-B columns; each column is 16px wide and blockRows is 16px units. */
+    public boolean copyBackgroundTileColumnsFromWorldToVdpPlane(int sourceWorldX, int sourceWorldY,
+                                                                 int destPlaneX, int columnCount,
+                                                                 int blockRows) {
+        if (tilemapManager == null || columnCount <= 0 || blockRows <= 0) return false;
+        ensureBackgroundTilemapData();
+        boolean changed = false;
+        int destTileX = Math.floorMod(destPlaneX / 8, 64);
+        int destTileY = Math.floorMod(sourceWorldY / 8, 32);
+        for (int column = 0; column < columnCount; column++) {
+            for (int tx = 0; tx < 2; tx++) {
+                for (int ty = 0; ty < blockRows * 2; ty++) {
+                    int descriptor = getBackgroundTileDescriptorAtWorld(
+                            sourceWorldX + column * 16 + tx * 8, sourceWorldY + ty * 8);
+                    changed |= tilemapManager.setRetainedBackgroundTileDescriptorAtTilemapCell(
+                            (destTileX + column * 2 + tx) & 63, (destTileY + ty) & 31, descriptor);
+                }
+            }
+        }
+        return changed;
+    }
+
+    /** Seeds all 64x32 retained Plane-B cells from one world source X, batching one upload. */
+    public void seedBackgroundVdpPlaneFromWorld(int sourceWorldX) {
+        ensureBackgroundTilemapData();
+        if (tilemapManager == null) return;
+        for (int ty = 0; ty < 32; ty++) {
+            for (int tx = 0; tx < 64; tx++) {
+                int descriptor = getBackgroundTileDescriptorAtWorld(sourceWorldX + tx * 8, ty * 8);
+                tilemapManager.setRetainedBackgroundTileDescriptorAtTilemapCell(tx, ty, descriptor);
+            }
+        }
+        tilemapManager.uploadBackgroundTilemap();
+    }
+
+    /** Captures the exact retained Plane-B descriptor buffer for deterministic rewind reconciliation. */
+    public byte[] captureBackgroundVdpPlane() {
+        ensureBackgroundTilemapData();
+        if (tilemapManager == null || tilemapManager.getBackgroundTilemapData() == null) return new byte[0];
+        return tilemapManager.captureRetainedBackgroundVdpRing();
+    }
+
+    /** Restores a retained Plane-B descriptor buffer and uploads it as one batch. */
+    public void restoreBackgroundVdpPlane(byte[] snapshot) {
+        ensureBackgroundTilemapData();
+        if (tilemapManager == null) throw new IllegalStateException("background tilemap manager unavailable");
+        tilemapManager.restoreRetainedBackgroundTilemapData(snapshot);
+        tilemapManager.uploadBackgroundTilemap();
     }
 
     private int getTileDescriptorAtWorld(byte layer, int worldX, int worldY) {
@@ -2698,7 +2867,18 @@ public class LevelManager {
                 // is initialized before the snap; replaying OPL_Main from the
                 // snapped camera drops early route objects from the SST window.
                 // S3K also needs this for its separate Y-camera placement pass.
-                objectManager.reset(camera.getX());
+                LevelEventProvider levelEvents = activeGameModule().getLevelEventProvider();
+                if (levelEvents != null
+                        && levelEvents.defersInitialObjectPlacementUntilAfterLevelEvents(
+                                currentZone, currentAct)) {
+                    // The zone's ScreenInit owns one or more allocations before
+                    // the first Load_Sprites pass. Clear and position the cursors,
+                    // but let level-event initialization claim those SST slots
+                    // before the first object update materializes placements.
+                    objectManager.resetForSynchronousActTransition(camera.getX());
+                } else {
+                    objectManager.reset(camera.getX());
+                }
             }
             // ROM parity: only when Get_LevelSizeStart had to clamp the camera
             // Y down to Camera_max_Y_pos does the immediately-following
@@ -3045,21 +3225,33 @@ public class LevelManager {
         }
         Integer minX = request.postTransitionMinX();
         if (minX != null) {
-            cam.setMinX((short) (int) minX);
+            cam.setMinXCurrent((short) (int) minX);
         }
         Integer maxX = request.postTransitionMaxX();
         if (maxX != null) {
-            cam.setMaxX((short) (int) maxX);
+            cam.setMaxXCurrent((short) (int) maxX);
         }
         Integer minY = request.postTransitionMinY();
         if (minY != null) {
-            cam.setMinY((short) (int) minY);
+            cam.setMinYCurrent((short) (int) minY);
         }
         Integer maxY = request.postTransitionMaxY();
         if (maxY != null) {
-            cam.setMaxY((short) (int) maxY);
+            cam.setMaxYCurrent((short) (int) maxY);
         }
         Integer maxYTarget = request.postTransitionMaxYTarget();
+        Integer minXTarget = request.postTransitionMinXTarget();
+        if (minXTarget != null) {
+            cam.setMinXTarget((short) (int) minXTarget);
+        }
+        Integer maxXTarget = request.postTransitionMaxXTarget();
+        if (maxXTarget != null) {
+            cam.setMaxXTarget((short) (int) maxXTarget);
+        }
+        Integer minYTarget = request.postTransitionMinYTarget();
+        if (minYTarget != null) {
+            cam.setMinYTarget((short) (int) minYTarget);
+        }
         if (maxYTarget != null) {
             cam.setMaxYTarget((short) (int) maxYTarget);
         }
@@ -3071,7 +3263,7 @@ public class LevelManager {
      * The delta matches the player offset (player/camera/object offsets are the
      * same world shift for every S3K seamless act transition).
      */
-    void offsetCarriedObjectsForTransition(List<ObjectInstance> carried,
+    static void offsetCarriedObjectsForTransition(List<TransitionSstOccupant> carried,
                                                    SeamlessLevelTransitionRequest request) {
         if (request == null || carried == null || carried.isEmpty()) {
             return;
@@ -3081,11 +3273,45 @@ public class LevelManager {
         if (offsetX == 0 && offsetY == 0) {
             return;
         }
-        for (ObjectInstance instance : carried) {
-            if (instance != null && !com.openggf.level.objects.ObjectCallbackDispatch.call(
-                    objectManager, instance, instance::isDestroyed)) {
-                com.openggf.level.objects.ObjectCallbackDispatch.run(objectManager, instance,
-                        () -> instance.onCarriedAcrossSeamlessTransition(offsetX, offsetY));
+        LevelManager currentLevelManager = GameServices.levelOrNull();
+        ObjectManager callbackManager = currentLevelManager != null
+                ? currentLevelManager.getObjectManager() : null;
+        for (TransitionSstOccupant occupant : carried) {
+            ObjectInstance instance = occupant.identity();
+            if (instance == null || com.openggf.level.objects.ObjectCallbackDispatch.call(
+                    callbackManager, instance, instance::isDestroyed)) {
+                continue;
+            }
+            if (request.objectOffsetPolicy()
+                    == SeamlessLevelTransitionRequest.ObjectOffsetPolicy.ROM_WORLD_OFFSET_RANGE) {
+                int slot = occupant.originalSlot();
+                if (request.shouldApplyRomWorldOffset(slot, true,
+                        com.openggf.level.objects.ObjectCallbackDispatch.call(callbackManager,
+                                instance, instance::participatesInRomWorldTransitionOffset))) {
+                    if (!(instance instanceof RomWorldPositionedObject positioned)) {
+                        throw new IllegalStateException("SST slot " + slot + " reports render_flags bit 2 "
+                                + "without a native ROM position contract: "
+                                + instance.getClass().getName());
+                    }
+                    Runnable offset = () -> {
+                            positioned.offsetNativePositionWordsPreserveSubpixel(offsetX, offsetY);
+                            positioned.afterRomWorldTransitionOffset(offsetX, offsetY);
+                        };
+                    if (callbackManager == null) {
+                        offset.run();
+                    } else {
+                        com.openggf.level.objects.ObjectCallbackDispatch.run(
+                                callbackManager, instance, offset);
+                    }
+                }
+            } else {
+                Runnable offset = () -> instance.onCarriedAcrossSeamlessTransition(offsetX, offsetY);
+                if (callbackManager == null) {
+                    offset.run();
+                } else {
+                    com.openggf.level.objects.ObjectCallbackDispatch.run(
+                            callbackManager, instance, offset);
+                }
             }
         }
     }
@@ -3110,7 +3336,9 @@ public class LevelManager {
             }
             // Persistent insta-shield survives transitions but the ObjectManager was rebuilt
             // (rebuildManagersForActTransition creates a new one). Re-register + invalidate DPLC.
-            if (playable.getInstaShieldObject() != null) {
+            if (playable.getInstaShieldObject() != null
+                    && request.objectSurvivalPolicy()
+                    != SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST) {
                 playable.markInstaShieldForReregistration();
                 playable.getInstaShieldObject().invalidateDplcCache();
             }
@@ -3135,6 +3363,8 @@ public class LevelManager {
         }
         cam.setX((short) (cam.getX() + request.cameraOffsetX()));
         cam.setY((short) (cam.getY() + request.cameraOffsetY()));
+        cam.setXCopy((short) (cam.getXCopy() + request.cameraOffsetX()));
+        cam.setYCopy((short) (cam.getYCopy() + request.cameraOffsetY()));
     }
 
     /**
@@ -3148,8 +3378,12 @@ public class LevelManager {
      * reconstruct both managers so they reference {@code level.getObjects()}
      * and {@code level.getRings()} from the newly loaded act.
      */
-    void rebuildManagersForActTransition(Camera cam, List<ObjectInstance> persistentDynamicObjects) {
-        int cameraX = cam.getX();
+    void rebuildManagersForActTransition(Camera cam, List<TransitionSstOccupant> persistentDynamicObjects) {
+        rebuildManagersForActTransition(cam, persistentDynamicObjects, null, cam.getX());
+    }
+
+    void rebuildManagersForActTransition(Camera cam, List<TransitionSstOccupant> persistentDynamicObjects,
+                                         SeamlessLevelTransitionRequest request, int cameraX) {
         ObjectManager previousObjectManager = objectManager;
 
         // Rebuild ObjectManager with the new act's object spawns
@@ -3177,32 +3411,72 @@ public class LevelManager {
             objectManager.enablePermanentDestroyLatch();
         }
         collisionSystem.setObjectManager(objectManager);
-        objectManager.reset(cameraX);
+        if (request != null && request.objectSurvivalPolicy()
+                == SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST) {
+            objectManager.resetForSynchronousActTransition(cameraX);
+        } else {
+            objectManager.reset(cameraX);
+        }
         if (previousObjectManager != null && persistentDynamicObjects != null) {
+            List<ObjectInstance> carriedIdentities = new ArrayList<>(persistentDynamicObjects.size());
+            for (TransitionSstOccupant occupant : persistentDynamicObjects) {
+                carriedIdentities.add(occupant.identity());
+            }
             com.openggf.level.objects.ObjectCallbackDispatch.inheritOwners(
-                    objectManager, previousObjectManager, persistentDynamicObjects);
+                    objectManager, previousObjectManager, carriedIdentities);
         }
 
         // Rebuild RingManager with the new act's ring spawns
         RingSpriteSheet ringSpriteSheet = level.getRingSpriteSheet();
         ringManager = new RingManager(level.getRings(), ringSpriteSheet, this, touchResponseTable, audioManager);
-        ringManager.reset(cameraX);
+        pendingTransitionRingInitialization = request != null
+                && request.deferRingInitializationToLevelUpdate();
+        if (!pendingTransitionRingInitialization) {
+            ringManager.reset(cameraX);
+        }
         ringManager.ensurePatternsCached(graphicsManager, level.getPatternCount());
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null) {
+            gameplayMode.registerRingAdapter(ringManager);
+        }
 
-        // Re-register player dynamic objects (shield, invincibility) that were
-        // orphaned when the old ObjectManager was replaced.
-        // ROM: these live in Dynamic_object_RAM which persists across act transitions.
-        reregisterPlayerDynamicObjects(cam.getFocusedSprite());
+        boolean allLiveSst = request != null
+                && request.objectSurvivalPolicy()
+                == SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST;
+        // Rebind every player to the replacement manager. Legacy transitions
+        // recreate their retained power-up entries; ALL_LIVE_SST restores the
+        // same captured identities at their exact slots below and must not
+        // allocate/register them twice first.
+        rebindPlayerDynamicObjects(cam.getFocusedSprite(), !allLiveSst);
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            reregisterPlayerDynamicObjects(sidekick);
+            rebindPlayerDynamicObjects(sidekick, !allLiveSst);
         }
         if (persistentDynamicObjects != null) {
-            for (ObjectInstance object : persistentDynamicObjects) {
+            for (TransitionSstOccupant occupant : persistentDynamicObjects) {
+                ObjectInstance object = occupant.identity();
                 if (object != null && !com.openggf.level.objects.ObjectCallbackDispatch.call(
                         objectManager, object, object::isDestroyed)) {
-                    objectManager.addDynamicObject(object);
+                    if (request != null
+                            && request.objectSurvivalPolicy()
+                            == SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST
+                            && object instanceof com.openggf.level.objects.AbstractObjectInstance aoi) {
+                        objectManager.addDynamicObjectAtSlot(object, occupant.originalSlot());
+                    } else {
+                        objectManager.addDynamicObject(object);
+                    }
                 }
             }
+        }
+        // ALL_LIVE_SST must restore captured identities before the persistent
+        // insta-shield reconciles with the replacement manager. The refresh
+        // then observes a carried shield in place, while still registering an
+        // owner-created shield that was not live when the snapshot was taken.
+        if (allLiveSst) {
+            if (cam.getFocusedSprite() instanceof AbstractPlayableSprite playable) {
+                playable.refreshPersistentInstaShieldRegistration();
+            }
+            spriteManager.getSidekicks().forEach(
+                    AbstractPlayableSprite::refreshPersistentInstaShieldRegistration);
         }
     }
 
@@ -3215,11 +3489,18 @@ public class LevelManager {
     }
 
     private void reregisterPlayerDynamicObjects(Sprite sprite) {
+        rebindPlayerDynamicObjects(sprite, true);
+    }
+
+    private void rebindPlayerDynamicObjects(Sprite sprite, boolean registerPowerUps) {
         if (!(sprite instanceof AbstractPlayableSprite playable)) {
             return;
         }
         // Re-inject spawner since ObjectManager was rebuilt
         playable.setPowerUpSpawner(new DefaultPowerUpSpawner(objectManager));
+        if (!registerPowerUps) {
+            return;
+        }
         PowerUpObject shield = playable.getShieldObject();
         if (shield != null && !shield.isDestroyed()) {
             playable.getPowerUpSpawner().registerObject(shield);
@@ -3262,6 +3543,12 @@ public class LevelManager {
         return checkpointCoordinator.state();
     }
 
+    /** ROM results-title handoff clears Last_star_post_hit and bonus return state. */
+    public void clearCheckpointAndBonusReturnForActTitle() {
+        checkpointCoordinator.clear();
+        transitions.clearBonusStageReturn();
+    }
+
     public CheckpointState.RewindState captureCheckpointStateForRewind() {
         return checkpointCoordinator.captureRewindState();
     }
@@ -3271,6 +3558,14 @@ public class LevelManager {
             return;
         }
         checkpointCoordinator.restoreRewindState(checkpointRewindState);
+    }
+
+    public boolean isTransitionRingInitializationPendingForRewind() {
+        return pendingTransitionRingInitialization;
+    }
+
+    public void restoreTransitionRingInitializationPendingForRewind(boolean pending) {
+        pendingTransitionRingInitialization = pending;
     }
 
     // ==================== Transition Coordinator Delegation ====================
@@ -3410,6 +3705,7 @@ public class LevelManager {
         gameModule = null;
         objectManager = null;
         ringManager = null;
+        pendingTransitionRingInitialization = false;
         zoneFeatureProvider = null;
         levelRenderer.resetState();
         objectRenderManager = null;
@@ -3557,6 +3853,45 @@ public class LevelManager {
      * which bypasses the profile system and matches ROM behavior.
      */
     public void applySeamlessTransition(SeamlessLevelTransitionRequest request) {
+        applySeamlessTransition(request, true);
+    }
+
+    /** Executes a ScreenEvents-owned reload before that same frame's tail work. */
+    public void applySynchronousScreenEventTransition(SeamlessLevelTransitionRequest request) {
+        if (request == null) {
+            return;
+        }
+        // The owning ScreenEvents routine marks the post boundary only after
+        // its native post-Load_Level tail has completed. Marking here would
+        // expose a half-finished FBZ1BGE_Normal frame to LiveRewindManager.
+        transitions.beginSynchronousScreenEventTransition(currentZone, currentAct, request);
+        try {
+            applySeamlessTransition(request, false);
+        } finally {
+            transitions.endSynchronousScreenEventTransition();
+        }
+    }
+
+    /**
+     * Returns whether the current call stack owns the exact synchronous
+     * ScreenEvents reload. This is execution context, not persistent level
+     * state, and is consumed only while replacement event handlers initialize.
+     */
+    public boolean isApplyingSynchronousScreenEventTransition(
+            int sourceZone, int sourceAct, int targetZone, int targetAct) {
+        return transitions.isApplyingSynchronousScreenEventTransition(
+                sourceZone, sourceAct, targetZone, targetAct);
+    }
+
+    public void markSynchronousSeamlessTransitionBoundary() {
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null && gameplayMode.getLevelManager() == this) {
+            gameplayMode.markRewindBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
+        }
+    }
+
+    private void applySeamlessTransition(SeamlessLevelTransitionRequest request,
+                                         boolean advanceReloadFrameCounter) {
         if (request == null) {
             return;
         }
@@ -3566,31 +3901,12 @@ public class LevelManager {
             switch (request.type()) {
                 case MUTATE_ONLY -> applySeamlessMutation(request.mutationKey());
                 case RELOAD_SAME_LEVEL -> {
-                    SeamlessLevelTransitionRequest adjusted = SeamlessLevelTransitionRequest
-                            .builder(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
-                            .targetZoneAct(currentZone, currentAct)
-                            .deactivateLevelNow(request.deactivateLevelNow())
-                            .preserveMusic(request.preserveMusic())
-                            .preserveLevelGamestate(request.preserveLevelGamestate())
-                            .showInLevelTitleCard(request.showInLevelTitleCard())
-                            .forceAirOnStaleObjectSupportLoss(request.forceAirOnStaleObjectSupportLoss())
-                            .preserveOffsetCameraPosition(request.preserveOffsetCameraPosition())
-                            .postTransitionMinXIfPresent(request.postTransitionMinX())
-                            .postTransitionMaxXIfPresent(request.postTransitionMaxX())
-                            .postTransitionMinYIfPresent(request.postTransitionMinY())
-                            .postTransitionMaxYIfPresent(request.postTransitionMaxY())
-                            .postTransitionMaxYTargetIfPresent(request.postTransitionMaxYTarget())
-                            .playerOffset(request.playerOffsetX(), request.playerOffsetY())
-                            .cameraOffset(request.cameraOffsetX(), request.cameraOffsetY())
-                            .mutationKey(request.mutationKey())
-                            .musicOverrideId(request.musicOverrideId())
-                            .build();
-                    executeActTransition(adjusted);
-                    advanceFrameCounterAcrossSeamlessReload();
+                    executeActTransition(request.retargetedForReload(currentZone, currentAct));
+                    if (advanceReloadFrameCounter) advanceFrameCounterAcrossSeamlessReload();
                 }
                 case RELOAD_TARGET_LEVEL -> {
                     executeActTransition(request);
-                    advanceFrameCounterAcrossSeamlessReload();
+                    if (advanceReloadFrameCounter) advanceFrameCounterAcrossSeamlessReload();
                 }
             }
         } catch (IOException e) {
@@ -3827,5 +4143,10 @@ public class LevelManager {
      */
     public RewindSnapshottable<LevelSnapshot> levelRewindSnapshottable() {
         return LevelRewindSnapshotAdapter.create(this);
+    }
+
+    /** Returns the rewind adapter for the history-dependent persistent Plane B nametable. */
+    public RewindSnapshottable<LevelTilemapSnapshot> levelTilemapRewindSnapshottable() {
+        return new LevelTilemapRewindAdapter(tilemapManager);
     }
 }

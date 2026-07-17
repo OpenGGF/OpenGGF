@@ -1,0 +1,752 @@
+# Flying Battery Zone Complete Implementation Plan
+
+> **Integration checkpoint (2026-07-17):** execution paused for branch
+> integration before the final parity gates. The exact remaining trace,
+> compatibility, S1-donation, visual, and cleanup work is tracked in
+> `docs/s3k-zones/fbz-outstanding-actions.md`. This plan is not complete, and
+> pending tasks must not be relabelled green from focused evidence.
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` to execute this plan task-by-task. Every implementation task also uses the named S3K specialist skill, `superpowers:test-driven-development`, and two fresh review passes (spec compliance, then code quality). Fix and re-review until both are GREEN before advancing.
+
+**Goal:** Implement locked-on Sonic 3 & Knuckles Flying Battery Zone Acts 1 and 2 completely and pixel-accurately, then prove native parity, late complete-run trace parity, multi-sidekick safety, widescreen safety, and cross-game donation compatibility.
+
+**Architecture:** `Sonic3kFBZEvents` is the canonical mutable event owner, exposed through an event-backed `FbzZoneRuntimeState`. Objects communicate through an FBZ event bridge; render, scroll, collision, animation, and palette systems consume the typed state through runtime-owned registries. Route slices are delivered in dependency order. Trace capture/replay is comparison-only and intentionally deferred until implementation and focused validation are substantially complete.
+
+**Tech Stack:** Java 21, Maven, JUnit 5, S3K locked-on ROM data, `docs/skdisasm/sonic3k.asm`, runtime-owned zone frameworks, BizHawk 2.11, BK2 trace recorder/replay tooling.
+
+---
+
+## Execution contract
+
+- Execute in an isolated worktree created with `superpowers:using-git-worktrees` from `feature/ai-fbz-complete`. Preserve the unrelated root-workspace edits listed in the design session.
+- Before each object/badnik task, run the `s3k-implement-object` preflight. Before each boss task, run `s3k-implement-boss`. Use `s3k-plc-system`, `s3k-parallax`, `s3k-animated-tiles`, `s3k-palette-cycling`, and `s3k-zone-events` for their respective tasks.
+- For every behavior: add a focused test, run it and record the expected RED result in `docs/superpowers/research/2026-07-12-fbz-red-green-log.md`, implement the minimum disassembly-backed behavior, run GREEN, refactor, run relevant regressions, then request spec and quality reviews from fresh agents. A task is not complete while either review has a blocker or important finding.
+- Use S&K-side (`sonic3k.asm`, address `< 0x200000`) constants by default. A Sonic 3-half address requires an explicit verified no-S&K-equivalent note.
+- Never add zone/route/frame trace carve-outs, trace-state hydration, raw game-name branches, direct gameplay map writes, object singleton access, or silent placeholder fallbacks.
+- After every route wave, run the focused FBZ suite, the affected shared regressions, both rewind guards, and `mvn package`.
+- Preserve the existing `LevelFrameStep` order: player/object physics; camera move/clamp; post-camera fixed objects and `Sonic3kFBZEvents.update()`; mutation flush; boundary easing; post-camera placement sync; remaining level systems; deformation/animation/palette/render registries; render; rewind capture. Do not reorder the generic pipeline for FBZ. A phase exception requires a cited ROM call site and an existing pre-physics, fixed-slot, or camera-driven hook.
+
+## Source contracts
+
+- Approved architecture: `docs/superpowers/specs/2026-07-12-fbz-complete-zone-design.md`
+- Zone catalogue: `docs/s3k-zones/fbz-analysis.md`
+- Counted inventory: `docs/s3k-zones/fbz-object-inventory.md`
+- Authority: `docs/skdisasm/sonic3k.asm`, `docs/skdisasm/Levels/FBZ/`, and `docs/skdisasm/Levels/Misc/Object pointers - SK Set 1.asm`
+- Inventory convention: the raw 421/441 records include one `$FFFF` terminator per act. Runtime placements are 420 + 440 = 860. All tests and completion ratios use runtime placements while retaining raw-record assertions.
+
+## Mandatory route-wave gate
+
+Run this after Tasks 4, 11, 12, 14, and 17, in addition to each task's focused command. The named task is not GREEN until this gate passes.
+
+```powershell
+$guards = @(
+  'com.openggf.game.rewind.coverage.TestRewindCoverageGuard',
+  'com.openggf.game.rewind.coverage.TestStaticStateRewindCoverageGuard',
+  'com.openggf.game.mutation.TestNoDirectMapMutationsInGameplay',
+  'com.openggf.game.TestZoneEventRuntimeAccessGuard',
+  'com.openggf.game.sonic3k.TestS3kRuntimeStateReadGuard',
+  'com.openggf.game.sonic3k.TestS3kTransitionBridgeGuard',
+  'com.openggf.level.objects.TestObjectServicesMigrationGuard',
+  'com.openggf.level.objects.TestNoServicesInObjectConstructors',
+  'com.openggf.tests.TestNoServicesInObjectConstructors',
+  'com.openggf.tests.TestTraceReplayInvariantGuard'
+) -join ','
+mvn "-Dtest=$guards" test "-Ds3k.rom.path=s3k.gen"
+mvn package "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 1: Freeze the FBZ evidence and completeness gates
+
+**Skills:** `s3k-zone-analysis`, `s3k-disasm-guide`, `s3k-implement-object`
+
+**Files:**
+
+- Verify/update: `docs/s3k-zones/fbz-object-inventory.md`
+- Create: `src/test/java/com/openggf/game/sonic3k/objects/TestFbzObjectInventory.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/objects/TestFbzObjectRegistryCompleteness.java`
+- Create: `docs/superpowers/research/2026-07-12-fbz-red-green-log.md`
+- Create: `docs/superpowers/research/2026-07-12-fbz-trace-baseline.json`
+- Create: `docs/s3k-zones/fbz-visual-checkpoints.json`
+- Modify: `src/main/java/com/openggf/tools/Sonic3kObjectProfile.java`
+
+**Steps:**
+
+1. Add RED tests that decode both placement binaries and assert 421/441 raw records, one terminator per act, 420/440 runtime spawns, every ID/subtype count in the inventory, and 535 current placeholder placements.
+2. Add a registry-completeness test whose allowlist is derived from the checked inventory. It must identify missing S3KL factories without accepting SKL remaps for `$A8/$A9`.
+3. Extend the inventory with the audio-cue and VRAM/PLC handoff matrices from the design. Resolve every mapping/art/animation/PLC label used by later tasks with `RomOffsetFinder --game s3k`; record the verified side/address.
+4. Without executing trace replay, freeze the last persisted result for every known-red trace as the lexicographic tuple `(firstErrorFrame, errorCount, warningCount)` and separately enumerate every currently green complete-run regression class in a `green_test_classes` JSON array. Record provenance and `unknown/not previously run` explicitly where no persisted result exists. Do not capture or replay the FBZ complete-run segment before Task 20.
+5. GREEN the inventory tests without weakening existing profile guards. Commit the gate before object implementations begin.
+6. Define immutable native visual checkpoints now, before render work: exact world coordinates/reference frames and assertions for act starts, every indoor/outdoor boundary, AniPLC/palette/parallax samples, bosses, plane transition, exit, and capsule. Task 19 performs the captures and records results; later implementations may not move checkpoints to fit their output.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzObjectInventory,TestFbzObjectRegistryCompleteness" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 2: Introduce the canonical background-plane collision provider
+
+**Skills:** `superpowers:test-driven-development`, `superpowers:systematic-debugging`
+
+**Files:**
+
+- Create: `src/main/java/com/openggf/physics/BackgroundPlaneCollisionProvider.java`
+- Create: `src/main/java/com/openggf/physics/DefaultBackgroundPlaneCollisionProvider.java`
+- Modify: `src/main/java/com/openggf/game/zone/ZoneRuntimeState.java`
+- Modify: `src/main/java/com/openggf/game/session/GameplayModeContext.java`
+- Modify: `src/main/java/com/openggf/game/session/GameplaySessionFactory.java`
+- Modify: `src/main/java/com/openggf/game/GameServices.java`
+- Modify: `src/main/java/com/openggf/physics/GroundSensor.java`
+- Modify: `src/main/java/com/openggf/physics/CollisionSystem.java`
+- Modify: `src/main/java/com/openggf/level/rings/RingManager.java`
+- Modify: `src/main/java/com/openggf/level/rings/LostRingObjectInstance.java`
+- Create: `src/test/java/com/openggf/physics/TestBackgroundPlaneCollisionProvider.java`
+- Create: `src/test/java/com/openggf/physics/TestFbzBackgroundPlaneCollision.java`
+- Create: `src/test/java/com/openggf/physics/TestFbzCalcRoomInFrontBackgroundCollision.java`
+- Create: `src/test/java/com/openggf/level/rings/TestFbzRingBackgroundCollision.java`
+
+**Steps:**
+
+1. Add RED provider tests for inactive foreground-only probes and active dual-layer floor/wall/ceiling/ring probes using ROM `Camera_X_diff`/`Camera_Y_diff`, including `GroundSensor.scanWorld` and `CalcRoomInFront`.
+2. Make `GameplayModeContext` own one provider. Its default adapter translates the existing `GameStateManager.backgroundCollisionFlag` and active parallax camera differences so HCZ/MGZ/CNZ behavior is unchanged.
+3. Add an optional explicit semantic state to `ZoneRuntimeState`; FBZ will later publish collision mode and camera differences through it.
+4. Route every relevant terrain and ring probe through the provider. Select the nearer valid result with ROM signed-distance semantics and restore caller world coordinates.
+5. Run HCZ/MGZ/CNZ focused regressions before accepting the shared migration.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestBackgroundPlaneCollisionProvider,TestFbzBackgroundPlaneCollision,TestFbzCalcRoomInFrontBackgroundCollision,TestFbzRingBackgroundCollision,TestS3kHcz2RaisedFloorWallCollisionHeadless,TestS3kCnzMinibossArenaHeadless,TestS3kMgz2BgRiseHeadless,TestS3kCnzBossScrollHandler" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 3: Add event-backed FBZ runtime state and registration
+
+**Skills:** `s3k-zone-events`, `superpowers:test-driven-development`
+
+**Files:**
+
+- Create: `src/main/java/com/openggf/game/sonic3k/events/Sonic3kFBZEvents.java`
+- Create: `src/main/java/com/openggf/game/sonic3k/events/FbzObjectEventBridge.java`
+- Create: `src/main/java/com/openggf/game/sonic3k/events/S3kFbzEventWriteSupport.java`
+- Create: `src/main/java/com/openggf/game/sonic3k/runtime/FbzZoneRuntimeState.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kLevelEventManager.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/runtime/S3kRuntimeStates.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/constants/Sonic3kConstants.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/TestFbzZoneRuntimeState.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/TestFbzRuntimeStateRegistration.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/events/TestFbzEventWriteSupport.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/events/TestFbzEventRewindRoundTrip.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/events/TestFbzFramePhaseOrdering.java`
+
+**Steps:**
+
+1. RED-test handler-backed state installation, `isBackedBy`, bridge write routing, invalid stages/modes, and capture/restore/capture byte equality.
+2. Model layout-region state, indoor/outdoor flags, redraw state/direction, bob offset, magnetic phase/polarity, Act 2 foreground/background stages and offsets, boss-load flag, plane/collision mode, shake inputs, and ten stable cloud rewind IDs.
+3. Serialize authoritative FBZ handler fields only through `FbzZoneRuntimeState.captureBytes()/restoreBytes()`. Exclude those fields from `Sonic3kLevelEventManager`'s event sidecar; after zone-runtime restore, the manager only rebinds/reconciles the current handler and object IDs. RED-test that the same fields are not captured or restored twice.
+4. Construct/install/reconcile the handler and adapter during level load, death, checkpoint, seamless reload, and rewind restoration. Do not register `ZoneRuntimeRegistry` a second time.
+5. Keep event methods as the sole state writers; objects mutate through the bridge and consumers read through `FbzZoneRuntimeState`.
+6. Pin and test the established `LevelFrameStep` phases. FBZ event state written post-camera affects the mutation flush/boundary phases that follow; polarity/object writes run in their proven object/fixed-slot phase; collision-mode writes become visible on the next player collision pass. Reject any implementation that moves the shared event pipeline.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzZoneRuntimeState,TestFbzRuntimeStateRegistration,TestFbzEventWriteSupport,TestFbzEventRewindRoundTrip,TestFbzFramePhaseOrdering,TestS3kZoneRuntimeStateAdapters,TestSonic3kLevelEventRewindSnapshot" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 4: Implement FBZ deform, plane rendering, AniPLC, polarity, palette, and art foundations
+
+**Skills:** `s3k-parallax`, `s3k-animated-tiles`, `s3k-palette-cycling`, `s3k-plc-system`
+
+**Files:**
+
+- Create: `src/main/java/com/openggf/game/sonic3k/scroll/SwScrlFbz.java`
+- Create: `src/main/java/com/openggf/game/sonic3k/render/FbzBossPlaneRenderMode.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/scroll/Sonic3kScrollHandlerProvider.java`
+- Modify: `src/main/java/com/openggf/game/render/AdvancedRenderFrameState.java`
+- Modify: `src/main/java/com/openggf/level/LevelRenderer.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kZoneFeatureProvider.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kPatternAnimator.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/S3kAnimatedTileChannels.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kPaletteCycler.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtKeys.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArt.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtProvider.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kPlcArtRegistry.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kPlcLoader.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/TestFbzScrollHandler.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/TestFbzBossCloudDeform.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/render/TestFbzBossPlaneRenderMode.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/TestFbzAnimatedTiles.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/TestFbzMagneticPolarity.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/TestFbzPlcArtHandoffs.java`
+
+**Steps:**
+
+1. RED-test exact representative H/V-scroll words for indoor 34-band scatter fill, outdoor eight-band `$0E00` drift/bob, and `FBZ2_CloudDeform` `$8000` drift/offset/shake paths from `FBZ_Deform`, its arrays/index tables, and `FBZCloud_PositionFrameData`.
+2. Implement `SwScrlFbz` with `ScrollEffectComposer`, `DeformationPlan`, and `ScatterFillPlan`; register it by provider so reloads reconstruct it.
+3. Add generic advanced-render state for Plane A/B assignment and independent foreground/background V-scroll overrides. Implement FBZ plane reversal as a typed-state contributor; keep collision and rendering as separate consumers of the same event mode.
+4. Register all five Act 1 and Act 2 AniPLC channels at `$200-$247`. Assert script 3 is the first/live writer of `$200-$207`, while FBZ spikes only reference those tile IDs.
+5. Dispatch `AnPal_FBZ`'s 256-frame magnetic phase into event-owned state. Do not invent color cycling. Implement event palette data/ownership for line 4 colors 2-9 and boss setup color 1.
+6. Register verified gimmick, miniboss, subboss, cloud, pillar, end-boss, exit, and capsule art/PLC entries before any consumer task is enabled.
+7. Run the mandatory route-wave gate. This is the **foundation wave boundary**.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzScrollHandler,TestFbzBossCloudDeform,TestFbzBossPlaneRenderMode,TestFbzAnimatedTiles,TestFbzMagneticPolarity,TestFbzPlcArtHandoffs,TestSonic3kPatternAnimatorRewindSnapshot,TestSonic3kPlcArtRewindSnapshot" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 5: Port Act 1 screen/background events and staged mutations
+
+**Skills:** `s3k-zone-events`, `s3k-implement-object`
+
+**Files:**
+
+- Modify: `src/main/java/com/openggf/game/sonic3k/events/Sonic3kFBZEvents.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/runtime/FbzZoneRuntimeState.java`
+- Create: `src/main/java/com/openggf/game/sonic3k/objects/FbzOutdoorBgMotionObjectInstance.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/events/TestFbzEventsAct1.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/events/TestFbzAct1LayoutMutations.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/objects/TestFbzOutdoorBgMotion.java`
+
+**Steps:**
+
+1. RED-test `FBZ1_ScreenInit`, all six `FBZ1_ScreenEvent` layout ranges, `FBZ1_BackgroundInit`, all background redraw directions/stages, palette patch timing, death gating, and deform-mode changes.
+2. Port the exact threshold and copy dimensions from `FBZ1_LayoutModRange`. Submit gameplay writes through `ZoneLayoutMutationPipeline`; never mutate `Map` directly.
+3. Resolve the palette ownership patch during the staged redraw and reapply it during state reconciliation.
+4. Implement `Obj_FBZOutdoorBGMotion` as the ordinary dynamically allocated object it is in the ROM: execute it in the established dynamic-object slot phase before camera/events, publish `Events_bg+$08` through the bridge, and assert that the same frame's later deformation phase consumes the new bob value. Do not move it after post-camera placement sync or add an FBZ-specific generic-loop reorder.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzEventsAct1,TestFbzAct1LayoutMutations,TestFbzOutdoorBgMotion,TestNoDirectMapMutationsInGameplay" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 6: Validate shared FBZ placements and add the two missing shared factories
+
+**Skills:** `s3k-implement-object`
+
+**Files:**
+
+- Modify only as required: existing shared object classes for IDs `$00,$01,$02,$07,$08,$0F,$26,$28,$2A,$2F,$33,$34,$3D,$6A,$6B,$80,$85`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kPlcArtRegistry.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/objects/TestFbzSharedObjectSubtypes.java`
+
+**Steps:**
+
+1. RED-test every shared subtype listed in the counted inventory, including FBZ art/collision configuration and remembered-placement behavior.
+2. Add correct S3KL factories/behavior for placed Ring `$00` and Retracting Spring `$3D`; do not treat the terminator records as rings.
+3. Correct only proven subtype gaps. Preserve all non-FBZ shared behavior through data/profile configuration rather than zone checks in common physics.
+4. Ratchet the completeness test from 535 to 533 placeholder placements.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzSharedObjectSubtypes,TestFbzObjectInventory,TestFbzObjectRegistryCompleteness" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 7: Implement route-critical carrier and transport families
+
+**Skills:** `s3k-implement-object`
+
+**Families/files:** create `FbzWireCageObjectInstance`, `FbzWireCageStationaryObjectInstance`, `FbzFloatingPlatformObjectInstance`, `FbzChainLinkObjectInstance`, `FbzSnakePlatformObjectInstance`, `FbzBentPipeObjectInstance`, `FbzRotatingPlatformObjectInstance`, and `FbzDezPlayerLauncherObjectInstance` under `src/main/java/com/openggf/game/sonic3k/objects/`; modify `src/main/java/com/openggf/game/sonic3k/constants/Sonic3kObjectIds.java`, `Sonic3kConstants.java`, `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`, `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtKeys.java`, `Sonic3kObjectArt.java`, `Sonic3kObjectArtProvider.java`, `Sonic3kPlcArtRegistry.java`, and `src/main/java/com/openggf/tools/Sonic3kObjectProfile.java`; create `TestFbzWireCages`, `TestFbzRailAndChainPlatforms`, `TestFbzSnakeAndRotatingPlatforms`, and `TestFbzPlayerTransportObjects`.
+
+**Steps:**
+
+1. For `$6F-$72,$75-$78`, decode every used subtype and child-allocation primitive from the inventory and `sonic3k.asm`; record preflight results in the RED/GREEN log.
+2. RED-test fixed-point motion, exact trig/table steps, solid/riding state, grab/release/forced-control bits, player positioning through `NativePositionOps`, allocation order, offscreen lifetime, and all used subtype branches.
+3. Implement with `ObjectServices`, `ObjectControlState`, explicit participation policies, `ObjectLifetimeOps`, and `spawnChild`/slot-aware replacement.
+4. Test more than two eligible characters at shared solids/carriers now; native parity remains the acceptance authority.
+5. Ratchet the completeness count for only these implemented inventory rows.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzWireCages,TestFbzRailAndChainPlatforms,TestFbzSnakeAndRotatingPlatforms,TestFbzPlayerTransportObjects,TestFbzObjectRegistryCompleteness" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 8: Implement mechanical platforms, doors, launchers, and missiles
+
+**Skills:** `s3k-implement-object`
+
+**Families/files:** create `FbzDisappearingPlatformObjectInstance`, `FbzScrewDoorObjectInstance`, `FbzSpinningPoleObjectInstance`, `FbzPropellerObjectInstance`, `FbzPistonObjectInstance`, `FbzPlatformBlocksObjectInstance`, `FbzMissileLauncherObjectInstance`, and `FbzWallMissileObjectInstance`, with concrete missile/companion child classes; modify `src/main/java/com/openggf/game/sonic3k/constants/Sonic3kObjectIds.java`, `Sonic3kConstants.java`, `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`, `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtKeys.java`, `Sonic3kObjectArt.java`, `Sonic3kObjectArtProvider.java`, `Sonic3kPlcArtRegistry.java`, and `src/main/java/com/openggf/tools/Sonic3kObjectProfile.java`; create `TestFbzDisappearingPlatformAndScrewDoor`, `TestFbzPolePropellerPistonAndBlocks`, and `TestFbzMissileObjects`.
+
+**Steps:**
+
+1. Cover `$79-$7F,$E0` and every used subtype from the inventory in RED tests.
+2. Port animation timers, solidity windows, button/event dependencies, collision/hurt timing, missile cadence/trajectory, launch companion allocation, child-to-explosion replacement, and respawn semantics.
+3. Verify mapping/animation addresses and exact art tile/palette/priority values before enabling renderers.
+4. Ratchet the completeness gate and run the Act 1 event/transport suite.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzDisappearingPlatformAndScrewDoor,TestFbzPolePropellerPistonAndBlocks,TestFbzMissileObjects,TestFbzEventsAct1,TestFbzObjectRegistryCompleteness" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 9: Implement magnetic and environmental hazard families
+
+**Skills:** `s3k-implement-object`, `s3k-palette-cycling`
+
+**Families/files:** create `FbzMagneticSpikeBallObjectInstance`, `FbzMagneticPlatformObjectInstance`, `FbzMineObjectInstance`, `FbzTrapSpringObjectInstance`, `FbzFlamethrowerObjectInstance`, `FbzSpiderCraneObjectInstance`, and `FbzMagneticPendulumObjectInstance`, plus real child classes; modify `src/main/java/com/openggf/game/sonic3k/constants/Sonic3kObjectIds.java`, `Sonic3kConstants.java`, `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`, `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtKeys.java`, `Sonic3kObjectArt.java`, `Sonic3kObjectArtProvider.java`, `Sonic3kPlcArtRegistry.java`, and `src/main/java/com/openggf/tools/Sonic3kObjectProfile.java`; create `TestFbzMagneticObjects`, `TestFbzMine`, `TestFbzTrapSpring`, `TestFbzFlamethrower`, and `TestFbzSpiderCraneAndPendulum`.
+
+**Steps:**
+
+1. RED-test `$73,$74,$E1,$E3-$E5,$FF` across every used subtype, the exact 256-frame polarity edge, field/chain construction, damage cadence, claw/grab policies, and child allocation/deletion.
+2. Read polarity only from `FbzZoneRuntimeState`; objects do not own competing timers.
+   Only `$73/$74` consume the bit. `$FF` is a strict-P1 three-slot pendulum
+   grab/swing/launcher and must not be coupled to magnetic polarity.
+3. Test death/restart/rewind around the polarity edge and three-or-more-character contact with hazards/grabbers.
+4. Ratchet completeness and rerun animation/palette/rewind coverage.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzMagneticObjects,TestFbzMine,TestFbzTrapSpring,TestFbzFlamethrower,TestFbzSpiderCraneAndPendulum,TestFbzMagneticPolarity,TestRewindCoverageGuard" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 10: Implement Blaster and Technosqueek
+
+**Skills:** `s3k-implement-object`
+
+**Files:**
+
+- Create: `src/main/java/com/openggf/game/sonic3k/objects/badniks/BlasterBadnikInstance.java`
+- Create: `src/main/java/com/openggf/game/sonic3k/objects/badniks/TechnoSqueekBadnikInstance.java`
+- Create concrete real-slot classes for the attached Blaster attack effect
+  (`ChildObjDat_89726`), both independent Blaster projectiles/effects
+  (`8972E`, `89746`), and the persistent parent-owned TechnoSqueek child
+  (`89B24`). Task 10 also owns reusable detached/falling Blaster and
+  TechnoSqueek entry forms for `$CF` subtype 2; Task 17 only integrates those
+  completed forms into the prison release table.
+- Modify: `src/main/java/com/openggf/game/sonic3k/constants/Sonic3kObjectIds.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`
+- Modify: `src/main/java/com/openggf/tools/Sonic3kObjectProfile.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/objects/badniks/TestFbzBlaster.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/objects/badniks/TestFbzTechnoSqueek.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/objects/badniks/TestFbzBadnikGraphRewind.java`
+- Create or extend focused PLC/mapping coverage in
+  `src/test/java/com/openggf/game/sonic3k/TestSonic3kPlcArtRegistry.java`
+
+`Sonic3kConstants`, `Sonic3kObjectArtKeys`, and `Sonic3kPlcArtRegistry`
+already contain the verified S&K-side art/mapping addresses and both standalone
+FBZ registrations. Change them only if the mandatory exact-shape tests expose
+a real defect; do not duplicate the existing art path.
+
+**Steps:**
+
+1. Freeze the exact placement boundary: `$A8` has 24 records (Act 1: 10;
+   Act 2: 14), `$A9` has 39 (Act 1: 13; Act 2: 26), so the executable
+   placeholder count must move exactly `101 -> 38`. RED-test `$A8` subtypes
+   `08,20,30`, `$A9` subtypes `00,02,04`, and their independent placement
+   orientation flags. Twelve Blasters have Y/render flag bit 1 and are magnetic
+   ceiling consumers; subtype alone never selects floor versus ceiling.
+2. Port Blaster initialization and targeting exactly: initial `$80` X velocity
+   tracks native P1, while attack acquisition chooses the closest native P1/P2
+   by signed 16-bit X distance (P1 wins ties), requires the target at or above
+   the badnik, within `$80`, and on its facing side. Extend the native-P2 role
+   safely to additional engine sidekicks without changing native two-player
+   results.
+3. Port Blaster patrol/wait underflow, ledge probes, attack timing, and the
+   magnetic interrupt before any ordinary routine work. On an active same-frame
+   `_unkF7C1` edge it saves the exact current routine and X velocity, rises with
+   `$20` acceleration to the ceiling, waits while active, falls with `$20`
+   acceleration, then restores routines 2/4/6/8 and their in-progress state.
+   Use the shared `FbzZoneRuntimeState`; do not create a family-local magnetic
+   clock or defer a palette-fade-suppressed edge.
+4. Preserve activation and after-current execution order before testing
+   cadence. On the first visible `Obj_WaitOffscreen` update, the shim only
+   restores the real object code; initialization occurs on the next frame.
+   Successful after-current allocations execute later in their creation frame.
+   `89726` performs init only and does not draw that frame. `8972E/89746` fall
+   through projectile init into movement, gravity, animation, cull, and touch in
+   the creation frame, changing mapping 5 to 6 and 7 to 8 respectively.
+   `89B24` initializes and draws mapping 2 in its creation frame.
+5. Preserve after-current allocation semantics and one-shot failure behavior.
+   After 17 attack-wait updates Blaster attempts `89726` first and `8972E`
+   second; `89746` is attempted later only on the attack-animation
+   `anim_frame==6` edge. `89726` refreshes relative to its parent slot but does
+   not check or delete with the parent; it is an independent short-lived slot
+   that terminates only through its raw-animation `$F4` callback.
+   `8972E/89746` are independent siblings. Port their exact adjusted offsets,
+   signed 8.8 velocities integrated into 16.16 positions, gravity, collision
+   (`$98` versus zero), shield-reaction, animation, priority, and XY culls.
+   Allocation failures do not retry or advance success-only state.
+6. Port TechnoSqueek without invented fire behavior or audio. Subtypes `$00`
+   and `$02` use the horizontal `$400`/`$20` swing (with `$02` forcing render
+   bit 1); `$04` uses its vertical counterpart. Preserve exact zero-velocity
+   turn transitions, raw animation/flip scripts, and bit-1 child offsets. The
+   `$2E=$10` word is consumed by the moving routine's tail-call to `Obj_Wait`:
+   it reaches zero after 16 moving updates and underflows on update 17, invoking
+   `loc_89926` before the after-current child runs and clearing bit 5. The same
+   callback is also selected by raw-animation `$F4` on update 93, but that later
+   call is redundant. Preserve the full 33-update turn animation before the
+   resumed moving phase.
+   `89B24` gets one after-current allocation attempt, no retry, and parent-status
+   deletion.
+7. Implement the two detached/falling entry routines now: Blaster launches at
+   `+/-$200,-$200`; TechnoSqueek at `+/-$200,-$300`, uses light gravity `$20`,
+   allocates its own `89B24`, and converts in-place to the normal patrol on
+   landing. Task 17 must call these concrete entry points for `$CF` subtype 2
+   rather than reimplementing them.
+8. Keep all ROM `x_pos/y_pos` work on centre-coordinate APIs. Main badniks use
+   current-position unsigned coarse-X `$280` deletion with placement-respawn
+   release; projectiles use current-position XY deletion. Preserve continuous
+   ENEMY touch polling, standard chain score, animal/explosion/Break SFX, and
+   assert that neither family emits a patrol, attack, detach, or impact SFX.
+9. Recreate every separate slot under rewind. Parent-relative effects and
+   parent-owned attached children relink by exact rewind identity and role,
+   including two parents at identical coordinates; the `89726` lifetime and
+   both projectiles remain independent. Test
+   in-place and forced reconstruction, allocation failure, exact slots, no
+   duplicate post-restore allocation, parent deletion, and more than two
+   configured sidekicks.
+10. Register S3KL factories while retaining the existing SKL `$A8/$A9` MHZ
+   cutscene implementations. Add an explicit MHZ negative/remap regression,
+   not merely an FBZ name assertion.
+11. Pin existing art data: Blaster has 11 mapping frames with piece counts
+    `4,4,4,1,1,1,1,1,1,1,1` and maximum tile `$27`; TechnoSqueek has 10
+    one-piece frames and maximum base tile `$22`. Both use palette 1, high
+    plane priority, priority `$280`, and the existing `PLCKosM_FBZ` entries.
+    Run the global mapping crawler and renderer corruption guard.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzBlaster,TestFbzTechnoSqueek,TestFbzBadnikGraphRewind,TestFbzObjectRegistryCompleteness,TestSonic3kPlcArtRegistry,TestPatternSpriteRendererCorruptionGuard,TestObjectServicesMigrationGuard,TestRewindCoverageGuard" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 11: Implement the Act 1 miniboss graph
+
+**Skills:** `s3k-implement-boss`, `s3k-plc-system`
+
+**Files:** create `FbzMinibossInstance` and all separate-slot children/controllers represented by `ChildObjDat_6FA76`, the two independently allocated five-link `loc_6F3DE` chains created from `word_6FAA2` (ten links at full allocation), `6FAA8`, `6FAB0`, `89ED0`, and `86B7A` under the boss/object packages; add `FbzMinibossRewindLinks`; modify `src/main/java/com/openggf/game/sonic3k/constants/Sonic3kObjectIds.java`, `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`, and only the art/profile files whose already-established FBZ miniboss entries require a concrete implementation change; create `TestFbzAct1Miniboss`, `TestFbzMinibossChildren`, `TestFbzMinibossRewind`, and `src/test/java/com/openggf/tests/TestFbzAct1RouteHeadless.java`. The existing direct Kosinski-Moduled art entry (`0x1652B4`) and mapping entry (`0x06FAF8`) are the locked-on source of truth; do not replace them with unused S3 PLC `$5E`.
+
+**Steps:**
+
+1. RED-test the single placed S3KL `$AA` object at `$2F00,$05E0` (SKL `$AA` remains Hyudoro), completeness decrease of exactly one, object-owned camera range Y `$240..$600`/X `$2D20..$2F20`, min-X chase, target Y `$540`, and final `$2E20..$2EA0` lock. The plunger sets root bit 0 only from its own status bit 3, the native P1-standing bit; P2 and extra sidekicks may ride/collide with it but cannot start the fight. After the start edge, `$2E=$78` reaches the music callback on `Obj_Wait` update 121 because the word is predecremented and branches only when negative. Then test seven initial children, both independently allocated five-link `word_6FAA2` chains, the full 18-slot persistent graph and 19-slot graph while the palette child exists, cyclic arm/chain endpoint links, same-pass first ticks, and every partial-prefix allocation failure with no retry or auto-fill.
+2. Port the full reachable call graph: one-time cover phases with `$2E=$20/$20/$40` consume 33/33/65 `Obj_Wait` updates under the same predecrement-negative rule; closest-native-pair aimer with P1 tie; P1-only outward lunge target; exact byte-angle, circular interpolation, and 24:8 outbound/pause/return phases whose `$1F` waits consume 32 updates each; and `sfx_MechaLand` at the pause edge. The normal chain terminal causes six scripted self-damage cycles rather than accepting direct player attacks. The first five hits alone play `sfx_BossHit` and run the exact 32-update four-word palette flash; the sixth starts defeat. Preserve ordinary `$86` terminal hurt/shield behavior and do not award an invented boss-hit score.
+3. Preserve the locked-on art path: direct `ArtKosM_FBZMiniboss`, `Map_FBZMiniboss`, `Pal_FBZMiniboss`, plus the shared raw boss-explosion PLC. Add the exact 18-frame piece-count vector `4,1,1,2,2,2,2,4,6,6,6,6,6,6,6,6,6,2`, max local tile `$51`, the 32-byte palette, attack-child EEE/`$644` script, hit-flash overlap arbitration, audio-edge tests, and mandatory corruption guards. Explicitly reject unused S3 PLC `$5E` as a runtime source.
+4. Port defeat as the exact one-shot/independent allocations and lifetimes: subtype-zero explosion control makes 31 every-third-update attempts with captured RNG; the boss slot converts in place to end-sign control; one global fade helper, one `6FAB0` helper, five `89ED0` animals, and five `86B7A` fragments retain their separate failure groups. Recreate/relink partial and complete graphs deterministically after rewind and checkpoint restart, including stable arm-side/link-index roles, cyclic endpoints, attack palette state, captured P1 target, camera ownership, and no stale or duplicated transient after slot conversion.
+5. Prove the native Act 1 route reaches and defeats the boss without placeholders or debug movement, then prove P2/extra riders and touch participants remain safe without gaining P1's plunger-start authority or changing the native closest-pair aimer/P1-only lunge target, and prove the world-coordinate camera lock under widescreen.
+6. Assert that the boss defeat routine does **not** publish `Events_fg_5`; the later `Obj_LevelResultsCreate` equivalent owns publication after signpost/results setup. Task 12 owns FBZ1 background consumption and the seamless transition.
+7. Run the mandatory route-wave gate. This is the **Act 1 traversal/boss wave boundary**.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzAct1Miniboss,TestFbzMinibossChildren,TestFbzMinibossRewind,TestFbzAct1RouteHeadless,TestFbzObjectRegistryCompleteness,TestFbzPlcArtHandoffs,TestSonic3kPlcArtRegistry,TestPatternSpriteRendererCorruptionGuard" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 12: Implement the seamless Act 1-to-Act 2 transition
+
+**Skills:** `s3k-zone-events`, `superpowers:test-driven-development`
+
+**Files:**
+
+- Modify: `src/main/java/com/openggf/level/SeamlessLevelTransitionRequest.java`
+- Modify: `src/main/java/com/openggf/level/LevelActTransitionExecutor.java`
+- Modify: `src/main/java/com/openggf/level/LevelManager.java`
+- Modify: `src/main/java/com/openggf/level/objects/ObjectManager.java`
+- Modify: `src/main/java/com/openggf/level/objects/ObjectSlotLayout.java`
+- Modify: `src/main/java/com/openggf/level/objects/ObjectInstance.java`
+- Modify: `src/main/java/com/openggf/level/objects/AbstractObjectInstance.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kLevelEventManager.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/events/Sonic3kFBZEvents.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/FbzMinibossInstance.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/S3kResultsScreenObjectInstance.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/S3kSignpostInstance.java`
+- Create: `src/test/java/com/openggf/tests/TestFbzActTransitionHeadless.java`
+- Create: `src/test/java/com/openggf/level/objects/TestFbzRomWorldOffsetPolicy.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/objects/TestFbzResultsTitleAndAct2Sizes.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/events/TestFbzTransitionRewind.java`
+
+**Steps:**
+
+1. RED-test the exact writer and same-frame consumer ordering. `Obj_LevelResultsCreate`, only after `Kos_modules_left==0`, creates the results children and then sets `Events_fg_5` for FBZ Act 1; neither the miniboss nor signpost defeat publishes it. `LevelLoop` runs `Process_Sprites`, then `ScreenEvents`, then `Load_Rings`, so `FBZ1BGE_Normal` must see and clear the flag in that same frame, before the results tally/exit, while still completing its ordinary `FBZ1BGE_GoDeform` tile-row/deformation tail. Do not freeze or early-return from the background event.
+2. RED-test the exact transition payload and live-state split: invoke `Load_PLC($1C)` exactly once, with no second upload through the `$1D` level-load alias; change only `Current_zone_and_act` to FBZ2 while `Apparent_act` remains Act 1; clear Dynamic-resize, object-load, rings-manager, boss, respawn-keep, and the complete level-trigger array; reload the level/solids; select immediate palette `$13`; then subtract `$2E00` from all engine playables, camera current/copy, current min/max X bounds, and eligible ROM objects. Preserve current min/max Y and target bounds, timer, ring count, music, control state, and subpixel fractions. Use `RELOAD_TARGET_LEVEL`, `deactivateLevelNow=false`, `preserveMusic=true`, `showInLevelTitleCard=false`, `preserveLevelGamestate=true`, fresh placement/ring respawn state, `preserveOffsetCameraPosition=true`, player/camera offset `(-$2E00,0)`, and explicit post-transition camera-bound overrides derived from the pre-load live bounds instead of accepting FBZ2's full `$0000..$6000/$0000..$0B00` `LevelSizes` entry.
+3. Separate survival from coordinate offset. `Load_Level` copies only the `$1000` layout bytes and does not clear SST, so every live SST/fixed occupant survives the transition at its original slot, including global dynamic slot 3, slot 94 and later, and render-bit-2-clear results/title objects. The ROM offset loop independently scans global SST slot 4 through slot 93 inclusive (`[4,94)`), and subtracts `$2E00` only when code is nonzero and render flag bit 2 is set. Add a request-scoped `ROM_WORLD_OFFSET_RANGE` (not a carry/survival range) with explicit start-inclusive/end-exclusive bounds; retain existing carry defaults for other transitions.
+4. RED-test all offset boundaries and graph cases: slot 3 survives without shift; slot 4 shifts; slot 93 shifts; slot 94 (`Breathing_bubbles`) and later survive without shift; bit-2-clear objects survive without shift; in-range slot-backed `BossChildComponent` children restore at their original slots and shift only when eligible; slotless/composite children survive only through their owner graph and receive no independent allocation or double shift. If the engine's manager rebuild is unavoidable, snapshot and restore **all** live SST/fixed occupants and their links, preserve slot 93 representability, rebind graphs first, apply native centre-coordinate/subpixel-preserving offsets exactly once, and only then run per-object anchor/origin/target hooks exactly once.
+5. RED-test the two loader cadences. Ring initialization runs later in the transition frame after `ScreenEvents`, clears its routine/status because `Respawn_table_keep=0`, selects FBZ2 ring data, and windows from the post-offset camera. Object placement initialization cannot run until the next frame because that frame's `Process_Sprites` already completed; it clears object respawn state, selects FBZ2 placements, and also windows from the post-offset camera. No `StartNewLevel`, fade, restart, title card, or early music change is permitted.
+6. Port the later results/title ownership rather than collapsing it into transition execution. Results exit sets `Apparent_act=1`, clears starpost/bonus state and `_unkFAA8`, and converts the surviving results owner to the in-level title card. That `_unkFAA8` clear immediately releases `Obj_EndSignControlAwaitStart`: it changes the controller routine to `Obj_EndSignControlDoStart` and restores every engine player's control **before** the title card finishes. `Obj_TitleCardWait` separately clears timer/ring totals/extra-life flags, resets air, restores level music, clears its `$48` state and advances routine; it does **not** set `End_of_level_flag`. `Obj_TitleCardWait2` alone waits the exact 90-frame `$2E` interval, then continues blocking until the title-card child count `$30` is zero, and only then publishes `End_of_level_flag`. Only `Obj_EndSignControlDoStart` waits on that flag; after publication it performs FBZ `Change_Act2Sizes`, copying stored Act 2 targets and creating three independent 16.16 workers: max-X `+$4000`, min-Y `-$4000`, and max-Y `+$8000` per update. RED-test the intermediate window explicitly: controls are already restored while Wait2 is active, but none of the bounds has started growing. Do not snap directly to full Act 2 bounds or let the broad results `onExit` substitute own these phases.
+7. Execute the reload synchronously, or with an exactly equivalent in-call mechanism, inside the same `ScreenEvents`/`FBZ1BGE_Normal` invocation before it returns and before that frame's `Load_Rings`; use the immediate act-transition execution path, not the asynchronous transition API. Still finish the remaining `FBZ1BGE_GoDeform` tail after the reload. Treat the completed reload as a rewind hard boundary and prove deterministic snapshots immediately before publication and immediately after synchronous reload, without seeking across the boundary. Verify checkpoint/death restart independently on both sides.
+8. Prove compatibility: offset all configured sidekicks while preserving daisy-chain/control state, but retain native-main-player publication authority; use actual viewport dimensions and shifted world bounds at every widescreen width; and run the transition/title flow with donation disabled, an S1 donor, and an S2 donor. Neither donated mode may require a spindash workaround or raw game-name branch.
+9. Run the mandatory route-wave gate. This is the **Act 1-to-Act 2 transition wave boundary**.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzActTransitionHeadless,TestFbzRomWorldOffsetPolicy,TestFbzResultsTitleAndAct2Sizes,TestFbzTransitionRewind,TestActTransitionHeadless,TestSeamlessCarryExcludesBossChildren" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 13: Port Act 2 events and traversal, including the elevator
+
+**Skills:** `s3k-zone-events`, `s3k-implement-object`
+
+**Files:** modify `src/main/java/com/openggf/game/sonic3k/events/Sonic3kFBZEvents.java`, `src/main/java/com/openggf/game/sonic3k/runtime/FbzZoneRuntimeState.java`, `src/main/java/com/openggf/game/sonic3k/constants/Sonic3kObjectIds.java`, `Sonic3kConstants.java`, `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`, `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtKeys.java`, `Sonic3kObjectArt.java`, `Sonic3kObjectArtProvider.java`, `Sonic3kPlcArtRegistry.java`, and `src/main/java/com/openggf/tools/Sonic3kObjectProfile.java`; create `FbzElevatorObjectInstance` plus car children; create `TestFbzEventsAct2`, `TestFbzElevator`, and `TestFbzAct2TraversalPreboss`.
+
+**Steps:**
+
+1. RED-test `FBZ2_ScreenInit`, the ordinary Act 2 foreground region, `FBZ2_BackgroundInit/Event`, stage progression before `$2B30`, and checkpoint/death restoration.
+2. Implement `$E2` subtypes `0F,1E,24,25,32,37,3B,4B`, including periodic car allocation, movement, solidity, culling, and rewind ownership.
+3. Re-run every shared/mechanical/magnetic/badnik family used in Act 2 and prove the route reaches the subboss naturally.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzEventsAct2,TestFbzElevator,TestFbzAct2TraversalPreboss,TestFbzObjectRegistryCompleteness" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 14: Implement the Act 2 subboss and PLC restoration
+
+**Skills:** `s3k-implement-boss`, `s3k-plc-system`
+
+**Files:** create `Fbz2SubbossInstance` and all children from `ChildObjDat_703C8`, `703D0`, `703DE`, `703E4`, and `703EC`; add rewind links; modify `src/main/java/com/openggf/game/sonic3k/constants/Sonic3kObjectIds.java`, `Sonic3kConstants.java`, `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`, `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtKeys.java`, `Sonic3kObjectArt.java`, `Sonic3kObjectArtProvider.java`, `Sonic3kPlcArtRegistry.java`, `Sonic3kPlcLoader.java`, and `src/main/java/com/openggf/tools/Sonic3kObjectProfile.java`; create `TestFbzAct2Subboss`, `TestFbz2SubbossCharacterArt`, `TestFbz2SubbossArtHandoff`, `TestFbz2SubbossRewind`, and `src/test/java/com/openggf/tests/TestFbzAct2RouteToBossHeadless.java`.
+
+**Steps:**
+
+1. RED-test the full subboss routine graph, four/two repeated pieces, controllers, sprite mask, Robotnik/EggRobo character branch, the signed `$39=$06` counter's seven cycles (and six nonfinal anchor moves), palette/music/SFX, defeat, and cleanup.
+2. Load the correct inline Sonic/Tails or Knuckles raw PLC selection (the pointer-table `$62-$6A` aliases are unused here). On normal progression, the subboss defeat path must queue `ArtKosM_FBZCloud` and `ArtKosM_FBZBossPillar` through `PLCKosM_FBZ2Subboss` before the `$2B30` setup, then restore raw `PLC_Monitors` followed by raw `PLC_MonitorsSpikesSprings` at the disassembly-defined stages.
+3. RED-test the normal cloud/pillar art readiness/order separately from checkpoint/re-entry. Verify the post-subboss route and rewind during each PLC handoff.
+4. Run the mandatory route-wave gate. This is the **Act 2 traversal/subboss wave boundary**.
+   Task 14's honest headless gate reuses the fixed 11,900-frame native-start
+   mechanics frontier and the real starpost-5 120-left lower magnetic/chain
+   wave; neither wave claims arena crossing. Complete start-to-arena controller
+   validation is deferred specifically to Task 20's BK2 trace polish, while the
+   placed `$AB` routine graph, timing, allocation failures, art handoffs, and
+   rewind behavior remain independently disassembly-reviewed and focused-tested.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzAct2Subboss,TestFbz2SubbossCharacterArt,TestFbz2SubbossArtHandoff,TestFbz2SubbossRewind,TestFbzAct2RouteToBossHeadless" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 15: Implement the pre-boss plane-transition controller, pillars, and clouds
+
+**Skills:** `s3k-zone-events`, `s3k-implement-object`, `s3k-parallax`
+
+**Files:** create `FbzEndBossEventControlInstance`, `FbzBossPillarInstance`, `FbzCloudInstance`, and `FbzBossEventRewindLinks`; modify `src/main/java/com/openggf/game/sonic3k/events/Sonic3kFBZEvents.java`, `src/main/java/com/openggf/game/sonic3k/runtime/FbzZoneRuntimeState.java`, `src/main/java/com/openggf/game/sonic3k/scroll/SwScrlFbz.java`, `src/main/java/com/openggf/game/sonic3k/render/FbzBossPlaneRenderMode.java`, `src/main/java/com/openggf/physics/BackgroundPlaneCollisionProvider.java`, `src/main/java/com/openggf/game/sonic3k/constants/Sonic3kObjectIds.java`, `Sonic3kConstants.java`, `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`, `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtKeys.java`, `Sonic3kObjectArt.java`, `Sonic3kObjectArtProvider.java`, `Sonic3kPlcArtRegistry.java`, and `src/main/java/com/openggf/tools/Sonic3kObjectProfile.java`; create `TestFbzBossEventSetup`, `TestFbzBossCloudIdentity`, and `TestFbzPlaneTransition`.
+
+**Steps:**
+
+1. RED-test the exact normal `$2B30` `SetUp_FBZ2BossEvent` order only: create controller, create pillar, clear cloud-address pairs, create ten clouds from `FBZCloud_PositionFrameData`, and apply the palette patch. Assert that setup performs no cloud/pillar art queue and does not yet advance offsets, carry players, enable background collision, reverse planes, or refresh the destination.
+2. RED-test checkpoint/re-entry at camera X `>= $2C40` as a distinct path: `FBZ2_ScreenInit` runs setup first, then queues `ArtKosM_FBZCloud` and `ArtKosM_FBZBossPillar`. Both paths must prove art readiness before rendering consumers.
+3. Preserve original slot/allocation order. Store ten rewind IDs, never raw references; relink after `ObjectManager` restore and deterministically recreate missing pre-cleanup clouds.
+4. RED-test the separately ordered controller/event phases: wait with no offset/collision change until player X `>= $2E80`; then advance `_unkEE98/_unkEE9C` and carry participants; enable background collision at the documented controller stage; drive plane reversal through the foreground/background event-stage handoff; refresh the destination; clear collision when both offsets reach their endpoints; and only later reach foreground stage `$0C`.
+5. Publish collision mode during the established post-camera event phase and make it visible on the next frame's player collision pass. Test entry, `$2E80` threshold, steady state, offset endpoints, boss-load handoff, cleanup, death, restart, rewind, and `TestFbzFramePhaseOrdering`; do not reorder `LevelFrameStep`.
+6. At foreground stage `$0C`, request the end-boss spawn; do not defer collision clearing to this spawn if the controller already cleared it at the offset endpoint. Clear remaining transient shake only at its documented stage.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzBossEventSetup,TestFbzBossCloudIdentity,TestFbzPlaneTransition,TestFbzBackgroundPlaneCollision,TestFbzBossCloudDeform,TestFbzBossPlaneRenderMode,TestFbzFramePhaseOrdering" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 16: Implement the Act 2 end-boss object graph and defeat
+
+**Skills:** `s3k-implement-boss`, `s3k-plc-system`
+
+**Files:** create `FbzEndBossInstance`, `FbzEndBossShipChild`, `FbzRobotnikHeadChild`, `FbzEndBossFlameChild`, concrete weapon/arm/projectile/debris children for `ChildObjDat_70EE0`, `70EF4`, `70EFC`, `70F04`, `70F0A`, and `70F24`, plus `FbzEndBossRewindLinks`; modify `src/main/java/com/openggf/game/sonic3k/constants/Sonic3kObjectIds.java`, `Sonic3kConstants.java`, `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`, `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtKeys.java`, `Sonic3kObjectArt.java`, `Sonic3kObjectArtProvider.java`, `Sonic3kPlcArtRegistry.java`, `Sonic3kPlcLoader.java`, and `src/main/java/com/openggf/tools/Sonic3kObjectProfile.java`; create `TestFbzEndBoss`, `TestFbzEndBossChildren`, `TestFbzEndBossAudioAndPlc`, and `TestFbzEndBossRewind`.
+
+**Steps:**
+
+1. RED-test the complete `$AC` routine graph: spawn slot, phases, movement tables, child order, Robotnik/EggRobo variants, hit/invulnerability/shield behavior, projectiles, flame, audio, palette, explosions, defeat, and cleanup.
+2. Port only verified integer/fixed-point behavior and exact mappings/tiles/priorities. Use slot-aware children and identity relinking.
+3. Queue `PLCKosM_FBZEndBoss_Exit` at the documented aftermath stage and expose the exit-ready event state.
+4. Test native Sonic, Tails, Sonic+Tails, and Knuckles boss completion before compatibility extensions.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzEndBoss,TestFbzEndBossChildren,TestFbzEndBossAudioAndPlc,TestFbzEndBossRewind" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 17: Implement exit hall/door, placed prisons/plungers, final capsule, and Sandopolis handoff
+
+**Skills:** `s3k-implement-object`, `s3k-plc-system`, `s3k-zone-events`
+
+**Files:** create `FbzExitDoorInstance`, `FbzExitHallInstance`, `FbzEggPrisonInstance`, `FbzSpringPlungerInstance`, and their real prison/capsule children; integrate Task 10's already-concrete detached/falling Blaster and TechnoSqueek entry forms for `$CF` subtype 2; configure the generic `Obj_EggCapsule` path without conflating it with `$CF`; modify `src/main/java/com/openggf/level/LevelTransitionCoordinator.java`, `src/main/java/com/openggf/game/sonic3k/constants/Sonic3kObjectIds.java`, `Sonic3kConstants.java`, `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`, `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtKeys.java`, `Sonic3kObjectArt.java`, `Sonic3kObjectArtProvider.java`, `Sonic3kPlcArtRegistry.java`, `Sonic3kPlcLoader.java`, and `src/main/java/com/openggf/tools/Sonic3kObjectProfile.java`; create `TestFbzExitDoor`, `TestFbzExitHall`, `TestFbzEggPrison`, `TestFbzFinalEggCapsule`, `TestFbzToSandopolisTransition`, and `src/test/java/com/openggf/tests/TestFbzAct2RouteHeadless.java`.
+
+**Steps:**
+
+1. RED-test `$CE`, `$8A` subtypes `00,04`, `$CF` subtypes `00,01,02`, `$D0`, their child tables, animals/explosions, art readiness, collision, animation, and lifecycle. For `$CF` subtype 2, assert exact allocation/order and integration of Task 10's `ChildObjDat_89F16/89F24` falling badnik forms; Task 17 must not create a second compressed implementation of either badnik.
+2. Keep placed `Obj_FBZEggPrison` behavior distinct from the dynamically spawned generic final `Obj_EggCapsule`.
+3. Enforce exit PLC completion before consumers. Port the door/hall/capsule sequence and wait for camera Y `$720` before requesting `StartNewLevel #$0800` (Sandopolis Act 1).
+4. GREEN the inventory/registry gate at zero live FBZ placeholder placements and prove both acts complete.
+5. Run the mandatory route-wave gate. This is the **final route/exit wave boundary**.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzExitDoor,TestFbzExitHall,TestFbzEggPrison,TestFbzFinalEggCapsule,TestFbzToSandopolisTransition,TestFbzAct2RouteHeadless,TestFbzObjectRegistryCompleteness" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 18: Close rewind, lifecycle, architecture, and native route coverage
+
+**Skills:** `superpowers:systematic-debugging`, `superpowers:verification-before-completion`
+
+**Files:** modify only proven gaps in `src/main/java/com/openggf/game/rewind/schema/DefaultObjectRewindPolicies.java` and object recreate/relink code; create `TestFbzObjectRewind`, `TestFbzBossGraphRewind`, `TestFbzCheckpointRoutes`, and `TestFbzNativeCharacterRoutes`; extend the route tests created in Tasks 11, 14, and 17 with restart/rewind/native-character cases.
+
+**Steps:**
+
+1. Add capture/restore/capture equality and forward-replay tests for events, transitions, polarity, carriers, hazards, badniks, bosses, clouds, exit, and capsule.
+2. Run both rewind coverage guards. Fix recreate paths, final mutable scalars, and object references instead of growing baselines unless parent recreation demonstrably owns a render-only child.
+3. Test normal start, every supported checkpoint, death/reload, seamless transition, level select, and Sandopolis handoff for Sonic, Tails, Sonic+Tails, and Knuckles.
+4. Run service, runtime-state, mutation, transition, trace-invariant, and architecture guards.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzObjectRewind,TestFbzBossGraphRewind,TestFbzCheckpointRoutes,TestFbzAct1RouteHeadless,TestFbzAct2RouteHeadless,TestFbzNativeCharacterRoutes,TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard,TestNoDirectMapMutationsInGameplay,TestZoneEventRuntimeAccessGuard,TestS3kRuntimeStateReadGuard,TestS3kTransitionBridgeGuard,TestObjectServicesMigrationGuard,TestNoServicesInObjectConstructors,TestTraceReplayInvariantGuard" test "-Ds3k.rom.path=s3k.gen"
+```
+
+### Task 19: Perform native visual/audio validation before trace work
+
+**Skills:** `s3k-zone-validate`
+
+**Files:**
+
+- Verify without moving coordinates/frames: `docs/s3k-zones/fbz-visual-checkpoints.json`
+- Create/update: `docs/s3k-zones/fbz-validation.md`
+- Create: `tools/validation/Validate-FbzVisualCheckpoints.ps1`
+
+**Steps:**
+
+1. Implement the reusable validation runner to read the immutable checkpoint manifest, capture reference/engine evidence, reject missing checkpoints, and append a named result section without changing expected coordinates/frames.
+2. Capture reference and engine checkpoints for act starts, all indoor/outdoor thresholds, representative objects/badniks, miniboss, seamless transition, subboss/PLC restoration, plane transition, end boss, exit/capsule, and Sandopolis handoff.
+3. Capture time series for AniPLC cadence, magnetic phase, palette changes, parallax drift/bob, clouds, shake, and plane reversal.
+4. Record `PASS/FAIL` with evidence. Deterministic behavior may not remain `LIKELY`; no required checkpoint may be skipped.
+5. Fix failures through their owning task and repeat both reviews before continuing.
+
+**Verify:**
+
+```powershell
+& tools/validation/Validate-FbzVisualCheckpoints.ps1 -Mode native-pre-compat -ExtensionsDisabled -Output docs/s3k-zones/fbz-validation.md
+```
+
+### Task 20: Restore pinned BizHawk and run the late complete-run trace polish
+
+**Skills:** `trace-replay-bug-fixing`, `s3k-zone-validate`
+
+**Files:**
+
+- Install ignored runtime: `docs/BizHawk-2.11-win-x64/`
+- Source movie: `src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2`
+- Create fixture directory: `src/test/resources/traces/s3k/fbz_completerun/`
+- Create: `src/test/java/com/openggf/tests/trace/s3k/TestS3kFbzCompleteRunTraceFixture.java`
+- Create: `src/test/java/com/openggf/tests/trace/s3k/TestS3kFbzCompleteRunTraceReplay.java`
+- Create: `src/test/java/com/openggf/tests/trace/TestTraceBaselineRegression.java`
+- Modify: `docs/TRACE_FRONTIER_LOG.md`
+
+**Steps:**
+
+1. Only now download `https://github.com/TASEmulators/BizHawk/releases/download/2.11/BizHawk-2.11-win-x64.zip`. Require size `91,301,556` and SHA-256 `722B5AAC5E1D89F890B2875B0150F4A86F5762D211F7CD47029CAC70434955C0`; extract under ignored `docs/BizHawk-2.11-win-x64` and verify `EmuHawk.exe`.
+2. Record the BK2 through `tools/bizhawk/s3k_complete_run_recorder.lua` and install the segment by metadata offset, never directory-name assumptions.
+3. RED/GREEN fixture assertions: `game=s3k`, `zone=fbz`, `zone_id=4`, `act=1`, `bk2_frame_offset=237913`, `trace_frame_count=44281` (the arm/bootstrap frame 237913 is not a CSV row; recorded movie frames are 237914-282194), next-zone frame 282195, `source_bk2=s3k-complete-sonic-tails.bk2`, `characters=[sonic,tails]`, `main_character=sonic`, `sidekicks=[tails]`, schema/CSV 5, complete-run profile, recorder `6.28-s3k-completerun`, BizHawk 2.11, Genplus-gx, ROM checksum `C5B1C655C19F462ADE0AC4E17A844D10`, gzipped physics/aux files only, and catalog discovery. Derive this count from the recorder boundary contract; never duplicate the bootstrap frame to satisfy the former planning estimate.
+4. Replay controller input only. Fix the first divergence using disassembly-backed state. Reject hydration, tolerance masking, and zone/route/frame exceptions.
+5. Acceptance is zero errors and zero warnings. Update the frontier log whenever the frontier moves or an existing green trace regresses; rerun all previously green S3K complete-run traces after shared fixes.
+6. Late in this task, run every `known_red` test class from the frozen JSON manifest. Expected Maven failures are allowed only to produce fresh `target/trace-reports/*_report.json` files. Then run `TestTraceBaselineRegression`, which fails for a missing/stale report, an earlier first-error frame, or—when the first frame is equal—a larger error count or warning count. A later frontier or fewer divergences is an improvement and must update `TRACE_FRONTIER_LOG.md`; trace data remains read-only.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestS3kFbzCompleteRunTraceFixture,TestS3kFbzCompleteRunTraceReplay" test "-Ds3k.rom.path=s3k.gen"
+$knownRed = ((Get-Content 'docs/superpowers/research/2026-07-12-fbz-trace-baseline.json' -Raw | ConvertFrom-Json).known_red.test_class) -join ','
+if ([string]::IsNullOrWhiteSpace($knownRed)) { throw 'known_red test manifest is empty' }
+mvn "-Dtest=$knownRed" test "-Ds3k.rom.path=s3k.gen"; $knownRedExit = $LASTEXITCODE
+mvn "-Dtest=com.openggf.tests.trace.TestTraceBaselineRegression" test "-Ds3k.rom.path=s3k.gen" "-Dtrace.baseline.path=docs/superpowers/research/2026-07-12-fbz-trace-baseline.json"
+```
+
+### Task 21: Run the mandatory compatibility matrix, then re-prove native parity
+
+**Skills:** `superpowers:test-driven-development`, `superpowers:systematic-debugging`
+
+**Files:**
+
+- Create: `src/test/java/com/openggf/tests/TestFbzCompatibilityMatrix.java`
+- Create: `src/test/java/com/openggf/tests/TestFbzNativeConfiguration.java`
+- Create: `docs/s3k-zones/fbz-compatibility.md`
+- Modify provider/profile/rules code only if a proven donated capability blocks a mandatory route
+
+**Steps:**
+
+1. Add parameterized multi-sidekick cases: Sonic+none, Sonic+Tails, Sonic+Tails+Knuckles, Sonic+Tails+Knuckles+Sonic, and Sonic+Sonic+Sonic+Sonic. Cover shared event/boss state, solids, hazards, carriers, grabs, forced movement, bosses, transitions, duplicate art banks, and full completion.
+2. Add widths 320, 352, 400, 528, and 800. For each width explicitly assert world-coordinate thresholds, camera locks/releases, spawn/culling, boss containment, premature activation absence, and no unsafe fall/death at both horizontal extremes.
+3. Add donation `off`, `s1`, and `s2` on the S3K host. Identify mandatory-route ability blockers. If needed, add the smallest semantic capability/profile workaround with an explicit comment naming the blocked FBZ mechanic and donor capability; preserve donation-off behavior.
+4. Persist every matrix row and evidence in `fbz-compatibility.md`.
+5. Parameterize `TestFbzNativeConfiguration` across Sonic, Tails, Sonic+Tails, and Knuckles. For each configuration assert donation source `off`, extensions disabled, native S3K movement/rules and character roster, native sidekick mode, no extra configured sidekicks, and viewport width 320 before parity comparisons.
+6. Rerun the strict native route, focused, and complete-run trace suites through those fixtures. Then execute the immutable stable-retro checkpoints with `-Mode native-post-compat -ExtensionsDisabled`; append a distinct `Post-compatibility native regression` section to `fbz-validation.md`. Compatibility work is rejected if any pre-compat native result changes.
+
+**Verify:**
+
+```powershell
+mvn "-Dtest=TestFbzCompatibilityMatrix,TestFbzNativeConfiguration,TestFbzNativeCharacterRoutes,TestFbzAct1RouteHeadless,TestFbzAct2RouteHeadless,TestS3kFbzCompleteRunTraceReplay" test "-Ds3k.rom.path=s3k.gen"
+& tools/validation/Validate-FbzVisualCheckpoints.ps1 -Mode native-post-compat -ExtensionsDisabled -Output docs/s3k-zones/fbz-validation.md
+```
+
+### Task 22: Final documentation and full verification
+
+**Skills:** `superpowers:verification-before-completion`, `superpowers:requesting-code-review`, `superpowers:finishing-a-development-branch`
+
+**Files:**
+
+- Modify: `CHANGELOG.md`
+- Modify: `docs/S3K_KNOWN_DISCREPANCIES.md` only for evidence-backed remaining limitations; full acceptance requires no FBZ gameplay waiver
+- Finalize: `docs/s3k-zones/fbz-analysis.md`, `fbz-object-inventory.md`, `fbz-visual-checkpoints.json`, `fbz-validation.md`, `fbz-compatibility.md`
+- Finalize: `docs/TRACE_FRONTIER_LOG.md`
+- Finalize: `docs/superpowers/research/2026-07-12-fbz-red-green-log.md` and `2026-07-12-fbz-trace-baseline.json`
+
+**Steps:**
+
+1. Confirm every inventory row is concrete, every dynamic spawn is implemented, every deterministic validation checkpoint is PASS, the trace has zero errors/warnings, and all compatibility rows pass.
+2. Run the complete FBZ suite, required S3K regressions, architecture/rewind guards, existing green S3K complete-run traces, and `mvn package` from a clean execution worktree.
+3. Delegate final spec-compliance, ROM-parity, architecture, compatibility, and code-quality reviews. Fix every blocker/important finding and repeat until all are GREEN.
+4. Inspect `git diff --check`, staged scope, and branch trailers. Do not stage the user's unrelated root-workspace changes.
+
+**Final verification:**
+
+```powershell
+mvn "-Dtest=TestFbz*,TestS3kFbzCompleteRunTraceFixture,TestS3kFbzCompleteRunTraceReplay" test "-Ds3k.rom.path=s3k.gen"
+$knownRed = ((Get-Content 'docs/superpowers/research/2026-07-12-fbz-trace-baseline.json' -Raw | ConvertFrom-Json).known_red.test_class) -join ','
+if ([string]::IsNullOrWhiteSpace($knownRed)) { throw 'known_red test manifest is empty' }
+mvn "-Dtest=$knownRed" test "-Ds3k.rom.path=s3k.gen"
+mvn "-Dtest=com.openggf.tests.trace.TestTraceBaselineRegression" test "-Ds3k.rom.path=s3k.gen" "-Dtrace.baseline.path=docs/superpowers/research/2026-07-12-fbz-trace-baseline.json"
+$greenFleet = ((Get-Content 'docs/superpowers/research/2026-07-12-fbz-trace-baseline.json' -Raw | ConvertFrom-Json).green_test_classes) -join ','
+if ([string]::IsNullOrWhiteSpace($greenFleet)) {
+  Write-Host 'No persisted zero-error S3K complete-run regression classes were available at the Task 1 freeze; green fleet is a documented no-op.'
+} else {
+  mvn "-Dtest=$greenFleet" test "-Ds3k.rom.path=s3k.gen"
+}
+$mustGreen = @(
+  'com.openggf.tests.TestS3kAiz1SkipHeadless',
+  'com.openggf.tests.TestSonic3kLevelLoading',
+  'com.openggf.game.sonic3k.TestSonic3kLevelLoading',
+  'com.openggf.game.sonic3k.TestSonic3kBootstrapResolver',
+  'com.openggf.game.sonic3k.TestSonic3kDecodingUtils',
+  'com.openggf.game.rewind.coverage.TestRewindCoverageGuard',
+  'com.openggf.game.rewind.coverage.TestStaticStateRewindCoverageGuard',
+  'com.openggf.game.mutation.TestNoDirectMapMutationsInGameplay',
+  'com.openggf.game.TestZoneEventRuntimeAccessGuard',
+  'com.openggf.game.sonic3k.TestS3kRuntimeStateReadGuard',
+  'com.openggf.game.sonic3k.TestS3kTransitionBridgeGuard',
+  'com.openggf.level.objects.TestObjectServicesMigrationGuard',
+  'com.openggf.level.objects.TestNoServicesInObjectConstructors',
+  'com.openggf.tests.TestNoServicesInObjectConstructors',
+  'com.openggf.tests.TestTraceReplayInvariantGuard'
+) -join ','
+mvn "-Dtest=$mustGreen" test "-Ds3k.rom.path=s3k.gen"
+mvn package "-Ds3k.rom.path=s3k.gen"
+git diff --check
+```
+
+## Definition of done
+
+- All 860 runtime placements and every reachable dynamic spawn have correct concrete implementations; raw file counts remain verified at 421/441 including terminators.
+- Both acts, checkpoints, bosses, seamless transition, exit/capsule, and Sandopolis handoff match the locked-on disassembly for Sonic, Tails, Sonic+Tails, and Knuckles.
+- Events, plane collision/rendering, parallax, AniPLC, palette, PLC/VRAM, art, mappings, audio, collision, object lifetime, and rewind behavior are deterministic and reviewed.
+- Focused tests, route tests, native visual checkpoints, all guards, package build, and the late complete-run replay are GREEN with zero trace errors/warnings.
+- Multi-sidekick, widescreen, and donation matrices pass; a final extension-disabled run proves native behavior remains unchanged.
+- Every task's spec and quality review loop is GREEN, and documentation contains no unresolved required FBZ discrepancy.

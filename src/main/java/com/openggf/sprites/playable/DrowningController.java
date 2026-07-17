@@ -455,6 +455,17 @@ public class DrowningController {
         this.remainingAir = remainingAir;
     }
 
+    /**
+     * A scripted music owner (for example S3K Obj_LevelResults) replaces the
+     * drowning track without running the ordinary exit-water music restore.
+     * Preserve the native air-second timer while clearing the engine latch so
+     * a later water exit cannot restart zone music over the scripted track.
+     */
+    public void restoreAirForExternalMusicOverride() {
+        remainingAir = INITIAL_AIR;
+        drowningMusicStarted = false;
+    }
+
     public void resetAirTimerFromFixedCountdownDeath() {
         remainingAir = INITIAL_AIR;
         frameTimer = FRAMES_PER_SECOND;

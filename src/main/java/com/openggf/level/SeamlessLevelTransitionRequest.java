@@ -12,6 +12,18 @@ public final class SeamlessLevelTransitionRequest {
         RELOAD_TARGET_LEVEL
     }
 
+    @com.openggf.game.ModApi
+    public enum ObjectSurvivalPolicy {
+        PERSISTENT_ONLY,
+        ALL_LIVE_SST
+    }
+
+    @com.openggf.game.ModApi
+    public enum ObjectOffsetPolicy {
+        CARRIED_OBJECTS,
+        ROM_WORLD_OFFSET_RANGE
+    }
+
     private final TransitionType type;
     private final int targetZone;
     private final int targetAct;
@@ -31,12 +43,23 @@ public final class SeamlessLevelTransitionRequest {
     private final Integer postTransitionMinY;
     private final Integer postTransitionMaxY;
     private final Integer postTransitionMaxYTarget;
+    private final Integer postTransitionMinXTarget;
+    private final Integer postTransitionMaxXTarget;
+    private final Integer postTransitionMinYTarget;
     private final int playerOffsetX;
     private final int playerOffsetY;
     private final int cameraOffsetX;
     private final int cameraOffsetY;
     private final String mutationKey;
     private final int musicOverrideId;
+    private final ObjectSurvivalPolicy objectSurvivalPolicy;
+    private final ObjectOffsetPolicy objectOffsetPolicy;
+    private final int objectOffsetStartSlot;
+    private final int objectOffsetEndSlotExclusive;
+    private final boolean preserveCheckpointUntilResults;
+    private final boolean omitSecondaryLevelPlc;
+    private final boolean suppressLevelLoadRewindBoundary;
+    private final boolean deferRingInitializationToLevelUpdate;
 
     private SeamlessLevelTransitionRequest(Builder builder) {
         this.type = builder.type;
@@ -61,12 +84,23 @@ public final class SeamlessLevelTransitionRequest {
         this.postTransitionMinY = builder.postTransitionMinY;
         this.postTransitionMaxY = builder.postTransitionMaxY;
         this.postTransitionMaxYTarget = builder.postTransitionMaxYTarget;
+        this.postTransitionMinXTarget = builder.postTransitionMinXTarget;
+        this.postTransitionMaxXTarget = builder.postTransitionMaxXTarget;
+        this.postTransitionMinYTarget = builder.postTransitionMinYTarget;
         this.playerOffsetX = builder.playerOffsetX;
         this.playerOffsetY = builder.playerOffsetY;
         this.cameraOffsetX = builder.cameraOffsetX;
         this.cameraOffsetY = builder.cameraOffsetY;
         this.mutationKey = builder.mutationKey;
         this.musicOverrideId = builder.musicOverrideId;
+        this.objectSurvivalPolicy = builder.objectSurvivalPolicy;
+        this.objectOffsetPolicy = builder.objectOffsetPolicy;
+        this.objectOffsetStartSlot = builder.objectOffsetStartSlot;
+        this.objectOffsetEndSlotExclusive = builder.objectOffsetEndSlotExclusive;
+        this.preserveCheckpointUntilResults = builder.preserveCheckpointUntilResults;
+        this.omitSecondaryLevelPlc = builder.omitSecondaryLevelPlc;
+        this.suppressLevelLoadRewindBoundary = builder.suppressLevelLoadRewindBoundary;
+        this.deferRingInitializationToLevelUpdate = builder.deferRingInitializationToLevelUpdate;
     }
 
     public TransitionType type() {
@@ -145,6 +179,10 @@ public final class SeamlessLevelTransitionRequest {
         return postTransitionMaxYTarget;
     }
 
+    public Integer postTransitionMinXTarget() { return postTransitionMinXTarget; }
+    public Integer postTransitionMaxXTarget() { return postTransitionMaxXTarget; }
+    public Integer postTransitionMinYTarget() { return postTransitionMinYTarget; }
+
     public int playerOffsetX() {
         return playerOffsetX;
     }
@@ -167,6 +205,71 @@ public final class SeamlessLevelTransitionRequest {
 
     public int musicOverrideId() {
         return musicOverrideId;
+    }
+
+    public ObjectSurvivalPolicy objectSurvivalPolicy() { return objectSurvivalPolicy; }
+
+    public ObjectOffsetPolicy objectOffsetPolicy() { return objectOffsetPolicy; }
+
+    public int objectOffsetStartSlot() { return objectOffsetStartSlot; }
+
+    public int objectOffsetEndSlotExclusive() { return objectOffsetEndSlotExclusive; }
+
+    public boolean preserveCheckpointUntilResults() { return preserveCheckpointUntilResults; }
+
+    public boolean omitSecondaryLevelPlc() { return omitSecondaryLevelPlc; }
+
+    public boolean suppressLevelLoadRewindBoundary() { return suppressLevelLoadRewindBoundary; }
+
+    public boolean deferRingInitializationToLevelUpdate() { return deferRingInitializationToLevelUpdate; }
+
+    public boolean shouldApplyRomWorldOffset(int slot, boolean objectCodeNonZero,
+                                              boolean renderFlagsBit2) {
+        return objectOffsetPolicy == ObjectOffsetPolicy.ROM_WORLD_OFFSET_RANGE
+                && objectCodeNonZero
+                && renderFlagsBit2
+                && slot >= objectOffsetStartSlot
+                && slot < objectOffsetEndSlotExclusive;
+    }
+
+    /** Converts a same-level request to the concrete target used by the reload executor. */
+    public SeamlessLevelTransitionRequest retargetedForReload(int zone, int act) {
+        Builder adjusted = builder(TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(zone, act)
+                .deactivateLevelNow(deactivateLevelNow)
+                .preserveMusic(preserveMusic)
+                .preserveLevelGamestate(preserveLevelGamestate)
+                .preserveEndOfLevelState(preserveEndOfLevelState)
+                .showInLevelTitleCard(showInLevelTitleCard)
+                .resetLevelGamestateAtInLevelTitleCardDisplay(
+                        resetLevelGamestateAtInLevelTitleCardDisplay)
+                .inLevelTitleCardResetAdditionalDispatches(
+                        inLevelTitleCardResetAdditionalDispatches)
+                .lockPlayerControlForInLevelTitleCard(lockPlayerControlForInLevelTitleCard)
+                .inLevelTitleCardExitAdditionalDispatches(inLevelTitleCardExitAdditionalDispatches)
+                .forceAirOnStaleObjectSupportLoss(forceAirOnStaleObjectSupportLoss)
+                .preserveOffsetCameraPosition(preserveOffsetCameraPosition)
+                .postTransitionMinXIfPresent(postTransitionMinX)
+                .postTransitionMaxXIfPresent(postTransitionMaxX)
+                .postTransitionMinYIfPresent(postTransitionMinY)
+                .postTransitionMaxYIfPresent(postTransitionMaxY)
+                .postTransitionMaxYTargetIfPresent(postTransitionMaxYTarget)
+                .postTransitionMinXTargetIfPresent(postTransitionMinXTarget)
+                .postTransitionMaxXTargetIfPresent(postTransitionMaxXTarget)
+                .postTransitionMinYTargetIfPresent(postTransitionMinYTarget)
+                .playerOffset(playerOffsetX, playerOffsetY)
+                .cameraOffset(cameraOffsetX, cameraOffsetY)
+                .mutationKey(mutationKey)
+                .musicOverrideId(musicOverrideId)
+                .objectSurvivalPolicy(objectSurvivalPolicy)
+                .preserveCheckpointUntilResults(preserveCheckpointUntilResults)
+                .omitSecondaryLevelPlc(omitSecondaryLevelPlc)
+                .suppressLevelLoadRewindBoundary(suppressLevelLoadRewindBoundary)
+                .deferRingInitializationToLevelUpdate(deferRingInitializationToLevelUpdate);
+        if (objectOffsetPolicy == ObjectOffsetPolicy.ROM_WORLD_OFFSET_RANGE) {
+            adjusted.romWorldObjectOffsetRange(objectOffsetStartSlot, objectOffsetEndSlotExclusive);
+        }
+        return adjusted.build();
     }
 
     public static Builder builder(TransitionType type) {
@@ -194,12 +297,23 @@ public final class SeamlessLevelTransitionRequest {
         private Integer postTransitionMinY;
         private Integer postTransitionMaxY;
         private Integer postTransitionMaxYTarget;
+        private Integer postTransitionMinXTarget;
+        private Integer postTransitionMaxXTarget;
+        private Integer postTransitionMinYTarget;
         private int playerOffsetX;
         private int playerOffsetY;
         private int cameraOffsetX;
         private int cameraOffsetY;
         private String mutationKey;
         private int musicOverrideId = -1;
+        private ObjectSurvivalPolicy objectSurvivalPolicy = ObjectSurvivalPolicy.PERSISTENT_ONLY;
+        private ObjectOffsetPolicy objectOffsetPolicy = ObjectOffsetPolicy.CARRIED_OBJECTS;
+        private int objectOffsetStartSlot;
+        private int objectOffsetEndSlotExclusive;
+        private boolean preserveCheckpointUntilResults;
+        private boolean omitSecondaryLevelPlc;
+        private boolean suppressLevelLoadRewindBoundary;
+        private boolean deferRingInitializationToLevelUpdate;
 
         private Builder(TransitionType type) {
             this.type = type;
@@ -321,6 +435,36 @@ public final class SeamlessLevelTransitionRequest {
             return this;
         }
 
+        public Builder postTransitionMinXTarget(int value) {
+            this.postTransitionMinXTarget = value;
+            return this;
+        }
+
+        public Builder postTransitionMinXTargetIfPresent(Integer value) {
+            this.postTransitionMinXTarget = value;
+            return this;
+        }
+
+        public Builder postTransitionMaxXTarget(int value) {
+            this.postTransitionMaxXTarget = value;
+            return this;
+        }
+
+        public Builder postTransitionMaxXTargetIfPresent(Integer value) {
+            this.postTransitionMaxXTarget = value;
+            return this;
+        }
+
+        public Builder postTransitionMinYTarget(int value) {
+            this.postTransitionMinYTarget = value;
+            return this;
+        }
+
+        public Builder postTransitionMinYTargetIfPresent(Integer value) {
+            this.postTransitionMinYTarget = value;
+            return this;
+        }
+
         public Builder playerOffset(int x, int y) {
             this.playerOffsetX = x;
             this.playerOffsetY = y;
@@ -340,6 +484,41 @@ public final class SeamlessLevelTransitionRequest {
 
         public Builder musicOverrideId(int musicOverrideId) {
             this.musicOverrideId = musicOverrideId;
+            return this;
+        }
+
+        public Builder objectSurvivalPolicy(ObjectSurvivalPolicy policy) {
+            this.objectSurvivalPolicy = policy;
+            return this;
+        }
+
+        public Builder romWorldObjectOffsetRange(int startSlot, int endSlotExclusive) {
+            if (startSlot < 0 || endSlotExclusive <= startSlot) {
+                throw new IllegalArgumentException("Invalid ROM object-offset range");
+            }
+            this.objectOffsetPolicy = ObjectOffsetPolicy.ROM_WORLD_OFFSET_RANGE;
+            this.objectOffsetStartSlot = startSlot;
+            this.objectOffsetEndSlotExclusive = endSlotExclusive;
+            return this;
+        }
+
+        public Builder preserveCheckpointUntilResults(boolean preserve) {
+            this.preserveCheckpointUntilResults = preserve;
+            return this;
+        }
+
+        public Builder omitSecondaryLevelPlc(boolean omit) {
+            this.omitSecondaryLevelPlc = omit;
+            return this;
+        }
+
+        public Builder suppressLevelLoadRewindBoundary(boolean suppress) {
+            this.suppressLevelLoadRewindBoundary = suppress;
+            return this;
+        }
+
+        public Builder deferRingInitializationToLevelUpdate(boolean defer) {
+            this.deferRingInitializationToLevelUpdate = defer;
             return this;
         }
 

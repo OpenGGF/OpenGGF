@@ -234,8 +234,13 @@ class TestCnzMinibossAnimationArt {
         for (int frame = 1; frame < 120; frame++) {
             transition.update(frame, null);
         }
+        assertFalse(harness.playedMusic().contains(Sonic3kMusic.CNZ1.id),
+                "Obj_Song_Fade_ToLevelMusic must not restore music before wait word $78 underflows");
+
+        transition.update(120, null);
+
         assertTrue(harness.playedMusic().contains(Sonic3kMusic.CNZ1.id),
-                "Obj_Song_Fade_ToLevelMusic must restore Carnival Night Act 1 music after the fade");
+                "Obj_Song_Fade_ToLevelMusic must restore Carnival Night Act 1 music on update 121");
     }
 
     private static Palette.Color colorFromSega(int value) {

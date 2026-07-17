@@ -9,6 +9,35 @@ package com.openggf.game.sonic3k.constants;
  * aware so the same numeric slot can still resolve to DEZ names on the SKL side.
  */
 public final class Sonic3kObjectIds {
+    public static final int FBZ_WIRE_CAGE = 0x6F;
+    public static final int FBZ_WIRE_CAGE_STATIONARY = 0x70;
+    public static final int FBZ_FLOATING_PLATFORM = 0x71;
+    public static final int FBZ_CHAIN_LINK = 0x72;
+    public static final int FBZ_MAGNETIC_SPIKE_BALL = 0x73;
+    public static final int FBZ_MAGNETIC_PLATFORM = 0x74;
+    public static final int FBZ_SNAKE_PLATFORM = 0x75;
+    public static final int FBZ_BENT_PIPE = 0x76;
+    public static final int FBZ_ROTATING_PLATFORM = 0x77;
+    public static final int FBZ_DEZ_PLAYER_LAUNCHER = 0x78;
+    public static final int FBZ_DISAPPEARING_PLATFORM = 0x79;
+    public static final int FBZ_SCREW_DOOR = 0x7A;
+    public static final int FBZ_SPINNING_POLE = 0x7B;
+    public static final int FBZ_PROPELLER = 0x7C;
+    public static final int FBZ_PISTON = 0x7D;
+    public static final int FBZ_PLATFORM_BLOCKS = 0x7E;
+    public static final int FBZ_MISSILE_LAUNCHER = 0x7F;
+    public static final int FBZ_EXIT_HALL = 0x8A;
+    public static final int FBZ_EXIT_DOOR = 0xCE;
+    public static final int FBZ_EGG_PRISON = 0xCF;
+    public static final int FBZ_SPRING_PLUNGER = 0xD0;
+    public static final int FBZ_WALL_MISSILE = 0xE0;
+    public static final int FBZ_MINE = 0xE1;
+    public static final int FBZ_ELEVATOR = 0xE2;
+    public static final int FBZ_TRAP_SPRING = 0xE3;
+    public static final int FBZ_FLAMETHROWER = 0xE4;
+    public static final int FBZ_SPIDER_CRANE = 0xE5;
+    public static final int FBZ_MAGNETIC_PENDULUM = 0xFF;
+    public static final int RING = 0x00;
     public static final int MONITOR = 0x01;
     public static final int PATH_SWAP = 0x02;
     public static final int AIZ_HOLLOW_TREE = 0x03;
@@ -86,6 +115,7 @@ public final class Sonic3kObjectIds {
     public static final int HCZ_SPINNING_COLUMN = 0x68;
     public static final int HCZ_WATER_WALL = 0x3B;
     public static final int DOOR = 0x3C;
+    public static final int RETRACTING_SPRING = 0x3D;
     public static final int HCZ_HAND_LAUNCHER = 0x3A;
     public static final int HCZ_CONVEYOR_BELT = 0x3E;
     public static final int HCZ_CONVEYOR_SPIKE = 0x3F;
@@ -162,6 +192,9 @@ public final class Sonic3kObjectIds {
     public static final int MGZ_END_BOSS_KNUX = 0xA2;
     public static final int MHZ1_CUTSCENE_KNUCKLES = 0xA8;
     public static final int MHZ1_CUTSCENE_BUTTON = 0xA9;
+    // S3KL pointer-table meanings for the same numeric slots.
+    public static final int BLASTER = 0xA8;
+    public static final int TECHNOSQUEEK = 0xA9;
     public static final int STILL_SPRITE = 0x2F;
     public static final int ANIMATED_STILL_SPRITE = 0x30;
     public static final int HIDDEN_MONITOR = 0x80;
@@ -252,6 +285,10 @@ public final class Sonic3kObjectIds {
     public static final int CNZ_MINIBOSS = 0xA6;
     // S3KL object table: Obj_CNZEndBoss. SKL reuses $A7 for DEZEndBoss.
     public static final int CNZ_END_BOSS = 0xA7;
+    // S3KL object table: Obj_FBZMiniboss. SKL reuses $AA for Hyudoro.
+    public static final int FBZ_MINIBOSS = 0xAA;
+    public static final int FBZ2_SUBBOSS = 0xAB;
+    public static final int FBZ_END_BOSS = 0xAC;
     // S3KL object table: Obj_Penguinator.
     public static final int PENGUINATOR = 0xAD;
     // S3KL object table: Obj_StarPointer.

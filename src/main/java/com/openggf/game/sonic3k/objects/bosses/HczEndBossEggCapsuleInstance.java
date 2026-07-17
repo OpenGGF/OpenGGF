@@ -62,7 +62,6 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
 
     // Post-open delay before results (ROM: 64-frame timer)
     private static final int POST_OPEN_DELAY = 64;
-    private static final int HCZ_RESULTS_CHILD_RETIRE_DISPATCHES = 6;
 
     // Animal spawn count (ROM: 14 animals)
     private static final int ANIMAL_COUNT = 14;
@@ -362,7 +361,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         }
 
         private HczEndBossResultsScreenObjectInstance() {
-            this(PlayerCharacter.SONIC_AND_TAILS, 1);
+            super(true);
         }
 
         @Override
@@ -379,15 +378,6 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
                 sidekick.getCpuController().setController2SignedLocked(true);
                 sidekick.getCpuController().clearController2LogicalLatch();
             }
-        }
-
-        @Override
-        protected int additionalChildRetireDispatches() {
-            // Obj_LevelResultsWait2 polls its live child-SST count at $30
-            // before loc_2DCE2 may clear _unkFAA8 (sonic3k.asm:62679-62693).
-            // HCZ's event-owned results retain six owner dispatches after the
-            // engine's embedded result elements have left the screen.
-            return HCZ_RESULTS_CHILD_RETIRE_DISPATCHES;
         }
 
         @Override

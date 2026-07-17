@@ -575,6 +575,12 @@ public class SidekickCpuController {
         clearInputs();
     }
 
+    /** ROM {@code clr.w Tails_CPU_idle_timer}: return native P2 authority to CPU immediately. */
+    public void clearManualControlTimer() {
+        controlCounter = 0;
+        manualInputAppliedThisTick = false;
+    }
+
     public boolean isController2SignedLocked() {
         return controller2SignedLocked;
     }
@@ -2319,6 +2325,7 @@ public class SidekickCpuController {
                         && dy >= -JUMP_HEIGHT_THRESHOLD;
         suppressLocalGraceFollowNudge =
                 suppressLocalGraceFollowNudge && !fastLeaderNoLiveObjectNudge && !smallDxDelayedInputNudge;
+        ObjectInstance interactSlotObject = currentInteractSlotObject();
         boolean suppressFastLeaderTinyFollowNudge =
                 collisionRules != null
                         && collisionRules.sidekickSuppressesFastLeaderTinyFollowNudge()
@@ -2329,7 +2336,7 @@ public class SidekickCpuController {
                         // rule. With no latched support, loc_13E0A/loc_13E34
                         // still applies its native +/-1 x_pos nudge
                         // (sonic3k.asm:26707-26741).
-                        && hasLiveInteractSlotObject(currentInteractSlotObject())
+                        && hasLocalLiveInteractSlotObject(interactSlotObject)
                         && Math.abs(sidekick.getGSpeed()) < 0x100
                         && localGraceAbsDx < followSnapThreshold
                         && dy < -JUMP_HEIGHT_THRESHOLD
@@ -2980,6 +2987,18 @@ public class SidekickCpuController {
             return true;
         }
         return levelManager.getObjectManager().isActiveObjectInstance(interactObject);
+    }
+
+    private boolean hasLocalLiveInteractSlotObject(ObjectInstance interactObject) {
+        if (!hasLiveInteractSlotObject(interactObject)) {
+            return false;
+        }
+        // This suppression is an engine object-order bridge for a spring/wall
+        // contact that is still local to Tails, not a native interact-slot gate.
+        // ROM loc_13E0A/loc_13E34 never inspects interact(a0), and that pointer
+        // can remain latched long after the old support is vertically remote.
+        int dy = (short) (sidekick.getCentreY() - interactObject.getY());
+        return Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y;
     }
 
     private boolean preservesSidekickCpuPushGraceWhileRiding(ObjectInstance ridingObject) {

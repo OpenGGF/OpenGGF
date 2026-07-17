@@ -12,6 +12,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestObjectManagerVerticalPlacement {
@@ -115,6 +116,100 @@ class TestObjectManagerVerticalPlacement {
                         + "(docs/skdisasm/sonic3k.asm:37640-37762)");
         assertEquals(5, low.getSlotIndex(),
                 "The earlier low-X entry is created by the later Y-camera pass, after X-pass slots are consumed");
+    }
+
+    @Test
+    void s3kOffscreenSelfDeleteRemainsEligibleForLaterVerticalCursorPass() {
+        Camera camera = new Camera(SonicConfigurationService.getInstance());
+        camera.setMinY((short) 0);
+        camera.setY((short) 0);
+
+        ObjectSpawn spawn = new ObjectSpawn(0x0200, 0x0280, 0x71, 0x38, 0, false, 0x0280);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager manager = new ObjectManager(
+                List.of(spawn),
+                registry,
+                -1,
+                null,
+                null,
+                null,
+                camera,
+                new StubObjectServices() {
+                    @Override
+                    public Camera camera() {
+                        return camera;
+                    }
+                });
+        manager.enableExecThenLoadPlacement();
+
+        manager.reset(0);
+        assertEquals(0, manager.getActiveObjects().size());
+
+        camera.setY((short) 0x0100);
+        manager.update(0x0080, null, List.of(), 1, false);
+        DummyObject first = registry.instances.get(spawn);
+        assertEquals(1, manager.getActiveObjects().size());
+
+        first.setDestroyedByOffscreen();
+        manager.update(0x0080, null, List.of(), 2, false);
+        assertEquals(0, manager.getActiveObjects().size());
+
+        camera.setY((short) 0);
+        manager.update(0x0080, null, List.of(), 3, false);
+        assertEquals(0, manager.getActiveObjects().size());
+
+        camera.setY((short) 0x0100);
+        manager.update(0x0080, null, List.of(), 4, false);
+
+        assertEquals(1, manager.getActiveObjects().size(),
+                "An S3K out_of_range delete clears the live respawn bit, but its layout entry remains "
+                        + "inside the X-cursor range for a later Load_Sprites Y pass");
+        assertNotSame(first, registry.instances.get(spawn),
+                "The later Y strip must allocate a fresh SST instance for the immutable layout entry");
+    }
+
+    @Test
+    void s3kGenericOutOfRangeUnloadRemainsEligibleForLaterVerticalCursorPass() {
+        Camera camera = new Camera(SonicConfigurationService.getInstance());
+        camera.setMinY((short) 0);
+        camera.setY((short) 0x0100);
+
+        ObjectSpawn spawn = new ObjectSpawn(0x0200, 0x0280, 0x71, 0x38, 0, false, 0x0280);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager manager = new ObjectManager(
+                List.of(spawn),
+                registry,
+                -1,
+                null,
+                null,
+                null,
+                camera,
+                new StubObjectServices() {
+                    @Override
+                    public Camera camera() {
+                        return camera;
+                    }
+                });
+        manager.enableExecThenLoadPlacement();
+
+        manager.reset(0);
+        DummyObject first = registry.instances.get(spawn);
+        assertEquals(1, manager.getActiveObjects().size());
+
+        first.moveTo(0x1000, 0x0280);
+        manager.update(0x0080, null, List.of(), 1, false);
+        assertEquals(0, manager.getActiveObjects().size(),
+                "The shared out_of_range tail must delete the live SST instance");
+
+        camera.setY((short) 0);
+        manager.update(0x0080, null, List.of(), 2, false);
+        camera.setY((short) 0x0100);
+        manager.update(0x0080, null, List.of(), 3, false);
+
+        assertEquals(1, manager.getActiveObjects().size(),
+                "S3K Load_Sprites must reconsider a cursor-owned layout entry when its Y strip re-enters");
+        assertNotSame(first, registry.instances.get(spawn),
+                "The later Y pass must allocate a fresh SST instance after generic out_of_range deletion");
     }
 
     @Test
@@ -307,6 +402,10 @@ class TestObjectManagerVerticalPlacement {
     private static final class DummyObject extends AbstractObjectInstance {
         private DummyObject(ObjectSpawn spawn) {
             super(spawn, "Dummy");
+        }
+
+        private void moveTo(int x, int y) {
+            updateDynamicSpawn(x, y);
         }
 
         @Override

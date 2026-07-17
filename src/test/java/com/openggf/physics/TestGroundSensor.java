@@ -19,6 +19,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.GroundMode;
 import java.lang.reflect.Field;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -131,6 +132,12 @@ public class TestGroundSensor {
         // Tile 3: Empty but valid object (Height 0)
         byte[] emptyHeights = new byte[16];
         tiles[3] = new SolidTile(3, emptyHeights, fullWidths, (byte) 0);
+        // Tile 4: Empty metric but solid, with an observable angle write.
+        tiles[4] = new SolidTile(4, emptyHeights, fullWidths, (byte) 0x28);
+        // Tiles 5/6: Full-height FG/BG surfaces with distinct write angles.
+        tiles[5] = new SolidTile(5, fullHeights, fullWidths, (byte) 0x10);
+        tiles[6] = new SolidTile(6, fullHeights, fullWidths, (byte) 0x28);
+        tiles[7] = new SolidTile(7, halfHeights, fullWidths, (byte) 0x10);
     }
 
     @AfterEach
@@ -616,6 +623,80 @@ public class TestGroundSensor {
                 "BG floor should beat the empty FG fallback when it is closer to the probe");
         assertEquals(1, result.tileId(),
                 "Result should come from the BG floor tile, not the empty FG path");
+    }
+
+    @Test
+    public void selectedEmptyBackgroundRetainsForegroundNativeAngleWrite() throws Exception {
+        // FindFloor writes the FG tile's angle before its zero height extends.
+        // The empty BG path wins the equal-distance comparison but performs no
+        // angle write, so the shared output must still contain the FG angle.
+        setTileAt((byte) 0, 100, 100, 4);
+        setTileAt((byte) 0, 100, 116, 0, CollisionMode.NO_COLLISION);
+        setTileAt((byte) 1, 100, 100, 0, CollisionMode.NO_COLLISION);
+        setTileAt((byte) 1, 100, 116, 0, CollisionMode.NO_COLLISION);
+
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 100);
+        GameServices.gameState().setBackgroundCollisionFlag(true);
+        GameServices.camera().setX((short) 0);
+        GameServices.camera().setY((short) 0);
+
+        SensorResult result = new GroundSensor(
+                mockSprite, Direction.DOWN, (byte) 0, (byte) 0, true).scan();
+
+        assertEquals(0, result.tileId(), "the equal-distance BG empty result should remain selected");
+        assertTrue(result.foregroundAngleWritten(),
+                "the returned trace must retain the earlier FG FindFloor angle write");
+        assertEquals(0x28, result.foregroundAngle() & 0xFF);
+        assertTrue(result.backgroundScanExecuted());
+        assertFalse(result.backgroundAngleWritten(),
+                "an empty BG FindFloor path must not manufacture an angle write");
+        assertFalse(result.restoreForegroundAngleState(),
+                "BG won the distance comparison, so no explicit FG restore occurs");
+    }
+
+    @Test
+    public void strictlyCloserForegroundRestoresPostForegroundAngleAfterBackgroundWrite() {
+        setTileAt((byte) 0, 100, 100, 7);
+        setTileAt((byte) 1, 100, 112, 6);
+
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 100);
+        GameServices.gameState().setBackgroundCollisionFlag(true);
+        GameServices.camera().setX((short) 0);
+        GameServices.camera().setY((short) 0);
+
+        SensorResult result = new GroundSensor(
+                mockSprite, Direction.DOWN, (byte) 0, (byte) 0, true).scan();
+
+        assertEquals(7, result.tileId());
+        assertTrue(result.foregroundAngleWritten());
+        assertEquals(0x10, result.foregroundAngle() & 0xFF);
+        assertTrue(result.backgroundAngleWritten());
+        assertEquals(0x28, result.backgroundAngle() & 0xFF);
+        assertTrue(result.restoreForegroundAngleState(),
+                "FG distance 3 wins strictly over BG distance 11 and restores the post-FG byte");
+    }
+
+    @Test
+    public void sensorResultSetClearsAndCopyPreservesNativeAngleWriteTrace() {
+        SensorResult source = new SensorResult((byte) 0x11, (byte) 2, 1, Direction.DOWN)
+                .setNativeAngleWriteTrace(true, (byte) 0x11,
+                        true, true, (byte) 0x22, true);
+        SensorResult copy = new SensorResult().copyFrom(source);
+
+        assertTrue(copy.foregroundAngleWritten());
+        assertEquals(0x11, copy.foregroundAngle() & 0xFF);
+        assertTrue(copy.backgroundScanExecuted());
+        assertTrue(copy.backgroundAngleWritten());
+        assertEquals(0x22, copy.backgroundAngle() & 0xFF);
+        assertTrue(copy.restoreForegroundAngleState());
+
+        copy.set((byte) 3, (byte) 16, 0, Direction.DOWN);
+        assertFalse(copy.foregroundAngleWritten());
+        assertFalse(copy.backgroundScanExecuted());
+        assertFalse(copy.backgroundAngleWritten());
+        assertFalse(copy.restoreForegroundAngleState());
     }
 
     @Test

@@ -92,6 +92,31 @@ public final class RewindRoundTripHarness {
             new ObjectSpawn(0x100, 0x100, 1, 0, 0, false, 0);
 
     private static final Map<String, String> GRAPH_COVERED_ISOLATED_PROBE_CLASSES = Map.ofEntries(
+            Map.entry("com.openggf.game.sonic3k.objects.FbzEggPrisonButtonInstance",
+                    "com.openggf.game.sonic3k.objects.TestFbzEggPrison"),
+            Map.entry("com.openggf.game.sonic3k.objects.FbzEndEggCapsuleButtonInstance",
+                    "com.openggf.game.sonic3k.objects.TestFbzFinalEggCapsule"),
+            Map.entry("com.openggf.game.sonic3k.objects.FbzEndBossArmChild", "com.openggf.game.sonic3k.objects.TestFbzEndBossRewind"),
+            Map.entry("com.openggf.game.sonic3k.objects.FbzEndBossChainLinkChild", "com.openggf.game.sonic3k.objects.TestFbzEndBossRewind"),
+            Map.entry("com.openggf.game.sonic3k.objects.FbzEndBossFlameChild", "com.openggf.game.sonic3k.objects.TestFbzEndBossRewind"),
+            Map.entry("com.openggf.game.sonic3k.objects.FbzEndBossJointChild", "com.openggf.game.sonic3k.objects.TestFbzEndBossRewind"),
+            Map.entry("com.openggf.game.sonic3k.objects.FbzEndBossShipChild", "com.openggf.game.sonic3k.objects.TestFbzEndBossRewind"),
+            Map.entry("com.openggf.game.sonic3k.objects.FbzEndBossShipExplosionController", "com.openggf.game.sonic3k.objects.TestFbzEndBossRewind"),
+            Map.entry("com.openggf.game.sonic3k.objects.FbzEndBossShipFlameChild", "com.openggf.game.sonic3k.objects.TestFbzEndBossRewind"),
+            Map.entry("com.openggf.game.sonic3k.objects.FbzEndBossWeaponChild", "com.openggf.game.sonic3k.objects.TestFbzEndBossRewind"),
+            Map.entry("com.openggf.game.sonic3k.objects.FbzRobotnikHeadChild", "com.openggf.game.sonic3k.objects.TestFbzEndBossRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.badniks.BlasterAttackEffectObjectInstance",
+                    "com.openggf.game.sonic3k.objects.badniks.TestFbzBadnikGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.badniks.TechnoSqueekAttachmentObjectInstance",
+                    "com.openggf.game.sonic3k.objects.badniks.TestFbzBadnikGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.FbzMissileLauncherCompanionObjectInstance",
+                    "com.openggf.game.sonic3k.objects.TestFbzMissileFamilyGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.FbzMissileLauncherProjectileObjectInstance",
+                    "com.openggf.game.sonic3k.objects.TestFbzMissileFamilyGraphRewind"),
             Map.entry(
                     "com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance",
                     "TestS1BadnikChildGraphRewind"),

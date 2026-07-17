@@ -1,15 +1,39 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.camera.Camera;
+import com.openggf.game.PlayableEntity;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.StubObjectServices;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonic3kSpikeObjectInstance {
+
+    private static final class TestableSprite extends AbstractPlayableSprite {
+        TestableSprite(String code) {
+            super(code, (short) 0, (short) 0);
+        }
+
+        @Override public void draw() { }
+        @Override public void defineSpeeds() { }
+        @Override protected void createSensorLines() { }
+    }
 
     @Test
     void spikesUseSolidObjectFullInclusiveRightEdge() {
@@ -18,6 +42,16 @@ class TestSonic3kSpikeObjectInstance {
 
         assertTrue(spikes.usesInclusiveRightEdge(),
                 "Obj_Spikes calls SolidObjectFull; SolidObject_cont rejects relX > width*2, not relX == width*2");
+    }
+
+    @Test
+    void spikesUseStrictSolidObjectFullRideBoundaryWithoutStickyExtension() {
+        Sonic3kSpikeObjectInstance spikes = new Sonic3kSpikeObjectInstance(
+                new ObjectSpawn(0x0870, 0x0290, Sonic3kObjectIds.SPIKES, 0x00, 0, false, 0));
+
+        assertFalse(spikes.usesStickyContactBuffer(),
+                "SolidObjectFull continued riding clears at its exact d1 bound; the engine's "
+                        + "16px platform tolerance must not collapse the authored gap between FBZ2 spikes");
     }
 
     @Test
@@ -106,6 +140,93 @@ class TestSonic3kSpikeObjectInstance {
                         + "cannot make SolidObjectFull active until the next object dispatch");
     }
 
+    @Test
+    void pushSpikesUseDelayedPlayerPushSnapshotAndPreserveXSubpixel() {
+        Sonic3kSpikeObjectInstance spikes = new Sonic3kSpikeObjectInstance(
+                new ObjectSpawn(0x24C0, 0x0570, Sonic3kObjectIds.SPIKES, 0x03, 0, false, 0));
+        TestableSprite player = new TestableSprite("sonic");
+        player.setCentreX((short) 0x24A5);
+        player.setCentreY((short) 0x056C);
+        player.setSubpixelRaw(0xA300, 0x4B00);
+
+        // Init returns before loc_24356/SolidObjectFull.
+        spikes.update(0, player);
+
+        // f13765 equivalent: the pre-solid snapshot sees Push clear, then this
+        // frame's SolidObject sets both the object contact and live player Push.
+        spikes.update(1, player);
+        spikes.onSolidContact(player,
+                new SolidContact(false, true, false, false, true, 0, true), 1);
+        player.setPushing(true);
+
+        // f13766: object push contact is live, but saved $3E Push is still clear.
+        spikes.update(2, player);
+        assertEquals(0x24C0, spikes.getX(),
+                "loc_24356 must not move until the prior player-status snapshot also has Push");
+        assertEquals(0x24A5, player.getCentreX() & 0xFFFF);
+        assertEquals(0xA300, player.getXSubpixelRaw());
+        spikes.onSolidContact(player,
+                new SolidContact(false, true, false, false, true, 0, true), 2);
+
+        // f13767: prior object contact and saved player Push now agree.
+        spikes.update(3, player);
+        assertEquals(0x24C1, spikes.getX());
+        assertEquals(0x24A6, player.getCentreX() & 0xFFFF);
+        assertEquals(0xA300, player.getXSubpixelRaw(),
+                "ROM addq.w #1,x_pos(a1) preserves x_sub");
+    }
+
+    @Test
+    void pushSpikesProcessNativeP1P2BeforeExtraWithSharedRateTimer() throws Exception {
+        TestableSprite p1 = pushingPlayer("sonic", 0x24A5);
+        TestableSprite p2 = pushingPlayer("tails_p2", 0x24A4);
+        TestableSprite extra = pushingPlayer("knuckles_p3", 0x24A3);
+        Sonic3kSpikeObjectInstance spikes = new Sonic3kSpikeObjectInstance(
+                new ObjectSpawn(0x24C0, 0x0570, Sonic3kObjectIds.SPIKES, 0x03, 0, false, 0));
+
+        ObjectManager[] holder = new ObjectManager[1];
+        Camera camera = new Camera() {
+            @Override public short getX() { return 0x2400; }
+            @Override public short getY() { return 0x0500; }
+            @Override public short getWidth() { return 320; }
+            @Override public short getHeight() { return 224; }
+            @Override public boolean isVerticalWrapEnabled() { return false; }
+        };
+        ObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public GraphicsManager graphicsManager() { return null; }
+            @Override public Camera camera() { return camera; }
+            @Override public List<PlayableEntity> sidekicks() { return List.of(p2, extra); }
+            @Override public ObjectPlayerQuery playerQuery() {
+                return new ObjectPlayerQuery(() -> p1, () -> List.of(p2, extra));
+            }
+        };
+        ObjectManager manager = new ObjectManager(List.of(), registryFor(spikes), 0,
+                null, null, null, camera, services);
+        holder[0] = manager;
+        manager.reset(0);
+        manager.addDynamicObject(spikes);
+
+        // Init frame returns before loc_24356.
+        manager.update(0x2400, p1, List.of(p2, extra), 0, false, true, false);
+        FbzParticipantStateTable table = (FbzParticipantStateTable)
+                field(spikes, "pushParticipants").get(spikes);
+        table.restoreRewindStateValue(new FbzParticipantStateTable.Snapshot(
+                3, new int[][]{{1, 1, 1}, {1, 1, 1}}));
+        field(spikes, "pushRateTimer").setInt(spikes, 0);
+
+        manager.update(0x2400, p1, List.of(p2, extra), 1, false, true, false);
+
+        assertEquals(0x24C1, spikes.getX(), "P1 consumes the immediate push slot first");
+        assertEquals(0x24A6, p1.getCentreX() & 0xFFFF);
+        assertEquals(0x24A4, p2.getCentreX() & 0xFFFF,
+                "P2 runs second and only decrements the shared timer from 16 to 15");
+        assertEquals(0x24A3, extra.getCentreX() & 0xFFFF,
+                "extra sidekicks run only after both native participants");
+        assertEquals(14, field(spikes, "pushRateTimer").getInt(spikes),
+                "P1 reset to 16, then P2 and the labelled extra each decrement once");
+    }
+
     private static final class TestableSpike extends Sonic3kSpikeObjectInstance {
         private TestableSpike(ObjectSpawn spawn) {
             super(spawn);
@@ -114,5 +235,37 @@ class TestSonic3kSpikeObjectInstance {
         private void setCurrentYForTest(int y) {
             currentY = y;
         }
+    }
+
+    private static TestableSprite pushingPlayer(String code, int x) {
+        TestableSprite player = new TestableSprite(code);
+        player.setWidth(18);
+        player.setHeight(38);
+        player.setCentreX((short) x);
+        player.setCentreY((short) 0x056C);
+        player.setPushing(true);
+        return player;
+    }
+
+    private static ObjectRegistry registryFor(ObjectInstance instance) {
+        return new ObjectRegistry() {
+            @Override public ObjectInstance create(ObjectSpawn spawn) { return instance; }
+            @Override public void reportCoverage(List<ObjectSpawn> spawns) { }
+            @Override public String getPrimaryName(int objectId) { return "Spikes"; }
+        };
+    }
+
+    private static Field field(Object target, String name) throws Exception {
+        Class<?> type = target.getClass();
+        while (type != null) {
+            try {
+                Field field = type.getDeclaredField(name);
+                field.setAccessible(true);
+                return field;
+            } catch (NoSuchFieldException ignored) {
+                type = type.getSuperclass();
+            }
+        }
+        throw new NoSuchFieldException(name);
     }
 }

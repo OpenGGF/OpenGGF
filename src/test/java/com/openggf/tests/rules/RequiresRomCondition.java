@@ -11,7 +11,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 /**
  * Jupiter extension backing {@link RequiresRom}.
  * <p>
- * Reads the {@link RequiresRom} annotation on the test class, checks ROM
+ * Reads the nearest {@link RequiresRom} annotation on the test method or class, checks ROM
  * availability, and disables the test when the ROM is absent. When the ROM
  * is present it rebuilds the gameplay mode around the selected ROM before
  * each test method.
@@ -31,8 +31,7 @@ public class RequiresRomCondition implements ExecutionCondition, BeforeAllCallba
 
     @Override
     public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
-        Class<?> testClass = context.getRequiredTestClass();
-        RequiresRom annotation = testClass.getAnnotation(RequiresRom.class);
+        RequiresRom annotation = annotationFor(context);
         if (annotation == null) {
             return ConditionEvaluationResult.enabled("No @RequiresRom annotation");
         }
@@ -62,7 +61,7 @@ public class RequiresRomCondition implements ExecutionCondition, BeforeAllCallba
             throw new IllegalStateException(
                     "@RequiresRom and @RequiresGameModule are mutually exclusive on " + testClass.getName());
         }
-        RequiresRom annotation = testClass.getAnnotation(RequiresRom.class);
+        RequiresRom annotation = annotationFor(context);
         if (annotation == null) {
             return;
         }
@@ -79,6 +78,15 @@ public class RequiresRomCondition implements ExecutionCondition, BeforeAllCallba
         context.getStore(NS).put("rom", rom);
     }
 
+    private RequiresRom annotationFor(ExtensionContext context) {
+        RequiresRom methodAnnotation = context.getTestMethod()
+                .map(method -> method.getAnnotation(RequiresRom.class))
+                .orElse(null);
+        return methodAnnotation != null
+                ? methodAnnotation
+                : context.getRequiredTestClass().getAnnotation(RequiresRom.class);
+    }
+
     /**
      * Retrieves the loaded ROM from the extension context.
      */
@@ -86,5 +94,4 @@ public class RequiresRomCondition implements ExecutionCondition, BeforeAllCallba
         return context.getStore(NS).get("rom", Rom.class);
     }
 }
-
 

@@ -138,6 +138,17 @@ public interface ObjectArtProvider {
     List<String> getRendererKeys();
 
     /**
+     * Returns the number of regular object patterns cached contiguously from the
+     * supplied object-art base. This query must not load or cache art.
+     *
+     * @return the regular object pattern count
+     * @throws UnsupportedOperationException when a provider does not expose the count
+     */
+    default int getRegularPatternCount() {
+        throw new UnsupportedOperationException("Regular object pattern count is not exposed");
+    }
+
+    /**
      * Caches all patterns to GPU memory.
      *
      * @param graphicsManager the graphics manager

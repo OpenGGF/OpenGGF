@@ -102,6 +102,31 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            // FBZ end-boss topology is derived from captured role/subtype words after all SST slots settle.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossInstance", "arms"), RewindFieldPolicy.DEFERRED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossInstance", "joints"), RewindFieldPolicy.DEFERRED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossInstance", "chainLinks"), RewindFieldPolicy.DEFERRED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossInstance", "ship"), RewindFieldPolicy.DEFERRED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossInstance", "weapon"), RewindFieldPolicy.DEFERRED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossInstance", "shipExplosionController"), RewindFieldPolicy.DEFERRED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossInstance", "shipFlame"), RewindFieldPolicy.DEFERRED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractFbzEndBossChild", "boss"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossShipExplosionController", "boss"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossShipFlameChild", "boss"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzRobotnikHeadChild", "ship"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossJointChild", "arm"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossChainLinkChild", "arm"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossChainLinkChild", "joint"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossFlameChild", "weapon"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossShipExplosionController", "ship"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossShipFlameChild", "ship"), RewindFieldPolicy.CAPTURED),
+            // The prison button is a separate SST object. Preserve its exact parent
+            // identity through the compact ObjectReferenceCodec; never infer a parent
+            // from coordinates or neighbouring slots after restore.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEggPrisonButtonInstance", "parentRef"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndEggCapsuleButtonInstance", "parentRef"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzExitHallInstance", "hallRecord"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.level.objects.boss.AbstractBossInstance", "childComponents"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance", "grabbingBoss"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance", "cylinders"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton", "parent"), RewindFieldPolicy.CAPTURED),
@@ -448,6 +473,72 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance", "nativeP2GrabbedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1Instance", "parentButton"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1PeerInstance", "parent"), RewindFieldPolicy.CAPTURED),
+            // FBZ constructor-derived final configuration is recreated exactly from
+            // ObjectSpawn. Keep every disposition explicit here: a broad final-scalar
+            // rule would hide genuinely mutable final state in future object classes.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzBentPipeObjectInstance", "frame"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzBentPipeObjectInstance", "sizeIndex"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzChainLinkObjectInstance", "horizontalMode"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzChainLinkObjectInstance", "rangePixels"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzCloudInstance", "selector"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzCloudInstance", "addressSlot"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzCloudInstance", "mappingFrame"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzDezPlayerLauncherObjectInstance", "anchorX"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzDisappearingPlatformObjectInstance", "animation"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzDisappearingPlatformObjectInstance", "mask"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzDisappearingPlatformObjectInstance", "offset"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzFloatingPlatformObjectInstance", "anchorX"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzFloatingPlatformObjectInstance", "movementMode"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzFloatingPlatformObjectInstance", "phase"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzMagneticPlatformObjectInstance", "maximumRise"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzMagneticSpikeBallObjectInstance", "kind"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzMissileLauncherObjectInstance", "burst"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzMissileLauncherObjectInstance", "companion"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzMissileLauncherObjectInstance", "interval"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzMissileLauncherObjectInstance", "phase"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzPistonObjectInstance", "cull"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzPistonObjectInstance", "travel"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzPlatformBlocksObjectInstance", "frame"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzPlatformBlocksObjectInstance", "travel"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzPlatformBlocksObjectInstance", "width"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzScrewDoorObjectInstance", "animation"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzScrewDoorObjectInstance", "height"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzScrewDoorObjectInstance", "horizontal"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzScrewDoorObjectInstance", "legacy"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzScrewDoorObjectInstance", "negative"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzScrewDoorObjectInstance", "trigger"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzScrewDoorObjectInstance", "width"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzSnakePlatformObjectInstance", "route"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzSpinningPoleObjectInstance", "height"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzWallMissileObjectInstance", "interval"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzWireCageObjectInstance", "rangePixels"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzWireCageObjectInstance", "verticalMode"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzWireCageStationaryObjectInstance", "travelAngle"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzWireCageStationaryObjectInstance", "travelExtent"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.BlasterBadnikInstance", "magneticCapable"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.TechnoSqueekBadnikInstance", "verticalMotion"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.TechnoSqueekBadnikInstance", "attachment"), RewindFieldPolicy.TRANSIENT),
+            // FBZ live family links use captured stable SST metadata to relink after
+            // restore. These non-standard names need exact central dispositions; the
+            // common parent/boss/arm names are covered by the structural-name policy.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzMagneticPendulumChainObjectInstance", "endpoint"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzMagneticPendulumEndpointObjectInstance", "chain"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzMagneticPendulumObjectInstance", "endpoint"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzMinibossArmChild", "next"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzMinibossArmChild", "terminal"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzMinibossChainLink", "previous"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzMinibossChainLink", "next"), RewindFieldPolicy.TRANSIENT),
+            // FBZ2 subboss family references are reconstructed from captured family-slot and
+            // native-role scalars after the restore graph settles (TestFbz2SubbossRewind).
+            // Keep these exact because root/corner/upperLeft/upperRight are not globally
+            // structural names outside this object family.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractFbz2SubbossChild", "root"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Fbz2SubbossInstance", "upperLeft"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Fbz2SubbossInstance", "upperRight"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Fbz2SubbossSolidSideChild", "corner"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzSpiderCraneCompanionObjectInstance", "owner"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzSpiderCraneObjectInstance", "companion"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.BlasterProjectileObjectInstance", "owner"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance", "spawnedKnuckles"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Mhz1CutsceneDoorInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper", "owner"), RewindFieldPolicy.CAPTURED),
@@ -463,6 +554,10 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoFlipperObjectInstance", "lockedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance", "rewardItem"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoMagnetOrbObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
+            // Results children capture parentSlot and relink this structural SST pointer in
+            // afterRewindRestoreSettled. The forced and in-place graph paths are covered by
+            // TestS3kResultsKosQueueAndChildren.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kResultsElementObjectInstance", "parentResults"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance", "playerRef"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotBonusCageObjectInstance", "controller"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance", "controller"), RewindFieldPolicy.TRANSIENT),
@@ -474,6 +569,9 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p1SolidContact"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p2SolidContact"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p2RecentlyClearedSolidContact"), RewindFieldPolicy.DEFERRED),
+            // Per-frame horizontal-spring collision scratch. update() clears it before
+            // recomputing proactive spring hits, so it must never cross a rewind boundary.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance", "proactiveTriggeredThisUpdate"), RewindFieldPolicy.TRANSIENT),
             // SS-entry flash parent links are structural and can outlive a ring removed from
             // ObjectManager while the flash finishes the transition. Restore relinks by position.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance", "parentRing"), RewindFieldPolicy.TRANSIENT),

@@ -280,6 +280,28 @@ public final class Sonic3kPlcArtRegistry {
     }
 
     /**
+     * Render consumers published only after {@code PLCKosM_FBZEndBoss_Exit}
+     * finishes writing its native door/hall VRAM windows.
+     */
+    public static List<LevelArtEntry> fbzExitLevelArtEntries() {
+        return List.of(
+                new LevelArtEntry(
+                        Sonic3kObjectArtKeys.FBZ_EXIT_DOOR,
+                        Sonic3kConstants.MAP_FBZ_EXIT_DOOR_ADDR,
+                        Sonic3kConstants.ART_TILE_FBZ_EXIT_DOOR, 2, null, 1),
+                // Obj_FBZExitHall subtype $00 uses the hall mapping's frame 0
+                // with the door PLC tile base; it is not Obj_FBZExitDoor's map.
+                new LevelArtEntry(
+                        Sonic3kObjectArtKeys.FBZ_EXIT_HALL_DOOR_SCENERY,
+                        Sonic3kConstants.MAP_FBZ_EXIT_HALL_ADDR,
+                        Sonic3kConstants.ART_TILE_FBZ_EXIT_DOOR, 2, null, 2),
+                new LevelArtEntry(
+                        Sonic3kObjectArtKeys.FBZ_EXIT_HALL,
+                        Sonic3kConstants.MAP_FBZ_EXIT_HALL_ADDR,
+                        Sonic3kConstants.ART_TILE_FBZ_EXIT_HALL, 2, null, 2));
+    }
+
+    /**
      * Adds zone-specific art entries to the given lists.
      * Populated in subsequent tasks with per-zone badnik and object art.
      *
@@ -1291,6 +1313,83 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.MAP_STILL_SPRITES_ADDR, 0x339, 1,
                 null, new int[]{44, 45}));
 
+        // Obj_FBZFloatingPlatform through Obj_FBZDEZPlayerLauncher consume
+        // the native ArtNem_FBZMisc level buffer installed by PLC $1A-$1D.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_FLOATING_PLATFORM,
+                Sonic3kConstants.MAP_FBZ_FLOATING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0x0A, 1, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_CHAIN_LINK,
+                Sonic3kConstants.MAP_FBZ_CHAIN_LINK_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_SNAKE_PLATFORM,
+                Sonic3kConstants.MAP_FBZ_SNAKE_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0xF2, 1, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_BENT_PIPE,
+                Sonic3kConstants.MAP_FBZ_BENT_PIPE_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0xF2, 1, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_ROTATING_PLATFORM,
+                Sonic3kConstants.MAP_FBZ_ROTATING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0xF2, 1, null, new int[]{0}));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_ROTATING_PLATFORM_SPECIAL,
+                Sonic3kConstants.MAP_FBZ_ROTATING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0xCA, 1, null, new int[]{1}));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_DEZ_PLAYER_LAUNCHER,
+                Sonic3kConstants.MAP_FBZ_DEZ_PLAYER_LAUNCHER_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0x3C, 1, null, new int[]{0}));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_DISAPPEARING_PLATFORM,Sonic3kConstants.MAP_FBZ_DISAPPEARING_PLATFORM_ADDR,Sonic3kConstants.ARTTILE_FBZ_MISC+0x41,1,null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_SCREW_DOOR,Sonic3kConstants.MAP_FBZ_SCREW_DOOR_ADDR,Sonic3kConstants.ARTTILE_FBZ_MISC+0x59,1,null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_PROPELLER,Sonic3kConstants.MAP_FBZ_PROPELLER_ADDR,Sonic3kConstants.ARTTILE_FBZ_OUTDOORS,1,null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_PISTON,Sonic3kConstants.MAP_FBZ_PISTON_ADDR,Sonic3kConstants.ARTTILE_FBZ_OUTDOORS+0x36,1,null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_PLATFORM_BLOCKS,Sonic3kConstants.MAP_FBZ_PLATFORM_BLOCKS_ADDR,Sonic3kConstants.ARTTILE_FBZ_MISC+0x94,2,null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_MISSILE_LAUNCHER,Sonic3kConstants.MAP_FBZ_MISSILE_LAUNCHER_ADDR,Sonic3kConstants.ARTTILE_FBZ_OUTDOORS+0x46,1,null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_MISSILE_LAUNCHER_COMPANION,Sonic3kConstants.MAP_FBZ_MISSILE_LAUNCHER_ADDR,Sonic3kConstants.ARTTILE_FBZ_OUTDOORS+0x46,2,null));
+        // The first two entries point backward to shared launcher-missile frames,
+        // so the first offset cannot be used to infer this table's length.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_WALL_MISSILE,
+                Sonic3kConstants.MAP_FBZ_WALL_MISSILE_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_OUTDOORS + 0x46,
+                1,
+                null,
+                8));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_MAGNETIC_SPIKE_BALL,
+                Sonic3kConstants.MAP_FBZ_MAGNETIC_SPIKE_BALL_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0xCA, 1, null));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_MAGNETIC_SPIKE_FIELD_NARROW,
+                Sonic3kConstants.MAP_FBZ_MAGNETIC_SPIKE_BALL_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0xC9, 1, null));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_MAGNETIC_PLATFORM,
+                Sonic3kConstants.MAP_FBZ_MAGNETIC_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0xCA, 1, null));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_MINE,
+                Sonic3kConstants.MAP_FBZ_MINE_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0x91, 0, null));
+        // Obj_FBZElevator car: make_art_tile(ArtTile_FBZMisc2,2,0).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_ELEVATOR,
+                Sonic3kConstants.MAP_FBZ_ELEVATOR_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC2, 2, null));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_TRAP_SPRING,
+                Sonic3kConstants.MAP_FBZ_TRAP_SPRING_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC2 + 0x3D, 0, null));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_FLAMETHROWER,
+                Sonic3kConstants.MAP_FBZ_FLAMETHROWER_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0xA4, 0, null));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_SPIDER_CRANE,
+                Sonic3kConstants.MAP_FBZ_SPIDER_CRANE_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC2 + 0x67, 1, null));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_MAGNETIC_PENDULUM,
+                Sonic3kConstants.MAP_FBZ_MAGNETIC_PENDULUM_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC2 + 0x51, 1, null));
+
         // Override shared spikes to FBZ tile address
         levelArt.removeIf(e -> e.key().equals(Sonic3kObjectArtKeys.SPIKES));
         levelArt.add(new LevelArtEntry(
@@ -1307,7 +1406,8 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 Sonic3kConstants.MAP_BLASTER_ADDR,
                 1,
-                -1
+                -1,
+                11
         ));
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.FBZ_TECHNOSQUEEK,
@@ -1316,7 +1416,8 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 Sonic3kConstants.MAP_TECHNOSQUEEK_ADDR,
                 1,
-                -1
+                -1,
+                10
         ));
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.FBZ_BUTTON,
@@ -1327,6 +1428,102 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 -1
         ));
+        // Composite mapping: plunger pieces use FBZ misc tiles while capsule
+        // pieces use PLC-loaded ArtTile_FBZEggCapsule ($35D). Keep it level-backed.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_EGG_CAPSULE,
+                Sonic3kConstants.MAP_FBZ_EGG_CAPSULE_ADDR, 0, 0, null));
+        if (actIndex == 0) {
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_MINIBOSS,
+                    Sonic3kConstants.ART_KOSM_FBZ_MINIBOSS_ADDR,
+                    CompressionType.KOSINSKI_MODULED, 0,
+                    Sonic3kConstants.MAP_FBZ_MINIBOSS_ADDR, 1, -1));
+            // Obj_EndSignControl reuses Map_EggCapsule frames but points them
+            // $46 tiles below ArtTile_EggCapsule into the FBZ1 PLC window.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.FBZ1_MINIBOSS_FRAGMENTS,
+                    Sonic3kConstants.MAP_EGG_CAPSULE_ADDR,
+                    Sonic3kConstants.ARTTILE_EGG_CAPSULE - 0x46,
+                    0, null, new int[] {2, 3, 0xA, 4, 0xB}));
+        } else {
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ2_SUBBOSS,
+                    Sonic3kConstants.ART_NEM_FBZ2_SUBBOSS_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ2_SUBBOSS_SIZE,
+                    Sonic3kConstants.MAP_FBZ2_SUBBOSS_ADDR, 1, -1));
+            // PLC_62_Through_6A dependencies used by the FBZ2 subboss sequence.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_ROBOTNIK_STAND,
+                    Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_STAND_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_STAND_SIZE,
+                    Sonic3kConstants.MAP_FBZ_ROBOTNIK_STAND_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_ROBOTNIK_RUN,
+                    Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_RUN_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_RUN_SIZE,
+                    Sonic3kConstants.MAP_FBZ_ROBOTNIK_RUN_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_EGGROBO_STAND,
+                    Sonic3kConstants.ART_NEM_FBZ_EGGROBO_STAND_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_EGGROBO_STAND_SIZE,
+                    Sonic3kConstants.MAP_FBZ_EGGROBO_STAND_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_EGGROBO_RUN,
+                    Sonic3kConstants.ART_NEM_FBZ_EGGROBO_RUN_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_EGGROBO_RUN_SIZE,
+                    Sonic3kConstants.MAP_FBZ_EGGROBO_RUN_ADDR, 0, -1));
+            // Obj_FBZ2Subboss's normal defeat path queues both KosM blocks.
+            // Pillar consumes default frame 0; clouds explicitly select
+            // frames 1-3 from FBZCloud_PositionFrameData.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_BOSS_PILLAR,
+                    Sonic3kConstants.MAP_FBZ2_PREBOSS_ADDR,
+                    Sonic3kConstants.ART_TILE_FBZ_BOSS_PILLAR, 2, null,
+                    new int[]{0}));
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_CLOUD,
+                    Sonic3kConstants.MAP_FBZ2_PREBOSS_ADDR,
+                    Sonic3kConstants.ART_TILE_FBZ_CLOUD, 3, null,
+                    new int[]{1, 2, 3}));
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_END_BOSS,
+                    Sonic3kConstants.ART_NEM_FBZ_END_BOSS_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_END_BOSS_SIZE,
+                    Sonic3kConstants.MAP_FBZ_END_BOSS_ADDR, 1, -1));
+            // PLC_6F dependencies. Shared sheets are published under their
+            // canonical keys so consumers do not create FBZ-only duplicates.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_ROBOTNIK_HEAD,
+                    Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_HEAD_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_HEAD_SIZE,
+                    Sonic3kConstants.MAP_FBZ_ROBOTNIK_HEAD_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_EGGROBO_HEAD,
+                    Sonic3kConstants.ART_KOSM_FBZ_EGGROBO_HEAD_ADDR,
+                    CompressionType.KOSINSKI_MODULED, Sonic3kConstants.ART_KOSM_FBZ_EGGROBO_HEAD_SIZE,
+                    Sonic3kConstants.MAP_FBZ_EGGROBO_HEAD_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_END_BOSS_FLAME,
+                    Sonic3kConstants.ART_NEM_FBZ_END_BOSS_FLAME_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_FBZ_END_BOSS_FLAME_SIZE,
+                    Sonic3kConstants.MAP_FBZ_END_BOSS_FLAME_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.ROBOTNIK_SHIP,
+                    Sonic3kConstants.ART_NEM_ROBOTNIK_SHIP_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_ROBOTNIK_SHIP_SIZE,
+                    Sonic3kConstants.MAP_ROBOTNIK_SHIP_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(
+                    ObjectArtKeys.BOSS_EXPLOSION,
+                    Sonic3kConstants.ART_NEM_BOSS_EXPLOSION_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_BOSS_EXPLOSION_SIZE,
+                    Sonic3kConstants.MAP_BOSS_EXPLOSION_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.EGG_CAPSULE,
+                    Sonic3kConstants.ART_NEM_EGG_CAPSULE_ADDR,
+                    CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_EGG_CAPSULE_SIZE,
+                    Sonic3kConstants.MAP_EGG_CAPSULE_ADDR, 0, -1));
+        }
 
         // Cork Floor: ArtTile_FBZMisc + $C1
         levelArt.add(new LevelArtEntry(

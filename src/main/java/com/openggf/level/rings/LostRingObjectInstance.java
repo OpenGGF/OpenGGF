@@ -7,9 +7,6 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.RingRules;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.ChunkDesc;
-import com.openggf.level.LevelManager;
-import com.openggf.level.SolidTile;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
@@ -57,11 +54,6 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private static final int RING_Y_RADIUS = 8;
     /** ROM Obj37_Init sets width_pixels(a1) = 8 for BuildSprites' X gate. */
     private static final int RING_RENDER_HALF_WIDTH = 8;
-    /** BuildSprites assumed-height path uses a 32 px Y band when render_flags bit 4 is clear. */
-    private static final int BUILDSPRITES_ASSUMED_Y_MARGIN = 32;
-    /** ROM RingCheckFloorDist top-solidity bit (s2.asm Obj37 floor probe). */
-    private static final int SOLIDITY_TOP = 0x0C;
-
     private int xSubpixel;
     private int ySubpixel;
     private int xVel;
@@ -72,6 +64,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private int sparkleStartFrame = -1;
     private int lastFrameCounter;
     private boolean romRenderFlagForFloorProbe = true;
+    private boolean deferFirstPhysicsUpdate;
 
     /**
      * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
@@ -141,6 +134,16 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     /** Inject the shared spill-spin owner (frame source for rendering). */
     public void setSpillAnimation(SpillAnimationState spillAnimation) {
         this.spillAnimation = spillAnimation;
+    }
+
+    /** Native Obj_Bouncing_Ring phase is derived from the allocated SST slot. */
+    public void setSpillPhaseOffset(int slotIndex) {
+        this.phaseOffset = slotIndex & 7;
+    }
+
+    /** Creation-SST seam for Obj_Bouncing_Ring callers whose init routine draws before physics. */
+    public void deferFirstPhysicsUpdate() {
+        deferFirstPhysicsUpdate = true;
     }
 
     @Override
@@ -266,6 +269,12 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        if (deferFirstPhysicsUpdate) {
+            deferFirstPhysicsUpdate = false;
+            refreshRomRenderFlagForFloorProbe();
+            return;
+        }
+
         updateMovement();
 
         // Obj37_CheckBoundary: shared Ring_spill_anim_counter == 0 → delete.
@@ -353,7 +362,20 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     private void refreshRomRenderFlagForFloorProbe() {
         romRenderFlagForFloorProbe = isWithinRenderSpriteBounds(
-                RING_RENDER_HALF_WIDTH, BUILDSPRITES_ASSUMED_Y_MARGIN);
+                RING_RENDER_HALF_WIDTH, resolveLostRingRenderVerticalMargin());
+    }
+
+    /**
+     * Vertical extent used by the renderer that latches {@code render_flags} bit 7.
+     * S1/S2 use BuildSprites' 32-pixel approximate-height path for Obj37, while
+     * S3K Render_Sprites reads the cleared {@code height_pixels} field and therefore
+     * uses no vertical margin (sonic3k.asm:36337-36370).
+     */
+    protected int resolveLostRingRenderVerticalMargin() {
+        RingRules rules = resolveRingRules();
+        return rules != null
+                ? rules.lostRingRenderVerticalMargin()
+                : GameRules.SONIC_2.ring().lostRingRenderVerticalMargin();
     }
 
     protected boolean ringFloorProbeRequiresRenderFlag() {
@@ -413,8 +435,15 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * top-solidity sensor. Negative distance means penetration. Relocated from RingManager.java:1313.
      */
     protected int ringCheckFloorDist(int x, int y) {
+        ObjectServices objectServices = servicesOrNull();
+        if (objectServices == null || objectServices.levelManager() == null) {
+            return 0;
+        }
         com.openggf.physics.TerrainCheckResult result =
-                com.openggf.physics.ObjectTerrainUtils.checkFloorDist(x, y);
+                com.openggf.physics.ObjectTerrainUtils.checkFloorDist(
+                        objectServices.levelManager(),
+                        objectServices.backgroundPlaneCollisionProvider(),
+                        objectServices.useSecondaryTerrainCollisionPath(), x, y);
         if (!result.foundSurface()) {
             return 0;
         }
@@ -426,59 +455,16 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * ({@code -$10} → check the tile below when fully solid). Relocated from RingManager.java:1342.
      */
     protected int ringCheckCeilingDist(int x, int y) {
-        LevelManager levelManager = levelManagerOrNull();
-        if (levelManager == null) {
+        ObjectServices objectServices = servicesOrNull();
+        if (objectServices == null || objectServices.levelManager() == null) {
             return 0;
         }
-        ChunkDesc chunkDesc = levelManager.getChunkDescAt((byte) 0, x, y);
-        SolidTile tile = solidTile(levelManager, chunkDesc);
-        int metric = heightMetric(tile, chunkDesc, x);
-        if (metric == 0) {
-            return 0;
-        }
-        if (metric == 16) {
-            // ROM: sub.w a3,d2 with a3=-$10 → check the tile below.
-            int nextY = y + 16;
-            ChunkDesc nextDesc = levelManager.getChunkDescAt((byte) 0, x, nextY);
-            int nextMetric = heightMetric(solidTile(levelManager, nextDesc), nextDesc, x);
-            if (nextMetric > 0 && nextMetric < 16) {
-                return distance(nextMetric, y, nextY);
-            }
-            return distance(metric, y, y);
-        }
-        return distance(metric, y, y);
-    }
-
-    private LevelManager levelManagerOrNull() {
-        ObjectServices services = servicesOrNull();
-        return services != null ? services.levelManager() : null;
-    }
-
-    private static SolidTile solidTile(LevelManager levelManager, ChunkDesc chunkDesc) {
-        if (chunkDesc == null || !chunkDesc.isSolidityBitSet(SOLIDITY_TOP)) {
-            return null;
-        }
-        return levelManager.getSolidTileForChunkDesc(chunkDesc, SOLIDITY_TOP);
-    }
-
-    private static int heightMetric(SolidTile tile, ChunkDesc desc, int x) {
-        if (tile == null) {
-            return 0;
-        }
-        int index = x & 0x0F;
-        if (desc != null && desc.getHFlip()) {
-            index = 15 - index;
-        }
-        byte metric = tile.getHeightAt((byte) index);
-        if (metric != 0 && metric != 16 && desc != null && desc.getVFlip()) {
-            metric = (byte) (16 - metric);
-        }
-        return metric & 0xFF;
-    }
-
-    private static int distance(int metric, int y, int checkY) {
-        int tileY = checkY & ~0x0F;
-        return (tileY + 16 - metric) - y;
+        com.openggf.physics.TerrainCheckResult result =
+                com.openggf.physics.ObjectTerrainUtils.checkReverseGravityRingDist(
+                        objectServices.levelManager(),
+                        objectServices.backgroundPlaneCollisionProvider(),
+                        objectServices.useSecondaryTerrainCollisionPath(), x, y);
+        return result.foundSurface() ? result.distance() : 0;
     }
 
     // ── Type marker + collision ───────────────────────────────────────────────

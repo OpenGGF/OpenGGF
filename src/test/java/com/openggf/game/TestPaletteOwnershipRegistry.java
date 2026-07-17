@@ -7,8 +7,24 @@ import com.openggf.level.Palette;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 class TestPaletteOwnershipRegistry {
+
+    @Test
+    void targetPatchPersistsAcrossFramesWithoutTouchingNormalPalette() {
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        Palette[] normal = blankPalettes();
+        byte[] patch = {0x00, 0x22, 0x00, 0x44};
+
+        registry.applyTargetPatch("fbz.background", 3, 2, patch);
+        registry.beginFrame();
+        registry.resolveInto(normal, null, null, null);
+
+        assertArrayEquals(patch, registry.targetSegaData(3, 2, 2));
+        assertEquals("fbz.background", registry.targetOwnerAt(3, 2));
+        assertColorWord(normal[3], 2, 0x0000);
+    }
 
     @Test
     void higherPriorityWriteOverridesOverlappingColorsOnly() {

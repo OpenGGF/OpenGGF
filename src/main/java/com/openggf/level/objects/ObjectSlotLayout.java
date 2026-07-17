@@ -3,8 +3,10 @@ package com.openggf.level.objects;
 /**
  * Game-specific dynamic object slot layout for the shared {@link ObjectManager}.
  *
- * <p>Only the allocatable dynamic slot window is modeled here. Fixed player/UI/support
- * slots that live outside the manager remain owned by their respective systems.
+ * <p>The allocatable dynamic window and the native processed SST range are
+ * independent. {@link SlotAllocator} owns only the former; {@link ObjectManager}
+ * orders any explicitly registered fixed/support occupant within the latter.
+ * Player slots remain owned and executed by the sprite system.
  */
 @com.openggf.game.ModApi
 public record ObjectSlotLayout(
@@ -34,10 +36,10 @@ public record ObjectSlotLayout(
     //
     // S3K Process_Sprites still walks the full 110-slot Object_RAM table
     // (docs/skdisasm/sonic3k.constants.asm:303-323;
-    // docs/skdisasm/sonic3k.asm:35965-35980). Most gameplay objects live in the
-    // managed dynamic window above; call sites choose the ROM countdown that
-    // matches the object path they are modeling.
-    public static final ObjectSlotLayout SONIC_3K = new ObjectSlotLayout(4, 89, 110, true, true, true);
+    // docs/skdisasm/sonic3k.asm:35965-35980). Explicit fixed occupants such as
+    // slot 3 therefore execute in global SST order even though AllocateObject
+    // can only consume the managed dynamic window above.
+    public static final ObjectSlotLayout SONIC_3K = new ObjectSlotLayout(4, 90, 110, true, true, true);
 
     public ObjectSlotLayout(int firstDynamicSlot, int dynamicSlotCount) {
         this(firstDynamicSlot, dynamicSlotCount, firstDynamicSlot + dynamicSlotCount, false, false, false);

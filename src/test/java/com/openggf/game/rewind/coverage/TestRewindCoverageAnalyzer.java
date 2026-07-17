@@ -121,6 +121,16 @@ class TestRewindCoverageAnalyzer {
     }
 
     @Test
+    void resultsElementSlotRelinkedParentIsNotFlagged() {
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, Set.of());
+        ObjectCoverage cov = report.objects().stream()
+                .filter(o -> o.className().endsWith("S3kResultsElementObjectInstance"))
+                .findFirst().orElseThrow();
+        assertFalse(cov.unIdObjectRefFields().contains("parentResults"),
+                "the Results child relinks its structural parent from captured parentSlot after restore");
+    }
+
+    @Test
     void enumerationIncludesRuntimeChildSpawnedClasses() {
         RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, Set.of());
         assertTrue(report.objects().stream()

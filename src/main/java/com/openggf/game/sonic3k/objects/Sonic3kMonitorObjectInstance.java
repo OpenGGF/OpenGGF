@@ -21,6 +21,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -57,7 +58,8 @@ import java.util.logging.Logger;
  */
 public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         implements TouchResponseProvider, TouchResponseListener,
-        SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider, RewindRecreatable {
+        SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider, RewindRecreatable,
+        RomWorldPositionedObject {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kMonitorObjectInstance.class.getName());
 
     // From disassembly: solid params d1=$19, d2=$10, d3=$11
@@ -146,6 +148,12 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     @Override
     public int getY() {
         return motion.y;
+    }
+
+    @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        motion.x = (motion.x + offsetX) & 0xFFFF;
+        motion.y = (motion.y + offsetY) & 0xFFFF;
     }
 
     /** Current X position (uses motion state, which tracks spawn for static monitors). */

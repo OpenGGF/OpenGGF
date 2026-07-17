@@ -1,18 +1,23 @@
 package com.openggf.game.rewind.snapshot;
 
+import java.util.List;
+
 /**
- * Snapshot of the PLC art loading epoch for a game's object art provider.
+ * Snapshot of a game's PLC art loading epoch and runtime-published level-art consumers.
  *
- * <p>The engine loads all PLC-driven object art at zone-load time
- * ({@code loadArtForZone}). No per-frame dynamic PLC loading is implemented
- * in v1; this snapshot records a {@code loadEpoch} counter that increments
- * each time a zone's art is loaded, giving the rewind system a cheap
- * consistency check without having to re-decompress art on restore.
- *
- * <p>On restore the epoch value is used for diagnostic purposes only — if the
- * restored epoch differs from the current one, the art provider was reloaded
- * between snapshot and restore, which would indicate a level-transition rewind
- * edge case (out of scope for v1).
+ * <p>The epoch identifies the zone-load generation. The ordered key list records
+ * consumers published dynamically after gameplay-time PLC/KosM work completes,
+ * allowing a restore to remove stale consumers or deterministically rebuild them.
+ * Providers whose art is wholly zone-load-time use the compatibility constructor
+ * and therefore capture an empty key list.
  */
-public record PlcProgressSnapshot(int loadEpoch) {
+public record PlcProgressSnapshot(int loadEpoch, List<String> publishedLevelArtKeys) {
+    public PlcProgressSnapshot {
+        publishedLevelArtKeys = List.copyOf(publishedLevelArtKeys);
+    }
+
+    /** Compatibility constructor for providers without dynamic publication. */
+    public PlcProgressSnapshot(int loadEpoch) {
+        this(loadEpoch, List.of());
+    }
 }

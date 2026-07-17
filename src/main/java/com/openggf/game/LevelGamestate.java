@@ -11,10 +11,12 @@ import com.openggf.audio.GameAudioProfile;
 public class LevelGamestate implements LevelState {
     private final LevelTimer timer;
     private int rings;
+    private int ringExtraLifeFlags;
 
     public LevelGamestate() {
         this.timer = new LevelTimer();
         this.rings = 0;
+        this.ringExtraLifeFlags = 0;
     }
 
     public void update() {
@@ -33,6 +35,22 @@ public class LevelGamestate implements LevelState {
         this.rings = Math.max(0, rings);
     }
 
+    @Override
+    public int getRingExtraLifeFlags() {
+        return ringExtraLifeFlags;
+    }
+
+    @Override
+    public void setRingExtraLifeFlags(int flags) {
+        ringExtraLifeFlags = flags & 0x06;
+    }
+
+    @Override
+    public void resetRingsForLoss() {
+        rings = 0;
+        ringExtraLifeFlags = 0;
+    }
+
     public void addRings(int amount) {
         if (amount != 0) {
             int previousRings = rings;
@@ -41,8 +59,14 @@ public class LevelGamestate implements LevelState {
 
             // Ring Bonus Logic: 100 and 200 rings grant an extra life
             if (amount > 0) {
-                if ((previousRings < 100 && rings >= 100)
-                        || (previousRings < 200 && rings >= 200)) {
+                int thresholdFlag = 0;
+                if (previousRings < 100 && rings >= 100 && (ringExtraLifeFlags & 0x02) == 0) {
+                    thresholdFlag = 0x02;
+                } else if (previousRings < 200 && rings >= 200 && (ringExtraLifeFlags & 0x04) == 0) {
+                    thresholdFlag = 0x04;
+                }
+                if (thresholdFlag != 0) {
+                    ringExtraLifeFlags |= thresholdFlag;
                     GameServices.gameState().addLife();
                     GameAudioProfile profile = GameServices.audio().getAudioProfile();
                     if (profile != null) {

@@ -696,8 +696,9 @@ public class HczEndBossInstance extends AbstractBossInstance
         // Child6_IncLevX; live Camera_max_X_pos remains locked until the
         // independent helper's accelerating $4000 accumulator advances it.
         int cameraTarget = targetLockXLeft + POST_FLEE_CAMERA_EXPAND;
-        spawnChild(() -> new HczEndBossGradualMaxXExtender(
-                state.x, state.y, cameraTarget));
+        services().camera().setMaxXTarget((short) cameraTarget);
+        spawnAfterCurrentSibling(() -> new com.openggf.game.sonic3k.objects.S3kIncLevelEndXGradualInstance(
+                state.x, state.y));
 
         // Resume zone music
         services().playMusic(Sonic3kMusic.HCZ2.id);

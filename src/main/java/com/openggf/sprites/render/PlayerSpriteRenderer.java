@@ -43,6 +43,16 @@ public class PlayerSpriteRenderer {
         patternBank.ensureCached(graphicsManager);
     }
 
+    /** Live virtual pattern-bank base used by compatibility/runtime diagnostics. */
+    public int patternBankBase() {
+        return patternBank.getBasePatternIndex();
+    }
+
+    /** Number of DPLC pattern slots owned by this renderer. */
+    public int patternBankCapacity() {
+        return patternBank.getPatterns().length;
+    }
+
     /**
      * Invalidates the DPLC frame cache, forcing tile re-upload on the next draw.
      * Must be called after a seamless level transition that reloads the pattern

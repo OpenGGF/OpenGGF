@@ -38,6 +38,7 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -52,6 +53,10 @@ import java.util.logging.Logger;
 public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.PlcProgressSnapshot> {
     private static final Logger LOG = Logger.getLogger(Sonic3kObjectArtProvider.class.getName());
+    private static final List<String> FBZ_EXIT_ART_KEYS = List.of(
+            Sonic3kObjectArtKeys.FBZ_EXIT_DOOR,
+            Sonic3kObjectArtKeys.FBZ_EXIT_HALL_DOOR_SCENERY,
+            Sonic3kObjectArtKeys.FBZ_EXIT_HALL);
 
     private int currentZoneIndex = -2;
     private int currentActIndex = 0;
@@ -63,6 +68,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private final List<String> rendererKeys = new ArrayList<>();
     private final List<ObjectSpriteSheet> sheetOrder = new ArrayList<>();
     private final List<PatternSpriteRenderer> rendererOrder = new ArrayList<>();
+    private final LinkedHashSet<String> runtimePublishedLevelArtKeys = new LinkedHashSet<>();
 
     // Tracks which level tile indices each level-art sheet depends on.
     // Used by Sonic3kPlcLoader.refreshAffectedRenderers() to find which
@@ -118,6 +124,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         rendererKeys.clear();
         sheetOrder.clear();
         rendererOrder.clear();
+        runtimePublishedLevelArtKeys.clear();
         dplcRenderers.clear();
         shieldArtSets.clear();
         levelArtTileRanges.clear();
@@ -942,9 +949,24 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                 + " level-art sheets for zone " + zoneIndex);
     }
 
+    /** Publishes the FBZ exit consumers after their native KosM queue drains. */
+    public void registerFbzExitArtSheets(Level level, Rom rom) throws IOException {
+        if (level == null || rom == null) return;
+        Sonic3kObjectArt art = new Sonic3kObjectArt(level, RomByteReader.fromRom(rom));
+        loadLevelArtEntries(Sonic3kPlcArtRegistry.fbzExitLevelArtEntries(), art);
+        for (String key : FBZ_EXIT_ART_KEYS) {
+            if (renderers.containsKey(key)) runtimePublishedLevelArtKeys.add(key);
+        }
+    }
+
     private void loadLevelArtFromRegistry(Sonic3kPlcArtRegistry.ZoneArtPlan plan,
             Sonic3kObjectArt art) {
-        for (Sonic3kPlcArtRegistry.LevelArtEntry entry : plan.levelArt()) {
+        loadLevelArtEntries(plan.levelArt(), art);
+    }
+
+    private void loadLevelArtEntries(List<Sonic3kPlcArtRegistry.LevelArtEntry> entries,
+            Sonic3kObjectArt art) {
+        for (Sonic3kPlcArtRegistry.LevelArtEntry entry : entries) {
             ObjectSpriteSheet sheet;
             if (entry.builderName() != null) {
                 sheet = invokeBuilder(art, entry.builderName(), entry.artTileBase());
@@ -1646,6 +1668,19 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         rendererOrder.add(renderer);
     }
 
+    private void removeLevelArtSheet(String key) {
+        int index = rendererKeys.indexOf(key);
+        if (index >= 0) {
+            rendererKeys.remove(index);
+            sheetOrder.remove(index);
+            rendererOrder.remove(index);
+        }
+        renderers.remove(key);
+        sheets.remove(key);
+        animations.remove(key);
+        levelArtTileRanges.remove(key);
+    }
+
     private void registerStandaloneAnimations(String key) {
         if (Sonic3kObjectArtKeys.MHZ_SHIP_PROPELLER.equals(key)) {
             SpriteAnimationSet set = new SpriteAnimationSet();
@@ -1793,6 +1828,11 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     }
 
     @Override
+    public int getRegularPatternCount() {
+        return sheetOrder.stream().mapToInt(sheet -> sheet.getPatterns().length).sum();
+    }
+
+    @Override
     public int ensurePatternsCached(GraphicsManager graphicsManager, int basePatternIndex) {
         int next = basePatternIndex;
         for (int i = 0; i < rendererOrder.size(); i++) {
@@ -1828,16 +1868,38 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
     @Override
     public com.openggf.game.rewind.snapshot.PlcProgressSnapshot capture() {
-        return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(loadEpoch);
+        return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(
+                loadEpoch, List.copyOf(runtimePublishedLevelArtKeys));
     }
 
-    /**
-     * Restore is a no-op for v1: all PLC art is loaded at zone-load time and
-     * does not change per-frame. The epoch is recorded in the snapshot as a
-     * diagnostic check but is not re-applied here.
-     */
     @Override
     public void restore(com.openggf.game.rewind.snapshot.PlcProgressSnapshot snap) {
-        // No per-frame PLC state to restore in v1.
+        loadEpoch = snap.loadEpoch();
+        List<String> desired = snap.publishedLevelArtKeys();
+        if (!desired.isEmpty() && !desired.equals(FBZ_EXIT_ART_KEYS)) {
+            throw new IllegalArgumentException("Unsupported runtime level-art publication: " + desired);
+        }
+
+        for (String key : FBZ_EXIT_ART_KEYS) {
+            if (!desired.contains(key)) removeLevelArtSheet(key);
+        }
+        runtimePublishedLevelArtKeys.clear();
+        if (desired.isEmpty()) return;
+
+        boolean rebuild = desired.stream().anyMatch(key -> !renderers.containsKey(key));
+        if (rebuild) {
+            LevelManager levelManager = GameServices.levelOrNull();
+            if (levelManager == null || levelManager.getCurrentLevel() == null) {
+                throw new IllegalStateException("Cannot restore FBZ exit art without an active level");
+            }
+            try {
+                registerFbzExitArtSheets(levelManager.getCurrentLevel(), GameServices.rom().getRom());
+            } catch (IOException failure) {
+                throw new IllegalStateException("Could not restore FBZ exit art", failure);
+            }
+        }
+        runtimePublishedLevelArtKeys.clear();
+        runtimePublishedLevelArtKeys.addAll(desired);
+        ensurePatternsCached(GameServices.graphics(), PatternAtlasRange.OBJECTS.base());
     }
 }

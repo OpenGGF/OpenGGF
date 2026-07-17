@@ -60,6 +60,10 @@ final class LevelFrameRuntimeUpdater {
     }
 
     void recomputeParallaxAfterRewindRestore() {
+        recomputeParallaxOnlyForCurrentFrame();
+    }
+
+    void recomputeParallaxOnlyForCurrentFrame() {
         if (levelManager.parallaxManager == null || levelManager.camera == null) {
             return;
         }

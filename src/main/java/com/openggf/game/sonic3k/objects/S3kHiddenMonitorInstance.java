@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -24,7 +25,8 @@ import java.util.logging.Logger;
  *
  * <p>Subtype encodes the monitor contents type.
  */
-public class S3kHiddenMonitorInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class S3kHiddenMonitorInstance extends AbstractObjectInstance
+        implements RewindRecreatable, RomWorldPositionedObject {
     private static final Logger LOG = Logger.getLogger(S3kHiddenMonitorInstance.class.getName());
 
     // Range check box: signpost position relative to THIS hidden monitor
@@ -48,6 +50,22 @@ public class S3kHiddenMonitorInstance extends AbstractObjectInstance implements 
     @Override
     public S3kHiddenMonitorInstance recreateForRewind(RewindRecreateContext ctx) {
         return new S3kHiddenMonitorInstance(ctx.spawn());
+    }
+
+    @Override
+    public int getX() {
+        return monitorX;
+    }
+
+    @Override
+    public int getY() {
+        return monitorY;
+    }
+
+    @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        monitorX = (monitorX + offsetX) & 0xFFFF;
+        monitorY = (monitorY + offsetY) & 0xFFFF;
     }
 
     @Override

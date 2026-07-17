@@ -406,6 +406,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected int invulnerableFrames = 0;
         private boolean suppressNextInvulnerabilityDecrement = false;
         private boolean invulnerabilityDisplayTimerTickedThisFrame = false;
+        private boolean invulnerabilityDisplayTimerDecrementedThisFrame = false;
 
         /**
          * Frames remaining for invincibility power-up.
@@ -948,7 +949,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         springing, springingFrames,
                         dead, drowningDeath, drownPreDeathTimer,
                         hurt, deathCountdown,
-                        invulnerableFrames, suppressNextInvulnerabilityDecrement, invincibleFrames,
+                        invulnerableFrames, suppressNextInvulnerabilityDecrement,
+                        invulnerabilityDisplayTimerDecrementedThisFrame, invincibleFrames,
                         spindash, spindashCounter,
                         crouching, lookingUp, lookDelayCounter,
                         doubleJumpFlag, doubleJumpProperty,
@@ -1096,6 +1098,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.deathCountdown = extra.deathCountdown();
                 this.invulnerableFrames = extra.invulnerableFrames();
                 this.suppressNextInvulnerabilityDecrement = extra.suppressNextInvulnerabilityDecrement();
+                this.invulnerabilityDisplayTimerDecrementedThisFrame =
+                                extra.invulnerabilityDisplayTimerDecrementedThisFrame();
                 this.invincibleFrames = extra.invincibleFrames();
                 this.spindash = extra.spindash();
                 this.spindashCounter = extra.spindashCounter();
@@ -1297,7 +1301,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
 
                 refreshInvincibilityStarsAfterRewindRestore();
-                refreshPersistentInstaShieldAfterRewindRestore();
+                refreshPersistentInstaShieldRegistration();
         }
 
         private void refreshInvincibilityStarsAfterRewindRestore() {
@@ -1334,7 +1338,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
         }
 
-        private void refreshPersistentInstaShieldAfterRewindRestore() {
+        /** Restores the persistent insta-shield graph after a manager rebuild or rewind. */
+        public void refreshPersistentInstaShieldRegistration() {
                 if (!hasPersistentInstaShieldAbility() || powerUpSpawner == null) {
                         return;
                 }
@@ -1705,9 +1710,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (isHidden()) {
                         return false;
                 }
+                int displayTimer = invulnerableFrames
+                        + (invulnerabilityDisplayTimerDecrementedThisFrame ? 1 : 0);
                 return isHurt()
-                        || invulnerableFrames <= 0
-                        || ((invulnerableFrames + 1) & 0x04) != 0;
+                        || displayTimer <= 0
+                        || (displayTimer & 0x04) != 0;
         }
         public boolean hasRenderFlagOnScreenState() {
                 return renderFlagOnScreenValid;
@@ -1997,6 +2004,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.pushingAtFrameStart = this.pushing;
                 this.hurtAtFrameStart = this.hurt;
                 this.hurtRecoveryCompletedThisFrame = false;
+                this.invulnerabilityDisplayTimerDecrementedThisFrame = false;
         }
 
         /**
@@ -2447,6 +2455,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (invulnerableFrames == 0) {
                         suppressNextInvulnerabilityDecrement = false;
                         invulnerabilityDisplayTimerTickedThisFrame = false;
+                        invulnerabilityDisplayTimerDecrementedThisFrame = false;
                 }
         }
 
@@ -2568,6 +2577,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 suppressNextInvulnerabilityDecrement = false;
                         } else {
                                 invulnerableFrames--;
+                                invulnerabilityDisplayTimerDecrementedThisFrame = true;
                         }
                 }
         }

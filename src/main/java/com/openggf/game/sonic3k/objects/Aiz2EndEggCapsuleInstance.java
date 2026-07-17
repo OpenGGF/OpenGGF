@@ -321,13 +321,13 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
         }
 
         private Aiz2ResultsScreenObjectInstance() {
-            this(PlayerCharacter.SONIC_AND_TAILS, 0);
+            super(true);
         }
 
         @Override
         public Aiz2ResultsScreenObjectInstance recreateForRewind(RewindRecreateContext ctx) {
             return ObjectConstructionContext.construct(ctx.objectServices(),
-                    () -> new Aiz2ResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+                    Aiz2ResultsScreenObjectInstance::new);
         }
 
         @Override

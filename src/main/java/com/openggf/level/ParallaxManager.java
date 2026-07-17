@@ -10,6 +10,7 @@ import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.ParallaxSnapshot;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
+import com.openggf.level.scroll.BgTilemapUpdateMode;
 import com.openggf.level.scroll.CameraDrivenScrollHandler;
 import com.openggf.level.scroll.ZoneScrollHandler;
 
@@ -81,6 +82,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     // Cached BG camera X from the active scroll handler (Integer.MIN_VALUE = no offset)
     private int cachedBgCameraX = Integer.MIN_VALUE;
     private int cachedBgPeriodWidth = 512;
+    private BgTilemapUpdateMode cachedBgTilemapUpdateMode = BgTilemapUpdateMode.STATIC_WINDOW;
 
     /**
      * Reset zone state to force reinitialization on next initZone call.
@@ -108,6 +110,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         currentShakeOffsetY = 0;
         cachedBgCameraX = Integer.MIN_VALUE;
         cachedBgPeriodWidth = 512;
+        cachedBgTilemapUpdateMode = BgTilemapUpdateMode.STATIC_WINDOW;
         minScroll = 0;
         maxScroll = 0;
         java.util.Arrays.fill(hScroll, 0);
@@ -238,6 +241,11 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         return cachedBgPeriodWidth;
     }
 
+    /** Returns the active handler's Plane B residency model. */
+    public BgTilemapUpdateMode getBgTilemapUpdateMode() {
+        return cachedBgTilemapUpdateMode;
+    }
+
     /**
      * Get the current horizontal shake offset for this frame.
      * This is propagated from the active zone scroll handler when screen shake is active.
@@ -330,6 +338,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
                 currentShakeOffsetY = handler.getShakeOffsetY();
                 cachedBgCameraX = handler.getBgCameraX();
                 cachedBgPeriodWidth = handler.getBgPeriodWidth();
+                cachedBgTilemapUpdateMode = handler.getBgTilemapUpdateMode();
                 capturePerLineVScroll(handler);
                 capturePerColumnVScroll(handler);
                 capturePerColumnVScrollFG(handler);
@@ -348,9 +357,11 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
             } else {
                 cachedBgCameraX = Integer.MIN_VALUE;
                 cachedBgPeriodWidth = 512;
+                cachedBgTilemapUpdateMode = BgTilemapUpdateMode.STATIC_WINDOW;
                 fillMinimal(cam);
             }
         } else {
+            cachedBgTilemapUpdateMode = BgTilemapUpdateMode.STATIC_WINDOW;
             fillMinimal(cam);
         }
     }
@@ -421,6 +432,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         // Camera is (0,0) during ending
         vscrollFactorFG = 0;
         vscrollFactorBG = (short) bgVscroll;
+        cachedBgTilemapUpdateMode = BgTilemapUpdateMode.STATIC_WINDOW;
 
         // Initialize zone if needed
         initZone(zoneId, actId, 0, 0);
@@ -434,6 +446,9 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
                     minScroll = handler.getMinScrollOffset();
                     maxScroll = handler.getMaxScrollOffset();
                     vscrollFactorBG = handler.getVscrollFactorBG();
+                    cachedBgCameraX = handler.getBgCameraX();
+                    cachedBgPeriodWidth = handler.getBgPeriodWidth();
+                    cachedBgTilemapUpdateMode = handler.getBgTilemapUpdateMode();
                 }
             }
         }

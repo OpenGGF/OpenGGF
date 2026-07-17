@@ -250,11 +250,18 @@ class TestObjectViewportWindowWidth {
     }
 
     @Test
-    void s3kTwoAxisPlacementKeepsNativeObjPosLoadAheadAtWidescreen() {
-        ObjectPlacementController placement = new ObjectPlacementController(List.of(), () -> 528);
-        placement.setTwoAxisCursorPlacement(true);
+    void s3kTwoAxisPlacementKeepsNativeParityAndUsesCappedWidescreenLead() {
+        int[] widths = {320, 528, 800};
+        int[] expected = {0x280, 656, 928};
+        for (int i = 0; i < widths.length; i++) {
+            int width = widths[i];
+            ObjectPlacementController placement =
+                    new ObjectPlacementController(List.of(), () -> width);
+            placement.setTwoAxisCursorPlacement(true);
 
-        assertEquals(0x280, placement.getLoadAhead(),
-                "S3K's X cursor must keep the ROM $280 allocation edge at widescreen");
+            assertEquals(expected[i], placement.getLoadAhead(),
+                    "S3K must remain ROM-exact at 320px and use only one chunk of "
+                            + "widescreen preload lead at width " + width);
+        }
     }
 }

@@ -7,6 +7,29 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestOscillationManagerSnapshot {
 
     @Test
+    void romTableByteOffsetsIncludeTheLeadingControlWord() {
+        OscillationManager.reset();
+        OscillationSnapshot base = OscillationManager.snapshot();
+        int[] values = base.values();
+        int[] deltas = base.deltas();
+        values[2] = 0x1D00;
+        deltas[2] = 0xFF00;
+        values[7] = 0x3500;
+        deltas[7] = 0x0100;
+        OscillationManager.restore(new OscillationSnapshot(
+                values, deltas, base.activeSpeeds(), base.activeLimits(),
+                base.control(), base.lastFrame(), base.suppressedUpdates()));
+
+        byte[] romTable = OscillationManager.snapshotRomFormatBytes();
+        assertEquals(OscillationManager.getByte(0x08), Byte.toUnsignedInt(romTable[0x0A]),
+                "Oscillating_table+$0A follows the two-byte control word and reads value[2]");
+        assertEquals(OscillationManager.getByte(0x1C), Byte.toUnsignedInt(romTable[0x1E]),
+                "Oscillating_table+$1E follows the two-byte control word and reads value[7]");
+        assertNotEquals(OscillationManager.getByte(0x0A), Byte.toUnsignedInt(romTable[0x0A]),
+                "passing a ROM table offset directly would read delta[2] instead");
+    }
+
+    @Test
     void roundTripPreservesOscillatorPhase() {
         OscillationManager.reset();
         // Tick a few times to advance values away from the initial state

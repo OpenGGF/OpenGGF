@@ -1,6 +1,7 @@
 package com.openggf.graphics;
 
 /** Read-only RGB palette surface consumed by the low-level texture uploader. */
+@com.openggf.game.ModApi
 public interface PaletteView {
     byte red(int colorIndex);
 

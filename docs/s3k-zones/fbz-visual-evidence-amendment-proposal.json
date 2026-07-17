@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "status": "proposed-awaiting-fresh-capture-and-independent-spec-review",
+  "scope": "fbz1-start-outdoor plus the five Act 1 AniPLC cadence evidence series only",
+  "frozen_manifest": "docs/s3k-zones/fbz-visual-checkpoints.json",
+  "frozen_manifest_sha256": "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",
+  "policy": {
+    "current_evidence_status": "rejected-superseded",
+    "reason": "The exact-start PNG and all five AniPLC series were captured while the FBZ title card/fade obscured gameplay, and the pixels contain a Lua/debug overlay. They cannot prove outdoor palette/deform or visible AniPLC cadence.",
+    "preservation": "Every old PNG and sidecar remains in place. Its hashes below are superseded evidence records, not deletion instructions.",
+    "acceptance_gate": "No checkpoint or cadence series may be marked PASS until fresh BizHawk evidence, an amended exact observed-state contract, fresh engine captures, and semantic comparison have passed independent spec review."
+  },
+  "rom_initialization_invariant": {
+    "scope": "FBZ1 level initialization before the first gameplay-visible capture frame",
+    "note": "This is an initialization/order invariant only. It is deliberately not an assertion about the first accepted visible frame.",
+    "script_order": [
+      {"channel": 0, "destination": "$210-$22F", "source": "ArtUnc_AniFBZ__0"},
+      {"channel": 1, "destination": "$230-$237", "source": "ArtUnc_AniFBZ__1"},
+      {"channel": 2, "destination": "$238-$247", "source": "ArtUnc_AniFBZ__2"},
+      {"channel": 3, "destination": "$200-$207", "source": "ArtUnc_AniFBZ__3"},
+      {"channel": 4, "destination": "$208-$20F", "source": "ArtUnc_AniFBZ__4"}
+    ],
+    "anim_counters": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "first_animation_tick": {
+      "note": "Exact ROM script-order counters after the first animation phase; this is independently distinct from the later first fully visible gameplay frame.",
+      "anim_counters": [63, 1, 7, 1, 1, 1, 7, 1, 7, 1, 0, 0, 0, 0, 0, 0]
+    }
+  },
+  "accepted_first_visible_frame": {
+    "status": "awaiting-fresh-independent-review",
+    "note": "Populate exact_state only from a fresh overlay-free BizHawk capture after independent review. The frame is not assumed to be Level_frame_counter 1 and its AniPLC timers are not inferred from initialization.",
+    "exact_state": null
+  },
+  "superseded_exact_start": {
+    "bk2_frame": 237914,
+    "trace_frame": 0,
+    "observed_problem": "The 320x224 active crop is predominantly black/title-card pixels and includes red Lua/debug text; the named outdoor and AniPLC features are not visible.",
+    "files": [
+      {
+        "path": "refs/fbz/fbz1-start-outdoor-320x224.png",
+        "sha256": "9572942942CC4A385397A942802B2EECCCB6B55BEC067C194D4D7C0909DC0569",
+        "bytes": 4010
+      },
+      {
+        "path": "refs/fbz/raw/fbz1-start-outdoor-348x240.png",
+        "sha256": "7811BD6214C0A5EE81F789F5F204534494FC82B1C66B84FE2D3471857DAF68C2",
+        "bytes": 4156
+      },
+      {
+        "path": "refs/fbz/provenance/fbz1-start-outdoor.bizhawk.json",
+        "sha256": "E5F98C7AB0288D19E6B0DD693810C49B3AEA3EF5CA61B91D902B852D21783FB1",
+        "bytes": 1714
+      },
+      {
+        "path": "refs/fbz/provenance/fbz1-start-outdoor.host.json",
+        "sha256": "756F907BC952F5177964CE477ED5C75EB0D41C69B8167C6E1A0B6D29D7F471BF",
+        "bytes": 1219
+      }
+    ]
+  },
+  "superseded_aniplc_series": {
+    "aggregate_algorithm": "For each channel, sort every matching file beneath refs/fbz by full path; normalize its repository-relative path to forward slashes; append path=uppercase_SHA256 plus LF; SHA-256 the UTF-8 concatenation.",
+    "sets": [
+      {
+        "destination": "$200-$207",
+        "channel": 3,
+        "file_count": 15,
+        "aggregate_sha256": "4D33EF04B5DED880E0F334F439857E0A81D4F8CADBAFDDD6B46EFF23CCFE5CA6"
+      },
+      {
+        "destination": "$208-$20F",
+        "channel": 4,
+        "file_count": 15,
+        "aggregate_sha256": "11EC35CFE63DF9163F08A7530A645BC835D47F376A5110E7BE298A016B6A8994"
+      },
+      {
+        "destination": "$210-$22F",
+        "channel": 0,
+        "file_count": 15,
+        "aggregate_sha256": "8E5148C26458F2822088DBA17FB3D9AE0A00CD17C0803DB8A423CBB30B313ED0"
+      },
+      {
+        "destination": "$230-$237",
+        "channel": 1,
+        "file_count": 15,
+        "aggregate_sha256": "24F86ED64895996D88021065E6B638E0E0C22FA195BEC488B8CCA1531F32BCF8"
+      },
+      {
+        "destination": "$238-$247",
+        "channel": 2,
+        "file_count": 15,
+        "aggregate_sha256": "E0CC82B242F6D20BC9E9144D755644582ACBFA3F7DD1C44C1DDE39B573DFDB32"
+      }
+    ]
+  },
+  "proposed_exact_start_replacement": {
+    "checkpoint": "fbz1-start-outdoor",
+    "intent_preserved": [
+      "native FBZ1 start position",
+      "outdoor palette",
+      "outdoor deform/cloud bands",
+      "all five initialized AniPLC channels"
+    ],
+    "selection_rule": "Use the first native 320x224 BizHawk frame after the title card and fade are completely absent and the gameplay plane is fully visible. The frame must still satisfy the native start intent; do not select a nearest later route frame.",
+    "pixel_gates": [
+      "title-card and act-label pixels absent",
+      "fade opacity is exactly clear",
+      "gameplay occupies the complete active crop",
+      "Lua, emulator, input-display, lag-counter, and debug overlay pixels disabled before screenshot",
+      "outdoor palette and at least one outdoor deform/cloud band visibly present"
+    ],
+    "required_exact_observed_state": [
+      "BK2 frame and trace frame",
+      "player x_pos/y_pos centre words",
+      "camera current/copy x/y and all current/target bounds",
+      "Current_zone_and_act",
+      "Events_routine_fg and Events_routine_bg",
+      "Events_bg+$00/$02/$04/$06",
+      "foreground/background outdoor flags",
+      "plane assignment, background collision, screen-shake, and boss flags",
+      "Level_frame_counter",
+      "all sixteen Anim_Counters bytes",
+      "title-card routine/state and fade state proving both are inactive"
+    ],
+    "manifest_application_rule": "After fresh capture, replace the setup recipe's timer/state values with the exact observed values and change the checkpoint reference to a new versioned gameplay-visible PNG path. Do not overwrite or delete the superseded PNG. The resulting byte-for-byte manifest hash must be independently reviewed before application.",
+    "proposed_reference_path": "refs/fbz/fbz1-start-outdoor-gameplay-v2-320x224.png"
+  },
+  "proposed_aniplc_replacements": {
+    "series": [
+      {
+        "checkpoint": "fbz1-aniplc-200",
+        "series": "aniplc-cadence-200-v2",
+        "channel": 3,
+        "source": "ArtUnc_AniFBZ__3",
+        "destination": "$200-$207",
+        "reviewed_visible_region": null,
+        "review_status": "awaiting-fresh-independent-review"
+      },
+      {
+        "checkpoint": "fbz1-aniplc-208",
+        "series": "aniplc-cadence-208-v2",
+        "channel": 4,
+        "source": "ArtUnc_AniFBZ__4",
+        "destination": "$208-$20F",
+        "reviewed_visible_region": null,
+        "review_status": "awaiting-fresh-independent-review"
+      },
+      {
+        "checkpoint": "fbz1-aniplc-210",
+        "series": "aniplc-cadence-210-v2",
+        "channel": 0,
+        "source": "ArtUnc_AniFBZ__0",
+        "destination": "$210-$22F",
+        "reviewed_visible_region": null,
+        "review_status": "awaiting-fresh-independent-review"
+      },
+      {
+        "checkpoint": "fbz1-aniplc-230",
+        "series": "aniplc-cadence-230-v2",
+        "channel": 1,
+        "source": "ArtUnc_AniFBZ__1",
+        "destination": "$230-$237",
+        "reviewed_visible_region": null,
+        "review_status": "awaiting-fresh-independent-review"
+      },
+      {
+        "checkpoint": "fbz1-aniplc-238",
+        "series": "aniplc-cadence-238-v2",
+        "channel": 2,
+        "source": "ArtUnc_AniFBZ__2",
+        "destination": "$238-$247",
+        "reviewed_visible_region": null,
+        "review_status": "awaiting-fresh-independent-review"
+      }
+    ],
+    "capture_rule": "Use a deterministic BizHawk savestate branch at the checkpoint's reviewed centre with the destination's animated tiles visibly present in the native crop. Capture a minimum of five title-card-free, overlay-free frames spanning a real timer expiry/frame-index advance for that channel.",
+    "per_frame_provenance": [
+      "ROM, BK2/input schedule, Lua, and savestate SHA-256/SHA-1 identities",
+      "BK2/branch frame and exact input",
+      "player/camera/event/fade/title-card state",
+      "channel timer and frame index before and after the animation phase",
+      "source art identity and exact VRAM destination",
+      "destination VRAM bytes SHA-256",
+      "raw framebuffer and 320x224 crop SHA-256"
+    ],
+    "visibility_gate": "Each accepted series must contain at least two distinct native-crop PNG hashes and a reviewed pixel region whose visible change corresponds to the recorded channel advance. Counter-only or VRAM-only evidence is insufficient; unrelated palette/fade/title pixels do not count."
+  },
+  "required_tooling_changes_before_recapture": [
+    "The candidate scanner must not treat coordinate/RAM equality during a title card as capture-eligible visual evidence.",
+    "The BizHawk capture script must gate on title-card inactive, fade clear, and a gameplay-visibility predicate before screenshot export.",
+    "The screenshot path must disable Lua and emulator overlays while retaining RAM capture in the sidecar.",
+    "AniPLC series planning must use per-channel visible checkpoint branches rather than trace frames 0/15/30/45/60.",
+    "The validator must recognize every superseded hash as FAIL/SUPERSEDED and must never count it as missing, accepted, or PASS."
+  ],
+  "review": {
+    "required": true,
+    "reviewer_must_be_independent": true,
+    "review_targets": [
+      "fresh exact observed-state values",
+      "new versioned reference paths and hashes",
+      "per-channel visible tile regions and cadence frames",
+      "capture-script visibility/overlay gates",
+      "validator supersession behavior",
+      "resulting frozen manifest hash"
+    ]
+  }
+}

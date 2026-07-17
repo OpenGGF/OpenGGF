@@ -788,6 +788,19 @@ final class ObjectSolidContactController {
         }
     }
 
+    void releaseRidingObject(PlayableEntity player, ObjectInstance owner) {
+        if (player == null || owner == null) {
+            return;
+        }
+        // Object-owned launch/release routines clear their own native
+        // standing bit even when SolidObjectFull skipped an offscreen P2.
+        clearObjectStandingBit(player, owner);
+        RidingState state = ridingStates.get(player);
+        if (state != null && state.object == owner) {
+            clearRidingObject(player);
+        }
+    }
+
     private void clearGroundWallSuppressionForNormalSolidSupport(PlayableEntity player, ObjectInstance instance) {
         if (!(player instanceof AbstractPlayableSprite sprite)
                 || instance == null
@@ -1162,7 +1175,7 @@ final class ObjectSolidContactController {
         // S3K SolidObjectFull tests Player_2 render_flags before entering
         // the helper that clears Status_OnObj/d6 for airborne riders
         // (docs/skdisasm/sonic3k.asm:41006-41010 before 41021-41034).
-        if (ridingObject != null && player.getAir()
+        if (instance == ridingObject && player.getAir()
                 && !preserveAirborneRideForEarlierPieces
                 && !carriesAirborneRiderAfterExitPlatform(ridingObject)
                 && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)
@@ -4133,11 +4146,15 @@ final class ObjectSolidContactController {
     }
 
     private boolean clearDeadPlayerStaleStandingBit(PlayableEntity player, ObjectInstance instance) {
+        RidingState ridingState = player != null ? ridingStates.get(player) : null;
+        boolean rideRecordOwnsInstance = ridingState != null && ridingState.object == instance;
+        boolean standingBitSet = player != null && instance != null
+                && hasObjectStandingBit(player, instance);
         if (player == null
                 || instance == null
                 || !player.getDead()
                 || !player.getAir()
-                || !hasObjectStandingBit(player, instance)
+                || (!standingBitSet && !rideRecordOwnsInstance)
                 || !(instance instanceof SolidObjectProvider provider)) {
             return false;
         }
@@ -4152,8 +4169,16 @@ final class ObjectSolidContactController {
         // Player 2 even when Tails is in Obj02_Dead; if the object's standing
         // bit is set and Status_InAir is already set, it clears Status_OnObj and
         // the object's P2 standing bit before returning (s2.asm:35022-35044).
-        snapshotObjectStandingBit(player, instance);
-        clearObjectStandingBit(player, instance);
+        // The explicit ride record is the folded runtime's equivalent of the
+        // native object's standing ownership. An earlier solid checkpoint may
+        // already have consumed the emulated d6 latch, while the later ridden
+        // solid still executes after Kill_Character in this same object pass.
+        // Native SolidObjectFull_1P loc_1DC98 clears Status_OnObj when that
+        // later owner observes Status_InAir (sonic3k.asm:41017-41035).
+        if (standingBitSet) {
+            snapshotObjectStandingBit(player, instance);
+            clearObjectStandingBit(player, instance);
+        }
         ridingStates.remove(player);
         inlineSupportedPlayers.remove(player);
         latestStandingSnapshots.remove(player);

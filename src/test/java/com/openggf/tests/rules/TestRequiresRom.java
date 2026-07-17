@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ConditionEvaluationResult;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.HashMap;
 import java.util.Map;
@@ -67,6 +68,17 @@ class TestRequiresRom {
                 "Concrete trace subclasses must inherit the ROM gate from abstract trace bases");
     }
 
+    @Test
+    void methodAnnotationOverridesAnUngatedContainingClass() throws Exception {
+        RequiresRomCondition condition = new RequiresRomCondition();
+        Method method = MethodRequiresRomTest.class.getDeclaredMethod("requiresS3k");
+
+        ConditionEvaluationResult result = condition.evaluateExecutionCondition(
+                extensionContextFor(MethodRequiresRomTest.class, method));
+
+        assertEquals(RomCache.getRom(SonicGame.SONIC_3K) == null, result.isDisabled());
+    }
+
     private TestTarget selectAvailableTarget() {
         for (SonicGame game : SonicGame.values()) {
             Rom rom = RomCache.getRom(game);
@@ -91,12 +103,17 @@ class TestRequiresRom {
     }
 
     private ExtensionContext extensionContextFor(Class<?> testClass) {
+        return extensionContextFor(testClass, null);
+    }
+
+    private ExtensionContext extensionContextFor(Class<?> testClass, Method testMethod) {
         Map<ExtensionContext.Namespace, Map<Object, Object>> stores = new HashMap<>();
         return (ExtensionContext) Proxy.newProxyInstance(
                 ExtensionContext.class.getClassLoader(),
                 new Class[]{ExtensionContext.class},
                 (proxy, method, args) -> switch (method.getName()) {
                     case "getRequiredTestClass" -> testClass;
+                    case "getTestMethod" -> Optional.ofNullable(testMethod);
                     case "getStore" -> storeFor(stores, (ExtensionContext.Namespace) args[0]);
                     case "getParent" -> Optional.empty();
                     case "getRoot" -> proxy;
@@ -136,6 +153,12 @@ class TestRequiresRom {
     private static final class NoAnnotationTest {
     }
 
+    private static final class MethodRequiresRomTest {
+        @RequiresRom(SonicGame.SONIC_3K)
+        void requiresS3k() {
+        }
+    }
+
     @RequiresRom(SonicGame.SONIC_1)
     private static final class RequiresS1RomTest {
     }
@@ -158,5 +181,4 @@ class TestRequiresRom {
     private record TestTarget(Class<?> testClass, String expectedModuleId, Rom rom) {
     }
 }
-
 

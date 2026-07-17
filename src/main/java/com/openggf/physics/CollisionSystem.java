@@ -2,6 +2,8 @@ package com.openggf.physics;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.GroundMode;
+import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rewind.snapshot.CollisionSystemSnapshot;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerMovementRules;
@@ -32,7 +34,7 @@ import java.util.logging.Logger;
  *    batched solid pass
  */
 @com.openggf.game.ModApi
-public class CollisionSystem {
+public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(CollisionSystem.class.getName());
 
     private final TerrainCollisionManager terrainCollisionManager;
@@ -41,6 +43,8 @@ public class CollisionSystem {
 
     // Trace for debugging/testing - defaults to no-op
     private CollisionTrace trace = NoOpCollisionTrace.INSTANCE;
+    private int primaryAngleOutput;
+    private int secondaryAngleOutput;
 
 
     public CollisionSystem() {
@@ -59,6 +63,7 @@ public class CollisionSystem {
         terrainCollisionManager.resetState();
         objectManager = null;
         trace = NoOpCollisionTrace.INSTANCE;
+        resetAngleOutputs();
     }
 
     public void setObjectManager(ObjectManager objectManager) {
@@ -71,6 +76,37 @@ public class CollisionSystem {
 
     public CollisionTrace getTrace() {
         return trace;
+    }
+
+    public int getPrimaryAngleOutput() {
+        return primaryAngleOutput;
+    }
+
+    public int getSecondaryAngleOutput() {
+        return secondaryAngleOutput;
+    }
+
+    /**
+     * Publish the shared outputs left by a grounded Player_AnglePos dispatch.
+     * Native AnglePos seeds both bytes to {@code 3}; its Status_OnObj fast path
+     * instead clears both to {@code 0}. Real FindFloor writes then overwrite
+     * only their respective byte.
+     */
+    public void publishGroundAngleOutputs(boolean onObject,
+                                          SensorResult left,
+                                          SensorResult right) {
+        int seed = onObject ? 0 : 3;
+        primaryAngleOutput = seed;
+        secondaryAngleOutput = seed;
+        if (!onObject) {
+            applyPrimaryAngleWrites(right);
+            applySecondaryAngleWrites(left);
+        }
+    }
+
+    private void resetAngleOutputs() {
+        primaryAngleOutput = 0;
+        secondaryAngleOutput = 0;
     }
 
     /**
@@ -820,6 +856,7 @@ public class CollisionSystem {
             case 0x00 -> {
                 doWallCheckBoth(sprite);
                 SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
+                applyPairedAngleWrites(groundResult);
                 doTerrainCollisionAir(sprite, groundResult, landingHandler);
             }
             case 0x40 -> {
@@ -830,15 +867,22 @@ public class CollisionSystem {
                     }
                 }
                 SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
+                applyPairedAngleWrites(ceilingResult);
                 boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
-                if (!ceilingHit) {
+                if (!ceilingHit && (forceFloorCheck || sprite.getYSpeed() >= 0)) {
+                    // S3K Tails_DoLevelCollision skips sub_11FD6 entirely while
+                    // rising unless WindTunnel_flag_P2 forces the floor check
+                    // (sonic3k.asm:29000-29008). Do not publish angles from a
+                    // helper the native dispatch never invoked.
                     SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
+                    applyPairedAngleWrites(groundResult);
                     doTerrainCollisionAirDirect(sprite, groundResult, landingHandler, forceFloorCheck);
                 }
             }
             case 0x80 -> {
                 doWallCheckBoth(sprite);
                 SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
+                applyPairedAngleWrites(ceilingResult);
                 doCeilingCollision(sprite, ceilingResult);
             }
             case 0xC0 -> {
@@ -848,15 +892,56 @@ public class CollisionSystem {
                     }
                 }
                 SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
+                applyPairedAngleWrites(ceilingResult);
                 boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
-                if (!ceilingHit) {
+                if (!ceilingHit && (forceFloorCheck || sprite.getYSpeed() >= 0)) {
+                    // Mirrored right-moving branch (sonic3k.asm:29095-29103).
                     SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
+                    applyPairedAngleWrites(groundResult);
                     doTerrainCollisionAirDirect(sprite, groundResult, landingHandler, forceFloorCheck);
                 }
             }
             default -> {
             }
         }
+    }
+
+    private void applyPairedAngleWrites(SensorResult[] results) {
+        if (results == null || results.length < 2) {
+            return;
+        }
+        // Sonic_CheckFloor/Ceiling probes right into Primary_Angle first, then
+        // left into Secondary_Angle (S3K sonic3k.asm:19839-19881).
+        applyPrimaryAngleWrites(results[1]);
+        applySecondaryAngleWrites(results[0]);
+    }
+
+    private void applyPrimaryAngleWrites(SensorResult result) {
+        primaryAngleOutput = applyNativeAngleWrites(primaryAngleOutput, result);
+    }
+
+    private void applySecondaryAngleWrites(SensorResult result) {
+        secondaryAngleOutput = applyNativeAngleWrites(secondaryAngleOutput, result);
+    }
+
+    private static int applyNativeAngleWrites(int incomingAngle, SensorResult result) {
+        if (result == null) {
+            return incomingAngle;
+        }
+        int postForeground = incomingAngle & 0xFF;
+        if (result.foregroundAngleWritten()) {
+            postForeground = result.foregroundAngle() & 0xFF;
+        }
+        int output = postForeground;
+        if (result.backgroundScanExecuted()) {
+            if (result.backgroundAngleWritten()) {
+                output = result.backgroundAngle() & 0xFF;
+            }
+            if (result.restoreForegroundAngleState()) {
+                output = postForeground;
+            }
+        }
+        return output;
     }
 
     private static void requireTerrainOnlyPlan(FrameCollisionPlan plan, String operation) {
@@ -1103,6 +1188,10 @@ public class CollisionSystem {
 
         for (int i = 0; i < 2; i++) {
             SensorResult result = pushSensors[i].scan((short) 0, (short) 0);
+            // CheckLeft/RightWallDist both target Primary_Angle. Publish before
+            // collision response because one-sided air branches can return
+            // immediately after this helper.
+            applyPrimaryAngleWrites(result);
 
             if (result != null && result.distance() < 0) {
                 moveForSensorResult(sprite, result);
@@ -1118,6 +1207,7 @@ public class CollisionSystem {
         }
 
         SensorResult result = pushSensors[sensorIndex].scan((short) 0, (short) 0);
+        applyPrimaryAngleWrites(result);
         if (result != null && result.distance() < 0) {
             moveForSensorResult(sprite, result);
             sprite.setXSpeed((short) 0);
@@ -1125,6 +1215,28 @@ public class CollisionSystem {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public String key() {
+        return "collision-system";
+    }
+
+    @Override
+    public CollisionSystemSnapshot capture() {
+        return new CollisionSystemSnapshot(primaryAngleOutput, secondaryAngleOutput);
+    }
+
+    @Override
+    public void restore(CollisionSystemSnapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        primaryAngleOutput = snapshot.primaryAngleOutput() & 0xFF;
+        secondaryAngleOutput = snapshot.secondaryAngleOutput() & 0xFF;
+    }
+
+    @Override
+    public void resetForMissingSnapshot() {
+        resetAngleOutputs();
     }
 
     private SensorResult selectSensorWithAngle(AbstractPlayableSprite sprite,

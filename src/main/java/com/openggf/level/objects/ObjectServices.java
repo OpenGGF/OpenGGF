@@ -39,7 +39,9 @@ import com.openggf.level.ParallaxManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.rings.RingManager;
+import com.openggf.level.resources.KosinskiModuleQueue;
 import com.openggf.physics.CollisionSystem;
+import com.openggf.physics.BackgroundPlaneCollisionProvider;
 import com.openggf.sprites.managers.SpriteManager;
 import java.io.IOException;
 import java.util.List;
@@ -62,6 +64,10 @@ public interface ObjectServices {
     LevelState levelGamestate();
     RespawnState checkpointState();
     LevelManager levelManager();
+    default BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider() {
+        return BackgroundPlaneCollisionProvider.FOREGROUND_ONLY;
+    }
+    default boolean useSecondaryTerrainCollisionPath() { return false; }
     Level currentLevel();
     int romZoneId();
     int currentAct();
@@ -104,6 +110,11 @@ public interface ObjectServices {
     GameRng rng();
 
     ZoneRuntimeRegistry zoneRuntimeRegistry();
+
+    /** Returns the gameplay-session-owned S3K Kosinski Moduled scheduler. */
+    default KosinskiModuleQueue kosinskiModuleQueue() {
+        throw new UnsupportedOperationException("Kosinski module queue is unavailable");
+    }
 
     ZoneRuntimeState zoneRuntimeState();
 

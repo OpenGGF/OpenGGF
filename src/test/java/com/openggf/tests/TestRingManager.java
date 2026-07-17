@@ -4,6 +4,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
+import com.openggf.game.LevelGamestate;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.ShieldType;
 import com.openggf.game.rewind.snapshot.RingSnapshot;
@@ -401,6 +402,10 @@ public class TestRingManager {
     @Test
     public void testLostRingSpawnReservesDynamicSlots() throws Exception {
         LevelManager levelManager = GameServices.level();
+        LevelGamestate levelState = new LevelGamestate();
+        levelState.setRings(100);
+        levelState.setRingExtraLifeFlags(0x02);
+        setField(levelManager, "levelGamestate", levelState);
         ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
         setField(levelManager, "objectManager", objectManager);
 
@@ -413,6 +418,9 @@ public class TestRingManager {
 
         assertEquals(3, objectManager.getAllocatedSlotCount(),
                 "Spilled lost rings should reserve real dynamic slots while active");
+        assertEquals(0, levelState.getRings());
+        assertEquals(0, levelState.getRingExtraLifeFlags(),
+                "Obj37 owner clears Extra_life_flags with Ring_count on spill");
     }
 
     @Test
@@ -620,6 +628,7 @@ public class TestRingManager {
                 ringRules.ringFloorCheckMask(),
                 ringRules.ringFloorCheckCounterPhase(),
                 ringRules.ringFloorProbeRequiresRenderFlag(),
+                ringRules.lostRingRenderVerticalMargin(),
                 ringCollisionHalfSize,
                 ringCollisionHalfSize,
                 ringRules.stageRingsUseObjectTouchCollection(),

@@ -1,0 +1,513 @@
+{
+  "schema_version": 1,
+  "generated_by": "tools/validation/Find-FbzVisualReferenceCandidates.ps1",
+  "manifest_sha256": "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",
+  "source": {
+    "metadata": "src/test/resources/traces/s3k/fbz_completerun/metadata.json",
+    "physics": "src/test/resources/traces/s3k/fbz_completerun/physics.csv.gz",
+    "bk2": "src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2",
+    "bk2_frame_offset": 237913,
+    "first_recorded_bk2_frame": 237914,
+    "final_recorded_bk2_frame": 282194,
+    "trace_frame_count": 44281,
+    "rom_sha1": "CFBF98C36C776677290A872547AC47C53D2761D6",
+    "bizhawk": "2.11 / Genplus-gx"
+  },
+  "policy": "Candidates locate natural movie states only. capture_eligible is true only when the frozen recipe is naturally exact; all other rows remain fail-closed until a deterministic savestate branch proves the complete recipe.",
+  "checkpoints": [
+    {
+      "id": "fbz1-start-outdoor",
+      "status": "capture-eligible-natural-exact",
+      "capture_eligible": true,
+      "trace_frame": 0,
+      "bk2_frame": 237914,
+      "candidate": {
+        "player_x": "0x0060",
+        "player_y": "0x076C",
+        "camera_x": "0x0000",
+        "camera_y": "0x070C",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 0
+      },
+      "blocker": null,
+      "required_next_proof": "BizHawk RAM must match the frozen start recipe before screenshot export."
+    },
+    {
+      "id": "fbz1-boundary-1-outdoor",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 3072,
+      "bk2_frame": 240986,
+      "candidate": {
+        "player_x": "0x0B00",
+        "player_y": "0x0A18",
+        "camera_x": "0x0A60",
+        "camera_y": "0x09D3",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 89
+      },
+      "blocker": "The complete-run proves only its natural crossing. The frozen recipe also requires the reset-and-reverse crossing.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz1-boundary-2-outdoor",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 5610,
+      "bk2_frame": 243524,
+      "candidate": {
+        "player_x": "0x0C73",
+        "player_y": "0x0351",
+        "camera_x": "0x0BE3",
+        "camera_y": "0x030C",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 157
+      },
+      "blocker": "The complete-run proves only its natural crossing. The frozen recipe also requires the reset-and-reverse crossing.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz1-boundary-3-outdoor",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 10851,
+      "bk2_frame": 248765,
+      "candidate": {
+        "player_x": "0x187E",
+        "player_y": "0x0A9C",
+        "camera_x": "0x17DE",
+        "camera_y": "0x0A3C",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 221
+      },
+      "blocker": "The complete-run proves only its natural crossing. The frozen recipe also requires the reset-and-reverse crossing.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz1-boundary-4-horizontal",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 14631,
+      "bk2_frame": 252545,
+      "candidate": {
+        "player_x": "0x208F",
+        "player_y": "0x0138",
+        "camera_x": "0x1FFA",
+        "camera_y": "0x00F8",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 1480
+      },
+      "blocker": "The movie never visits the frozen synthetic centre and does not prove both horizontal redraw directions.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz1-boundary-5-outdoor",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 14582,
+      "bk2_frame": 252496,
+      "candidate": {
+        "player_x": "0x208F",
+        "player_y": "0x0244",
+        "camera_x": "0x1FFA",
+        "camera_y": "0x0204",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 117
+      },
+      "blocker": "The complete-run proves only its natural crossing. The frozen recipe also requires the reset-and-reverse crossing.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz1-boundary-6-outdoor",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 241,
+      "bk2_frame": 238155,
+      "candidate": {
+        "player_x": "0x0171",
+        "player_y": "0x063D",
+        "camera_x": "0x00D1",
+        "camera_y": "0x05D8",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 116
+      },
+      "blocker": "The complete-run proves only its natural crossing. The frozen recipe explicitly requires the reverse indoor path.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz1-aniplc-200",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 1680,
+      "bk2_frame": 239594,
+      "candidate": {
+        "player_x": "0x0428",
+        "player_y": "0x0900",
+        "camera_x": "0x0398",
+        "camera_y": "0x087B",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 40
+      },
+      "blocker": "The physics fixture does not contain Anim_Counters or VRAM DMA destination evidence for the frozen timer phase.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz1-aniplc-208",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 909,
+      "bk2_frame": 238823,
+      "candidate": {
+        "player_x": "0x0636",
+        "player_y": "0x08BF",
+        "camera_x": "0x05A2",
+        "camera_y": "0x083A",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 119
+      },
+      "blocker": "The physics fixture does not contain Anim_Counters or VRAM DMA destination evidence for the frozen timer phase.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz1-aniplc-210",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 2443,
+      "bk2_frame": 240357,
+      "candidate": {
+        "player_x": "0x0801",
+        "player_y": "0x0A6C",
+        "camera_x": "0x0761",
+        "camera_y": "0x0A0C",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 365
+      },
+      "blocker": "The physics fixture does not contain Anim_Counters or VRAM DMA destination evidence for the frozen timer phase.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz1-aniplc-230",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 2836,
+      "bk2_frame": 240750,
+      "candidate": {
+        "player_x": "0x09F6",
+        "player_y": "0x0A22",
+        "camera_x": "0x0956",
+        "camera_y": "0x09DD",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 300
+      },
+      "blocker": "The physics fixture does not contain Anim_Counters or VRAM DMA destination evidence for the frozen timer phase.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz1-aniplc-238",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 3211,
+      "bk2_frame": 241125,
+      "candidate": {
+        "player_x": "0x0C04",
+        "player_y": "0x0A19",
+        "camera_x": "0x0B64",
+        "camera_y": "0x09D4",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 285
+      },
+      "blocker": "The physics fixture does not contain Anim_Counters or VRAM DMA destination evidence for the frozen timer phase.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz1-miniboss",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 20958,
+      "bk2_frame": 258872,
+      "candidate": {
+        "player_x": "0x2E31",
+        "player_y": "0x05EC",
+        "camera_x": "0x2E20",
+        "camera_y": "0x0540",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 189
+      },
+      "blocker": "Requires a BizHawk RAM/object-slot proof of active routine, six-hit state, PLC completion, and exact camera bounds.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz-seamless-transition",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 22397,
+      "bk2_frame": 260311,
+      "candidate": {
+        "player_x": "0x0102",
+        "player_y": "0x05A8",
+        "camera_x": "0x0062",
+        "camera_y": "0x0540",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 230
+      },
+      "blocker": "The natural movie transition lands at a different translated player coordinate than the frozen $2E60 injection recipe.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz2-boundary-outdoor",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 25893,
+      "bk2_frame": 263807,
+      "candidate": {
+        "player_x": "0x0BBB",
+        "player_y": "0x0A05",
+        "camera_x": "0x0B24",
+        "camera_y": "0x09A5",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 1152
+      },
+      "blocker": "The complete-run proves only its natural crossing. The frozen recipe also requires the reset-and-reverse crossing.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz2-subboss",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 35306,
+      "bk2_frame": 273220,
+      "candidate": {
+        "player_x": "0x29A1",
+        "player_y": "0x0638",
+        "camera_x": "0x2901",
+        "camera_y": "0x05F3",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 269
+      },
+      "blocker": "Requires a BizHawk RAM/object-slot proof of character-selected active routine, PLC completion, and exact camera lock.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz2-plane-transition-entry",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 36318,
+      "bk2_frame": 274232,
+      "candidate": {
+        "player_x": "0x2BDD",
+        "player_y": "0x0691",
+        "camera_x": "0x2B35",
+        "camera_y": "0x05E0",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 681
+      },
+      "blocker": "Requires exact event-controller, pillar, ten-cloud allocation and pre-threshold RAM proof.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz2-plane-reversal-steady",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 42080,
+      "bk2_frame": 279994,
+      "candidate": {
+        "player_x": "0x2F84",
+        "player_y": "0x066C",
+        "camera_x": "0x2E5C",
+        "camera_y": "0x060C",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 1148
+      },
+      "blocker": "Requires exact plane assignment, background collision, shake, event routines, and cloud accumulator proof.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz2-end-boss",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 38518,
+      "bk2_frame": 276432,
+      "candidate": {
+        "player_x": "0x3271",
+        "player_y": "0x0504",
+        "camera_x": "0x31BF",
+        "camera_y": "0x049F",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 1461
+      },
+      "blocker": "Requires exact active boss routine, eight-hit state, PLC completion, containment, and camera-bound proof.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz2-exit",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 43912,
+      "bk2_frame": 281826,
+      "candidate": {
+        "player_x": "0x325D",
+        "player_y": "0x066C",
+        "camera_x": "0x31BD",
+        "camera_y": "0x060C",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 316
+      },
+      "blocker": "The complete-run does not naturally occupy the frozen synthetic exit centre; exit PLC and retained boss-event reversal (Events fg=$0C/bg=$10, FG=B/BG=A) need a state branch.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    },
+    {
+      "id": "fbz2-capsule",
+      "status": "candidate-only-fail-closed",
+      "capture_eligible": false,
+      "trace_frame": 43971,
+      "bk2_frame": 281885,
+      "candidate": {
+        "player_x": "0x33BF",
+        "player_y": "0x066C",
+        "camera_x": "0x331F",
+        "camera_y": "0x060C",
+        "level_frame_counter": "0x0000",
+        "weighted_distance": 457
+      },
+      "blocker": "The complete-run does not naturally occupy the frozen capsule centre/camera-Y gate; the pre-StartNewLevel frame needs a state branch.",
+      "required_next_proof": [
+        "A deterministic BizHawk savestate branch must execute the complete frozen setup recipe.",
+        "No nearest-frame screenshot may be promoted to refs/fbz."
+      ]
+    }
+  ],
+  "cadence_series_trace_frames": {
+    "aniplc-cadence-200": [
+      0,
+      15,
+      30,
+      45,
+      60
+    ],
+    "aniplc-cadence-208": [
+      0,
+      15,
+      30,
+      45,
+      60
+    ],
+    "aniplc-cadence-210": [
+      0,
+      15,
+      30,
+      45,
+      60
+    ],
+    "aniplc-cadence-230": [
+      0,
+      15,
+      30,
+      45,
+      60
+    ],
+    "aniplc-cadence-238": [
+      0,
+      15,
+      30,
+      45,
+      60
+    ],
+    "palette-change": [
+      0,
+      15,
+      30,
+      45,
+      60
+    ],
+    "parallax-drift-bob": [
+      0,
+      15,
+      30,
+      45,
+      60
+    ],
+    "boss-clouds": [
+      43870,
+      43874,
+      43878,
+      43882,
+      43886
+    ],
+    "screen-shake": [
+      43870,
+      43874,
+      43878,
+      43882,
+      43886
+    ],
+    "plane-reversal": [
+      43870,
+      43874,
+      43878,
+      43882,
+      43886
+    ],
+    "magnetic-phase": []
+  },
+  "cadence_blockers": {
+    "magnetic_phase": "No Obj_FBZMagneticPlatform ($3B25C) object_state sample exists in the complete-run aux fixture; requires a deterministic savestate branch.",
+    "aniplc": "Series frames are capture candidates. Anim_Counters and DMA/VRAM provenance must be recorded by BizHawk before the series is accepted."
+  }
+}

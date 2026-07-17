@@ -217,6 +217,25 @@ class TestDrowningControllerMusicSelection {
     }
 
     @Test
+    void externalMusicOverrideRestoresAirWithoutRestartingZoneMusicOrChangingFramePhase()
+            throws Exception {
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.currentAudioManager()).thenReturn(AudioManager.getInstance());
+        DrowningController controller = new DrowningController(player);
+        controller.setRemainingAirFromFixedCountdown(7);
+        setPrivateInt(controller, "frameTimer", 17);
+        setPrivateBoolean(controller, "drowningMusicStarted", true);
+
+        controller.restoreAirForExternalMusicOverride();
+
+        assertEquals(30, controller.getRemainingAir());
+        assertEquals(17, getPrivateInt(controller, "frameTimer"),
+                "Obj_LevelResults writes air_left only; it does not reset the second timer");
+        assertFalse(controller.isDrowningMusicPlaying(),
+                "a later water exit must not restore zone music over ACT_CLEAR");
+    }
+
+    @Test
     void bubbleArtResolutionUsesRendererPresenceBeforeGpuCacheReadiness() throws Exception {
         AudioManager audioManager = AudioManager.getInstance();
         AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
@@ -250,6 +269,13 @@ class TestDrowningControllerMusicSelection {
         Field field = DrowningController.class.getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getInt(controller);
+    }
+
+    private static void setPrivateBoolean(DrowningController controller, String fieldName,
+                                          boolean value) throws Exception {
+        Field field = DrowningController.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setBoolean(controller, value);
     }
 
     private static String getPrivateString(DrowningController controller, String fieldName) throws Exception {

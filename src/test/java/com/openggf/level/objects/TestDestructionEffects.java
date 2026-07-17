@@ -130,6 +130,13 @@ class TestDestructionEffects {
 
     @Test
     void sonic2AnimalAllocatesPointsOnItsOwnFirstExecuteObjectsPass() {
+        // S2 RunObjects scans the full 128-slot SST, while AllocateObject starts
+        // at Dynamic_Object_RAM (global slot 16). With Obj27 retained in slot 22,
+        // Obj28 therefore lands in the already-visited lower slot 16 and waits
+        // for the following pass (docs/s2disasm/s2.asm:24596-24636,
+        // 25125-25146,46707-46715).
+        objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(ObjectSlotLayout.SONIC_2),
+                0, null, null, null, GameServices.camera(), services);
         DestructionConfig config = new DestructionConfig(
                 -1,
                 (spawn, svc) -> new AnimalObjectInstance(spawn, svc,
@@ -171,6 +178,16 @@ class TestDestructionEffects {
     }
 
     private static final class NoOpObjectRegistry implements ObjectRegistry {
+        private final ObjectSlotLayout slotLayout;
+
+        private NoOpObjectRegistry() {
+            this(ObjectSlotLayout.SONIC_1);
+        }
+
+        private NoOpObjectRegistry(ObjectSlotLayout slotLayout) {
+            this.slotLayout = slotLayout;
+        }
+
         @Override
         public ObjectInstance create(ObjectSpawn spawn) {
             return null;
@@ -183,6 +200,11 @@ class TestDestructionEffects {
         @Override
         public String getPrimaryName(int objectId) {
             return "noop";
+        }
+
+        @Override
+        public ObjectSlotLayout objectSlotLayout() {
+            return slotLayout;
         }
     }
 

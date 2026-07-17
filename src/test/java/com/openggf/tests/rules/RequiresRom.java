@@ -10,17 +10,16 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Declares that a test class needs a real ROM loaded.
+ * Declares that a test class or individual test method needs a real ROM loaded.
  * The Jupiter extension attached to this annotation loads the ROM, detects the
  * game module, and configures {@link RomManager} before each test.
  * If the ROM is unavailable, tests are gracefully skipped.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
+@Target({ElementType.TYPE, ElementType.METHOD})
 @Inherited
 @ExtendWith(RequiresRomCondition.class)
 public @interface RequiresRom {
     SonicGame value();
 }
-
 

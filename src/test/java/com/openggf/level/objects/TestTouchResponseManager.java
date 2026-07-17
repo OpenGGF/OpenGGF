@@ -968,7 +968,7 @@ public class TestTouchResponseManager {
     }
 
     @Test
-    public void testS3kInlineTouchUsesPreviousCollisionResponseListCapturedPosition() {
+    public void testS3kInlineTouchUsesPreviousCollisionResponseListLivePointerPosition() {
         when(player.getCentreX()).thenReturn((short) 160);
         when(player.getCentreY()).thenReturn((short) 112);
         when(player.getYRadius()).thenReturn((short) 15);
@@ -985,8 +985,8 @@ public class TestTouchResponseManager {
         objectManager.snapshotTouchResponseState(true);
         objectManager.runTouchResponsesForPlayer(player, 542, true);
 
-        assertFalse(enemy.wasAttacked,
-                "S3K TouchResponse consumes the previous Collision_response_list as captured by the prior object pass");
+        assertTrue(enemy.wasAttacked,
+                "S3K TouchResponse consumes prior-list membership but reads x_pos/y_pos through the live SST pointer");
     }
 
     @Test
@@ -1012,6 +1012,31 @@ public class TestTouchResponseManager {
         assertTrue(enemy.wasAttacked,
                 "S3K Collision_response_list is populated after an object's routine/draw-touch helper, "
                         + "so touch must use the post-update position captured with that list");
+    }
+
+    @Test
+    public void testS3kPreviousCollisionResponseListReadsLivePointerPositionAtInstaShieldEdge() {
+        when(player.getCentreX()).thenReturn((short) 160);
+        when(player.getCentreY()).thenReturn((short) 112);
+        when(player.getYRadius()).thenReturn((short) 15);
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
+        when(player.getDoubleJumpFlag()).thenReturn(1);
+        when(player.getShieldType()).thenReturn(null);
+        when(player.getInvincibleFrames()).thenReturn(0);
+        when(player.getYSpeed()).thenReturn((short) 0x0508);
+
+        MockMovingPreviousListAttackableEnemy enemy =
+                new MockMovingPreviousListAttackableEnemy(194, 120, 192, 120, 0x0B);
+        setupTableSize(0x0B, 8, 8);
+        objectManager.addDynamicObject(enemy);
+
+        objectManager.update(0, player, List.of(), 541, false, true, true);
+        objectManager.snapshotTouchResponseState(true);
+        objectManager.runTouchResponsesForPlayer(player, 542, true);
+
+        assertTrue(enemy.wasAttacked,
+                "S3K previous Collision_response_list entries are live SST pointers: membership is prior-frame, "
+                        + "but x_pos/y_pos are read at the player slot before the next object pass");
     }
 
     @Test
@@ -1501,6 +1526,47 @@ public class TestTouchResponseManager {
         public boolean usesCurrentTouchResponseState() {
             return true;
         }
+
+        @Override
+        public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
+            wasAttacked = true;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+        }
+    }
+
+    private static final class MockMovingPreviousListAttackableEnemy extends AbstractObjectInstance
+            implements TouchResponseProvider, TouchResponseAttackable {
+        private int currentX;
+        private int currentY;
+        private final int movedX;
+        private final int movedY;
+        private final int collisionFlags;
+        boolean wasAttacked;
+
+        private MockMovingPreviousListAttackableEnemy(
+                int initialX, int initialY, int movedX, int movedY, int collisionFlags) {
+            super(new ObjectSpawn(initialX, initialY, 0, 0, 0, false, 0),
+                    "MockMovingPreviousListAttackableEnemy");
+            this.currentX = initialX;
+            this.currentY = initialY;
+            this.movedX = movedX;
+            this.movedY = movedY;
+            this.collisionFlags = collisionFlags;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            currentX = movedX;
+            currentY = movedY;
+        }
+
+        @Override public int getX() { return currentX; }
+        @Override public int getY() { return currentY; }
+        @Override public int getCollisionFlags() { return collisionFlags; }
+        @Override public int getCollisionProperty() { return 0; }
 
         @Override
         public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {

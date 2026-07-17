@@ -280,6 +280,13 @@ public final class LevelFrameStep {
         // 6. Level scroll / parallax / animation update.
         wrapper.wrap("level", levelManager::update);
 
+        // 6b. ROM LevelLoop calls Process_Kos_Module_Queue after Animate_Tiles.
+        // One call performs either module start or completed-module DMA; it must
+        // never drain multiple phases in one engine frame.
+        if (context.kosinskiModuleQueue() != null) {
+            wrapper.wrap("kosinski-modules", context.kosinskiModuleQueue()::processNativeFrame);
+        }
+
         // 7. Cache BuildSprites on-screen results for next frame's logic.
         levelManager.refreshObjectPostCameraRenderState();
         if (spriteManager != null) {

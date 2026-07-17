@@ -42,8 +42,11 @@ import com.openggf.level.Palette;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.resources.KosinskiModuleQueue;
 import com.openggf.level.rings.RingManager;
 import com.openggf.physics.CollisionSystem;
+import com.openggf.physics.BackgroundPlaneCollisionProvider;
+import com.openggf.physics.DefaultBackgroundPlaneCollisionProvider;
 import com.openggf.physics.GroundSensor;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
@@ -81,6 +84,7 @@ public final class GameplayModeContext implements ModeContext {
     private CollisionSystem collisionSystem;
     private SpriteManager spriteManager;
     private LevelManager levelManager;
+    private BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider;
 
     private ZoneRuntimeRegistry zoneRuntimeRegistry;
     private PaletteOwnershipRegistry paletteOwnershipRegistry;
@@ -89,6 +93,7 @@ public final class GameplayModeContext implements ModeContext {
     private AdvancedRenderModeController advancedRenderModeController;
     private ZoneLayoutMutationPipeline zoneLayoutMutationPipeline;
     private final GhostRenderRegistry ghostRenderRegistry = new GhostRenderRegistry();
+    private final KosinskiModuleQueue kosinskiModuleQueue = new KosinskiModuleQueue();
 
     private BonusStageProvider activeBonusStageProvider = NoOpBonusStageProvider.INSTANCE;
     private GameplayInputFilter gameplayInputFilter = GameplayInputFilter.IDENTITY;
@@ -133,6 +138,7 @@ public final class GameplayModeContext implements ModeContext {
                 && collisionSystem != null
                 && spriteManager != null
                 && levelManager != null
+                && backgroundPlaneCollisionProvider != null
                 && zoneRuntimeRegistry != null
                 && paletteOwnershipRegistry != null
                 && animatedTileChannelGraph != null
@@ -215,6 +221,7 @@ public final class GameplayModeContext implements ModeContext {
         this.rewindRegistry.register(timerManager);
         this.rewindRegistry.register(fadeManager);
         this.rewindRegistry.register(new OscillationStaticAdapter());
+        this.rewindRegistry.register(kosinskiModuleQueue);
         // Register solid-execution adapter (no-op if not DefaultSolidExecutionRegistry)
         if (solidExecutionRegistry instanceof DefaultSolidExecutionRegistry dser) {
             this.rewindRegistry.register(dser);
@@ -240,10 +247,12 @@ public final class GameplayModeContext implements ModeContext {
         this.collisionSystem = Objects.requireNonNull(collisionSystem, "collisionSystem");
         this.spriteManager = Objects.requireNonNull(spriteManager, "spriteManager");
         this.levelManager = Objects.requireNonNull(levelManager, "levelManager");
+        maybeCreateBackgroundPlaneCollisionProvider();
 
         if (rewindRegistry != null) {
             rewindRegistry.deregister("parallax");
             rewindRegistry.deregister("water");
+            rewindRegistry.deregister("collision-system");
             rewindRegistry.deregister("sprites");
             rewindRegistry.deregister("palette-colors");
             rewindRegistry.deregisterPostRestoreCallback("parallax-derived-state");
@@ -252,6 +261,7 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.deregisterPostRestoreCallback("sprite-carry-solid-derived-state");
             rewindRegistry.register(parallaxManager);
             rewindRegistry.register(waterSystem);
+            rewindRegistry.register(collisionSystem);
             rewindRegistry.register(spriteManager.rewindSnapshottable());
             rewindRegistry.register(new PaletteColorStateAdapter(
                     () -> levelPalettesOrNull(levelManager),
@@ -315,6 +325,8 @@ public final class GameplayModeContext implements ModeContext {
         this.advancedRenderModeController = Objects.requireNonNull(advancedRenderModeController, "advancedRenderModeController");
         this.zoneLayoutMutationPipeline = Objects.requireNonNull(zoneLayoutMutationPipeline, "zoneLayoutMutationPipeline");
 
+        maybeCreateBackgroundPlaneCollisionProvider();
+
         if (rewindRegistry != null) {
             rewindRegistry.deregister("zone-runtime");
             rewindRegistry.deregister("palette-ownership");
@@ -328,6 +340,30 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.register(specialRenderEffectRegistry);
             rewindRegistry.register(advancedRenderModeController);
             rewindRegistry.register(zoneLayoutMutationPipeline);
+        }
+    }
+
+    public void attachBackgroundPlaneCollisionProvider(
+            BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider) {
+        this.backgroundPlaneCollisionProvider = Objects.requireNonNull(
+                backgroundPlaneCollisionProvider, "backgroundPlaneCollisionProvider");
+    }
+
+    public BackgroundPlaneCollisionProvider createDefaultBackgroundPlaneCollisionProvider() {
+        return new DefaultBackgroundPlaneCollisionProvider(
+                Objects.requireNonNull(gameStateManager, "gameStateManager"),
+                Objects.requireNonNull(camera, "camera"),
+                Objects.requireNonNull(parallaxManager, "parallaxManager"),
+                Objects.requireNonNull(zoneRuntimeRegistry, "zoneRuntimeRegistry"),
+                () -> levelManager);
+    }
+
+    private void maybeCreateBackgroundPlaneCollisionProvider() {
+        if (backgroundPlaneCollisionProvider == null
+                && gameStateManager != null && camera != null
+                && parallaxManager != null && levelManager != null
+                && zoneRuntimeRegistry != null) {
+            backgroundPlaneCollisionProvider = createDefaultBackgroundPlaneCollisionProvider();
         }
     }
 
@@ -387,6 +423,10 @@ public final class GameplayModeContext implements ModeContext {
         gameplayInputFilter = Objects.requireNonNull(filter, "filter");
     }
 
+    public BackgroundPlaneCollisionProvider getBackgroundPlaneCollisionProvider() {
+        return backgroundPlaneCollisionProvider;
+    }
+
     public ObjectManager getObjectManager() {
         return levelManager != null ? levelManager.getObjectManager() : null;
     }
@@ -419,6 +459,11 @@ public final class GameplayModeContext implements ModeContext {
         return zoneLayoutMutationPipeline;
     }
 
+    /** Runtime owner for the ROM-visible Kosinski Moduled scheduling queue. */
+    public KosinskiModuleQueue getKosinskiModuleQueue() {
+        return kosinskiModuleQueue;
+    }
+
     // ── Rewind framework ─────────────────────────────────────────────────
 
     /**
@@ -448,6 +493,7 @@ public final class GameplayModeContext implements ModeContext {
             return;
         }
         rewindRegistry.deregister("level");
+        rewindRegistry.deregister("level-tilemap");
         rewindRegistry.deregister("object-manager");
         rewindRegistry.deregister("level-event");
         rewindRegistry.deregister("solid-execution");
@@ -457,6 +503,7 @@ public final class GameplayModeContext implements ModeContext {
         }
         levelEventExtraRewindKeys.clear();
         rewindRegistry.register(levelManager.levelRewindSnapshottable());
+        rewindRegistry.register(levelManager.levelTilemapRewindSnapshottable());
         if (levelManager.getObjectManager() != null) {
             rewindRegistry.register(levelManager.getObjectManager().rewindSnapshottable());
         }
@@ -694,6 +741,7 @@ public final class GameplayModeContext implements ModeContext {
         if (zoneLayoutMutationPipeline != null) {
             zoneLayoutMutationPipeline.clear();
         }
+        kosinskiModuleQueue.clear();
         if (solidExecutionRegistry != null) {
             solidExecutionRegistry.clearTransientState();
         }
@@ -749,6 +797,7 @@ public final class GameplayModeContext implements ModeContext {
         animatedTileChannelGraph = null;
         paletteOwnershipRegistry = null;
         zoneRuntimeRegistry = null;
+        backgroundPlaneCollisionProvider = null;
         levelManager = null;
         spriteManager = null;
         collisionSystem = null;
@@ -780,6 +829,7 @@ public final class GameplayModeContext implements ModeContext {
      * gameplay mode context is wired up.
      */
     public void initializeFreshGameplayState() {
+        kosinskiModuleQueue.clear();
         if (gameStateManager != null) {
             gameStateManager.resetState();
         }

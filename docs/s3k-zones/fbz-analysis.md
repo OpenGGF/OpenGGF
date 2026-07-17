@@ -16,7 +16,7 @@
 
 ### Dynamic_Resize (FBZ1_Resize / FBZ2_Resize)
 
-**Disassembly location:** `sonic3k.asm` line 39411-39413
+**Disassembly location:** `sonic3k.asm` lines 39416-39417
 
 Both `FBZ1_Resize` and `FBZ2_Resize` are `rts` stubs (shared with CNZ). FBZ does NOT use the standard `Dynamic_resize_routine` state machine. All event logic is handled entirely through `ScreenEvent` and `BackgroundEvent` routines.
 
@@ -24,9 +24,9 @@ Both `FBZ1_Resize` and `FBZ2_Resize` are `rts` stubs (shared with CNZ). FBZ does
 
 ### Act 1 Screen Events (FBZ1_ScreenEvent)
 
-**Disassembly location:** `sonic3k.asm` line 108171
+**Disassembly location:** `sonic3k.asm` line 108176
 
-FBZ1 uses a layout modification system that swaps foreground tile regions when the player moves between "indoor" and "outdoor" areas of the airship. The system is driven by `Events_bg+$00` (layout mod index) and `Events_bg+$02` (indoor/outdoor state flag for FG).
+FBZ1 uses a layout modification system that swaps foreground tile regions when the player moves between "indoor" and "outdoor" areas of the airship. The system is driven by `Events_bg+$00` (layout mod index) and `Events_bg+$02` (indoor/outdoor state flag for FG). All donor and destination regions are in `Level_layout_main`, the mutable Plane-A/foreground layout; these are not background-plane-to-foreground copies.
 
 **Death guard:** Returns immediately (`rts`) if `Player_1+routine >= 6` (dying).
 
@@ -42,7 +42,7 @@ FBZ1 uses a layout modification system that swaps foreground tile regions when t
 | 5 | $14 | FBZ1SE_LayoutMod5 | $2080-$2680, $100-$280 | Fifth swap area |
 | 6 | $18 | FBZ1SE_LayoutMod6 | $0-$180, $580-$780 | Beginning of stage (near start) |
 
-**Layout mod range table:** `FBZ1_LayoutModRange` at line 108656:
+**Layout mod range table:** `FBZ1_LayoutModRange` at line 108661:
 ```
 $0400, $0F00, $0880, $0A80   ; Region 1
 $0880, $1100, $0180, $0300   ; Region 2
@@ -56,11 +56,12 @@ $0000, $0180, $0580, $0780   ; Region 6
 Each layout mod checks if the player has moved past a threshold:
 - If `Events_bg+$02` is clear (indoors): checks for transition to outdoors
 - If `Events_bg+$02` is set (outdoors): checks for transition back to indoors
-- On transition: copies tile data from the appropriate BG row to the FG layout, then calls `Refresh_PlaneScreenDirect`
+- On transition: copies layout cells from an off-route donor region of the Plane-A layout to the active Plane-A destination region, then calls `Refresh_PlaneScreenDirect`
+- The disassembly uses `st (Events_bg+$02).w`, which is a **byte** write at the word-aligned address. From cleared RAM the containing word becomes `$FF00`, not `$00FF` or `$FFFF`; consumers deliberately use `tst.w`, so the portable contract is zero versus nonzero.
 
-**ScreenInit (FBZ1_ScreenInit):** At line 108144
-- If Player X >= $180: copies "indoors" tile data from BG to visible area
-- If Player X < $180: sets `Events_bg+$00 = $18` (LayoutMod6 -- start area) and `Events_bg+$02 = $FF` (outdoors flag)
+**ScreenInit (FBZ1_ScreenInit):** At line 108149
+- If Player X >= $180: copies 5 Plane-A layout cells across 3 rows from the donor row pointer at `$48(a3)` to the destination row pointer at `$34(a3)`
+- If Player X < $180: sets `Events_bg+$00 = $18` (LayoutMod6 -- start area) and sets the byte at `Events_bg+$02` with `st` (outdoors/nonzero flag)
 
 **Knuckles differences:** None in Act 1 screen events.
 
@@ -68,7 +69,7 @@ Each layout mod checks if the player has moved past a threshold:
 
 ### Act 1 Background Events (FBZ1_BackgroundEvent)
 
-**Disassembly location:** `sonic3k.asm` line 108700
+**Disassembly location:** `sonic3k.asm` line 108705
 
 The background event manages the indoor/outdoor BG plane switching -- when the player transitions between indoor and outdoor sections, the BG plane must be redrawn with different content and palette.
 
@@ -82,8 +83,10 @@ The background event manages the indoor/outdoor BG plane switching -- when the p
 | 3 | $0C | FBZ1BGE_ChangeLeftRight | Draws new BG plane left-to-right during transition |
 | 4 | $10 | FBZ1BGE_ChangeRightLeft | Draws new BG plane right-to-left during transition |
 
-**Act 1 to Act 2 seamless transition** (in `FBZ1BGE_Normal`, line 108789):
-When `Events_fg_5` is set (by Act 1 miniboss defeat via standard `Obj_EndSignControl`):
+The normal handler checks `Events_fg_5` **before** its player-death guard. Therefore a pending act transition is processed even when `Player_1+routine >= 6`; only the ordinary BG-change path returns early for death. Active redraw stages do not contain this death guard.
+
+**Act 1 to Act 2 seamless transition** (in `FBZ1BGE_Normal`, line 108794):
+When `Events_fg_5` is set, the transition runs. The direct generic writer is `Obj_LevelResultsCreate` (`sonic3k.asm` lines 62615-62621), after the Act 1 results object is created; attributing the write directly to `Obj_EndSignControl` is not accurate.
 1. Loads PLC $1C (FBZ2 level art: `ArtNem_FBZMisc`, `ArtNem_FBZMisc2`, `ArtNem_FBZEggCapsule`)
 2. Sets `Current_zone_and_act` = $0401 (FBZ Act 2)
 3. Clears `Dynamic_resize_routine`, `Object_load_routine`, `Rings_manager_routine`, `Boss_flag`, `Respawn_table_keep`
@@ -92,7 +95,7 @@ When `Events_fg_5` is set (by Act 1 miniboss defeat via standard `Obj_EndSignCon
 6. Offsets all objects and camera by -$2E00 X pixels
 7. Resets tile offsets and runs `FBZ_Deform`
 
-**BG change system (FBZ1_CheckBGChange):** At line 108922
+**BG change system (FBZ1_CheckBGChange):** At line 108927
 Dispatches to 6 background change routines corresponding to the 6 layout mod regions. Each checks player position against thresholds and triggers indoor/outdoor BG transitions:
 
 | Handler | Indoor->Outdoor trigger | Outdoor->Indoor trigger |
@@ -105,18 +108,25 @@ Dispatches to 6 background change routines corresponding to the 6 layout mod reg
 | BGChange6 | Player Y >= $640 | Player Y <= $640 |
 
 **BG change mechanics:**
-- Going outdoors: `Events_bg+$04` set, loads `Pal_FBZBGOutdoors` to palette line 4 colors 2-9, sets `Events_routine_bg` to TopDown($04) or BottomUp($08)
+- Going outdoors: the byte at `Events_bg+$04` is set with `st`, loads `Pal_FBZBGOutdoors` to palette line 4 colors 2-9, sets `Events_routine_bg` to TopDown($04) or BottomUp($08)
 - Going indoors: `Events_bg+$04` cleared, loads `Pal_FBZBGIndoors` to palette line 4 colors 2-9, sets `Events_routine_bg` to TopDown or BottomUp
 - BGChange4 special case: uses LeftRight($0C) / RightLeft($10) for horizontal BG transitions instead of vertical
+
+**Redraw cadence and ordering:**
+- A vertical transition initializes `Draw_delayed_rowcount` to `$F` and draws at most one 16-pixel row per frame, for 16 frames. Top-down adds `$10` to the delayed position; bottom-up subtracts `$10`.
+- A horizontal transition initializes the count to `$1F`; the horizontal helpers draw two 16-pixel columns per frame, for 32 columns over 16 frames. Left-to-right adds `$10` per column; right-to-left subtracts `$10`.
+- The palette/state switch, deformation reset, and first transition row or columns all occur in the trigger frame. While a redraw is active, `FBZ1_CheckBGChange` still runs every frame, allowing the transition to reverse. The ordinary `Draw_TileRow` and deformation pass also run after the transition draw on every such frame.
+- Vertical redraw starts at effective BG Y for top-down and effective BG Y + `$F0` for bottom-up. The horizontal special case starts at `$000` or `$3F0` respectively.
 
 **Palette mutations on BG change:**
 - Going outdoors: writes `Pal_FBZBGOutdoors` (16 bytes) to `Normal_palette_line_4+$04` (palette line 4, colors 2-9)
 - Going indoors: writes `Pal_FBZBGIndoors` (16 bytes) to same location
-- BGChange4 left-right special case: loads palette inline at line 109120-109131
+- BGChange4 left-right special case: selects the palette at lines 109125-109131 and writes it at lines 109132-109137
+- Runtime transitions write only the **normal** palette buffer. By contrast, the outdoor branch of `FBZ1_BackgroundInit` writes those 16 bytes only to `Target_palette_line_4+$04`; this distinction is intentional during initial fade/setup.
 
-**BackgroundInit (FBZ1_BackgroundInit):** At line 108665
+**BackgroundInit (FBZ1_BackgroundInit):** At line 108670
 1. Allocates `Obj_FBZOutdoorBGMotion` (BG bobbing object)
-2. If Player X < $180: sets `Events_bg+$04` = $FF (outdoors), loads `Pal_FBZBGOutdoors` palette, applies outdoor BG deformation
+2. If Player X < $180: sets the byte at `Events_bg+$04` with `st` (outdoors/nonzero), writes `Pal_FBZBGOutdoors` to the target palette buffer, applies outdoor BG deformation
 3. If Player X >= $180: applies indoor BG deformation (default)
 
 **Confidence:** HIGH
@@ -219,12 +229,12 @@ When `Events_bg+$06` is set (boss loaded):
 - **PLC load:** `PLC_FBZ2Subboss_SonicTails` (Robotnik art) or `PLC_FBZ2Subboss_Knuckles` (EggRobo art) based on `Player_1+character_id`
 - **Palette:** `Pal_FBZ2Subboss` loaded to palette line 1
 - **Arena boundaries:** `Camera_min_X_pos = $2900`, `Camera_target_max_Y_pos = $5E0`
-- **HP:** 127 hits (`collision_property = $7F` -- effectively invincible, uses hit counter at $39 = 6 real hits)
+- **HP:** ordinary contact property `$7F` (effectively invincible); the separate signed cycle byte starts at `$06`, is predecremented after each laser cycle, and defeats on negative, producing **seven** scripted cycles. Only the first six nonfinal callbacks advance the left anchors.
 - **Boss flag:** Sets `Boss_flag = 1` on init
 - **Music:** Fades to `mus_Miniboss`
-- **Defeat behavior:** Loads boss pillar/cloud art (`PLCKosM_FBZ2Subboss`), clears `Boss_flag`, loads `PLC_Monitors`
+- **Defeat behavior:** Queues `ArtKosM_FBZCloud` at tile `$3A3` then `ArtKosM_FBZBossPillar` at `$3D5`; after the first `$5F` wait the character escapes and the level-music fade is attempted, after the second `$5F` wait `Boss_flag` clears and raw `PLC_Monitors` is applied, then the escaping character applies raw `PLC_MonitorsSpikesSprings` only when it leaves the screen.
 - **Character difference:** Knuckles gets `ArtNem_EggRoboStand` / `ArtNem_EggRoboRun` instead of `ArtNem_FBZRobotnikStand` / `ArtNem_FBZRobotnikRun`
-- **Confidence:** MEDIUM -- arena setup and character branching clear; multi-phase attack loop (routines 0-8) needs deeper reading
+- **Confidence:** HIGH -- routines 0-8, all five child tables, allocation failure edges, raw animations, hit flash, screen-shake ownership, PLC ordering, and cleanup were ported from the locked-on routine graph.
 
 ### Act 2 End Boss (Obj_FBZEndBoss)
 
@@ -237,8 +247,8 @@ When `Events_bg+$06` is set (boss loaded):
 - **Boss flag:** Sets `Boss_flag = 1`
 - **Music:** Fades out current, transitions to `mus_EndBoss`
 - **Screen shake:** Cleared (`Screen_shake_flag = 0`) when boss loads
-- **Defeat behavior:** `Obj_EndSignControl` called, palette rotation script started for transition; creates `Obj_FBZRobotnikHead` and `Obj_FBZRobotnikShip` children
-- **Confidence:** MEDIUM -- spawn sequence and arena well-documented; the boss's multi-phase attack pattern (5 routines) needs deeper investigation
+- **Defeat behavior:** pauses the level timer, dismantles the arm graph into exact debris, runs the ship explosion/escape sequence, spawns the fixed egg capsule and waits on `endOfLevelActive`, then publishes the native control/camera workers and queues exit door followed by exit hall KosM art.
+- **Confidence:** HIGH -- the complete root/child graph, allocation prefixes, targeting, raw flame scripts, damage flash, defeat/escape/capsule timing, exit-ready handoff, and family-safe rewind behavior are implemented and disassembly-reviewed.
 
 ### Boss Event Control (Obj_FBZEndBossEventControl)
 
@@ -259,7 +269,7 @@ When `Events_bg+$06` is set (boss loaded):
 
 ### FBZ_Deform (shared routine)
 
-**Disassembly location:** `sonic3k.asm` line 108854
+**Disassembly location:** `sonic3k.asm` line 108859
 
 FBZ uses a single `FBZ_Deform` routine for both acts, with indoor and outdoor modes selected by `Events_bg+$04`.
 
@@ -277,7 +287,7 @@ This gives a slightly-less-than-half-speed vertical parallax.
 Base X = `Camera_X << 16 >> 4` = Camera_X * 4096 (fixed-point, only integer part used)
 Each band adds `base_increment = base_X` to the running accumulator.
 
-**Scatter-fill index table:** `FBZ_InBGDeformIndex` at line 109270
+**Scatter-fill index table:** `FBZ_InBGDeformIndex` at line 109275
 
 The indoor deform uses a non-sequential scatter-fill pattern. The index table maps 9 speed groups to specific HScroll_table entries (scanline pairs). Format: `count-1, entry0, entry1, ..., entryN`.
 
@@ -293,7 +303,7 @@ The indoor deform uses a non-sequential scatter-fill pattern. The index table ma
 | 7 | 2 | +7 increments | $00, $44 |
 | 8 | 4 | +8 increments (fastest) | $02, $1A, $2A, $42 |
 
-**Indoor deform array:** `FBZ_InBGDeformArray` at line 109224
+**Indoor deform array:** `FBZ_InBGDeformArray` at line 109229
 Heights in pixels for each BG band (word entries, $7FFF = fill remaining):
 
 | Band | Height (px) | Description |
@@ -353,10 +363,10 @@ Each of 9 bands accumulates `base_increment = base / 2` plus a cloud drift `d2` 
 HScroll_table+$1FC += $0E00 per frame   (cloud auto-scroll accumulator)
 ```
 
-**Outdoor deform index table:** `FBZ_OutBGDeformIndex` at line 109282
+**Outdoor deform index table:** `FBZ_OutBGDeformIndex` at line 109287
 9 entries (word offsets into HScroll_table): $0E, $02, $0A, $06, $0C, $04, $08, $00, $10
 
-**Outdoor deform array:** `FBZ_OutBGDeformArray` at line 109260
+**Outdoor deform array:** `FBZ_OutBGDeformArray` at line 109265
 
 | Band | Height (px) |
 |------|-------------|
@@ -374,7 +384,9 @@ Total: 8 bands before terminator.
 
 **Auto-scroll:** Cloud drift at $0E00 per frame in `HScroll_table+$1FC`.
 
-**Obj_FBZOutdoorBGMotion** (line 109217): Uses `Gradual_SwingOffset` with amplitude $2800 and step $80 to create a gentle vertical bobbing motion. Result stored in `Events_bg+$08`.
+**Obj_FBZOutdoorBGMotion** (line 109222): Uses `Gradual_SwingOffset` with initial 16.16 velocity magnitude `$2800` and a per-frame velocity delta of `$80` to create a gentle vertical bobbing motion. `$2800` is not the displacement amplitude; the resulting displacement is only several pixels. The high word of the object's 16.16 offset is stored in `Events_bg+$08`.
+
+`FBZ1_BackgroundInit` allocates the object before its initial deformation pass, but the slot is not executed until the subsequent `Process_Sprites`, so initial deformation reads a zero bob offset. During gameplay `Process_Sprites` runs before `DeformBgLayer` and `ScreenEvents`, so the background event sees the newly updated offset from that frame. The object has no deletion or range-check branch and persists until object RAM is cleared; the seamless Act 1-to-2 `Load_Level` path does not clear object RAM, so this same instance survives the transition.
 
 **Confidence:** HIGH
 
@@ -565,7 +577,7 @@ locret_244C:
 | Magnetic Pendulum | `Obj_FBZMagneticPendulum` (81106) | Swinging pendulum | Yes | |
 | Exit Door | `Obj_FBZExitDoor` (149227) | End boss exit | Yes | |
 | Exit Hall | `Obj_FBZExitHall` (182234) | End-of-zone hallway | Yes | |
-| Egg Capsule | `Obj_FBZEggPrison` (187030) | Zone-specific capsule | Yes | |
+| Egg Prison | `Obj_FBZEggPrison` (187030) | Placed respawn-aware destructible prison; distinct from the generic final `Obj_EggCapsule` | Yes | |
 | Spring Plunger | `Obj_FBZSpringPlunger` (187089) | Miniboss-related spring | Yes | |
 | Outdoor BG Motion | `Obj_FBZOutdoorBGMotion` (109217) | BG bobbing oscillation | Yes | Persistent object |
 | Boss Event Control | `Obj_FBZEndBossEventControl` (109820) | Act 2 boss transition | Yes | Solid platform |
@@ -605,8 +617,8 @@ locret_244C:
 ## Dependency Map
 
 ### Events -> Animated Tiles
-- No direct dependencies. AniPLC scripts run independently of event state.
-- No VRAM conflicts: AniPLC targets tiles $200-$247; event PLCs load to different tile ranges (boss art, misc art).
+- No direct event-flag dependency. AniPLC scripts run independently of event state.
+- There is an intentional shared VRAM region: `ArtTile_FBZSpikes` is $200 while AniPLC script 3 is the first/live writer of `ArtUnc_AniFBZ__3` to $200-$207. No FBZ level PLC targets this range; spike objects reference the animated tile IDs.
 
 ### Events -> Palette Cycling
 - No dependency. `AnPal_FBZ` toggles `_unkF7C1` independently of event state; events only write BG palette (line 4, colors 2-9).

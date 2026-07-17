@@ -27,7 +27,10 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
 
     private static final Logger LOG = Logger.getLogger(AizIntroEmeraldGlowChild.class.getName());
     private final AizIntroPlaneChild parent;
+    // Non-final so generic rewind capture restores the exact live SST state.
     private int variant;
+    private int xOffset;
+    private int yOffset;
 
     private static final int[][] ANIM_SEQUENCES = {
             {1, 2, 3, 4, 3, 2},
@@ -56,6 +59,8 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
                     + " disagrees with captured spawn subtype variant " + spawnVariant);
         }
         this.variant = spawnVariant;
+        this.xOffset = X_OFFSETS[this.variant];
+        this.yOffset = Y_OFFSETS[this.variant];
     }
 
     @Override

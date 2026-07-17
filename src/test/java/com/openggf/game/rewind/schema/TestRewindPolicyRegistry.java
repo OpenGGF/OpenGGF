@@ -189,6 +189,26 @@ class TestRewindPolicyRegistry {
     }
 
     @Test
+    void defaultObjectPolicyTreatsFbz2SubbossFamilyLinksAsTransient() throws NoSuchFieldException {
+        assertDefaultPolicy(
+                "com.openggf.game.sonic3k.objects.AbstractFbz2SubbossChild",
+                "root",
+                RewindFieldPolicy.TRANSIENT);
+        assertDefaultPolicy(
+                "com.openggf.game.sonic3k.objects.Fbz2SubbossInstance",
+                "upperLeft",
+                RewindFieldPolicy.TRANSIENT);
+        assertDefaultPolicy(
+                "com.openggf.game.sonic3k.objects.Fbz2SubbossInstance",
+                "upperRight",
+                RewindFieldPolicy.TRANSIENT);
+        assertDefaultPolicy(
+                "com.openggf.game.sonic3k.objects.Fbz2SubbossSolidSideChild",
+                "corner",
+                RewindFieldPolicy.TRANSIENT);
+    }
+
+    @Test
     void defaultObjectPolicyCapturesLbzMinibossKnucklesParentReference() throws NoSuchFieldException {
         Field parent = LbzMinibossInstance.class.getDeclaredField("knucklesFightParent");
 
@@ -277,6 +297,12 @@ class TestRewindPolicyRegistry {
                 .findFirst()
                 .orElseThrow();
         assertEquals(policy, plan.policy());
+    }
+
+    private static void assertDefaultPolicy(
+            String className, String fieldName, RewindFieldPolicy expected) throws NoSuchFieldException {
+        Field field = classForName(className).getDeclaredField(fieldName);
+        assertEquals(expected, RewindPolicyRegistry.policyForAudit(field).orElse(null));
     }
 
     private static Class<?> classForName(String className) {

@@ -178,7 +178,9 @@ public abstract class Sonic2ZoneEvents {
             }
             ObjectArtProvider provider = GameServices.module().getObjectArtProvider();
             if (provider instanceof Sonic2ObjectArtProvider sonic2Provider) {
-                sonic2Provider.requestPlc(plcId);
+                if (sonic2Provider.requestPlc(plcId)) {
+                    levelManager.refreshObjectArtPatterns();
+                }
             }
         } catch (RuntimeException | IOException e) {
             LOGGER.fine(() -> "S2 PLC request " + plcId + " deferred: " + e.getMessage());

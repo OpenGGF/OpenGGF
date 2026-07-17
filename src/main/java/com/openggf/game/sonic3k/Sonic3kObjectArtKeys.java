@@ -235,6 +235,24 @@ public final class Sonic3kObjectArtKeys {
     public static final String FBZ_BLASTER = "fbz_blaster";
     public static final String FBZ_TECHNOSQUEEK = "fbz_technosqueek";
     public static final String FBZ_BUTTON = "fbz_button";
+    public static final String FBZ_MINIBOSS = "fbz_miniboss";
+    /** FBZ1 miniboss defeat fragments: generic capsule map over the act-1 PLC tile window. */
+    public static final String FBZ1_MINIBOSS_FRAGMENTS = "fbz1_miniboss_fragments";
+    public static final String FBZ2_SUBBOSS = "fbz2_subboss";
+    public static final String FBZ_ROBOTNIK_STAND = "fbz_robotnik_stand";
+    public static final String FBZ_EGGROBO_STAND = "fbz_eggrobo_stand";
+    public static final String FBZ_EGGROBO_RUN = "fbz_eggrobo_run";
+    public static final String FBZ_ROBOTNIK_HEAD = "fbz_robotnik_head";
+    public static final String FBZ_EGGROBO_HEAD = "fbz_eggrobo_head";
+    public static final String FBZ_END_BOSS_FLAME = "fbz_end_boss_flame";
+    public static final String FBZ_CLOUD = "fbz_cloud";
+    public static final String FBZ_BOSS_PILLAR = "fbz_boss_pillar";
+    public static final String FBZ_END_BOSS = "fbz_end_boss";
+    public static final String FBZ_EXIT_DOOR = "fbz_exit_door";
+    /** Obj_FBZExitHall subtype $00: hall mapping frame 0 over the exit-door PLC tiles. */
+    public static final String FBZ_EXIT_HALL_DOOR_SCENERY = "fbz_exit_hall_door_scenery";
+    public static final String FBZ_EXIT_HALL = "fbz_exit_hall";
+    public static final String FBZ_EGG_CAPSULE = "fbz_egg_capsule";
 
     // ICZ badniks
     public static final String ICZ_SNOWDUST = "icz_snowdust";
@@ -346,6 +364,30 @@ public final class Sonic3kObjectArtKeys {
     public static final String STILL_FBZ_HANGER = "still_fbz_hanger";     // base 0x379
     public static final String STILL_FBZ_EXTRA = "still_fbz_extra";       // base 0x443
     public static final String STILL_FBZ_RAIL = "still_fbz_rail";         // base 0x339
+    public static final String FBZ_FLOATING_PLATFORM = "fbz_floating_platform";
+    public static final String FBZ_CHAIN_LINK = "fbz_chain_link";
+    public static final String FBZ_MAGNETIC_SPIKE_BALL = "fbz_magnetic_spike_ball";
+    public static final String FBZ_MAGNETIC_SPIKE_FIELD_NARROW = "fbz_magnetic_spike_field_narrow";
+    public static final String FBZ_MAGNETIC_PLATFORM = "fbz_magnetic_platform";
+    public static final String FBZ_SNAKE_PLATFORM = "fbz_snake_platform";
+    public static final String FBZ_BENT_PIPE = "fbz_bent_pipe";
+    public static final String FBZ_ROTATING_PLATFORM = "fbz_rotating_platform";
+    public static final String FBZ_ROTATING_PLATFORM_SPECIAL = "fbz_rotating_platform_special";
+    public static final String FBZ_DEZ_PLAYER_LAUNCHER = "fbz_dez_player_launcher";
+    public static final String FBZ_DISAPPEARING_PLATFORM = "fbz_disappearing_platform";
+    public static final String FBZ_SCREW_DOOR = "fbz_screw_door";
+    public static final String FBZ_PROPELLER = "fbz_propeller";
+    public static final String FBZ_PISTON = "fbz_piston";
+    public static final String FBZ_PLATFORM_BLOCKS = "fbz_platform_blocks";
+    public static final String FBZ_MISSILE_LAUNCHER = "fbz_missile_launcher";
+    public static final String FBZ_MISSILE_LAUNCHER_COMPANION = "fbz_missile_launcher_companion";
+    public static final String FBZ_WALL_MISSILE = "fbz_wall_missile";
+    public static final String FBZ_MINE = "fbz_mine";
+    public static final String FBZ_ELEVATOR = "fbz_elevator";
+    public static final String FBZ_TRAP_SPRING = "fbz_trap_spring";
+    public static final String FBZ_FLAMETHROWER = "fbz_flamethrower";
+    public static final String FBZ_SPIDER_CRANE = "fbz_spider_crane";
+    public static final String FBZ_MAGNETIC_PENDULUM = "fbz_magnetic_pendulum";
     public static final String STILL_SOZ_001 = "still_soz_001";           // base 0x001
     public static final String STILL_SOZ_CORK = "still_soz_cork";         // base 0x3AF
     public static final String STILL_DEZ_BEAM = "still_dez_beam";         // base 0x3FF

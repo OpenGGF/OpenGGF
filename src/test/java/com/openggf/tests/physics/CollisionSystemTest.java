@@ -87,6 +87,31 @@ public class CollisionSystemTest {
     }
 
     @Test
+    public void sharedAngleOutputsRoundTripThroughRewindAndResetWhenMissing() {
+        SensorResult leftSolid = new SensorResult(
+                (byte) 0xFF, (byte) -1, 0xFF, Direction.DOWN);
+        SensorResult rightEmpty = new SensorResult(
+                (byte) 3, (byte) 16, 0, Direction.DOWN);
+
+        collisionSystem.publishGroundAngleOutputs(false, leftSolid, rightEmpty);
+        assertEquals(3, collisionSystem.getPrimaryAngleOutput());
+        assertEquals(0xFF, collisionSystem.getSecondaryAngleOutput());
+        var snapshot = collisionSystem.capture();
+
+        collisionSystem.publishGroundAngleOutputs(true, null, null);
+        assertEquals(0, collisionSystem.getPrimaryAngleOutput());
+        assertEquals(0, collisionSystem.getSecondaryAngleOutput());
+
+        collisionSystem.restore(snapshot);
+        assertEquals(3, collisionSystem.getPrimaryAngleOutput());
+        assertEquals(0xFF, collisionSystem.getSecondaryAngleOutput());
+
+        collisionSystem.resetForMissingSnapshot();
+        assertEquals(0, collisionSystem.getPrimaryAngleOutput());
+        assertEquals(0, collisionSystem.getSecondaryAngleOutput());
+    }
+
+    @Test
     public void airborneCollisionResetsStaleWallModeBeforeWorldSpaceProbes() {
         AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
         Mockito.when(player.getAir()).thenReturn(true);

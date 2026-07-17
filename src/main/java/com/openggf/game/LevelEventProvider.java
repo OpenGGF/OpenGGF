@@ -25,6 +25,30 @@ public interface LevelEventProvider {
     void initLevel(int zone, int act);
 
     /**
+     * Returns whether the level's initial object-placement window must remain
+     * deferred until {@link #initLevel(int, int)} has run.
+     *
+     * <p>Some native screen-initialization routines allocate a dynamic SST
+     * object before the first {@code Load_Sprites} pass. The default keeps the
+     * existing eager materialization used by zones without that contract.
+     */
+    default boolean defersInitialObjectPlacementUntilAfterLevelEvents(int zone, int act) {
+        return false;
+    }
+
+    /**
+     * Reconciles zone-event-owned dynamic objects after an object-manager
+     * placement reset clears dynamic SST.
+     *
+     * <p>The caller invokes this for every game and route; providers that own
+     * startup objects recreate or re-adopt only the objects required by their
+     * current native level state.
+     */
+    default void restoreEventOwnedObjectsAfterPlacementReset() {
+        // Default no-op.
+    }
+
+    /**
      * Update level events for the current frame.
      * Called once per frame before camera boundary easing.
      *

@@ -33,6 +33,21 @@ public interface LevelState {
      */
     void setRings(int rings);
 
+    /** ROM Extra_life_flags bits used by GiveRing's first 100/200 awards. */
+    default int getRingExtraLifeFlags() { return 0; }
+
+    /** Restores/updates ROM Extra_life_flags for ring-threshold awards. */
+    default void setRingExtraLifeFlags(int flags) { }
+
+    /**
+     * ROM Obj_Bouncing_Ring owner transition: clears Ring_count and
+     * Extra_life_flags together when a hurt spill materializes.
+     */
+    default void resetRingsForLoss() {
+        setRings(0);
+        setRingExtraLifeFlags(0);
+    }
+
     /**
      * Returns true if time is over (10 minutes elapsed).
      * @return true if time over

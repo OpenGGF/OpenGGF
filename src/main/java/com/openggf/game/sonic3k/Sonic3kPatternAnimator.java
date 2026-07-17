@@ -2038,6 +2038,9 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                     : Sonic3kConstants.ANIPLC_HCZ2_ADDR;
             case 2 -> Sonic3kConstants.ANIPLC_MGZ_ADDR;
             case 0x03 -> Sonic3kConstants.ANIPLC_CNZ_ADDR;
+            case 0x04 -> actIndex == 0
+                    ? Sonic3kConstants.ANIPLC_FBZ1_ADDR
+                    : Sonic3kConstants.ANIPLC_FBZ2_ADDR;
             case 0x05 -> Sonic3kConstants.ANIPLC_ICZ_ADDR;
             case 0x06 -> actIndex == 0
                     ? Sonic3kConstants.ANIPLC_LBZ1_ADDR
@@ -2066,6 +2069,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             graph.install(S3kAnimatedTileChannels.buildCnzChannels(this, scripts));
             return;
         }
+        if (zoneIndex == 0x04) {
+            graph.install(S3kAnimatedTileChannels.buildFbzChannels(this, scripts));
+            return;
+        }
         if (zoneIndex == 0x06) {
             graph.install(S3kAnimatedTileChannels.buildLbzChannels(this, scripts, actIndex, lbzRegularScriptCount));
             return;
@@ -2079,6 +2086,11 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             return;
         }
         graph.install(List.of());
+    }
+
+    /** Package-level deterministic inspection used by ROM AniPLC conformance tests. */
+    List<AniPlcScriptState> scriptsForTesting() {
+        return scripts;
     }
 
     private static int word(int value) {

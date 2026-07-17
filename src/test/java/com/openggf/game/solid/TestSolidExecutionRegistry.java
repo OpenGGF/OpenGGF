@@ -11,6 +11,7 @@ import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -94,6 +95,91 @@ class TestSolidExecutionRegistry {
         assertEquals(ContactKind.NONE, context.lastCheckpoint().perPlayer().get(player).kind());
         registry.endObject(object);
         assertTrue(registry.currentObject().isInert());
+    }
+
+    @Test
+    void perPlayerCheckpointInterleavesAndAccumulatesOrderedResults() {
+        DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
+        PlayableEntity p1 = playableEntity("p1");
+        PlayableEntity p2 = playableEntity("p2");
+        ObjectInstance object = new RegistryTestObject();
+        java.util.ArrayList<PlayableEntity> order = new java.util.ArrayList<>();
+
+        registry.beginFrame(2, List.of(p1, p2));
+        registry.beginObject(object, new ObjectSolidExecutionContext.Resolver() {
+            @Override
+            public SolidCheckpointBatch resolveNow() {
+                throw new AssertionError("ordered spring path must not resolve all participants at once");
+            }
+
+            @Override
+            public SolidCheckpointBatch resolvePlayer(PlayableEntity player) {
+                order.add(player);
+                return new SolidCheckpointBatch(object, Map.of(player,
+                        new PlayerSolidContactResult(ContactKind.SIDE, false, false,
+                                true, false, PreContactState.ZERO, PostContactState.ZERO, -8)));
+            }
+        });
+
+        assertEquals(ContactKind.SIDE, registry.currentObject().resolveSolidNowOnly(p1).kind());
+        assertEquals(ContactKind.SIDE, registry.currentObject().resolveSolidNowOnly(p2).kind());
+
+        assertEquals(List.of(p1, p2), order);
+        assertTrue(registry.currentObject().lastCheckpoint().perPlayer().containsKey(p1));
+        assertTrue(registry.currentObject().lastCheckpoint().perPlayer().containsKey(p2));
+    }
+
+    @Test
+    void perPlayerCheckpointRejectsWrongOwnerAndAdditionalParticipants() {
+        DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
+        PlayableEntity requested = playableEntity("requested");
+        PlayableEntity extra = playableEntity("extra");
+        ObjectInstance object = new RegistryTestObject();
+        ObjectInstance other = new RegistryTestObject();
+        PlayerSolidContactResult side = new PlayerSolidContactResult(
+                ContactKind.SIDE, false, false, true, false,
+                PreContactState.ZERO, PostContactState.ZERO, -8);
+
+        registry.beginObject(object, resolverForPlayer(
+                player -> new SolidCheckpointBatch(other, Map.of(player, side))));
+        assertThrows(IllegalStateException.class,
+                () -> registry.currentObject().resolveSolidNowOnly(requested));
+        registry.endObject(object);
+
+        registry.beginObject(object, resolverForPlayer(
+                player -> new SolidCheckpointBatch(object, Map.of(player, side, extra, side))));
+        assertThrows(IllegalStateException.class,
+                () -> registry.currentObject().resolveSolidNowOnly(requested));
+    }
+
+    @Test
+    void perPlayerCheckpointOmissionReplacesStaleResultWithFreshNoContact() {
+        DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
+        PlayableEntity player = playableEntity("player");
+        ObjectInstance object = new RegistryTestObject();
+        AtomicInteger pass = new AtomicInteger();
+        PlayerSolidContactResult side = new PlayerSolidContactResult(
+                ContactKind.SIDE, false, false, true, false,
+                PreContactState.ZERO, PostContactState.ZERO, -8);
+        registry.beginObject(object, resolverForPlayer(requested ->
+                new SolidCheckpointBatch(object,
+                        pass.getAndIncrement() == 0 ? Map.of(requested, side) : Map.of())));
+
+        assertEquals(ContactKind.SIDE, registry.currentObject().resolveSolidNowOnly(player).kind());
+        assertEquals(ContactKind.NONE, registry.currentObject().resolveSolidNowOnly(player).kind());
+        assertEquals(ContactKind.NONE,
+                registry.currentObject().lastCheckpoint().perPlayer().get(player).kind());
+    }
+
+    @Test
+    void lambdaResolverDoesNotSilentlyExpandParticipantCheckpointToAllPlayers() {
+        DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
+        PlayableEntity player = playableEntity("player");
+        ObjectInstance object = new RegistryTestObject();
+        registry.beginObject(object, () -> new SolidCheckpointBatch(object, Map.of()));
+
+        assertThrows(UnsupportedOperationException.class,
+                () -> registry.currentObject().resolveSolidNowOnly(player));
     }
 
     @Test
@@ -264,6 +350,21 @@ class TestSolidExecutionRegistry {
 
     private static PlayableEntity playableEntity(String name) {
         return proxyPlayableEntity(name, false);
+    }
+
+    private static ObjectSolidExecutionContext.Resolver resolverForPlayer(
+            Function<PlayableEntity, SolidCheckpointBatch> resolver) {
+        return new ObjectSolidExecutionContext.Resolver() {
+            @Override
+            public SolidCheckpointBatch resolveNow() {
+                throw new AssertionError("all-player resolution is not expected");
+            }
+
+            @Override
+            public SolidCheckpointBatch resolvePlayer(PlayableEntity player) {
+                return resolver.apply(player);
+            }
+        };
     }
 
     private static PlayableEntity equalButDistinctPlayableEntity(String name) {

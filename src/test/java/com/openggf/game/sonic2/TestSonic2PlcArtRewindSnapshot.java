@@ -15,7 +15,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * {@link com.openggf.game.rewind.RewindSnapshottable} implementation (Track F.1).
  *
  * <p>Tests verify that the key and epoch capture are stable without requiring
- * a full level load.
+ * a full level load. Production-path PLC restore/replay coverage lives in
+ * {@link TestSonic2RuntimePlcRendererRefresh}.
  */
 class TestSonic2PlcArtRewindSnapshot {
 
@@ -53,12 +54,11 @@ class TestSonic2PlcArtRewindSnapshot {
     }
 
     @Test
-    void restoreIsNoOp() {
+    void restoreReinstatesCapturedEpoch() {
         Sonic2ObjectArtProvider provider = new Sonic2ObjectArtProvider();
-        PlcProgressSnapshot snap = provider.capture();
-        // Restore should not throw and epoch should stay the same
-        assertDoesNotThrow(() -> provider.restore(snap));
-        assertEquals(snap.loadEpoch(), provider.capture().loadEpoch());
+        provider.restore(new PlcProgressSnapshot(37));
+
+        assertEquals(37, provider.capture().loadEpoch());
     }
 
     @Test

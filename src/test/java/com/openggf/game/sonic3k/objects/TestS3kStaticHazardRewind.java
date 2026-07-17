@@ -156,7 +156,9 @@ class TestS3kStaticHazardRewind {
         setIntField(spike, "retractOffset", 0x1800);
         setIntField(spike, "retractState", 1);
         setIntField(spike, "retractTimer", 17);
-        setBooleanField(spike, "contactPushingActive", true);
+        FbzParticipantStateTable participants = readParticipantTable(spike);
+        participants.restoreRewindStateValue(new FbzParticipantStateTable.Snapshot(
+                2, new int[][]{{1, 0}, {0, 1}}));
         setIntField(spike, "pushRateTimer", 7);
         setIntField(spike, "pushDistanceRemaining", 11);
         setBooleanField(spike, "mainRoutineReached", true);
@@ -178,8 +180,18 @@ class TestS3kStaticHazardRewind {
                 "spike retract state must restore exactly");
         assertEquals(17, readIntField(spike, "retractTimer"),
                 "spike retract timer must restore exactly");
-        assertTrue(readBooleanField(spike, "contactPushingActive"),
-                "spike push contact flag must restore exactly");
+        FbzParticipantStateTable.Snapshot participants =
+                readParticipantTable(spike).captureRewindStateValue();
+        assertEquals(2, participants.size(),
+                "spike participant latch count must restore exactly");
+        assertEquals(1, participants.values()[0][0],
+                "native P1 prior object-push latch must restore exactly");
+        assertEquals(0, participants.values()[0][1],
+                "native P2 prior object-push latch must restore exactly");
+        assertEquals(0, participants.values()[1][0],
+                "native P1 saved player-Push latch must restore exactly");
+        assertEquals(1, participants.values()[1][1],
+                "native P2 saved player-Push latch must restore exactly");
         assertEquals(7, readIntField(spike, "pushRateTimer"),
                 "spike push rate timer must restore exactly");
         assertEquals(11, readIntField(spike, "pushDistanceRemaining"),
@@ -240,6 +252,15 @@ class TestS3kStaticHazardRewind {
             return findField(target.getClass(), fieldName).getBoolean(target);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to read " + fieldName + " from " + target.getClass(), e);
+        }
+    }
+
+    private static FbzParticipantStateTable readParticipantTable(Sonic3kSpikeObjectInstance spike) {
+        try {
+            return (FbzParticipantStateTable) findField(
+                    spike.getClass(), "pushParticipants").get(spike);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to read spike pushParticipants", e);
         }
     }
 

@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.solid.ContactKind;
+import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.audio.GameSound;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.SpringHelper;
@@ -16,6 +18,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -28,6 +31,7 @@ import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -384,6 +388,18 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureInitialized();
         proactiveTriggeredThisUpdate.clear();
+        List<PlayableEntity> nativeParticipants = List.of();
+        if (springType == TYPE_HORIZONTAL) {
+            // Obj_Spring_Horizontal runs both SolidObjectFull2_1P passes before
+            // falling through to sub_2326C (sonic3k.asm:47779-47814,
+            // 47957-48024). Keep that checkpoint ahead of the proactive zone:
+            // stacked FBZ springs rely on the later spring's side correction
+            // cancelling its own sub_23190 position nudge (trace f12917).
+            nativeParticipants = nativeSpringParticipants(playerEntity);
+            for (PlayableEntity participant : nativeParticipants) {
+                applyHorizontalCheckpointContact(participant, checkpointPlayer(participant));
+            }
+        }
         // ROM sub_2326C (sonic3k.asm:47957) — proactive horizontal-spring zone.
         // The whole routine is gated on `cmpi.b #3,anim(a0) / beq.w locret_23324`
         // (sonic3k.asm:47958-47959); within that gate, Player_1 (line 47973) and
@@ -397,28 +413,97 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // unfired because the engine's per-player solid-contact path also has
         // no overlap to resolve.  The proactive zone (±$28 X, ±$18 Y) is the
         // ROM's safety net for exactly this geometry.
+        List<PlayableEntity> extraParticipants = List.of();
+        if (springType == TYPE_HORIZONTAL) {
+            List<PlayableEntity> allPlayers = services().playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
+            List<PlayableEntity> extras = new ArrayList<>(allPlayers.size());
+            for (PlayableEntity candidate : allPlayers) {
+                if (!containsIdentity(nativeParticipants, candidate)) {
+                    extras.add(candidate);
+                }
+            }
+            extraParticipants = List.copyOf(extras);
+        }
+
         if (springType == TYPE_HORIZONTAL && animationState.getAnimId() == ANIM_IDLE) {
             // ROM sub_2326C falls through from the Player_1 block to the
             // Player_2 block (sonic3k.asm:47998→47999) regardless of whether
             // Player_1 fired the spring, so the second-player check must run
             // unconditionally inside the outer animation gate.
-            boolean sawUpdatePlayer = false;
-            for (PlayableEntity candidate : services().playerQuery().playersFor(
-                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
-                if (candidate == playerEntity) {
-                    sawUpdatePlayer = true;
-                }
+            for (PlayableEntity candidate : nativeParticipants) {
                 if (candidate instanceof AbstractPlayableSprite player) {
                     checkHorizontalApproach(player);
                 }
             }
-            if (!sawUpdatePlayer && playerEntity instanceof AbstractPlayableSprite player) {
-                checkHorizontalApproach(player);
+            // Preserve the engine's multi-sidekick extension, but run it only
+            // after both native P1/P2 checks so an extension-only actor cannot
+            // suppress the ROM-ordered native proactive pass.
+            for (PlayableEntity candidate : extraParticipants) {
+                if (candidate instanceof AbstractPlayableSprite player) {
+                    checkHorizontalApproach(player);
+                }
+            }
+        }
+
+        if (springType == TYPE_HORIZONTAL) {
+            // Multi-sidekick extension: extra engine players still receive the
+            // real solid-side spring reaction, but only after the native P1/P2
+            // solid + proactive sequence. An extension-only actor must not set
+            // anim=3 early and suppress ROM sub_2326C for P1 or native P2.
+            for (PlayableEntity extra : extraParticipants) {
+                applyHorizontalCheckpointContact(extra, checkpointPlayer(extra));
             }
         }
 
         animationState.update();
         mappingFrame = animationState.getMappingFrame();
+    }
+
+    private void applyHorizontalCheckpointContact(
+            PlayableEntity entity, PlayerSolidContactResult contact) {
+        if (!(entity instanceof AbstractPlayableSprite player)
+                || contact == null
+                || contact.kind() != ContactKind.SIDE
+                || !isPlayerOnHorizontalSpringActiveSide(player)) {
+            return;
+        }
+        applyHorizontalSpring(player);
+    }
+
+    protected PlayerSolidContactResult checkpointPlayer(PlayableEntity player) {
+        return services().solidExecution().resolveSolidNowOnly(player);
+    }
+
+    private List<PlayableEntity> nativeSpringParticipants(PlayableEntity updatePlayer) {
+        List<PlayableEntity> queried = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+        if (updatePlayer == null || containsIdentity(queried, updatePlayer)) {
+            return queried;
+        }
+        ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(queried.size() + 1);
+        withUpdatePlayer.add(updatePlayer);
+        withUpdatePlayer.addAll(queried);
+        return List.copyOf(withUpdatePlayer);
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> players, PlayableEntity candidate) {
+        for (PlayableEntity player : players) {
+            if (player == candidate) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        // Only Obj_Spring_Horizontal has object-local logic after its solid
+        // passes whose ordering is observable. Other variants retain the
+        // shared automatic post-update contact path.
+        return springType == TYPE_HORIZONTAL
+                ? SolidExecutionMode.MANUAL_CHECKPOINT
+                : SolidExecutionMode.AUTO_AFTER_UPDATE;
     }
 
     /**
@@ -434,8 +519,8 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         }
 
         boolean flipped = isFlippedHorizontal();
-        int dx = player.getCentreX() - spawn.x();
-        int dy = player.getCentreY() - spawn.y();
+        int dx = player.getCentreX() - getX();
+        int dy = player.getCentreY() - getY();
 
         // Check Y range: ±$18
         if (dy < -HORIZ_DETECT_Y || dy > HORIZ_DETECT_Y) {
@@ -487,7 +572,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         }
         // Engine ordering can leave the sidekick airborne until the next tick;
         // accept only the frame that has reached the spring's Y line.
-        return player.getYSpeed() > 0 && (player.getCentreY() & 0xFFFF) >= (spawn.y() & 0xFFFF);
+        return player.getYSpeed() > 0 && (player.getCentreY() & 0xFFFF) >= (getY() & 0xFFFF);
     }
 
     private int horizontalApproachSpeed(AbstractPlayableSprite player, boolean landingHandoff) {
@@ -510,7 +595,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
     }
 
     private boolean isPlayerOnHorizontalSpringActiveSide(AbstractPlayableSprite player) {
-        int objectX = spawn.x() & 0xFFFF;
+        int objectX = getX() & 0xFFFF;
         int playerX = player.getCentreX() & 0xFFFF;
         boolean flipped = isFlippedHorizontal();
         return flipped ? objectX >= playerX : objectX < playerX;
@@ -521,11 +606,11 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         boolean flipped = isFlippedHorizontal();
         if (flipped) {
             // ROM sub_234E6: trigger only when x_pos(a0)+4 >= x_pos(a1).
-            int lipX = (spawn.x() + 4) & 0xFFFF;
+            int lipX = (getX() + 4) & 0xFFFF;
             return Integer.compareUnsigned(lipX, playerX) >= 0;
         }
         // ROM sub_234E6: trigger only when x_pos(a0)-4 < x_pos(a1).
-        int lipX = (spawn.x() - 4) & 0xFFFF;
+        int lipX = (getX() - 4) & 0xFFFF;
         return Integer.compareUnsigned(lipX, playerX) < 0;
     }
 
@@ -554,8 +639,8 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // the horizontal spring nudge. Engine generic solid contact includes the
         // player radius in its X overlap and can otherwise pre-push the player
         // onto the spring edge before that proactive trigger runs.
-        int dx = player.getCentreX() - spawn.x();
-        int dy = player.getCentreY() - spawn.y();
+        int dx = player.getCentreX() - getX();
+        int dy = player.getCentreY() - getY();
         if (dy < -HORIZ_DETECT_Y || dy > HORIZ_DETECT_Y) {
             return false;
         }
@@ -608,6 +693,16 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // bset #Status_Push, sonic3k.asm:41488-41495) because the right
         // edge is inclusive. With an exclusive edge the engine dropped the
         // contact and Status_Push the moment the centre reached the edge.
+        return true;
+    }
+
+    @Override
+    public boolean preservesEdgeSubpixelMotion() {
+        // SolidObject_cont corrects horizontal contact with
+        // `sub.w d0,x_pos(a1)` (sonic3k.asm:41488). That word write leaves
+        // x_sub untouched even when d0 == 0. FBZ's stacked springs at
+        // ($2000,$0890/$08B0) depend on retaining P1's $2D00 fraction through
+        // both side passes before sub_23190 applies its word-only x_pos nudge.
         return true;
     }
 
@@ -686,7 +781,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         boolean hFlip = isFlippedHorizontal();
         boolean vFlip = springType == TYPE_DOWN || springType == TYPE_DIAGONAL_DOWN
                 || (spawn.renderFlags() & 0x2) != 0;
-        renderer.drawFrameIndex(mappingFrame, spawn.x(), spawn.y(), hFlip, vFlip);
+        renderer.drawFrameIndex(mappingFrame, getX(), getY(), hFlip, vFlip);
     }
 
     private String resolveArtKey() {

@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -56,7 +57,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, RomWorldPositionedObject {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kStarPostObjectInstance.class.getName());
 
     // Activation zone dimensions (ROM: dx + 8 < $10, dy + $40 < $68)
@@ -150,6 +151,8 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
     private boolean activated;
     private boolean starActive;
     private boolean initialized;
+    private int x;
+    private int y;
 
     public Sonic3kStarPostObjectInstance(ObjectSpawn spawn) {
         super(spawn, "StarPost");
@@ -161,6 +164,8 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
         this.animTimer = 0;
         this.animFrameIndex = 0;
         this.starActive = false;
+        this.x = spawn.x();
+        this.y = spawn.y();
     }
 
     private void ensureInitialized() {
@@ -217,8 +222,8 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
         // ROM collision check: player center vs starpost position
         int px = player.getCentreX();
         int py = player.getCentreY();
-        int cx = spawn.x();
-        int cy = spawn.y();
+        int cx = x;
+        int cy = y;
 
         int dx = px - cx;
         int dy = py - cy;
@@ -275,12 +280,12 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
         mappingFrame = FRAME_NO_BALL;
 
         // 5. ROM: bsr.w sub_2D164 - save checkpoint data
-        checkpointState.saveCheckpoint(checkpointIndex, spawn.x(), spawn.y(), cameraLockFlag);
+        checkpointState.saveCheckpoint(checkpointIndex, x, y, cameraLockFlag);
 
         // 6. ROM: move.b #4,routine(a0) - terminal state (handled by activated=true)
         // 7. ROM: bset #0,(a2) - set respawn bit (handled by CheckpointState)
 
-        LOGGER.fine("S3K StarPost " + checkpointIndex + " activated at (" + spawn.x() + ", " + spawn.y() + ")");
+        LOGGER.fine("S3K StarPost " + checkpointIndex + " activated at (" + x + ", " + y + ")");
     }
 
     /**
@@ -410,15 +415,15 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
             appendFallbackBox(commands);
             return;
         }
-        renderer.drawFrameIndex(mappingFrame, spawn.x(), spawn.y(), false, false);
+        renderer.drawFrameIndex(mappingFrame, x, y, false, false);
     }
 
     /**
      * Fallback debug wireframe rendering when no art is loaded.
      */
     private void appendFallbackBox(List<GLCommand> commands) {
-        int cx = spawn.x();
-        int cy = spawn.y();
+        int cx = x;
+        int cy = y;
         int hw = 8;
         int hh = 0x28;
         float r = activated ? 0.3f : 0.8f;
@@ -453,11 +458,17 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
     }
 
     public int getCenterX() {
-        return spawn.x();
+        return x;
     }
 
     public int getCenterY() {
-        return spawn.y();
+        return y;
+    }
+
+    @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int deltaX, int deltaY) {
+        x = (x + deltaX) & 0xFFFF;
+        y = (y + deltaY) & 0xFFFF;
     }
 
     @Override

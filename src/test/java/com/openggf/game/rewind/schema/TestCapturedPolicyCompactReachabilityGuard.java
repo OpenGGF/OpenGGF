@@ -2,11 +2,11 @@ package com.openggf.game.rewind.schema;
 
 import com.openggf.game.rewind.FieldKey;
 import com.openggf.game.rewind.GenericRewindEligibility;
-import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeImpactExplosion;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleButton;
 import com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance;
+import com.openggf.game.sonic3k.objects.FbzEndBossInstance;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import org.junit.jupiter.api.Test;
@@ -38,14 +38,24 @@ class TestCapturedPolicyCompactReachabilityGuard {
                 DefaultObjectRewindPolicies.exactFieldPoliciesForAudit();
 
         assertEquals(RewindFieldPolicy.CAPTURED, policies.get(new FieldKey(
-                S3kResultsScreenObjectInstance.class.getName(), "elements")));
-        assertEquals(RewindFieldPolicy.CAPTURED, policies.get(new FieldKey(
                 HczEndBossEggCapsuleButton.class.getName(), "parent")));
         assertEquals(RewindFieldPolicy.CAPTURED, policies.get(new FieldKey(
                 HczEndBossBladeImpactExplosion.class.getName(), "boss")));
         assertFalse(policies.containsKey(new FieldKey(
                 TensionBridgeObjectInstance.class.getName(), "playerAtCollapse")),
                 "deleted bridge fields must not leave unreachable exact policies behind");
+    }
+
+    @Test
+    void fbzEndBossDerivedCollectionsAreDeferredAndFamilyReferencesCaptured() {
+        Map<FieldKey, RewindFieldPolicy> policies =
+                DefaultObjectRewindPolicies.exactFieldPoliciesForAudit();
+        for (String field : List.of("arms", "joints", "chainLinks")) {
+            assertEquals(RewindFieldPolicy.DEFERRED,
+                    policies.get(new FieldKey(FbzEndBossInstance.class.getName(), field)));
+        }
+        assertEquals(RewindFieldPolicy.CAPTURED, policies.get(new FieldKey(
+                "com.openggf.game.sonic3k.objects.AbstractFbzEndBossChild", "boss")));
     }
 
     @Test

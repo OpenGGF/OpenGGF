@@ -6,13 +6,17 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractSpikeObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -33,7 +37,9 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance impl
     private static final int PUSH_MAX_DISTANCE = 0x20;  // $3C init: 32 pixels total
 
     // Push mode state (ROM: $3A rate limiter, $3C distance remaining, $3E/$3F prev status)
-    private boolean contactPushingActive;   // Set by onSolidContact, consumed by next update()
+    private static final int PUSH_CONTACT = 0;
+    private static final int SAVED_PLAYER_PUSH = 1;
+    private final FbzParticipantStateTable pushParticipants = new FbzParticipantStateTable(2);
     private int pushRateTimer;              // $3A: frames until next push allowed
     private int pushDistanceRemaining = PUSH_MAX_DISTANCE; // $3C: remaining 1px pushes
     private boolean mainRoutineReached;
@@ -58,7 +64,7 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance impl
         // doesn't trigger shouldHurt for upright spikes but does drive push logic).
         // ROM: status(a0) pushing bits are set by SolidObjectFull, read next frame.
         if (isPushMode() && contact.pushing()) {
-            contactPushingActive = true;
+            pushParticipants.flag(pushParticipants.slot(player), PUSH_CONTACT, true);
         }
         super.onSolidContact(player, contact, frameCounter);
     }
@@ -93,7 +99,7 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance impl
         switch (behavior) {
             case 1 -> moveSpikesVertical();
             case 2 -> moveSpikesHorizontal();
-            case 3 -> moveSpikesPush(player);
+            case 3 -> moveSpikesPush(playerEntity);
             default -> {
                 currentX = baseX;
                 currentY = baseY;
@@ -154,17 +160,40 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance impl
      * actively pushes against them from the left. Movement is rate-limited to 1 pixel
      * every 17 frames, with a maximum total displacement of 32 pixels.
      */
-    private void moveSpikesPush(AbstractPlayableSprite player) {
-        // contactPushingActive is set by onSolidContact (previous frame's solid resolution).
-        // Consume it now; will be re-set by this frame's onSolidContact if still pushing.
-        boolean wasPushing = contactPushingActive;
-        contactPushingActive = false;
+    private void moveSpikesPush(PlayableEntity updatePlayer) {
+        List<PlayableEntity> nativePlayers = nativePushParticipants(updatePlayer);
+        for (PlayableEntity player : nativePlayers) {
+            tryPushPlayer(player);
+        }
 
-        if (!wasPushing || player == null) {
+        // Multi-sidekick extension: preserve the ROM's P1 -> P2 order first,
+        // then give additional engine players the same delayed-latch behavior.
+        // Extras must not consume the shared rate limiter ahead of native P1/P2.
+        List<PlayableEntity> allPlayers = allPushParticipants(updatePlayer);
+        for (PlayableEntity player : allPlayers) {
+            if (!containsIdentity(nativePlayers, player)) {
+                tryPushPlayer(player);
+            }
+        }
+
+        // loc_2437C snapshots Player_1/Player_2 status before this frame's
+        // SolidObjectFull calls. Keep that saved Push byte distinct from the
+        // object contact bits populated later by onSolidContact.
+        for (PlayableEntity player : allPlayers) {
+            int slot = pushParticipants.slot(player);
+            boolean pushing = player instanceof AbstractPlayableSprite sprite && sprite.getPushing();
+            pushParticipants.flag(slot, SAVED_PLAYER_PUSH, pushing);
+            pushParticipants.flag(slot, PUSH_CONTACT, false);
+        }
+    }
+
+    private void tryPushPlayer(PlayableEntity playerEntity) {
+        if (!(playerEntity instanceof AbstractPlayableSprite player)) {
             return;
         }
-        // ROM: btst #5,d0 - player must have been in pushing state (from previous solid resolution)
-        if (!player.getPushing()) {
+        int slot = pushParticipants.slot(player);
+        if (!pushParticipants.flag(slot, PUSH_CONTACT)
+                || !pushParticipants.flag(slot, SAVED_PLAYER_PUSH)) {
             return;
         }
         // ROM: cmp.w x_pos(a1),d2 / blo.s - spike must be at or to the right of the player
@@ -185,6 +214,44 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance impl
         // ROM: subq.w #1,$3C(a0) / addq.w #1,x_pos(a0) / addq.w #1,x_pos(a1)
         pushDistanceRemaining--;
         currentX++;
-        player.setCentreX((short) (playerX + 1));
+        NativePositionOps.addXPosPreserveSubpixel(player, 1);
+    }
+
+    private List<PlayableEntity> nativePushParticipants(PlayableEntity updatePlayer) {
+        ObjectServices objectServices = tryServices();
+        if (objectServices == null) {
+            return updatePlayer == null ? List.of() : List.of(updatePlayer);
+        }
+        List<PlayableEntity> nativePlayers = objectServices.playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+        // The injected query is authoritative whenever services exist. An
+        // update argument absent from it is extension-only, never promoted
+        // ahead of the ROM P1/P2 slots.
+        return nativePlayers;
+    }
+
+    private List<PlayableEntity> allPushParticipants(PlayableEntity updatePlayer) {
+        ObjectServices objectServices = tryServices();
+        if (objectServices == null) {
+            return updatePlayer == null ? List.of() : List.of(updatePlayer);
+        }
+        List<PlayableEntity> allPlayers = objectServices.playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
+        if (updatePlayer == null || containsIdentity(allPlayers, updatePlayer)) {
+            return allPlayers;
+        }
+        ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(allPlayers.size() + 1);
+        withUpdatePlayer.addAll(allPlayers);
+        withUpdatePlayer.add(updatePlayer);
+        return List.copyOf(withUpdatePlayer);
+    }
+
+    private static boolean containsIdentity(List<PlayableEntity> players, PlayableEntity candidate) {
+        for (PlayableEntity player : players) {
+            if (player == candidate) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -80,6 +80,8 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * intentionally uses this constant rather than the per-object height.
      */
     private static final int TOUCH_RESPONSE_Y_MARGIN = 32;
+    private static final int COARSE_X_ALIGNMENT_MASK = 0xFF80;
+    private static final int COARSE_X_CAMERA_BIAS = 0x80;
     protected final ObjectSpawn spawn;
     protected final String name;
     private boolean destroyed;
@@ -164,6 +166,9 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      */
     private int slotIndex = -1;
 
+    /** ROM {@code render_flags.level_fg} (bit 2), retained as live object state. */
+    private boolean romWorldPositioned = true;
+
     /**
      * ROM parity (S1): Index into the respawn state table (v_objstate+2).
      * <p>
@@ -241,6 +246,16 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     @Override
     public boolean participatesInLevelRepeatOffset() {
         return false;
+    }
+
+    @Override
+    public boolean participatesInRomWorldTransitionOffset() {
+        return romWorldPositioned;
+    }
+
+    /** Screen-space routines clear ROM {@code render_flags.level_fg}. */
+    protected final void setRomWorldPositioned(boolean worldPositioned) {
+        this.romWorldPositioned = worldPositioned;
     }
 
     @Override
@@ -900,6 +915,21 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         return cameraBounds.contains(getX(), getY(), margin);
     }
 
+    /** ROM-style unsigned, 128-pixel-aligned X distance used by delete-touch routines. */
+    protected static boolean isCoarseXOutOfRange(int objectX, int cameraX, int maximumDistance) {
+        int alignedObject = objectX & COARSE_X_ALIGNMENT_MASK;
+        int alignedCamera = (cameraX - COARSE_X_CAMERA_BIAS) & COARSE_X_ALIGNMENT_MASK;
+        return ((alignedObject - alignedCamera) & 0xFFFF) > maximumDistance;
+    }
+
+    /** Applies a coarse-X delete-touch check when an object has a camera service. */
+    protected final void coarseXCull(int anchorX, int maximumDistance) {
+        if (services().camera() != null
+                && isCoarseXOutOfRange(anchorX, services().camera().getX(), maximumDistance)) {
+            setDestroyedByOffscreen();
+        }
+    }
+
     /**
      * Checks this object against Render_Sprites-style bounds, where the right
      * and bottom edges are exclusive. Use for routines that observe the ROM
@@ -1092,31 +1122,37 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @param <T> the child type
      */
     protected <T extends AbstractObjectInstance> T spawnChild(java.util.function.Supplier<T> factory) {
+        return allocateAfterCurrent(factory);
+    }
+
+    /**
+     * Allocate an independent object in the next free slot after the current one.
+     * This models AllocateObjectAfterCurrent routines whose result is a sibling,
+     * not a lifetime-owned child (for example FBZ launcher missiles).
+     */
+    protected <T extends AbstractObjectInstance> T spawnAfterCurrentSibling(java.util.function.Supplier<T> factory) {
+        return allocateAfterCurrent(factory);
+    }
+
+    /**
+     * Shared AllocateObjectAfterCurrent mechanics. Registration determines slot and update
+     * ordering only; callers separately define whether the allocated object is structurally owned.
+     */
+    private <T extends AbstractObjectInstance> T allocateAfterCurrent(java.util.function.Supplier<T> factory) {
         ObjectServices svc = services();
         return ObjectConstructionContext.construct(svc, () -> {
-            T child = factory.get();
-            ObjectManager om = svc.objectManager();
-            // A throwaway RewindRecreatable probe instance's construction must never leak a
-            // live or pooled side-effect object under its own (about-to-be-discarded)
-            // identity -- see ObjectConstructionContext.isProbeConstruction().
-            if (om != null && !ObjectConstructionContext.isProbeConstruction()) {
-                // During an active-object rewind restore the parent is reconstructed to re-derive
-                // its non-captured structural state (including its back-references to these
-                // children). The children themselves are registered and given their EXACT captured
-                // state by the step-4 dynamic-object reconciliation loop, which reuses the
-                // instances spawned here. We still register the construction child (so the boss
-                // back-reference points at a managed instance the reconciliation can adopt), but
-                // mark it as a restore-reconstruction child so the restore loop adopts it in place
-                // instead of recreating a duplicate. See ObjectManager.restore() step 4.
+            T object = factory.get();
+            ObjectManager manager = svc.objectManager();
+            if (manager != null && !ObjectConstructionContext.isProbeConstruction()) {
                 if (ObjectConstructionContext.isRewindActiveRestore()) {
-                    om.registerRewindReconstructionChild(child);
-                } else if (child.skipsSameFrameUpdateAfterSpawn()) {
-                    om.addDynamicObjectAfterCurrentNextFrame(child);
+                    manager.registerRewindReconstructionObject(object);
+                } else if (object.skipsSameFrameUpdateAfterSpawn()) {
+                    manager.addDynamicObjectAfterCurrentNextFrame(object);
                 } else {
-                    om.addDynamicObjectAfterCurrent(child);
+                    manager.addDynamicObjectAfterCurrent(object);
                 }
             }
-            return child;
+            return object;
         });
     }
 

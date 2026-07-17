@@ -60,7 +60,6 @@ com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance#activePlayers
 com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#killedThisFrame
 com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#rawSurfaceByPlayer
 com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#standingNextUpdate
-com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance#proactiveTriggeredThisUpdate
 com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance#bodySegments
 com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance#childComponents
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance#childComponents

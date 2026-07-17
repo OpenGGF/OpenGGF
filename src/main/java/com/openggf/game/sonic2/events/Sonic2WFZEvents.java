@@ -165,6 +165,16 @@ public class Sonic2WFZEvents extends Sonic2ZoneEvents {
         return bgYOffset;
     }
 
+    /** Returns Camera_BG_X_pos. */
+    public int getBgXPos() {
+        return bgXPos;
+    }
+
+    /** Returns Camera_BG_Y_pos. */
+    public int getBgYPos() {
+        return bgYPos;
+    }
+
     /** Returns WFZ_BG_Y_Speed (0.8 fixed point). */
     public int getBgYSpeed() {
         return bgYSpeed;
@@ -263,7 +273,7 @@ public class Sonic2WFZEvents extends Sonic2ZoneEvents {
      * Primary R2: Sync BG diffs until platform ride trigger.
      * ROM: LevEvents_WFZ_Routine2 (s2.asm)
      *
-     * Copies camera diffs to BG diffs each frame. When camera reaches
+     * Chases the offset-adjusted camera position each frame. When camera reaches
      * ($2BC0, $580), advances to platform ride routine and zeros BG Y speed.
      */
     private void primaryRoutine2_syncUntilTrigger() {
@@ -354,8 +364,8 @@ public class Sonic2WFZEvents extends Sonic2ZoneEvents {
 
     /**
      * Common tail shared by primary routines 2, 4, and 6.
-     * Copies camera position diffs to BG position diffs, then
-     * tracks BG position for ScrollBG.
+     * Computes the offset-adjusted camera delta, caps it to ScrollBG's
+     * 16-pixel reload limit, and advances the tracked BG position.
      *
      * ROM equivalent of:
      *   move.w (Camera_X_pos_diff).w,(Camera_BG_X_pos_diff).w
@@ -368,10 +378,16 @@ public class Sonic2WFZEvents extends Sonic2ZoneEvents {
      * state variables it will read.
      */
     private void syncBgDiffs() {
-        bgXPosDiff = camera().getX() - bgXPos;
-        bgYPosDiff = camera().getY() - bgYPos;
-        bgXPos = camera().getX();
-        bgYPos = camera().getY();
+        int dx = clamp16(camera().getX() - bgXPos - bgXOffset);
+        int dy = clamp16(camera().getY() - bgYPos - bgYOffset);
+        bgXPosDiff = dx;
+        bgYPosDiff = dy;
+        bgXPos += dx;
+        bgYPos += dy;
+    }
+
+    private static int clamp16(int value) {
+        return value > 16 ? 16 : (value < -16 ? -16 : value);
     }
 
     // =========================================================================

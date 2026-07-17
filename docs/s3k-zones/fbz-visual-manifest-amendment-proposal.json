@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "status": "approved-applied",
+  "frozen_manifest": "docs/s3k-zones/fbz-visual-checkpoints.json",
+  "frozen_manifest_sha256": "345C05942D46D42E6456DCB5EF86A4F45F0D9549D5A332C82267801B139E0203",
+  "proposed_manifest_sha256_if_applied_byte-for-byte": "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",
+  "authorization": "Accepted by independent spec review and applied byte-for-byte with synchronized semantic/provenance bindings.",
+  "corrections": [
+    {
+      "checkpoint": "fbz1-boundary-1-outdoor",
+      "classification": "impossible-as-frozen",
+      "source": "FBZ1_BGChange1, sonic3k.asm:108952-108991",
+      "contradiction": "At x_pos >= $0B00, loc_52AF4 compares y_pos against $0900. The frozen pre-state x=$0B00,y=$09BF,indoor therefore changes outdoors before the requested y=$09C0 crossing.",
+      "intended_semantics": "Exercise the x_pos < $0B00 branch's indoor-to-outdoor crossing at y=$09C0 and its reverse path.",
+      "minimal_changes": [
+        {"path": "/setup_recipes/fbz1-boundary-1-outdoor/centre/x", "from": 2816, "to": 2815},
+        {"path": "/checkpoints/fbz1-boundary-1-outdoor/player/x", "from": 2816, "to": 2815}
+      ]
+    },
+    {
+      "checkpoint": "fbz1-boundary-2-outdoor",
+      "classification": "impossible-as-frozen",
+      "source": "FBZ1_BGChange2, sonic3k.asm:108994-109033",
+      "contradiction": "At x_pos >= $0C80, loc_52B46 compares y_pos against $0240. The frozen x=$0C80,y=$02C1->$02C0 sequence never crosses that selected threshold.",
+      "intended_semantics": "Exercise the x_pos < $0C80 branch's indoor-to-outdoor crossing at y=$02C0 and its reverse path.",
+      "minimal_changes": [
+        {"path": "/setup_recipes/fbz1-boundary-2-outdoor/centre/x", "from": 3200, "to": 3199},
+        {"path": "/checkpoints/fbz1-boundary-2-outdoor/player/x", "from": 3200, "to": 3199}
+      ]
+    },
+    {
+      "checkpoint": "fbz1-boundary-3-outdoor",
+      "classification": "impossible-as-frozen",
+      "source": "FBZ1_BGChange3, sonic3k.asm:109036-109075",
+      "contradiction": "At x_pos >= $1880, loc_52B98 compares y_pos against $0940. The frozen pre-state x=$1880,y=$09BF,indoor therefore changes outdoors before the requested y=$09C0 crossing.",
+      "intended_semantics": "Exercise the x_pos < $1880 branch's indoor-to-outdoor crossing at y=$09C0 and its reverse path.",
+      "minimal_changes": [
+        {"path": "/setup_recipes/fbz1-boundary-3-outdoor/centre/x", "from": 6272, "to": 6271},
+        {"path": "/checkpoints/fbz1-boundary-3-outdoor/player/x", "from": 6272, "to": 6271}
+      ]
+    },
+    {
+      "checkpoint": "fbz1-boundary-4-horizontal",
+      "classification": "impossible-as-frozen",
+      "source": "FBZ1_BGChange4, sonic3k.asm:109078-109146",
+      "contradiction": "FBZ1_BGChange4 tests y_pos against $0100 before testing x_pos. Frozen y=$01C0 selects the vertical branch and immediately changes the indoor state at its y=$01C0 threshold, so x=$1AFF->$1B00 cannot be the triggering branch.",
+      "intended_semantics": "Exercise the y_pos < $0100 horizontal branch's indoor-to-outdoor crossing at x=$1B00 and the right-to-left reverse path.",
+      "minimal_changes": [
+        {"path": "/setup_recipes/fbz1-boundary-4-horizontal/centre/y", "from": 448, "to": 255},
+        {"path": "/checkpoints/fbz1-boundary-4-horizontal/player/y", "from": 448, "to": 255}
+      ]
+    },
+    {
+      "checkpoint": "fbz2-exit",
+      "classification": "impossible-as-frozen",
+      "source": "FBZ2BGE_BossEvent, sonic3k.asm:109644-109695; Obj_FBZEndBoss exit sequence, sonic3k.asm:148906-148968",
+      "contradiction": "The boss-event background routine remains Events_routine_bg=$10 and continues drawing the background on plane A with flipped deformation. The defeat/exit sequence spawns the generic capsule, releases camera bounds, queues door/hall art, and requests level $0800, but contains no write that restores the pre-boss plane assignment.",
+      "intended_semantics": "Validate the original exit presentation with Events_routine_fg=$0C, Events_routine_bg=$10, explicit FG=B/BG=A assignment, door/hall art, and safe camera release while the boss-event plane reversal remains active until the level transition.",
+      "minimal_changes": [
+        {"path": "/setup_recipes/fbz2-exit/state/Events_routine_fg", "operation": "add", "to": 12},
+        {"path": "/setup_recipes/fbz2-exit/state/Events_routine_bg", "operation": "add", "to": 16},
+        {"path": "/setup_recipes/fbz2-exit/state/plane_assignment", "operation": "replace", "from": "normal", "to": "FG=B,BG=A"},
+        {"path": "/checkpoints/fbz2-exit/assertions/1", "from": "plane mode restored", "to": "boss-event plane reversal remains active until level transition"}
+      ]
+    }
+  ],
+  "dependent_semantic_docs_if_approved": [
+    {
+      "path": "docs/s3k-zones/fbz-visual-branch-recipes.json",
+      "required_change": "Replace fbz2-exit required proof 'plane restoration' with exact proof Events_routine_fg=$0C, Events_routine_bg=$10, plane assignment FG=B/BG=A through the transition; bind the new manifest hash."
+    },
+    {
+      "path": "docs/s3k-zones/fbz-visual-reference-candidates.json",
+      "required_change": "Replace the fbz2-exit blocker phrase 'plane restoration' with proof of the retained boss-event reversal (foreground on B, background on A) through the transition; bind the new manifest hash."
+    },
+    {
+      "path": "docs/s3k-zones/fbz-validation.md",
+      "required_change": "Replace the fbz2-exit assertion 'plane mode restored' with 'Events fg=$0C/bg=$10; FG=B/BG=A remains active until level transition' in native and compatibility evidence."
+    }
+  ],
+  "application_result": "Applied manifest, semantic documents, validator/tool contracts, and transparent exact-start provenance rebind all use D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD."
+}
