@@ -962,7 +962,15 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJ80_WFZ_ADDR);
+        // ROM Obj80_WFZ_Init draws with make_art_tile(ArtTile_ArtNem_WfzHook_Fudge,1,0):
+        // the mappings are authored against base $03FE, but the art is loaded to
+        // $03FA (plreq ArtTile_ArtNem_WfzHook). Apply the +4 "fudge" tile offset so
+        // the chain (piece tile 0) and hook (piece tile 4) resolve to the ROM tiles;
+        // without it the chain shows the 4 leading art tiles and the hook renders the
+        // chain tiles (garbled). See s2.asm:56667-56668, s2.constants.asm:2399-2400.
+        int hookFudgeOffset = Sonic2Constants.ART_TILE_WFZ_HOOK_FUDGE - Sonic2Constants.ART_TILE_WFZ_HOOK;
+        List<SpriteMappingFrame> mappings = loadMappingFramesWithTileOffset(
+                Sonic2Constants.MAP_UNC_OBJ80_WFZ_ADDR, hookFudgeOffset);
         return new ObjectSpriteSheet(patterns, mappings, 1, 1);
     }
 
@@ -1082,8 +1090,8 @@ public class Sonic2ObjectArt {
             return null;
         }
         List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJBD_ADDR);
-        // Palette line 3 = index 2 in engine (palette 0 is universal)
-        return new ObjectSpriteSheet(patterns, mappings, 2, 1);
+        // ROM make_art_tile(ArtTile_ArtNem_WfzBeltPlatform,3,1): palette line 3 (passed directly).
+        return new ObjectSpriteSheet(patterns, mappings, 3, 1);
     }
 
     // ========== WFZ Stick / unused badnik (Object 0xBF) ==========

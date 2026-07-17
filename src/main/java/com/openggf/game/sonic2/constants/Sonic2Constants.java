@@ -928,6 +928,14 @@ public class Sonic2Constants {
     public static final int HTZ_COLLISION_PRIMARY_ADDR = 0x044E50;    // Primary collision index
     public static final int HTZ_COLLISION_SECONDARY_ADDR = 0x044F40;  // Secondary collision index
 
+    // WFZ foreground pattern supplement (ArtKos_WFZ = "WFZ_Supp.kos"): like HTZ, WFZ
+    // shares the SCZ base art (ArtKos_SCZ) and overlays a supplement that "overwrites
+    // several SCZ tiles" starting at tile ArtTile_ArtKos_NumTiles_WFZ_Main = $0307.
+    // The ROM applies this via a hardcoded patch (s2.asm:6494-6499), the sibling of the
+    // HTZ patch. Building the getaway ship (and other WFZ-specific FG tiles) needs it.
+    public static final int WFZ_PATTERNS_OVERLAY_ADDR = 0x0C7EC4;   // ArtKos_WFZ (WFZ_Supp.kos)
+    public static final int WFZ_PATTERNS_OVERLAY_OFFSET = 0x60E0;   // $0307 tiles * $20 bytes/tile
+
     // HTZ ROM zone ID (from s2.constants.asm)
     public static final int ZONE_HTZ = 0x07;  // hill_top_zone
 

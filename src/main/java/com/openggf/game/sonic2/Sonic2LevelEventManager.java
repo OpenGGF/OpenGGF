@@ -1,11 +1,10 @@
 package com.openggf.game.sonic2;
 
 import com.openggf.game.sonic2.events.*;
-import com.openggf.game.sonic2.runtime.CnzRuntimeState;
 import java.nio.ByteBuffer;
 import com.openggf.game.sonic2.runtime.CnzRuntimeStateView;
-import com.openggf.game.sonic2.runtime.HtzRuntimeState;
 import com.openggf.game.sonic2.runtime.HtzRuntimeStateView;
+import com.openggf.game.sonic2.runtime.WfzRuntimeStateView;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
@@ -130,12 +129,17 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         ZoneRuntimeRegistry registry = GameServices.zoneRuntimeRegistry();
         if (zone == ZONE_HTZ) {
             installOwnedRuntimeState(registry, new HtzRuntimeStateView(zone, act, htzEvents));
-        } else if (registry.currentAs(HtzRuntimeState.class).isPresent()) {
+        } else if (registry.currentAs(HtzRuntimeStateView.class).isPresent()) {
             registry.clear();
         }
         if (zone == ZONE_CNZ) {
             installOwnedRuntimeState(registry, new CnzRuntimeStateView(zone, act, cnzEvents));
-        } else if (registry.currentAs(CnzRuntimeState.class).isPresent()) {
+        } else if (registry.currentAs(CnzRuntimeStateView.class).isPresent()) {
+            registry.clear();
+        }
+        if (zone == ZONE_WFZ) {
+            installOwnedRuntimeState(registry, new WfzRuntimeStateView(zone, act, wfzEvents));
+        } else if (registry.currentAs(WfzRuntimeStateView.class).isPresent()) {
             registry.clear();
         }
     }
@@ -147,7 +151,9 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
     }
 
     private static boolean isOwnedSonic2RuntimeState(ZoneRuntimeState state) {
-        return state instanceof HtzRuntimeState || state instanceof CnzRuntimeState;
+        return state instanceof HtzRuntimeStateView
+                || state instanceof CnzRuntimeStateView
+                || state instanceof WfzRuntimeStateView;
     }
 
     @Override

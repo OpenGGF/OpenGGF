@@ -69,6 +69,43 @@
             </properties>
         </profile>
 
+        <!-- Fast local dev launcher: run the engine straight from target/classes
+             without building the jar-with-dependencies. Activate explicitly:
+
+               mvn -q -Pdev-run compile exec:exec
+
+             This is what dev.cmd invokes. It skips the ~40s fat-jar assembly /
+             mod-SDK / verify packaging that run.cmd performs; use run.cmd when you
+             need the distributable jar. The forked JVM args mirror run.cmd. -->
+        <profile>
+            <id>dev-run</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <configuration>
+                            <executable>java</executable>
+                            <arguments>
+                                <argument>--add-exports</argument>
+                                <argument>java.base/java.lang=ALL-UNNAMED</argument>
+                                <argument>--add-exports</argument>
+                                <argument>java.desktop/sun.awt=ALL-UNNAMED</argument>
+                                <argument>--add-exports</argument>
+                                <argument>java.desktop/sun.java2d=ALL-UNNAMED</argument>
+                                <argument>-XX:+UseG1GC</argument>
+                                <argument>-XX:MaxGCPauseMillis=5</argument>
+                                <argument>-classpath</argument>
+                                <classpath/>
+                                <argument>com.openggf.Engine</argument>
+                            </arguments>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <!-- CI/CD profile: low-memory, single-fork execution.
              Activated automatically when CI=true (GitHub Actions, GitLab CI, etc.)
              or manually via: mvn test -Pci

@@ -2,6 +2,7 @@ package com.openggf.game.sonic2;
 
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic2.runtime.CnzRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.tests.TestEnvironment;
@@ -125,6 +126,30 @@ class TestSonic2CnzRuntimeStateRegistration {
     }
 
     @Test
+    void cnzInitDoesNotReplaceCustomCnzRuntimeState() {
+        requireRuntime();
+        Sonic2LevelEventManager manager = new Sonic2LevelEventManager();
+        CnzRuntimeState custom = new CustomCnzRuntimeState(79, 4);
+        currentRegistry().install(custom);
+
+        manager.initLevel(Sonic2LevelEventManager.ZONE_CNZ, 1);
+
+        assertSame(custom, currentRegistry().current());
+    }
+
+    @Test
+    void nonCnzInitDoesNotClearCustomCnzRuntimeState() {
+        requireRuntime();
+        Sonic2LevelEventManager manager = new Sonic2LevelEventManager();
+        CnzRuntimeState custom = new CustomCnzRuntimeState(80, 5);
+        currentRegistry().install(custom);
+
+        manager.initLevel(Sonic2LevelEventManager.ZONE_EHZ, 0);
+
+        assertSame(custom, currentRegistry().current());
+    }
+
+    @Test
     void cnzActSwitchRefreshesInstalledMetadata() {
         requireRuntime();
         Sonic2LevelEventManager manager = new Sonic2LevelEventManager();
@@ -192,6 +217,38 @@ class TestSonic2CnzRuntimeStateRegistration {
             throw new AssertionError("Missing method: " + methodName, e);
         } catch (InvocationTargetException e) {
             throw new AssertionError("Method threw: " + methodName, e.getCause());
+        }
+    }
+
+    private record CustomCnzRuntimeState(int zoneIndex, int actIndex) implements CnzRuntimeState {
+        @Override
+        public boolean bossArenaActive() {
+            return false;
+        }
+
+        @Override
+        public boolean bossSpawnPending() {
+            return false;
+        }
+
+        @Override
+        public boolean bossSpawned() {
+            return false;
+        }
+
+        @Override
+        public boolean leftArenaWallPlaced() {
+            return false;
+        }
+
+        @Override
+        public boolean rightArenaWallPlaced() {
+            return false;
+        }
+
+        @Override
+        public int eventRoutine() {
+            return 0;
         }
     }
 }

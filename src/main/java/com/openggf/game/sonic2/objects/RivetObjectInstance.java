@@ -6,6 +6,7 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
+import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -210,6 +211,13 @@ public class RivetObjectInstance extends AbstractObjectInstance
 
         // ROM: bset #status.player.in_air,(MainCharacter+status).w (s2.asm line 80607)
         // ROM: bclr #status.player.on_object,(MainCharacter+status).w (s2.asm line 80608)
+        // clearRidingObject drops the engine's riding-state link; without it the
+        // solid-contact latch re-seats the player as grounded/on-object every frame
+        // and he never falls. Mirror the ROM bclr by clearing onObject + air after.
+        ObjectManager objectManager = services().objectManager();
+        if (objectManager != null) {
+            objectManager.clearRidingObject(player);
+        }
         player.setAir(true);
         player.setOnObject(false);
 
@@ -278,8 +286,11 @@ public class RivetObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        // ROM transforms the rivet into Obj27, whose init plays SndID_Explosion
+        // ($C1; s2.asm:46728). Pass the SFX so the spawned explosion is not silent.
         spawnFreeChild(() -> new ExplosionObjectInstance(
-                Sonic2ObjectIds.EXPLOSION, spawn.x(), spawn.y(), renderManager));
+                Sonic2ObjectIds.EXPLOSION, spawn.x(), spawn.y(), renderManager,
+                Sonic2AudioConstants.SFX_EXPLOSION));
     }
 
     // ========================================================================

@@ -150,7 +150,8 @@ public final class LevelRenderer {
     // Mutable state for the pre-allocated BG tile pass command.
     private int pendingBgTilePassRenderWidth;
     private int pendingBgTilePassRenderHeight;
-    private int pendingBgTilePassRingBaseTiles;
+    private int pendingBgTilePassRingBaseXTiles;
+    private int pendingBgTilePassRingBaseYTiles;
     private int pendingBgTilePassContentGeneration;
     private int completedBgTilePassFrame = Integer.MIN_VALUE;
     private int completedBgTilePassSourceGeneration = -1;
@@ -424,7 +425,9 @@ public final class LevelRenderer {
                             pendingBgTilePassUpperBandWrapHeightPx,
                             pendingBgTilePassUpperBandWrapWidthTiles);
                     tilemapRenderer.setBackgroundRenderRingBaseOverride(
-                            pendingBgTilePassRingBaseTiles, pendingBgTilePassContentGeneration);
+                            pendingBgTilePassRingBaseXTiles,
+                            pendingBgTilePassRingBaseYTiles,
+                            pendingBgTilePassContentGeneration);
                     tilemapRenderer.render(
                             backgroundPlaneSource(currentAdvancedRenderFrameState),
                             pendingBgTilePassRenderWidth,
@@ -525,7 +528,7 @@ public final class LevelRenderer {
 
         private final FrameCommandPool pool;
         private final int[] viewport = new int[4];
-        private final int[] ints = new int[21];
+        private final int[] ints = new int[22];
         private final float[] floats = new float[18];
         private final boolean[] bools = new boolean[8];
         private final Object[] refs = new Object[8];
@@ -583,8 +586,9 @@ public final class LevelRenderer {
             ints[16] = r.pendingBgTilePassRenderHeight;
             ints[17] = r.pendingBgTilePassAlignedBgY;
             ints[18] = r.currentShimmerStyle;
-            ints[19] = r.pendingBgTilePassRingBaseTiles;
-            ints[20] = r.pendingBgTilePassContentGeneration;
+            ints[19] = r.pendingBgTilePassRingBaseXTiles;
+            ints[20] = r.pendingBgTilePassRingBaseYTiles;
+            ints[21] = r.pendingBgTilePassContentGeneration;
             floats[0] = r.pendingWaterlineScreenY;
             floats[1] = r.pendingFgWorldOffsetX_low;
             floats[2] = r.pendingFgWorldOffsetY_low;
@@ -663,8 +667,9 @@ public final class LevelRenderer {
             r.pendingBgTilePassRenderHeight = ints[16];
             r.pendingBgTilePassAlignedBgY = ints[17];
             r.currentShimmerStyle = ints[18];
-            r.pendingBgTilePassRingBaseTiles = ints[19];
-            r.pendingBgTilePassContentGeneration = ints[20];
+            r.pendingBgTilePassRingBaseXTiles = ints[19];
+            r.pendingBgTilePassRingBaseYTiles = ints[20];
+            r.pendingBgTilePassContentGeneration = ints[21];
             r.pendingWaterlineScreenY = floats[0];
             r.pendingFgWorldOffsetX_low = floats[1];
             r.pendingFgWorldOffsetY_low = floats[2];
@@ -1196,10 +1201,12 @@ public final class LevelRenderer {
         lm.ensureBackgroundTilemapData();
 
         int bgPeriodWidthPixels = lm.tilemapManager.getBackgroundTilemapWidthTiles() * Pattern.PATTERN_WIDTH;
-        // Pass bgTilemapBaseX to the shader so it offsets worldX before wrapping.
+        // Pass the tilemap's source anchor to the shader so it offsets worldX before wrapping.
         // Shader: fboWorldOffsetX = -ScrollMidpoint - ExtraBuffer
-        // We want fboWorldOffsetX = bgTilemapBaseX, so ScrollMidpoint = -bgTilemapBaseX.
-        int shaderScrollMidpoint = -lm.tilemapManager.getBgTilemapBaseX();
+        // We want fboWorldOffsetX = sourceX, so ScrollMidpoint = -sourceX.
+        BackgroundTilemapSampling sourceSampling = backgroundTilemapSampling(
+                lm.tilemapManager, 0);
+        int shaderScrollMidpoint = -sourceSampling.compositorWorldAnchorX();
         int shaderExtraBuffer = 0;
         float bgTilemapWorldOffsetX = 0.0f;
         boolean perLineScrollActive = false;
@@ -1292,6 +1299,8 @@ public final class LevelRenderer {
         // The parallax shader shifts the FBO sampling by (actualBgScrollY - alignedBgY)
         // so we must shift the waterline by the same amount to keep it steady on screen
         int vOffset = actualBgScrollY - alignedBgY;
+        BackgroundTilemapSampling sampling = backgroundTilemapSampling(
+                lm.tilemapManager, alignedBgY);
         float fboWaterlineY = (float) ((waterLevelWorldY - camera.getY()) + vOffset);
 
         // Compute screen-space waterline for BG parallax shimmer
@@ -1302,7 +1311,7 @@ public final class LevelRenderer {
         pendingBgTilePassRenderHeight = renderHeight;
         pendingBgTilePassHasWater = hasWater && !suppressUnderwaterPalette;
         pendingBgTilePassFboWaterlineY = fboWaterlineY;
-        pendingBgTilePassAlignedBgY = alignedBgY;
+        pendingBgTilePassAlignedBgY = sampling.tilePassWorldOffsetY();
         pendingBgTilePassBgTilemapWorldOffsetX = bgTilemapWorldOffsetX;
         pendingBgTilePassPerLineScroll = perLineScrollActive;
         // Per-column BG VScroll is screen-column VSRAM state, so the parallax
@@ -1315,10 +1324,12 @@ public final class LevelRenderer {
         pendingBgTilePassUpperBandWrapHeightPx = upperBandWrapHeightPx;
         pendingBgTilePassUpperBandWrapWidthTiles = upperBandWrapWidthTiles;
         TilemapGpuRenderer tilemapRenderer = lm.graphicsManager.getTilemapGpuRenderer();
-        pendingBgTilePassRingBaseTiles = tilemapRenderer != null
-                ? tilemapRenderer.getBackgroundRingBaseTiles() : 0;
-        pendingBgTilePassContentGeneration = tilemapRenderer != null
-                ? tilemapRenderer.getBackgroundContentGeneration() : 0;
+        TilemapGpuRenderer.BackgroundRenderState bgRenderState = tilemapRenderer != null
+                ? tilemapRenderer.captureBackgroundRenderState()
+                : new TilemapGpuRenderer.BackgroundRenderState(0, 0, 0);
+        pendingBgTilePassRingBaseXTiles = bgRenderState.ringBaseXTiles();
+        pendingBgTilePassRingBaseYTiles = bgRenderState.ringBaseYTiles();
+        pendingBgTilePassContentGeneration = bgRenderState.contentGeneration();
         lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.BG_TILE));
 
         // 5. Set shimmer state on BG renderer for parallax compositing pass
@@ -1342,6 +1353,16 @@ public final class LevelRenderer {
             pendingBgPerLineScroll = perLineScrollActive;
             lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.BG_RENDER));
         }
+    }
+
+    record BackgroundTilemapSampling(int compositorWorldAnchorX, int tilePassWorldOffsetY) {
+    }
+
+    static BackgroundTilemapSampling backgroundTilemapSampling(
+            LevelTilemapManager tilemapManager, int alignedBgY) {
+        return new BackgroundTilemapSampling(
+                tilemapManager.getBackgroundTilemapSourceX(),
+                alignedBgY - tilemapManager.getBackgroundTilemapSourceY());
     }
 
     /**
