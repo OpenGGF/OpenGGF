@@ -924,14 +924,18 @@ public class TestPlayableSpriteAnimation {
     private static TestablePlayableSprite createSprite(GameRules featureSet) {
         TestablePlayableSprite sprite = new TestablePlayableSprite("tails", (short) 0, (short) 0);
         sprite.setGameRulesForTest(featureSet);
-        sprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+        ScriptedVelocityAnimationProfile profile = new ScriptedVelocityAnimationProfile()
                 .setIdleAnimId(5)
                 .setWalkAnimId(0)
                 .setRunAnimId(1)
                 .setRollAnimId(2)
                 .setPushAnimId(4)
                 .setAirAnimId(0)
-                .setRunSpeedThreshold(0x600));
+                .setRunSpeedThreshold(0x600);
+        if (featureSet == GameRules.SONIC_1 || featureSet == GameRules.SONIC_2) {
+            profile.setPushUsesWalkSpecialHandler(true);
+        }
+        sprite.setAnimationProfile(profile);
         sprite.setAnimationSet(createAnimationSet());
         sprite.setAir(false);
         sprite.setRolling(false);

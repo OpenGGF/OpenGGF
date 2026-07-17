@@ -81,6 +81,7 @@ public class Sonic1PlayerArt {
                 .setRollAnimId(Sonic1AnimationIds.ROLL)
                 .setRoll2AnimId(Sonic1AnimationIds.ROLL2)
                 .setPushAnimId(Sonic1AnimationIds.PUSH)
+                .setPushUsesWalkSpecialHandler(true)
                 .setDuckAnimId(Sonic1AnimationIds.DUCK)
                 .setLookUpAnimId(Sonic1AnimationIds.LOOK_UP)
                 .setSpringAnimId(Sonic1AnimationIds.SPRING)

@@ -42,6 +42,8 @@ public class Sonic2PlayerArtTest {
         assertEquals(Sonic2Constants.SONIC_ANIM_SCRIPT_COUNT, sonic.animationSet().getScriptCount());
         assertTrue(((ScriptedVelocityAnimationProfile) sonic.animationProfile())
                 .isWalkRunPublishesFrameBeforeTimerAdvance());
+        assertTrue(((ScriptedVelocityAnimationProfile) sonic.animationProfile())
+                .isPushUsesWalkSpecialHandler());
         assertEquals(Sonic2AnimationIds.HURT2.id(),
                 ((ScriptedVelocityAnimationProfile) sonic.animationProfile()).getHurtAnimId());
     }
@@ -59,6 +61,7 @@ public class Sonic2PlayerArtTest {
                 .isWalkRunPublishesFrameBeforeTimerAdvance());
         ScriptedVelocityAnimationProfile profile =
                 (ScriptedVelocityAnimationProfile) tails.animationProfile();
+        assertTrue(profile.isPushUsesWalkSpecialHandler());
         assertEquals(0x1F, profile.getHighSpeedWalkRunAnimId());
         assertEquals(0x700, profile.getHighSpeedWalkRunThreshold());
         assertEquals(4, profile.getWalkSlopeFrameStride());

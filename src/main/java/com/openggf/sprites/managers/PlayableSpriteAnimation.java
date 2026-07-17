@@ -579,10 +579,8 @@ public class PlayableSpriteAnimation {
     }
 
     private boolean pushUsesWalkSpecialHandler() {
-        PlayerAnimationRules rules = playerAnimationRulesOrNull();
         ScriptedVelocityAnimationProfile profile = resolveVelocityProfile();
-        return (rules != null && rules.pushUsesWalkSpecialHandler())
-                || (profile != null && profile.isPushUsesWalkSpecialHandler());
+        return profile != null && profile.isPushUsesWalkSpecialHandler();
     }
 
     private int resolveRunThreshold(ScriptedVelocityAnimationProfile profile) {

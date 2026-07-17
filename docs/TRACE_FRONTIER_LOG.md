@@ -1,5 +1,20 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- Review finding 7: push special-handler ownership consolidated
+
+Branch `feature/ai-trace-animation-verification`, on top of `2018ae1cf`.
+`ScriptedVelocityAnimationProfile` is now the sole owner of whether push frames
+are selected inside the Walk special handler. S1 Sonic and S2 Sonic/Tails set
+the profile flag alongside the existing S3K Sonic/Tails profiles; Knuckles and
+Super Sonic remain independently disabled. The duplicate game-wide
+`PlayerAnimationRules` component and consumer-side OR were removed.
+
+The 35-test shared animation suite passed, as did three ROM-backed profile
+assertions. The full ROM-backed `*TraceReplay` checkpoint completed 92 tests:
+53 passed, 37 failed, 1 errored, and 1 skipped. Its testcase statuses and first
+failure/error messages exactly matched the `018467c0e` reference, so no trace
+frontier moved.
+
 ### 2026-07-17 -- Review finding 6: dead deep-wait provider hook removed
 
 Branch `feature/ai-trace-animation-verification`, on top of `018467c0e`.

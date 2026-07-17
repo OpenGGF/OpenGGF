@@ -106,6 +106,7 @@ public class Sonic2PlayerArt {
                 .setRollAnimId(Sonic2AnimationIds.ROLL)
                 .setRoll2AnimId(Sonic2AnimationIds.ROLL2)
                 .setPushAnimId(Sonic2AnimationIds.PUSH)
+                .setPushUsesWalkSpecialHandler(true)
                 .setDuckAnimId(Sonic2AnimationIds.DUCK)
                 .setLookUpAnimId(Sonic2AnimationIds.LOOK_UP)
                 .setSpindashAnimId(Sonic2AnimationIds.SPINDASH)

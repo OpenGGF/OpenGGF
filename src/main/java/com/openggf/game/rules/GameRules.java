@@ -74,7 +74,6 @@ public record GameRules(
                     false,
                     false,
                     false,
-                    true,
                     true
             ),
             new CameraRules(
@@ -210,7 +209,6 @@ public record GameRules(
             new PlayerAnimationRules(
                     true,
                     false,
-                    true,
                     true,
                     false
             ),
@@ -348,7 +346,6 @@ public record GameRules(
                     true,
                     true,
                     true,
-                    false,
                     false
             ),
             new CameraRules(
