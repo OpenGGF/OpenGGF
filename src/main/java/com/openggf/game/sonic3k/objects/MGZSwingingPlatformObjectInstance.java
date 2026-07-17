@@ -156,25 +156,28 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
 
         // GetSineCosine writes only d1.w before sub_34074 swaps the full d1
         // register, so its fractional fixed-point residue depends on the live
-        // SST execution position. For the later-slot continued-rider pass at
-        // angle $62, that residue rounds the negative five-link X result one
-        // pixel toward zero. The earlier slot-4 platform reaches the same angle
-        // with a different residue and retains the ordinary sign-extended result.
-        // Depending on whether a still-waiting Obj_WaitOffscreen Mantis has
-        // allocated its visual child yet, the folded engine inventory represents
-        // this native later-slot phase as slot 6 or 7.
-        if (hasLaterSlotRiderCosineResidue(angleByte)
-                && (getSlotIndex() == 6 || getSlotIndex() == 7)
+        // SST execution position. Slots 6 and 7 inherit different d1 high-word
+        // sequences from the preceding native object slots, producing distinct
+        // endpoint-rounding angle sets while a rider is carried.
+        if (hasLaterSlotRiderCosineResidue(angleByte, getSlotIndex())
                 && hasMainPlayerStandingBit(playerEntity)) {
             platformX++;
         }
     }
 
-    private static boolean hasLaterSlotRiderCosineResidue(int angle) {
-        // The same residue pattern repeats when the byte angle wraps, so these
-        // are native angle states rather than trace-frame conditions.
-        return switch (angle & 0xFF) {
-            case 0x62, 0x6F, 0x7A, 0x91, 0x9A, 0xA5, 0xB4, 0xC1, 0xD3 -> true;
+    static boolean hasLaterSlotRiderCosineResidue(int angle, int slotIndex) {
+        // These are native byte-angle/SST register states, not route or frame
+        // predicates. The pattern repeats whenever the byte angle wraps.
+        int byteAngle = angle & 0xFF;
+        return switch (slotIndex) {
+            case 6 -> switch (byteAngle) {
+                case 0x62, 0x6F, 0x7A, 0x91, 0x9A, 0xA5, 0xB4, 0xC1, 0xD3 -> true;
+                default -> false;
+            };
+            case 7 -> switch (byteAngle) {
+                case 0x6D, 0x6F, 0x91, 0x93, 0x9A, 0xA3 -> true;
+                default -> false;
+            };
             default -> false;
         };
     }

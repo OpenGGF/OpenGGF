@@ -1,5 +1,40 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- MGZ swinging-platform residue follows the native SST slot
+
+Branch `feature/ai-trace-animation-verification`, after commit `500be0fda`.
+At frame 25759, Sonic and the slot-7 swinging platform matched native
+subpixels and velocities, but the platform endpoint and carried player were
+one pixel right. The existing cosine-residue model treated native slots 6 and
+7 as interchangeable because an earlier folded Mantis inventory could map the
+same platform phase to either engine slot. Restoring the Mantis operation and
+child allocation has removed that fold.
+
+`GetSineCosine` writes only `d1.w`; `sub_34074` then swaps the full register,
+so its five-link endpoint retains the high-word residue inherited through the
+native SST stream. Native slots 6 and 7 have distinct repeating byte-angle
+rounding sets. The engine now models each SST set separately: complete-run's
+slot-6 ride retains its established residue, while standalone's slot-7 ride
+uses its own six-angle sequence. No trace hydration, zone/route/frame
+predicate, comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:3021-3029,70468-70543`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 25759 to frame 27335
+  (`tails_cpu_respawn_counter`, expected `$0001` / actual `$0000`), with
+  errors reduced from 1504 to 1476.
+- MGZ standalone animation remains at frame 28207
+  (`tails_animation_id`, expected `$1A` / actual `$02`) with 263 errors.
+- MGZ complete-run physics and animation remain fully green.
+- The focused swinging-platform suite passes 5/5, including the distinct
+  slot-6/slot-7 angle-residue contract.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+- S3K AIZ skip, level-loading, bootstrap-resolver, and decoding guards pass.
+
 ### 2026-07-17 -- Restored MGZ Mantis routines run beyond the strict viewport
 
 Branch `feature/ai-trace-animation-verification`, after commit `776555553`.
