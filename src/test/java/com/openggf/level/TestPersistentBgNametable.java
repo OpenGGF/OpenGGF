@@ -273,8 +273,10 @@ class TestPersistentBgNametable {
         int originY = manager.getPersistentBgOriginYTiles();
         int fullPublications = manager.persistentBgFullPublicationCount;
         byte[] snapshotMapData = mutableLevel.getMap().getData();
-        int mutatedMapOffset = MAP_WIDTH_BLOCKS * MAP_HEIGHT_BLOCKS + 5;
+        int mutatedMapOffset = MAP_WIDTH_BLOCKS + 5;
         byte snapshotMapValue = snapshotMapData[mutatedMapOffset];
+        assertEquals(5, snapshotMapValue & 0xFF,
+                "fixture layer 1/x 5/y 0 must use the row-interleaved map offset");
         mutableLevel.bumpEpoch();
 
         MutationEffects effects = LevelMutationSurface.forLevel(mutableLevel)
@@ -284,7 +286,10 @@ class TestPersistentBgNametable {
         assertEquals(31, mutableLevel.getMap().getValue(1, 5, 0) & 0xFF);
         assertNotSame(snapshotMapData, mutableLevel.getMap().getData(),
                 "layout-RAM-only writes must retain copy-on-write snapshot isolation");
-        assertEquals(snapshotMapValue, snapshotMapData[mutatedMapOffset]);
+        assertEquals(31, mutableLevel.getMap().getData()[mutatedMapOffset] & 0xFF,
+                "the cloned live backing must receive the layer 1 mutation");
+        assertEquals(5, snapshotMapData[mutatedMapOffset] & 0xFF,
+                "the captured backing must retain the pre-mutation layer 1 value");
         assertTrue(mutableLevel.consumeDirtyMapCells().isEmpty(),
                 "layout-RAM-only writes must not queue next-frame tilemap invalidation");
         assertArrayEquals(retainedBeforeMutation, manager.getPersistentBgRingCopy());
