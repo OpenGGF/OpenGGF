@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- MGZ continuous shake uses the global level counter
+
+Branch `feature/ai-trace-animation-verification`, after commit `41b06bd7a`.
+At frame 28680, native CPU Tails has only just left BuildSprites' upper
+visibility boundary, while the engine had incremented his off-screen counter
+one pass early. The active MGZ quake was selecting `ScreenShakeArray2` with
+the level-event manager's act-local counter (`14741`) rather than the live
+ROM level counter (`28677`), producing a three-pixel camera-copy offset where
+the native phase produces two.
+
+`ShakeScreen_Setup` indexes the continuous table with
+`Level_frame_counter`; the engine's canonical counterpart is
+`LevelManager.getFrameCounter()`, which remains aligned across seamless act
+handoffs and retained event phases. MGZ ScreenEvents now uses that owner when
+a gameplay runtime exists, retaining its explicit callback counter only for
+isolated no-runtime tests. No trace hydration, zone/route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:104188-104234,106257-106309`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 28680 to frame 30178
+  (`tails_x_speed`, expected `$0000` / actual `-$0073`), with errors reduced
+  from 921 to 920.
+- MGZ standalone animation remains at frame 30178
+  (`tails_animation_id`, expected `$18` / actual `$00`) with 156 errors.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
 ### 2026-07-17 -- MGZ drilling escape retains its child hurt SSTs
 
 Branch `feature/ai-trace-animation-verification`, after commit `da8784bed`.
