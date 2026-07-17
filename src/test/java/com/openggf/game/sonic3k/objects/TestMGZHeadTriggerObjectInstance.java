@@ -205,6 +205,15 @@ class TestMGZHeadTriggerObjectInstance {
         assertEquals(0x120, projectile.getY());
     }
 
+    @Test
+    void projectilePublishesItsPostMoveTouchCoordinate() {
+        MGZHeadTriggerProjectileInstance projectile =
+                new MGZHeadTriggerProjectileInstance(0x180, 0x120, 0x400, false);
+
+        assertTrue(projectile.usesCurrentTouchResponseState(),
+                "loc_34518 moves before Add_SpriteToCollisionResponseList");
+    }
+
     private static int readMappingFrame(MGZHeadTriggerObjectInstance head) throws Exception {
         Field field = MGZHeadTriggerObjectInstance.class.getDeclaredField("mappingFrame");
         field.setAccessible(true);

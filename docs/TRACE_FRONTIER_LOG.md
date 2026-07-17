@@ -1,5 +1,37 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- MGZ head-trigger projectile publishes post-move touch state
+
+Branch `feature/ai-trace-animation-verification`, after commit `9bfc9c657`.
+At frame 24211, native head-trigger projectile slot 8 hurts Sonic from the
+coordinate written by its preceding `MoveSprite2`, creates the Obj37 owner,
+and enters the hurt routine. The engine's projectile position and velocity
+were correct, but its collision-list entry sampled the older pre-update
+coordinate, missing the exact-edge overlap and all downstream hurt/ring state.
+
+`loc_34518` moves the projectile before
+`Add_SpriteToCollisionResponseList`; the projectile now exposes that live
+post-move coordinate to the following player-slot touch pass. This is the
+existing ROM-state/call-site ownership rule, with no trace hydration,
+zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:70883-70892`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 24211 to frame 24875
+  (`y_speed`, expected `$0295` / actual `$0195`), with errors reduced from
+  3108 to 1505.
+- MGZ standalone animation advances from frame 24211 to frame 28207
+  (`tails_animation_id`, expected `$1A` / actual `$02`), with errors reduced
+  from 523 to 263.
+- Focused MGZ head-trigger tests pass 7/7, including the explicit post-move
+  touch-state contract.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
 ### 2026-07-17 -- MGZ invisible-block left contact clears residual ground speed
 
 Branch `feature/ai-trace-animation-verification`, after commit `01018be5c`.
