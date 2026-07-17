@@ -2034,6 +2034,41 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void deferredControllerReleaseDoesNotDetachInterveningSolidLanding() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        TestSolidObject formerSupport = new TestSolidObject(100, 100, params);
+        TestSolidObject interveningSupport = new TestSolidObject(200, 100, params);
+        ObjectManager manager = buildManager(formerSupport);
+        manager.addDynamicObject(interveningSupport);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(20);
+        manager.forceRidingObjectForBootstrap(player, formerSupport);
+
+        manager.clearRidingObjectAfterControllerAirborneRelease(player, formerSupport);
+        player.setCentreX((short) interveningSupport.getX());
+        int maxTop = params.airHalfHeight() + player.getYRadius();
+        player.setCentreY((short) (interveningSupport.getY() - 4 - maxTop + 8));
+        player.setYSpeed((short) 0x0100);
+        manager.processImmediateInlineSolidCheckpoint(interveningSupport, player, List.of());
+
+        assertTrue(manager.isRidingObject(player, interveningSupport),
+                "An intervening solid slot should establish the replacement ride");
+        assertFalse(player.getAir());
+
+        manager.processImmediateInlineSolidCheckpoint(formerSupport, player, List.of());
+
+        assertFalse(manager.hasObjectStandingBit(player, formerSupport),
+                "The former support still consumes its deferred native standing bit");
+        assertTrue(manager.isRidingObject(player, interveningSupport),
+                "The former support slot must not detach a later slot's replacement ride");
+        assertTrue(player.isOnObject());
+        assertFalse(player.getAir());
+    }
+
+    @Test
     public void unifiedRideExitClearsOnObjectWithoutForcingAirSameFrame() {
         GameModule previous = GameModuleRegistry.getCurrent();
         GameModuleRegistry.setCurrent(new Sonic1GameModule());

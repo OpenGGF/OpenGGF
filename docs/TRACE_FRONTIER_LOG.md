@@ -1,5 +1,22 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- Review finding 2: intervening solid re-landing survives deferred release
+
+Branch `feature/ai-trace-animation-verification`, on top of `9c1c015df`.
+When a controller requests an airborne release, the former support retains a
+deferred native standing-bit clear for its own SST slot. That slot now checks
+the live riding owner before clearing the player-wide on-object/air state, so
+an intervening solid slot can re-land the player without the former support
+discarding the replacement ride. The focused slot-order regression test
+passes.
+
+The full ROM-backed `*TraceReplay` checkpoint used one Surefire fork with a
+3 GiB heap and the discovered root-level S1, S2, and locked-on S3K ROM paths.
+It completed 92 tests: 53 passed, 37 failed, 1 errored, and 1 skipped. An
+isolated run of preceding commit `9c1c015df` produced the same totals and the
+same failing, errored, and skipped test identities, so no trace frontier
+moved.
+
 ### 2026-07-17 -- Review finding 1: batched push-release checkpoint ownership
 
 Branch `feature/ai-trace-animation-verification`, with local review fix applied
@@ -9,16 +26,16 @@ object-pass push ownership that the inline resolver obtains from
 retail `Solid_NoCollision` Walk/Run word write. The focused batched-path
 regression test passes.
 
-The required ROM-backed checkpoint command was:
+The required ROM-backed checkpoint command used one Surefire fork with a
+3 GiB heap and the discovered root-level S1, S2, and locked-on S3K ROM paths.
+In schematic form it was:
 
-`mvn -Pci -Dsonic1.rom.path=<root S1 ROM> -Dsonic2.rom.path=<root S2 ROM> -Ds3k.rom.path=<root S3K ROM> -Dtest='*TraceReplay' -DfailIfNoTests=false test`
+`mvn "-Dsurefire.argLine=-Xshare:off -Xmx3g" -Dsurefire.forkCount=1 -Dsonic1.rom.path=<root S1 ROM> -Dsonic2.rom.path=<root S2 ROM> -Ds3k.rom.path=<root S3K ROM> -Dtest='*TraceReplay' -DfailIfNoTests=false test`
 
-It completed 66 replay tests with the branch's existing signature: 43 passed,
-22 failed, and 1 skipped. No S1 replay failed. The unchanged red set comprises
-seven S2 routes (CNZ2, CPZ2, DEZ ending, MCZ2, OOZ, SCZ, WFZ) plus fifteen
-pre-existing methods in the broad S3K AIZ replay class. This batched-only fix
-does not execute on the current three game rule sets, which all use inline
-object solid checkpoints, and no trace frontier moved.
+It completed 92 tests with the branch's existing signature: 53 passed, 37
+failed, 1 errored, and 1 skipped. This batched-only fix does not execute on the
+current three game rule sets, which all use inline object solid checkpoints,
+and no trace frontier moved.
 
 ### 2026-07-17 -- MGZ floating capsule reaches full physics and animation parity
 

@@ -1304,12 +1304,22 @@ final class ObjectSolidContactController {
             if (releasedSupports.isEmpty()) {
                 controllerAirborneReleaseSupports.remove(player);
             }
+            RidingState currentSupport = ridingStates.get(player);
+            boolean relandedOnDifferentSupport = currentSupport != null
+                    && currentSupport.object != null
+                    && currentSupport.object != instance;
             if (hasObjectStandingBit(player, instance)) {
                 snapshotObjectStandingBit(player, instance);
                 clearObjectStandingBit(player, instance);
             }
-            player.setOnObject(false);
-            player.setAir(true);
+            if (!relandedOnDifferentSupport) {
+                ridingStates.remove(player);
+                inlineSupportedPlayers.remove(player);
+                latestStandingSnapshots.remove(player);
+                forceAirOnStaleSupportLoss.remove(player);
+                player.setOnObject(false);
+                player.setAir(true);
+            }
             return null;
         }
 
