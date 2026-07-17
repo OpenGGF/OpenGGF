@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **fix: three MHZ object regressions.** (1) The MHZ act-transition no longer
+  crashes: the MHZ1 cutscene door's `parent` button link is now `@RewindTransient`,
+  so a persistent dynamic door that outlives its placed button across the act
+  boundary no longer fails rewind capture with `RewindIdentityTable has no
+  registered id` (the link is re-established on recreate). (2) The MHZ pulley lift
+  now rises back up when the down button is released while the handle is still
+  held — the pull flag is recomputed fresh each frame like ROM `$3A` instead of
+  latching. (3) The MHZ twisted vine now hands the player onto the floor above:
+  `RideObject_SetRide`'s `angle = 0` mount side-effect is applied on entry, so a
+  mount taken on a loop wall no longer keeps the steep angle that collapsed
+  horizontal speed and hung the player mid-arc until a jump. MHZ complete-run
+  trace error count is unchanged (net-neutral).
 - **fix: native Tails deaths and initial S3K mod title cards now complete their
   host lifecycle transitions.** Instant death enters through the canonical player
   setter, clearing active Tails flight while retaining the stock `-0x700` hop,

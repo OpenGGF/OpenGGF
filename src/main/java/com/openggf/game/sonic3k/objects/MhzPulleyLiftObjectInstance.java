@@ -203,12 +203,15 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
             return;
         }
         snapPlayerToHandle(handle, player);
+        // ROM loc_3E472 clears the pull flag $3A every frame (sonic3k.asm:82512)
+        // and re-sets it only while down is currently held (loc_3E60C:82694). The
+        // retract/rise path (loc_3E4AA:82531) then runs whenever $3A is clear, so
+        // releasing down while still holding the handle must let the lift rise.
+        // Track the current down state fresh each frame rather than latching it.
         boolean downPressed = player.isDownPressed();
-        if (downPressed) {
-            handle.pullActive = true;
-            if (!handle.downPressedLastFrame && isPullEnabled()) {
-                playPulleyMoveSfx();
-            }
+        handle.pullActive = downPressed;
+        if (downPressed && !handle.downPressedLastFrame && isPullEnabled()) {
+            playPulleyMoveSfx();
         }
         handle.downPressedLastFrame = downPressed;
         updatePlayerFacingFromHeldInput(player);
