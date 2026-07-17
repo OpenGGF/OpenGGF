@@ -1033,6 +1033,32 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void sonic1BatchedPreviousObjectPassPublishesAfterMovementClearsLivePush() {
+        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        TestMultiPieceSolidObject object = new TestMultiPieceSolidObject(
+                100, 100, new SolidObjectParams(16, 8, 8));
+        ObjectManager manager = buildManager(object);
+        TestPlayableSprite player = createSonic1WalkPushPlayer();
+
+        manager.updateSolidContacts(player);
+        assertTrue(player.getPushing());
+
+        // The legacy S1 UNIFIED post-movement resolver has no inline checkpoint
+        // callback, but its per-object latch still represents the immediately
+        // previous SolidObject pass. Pair it with frame-start Status_Push just as
+        // the inline resolver does for Solid_NoCollision.
+        player.captureOnObjectAtFrameStart();
+        player.setPushing(false);
+        player.setAnimationId(5);
+        player.setCentreX((short) 40);
+        manager.updateSolidContacts(player, true, false);
+
+        assertFalse(player.getPushing());
+        assertEquals(0, player.getAnimationId());
+        assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId());
+    }
+
+    @Test
     public void sonic1AirborneMonitorPushReleaseBypassesAnimationWord() {
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
         SolidObjectParams params = new SolidObjectParams(0x1A, 0x0F, 0x10);

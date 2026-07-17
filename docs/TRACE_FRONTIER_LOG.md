@@ -1,5 +1,25 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- Review finding 1: batched push-release checkpoint ownership
+
+Branch `feature/ai-trace-animation-verification`, with local review fix applied
+on top of `9f0c4851f`. The legacy batched solid resolver now supplies the prior
+object-pass push ownership that the inline resolver obtains from
+`SolidExecutionRegistry`, so a same-frame movement clear cannot suppress S1's
+retail `Solid_NoCollision` Walk/Run word write. The focused batched-path
+regression test passes.
+
+The required ROM-backed checkpoint command was:
+
+`mvn -Pci -Dsonic1.rom.path=<root S1 ROM> -Dsonic2.rom.path=<root S2 ROM> -Ds3k.rom.path=<root S3K ROM> -Dtest='*TraceReplay' -DfailIfNoTests=false test`
+
+It completed 66 replay tests with the branch's existing signature: 43 passed,
+22 failed, and 1 skipped. No S1 replay failed. The unchanged red set comprises
+seven S2 routes (CNZ2, CPZ2, DEZ ending, MCZ2, OOZ, SCZ, WFZ) plus fifteen
+pre-existing methods in the broad S3K AIZ replay class. This batched-only fix
+does not execute on the current three game rule sets, which all use inline
+object solid checkpoints, and no trace frontier moved.
+
 ### 2026-07-17 -- MGZ floating capsule reaches full physics and animation parity
 
 Branch `feature/ai-trace-animation-verification`, on top of `bf3704da2`.

@@ -349,11 +349,19 @@ final class ObjectSolidContactController {
     }
 
     private void publishSolidPushReleaseAnimationWord(PlayableEntity player, ObjectInstance instance) {
-        publishSolidPushReleaseAnimationWord(player, instance, false);
+        publishSolidPushReleaseAnimationWord(
+                player, instance, false, checkpointPushingLastFrame);
     }
 
     private void publishSolidPushReleaseAnimationWord(
             PlayableEntity player, ObjectInstance instance, boolean foldedSiblingNoCollisionRelease) {
+        publishSolidPushReleaseAnimationWord(
+                player, instance, foldedSiblingNoCollisionRelease, checkpointPushingLastFrame);
+    }
+
+    private void publishSolidPushReleaseAnimationWord(
+            PlayableEntity player, ObjectInstance instance, boolean foldedSiblingNoCollisionRelease,
+            boolean pushingAtPreviousCheckpoint) {
         ObjectInteractionRules rules = objectInteractionRulesOrNull(player);
         if (rules == null
                 || !rules.solidPushReleaseWritesWalkRunAnimationWord()
@@ -387,7 +395,7 @@ final class ObjectSolidContactController {
         int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
         boolean persistentNativeLatch = instance instanceof SolidObjectProvider provider
                 && provider.preservesNativePushLatchAcrossSkippedSolidCheckpoints();
-        boolean previousCheckpointStillOwnsWalk = checkpointPushingLastFrame
+        boolean previousCheckpointStillOwnsWalk = pushingAtPreviousCheckpoint
                 && sprite.getPushingAtFrameStart();
         boolean persistentLatchStillOwnsWalk = persistentNativeLatch;
         if (!foldedSiblingNoCollisionRelease
@@ -2690,7 +2698,12 @@ final class ObjectSolidContactController {
                     provider.setPlayerPushing(player, true);
                 } else if (clearObjectPushingBit(player, instance)) {
                     if (result.aggregateContact() == null) {
-                        publishSolidPushReleaseAnimationWord(player, instance);
+                        // The batched resolver visits each object once per pass, so a
+                        // latch cleared here necessarily came from this object's prior
+                        // pass. Supply that checkpoint ownership explicitly; unlike the
+                        // inline resolver there is no SolidExecutionRegistry callback
+                        // around this site to arm checkpointPushingLastFrame.
+                        publishSolidPushReleaseAnimationWord(player, instance, false, true);
                     }
                     player.setPushing(false);
                     provider.setPlayerPushing(player, false);
