@@ -1557,7 +1557,7 @@ final class ObjectSolidContactController {
             MultiPieceContactResult result = processMultiPieceCollision(
                     player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer());
             boolean preservedRidingPush = player instanceof AbstractPlayableSprite sprite
-                    && sprite.getPushingAtFrameStart()
+                    && sprite.getPushing()
                     && result.standing()
                     && provider.preservesRidingPushStatus(player);
             if (result.pushing()
@@ -2044,7 +2044,7 @@ final class ObjectSolidContactController {
     private void preserveRidingPushStatusIfNeeded(PlayableEntity player, ObjectInstance instance,
             SolidObjectProvider provider) {
         if (!(player instanceof AbstractPlayableSprite sprite)
-                || !sprite.getPushingAtFrameStart()
+                || !sprite.getPushing()
                 || !provider.preservesRidingPushStatus(player)) {
             return;
         }
@@ -2698,7 +2698,7 @@ final class ObjectSolidContactController {
                 boolean earlierSlotPushing =
                         instance == multiPieceEarlierPiecesInstance && multiPieceEarlierPiecesPushing;
                 boolean preservedRidingPush = player instanceof AbstractPlayableSprite sprite
-                        && sprite.getPushingAtFrameStart()
+                        && sprite.getPushing()
                         && result.standing()
                         && provider.preservesRidingPushStatus(player);
                 if (result.pushing() || earlierSlotPushing || preservedRidingPush) {

@@ -1,5 +1,19 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- Review finding 3: riding providers preserve the live push byte
+
+Branch `feature/ai-trace-animation-verification`, on top of `0e7fabaa6`.
+The opt-in riding push bridge now gates on the live player `Status_Push` value
+visible when the provider's SST slot executes. This retains a push established
+by an earlier solid slot in the same `ExecuteObjects` pass without allowing a
+riding provider to invent push from geometry alone. Focused multi-piece tests
+cover both the live earlier-slot handoff and the clear-bit rejection.
+
+The full ROM-backed `*TraceReplay` checkpoint completed 92 tests: 53 passed,
+37 failed, 1 errored, and 1 skipped. An isolated run of preceding commit
+`0e7fabaa6` had the same totals, test identities, and first divergence/error
+messages, so no trace frontier moved.
+
 ### 2026-07-17 -- Review finding 2: intervening solid re-landing survives deferred release
 
 Branch `feature/ai-trace-animation-verification`, on top of `9c1c015df`.

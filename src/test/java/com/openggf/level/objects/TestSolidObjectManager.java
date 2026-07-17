@@ -791,7 +791,7 @@ public class TestSolidObjectManager {
     }
 
     @Test
-    public void preservedMultiPieceRidingPushIsNotConsultedWithoutFrameStartLatch() {
+    public void preservedMultiPieceRidingPushIsNotConsultedWithoutLivePushLatch() {
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);
         PreservingRidingPushMultiPieceSolidObject object =
                 new PreservingRidingPushMultiPieceSolidObject(100, 100, params);
@@ -811,7 +811,38 @@ public class TestSolidObjectManager {
 
         assertTrue(player.isOnObject(), "fixture should establish a standing multi-piece contact");
         assertEquals(0, object.preserveChecks,
-                "same-pass collision geometry cannot invoke the frame-start push preservation hook");
+                "same-pass collision geometry cannot invent a live push latch");
+    }
+
+    @Test
+    public void preservedMultiPieceRidingPushUsesLiveEarlierSlotLatch() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        PreservingRidingPushMultiPieceSolidObject object =
+                new PreservingRidingPushMultiPieceSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setPushing(false);
+        player.captureOnObjectAtFrameStart();
+        assertFalse(player.getPushingAtFrameStart());
+
+        // Model an earlier SolidObject SST setting Status_Push before this
+        // riding provider's later slot observes the same live player byte.
+        player.setPushing(true);
+        player.setCentreX((short) 100);
+        player.setCentreY((short) 83);
+        player.setYSpeed((short) 0);
+
+        manager.updateSolidContacts(player);
+
+        assertTrue(player.isOnObject(), "fixture should establish a standing multi-piece contact");
+        assertTrue(player.getPushing(), "the later riding slot must preserve the live earlier-slot push");
+        assertTrue(manager.hasObjectPushingBit(player));
+        assertTrue(object.preserveChecks > 0,
+                "the provider must observe the live SST bit even when the frame-start snapshot was clear");
     }
 
     @Test
