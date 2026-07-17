@@ -1,5 +1,20 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- Review finding 10: hot-file whitespace churn removed
+
+Branch `feature/ai-trace-animation-verification`, on top of `e56e1d549`.
+`ObjectPlacementController`, `PlayableSpriteMovement`, and
+`PlayableSpriteAnimation` were reconstructed from the `develop` bytes plus the
+branch's whitespace-insensitive semantic patch. The 8-add/8-remove placement
+hunk disappeared, and raw versus `git diff -w` merge-base stats are now
+identical for both animation (265/105) and movement (330/86). A normalized
+patch comparison confirmed no semantic delta from the pre-cleanup branch.
+
+The full ROM-backed `*TraceReplay` checkpoint completed 92 tests: 53 passed,
+37 failed, 1 errored, and 1 skipped. Its testcase statuses and first
+failure/error messages exactly matched the `018467c0e` reference, so no trace
+frontier moved.
+
 ### 2026-07-17 -- Review finding 9: dead Walk-selector branch removed
 
 Branch `feature/ai-trace-animation-verification`, on top of `981131999`.

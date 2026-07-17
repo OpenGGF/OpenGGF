@@ -523,14 +523,14 @@ public class PlayableSpriteAnimation {
                 // resumes at this same $FD command instead of restarting it.
                 SpriteAnimationProfile profile = sprite.getAnimationProfile();
                 boolean switchingFromSkid = profile instanceof ScriptedVelocityAnimationProfile velocityProfile
-                        && velocityProfile.getSkidAnimId() == sprite.getAnimationId();
+                            && velocityProfile.getSkidAnimId() == sprite.getAnimationId();
                 boolean skidRefreshed = switchingFromSkid
                         && sprite.getMovementManager() instanceof PlayableSpriteMovement movement
-                        && movement.isSkidAnimationRefreshedThisFrame();
+                            && movement.isSkidAnimationRefreshedThisFrame();
                 sprite.setAnimationId(nextAnimId);
                 if (skidRefreshed) {
                     return false;
-                }
+                    }
                 if (switchingFromSkid) {
                     // Engine-only latch: once braking no longer selects Stop,
                     // the native raw-animation switch ends the skid state.

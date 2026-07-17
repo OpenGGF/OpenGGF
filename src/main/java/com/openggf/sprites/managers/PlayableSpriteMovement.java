@@ -3225,7 +3225,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		boolean preservePinballMode = movementRules != null && movementRules.pinballLandingPreservesPinballMode();
 		boolean preserveObjectLandingRoll = sprite.consumePreserveRollingOnNextLanding();
 		boolean skipLandingRollClear = sprite.getRolling()
-					&& ((sprite.getPinballMode() && preservePinballRoll) || preserveObjectLandingRoll);
+				&& ((sprite.getPinballMode() && preservePinballRoll) || preserveObjectLandingRoll);
 		boolean clearsRolling = sprite.getRolling() && !skipLandingRollClear;
 		if (clearsRolling) {
 			if (movementRules != null && movementRules.landingRollClearUsesCurrentYRadiusDelta()) {
@@ -4102,8 +4102,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			PlayerAnimationRules rules = playerAnimationRulesOrNull();
 			deferredSpindashAnimationPushClear =
 					rules != null && rules.animationChangeClearsPush();
+			}
 		}
-	}
 
 	/**
 	 * Applies Animate_Sonic/Animate_Tails' animation-change push clear after the
