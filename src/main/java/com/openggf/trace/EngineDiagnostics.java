@@ -45,16 +45,30 @@ public record EngineDiagnostics(
     int xSub,
     int ySub,
     int ridingObject,
-    int standingSnapshot
+    int standingSnapshot,
+    int animationId,
+    int mappingFrame
 ) {
+    /** Backward-compatible constructor for diagnostics without animation capture. */
+    public EngineDiagnostics(
+            int routine, int standOnSlot, int standOnType, int rings, int statusByte,
+            int cameraX, int cameraY, int cursorIdx, int leftCursorIdx, int fwdCtr,
+            int bwdCtr, String solidEvent, int xSub, int ySub, int ridingObject,
+            int standingSnapshot) {
+        this(routine, standOnSlot, standOnType, rings, statusByte, cameraX, cameraY,
+                cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent, xSub, ySub,
+                ridingObject, standingSnapshot, -1, -1);
+    }
+
     /** No diagnostics available. */
     public static final EngineDiagnostics EMPTY = new EngineDiagnostics(
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, "", -1, -1, -1, -1);
+            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, "", -1, -1, -1, -1,
+            -1, -1);
 
     /** Wrap a preformatted diagnostics string for context rendering. */
     public static EngineDiagnostics formattedOnly(String formatted) {
         return new EngineDiagnostics(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                formatted == null ? "" : formatted, -1, -1, -1, -1);
+                formatted == null ? "" : formatted, -1, -1, -1, -1, -1, -1);
     }
 
     /**
@@ -65,7 +79,15 @@ public record EngineDiagnostics(
     public static EngineDiagnostics formattedWithCamera(int cameraX, int cameraY, String formatted) {
         return new EngineDiagnostics(-1, -1, -1, -1, -1, cameraX, cameraY,
                 -1, -1, -1, -1,
-                formatted == null ? "" : formatted, -1, -1, -1, -1);
+                formatted == null ? "" : formatted, -1, -1, -1, -1, -1, -1);
+    }
+
+    /** Preformatted diagnostics that retain strict camera and animation values. */
+    public static EngineDiagnostics formattedWithCameraAndAnimation(
+            int cameraX, int cameraY, int animationId, int mappingFrame, String formatted) {
+        return new EngineDiagnostics(-1, -1, -1, -1, -1, cameraX, cameraY,
+                -1, -1, -1, -1, formatted == null ? "" : formatted,
+                -1, -1, -1, -1, animationId, mappingFrame);
     }
 
     /**
@@ -111,6 +133,10 @@ public record EngineDiagnostics(
             if (!sb.isEmpty()) sb.append(' ');
             sb.append(String.format("standsnap=%d", standingSnapshot));
         }
+        if (animationId >= 0) {
+            if (!sb.isEmpty()) sb.append(' ');
+            sb.append(String.format("anim=%02X map=%02X", animationId, mappingFrame));
+        }
         if (solidEvent != null && !solidEvent.isEmpty()) {
             if (!sb.isEmpty()) sb.append(' ');
             sb.append(solidEvent);
@@ -118,5 +144,4 @@ public record EngineDiagnostics(
         return sb.toString();
     }
 }
-
 

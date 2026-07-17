@@ -32,8 +32,10 @@ final class LevelActTransitionExecutor {
         boolean endOfLevelActive = gameState.isEndOfLevelActive();
         boolean endOfLevelFlag = gameState.isEndOfLevelFlag();
         gameState.resetForLevel();
-        if (request.preserveEndOfLevelState()) {
+        if (request.preserveEndOfLevelActive()) {
             gameState.setEndOfLevelActive(endOfLevelActive);
+        }
+        if (request.preserveEndOfLevelFlag()) {
             gameState.setEndOfLevelFlag(endOfLevelFlag);
         }
 
@@ -109,8 +111,10 @@ final class LevelActTransitionExecutor {
                     levelManager.currentAct,
                     request.resetLevelGamestateAtInLevelTitleCardDisplay(),
                     request.inLevelTitleCardResetAdditionalDispatches(),
+                    request.inLevelTitleCardResetPhaseOneDispatchOverlap(),
                     request.lockPlayerControlForInLevelTitleCard(),
-                    request.inLevelTitleCardExitAdditionalDispatches());
+                    request.inLevelTitleCardExitAdditionalDispatches(),
+                    request.inLevelTitleCardExitPhaseOneDispatchOverlap());
         }
     }
 

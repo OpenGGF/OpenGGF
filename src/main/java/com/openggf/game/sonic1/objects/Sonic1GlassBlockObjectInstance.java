@@ -235,6 +235,20 @@ public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Glass_Block012/34 call SolidObject, whose unsigned horizontal reject
+        // uses `bhi`; equality at twice d1 remains inside the solid.
+        return true;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // Oscillation/lowering rebuilds dynamicSpawn as y_pos changes, while
+        // the native pushing bit remains in this same Obj30 SST status byte.
+        return true;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         // Glass blocks use standard SolidObject with full collision (top, sides, bottom)
         return false;

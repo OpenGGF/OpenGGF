@@ -266,6 +266,24 @@ public class ARZBossPillar extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj89_Pillar_SolidObject calls the standard SolidObject helper.
+        // Its initial horizontal range check uses BHI, so relX == 2*d1 is
+        // still a side contact rather than a release.
+        // docs/s2disasm/s2.asm:35338-35436,65330-65339,65531-65539
+        return true;
+    }
+
+    @Override
+    public boolean preservesEdgeSubpixelMotion() {
+        // At the exact right edge SolidObject reaches the side path with d0=0;
+        // sub.w d0,x_pos preserves the native x_sub low word while publishing
+        // Status_Push.
+        // docs/s2disasm/s2.asm:35420-35436,65330-65339,65531-65539
+        return true;
+    }
+
+    @Override
     public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
         // Obj89_Pillar_Sub0/Sub2 call Obj89_Pillar_SolidObject before raise/shake movement.
         // docs/s2disasm/s2.asm:65330-65345,65348-65374,65531-65539
@@ -276,6 +294,16 @@ public class ARZBossPillar extends AbstractObjectInstance
     public boolean usesPreUpdateYForContinuedRide(PlayableEntity player) {
         // MvSonicOnPtfm inherits the same pre-motion y_pos used by Obj89_Pillar_SolidObject.
         // docs/s2disasm/s2.asm:65330-65345,65348-65374,65531-65539
+        return true;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // The pillar changes y_pos every raising/lowering frame, but its
+        // standing/pushing bits remain in the same Obj89 SST slot. Keying the
+        // folded engine latch by the rewritten dynamic spawn prevents the old
+        // side-push owner from becoming unreachable when the pillar moves.
+        // docs/s2disasm/s2.asm:65330-65374,65531-65539
         return true;
     }
 

@@ -580,6 +580,16 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
         return player instanceof AbstractPlayableSprite sprite && !sprite.getDead();
     }
 
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        // Sprite_CheckDeleteTouch runs after Tunnelbot's movement routine and
+        // adds the SST address to Collision_response_list. The following player
+        // pass dereferences that live x_pos/y_pos, not the older pre-movement
+        // coordinate retained by the engine's generic snapshot.
+        // sonic3k.asm:184710-184723,20656-20708,21200-21210.
+        return true;
+    }
+
     // ── Screen shake ────────────────────────────────────────────────────
 
     /**

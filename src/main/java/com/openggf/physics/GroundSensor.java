@@ -217,6 +217,10 @@ public class GroundSensor extends Sensor {
         // Convert FG probe coordinates to BG space
         short bgX = (short) (fgX - cameraDiffX);
         short bgY = (short) (fgY - cameraDiffY);
+        var currentLevel = lm.getCurrentLevel();
+        if (currentLevel != null && !currentLevel.hasBackgroundCollisionRowAt(bgY)) {
+            return null;
+        }
 
         // Perform the scan using the BG-adjusted coordinates. Do not bail out
         // early on an empty first tile: the ROM still runs the extension pass
@@ -246,96 +250,8 @@ public class GroundSensor extends Sensor {
      * Horizontal scan against BG layer tiles.
      */
     private SensorResult scanHorizontalBg(LevelManager lm, short x, short y, int solidityBit, Direction direction) {
-        WallScanResult result = evaluateWallTileBg(lm, x, y, solidityBit, direction);
-
-        switch (result.state) {
-            case FOUND:
-                return createResultWithDistance(bgWallScanResult, result.tile, result.desc,
-                        (byte) result.distance, direction);
-
-            case REGRESS: {
-                int prevX = x + (direction == Direction.LEFT ? 16 : -16);
-                WallScanResult prev = scanWallTileSimpleBg(lm, prevX, y, solidityBit, direction);
-                SolidTile prevTile = prev.tile != null ? prev.tile : result.tile;
-                ChunkDesc prevDesc = prev.tile != null ? prev.desc : result.desc;
-                return createResultWithDistance(bgWallScanResult, prevTile, prevDesc,
-                        (byte) (prev.distance - 16), direction);
-            }
-
-            case EXTEND:
-            default: {
-                int nextX = x + (direction == Direction.LEFT ? -16 : 16);
-                WallScanResult next = scanWallTileSimpleBg(lm, nextX, y, solidityBit, direction);
-                SolidTile nextTile = next.tile != null ? next.tile : result.tile;
-                ChunkDesc nextDesc = next.tile != null ? next.desc : result.desc;
-                return createResultWithDistance(bgWallScanResult, nextTile, nextDesc,
-                        (byte) (next.distance + 16), direction);
-            }
-        }
-    }
-
-    private WallScanResult evaluateWallTileBg(LevelManager lm, int x, int y, int solidityBit, Direction direction) {
-        ChunkDesc desc = lm.getChunkDescAt((byte) 1, x, y, false);
-        SolidTile tile = getSolidTile(lm, desc, solidityBit);
-
-        if (tile == null) {
-            return wallResult1.set(WallScanState.EXTEND, 0, null, null);
-        }
-
-        int metric = getWallMetric(tile, desc, y, direction);
-        if (metric == 0) {
-            return wallResult1.set(WallScanState.EXTEND, 0, tile, desc);
-        }
-
-        int xInTile = x & 0x0F;
-        int xAdjusted = (direction == Direction.LEFT) ? (15 - xInTile) : xInTile;
-        if (metric < 0) {
-            boolean extend = (metric + xAdjusted >= 0);
-            return extend
-                    ? wallResult1.set(WallScanState.EXTEND, 0, tile, desc)
-                    : wallResult1.set(WallScanState.REGRESS, 0, tile, desc);
-        }
-
-        if (metric == FULL_TILE) {
-            return wallResult1.set(WallScanState.REGRESS, 0, tile, desc);
-        }
-
-        int distance = (direction == Direction.LEFT)
-                ? (xInTile - metric)
-                : (15 - metric - xInTile);
-        return wallResult1.set(WallScanState.FOUND, distance, tile, desc);
-    }
-
-    private WallScanResult scanWallTileSimpleBg(LevelManager lm, int x, int y, int solidityBit, Direction direction) {
-        ChunkDesc desc = lm.getChunkDescAt((byte) 1, x, y, false);
-        SolidTile tile = getSolidTile(lm, desc, solidityBit);
-        int xInTile = x & 0x0F;
-        int xAdjusted = (direction == Direction.LEFT) ? (15 - xInTile) : xInTile;
-
-        if (tile == null) {
-            int dist = 15 - xAdjusted;
-            return wallResult2.set(WallScanState.FOUND, dist, null, null);
-        }
-
-        int metric = getWallMetric(tile, desc, y, direction);
-        if (metric == 0) {
-            int dist = 15 - xAdjusted;
-            return wallResult2.set(WallScanState.FOUND, dist, tile, desc);
-        }
-
-        if (metric < 0) {
-            if (metric + xAdjusted >= 0) {
-                int dist = 15 - xAdjusted;
-                return wallResult2.set(WallScanState.FOUND, dist, tile, desc);
-            }
-            int dist = -1 - xAdjusted;
-            return wallResult2.set(WallScanState.FOUND, dist, tile, desc);
-        }
-
-        int distance = (direction == Direction.LEFT)
-                ? (xInTile - metric)
-                : (15 - metric - xInTile);
-        return wallResult2.set(WallScanState.FOUND, distance, tile, desc);
+        return scanHorizontalLayer(lm, x, y, solidityBit, direction,
+                (byte) 1, false, bgWallScanResult);
     }
 
     // ========================================
@@ -596,37 +512,52 @@ public class GroundSensor extends Sensor {
     // ========================================
 
     private SensorResult scanHorizontal(LevelManager lm, short x, short y, int solidityBit, Direction direction) {
-        WallScanResult result = evaluateWallTile(lm, x, y, solidityBit, direction);
+        return scanHorizontalLayer(lm, x, y, solidityBit, direction,
+                (byte) 0, sprite.isLoopLowPlane(), reusableResult);
+    }
+
+    private SensorResult scanHorizontalLayer(LevelManager lm, short x, short y, int solidityBit,
+                                             Direction direction, byte layer, boolean loopLowPlane,
+                                             SensorResult resultTarget) {
+        WallScanResult result = evaluateWallTile(lm, x, y, solidityBit, direction, layer, loopLowPlane);
 
         switch (result.state) {
             case FOUND:
-                return createResultWithDistance(result.tile, result.desc, (byte) result.distance, direction);
+                return createResultWithDistance(resultTarget, result.tile, result.desc,
+                        (byte) result.distance, direction);
 
-            case REGRESS:
+            case REGRESS: {
                 // Check previous tile (opposite direction)
                 // ROM behavior: if adjacent tile has no collision, preserve angle from current tile
                 int prevX = x + (direction == Direction.LEFT ? 16 : -16);
-                WallScanResult prev = scanWallTileSimple(lm, prevX, y, solidityBit, direction);
+                WallScanResult prev = scanWallTileSimple(
+                        lm, prevX, y, solidityBit, direction, layer, loopLowPlane);
                 // Use current tile's angle if adjacent tile has no collision (ROM: angle buffer not modified)
                 SolidTile prevTile = prev.tile != null ? prev.tile : result.tile;
                 ChunkDesc prevDesc = prev.tile != null ? prev.desc : result.desc;
-                return createResultWithDistance(prevTile, prevDesc, (byte) (prev.distance - 16), direction);
+                return createResultWithDistance(resultTarget, prevTile, prevDesc,
+                        (byte) (prev.distance - 16), direction);
+            }
 
             case EXTEND:
-            default:
+            default: {
                 // Check next tile (same direction)
                 // ROM behavior: if adjacent tile has no collision, preserve angle from current tile
                 int nextX = x + (direction == Direction.LEFT ? -16 : 16);
-                WallScanResult next = scanWallTileSimple(lm, nextX, y, solidityBit, direction);
+                WallScanResult next = scanWallTileSimple(
+                        lm, nextX, y, solidityBit, direction, layer, loopLowPlane);
                 // Use current tile's angle if adjacent tile has no collision (ROM: angle buffer not modified)
                 SolidTile nextTile = next.tile != null ? next.tile : result.tile;
                 ChunkDesc nextDesc = next.tile != null ? next.desc : result.desc;
-                return createResultWithDistance(nextTile, nextDesc, (byte) (next.distance + 16), direction);
+                return createResultWithDistance(resultTarget, nextTile, nextDesc,
+                        (byte) (next.distance + 16), direction);
+            }
         }
     }
 
-    private WallScanResult evaluateWallTile(LevelManager lm, int x, int y, int solidityBit, Direction direction) {
-        ChunkDesc desc = lm.getChunkDescAt((byte) 0, x, y, sprite.isLoopLowPlane());
+    private WallScanResult evaluateWallTile(LevelManager lm, int x, int y, int solidityBit,
+                                            Direction direction, byte layer, boolean loopLowPlane) {
+        ChunkDesc desc = lm.getChunkDescAt(layer, x, y, loopLowPlane);
         SolidTile tile = getSolidTile(lm, desc, solidityBit);
 
         if (tile == null) {
@@ -673,8 +604,9 @@ public class GroundSensor extends Sensor {
         return wallResult1.set(WallScanState.FOUND, distance, tile, desc);
     }
 
-    private WallScanResult scanWallTileSimple(LevelManager lm, int x, int y, int solidityBit, Direction direction) {
-        ChunkDesc desc = lm.getChunkDescAt((byte) 0, x, y, sprite.isLoopLowPlane());
+    private WallScanResult scanWallTileSimple(LevelManager lm, int x, int y, int solidityBit,
+                                              Direction direction, byte layer, boolean loopLowPlane) {
+        ChunkDesc desc = lm.getChunkDescAt(layer, x, y, loopLowPlane);
         SolidTile tile = getSolidTile(lm, desc, solidityBit);
         int xInTile = x & 0x0F;
         int xAdjusted = (direction == Direction.LEFT) ? (15 - xInTile) : xInTile;
@@ -771,10 +703,6 @@ public class GroundSensor extends Sensor {
             return null;
         }
         return lm.getSolidTileForChunkDesc(desc, solidityBit);
-    }
-
-    private SensorResult createResultWithDistance(SolidTile tile, ChunkDesc desc, byte distance, Direction direction) {
-        return createResultWithDistance(reusableResult, tile, desc, distance, direction);
     }
 
     private SensorResult createResultWithDistance(SensorResult target,

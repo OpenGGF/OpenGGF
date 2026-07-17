@@ -34,6 +34,11 @@ public interface TitleCardProvider {
         requestLevelGamestateResetAtInLevelDisplay();
     }
 
+    default void requestLevelGamestateResetAtInLevelDisplay(
+            int additionalDispatches, int phaseOneDispatchOverlap) {
+        requestLevelGamestateResetAtInLevelDisplay(additionalDispatches);
+    }
+
     default void requestInLevelPlayerControlLock() {
         // No-op unless an in-level title card owns the native controller lock.
     }
@@ -52,6 +57,19 @@ public interface TitleCardProvider {
 
     default void requestInLevelExitAdditionalDispatches(int dispatches) {
         // No-op unless the title card models SST child retirement dispatches.
+    }
+
+    default void requestInLevelExitAdditionalDispatches(
+            int dispatches, int phaseOneDispatchOverlap) {
+        requestInLevelExitAdditionalDispatches(dispatches);
+    }
+
+    /**
+     * Whether an active in-level title owner still dispatches on replay rows
+     * whose level gameplay counter is held. Normal level-title overlays do not.
+     */
+    default boolean advancesOnHeldLevelCounter() {
+        return false;
     }
 
     /**

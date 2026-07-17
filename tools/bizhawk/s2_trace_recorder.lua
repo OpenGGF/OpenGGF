@@ -79,7 +79,9 @@
 -- (see v9.3-s2 change note above for context).
 -- The bootstrap-comparator eligibility is derived from this version string by
 -- TraceMetadata.nativePreludeMode() — no separate JSON flag is emitted.
-local LUA_SCRIPT_VERSION = "9.10-s2"
+-- v9.11-s2 changes: CSV v7 records each character's animation ID and displayed
+-- mapping frame every frame for independent animation trace verification.
+local LUA_SCRIPT_VERSION = "9.11-s2"
 
 -- Output directory (relative to BizHawk working dir)
 local OUTPUT_DIR = "trace_output/"
@@ -463,15 +465,17 @@ local function open_files()
     physics_file = io.open(OUTPUT_DIR .. "physics.csv", "w")
     aux_file = io.open(OUTPUT_DIR .. "aux_state.jsonl", "w")
 
-    -- v6 header: shared execution counters plus explicit Sonic/Tails state blocks.
+    -- v7 header: shared execution counters plus symmetric Player/Sidekick blocks.
     physics_file:write("frame,input,camera_x,camera_y,rings,gameplay_frame_counter,"
-        .. "vblank_counter,lag_counter,sonic_present,sonic_x,sonic_y,sonic_x_speed,"
-        .. "sonic_y_speed,sonic_g_speed,sonic_angle,sonic_air,sonic_rolling,"
-        .. "sonic_ground_mode,sonic_x_sub,sonic_y_sub,sonic_routine,sonic_status_byte,"
-        .. "sonic_stand_on_obj,tails_present,tails_x,tails_y,tails_x_speed,"
-        .. "tails_y_speed,tails_g_speed,tails_angle,tails_air,tails_rolling,"
-        .. "tails_ground_mode,tails_x_sub,tails_y_sub,tails_routine,"
-        .. "tails_status_byte,tails_stand_on_obj\n")
+        .. "vblank_counter,lag_counter,player_present,player_x,player_y,player_x_speed,"
+        .. "player_y_speed,player_g_speed,player_angle,player_air,player_rolling,"
+        .. "player_ground_mode,player_x_sub,player_y_sub,player_routine,player_status_byte,"
+        .. "player_stand_on_obj,player_animation_id,player_mapping_frame,"
+        .. "sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,"
+        .. "sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,"
+        .. "sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,"
+        .. "sidekick_status_byte,sidekick_stand_on_obj,sidekick_animation_id,"
+        .. "sidekick_mapping_frame\n")
     physics_file:flush()
 end
 
@@ -499,8 +503,8 @@ local function write_metadata()
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
     meta_file:write('  "lua_script_version": "' .. LUA_SCRIPT_VERSION .. '",\n')
-    meta_file:write('  "trace_schema": 8,\n')
-    meta_file:write('  "csv_version": 6,\n')
+    meta_file:write('  "trace_schema": 9,\n')
+    meta_file:write('  "csv_version": 7,\n')
     meta_file:write('  "aux_schema_extras": ["cnz_slot_machine_state_per_frame", "cpu_state_per_frame"],\n')
     meta_file:write('  "trace_profile": "' .. json_escape(TRACE_PROFILE) .. '",\n')
     meta_file:write('  "bizhawk_version": "2.11",\n')
@@ -534,6 +538,8 @@ function read_character_trace_state(base)
             routine = 0,
             status = 0,
             stand_on_obj = 0,
+            animation_id = 0,
+            mapping_frame = 0,
         }
     end
 
@@ -558,6 +564,8 @@ function read_character_trace_state(base)
         routine = mainmemory.read_u8(base + OFF_ROUTINE),
         status = status,
         stand_on_obj = mainmemory.read_u8(base + OFF_STAND_ON_OBJ),
+        animation_id = mainmemory.read_u8(base + OFF_ANIM_ID),
+        mapping_frame = mainmemory.read_u8(base + OFF_ANIM_FRAME_DISP),
     }
 end
 
@@ -1135,6 +1143,8 @@ local function on_frame_end()
     local angle = mainmemory.read_u8(PLAYER_BASE + OFF_ANGLE)
     local status = mainmemory.read_u8(PLAYER_BASE + OFF_STATUS)
     local routine = mainmemory.read_u8(PLAYER_BASE + OFF_ROUTINE)
+    local animation_id = mainmemory.read_u8(PLAYER_BASE + OFF_ANIM_ID)
+    local mapping_frame = mainmemory.read_u8(PLAYER_BASE + OFF_ANIM_FRAME_DISP)
 
     -- Camera position (pixel words from 32-bit values)
     local camera_x = mainmemory.read_u16_be(ADDR_CAMERA_X)
@@ -1181,10 +1191,10 @@ local function on_frame_end()
         recorded_sidekick_present = true
     end
 
-    -- v6 CSV: shared execution counters plus explicit Sonic/Tails state blocks.
+    -- v7 CSV: shared execution counters plus symmetric Player/Sidekick state blocks.
     physics_file:write(string.format(
-        "%04X,%04X,%04X,%04X,%04X,%04X,%04X,%04X,%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,"
-            .. "%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X\n",
+        "%04X,%04X,%04X,%04X,%04X,%04X,%04X,%04X,%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,%02X,%02X,"
+            .. "%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,%02X,%02X\n",
         trace_frame, input_mask,
         camera_x, camera_y,
         rings,
@@ -1206,6 +1216,8 @@ local function on_frame_end()
         routine,
         status,
         stand_on_obj,
+        animation_id,
+        mapping_frame,
         sidekick.present,
         sidekick.x,
         sidekick.y,
@@ -1220,7 +1232,9 @@ local function on_frame_end()
         sidekick.y_sub,
         sidekick.routine,
         sidekick.status,
-        sidekick.stand_on_obj))
+        sidekick.stand_on_obj,
+        sidekick.animation_id,
+        sidekick.mapping_frame))
     -- Flush periodically instead of every frame to reduce I/O overhead.
     -- Also update metadata every 300 frames (~5 sec) so a killed process
     -- still has a valid (if slightly stale) metadata.json.

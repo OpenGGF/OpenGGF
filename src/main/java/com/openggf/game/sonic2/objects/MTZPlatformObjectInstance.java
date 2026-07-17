@@ -112,6 +112,12 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
     public int getY() {
         return y;
     }
+
+    @Override
+    public int getBalanceWidthPixels() {
+        return widthPixels;
+    }
+
     @Override
     public SolidObjectParams getSolidParams() {
         // From disassembly line 53930-53937:
@@ -125,6 +131,16 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
         // Obj6B uses regular SolidObject (jsrto JmpTo14_SolidObject), not PlatformObject,
         // so it's fully solid from all sides, not just the top.
         return false;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj6B_Main passes width_pixels+$B to the standard SolidObject helper
+        // (s2.asm:53944-53956). SolidObject_cont rejects the right side with
+        // BHI, so relX==2*d1 remains a zero-distance side contact
+        // (s2.asm:35138-35176). In CPZ2, the narrow square at x=$1ECE has
+        // d1=$1B and keeps its push bit when Sonic is exactly at x=$1EE9.
+        return true;
     }
 
     @Override

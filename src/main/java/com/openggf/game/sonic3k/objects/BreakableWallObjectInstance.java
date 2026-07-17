@@ -15,6 +15,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -144,6 +145,24 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj_BreakableWall calls SolidObjectFull, whose unsigned X-window
+        // rejection is `bhi`, not `bhs` (sonic3k.asm:41405). A player exactly
+        // flush with the padded right edge therefore remains a side contact and
+        // has Status_Push reasserted without positional correction.
+        return true;
+    }
+
+    @Override
+    public boolean projectsPreMovementGroundXForSolidContact(PlayableEntity player) {
+        // Obj_BreakableWall's SolidObjectFull call observes the player slot's
+        // already-applied X step. This also lets an object-controlled carrier
+        // publish its equivalent pending MoveSprite2 step through the shared
+        // projection seam.
+        return true;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         return false;
     }
@@ -207,14 +226,14 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
             if (result.kind() != com.openggf.game.solid.ContactKind.SIDE) {
                 return;
             }
-        } else if (!result.pushingNow()) {
+        } else if (!result.pushingNow() && !bypassesStandardPushGate(player)) {
             return;
         }
 
         boolean shouldBreak = switch (config.breakMode) {
             case STANDARD -> checkStandardBreak(player);
             case KNUCKLES_ONLY -> isKnuckles();
-            case MGZ_SPIN_BREAK -> checkMgzSpinBreak(player);
+            case MGZ_SPIN_BREAK -> checkMgzSpinBreak(player, result.sideDistX());
         };
 
         if (shouldBreak) {
@@ -240,18 +259,59 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         return true;
     }
 
+    private boolean bypassesStandardPushGate(AbstractPlayableSprite player) {
+        if (config.breakMode != BreakMode.STANDARD) {
+            return false;
+        }
+        // Obj_BreakableWall branches around the wall's pushing-bit test for
+        // Super Sonic/Knuckles and for status_secondary's fire-shield bit.
+        // The roll-animation and speed gates still apply to the shield case.
+        return player.isSuperSonic()
+                || isKnuckles()
+                || player.hasShield() && player.getShieldType() == ShieldType.FIRE;
+    }
+
     /**
      * MGZ spin-break check (loc_2172E).
-     * ROM: bclr #6,$37(a1) clears the wall-cling side-contact bit when the wall
-     * sees a side hit. Knuckles-in-glide is kept as an engine fallback because
-     * the glide path does not always raise the cling bit at the same point.
+     * ROM: bclr #6,$37(a1) tests and consumes the tertiary side-contact bit set
+     * by SolidObjectFull after a non-zero side correction. This is distinct from
+     * the engine's persistent wall-cling flag, which also owns the MGZ top-platform
+     * grab state. Knuckles-in-glide remains an engine fallback because the glide
+     * path does not always raise the contact bit at the same point.
      */
-    private boolean checkMgzSpinBreak(AbstractPlayableSprite player) {
-        if (player.isWallCling()) {
-            player.setWallClingSideContact(false);
+    private boolean checkMgzSpinBreak(AbstractPlayableSprite player, int sideDistX) {
+        if (player.consumeWallClingSideContact()) {
+            return true;
+        }
+        // A later wall slot observes the carrier's already-applied MoveSprite2
+        // step. The manual checkpoint represents its non-zero SolidObjectFull
+        // d0 before the controller callback can publish status_tertiary bit 6.
+        if (player.isWallCling() && sideDistX != 0) {
             return true;
         }
         return isKnuckles() && player.getDoubleJumpFlag() == GLIDE_ACTIVE;
+    }
+
+    boolean wouldBreakFromSideContact(AbstractPlayableSprite player) {
+        if (player == null || broken) {
+            return false;
+        }
+        return switch (config.breakMode) {
+            case STANDARD -> player.isSuperSonic()
+                    || isKnuckles()
+                    || player.getAnimationId() == ANIM_ROLL
+                            && Math.abs(player.getXSpeed()) >= BREAK_SPEED_THRESHOLD;
+            case KNUCKLES_ONLY -> isKnuckles();
+            // The projection guard runs before SolidObjectFull can raise the
+            // transient side-contact bit, so the active MGZ grab/cling state
+            // predicts that the resolving side pass is eligible to break.
+            case MGZ_SPIN_BREAK -> player.isWallCling()
+                    || isKnuckles() && player.getDoubleJumpFlag() == GLIDE_ACTIVE;
+        };
+    }
+
+    boolean breaksFromTertiarySideFeedback() {
+        return config.breakMode == BreakMode.MGZ_SPIN_BREAK;
     }
 
     private void performBreak(AbstractPlayableSprite player) {
@@ -259,6 +319,7 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
             return;
         }
         broken = true;
+        player.notifyObjectControlledSolidContactInvalidated(this);
 
         player.setXSpeed(savedPreContactXSpeed);
         player.setGSpeed(savedPreContactXSpeed);
@@ -335,11 +396,36 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         int pieceCount = brokenFrame.pieces().size();
         int maxFragments = Math.min(pieceCount, velTable.length);
 
-        for (int i = 0; i < maxFragments; i++) {
+        int firstAllocatedPiece = 0;
+        if (maxFragments > 0) {
+            // BreakObjectToPieces starts with a1=a0, so piece zero morphs the
+            // wall's existing SST slot in place before AllocateObjectAfterCurrent
+            // is used for the remaining pieces (sonic3k.asm:216D8-21726).
+            // Keeping that slot occupied is load-bearing for later S3K object
+            // allocation and execution order.
+            ObjectManager objectManager = services().objectManager();
+            int transferredSlot = ObjectLifetimeOps.detachSlotForTransfer(this);
+            if (objectManager != null && transferredSlot >= 0) {
+                int xVel = velTable[0][0];
+                int yVel = velTable[0][1];
+                BreakableWallFragment firstFragment = new BreakableWallFragment(
+                        x, y, brokenFrameIndex, 0, xVel, yVel, config.artKey,
+                        config.halfWidth, config.halfHeight);
+                ObjectLifetimeOps.addReplacementAtTransferredSlot(
+                        objectManager, firstFragment, transferredSlot);
+                // The ROM immediately falls through to loc_21692 after the
+                // in-place conversion, so piece zero moves once this same tick.
+                firstFragment.update(0, null);
+                firstAllocatedPiece = 1;
+            }
+        }
+
+        for (int i = firstAllocatedPiece; i < maxFragments; i++) {
             int xVel = velTable[i][0];
             int yVel = velTable[i][1];
             BreakableWallFragment fragment = new BreakableWallFragment(
-                    x, y, brokenFrameIndex, i, xVel, yVel, config.artKey);
+                    x, y, brokenFrameIndex, i, xVel, yVel, config.artKey,
+                    config.halfWidth, config.halfHeight);
             spawnDynamicObject(fragment);
         }
     }
@@ -469,11 +555,22 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         private int fragmentFrameIndex;
         private int pieceIndex;
         private String artKey;
+        private int renderHalfWidth;
+        private int renderHalfHeight;
+        private boolean romRenderFlag = true;
         private final SubpixelMotion.State motionState;
 
         public BreakableWallFragment(int parentX, int parentY,
                                      int fragmentFrameIndex, int pieceIndex,
                                      int xVel, int yVel, String artKey) {
+            this(parentX, parentY, fragmentFrameIndex, pieceIndex, xVel, yVel,
+                    artKey, 0x10, 0x28);
+        }
+
+        public BreakableWallFragment(int parentX, int parentY,
+                                     int fragmentFrameIndex, int pieceIndex,
+                                     int xVel, int yVel, String artKey,
+                                     int renderHalfWidth, int renderHalfHeight) {
             super(new ObjectSpawn(parentX, parentY, Sonic3kObjectIds.BREAKABLE_WALL,
                     0, 0, false, 0), "BreakableWallFragment");
             this.currentX = parentX;
@@ -481,6 +578,8 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
             this.fragmentFrameIndex = fragmentFrameIndex;
             this.pieceIndex = pieceIndex;
             this.artKey = artKey;
+            this.renderHalfWidth = renderHalfWidth;
+            this.renderHalfHeight = renderHalfHeight;
             this.motionState = new SubpixelMotion.State(
                     currentX, currentY, 0, 0, xVel, yVel);
         }
@@ -522,9 +621,26 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
             currentX = motionState.x;
             currentY = motionState.y;
 
-            if (!isOnScreen(128)) {
+            // loc_21692 consumes the render_flags sign bit retained from the
+            // preceding Render_Sprites pass, after applying this tick's motion.
+            if (!romRenderFlag) {
                 setDestroyed(true);
             }
+        }
+
+        @Override
+        public int getOnScreenHalfWidth() {
+            return renderHalfWidth;
+        }
+
+        @Override
+        public int getOnScreenHalfHeight() {
+            return renderHalfHeight;
+        }
+
+        @Override
+        public void refreshPostCameraRenderState() {
+            romRenderFlag = isWithinRenderSpriteBounds(renderHalfWidth, renderHalfHeight);
         }
 
         @Override

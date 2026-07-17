@@ -26,6 +26,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -143,6 +144,20 @@ public class TestSonic3kLevelLoading {
         assertLevelResourceIntegrity(level, 2, 0);
     }
 
+    @Test
+    public void mgz2BackgroundCollisionRejectsZeroPointerRows() throws Exception {
+        Level level = game.loadLevel(LevelData.S3K_MARBLE_GARDEN_2.getLevelIndex());
+
+        assertEquals(7, level.getLayerHeightBlocks(1),
+                "MGZ2's visual background declares seven block rows");
+        assertTrue(level.hasBackgroundCollisionRowAt(0x0000));
+        assertTrue(level.hasBackgroundCollisionRowAt(0x0300));
+        assertFalse(level.hasBackgroundCollisionRowAt(0x0380),
+                "the first zero BG row-pointer must not wrap into visual row zero");
+        assertFalse(level.hasBackgroundCollisionRowAt(0xFFB2),
+                "state-eight's negative BG collision coordinate selects absent ROM row 31");
+    }
+
     private void assertLevelResourceIntegrity(Level level, int zone, int act) throws Exception {
         assertNotNull(level);
         assertNotNull(level.getMap());
@@ -217,5 +232,4 @@ public class TestSonic3kLevelLoading {
         assertTrue(patternIndex < level.getPatternCount(), "Spawn region references invalid pattern index " + patternIndex);
     }
 }
-
 

@@ -55,6 +55,21 @@ class TestSonic3kHczSlideTerrain {
         assertEquals(5, player.getMoveLockTimer());
     }
 
+    @Test
+    void airborneDetachLeavesPublishedSlideAnimationForPlayableDispatch() {
+        TestablePlayableSprite player = groundedSlideCandidate();
+        player.setSliding(true);
+        player.setRolling(true);
+        player.setAnimationId(0x1B);
+        player.setAir(true);
+
+        Sonic3kHCZEvents.applyHcz2SlideTerrainForBlock(player, 0x91);
+
+        assertFalse(player.isSliding());
+        assertEquals(0x1B, player.getAnimationId(),
+                "sub_717C clears slide state after the player animation dispatch");
+    }
+
     private static TestablePlayableSprite groundedSlideCandidate() {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         player.setAir(false);

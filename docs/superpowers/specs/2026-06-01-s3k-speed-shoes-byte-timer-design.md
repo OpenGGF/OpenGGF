@@ -10,6 +10,17 @@ the S3K CNZ trace frontier.
 
 ## Implementation status (2026-06-01): RESOLVED — implemented
 
+### 2026-07-16 correction: low-byte address semantics
+
+The cadence constant is now zero: `(Level_frame_counter+1).w` is an absolute
+address expression selecting the low byte of the word, not an arithmetic
+`Level_frame_counter + 1` value. Native `andi.b #7` therefore accepts counter
+low-byte zero. Standalone MGZ exposed the old phase at speed-shoes expiry;
+correcting it advanced physics from frame 6496 to 7346 and animation from 6524
+to 7366 while both full green fleets held. The historical diagnosis below is
+retained as the record of the earlier implementation decision, but its
+`ALIGN=7` conclusion is superseded by this address-semantics correction.
+
 Landed: `PhysicsFeatureSet.speedShoesTimerDecimation` (S1/S2 `1`, S3K `8`) and a
 `SpeedShoesTimer` that counts from `ROM_DURATION_FRAMES / decimation` (150 for
 S3K) and decrements only on aligned level frames. The decrement gate uses

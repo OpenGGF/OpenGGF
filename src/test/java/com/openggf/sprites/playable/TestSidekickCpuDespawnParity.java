@@ -398,6 +398,8 @@ class TestSidekickCpuDespawnParity {
         tails.setXSpeed((short) 0x041C);
         tails.setYSpeed((short) 0x0020);
         tails.setGSpeed((short) 0x041C);
+        tails.setAnimationId(2);
+        tails.setMappingFrame(0x96);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.setInitialState(SidekickCpuController.State.NORMAL);
@@ -414,6 +416,10 @@ class TestSidekickCpuDespawnParity {
         assertEquals((short) 0x041C, tails.getXSpeed());
         assertEquals((short) 0x0020, tails.getYSpeed());
         assertEquals((short) 0x041C, tails.getGSpeed());
+        assertEquals(2, tails.getAnimationId(),
+                "sub_13ECA does not replace the raw animation byte with Fly");
+        assertEquals(0x96, tails.getMappingFrame(),
+                "bit-7 object control retains the pre-warp displayed frame");
         assertEquals(0, tails.getDoubleJumpFlag(),
                 "S3K sub_13ECA clears double_jump_flag");
         assertTrue(tails.getAir());
@@ -1321,7 +1327,10 @@ class TestSidekickCpuDespawnParity {
                 objectRules.touchResponseUsesRenderFlagYGate(),
                 objectRules.touchResponseUsesPreviousCollisionResponseList(),
                 objectRules.animalObjectPreservesObjectMoveXSubpixel(),
-                objectRules.animalObjectUsesRenderFlagDeleteBounds())));
+                objectRules.animalObjectUsesRenderFlagDeleteBounds(),
+                objectRules.solidPushReleaseWritesWalkRunAnimationWord(),
+                objectRules.solidPushReleaseSkipsWalkRunWhenRolling(),
+                objectRules.solidPushReleaseSkipsWalkRunWhenSpindashing())));
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x02BC);
         tails.setCentreY((short) 0x0250);

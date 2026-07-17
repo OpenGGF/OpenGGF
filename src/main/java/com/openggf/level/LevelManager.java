@@ -183,6 +183,7 @@ public class LevelManager {
     }
     int frameCounter = 0;
     ObjectManager objectManager;
+    private int ringFloorCheckCounterPhase;
     RingManager ringManager;
     ZoneFeatureProvider zoneFeatureProvider;
     private TouchResponseTable touchResponseTable;
@@ -533,6 +534,7 @@ public class LevelManager {
                 graphicsManager,
                 camera,
                 buildObjectServices());
+        objectManager.initRingFloorCheckCounterPhase(ringFloorCheckCounterPhase);
 
         // S1 parity: counter-based respawn tracking DISABLED pending fix for
         // load/unload/reload incompatibility. The counter system prevents respawns
@@ -563,7 +565,7 @@ public class LevelManager {
         collisionSystem.setObjectManager(objectManager);
 
         // Inject PowerUpSpawner into all playable sprites
-        injectPowerUpSpawner();
+        refreshPlayablePowerUpSpawners();
     }
 
     /**
@@ -574,7 +576,17 @@ public class LevelManager {
         return ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
     }
 
-    private void injectPowerUpSpawner() {
+    /**
+     * Rebinds the active playable roster to the current object manager's
+     * power-up spawner.
+     *
+     * <p>The normal level-load path calls this when it creates the object
+     * manager. Headless shared-level fixtures replace the sprite roster while
+     * retaining that manager, so they call it again after registering the new
+     * team. This keeps fixed shield objects and their ROM-allocated children on
+     * the same lifecycle path as production gameplay.</p>
+     */
+    public void refreshPlayablePowerUpSpawners() {
         DefaultPowerUpSpawner spawner = new DefaultPowerUpSpawner(objectManager);
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         if (player instanceof AbstractPlayableSprite playable) {
@@ -871,6 +883,8 @@ public class LevelManager {
                     objectsExecuteAfterPlayerPhysics());
         }
         if (ringManager != null && player instanceof AbstractPlayableSprite playable && !playable.getDead()) {
+            ringManager.collectAttractedRing(playable, frameCounter + 1);
+            ringManager.attractStageRings(playable);
             if (!ringManager.usesObjectTouchCollection()) {
                 ringManager.collectStageRings(playable, frameCounter + 1);
             }
@@ -887,6 +901,7 @@ public class LevelManager {
      */
     public void prepareTouchResponseSnapshots() {
         if (objectManager != null) objectManager.snapshotTouchResponseState(touchResponseUsesPreviousCollisionResponseList());
+        if (ringManager != null) ringManager.prepareAttractedRingTouchSnapshot();
     }
 
     private boolean touchResponseUsesPreviousCollisionResponseList() {
@@ -2301,6 +2316,14 @@ public class LevelManager {
         return objectManager;
     }
 
+    /** Preserves the recorded Obj37 V-int low-bit phase across seamless act rebuilds. */
+    public void initRingFloorCheckCounterPhase(int phase) {
+        ringFloorCheckCounterPhase = phase;
+        if (objectManager != null) {
+            objectManager.initRingFloorCheckCounterPhase(phase);
+        }
+    }
+
     public void spawnLostRings(AbstractPlayableSprite player, int frameCounter) {
         if (ringManager == null || player == null) {
             return;
@@ -2979,6 +3002,14 @@ public class LevelManager {
      */
     void rebuildManagersForActTransition(Camera cam, List<ObjectInstance> persistentDynamicObjects) {
         int cameraX = cam.getX();
+        // V_int_run_count is global work RAM, outside Dynamic_object_RAM, and
+        // Load_Level does not clear it. The ObjectManager owns our live copy of
+        // that clock, so carry it across the manager rebuild even though the
+        // per-act object execution counter intentionally restarts.
+        int inheritedVblaCounter = objectManager != null ? objectManager.getVblaCounter() : 0;
+        int inheritedVIntRunCounterPhaseOffset = objectManager != null
+                ? objectManager.getVIntRunCounterPhaseOffset()
+                : 0;
 
         // Rebuild ObjectManager with the new act's object spawns
         objectManager = new ObjectManager(level.getObjects(),
@@ -2989,6 +3020,7 @@ public class LevelManager {
                 graphicsManager,
                 camera,
                 buildObjectServices());
+        objectManager.initRingFloorCheckCounterPhase(ringFloorCheckCounterPhase);
         GameRules gameRules = gameModule.getRules();
         if (gameRules != null
                 && gameRules.collision() != null
@@ -3005,6 +3037,8 @@ public class LevelManager {
         }
         collisionSystem.setObjectManager(objectManager);
         objectManager.reset(cameraX);
+        objectManager.initVblaCounter(inheritedVblaCounter);
+        objectManager.initVIntRunCounterPhaseOffset(inheritedVIntRunCounterPhaseOffset);
 
         // Rebuild RingManager with the new act's ring spawns
         RingSpriteSheet ringSpriteSheet = level.getRingSpriteSheet();
@@ -3171,6 +3205,28 @@ public class LevelManager {
                 resetAdditionalDispatches, lockPlayerControl, exitAdditionalDispatches);
     }
 
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches,
+                                        int resetPhaseOneDispatchOverlap,
+                                        boolean lockPlayerControl,
+                                        int exitAdditionalDispatches) {
+        transitions.requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay,
+                resetAdditionalDispatches, resetPhaseOneDispatchOverlap,
+                lockPlayerControl, exitAdditionalDispatches);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches,
+                                        int resetPhaseOneDispatchOverlap,
+                                        boolean lockPlayerControl,
+                                        int exitAdditionalDispatches,
+                                        int exitPhaseOneDispatchOverlap) {
+        transitions.requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay,
+                resetAdditionalDispatches, resetPhaseOneDispatchOverlap,
+                lockPlayerControl, exitAdditionalDispatches,
+                exitPhaseOneDispatchOverlap);
+    }
+
     /** @see LevelTransitionCoordinator#isTitleCardRequested() */
     public boolean isTitleCardRequested() { return transitions.isTitleCardRequested(); }
 
@@ -3191,8 +3247,16 @@ public class LevelManager {
         return transitions.consumeInLevelTitleCardLevelGamestateResetRequest();
     }
 
+    public boolean hasPendingInLevelTitleCardHeldCounterDispatch() {
+        return transitions.hasPendingInLevelTitleCardHeldCounterDispatch();
+    }
+
     public int consumeInLevelTitleCardResetAdditionalDispatches() {
         return transitions.consumeInLevelTitleCardResetAdditionalDispatches();
+    }
+
+    public int consumeInLevelTitleCardResetPhaseOneDispatchOverlap() {
+        return transitions.consumeInLevelTitleCardResetPhaseOneDispatchOverlap();
     }
 
     public boolean consumeInLevelTitleCardPlayerControlLockRequest() {
@@ -3201,6 +3265,10 @@ public class LevelManager {
 
     public int consumeInLevelTitleCardExitAdditionalDispatches() {
         return transitions.consumeInLevelTitleCardExitAdditionalDispatches();
+    }
+
+    public int consumeInLevelTitleCardExitPhaseOneDispatchOverlap() {
+        return transitions.consumeInLevelTitleCardExitPhaseOneDispatchOverlap();
     }
 
     /** @see LevelTransitionCoordinator#getTitleCardZone() */
@@ -3442,6 +3510,14 @@ public class LevelManager {
         // frame top and returns from RecordingFrameDriver/GameLoop, so preserve
         // that native post-ScreenEvents oscillator tick explicitly.
         advanceGlobalOscillation();
+
+        // The pending seamless reload is consumed at frame top, so this row
+        // returns before ObjectManager.update() can perform its normal V-int
+        // clock increment. V_int_run_count is global work RAM and still ticks
+        // in the ROM on that transition-only VBlank.
+        if (objectManager != null) {
+            objectManager.advanceVblaCounter();
+        }
 
         // ROM keeps Level_frame_counter ticking through AIZ's reload frame
         // (docs/skdisasm/sonic3k.asm:7884-7894); S3K Tails CPU reads it for

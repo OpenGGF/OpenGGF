@@ -164,6 +164,36 @@ public final class HCZWaterTunnelHandler {
     }
 
     /**
+     * Releases the temporary {@code anim=$1A} tunnel-exit owner as soon as the
+     * player reaches {@code Player_TouchFloor}. The ordinary feature update
+     * runs after the playable slot, which is too late for that slot's
+     * {@code Animate_Sonic}/{@code Animate_Tails} call; consuming the native
+     * exit latch from the landing callback lets the landing's Walk write own
+     * the same frame (sonic3k.asm {@code loc_7046} and {@code loc_121B6}).
+     */
+    public static boolean consumeExitAnimationOnLanding(AbstractPlayableSprite player) {
+        return consumeExitAnimationOnLanding(playerQueryFromGameServices(), player);
+    }
+
+    static boolean consumeExitAnimationOnLanding(ObjectPlayerQuery query,
+                                                  AbstractPlayableSprite player) {
+        if (player == null || query == null) {
+            return false;
+        }
+        if (player == asPlayableSprite(query.mainPlayerOrNull()) && exitAnimTimerP1 > 0) {
+            exitAnimTimerP1 = 0;
+            player.setForcedAnimationId(-1);
+            return true;
+        }
+        if (player == nativeP2From(query) && exitAnimTimerP2 > 0) {
+            exitAnimTimerP2 = 0;
+            player.setForcedAnimationId(-1);
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Resets static state. Call on level load or engine reset.
      */
     public static void reset() {

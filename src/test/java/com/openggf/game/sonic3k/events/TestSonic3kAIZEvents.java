@@ -18,6 +18,7 @@ import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.AizBattleshipInstance;
 import com.openggf.game.sonic3k.objects.AizBgTreeInstance;
 import com.openggf.game.sonic3k.objects.AizBgTreeSpawnerInstance;
@@ -910,6 +911,9 @@ public class TestSonic3kAIZEvents {
         sonic.setCentreXPreserveSubpixel((short) 0x4762);
         tails.setCentreXPreserveSubpixel((short) 0x46C8);
         extraSidekick.setCentreXPreserveSubpixel((short) 0x4700);
+        sonic.setAnimationId(Sonic3kAnimationIds.WAIT);
+        tails.setAnimationId(Sonic3kAnimationIds.WAIT);
+        extraSidekick.setAnimationId(Sonic3kAnimationIds.WAIT);
 
         events.updatePrePhysics(1);
 
@@ -921,6 +925,12 @@ public class TestSonic3kAIZEvents {
                 "AIZ2_DoShipLoop wraps native P2, then clamps it to Camera_X_pos+$18");
         assertEquals(0x4500, extraSidekick.getCentreX() & 0xFFFF,
                 "AIZ2_DoShipLoop must preserve all-engine sidekick participation for extra sidekicks");
+        assertEquals(Sonic3kAnimationIds.WALK.id(), sonic.getAnimationId(),
+                "sub_50318 must clear an idle Player 1 animation to Walk before clamping");
+        assertEquals(Sonic3kAnimationIds.WALK.id(), tails.getAnimationId(),
+                "sub_50318 must clear an idle native Player 2 animation to Walk before clamping");
+        assertEquals(Sonic3kAnimationIds.WALK.id(), extraSidekick.getAnimationId(),
+                "the all-engine sidekick extension must apply the same native animation write");
         assertEquals(0x200, events.getLevelRepeatOffset(),
                 "post-bombing wraps must expose the ROM Level_repeat_offset value");
     }

@@ -22,6 +22,7 @@ import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingFrame;
 import com.openggf.level.rings.RingFramePiece;
+import com.openggf.level.rings.LostRingObjectInstance;
 import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
@@ -254,6 +255,30 @@ public class TestRingManager {
     }
 
     @Test
+    public void testLightningAttractionAllocatesOneRingPerPlayerTouchPass() {
+        RingSpawn first = new RingSpawn(140, 100);
+        RingSpawn second = new RingSpawn(164, 100);
+        RingManager ringManager = buildRingManager(List.of(first, second));
+        ringManager.reset(0);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.giveShield(ShieldType.LIGHTNING);
+
+        ringManager.update(0, player, 0);
+
+        assertTrue(ringManager.isCollected(first));
+        assertFalse(ringManager.isCollected(second),
+                "Test_Ring_Collisions returns after allocating one Obj_Attracted_Ring");
+        assertEquals(1, ringManager.capture().attractedRings().length);
+
+        ringManager.update(0, player, 1);
+
+        assertTrue(ringManager.isCollected(second));
+        assertEquals(2, ringManager.capture().attractedRings().length);
+    }
+
+    @Test
     public void testLightningAttractionUsesTypedCapabilityRulesWithoutLegacyGameRules() {
         RingSpawn spawn = new RingSpawn(169, 100);
         RingManager ringManager = buildRingManager(List.of(spawn));
@@ -447,6 +472,8 @@ public class TestRingManager {
         player.useGameRules(GameRules.SONIC_3K);
         player.giveShield(ShieldType.LIGHTNING);
 
+        ringManager.prepareAttractedRingTouchSnapshot();
+        ringManager.collectAttractedRing(player, 0);
         ringManager.update(0, player, 0);
 
         assertEquals(1, player.getRingCount());
@@ -458,8 +485,20 @@ public class TestRingManager {
                 "Attracted-ring sparkle should keep occupying the dynamic slot before Ani_RingSparkle finishes");
 
         ringManager.update(0, player, 2);
+        assertEquals(1, objectManager.getAllocatedSlotCount(),
+                "The second sparkle mapping keeps the attracted-ring slot occupied");
+
+        ringManager.update(0, player, 3);
+        assertEquals(1, objectManager.getAllocatedSlotCount(),
+                "Animate_Sprite retains each mapping for delay+1 object passes");
+
+        ringManager.update(0, player, 4);
+        assertEquals(1, objectManager.getAllocatedSlotCount(),
+                "$FC only advances the attracted ring to its delete routine");
+
+        ringManager.update(0, player, 5);
         assertEquals(0, objectManager.getAllocatedSlotCount(),
-                "Attracted-ring sparkle should release its dynamic slot when the sparkle routine deletes");
+                "The object pass after $FC releases the attracted-ring slot");
     }
 
     @Test
@@ -501,6 +540,56 @@ public class TestRingManager {
     }
 
     @Test
+    public void testS3kAttractedRingBecomesBouncingRingWhenLightningShieldIsLost() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(List.of(), levelManager);
+        setField(levelManager, "ringManager", ringManager);
+        RingSnapshot base = ringManager.capture();
+        int reservedSlot = objectManager.allocateDynamicSlot();
+        objectManager.releaseDynamicSlot(reservedSlot);
+        ringManager.restore(new RingSnapshot(
+                base.collected(),
+                base.sparkleTimers(),
+                base.placementCursorIndex(),
+                base.placementLastCameraX(),
+                base.lostRingActiveCount(),
+                7,
+                0x1234,
+                2,
+                base.lostRingFrameCounter(),
+                base.lostRings(),
+                new RingSnapshot.AttractedRingEntry[] {
+                        new RingSnapshot.AttractedRingEntry(
+                                true, 0, 100, 100, 0x1200, 0x3400, 0, 0,
+                                0, reservedSlot, false, -1)
+                }));
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 120, (short) 100);
+        player.useGameRules(GameRules.SONIC_3K);
+        ringManager.update(0, player, 10);
+
+        assertEquals(0, ringManager.capture().attractedRings().length,
+                "loc_1A88C stops running Obj_Attracted_Ring after the shield is gone");
+        List<LostRingObjectInstance> bouncingRings =
+                objectManager.activeObjectsOfType(LostRingObjectInstance.class);
+        assertEquals(1, bouncingRings.size());
+        LostRingObjectInstance bouncingRing = bouncingRings.getFirst();
+        assertEquals(reservedSlot, bouncingRing.getSlotIndex(),
+                "The ROM changes the existing SST code pointer instead of allocating another slot");
+        assertEquals(0x30, bouncingRing.getXVelForTest(),
+                "AttractedRing_Move runs before the shield-loss conversion");
+        assertEquals((100 << 8) | 0x42, bouncingRing.getXSubpixelForTest(),
+                "The conversion must preserve the attracted ring's fixed-point position");
+        assertEquals(0xFF, ringManager.getSpillAnimationState().counter());
+        assertEquals(0x1234, ringManager.getSpillAnimationState().accum(),
+                "The ROM restarts only Ring_spill_anim_counter");
+        assertEquals(2, ringManager.getSpillAnimationState().frame());
+    }
+
+    @Test
     public void testS3kAttractedRingUsesTouchResponseBoundsForCollection() {
         RingManager ringManager = buildRingManager(List.of());
         RingSnapshot base = ringManager.capture();
@@ -523,9 +612,13 @@ public class TestRingManager {
         ringManager.restore(snapshot);
 
         TestPlayableSprite player = new TestPlayableSprite((short) 0x0A4A, (short) 0x0C4B);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.giveShield(ShieldType.LIGHTNING);
         player.setRolling(true);
 
-        ringManager.update(0, player, 2388);
+        ringManager.prepareAttractedRingTouchSnapshot();
+        ringManager.collectAttractedRing(player, 2388);
+        ringManager.update(0x0A00, player, 2388);
 
         assertEquals(0, player.getRingCount(),
                 "S3K collision_flags $47 uses TouchResponse bounds; this frame-2388 geometry is near but not overlapping");
@@ -559,6 +652,9 @@ public class TestRingManager {
         sidekick.setCpuControlled(true);
         GameServices.sprites().addSprite(sidekick);
 
+        ringManager.prepareAttractedRingTouchSnapshot();
+        ringManager.collectAttractedRing(main, 0);
+        ringManager.collectAttractedRing(sidekick, 0);
         ringManager.update(0, main, 0);
 
         assertEquals(1, sidekick.getRingCount(),
@@ -620,6 +716,7 @@ public class TestRingManager {
                 ringRules.ringFloorCheckMask(),
                 ringRules.ringFloorCheckCounterPhase(),
                 ringRules.ringFloorProbeRequiresRenderFlag(),
+                ringRules.lostRingRenderYMargin(),
                 ringCollisionHalfSize,
                 ringCollisionHalfSize,
                 ringRules.stageRingsUseObjectTouchCollection(),

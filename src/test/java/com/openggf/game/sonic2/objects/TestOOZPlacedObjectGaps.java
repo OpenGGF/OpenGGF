@@ -493,6 +493,12 @@ class TestOOZPlacedObjectGaps {
         SolidObjectProvider platform = assertInstanceOf(SolidObjectProvider.class, object);
         assertTrue(platform.usesInstanceSolidStateLatchKey(),
                 "Obj33 rebuilds its dynamic spawn while ROM keeps standing/pushing bits in the SST status byte");
+        assertTrue(platform.usesInclusiveRightEdge(),
+                "Obj33's SolidObject BHI gate accepts relX == 2*d1");
+        assertTrue(platform.preservesZeroDistanceSideContactMotion(),
+                "Obj33's exact-edge AtEdge branch sets push without entering StopCharacter");
+        assertFalse(platform.preservesEdgeSubpixelMotion(),
+                "Obj33 must not alter ordinary nonzero side-correction semantics");
         assertTrue(platform.allowsObjectControlledSolidContacts(),
                 "Obj33 keeps calling SolidObject while captured riders have positive obj_control=1");
         TestablePlayableSprite tails = playerAt(0x1000, 0x04E0);

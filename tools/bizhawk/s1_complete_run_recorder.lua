@@ -51,6 +51,8 @@
 -- subpixel-trajectory frontiers (SBZ2 f2224, SYZ3 f6358). metadata
 -- lua_script_version reports "3.7"; aux_schema_extras gains v_objstate_per_frame
 -- and camera_boundary_per_frame.
+-- v3.14 changes: CSV v7 records the player's animation ID and displayed
+-- mapping frame every frame using the shared Player/Sidekick layout.
 -- v3.8 changes: ADD two per-object fields to the EXISTING object_near aux event
 -- (CSV schema UNCHANGED; comparison-only context, never engine write-back). v3.7
 -- traces stay valid (the new aux_schema_extras key gates the parser; the parser
@@ -274,22 +276,42 @@ local ZONE_NAMES = {
 -- each zone) is gone. Defined here (after ZONE_NAMES / BASE_OUTPUT_DIR) so the
 -- frame loop's ensure_segment_dir() reference resolves to this local.
 local function precreate_segment_dirs()
-    -- Strip any trailing slash before quoting: a trailing "\" inside a cmd-quoted
-    -- path escapes the closing quote (`"trace_output\"` is malformed).
+    local is_windows = package.config:sub(1, 1) == "\\"
     local function quote_dir(p)
-        local win = (p:gsub("/", "\\"))      -- parens: keep only the string, drop gsub's count
-        win = (win:gsub("\\+$", ""))         -- drop trailing backslashes
-        return "\"" .. win .. "\""
+        if is_windows then
+            local win = (p:gsub("/", "\\"))
+            win = (win:gsub("\\+$", ""))
+            return "\"" .. win .. "\""
+        end
+        return "\"" .. (p:gsub("/+$", "")) .. "\""
     end
-    local quoted = { quote_dir(BASE_OUTPUT_DIR) }
+    local paths = { BASE_OUTPUT_DIR }
     for _, zname in pairs(ZONE_NAMES) do
-        for act = 1, 3 do
-            quoted[#quoted + 1] = quote_dir(BASE_OUTPUT_DIR .. zname .. tostring(act))
+        -- The complete route exposes SBZ3 through the ROM's LZ act-4 alias.
+        for act = 1, 4 do
+            paths[#paths + 1] = BASE_OUTPUT_DIR .. zname .. tostring(act) .. "/"
         end
     end
-    -- Windows mkdir takes multiple paths; 2>NUL swallows "already exists".
-    -- One brief cmd window for the whole run.
-    os.execute("mkdir " .. table.concat(quoted, " ") .. " 2>NUL")
+    local all_exist = true
+    for _, path in ipairs(paths) do
+        local probe_path = path .. ".oggf_dir_probe"
+        local probe = io.open(probe_path, "w")
+        if probe then
+            probe:close()
+            os.remove(probe_path)
+        else
+            all_exist = false
+            break
+        end
+    end
+    if all_exist then return end
+    local quoted = {}
+    for _, path in ipairs(paths) do
+        quoted[#quoted + 1] = quote_dir(path)
+    end
+    local mkdir = is_windows and "mkdir " or "mkdir -p "
+    local stderr = is_windows and " 2>NUL" or " 2>/dev/null"
+    os.execute(mkdir .. table.concat(quoted, " ") .. stderr)
 end
 
 -- Shell-free fallback for an UNKNOWN zone id whose dir was not pre-created
@@ -304,7 +326,11 @@ local function ensure_segment_dir(dir)
         os.remove(probe_path)
         return  -- dir exists (pre-created); no shell-out.
     end
-    os.execute("mkdir \"" .. (dir:gsub("/", "\\")) .. "\" 2>NUL")
+    if package.config:sub(1, 1) == "\\" then
+        os.execute("mkdir \"" .. (dir:gsub("/", "\\")) .. "\" 2>NUL")
+    else
+        os.execute("mkdir -p \"" .. (dir:gsub("/+$", "")) .. "\" 2>/dev/null")
+    end
 end
 
 -- Snapshot interval (frames between full state snapshots in aux file)
@@ -426,10 +452,17 @@ local function open_files()
     physics_file = io.open(OUTPUT_DIR .. "physics.csv", "w")
     aux_file = io.open(OUTPUT_DIR .. "aux_state.jsonl", "w")
 
-    -- v3 header: gameplay/VBlank execution counters plus stand_on_obj.
-    physics_file:write("frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,"
-        .. "x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,"
-        .. "vblank_counter,lag_counter\n")
+    -- v7 header: shared execution counters plus symmetric Player/Sidekick blocks.
+    physics_file:write("frame,input,camera_x,camera_y,rings,gameplay_frame_counter,"
+        .. "vblank_counter,lag_counter,player_present,player_x,player_y,player_x_speed,"
+        .. "player_y_speed,player_g_speed,player_angle,player_air,player_rolling,"
+        .. "player_ground_mode,player_x_sub,player_y_sub,player_routine,player_status_byte,"
+        .. "player_stand_on_obj,player_animation_id,player_mapping_frame,"
+        .. "sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,"
+        .. "sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,"
+        .. "sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,"
+        .. "sidekick_status_byte,sidekick_stand_on_obj,sidekick_animation_id,"
+        .. "sidekick_mapping_frame\n")
     physics_file:flush()
 end
 
@@ -445,11 +478,14 @@ local function write_metadata()
     meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
     meta_file:write('  "start_x": "0x' .. hex(start_x) .. '",\n')
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
+    meta_file:write('  "characters": ["sonic"],\n')
+    meta_file:write('  "main_character": "sonic",\n')
+    meta_file:write('  "sidekicks": [],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.12",\n')
-    meta_file:write('  "trace_schema": 3,\n')
-    meta_file:write('  "csv_version": 4,\n')
+    meta_file:write('  "lua_script_version": "3.14",\n')
+    meta_file:write('  "trace_schema": 4,\n')
+    meta_file:write('  "csv_version": 7,\n')
     meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame", '
         .. '"v_objstate_per_frame", "camera_boundary_per_frame", "object_near_routine2_objoff3c", '
         .. '"object_near_objoff_34_36_38", "v_oscillate_per_frame", "lag_state_per_frame", '
@@ -927,6 +963,8 @@ local function on_frame_end()
     local angle = mainmemory.read_u8(PLAYER_BASE + OFF_ANGLE)
     local status = mainmemory.read_u8(PLAYER_BASE + OFF_STATUS)
     local routine = mainmemory.read_u8(PLAYER_BASE + OFF_ROUTINE)
+    local animation_id = mainmemory.read_u8(PLAYER_BASE + OFF_ANIM_ID)
+    local mapping_frame = mainmemory.read_u8(PLAYER_BASE + OFF_ANIM_FRAME_DISP)
 
     -- Camera position (pixel words from 32-bit values)
     local camera_x = mainmemory.read_u16_be(ADDR_CAMERA_X)
@@ -964,10 +1002,18 @@ local function on_frame_end()
     local vblank_counter = mainmemory.read_u16_be(ADDR_VBLA_WORD)
     local lag_counter = 0
 
-    -- v3 CSV: execution counters plus stand_on_obj.
+    -- v7 CSV: shared counters, Player state, and an absent Sidekick block.
     physics_file:write(string.format(
-        "%04X,%04X,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%04X,%04X,%04X,%02X,%04X,%02X,%04X,%04X\n",
-        trace_frame, input_mask, x, y,
+        "%04X,%04X,%04X,%04X,%04X,%04X,%04X,%04X,%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,%02X,%02X,"
+            .. "%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,%02X,%02X\n",
+        trace_frame, input_mask,
+        camera_x, camera_y,
+        rings,
+        gameplay_frame_counter,
+        vblank_counter,
+        lag_counter,
+        1,
+        x, y,
         uhex(x_speed), uhex(y_speed), uhex(g_speed),
         angle,
         air and 1 or 0,
@@ -975,13 +1021,11 @@ local function on_frame_end()
         ground_mode,
         x_sub, y_sub,
         routine,
-        camera_x, camera_y,
-        rings,
         status,
-        gameplay_frame_counter,
         stand_on_obj,
-        vblank_counter,
-        lag_counter))
+        animation_id,
+        mapping_frame,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
     -- Flush periodically instead of every frame to reduce I/O overhead.
     -- Also update metadata every 300 frames (~5 sec) so a killed process
     -- still has a valid (if slightly stale) metadata.json.

@@ -274,6 +274,10 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
                 objectManager.clearRidingObject(player);
             }
             if (player instanceof AbstractPlayableSprite sprite) {
+                // loc_2B45E/loc_2B478 run after both player animation slots and
+                // write anim=$1B immediately while retaining the displayed
+                // mapping selected earlier in the frame.
+                sprite.setAnimationId(Sonic3kAnimationIds.HURT_FALL);
                 // Use forcedAnimationId so the normal animation system doesn't
                 // overwrite HURT_FALL on the next frame based on movement state.
                 sprite.setForcedAnimationId(Sonic3kAnimationIds.HURT_FALL);

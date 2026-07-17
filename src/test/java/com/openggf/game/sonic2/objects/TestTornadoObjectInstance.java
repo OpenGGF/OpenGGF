@@ -22,6 +22,7 @@ import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import org.junit.jupiter.api.AfterEach;
@@ -64,6 +65,14 @@ public class TestTornadoObjectInstance {
 
     private GameModule previousModule;
 
+    @Test
+    void sczTornadoDoesNotSuppressFreshLogicalHorizontalInput() {
+        TornadoObjectInstance tornado = createTornado(0x700, 0x100, 0x50);
+
+        assertEquals(0, tornado.staleHorizontalLogicalInputFramesWhileRiding(null, 121),
+                "Obj01_MdNormal_Checks must see the fresh logical direction and enter Blink");
+    }
+
     @BeforeEach
     public void setUp() {
         previousModule = GameModuleRegistry.getCurrent();
@@ -88,6 +97,8 @@ public class TestTornadoObjectInstance {
     @Test
     public void moveObeyPlayerClampsPlayerToTornado() throws Exception {
         TornadoObjectInstance tornado = createTornado(100, 0x100, 0x50);
+        assertEquals(0x60, tornado.getBalanceWidthPixels(),
+                "ObjB2 balancing uses its native width_pixels, not its smaller SolidObject width");
         TestPlayableSprite main = new TestPlayableSprite("main", (short) 200, (short) 100);
 
         invokePrivate(tornado, "moveObeyPlayer",
@@ -395,6 +406,79 @@ public class TestTornadoObjectInstance {
         assertEquals(0x311F, main.getCentreX());
         assertEquals(0x0439, main.getCentreY());
         assertEquals(0x438, getField(tornado, "scriptTimer"));
+    }
+
+    @Test
+    public void wfzJumpToShipKeepsPlayerAnimationAfterLeavingPlane() throws Exception {
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x311F, (short) 0x0439);
+        main.setAnimationId(Sonic2AnimationIds.ROLL);
+        main.setMappingFrame(0x25);
+        TornadoObjectInstance tornado = createTornado(
+                0x311E,
+                0x0454,
+                0x54,
+                new QueryOnlyPlayerServices(main, List.of()));
+        GameServices.camera().setFocusedSprite(main);
+
+        setField(tornado, "routineSecondary", 0x0E);
+        setField(tornado, "scriptTimer", 0x439);
+        setField(tornado, "xVel", -0x100);
+        setField(tornado, "yVel", -0x100);
+        setField(tornado, "dockVelocityIndex", 12);
+
+        invokePrivate(tornado, "wfzJumpToShip",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(AbstractPlayableSprite.INPUT_JUMP, main.getForcedInputMask());
+        assertEquals(Sonic2AnimationIds.ROLL.id(), main.getAnimationId(),
+                "ObjB2_Jump_to_ship does not reapply the earlier approaching-state Wait tuple");
+        assertEquals(0x25, main.getMappingFrame());
+    }
+
+    @Test
+    public void wfzJumpToShipKeepsPlayerAnimationAtJumpWindowEnd() throws Exception {
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x3110, (short) 0x0420);
+        main.setAnimationId(Sonic2AnimationIds.HANG);
+        main.setMappingFrame(0x3B);
+        TornadoObjectInstance tornado = createTornado(
+                0x3100,
+                0x0440,
+                0x54,
+                new QueryOnlyPlayerServices(main, List.of()));
+        GameServices.camera().setFocusedSprite(main);
+
+        setField(tornado, "routineSecondary", 0x0E);
+        setField(tornado, "scriptTimer", 0x447);
+        setField(tornado, "xVel", -0x100);
+        setField(tornado, "yVel", -0x100);
+        setField(tornado, "dockVelocityIndex", 12);
+
+        invokePrivate(tornado, "wfzJumpToShip",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(0, main.getForcedInputMask());
+        assertEquals(Sonic2AnimationIds.HANG.id(), main.getAnimationId(),
+                "ObjB2_Jump_to_ship leaves the player-owned animation byte live when its jump window closes");
+        assertEquals(0x3B, main.getMappingFrame());
+    }
+
+    @Test
+    public void wfzInvisibleGrabberDoesNotRestartLiveHangScript() throws Exception {
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x3118, (short) 0x03F0);
+        main.setAnimationId(Sonic2AnimationIds.HANG);
+        main.setAnimationFrameIndex(1);
+        main.setAnimationTick(1);
+        TornadoObjectInstance grabber = createTornado(0x3118, 0x03F0, 0x56);
+
+        setField(grabber, "routineSecondary", 2);
+        invokePrivate(grabber, "catchPlayerWithInvisibleGrabber",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(Sonic2AnimationIds.HANG.id(), main.getAnimationId());
+        assertEquals(1, main.getAnimationFrameIndex(),
+                "loc_3AC84 writes only anim=Hang and leaves anim_frame live");
+        assertEquals(1, main.getAnimationTick(),
+                "loc_3AC84 leaves anim_frame_duration live on the second catch");
     }
 
     @Test

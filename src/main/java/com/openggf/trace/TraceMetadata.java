@@ -19,6 +19,7 @@ public record TraceMetadata(
     @JsonProperty("zone_id") Integer zoneId,
     @JsonProperty("act") int act,
     @JsonProperty("bk2_frame_offset") int bk2FrameOffset,
+    @JsonProperty("ring_floor_check_counter_phase") Integer ringFloorCheckCounterPhase,
     @JsonProperty("trace_frame_count") int traceFrameCount,
     @JsonProperty("start_x") String startXHex,
     @JsonProperty("start_y") String startYHex,
@@ -155,6 +156,11 @@ public record TraceMetadata(
     /** Returns whether this trace metadata explicitly records a gameplay team. */
     public boolean hasRecordedTeam() {
         return !recordedCharacters().isEmpty();
+    }
+
+    /** Whether the primary CSV carries strict per-character animation fields. */
+    public boolean hasPerFrameCharacterAnimation() {
+        return csvVersion != null && csvVersion >= 7;
     }
 
     /**
@@ -465,5 +471,3 @@ public record TraceMetadata(
         return mapper.readValue(metadataFile.toFile(), TraceMetadata.class);
     }
 }
-
-

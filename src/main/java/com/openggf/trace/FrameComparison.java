@@ -29,6 +29,13 @@ public record FrameComparison(
             .anyMatch(fc -> fc.severity() == Severity.ERROR);
     }
 
+    /** True if any field in the selected verification scope is ERROR severity. */
+    public boolean hasError(TraceVerificationScope scope) {
+        return fields.values().stream()
+                .anyMatch(fc -> scope.includes(fc.verificationGroup())
+                        && fc.severity() == Severity.ERROR);
+    }
+
     /** Get all divergent fields. */
     public List<FieldComparison> divergentFields() {
         return fields.values().stream()
@@ -42,5 +49,4 @@ public record FrameComparison(
         return fc != null && fc.severity() == Severity.ERROR;
     }
 }
-
 

@@ -25,6 +25,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestAizLrzRockPlayerParticipation {
 
     @Test
+    void balanceWidthUsesNativeUnpaddedRockWidth() {
+        int[] expectedWidths = {0x18, 0x18, 0x18, 0x0E, 0x10, 0x28, 0x28, 0x10};
+        for (int size = 0; size < expectedWidths.length; size++) {
+            AizLrzRockObjectInstance rock = new AizLrzRockObjectInstance(
+                    new ObjectSpawn(0x1000, 0x1000, Sonic3kObjectIds.AIZLRZ_ROCK,
+                            size << 4, 0, false, 0));
+
+            assertEquals(expectedWidths[size], rock.getBalanceWidthPixels(),
+                    "balance must read byte_1F9D0 width_pixels without SolidObjectFull's +$B padding");
+        }
+    }
+
+    @Test
     void sideBreakUsesRollAnimationSnapshotNotRollingFlag() {
         TestablePlayableSprite sonic = player("sonic", 0x0F00, 0x1000);
         sonic.setXSpeed((short) 0);

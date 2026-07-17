@@ -1,5 +1,5665 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- Review finding 10: hot-file whitespace churn removed
+
+Branch `feature/ai-trace-animation-verification`, on top of `e56e1d549`.
+`ObjectPlacementController`, `PlayableSpriteMovement`, and
+`PlayableSpriteAnimation` were reconstructed from the `develop` bytes plus the
+branch's whitespace-insensitive semantic patch. The 8-add/8-remove placement
+hunk disappeared, and raw versus `git diff -w` merge-base stats are now
+identical for both animation (265/105) and movement (330/86). A normalized
+patch comparison confirmed no semantic delta from the pre-cleanup branch.
+
+The full ROM-backed `*TraceReplay` checkpoint completed 92 tests: 53 passed,
+37 failed, 1 errored, and 1 skipped. Its testcase statuses and first
+failure/error messages exactly matched the `018467c0e` reference, so no trace
+frontier moved.
+
+### 2026-07-17 -- Review finding 9: dead Walk-selector branch removed
+
+Branch `feature/ai-trace-animation-verification`, on top of `981131999`.
+The final nonzero-speed branch in `ScriptedVelocityAnimationProfile` returned
+Walk for both values of `pressingDirection`; the unreachable distinction was
+removed without changing the selector result.
+
+All 27 profile tests passed. The full ROM-backed `*TraceReplay` checkpoint
+completed 92 tests: 53 passed, 37 failed, 1 errored, and 1 skipped. Its
+testcase statuses and first failure/error messages exactly matched the
+`018467c0e` reference, so no trace frontier moved.
+
+### 2026-07-17 -- Review finding 8: landing Walk publication de-duplicated
+
+Branch `feature/ai-trace-animation-verification`, on top of `d3bc77241`.
+`resetOnFloor` now reports when its rolling-clear branch owned the native Walk
+write. Normal and direct terrain landing wrappers publish their unconditional
+`Sonic_Floor` Walk only when that inner owner did not, eliminating the second
+write without merging the distinct rolling, pinball, and spindash guards.
+
+Five focused landing tests passed, covering rolling and non-rolling ownership,
+pinball roll preservation, and the live S2 spindash alias. The full ROM-backed
+`*TraceReplay` checkpoint completed 92 tests: 53 passed, 37 failed, 1 errored,
+and 1 skipped. Its testcase statuses and first failure/error messages exactly
+matched the `018467c0e` reference, so no trace frontier moved.
+
+### 2026-07-17 -- Review finding 7: push special-handler ownership consolidated
+
+Branch `feature/ai-trace-animation-verification`, on top of `2018ae1cf`.
+`ScriptedVelocityAnimationProfile` is now the sole owner of whether push frames
+are selected inside the Walk special handler. S1 Sonic and S2 Sonic/Tails set
+the profile flag alongside the existing S3K Sonic/Tails profiles; Knuckles and
+Super Sonic remain independently disabled. The duplicate game-wide
+`PlayerAnimationRules` component and consumer-side OR were removed.
+
+The 35-test shared animation suite passed, as did three ROM-backed profile
+assertions. The full ROM-backed `*TraceReplay` checkpoint completed 92 tests:
+53 passed, 37 failed, 1 errored, and 1 skipped. Its testcase statuses and first
+failure/error messages exactly matched the `018467c0e` reference, so no trace
+frontier moved.
+
+### 2026-07-17 -- Review finding 6: dead deep-wait provider hook removed
+
+Branch `feature/ai-trace-animation-verification`, on top of `018467c0e`.
+`allowsDeepWaitPlayerRoutineWhileRidden` and its Elevator/Tornado overrides
+were deleted rather than reconnected. S2 `Obj01_MdNormal_Checks` owns the
+grounded Wait/Blink transition regardless of `Status_OnObj`, and the shared
+movement tests already cover ordinary riders plus the CNZ elevator's stale
+movement-input split. The removed object tests asserted a hook with no caller.
+
+Eight narrowed movement/object tests passed. The full ROM-backed
+`*TraceReplay` checkpoint completed 92 tests: 53 passed, 37 failed, 1 errored,
+and 1 skipped. Its testcase statuses and first failure/error messages exactly
+matched the `018467c0e` reference, so no trace frontier moved.
+
+### 2026-07-17 -- Review finding 5: live S3K ring-counter phase restored
+
+Branch `feature/ai-trace-animation-verification`, on top of `41b3cfee8`.
+S3K's live `RingRules` once again supplies the four-count phase between the
+gameplay-scoped object clock and the ROM-visible V-int byte read by Obj37.
+Replay-only absolute phase metadata is normalized into an offset from that
+live baseline at trace-session bootstrap, preserving old fixtures without
+making ordinary gameplay depend on comparison data. Focused rule and
+normalization tests pass.
+
+The full ROM-backed `*TraceReplay` checkpoint completed 92 tests: 53 passed,
+37 failed, 1 errored, and 1 skipped. An isolated run of preceding commit
+`41b3cfee8` produced identical testcase statuses and first failure/error
+messages, so no trace frontier moved.
+
+### 2026-07-17 -- Review finding 4 rejected: level-entry forced-animation reset
+
+Branch `feature/ai-trace-animation-verification`, on top of `3a1114049`.
+Restoring `setForcedAnimationId(-1)` to the level-start/bootstrap placement
+paths was evaluated in three progressively narrower forms. Clearing it on the
+established-follower path, the bootstrap refresh, or only the ordinary shared
+placement each caused the same three regressions: HCZ complete-run, MGZ
+complete-run, and standalone MGZ failed at frame 0 because the expected Tails
+Fly animation `$1B` was replaced by `$00`. The candidate fleet fell from 53 to
+50 passing tests (40 failures, 1 error, 1 skip).
+
+The candidate was fully reverted. `SidekickCpuController.reset()` already
+clears the synthetic forced-animation owner for the normal reset lifecycle,
+while the reviewed placement paths are also used to consume carried/seeded
+mid-run animation state. Adding a route or trace distinction there would
+violate the comparison-only and no-carve-out rules. The post-revert full
+ROM-backed `*TraceReplay` checkpoint returned to the prior 92-test signature:
+53 passed, 37 failed, 1 errored, and 1 skipped.
+
+### 2026-07-17 -- Review finding 3: riding providers preserve the live push byte
+
+Branch `feature/ai-trace-animation-verification`, on top of `0e7fabaa6`.
+The opt-in riding push bridge now gates on the live player `Status_Push` value
+visible when the provider's SST slot executes. This retains a push established
+by an earlier solid slot in the same `ExecuteObjects` pass without allowing a
+riding provider to invent push from geometry alone. Focused multi-piece tests
+cover both the live earlier-slot handoff and the clear-bit rejection.
+
+The full ROM-backed `*TraceReplay` checkpoint completed 92 tests: 53 passed,
+37 failed, 1 errored, and 1 skipped. An isolated run of preceding commit
+`0e7fabaa6` had the same totals, test identities, and first divergence/error
+messages, so no trace frontier moved.
+
+### 2026-07-17 -- Review finding 2: intervening solid re-landing survives deferred release
+
+Branch `feature/ai-trace-animation-verification`, on top of `9c1c015df`.
+When a controller requests an airborne release, the former support retains a
+deferred native standing-bit clear for its own SST slot. That slot now checks
+the live riding owner before clearing the player-wide on-object/air state, so
+an intervening solid slot can re-land the player without the former support
+discarding the replacement ride. The focused slot-order regression test
+passes.
+
+The full ROM-backed `*TraceReplay` checkpoint used one Surefire fork with a
+3 GiB heap and the discovered root-level S1, S2, and locked-on S3K ROM paths.
+It completed 92 tests: 53 passed, 37 failed, 1 errored, and 1 skipped. An
+isolated run of preceding commit `9c1c015df` produced the same totals and the
+same failing, errored, and skipped test identities, so no trace frontier
+moved.
+
+### 2026-07-17 -- Review finding 1: batched push-release checkpoint ownership
+
+Branch `feature/ai-trace-animation-verification`, with local review fix applied
+on top of `9f0c4851f`. The legacy batched solid resolver now supplies the prior
+object-pass push ownership that the inline resolver obtains from
+`SolidExecutionRegistry`, so a same-frame movement clear cannot suppress S1's
+retail `Solid_NoCollision` Walk/Run word write. The focused batched-path
+regression test passes.
+
+The required ROM-backed checkpoint command used one Surefire fork with a
+3 GiB heap and the discovered root-level S1, S2, and locked-on S3K ROM paths.
+In schematic form it was:
+
+`mvn "-Dsurefire.argLine=-Xshare:off -Xmx3g" -Dsurefire.forkCount=1 -Dsonic1.rom.path=<root S1 ROM> -Dsonic2.rom.path=<root S2 ROM> -Ds3k.rom.path=<root S3K ROM> -Dtest='*TraceReplay' -DfailIfNoTests=false test`
+
+It completed 92 tests with the branch's existing signature: 53 passed, 37
+failed, 1 errored, and 1 skipped. This batched-only fix does not execute on the
+current three game rule sets, which all use inline object solid checkpoints,
+and no trace frontier moved.
+
+### 2026-07-17 -- MGZ floating capsule reaches full physics and animation parity
+
+Branch `feature/ai-trace-animation-verification`, on top of `bf3704da2`.
+At standalone MGZ frame 35200, the engine's route-8 egg capsule hovered about
+`$20` pixels below its native parent SST and falsely side-collided with flying
+CPU Tails, clearing Tails' X velocity. `loc_8664E` derives the ordinary hover
+target from `Camera_Y_pos+$40`, then raises it by `$20` while
+`Current_zone=MGZ`. The MGZ capsule profile now supplies that target offset.
+The collapsed parent/button object also preserves the parent X saved before
+routine movement for `SolidObjectFull`, while its separately refreshed button
+child uses the moved X. No trace state, route/frame predicate, comparator
+tolerance, or physics synchronization was added.
+
+ROM references:
+
+- `docs/skdisasm/sonic3k.asm:181501-181545` (saved parent X and solid call)
+- `docs/skdisasm/sonic3k.asm:181626-181637` (MGZ hover-target adjustment)
+- `docs/skdisasm/sonic3k.asm:181739-181767` (button child refresh)
+
+Verification with the root-level locked-on S3K ROM:
+
+- The focused floating-capsule object suite passes, including saved parent-X,
+  refreshed button-X, and MGZ raised-target contracts.
+- Standalone MGZ physics advances from frame 35200 / 43 errors to fully green.
+- Standalone MGZ animation advances from frame 35279 / 29 errors to fully green.
+- MGZ complete-run physics and animation remain fully green.
+- Full trace fleets advance from 44/58 to 45/58 green physics routes and from
+  43/58 to 44/58 green animation routes. The remaining failure sets contain no
+  newly regressed routes; AIZ/HCZ/MGZ complete-run physics and animation remain
+  green.
+
+### 2026-07-17 -- Released MGZ carry publishes its generated flap input
+
+Branch `feature/ai-trace-animation-verification`, on top of `7b2faf957`.
+At standalone MGZ frame 34404, native routine `$18` is in the released-rescue
+path at `loc_142E2`: `Tails_CPU_auto_fly_timer` advances from `$57` to zero and
+generates A/B/C in `Ctrl_2_logical`. The engine already matched the timer and
+used the generated flap for Tails' movement, but only active-carry routine
+`$18` mirrored generated inputs into the ROM-visible logical latch; the
+released chase left its latch at zero. The released body now publishes its
+existing input decision before the cooldown/regrab pass. No trace state is
+copied into gameplay and no zone, route, frame, or tolerance carve-out was
+added.
+
+ROM references:
+
+- `docs/skdisasm/sonic3k.asm:27024-27067` (active routine `$18` input)
+- `docs/skdisasm/sonic3k.asm:27138-27160` (`loc_142E2` released flap)
+
+Verification with the root-level locked-on S3K ROM:
+
+- Focused released-carry threshold/`Ctrl_2_logical` publication contract
+  passed.
+- Standalone MGZ physics advances from frame 34404 / 45 errors to frame 35200
+  / 43 errors. The new frontier is Tails X velocity (expected `-$1B2`, actual
+  zero) during the later released-rescue chase.
+- Standalone MGZ animation remains at frame 35279 / 29 errors.
+- MGZ complete-run physics and animation both remain fully green.
+- Full trace fleets remain at physics 44/58 green and animation 43/58 green;
+  AIZ/HCZ/MGZ complete-run physics and animation remain green.
+
+### 2026-07-17 -- Obj37 defers collision clear until its SST executes
+
+Branch `feature/ai-trace-animation-verification`, on top of `134b73c4c`.
+Standalone MGZ's two players overlap lost-ring slots 28 and 42 together near
+frame 30753. Native P1 `Touch_ChkValue` writes routine 4 to slot 28 and returns,
+but leaves `collision_flags=$47` until that Obj37 SST executes later in the
+same object pass. P2 therefore encounters the same first ring and also returns;
+slot 42 is collected on the following frame. The engine marked slot 28
+collected and exposed zero collision flags immediately, allowing P2 to skip it
+and collect slot 42 one frame early. Lost rings now retain `$47` through the
+remaining player slots and clear it when their collection routine begins. No
+zone, route, frame, trace-hydration, or tolerance condition was added.
+
+ROM references:
+
+- `docs/skdisasm/sonic3k.asm:20656-20789` (`Touch_Loop` / `Touch_ChkValue`)
+- `docs/skdisasm/sonic3k.asm:35520-35676` (`Obj_Bouncing_Ring` routines 2/4/6)
+
+Verification with the root-level locked-on S3K ROM:
+
+- Focused two-player pending-ring ordering contract passed.
+- Standalone MGZ physics advances from frame 30753 / 46 errors to frame 34404
+  / 45 errors. The new frontier is a later CPU Tails logical-input publication
+  mismatch (expected held `$10`, actual `$00`).
+- Standalone MGZ animation remains at frame 35279 / 29 errors.
+- MGZ complete-run physics and animation both remain fully green.
+- Full trace fleets retain their established baselines: physics 44/58 green
+  and animation 43/58 green. AIZ/HCZ/MGZ complete-run physics and animation
+  remain green.
+
+### 2026-07-17 -- S3K lost rings scan the active background collision plane
+
+Branch `feature/ai-trace-animation-verification`, after the checkpoint merge of
+`develop` (already up to date at `1b1a5efee`). At standalone MGZ frame 30648,
+native Obj37 slot 27 reaches the raised background floor at `$39F8,$0927` and
+reverses its Y velocity. The engine's lost-ring probe only queried foreground,
+so the corresponding ring fell through the live MGZ background geometry and
+missed the native collection at frame 30714. `Ring_FindFloor` explicitly runs
+the same height-map scan through `Find_Tile_FG` and, while
+`Background_collision_flag` is set, through `Find_Tile_BG` after applying
+`Camera_X_diff`/`Camera_Y_diff`; the more penetrating result owns the bounce.
+Lost rings now consume that ROM-state-driven dual-plane result. No zone, route,
+frame, trace-hydration, or tolerance condition was added.
+
+ROM references:
+
+- `docs/skdisasm/sonic3k.asm:19369-19448` (`Ring_FindFloor`)
+- `docs/skdisasm/sonic3k.asm:20098-20110` (`RingCheckFloorDist`)
+- `docs/skdisasm/sonic3k.asm:35520-35645` (`Obj_Bouncing_Ring`)
+
+Verification with the root-level locked-on S3K ROM:
+
+- Focused `s3kRingFindFloorIncludesActiveBackgroundCollisionPlane` contract
+  passed.
+- Standalone MGZ physics advances from frame 30714 / 49 errors to frame 30753
+  / 46 errors. The new frontier is a later lost-ring count mismatch (expected
+  5, actual 6), requiring separate ring/touch ordering analysis.
+- Standalone MGZ animation remains at frame 35279 / 29 errors; the physics-only
+  ring correction does not move or regress it.
+- MGZ complete-run physics and animation both remain fully green.
+- Full trace fleets remain at their established baselines: physics 44/58 green
+  and animation 43/58 green. AIZ/HCZ/MGZ complete-run physics and animation
+  remain green.
+
+### 2026-07-17 -- S3K grounded BG collision restores fatal floor-overlap tail
+
+Branch `feature/ai-trace-animation-verification`, after commit `a26e17819`.
+At frame 30178, native CPU Tails enters `Kill_Character` with routine `$06`,
+death animation `$18`, and upward velocity `-$0700`, while the engine remains
+in the normal grounded path. A direct BizHawk probe confirmed both runtimes
+had `Camera_max_Y=$1000`; this was not a bottom-boundary death.
+
+After grounded `AnglePos`/slope handling, S3K checks
+`Background_collision_flag`, calls `sub_F846`, and probes `FindFloor` at
+`x_pos,y_pos-4`. A negative dual-plane result jumps to `Kill_Character`
+before the following background left/right wall clamps. The shared collision
+pipeline now models that missing probe for both stand and roll paths and
+routes CPU sidekicks through the existing native level-boundary kill state.
+No trace hydration, zone/route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM reference:
+`docs/skdisasm/sonic3k.asm:19946-19973,27520-27548,27732-27760`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 30178 to frame 30714
+  (`rings`, expected `1` / actual `0`), with errors reduced from 920 to 49.
+- MGZ standalone animation advances from frame 30178 to frame 35279
+  (`tails_animation_id`, expected `$23` / actual `$22`), with errors reduced
+  from 156 to 29.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
+### 2026-07-17 -- MGZ continuous shake uses the global level counter
+
+Branch `feature/ai-trace-animation-verification`, after commit `41b06bd7a`.
+At frame 28680, native CPU Tails has only just left BuildSprites' upper
+visibility boundary, while the engine had incremented his off-screen counter
+one pass early. The active MGZ quake was selecting `ScreenShakeArray2` with
+the level-event manager's act-local counter (`14741`) rather than the live
+ROM level counter (`28677`), producing a three-pixel camera-copy offset where
+the native phase produces two.
+
+`ShakeScreen_Setup` indexes the continuous table with
+`Level_frame_counter`; the engine's canonical counterpart is
+`LevelManager.getFrameCounter()`, which remains aligned across seamless act
+handoffs and retained event phases. MGZ ScreenEvents now uses that owner when
+a gameplay runtime exists, retaining its explicit callback counter only for
+isolated no-runtime tests. No trace hydration, zone/route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:104188-104234,106257-106309`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 28680 to frame 30178
+  (`tails_x_speed`, expected `$0000` / actual `-$0073`), with errors reduced
+  from 921 to 920.
+- MGZ standalone animation remains at frame 30178
+  (`tails_animation_id`, expected `$18` / actual `$00`) with 156 errors.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
+### 2026-07-17 -- MGZ drilling escape retains its child hurt SSTs
+
+Branch `feature/ai-trace-animation-verification`, after commit `da8784bed`.
+At frame 28207, native CPU Tails overlaps the drilling Robotnik's still-live
+child graph during the mini-event ceiling escape, enters the hurt routine,
+and receives the standard `$0200,-$0400` rebound. The engine had already
+folded those child SSTs into the parent's multi-region touch provider, but
+disabled that entire provider when the parent entered routine `$16`, leaving
+Tails one pixel lower and on his ordinary movement/animation path.
+
+`Obj_MGZ2DrillingRobotnikStart` always ends in
+`Draw_And_Touch_Sprite`, including routines `$16` and `$18`; only the parent
+body's own collision flag is disabled during its hit flash. The folded drill
+tip and lower hurt children now remain published through the escape routines,
+while the pending parent hit immediately hides the attackable body exactly as
+the native cleared `collision_flags` byte does. No trace hydration,
+zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference:
+`docs/skdisasm/sonic3k.asm:142415-142425,142477-142515,144374-144415`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 28207 to frame 28680
+  (`tails_cpu_respawn_counter`, expected `$0000` / actual `$0001`), with
+  errors reduced from 1114 to 921.
+- MGZ standalone animation advances from frame 28207 to frame 30178
+  (`tails_animation_id`, expected `$18` / actual `$00`), with errors reduced
+  from 259 to 156.
+- Focused parent-hit and ceiling-escape child-hazard contracts pass 2/2.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
+### 2026-07-17 -- MGZ trigger-platform shake follows native camera-copy phase
+
+Branch `feature/ai-trace-animation-verification`, after commit `34bd8d32f`.
+At frame 27335, CPU Tails had crossed the lower BuildSprites boundary in the
+ROM but remained visible in the engine, delaying the off-screen flight timer.
+The active horizontal trigger platform correctly wrote the continuous
+`Screen_shake_flag`, but the later MGZ event pass cleared that shared request
+and the sprite camera copy therefore used the raw camera Y.
+
+`MGZ1_ScreenEvent` applies the previously prepared `Screen_shake_offset` to
+`Camera_Y_pos_copy`, while the later background event calls
+`ShakeScreen_Setup` for the following frame. The engine's object callback is
+two counts ahead of the native level-frame counter exposed at that point, so
+the platform selects the continuous-shake sample three counts behind its
+callback. Inactive platform routines no longer clear another SST's live
+request, and a platform that finishes movement no longer publishes the
+constant flag that its native completion path clears on the same pass. No
+trace hydration, zone/route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM reference:
+`docs/skdisasm/sonic3k.asm:70910-71029,104188-104234,106257-106309`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ standalone physics advances from frame 27335 to frame 28207
+  (`tails_y`, expected `$071C` / actual `$071D`), with errors reduced from
+  1476 to 1114.
+- MGZ standalone animation remains at frame 28207
+  (`tails_animation_id`, expected `$1A` / actual `$02`), with errors reduced
+  from 263 to 259 as the corrected visibility phase removes downstream
+  mismatches.
+- The focused trigger-platform suite passes 11/11.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
+### 2026-07-17 -- MGZ swinging-platform residue follows the native SST slot
+
+Branch `feature/ai-trace-animation-verification`, after commit `500be0fda`.
+At frame 25759, Sonic and the slot-7 swinging platform matched native
+subpixels and velocities, but the platform endpoint and carried player were
+one pixel right. The existing cosine-residue model treated native slots 6 and
+7 as interchangeable because an earlier folded Mantis inventory could map the
+same platform phase to either engine slot. Restoring the Mantis operation and
+child allocation has removed that fold.
+
+`GetSineCosine` writes only `d1.w`; `sub_34074` then swaps the full register,
+so its five-link endpoint retains the high-word residue inherited through the
+native SST stream. Native slots 6 and 7 have distinct repeating byte-angle
+rounding sets. The engine now models each SST set separately: complete-run's
+slot-6 ride retains its established residue, while standalone's slot-7 ride
+uses its own six-angle sequence. No trace hydration, zone/route/frame
+predicate, comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:3021-3029,70468-70543`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 25759 to frame 27335
+  (`tails_cpu_respawn_counter`, expected `$0001` / actual `$0000`), with
+  errors reduced from 1504 to 1476.
+- MGZ standalone animation remains at frame 28207
+  (`tails_animation_id`, expected `$1A` / actual `$02`) with 263 errors.
+- MGZ complete-run physics and animation remain fully green.
+- The focused swinging-platform suite passes 5/5, including the distinct
+  slot-6/slot-7 angle-residue contract.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+- S3K AIZ skip, level-loading, bootstrap-resolver, and decoding guards pass.
+
+### 2026-07-17 -- Restored MGZ Mantis routines run beyond the strict viewport
+
+Branch `feature/ai-trace-animation-verification`, after commit `776555553`.
+At frame 24875, native Mantis slot 8 has already seen CPU Tails enter its
+64-pixel detection range, completed its prep animation, and leapt above the
+floor before Tails reaches it. The engine restored and initialized the Mantis
+on the native passes, but then stopped dispatching its routine until the
+Mantis centre entered the strict viewport. That delayed its target scan until
+Sonic arrived and left the Mantis near the floor for a false Tails contact.
+
+After `Obj_WaitOffscreen` restores the operation pointer, `Obj_Mantis`
+dispatches on every SST pass. Its trailing `Sprite_CheckDeleteTouch` owns
+unload and collision-list work; it is not a strict-viewport routine gate. The
+engine now preserves that distinction, including native-P2 target selection,
+without trace hydration, zone/route/frame predicates, comparator tolerance,
+or physics-state synchronization.
+
+ROM reference:
+`docs/skdisasm/sonic3k.asm:180266-180298,185700-185840`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 24875 to frame 25759
+  (`x`, expected `$2A83` / actual `$2A84`), with errors reduced from 1505 to
+  1504.
+- MGZ standalone animation remains at frame 28207
+  (`tails_animation_id`, expected `$1A` / actual `$02`) with 263 errors.
+- Focused Mantis and MGZ pulley/Mantis tests pass 16/16, including restored
+  routine dispatch beyond the strict viewport and native-P2 detection.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+- S3K AIZ skip, level-loading, bootstrap-resolver, and decoding guards pass.
+
+### 2026-07-17 -- MGZ head-trigger projectile publishes post-move touch state
+
+Branch `feature/ai-trace-animation-verification`, after commit `9bfc9c657`.
+At frame 24211, native head-trigger projectile slot 8 hurts Sonic from the
+coordinate written by its preceding `MoveSprite2`, creates the Obj37 owner,
+and enters the hurt routine. The engine's projectile position and velocity
+were correct, but its collision-list entry sampled the older pre-update
+coordinate, missing the exact-edge overlap and all downstream hurt/ring state.
+
+`loc_34518` moves the projectile before
+`Add_SpriteToCollisionResponseList`; the projectile now exposes that live
+post-move coordinate to the following player-slot touch pass. This is the
+existing ROM-state/call-site ownership rule, with no trace hydration,
+zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:70883-70892`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 24211 to frame 24875
+  (`y_speed`, expected `$0295` / actual `$0195`), with errors reduced from
+  3108 to 1505.
+- MGZ standalone animation advances from frame 24211 to frame 28207
+  (`tails_animation_id`, expected `$1A` / actual `$02`), with errors reduced
+  from 523 to 263.
+- Focused MGZ head-trigger tests pass 7/7, including the explicit post-move
+  touch-state contract.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
+### 2026-07-17 -- MGZ invisible-block left contact clears residual ground speed
+
+Branch `feature/ai-trace-animation-verification`, after commit `01018be5c`.
+At this requested checkpoint, `git fetch origin develop:develop` confirmed
+local and remote `develop` at `1b1a5efee`; merging `develop` reported
+`Already up to date`.
+
+At frame 23891, Sonic falls beside the subtype-$02 invisible block at
+`$1FC4,$07B4`. Native `SolidObjectFull2` applies the recorded four-pixel
+left separation and routes `x_vel == 0` through `loc_1E056`, clearing both
+`x_vel` and the residual `$00BC` `ground_vel`; only a negative X velocity is
+treated as moving away from that left edge. The engine already applied the
+same position correction but used a strict-positive moving-into predicate,
+so it retained the stale ground speed and shifted the falling animation.
+
+The S3K invisible block now opts into the shared zero-speed left-side stop
+semantics. No trace hydration, zone/route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:41468-41483,42656-42691`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 23891 to frame 24211
+  (`x_speed`, expected `$0200` / actual `$0000`), with errors reduced from
+  3109 to 3108.
+- MGZ standalone animation advances from frame 23897 to frame 24211
+  (`player_animation_id`, expected `$1A` / actual `$02`), with errors reduced
+  from 531 to 523.
+- The focused invisible-block contract test passes 1/1.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
+### 2026-07-17 -- MGZ Mantis restores its operation before child initialization
+
+Branch `feature/ai-trace-animation-verification`, after commit `20f5153c8`.
+At this requested checkpoint, a fresh fetch again confirmed local and remote
+`develop` at `1b1a5efee`; merging `develop` reported `Already up to date`.
+
+The frame-23562 ring miss came from Obj37's native SST phase, but the first
+upstream occupancy difference was an older Mantis. Native `Obj_WaitOffscreen`
+observes the placeholder's retained `render_flags.on_screen` bit, restores the
+saved Mantis operation, and returns; `Obj_Mantis` initializes and allocates its
+visual child on that SST's following pass. The engine additionally required the
+Mantis center to enter the viewport, delaying initialization by four passes.
+That omitted child let the same-frame swinging-platform helpers take an earlier
+slot, shifting the first two later Obj37 rings and their `d7` floor cadence.
+
+Mantis now latches the post-camera placeholder render flag, preserves the
+restore-only pass, and initializes on the next pass without the extra center
+gate. This restores the actual ROM state and allocation order; no trace
+hydration, zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference:
+`docs/skdisasm/sonic3k.asm:180266-180298,185700-185840,35965-35980`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 23562 to frame 23891
+  (`g_speed`, expected `$0000` / actual `$00BC`), with errors reduced from
+  3110 to 3109.
+- MGZ standalone animation remains at frame 23897
+  (`player_mapping_frame`, expected `$96` / actual `$9A`) with 531 errors.
+- Focused Mantis lifecycle and MGZ pulley/Mantis suites pass 14/14.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
+### 2026-07-16 -- Deferred Obj37 owner clears rings on its SST pass
+
+Branch `feature/ai-trace-animation-verification`, after commit `8e1ec19f6`.
+At the requested checkpoint, a fresh fetch confirmed local and remote
+`develop` were both still at `1b1a5efee`; merging `develop` reported `Already
+up to date`. At standalone MGZ frame 23462, spike slot 20 hurts Sonic and
+allocates the Obj37 owner into free slot 14. Because Process_Sprites has
+already passed slot 14, native `Obj37_Init` and its `Ring_count=0` write do not
+run until the next object pass. The engine cleared rings immediately when the
+slot was allocated, one frame ahead of the native write.
+
+The object manager now exposes whether a reserved slot lies behind its live
+SST cursor. When that occurs, the Obj37 owner retains a rewind-captured pending
+clear and performs the write at the start of its first execution, before its
+movement. Owners allocated before the loop or into later slots keep their
+existing same-pass behavior. No trace hydration, zone/route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:21065-21110,35549-35616`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ standalone physics advances from frame 23462 to frame 23562 (`rings`,
+  expected `1` / actual `0`), with errors reduced from 3111 to 3110.
+- MGZ standalone animation remains at frame 23897
+  (`player_mapping_frame`, expected `$96` / actual `$9A`) with 531 errors.
+- Lost-ring, SST child-allocation, and ring-manager suites pass 59/59,
+  including both earlier/later cursor placement and deferred Ring_count clear.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
+### 2026-07-16 -- S3K collision-response list retains explicit off-camera publishers
+
+Branch `feature/ai-trace-animation-verification`, after the floating-platform
+render-gate milestone. At standalone MGZ frame 23264, CPU Tails is ahead of
+the camera beside spilled-ring slot 24. Native `Obj_Bouncing_Ring` publishes
+that SST pointer unconditionally, and `Add_SpriteToCollisionResponseList`
+checks only the `$7E`-byte capacity. The engine added an unrelated camera
+window while rebuilding the prior-frame list, so Tails never scanned the ring
+even though its position and collection flags matched the native object.
+
+The shared S3K collision-response list now relies on each object's explicit
+publication predicate and preserves native SST order/capacity without an
+extra camera filter. No trace hydration, zone/route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:21200-21210,35616-35645`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ standalone physics advances from frame 23264 to frame 23462 (`rings`,
+  expected `11` / actual `0`), while the total remains 3111 errors.
+- MGZ standalone animation remains at frame 23897
+  (`player_mapping_frame`, expected `$96` / actual `$9A`) with 531 errors.
+- Focused previous-list and lost-ring touch tests pass 13/13, including an
+  explicit publisher positioned beyond the former camera window.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
+### 2026-07-16 -- Floating platform gates SolidObjectTop on object render_flags
+
+Branch `feature/ai-trace-animation-verification`, after the collapsing-bridge
+push-release milestone. At standalone frames 23045-23047, native MGZ floating
+platform slot 20 remains at `$20B0,$06A0` with `render_flags=$04`. Its
+`loc_255F4` caller tests the sign bit and skips `SolidObjectTop`, so the
+airborne Tails continues past it. The engine treated all top-only callers as
+unconditionally solid and installed a false ride at the same position.
+
+`FloatingPlatformObjectInstance` now gates solidity on the existing
+BuildSprites-equivalent object bounds and exposes its exact ROM
+`width_pixels`/`height_pixels` values for that calculation. This models the
+caller's explicit render check rather than changing the shared top-solid
+helper, whose native entry has no such gate. No trace hydration,
+zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:50758-50853`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 23046 to frame 23264 (`rings`,
+  expected `7` / actual `6`), with errors reduced from 3283 to 3111.
+- MGZ standalone animation advances from frame 23047 to frame 23897
+  (`player_mapping_frame`, expected `$96` / actual `$9A`), with errors reduced
+  from 557 to 531.
+- `TestFloatingPlatformObjectInstance` passes 3/3, including explicit off/on
+  screen solidity coverage.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
+### 2026-07-16 -- Collapsing bridge wave release clears Status_Push
+
+Branch `feature/ai-trace-animation-verification`, after commit `0601222` and
+the requested checkpoint merge check. A fresh fetch confirmed local and remote
+`develop` were both still at `1b1a5efee`; merging `develop` therefore reported
+`Already up to date`. At standalone frame 21890, Tails's rolling ground-wall
+probe correctly zeroes his ground speed and temporarily sets `Status_Push`
+while he still has `Status_OnObj`. The collapsing bridge executes later in the
+object pass. Native `Check_CollapsePlayerRelease` clears both bits before
+setting `Status_InAir`; the engine release path cleared only `Status_OnObj`, so
+the transient push bit survived into the trace snapshot.
+
+The bridge release now clears pushing in the same block that clears on-object,
+sets air, and publishes `prev_anim=Run`. No trace hydration, zone/route/frame
+predicate, comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:45349-45383`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 21890 to frame 23046
+  (`tails_g_speed`, expected `$0000` / actual `$0200`), with errors reduced
+  from 3284 to 3283.
+- MGZ standalone animation remains at frame 23047
+  (`tails_animation_id`, expected `$1A` / actual `$00`) with 557 errors.
+- `TestS3kCollapsingBridgeParity` passes 10/10, including the explicit
+  `Status_Push` clear on wave release.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
+### 2026-07-16 -- S3K collapsing bridges release placement lifetime on fragmentation
+
+Branch `feature/ai-trace-animation-verification`, after the MGZ pulley
+render-flag milestone. Native `ObjPlatformCollapse_SmashObject` converts the
+original bridge SST into fragment zero, then clears bit 7 through its
+`respawn_addr`; the transformed object continues falling while `Load_Sprites`
+is free to allocate a fresh copy of the same layout entry. The engine kept the
+falling parent in the placement-keyed active map, so its equivalent placement
+bit could never clear and MGZ's Camera-Y pass at frame 21792 could not recreate
+the bridge at `$1900,$0340` for Tails to land on.
+
+The shared lifetime API now detaches an in-place transformed object from its
+layout key without releasing its SST slot or destroying it. For S3K two-axis
+placement, the entry remains eligible for the next Camera-Y strip scan.
+Standard and MGZ-stomp bridge paths use that operation after fragmentation;
+trigger-mode bridges retain the ROM's distinct `clr.w respawn_addr` behavior,
+which deliberately leaves the placement bit set. No trace hydration,
+zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:45125-45420`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 21808 to frame 21890
+  (`tails_status_byte`, expected `$07` / actual `$27`), with errors reduced
+  from 3304 to 3284.
+- MGZ standalone animation advances from frame 21809 to frame 23047
+  (`tails_animation_id`, expected `$1A` / actual `$00`), with errors reduced
+  from 566 to 557.
+- `TestObjectManagerVerticalPlacement` passes 9/9, including coexistence of
+  the transformed bridge and its fresh placement instance; the existing
+  `TestS3kCollapsingBridgeParity` suite passes 10/10.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
+### 2026-07-16 -- MGZ pulley grab consumes playable render_flags
+
+Branch `feature/ai-trace-animation-verification`, after commit `04b9e3cc8` and
+the requested checkpoint merge check. `origin/develop` and local `develop`
+were both still at `1b1a5efee`, so merging `develop` reported `Already up to
+date`. At standalone frame 21734 Tails is just below the nominal 224-pixel
+viewport but native BuildSprites still publishes `render_flags=$85`. The
+pulley's `sub_349BA` tests that sign bit and continues carrying P2; the engine
+instead used the stricter `Camera.isOnScreen` point test and released Tails
+before applying the next handle position. The pulley now consumes the existing
+playable render-flag state, falling back to the same BuildSprites-equivalent
+camera calculation only before that state has been initialized. No new margin,
+trace hydration, zone/route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:36336-36364,71242-71286`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 21734 to frame 21808
+  (`tails_y_speed`, expected `$0000` / actual `$05BC`), with 3304 errors in
+  the newly reached route tail.
+- MGZ standalone animation advances from frame 21767 to frame 21809
+  (`tails_animation_id`, expected `$08` / actual `$00`), with errors reduced
+  from 571 to 566.
+- `TestS3kMgzPulleyAndMantis` passes 10/10, including a P2-only grab whose
+  published render flag remains on-screen outside the strict camera point.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
+### 2026-07-16 -- MGZ pulley keeps extension motion owned by P1's grab byte
+
+Branch `feature/ai-trace-animation-verification`, after the waiting-Mantis
+collision milestone. At standalone frame 21695 Sonic jumps from the MGZ pulley
+while Tails remains attached. Native `loc_34900` tests only `$38(a0)`, the P1
+grab byte, when choosing extension motion; it does not aggregate the adjacent
+P2 byte at `$39(a0)`. With P1 released, the pulley therefore relaxes toward
+its subtype extension by two pixels per object pass. The later P2 half of
+`sub_349A2` still sees `$39(a0)` and moves Tails with the handle, producing the
+recorded +1 X / +2 Y whole-position writes while preserving his subpixels and
+zero velocities. The engine had treated either player as holding the extension
+retracted. No trace hydration, zone/route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:71178-71345`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 21696 to frame 21734 (`tails_x`,
+  expected `$186D` / actual `$186C`), with errors reduced from 4312 to 3290.
+- MGZ standalone animation advances from frame 21765 to frame 21767
+  (`tails_animation_id`, expected `$0B` / actual `$00`), with errors reduced
+  from 1116 to 571.
+- `TestS3kMgzPulleyAndMantis` passes 10/10, including P1 release while P2
+  remains grabbed and follows the relaxing handle.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
+### 2026-07-16 -- Waiting MGZ Mantis keeps collision_flags clear
+
+Branch `feature/ai-trace-animation-verification`, after the Mantis
+`Obj_WaitOffscreen` position/lifecycle milestone. A second waiting Mantis at
+slot 9 correctly remained at X=`$1E20`, Y=`$04B0`, but the shared badnik base
+still exposed collision `$1A`. Native `loc_85AD2` has not reached
+`SetUp_ObjAttributes`, so the freshly loaded SST's `collision_flags` byte is
+zero. Mantis now publishes no touch response until its first visible
+initialization pass, when collision `$1A` and the visual child are installed
+together. Tails therefore continues its native ground movement instead of
+entering the hurt routine. No trace hydration, zone/route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:180266-180298,185700-185729`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 20873 to frame 21696 (`tails_x`,
+  expected `$1847` / actual `$1846`), with errors reduced from 4385 to 4312.
+- MGZ standalone animation advances from frame 20873 to frame 21765
+  (`tails_animation_id`, expected `$0B` / actual `$00`), with 1116 errors
+  visible across the newly reached route tail.
+- Focused Mantis and MGZ swinging-platform suites pass 17/17.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
+### 2026-07-16 -- Offscreen MGZ Mantis remains in Obj_WaitOffscreen
+
+Branch `feature/ai-trace-animation-verification`, after the moving-spike
+air-unseat milestone. Native Mantis slots 5 and 9 still point at
+`loc_85AD2` with their placement Y coordinates while outside the `$20`-wide,
+`$22`-swept placeholder bounds. The engine had gated only on X, initialized
+the lower slot, allocated its visual child, and ran its full leap/landing cycle
+from Y=`$0490` to `$0423`; Tails then destroyed that Mantis and received a
+false enemy bounce. Uninitialized Mantis instances now stay dormant outside
+the native placeholder render bounds, while initialized jump arcs retain their
+existing X-only lifetime. Removing the premature child can fold the same
+native later-slot swinging-platform phase into engine slot 6 instead of 7, so
+the existing `GetSineCosine` high-word residue applies to either folded slot
+representation. No trace hydration, zone/route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:180266-180298,185700-185840,70468-70543`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 20834 to frame 20873
+  (`tails_x_speed`, expected `-$03C4` / actual `$0200`), with errors reduced
+  from 4479 to 4385.
+- MGZ standalone animation advances from frame 20868 to frame 20873
+  (`tails_animation_id`, expected `$00` / actual `$1A`), with errors reduced
+  from 1129 to 1112.
+- Focused Mantis and MGZ swinging-platform suites pass 17/17.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
+### 2026-07-16 -- MGZ moving-spike jump unseats in its owning solid slot
+
+Branch `feature/ai-trace-animation-verification`, after the Spiker cooldown
+milestone. On the recorded jump, Sonic changes from standing to rolling radii
+at Y=`$04BA` while Obj56 moves from Y=`$04F9` to `$04F8`. An earlier floating
+platform checkpoint was consuming Obj56's riding record before Obj56 ran, so
+the later `SolidObjectFull` pass treated the exact surface boundary as a fresh
+contact and applied a one-pixel upward correction. Solid providers whose
+post-helper behavior depends on their own native standing bit can now retain
+the airborne rider until that same object's checkpoint. The MGZ moving-spike
+platform declares that concrete routine contract; vanished and ordinary stale
+supports retain their established cleanup behavior. No trace hydration,
+zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:41017-41035,41066-41084,71029-71114`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 17092 to frame 20834
+  (`tails_y_speed`, expected `$00B8` / actual `-$00B8`), with errors changing
+  from 4112 to 4479 as the newly reached route tail becomes visible.
+- MGZ standalone animation advances from frame 17119 to frame 20868
+  (`tails_animation_id`, expected `$00` / actual `$02`), with errors changing
+  from 485 to 1129 across the newly reached route tail.
+- The focused earlier-slot/owning-slot airborne-unseat contract passes.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+- At this checkpoint, `origin/develop` and local `develop` were both
+  `1b1a5efee`; merging `develop` reported `Already up to date`.
+
+### 2026-07-16 -- MGZ Spiker top spring retains its Obj_Wait setup pass
+
+Branch `feature/ai-trace-animation-verification`, after the drilling-Robotnik
+hurt-visibility milestone. Spiker's top child clears collision, writes `$10`
+to its wait word, and installs `Obj_Wait` only after `Check_PlayerCollision`
+selects the touching player. Because the engine reports that touch during the
+earlier player slot, it was decrementing the new wait word again when the
+child slot ran later in the same object pass. It then restored `$CA` when the
+word reached zero rather than after signed underflow. Retaining the setup pass
+and the zero-valued wait frame prevents Tails from retriggering the spring at
+the exact edge as it reopens. Tails now continues falling and reaches the
+native landing/idle animation. No trace hydration, zone/route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:185465-185563,177949-177959`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 16292 to frame 17092 (`y`,
+  expected `$04BA` / actual `$04B9`), with errors reduced from 4242 to 4112.
+- MGZ standalone animation advances from frame 16304 to frame 17119
+  (`tails_animation_id`, expected `$00` / actual `$20`), with errors reduced
+  from 547 to 485.
+- The focused Spiker top-spring setup/underflow lifecycle contract passes.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ drill hurt becomes visible after its movement routine
+
+Branch `feature/ai-trace-animation-verification`, after the title-card exit
+milestone and an up-to-date merge check against `develop` at `1b1a5efee`.
+`Obj_MGZ2DrillingRobotnik` dispatches its movement routine before
+`MGZ2_SpecialCheckHit`. On the complete-run route Sonic first overlaps the
+drill during its hang routine; publishing the hurt bit before that routine
+made the engine enter the ceiling escape one object pass early. The mini-event
+now retains a touch-reported hit until its current movement routine completes.
+With the boss cleanup on its native pass, the gradual camera worker relies
+directly on `AllocateObject` slot order: a wrapped lower slot starts next pass,
+without an additional synthetic setup skip. Standalone's slot-4 worker and the
+complete-run's slot-5 worker now both release the first quake arena on their
+recorded camera frame. No trace hydration, zone/route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:142389-142436,142620-142706,178159-178198`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 16055 to frame 16292 (`tails_y`,
+  expected `$05E9` / actual `$05EF`), with physics errors reduced from 4243
+  to 4242.
+- MGZ standalone animation remains at frame 16304 (`tails_animation_id`,
+  expected `$00` / actual `$02`) with 547 errors.
+- The focused post-routine hit-visibility contract passes.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ title-card exit accounts for phase-owned wait dispatches
+
+Branch `feature/ai-trace-animation-verification`, after the title-card reset
+milestone. MGZ's seamless transition supplies ten retained
+`Obj_EndSignControl`/title-parent dispatches after the visible title children
+retire. When the transparent title card starts at object-module phase 1, its
+generic owner already contributes five of those wait entries. Counting both
+budgets held `End_of_level_flag` for 15 updates and delayed normal camera
+tracking. Seamless title requests can now declare the concrete phase-one
+overlap for their exit budget as well as their display reset; MGZ declares
+five while HCZ's separate seven/five-dispatch handoff declares no overlap.
+The phase-0 MGZ complete-run path therefore retains all ten entries. No trace
+hydration, zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:62244-62279,62708-62720,106307-106345`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 14529 to frame 16055
+  (`camera_x`, expected `$07E1` / actual `$07E0`), with physics errors reduced
+  from 4245 to 4243.
+- MGZ standalone animation remains at frame 16304 (`tails_animation_id`,
+  expected `$00` / actual `$02`) with 547 errors.
+- The focused transition-coordinator and headless in-level title-card suites
+  pass; standalone/complete-run HCZ and MGZ retain their established timing.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ title-card reset accounts for phase-owned child dispatches
+
+Branch `feature/ai-trace-animation-verification`, after the live miniboss
+touch-position milestone. MGZ1 reloads Act 2 while `Obj_LevelResults` remains
+live, then mutates that retained owner into `Obj_TitleCard`. The transition
+request already carries the twelve intervening child-SST dispatches. When the
+transparent title card starts at object-module phase 1, its generic manager
+also accounts for the final six create/render dispatches; adding both budgets
+delayed `Obj_TitleCardWait`'s ring/timer reset by six frames. Seamless title
+requests can now declare that concrete phase-one overlap, and MGZ declares six
+while HCZ's independently counted handoff declares none. This preserves the
+complete-run timing, whose title card starts at phase 0. No trace hydration,
+zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:62214-62235,62708-62720,106307-106345`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 14424 to frame 14529
+  (`camera_y`, expected `$0813` / actual `$0810`), with physics errors reduced
+  from 4246 to 4245.
+- MGZ standalone animation remains at frame 16304 (`tails_animation_id`,
+  expected `$00` / actual `$02`) with 547 errors.
+- The focused transition-coordinator and headless in-level title-card suites
+  pass, and standalone/complete-run HCZ and MGZ retain their established
+  timing.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ miniboss touch uses its live post-movement SST position
+
+Branch `feature/ai-trace-animation-verification`, after the lost-ring cadence
+milestone. `Obj_MGZMiniboss` dispatches its movement routine before calling
+`Draw_And_Touch_Sprite`, so the collision-response list contains an SST
+pointer whose coordinates are dereferenced after the boss has moved. At trace
+frame 12821 the boss moves from Y=`$0E84` to `$0E83` before publishing that
+pointer; the generic frame-start touch snapshot retained `$0E84` and missed
+Sonic's exact-edge attack. Opting this boss into live touch state restores the
+native S3K boss rebound, including the X/Y/ground-speed negation. No trace
+hydration, zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:184817-184834,20656-20708,20895-20922`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 12821 to frame 14424 (`rings`,
+  expected `0` / actual `3`), with physics errors reduced from 5882 to 4246.
+- MGZ standalone animation advances from frame 12863 to frame 16304
+  (`tails_animation_id`, expected `$00` / actual `$02`), with 547 animation
+  errors remaining.
+- The focused S3K boss touch-response profile suite passes 7/7; the shared
+  touch-response and lost-ring ordering suites remain green.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ lost-ring phase is reconstructed from native slot cadence
+
+Branch `feature/ai-trace-animation-verification`, after the stomp-bridge
+milestone. The standalone schema-v6 recording stored the word adjacent to
+S3K's byte-sized `V_int_run_count+2`, so its Obj37 floor-probe low bits must be
+restored from trace-start metadata. The earlier phase `3` avoided the first
+false bounce but did not reproduce the native slot cadence. The ROM trace
+shows slot 28 bouncing at frame 12425; because `Process_Sprites` supplies
+`d7=109-slot`, slot 26's matching eight-frame probe falls six frames later,
+not on the engine's former frame 12426. Restoring the captured phase as `6`
+lets that ring pass the solid edge before its next probe and prevents its
+stale frame-12457 collection. This is one-time clock bootstrap only; no
+per-frame trace hydration, zone/route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:543,35593-35645,35965-35980`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 12457 to frame 12821
+  (`g_speed`, expected `-$0098` / actual `$0098`).
+- MGZ standalone animation remains at frame 12863 (`player_animation_id`,
+  expected `$00` / actual `$02`).
+- The focused trace-metadata and lost-ring suites pass 74/74.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ stomp bridge retains SolidObjectTop's relative landing
+
+Branch `feature/ai-trace-animation-verification`, after the lightning-shield
+spark-slot milestone. The MGZ type-2 collapsing bridge calls
+`SolidObjectTop`, which seats the carried player with `y_pos += d0 + 3` while
+the top platform's enlarged `y_radius` is still live. `Player_TouchFloor`
+then restores the ordinary radius without changing that native `y_pos`. The
+engine correctly calculated `$0AA4`, but its default PlatformObject-style
+absolute re-seat ran after the radius reset and overwrote the result with
+`$0ABC`. Declaring the bridge's actual solid routine preserves the relative
+landing and the same-pass stomp breakup. No trace hydration,
+zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:24335-24390,41982-42039,45170-45218`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 10842 to frame 12457 (`rings`,
+  expected `0` / actual `1`).
+- MGZ standalone animation remains at frame 12863 (`player_animation_id`,
+  expected `$00` / actual `$02`).
+- The focused collapsing-bridge suite passes 10/10.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ shared replay restores lightning-shield spark slots
+
+Branch `feature/ai-trace-animation-verification`, after the attracted-ring
+allocation milestone. Shared-level replay fixtures replace the playable roster
+after retaining the already-loaded `ObjectManager`; the replacement S3K team
+therefore had the lightning-shield status but no bound power-up spawner or
+fixed shield object. Native `Obj_LightningShield_CreateSpark` allocates four
+diagonal spark objects for 21 object passes on every double jump. Rebinding the
+replacement team through the existing elemental-shield capability restores
+those dynamic slots. In particular, the trace-frame-5017 spark burst remains
+live while the frame-5036 star post and nearby objects load, preventing the
+downstream MGZ platform/wall slot cascade. The production fresh-load path now
+exposes the same rebinding operation used by the fixture. No trace hydration,
+zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:34742-34858`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 10589 to frame 10842 (`y`,
+  expected `$0AA4` / actual `$0ABC`).
+- MGZ standalone animation advances from frame 10590 to frame 12863
+  (`player_animation_id`, expected `$00` / actual `$02`).
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ attracted-ring sparkle preserves SST allocation order
+
+Branch `feature/ai-trace-animation-verification`, after the moving-spike balance
+milestone. `Obj_Attracted_Ring` reuses the custom attract routine's
+`anim_frame_timer` when it changes in place to `loc_1A920`; each sparkle mapping
+therefore lasts the native `delay+1` object passes. The terminal `$FC` command
+only increments `routine`, leaving deletion to the following SST pass. Keeping
+that final pass prevents the next player-slot attraction from reusing a slot
+which native still occupies: the attraction at trace frame 1089 now allocates
+slot 19, and the frame-1103 StillSprite placement correctly receives slot 11.
+The accompanying MGZ carrier/wall and falling-fragment ordering changes model
+their prior-pass render flags, fixed-point movement, and relative SST ordering.
+No trace hydration, route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:35710-35841,36157-36231,45317-45445`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics holds at frame 10589 (`x`, expected `$266D` / actual
+  `$267E`) while its first known placement-slot divergence advances beyond
+  trace frame 1103.
+- MGZ standalone animation holds at frame 10590 (`player_mapping_frame`,
+  expected `$21` / actual `$06`).
+- The focused ring, rewind-snapshot, collapsing-bridge, breakable-wall, and
+  moving-spike suites pass.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ moving spike exposes its native balance width
+
+Branch `feature/ai-trace-animation-verification`, after the standalone Obj37
+clock-phase milestone. `Obj_MGZMovingSpikePlatform` stores `$18` in its SST
+`width_pixels` byte. Sonic's on-object balance path reads that byte directly,
+not the `$23` width passed to `SolidObjectFull` after its `$B` side padding and
+not the engine's generic `$10` fallback. Exposing the native width prevents a
+false left-edge Balance2 selection immediately after Sonic recovers from the
+platform's spike hurt. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:22440-22487,71029-71114`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone animation advances from frame 9880 to frame 10590
+  (`player_mapping_frame`, expected `$21` / actual `$06`).
+- MGZ standalone physics holds at frame 10589 (`x`, expected `$266D` / actual
+  `$267E`).
+- The focused MGZ moving-spike suite passes with an explicit balance-width
+  assertion.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ standalone restores its captured Obj37 V-int phase
+
+Branch `feature/ai-trace-animation-verification`, after the moving-spike hurt
+milestone. The schema-v6 standalone recording captured the word adjacent to
+S3K's byte-sized `V_int_run_count+2`, so its Obj37 floor-probe low bits cannot
+be reconstructed from the CSV counter alone. Recording the missing initial
+phase as `3`, through the existing trace-start clock-state metadata, prevents a
+slot-16 attracted ring from taking a false terrain bounce: it now falls below
+the active camera boundary and deletes on the native frame instead of returning
+on-screen for Tails to collect. This initializes the replay clock once; no
+per-frame trace hydration, zone/route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:543,35593-35645,35965-35980`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 9962 to frame 10589 (`x`,
+  expected `$266D` / actual `$267E`).
+- MGZ standalone animation holds at frame 9880 (`player_animation_id`,
+  expected `$05` / actual `$0C`).
+- The focused ring, lost-ring, and trace-metadata suites pass.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ moving spike hurt rewinds vertical movement
+
+Branch `feature/ai-trace-animation-verification`, after the reused-interact-slot
+milestone. `Obj_MGZMovingSpikePlatform` routes a qualifying solid contact
+through `sub_24280`, which subtracts the current 8:8 `y_vel` from the complete
+16:16 `y_pos` longword before calling `HurtCharacter`. Mirroring that rewind
+restores Sonic's pre-movement integer and subpixel Y before
+`Player_TouchFloor` changes the rolling radii. No trace hydration, route/frame
+predicate, comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:49180-49219,71029-71114`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 9838 to frame 9962 (`rings`,
+  expected `110` / actual `111`).
+- MGZ standalone animation advances from frame 9879 to frame 9880
+  (`player_animation_id`, expected `$05` / actual `$0C`).
+- The focused MGZ moving-spike fixed-point rewind test passes.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- Reused interact slots do not suppress Tails follow nudges
+
+Branch `feature/ai-trace-animation-verification`, after the MGZ top-platform
+surface milestone. S3K's fast-leader spring/wall bridge suppresses the native
+`loc_13E0A/loc_13E34` one-pixel follow nudge only while the live interact-slot
+object is the same support object Tails latched. Once that support is destroyed,
+an unrelated object reusing the engine slot no longer suppresses the ROM nudge.
+At standalone MGZ frame 7582 this restores `addq.w #1,x_pos` while preserving
+the already-matching `$0084->$0078` speed update. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:26690-26741`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 7582 to frame 9838 (`y`, expected
+  `$089F` / actual `$089C`).
+- MGZ standalone animation holds at frame 9879 (`player_animation_id`, expected
+  `$00` / actual `$1A`).
+- The focused reused-interact-slot sidekick CPU regression test passes.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ top-platform riders use the pre-movement surface
+
+Branch `feature/ai-trace-animation-verification`, after the speed-shoes phase
+milestone. `Obj_MGZTopPlatform` calls its per-player `SolidObjectFull_1P` state
+machine before moving the platform body. Consequently an ordinary standing
+rider sees zero horizontal carry and remains seated on the pre-movement Y for
+that frame; the later `sub_35202` post-sync only copies positions once the
+object-local player state reaches the grabbed path. The platform also exposes
+its native `width_pixels=$18` to Tails' on-object balance check rather than the
+generic full-solid width. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:71475-71584,71729-71763,
+72045-72064`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 7346 to frame 7582 (`tails_x`,
+  expected `$1B0E` / actual `$1B0D`).
+- MGZ standalone animation advances from frame 7366 to frame 9879
+  (`player_animation_id`, expected `$00` / actual `$1A`).
+- The focused MGZ top-platform parity suite passes.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- S3K speed-shoes cadence reads the counter's low byte
+
+Branch `feature/ai-trace-animation-verification`, after the hurt-routine timer
+milestone. The existing cadence treated `(Level_frame_counter+1).w` as an
+arithmetic counter increment and gated engine counter low bits at one. In 68k
+absolute-address syntax, `+1` instead selects the second byte of the word—the
+counter's low byte—so the native `andi.b #7` gate fires when that byte is zero.
+Aligning the shared S3K byte timer to low-byte zero makes the final decrement
+visible before the next movement pass. No duration compensation, trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:22067-22095`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 6496 to frame 7346 (`tails_x`,
+  expected `$1999` / actual `$199A`).
+- MGZ standalone animation advances from frame 6524 to frame 7366
+  (`tails_animation_id`, expected `$06` / actual `$05`).
+- A/B verification of the already-red CNZ route retains its frame-0 frontier
+  and 4,581 physics errors under both phases.
+- The five-test speed-shoes timer suite passes with the low-byte-zero cadence.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- Speed-shoes countdown pauses outside the normal player routine
+
+Branch `feature/ai-trace-animation-verification`, after the attracted-ring
+lifetime milestone. Native `Sonic_ChkShoes` is called by `Sonic_Display` only
+from player routine 2. Hurt routine 4 uses its own direct draw path, so its
+44-frame span in standalone MGZ skips five globally aligned speed-shoes timer
+decrements. The engine's manager-owned timer continued decrementing through
+that state and removed the boosted acceleration 40 frames early. The timer now
+uses the existing playable hurt/routine state to freeze until normal control
+resumes. No duration compensation, trace hydration, route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:21886-21899,21940-22022,
+22037-22095`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 6457 to frame 6496 (`y_speed`,
+  expected `-$0074` / actual `-$0073`).
+- MGZ standalone animation advances from frame 6465 to frame 6524
+  (`player_mapping_frame`, expected `$08` / actual `$07`).
+- The five-test speed-shoes timer suite passes, including hurt-routine freeze
+  and normal-control resume coverage.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- Attracted rings become bouncing rings after shield loss
+
+Branch `feature/ai-trace-animation-verification`, after the Tunnelbot live-
+touch milestone. Native `Obj_Attracted_Ring` runs `AttractedRing_Move`, then
+checks Player 1's lightning-shield bit. If the shield is gone, it changes the
+same SST code pointer to `Obj_Bouncing_Ring`, selects routine 2, and restarts
+only `Ring_spill_anim_counter`; its slot, fixed-point position, and velocities
+survive. The engine instead kept flying that ring toward Sonic indefinitely,
+so the third ring attracted near frame 5467 was incorrectly collected at frame
+5548 instead of becoming the native bouncing ring when Sonic lost the shield.
+The subsystem-backed attracted ring now transfers its reserved dynamic slot and
+motion state to the shared Obj37 path, while preserving the spill accumulator
+and mapping frame. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:35639-35846`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ standalone physics advances from frame 5548 to frame 6457 (`x_speed`,
+  expected `$0538` / actual `$0544`).
+- MGZ standalone animation remains at frame 6465 (`player_mapping_frame`,
+  expected `$08` / actual `$01`).
+- The 24-test focused ring-manager suite passes, including SST transfer,
+  fixed-point motion retention, and counter-only spill-animation restart.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- Tunnelbot touch uses its live post-movement SST position
+
+Branch `feature/ai-trace-animation-verification`, after the slow trigger-
+platform milestone. `Obj_Tunnelbot` runs its movement routine and then calls
+`Sprite_CheckDeleteTouch`, which adds its SST address—not a coordinate copy—to
+`Collision_response_list`. The following player pass therefore reads the last
+post-movement `x_pos/y_pos`. The engine instead used its generic pre-update
+snapshot, leaving the rising body one pixel lower. That created an inclusive-
+edge attack overlap absent in the ROM and `Touch_Enemy_Part2` falsely negated
+both Sonic velocities. Tunnelbot now opts into the shared live touch-state
+contract already used by moving S3K collision-list objects. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:184710-184723,20656-20708,
+21200-21210`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ standalone physics advances from frame 2475 to frame 5548 (`rings`,
+  expected 87 / actual 88).
+- MGZ standalone animation advances from frame 2496 to frame 6465
+  (`player_mapping_frame`, expected `$08` / actual `$01`).
+- The focused Tunnelbot touch-state regression passes.
+- MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ slow trigger platform consumes prior-pass dash writes
+
+Branch `feature/ai-trace-animation-verification`, after complete-run animation
+reached green. The standalone route's subtype-`$14` platform occupies an
+earlier live SST slot than its matching dash trigger. When the platform next
+observes a nonzero `Level_trigger_array` byte, that value necessarily survived
+from the preceding `ExecuteObjects` pass and `loc_3466E` moves immediately.
+The engine's platform-local activation latch added a second delay even though
+the real later-slot ordering had already supplied the native one-pass
+visibility delay. Matching live dash-trigger ownership and relative SST order
+now establish that a later-source byte is actionable immediately, while the
+slow earlier-source arrangement retains its required bridge. No trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:51473-51608,70910-71029`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ standalone physics advances from frame 1538 to frame 2475
+  (`y_speed`, expected `-$0108` / actual `$0108`).
+- MGZ standalone animation advances from frame 1574 to frame 2496
+  (`player_animation_id`, expected Roll / actual Walk).
+- The focused trigger-platform suite passes all 11 tests, including explicit
+  earlier- and later-dash-slot visibility contracts.
+- MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ complete-run animation reaches green
+
+Branch `feature/ai-trace-animation-verification`, after the two-pass carry
+ownership milestone. When the CPU-side `Tails_Carry_Sonic` call releases
+Sonic, native `Tails_FlyingSwimming` still reaches the routine a second time
+after movement; with the carry flag clear, that call immediately decrements
+the cooldown. The engine suppressed the post-flight hook on the release frame,
+leaving the cooldown one tick late and moving a later proximity pickup from
+the CPU pass to the post-movement pass. Retaining that pending call restores
+the native pre-movement regrab, Tails flight mapping, and same-frame raw Sonic
+mapping. No trace hydration, route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:27186-27376,27553-27587`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics and animation are fully green across all recorded
+  frames.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused carry and MGZ handoff suites pass.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  fleet verification retains 44/58 green physics routes and advances
+  animation from 42/58 to 43/58 green routes.
+
+### 2026-07-16 -- CPU carry owns both native raw-animation passes
+
+Branch `feature/ai-trace-animation-verification`, after the carry-rearm reset
+milestone. Native `object_control=$03` skips Sonic's ordinary animation call;
+the shared animation timer is instead decremented once by the CPU routine's
+pre-movement `Tails_Carry_Sonic` pass and again by the post-flight pass. The
+engine had accidentally obtained the same two early ticks from one ordinary
+Sonic animation plus one carry call, then slowed to one tick after a late
+regrab transferred explicit mapping ownership. Carried mapping ownership now
+starts at attachment and the CPU controller executes both native carry passes.
+No trace hydration, route/frame predicate, comparator tolerance, or physics-
+state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:26208-26247,26903-27070,
+27222-27330,27553-27587`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics remains fully green.
+- MGZ complete-run animation advances from frame 36667 to frame 37411, leaving
+  two mismatches: Tails mapping `$A1` / `$A0` on that frame and Sonic mapping
+  `$91` / `$99` through frame 37412.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused carry and MGZ handoff suites pass.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  fleet verification retains 44/58 green physics routes and 42/58 green
+  animation routes.
+
+### 2026-07-16 -- MGZ carry rearm resets the raw animation phase
+
+Branch `feature/ai-trace-animation-verification`, after complete-run physics
+reached green. Native CPU carry-init routines `$0C` and `$14` call
+`sub_1459E` unconditionally before setting the active carry flag. MGZ can
+publish routine `$14` while a proximity regrab is already active; the engine
+previously skipped the initializer in that state and retained Sonic's earlier
+raw carry-animation frame/timer. Carry init now refreshes the attachment and
+shared animation bytes regardless of the current carry flag. No trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:26903-27014,27382-27415`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics remains fully green.
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`), with its remaining
+  error groups reduced from 38 to 9.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused carry, MGZ handoff, and required S3K regression suites pass.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  fleet verification retains 44/58 green physics routes and 42/58 green
+  animation routes.
+
+### 2026-07-16 -- MGZ complete-run physics reaches green
+
+Branch `feature/ai-trace-animation-verification`, after the retained-results
+camera milestone. Native `BuildSprites` continues publishing playable
+`render_flags` while the level is inactive for the pending results/fade
+transition. The shared frame step returned before its render-flag publication,
+so `Obj_MGZ2_BossTransition` indefinitely observed Sonic's last on-screen bit
+and could not rearm rescue Tails after the results handoff. Inactive transition
+frames now refresh playable render flags before returning, preserving the
+native previous-frame visibility predicate without a route or frame carve-out.
+No trace hydration, comparator tolerance, or physics-state synchronization was
+added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:30247-30270,36327-36394`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 39023 to fully green (all
+  recorded frames).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`; 38 errors, down from
+  46 because the downstream post-results animation mismatches are also gone).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused MGZ event suite passes, and the complete-run physics replay is
+  fully green.
+- AIZ and HCZ complete-run physics and animation remain fully green; full fleet
+  verification records 44/58 green physics routes and retains the 42/58 green
+  animation baseline.
+
+### 2026-07-16 -- MGZ results retain the boss camera handoff
+
+Branch `feature/ai-trace-animation-verification`, after the carry-input
+milestone. Native `loc_6C8F4` keeps publishing
+`Camera_min_X_pos=Camera_X_pos` while the retained boss waiter polls the
+capsule/results flag, then sets `Scroll_lock` instead of restoring the level's
+normal camera bounds when results finish. The generic engine results exit
+briefly restored those bounds after the earlier fixed transition-object pass,
+allowing one capped X/Y camera step before the transition relocked it next
+frame. The MGZ results variant now retains its arena bounds and asserts the
+post-results scroll lock, while the boss waiter republishes its native left
+boundary. Restoring Sonic's routine no longer changes camera state. No trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:143159-143199`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 38993 to frame 39023
+  (`tails_x`, expected `$3D96` / actual `$3C9C`; 51 errors, down from 53).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`; 46 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- Focused retained-boss-waiter and MGZ results-exit tests pass, covering the
+  pinned left boundary, retained arena bounds, and `Scroll_lock` handoff.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain the established 43/58 green physics and 42/58 green animation
+  route baselines.
+
+### 2026-07-16 -- MGZ carry input advances before jump release
+
+Branch `feature/ai-trace-animation-verification`, after the live boss-body
+publication milestone. Native routine `$18` is part of
+`Tails_FlyingSwimming`, so it advances the shared
+`Tails_CPU_auto_fly_timer` and writes `Ctrl_2_logical` before the later
+`Tails_Carry_Sonic` jump-release checks. The engine performed those release
+checks first, skipping one timer tick on Sonic's jump-out frame and delaying a
+later `$58` A/B/C flap. MGZ carry input generation now runs before every leader
+release path, while the later parentage/cooldown decisions retain their native
+order. No trace hydration, route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:26996-27070,27186-27376,
+27553-27639`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 38184 to frame 38993
+  (`camera_x`, expected `$3C80` / actual `$3C68`; 53 errors, down from 131).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`; its downstream tail
+  falls from 68 to 46 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused 35-test Tails carry suite passes with an explicit assertion that
+  the auto-flight timer advances on the jump-release frame.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
+### 2026-07-16 -- MGZ horizontal boss body publishes its live collision-list position
+
+Branch `feature/ai-trace-animation-verification`, after the positive carry-
+control milestone. The ROM's horizontal air-attack parent publishes a pointer
+to its live SST entry in `Collision_response_list`; the later player touch pass
+therefore observes the parent after the remaining object/V-int movement phases.
+The engine folds the composite drill graph into one provider queried from its
+retained parent phase. Pattern-zero body touch now projects those two native
+phases, while diagonal body positions and the separately phased drill children
+retain their existing publication rules. This restores Sonic's exact boss-body
+rebound at frame 37920 without changing attack cadence. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:142969-143017,143271-143321`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 37920 to frame 38184
+  (`tails_cpu_ctrl2_held`, expected Right / actual neutral; 131 errors).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`; its downstream tail
+  falls from 110 to 68 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused 52-test MGZ drilling-boss suite passes, including explicit live
+  horizontal-body and horizontal/diagonal child publication coverage.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
+### 2026-07-16 -- Carried Sonic retains native positive object control
+
+Branch `feature/ai-trace-animation-verification`, after the carrier-hurt
+transition milestone. Native `sub_1459E` writes `object_control=$03`: bit 0
+suppresses Sonic's movement, bit 1 suppresses his normal animator, but the
+`$A0` mask still permits TouchResponse. The engine encoded carry as a negative
+bit-7 takeover, so Sonic could not receive the later drill touch. Carry now
+uses the positive bits-0-to-6 control state, and Tails clears the carry word on
+the following hurt-routine entry, after Sonic's earlier player slot has run.
+The folded boss also retains pattern zero's already-published horizontal child
+position while diagonal attack patterns continue to project their later child
+slots, preventing the newly-visible touch path from inventing an earlier hit.
+No trace hydration, route/frame predicate, comparator tolerance, or physics-
+state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:21973-22022,27222-27415,
+29180-29192,142969-143017,143271-143321`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 37412 to frame 37920
+  (`x_speed`, expected `-$25` / actual `$25`; 114 errors, down from 153).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`; 110 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused 51-test MGZ drilling-boss suite and 58 carry/object-control tests
+  pass, covering positive-control touch eligibility and both horizontal and
+  diagonal child publication phases.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
+### 2026-07-16 -- Carrier hurt clears the native carry word immediately
+
+Branch `feature/ai-trace-animation-verification`, after merging current
+`develop` and advancing the folded drill-child touch. Native Tails' hurt path
+clears Player 1's `object_control` byte and the complete
+`Flying_carrying_Sonic_flag` word during the damage transition. The engine
+waited for Tails' later CPU update and installed a `$3C` release cooldown,
+leaving Sonic touch-suppressed when the boss drill reached him. Successful
+carrier damage now releases Sonic immediately and clears the cooldown byte as
+the native `clr.w` does. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:29187-29192`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics remains at frame 37412 but advances from a missed
+  hurt response to the final position phase (`y`, expected `$06E7` / actual
+  `$06E6`; 153 errors, down from 154).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`) while its downstream
+  tail falls from 112 to 110 errors.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused Tails carry/CPU-carry suites pass with immediate unlock and
+  zero-cooldown coverage.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
+### 2026-07-16 -- MGZ folded drill children publish from their later SST phase
+
+Branch `feature/ai-trace-animation-verification`, after the directional carry
+cooldown milestone. The ROM's drill-tip and lower drill children occupy later
+SST slots than `Obj_MGZEndBoss`: during routine `$20`, the parent runs
+`MoveSprite2`, then `loc_6C948`/`loc_6C9E8` refresh the child coordinates from
+that moved parent before adding the children to `Collision_response_list`.
+The engine folds those children into the parent, so their touch regions used
+the retained parent publication position and remained two vertical pixels
+behind. Folded child touch anchors now project the parent's native 8.8 motion
+for that moving routine only; the boss body keeps its own parent-slot position.
+No trace hydration, route/frame predicate, comparator tolerance, or physics
+state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:142969-142997,143271-143321`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 37411 to frame 37412 (`y`,
+  expected `$06E7` / actual `$06EC`; 154 errors, down from 384). Tails now
+  receives the native drill-tip hurt response at frame 37411.
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`) while its downstream
+  tail falls from 120 to 112 errors.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused 50-test MGZ drilling-boss suite passes with explicit moving-child
+  publication coverage.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
+### 2026-07-16 -- Directional carry release retains both native cooldown probes
+
+Branch `feature/ai-trace-animation-verification`, after the fractional attack
+milestone. Native `Tails_Carry_Sonic` initially writes `$12` on an A/B/C jump
+release, then replaces it with `$3C` whenever any direction is held in the high
+byte of `Ctrl_1`; only Left/Right additionally overwrite `x_vel`. While the
+carry flag is clear, the CPU routine reaches `loc_14534` before movement and
+`Tails_FlyingSwimming` reaches it again afterwards, consuming two cooldown
+ticks per frame. The engine always selected `$12` and counted only the first
+probe. It therefore accepted the f37408 pickup geometry three frames before
+the ROM. The release now reads the live held-direction state and the released
+MGZ carry retains the post-movement countdown/proximity pass. No trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:27186-27376,27553-27587`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 37408 to frame 37411
+  (`tails_x_speed`, expected `$0200` / actual `$0000`; 384 errors, down from
+  389). The successful pickup now occurs on the native frame.
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`) while its downstream
+  tail falls from 122 to 120 errors.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused sidekick-carry suite passes with vertical-direction `$3C`
+  selection coverage.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
+### 2026-07-16 -- MGZ configured attacks retain native fractional position
+
+Branch `feature/ai-trace-animation-verification`, after the folded-child
+publication milestone. Native `loc_6D710` writes only the integer words of
+`x_pos` and `y_pos`; the fractional words survive from the preceding air sweep.
+The engine instead cleared both fractions while configuring the folded boss,
+leaving the pre-player collision-list position one horizontal half-step behind
+the ROM. The configured attack now retains those fractions, and the folded
+child delay is refined from two phases to the single later SST publication
+phase. Tails consequently receives the native boss-body hurt response at the
+exact boundary. No trace hydration, route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:142975-143017,144769-144842`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 36974 to frame 37408 (`y`,
+  expected `$06F1` / actual `$06ED`; 389 errors, down from 515).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`; 122 errors, down from
+  129 through the later corrected boss contact).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused 49-test MGZ drilling-boss suite passes with fractional-position
+  preservation coverage.
+- AIZ and HCZ complete-run physics and animation remain fully green; the full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
+### 2026-07-16 -- MGZ air-attack wait retains folded child publication phases
+
+Branch `feature/ai-trace-animation-verification`, after the shared auto-fly
+timer milestone. Native `loc_6C646` configures the end boss and starts a `$1F`
+parent wait, after which the drill graph's later SST slots publish the refreshed
+child positions before the next player touch scan. The engine folds that graph
+into the parent and exposed its touch regions two passes early, producing an
+early boss rebound. The composite wait now retains those two concrete child-
+publication phases. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:142929-142960,143210-143321`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 36923 to frame 36974
+  (`tails_x_speed`, expected `$200` / actual `$000`; 515 errors, down from
+  844).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`; 129 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused 49-test MGZ drilling-boss suite passes with explicit configured-
+  attack publication-delay coverage.
+- AIZ and HCZ complete-run physics and animation remain fully green; the full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
+### 2026-07-16 -- MGZ carry preserves the shared auto-fly timer across CPU routines
+
+Branch `feature/ai-trace-animation-verification`, after the transition-rearm
+milestone. `Tails_CPU_auto_fly_timer` is a shared ROM global: the released
+rescue chase can leave it nonzero, and the transition object's intervening CPU
+routine `$12` plus carry routines `$14/$16` do not clear it. The engine treated
+the value as carry-local state and reset it on release, rescue wait, carry init,
+and the `$16->$18` handoff. Those transitions now preserve the counter, so the
+inherited `$3C` value reaches routine `$18` and immediately satisfies P1 Up's
+native `$20` flap threshold. No trace hydration, route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:26976-27070,27142-27268`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 36786 to frame 36923
+  (`x_speed`, expected `-$13C` / actual `$13C`; 844 errors, with a new
+  downstream carry-direction tail exposed).
+- MGZ complete-run animation remains at frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`) while its reported
+  tail falls from 128 to 122 errors.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused sidekick-carry suite passes with explicit
+  `$12->$14->$16->$18` inherited-timer coverage.
+- AIZ and HCZ complete-run physics and animation remain fully green; the full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
+### 2026-07-16 -- MGZ transition rearms an active carrier below its SST
+
+Branch `feature/ai-trace-animation-verification`, after the late carry-animation
+ownership milestone. The engine incorrectly applied
+`Flying_carrying_Sonic_flag` to both halves of `Obj_MGZ2_BossTransition`.
+Native `loc_16340` gates only Sonic's transition-line clamp with that flag;
+the later `loc_16384` off-screen-player/Tails-height branch writes CPU routine
+`$14` independently, even when the current carry flag remains set. The event
+now restarts that concrete carry-init phase whenever its native render/routine/
+height predicates pass. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:30225-30270`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 36650 to frame 36786
+  (`tails_cpu_ctrl2_held`, expected `$14` / actual `$04`; 692 errors, down from
+  1,533).
+- MGZ complete-run animation advances from frame 36654 to frame 36667
+  (`player_mapping_frame`, expected `$90` / actual `$91`; 128 errors, down from
+  189).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused MGZ2 end-boss event suite passes with active- and released-carry
+  rearm coverage.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
+### 2026-07-16 -- Late carry pickup transfers raw-animation ownership
+
+Branch `feature/ai-trace-animation-verification`, after the post-movement
+pickup milestone. A successful released-carry `loc_14542` probe at the end of
+the carrier body writes `object_control=$03`: Sonic's already-completed normal
+animation pass must not advance the shared animation bytes again on following
+frames, leaving `AniRaw_Tails_Carry` as the mapping owner. The post-movement
+pickup now publishes that ownership until carry release, which restores the
+normal player animation path. No trace hydration, route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:21973-22019,27222-27330`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run animation advances from frame 36641 to frame 36654
+  (`tails_animation_id`, expected `$23` / actual `$22`; 189 errors, down from
+  204).
+- MGZ complete-run physics remains at frame 36650 with 1,533 errors.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused Tails-carry and sidekick-carry suites pass.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
+### 2026-07-16 -- Released carry rechecks pickup after carrier movement
+
+Branch `feature/ai-trace-animation-verification`, after the carry-release input
+milestone. Native `Tails_FlyingSwimming` moves Tails before the later
+`Tails_Carry_Sonic` `loc_14542` proximity probe. When the engine's pre-body
+probe was one pixel outside the pickup window, it discarded the probe instead
+of checking the live post-movement carrier position. Released carry now retains
+that second probe while preserving the immediate path when the pre-body
+position is already inside the window. No trace hydration, route/frame
+predicate, comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:27186-27330,27553-27570`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 36640 to frame 36650 (`tails_x`,
+  expected `$3D93` / actual `$3DA0`; 1,533 errors, with the larger tail exposed
+  by the newly reached carry path).
+- MGZ complete-run animation advances from frame 36640 to frame 36641
+  (`player_mapping_frame`, expected `$91` / actual `$90`; 204 errors, with the
+  larger tail exposed by the newly reached carry path).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused sidekick-carry suite passes, including both immediate and
+  post-movement released-carry pickup paths.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
+### 2026-07-16 -- Carry release consumes the pre-body logical input
+
+Branch `feature/ai-trace-animation-verification`, after the end-boss air-entry
+milestone. Native `Tails_FlyingSwimming` consumes the current
+`Ctrl_2_logical` direction before the later `Tails_Carry_Sonic` call observes
+Sonic's A/B/C press and releases him. The engine prepared that release before
+carrier movement and cleared the transient direction, so the release pass ran
+apex drag without its preceding Right acceleration. Jump release now restores
+the already-published logical input for that carrier body and clears the latch
+on the following released-cooldown pass. No trace hydration, route/frame
+predicate, comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:27553-27570,27186-27268`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 36535 to frame 36640 (`x`,
+  expected `$3DA3` / actual `$3D94`; 1,012 errors, down from 1,021), aligning
+  its frontier with animation.
+- MGZ complete-run animation remains at frame 36640 with 145 errors.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused sidekick-carry suite passes, including the release-pass logical
+  input regression.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
+### 2026-07-16 -- MGZ end-boss air entry preserves composite SST phases
+
+Branch `feature/ai-trace-animation-verification`, after the flying-carry-order
+milestone. The engine owns the drilling boss's later-slot child objects inside
+one composite instance. Publishing the post-collapse air approach immediately
+after the parent rise therefore put its live touch anchor two SST phases ahead
+of the ROM: at the first recorded attack it was two pixels left and six pixels
+above the native parent, causing Sonic's velocity-negate bounce one player pass
+early. The air-rise wait now retains those two composite object phases before
+publishing the approach, without shifting the already-matched collapse encounter.
+No trace hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:142900-142970`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 36084 to frame 36535
+  (`tails_x_speed`, expected `$025D` / actual `$0246`; 1,021 errors, down from
+  1,226).
+- MGZ complete-run animation advances from frame 36109 to frame 36640
+  (`player_animation_id`, expected carried `$22` / actual Roll `$02`; 145
+  errors, down from 188).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused 49-test drilling-Robotnik suite passes.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
+### 2026-07-16 -- Flying carry updates vertical speed before horizontal drag
+
+Branch `feature/ai-trace-animation-verification`, after the shared raw-carry-
+animation milestone. Native `Tails_FlyingSwimming` calls
+`Tails_Move_FlySwim` before `Tails_InputAcceleration_Freespace`. At the flight
+apex this changes `y_vel` from `-$08` to zero before the horizontal drag test,
+so a right-input step retains its full `$18` acceleration. The engine ran the
+CPU carry's vertical controller later, causing the stale negative speed to
+subtract `$07` from both Tails and carried Sonic. The concrete flying-carry
+path now updates vertical state before airborne steering and reuses the result
+for movement. No trace hydration, route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:27553-27639,28330-28401`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 35940 to frame 36084
+  (`y_speed`, expected `$02A0` / actual `-$02A0`; 1,226 errors, down from
+  1,274).
+- MGZ complete-run animation remains at frame 36109 with 188 errors.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green; full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+
+### 2026-07-16 -- Tails carry publishes native shared raw animation state
+
+Branch `feature/ai-trace-animation-verification`, after the literal-airborne-
+status milestone. `sub_1459E` writes the carried id to both `anim` and
+`prev_anim` and clears the shared animation frame/timer bytes. Scripted pickup
+then falls through to `Tails_Carry_Sonic`, whose `AniRaw_Tails_Carry` pass
+shares those bytes with Sonic's earlier normal animation pass and immediately
+publishes mapping `$91`. The carry controller now exposes both writes in their
+native phases and advances the raw carry sequence after carrier movement. No
+trace hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:27186-27330,27382-27415`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run animation advances from frame 35787 to frame 36109
+  (`player_animation_id`, expected Roll `$02` / actual carried `$22`; 188
+  errors, down from 213).
+- MGZ complete-run physics remains at frame 35940 (`tails_x_speed`, expected
+  `$00E7` / actual `$00E0`; 1,274 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- CNZ complete-run animation also advances from frame 1 to frame 108
+  (`player_animation_id`, expected Walk `$00` / actual carried `$22`; 2,598
+  errors, down from 2,602); its physics and standalone frontiers are unchanged.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The focused carry-controller suites pass; full sweeps retain 43/58 green
+  physics routes and 42/58 green animation routes.
+
+### 2026-07-16 -- MGZ routine `$14` writes literal airborne status
+
+Branch `feature/ai-trace-animation-verification`, after the deferred rescue-
+attachment milestone. `loc_140CE` writes `Status_InAir` as a literal byte
+before attaching Sonic, clearing Tails's stale standing/facing/roll/water bits
+and detached engine ride entry. The engine only set the air bit, so the deleted
+collapse carrier's standing state immediately grounded Tails and suppressed the
+native flight-gravity/carry pass. The MGZ carry-init path now performs the
+literal status transition while the generic CNZ `$0C` path retains its own
+status ownership. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:26979-27014`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 35787 to frame 35940
+  (`tails_x_speed`, expected `$00E7` / actual `$00E0`; 1,274 errors).
+- MGZ complete-run animation remains at frame 35787
+  (`player_animation_id`, expected carried `$22` / actual Roll `$02`), with
+  its error tail reduced from 312 to 213.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green; the
+  established 43/58 physics and 42/58 animation fleet baselines are unchanged.
+- The focused MGZ end-boss and carry-controller suites pass.
+
+### 2026-07-16 -- MGZ carry begins from CPU routine `$14`
+
+Branch `feature/ai-trace-animation-verification`, after the rescue-countdown
+milestone. The transition object's later SST pass only writes Tails's native
+word position and CPU routine `$14`; it preserves fractional position/status
+and leaves `Flying_carrying_Sonic_flag` clear. The engine instead attached
+Sonic immediately, cleared Tails's subpixels, and exposed generic carry routine
+`$0C`. The object-slot write is now separate from the following Player 2 pass,
+where `loc_140CE` performs the attachment and advances to routine `$16`.
+MGZ's existing ascent/flight states now publish their native `$14/$16/$18`
+routine words. No trace hydration, route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:26979-27014,30247-30270`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 35786 to frame 35787
+  (`y_speed`, expected `$0008` / actual `$0000`; 1,419 errors).
+- MGZ complete-run animation remains at frame 35787, now at
+  `player_animation_id` (expected carried `$22` / actual Roll `$02`; 312
+  errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green; the full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+- The focused MGZ end-boss and carry-controller suites pass.
+
+### 2026-07-16 -- MGZ rescue waits for its allocated transition SST pass
+
+Branch `feature/ai-trace-animation-verification`, after the cleared-interact-
+slot milestone. `Obj_MGZEndBoss` allocates `Obj_MGZ2_BossTransition` into an
+earlier SST slot after that slot's current object pass has already elapsed.
+The manager bridge started the native `$168` countdown immediately from the
+allocation request, promoting Tails from rescue-wait one pass early. The
+countdown now includes that concrete pending allocation pass, so native slot
+14 remains at `loc_16334` through frame 35785 and reaches `loc_16340` on frame
+35786. No trace hydration, route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:30200-30270,142849-142866`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 35785 to frame 35786 (`x`,
+  expected `$3CCB` / actual `$3CC0`; 1,419 errors).
+- MGZ complete-run animation advances from frame 35786 to frame 35787
+  (`tails_animation_id`, expected carried `$22` / actual Balance `$06`; 309
+  errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green; the full
+  sweeps retain 43/58 green physics routes and 42/58 green animation routes.
+- The focused MGZ end-boss event suite passes.
+- The remote checkpoint found local `develop` and `origin/develop` both at
+  `7ed40f0cdcde`; no merge was required.
+
+### 2026-07-16 -- S3K balance dereferences a cleared persistent interact slot
+
+Branch `feature/ai-trace-animation-verification`, after the terminal carrier-
+deletion milestone. Tails retains both `Status_OnObj` and the byte index in
+`interact(a0)` after slot 15 is deleted. Native `Tails_InputAcceleration_Path`
+still dereferences that cleared SST, reading zero status, width, and X words;
+its signed object-edge comparison therefore selects `Balance`. The engine's
+ride table retained a destroyed Java object reference and skipped balance.
+Object-edge balance now gives the persistent empty interact slot priority and
+models the cleared-SST words for this shared stale-status interval. No trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:27811-27869,106955-106970`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run animation advances from frame 35741 to frame 35786
+  (`player_animation_id`, expected Roll `$02` / actual carried `$22`; 313
+  errors).
+- MGZ complete-run physics remains at frame 35785 (`tails_x`, expected `$3C90`
+  / actual `$3CC0`; 1,437 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- Focused cleared-interact-slot balance coverage plus the MGZ collapse/end-boss
+  suites, rewind guards, and trace-invariant guard pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ terminal collapse carriers delete before their final snap
+
+Branch `feature/ai-trace-animation-verification`, after the all-columns lifetime
+milestone. The production ScreenEvents bridge publishes after dynamic objects,
+so the raw scroll supplier already projected the pending event step but the
+carrier deletion predicate did not project the accompanying all-columns
+completion. On the transition frame the carrier therefore applied one extra
+ride snap before `SCREEN_EVENT_MOVE_BG` became visible. The same concrete
+pending accumulator state now drives both projections: if the next collapse
+dispatch completes all ten columns, the carrier deletes before contact. No
+trace hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:106515-106595,106955-106970`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35740 to frame 35785
+  (`tails_x`, expected `$3C90` / actual `$3CC0`; 1,437 errors).
+- MGZ complete-run animation remains at frame 35741 (`tails_animation_id`,
+  expected `Duck` / actual `Skid`; 313 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The focused pending-completion deletion coverage plus the MGZ collapse/end-
+  boss suites, rewind guards, and trace-invariant guard pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ capped columns continue until the full collapse completes
+
+Branch `feature/ai-trace-animation-verification`, after the terminal-overshoot
+milestone. `MGZ2_LevelCollapse` advances all ten HScroll-table velocity and
+position longwords on every active dispatch, including columns whose temporary
+draw displacement has already reached `$2E0`. The engine instead froze each
+column independently at the cap, so column zero stopped eight frames before the
+last delayed column completed. Raw carrier motion now continues for the full
+routine lifetime while the draw values stay capped. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:106515-106565`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35733 to frame 35740
+  (`tails_y`, expected `$0A4C` / actual `$0A51`; 1,437 errors).
+- MGZ complete-run animation remains at frame 35741 (`tails_animation_id`,
+  expected `Duck` / actual `Skid`; 313 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The focused capped-column lifetime coverage plus the MGZ collapse/end-boss
+  suites, rewind guards, and trace-invariant guard pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ collapse carriers retain terminal accumulator overshoot
+
+Branch `feature/ai-trace-animation-verification`, after the native SST-order
+milestone. `MGZ2_LevelCollapse` clamps only the temporary displacement used by
+the VScroll draw and completion count to `$2E0`; its per-column HScroll-table
+16:16 accumulator remains uncapped. `Obj_MGZ2LevelCollapseSolid` reads that raw
+high word later in the object pass, so the terminal column-zero carrier reaches
+`$2E5` rather than stopping at the visual cap. The carrier projection now uses
+the raw accumulator while the renderer and completion logic retain their native
+`$2E0` cap. No trace hydration, route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:106515-106565,106955-106970`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35732 to frame 35733
+  (`tails_y`, expected `$0A2B` / actual `$0A26`; 1,437 errors).
+- MGZ complete-run animation remains at frame 35741 (`tails_animation_id`,
+  expected `Duck` / actual `Skid`; 313 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The focused raw-accumulator/capped-draw regression coverage plus the MGZ
+  collapse suite, rewind guards, and trace-invariant guard pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ transition and collapse solids execute in native SST order
+
+Branch `feature/ai-trace-animation-verification`, after the collapse-carrier
+interact-pointer milestone. `Obj_MGZ2_BossTransition` occupies native slot 14,
+before the collapse solids allocated into slots 15 onward. The engine modeled
+the transition as a post-object event, so its clamp erased later collapse-solid
+separation and also synthesized `Status_InAir` while writing Player 1 routine
+`$02`. The transition now runs through the fixed-object phase after player
+physics and before dynamic objects, and its routine write leaves the player's
+status bits untouched. The later carrier therefore sees the clamped position
+and can preserve native standing/pushing state.
+
+This exposed the shared S3K `SolidObject_cont` underside branch: unlike S1/S2,
+S3K `loc_1E0E0` separates every airborne bottom overlap and clears `y_vel`
+even when the incoming velocity is zero or positive. The existing typed
+air-collision rules now own that game-wide difference; no MGZ-specific solid
+exception was added. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:30225-30246,41065-41084,
+41541-41577,41608-41637,106955-106970`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35652 to frame 35732
+  (`tails_y`, expected `$0A26` / actual `$0A21`; 1,437 errors).
+- MGZ complete-run animation remains at frame 35741 (`tails_animation_id`,
+  expected `Duck` / actual `Skid`; 313 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- Focused shared solid-object coverage and the MGZ end-boss/collapse suites plus rewind coverage,
+  static-state rewind coverage, and trace-invariant guards pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ collapse carriers publish Tails' interact pointer word
+
+Branch `feature/ai-trace-animation-verification`, after the rescue-logical-
+input milestone. S3K's `TailsCPU_UpdateObjInteract` latches the high word of
+the stood-on SST's operation pointer, not its object ID. The live collapse
+carrier contact was correct, but the carrier did not implement the shared ROM
+pointer contract, so Tails retained `$0002` from an older solid instead of
+`Obj_MGZ2LevelCollapseSolid`'s `$0005180A` high word `$0005`. The carrier now
+exposes that native word. The reusable S3K object pitfall catalogue now records
+this requirement as P36 in both skill trees. No trace hydration, route/frame
+predicate, comparator tolerance, or physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:26816-26843,106955-106970`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35631 to frame 35652
+  (`y_speed`, expected `$0000` / actual `$00A8`; 1,464 errors).
+- MGZ complete-run animation remains at frame 35741 (`tails_animation_id`,
+  expected `Duck` / actual `Skid`; 315 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The MGZ collapse-event suite plus rewind coverage, static-state rewind
+  coverage, and trace-invariant guards pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ rescue-wait routine clears the logical input word
+
+Branch `feature/ai-trace-animation-verification`, after the rescue-wait phase
+milestone. Native CPU routine `$12` dispatches `loc_140C6`, whose only action
+is clearing the complete `Ctrl_2_logical` word. The engine cleared Tails'
+movement booleans but retained the trace-visible held/pressed logical latches,
+so Right survived after the routine transition. `MGZ_RESCUE_WAIT` now uses the
+existing logical-word clear path. No trace hydration, route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:26976-26978`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35611 to frame 35631
+  (`tails_cpu_interact`, expected `$05` / actual `$02`; 1,526 errors).
+- MGZ complete-run animation remains at frame 35741 (`tails_animation_id`,
+  expected `Duck` / actual `Skid`; 315 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The MGZ end-boss event suite plus rewind coverage, static-state rewind
+  coverage, and trace-invariant guards pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ rescue wait publishes before the transition timer gate
+
+Branch `feature/ai-trace-animation-verification`, after the rescue-clamp
+subpixel milestone and the requested remote-develop check (`develop` and
+`origin/develop` both at `7ed40f0cdcde`, already merged). Once Sonic is
+off-screen and Tails has fallen below the transition object's `y_pos`, native
+`loc_16384` writes `Tails_CPU_routine=$12` before it tests the object's still-
+running `$168` timer. The engine tested the timer first, leaving Tails in
+normal follow routine `$06` with stale logical input. The event now publishes
+the rescue-wait routine at that native phase without repositioning Tails until
+the timer expires. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:30247-30264`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35610 to frame 35611
+  (`tails_cpu_ctrl2_held`, expected `$00` / actual `$08`; 1,527 errors).
+- MGZ complete-run animation advances from frame 35635 to frame 35741
+  (`tails_animation_id`, expected `Duck` / actual `Skid`; 315 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The MGZ end-boss event suite plus rewind coverage, static-state rewind
+  coverage, and trace-invariant guards pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ boss-transition clamp preserves player subpixel Y
+
+Branch `feature/ai-trace-animation-verification`, after the collapse-standing
+milestone. `Obj_MGZ2_BossTransition` clamps a falling Sonic to its own
+`y_pos` with a word write, leaving the low fractional word of Sonic's 16:16
+position untouched. The engine used a full centre-position setter and erased
+that fraction at the first rescue clamp. The event now routes the native
+`y_pos` write through `NativePositionOps`, with focused coverage for the
+retained `$1000` fraction. No trace hydration, route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:30225-30231`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35596 to frame 35610
+  (`tails_cpu_routine`, expected `$12` / actual `$06`; 1,571 errors).
+- MGZ complete-run animation remains at frame 35635 (`tails_animation_id`,
+  expected `Skid` / actual `Roll`; 173 errors).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The MGZ end-boss event suite plus rewind coverage, static-state rewind
+  coverage, and trace-invariant guards pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ collapse carriers retain SST standing state while scrolling
+
+Branch `feature/ai-trace-animation-verification`, after the pending-scroll
+milestone. `Obj_MGZ2LevelCollapseSolid` rewrites its `y_pos` from the collapse
+scroll word every SST pass, but its Player 1/2 standing bits remain in that
+same live SST `status` byte. The engine keyed those bits through the carrier's
+moving dynamic-spawn record, so the key changed with Y and a jump-off lost the
+retained bit before `SolidObjectFull2_1P` could consume it. Collapse carriers
+now keep their standing latch on the live instance and use the full-solid
+stale-airborne return: `loc_1DCF0` clears the bit and returns `d4=0` instead of
+falling through to `loc_1E154`'s one-pixel upward lift. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:41065-41084,41608-41637,
+106955-106970`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35531 to frame 35596
+  (`y_sub`, expected `$1000` / actual `$0000`).
+- MGZ complete-run animation remains at frame 35635 (`tails_animation_id`,
+  expected `Skid` / actual `Roll`).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The collapse-event suite plus rewind coverage, static-state rewind coverage,
+  and trace-invariant guards pass.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ collapse carriers read the pending ScreenEvents scroll
+
+Branch `feature/ai-trace-animation-verification`, after the collapse-carrier
+allocation milestone. Native `MGZ2_LevelCollapse` advances each HScroll-table
+column before `Obj_MGZ2LevelCollapseSolid` reads that word for its collision Y.
+The engine's canonical event call occurs after dynamic objects, so carriers
+were resolving contact against the preceding one-pixel column position. Their
+event-owned supplier now projects exactly the pending accumulator step during
+the object pass; the event publishes the same result later in the frame, so
+stored and rendered collapse state remains single-writer. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:106515-106545,106955-106970`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35514 to frame 35531 (`y`,
+  expected `$0782` / actual `$0783`).
+- MGZ complete-run animation remains at frame 35635 (`tails_animation_id`,
+  expected `Skid` / actual `Roll`).
+- The collapse-event suite plus rewind coverage, static-state rewind coverage,
+  and trace-invariant guards pass.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ collapse carriers retain ScreenEvents and Full2 phase
+
+Branch `feature/ai-trace-animation-verification`, after the visible-Tails
+handoff milestone. The boss SST's `Events_fg_4` write, the positive
+`Screen_shake_flag` owner, `MGZ2SE_Collapse`, and the newly allocated carrier
+SSTs are distinct native phases. The engine consumed the flag, decremented the
+new `$14` counter, cleared the layout, and exposed carriers too early. It also
+treated the deliberately invisible carriers as ordinary `SolidObjectFull`
+objects, so their new-contact path was suppressed by the render gate. Collapse
+startup now preserves the intervening ScreenEvents observations, and the
+carriers use their real `SolidObjectFull2` inclusive-edge/off-screen profile.
+No trace hydration, route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:41065-41084,106412-106512,
+106955-106970,142844-142866`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35445 to frame 35514 (`y`,
+  expected `$0765` / actual `$0764`).
+- MGZ complete-run animation advances from frame 35445 to frame 35635
+  (`tails_animation_id`, expected `Skid` / actual `Roll`).
+- The 12 collapse-event tests pass, including request/counter phase, invisible
+  `SolidObjectFull2`, layout-clear, scroll, and rewind-recreation coverage.
+- Rewind coverage, static-state rewind coverage, and trace-invariant guards pass.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ boss transition preserves visible Tails
+
+Branch `feature/ai-trace-animation-verification`, after the V-int touch-phase
+milestone. `Obj_MGZ2_BossTransition` tests Player 2's live
+`render_flags.on_screen` bit before writing the transition coordinate, object
+entry, or `Tails_CPU_routine=$12`. The engine instead reinitialised every
+existing Tails slot, teleporting a still-visible hurt Tails out of his native
+fall on the boss-impact frame. The handoff now leaves a visible Player 2 slot
+untouched and only prepares an off-screen or absent Tails for the later rescue.
+No trace hydration, route/frame predicate, comparator tolerance, or
+physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:30200-30221`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35425 to frame 35445
+  (`tails_air`, expected grounded / actual airborne).
+- MGZ complete-run animation advances from frame 35425 to frame 35445
+  (`tails_mapping_frame`, expected `$01` / actual `$07`). Physics and
+  animation remain aligned.
+- `TestSonic3kMgz2EndBossEvents` passes all 32 tests, including the visible-
+  Tails preservation and off-screen rescue preparation cases.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- S3K V-int phase and multi-region Insta-Shield touch
+
+Branch `feature/ai-trace-animation-verification`, after the floating-platform
+milestone. Schema-v6 S3K recordings sampled `$FFFFFE12`, the life-count word,
+instead of `V_int_run_count` at `$FFFFFE0C`; the resulting stable `$0800` /
+`$0900` / `$0A00` values cannot seed object routines whose draw-and-touch
+cadence reads `V_int_run_count+3`. Replay now reconstructs only that missing
+low-bit phase from the BK2 VBlank cursor while retaining the established
+general object clock and lost-ring floor cadence. The corrected phase exposed
+a shared collision omission: the 48x48 Insta-Shield scan temporarily sets
+`Status_Invincible`, but multi-region touch providers did not honor the same
+HURT early-return already implemented for ordinary objects. Multi-region
+providers now follow the native early return, so the drilling-Robotnik flame
+children neither hurt an active Insta-Shield nor lose their real alternating
+touch phase. No trace hydration, route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:543,20610-20640,21003-21047,
+142844-142850`; `docs/skdisasm/sonic3k.lst:1382,3641`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 35373 to frame 35425
+  (`tails_x_sub`, expected `$EB00` / actual `$0000`).
+- MGZ complete-run animation advances from frame 35373 to frame 35425
+  (`tails_animation_id`, expected `Hurt` / actual `Walk`). Physics and
+  animation remain aligned.
+- The trace parsing, shared touch-response, and drilling-Robotnik focused
+  suites pass, including the corrected V-int phase and multi-region
+  Insta-Shield regression cases.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ floating platforms use the native SolidObjectTop surface
+
+Branch `feature/ai-trace-animation-verification`, after the reversed trigger-
+platform milestone. `Obj_FloatingPlatform` loads `height_pixels`, increments
+the value, and passes that `height+1` surface as `d3` to `SolidObjectTop`.
+The engine instead tested the unincremented height, then applied a
+`PlatformObject_ChkYRange`-style absolute snap after the landing reset. That
+compensation produced the right result for ordinary rolling landings but
+placed a non-rolling Tails with stale rolling radii one pixel high. Floating
+platforms now expose the real `SolidObjectTop` profile: `height+1` participates
+in the contact itself, exact `d0=0` is rejected, and the relative
+`y_pos += d0 + 3` result survives. No trace hydration, route/frame predicate,
+comparator tolerance, or physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:50826-50843,41982-42035`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 34610 to frame 35373
+  (`tails_x_speed`, expected `$01C0` / actual `-$0200`).
+- MGZ complete-run animation remains at frame 35373 (`tails_animation_id`,
+  expected `Roll` / actual `Hurt`). Physics and animation are now aligned.
+- `TestFloatingPlatformObjectInstance` passes all 2 tests, including the
+  native surface, zero-boundary, and relative-snap profile assertions.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ reversed trigger replay follows placement direction
+
+Branch `feature/ai-trace-animation-verification`, after the background-terrain
+release milestone. The trigger-platform sibling checkpoint compensates for a
+backwards `Load_Sprites` allocation: a right-hand subtype-`$1x` landing
+platform can execute before its left-hand subtype-`$2x` sibling even when the
+engine's placement slots have the opposite order. The compensation was also
+replaying right-hand siblings, whose ordinary forward-order `SolidObjectFull`
+had already executed; at the raised-terrain pair this published
+`Status_Push` one frame early. The checkpoint now consumes the placement
+direction that actually distinguishes the reversed allocation. No trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:37640-37762,41370-41534,
+70910-71029`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 34344 to frame 34610
+  (`tails_y`, expected `$0771` / actual `$0770`).
+- MGZ complete-run animation remains at frame 35373 (`tails_animation_id`,
+  expected `Roll` / actual `Hurt`).
+- `TestS3kMgzTriggerPlatformObject` passes all 10 tests, including both the
+  reversed left-sibling and already-executed right-sibling cases.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ background deform releases terrain-overlapping riders
+
+Branch `feature/ai-trace-animation-verification`, after the delayed rise-
+acceleration milestone. MGZ2's normal background deform checks the live
+`Background_collision_flag` after its object pass and dispatches
+`Go_CheckPlayerRelease`. For each native object standing bit,
+`CheckPlayerReleaseFromObj` runs `SonicOnObjHitFloor`; a zero or negative floor
+distance clears `Status_OnObj`, sets `Status_InAir`, and clears the object's
+standing bit. The engine now exposes that operation through the shared solid-
+contact owner and calls it from MGZ's post-object event phase under the existing
+ROM-derived background-collision flag. No trace hydration, route/frame
+predicate, comparator tolerance, or physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:42120-42134,107060-107075,
+115079-115096`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 34231 to frame 34344
+  (`status_byte`, expected `$08` / actual `$28`).
+- MGZ complete-run animation advances from frame 34264 to frame 35373
+  (`tails_animation_id`, expected `Roll` / actual `Hurt`).
+- The focused shared release tests and MGZ BG-rise event/headless suites pass
+  all 31 selected tests.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ rise acceleration starts after its latch dispatch
+
+Branch `feature/ai-trace-animation-verification`, after the late Tails push-
+grace milestone. `Obj_MGZ2BGMoveSonic` tests its `$39` acceleration latch at
+`loc_51B44`; only the initially-clear path later compares the player against
+X=`$3D50` and sets the latch at `loc_51B6C`. The threshold-crossing dispatch
+therefore still adds `$6000` to the subpixel accumulator, and the one-pixel
+path begins on the following object pass. The engine tested the newly written
+latch immediately and lifted both player slots one extra pixel. No trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:107276-107323`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 33440 to frame 34231 (`air`,
+  expected `1` / actual `0`).
+- MGZ complete-run animation remains at frame 34264 (`player_mapping_frame`,
+  expected `$06` / actual `$05`).
+- The focused MGZ BG-rise event and headless integration suites pass all 29
+  tests.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- Late S3K push grace yields to the native follow nudge
+
+Branch `feature/ai-trace-animation-verification`, after the rise-object phase
+milestone. `Tails_CPU_Normal` tests the current `Status_Push` bit before its
+ordinary history-target steering and `loc_13E0A` one-pixel position nudge. At
+MGZ frame 33319, the ROM's current Tails status is clear, but the engine still
+treated the final portion of its terrain-inferred push continuity as a live
+push and bypassed the follow tail. The early continuity window remains intact
+for delayed object-publication cases; its last six frames now fall through to
+the native steering path when there is no live push. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:26683-26741`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 33319 to frame 33440 (`y`,
+  expected `$0A59` / actual `$0A58`).
+- MGZ complete-run animation advances from frame 33375 to frame 34264
+  (`player_mapping_frame`, expected `$06` / actual `$05`).
+- The focused sidekick CPU follow-parity suite passes all 99 tests.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ rise object consumes the completed player pass
+
+Branch `feature/ai-trace-animation-verification`, after the empty-background-
+row milestone. `Obj_MGZ2BGMoveSonic` is an independently allocated SST that
+runs after both fixed player slots. When Sonic first crosses `x_pos > $36D0`,
+its setup falls straight through to the first `$6000` accumulator update on
+that same object pass. The engine had combined this work with the earlier
+background-event collision bridge, so it observed the crossing one frame late.
+The rise object now runs after player physics and subtracts each integer lift
+delta through `NativePositionOps`, preserving the players' 16-bit subpixels as
+the ROM's word-only `y_pos` writes do. No trace hydration, route/frame
+predicate, comparator tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:107241-107323`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 32945 to frame 33319
+  (`tails_x`, expected `$3B27` / actual `$3B28`).
+- MGZ complete-run animation advances from frame 32951 to frame 33375
+  (`tails_animation_id`, expected `Wait` / actual `Duck`).
+- The focused MGZ BG-rise event, headless integration, and rewind-schema suite
+  passes all 47 tests.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- S3K background collision honors empty layout rows
+
+Branch `feature/ai-trace-animation-verification`, after the collision-
+publication milestone. S3K's `Find_Tile_BG` selects one of 32 background
+layout rows from the 12-bit collision Y coordinate; it does not wrap that
+selection through the smaller visual background height. MGZ2 declares seven
+visual rows and leaves the remaining interleaved background row pointers zero,
+so wrapping the negative state-eight collision coordinate produced a false
+solid row beneath Sonic and Tails. The level now retains which ROM row pointers
+are present, and background probes ignore absent rows. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:19115-19154,102196-102209` and
+the MGZ2 layout header/row-pointer table selected by the locked-on ROM.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 32315 to frame 32945
+  (`tails_y`, expected `$0AD1` / actual `$0AD2`).
+- MGZ complete-run animation advances from frame 32315 to frame 32951
+  (`player_animation_id`, expected `Wait` / actual `Walk`).
+- The focused S3K level-loading, ground-sensor, mutable-level, MGZ BG-rise,
+  headless integration, and rewind-schema suite passes all 109 tests.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full sweeps retain 43/58 green physics routes and 42/58 green animation
+  routes; every previously green route stays green.
+
+### 2026-07-16 -- MGZ collision publication follows the refreshed player pass
+
+Branch `feature/ai-trace-animation-verification`, after the BG-rise plane-
+refresh milestone. The delayed draw really does consume its remaining fourteen
+rows across seven `ScreenEvents` calls, but the event bridge executes before
+player physics whereas `MGZ2BGE_Normal` publishes state-eight background
+collision afterward. Retaining the cleared flag for that eighth following
+player pass prevents `CalcRoomInFront` from seeing the newly selected BG plane
+one dispatch early. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:103560-103605,107045-107130`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 32314 to frame 32315 (`x`,
+  expected `$3509` / actual `$34F5`).
+- MGZ complete-run animation advances from frame 32314 to frame 32315
+  (`player_mapping_frame`, expected `$23` / actual `$B8`).
+- The focused MGZ BG-rise event, headless integration, and rewind-schema tests
+  pass (46 support tests plus the expected frontier failure).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full physics and animation sweeps retain their established green routes;
+  the MGZ-only phase change introduces no new failing trace.
+
+### 2026-07-16 -- MGZ background rise retains its plane-refresh delay
+
+Branch `feature/ai-trace-animation-verification`, after the fire-shield wall
+milestone. `MGZ2BGE_Normal` clears `Background_collision_flag` when state zero
+promotes `Events_bg` to state eight, then switches `Events_routine_bg` to the
+vertical plane-refresh handler. That handler consumes two of the fifteen
+delayed rows per `ScreenEvents` call and skips `MGZ2_BGEventTrigger`, leaving
+background collision disabled for seven following frames. The engine now
+retains that concrete refresh phase before state eight enables collision while
+continuing to update the independently allocated BG-rise Sonic object. No
+trace hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:103535-103605,107045-107130`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 32308 to frame 32314 (`y`,
+  expected `$08BC` / actual `$08BE`).
+- MGZ complete-run animation advances from frame 32308 to frame 32314
+  (`player_mapping_frame`, expected `$22` / actual `$B7`).
+- The focused MGZ BG-rise event, headless integration, and rewind-schema tests
+  pass.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-16 -- S3K standard walls honor the fire-shield push bypass
+
+Branch `feature/ai-trace-animation-verification`, after the drilling gradual-
+bound milestone. `Obj_BreakableWall` snapshots the player's pre-contact
+`x_vel` before `SolidObjectFull`, then normally requires the wall's native
+pushing bit before accepting a Roll-speed break. The ROM explicitly branches
+around that push-bit test when `status_secondary` has the fire-shield bit set;
+the engine instead stopped the dash and returned before its existing
+animation/speed checks. The standard wall now recognizes that concrete shield
+state, restores the saved `-$0800` dash speed, applies the native four-pixel
+`x_pos` step, and converts the wall SST into fragments. The Roll and speed
+gates remain in force. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:45657-45766`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 31890 to frame 32308 (`x`,
+  expected `$34D8` / actual `$34D5`; the focused diagnostic run also reports
+  a one-pixel Y mismatch on that frame).
+- MGZ complete-run animation advances from frame 31894 to frame 32308
+  (`player_mapping_frame`, expected `$24` / actual `$B9`).
+- The focused S3K breakable-wall suite passes, including a non-pushing
+  fire-shield dash that restores the ROM-saved velocity and X step.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-16 -- MGZ drilling cleanup allocates its native gradual-bound SST
+
+Branch `feature/ai-trace-animation-verification`, after the drilling setup-
+dispatch milestone. `loc_6C200` does not leave the quake-arena boundary under
+the level-event routine: it uses `AllocateObject` to create an independent
+`Obj_IncLevEndXGradual` or `Obj_DecLevStartXGradual` SST with its own `$4000`
+longword accumulator. The allocation searches from the start of SST, so the
+first appearance wraps to an already-visited lower slot while the third uses a
+later slot and runs on the same `ExecuteObjects` pass. Preserving that concrete
+slot-relative phase releases the third arena's `$32C0` left boundary on the
+recorded camera frame. No trace hydration, route/frame predicate, comparator
+tolerance, or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:142620-142706,178159-178198`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 31797 to frame 31890 (`x`,
+  expected `$320F` / actual `$320B`).
+- MGZ complete-run animation remains at frame 31894
+  (`player_mapping_frame`, expected `$96` / actual `$98`).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-16 -- MGZ drilling mini-boss retains native setup dispatches
+
+Branch `feature/ai-trace-animation-verification`, after the fast trigger-
+platform milestone. The engine had folded `Obj_MGZ2DrillingRobotnik`'s initial
+entry, `Obj_Wait` completion, `Obj_MGZ2DrillingRobotnikGo`, and
+`Obj_MGZ2DrillingRobotnikStart` too tightly. ROM leaves the freshly written
+`$2E=120` timer untouched on the initial entry, calls its callback only after
+signed underflow, and gives both the Go and Start/setup routines their own SST
+passes before routine 2 promotes the drill drop. Restoring those concrete
+routine phases places the boss at `$0743` instead of `$0736` on frame 31641,
+preventing Sonic's three-frame-early attack bounce and the resulting Tails
+Hurt path. No trace hydration, route/frame predicate, comparator tolerance,
+or physics-state synchronization was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:142389-142490,177949-177959`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 31641 to frame 31797
+  (`camera_x`, expected `$32BF` / actual `$32C0`).
+- MGZ complete-run animation advances from frame 31643 to frame 31894
+  (`player_mapping_frame`, expected `$96` / actual `$98`).
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-16 -- MGZ fast trigger platforms observe earlier dash SST writes
+
+Branch `feature/ai-trace-animation-verification`, after the swinging-platform
+residue milestone. `Obj_MGZTriggerPlatform` reads `Level_trigger_array` from
+its own SST slot before `loc_3466E` applies the vertical step. The fast `$2x`
+platform at the new frontier occupies slot 12 after its matching dash trigger
+in slot 11, so the trigger byte is live and the platform moves two pixels on
+that same `ExecuteObjects` pass. The former blanket vertical one-pass delay
+left the platform two pixels low, creating a false airborne side contact that
+shifted Tails right and cleared both horizontal speeds. The platform now uses
+the concrete speed variant and relative live SST order to select same-pass
+visibility; earlier-writer ordering is covered directly. No trace hydration,
+route/frame predicate, comparator tolerance, or physics-state synchronization
+was added.
+
+ROM references:
+`docs/skdisasm/sonic3k.asm:51473-51608,70910-71029`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 31319 to frame 31641
+  (`g_speed`, expected `-$00D7` / actual `$00D7`).
+- MGZ complete-run animation remains at frame 31643; standalone remains at
+  physics frame 1538 and animation frame 1574.
+- The focused trigger-platform suite passes, including the earlier dash-slot
+  visibility contract.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-16 -- MGZ swinging-platform rider preserves slot-local sine residue
+
+Branch `feature/ai-trace-animation-verification`, after the spike-ball helper-
+slot milestone. `GetSineCosine` writes only `d1.w`; `sub_34074` then swaps and
+shifts the full register, so the five-link fixed-point cosine retains residue
+from the live SST execution position. On the later-slot continued-rider pass,
+the native residue rounds nine byte-angle X endpoints one pixel toward zero;
+the same angle-state pattern repeats after the byte wraps. The earlier slot-4
+platform reaches angle `$62` with the ordinary sign-extended result, which
+rules out a generic angle or standing correction. The platform now preserves
+the later-slot, standing-bit result from concrete object state. No trace
+hydration, route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM references:
+`docs/skdisasm/sonic3k.asm:3021-3029,70468-70543`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 29122 through the full
+  swinging-platform ride to frame 31319 (`tails_x`, expected `$34CA` / actual
+  `$34CB`).
+- The older slot-4 ride at frame 23515 remains exact; the first approximation
+  based on angle/standing alone was rejected before this milestone.
+- MGZ complete-run animation remains at frame 31643; standalone remains at
+  physics frame 1538 and animation frame 1574.
+- The focused MGZ swinging-platform suite passes.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ swinging spike balls reserve their visual helper SST
+
+Branch `feature/ai-trace-animation-verification`, after the S3K lost-ring
+render-height milestone. `Obj_MGZSwingingSpikeBall` creates a separate
+`loc_34244` helper with `AllocateObjectAfterCurrent`; the helper owns the
+anchor and chain sprites and independently runs `Sprite_OnScreen_Test`. The
+engine renders that geometry inline, but had not reserved the helper's SST.
+Consequently a later Mantis loaded one slot early, its child and the subsequent
+lost-ring cluster inherited the shifted slot phases, and Sonic collected one
+ring a frame late. The object now reserves one after-parent child slot for the
+helper while retaining inline rendering. Both native parent and helper retire
+on complete-run frame 27968, matching the existing parent-owned reservation
+lifetime. No trace state, zone/route/frame carve-out, hydration, or comparator
+tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:70563-70730`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 28398 to frame 29122 (`x`,
+  expected `$2A78` / actual `$2A77`).
+- MGZ complete-run animation remains at frame 31643 (`tails_animation_id`,
+  expected Roll / actual Hurt).
+- The focused swinging-spike-ball suite passes, including the one-helper SST
+  reservation contract.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- S3K lost rings use their zero-height render window
+
+Branch `feature/ai-trace-animation-verification`, after the spindash follower-
+history milestone. S3K `Obj_Bouncing_Ring` initializes `y_radius` and
+`x_radius`, but leaves the freshly allocated SST's `height_pixels` byte zero.
+`Render_Sprites` reads that separate byte when refreshing
+`render_flags.on_screen`; it therefore clears the flag at the 224-line viewport
+edge. The shared ring object had retained S1/S2 BuildSprites' assumed 32-pixel
+Y margin, allowing an off-screen MGZ ring to probe and bounce from terrain,
+return on-screen, and be collected by Sonic. The lost-ring renderer extent is
+now owned by typed `RingRules`: S1/S2 retain 32 and S3K uses zero. No trace
+state, zone/route/frame carve-out, hydration, or comparator tolerance was
+added.
+
+ROM references:
+`docs/skdisasm/sonic3k.asm:35549-35604,35623-35645,36336-36365`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 28165 to frame 28398 (`rings`,
+  expected 2 / actual 1).
+- MGZ complete-run animation remains at frame 31643 (`tails_animation_id`,
+  expected Roll / actual Hurt).
+- The focused lost-ring and ring-manager suites pass, including an explicit
+  S3K zero-height render-window assertion.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- Spindash Push clears after follower-history publication
+
+Branch `feature/ai-trace-animation-verification`, after the repeated head-
+projectile milestone. A spindash charge writes the `$0900` animation word
+during movement, but `Sonic_RecordPos` publishes the current status byte before
+`Animate_Sonic`/`Animate_Tails` consumes that animation change and clears
+Status_Push. The engine cleared Push at the animation-word write instead, so
+the player finished the frame correctly after the later solid-object pass but
+CPU Tails read an incorrect delayed Stat-table byte 16 frames later. The clear
+is now deferred until immediately after follower-history publication and still
+precedes the normal animation pass. No trace state, zone/route/frame carve-out,
+hydration, or comparator tolerance was added.
+
+ROM references:
+`docs/skdisasm/sonic3k.asm:22006-22017,22119-22136,23642-23675,26683-26729,29359-29364`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 27867 to frame 28165 (`rings`,
+  expected 6 / actual 7).
+- MGZ complete-run animation remains at frame 31643 (`tails_animation_id`,
+  expected Roll / actual Hurt).
+- `TestPlayableSpriteMovement` passes in full, including an explicit assertion
+  that the follower-history byte retains Push before the deferred clear.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ head triggers restore native repeated-projectile cadence
+
+Branch `feature/ai-trace-animation-verification`, after the trigger-platform
+activation milestone. `loc_3438E` tests the player watch window whenever the
+head's current animation is idle, and starts animation 1 without consulting a
+one-shot exposed state. When that animation returns to idle through `$FD`, a
+nearby player therefore re-arms the blink/spit cycle immediately. The engine's
+invented `gemExposed` latch and inferred eight-pass post-hit restart delay
+suppressed later arrows and changed the route's damage history; both have been
+removed. No trace state, zone/route/frame carve-out, hydration, or comparator
+tolerance was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:70785-70800,70847-70878`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- Auxiliary complete-run tracing observes repeated projectile starts exactly
+  82 frames apart at 27016/27098 and 27553/27635.
+- MGZ complete-run physics advances from frame 27577 to frame 27867
+  (`tails_cpu_ctrl2_held`, expected `$1A` / actual `$12`).
+- MGZ complete-run animation advances from frame 27577 to frame 31643
+  (`tails_animation_id`, expected Roll / actual Hurt).
+- `TestMGZHeadTriggerObjectInstance` passes 6/6, including the repeated native
+  82-frame spit cadence.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ horizontal trigger begins on its native object pass
+
+Branch `feature/ai-trace-animation-verification`, after the post-move carry-
+reference milestone. The horizontal Object `$57` trigger is published before
+the platform's native SST slot, and `loc_34600` moves the platform by two
+pixels on that same pass. The engine delayed every trigger by one platform
+update, leaving this horizontal platform one step behind: Balance, Balance2,
+and the final walk-off therefore each occurred a frame late. Horizontal
+activation now moves immediately, while vertical subtypes retain the existing
+following-pass bridge required by their later-slot trigger sources.
+
+The newly reached full route also exposed a Mantis lifecycle invariant: its
+dynamic visual child can retire independently while the parent remains live.
+The child now clears the parent's structural back-reference in `onUnload()`
+before ObjectManager unregisters its rewind identity. No trace state,
+zone/route/frame carve-out, hydration, or comparator tolerance was added.
+
+ROM references:
+`docs/skdisasm/sonic3k.asm:70954-71025,185700-185846`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 27170 to frame 27577
+  (`x_speed`, expected zero / actual `-$0200`).
+- MGZ complete-run animation advances from frame 27165 to frame 27577
+  (`player_animation_id`, expected Roll / actual Hurt).
+- `TestS3kMgzTriggerPlatformObject` passes 8/8, including exact horizontal
+  same-pass and vertical following-pass trigger visibility.
+- `TestMantisBadnikInstance` passes 3/3, including child-unload rewind-reference
+  closure; the complete route also runs past frame 28722 without a closure
+  error.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ horizontal trigger platform uses its post-move carry reference
+
+Branch `feature/ai-trace-animation-verification`, after the head-trigger
+recovery milestone. The horizontal Object `$57` movement routine updates
+`x_pos`, then loads that current value into `d4` before calling
+`SolidObjectFull`. Consequently `MvSonicOnPtfm` observes a zero horizontal
+delta: the retracting platform slides beneath a rider while the rider retains
+their world X. The shared solid-contact hook now represents that concrete
+object calling convention. No trace state, zone/route/frame carve-out,
+hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:70991-71005`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 27165 to frame 27170 (`air`,
+  expected airborne / actual grounded).
+- MGZ complete-run animation remains at frame 27165 (`player_animation_id`,
+  expected Balance / actual Push); the prior actual Walk mismatch is removed.
+- `TestS3kMgzTriggerPlatformObject` passes 8/8, including an explicit
+  post-move carry-reference contract assertion.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ head-trigger recovery runs beside animation restart
+
+Branch `feature/ai-trace-animation-verification`, after the twisting-loop
+velocity milestone. A non-final MGZ head-trigger hit clears `collision_flags`
+and starts its `$32` recovery word; `loc_343C6` decrements that word every
+object pass independently of the head's animation. The engine's short
+blink/spit restart delay instead paused recovery for eight passes, so the head
+was still intangible when the ROM re-armed it and Sonic missed the native
+nonzero-`collision_property` rebound. Recovery and animation restart now
+advance concurrently. No trace state, zone/route/frame carve-out, hydration,
+or comparator tolerance was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:20911-20922,70752-70848`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 27157 to frame 27165 (`x`,
+  expected `$1FB1` / actual `$1FAF`).
+- MGZ complete-run animation advances from frame 27164 to frame 27165
+  (`player_animation_id`, expected Balance / actual Walk).
+- `TestMGZHeadTriggerObjectInstance` passes 6/6, including an exact 60-tick
+  recovery assertion while the blink restart advances.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ twisting-loop minimum clamp preserves live `y_vel`
+
+Branch `feature/ai-trace-animation-verification`, after the vertical-trigger-
+platform milestone. `Obj_MGZTwistingLoop` clamps `ground_vel` to a minimum
+magnitude of `$400`, but its minimum branch does not write `y_vel`; the live
+velocity projected by the preceding player movement routine remains the input
+to the private spiral-position calculation. The engine instead copied the
+clamped ground-speed magnitude into `y_vel` every loop pass, replacing native
+values such as `$03FD` and `$03A0` with `$0400` and shifting both position and
+twist-frame cadence. The loop now writes positive `$C00` `y_vel` only on the
+native maximum-clamp branch. No trace state, zone/route/frame carve-out,
+hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:70298-70452`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 25250 to frame 27157
+  (`y_speed`, expected `$04F8` / actual `-$04F8`).
+- MGZ complete-run animation advances from frame 25258 to frame 27164
+  (`player_animation_id`, expected Walk / actual Roll).
+- `TestS3kMgzTwistingLoopObject` passes 10/10, including separate minimum-
+  clamp retention and maximum-clamp publication assertions.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ vertical trigger platforms restore native sibling SST order
+
+Branch `feature/ai-trace-animation-verification`, after the Spiker-launcher
+milestone. Each vertical trigger-platform placement calls `SolidObjectFull` in
+native SST order. At the current crossing the subtype-`$14` platform lands
+Sonic before a later subtype-`$24` platform tests its side, allowing that
+second object to publish `Status_Push`. Engine placement allocation had
+reversed those two live slots, so the side test ran while Sonic was still
+airborne and the push state arrived one frame late. After a subtype-`$1x`
+standing contact, the landing object now re-runs only earlier engine-slot
+subtype-`$2x` siblings through the shared inline solid checkpoint. No trace
+state, zone/route/frame carve-out, hydration, or comparator tolerance was
+added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:41370-41534,70910-71029`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 24075 to frame 25250
+  (`y_speed`, expected `$03FD` / actual `$0400`).
+- MGZ complete-run animation remains at frame 25258
+  (`player_mapping_frame`, expected `$71` / actual `$70`).
+- `TestS3kMgzTriggerPlatformObject` passes 8/8, including the reversed-slot
+  sibling checkpoint regression.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- Spiker launchers select players from their own SST coordinates
+
+Branch `feature/ai-trace-animation-verification`, after the regressed-wall-
+angle milestone. Each MGZ Spiker side launcher calls `Find_SonicTails` with
+its own child SST in `a0`; the engine instead selected the nearest player from
+the parent body's centre and only then tested which side of the launcher that
+player occupied. When Tails crossed the left launcher while Sonic remained
+closer to the body, this delayed the native attack by 24 frames and omitted the
+projectile hurt at complete-run frame 23566. Player selection now measures
+from the calling launcher coordinate while the parent-open test retains the
+parent coordinate.
+
+The projectile child also follows its native `loc_86D4A` / `loc_86D5E`
+ownership: its higher SST slot performs allocation-frame movement, publishes
+its post-movement position to the collision-response list, and uses
+`Sprite_CheckDeleteTouchXY`'s coarse X / asymmetric Y bounds plus delayed SST
+release. No trace state, zone/route/frame carve-out, hydration, or comparator
+tolerance was added.
+
+ROM references:
+`docs/skdisasm/sonic3k.asm:178248-178298,179032-179047,182262-182271,185505-185677`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 23566 to frame 24075
+  (`status_byte`, expected `$29` / actual `$09`).
+- MGZ complete-run animation advances from frame 23566 to frame 25258
+  (`player_mapping_frame`, expected `$71` / actual `$70`).
+- `TestSpikerBadnikInstance` passes 9/9, including launcher-coordinate player
+  selection, current-position collision publication, and native delayed
+  projectile deletion.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- FindWall regress keeps the prior collision angle
+
+Branch `feature/ai-trace-animation-verification`, after the shallow-wall
+velocity milestone. S3K `FindWall` stores a regressed tile's angle before
+sampling its rotated height map. At MGZ's full-tile boundary the prior solid
+tile supplied angle `$FC` but a zero width sample; the engine instead retained
+the original tile's odd `$FF` angle, which the paired sensor replaced with its
+steep-wall fallback and incorrectly stopped the top platform. The shared
+object-terrain wall probe now retains the prior collision shape's angle and
+tile identity whenever that shape exists, matching the already-correct
+`FindFloor` regress path. No trace state, zone/route/frame carve-out,
+hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:19522-19659`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 22676 to frame 23566
+  (`tails_x_speed`, expected `$0200` / actual `-$0150`).
+- MGZ complete-run animation advances from frame 22688 to frame 23566
+  (`tails_animation_id`, expected Hurt / actual Walk).
+- `TestS3kMgzTopPlatformParityHeadless` passes 30/30, including an explicit
+  zero-width wall-regress angle and tile-identity assertion.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ diagonal wall clamps retain shallow-flight velocity
+
+Branch `feature/ai-trace-animation-verification`, after the waypoint-target
+milestone. The diagonal branches of `sub_3526A` always correct the platform's
+position at a side wall, but preserve `x_vel` while `(angle+$30) < $60`; only
+the steep-wall branch clears `x_vel` and transfers `y_vel` into `ground_vel`.
+The engine instead stopped horizontal motion after every diagonal wall clamp.
+Both left and right helpers now keep the ROM's angle gate. No trace state,
+zone/route/frame carve-out, hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:72070-72404`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 22669 to frame 22676 (`x`,
+  expected `$1B43` / actual `$1B37`).
+- MGZ complete-run animation remains at frame 22688 (`player_animation_id`,
+  expected Hurt / actual Walk).
+- `TestS3kMgzTopPlatformParityHeadless` passes 29/29, including shallow-wall
+  velocity retention and steep-wall velocity transfer assertions.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ waypoint approach retains the raw destination Y
+
+Branch `feature/ai-trace-animation-verification`, after the carried-wall
+milestone. `sub_35666` keeps the waypoint's original destination Y in `d5` for
+the initial constant-speed approach, while applying the optional delta only to
+`d0` before storing the later arc centre at object word `$32`. The engine used
+the adjusted arc-centre Y for both roles, turning MGZ2's shallow left/up
+approach into a steep climb. The two native register roles are now represented
+separately. No trace state, zone/route/frame carve-out, hydration, or comparator
+tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:72497-72633`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 22451 to frame 22669
+  (`x_speed`, expected `$0BE8` / actual `$0000`).
+- MGZ complete-run animation advances from frame 22590 to frame 22688
+  (`player_animation_id`, expected Hurt / actual Walk).
+- `TestS3kMgzTopPlatformParityHeadless` passes 27/27, including an explicit
+  raw-destination approach / adjusted-arc-centre regression.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ carried wall feedback follows SST order and non-zero d0
+
+Branch `feature/ai-trace-animation-verification`, after the lightning-attraction
+milestone. MGZ's frame-2 breakable wall reads `status_tertiary` bit 6, which
+`SolidObjectFull` sets only after a non-zero side correction while the cling bit
+is active. The engine instead treated the persistent top-platform grab bit as
+the side-hit bit, projected a later carrier slot through an earlier wall slot,
+and published side feedback even on the inclusive-right-edge `d0 == 0` path.
+Carrier projection now observes SST order, the exact-right-edge earlier-wall
+case retains its current position, and both carried-contact publishers require
+the ROM's non-zero correction before raising bit 6. No trace state,
+zone/route/frame carve-out, hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:41394-41498,45519-45920`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 22432 to frame 22451
+  (`x`, expected `$175C` / actual `$1762`).
+- MGZ complete-run animation advances from frame 22541 to frame 22590
+  (`player_mapping_frame`, expected `$22` / actual `$08`).
+- `TestS3kBreakableWallPlayerParticipation` passes 7/7, including exact-edge,
+  non-zero-displacement, and consumed tertiary-feedback assertions.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- S3K lightning attraction allocates one ring per touch pass
+
+Branch `feature/ai-trace-animation-verification`, after the MGZ trigger-platform
+milestone. `Test_Ring_Collisions_AttractRing` returns immediately after
+allocating one `Obj_Attracted_Ring`; the engine instead continued through the
+placement table and allocated every nearby ring during the same player touch
+pass. That gave adjacent MGZ rings the wrong acceleration phase and delayed
+their later collision-response pickup. Lightning attraction now stops after
+the first successful allocation and resumes at the next player touch pass. No
+trace state, zone/route/frame carve-out, hydration, or comparator tolerance was
+added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:18444-18560,35721-35900`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 22016 to frame 22432
+  (`x_sub`, expected `$3700` / actual `$D700`).
+- MGZ complete-run animation remains at frame 22541
+  (`player_mapping_frame`, expected `$23` / actual `$22`).
+- `TestRingManager` passes 23/23, including the explicit one-allocation-per-
+  touch-pass regression.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ trigger platform consumes airborne stale rides in its later slot
+
+Branch `feature/ai-trace-animation-verification`, after the regressed-floor-angle
+milestone. Tails crossed from upward to downward velocity while still carrying
+the prior standing bits for the subtype `$22` MGZ trigger platform. The engine's
+pre-movement support recovery treated that stale ride as current ground and ran
+ground movement; the ROM runs Tails' airborne slot first, then the platform's
+later `SolidObjectFull2_1P` call clears its standing bit and returns without a
+new contact. The platform now declares both halves of that shared solid-routine
+contract. No trace state, zone/route/frame carve-out, hydration, or comparator
+tolerance was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:70989-71029,41066-41084`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 21922 to frame 22016, leaving
+  one missed ring (`rings`, expected 61 / actual 60).
+- MGZ complete-run animation advances from frame 21922 to frame 22541
+  (`player_mapping_frame`, expected `$23` / actual `$22`).
+- `TestS3kMgzTriggerPlatformObject` passes 7/7, including the two explicit
+  airborne stale-ride contract assertions.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- FindFloor regress keeps the prior collision angle
+
+Branch `feature/ai-trace-animation-verification`, after the Mantis landing
+milestone. S3K `FindFloor` stores a regressed tile's angle before sampling its
+height map. When the MGZ top platform crossed a full-tile edge at X `$0C76`,
+the tile above supplied angle `$10` but a zero height sample; the engine kept
+the original tile's `$04` angle instead. The shared object-terrain probe now
+retains the prior collision shape's angle and tile identity whenever that
+shape exists, while an absent shape still preserves the original angle. No
+trace state, zone/route/frame carve-out, hydration, or comparator tolerance
+was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:19187-19305`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 20490 to frame 21922
+  (`tails_y`, expected `$08A2` / actual `$08A1`).
+- MGZ complete-run animation advances from frame 20559 to frame 21922
+  (`tails_animation_id`, expected Roll `$02` / actual Wait `$05`).
+- `TestObjectTerrainUtils` passes its focused run, including the new zero-height
+  prior-collision angle assertion and the absent-shape preservation assertion.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ Mantis landing callback retains composed Y
+
+Branch `feature/ai-trace-animation-verification`, after the global-oscillator
+ownership milestone. The first Mantis at X `$1428` matched the native jump
+and landing timeline through frame 19579. On frame 19580 the landing animation
+completed at Y `$0680`; native callback `loc_88F48` writes only
+`routine=2`, but the engine also restored the earlier floor-hit Y `$0669`.
+That invented reset shifted the next jump arc upward and made Sonic miss the
+native frame-19646 attack bounce. The callback now retains the position
+composed by the landing animation. No trace state, zone/route/frame carve-out,
+hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:185700-185840`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 19646 to frame 20490
+  (`x_speed`, expected `-$0B10` / actual `-$0BE8`).
+- MGZ complete-run animation advances from frame 19720 to frame 20559
+  (`player_mapping_frame`, expected `$21` / actual `$03`).
+- `TestMantisBadnikInstance` passes 2/2, including a direct assertion that
+  the `$F4` landing callback retains its composed Y.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ moving-spike platform preserves global oscillator ownership
+### 2026-07-15 -- MGZ moving-spike platform preserves global oscillator ownership
+
+Branch `feature/ai-trace-animation-verification`, after the live Mantis-touch
+milestone. `Obj_MGZMovingSpikePlatform` reads
+`Oscillating_table+$12` during its object slot, but the engine port also
+called the global oscillator updater there. Once the first moving-spike
+platform entered the active window at frame 10660, that object-local call and
+the normal `LevelLoop` tail advanced the shared table twice under different
+frame counters. The later frame-19089 floating platform was consequently 46
+pixels away from its native position and missed Sonic's landing. The object now
+only reads the table; the level loop remains its sole update owner. No trace
+state, zone/route/frame carve-out, hydration, or comparator tolerance was
+added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:7909,71029-71072`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 19089 to frame 19646
+  (`y_speed`, expected `-$038D` / actual `-$048D`).
+- MGZ complete-run animation advances from frame 19089 to frame 19720
+  (`player_animation_id`, expected Roll `$02` / actual Walk `$00`).
+- The focused object regression proves that a moving-spike update leaves the
+  complete global oscillator table unchanged while still consuming the current
+  `Oscillating_table+$12` byte.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+- Remote and local `develop` were both `a6e43419a`; merging local
+  `develop` reported that this branch was already up to date.
+
+### 2026-07-15 -- MGZ Mantis touch reads its live SST position
+### 2026-07-15 -- MGZ Mantis touch reads its live SST position
+
+Branch `feature/ai-trace-animation-verification`, after the drilling gradual-
+unlock milestone. `Obj_Mantis` publishes itself to S3K's
+`Collision_response_list` after its upward `MoveSprite` step. The list retains
+the SST pointer, so the following player slot reads the live `x_pos`/`y_pos`;
+the engine instead used the older copied pre-update coordinate and missed an
+exact-edge Roll attack. Mantis now declares that native live-pointer contract,
+allowing `Touch_EnemyNormal` to destroy it and add `$100` to Sonic's upward
+velocity on the correct frame. No trace state, zone/route/frame carve-out,
+hydration, or comparator tolerance was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:20610-20712,20945-20993,185695-185840`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 18603 to frame 19089 (the next
+  block is the shared landing transition: expected zero vertical speed versus
+  actual `$0030`, with Y three pixels low in frontier-only comparison).
+- MGZ complete-run animation advances from frame 18641 to frame 19089
+  (`player_animation_id`, expected Walk `$00` / actual Roll `$02`).
+- The focused Mantis live-touch contract test passes, along with the existing
+  previous-list membership/captured-position tests 4/4.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ drilling escape restores native gradual-bound cadence
+
+Branch `feature/ai-trace-animation-verification`, after the strict quake-edge
+milestone. The drilling Robotnik escape now follows `Move_WaitNoFall` and
+`Obj_Wait` literally: ceiling contact switches routine without consuming the
+wait word, and the cleanup callback fires only after the signed word becomes
+negative. Its replacement camera-bound worker starts on the following object
+pass and adds `$4000` to its longword accumulator each frame, publishing the
+high word to the boundary. This replaces the engine's coarse `$40`-pixel step
+and its same-frame worker execution. No trace state, zone/route/frame carve-out,
+hydration, or comparator tolerance was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:142619-142706,177949-177957,178159-178198`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 18267 to frame 18603
+  (`y_speed`, expected `-$0250` / actual `-$0350`).
+- MGZ complete-run animation remains at frame 18641
+  (`player_animation_id`, expected Walk `$00` / actual Roll `$02`).
+- The focused gradual-worker ordering and rewind-schema tests pass; the
+  Robotnik cleanup assertion covers the signed `Obj_Wait` zero/negative edge.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ quake clamp preserves S3K's strict right edge
+
+Branch `feature/ai-trace-animation-verification`, after the pulley jumping-byte
+milestone. The MGZ quake bridge clamps players after movement while the native
+`Player_LevelBound` check runs before `MoveSprite_TestGravity2`. Its equality
+case must therefore preserve the position fraction and velocities: S3K uses
+`blo Player_Boundary_Sides`, so only a projected position strictly past
+`Camera_max_X_pos+$128` is outside. The engine bridge previously treated exact
+equality as outside, clearing `$0908.B000` and both speeds one frame early. No
+trace state, route/frame carve-out, hydration, or comparator tolerance was
+added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:22290-22310,23172-23217,106579-106786`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 17964 to frame 18267
+  (`camera_x`, expected `$07E0` / actual `$07F8`).
+- MGZ complete-run animation advances from frame 17965 to frame 18641
+  (`player_animation_id`, expected Walk `$00` / actual Roll `$02`).
+- The focused overshoot-clamp and exact-edge-preservation unit tests pass 2/2.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ pulley release preserves native jumping-byte ownership
+
+Branch `feature/ai-trace-animation-verification`, after removal of the pulley's
+false solid capability. `loc_349F4` publishes `x_vel=-$400`, `y_vel=-$600`,
+`Status_InAir`, the `$0E/$07` radii, Roll animation, and `Status_Roll`; it does
+not write the separate `jumping` byte. The engine's extra `jumping=true` kept
+`Sonic_JumpHeight` on the variable-height / shield-move path, so a later fresh
+jump press incorrectly activated Sonic's lightning shield. The release now
+leaves that byte under its prior ROM owner. No trace state, zone/route/frame
+carve-out, hydration, or comparator tolerance was added.
+
+ROM references: `docs/skdisasm/sonic3k.asm:71295-71327,23366-23440`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 17276 to frame 17964
+  (`x_sub`, expected `$B000` / actual `$0000`).
+- MGZ complete-run animation advances from frame 17293 to frame 17965
+  (`player_animation_id`, expected Walk `$00` / actual Wait `$05`).
+- `TestS3kMgzPulleyAndMantis` passes 9/9, including the assertion that pulley
+  launch does not write the native `jumping` byte.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ pulley release bypasses generic solid collision
+
+Branch `feature/ai-trace-animation-verification`, after the retained capture
+status milestone. `Obj_MGZPulley` updates its two explicit player slots through
+`sub_349A2` / `sub_349BA` and returns without calling `SolidObject`. The engine
+had nevertheless registered the pulley as a full solid, so its post-update
+compatibility checkpoint pushed Sonic five pixels left after the jump-release
+routine had written the correct native position and launch state. The pulley
+now exposes only its explicit proximity capture/release behavior. Jump release
+also writes the literal `$0E/$07` rolling radii, Roll bit, and ground mode
+without allowing sprite-width changes to reinterpret `x_pos`. No trace state,
+zone/route/frame carve-out, hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:71117-71473`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 17240 to frame 17276
+  (`y_sub`, expected `$7600` / actual `$4E00`).
+- MGZ complete-run animation remains at frame 17293
+  (`player_animation_id`, expected Wait `$00` / actual Walk `$02`).
+- `TestS3kMgzPulleyAndMantis` passes 9/9, including the non-solid registry,
+  exact release-position, radii/status, and ground-mode contracts.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ pulley capture retains its existing solid status
+
+Branch `feature/ai-trace-animation-verification`, after the pulley fractional
+position milestone. The capture path at `loc_34AD6` writes player velocity,
+position, animation, facing, and positive object control, but does not modify
+`Status_OnObj` or `Status_InAir`. The engine now leaves those bits—and the
+current riding-object owner—untouched until the pulley's explicit jump-release
+path. The camera consequently performs its native grounded six-pixel step from
+the newly written handle position on the capture frame. No trace state,
+zone/route/frame carve-out, hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:71329-71381`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 17174 to frame 17240 (`x`,
+  expected `$04EA` / actual `$04E5`).
+- MGZ complete-run animation remains at frame 17293
+  (`player_animation_id`, expected Wait `$00` / actual Walk `$02`).
+- `TestS3kMgzPulleyAndMantis` passes 9/9, including capture status, fractional
+  position, and positive object-control assertions.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ pulley capture preserves native position fractions
+
+Branch `feature/ai-trace-animation-verification`, after the Act 2 size-worker
+phase milestone. `Obj_MGZPulley` captures and subsequently anchors a player
+with word writes to `x_pos` and `y_pos`; those writes leave the adjacent
+`x_sub`/`y_sub` words untouched. The engine now routes both checkpoints through
+`NativePositionOps`, and models the pulley's literal positive
+`object_control=$01` instead of the signed bit-7 full-control gate. Focused
+coverage asserts both fractional words and the positive object-control CPU
+semantics. No trace state, zone/route/frame carve-out, hydration, or comparator
+tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:71255-71381`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics remains on frame 17174 but clears both playable
+  subpixel errors; the next owner is `camera_y` (expected `$0766` / actual
+  `$0760`) and the focused frontier shrinks from five errors to three.
+- MGZ complete-run animation remains at frame 17293
+  (`player_animation_id`, expected Wait `$00` / actual Walk `$02`).
+- `TestS3kMgzPulleyAndMantis` passes 9/9.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ Act 2 size workers retain their create-entry phase
+
+Branch `feature/ai-trace-animation-verification`, after the title-card size
+worker milestone. Each of `Change_Act2Sizes`' three child objects executes its
+creation entry before reaching the shared gradual-worker dispatch later in the
+same `Process_Sprites` pass. Retaining that first `$4000` fixed-point step for
+the maximum-X and minimum-Y children, alongside the already retained `$8000`
+maximum-Y half-step, releases the Act 2 horizontal camera bound on the native
+frame. No trace state, zone/route/frame carve-out, hydration, or comparator
+tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:180359-180614`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 16658 to frame 17174
+  (`x_sub`, expected `$2E00` / actual `$0000`).
+- MGZ complete-run animation remains at frame 17293
+  (`player_animation_id`, expected Wait `$00` / actual Walk `$02`).
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ title-card completion starts native Act 2 size workers
+
+Branch `feature/ai-trace-animation-verification`, after the carried-results
+milestone. MGZ's in-place `Load_Level` holds the gameplay counter while the
+retained `Obj_TitleCard` parent and children continue through
+`Process_Sprites`. Headless replay treated those rows as physics-free VBlank
+rows but did not dispatch the title owner, and the rebuilt object manager had
+also lost the retained `Obj_EndSignControlDoStart` owner that waits for the
+new title-card `End_of_level_flag` before calling `Change_Act2Sizes`.
+
+Held-counter replay rows now advance only title owners that explicitly carry
+the results-time level-gamestate reset contract. MGZ retains the end-sign
+handoff, consumes the shared results transition signal, and on the later title
+completion publishes Act 2's bottom-bound target plus the three native gradual
+size workers (`Obj_IncLevEndXGradual`, `Obj_DecLevStartYGradual`, and
+`Obj_IncLevEndYGradual`) with their independent fixed-point rates and SST
+dispatch phases. The transition request can preserve `Level_end_flag` without
+also retaining the already-consumed `End_of_level_flag`. No trace state,
+zone/route/frame carve-out, hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:62214-62279`,
+`106312-106360`, `178159-178230`, and `180359-180614`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 16656 to frame 16658
+  (`camera_x`, expected `$0001` / actual `$0000`).
+- MGZ complete-run animation advances from frame 16860 to frame 17293
+  (`player_animation_id`, expected Wait `$00` / actual Walk `$02`).
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+- Focused S3K level-event rewind, in-level title-card, and title-card object
+  execution guards pass 39/39 (23 ROM-dependent cases skipped in that run).
+
+### 2026-07-15 -- MGZ carried-results frontiers advance through title display
+
+Branch `feature/ai-trace-animation-verification`, after the seamless-reload
+milestone. The carried `Obj_LevelResults` parent clears `_unkFAA8` in its later
+object slot, publishes `Restore_PlayerControl`'s Wait animation for both
+players, and then lets the next player slots resume normal physics. The engine
+left the MGZ release to the following ScreenEvents entry and used the HCZ
+carried-child retirement count even though MGZ's routine-6 landing wait had
+already consumed one collapsed owner dispatch.
+
+The results object now carries that live routine-entry fact into its retained
+child retirement count: a path that actually waited on `Status_InAir` has two
+remaining dispatches, while the already-grounded HCZ path keeps three. The
+results-owned release bridge publishes Wait immediately. MGZ's Act 2 title
+card also resets the carried ring/time gamestate after its twelve native child
+create/render dispatches, matching the display checkpoint rather than the
+earlier reload. No zone, route, frame, trace hydration, or comparator tolerance
+was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:62214-62279,62686-62720`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 16513 to frame 16656
+  (`camera_y`, expected `$0813` / actual `$0810`).
+- MGZ complete-run animation advances from frame 16512 to frame 16860
+  (`player_animation_id`, expected `$02` / actual `$05`).
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ seamless-reload frontier advances to results exit
+
+Branch `feature/ai-trace-animation-verification`, after the landing-wait
+milestone. `MGZ1BGE_Normal` queues two Kosinski streams plus one Kosinski
+Module stream when `Obj_LevelResultsCreate` sets `Events_fg_5`; the following
+background routine waits for `Kos_modules_left`, then performs `Load_Level`
+and the `-$2E00/-$600` coordinate shifts while `Obj_LevelResults` is still
+active. The engine instead gated this reload on `End_of_level_flag`, delaying
+it until the tally and results exit roughly five hundred frames later.
+
+MGZ now retains a rewind-captured 26-entry representation of that queued
+secondary-art workload and executes the reload in the owning ScreenEvents
+dispatch. The transition preserves the live results/ring/time state, applies
+the native offsets to players, camera, and camera bounds, and keeps both
+ending poses until the carried results owner actually clears its active flag.
+No trace state, route, frame, hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:106280-106360`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 16009 to frame 16513
+  (`tails_y_speed`, expected `-$0002` / actual `$0000`).
+- MGZ complete-run animation remains at frame 16512, now with the retained
+  Victory animation (`expected $05` / `actual $13`) rather than an early idle
+  release.
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The S3K level-event rewind/schema guards pass (54/54).
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ landing-wait frontiers advance past the end sign
+
+Branch `feature/ai-trace-animation-verification`, after the aligned
+frame-15974 milestone. In MGZ, `Obj_EndSignResults` spends native routine-6
+entries waiting for Player 1's `Status_InAir` bit to clear. Sonic lands during
+the earlier player slot at frame 15974, so the later signpost slot calls
+`Set_PlayerEndingPose` immediately; the following routine-8 entry can then run
+`Check_TailsEndPose`. The engine previously applied the collapsed-entry delay
+used by the already-grounded end-sign path, publishing both ending poses one
+frame late.
+
+The signpost now retains whether routine 6 actually waited for a landing. A
+waited path applies Player 1's ending pose on the landing frame and arms the
+next-entry Tails check; an already-grounded path keeps the existing delayed
+dispatch required by AIZ and HCZ. This models only live player air state and
+routine ownership; no zone, route, frame, trace hydration, or comparator
+tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:176229-176272,181919-181943`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 15974 to frame 16009
+  (`x`, expected `$0091` / actual `$2E91`).
+- MGZ complete-run animation advances from frame 15974 to frame 16512
+  (`player_animation_id`, expected `$05` / actual `$00`).
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The focused signpost suite passes (12/12).
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ complete-run frontiers align at frame 15974
+
+Branch `feature/ai-trace-animation-verification`, after the frame-15947
+attracted-ring milestone. `Obj_EndSignLanded` changes to routine 6 and writes
+`Ctrl_2_locked=$FF` in its later object slot. On the next frame the signed lock
+makes `Tails_Control` bypass both the raw-controller copy and
+`Tails_CPU_Control`, while ordinary Tails movement continues from the retained
+`Ctrl_2_logical` word. Replay represented only the general Boolean input lock,
+so CPU follow steering still applied a literal `-1 x_pos` nudge and restarted
+Tails' mapping sequence.
+
+The landed-to-results transition now publishes the CPU controller's existing
+signed-lock state at the same object checkpoint. The later
+`Check_TailsEndPose` path clears both representations before installing the
+ending pose. The extension applies the native P2 behavior to configured
+sidekicks through the existing participation policy; no zone, route, frame,
+trace hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:176198-176238,181919-181943`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 15947 to frame 15974
+  (`x_speed`, expected `$0000` / actual `$0196`).
+- MGZ complete-run animation advances from frame 15970 to frame 15974
+  (`player_animation_id`, expected `$13` / actual `$00`).
+- AIZ and HCZ complete-run physics and animation remain fully green. MGZ
+  standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ attracted-ring frontier advances to frame 15947
+
+Branch `feature/ai-trace-animation-verification`, after the frame-11531
+spilled-ring milestone. Native `Obj_Attracted_Ring` publishes its moved
+position to the collision-response list at the end of its object slot, and the
+next player slot consumes that retained list before later MGZ objects can carry
+or reposition the player. The engine already moved attracted rings on the
+object side of the frame, but still performed the give-ring overlap in the late
+level update after the top platform had moved Sonic. That let the second ring
+in the MGZ sequence overlap one frame early.
+
+`RingManager` now snapshots the active attracted rings at the frame-start touch
+checkpoint. Each playable consumes at most the first overlapping retained
+entry during its own `ReactToItem` phase, before lightning attraction creates
+new ring objects; attracted-ring motion and collision-list publication remain
+in the later object update. Consequently a ring created by P1 is not visible
+to P2 until that ring has executed its first native object slot. No trace state,
+route, zone, frame, hydration, or comparator tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:35719-35846`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 11531 to frame 15947
+  (`tails_x`, expected `$2E75` / actual `$2E74`). Animation remains at frame
+  15970 (`tails_mapping_frame`).
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The focused ring-manager suite passes (22/22).
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ spilled-ring frontier advances to frame 11531
+
+Branch `feature/ai-trace-animation-verification`, after the frame-9259
+follow-nudge milestone. Legacy S3K complete-run CSVs captured the word adjacent
+to the byte used by `Obj_Bouncing_Ring`, so trace metadata now records that
+initial low-bit floor-check phase independently and `LevelManager` carries it
+across seamless act object-manager rebuilds. This is trace-start clock state;
+per-frame trace values remain comparison-only.
+
+HCZ's end boss also now materializes every slot owner in
+`ChildObjDat_6BD8A` and `Child1_MakeRoboHead`: the previously folded lower
+housing and Robotnik head are real SST children. The detached `loc_6B3DE`
+spray remains live during the water column's descent, as in its native routine,
+so later damage spills retain their native owner slot. No zone, route, frame,
+or tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm:140832-141240,142198-142246`.
+
+Verification with the root-level locked-on S3K ROM:
+
+- MGZ complete-run physics advances from frame 9259 to frame 11531
+  (`rings`, expected 22 / actual 23). Animation remains at frame 15970.
+- AIZ and HCZ complete-run physics and animation remain fully green.
+- MGZ standalone remains at physics frame 1538 and animation frame 1574.
+- The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- The full animation sweep remains 42/58 green routes / 16 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ follow-nudge frontier advances to frame 9259
+
+Branch `feature/ai-trace-animation-verification`, after the frame-8799
+execution-classification milestone. S3K `TailsCPU_Normal` applies its literal
+`-1 x_pos` follow nudge whenever Tails is moving left, facing left, and the
+current `Status_Push` bit is clear, including while he remains supported by an
+ordinary `SolidObjectFull` platform. At MGZ frame 8799, native Tails rides the
+vertical trigger platform with a clear push bit; the nudge moves the predicted
+`CalcRoomInFront` probe one pixel into terrain, so the `$FFFF` result changes
+`x_vel` from `-$18` to `+$E8`, zeros `ground_vel`, and sets `Status_Push` before
+movement returns him to the recorded position. Replay was suppressing that
+nudge solely because a generic push-grace counter remained live while any
+object ride existed. Nudge suppression now requires a ROM-visible object-order
+context, leader support, or an object provider that explicitly preserves the
+riding push grace. No route, zone, frame, hydration, or tolerance condition was
+added.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 8799 to frame 9259 (`rings`),
+  while animation advances from frame 8800 to frame 15970
+  (`tails_mapping_frame`).
+- AIZ and HCZ complete-run physics and animation remain green. MGZ standalone
+  remains unchanged at physics frame 1538 and animation frame 1574.
+- The full animation sweep remains 42/58 green routes / 16 established reds.
+  The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+
+### 2026-07-15 -- MGZ complete-run execution frontier advances to frame 8799
+
+Branch `feature/ai-trace-animation-verification`, after aligning the MGZ
+complete-run frontiers at frame 5918. An S3K row can expose a stationary main
+player, a plateaued gameplay counter, and a changed VBlank byte while the full
+player/object loop still ran. At MGZ frame 5917, the native
+`tails_cpu_normal_step` execution hook and a fresh controller-input edge prove
+that `TailsCPU_Control`, Sonic's zero-delay Spindash script, and object logic all
+executed. Replay had classified that row as VBlank-only, skipping one engine
+gameplay update and leaving both Sonic's mapping sequence and the shared Tails
+CPU respawn word one tick late. The replay execution model now promotes only a
+counter-classified VBlank row that carries both that native CPU execution hook
+and a fresh input edge; an advancing lag counter remains authoritative. Trace
+values stay comparison-only and no route, zone, frame, hydration, or tolerance
+condition was added.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run physics advances from frame 5918 to frame 8799
+  (`tails_g_speed`), while animation advances to frame 8800
+  (`tails_mapping_frame`). The former Spindash mapping and CPU respawn-counter
+  groups are removed.
+- AIZ and HCZ complete-run physics and animation remain green. The focused
+  execution-policy regression passes.
+- The full animation sweep remains 42/58 green routes / 16 established reds.
+  The full physics sweep remains 43/58 green routes / 15 established reds;
+  every previously green route stays green.
+- MGZ standalone remains unchanged at physics frame 1538 and animation frame
+  1574.
+
+### 2026-07-15 -- MGZ complete-run frontiers aligned at frame 5918
+
+Branch `feature/ai-trace-animation-verification`, after restoring the HCZ
+physics frontier. This milestone ports the native object-slot behavior needed
+through MGZ Act 1's miniboss/results handoff: carried top-platform players now
+retain the ROM's positive object-control semantics while later monitors,
+walls, mud, bridges, spikes, and springs execute their own solid checkpoints;
+the dash/trigger platform family, twisting loop, swinging objects, sinking mud,
+Spiker, collapsing bridge, and miniboss preserve their native latches,
+subpixels, timers, child lifetimes, and touch-list ordering. S3K lost-ring
+materialization also uses the global V-int clock across the AIZ seamless reload
+and its native single first update. The HCZ miniboss supplies the one initial
+end-sign wait entry consumed by its retained controller path, keeping the
+shared MGZ sign-flow initialization delay without moving HCZ's `$3F` handoff.
+The S3K upward FindFloor ceiling probe is exposed explicitly so the MGZ users
+do not change the legacy S1/S2 object-ceiling contract. No trace state,
+route/frame predicate, zone carve-out, or comparator tolerance was added.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ complete-run advances from frame 1072 (`rings`) to frame 5918. Its first
+  physics mismatch is now Tails' respawn counter (`$2A/$29`), and its first
+  animation mismatch is Sonic's duck mapping (`$87/$86`) on that same frame;
+  only those two three-frame groups remain under `trace.frontierOnly`.
+- MGZ standalone remains the next target: physics first diverges at frame 1538
+  and animation at frame 1574.
+- AIZ and HCZ complete-run physics and animation both pass. Focused S1 MZ2,
+  AIZ, HCZ, MGZ, lost-ring, act-transition, and MGZ object parity gates retain
+  their expected status.
+- The full animation sweep remains 42/58 green routes / 16 established reds.
+  The full physics sweep returns to 43/58 green routes / 15 established reds;
+  the temporary S1 MZ2 ceiling-probe regression found by that sweep is covered
+  by the focused green replay after separating the S3K upward probe.
+
+### 2026-07-15 -- HCZ physics restored after develop merge
+
+Branch `feature/ai-trace-animation-verification`, after the AIZ animation
+completion milestone. The ROM HCZ hand-launcher arm at `loc_30DEC` is a child
+of the placement-owned launcher and now releases its dynamic slot when that
+parent leaves the active placement set. The HCZ end-boss water column now also
+creates the two `ChildObjDat_6BDCA` surface objects, twenty
+`ChildObjDat_6BDE6` bubble objects (including their native `Random_Number`
+consumption), and the later `loc_6B3DE` spray object as independent SST
+occupants. Their mappings remain folded into the existing consolidated water-
+column render pass, but their lifetimes and `Process_Sprites` slots are real.
+This restores the Obj37 floor-probe phase exposed by the incoming StillSprite
+lifetime change without a zone/route/frame exception, trace hydration, or
+comparison tolerance.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 65730-66018
+(`Obj_HCZHandLauncher` / `loc_30DEC`) and 141080-141340
+(`loc_6B2AA`, `loc_6B3DE`, `loc_6B456`, and `loc_6B50C`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- HCZ complete-run physics and animation both pass through the MGZ handoff;
+  the incoming frame-29096 scattered-ring regression is removed.
+- HCZ hand-launcher unit/rewind tests and both rewind coverage guards pass.
+- The full physics sweep improves from the post-merge 42/58 to 43/58 green
+  routes / 15 expected failures; every previously green route remains green.
+- The full animation sweep remains 42/58 green routes / 16 expected failures;
+  every previously green route remains green.
+
+### 2026-07-15 -- AIZ animation complete
+
+Branch `feature/ai-trace-animation-verification`, after merging current
+`origin/develop` at `661c4df0f`. The earlier cutscene button clears
+`Ctrl_1_locked` before the later end-sequence controller observes the shared
+button flag, so the controller now clears its forced logical input immediately
+instead of carrying the final Up word into the next player dispatch. Fourteen
+bridge entries later, `Obj_AIZDrawBridge` clears both standing bits and writes
+raw `anim=HurtFall ($1B)` after the two player animation slots; the engine
+bridge now publishes both the raw byte and its temporary forced owner. On the
+subsequent terrain landing, `Player_TouchFloor` owns `anim=Walk`, so the shared
+landing path releases only that semantic HurtFall override before Animate.
+These are routine-, status-, and animation-owner transitions; no zone/route/
+trace-frame exception, trace hydration, or tolerance was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 59730-59762
+(`loc_2B452`, `loc_2B45E`, and `loc_2B478`), 133931-133943
+(`Obj_CutsceneButton`), and 138282-138326 (`loc_69588`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestAiz2BossEndSequenceObjects` passes, including the drawbridge's immediate
+  raw HurtFall publication.
+- AIZ complete-run physics and animation both pass; animation advances from
+  frame 25951 / 6 grouped errors to fully green.
+- The full animation sweep improves from 41/58 to 42/58 green routes / 16
+  expected failures. HCZ and every previously green route retain their status.
+- The full physics sweep is 42/58 green routes / 16 expected failures after the
+  develop merge. Every prior green remains green except the already documented
+  incoming HCZ frame-29096 scattered-ring regression; AIZ remains green.
+
+### 2026-07-15 -- AIZ2 forced-walk input-phase milestone
+
+Branch `feature/ai-trace-animation-verification`, after the results-owner
+control-restore milestone. The post-boss controller now exposes
+`loc_69526`'s logical Right word on the object entry before the next player
+dispatch, while leaving acceleration, subpixel movement, and Walk animation
+publication to that player dispatch. Its separately allocated gradual camera
+child retains its existing later activation, so animation timing advances
+without shifting the physics-green camera boundary. No route, trace-frame,
+hydration, or comparison-tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 138263-138293
+(`loc_694D4`, `loc_6950E`, and `loc_69526`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- All 34 `TestAiz2BossEndSequenceObjects` tests pass; the controller test now
+  confirms that the object slot publishes input without performing player
+  acceleration or subpixel movement itself.
+- AIZ complete-run advances from frame 25592 / 17 grouped animation errors to
+  frame 25951 / 6; the entire initial forced-walk animation/mapping cadence is
+  exact.
+- Focused AIZ and HCZ physics replays pass.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  HCZ and every previously green route retain their status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
+### 2026-07-14 -- AIZ2 results-owner control-restore milestone
+
+Branch `feature/ai-trace-animation-verification`, after the fire-bridge
+roll-cadence milestone. Once `Obj_LevelResults` clears `_unkFAA8`, the retained
+AIZ2 egg-capsule owner now publishes both native `Restore_PlayerControl`
+animation words: `anim=Wait`, `prev_anim=Wait`, and zeroed animation
+frame/timer, alongside the existing object-control release. The write remains
+in the capsule's post-player object dispatch and does not alter the displayed
+Victory mapping on the release frame. No route, trace-frame, hydration, or
+comparison-tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 166696-166703
+(`loc_7D078`) and 180361-180370 (`Restore_PlayerControl` /
+`Restore_PlayerControl2`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- All 34 `TestAiz2BossEndSequenceObjects` tests pass, including the delayed
+  capsule-owner animation-word publication for both native players.
+- AIZ complete-run advances from frame 25590 / 18 grouped animation errors to
+  frame 25592 / 17; the dual-player Victory-to-Wait release is exact.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  HCZ and every previously green route retain their status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
+### 2026-07-14 -- AIZ fire-bridge roll-cadence milestone
+
+Branch `feature/ai-trace-animation-verification`, after the battleship
+idle-release milestone. S3K Walk/Run publishes its current mapping before the
+timer gate, but Roll (`loc_12A2A`) and Push (`loc_12A72`) return on a live timer
+before selecting a mapping. The shared scripted animator now preserves that
+per-handler ordering. The AIZ fire bridge also mirrors its parent SST standing
+bits on every `SolidObjectTop` checkpoint, so a rider released long before the
+burn trigger cannot receive a stale `sub_2AF9C` `prev_anim` write when the
+bridge finally collapses. No route, trace-frame, hydration, or comparison-
+tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 25151-25202
+(`loc_12A2A` / `loc_12A72`) and 59331-59465
+(`loc_2AEE2`, `loc_2AF06`, and `sub_2AF9C`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestPlayableSpriteAnimation#s3kRollKeepsTimerFirstCadenceWhenWalkPublishesFirst`
+  and all three `TestAizCollapsingLogBridgeObjectInstance` tests pass.
+- AIZ complete-run advances from frame 23161 / 19 grouped animation errors to
+  frame 25590 / 18; the 14-frame airborne Roll cadence is exact.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  HCZ and every previously green route retain their status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
+### 2026-07-14 -- AIZ battleship idle-release milestone
+
+Branch `feature/ai-trace-animation-verification`, after the collapsing-log
+rider-release milestone. AIZ2's `sub_50318` changes an idle player animation
+from Wait (`$05`) to Walk (`$00`) before checking either auto-scroll edge.
+The engine's shared Player 1 / sidekick battleship clamp now publishes that
+native animation write on every pass, including the multi-sidekick extension;
+no route, trace-frame, hydration, or comparison-tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 105229-105258
+(`AIZ2_DoShipLoop` and `sub_50318`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestSonic3kAIZEvents#aiz2PostBombingShipLoopUsesRomRepeatOffset` passes,
+  including native Player 1, native Player 2, and extended-sidekick Wait-to-Walk
+  publication.
+- AIZ complete-run advances from frame 22373 / 21 grouped animation errors to
+  frame 23161 / 19; the two-frame CPU Tails Wait/mapping block is exact.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  HCZ and every previously green route retain their status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
+### 2026-07-14 -- AIZ collapsing-log rider-release milestone
+
+Branch `feature/ai-trace-animation-verification`, after the S3K post-balance
+low-speed Duck milestone. `sub_2AF9C` releases a collapsing-log rider after the
+player's native animation pass and writes `prev_anim=Run ($01)` while leaving
+the current Walk byte untouched. The next player slot therefore restarts
+`Animate_Sonic` at Walk mapping `$07`. The engine now publishes that exact
+adjacent animation byte when either bridge subtype ejects a rider; no zone,
+route, trace-frame, hydration, or comparison-tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 59410-59465
+(`loc_2AF70` and `sub_2AF9C`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestAizCollapsingLogBridgeObjectInstance` passes 2/2, including the raw
+  `anim`/`prev_anim` split on release.
+- AIZ complete-run advances from frame 19814 to frame 22373; the 34-frame
+  Walk/run mapping-cadence block is now exact (21 grouped errors remain after
+  the newly exposed later mapping group).
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  HCZ and every previously green route retain their status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
+### 2026-07-14 -- S3K post-balance low-speed Duck milestone
+
+Branch `feature/ai-trace-animation-verification`, after the AIZ/LRZ rock
+balance-width milestone. `SonicKnux_Roll` and `Tails_Roll` run after the
+ground-input routine. While Down is held below `$100`, their raw Duck write
+therefore supersedes a Balance animation selected by the earlier Move routine,
+but it does not undo Move's facing-bit change. The engine's post-movement
+crouch bridge now preserves exactly that split ownership. No zone, route,
+trace-frame, hydration, or comparison-tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 23223-23240
+(`SonicKnux_Roll`) and 27796-27861 / 28458-28483
+(`Tails_InputAcceleration_Path` and `Tails_Roll`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- AIZ complete-run advances from frame 12706 / 23 grouped animation errors to
+  frame 19814 / 21; the 21-frame CPU Tails Duck/mapping block is now exact.
+- Focused AIZ physics and HCZ animation replays pass.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  every previously green route retains its status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
+### 2026-07-14 -- AIZ1 breakable-rock balance-width milestone
+
+Branch `feature/ai-trace-animation-verification`, after the signpost
+results-lifetime milestone. `Obj_AIZLRZEMZRock` stores the size-specific
+`byte_1F9D0` width in `width_pixels`, then passes a separate width plus `$B`
+to `SolidObjectFull`. The engine had exposed its generic `$10` full-solid
+balance width instead. At the covered rock, that changed Tails' native inner
+position from 13 pixels inside the `$18` rock to 3 pixels inside the generic
+width, falsely selecting Balance immediately before the rock broke. The rock
+now exposes its exact table width to the shared balance routine; no zone,
+route, trace-frame, hydration, or comparison-tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 43838-43935
+(`Obj_AIZLRZEMZRock` initialization and `SolidObjectFull` call) and
+27820-27837 (Tails' on-object `width_pixels` balance check).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestAizLrzRockPlayerParticipation#balanceWidthUsesNativeUnpaddedRockWidth`
+  passes for all eight size-table entries.
+- AIZ complete-run advances from frame 12091 / 25 grouped animation errors to
+  frame 12706 / 23; the 27-frame Tails Wait/mapping block is now exact.
+- Focused AIZ physics and HCZ animation replays pass.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  every previously green route retains its status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
+### 2026-07-14 -- AIZ1 signpost results-lifetime milestone
+
+Branch `feature/ai-trace-animation-verification`, after the collapsing-platform
+multi-rider release milestone. The AIZ miniboss collision bridge intentionally
+keeps the parent interactive after the fatal touch, which makes the engine's
+visual signpost land later than the native SST. The signpost now carries that
+already-elapsed state into its results countdown without moving the interactive
+object earlier. Its retained results owner separately publishes
+`Restore_PlayerControl`'s Wait animation word, preserves the current Victory
+mapping for that object entry, and waits through the remaining results-handoff
+dispatches before starting the Act 2 title-card path. These are object-local
+entry counts carried through constructors and rewind state; no zone, route,
+trace frame, trace hydration, or comparison tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 176198-176272
+(`Obj_EndSignLanded` through `Obj_EndSignAfter`), 180360-180419
+(`Restore_PlayerControl` / `Obj_EndSignControl`), and 62679-62720
+(`Obj_LevelResultsWait2`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestS3kSignpostInstance` and `TestS3kBossDefeatSignpostFlow` pass; the
+  focused AIZ physics replay remains green.
+- AIZ complete-run advances from frame 11350 / 61 grouped animation errors to
+  frame 12091 / 25. The full AIZ1 Victory animation and mapping cadence now
+  matches through the post-results control release.
+- `TestS3kHczCompleteRunTraceReplay` remains animation-green.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  every previously green route retains its status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
+### 2026-07-14 -- S3K collapsing-platform multi-rider release milestone
+
+Branch `feature/ai-trace-animation-verification`, after the AIZ hollow-tree
+milestone. `Obj_CollapsingPlatform` runs `sub_205FC` first for Player 1 and
+then for Player 2 in the same object dispatch. Each recorded rider has
+`Status_OnObj`/`Status_Push` cleared, `Status_InAir` set, and
+`prev_anim=Run ($01)` published while the current Walk byte remains untouched.
+The engine's split solid callback omitted the previous-animation write, and
+its first callback also promoted the shared parent state before Player 2 could
+receive the same release. The release phase now remains eligible only for an
+already-recorded second rider through that solid pass; the falling parent
+retains its prior update cadence. No zone, route, frame, trace hydration, or
+tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 44844-44864 (`loc_205DE`
+and `sub_205FC`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestSonic3kCollapsingPlatformTransitionSolid` passes 4/4, covering the
+  release `prev_anim` byte, push clear, and second-rider-only eligibility.
+- AIZ complete-run advances from Act 2 frame 7443 / 64 grouped animation
+  errors to frame 11350 / 61. Both player phases restart at the native Walk
+  mapping after the platform release.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  HCZ and every previously green route retain their status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
+### 2026-07-14 -- AIZ hollow-tree adjacent animation-word milestone
+
+Branch `feature/ai-trace-animation-verification`, after the stationary
+crouch-release milestone. At the AIZ1 hollow-tree release, retail executes
+`move.w #1,anim(a1)`. Because the 68000 stores that word big-endian across the
+adjacent `anim` and `prev_anim` bytes, the visible result is `anim=Walk ($00)`
+and `prev_anim=Run ($01)`. The port had interpreted the word as the engine's
+distinct Run animation ID. The hollow-tree release now publishes both native
+bytes, restoring the release animation and the following Walk/run script
+restart cadence. No zone, route, frame, trace hydration, or tolerance
+condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 43698-43725
+(`AIZTree_FallOff`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestAizHollowTreeObjectInstance` passes 3/3, including assertions for both
+  halves of the adjacent animation word.
+- AIZ complete-run advances from frame 5470 / 66 grouped animation errors to
+  Act 2 frame 7443 / 64. The four raw Run mismatches and the following
+  24-frame slope-bank cadence group are removed.
+- The full animation sweep remains 41/58 green routes / 17 expected failures;
+  HCZ and every previously green route retain their status.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
+### 2026-07-14 -- S3K stationary crouch-release animation milestone
+
+Branch `feature/ai-trace-animation-verification`, after HCZ animation
+verification completed. AIZ's early isolated Wait-vs-Walk mismatches occurred
+when Sonic or CPU Tails released Down at zero inertia. Retail runs the ground
+Move routine before `SonicKnux_Roll`/`Tails_Roll`: the Move zero-speed tail
+first writes Wait, so the later roll check no longer sees Duck and performs no
+Walk write. The shared profile had applied its Duck-release Walk before
+resolving that Move tail. It now publishes Walk only when a no-input coasting
+frame leaves Duck intact; stationary releases retain Move's Wait. No zone,
+route, frame, trace hydration, or tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 23247-23265 and
+28458-28482 (`Player_ChkWalk` and the equivalent `Tails_Roll` tail).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestScriptedVelocityAnimationProfile` passes 27/27, including stationary
+  and coasting Duck-release ordering regressions.
+- AIZ complete-run advances from frame 2980 / 78 grouped animation errors to
+  frame 5470 / 66. The prior player and sidekick Wait-vs-Walk clusters are
+  removed.
+- The full animation sweep remains 41/58 green routes / 17 expected failures.
+  HCZ and every previously green S1/S2 route remain green; later S3K routes
+  retain their prior pass/fail status, with several mismatch totals improved by
+  the same shared ordering correction.
+- The full physics sweep remains 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
+### 2026-07-14 -- HCZ animation-verification completion milestone
+
+Branch `feature/ai-trace-animation-verification`, after the S3K post-Move
+crouch milestone. HCZ's final three mismatches were isolated player/sidekick
+twist frames on Obj68 jump-release ticks. `sub_32784` calculates the rider's
+position and increments its swing byte, then tests the newly pressed logical
+jump bits. A taken jump branch returns through `loc_325F2`; it never reaches
+`loc_3260A`, so the player retains the twist mapping published on the preceding
+hold tick. The engine had published the incremented twist mapping before
+testing jump. The port now preserves the native instruction order. No zone,
+route, frame, trace hydration, or tolerance condition was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 68136-68148 and
+68235-68276 (`sub_32784`, `loc_325B6`, `loc_325F2`, and `loc_3260A`).
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestS3kHczSpinningColumn` passes 8/8, including a regression that releases
+  exactly as the incremented swing byte crosses a twist-table boundary.
+- `TestS3kHczCompleteRunTraceReplay` passes animation-only verification. HCZ
+  advances from frame 12975 / 3 grouped errors to fully green.
+- The full animation sweep reports 41/58 green routes / 17 expected failures,
+  improving the baseline by the newly green HCZ route. AIZ remains at frame
+  2980 / 78; every S1/S2 route and later expected S3K failure retains its
+  previous status.
+- The full physics sweep reports 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
+### 2026-07-14 -- S3K post-Move crouch animation-owner milestone
+
+Branch `feature/ai-trace-animation-verification`, after the HCZ wind-tunnel
+landing milestone. HCZ's six Duck mismatches all occurred while a live object
+owner held `move_lock`: the engine returned before resolving any ground
+animation, while retail S3K gates `Sonic_Move` on `move_lock` and then runs
+`SonicKnux_Roll` separately. When Player 1 holds Down below the `$100` roll
+threshold, that later routine writes Duck `$08` even though the movement
+routine was skipped. The shared profile now permits that write through the
+existing S3K `movingCrouchThreshold` rule for a non-CPU player. CPU movement
+state remains excluded because it is not the `Ctrl_2_logical` byte consumed by
+`Tails_Roll`. No zone, route, frame, trace hydration, or tolerance condition
+was added.
+
+ROM reference: `docs/skdisasm/sonic3k.asm`, lines 22434-22435,
+23223-23240, 27796-27797, and 28458-28475.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- `TestScriptedVelocityAnimationProfile` passed, including focused S3K player,
+  S2 preservation, and S3K CPU-sidekick ownership regressions.
+- HCZ complete-run advances from frame 12727 / 9 grouped animation errors to
+  frame 12975 / 3; all six `move_lock` Duck mismatches are removed.
+- The full animation sweep reports 58 routes / 18 expected failures. Every
+  previously green S1/S2 route remains green, AIZ remains at frame 2980 / 78,
+  and the other expected S3K failures retain their prior status.
+- The full physics sweep reports 43/58 green routes / 15 expected failures;
+  AIZ and HCZ remain physics-green.
+
+### 2026-07-14 -- HCZ wind-tunnel landing animation-owner milestone
+
+Branch `feature/ai-trace-animation-verification`, after the S3K
+`SolidObjectFull` release-word milestone. HCZ's water-tunnel handler writes
+`anim=$1A` when the live `WindTunnel_flag` leaves its region, then
+`Player_TouchFloor_Check_Spindash` publishes Walk if the player lands before a
+later routine changes that byte. The engine represented the tunnel byte as a
+forced animation and released it only from the post-player zone-feature pass,
+one slot too late for the landing frame's `Animate_Sonic`/`Animate_Tails`.
+The handler now consumes its existing per-player exit latch from the shared
+S3K landing callback, before animation, without consulting zone, route, frame,
+or trace data. Native P1 and P2 exit owners remain independent.
+
+ROM references: `docs/skdisasm/sonic3k.asm` `loc_7046` and `loc_121B6`.
+
+Verification with all three discovered root-level REV01/locked-on ROMs:
+
+- `TestHCZWaterTunnelHandler` and the focused HCZ complete-run replay passed
+  their unit assertions; HCZ advances from frame 1222 / 16 grouped animation
+  errors to frame 12727 / 9. All six Hurt-to-Walk player/sidekick groups and
+  the dependent frame-1231 mapping mismatch are removed.
+- The 58-test animation sweep retains every previously green S1/S2 route (the
+  same eight legacy S1 credits fixtures remain structurally ineligible for
+  animation-only verification). AIZ remains at frame 2980 / 78 groups; all
+  post-HCZ S3K frontiers and group counts are unchanged.
+- The 58-test physics sweep remains 43 green / 15 expected-red. AIZ and HCZ
+  complete runs remain physics-green.
+
+### 2026-07-14 -- S3K SolidObject release-word milestone
+
+The typed S3K object-interaction rules now model `SolidObjectFull`'s
+`loc_1E0A2` push-release write: when an object's native push bit is consumed,
+the adjacent player-slot `anim/prev_anim` bytes receive Walk/Run unless the
+current animation is Roll or Spindash. This is shared solid-contact state, not
+a zone or route exception, and it restores both player and CPU-sidekick release
+ownership. No trace state is hydrated and no comparator tolerance was changed
+(`docs/skdisasm/sonic3k.asm:41503-41520`).
+
+Authoritative locked-on S3K complete-run animation results before/after this
+milestone:
+
+```text
+AIZ complete: 89 groups at frame 2980 -> 78 groups at frame 2980
+HCZ complete: 27 groups at frame 819 -> 16 groups at frame 1222
+```
+
+Regression gate at this milestone:
+
+- all 19 S2 animation routes and all 21 animation-capable S1 traces remain
+  green; the same eight legacy S1 credits traces reject their pre-v7 schema;
+- every previously green S3K animation trace retains its status, while the
+  already-red post-HCZ routes retain or advance their first-error frontiers;
+- the full 58-method cross-game physics sweep remains 43 passes / 15 existing
+  failures, with AIZ complete and HCZ complete green;
+- the 63-test shared solid-contact suite and five-test game-rules suite pass.
+
+Commands executed from the project root:
+
+```text
+mvn -q "-Dtest=com.openggf.level.objects.TestSolidObjectManager,com.openggf.tests.game.TestGameRulesConstants" test
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=animation "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=physics "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+```
+
+### 2026-07-14 -- S3K runtime animation-owner milestone
+
+S3K player and CPU-sidekick animation ownership now follows the native routine
+that publishes each raw animation byte across push handling, crouch release,
+airborne slide release, skid-script `$FD` switches, object capture/release,
+catch-up recovery, and retained end-of-act owners. Solid contacts carry their
+pre-contact push state into the later object slot, while HCZ's boss/results
+handoff restores its native Wait tuple through the retained event owner. No
+zone, route, frame, trace hydration, or comparator tolerance was added.
+
+Authoritative locked-on S3K complete-run animation results before/after this
+milestone:
+
+```text
+AIZ complete: 246 groups at frame 2402 -> 89 groups at frame 2980
+HCZ complete: 660 groups at frame 104 -> 27 groups at frame 819
+```
+
+Regression gate at this milestone:
+
+- all 19 S2 animation routes and all 21 animation-capable S1 traces remain
+  green; the same eight legacy S1 credits traces reject their pre-v7 schema;
+- every previously green S3K animation trace retains its status, and the
+  already-red post-HCZ routes retain their existing first-error frontiers;
+- the full 58-method cross-game physics sweep retains 43 passes / 15 existing
+  failures, with AIZ complete and HCZ complete still green;
+- the 159-test focused object, animation-profile, comparison-only invariant,
+  hydration-default, and rewind-coverage suite passes.
+
+Commands executed from the project root:
+
+```text
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=animation "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=physics "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+mvn -Dmse=off "-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=<focused S3K object/animation tests>,com.openggf.tests.TestTraceReplayInvariantGuard,com.openggf.tests.trace.TestTraceHydrateSwitchDefault,com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.game.rewind.coverage.TestStaticStateRewindCoverageGuard" test
+```
+
+### 2026-07-14 -- S3K Tails private high-speed animation-tier milestone
+
+S3K Tails' production animation profile now models `Animate_Tails`' private
+high-speed Walk selection. At `|ground_vel| >= $700`, the public raw animation
+byte remains Walk while the animator reads private script `$1F`; its `$C3/$C4`
+entries use one-frame slope banks rather than the ordinary Walk or Run stride.
+No zone, route, frame, trace hydration, or comparator tolerance was added
+(`docs/skdisasm/sonic3k.asm:29462-29489`; `docs/skdisasm/General/Sprites/Tails/Anim - Tails.asm:79`).
+
+Authoritative locked-on S3K complete-run animation results before/after this
+milestone:
+
+```text
+AIZ complete: 251 groups at frame 1602 -> 246 groups at frame 2402
+HCZ complete: 670 groups at frame 104 -> 660 groups at frame 104
+```
+
+Regression gate at this milestone:
+
+- all 19 S2 animation routes and all 21 animation-capable S1 traces remain
+  green; the same eight legacy S1 credits traces reject their pre-v7 schema;
+- the other S3K animation counts do not regress: CNZ 172/2673, ICZ 1372,
+  LBZ 375, MGZ 3917/4077 (improved from 3920/4078), and MHZ 98; standalone
+  AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 43 passes / 15 existing
+  failures, with AIZ complete and HCZ complete still green;
+- the seven-test focused production-profile, shared high-speed-tier, and game
+  rules suite passes;
+- the 13-test comparison-only invariant, hydration-default, and both rewind
+  coverage guard suite passes.
+
+Commands executed from the project root:
+
+```text
+mvn -Dmse=off "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.sprites.managers.TestTailsTailsFlightSelection#s3kTailsProfileUsesNativePrivateHighSpeedWalkTier,com.openggf.sprites.managers.TestPlayableSpriteAnimation#s3kTailsHighSpeedTierUsesSingleFrameSlopeStride,com.openggf.tests.game.TestGameRulesConstants" test
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=animation "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=physics "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+mvn -Dmse=off "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.tests.TestTraceReplayInvariantGuard,com.openggf.tests.trace.TestTraceHydrateSwitchDefault,com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.game.rewind.coverage.TestStaticStateRewindCoverageGuard" test
+```
+
+### 2026-07-14 -- S3K intro landing and CPU-handoff animation milestone
+
+The forced animation used to represent a `SpawnLevelMainSprites` falling intro
+now has an explicit level-event owner at the landing boundary. When terrain
+clears `Status_InAir`, that owner publishes the ROM's raw `anim=Walk` write
+before the same player slot reaches Animate; ordinary Hurt/Fall and recovery
+flight animations do not take this path. AIZ's dormant-marker bridge likewise
+publishes the raw Walk byte during its routine-4-to-6 handoff because that
+event path intentionally suppresses the following normal movement pulse. No
+zone, route, frame, trace hydration, or comparator tolerance was added
+(`docs/skdisasm/sonic3k.asm:24325-24329,26631-26648`).
+
+Authoritative locked-on S3K complete-run animation results before/after this
+milestone:
+
+```text
+AIZ complete: 253 groups at frame 987 -> 251 groups at frame 1602
+HCZ complete: 672 groups at frame 94 -> 670 groups at frame 104
+```
+
+Regression gate at this milestone:
+
+- all 19 S2 animation routes and all 21 animation-capable S1 traces remain
+  green; the same eight legacy S1 credits traces reject their pre-v7 schema;
+- the other S3K animation counts do not regress: CNZ 172/2673, ICZ 1372
+  (improved from 1374), LBZ 375, MGZ 3920/4078 (improved from 3923/4081), and
+  MHZ 98; standalone AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 43 passes / 15 existing
+  failures, with AIZ complete and HCZ complete still green;
+- the 23-test focused HCZ intro, sidekick recovery, and AIZ marker-handoff
+  suite passes;
+- the 13-test comparison-only invariant, hydration-default, and both rewind
+  coverage guard suite passes.
+
+Commands executed from the project root:
+
+```text
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=animation "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=physics "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+mvn -Dmse=off "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.tests.TestTraceReplayInvariantGuard,com.openggf.tests.trace.TestTraceHydrateSwitchDefault,com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.game.rewind.coverage.TestStaticStateRewindCoverageGuard" test
+```
+
+### 2026-07-14 -- S3K AIZ/HCZ intro animation-ownership milestone
+
+AIZ's plane intro now publishes the player's literal `mapping_frame=0` while
+its `$53` object-control byte suppresses `Animate_Sonic`; when the explosion
+releases the player after the player slot has already run, it publishes the
+raw Hurt byte without replacing that already displayed intro frame. The
+fresh CPU-sidekick slot likewise retains animation/mapping zero under
+`object_control=$83`: AIZ's dormant-marker release changes only the CPU
+routine, and the later catch-up trigger is the first owner that clears direct
+mapping control and selects Fly. Removing the engine-only forced-animation
+clear from ordinary established-follower placement also restores HCZ's
+`SpawnLevelMainSprites`-authored `$1B` intro animation. No zone, route, frame,
+trace hydration, or comparator tolerance was added
+(`docs/skdisasm/sonic3k.asm:8111-8148,22067-22076,26257-26272,
+26389-26397,26474-26534,135492-135495,135609-135619`).
+
+Authoritative locked-on S3K complete-run animation results before/after this
+milestone:
+
+```text
+AIZ complete: 257 groups at frame 0 -> 253 groups at frame 987
+HCZ complete: 673 groups at frame 0 -> 672 groups at frame 94
+```
+
+Regression gate at this milestone:
+
+- all 19 S2 animation routes and all 21 animation-capable S1 traces remain
+  green; the same eight legacy S1 credits traces reject their pre-v7 schema;
+- the other S3K animation counts do not regress: CNZ 172/2673, ICZ 1374
+  (improved from 1376), LBZ 375, MGZ 3923/4081, and MHZ 98; standalone AIZ
+  retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 43 passes / 15 existing
+  failures, with AIZ complete and HCZ complete still green;
+- the 39-test focused AIZ intro, HCZ intro, and sidekick catch-up suite passes;
+- the 13-test comparison-only invariant, hydration-default, and both rewind
+  coverage guard suite passes.
+
+Commands executed from the project root:
+
+```text
+mvn -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=animation -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay#replayMatchesTrace test
+mvn -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=animation -Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace test
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=animation "-Dtest=*TraceReplay" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic3k.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtrace.verification=physics "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false -Dmaven.test.failure.ignore=true test
+```
+
+### 2026-07-14 -- S2 CNZ2 boss-slot animation completion milestone
+
+CNZ2's final 247 animation groups came from Obj51 parent/child SST publication
+across the player and object slots. The boss body now retains the post-trigger
+X used by `Touch_Boss`, while each allocated electric ball keeps the parent
+`x_pos` captured in its spawn record throughout `loc_31BA8`, where
+`Boss_MoveObject` no longer advances the parent. The attached child observes
+the countdown value that the ROM parent slot would have published and changes
+to fall only at exact zero. After the floor split, the
+`AllocateObjectAfterCurrent` positive half retains its pre-physics coordinate
+for the next ordinary player-slot touch scan; both halves otherwise use the
+normal frame-start single-region path, without stale projected collision
+regions. This restores the exact inclusive-edge Tails hurts at all three split
+passes. No zone, route, frame, trace hydration, or comparator tolerance was
+added
+(`docs/s2disasm/s2.asm:66513-66538,66581-66617,66689-66696,66955-67022,85078,85107-85192`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 247 -> 0 grouped errors
+Green: 18 -> 19 (newly CNZ2; Sonic 2 animation fleet complete)
+```
+
+Regression gate at this milestone:
+
+- all 21 animation-capable S1 traces remain green; the same eight legacy
+  credits traces still report that their pre-v7 CSVs lack animation fields;
+- the S3K animation baseline remains unchanged from milestone `1a32cb932`:
+  AIZ complete 257, CNZ 172/2673, HCZ 673, ICZ 1376, LBZ 375, MGZ
+  3923/4081, MHZ 98, and standalone AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 43 passes / 15 existing
+  failures with no new failure; CNZ2 improves to two respawn-counter groups;
+- the 15-test focused CNZ boss collision suite passes;
+- the ten-test comparison-only invariant guard, hydration-default guard, and
+  both rewind coverage guards remain green.
+
+### 2026-07-14 -- S2 ARZ2 arrow-release and pillar-edge animation milestone
+
+ARZ2's last fourteen animation groups came from Obj89 state that crosses the
+object/player dispatch boundary. An arrow's drop routine sets airborne and
+clears on-object without clearing `Status_Push`; CPU Tails now publishes that
+still-live bit through the retained interact slot before its movement and
+animation dispatch. The boss pillar also follows its ordinary `SolidObject`
+contract: the unsigned range gate includes the exact right edge, where the
+zero-distance correction leaves the position low word untouched while setting
+push. With those native states present, the later arrow support/drop cadence
+converges without a separate timing adjustment. No zone, route, frame, trace
+hydration, or comparator tolerance was added
+(`docs/s2disasm/s2.asm:35338-35436,39297-39300,40484-40491,65330-65339,65531-65539,65689-65704`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 261 -> 247 grouped errors
+Green: 17 -> 18 (newly ARZ2)
+CNZ2: 247
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- the S3K animation baseline remains unchanged from milestone `9c7326c09`:
+  AIZ complete 257, CNZ 172/2673, HCZ 673, ICZ 1376, LBZ 375, MGZ
+  3923/4081, MHZ 98, and standalone AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep improves from 42 passes / 16
+  existing failures to 43 / 15 by greening ARZ2, with no new failure;
+- the 73-test focused Sonic 2 object suite passes;
+- the ten-test comparison-only invariant guard, hydration-default guard, and
+  both rewind coverage guards remain green.
+
+### 2026-07-14 -- S2 OOZ1 exact-edge push animation milestone
+
+OOZ1's last two animation groups came from Obj33's standard `SolidObject`
+edge. Its unsigned `bhi` gate accepts the exact +$23 right edge and reaches
+`SolidObject_AtEdge` with zero distance: the routine sets `Status_Push` without
+entering `StopCharacter`, so position low word, velocity, and inertia remain
+unchanged. The shared solid profile now exposes that exact zero-distance
+contract separately from its broader edge-subpixel hook, leaving ordinary
+nonzero correction untouched. Once Obj33 publishes the real push pulses, the
+old Obj36 CPU-sidekick grace ladder is both unnecessary and incorrect; its
+frame-, position-, speed-, and direction-shaped compensation has been removed.
+No zone, route, frame, trace hydration, or comparator tolerance was added
+(`docs/s2disasm/s2.asm:35338-35444,39287-39300,49673-49687`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 263 -> 261 grouped errors
+Green: 16 -> 17 (newly OOZ1)
+ARZ2: 14                     CNZ2: 247
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- the S3K animation baseline remains unchanged from milestone `95806f3a9`:
+  AIZ complete 257, CNZ 172/2673, HCZ 673, ICZ 1376, LBZ 375, MGZ
+  3923/4081, MHZ 98, and standalone AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 42 passes / 16 existing
+  failures, including OOZ1's pre-existing respawn-counter mismatch and no new
+  failure;
+- the focused solid-contact, OOZ placed-object, and Sonic 2 object suites pass
+  61 + 17 + 73 tests;
+- the ten-test comparison-only invariant guard and hydration-default guard
+  remain green.
+
+### 2026-07-14 -- S2 MCZ2 grounded-detach and stomper-edge animation milestone
+
+MCZ2's last three animation groups came from two native grounded dispatches.
+S2 Tails' `Move` routine chooses its standing Balance byte before `SpeedToPos`
+and `AnglePos`; when the later terrain probe sets `Status_InAir`, that earlier
+animation choice remains visible for the frame. The engine now carries that
+choice across a terrain detach, while a rewind-captured prior-frame
+`Status_OnObj` snapshot distinguishes a just-released solid ride and preserves
+MCZ1's collapsing-platform cadence. Separately, Obj2A's standard `SolidObject`
+call accepts the exact +$1B right edge and reaches `AtEdge`, setting push while
+leaving velocity and subpixel motion untouched. These are generic live-status,
+dispatch-order, and object-profile rules; no zone, route, frame, trace
+hydration, or comparator tolerance was added
+(`docs/s2disasm/s2.asm:35338-35449,39681-39748`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 266 -> 263 grouped errors
+Green: 15 -> 16 (newly MCZ2)
+ARZ2: 14                     CNZ2: 247
+OOZ1: 2
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- the S3K animation baseline remains unchanged from milestone `7b3ed8f73`:
+  AIZ complete 257, CNZ 172/2673, HCZ 673, ICZ 1376, LBZ 375, MGZ
+  3923/4081, MHZ 98, and standalone AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 42 passes / 16 existing
+  failures, including MCZ2's pre-existing respawn-counter mismatch and no new
+  failure;
+- the focused playable-movement, Sonic 2 object, and playable rewind-capture
+  suites pass 134 + 73 + 11 tests;
+- the ten-test comparison-only invariant guard and hydration-default guard
+  remain green.
+
+### 2026-07-14 -- S2 WFZ holding and grabber-cadence animation milestone
+
+WFZ's last seven animation groups were owned by two native state machines. The
+level-event `WindTunnel` now distinguishes its active flag from
+`WindTunnel_holding_flag`: once ObjC1 publishes the holding flag with Hang and
+object control, the tunnel returns without inventing its leave-path Walk write
+or clearing the active flag. ObjB2's approaching state remains the only docking
+state that publishes the waiting tuple; after it falls through to
+`ObjB2_Jump_to_ship`, player and invisible-grabber routines own the animation.
+Finally, each invisible-grabber catch writes only `anim=Hang`; its second
+routine-secondary catch no longer resets the already-live `anim_frame` and
+duration, preserving the retail two-frame Hang cadence. ObjC1 and the ObjB2
+grabber both publish the same explicit holding state. No route/frame exception,
+trace hydration, or comparator tolerance was added
+(`docs/s2disasm/s2.asm:5474-5524,79018-79164,80857-80916`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 273 -> 266 grouped errors
+Green: 14 -> 15 (newly WFZ)
+ARZ2: 14                     CNZ2: 247
+MCZ2: 3                      OOZ1: 2
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- the S3K animation baseline remains unchanged from milestone `2bf13428a`:
+  AIZ complete 257, CNZ 172/2673, HCZ 673, ICZ 1376, LBZ 375, MGZ
+  3923/4081, MHZ 98, and standalone AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 42 passes / 16 existing
+  failures, including WFZ's pre-existing absent-sidekick mismatch and no new
+  failure;
+- the focused Tornado, WFZ wind-tunnel, and Sonic 2 trigger-participation
+  suites pass 26 + 2 + 56 tests;
+- the ten-test comparison-only invariant guard and hydration-default guard
+  remain green.
+
+### 2026-07-14 -- S2 MTZ2 exact-edge landing animation milestone
+
+MTZ2's final two animation groups came from one ordinary Obj47 landing spread
+across the native object/player dispatch boundary. The button's standard
+`SolidObject` call accepts the exact +$1B right edge. When that contact becomes
+an airborne landing, `RideObject_SetRide` reaches `ResetOnFloor_Part3`, which
+clears `Status_Push` even if an earlier object-side latch remains live. If the
+object pass publishes the resulting Walk byte after the player's animation
+pass, the next player tick still compares raw `anim` with `prev_anim` and owns
+the corresponding push clear even when object control suppresses the movement
+resolver. These are generic ROM state and ordering rules; no zone, route,
+frame, trace hydration, or comparator tolerance was added
+(`docs/s2disasm/s2.asm:35331-35446,35980-36028,41013-41037,41262-41290,50825-50842`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 275 -> 273 grouped errors
+Green: 13 -> 14 (newly MTZ2)
+ARZ2: 14                     CNZ2: 247
+MCZ2: 3                      OOZ1: 2
+WFZ: 7
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- the S3K animation baseline remains unchanged from milestone `38dc7d81d`:
+  AIZ complete 257, CNZ 172/2673, HCZ 673, ICZ 1376, LBZ 375, MGZ
+  3923/4081, MHZ 98, and standalone AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 42 passes / 16 existing
+  failures, with MTZ2 still physics-green and no new failure;
+- the focused Obj47, solid-contact, and playable-animation suites pass;
+- the ten-test comparison-only invariant guard and hydration-default guard
+  remain green.
+
+### 2026-07-14 -- S2 OOZ2 landing and capsule-contact animation milestone
+
+OOZ2's last eleven animation groups came from four ROM state owners that meet
+around Oil Ocean's late capsule. `Sonic_SlopeRepel` sets air and move-lock but
+does not eagerly clear `Status_Push`; that clear remains owned by the later
+`anim != prev_anim` branch. An Obj07 oil landing reached after HurtStop keeps
+the already-published Hurt byte/mapping through the object pass instead of
+inventing an unconditional Walk write. Obj3E keeps its initialized
+`width_pixels=$20` for balance decisions while passing the separately expanded
+`d1=$2B` only to its body collision. Finally, its routine-4 button uses the
+standard `SolidObject` unsigned `bhi` range gate, so the exact +$1B right edge
+is a live zero-distance side contact that republishes `Status_Push` after the
+body landing. These owners are routine/object-state driven; no zone, route,
+frame, trace hydration, or comparator tolerance was added
+(`docs/s2disasm/s2.asm:35331-35446,37775-37799,50086-50155,84733-84858`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 286 -> 275 grouped errors
+Green: 12 -> 13 (newly OOZ2)
+ARZ2: 14                     CNZ2: 247
+MCZ2: 3                      MTZ2: 2
+OOZ1: 2                      WFZ: 7
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- the S3K animation baseline remains unchanged from milestone `b9825a931`:
+  AIZ complete 257, CNZ 172/2673, HCZ 673, ICZ 1376, LBZ 375, MGZ
+  3923/4081, MHZ 98, and standalone AIZ retains its input-alignment failure;
+- the full 58-method cross-game physics sweep retains 42 passes / 16 existing
+  failures, with OOZ2 still physics-green and no new failure;
+- the focused Sonic 2 oil, object, and movement suites pass 11 + 73 + 132
+  tests;
+- the ten-test comparison-only invariant guard and hydration-default guard
+  remain green.
+
+### 2026-07-14 -- S2 active-charge landing and exact-zero animation milestone
+
+MTZ3's remaining mismatches came from three independent native state owners.
+When opposite-direction braking subtracts exactly to zero, `MoveLeft` returns to
+the enclosing standing tail instead of entering the Stop branch; the engine now
+clears its semantic skid latch so that tail can publish Wait or Balance. When a
+CPU Panic spindash lands, the live Spindash animation together with S2's aliased
+`spindash_flag`/`pinball_mode` rule suppresses only the landing Walk write. This
+deliberately does not treat the bare Obj84 spindash mirror as a landing-wide
+pinball predicate: CNZ2's known post-despawn mirror can remain set after the
+native charge owner is gone. Finally, Obj70 exposes the `no_balancing` status
+that its initializer copies to every cog tooth
+(`docs/s2disasm/s2.asm:36880-36999,40464-40530,41013-41037,54607-54783`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 292 -> 286 grouped errors
+Green: 11 -> 12 (newly MTZ3)
+ARZ2: 14                     CNZ2: 247
+MCZ2: 3                      MTZ2: 2
+OOZ1: 2                      OOZ2: 11
+WFZ: 7
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- nine S3K animation results exactly retain milestone `8b53a74f8`'s known
+  counts, standalone AIZ retains its input-alignment failure, and AIZ
+  complete-run improves from 259 to 257 grouped errors;
+- the full 58-method cross-game physics sweep retains 42 passes / 16 existing
+  failures, with MTZ3 still physics-green and no new failure;
+- the focused Sonic 2 object and movement suites pass 72 + 132 tests;
+- the ten-test comparison-only invariant guard and hydration-default guard
+  remain green.
+
+### 2026-07-14 -- S2 exact-edge push and deep-wait animation milestone
+
+HTZ2's remaining animation cluster came from live solid state that the engine
+lost at two native boundaries. Obj2D Barrier and Obj3E Egg Prison now retain
+the standard S2 `SolidObject` inclusive right edge, while the capsule's folded
+body/button representation preserves the ROM SST ordering that leaves
+`Status_Push` visible to CPU Tails and its later Walk animation pass. The
+provider hook is driven by the live interact object and grounded body-edge
+geometry, not by a zone, route, or frame exception
+(`docs/s2disasm/s2.asm:35193-35207,39297-39300,40484-40491`).
+
+Two smaller native ownership fixes advance other routes: Obj89's arrow uses
+the cleared SST `width_pixels=0` for balance checks independently from its
+platform collision dimensions, and S2 `Sonic_ChkWait` continues through its
+Wait/Blink transition while riding because `Status_OnObj` is not one of that
+routine's gates (`docs/s2disasm/s2.asm:36545-36602,65565-65591`). Publishing
+Barrier's correct push bit exposed an older collision compensation: a negative
+`CalcRoomInFront` distance was being applied immediately and then repeated
+after `ObjectMove`. The ROM executes that terrain response once; only Obj30's
+separate exactly-flush `DropOnFloor` handoff remains deferred. Removing the
+duplicate restores HTZ2 physics without weakening the animation fix.
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 351 -> 292 grouped errors
+Green: 10 -> 11 (newly HTZ2)
+ARZ2: 28 -> 14              MTZ2: 4 -> 2
+MTZ3: 11 -> 6               OOZ2: 13 -> 11
+HTZ2: 36 -> 0
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- all ten S3K animation results exactly retain milestone `0f648a4f5`'s known
+  baseline (AIZ complete 259; CNZ 172/2673; HCZ 673; ICZ 1376; LBZ 375; MGZ
+  3923/4081; MHZ 98; standalone AIZ retains its input-alignment failure);
+- the full 58-method cross-game physics sweep retains 42 passes / 16 existing
+  failures, with HTZ2 green and no new failure;
+- the focused object, movement, and sidekick suites pass 71 + 131 + 97 tests;
+- the ten-test comparison-only invariant guard and hydration-default guard
+  remain green.
+
+### 2026-07-14 -- S2 solid-edge, spindash, and respawn animation milestone
+
+Four remaining Sonic 2 routes were blocked by native state that the engine was
+either dropping at an exact boundary or continuously replacing. CPZ and HTZ
+solids now keep the retail `bhi`-inclusive right edge, CPZ staircase push
+preservation requires both vertical overlap and a frame-start `Status_Push`
+latch, and Obj36 moving spikes retain their initialization dispatch without a
+same-frame movement step (`docs/s2disasm/s2.asm:29362-29389,35138-35176`). The
+frame-start requirement also removes the temporary CPZ1 physics regression
+that a same-pass synthesized push latch exposed.
+
+Animation state now stays with its actual ROM writer: an active spindash flag
+does not continuously republish Spindash between charge presses; Obj69-style
+full reset-on-floor users can explicitly publish Walk on a non-rolling
+landing; and ordinary S2 `TailsCPU_Respawn` clears only the engine's forced-Fly
+latch while preserving the live status/animation/script bytes. S3K retains its
+separate catch-up-flight write. Moving ARZ pillars and MCZ stompers also retain
+their solid status on the live SST identity, while the MCZ springboard exposes
+its unconditional `no_balancing` bit. These decisions are driven by routine,
+object capability, and frame-start state rather than zone, route, or trace
+frame (`docs/s2disasm/s2.asm:35462-35509,39122-39228,40470-40587`).
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 417 -> 351 grouped errors
+Green: 6 -> 10 (newly CPZ1, CPZ2, HTZ1, CNZ1)
+ARZ2: 29 -> 28              MCZ2: 8 -> 3
+MTZ3: 24 -> 11              CNZ2: 251 -> 247
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- all ten S3K animation results exactly retain milestone `0f648a4f5`'s known
+  baseline (AIZ complete 259; CNZ 172/2673; HCZ 673; ICZ 1376; LBZ 375; MGZ
+  3923/4081; MHZ 98; standalone AIZ retains its input-alignment failure);
+- the full 58-method cross-game physics sweep retains 42 passes / 16 existing
+  failures, with no new failure;
+- the ten-test comparison-only invariant guard and hydration-default guard
+  remain green.
+
+### 2026-07-14 -- S2 native landing and release-state animation milestone
+
+Several remaining Sonic 2 clusters shared a missing `ResetOnFloor` boundary.
+Ordinary solid-object landings now clear the complete flip/tumble state, and
+angled wall/ceiling terrain landings publish Walk through a typed S2 movement
+rule. The latter remains disabled for S1, whose angled path can retain Spring,
+and S3K keeps its separate raw Push byte authoritative. The animator mirrors
+the native `anim` to `prev_anim` comparison for S1/S2's Walk-special push
+handler even when an object-owned landing makes the write on a resolver-null
+frame (`docs/s2disasm/s2.asm:38049-38152,38627-38649`).
+
+The other native owners in this milestone are similarly state-driven:
+Grabber's escape tail publishes Walk, `Kill_Character` publishes Death without
+replacing the mapping already drawn that frame, and MTZ Obj69 exposes its ROM
+`width_pixels=$20` for Balance independently from the `$2B` solid collision
+width (`docs/s2disasm/s2.asm:56382-56435`). No trace data, comparator tolerance,
+or zone/route/frame exception was added.
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 2381 -> 417 grouped errors
+Green: DEZ1, EHZ1, ARZ1, MCZ1, MTZ1, SCZ1
+CPZ2: 589 -> 9             CNZ1: 52 -> 4
+MTZ2: 35 -> 4              MTZ3: 1224 -> 24
+OOZ1: 34 -> 2              CNZ2: 294 -> 251
+```
+
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- S3K gains no mismatching animation frame: CNZ complete-run improves from
+  2747 to 2673 grouped errors, while HCZ complete-run fixes one mismatching
+  frame (3874 -> 3873 unique frames) even though the split ranges raise its
+  grouped count from 672 to 673;
+- the full 58-method cross-game physics sweep improves from 41 passes / 17
+  existing failures to 42 / 16 by making MTZ3 physics green, with no new
+  failure;
+- the trace comparison-only invariant and hydration-default guards remain
+  green.
+
+### 2026-07-14 -- S2 native object, landing, and tumble animation owners milestone
+
+The remaining broad Sonic 2 divergence clusters came from engine state being
+treated as an animation owner. The synthetic spring and grounded-slide flags
+no longer overwrite bytes explicitly published by objects or OilSlides;
+`Player_JumpFlip` advances `flip_angle` in the airborne player routine before
+collision rather than in the later animation pass; and pinball-mode landings
+retain Roll while ordinary oil/terrain landings publish Walk. S2's
+`SolidObject_TestClearPush` Walk/Run word now has its native Roll guard, scoped
+through typed `ObjectInteractionRules` so S1's retail behavior is unchanged
+(`docs/s2disasm/s2.asm:35464-35476,37780-37786`).
+
+Object data now supplies the animation decisions that depend on it: CNZ
+rectangle blocks expose their live position and frame width, the Tornado,
+sliding spikes, MCZ rotating platforms, MTZ platforms, and OOZ popping lids
+expose their native balance widths, and the MTZ cylinder publishes the complete
+Walk/Run animation word. WFZ's breakable plating and invisible grabber retain
+Touch_Special's continuous collision-property polling. The SCZ Tornado opts
+into the native player-slot deep Wait/Blink routine while ordinary riders keep
+their platform-owned cadence; this object capability avoids the CNZ1/MTZ2
+physics regressions produced by enabling the whole-frame Blink skip for every
+rider.
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes: 8233 -> 2381 errors
+Green: DEZ1, EHZ1, ARZ1, MCZ1, SCZ1
+CNZ1: 351 -> 52            MTZ2: 274 -> 35
+CNZ2: 387 -> 294           OOZ2: 15 -> 14
+HTZ1: 6                    MCZ2: 22
+```
+
+No zone, route, frame, trace hydration, or comparator exception was added.
+Regression gate at this milestone:
+
+- all 21 eligible S1 animation traces remain green;
+- S3K animation has no new mismatching frame: CNZ complete-run fixes frame
+  1506, reducing its mapping mismatch span by one even though splitting the
+  surrounding range increases the report's grouped-divergence count by one;
+- the full 58-method cross-game physics sweep retains the same 41 passes and
+  identical 17 existing failures as milestone `59ce3445b`;
+- the trace comparison-only invariant and hydration-default guards remain
+  green.
+
+### 2026-07-14 -- S2 native push, hurt, and Tails respawn-animation ownership milestone
+
+Three ROM-owned animation transitions were still being represented as generic
+engine substitutions. First, S2 keeps raw `anim=Walk` while the `$FF`
+walk/run handler selects push mappings; Sonic publishes the current walk/run
+mapping and consumes a live timer before the push sub-handler is eligible
+(`docs/s2disasm/s2.asm:38449-38505,38627-38649`). Second,
+`Hurt_Sidekick` writes animation `$1A` for both Sonic and Tails rather than the
+generic `$19` entry (`docs/s2disasm/s2.asm:85497-85519`). Third,
+`TailsCPU_Respawn` changes routine/position/priority/spindash state without
+writing `anim`, `prev_anim`, `anim_frame`, or the animation timer; an already
+running Fly script must retain its cadence across SPAWNING -> APPROACHING
+(`docs/s2disasm/s2.asm:39116-39140,41272-41303`). Tails' separate native tumble
+mapping base is also `$75` (`docs/s2disasm/s2.asm:41405-41435`).
+
+The S2 `PlayerAnimationRules` now exposes push as a walk-special-handler owner,
+the shared animator defers Sonic's push mapping until the live walk timer
+expires, the canonical S2 hurt mapping resolves to `$1A`, and CPU respawn
+cleanup no longer fabricates a previous-animation mismatch. Focused tests cover
+raw Walk preservation, push-onset/expiry publication, both characters' hurt
+profile, Tails' tumble base, and preserved Fly `prev_anim`/frame/timer state.
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+All 19 routes improved; aggregate errors 14506 -> 8233 (-6273).
+ARZ1: 105 -> 3             DEZ1: 42 -> 1
+EHZ1: 435 -> 30            HTZ1: 851 -> 20
+CNZ2: 597 -> 202           HTZ2: 801 -> 81
+MCZ2: 344 -> 46            MTZ2: 1027 -> 116
+OOZ2: 412 -> 127           SCZ1: 22 -> 15
+```
+
+No zone, route, frame, trace hydration, or comparator exception was added.
+Regression gate at this milestone:
+
+- the 21 eligible S1 animation traces remain green;
+- all ten S3K animation results exactly retain milestone `36654f178`'s known
+  baseline, including the standalone AIZ input-alignment failure;
+- the full 58-method cross-game physics sweep retains the same 41 passes and
+  identical 17 existing failures as milestones `c886deab2` and `36654f178`;
+- the trace comparison-only invariant guard (10 tests) and hydration-default
+  guard remain green.
+
+### 2026-07-14 -- S2 Tails private high-speed tier milestone
+
+The cadence fix exposed EHZ1 frame 1031 with Tails at effective speed above
+`$700`, raw animation Walk (`$00`), expected mapping `$38`, and engine mapping
+`$32`. `TAnim_WalkRunZoom` has three internal locomotion tiers while leaving
+the public animation byte at Walk: Walk below `$600`, Run from `$600`, and the
+private `TailsAni_HaulAss` pointer at or above `$700`. Their slope-bank strides
+are `4/3/3`; HaulAss is table slot `$1F` with frames `$32,$33`
+(`docs/s2disasm/s2.asm:41366-41401,41553,41622-41623`). The same routine doubles
+animation-purpose speed while `status_secondary.sliding` is set.
+
+`ScriptedVelocityAnimationProfile` now carries an optional private high-speed
+tier, exact per-tier slope strides, and sliding-speed policy. The shared
+animator selects that script without writing the raw animation ID or resetting
+the shared frame/timer cadence. Translation validates that a donor really has
+the private script before retaining the tier. S2 Tails is configured as
+`$1F/$700` with strides `4/3/3`; S2 Sonic receives only the independently native
+sliding-speed policy. S3K profiles remain unchanged in this milestone, keeping
+its existing trace baseline stable until its own tier-transition cadence is
+addressed.
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+EHZ1: 438 errors at frame 1031 -> 435 errors at frame 1534
+CNZ1: 281 errors at frame 191  -> 277 errors at frame 1023
+CNZ2: 607 errors at frame 223  -> 597 errors at frame 909
+CPZ1: 60 errors at frame 250   -> 55 errors at frame 706
+CPZ2: 2113 errors at frame 402 -> 2110 errors at frame 759
+OOZ2: 443 errors               -> 412 errors
+All 19 routes: no animation error count increased.
+```
+
+Focused tests cover S2 Run's three-frame slope stride, the `$700` HaulAss
+boundary, raw-Walk preservation, sliding `$380 -> $700` effective speed, ROM
+script frames, translation/copy behavior, and the cross-game-capable `4/2/1`
+S3K data shape without enabling it in S3K runtime profiles.
+
+Regression gate at this milestone:
+
+- the 21 eligible S1 animation traces remain green;
+- the ten S3K animation replay results exactly match milestone `c886deab2`
+  (including the existing standalone AIZ input-alignment failure);
+- the full 58-method cross-game physics sweep retains the same 41 passes and
+  identical 17 existing failures as `c886deab2`.
+
+### 2026-07-14 -- S2 character-specific walk/run cadence milestone
+
+All 19 ordinary Sonic 2 animation traces initially diverged on Sonic's first
+walk mapping: after frame 0 published `$0F`, the engine held it through frame 1
+while the ROM immediately published `$10`. `SAnim_WalkRun` writes
+`mapping_frame` from the current `anim_frame` before its timer decrement and
+expiry advance (`docs/s2disasm/s2.asm:38494-38505`). Tails is deliberately
+different: `TAnim_WalkRunZoom` gates on its live timer before selecting and
+publishing a mapping (`docs/s2disasm/s2.asm:41330-41396`).
+
+The shared animator now models this as a per-character
+`ScriptedVelocityAnimationProfile` property. S2 Sonic and all S3K playable
+profiles use publish-first cadence; S1 Sonic and S2 Tails retain timer-first
+cadence. Translation and profile-copy paths preserve the property. Focused
+tests cover both orders, the exact publish-then-expiry sequence, the S2
+Sonic/Tails ROM profile split, and the S3K playable profiles.
+
+Authoritative REV01 Sonic 2 animation sweep before/after this milestone:
+
+```text
+19 traces before: 19 failed; common first frontier frame 1,
+  player_mapping_frame expected=$10 actual=$0F
+19 traces after:  19 failed; every frame-1 Sonic frontier cleared
+EHZ1: 924 errors at frame 1 -> 438 errors at frame 1031
+DEZ1: 911 errors -> 42 errors
+MCZ1: 471 errors -> 15 errors
+SCZ1: 359 errors -> 22 errors
+WFZ1: 1101 errors -> 38 errors
+```
+
+The first remaining EHZ1 mismatch is Tails' separate high-speed locomotion
+tier (`expected mapping=$38, actual=$32`); it is not part of the cadence rule.
+No route, zone, frame, trace hydration, or comparison tolerance was added.
+
+Regression gate at this milestone:
+
+- All 21 S1 traces whose CSV fixtures contain v7 animation fields remain green;
+  the eight historical credits fixtures reject animation-only verification
+  because they intentionally lack those fields.
+- Against a detached clean-HEAD baseline, all nine runnable S3K animation
+  traces reduced their error counts (for example AIZ complete-run
+  `3382 -> 286`, HCZ `2370 -> 674`, and MHZ `457 -> 98`); the standalone AIZ
+  fixture retains its identical pre-existing BK2 input-alignment failure.
+- The full 58-method cross-game physics replay sweep has the same 17 existing
+  failures as clean HEAD; all S1 physics traces remain green and no physics
+  frontier moved.
+
+### 2026-07-14 -- S1 delayed slope orientation fixed; 29-trace fleet remains green
+
+The new mapping-frame verifier correctly kept S1's high-angle Walk/Run mapping
+frame across `obTimeFrame` delay frames, but the renderer independently reset
+its X/Y flips to ordinary facing every frame. That split the two halves of the
+native displayed state: frame `$1C` remained selected while its required paired
+X/Y inversion disappeared, producing the alternating upside-down pose.
+
+`Sonic_Animate` decrements `obTimeFrame` and returns before reading the angle or
+rewriting either `obFrame` or the X/Y bits in `obRender`
+(`docs/s1disasm/_incObj/01 Sonic.asm:2253-2279`). The shared animation manager
+now retains the orientation with the mapping under an explicit
+`PlayerAnimationRules` value: S1 `true`, S2 `false`, S3K `false`. S2 and S3K
+place their Walk/Run orientation selection before their timer gates
+(`docs/s2disasm/s2.asm:38449-38513`;
+`docs/skdisasm/sonic3k.asm:24804-24882`). A focused regression holds mapping
+`$1C` and both render flips across the next delayed S1 frame.
+
+Authoritative REV01 S1 sweep with local uncommitted fix:
+
+```text
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true \
+  -Dsonic1.rom.path=<REV01 ROM> \
+  -Dtest='com.openggf.tests.trace.s1.*TraceReplay' test
+Tests run: 29, Failures: 0, Errors: 0, Skipped: 0
+```
+
+The full cross-game `*TraceReplay` sweep retained the same 29/29 S1 result.
+It reported 19 existing S2 failures (the common first frontier is mapping
+`expected=$10, actual=$0F`) and 43 skips, primarily disabled S3K fixtures. A
+detached clean-HEAD rerun of `TestS2Ehz1TraceReplay` reproduced its identical
+924-error baseline at frame 1, proving that S2 result is not introduced by this
+fix.
+
+### 2026-07-13 -- Sonic 1 animation-verification fleet fully green
+
+The animation/frame verifier exposed native state that physics-only replay had
+not distinguished. The final fixes model that state rather than carving out
+zones, routes, or frames:
+
+- `Solid_NoCollision` publishes the retail Walk/Run animation word only while
+  the paired player/checkpoint owner is live. A folded staircase's
+  standing-only sibling release and Obj33's skipped state-2 exit retain their
+  own explicit native owners; `Solid_SideAir` and an airborne monitor release
+  clear push without publishing.
+- S1 monitors (Obj26), MZ bricks (Obj46), and chained stompers (Obj31) retain
+  exact-right-edge contact because their native comparison rejects with `bhi`,
+  not `bhs`. Moving owners use their live SST identity.
+- Obj33 preserves its state-2 ride/exit transition and consumes the retained
+  push owner at the following state-0 checkpoint.
+- The only held-direction balance exception is the S1 `MoveLeft` braking branch
+  that subtracts `$80` from positive inertia to reach exactly zero; ordinary
+  held input at rest remains suppressed.
+
+The screenshot audit was also locked down as a focused contract: at angle
+`$18`, facing right, raw animation `$00` is correctly Walk and the ROM's coarse
+slope quantization selects mapping `$1C` (shown as decimal `28` by the debug
+overlay) before incrementing the animation frame index.
+
+Authoritative root-level REV01 sweep:
+
+```text
+mvn -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true \
+  -Dsonic1.rom.path=<REV01 ROM> \
+  -Dtest=com.openggf.tests.trace.s1.*TraceReplay test
+Tests run: 29, Failures: 0, Errors: 0, Skipped: 0
+```
+
+All 29 Sonic 1 traces are green with zero release-blocking physics or animation
+divergences. Focused solid-controller, movement, object-profile, and slope-bank
+regressions also pass.
+
+### 2026-07-13 -- S1 prison-capsule balance width greens GHZ3
+
+GHZ3 frame 8736 left Sonic stationary on the Obj3E capsule body at X offset
+`-$19`. Native `Pri_Var` stores `obActWid=$20` for that body, and
+`Pri_BodyMain` adds Sonic's `$B` solid width only to the `$2B` passed in `d1`
+to `SolidObject`. The later `Sonic_Move` balance check reads the unchanged
+`obActWid`, placing Sonic safely inside the native edge window. The engine
+instead used its full-solid fallback balance width of 16 and falsely selected
+Balance rather than Wait. The later frame-8771 span was the same body and
+position.
+
+Obj3E now exposes `$20` through `getBalanceWidthPixels()` while retaining its
+`$2B` collision half-width. This is object data shared by every prison body,
+not a zone, route, frame, trace-data, or tolerance exception. With the local
+REV01 Sonic 1 ROM, `TestS1Ghz3CompleteRunTraceReplay` advances frame 8736 / 4
+animation errors to fully green, with zero physics errors or warnings. The
+focused Obj3E contract test and the existing Obj56/Obj61 balance-width sanity
+tests also pass.
+
+### 2026-07-13 -- S1 MZ1 native solid/standing animation owners
+
+After the native edge-balance cluster, MZ1 standalone had seven
+animation-only errors with green physics. The first two isolated frames were
+the retail S1 `FixBugs=0` behavior in `Solid_NoCollision`: the object-side
+`Status_Push` bit was still set even though player movement had already cleared
+Sonic's paired bit, so the ROM still executed `move.w #id_Run,obAnim(a1)` and
+published raw Walk with `prev_anim=Run`. The engine incorrectly required an
+additional live-player or one-frame checkpoint predicate after it had already
+consumed that exact object's push latch.
+
+The next edge frame came from opposite-direction braking reaching inertia zero
+while Left remained held. `Sonic_MoveLeft` returns to the enclosing routine,
+which then continues through the ordinary zero-inertia Wait/Balance tail; held
+direction is not a separate balance veto. The longer frame-5807 window exposed
+another P29 width case: Obj31 sets `obActWid` from `CStom_Var2` but adds `$B`
+only to the `SolidObject` argument. Its balance width is therefore raw
+`$38/$30/$10`, not the generic 16-pixel fallback or padded collision width.
+
+All changes are driven by native object push latches, inertia/input state, and
+subtype-backed SST width. No route, zone, frame, trace hydration, or tolerance
+was added. ROM references:
+
+- `docs/s1disasm/_incObj/sub SolidObject.asm:251-263`
+- `docs/s1disasm/_incObj/01 Sonic.asm:395-460,634-757`
+- `docs/s1disasm/_incObj/31 MZ Chained Stompers.asm:112-135,184-190`
+
+The three new focused contracts pass: object-side push ownership after the
+paired player bit clears, held-direction zero-inertia balance, and all three
+Obj31 native balance widths. With the root-level REV01 ROM, MZ1 standalone
+improves from 7 to 6 animation-only errors with zero warnings and fully green
+physics. The 37-frame Obj31 false-Balance window at frames 5807-5843 and the
+frame-6092 push-release mismatch are gone. The first remaining frontier stays
+at frame 2596 (ROM Walk, engine Duck); frame 4114 and later mapping cadence are
+separate remaining animation-owner work.
+
+### 2026-07-13 -- S1 moving-solid animation release ownership
+
+Three remaining mapping mismatches shared one native state-ownership theme.
+GHZ3's collapsing ledge cleared Sonic's ride/push status at `Ledge_TimeZero`
+but omitted the adjacent `move.b #id_Run,obPrevAni(a1)`, so Walk did not
+restart when the platform forced him off. LZ1's moving Obj56 door and MZ2's
+retracting Obj36 spikes rebuilt position-derived spawn keys while their ROM
+standing/pushing bits remained in the same live SST, stranding the solid latch
+that owns the following animation release. MZ2 also exposed that Obj33's
+raw-Walk fallback must survive skipped solid checkpoints only while its native
+lava-motion state is active; applying it to an ordinary state-0 block invented
+a later release.
+
+The ledge now publishes the native previous-animation sentinel, moving spikes
+and floating blocks retain their solid state by live instance, and Obj33 scopes
+its skipped-checkpoint fallback to `inMotion`. These are object routine/state
+rules, not zone, route, frame, trace-data, or tolerance exceptions. Focused
+object tests pass. With the local REV01 Sonic 1 ROM and zero physics errors:
+
+- `TestS1Lz1CompleteRunTraceReplay` advances frame 1492 / 1 animation error to
+  fully green.
+- `TestS1Ghz3CompleteRunTraceReplay` advances frame 6464 / 5 animation errors
+  to frame 8736 / 4 animation errors; the new frontier is a separate animation
+  ID mismatch (expected `$05`, actual `$06`).
+- `TestS1Mz2CompleteRunTraceReplay` advances frame 3634 / 19 animation errors
+  through frame 4276 to frame 5817 / 17 animation errors; the new frontier is
+  a separate mapping mismatch (expected `$09`, actual `$46`).
+
+### 2026-07-13 -- S1 full-solid SideAir push-latch cleanup
+
+SYZ1's remaining frame-5761 mapping restart came from conflating two native
+`SolidObject` exits. As Sonic moved across the top-left corner of an adjacent
+Obj56, the contact became `Solid_SideAir`: ROM calls `Solid_NotPushing`
+directly, clearing the object/player push pair without passing through
+`Solid_NoCollision`'s retail S1 Walk/Run word write. The single-piece engine
+paths retained the old push latch through this non-pushing contact, then later
+cleared it as no-contact and emitted the wrong animation word.
+
+Single-piece inline and batched contacts now clear a native latch when the
+resolved contact is a non-pushing side result, while top/standing contacts
+retain their native owner and null/no-collision alone publishes the animation
+word. This is the shared `SolidObject` control-flow distinction, not a zone,
+route, frame, or trace exception; trace data and comparison tolerances are
+unchanged. The focused full-solid SideAir test is green. Composed SYZ1 trace
+verification is fully green with zero animation or physics divergences. The
+already-green SBZ2 replay remains green, and MZ1 complete-run retains its prior
+frame-3969 animation frontier (four unrelated errors) with zero physics errors.
+
+### 2026-07-13 -- S1 SBZ2 greens on Obj6B solid state
+
+SBZ2's final mismatch at frames 3377-3378 occurred as Sonic reversed along
+the moving Obj6B stomper door. Native `Sto_Solid` calls retail S1
+`SolidObject`: its initial horizontal `bhi` bound retains equality as a side
+contact, and its standing/pushing bits remain in the live Obj6B SST while the
+door moves. The engine used an exclusive inherited edge and keyed persistent
+status to the dynamic placement rebuilt during movement, shifting Walk's frame
+cadence by one step.
+
+Obj6B now exposes the inclusive bound and live-instance latch ownership. These
+are object routine/lifetime rules, not zone, route, frame, or trace exceptions;
+trace data and comparison tolerances are unchanged. The focused solid-profile
+test passes, and `TestS1Sbz2CompleteRunTraceReplay` is fully green with the
+local REV01 Sonic 1 ROM, with zero animation, physics, or warning divergences.
+
+### 2026-07-13 -- S1 floating-block solid status uses the live SST
+
+SYZ1 frame 1741 ended Obj56 side contact while Sonic remained standing on a
+different floating block. ROM stores each block's standing/pushing bits in its
+live SST status byte, so the former side-contact slot cleared `Status_Push` and
+the push mapping released on the native cadence. The engine rebuilt Obj56's
+dynamic spawn every movement tick and keyed the persistent solid latch to that
+transient placement, leaving the old push owner unreachable.
+
+Obj56 now keys standing/pushing state to its live object instance, matching the
+SST lifetime while retaining dynamic placement updates. This is object-lifetime
+state shared by all floating blocks and doors, not a zone, route, frame, or
+trace exception; trace data and comparison tolerances are unchanged. The
+focused Obj56 contract passes, and with the local REV01 Sonic 1 ROM SYZ1
+advances from frame 1742 / 4 animation errors to frame 5761 / 3 animation
+errors with zero physics errors.
+
+### 2026-07-13 -- S1 running-disc attachment animation ownership
+
+SBZ2 complete-run frame 170 lands inside Obj67's running-disc radius. The
+native `Disc_MoveSonic` first-attachment path runs later in the object list,
+after Sonic has rendered the landing frame: when Sonic is no longer rolling it
+clears `obAnim` to Walk, then writes Run to `obPrevAni` so the next player slot
+restarts Walk from mapping `$08`. The engine previously treated ordinary
+walking selection as an implicit substitute, leaving the landing mapping live.
+
+Obj67 now publishes both native animation bytes at first grounded attachment.
+This is the object's routine state, not a zone, route, frame, or trace
+exception; trace data and comparison tolerances are unchanged. The focused
+Obj67 tests pass, and with the local REV01 Sonic 1 ROM SBZ2 advances from frame
+171 / 49 animation errors to frame 3377 / 1 animation error with zero physics
+errors.
+
+### 2026-07-13 -- S1 frame-start push pairing advances MZ1
+
+MZ1 complete-run frame 2404 began with both Sonic and Obj30's native
+`Status_Push` bits set. Sonic's earlier movement slot cleared the player bit
+and selected Wait; the later oscillating glass-block slot then reached retail
+`Solid_NoCollision`, observed its still-set object bit, and wrote the adjacent
+Walk/Run animation word for one frame. The engine required the live player bit
+or an already-Walk animation, so it suppressed this valid later-slot write.
+
+Push release now pairs the exact object's immediately previous solid checkpoint
+with the player's existing frame-start push snapshot. Obj30 also keys its push
+state by live instance while its dynamic Y changes and exposes `SolidObject`'s
+inclusive right edge. This is native status/slot-order state, not a zone, route,
+frame, or trace gate; no trace data or tolerance changed. Focused stale-latch,
+previous-checkpoint, persistent-latch, and Obj30 geometry tests pass.
+`TestS1Mz1CompleteRunTraceReplay` advances from frame 2404 to frame 2815 with
+zero warnings and physics errors.
+
+### 2026-07-13 -- Forced logical direction greens S1 SLZ2
+
+SLZ2 remained byte-exact through signpost walk-off frame 5289, where forced
+Right carried inertia from `-$58` to `+$80` without writing `obAnim`, so Stop
+correctly remained visible. On frame 5290 the native same-direction helper
+wrote Walk. The engine movement dispatch did the same, but the later animation
+profile reclassified the frame from the raw Left button hidden by the signpost's
+locked logical Right input and preserved Stop.
+
+Opposite-direction no-write ownership now stays in the movement dispatcher,
+which receives the effective logical pad. The animation profile therefore
+honors its published result rather than re-reading raw inputs. This is a
+controller-state rule, not a zone, route, frame, or trace exception; no trace
+data or tolerance changed. Focused profile/movement tests pass,
+`TestS1Slz2CompleteRunTraceReplay` is fully green with zero warnings and
+physics errors, and the previously green LZ3 complete run remains green.
+
+### 2026-07-13 -- S1 Labyrinth-block balance width
+
+SBZ3 complete-run frame 3491 placed Sonic on Obj61 subtype `$13`, whose
+`LBlk_Var` entry gives `obActWid=$20`. The object passes `$20+$B` to
+`SolidObject` for collision, but native `Sonic_Move` reads the unpadded
+`obActWid` when deciding whether to balance. Reusing the collision width made
+the engine select Balance while the trace remained in Wait.
+
+Obj61 now exposes its native active width separately and retains
+`SolidObject`'s inclusive right edge. This is subtype/routine data, not a zone,
+route, frame, or trace exception; trace data and comparison tolerances are
+unchanged. With the local REV01 Sonic 1 ROM, the focused object contract test
+passes and `TestS1Sbz3CompleteRunTraceReplay` advances from frame 3491 / 3
+animation errors to frame 5818 / 1 animation error, with zero warnings and
+physics errors.
+
+### 2026-07-13 -- Coasting animation ownership greens S1 LZ3
+
+After the full-solid edge fixes, LZ3 retained four animation errors. At frame
+13792, WaterSlide had been carried through the airborne arc and landing, but
+the first unlocked no-input ground tick replaced it with Walk while inertia
+was still nonzero. Native `Sonic_Move` reaches `ResetScr` without an animation
+write on that path; only the following zero-speed tail writes Wait. The later
+frame-13894 mismatch was the same ownership rule during braking: once Stop is
+published, opposite-direction ticks below the skid threshold leave it intact
+until inertia crosses zero, facing changes, and the same-direction helper
+writes Walk.
+
+The shared scripted velocity profile now preserves the current animation for
+nonzero no-direction coasting, and preserves Stop while effective input remains
+opposite the current facing direction. These are input/inertia/status branches,
+not trace, zone, route, or frame gates. No trace data or comparison tolerance
+changed. With the local REV01 Sonic 1 ROM, the focused profile tests pass and
+`TestS1Lz3CompleteRunTraceReplay` is fully green with zero warnings and physics
+errors.
+
+### 2026-07-13 -- S1 full-solid caller inclusive edges
+
+GHZ2 frame 829 and LZ3 frame 2894 both reached the same false animation
+restart after an exact-edge side contact. Obj36 spikes and Obj56 floating
+blocks/doors call the S1 `SolidObject` routine, whose initial horizontal check
+uses `bhi`: a relative X equal to twice `d1` remains inside. Their engine
+profiles inherited an exclusive right edge, so the per-object push bit cleared
+and the retail S1 `Solid_NoCollision` animation word ran one frame too early.
+
+Both native callers now expose an inclusive right edge through their solid
+profiles. This is routine geometry shared by every instance, not a zone, route,
+or frame carve-out; trace data and comparison tolerances are unchanged.
+Verification with the local REV01 Sonic 1 ROM:
+
+- `TestS1Ghz2CompleteRunTraceReplay` is fully green (animation and physics).
+- `TestS1Lz3CompleteRunTraceReplay` advances from frame 2894 / 17 errors to
+  frame 13792 / 4 errors, with zero warnings and physics errors.
+- Focused Obj36 and Obj56 contract tests cover the inclusive edge.
+
+### 2026-07-13 -- Grounded roll preserves later animation owners
+
+At composed baseline `47e9a5eed`, SBZ1 complete-run frame 1432 cleared Obj70
+Girder's native pushing bit while Sonic remained in `Status_Roll`.
+`Solid_NoCollision` wrote the retail S1 word `#id_Run` across `obAnim` and
+`obPrevAni`, leaving raw Walk `$00` active. The ROM's following
+`Sonic_MdRoll` frames do not write `obAnim`; only roll entry does. The shared
+animation profile instead reselected Roll `$02` every grounded rolling frame,
+overwriting the later object owner at frame 1433.
+
+Grounded rolling now preserves the existing animation byte. Roll entry remains
+an explicit Roll publisher. `RollLeft` and `RollRight` also publish Roll only
+when held input points with the current inertia (including zero), while their
+opposite-direction braking branches leave the byte alone, matching the S1, S2,
+and S3K routines. The fix is shared routine ownership, with no route, zone,
+frame, trace-data, or tolerance change.
+
+Verification used the local REV01 Sonic 1 ROM:
+
+- `TestScriptedVelocityAnimationProfile#groundedRollPreservesAnimationWrittenByLaterObjectDispatch`
+  passed.
+- `TestPlayableSpriteMovement#testSameDirectionRollInputPublishesRollButOppositeInputDoesNot`
+  passed, covering both directional ownership branches.
+- `TestS1Sbz1CompleteRunTraceReplay` advanced from frame 1433 / 13 errors to
+  frame 1541 / 9 errors. The new first error is a separate Walk mapping cadence
+  mismatch (expected `$08`, actual `$09`); physics remains at zero errors and
+  the report has zero warnings.
+- `TestS1Mz1CompleteRunTraceReplay` retained its pre-existing frame-2404
+  animation-only frontier (7 errors, 0 warnings, green physics). Its release
+  occurs after the engine player push bit has already cleared and needs a
+  future exact object-push-lifetime correction; the animation resolver does not
+  infer that missing state.
+- The previously green `TestS1Ghz1CompleteRunTraceReplay`,
+  `TestS1Ghz1TraceReplay`, and `TestS1Slz3CompleteRunTraceReplay` all remained
+  green. The comparison-only S2 EHZ1 check retained its pre-existing frame-1
+  mapping frontier.
+
+### 2026-07-13 -- S1 button inclusive-edge push ownership
+
+SBZ3 complete-run frame 49 placed Sonic exactly at the right edge of Obj32's
+`SolidObject` width while he continued pushing. The ROM horizontal range check
+uses `bhi`, so equality remains a side collision and the object's push bit stays
+set. The button's default engine profile used an exclusive right edge, causing
+its push latch to clear intermittently and the S1 retail push-release animation
+word to restart Walk before the expected push mapping appeared.
+
+Obj32 now exposes the inclusive edge encoded by its native `SolidObject` call.
+This is object/routine geometry, not a route or frame exception; trace data and
+comparison tolerances are unchanged. With the local REV01 Sonic 1 ROM,
+`TestS1Sbz3CompleteRunTraceReplay` advances from frame 49 / 5 animation errors
+to frame 3491 / 3 animation errors, with zero physics errors and warnings. The
+focused button contract test also covers the inclusive edge.
+
 ## Agent Quick State
 
 Read this section first. Treat it as the current routing table for trace work;
@@ -45,6 +5705,238 @@ probe is required before the bounce is accepted.
 Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
+
+On branch `feature/ai-trace-animation-verification`, trace CSV v7 adds the
+ROM animation id and displayed mapping frame for both Player and Sidekick.
+`trace.verification=physics|animation|all` now holds independent verification
+frontiers: S1 GHZ1 physics remains green through 3,905 frames while animation
+first differs at f387; S2 EHZ1 physics remains green while animation first
+differs at f1; S3K AIZ retains its existing physics first-red at f290 and has
+an independently classified animation first-red at f290. See the entry below
+for exact fields and values.
+
+## 2026-07-13 - Player and Sidekick animation verification
+
+### Rolling-jump animation ownership
+
+Branch `bugfix/ai-s1-slide-roll-owner`, based exactly on `58f18adb5`, restores
+the native animation contract when a jump begins with Status_Roll already set.
+At LZ3 f2004, `LZWaterSlides` has published Slide `$1B` while Sonic remains in
+the rolling ground mode. The jump press then sets InAir, Jumping, and
+Roll-Jump, but the ROM retains Slide while the engine previously inferred Roll
+`$02` from the final status bits.
+
+`Sonic_Jump` writes Roll only on its non-rolling entry. If Status_Roll is
+already set, the `.rolljump` tail sets the Roll-Jump bit and returns without
+touching `obAnim`. The same branch ownership is present in S1
+(`docs/s1disasm/_incObj/01 Sonic.asm:1203-1274`), S2
+(`docs/s2disasm/s2.asm:37318-37397`), and S3K
+(`docs/skdisasm/sonic3k.asm:23303-23363`). The shared profile now preserves
+the explicit incoming animation throughout a rolling-jump arc; an ordinary
+non-rolling jump still selects Roll.
+
+Comparison-only results with the verified REV01 ROM, with zero physics errors:
+
+- LZ3 complete run: 23 animation errors at f2004 -> 21 errors at f2235
+  (`player_mapping_frame`, expected `$08`, actual `$09`).
+- LZ2 complete run: unchanged at 9 animation errors, first red f2293
+  (Bubble `$0F` expected, Walk `$00` actual).
+
+The later LZ3 frontier is a separate mapping-cadence issue. The combined
+movement/profile unit suite passes 133/133, including focused coverage that a
+rolling jump preserves a pre-dispatch Slide byte.
+
+### Released-input Stop animation ownership
+
+Branch `bugfix/ai-s1-skid-publication`, based exactly on `075b9fd03`, restores
+the native lifetime of a published Stop animation after the player releases
+the opposite direction. LZ3 f1571 and SLZ2 f1740 share the same signature:
+the grounded player retains nonzero inertia and no direction is held, the ROM
+keeps Stop `$0D`, and the engine previously replaced it with Walk `$00`.
+
+In the native grounded routine, the no-direction path tests angle and inertia,
+then reaches `ResetScr` without writing `obAnim`. A Stop byte written by the
+earlier opposite-direction braking helper therefore remains active until the
+Stop script's `$FD` command explicitly switches it to Walk. The engine's
+`skidding` boolean is a synthetic trigger/dust owner and may clear on input
+release, but it must not imply an animation write. The same control shape is
+present in S1 (`docs/s1disasm/_incObj/01 Sonic.asm:379-430,634-757`), S2
+(`docs/s2disasm/s2.asm:36880-36999`), and S3K
+(`docs/skdisasm/sonic3k.asm:22792-22918`).
+
+Comparison-only results with the verified REV01 ROM, with zero physics errors:
+
+- LZ3 complete run: 31 animation errors at f1571 -> 27 errors at f2004
+  (WaterSlide `$1B` expected, Roll2 `$02` actual).
+- SLZ2 complete run: 4 animation errors at f1740 -> 1 error at f2609
+  (`player_mapping_frame`, expected `$08`, actual `$09`).
+
+Those later frontiers are separate slide/roll ownership and mapping-cadence
+issues. The combined movement/profile unit suite passes 132/132, including a
+focused regression with Stop active above the Run threshold after input
+release.
+
+### Dispatch-time move-lock and slide animation ownership
+
+Branch `bugfix/ai-s1-lz-slide-frontiers`, based exactly on `f76d96095`,
+restores two animation decisions made before the final player status is
+published. Neither correction depends on the zone, route, or trace frame.
+
+On LZ2 f575, native `Sonic_Move` reads `locktime=1` and branches to
+`Sonic_ResetScr` before any direction or animation write. `Sonic_SlopeRepel`
+then decrements the timer to zero later in the same grounded routine. The
+engine previously resolved animation from that final zero and selected stale
+Stop `$0D`; its animation manager now retains the movement dispatch's explicit
+write suppression through the later animation pass. The same routine ordering
+exists in S1 (`docs/s1disasm/_incObj/01 Sonic.asm:379-430,1402-1435`), S2
+(`docs/s2disasm/s2.asm:36423-36429,37458-37479`), and S3K
+(`docs/skdisasm/sonic3k.asm:21619-21623,23909-23948`).
+
+On LZ3 f1377, `LZWaterSlides` begins with Sonic grounded and writes Slide
+`$1B`; the subsequent `AnglePos` terrain-detach tail sets Status_InAir and the
+previous-animation sentinel but does not replace `obAnim`. The shared profile
+now preserves that earlier explicit Slide write when no jump/roll dispatch
+superseded it. The next pre-physics water-slide call observes the air bit and
+clears slide mode normally (`docs/s1disasm/_inc/LZWaterFeatures.asm:468-513`).
+
+Comparison-only results with the verified REV01 ROM, with zero physics errors:
+
+- LZ2 complete run: 32 animation errors at f575 -> 16 errors at f2279
+  (`player_mapping_frame`, expected `$3D`, actual `$3C`).
+- LZ3 complete run: 41 animation errors at f1377 -> 31 errors at f1571
+  (`player_animation_id`, expected Stop `$0D`, actual Walk `$00`).
+
+The later frontiers are separate animation cadence and skid-trigger owners.
+The combined movement/profile unit suite passes 130/130, including focused
+dispatch-time regressions for the expiring lock and terrain-detached slide.
+
+### Terrain-detach rolling animation restart
+
+Branch `bugfix/ai-trace-s1-roll-cadence`, based exactly on `07f12969a`,
+restores the shared `AnglePos` animation-state transition when terrain support
+is lost. The five affected S1 frames all have the same state signature:
+grounded Roll2 becomes airborne Roll2 while physics remains exact, but the ROM
+restarts at mapping `$2E` and the engine previously continued to `$31`.
+
+This is not an animation-id change or a zone rule. Every orientation of S1
+`Sonic_AnglePos` sets InAir, clears Push, and writes Run to `prev_anim`
+(`docs/s1disasm/_incObj/Sonic AnglePos.asm:113-115,276-278,349-351,
+422-424`). The later `Sonic_Animate` comparison sees the unchanged raw Roll2
+id differ from that sentinel and resets `anim_frame` and `anim_time`, while an
+unchanged raw Run id compares equal and preserves its cadence. S2 and S3K carry
+the same write in all four terrain-detach branches
+(`docs/s2disasm/s2.asm:43108-43110,43216-43218,43283-43285,43350-43352`;
+`docs/skdisasm/sonic3k.asm:18840-18842,18965-18967,19037-19039,
+19109-19111`). `CollisionSystem` now publishes that exact canonical Run
+previous-animation value beside the existing InAir and Push transitions.
+
+Comparison-only results with the verified REV01 ROM, with zero physics errors:
+
+- GHZ2 complete run: first animation red advances f112 -> f830; 6 distinct
+  later errors remain.
+- LZ1 complete run: f41 -> f264; 55 distinct later errors remain.
+- LZ2 complete run: f190 -> f242; 130 distinct later errors remain.
+- SLZ2 complete run: f307 -> f1067; errors fall from 66 to 6.
+- SLZ3 complete run: f293 -> f1166; errors fall from 57 to 26.
+
+The new frontiers are independent animation-selection or object-controlled
+state mismatches and are not part of this terrain-detach script-phase fix. The
+focused collision/animation suite passes 26/26, including regressions proving
+that terrain loss restarts an unchanged Roll2 at mapping `$2E` but advances an
+unchanged raw Run to its next frame.
+
+### Sonic 1 zero-inertia Wait selection
+
+The shared scripted-velocity animation resolver now distinguishes an explicit
+post-movement zero-speed snapshot from an already-stationary frame. This models
+the ROM control flow: opposite-direction braking can return to the enclosing
+Move routine at exactly zero and select Wait despite the held direction, while
+RollSpeed writes Wait directly when a grounded roll stops. Frames without that
+movement snapshot retain the existing held-direction Walk behavior, including
+air-mode landings whose ResetOnFloor path writes Walk. The same control shape is
+present in S1 `Objects/Sonic.asm:284-310,480-623`, S2
+`s2.asm:36558-36577,36880-37062`, and S3K
+`sonic3k.asm:22787-22994,28169-28239`.
+
+Focused comparison-only results with the verified REV01 ROM:
+
+- GHZ1 complete run: 100 animation errors, first red f551 (Wait expected,
+  Walk actual) -> 96 errors, first red f679 (Walk expected, Run actual).
+- SYZ1 complete run: 142 animation errors, first red f135 (Wait expected,
+  Walk actual) -> 139 errors, first red f433 (Walk expected, Run actual).
+- SBZ3/LZ4 complete run: unchanged at 197 animation errors, first red f0
+  (Wait expected, Walk actual). Its trace begins airborne immediately after an
+  internal act transition and records a rolling-to-standing mode change at f0;
+  direct replay bootstrap starts already unrolled with Walk. This is a distinct
+  transition/bootstrap frontier, not the grounded zero-inertia control path.
+
+Physics remained green (zero physics errors) in all three traces. The focused
+animation-profile unit suite passed 6/6; the combined replay run remained
+expected-red only at the later animation frontiers above (9 tests total, 6
+passing and 3 trace assertions failing).
+
+Branch `feature/ai-trace-animation-verification` extends the comparison-only
+trace path with Player and Sidekick animation ids and displayed mapping frames.
+The BizHawk recorders sample the native `anim` and `mapping_frame` bytes at the
+same end-of-frame point as the existing physics state. The engine comparator
+checks those bytes against `getAnimationId()` and `getMappingFrame()` without
+hydrating engine state from the trace.
+
+All 50 committed normal-gameplay fixtures were regenerated as the universal
+42-column CSV v7 schema: 21 S1, 19 S2, and 10 S3K traces. The separate S2
+special-stage and credits-demo formats remain on their dedicated schemas. S3K
+regeneration used `OGGF_TRACE_LIGHTWEIGHT=1`, which records the authoritative
+physics and animation stream while retaining the existing auxiliary diagnostic
+streams; the normal recorder mode remains available for full auxiliary capture.
+
+Verification groups are selected with `-Dtrace.verification=physics`,
+`animation`, or `all` (the default). Scoped reports use `_physics` and
+`_animation` suffixes and preserve separate error summaries and frontier stop
+conditions. Focused ROM-backed evidence with `-Dtrace.frontierOnly=true`:
+
+- S1 GHZ1 physics-only: PASS through all 3,905 frames. Animation-only:
+  expected-red f387, `player_animation_id`, ROM `0x001A`, engine `0x0002`.
+- S2 EHZ1 physics-only: PASS. Animation-only: expected-red f1,
+  `player_mapping_frame`, ROM `0x0010`, engine `0x000F`.
+- S3K AIZ physics-only: retained expected-red f290, `x`, ROM `0x0040`,
+  engine `0x13A0`. Animation-only: independently expected-red f290,
+  `player_mapping_frame`, ROM `0x0000`, engine `0x0007`.
+
+The focused parser/binder/report/frontier/triage/recorder-contract/invariant
+suite passed 183/183 tests. The recorder contract additionally checks every
+committed normal-gameplay metadata file and every CSV row for v7/42-column
+completeness, so absent Player or Sidekick animation samples cannot silently
+enter the fixture fleet.
+
+## 2026-07-13 - Classic raw Walk id with speed-selected Run frames
+
+Branch `bugfix/ai-trace-s1-run-id`, based exactly on `8811c088d`, fixes the
+shared movement-profile model exposed by the new animation fields. The classic
+ROMs do not publish a separate Run animation id during ordinary high-speed
+movement: S1 `MoveLeft`/`MoveRight` keep `obAnim=id_Walk`, then
+`Sonic_Animate` selects `SonAni_Run` from inertia `$600` upward
+(`docs/s1disasm/_incObj/01 Sonic.asm:634-658,704-722,2253-2315`). S2 and
+S3K use the same raw-id/render-script split (`docs/s2disasm/s2.asm:36880-36962,
+38473-38503`; `docs/skdisasm/sonic3k.asm:22792-22877,24833-24879`). The
+typed `ScriptedVelocityAnimationProfile` now expresses that relationship;
+all shipped classic player profiles opt in, while custom profiles retain the
+previous default.
+
+ROM-backed comparison-only results, with no trace hydration or tolerances:
+
+- SBZ2 advances from f170 `player_animation_id` (137 errors) to f173
+  `player_mapping_frame` (118 errors).
+- SLZ1 advances from f122 `player_animation_id` to f277
+  `player_animation_id` (64 errors).
+- GHZ3 clears the f347 `player_animation_id` mismatch; its independent
+  `player_mapping_frame` mismatch remains on f347 (110 errors).
+
+`TestPlayableSpriteAnimation` passes 16/16, including a cross-game regression
+that asserts raw Walk id plus Run mapping selection for S1, S2, and S3K. An
+expected-red S2 EHZ1 replay retained its pre-existing f1 mapping-frame
+frontier. The broad S3K AIZ replay class remains unsuitable as a clean
+regression oracle on this base because its existing multi-fixture failures and
+input-alignment error precede this change.
 
 ## 2026-07-13 - HCZ branch repair, rewind closure, and final verification
 
@@ -38955,6 +44847,30 @@ The performance threshold (guarded median both more than one second and more
 than 10% slower) was false for both targets. Timing evidence is preserved in
 `target/rewind-closure-timing.json` and `target/rewind-closure-timing/`.
 
+### 2026-07-13 -- S1 GHZ1 push special-handler timing (f188 -> f551)
+
+On `bugfix/ai-trace-s1-ghz1-anim`, the newly enabled animation comparison first
+failed `TestS1Ghz1CompleteRunTraceReplay` at frame 188. S1 keeps `obAnim` at
+Walk while `Sonic_Animate` selects `SonAni_Push` only after the shared special
+animation timer expires; the engine had instead substituted the Push animation
+id immediately and reset its script state. The typed S1 animation rule now
+preserves the raw Walk id, retains the current mapping during the delay, and
+selects a push mapping at the native timer boundary
+(`docs/s1disasm/_incObj/01 Sonic.asm:2174-2193,2253-2282,2353-2376`).
+
+Verification with local uncommitted implementation changes:
+
+- `mvn "-Dtest=TestPlayableSpriteAnimation" test` exited 0; all 15 focused
+  animation tests passed.
+- `mvn "-Dtest=TestS1Ghz1CompleteRunTraceReplay" "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" test`
+  retained the expected-red route but advanced its first animation error from
+  frame 188 to frame 551, with 115 errors and 0 warnings; the new field is
+  `player_animation_id` (expected `$05`, actual `$00`).
+- `mvn "-Dtest=TestS1Ghz1TraceReplay" "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" test`
+  retained the pre-existing frame-387 `player_animation_id` frontier and
+  reduced errors from 169 on detached clean feature HEAD `e00abcd8d` to 162 on
+  the fix branch. No same-game frontier regression was introduced.
+
 ### 2026-07-12 -- HCZ background-wall rendering regression sweep
 
 The HCZ Act 2 background-wall rendering fix was checked on branch
@@ -38971,6 +44887,539 @@ first-frontier changes. The retained errors were the existing CNZ miniboss
 null-parent assertion and HCZ TurboSpiker rewind reference-closure failure at
 frame 14211. No trace regression was introduced by the rendering fix.
 
+### 2026-07-13 -- S1 grounded facing-flip animation restart (SYZ2 f11 -> f33)
+
+On branch `bugfix/ai-trace-s1-syz2-map` at feature baseline `e00abcd8d`, the
+animation comparator exposed that S1 retained the current walk-script position
+when Sonic reversed direction on the ground. The retail ROM unconditionally
+writes `prev_anim=Run` from both grounded direction-change paths; the later
+`Sonic_Animate` anim/prev-anim mismatch resets `obAniFrame` and `obTimeFrame`.
+Only the optional `FixBugs` push-bit clear is absent from retail S1, so using
+that rule to suppress the animation restart was too broad
+(`docs/s1disasm/_incObj/01 Sonic.asm:634-659,704-723,2174-2182`).
+
+The shared grounded-facing-flip path now always requests the native animation
+restart, while the existing typed player-animation rule continues to own only
+the distinct push-clear behavior. Focused verification used the local REV01
+Sonic 1 ROM and comparison-only replay path:
+
+- `mvn -Dmse=off "-Dtest=TestPlayableSpriteMovement#groundedFacingFlipRestartsWalkScriptLikeRomPrevAnimSentinel" test`
+  exited 0: 1 test passed.
+- `mvn "-Dtest=TestS1Syz2CompleteRunTraceReplay" "-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen" test`
+  retained the expected-red trace but advanced its first error from frame 11 to
+  frame 33 (`player_mapping_frame`, expected `0x000A`, actual `0x0020`), with
+  149 errors and 0 warnings. The new frontier is the next animation-cadence
+  mismatch; no trace state was hydrated or tolerated.
+
+### 2026-07-13 -- S1 credits stable-retro schema compatibility (8 traces green)
+
+On branch `bugfix/ai-trace-s1-bootstrap-schema` at feature baseline
+`e00abcd8d`, all eight Sonic 1 credits fixtures stopped during trace loading:
+their metadata reports `csv_version: 4`, but the historical stable-retro
+recorder emitted the 20-column v2.2 row shape rather than BizHawk's later
+22-column v3 shape. Treating every version 4 row as v3 incorrectly rejected
+valid preserved traces before comparison began.
+
+Pre-v5 rows now select the already-supported v1/v2/v2.1/v2.2/v3 parser from
+their validated column count. The structurally distinct v5/v6/v7 layouts keep
+their existing strict version/width checks. A focused regression fixture locks
+the overloaded version-4, 20-column case without changing trace data or feeding
+recorded state back into the engine.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `mvn -Dmse=off "-Dtest=TestTraceDataParsing" test` exited 0: 44 tests passed.
+- `mvn -Dmse=off "-Dtest=TestS1Credits*TraceReplay" "-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen" test`
+  exited 0: 8 tests passed, 0 failures, 0 errors, 0 skips.
+
+The newly green fixtures are `Credits00Ghz1`, `Credits01Mz2`,
+`Credits02Syz3`, `Credits03Lz3`, `Credits04Slz3`, `Credits05Sbz1`,
+`Credits06Sbz2`, and `Credits07Ghz1b`.
+
+### 2026-07-13 -- Shared animation delay latches mapping (S1 SYZ2 f33 -> f47)
+
+The shared scripted animator previously reselected walk/run mappings and slope
+offsets on every delay frame. The ROM decrements `obTimeFrame` before reading
+the script or entering its special handler, and its non-negative path returns
+without touching `obFrame` (`docs/s1disasm/_incObj/01 Sonic.asm:2174-2193,
+2253-2282`). This was visible when the SYZ2 horizontal spring changed Sonic's
+speed while the prior walk frame still had a live delay: the engine displayed
+a run mapping one frame before the ROM.
+
+The timer decrement now gates all script selection and frame writes. Focused
+verification with the local REV01 Sonic 1 ROM:
+
+- `mvn -Dmse=off "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteAnimation" test`
+  exited 0: 16 tests passed.
+- `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Syz2CompleteRunTraceReplay" "-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen" test`
+  advanced the first animation error from frame 33 to frame 47 and reduced the
+  report from 133 to 125 errors. The new frontier is the distinct engine Run-id
+  publication mismatch; no trace state was hydrated or tolerated.
+
+### 2026-07-13 -- S1 rolling-landing animation publication
+
+On branch `bugfix/ai-trace-s1-landing-anim` at composed baseline `8811c088d`,
+the animation comparator exposed four landings where the engine cleared
+`Status_Roll` but retained the Roll animation id. Retail S1 calls
+`Sonic_ResetOnFloor` from both terrain and solid-object landing paths; when it
+clears `Status_Roll`, that routine restores the standing radii and writes
+`id_Walk`. Solid objects execute after `Sonic_Animate`, so that frame publishes
+the Walk animation byte while retaining the already-rendered ball mapping
+(`docs/s1disasm/_incObj/01 Sonic.asm:1481-1561,1839-1864`;
+`docs/s1disasm/_incObj/sub SolidObject.asm:357-388`).
+
+The shared terrain and object-contact owners now resolve the canonical Walk id
+only when landing actually clears rolling. Pinball and object-requested
+roll-preservation paths retain their existing behavior. No trace data was
+modified, hydrated into engine state, or tolerated.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `mvn -Dmse=off "-Dtest=TestPlayableSpriteMovement#testS1RollingLandingWritesWalkAnimationLikeResetOnFloor,TestSolidObjectManager#testLandingFromAirRollOnObjectAdjustsYWhenUnrolling" test`
+  exited 0: 2 tests passed.
+- `TestS1Ghz2CompleteRunTraceReplay` advanced from frame 100 to frame 112
+  (`player_mapping_frame`, expected `0x0008`, actual `0x0009`), with 102 errors
+  and 0 warnings.
+- `TestS1Mz1CompleteRunTraceReplay` advanced from frame 417 to frame 756
+  (`player_animation_id`, expected `0x001A`, actual `0x0002`), with 85 errors
+  and 0 warnings.
+- `TestS1Mz3CompleteRunTraceReplay` advanced from frame 189 to frame 631
+  (`player_mapping_frame`, expected `0x001D`, actual `0x0011`), with 145 errors
+  and 0 warnings.
+- `TestS1Sbz1CompleteRunTraceReplay` advanced from frame 280 to frame 581
+  (`player_animation_id`, expected `0x001A`, actual `0x0005`), with 133 errors
+  and 0 warnings.
+
+### 2026-07-13 -- Shared hurt-animation publication
+
+On branch `bugfix/ai-trace-s1-hurt-publication` at composed baseline
+`ea530e3c7`, the S1 GHZ1 standalone trace reached a damage frame after its
+ordinary animation pass had already selected Roll mapping `$31`. The later
+`ReactToItem` call entered `HurtSonic`, installed routine 4 and knockback state,
+then wrote `obAnim=id_Hurt` without running animation again. Thus the damage
+frame exposes animation id `$1A` while retaining mapping `$31`
+(`docs/s1disasm/_incObj/01 Sonic.asm:78-100`;
+`docs/s1disasm/_incObj/Sonic ReactToItem.asm:375-410`).
+
+S2 and S3K use the same ordering and immediate write in `HurtCharacter`
+(`docs/s2disasm/s2.asm:85471-85519`;
+`docs/skdisasm/sonic3k.asm:21065-21110`). The shared damage owner now resolves
+canonical Hurt when it applies knockback; it does not touch the already-latched
+mapping. No route, zone, or frame gate was added, and no trace state was
+modified, hydrated into the engine, or tolerated.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `mvn -Dmse=off "-Dtest=TestHurtAnimationPublication" test` exited 0: all
+  three parameterized S1/S2/S3K publication cases passed.
+- `mvn "-Dtest=TestS1Ghz1TraceReplay" "-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen" test`
+  retained the expected-red route but advanced the first error from frame 387
+  to frame 437 (`player_animation_id`, expected `0x0000`, actual `0x0005`) and
+  reduced the report from 157 to 156 errors, with 0 warnings.
+- `mvn "-Dtest=TestS1Mz2CompleteRunTraceReplay" "-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen" test`
+  retained the expected-red route but advanced the first error from frame 308
+  to frame 354 (`player_animation_id`, expected `0x0000`, actual `0x0005`) and
+  reduced the report from 179 to 168 errors, with 0 warnings.
+
+### 2026-07-13 -- Hurt-landing Walk publication
+
+On branch `bugfix/ai-trace-s1-hurt-landing-walk` at composed baseline
+`fe3fdf7ac`, five S1 traces exposed the same recovery-frame mismatch: the ROM
+published raw Walk `$00`, while the engine replaced it with Wait `$05` because
+the recovered player had zero inertia. S1 `Sonic_HurtStop` clears velocity,
+writes `id_Walk`, returns to the hurt routine, and then calls `Sonic_Animate` in
+that same frame (`docs/s1disasm/_incObj/01 Sonic.asm:1901-1951`). S2 Sonic and
+Tails, and S3K Sonic/Knuckles and Tails, use the same ordering
+(`docs/s2disasm/s2.asm:38187-38226,41074-41114`;
+`docs/skdisasm/sonic3k.asm:24463-24506,29208-29251`).
+
+The shared velocity-animation profile now consumes the existing semantic
+frame-state: either hurt recovery completed explicitly, or the player began
+the frame hurt and terrain landing cleared that state before animation. It
+returns Walk only for that recovery-owned frame; the next normal-control frame
+still selects Wait at zero inertia. No route, zone, or frame gate was added,
+and no trace data was modified, hydrated into engine state, or tolerated.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `mvn -Dmse=off "-Dtest=TestScriptedVelocityAnimationProfile#hurtLandingPublishesWalkForRecoveryFrameBeforeReturningToWait" test`
+  exited 0: 1 test passed.
+- A combined run of `TestS1Ghz1TraceReplay`,
+  `TestS1Mz2CompleteRunTraceReplay`, `TestS1Mz1CompleteRunTraceReplay`,
+  `TestS1Sbz1CompleteRunTraceReplay`, and
+  `TestS1Slz1CompleteRunTraceReplay` retained all five expected-red routes and
+  advanced every frontier:
+    - GHZ1 standalone: frame 437 to 810 (`player_mapping_frame`, expected
+      `0x0014`, actual `0x0012`), errors 19 to 17.
+    - MZ2 complete-run: frame 354 to 1021 (`player_mapping_frame`, expected
+      `0x0008`, actual `0x0009`), errors 111 to 89.
+    - MZ1 complete-run: frame 808 to 1144 (`player_mapping_frame`, expected
+      `0x0037`, actual `0x0038`), errors 69 to 65.
+    - SBZ1 complete-run: frame 625 to 737 (`player_mapping_frame`, expected
+      `0x0008`, actual `0x0009`), errors 83 to 71.
+    - SLZ1 complete-run: frame 319 to 1423 (`player_mapping_frame`, expected
+      `0x002E`, actual `0x0032`), errors 30 to 22.
+  All reports contained 0 warnings.
+
+### 2026-07-13 -- S1 post-slope facing-flip animation restart
+
+On branch `bugfix/ai-trace-s1-walk-cadence` at composed baseline `fe3fdf7ac`,
+the MZ1 standalone replay reached a grounded right-facing change at frame 119.
+The frame started with inertia `$FFFF`; `Sonic_SlopeResist` carried it positive
+before `MoveRight` tested it, so the ROM cleared `Status_Facing` and wrote
+`prev_anim=Run` on that same frame. The engine checked for the animation
+restart before slope resistance, then changed direction later in its ground
+move without publishing the restart (`docs/s1disasm/_incObj/01 Sonic.asm:283-291,634-659,704-723`).
+
+The shared grounded facing-change check now runs after slope resistance and
+immediately before ground input, matching the native state boundary. No zone,
+route, or frame gate was added, and no trace state was modified, hydrated into
+engine state, or tolerated.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `mvn -Dmse=off "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement#groundedFacingFlipRestartsWalkScriptLikeRomPrevAnimSentinel+slopeResistanceCrossingZeroRestartsWalkOnSameFrameAsFacingFlip" test`
+  exited 0: both focused restart cases passed.
+- `TestS1Mz1TraceReplay` advanced from frame 124 to frame 381
+  (`player_mapping_frame`, expected `0x0008`, actual `0x000A`) and reduced the
+  report from 73 to 70 errors, with 0 warnings.
+- `TestS1Ghz1CompleteRunTraceReplay` retained its frame-740 frontier and
+  27-error report; `TestS1Syz2CompleteRunTraceReplay` retained its frame-196
+  frontier and 78-error report. Both were compared directly against the exact
+  baseline in a detached worktree, confirming no representative-route
+  regression.
+
+### 2026-07-13 -- Sonic 1 composed animation fleet sweep
+
+After composing the schema, push timing, grounded facing, delay-latch,
+raw-Walk/run-frame, landing, hurt-publication, zero-inertia Wait, and donor
+translation fixes, the full Sonic 1 replay fleet was run with the local REV01
+ROM:
+
+`mvn -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dtest=com.openggf.tests.trace.s1.*TraceReplay" test`
+
+All 29 fixtures loaded and compared. The eight legacy credits fixtures passed;
+the 21 gameplay fixtures retained animation-only failures with every physics
+stream green. The sweep exposed three reusable next roots rather than route
+exceptions: `AnglePos` terrain-detach `prev_anim=Run` restarts (GHZ2/LZ1/LZ2
+and SLZ2/SLZ3), post-slope facing changes (MZ1 standalone), and hurt-recovery
+Walk publication (GHZ1 standalone/MZ1/MZ2/SBZ1/SLZ1). SBZ3 frame 0 remained a
+separate act-transition bootstrap question and was not hydrated from its trace.
+
+### 2026-07-13 -- Air-routine landing animation ownership
+
+At composed baseline `36b886faf`, the MZ3 complete-run replay first diverged at
+frame 813 when an airborne movement dispatch landed with zero inertia. The ROM
+kept the incoming Walk animation and mapping for that landing frame because the
+already-selected air routine never called the grounded Move routine; grounded
+Wait selection began on the next frame. The engine instead selected animation
+from the post-collision grounded status and exposed Wait one frame early.
+
+The shared velocity-animation profile now records `Status_InAir` at the same
+frame-start boundary as the other playable snapshots. When that frame's air
+routine lands, it defers unrelated grounded Wait/Balance selection until the
+following ground dispatch. The terrain landing owner also publishes the ROM's
+explicit Walk write after `ResetOnFloor`, including non-rolling falls that had
+carried Wait through the air. Object/platform landings keep their separate
+post-animation timing. No trace data was modified or hydrated, and no zone,
+route, or frame gate or comparison tolerance was added.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `mvn -Dmse=off "-Dtest=com.openggf.tests.TestScriptedVelocityAnimationProfile" test`
+  exited 0: all 8 focused profile tests passed.
+- The focused S1 ordinary and rolling terrain-landing tests both passed.
+- `TestS1Mz3CompleteRunTraceReplay` retained its expected-red animation-only
+  report but advanced from frame 813 to frame 2585
+  (`player_mapping_frame`, expected `0x0045`, actual `0x0008`) and reduced from
+  40 to 16 errors, with 0 warnings and its physics stream still green.
+
+### 2026-07-13 -- S1 SBZ3 fresh-player native bootstrap
+
+On branch `bugfix/ai-trace-s1-sbz3-bootstrap` at composed baseline `c9d3b77ca`,
+the SBZ3 complete-run replay began with green physics but selected Walk/map 8
+instead of the ROM's Wait/map 1. The SBZ2-to-SBZ3 transition sets `f_restart`
+and changes `v_zone` to the LZ4 alias; `GM_Level` then clears object RAM, creates
+the fresh Sonic slot, runs `ObjPosLoad` plus one `ExecuteObjects` pass, and only
+afterwards clears `v_frame_counter` and enters `Level_MainLoop`. Sonic therefore
+starts that native pass grounded with zero input: `Sonic_Move` writes Wait,
+`Sonic_AnglePos` finds no floor at `y_pos=0` and sets `Status_InAir`, and
+`Sonic_Animate` publishes map 1. No player state survives the act transition.
+
+The ROM-derived `LevelInitProfile` now owns the count of fresh-player prelude
+dispatches (one for S1, zero by default). Production title-card entry and trace
+replay both invoke the same main-player-only canonical physics/animation pass,
+restoring the gameplay frame counter afterward. The shared scripted animation
+resolver also preserves a ground animation chosen earlier in a frame when
+`AnglePos` subsequently detaches the player. This is driven by fresh object-RAM
+state and native runtime execution; it does not read a trace player row or add a
+zone, route, act, or frame exception.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `TestScriptedVelocityAnimationProfile#groundMovementWaitSurvivesAnglePosDetachFrame`
+  and `TestSonic1LevelInitProfile#freshPlayerRunsOneNativePreludeDispatch` pass.
+- `TestS1Sbz3CompleteRunTraceReplay` advances from frame 0 to frame 243 and
+  reduces its animation report from 129 to 102 errors, with physics still at
+  zero errors. The new frame-243 mapping mismatch (expected `$2E`, actual `$32`)
+  is a separate later animation-cadence frontier.
+- A 29-class S1 `frontierOnly` sweep was run both at detached baseline
+  `c9d3b77ca` and with the fix. All eight existing greens stayed green and the
+  other 20 expected-red first errors were byte-identical; SBZ3 was the sole
+  changed frontier (frame 0 to frame 243). Both sweeps had zero skips and zero
+  infrastructure errors.
+
+### 2026-07-13 -- Final animation byte owns script restart
+
+At composed baseline `075b9fd03`, LZ2 and SBZ3 exposed the same Spring-script
+cadence reset. A landing path could write Walk transiently before a later state
+owner restored Spring in the same player dispatch. The ROM's animator compares
+the final `anim` byte against `prev_anim`; because both are still Spring, it
+continues the existing script. The engine instead reset immediately when its
+resolver replaced the transient current value, despite its own `lastAnimationId`
+already matching the final Spring value.
+
+Script restart is now owned solely by the existing final-animation versus
+previous-animation comparison inside the scripted update. A focused test proves
+that a transient Walk followed by final Spring advances the existing timer and
+mapping rather than restarting frame `$3C`. No trace data or tolerance changed,
+and no route, zone, or frame gate was added.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- The focused final-animation cadence regression passed.
+- `TestS1Lz2CompleteRunTraceReplay` advanced from frame 2279 / 16 errors to
+  frame 2293 / 13 errors (`player_animation_id`, expected `$0F`, actual `$00`).
+- `TestS1Sbz3CompleteRunTraceReplay` advanced from frame 3178 / 21 errors to
+  frame 3491 / 3 errors (`player_animation_id`, expected Wait `$05`, actual
+  Balance `$06`). Both reports retained zero warnings and green physics.
+
+### 2026-07-13 -- S1 Obj56 balance width (SYZ2 f2549 -> f4012; SYZ3 f1656 -> f1911)
+
+At composed baseline `075b9fd03`, SYZ2 frame 2549 and SYZ3 frame 1656 had the
+same animation-only mismatch while Sonic stood still on a 2x2 Obj56 floating
+block: the ROM selected Wait `$05`, while the engine selected Balance `$06`.
+Player position, velocity, status, platform contact, camera, and gameplay frame
+counter all matched. In both cases Sonic was 21 pixels right of the block's
+center.
+
+`FBlock_Main` loads `obActWid=$20` for that subtype from `FBlock_Var`.
+`FBlock_Solid` separately adds `$B` to the width passed in `d1` to
+`SolidObject`; it does not change `obActWid`. S1 `Sonic_Move` reads the stood-on
+object's `obActWid` for its balance window. The engine's shared fallback used a
+fixed 16-pixel rendered width for full-solid objects, so it falsely classified
+the +21 position as beyond the right edge. Obj56 now returns its subtype-backed
+`halfWidth` from `getBalanceWidthPixels()` while retaining `halfWidth+$B` in
+`getSolidParams()`. The rule is object-state-driven and applies to every Obj56
+subtype; no zone, route, or frame gate was added, and no trace data was changed,
+hydrated, or tolerated.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `TestSonic1FloatingBlockObjectInstance` passes all six tests, including the
+  focused `$20` balance-width / `$2B` collision-width contract.
+- `TestS1Syz2CompleteRunTraceReplay` advances from frame 2549 to frame 4012 and
+  reduces from 10 to 8 errors. The new frontier is a separate spring-owned
+  animation mismatch (ROM Spring `$10`/map `$40`, engine Walk `$00`/map `$08`).
+- `TestS1Syz3CompleteRunTraceReplay` advances from frame 1656 to frame 1911 and
+  reduces from 31 to 17 errors. The new frontier is a separate Walk mapping
+  cadence mismatch (ROM map `$08`, engine map `$09`).
+- Both replay reports retain zero warnings and green physics streams.
+### 2026-07-13 -- Sonic 1 solid push-release animation word
+
+On branch `bugfix/ai-trace-s1-walk-frame-nine` at baseline `36b886faf`, five
+Sonic 1 routes reached the same Walk mapping mismatch after releasing a solid:
+the ROM still displayed mapping `$08`, while the engine had advanced to `$09`.
+Retail S1's `Solid_NoCollision` checks the object's push bit and executes
+`move.w #id_Run,obAnim(a1)` before `Solid_NotPushing`. Because `anim` and
+`prev_anim` are adjacent big-endian bytes, that word publishes raw Walk `$00`
+and previous Run `$01`, restarting Walk on the next player animation pass
+(`docs/s1disasm/_incObj/sub SolidObject.asm:251-263`;
+`docs/s1disasm/_incObj/sub SolidWall.asm:36-51`). S2 and S3K do not carry this
+retail S1 write.
+
+The shared solid-contact controller now reproduces the word under a typed S1
+object-interaction rule. Publication requires the live paired player
+`Status_Push` state as well as the per-object latch: native side contact owns
+those together, whereas an engine object latch can survive an unrelated push
+clear until later placement cleanup. This prevents an old latch from restarting
+Roll or another animation hundreds of frames later. No route, zone, or frame
+gate was added, and no trace data was modified, hydrated into engine state, or
+tolerated.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- `mvn -q "-Dtest=TestSolidObjectManager#sonic1SolidPushReleasePublishesWalkWithRunPreviousAnimation+sonic2SolidPushReleaseDoesNotPublishSonic1AnimationWord+sonic1StaleObjectPushLatchDoesNotPublishAfterPlayerPushWasCleared" test`
+  exited 0; the focused S1 publication, stale-latch rejection, and S2
+  non-publication cases passed.
+- A combined comparison-only run of `TestS1FzCompleteRunTraceReplay`,
+  `TestS1Ghz1TraceReplay`, `TestS1Mz1TraceReplay`,
+  `TestS1Mz1CompleteRunTraceReplay`, and
+  `TestS1Mz2CompleteRunTraceReplay` used
+  `-Dmaven.test.failure.ignore=true` only to collect every report. The targeted
+  shared occurrence advanced on four routes:
+    - FZ complete-run: frame 312 to frame 924, 14 to 10 errors.
+    - GHZ1 standalone: frame 1772 to frame 2240, ending at 4 errors.
+    - MZ1 complete-run: frame 1465 to frame 2369, 22 to 21 errors.
+    - MZ2 complete-run: frame 1021 to frame 1552, ending at 43 errors.
+  MZ1 standalone retained frame 587 and 23 errors because its large grassy
+  platform contact does not currently publish the native player/object push
+  pair in the engine; FZ's later frame-924 cylinder occurrence exposes the same
+  upstream push-lifetime gap. Those remaining expected-red frontiers were not
+  hidden by broadening the animation rule. All five reports contained 0
+  warnings.
+
+### 2026-07-13 -- Sonic 1 moving-solid push-release ownership
+
+At composed baseline `58f18adb5`, five remaining routes reached the same Walk
+cadence mismatch after native `Solid_NoCollision` had written
+`anim=Walk/prev_anim=Run`: FZ frame 924, MZ1 standalone frame 587, MZ2 frame
+1552, SLZ2 frame 2609, and SYZ3 frame 1911 all expected mapping `$08` while the
+engine had advanced to `$09`.
+
+The shared publication rule itself was already correct; three pieces of its
+object-owned input state were not. S1 `SolidObject` and
+`SolidObject_Heightmap` reject the right edge with unsigned `bhi`, so
+`relX == width*2` remains a contact. The MZ large grassy platform and FZ
+cylinder now expose that inclusive boundary. Their movement, plus the SLZ
+staircase and MZ push block, rebuilds `dynamicSpawn` as position changes, but
+the ROM pushing bit stays in the same live SST `status(a0)` byte; those objects
+therefore key standing/pushing state by instance. Finally, the controller now
+uses the immediately previous per-object checkpoint when MoveLeft/MoveRight
+has cleared the player's `Status_Push` before the later object slot runs. That
+fallback is bounded to raw Walk, so an unrelated old latch cannot overwrite
+Roll. Obj33's states 4/6 deliberately return without calling
+`Solid_ChkEnter`; a provider contract keeps that exact live-SST latch until the
+next state-0 checkpoint consumes it (`docs/s1disasm/_incObj/sub
+SolidObject.asm:123-166,251-263`; `docs/s1disasm/_incObj/33 Pushable
+Blocks.asm:207-252`). No zone, route, object-id, or frame gate was added, and no
+trace data was changed, hydrated, or tolerated.
+
+Verification with the local REV01 Sonic 1 ROM:
+
+- The focused `TestSolidObjectManager` publication, stale-latch rejection,
+  previous-checkpoint ownership, and skipped-checkpoint persistence tests pass.
+- Comparison-only representative replays moved as follows, with zero warnings
+  and green physics in every report:
+  - FZ complete-run: frame 924 / 8 errors to frame 2040 / 2 errors.
+  - MZ1 standalone: frame 587 / 17 errors to frame 749 / 15 errors.
+  - MZ2 complete-run: frame 1552 / 21 errors to frame 3634 / 19 errors.
+  - SLZ2 complete-run: frame 2609 / 1 error to fully green.
+  - SYZ3 complete-run: frame 1911 / 12 errors to frame 1946 / 6 errors.
+
+### 2026-07-13 -- S1 object-owned Spring / wind-tunnel animation publication
+
+On branch `bugfix/ai-trace-s1-spring-publication` at baseline `58f18adb5`,
+LZ2 first diverged at frame 2293 (ROM Float2 `$0F` / map `$53`, engine Walk
+`$00` / map `$08`) and SYZ2 first diverged at frame 4012 (ROM Spring `$10` /
+map `$40`, engine Walk `$00` / map `$08`). Both traces had byte-green physics.
+
+The failures shared a missing raw-animation ownership boundary. Native
+`Sonic_Move` reaches `Sonic_AngleSpeed` without writing `obAnim` during the
+no-input friction tail and during opposite-direction braking, including the
+frame braking carries inertia across zero. The shared profile now preserves a
+published Spring byte while coasting, and the movement dispatcher marks the
+opposite-direction no-write path so animation resolution cannot synthesize
+Walk. Grounded facing flips now publish the exact `prev_anim=Run` value rather
+than an anonymous restart. Finally, the shared animator consumes the existing
+runtime `isWaterTunnelActive()` predicate to reproduce S1 `Sonic_Control`'s
+`anim=Walk -> anim=prev_anim` repair while Obj64 temporarily disables tunnel
+push without clearing `f_wtunnelmode`. No game name, zone, route, frame, trace
+hydration, or tolerance was added.
+
+ROM references: `docs/s1disasm/_incObj/01 Sonic.asm:385-407,634-757,2174-2182`
+and `docs/s1disasm/_inc/LZWaterFeatures.asm:279-373`.
+
+Verification with the root-level REV01 Sonic 1 ROM:
+
+- Focused unit selection passed 15/15:
+  `TestScriptedVelocityAnimationProfile` plus
+  `TestPlayableSpriteMovement#oppositeDirectionCrossingZeroDoesNotPublishWalk`
+  and `#groundedFacingFlipRestartsWalkScriptLikeRomPrevAnimSentinel`.
+- `TestS1Lz2CompleteRunTraceReplay` advances from frame 2293 / 9 errors to
+  frame 6477 / 5 errors. The new frontier is a separate Walk mapping-cadence
+  mismatch (expected `$08`, actual `$09`); physics remains green.
+- `TestS1Syz2CompleteRunTraceReplay` advances from frame 4012 / 4 errors to
+  frame 5696 / 2 errors. The new frontier is a separate standing
+  Wait-vs-Balance selection (expected `$05`, actual `$06`); physics remains
+  green.
+- The shared-path checks also remain green: S2 EHZ1 physics-only trace replay
+  passed 1/1, and `TestS3kAiz1SkipHeadless` passed 8/8 with their respective
+  root-level ROMs.
+
+## 2026-07-13 — S1 SYZ1 horizontal-spring facing toggle
+
+Branch `feature/ai-trace-animation-verification`, measured with the engine
+change and focused test locally applied on top of `f16d5dfce`. The SYZ1
+complete-run replay advances from frame 690 / 11 errors to frame 1742 / 4
+errors; physics remains green. At frame 679 Obj41 reverses the player from
+leftward `$F05B` to rightward `$1000`. ROM `Spring_BounceLR` performs
+`bchg #0,obStatus(a1)`, so the prior right-facing state toggles to left and
+the later steep-slope run frames use mapping `$2B-$2D`. The engine instead
+faced the player from the positive launch velocity and rendered `$23-$25`.
+The object now toggles the prior direction literally; no trace state,
+zone/route/frame predicate, tolerance, or physics value is involved.
+
+Command:
+`mvn -Dmse=relaxed "-Dsonic1.rom.path=/var/home/james/IdeaProjects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dtest=com.openggf.game.sonic1.objects.TestSonic1SpringObjectInstance,com.openggf.tests.trace.s1.TestS1Syz1CompleteRunTraceReplay" test`
+
+ROM reference: `docs/s1disasm/_incObj/41 Springs.asm:146-149`.
+
+### 2026-07-13 -- S1 native edge-balance owner cluster
+
+At composed baseline `f16d5dfce`, four animation-only frontiers selected
+Balance `$06` where the REV01 ROM retained Wait `$05`: FZ complete-run frame
+2040, MZ1 standalone frame 749, SBZ1 complete-run frame 3948, and SYZ2
+complete-run frame 5696. All four physics streams were byte-green.
+
+Three stood-on objects exposed collision geometry instead of the SST byte read
+by `Sonic_Move`. Obj2F grassy platforms publish their subtype width in
+`obActWid`, Obj6B stomper/doors publish the selected `Sto_Var` width, and Obj84
+FZ cylinders publish `64/2`; each solid routine adds Sonic's `$B` width only to
+the separate `SolidObject` argument. Those objects now return the raw value
+through `getBalanceWidthPixels()`. The terrain case had the same ownership
+error in time rather than width: after `ObjFloorDist`, retail S1 compares the
+previously copied `angleright`/`angleleft` bytes to the empty-tile sentinel 3.
+The engine now consumes its existing angle latches instead of recomputing the
+edge from fresh side distances. S2/S3K retain their existing extended-balance
+branch. No zone, route, frame, trace hydration, or tolerance was added.
+
+ROM references:
+
+- `docs/s1disasm/_incObj/01 Sonic.asm:405-460`
+- `docs/s1disasm/_incObj/2F, 35 MZ Large Grassy Platforms and Burning Grass.asm:23-99`
+- `docs/s1disasm/_incObj/6B SBZ Stomper and Sliding Door.asm:25-42,111-131`
+- `docs/s1disasm/_incObj/85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:660-723`
+
+Verification with the root-level REV01 Sonic 1 ROM:
+
+- The eight focused object-width and terrain-angle unit tests passed.
+- FZ complete-run advanced from frame 2040 / 2 errors to fully green.
+- SBZ1 complete-run advanced from frame 3948 / 2 errors to fully green.
+- SYZ2 complete-run advanced from frame 5696 / 2 errors to fully green.
+- MZ1 standalone advanced from frame 749 / 15 errors to frame 2596 / 7
+  errors. Its new frontier is a separate movement-publication mismatch (ROM
+  Walk `$00`, engine Duck `$08`); physics remains green.
+- Four existing GHZ1 headless balance checks stayed green: true object-edge
+  balance, center non-balance, wide-platform non-balance, and terrain-center
+  gating.
+
+### 2026-07-13 -- S1 MZ1 moving-spike solid-state ownership
+
+At the composed animation-verification baseline, MZ1 complete-run reached frame
+2815 with byte-green physics but kept push mapping `$45` for twelve frames after
+the REV01 ROM returned to Walk mapping `$08`. The nearby Obj36 moving spike had
+previously established its native object-side pushing bit. Its movement calls
+`updateDynamicSpawn()`, and the shared latch default therefore looked for a new
+placement key when the no-contact checkpoint attempted to clear the bit. Retail
+keeps both bits in the same live Obj36 SST status byte. Obj36 now uses its live
+instance as that latch key, exactly as its single native slot does; no trace,
+zone, route, frame, or tolerance condition is involved.
+
+With the root-level REV01 ROM, the Obj36 unit suite passed 9/9 and MZ1
+complete-run advanced from frame 2815 / 5 reported animation errors to frame
+3969 / 4, with zero physics divergences. The new frontier is separate: ROM Wait
+`$05` versus engine Walk `$00`.
 ### 2026-07-14 -- StillSprite ROM lifetime fix: new s3k_hcz completerun frontier
 
 Branch `bugfix/ai-hcz2-wall-window-bg` (worktree

@@ -266,6 +266,14 @@ public class Sonic1LargeGrassyPlatformObjectInstance extends AbstractObjectInsta
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // LGrass_Main publishes the table's platform width as obActWid. The
+        // extra $B is added only to SolidObject_Heightmap's collision input;
+        // Sonic_Move reads the unpadded SST byte for its edge window.
+        return platformWidth;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         // SolidObject2F falls through to loc_FB0E (the standard solid resolution code),
         // which handles top landing, side pushout, AND bottom collision. These platforms
@@ -295,6 +303,20 @@ public class Sonic1LargeGrassyPlatformObjectInstance extends AbstractObjectInsta
         // The platform's catch range ($20/$30) participates in the side/top-bottom
         // classification, which is required for edge side contact at the MZ1 trace's
         // first large-grassy-platform encounter.
+        return true;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // SolidObject_Heightmap rejects with `bhi`, so relX == width*2 is inside.
+        // docs/s1disasm/_incObj/sub SolidObject.asm:123-131
+        return true;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // The oscillating platform rebuilds dynamicSpawn as y_pos changes, but
+        // the native push bit remains in this same Obj2F SST status byte.
         return true;
     }
 

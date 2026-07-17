@@ -228,6 +228,11 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
                     objectManager.clearRidingObject(player);
                     player.setOnObject(false);
                     player.setPushing(false);
+                    // Retail S1 also executes `move.b #id_Run,obPrevAni(a1)`
+                    // here. The selected byte remains Walk, but the mismatched
+                    // previous-animation byte restarts that script on Sonic's
+                    // next object slot (GHZ3 collapse release).
+                    player.publishRunAsPreviousAnimation();
                     // loc_82FC: clear flag
                     collapseFlag = false;
                 }

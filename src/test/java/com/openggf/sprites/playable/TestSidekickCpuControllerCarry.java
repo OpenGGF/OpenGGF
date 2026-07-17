@@ -246,6 +246,52 @@ class TestSidekickCpuControllerCarry {
     }
 
     @Test
+    void scriptedPickupRunsRawCarryAnimatorAfterCarrierMovement() {
+        AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
+        AbstractPlayableSprite sonic = pair[0];
+        sonic.setMappingFrame(0x98);
+
+        controller.update(1);  // INIT -> CARRY_INIT
+        controller.update(2);  // sub_1459E resets anim_frame/timer
+
+        assertEquals(0x91, sonic.getMappingFrame(),
+                "CPU routine $14 falls through to its pre-movement Tails_Carry_Sonic pass");
+        assertEquals(1, sonic.getAnimationFrameIndex());
+        assertEquals(0x0B, sonic.getAnimationTick());
+
+        controller.finishCarryAfterCarrierMovement();
+        assertEquals(0x91, sonic.getMappingFrame(),
+                "the later Tails_FlyingSwimming pass advances the same raw carry animator");
+        assertEquals(1, sonic.getAnimationFrameIndex());
+        assertEquals(0x0A, sonic.getAnimationTick());
+    }
+
+    @Test
+    void carryInitRefreshResetsRawAnimatorEvenWhenCarryIsAlreadyActive() {
+        AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
+        AbstractPlayableSprite sonic = pair[0];
+
+        controller.update(1);
+        controller.update(2);
+        controller.finishCarryAfterCarrierMovement();
+        sonic.setAnimationFrameIndex(8);
+        sonic.setAnimationTick(5);
+        sonic.setMappingFrame(0x90);
+
+        controller.setInitialState(SidekickCpuController.State.CARRY_INIT);
+        controller.update(3);
+
+        assertEquals(1, sonic.getAnimationFrameIndex(),
+                "native sub_1459E clears anim_frame before the CPU raw carry pass");
+        assertEquals(0x0B, sonic.getAnimationTick(),
+                "the refreshed CPU pass restarts AniRaw_Tails_Carry after an earlier regrab");
+        assertEquals(0x91, sonic.getMappingFrame());
+        controller.finishCarryAfterCarrierMovement();
+        assertEquals(0x91, sonic.getMappingFrame());
+        assertEquals(0x0A, sonic.getAnimationTick());
+    }
+
+    @Test
     void carryingCopiesPostMovementTailsDirectionToSonic() {
         AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
         AbstractPlayableSprite sonic = pair[0];
@@ -470,6 +516,9 @@ class TestSidekickCpuControllerCarry {
                 "Tails_Carry_Sonic jump release clears Status_RollJump");
         assertEquals(0x12, controller.getReleaseCooldownForTest(),
                 "Jump release cooldown is 0x12 (~18 frames)");
+        controller.finishCarryAfterCarrierMovement();
+        assertEquals(0x11, controller.getReleaseCooldownForTest(),
+                "the later Tails_FlyingSwimming carry probe consumes the first cooldown tick");
     }
 
     @Test
@@ -487,6 +536,25 @@ class TestSidekickCpuControllerCarry {
 
         assertEquals((short) 0x0200, sonic.getXSpeed(),
                 "ROM high-byte right press applies the carry jump-release x_vel override");
+        assertEquals(0x3C, controller.getReleaseCooldownForTest(),
+                "any held direction replaces the short jump-release cooldown with $3C");
+    }
+
+    @Test
+    void jumpPressWithVerticalDirectionUsesLongCooldownWithoutChangingXVelocity() {
+        AbstractPlayableSprite[] pair = prepareCarry();
+        AbstractPlayableSprite sonic = pair[0];
+        controller.update(1);
+        controller.update(2);
+
+        sonic.setDirectionalInputPressed(true, false, false, false);
+        sonic.setJumpInputPressed(false);
+        sonic.setJumpInputPressed(true);
+        controller.update(3);
+
+        assertEquals((short) 0x0100, sonic.getXSpeed(),
+                "Up selects the long delay but does not alter carried x_vel");
+        assertEquals(0x3C, controller.getReleaseCooldownForTest());
     }
 
     @Test
@@ -529,6 +597,7 @@ class TestSidekickCpuControllerCarry {
         }
 
         controller.update(4 + 0x11);
+        controller.finishCarryAfterCarrierMovement();
 
         assertTrue(sonic.isObjectControlled(),
                 "When the cooldown decrement reaches zero, MGZ Tails_Carry_Sonic should run the proximity grab on that frame");
@@ -536,6 +605,108 @@ class TestSidekickCpuControllerCarry {
         assertEquals((short) tails.getCentreX(), (short) sonic.getCentreX());
         assertEquals((short) (tails.getCentreY() + Sonic3kConstants.CARRY_DESCEND_OFFSET_Y),
                 (short) sonic.getCentreY());
+    }
+
+    @Test
+    void mgzReleasedCarryRechecksPickupRangeAfterCarrierMovement() {
+        AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
+        AbstractPlayableSprite sonic = pair[0];
+        AbstractPlayableSprite tails = pair[1];
+        fixture.camera().setY((short) 0x0600);
+        tails.setCentreY((short) 0x0690);
+        controller.update(1);
+        controller.update(2);
+        sonic.setJumpInputPressed(false);
+        sonic.setJumpInputPressed(true);
+        controller.update(3);
+
+        sonic.setJumpInputPressed(false);
+        tails.getTailsCarryController().setCooldown(0);
+        tails.setCentreX((short) 0x1000);
+        tails.setCentreY((short) 0x0690);
+        sonic.setCentreX((short) 0x1000);
+        sonic.setCentreY((short) 0x06C1);
+        sonic.setAir(true);
+        controller.update(4);
+
+        assertFalse(sonic.isObjectControlled(),
+                "The pre-body position is one pixel below loc_14542's pickup window");
+        tails.setCentreY((short) 0x0695);
+        controller.finishCarryAfterCarrierMovement();
+
+        assertTrue(sonic.isObjectControlled(),
+                "Tails_Carry_Sonic must recheck pickup range after current carrier movement");
+        assertTrue(sonic.isObjectMappingFrameControl(),
+                "the post-movement pickup transfers mapping ownership to AniRaw_Tails_Carry");
+    }
+
+    @Test
+    void mgzJumpReleasePreservesPreBodyLogicalDirectionForOnePass() {
+        AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
+        AbstractPlayableSprite sonic = pair[0];
+        AbstractPlayableSprite tails = pair[1];
+        fixture.camera().setY((short) 0x0600);
+        tails.setCentreY((short) 0x0690);
+        controller.update(1);
+        controller.update(2);
+
+        sonic.setDirectionalInputPressed(false, false, false, true);
+        controller.update(3);
+        assertTrue(controller.getInputRight());
+        SidekickCpuRewindExtra beforeRelease = controller.captureRewindState();
+        controller.restoreRewindState(withMgzControlScalars(
+                beforeRelease,
+                false, 0x20,
+                beforeRelease.mgzReleasedChaseLatched(),
+                beforeRelease.mgzReleasedChaseXAccel(),
+                beforeRelease.mgzReleasedChaseYAccel()));
+
+        sonic.setJumpInputPressed(false);
+        sonic.setJumpInputPressed(true);
+        controller.update(4);
+
+        assertTrue(controller.getInputRight(),
+                "Tails_FlyingSwimming consumes the prior Ctrl_2 direction before Tails_Carry_Sonic releases Sonic");
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT, controller.getDiagnosticGeneratedHeldInput());
+        assertEquals(0x21, controller.captureRewindState().mgzCarryFlapTimer(),
+                "routine $18 advances Tails_CPU_auto_fly_timer before the later jump-release check");
+
+        sonic.setJumpInputPressed(false);
+        controller.update(5);
+
+        assertFalse(controller.getInputRight());
+        assertEquals(0, controller.getDiagnosticGeneratedHeldInput(),
+                "The released-carry cooldown publishes an empty Ctrl_2 logical word on its following pass");
+    }
+
+    @Test
+    void mgzReleasedChasePublishesAutoFlapIntoCtrl2Logical() {
+        AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
+        AbstractPlayableSprite sonic = pair[0];
+        AbstractPlayableSprite tails = pair[1];
+        fixture.camera().setY((short) 0x0600);
+        tails.setCentreY((short) 0x0690);
+        controller.update(1);
+        controller.update(2);
+
+        sonic.setJumpInputPressed(true);
+        controller.update(3);
+        sonic.setJumpInputPressed(false);
+        SidekickCpuRewindExtra released = controller.captureRewindState();
+        controller.restoreRewindState(withMgzControlScalars(
+                released,
+                false, 0x57,
+                false,
+                released.mgzReleasedChaseXAccel(),
+                released.mgzReleasedChaseYAccel()));
+
+        controller.update(4);
+
+        assertTrue(controller.getInputJumpPress(),
+                "loc_142E2 should generate the threshold flap while the carry is released");
+        assertEquals(AbstractPlayableSprite.INPUT_JUMP,
+                controller.getDiagnosticGeneratedHeldInput(),
+                "the released chase must publish its generated A/B/C pulse into Ctrl_2_logical");
     }
 
     @Test
@@ -552,10 +723,18 @@ class TestSidekickCpuControllerCarry {
                 "Precondition: MGZ carry should own Sonic before Tails takes damage");
 
         tails.applyHurt(sonic.getCentreX());
+
+        assertTrue(sonic.isObjectControlled(),
+                "Touch_Hurt changes Tails' routine after Sonic's earlier player slot has run");
+        assertTrue(tails.getTailsCarryController().isCarryingMainCharacter(),
+                "the carry flag survives until Tails enters the hurt routine on the next frame");
+
         controller.update(3);
 
         assertFalse(sonic.isObjectControlled(),
-                "ROM Tails hurt routine clears Player_1 object_control and Flying_carrying_Sonic_flag");
+                "Tails' hurt routine clears Player_1 object_control before hurt movement");
+        assertEquals(0, tails.getTailsCarryController().capture().cooldown(),
+                "clr.w clears the adjacent native carry cooldown byte too");
         assertFalse(controller.isFlyingCarrying(),
                 "Tails must stop actively carrying Sonic as soon as the carrier is hurt");
         assertFalse(controller.usesFlyingCarryMovement(),
@@ -842,7 +1021,6 @@ class TestSidekickCpuControllerCarry {
                 source.objectOrderGracePushBypassThisFrame(),
                 source.pendingGroundedFollowNudge(),
                 source.pendingGroundedFollowNudgeFrame(),
-                source.aizIntroDormantMarkerPrimed(),
                 source.suppressNextLevelEventNormalMovement(),
                 source.catchUpUsesRomVisibleLevelFrameCounter(),
                 source.levelEventDormantMarkerReleasePending(),
@@ -882,6 +1060,39 @@ class TestSidekickCpuControllerCarry {
         assertTrue(controller.getInputLeft(),
                 "ROM loc_141D2 ORs P1 left/right into Ctrl_2 during MGZ routine $18");
         assertFalse(controller.getInputRight());
+    }
+
+    @Test
+    void mgzCpuRoutineTransitionsPreserveInheritedAutoFlyTimerForPlayerSteeredFlight() {
+        AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
+        AbstractPlayableSprite tails = pair[1];
+        fixture.camera().setY((short) 0x0600);
+        tails.setCentreY((short) 0x0690);
+        controller.update(1);  // INIT -> CARRY_INIT
+
+        SidekickCpuRewindExtra beforeCarryInit = controller.captureRewindState();
+        controller.restoreRewindState(withMgzControlScalars(
+                beforeCarryInit,
+                false, 0x3C,
+                beforeCarryInit.mgzReleasedChaseLatched(),
+                beforeCarryInit.mgzReleasedChaseXAccel(),
+                beforeCarryInit.mgzReleasedChaseYAccel()));
+
+        controller.setInitialState(SidekickCpuController.State.MGZ_RESCUE_WAIT);
+        assertEquals(0x3C, controller.captureRewindState().mgzCarryFlapTimer(),
+                "ROM routine $12 does not clear the shared Tails_CPU_auto_fly_timer global");
+        controller.setInitialState(SidekickCpuController.State.CARRY_INIT);
+        controller.update(2);  // CARRY_INIT -> CARRYING; routine $16 reaches Camera_Y+$90
+
+        assertEquals(0x3C, controller.captureRewindState().mgzCarryFlapTimer(),
+                "ROM routines $14/$16 leave Tails_CPU_auto_fly_timer untouched");
+
+        fixture.sprite().setDirectionalInputPressed(true, false, false, false);
+        controller.update(3);
+
+        assertTrue(controller.getInputJumpPress(),
+                "The inherited timer must trigger the first routine $18 Up flap immediately");
+        assertEquals(0, controller.captureRewindState().mgzCarryFlapTimer());
     }
 
     @Test

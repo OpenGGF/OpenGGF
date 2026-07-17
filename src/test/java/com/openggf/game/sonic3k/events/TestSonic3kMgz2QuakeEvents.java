@@ -247,6 +247,36 @@ class TestSonic3kMgz2QuakeEvents {
     }
 
     @Test
+    void activeQuakeSequence_preservesExactViewportRightEdgeUntilPlayerBoundaryCheck() {
+        AbstractPlayableSprite player = placePlayer(0, 0);
+        player.setWidth(20);
+        player.setHeight(38);
+        player.setCentreX((short) 0x31E0);
+        player.setCentreY((short) 0x0200);
+
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        events.update(1, 0);
+        assertEquals(8, events.getQuakeEventRoutine(), "precondition: state 8");
+
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x2F80);
+        int rightBoundary = 0x2F80 + 320 - 24;
+        player.setCentreX((short) rightBoundary);
+        player.setSubpixelRaw(0xB000, 0x2D00);
+        player.setXSpeed((short) 0x065C);
+        player.setGSpeed((short) 0x0669);
+
+        events.update(1, 1);
+
+        assertEquals(rightBoundary, player.getCentreX());
+        assertEquals(0xB000, player.getXSubpixelRaw(),
+                "S3K's strict right-boundary comparison preserves the exact-edge fraction");
+        assertEquals(0x065C, player.getXSpeed());
+        assertEquals(0x0669, player.getGSpeed());
+    }
+
+    @Test
     void quakeEvent3_advancesToFlee_whenCameraReachesLock() {
         AbstractPlayableSprite player = placePlayer(0x3460, 0x6A0);
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
@@ -344,9 +374,15 @@ class TestSonic3kMgz2QuakeEvents {
 
         camera.setMaxX((short) 0x07E0);
         events.update(1, 2);
-
-        assertTrue((camera.getMaxX() & 0xFFFF) > 0x07E0,
-                "destroyed Robotnik should start restoring the camera X bound immediately");
+        assertEquals(0x07E0, camera.getMaxX() & 0xFFFF,
+                "the newly allocated gradual worker starts on the following frame");
+        events.update(1, 3);
+        events.update(1, 4);
+        events.update(1, 5);
+        assertEquals(0x07E0, camera.getMaxX() & 0xFFFF);
+        events.update(1, 6);
+        assertEquals(0x07E1, camera.getMaxX() & 0xFFFF,
+                "the fourth $4000 step publishes the first one-pixel bound increment");
     }
 
     @Test

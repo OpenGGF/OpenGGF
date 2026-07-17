@@ -516,3 +516,59 @@ The trap: model the fragment's off-screen delete as `setDestroyed(true)` (engine
 **How to find it.** A badnik that ROM RESPAWNS when the camera revisits its layout X (visible as the same `object_appeared` X reappearing in the `slot_dump`/aux at a later frame) but the engine never re-creates. Diff engine SST occupancy vs the ROM `slot_dump` to find the missing object, trace its layout-entry respawn through `trySpawnCountered` (the `objStateBit` test), then walk back to the despawn: if its destroy left `isDestroyedRespawnable()==false` while the ROM tail does `bclr #7`, the off-screen delete used the wrong API.
 
 **Originating commit.** `bugfix/ai-mz2-f4610` (S1 Caterkiller Obj0x78 `Sonic1CaterkillerBadnikInstance.updateFragment` off-screen branch: `setDestroyed(true)` → `setDestroyedByOffscreen()`. The MZ2 @0x200 Caterkiller the player frag-hit at the start then walked away from now respawns at f3031 as ROM does, restoring slots 39/41/42/52 → the f4019 scattered-ring spill lands in ROM slots [35,39,41] not [35,54,58] → the Basaran takes slot 40 not 39 → its drop-gate fires on ROM's frame → the f4610 bounce registers. MZ2 f4610 → f8661, 824 → 665 errors; full S1 sweep + S2 EHZ1 held GREEN). Related to P21 (RememberState slot-cadence) and the P25 multi-segment despawn family, but P28 is specifically the secondary FRAGMENT/break-apart death path keeping the respawn bit set.
+
+## P29 — Translate `bchg` as a toggle of the existing bit, not as a value inferred from the resulting motion
+
+**Symptom.** An object launch has byte-perfect position and velocity, but the
+player uses the wrong slope-dependent animation bank afterward. The mismatch
+can remain hidden on flat terrain and appear only when the launch crosses a
+curve while control is locked.
+
+**Root cause.** The ROM uses `bchg #0,obStatus(a1)`, which toggles the player's
+pre-contact facing bit regardless of launch direction. Replacing that with
+`setDirection(xVel > 0 ? RIGHT : LEFT)` derives a new value instead. Those are
+not equivalent when the player was already facing along the launch direction:
+ROM intentionally leaves facing opposite to the new velocity after the toggle.
+
+**What to check.** Translate every object-side `bchg` literally from the old
+bit value. Do not infer the new flag from velocity, position delta, subtype,
+or object facing unless the disassembly separately assigns it with `bset`,
+`bclr`, or `move`.
+
+**ROM citation.** `docs/s1disasm/_incObj/41 Springs.asm:146-149`
+(`Spring_BounceLR`: set velocity/inertia, then toggle Sonic's status bit 0).
+
+**Originating commit.** S1 SYZ1 animation frontier frame 690 → 1742: the
+horizontal spring's rightward launch now toggles the prior right-facing state
+to left, restoring mappings `$2B-$2D` on the following steep curve.
+
+## P30 — Player edge balance reads the object's raw `obActWid`, not the padded `SolidObject` collision width
+
+**Symptom.** Sonic stands still safely inboard on a wide full-solid object, but
+the engine selects Balance while the ROM retains Wait. Physics and standing
+contact remain exact; only animation/facing diverge.
+
+**Root cause.** S1 `Sonic_Move` resolves the stood-on SST slot and reads its
+raw `obActWid` to form the edge window. Many full-solid callers separately add
+Sonic's `$B` collision width before calling `SolidObject`; that padded value is
+not written back to `obActWid`. Falling back to a generic 16-pixel render width
+or reusing the padded collision width therefore moves the balance edge.
+
+**What to check.** Every solid object with a ROM `obActWid` other than the
+shared 16-pixel default must override `getBalanceWidthPixels()` with that exact
+byte or subtype-backed field. Keep `getSolidParams().halfWidth()` faithful to
+the caller's distinct `SolidObject` argument. Do not infer either from render
+dimensions.
+
+**ROM citation.** `docs/s1disasm/_incObj/01 Sonic.asm:409-430`;
+Obj2F `LGrass_Data`/`LGrass_Main` at `2F, 35 MZ Large Grassy Platforms and
+Burning Grass.asm:23-53`; Obj6B `Sto_Var`/`Sto_Main` at `6B SBZ Stomper and
+Sliding Door.asm:25-42`; Obj84 `EggmanCylinder_Main` at `85,84,86 Boss - FZ
+Main, Cylinders, and Plasma Balls.asm:660-723`; Obj31 `CStom_Var2` and
+`CStom_MainBlock` at `31 MZ Chained Stompers.asm:112-135,184-190`.
+
+**Originating commit.** `bugfix/ai-s1-balance-owner` (FZ, SBZ1, and SYZ2
+animation traces green; MZ1 f749 → f2596). Earlier examples: Obj56 floating
+block (`ab3112b73`) and Obj61 Labyrinth block (`fc5d5e922`). Obj31 chained
+stomper was the next exposed instance: raw `$38/$30/$10`, not the collision
+argument extended by `$B`.

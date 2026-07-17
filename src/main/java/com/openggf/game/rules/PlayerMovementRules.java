@@ -13,6 +13,7 @@ public record PlayerMovementRules(
         boolean pinballLandingPreservesPinballMode,
         boolean rollingJumpPinballGateRequiresSpindashFlag,
         boolean landingRollClearUsesCurrentYRadiusDelta,
+        boolean angledLandingPublishesWalk,
         boolean rollStopsBelowMinimumSpeed,
         boolean rollControlledDecelUsesEffectiveDecelQuarter,
         boolean levelBoundaryRightStrict,

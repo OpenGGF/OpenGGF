@@ -878,7 +878,8 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
                         services().featureZoneId(), services().featureActId(), true);
                 defeatHandoffStarted = true;
                 spawnChild(() -> new S3kBossDefeatSignpostFlow(
-                        state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE));
+                        state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE,
+                        1, 0, 0, 0));
             }
         }
         if (!defeatHandoffStarted || !defeatExplosionController.isFinished()
@@ -1071,6 +1072,9 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         if (firstContact) {
             ObjectControlState.nativeBit7FullControl().applyTo(sprite);
             sprite.setAir(true);
+            // sub_6AA00 writes the public anim byte; forced animation only
+            // represents this object's continuing ownership on later frames.
+            sprite.setAnimationId(Sonic3kAnimationIds.FLOAT2);
             sprite.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2.id());
             sprite.setXSpeed((short) 0);
             sprite.setYSpeed((short) 0);

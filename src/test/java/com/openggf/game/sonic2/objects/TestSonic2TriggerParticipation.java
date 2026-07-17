@@ -14,6 +14,7 @@ import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.Sonic2ZoneFeatureProvider;
 import com.openggf.game.sonic2.objects.badniks.SlicerBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.SlicerPincerInstance;
 import com.openggf.game.sonic2.objects.badniks.SpinyBadnikInstance;
@@ -25,6 +26,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.LevelManager;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -50,6 +52,21 @@ class TestSonic2TriggerParticipation {
     @BeforeEach
     void resetObjectCameraBounds() {
         AbstractObjectInstance.updateCameraBounds(0, 0, 0x2000, 0x2000, 0);
+    }
+
+    @Test
+    void movingSpikeConsumesInitFrameBeforeFirstPositionStep() {
+        SpikeObjectInstance spike = new SpikeObjectInstance(
+                new ObjectSpawn(0x1548, 0x06B8, Sonic2ObjectIds.SPIKES, 0x01, 0, false, 0),
+                "Spikes");
+
+        spike.update(0, null);
+        assertEquals(0x06B8, spike.getY(),
+                "Obj36_Init returns before MoveSpikes changes the placement position");
+
+        spike.update(1, null);
+        assertEquals(0x06C0, spike.getY(),
+                "the first Obj36_Upright execution applies the initial +8px retract step");
     }
 
     @Test
@@ -152,6 +169,17 @@ class TestSonic2TriggerParticipation {
         assertTrue(nut.fullSolidBottomOverlapUsesCurrentYRadiusOnly(null),
                 "Obj69 SolidObject tail doubles live y_radius(a1), so rolling lower-half contact "
                         + "must not use stand radius");
+    }
+
+    @Test
+    void nutExposesNativeWidthForObjectEdgeBalance() {
+        NutObjectInstance nut = new NutObjectInstance(
+                new ObjectSpawn(0x18C0, 0x04F4, Sonic2ObjectIds.NUT, 0, 0, false, 0),
+                "Nut");
+
+        assertEquals(0x20, nut.getBalanceWidthPixels(),
+                "Obj69 writes width_pixels=$20; player balance must not use the 16px sprite default "
+                        + "or SolidObject's wider d1=$2B collision extent");
     }
 
     @Test
@@ -496,6 +524,8 @@ class TestSonic2TriggerParticipation {
         grabPlayer.invoke(plating, player);
 
         assertRomObjControlBitOneState(player, "Breakable Plating obj_control=1");
+        assertTrue(plating.requiresContinuousTouchCallbacks(),
+                "Touch_Special must refresh ObjC1 collision_property during sustained overlap");
     }
 
     @Test
@@ -519,10 +549,15 @@ class TestSonic2TriggerParticipation {
     @Test
     void wfzBreakablePlatingNativeMainTouchStillGrabs() {
         TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
+        Sonic2ZoneFeatureProvider zoneFeatures = new Sonic2ZoneFeatureProvider();
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getZoneFeatureProvider()).thenReturn(zoneFeatures);
         BreakablePlatingObjectInstance plating = new BreakablePlatingObjectInstance(
                 new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.BREAKABLE_PLATING, 0, 0, false, 0),
                 "BreakablePlating");
-        plating.setServices(new QueryOnlyPlayerServices(main, List.of()));
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(main, List.of());
+        services.withLevelManager(levelManager);
+        plating.setServices(services);
 
         plating.onTouchResponse(main, null, 0);
         plating.update(0, main);
@@ -530,6 +565,8 @@ class TestSonic2TriggerParticipation {
         assertRomObjControlBitOneState(main, "Breakable Plating native P1 grab");
         assertEquals(0x0FEC, main.getCentreX() & 0xFFFF);
         assertEquals(Sonic2AnimationIds.HANG.id(), main.getAnimationId());
+        assertTrue(zoneFeatures.isWfzWindTunnelHolding(),
+                "ObjC1 publishes WindTunnel_holding_flag with its Hang/object-control tuple");
     }
 
     @Test
@@ -910,6 +947,16 @@ class TestSonic2TriggerParticipation {
         assertTrue(block.isDestroyed(),
                 "Obj32 snapshots player anim before SolidObject and breaks on anim==Roll");
         assertEquals(0xFD00, main.getYSpeed() & 0xFFFF);
+    }
+
+    @Test
+    void breakableBlockKeepsSolidObjectExactRightEdgeContact() {
+        BreakableBlockObjectInstance block = new BreakableBlockObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.BREAKABLE_BLOCK, 0, 0, false, 0),
+                "BreakableBlock");
+
+        assertTrue(block.getSolidRoutineProfile().inclusiveRightEdge(),
+                "Obj32's SolidObject bhi gate accepts relX == 2*d1");
     }
 
     @Test

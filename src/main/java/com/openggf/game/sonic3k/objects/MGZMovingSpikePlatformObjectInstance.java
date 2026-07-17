@@ -15,6 +15,7 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 
@@ -103,8 +104,10 @@ public class MGZMovingSpikePlatformObjectInstance extends AbstractObjectInstance
         }
 
         // ROM: move.b (Oscillating_table+$12).w,d0 / add.w $32(a0),d0 / move.w d0,y_pos(a0).
-        // The oscillator is driven globally; ensure it has ticked this frame.
-        OscillationManager.update(frameCounter);
+        // This routine only reads the global table. OscillateNumDo runs once at
+        // the LevelLoop tail after every object slot (sonic3k.asm:7909,
+        // 71069-71072), so an object-local update would double-advance every
+        // oscillator while this platform is active.
         int oscByte = OscillationManager.getByte(OSC_OFFSET) & 0xFF;
         currentY = baseY + oscByte;
 
@@ -132,6 +135,22 @@ public class MGZMovingSpikePlatformObjectInstance extends AbstractObjectInstance
         return HALF_WIDTH;
     }
 
+    @Override
+    public int getBalanceWidthPixels() {
+        // Sonic_Move/Tails_Move read width_pixels(a1) directly. The platform's
+        // full-solid pass uses width+$B, while the shared fallback is only $10;
+        // neither represents the native $18 edge-balance surface.
+        return HALF_WIDTH;
+    }
+
+    @Override
+    public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
+        // Obj_MGZMovingSpikePlatform consumes SolidObjectFull's d6 result in
+        // this slot before running its spike-hurt branch. Preserve the native
+        // per-object standing bit until this platform's own checkpoint runs.
+        return true;
+    }
+
     // ===== SolidObjectListener =====
 
     @Override
@@ -148,6 +167,14 @@ public class MGZMovingSpikePlatformObjectInstance extends AbstractObjectInstance
         int playerY = playerEntity.getCentreY();
         if (playerY - currentY + HURT_Y_THRESHOLD < 0) {
             return;
+        }
+
+        // sub_24280 rewinds the full 16:16 y_pos by the current 8:8 y_vel
+        // before calling HurtCharacter. The platform runs after the player
+        // slot, so this restores the pre-movement position (including the
+        // subpixel fraction) before Player_TouchFloor changes rolling radii.
+        if (playerEntity instanceof AbstractPlayableSprite sprite) {
+            sprite.move((short) 0, (short) -sprite.getYSpeed());
         }
 
         int sourceX = currentX;
@@ -196,6 +223,14 @@ public class MGZMovingSpikePlatformObjectInstance extends AbstractObjectInstance
     @Override
     public int getY() {
         return currentY;
+    }
+
+    @Override
+    public int getOutOfRangeReferenceX() {
+        // ROM loc_347F6 reloads the fixed origin from $30(a0) before
+        // tail-calling Sprite_OnScreen_Test2. The live platform can be up to
+        // $50 pixels away from that origin when the unload decision runs.
+        return baseX;
     }
 
     @Override

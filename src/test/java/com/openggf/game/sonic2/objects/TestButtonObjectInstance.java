@@ -40,6 +40,15 @@ class TestButtonObjectInstance {
                 "Obj47 must write ButtonVine_Trigger from the same-frame SolidObject result");
     }
 
+    @Test
+    void buttonKeepsStandardSolidObjectExactRightEdgeContact() {
+        ButtonObjectInstance button = new ButtonObjectInstance(
+                new ObjectSpawn(0x1710, 0x0200, 0x47, 0, 0, false, 0));
+
+        assertTrue(button.getSolidRoutineProfile().inclusiveRightEdge(),
+                "Obj47's BHI gate accepts the exact +$1B edge");
+    }
+
     private static final class TestButton extends ButtonObjectInstance {
         private boolean standing;
 

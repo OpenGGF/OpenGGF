@@ -57,6 +57,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     private static final int SWING_ACCELERATION = 0x10;
 
     private int currentX;
+    private int solidBodyX;
     private int currentY;
     private int ySubpixel;
     private int yVelocity = SWING_MAX_SPEED;
@@ -83,6 +84,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
             boolean routeInitPending) {
         super(new ObjectSpawn(initialX, initialY, OBJECT_ID, 0, 0, false, 0), debugName);
         this.currentX = initialX;
+        this.solidBodyX = initialX;
         this.currentY = initialY;
         this.routeInitPending = routeInitPending;
     }
@@ -148,7 +150,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
 
     @Override
     public int getPieceX(int pieceIndex) {
-        return currentX;
+        return pieceIndex == PIECE_BUTTON ? currentX : solidBodyX;
     }
 
     @Override
@@ -170,6 +172,12 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        // Obj_EggCapsule saves x_pos in d4 before dispatching its routine and
+        // passes that saved coordinate to SolidObjectFull after movement. The
+        // separate button child refreshes from the parent's current position.
+        // Preserve both anchors when collapsing those native slots into one
+        // engine object (sonic3k.asm:181501-181545,181739-181767).
+        solidBodyX = currentX;
         onBeforeCapsuleUpdate();
         if (!opened) {
             if (routeInitPending) {
@@ -265,9 +273,13 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         }
         currentX = (currentX + xDirection) & 0xFFFF;
 
-        int targetY = (cameraY + Y_TARGET_OFFSET) & 0xFFFF;
+        int targetY = (cameraY + targetYOffset()) & 0xFFFF;
         int yStep = Integer.compareUnsigned(targetY, currentY & 0xFFFF) > 0 ? 0x4000 : -0x4000;
         addYLongword(yStep);
+    }
+
+    protected int targetYOffset() {
+        return Y_TARGET_OFFSET;
     }
 
     private void updateSwingAndMove() {

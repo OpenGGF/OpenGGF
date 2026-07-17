@@ -66,6 +66,13 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     private static final int HORIZONTAL_CYCLE_COUNT = 4;    // ROM: move.b #4,$39(a0)
     private static final int INVULN_TIME = 0x20;
     private static final int FATAL_HIT_DEFEAT_DELAY = 13;
+    // The collision bridge keeps the defeated miniboss interactive while the
+    // native object schedule has already advanced into the end-sign sequence.
+    // Carry that elapsed owner state forward instead of spawning the physical
+    // signpost early, which would make it collide with the player twice.
+    private static final int SIGNPOST_RESULTS_TIMER_CATCH_UP_ENTRIES = 16;
+    private static final int RESULTS_WAIT_DURATION_ADJUSTMENT = 3;
+    private static final int RESULTS_POST_CONTROL_HANDOFF_DELAY_ENTRIES = 13;
     private static final int DEFEAT_WAIT_FADE_TIMER = 0x3F;
     private static final int FLAG_PARENT_BITS = 0x38;
     private static final int FLAG_PARENT_COUNTER = 0x39;
@@ -622,7 +629,10 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
             // Use spawnChild() so CONSTRUCTION_CONTEXT is set — the constructor calls services()
             spawnChild(() -> new S3kBossDefeatSignpostFlow(
                     state.x, 0,
-                    S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_AIZ_FIRE_PALETTE));
+                    S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_AIZ_FIRE_PALETTE,
+                    SIGNPOST_RESULTS_TIMER_CATCH_UP_ENTRIES,
+                    RESULTS_WAIT_DURATION_ADJUSTMENT,
+                    RESULTS_POST_CONTROL_HANDOFF_DELAY_ENTRIES));
         }
     }
 

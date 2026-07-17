@@ -79,6 +79,41 @@ public class TestActTransitionHeadless {
     }
 
     @Test
+    public void executeActTransitionPreservesGlobalVintClock() throws Exception {
+        LevelManager lm = GameServices.level();
+        ObjectManager beforeOM = lm.getObjectManager();
+        beforeOM.initVblaCounter(0x4567);
+
+        SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest
+                .builder(TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(ZONE_EHZ, ACT_2)
+                .preserveMusic(true)
+                .build();
+
+        lm.executeActTransition(request);
+
+        assertEquals(0x4567, lm.getObjectManager().getVblaCounter(),
+                "Load_Level rebuilds object RAM but must not reset global V_int_run_count");
+    }
+
+    @Test
+    public void seamlessReloadTicksGlobalVintClockAcrossTransitionOnlyFrame() {
+        LevelManager lm = GameServices.level();
+        lm.getObjectManager().initVblaCounter(0x4567);
+
+        SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest
+                .builder(TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(ZONE_EHZ, ACT_2)
+                .preserveMusic(true)
+                .build();
+
+        lm.applySeamlessTransition(request);
+
+        assertEquals(0x4568, lm.getObjectManager().getVblaCounter(),
+                "The transition-only row still runs V-int even though ObjectManager.update is skipped");
+    }
+
+    @Test
     public void executeActTransitionRebuildsRingManager() throws Exception {
         LevelManager lm = GameServices.level();
         RingManager beforeRM = lm.getRingManager();
@@ -329,5 +364,3 @@ public class TestActTransitionHeadless {
                 "when camera is at X=5000");
     }
 }
-
-

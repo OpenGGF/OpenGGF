@@ -64,6 +64,10 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
     // GenericFieldCapturer reapplies these captured values after recreate.
     private int apparentAct;
     private CleanupAction cleanupAction;
+    private int initialWaitCatchUpEntries;
+    private int signpostResultsTimerCatchUpEntries;
+    private int resultsWaitDurationAdjustment;
+    private int resultsPostControlHandoffDelayEntries;
     private boolean initialized;
 
     /**
@@ -76,10 +80,28 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
      * @param cleanupAction action to run after spawning the signpost (e.g. palette restore)
      */
     public S3kBossDefeatSignpostFlow(int signpostX, int apparentAct, CleanupAction cleanupAction) {
+        this(signpostX, apparentAct, cleanupAction, 0, 0, 0, 0);
+    }
+
+    S3kBossDefeatSignpostFlow(int signpostX, int apparentAct, CleanupAction cleanupAction,
+            int signpostResultsTimerCatchUpEntries, int resultsWaitDurationAdjustment,
+            int resultsPostControlHandoffDelayEntries) {
+        this(signpostX, apparentAct, cleanupAction, 0,
+                signpostResultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
+                resultsPostControlHandoffDelayEntries);
+    }
+
+    S3kBossDefeatSignpostFlow(int signpostX, int apparentAct, CleanupAction cleanupAction,
+            int initialWaitCatchUpEntries, int signpostResultsTimerCatchUpEntries,
+            int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries) {
         super(new ObjectSpawn(signpostX, 0, 0, 0, 0, false, 0), "S3kBossDefeatSignpostFlow");
         this.signpostX = signpostX;
         this.apparentAct = apparentAct;
         this.cleanupAction = cleanupAction == null ? CleanupAction.NONE : cleanupAction;
+        this.initialWaitCatchUpEntries = Math.max(0, initialWaitCatchUpEntries);
+        this.signpostResultsTimerCatchUpEntries = Math.max(0, signpostResultsTimerCatchUpEntries);
+        this.resultsWaitDurationAdjustment = Math.max(0, resultsWaitDurationAdjustment);
+        this.resultsPostControlHandoffDelayEntries = Math.max(0, resultsPostControlHandoffDelayEntries);
         this.phase = Phase.WAIT_FADE;
         this.timer = FADE_TIMER;
     }
@@ -115,7 +137,13 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        ensureInitialized();
+        if (!initialized) {
+            ensureInitialized();
+            timer -= initialWaitCatchUpEntries;
+            // Obj_EndSignControl installs Obj_EndSignControlWait and returns;
+            // its $77 timer is first decremented on the following object pass.
+            return;
+        }
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {
             return;
@@ -173,7 +201,9 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         services().gameState().setCurrentBossId(0);
 
         // Spawn signpost above camera
-        S3kSignpostInstance signpost = new S3kSignpostInstance(signpostX, apparentAct);
+        S3kSignpostInstance signpost = new S3kSignpostInstance(
+                signpostX, apparentAct, signpostResultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
+                resultsPostControlHandoffDelayEntries);
         spawnDynamicObject(signpost);
         LOG.fine("S3K defeat flow spawned signpost at X=" + signpostX);
 

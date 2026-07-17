@@ -98,6 +98,28 @@ class TestMGZHeadTriggerObjectInstance {
     }
 
     @Test
+    void nonFinalHitRecoveryCountsWhileBlinkRestartAdvances() {
+        RecordingServices services = new RecordingServices();
+        MGZHeadTriggerObjectInstance head = new MGZHeadTriggerObjectInstance(
+                new ObjectSpawn(0x180, 0x100, Sonic3kObjectIds.MGZ_HEAD_TRIGGER, 0x02, 0, false, 0));
+        head.setServices(services);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x140, (short) 0x100);
+
+        head.onPlayerAttack(player, ENEMY_HIT);
+        head.update(0, player);
+        for (int frame = 1; frame < 60; frame++) {
+            head.update(frame, player);
+        }
+        assertEquals(0, head.getCollisionFlags(),
+                "The head remains intangible through the 59th recovery tick");
+
+        head.update(60, player);
+
+        assertEquals(0x17, head.getCollisionFlags(),
+                "The independent 60-frame recovery must re-arm collision on time");
+    }
+
+    @Test
     void thirdHitSetsLevelTriggerAndLeavesTriggeredFrameVisible() throws Exception {
         RecordingServices services = new RecordingServices();
         MGZHeadTriggerObjectInstance head = new MGZHeadTriggerObjectInstance(
@@ -154,10 +176,10 @@ class TestMGZHeadTriggerObjectInstance {
         assertEquals(1, readMappingFrame(head));
 
         runFrames(head, player, 80, 220);
-        assertEquals(1, countProjectiles(services),
-                "Once exposed, the head should wait for a hit instead of rearming from proximity");
+        assertEquals(2, countProjectiles(services),
+                "The idle watch-window check should re-arm the native 82-frame spit cadence");
         assertEquals(1, readMappingFrame(head),
-                "The waiting state should hold on the exposed red gem frame");
+                "The second cycle should reach the exposed red gem frame");
     }
 
     @Test
@@ -181,6 +203,15 @@ class TestMGZHeadTriggerObjectInstance {
 
         assertEquals(0x170, projectile.getX());
         assertEquals(0x120, projectile.getY());
+    }
+
+    @Test
+    void projectilePublishesItsPostMoveTouchCoordinate() {
+        MGZHeadTriggerProjectileInstance projectile =
+                new MGZHeadTriggerProjectileInstance(0x180, 0x120, 0x400, false);
+
+        assertTrue(projectile.usesCurrentTouchResponseState(),
+                "loc_34518 moves before Add_SpriteToCollisionResponseList");
     }
 
     private static int readMappingFrame(MGZHeadTriggerObjectInstance head) throws Exception {

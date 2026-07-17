@@ -1165,8 +1165,185 @@ entry (`docs/skdisasm/sonic3k.asm:179032-179047,179136-179139`).
 
 ---
 
-## How to add a new entry
+## P33 -- Object-controlled players retain object-owned mapping frames
 
+**Symptom.** A player or CPU sidekick has the right position, velocity, raw
+animation byte, and object-control state, but displays an ordinary player
+animation frame instead of the literal mapping frame written by an intro,
+cutscene, or capture object. A later routine handoff can also replace the
+displayed frame one object slot too early.
+
+**Root cause.** S3K tests `object_control` bit 1 before calling
+`Animate_Sonic`/`Animate_Tails`. An object that writes a literal
+`mapping_frame` together with a bit-1 control byte therefore owns the displayed
+frame until that bit is cleared. Separately, an object running after the player
+slot can write a new raw `anim` byte on release without retroactively running
+the animator or changing the frame already published that tick. Engine forced
+animation helpers that clear or recompute mapping state during placement,
+release, or CPU routine changes collapse those native ownership boundaries.
+
+**What to check.** For any object-controlled player sequence:
+
+1. Record the exact `object_control`, `anim`, and `mapping_frame` writes; do not
+   infer one from another.
+2. If bit 1 is set, preserve the literal mapping frame and suppress the normal
+   player animator until the ROM clears bit 1.
+3. Keep CPU-routine changes separate from animation ownership. A routine write
+   that does not write `anim`, `mapping_frame`, or `object_control` must retain
+   all three.
+4. Respect slot order on release: a post-player object may publish the next raw
+   animation byte while the old displayed frame remains visible until the next
+   player dispatch.
+5. Do not clear an event-authored animation merely because a sidekick is being
+   installed as an established follower; verify whether the native init path
+   actually writes that byte.
+6. Treat an engine forced-animation value as an owner, not as the native byte
+   itself. If a level-start/event owner must release on landing, consume that
+   explicit owner from the landing path before the same player slot reaches
+   Animate and publish the native raw animation write there. Do not clear every
+   matching Hurt/Fall or Fly value globally: unrelated CPU recovery can carry
+   the same numeric animation through a different native routine.
+
+**ROM citation.** `Sonic_Control` and `Tails_Control` skip their animators for
+bit 1 (`docs/skdisasm/sonic3k.asm:22067-22076,26257-26272`). The AIZ plane
+intro writes player `mapping_frame=0` with `$53`, later publishes Hurt after
+the player slot, and its CPU-sidekick dormant marker writes `$83` without an
+animation write; Fly begins only at the catch-up trigger
+(`docs/skdisasm/sonic3k.asm:26389-26397,26474-26534,
+135492-135495,135609-135619`). HCZ level-start setup writes `$1B` before the
+ordinary sidekick init path; the landing routine writes Walk before Animate,
+and flight recovery writes Walk during its routine-4-to-6 handoff
+(`docs/skdisasm/sonic3k.asm:8111-8148,24325-24329,26631-26648`).
+
+**Originating commits.** `b18c254e3`; `<pending: S3K intro landing milestone>`.
+
+---
+
+## P34 -- Public animation bytes can select private velocity tiers
+
+**Symptom.** A player's trace-visible raw animation byte and physics are both
+correct, but the displayed mapping frame comes from the ordinary Walk or Run
+script instead of a short private script. The mismatch begins only above a
+specific ground-speed threshold and can alternate among slope-frame banks.
+
+**Root cause.** A negative animation-table entry is executable selection logic,
+not merely a reference to the public animation ID. S3K Tails' Walk entry `$FF`
+handler leaves the public `anim` byte at Walk but changes the internal script
+pointer at `|ground_vel| >= $700` to private `AniTails1F`. That two-frame script
+uses `$C3/$C4`, whose slope-bank stride differs from both ordinary Walk and Run.
+Treating every velocity tier as a public raw-animation substitution makes the
+trace byte wrong; omitting the private tier makes only the mapping frame wrong.
+
+**What to check.** Follow every negative entry in the character's animation
+pointer table through its speed comparisons and private pointer selections.
+Record the exact threshold, whether the public animation byte is rewritten,
+and the slope-frame stride selected for each branch. Load private scripts even
+when no public animation constant names them, and test the production
+ROM-backed profile as well as the shared animator helper.
+
+**ROM citation.** `Animate_Tails` selects `AniTails1F` at absolute
+`ground_vel >= $700` without changing the Walk byte
+(`docs/skdisasm/sonic3k.asm:29462-29489`); `AniTails1F` is `$FF,$C3,$C4`
+(`docs/skdisasm/General/Sprites/Tails/Anim - Tails.asm:79`).
+
+**Originating commit.** `<pending: S3K Tails high-speed animation tier>`.
+
+---
+
++## P35 -- Objects that read global oscillators must not advance them
+
+**Symptom.** Every oscillating platform or hazard in the level changes phase
+while one particular object is active. The target object can look locally
+plausible, but a later unrelated platform is hundreds of oscillator ticks away
+from ROM.
+
+**Root cause.** The object port calls the engine's global oscillator update
+before reading the table. ROM object routines read `Oscillating_table` only;
+`OscillateNumDo` advances the shared table once at the level-loop tail after
+all object slots. An object-local update therefore adds a second tick per frame,
+and a different counter domain can defeat frame-number deduplication entirely.
+
+**What to check.** When an object reads `Oscillating_table+N`, port only the
+read and local position calculation. Keep the single global update under the
+level loop's owner. Add a test that snapshots the complete oscillator table,
+executes the object once, and proves the table is unchanged.
+
+**ROM citation.** S3K calls `OscillateNumDo` once after
+`Process_Sprites` at the `LevelLoop` tail, while
+`Obj_MGZMovingSpikePlatform` only reads `Oscillating_table+$12`
+(`docs/skdisasm/sonic3k.asm:7909,71029-71072`).
+
+**Originating commit.** `<pending: MGZ moving-spike oscillator ownership milestone>`.
+
+---
+
++## P36 -- S3K rideable objects must expose their operation-pointer high word
+
+**S3K-specific.**
+
+**Symptom.** CPU Tails lands on the correct live solid with matching position,
+standing bit, and SST slot, but `Tails_CPU_interact` retains the preceding
+object's value. The next off-screen `sub_13EFC` comparison can then despawn
+Tails incorrectly, and trace replay first reports an interact-word mismatch.
+
+**Root cause.** S3K stores the high word of the stood-on object's operation
+pointer, not its object ID, in `Tails_CPU_interact`. An engine solid that does
+not implement `RomObjectCodePointerProvider` cannot refresh that latch even
+when the ride instance is otherwise correct.
+
+**What to check.** Every S3K object that can set Player 2's standing bit must
+expose the high word of its live locked-on-ROM operation pointer through
+`RomObjectCodePointerProvider`. Use the pointer for the exact routine installed
+in word 0 of that SST state; do not substitute the object ID or zone name. Add a
+focused assertion for the returned word.
+
+**ROM citation.** `TailsCPU_UpdateObjInteract` copies `(a3)` into
+`Tails_CPU_interact`, and `sub_13EFC` compares that word against the current
+stood-on slot (`docs/skdisasm/sonic3k.asm:26816-26843`).
+`Obj_MGZ2LevelCollapseSolid` runs at `$0005180A`
+(`docs/skdisasm/sonic3k.asm:106955-106970`), so its high word is `$0005`.
+
+**Originating commit.** `<pending: MGZ collapse-carrier interact milestone>`.
+
+---
+
+
+## P37 -- A zero velocity is not symmetric across SolidObject side branches
+
+**Symptom.** An airborne player is separated from the left edge of a full
+solid at the correct pixel, but retains a stale nonzero `ground_vel` even
+though native `x_vel` is zero. Physics and fall-animation cadence then diverge
+together despite matching position and vertical velocity.
+
+**Root cause.** S3K `SolidObject_cont` uses sign branches, not an abstract
+strict "moving into" test. On the object's left edge (`d0 > 0`), only
+`x_vel < 0` skips `loc_1E056`; therefore `x_vel == 0` clears both
+`ground_vel` and `x_vel`. On the right edge (`d0 < 0`), `x_vel == 0`
+does skip the clear. Treating zero identically on both sides preserves stale
+ground speed on left-side contacts.
+
+**What to check.** For every full-solid port that reaches the standard S3K
+left/right branch:
+
+1. Preserve the exact signed branch boundaries from the helper, including
+   whether zero falls through or branches away.
+2. If the shared engine predicate keeps legacy strict-sign behavior, opt the
+   concrete provider into `zeroXSpeedStopsOnLeftSideContact()` with a citation.
+3. Test `x_vel == 0` with nonzero `ground_vel`; asserting position alone will
+   miss the bug.
+4. Do not make the right-side zero case symmetric unless that object's ROM
+   routine uses a different helper.
+
+**ROM citation.** S3K `SolidObject_cont` left/right classification and stop
+path at `docs/skdisasm/sonic3k.asm:41468-41483`. The MGZ invisible block calls
+`SolidObjectFull2` at `docs/skdisasm/sonic3k.asm:42656-42691`.
+
+**Originating commit.** `<pending: MGZ invisible-block zero-speed side-stop
+milestone>`.
+
+---
+
+## How to add a new entry
 When a trace-replay-bug-fixing iteration commits an object fix whose root
 cause is a class of bug (not a one-off):
 

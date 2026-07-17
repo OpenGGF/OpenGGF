@@ -223,6 +223,20 @@ public class TraceBinder {
                     0, 1, false));
         }
 
+        if (expected.animationId() >= 0 && expected.mappingFrame() >= 0) {
+            boolean animationPresent = engineDiag != null
+                    && engineDiag.animationId() >= 0
+                    && engineDiag.mappingFrame() >= 0;
+            fields.put("player_animation_present", compareAnimationFlag(
+                    "player_animation_present", true, animationPresent));
+            if (animationPresent) {
+                fields.put("player_animation_id", compareAnimationByte(
+                        "player_animation_id", expected.animationId(), engineDiag.animationId()));
+                fields.put("player_mapping_frame", compareAnimationByte(
+                        "player_mapping_frame", expected.mappingFrame(), engineDiag.mappingFrame()));
+            }
+        }
+
         if (tolerances.ringCountMode() != ToleranceConfig.RingCountMode.DISABLED
                 && expected.rings() >= 0 && engineDiag != null && engineDiag.rings() >= 0) {
             fields.put("rings", compareRingCount(expected.rings(), engineDiag.rings()));
@@ -533,6 +547,14 @@ public class TraceBinder {
         boolean actualPresent = actual != null && actual.present();
         fields.put(prefix + "present",
             compareFlag(prefix + "present", expectedPresent, actualPresent));
+        boolean expectedAnimation = expected != null
+                && expected.animationId() >= 0 && expected.mappingFrame() >= 0;
+        if (expectedAnimation) {
+            boolean actualAnimationPresent = actualPresent
+                    && actual.animationId() >= 0 && actual.mappingFrame() >= 0;
+            fields.put(prefix + "animation_present", compareAnimationFlag(
+                    prefix + "animation_present", expectedPresent, actualAnimationPresent));
+        }
         if (!expectedPresent || !actualPresent) {
             return;
         }
@@ -590,6 +612,28 @@ public class TraceBinder {
                         0, 1, false));
             }
         }
+        if (expected.animationId() >= 0 && expected.mappingFrame() >= 0
+                && actual.animationId() >= 0 && actual.mappingFrame() >= 0) {
+            fields.put(prefix + "animation_id", compareAnimationByte(
+                    prefix + "animation_id", expected.animationId(), actual.animationId()));
+            fields.put(prefix + "mapping_frame", compareAnimationByte(
+                    prefix + "mapping_frame", expected.mappingFrame(), actual.mappingFrame()));
+        }
+    }
+
+    private static FieldComparison compareAnimationByte(String name, int expected, int actual) {
+        int expectedByte = expected & 0xFF;
+        int actualByte = actual & 0xFF;
+        Severity severity = expectedByte == actualByte ? Severity.MATCH : Severity.ERROR;
+        return FieldComparison.animation(name, formatHex(expectedByte), formatHex(actualByte),
+                severity, Math.abs(expectedByte - actualByte));
+    }
+
+    private static FieldComparison compareAnimationFlag(
+            String name, boolean expected, boolean actual) {
+        Severity severity = expected == actual ? Severity.MATCH : Severity.ERROR;
+        return FieldComparison.animation(name, expected ? "1" : "0", actual ? "1" : "0",
+                severity, expected == actual ? 0 : 1);
     }
 
     private void appendSidekickCpuComparisons(Map<String, FieldComparison> fields, String prefix,

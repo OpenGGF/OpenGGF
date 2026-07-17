@@ -65,6 +65,9 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
     private boolean exploding;
     private int renderFlags;
     private int lastFrameCounter;
+    private int positiveSplitPrePhysicsX;
+    private int positiveSplitPrePhysicsY;
+    private boolean positiveSplitPrePhysicsReady;
 
     /**
      * Create electric ball attached to boss.
@@ -74,11 +77,14 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
         super(spawn, "CNZ Boss Ball");
         this.mainBoss = mainBoss;
 
-        // ROM: loc_31F48 - position = parent (x, y+0x30) during init
+        // ROM: loc_31F48 - position = parent (x, y+0x30) during init.
+        // The engine spawn records the parent SST x_pos visible when Obj51 is
+        // allocated. Keep that published coordinate: Boss_MoveObject no longer
+        // runs during loc_31BA8, so every later loc_31F96 parent read is equal.
         // Then immediately advances to attach routine where objoff_28 starts at 0
         // So ball position becomes parent.y + 0 on first frame of attach
         // This matches the ROM behavior where the ball "appears" at parent position
-        this.x = mainBoss.getX();
+        this.x = spawn.x();
         this.y = mainBoss.getY();  // Will be adjusted by ballRiseOffset in attach
         this.xFixed = x << 16;
         this.yFixed = y << 16;
@@ -152,7 +158,7 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
         }
 
         switch (routineState) {
-            case BALL_ATTACH -> updateBallAttach();
+            case BALL_ATTACH -> updateBallAttach(frameCounter);
             case BALL_FALL -> updateBallFall();
             case BALL_SPLIT -> updateBallSplit();
         }
@@ -163,11 +169,10 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
      * objoff_28 starts at 0, increments by 1 per frame, caps at $2E.
      * Position = parent.y + objoff_28
      */
-    private void updateBallAttach() {
-        // ROM Obj51 copies the parent x_pos while the parent is in loc_31BA8,
-        // where Boss_MoveObject is no longer run. Preserve the child-init X here
-        // instead of re-reading the engine's boss fixed-position helper, which is
-        // ahead of the ROM-visible x_pos at the trigger boundary.
+    private void updateBallAttach(int frameCounter) {
+        // ROM loc_31F96 recopies the stationary parent x_pos. The equivalent
+        // engine value was captured by the allocation spawn; re-reading the
+        // live boss would expose a different fixed-accumulator phase.
         y = mainBoss.getY() + ballRiseOffset;
 
         // ROM: addi_.w #1,d0 / cmpi.w #$2E,d0 / blt.s + / move.w #$2E,d0
@@ -182,7 +187,7 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
 
         // ROM: tst.w (Boss_Countdown).w / bne.w DisplaySprite
         // Wait for main boss countdown to reach 0
-        if (mainBoss.getBossCountdown() <= 0) {
+        if (mainBoss.getBossCountdownVisibleToBall(frameCounter) == 0) {
             routineState = BALL_FALL;
             xVel = 0;
             yVel = 0;
@@ -191,15 +196,16 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
 
     /**
      * ROM: loc_31FDC - Ball falling.
-     * Uses ObjCheckFloorDist, triggers split when d1 (distance) is negative or zero.
+     * Uses ObjCheckFloorDist and splits only when d1 is negative.
      */
     private void updateBallFall() {
         applyBallPhysics();
 
-        // ROM: jsr (ObjCheckFloorDist).l / tst.w d1 / bpl.w DisplaySprite
-        // Triggers when d1 <= 0 (at or below floor)
+        // ROM: jsr (ObjCheckFloorDist).l / tst.w d1 / bpl.w DisplaySprite.
+        // bpl includes zero, so exact surface contact remains in BALL_FALL;
+        // only a negative penetration reaches loc_32030 and splits the ball.
         TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(x, y, Y_RADIUS);
-        if (floor.hasCollision() && floor.distance() <= 0) {
+        if (floor.foundSurface() && floor.distance() < 0) {
             y += floor.distance();
             yFixed = y << 16;
             explodeAndSplit();
@@ -222,6 +228,15 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
      * Apply physics to ball (ROM: loc_31FF8).
      */
     private void applyBallPhysics() {
+        if (routineState == BALL_SPLIT && xVel > 0) {
+            // AllocateObjectAfterCurrent lets the copied positive half execute
+            // after both player slots have already run. Retain the coordinate
+            // from before that immediate loc_31FF8 step for the next ordinary
+            // single-region touch scan.
+            positiveSplitPrePhysicsX = x;
+            positiveSplitPrePhysicsY = y;
+            positiveSplitPrePhysicsReady = true;
+        }
         xFixed = (x << 16) + (xVel << 8);
         yFixed = (y << 16) + (yVel << 8);
         yVel += GRAVITY;
@@ -326,31 +341,23 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
         if (isDestroyed()) {
             return null;
         }
-        if (routineState == BALL_FALL && !exploding) {
-            // ROM Touch_Boss scans Obj51's collision_flags and x_pos/y_pos directly
-            // (docs/s2disasm/s2.asm:85164-85252). In the captured CNZ2 boss
-            // population, the parent Obj51 runs before the original falling ball,
-            // so the contact row sees the next loc_31FF8 fall position
-            // (docs/s2disasm/s2.asm:67049-67079). Project only this pre-split
-            // original hurt region; split clones keep their existing timing.
-            int projectedY = ((y << 16) + (yVel << 8)) >> 16;
-            return new TouchResponseProvider.TouchRegion[] {
-                    new TouchResponseProvider.TouchRegion(x, projectedY, 0x98)
-            };
-        }
-        if (routineState == BALL_SPLIT && xVel < 0) {
-            // loc_32030 leaves the original split half in the current slot with
-            // x_vel=-$100, while the copied +$100 half is allocated after current
-            // and executes immediately. The original half therefore needs the
-            // same loc_31FF8 projection the ROM contact row observes before the
-            // next displayed split step.
-            int projectedX = ((x << 16) + (xVel << 8)) >> 16;
-            int projectedY = ((y << 16) + (yVel << 8)) >> 16;
-            return new TouchResponseProvider.TouchRegion[] {
-                    new TouchResponseProvider.TouchRegion(projectedX, projectedY, 0x98)
-            };
-        }
         return null;
+    }
+
+    @Override
+    public int getPreUpdateX() {
+        if (routineState == BALL_SPLIT && xVel > 0 && positiveSplitPrePhysicsReady) {
+            return positiveSplitPrePhysicsX;
+        }
+        return super.getPreUpdateX();
+    }
+
+    @Override
+    public int getPreUpdateY() {
+        if (routineState == BALL_SPLIT && xVel > 0 && positiveSplitPrePhysicsReady) {
+            return positiveSplitPrePhysicsY;
+        }
+        return super.getPreUpdateY();
     }
 
     @Override

@@ -39,6 +39,8 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
     private static final int LAUNCH_Y_VELOCITY = -0x600;
     private static final int GRAVITY = 0x38;
     private static final int FLOOR_Y_RADIUS = 0x29;
+    private static final int WAIT_PLACEHOLDER_X_MARGIN = 0x20;
+    private static final int WAIT_PLACEHOLDER_Y_MARGIN = 0x22;
 
     private static final int[] PREP_FRAMES = {0, 1, 2};
     private static final int[] PREP_DELAYS = {0, 2, 0};
@@ -63,21 +65,35 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
     private boolean initialized;
     private int animIndex = -1;
     private int animTimer;
-    private int restY;
     private MantisChild child;
+    private boolean waitPlaceholderRenderFlag;
+    private boolean waitingForOnscreen = true;
 
     public MantisBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Mantis",
                 Sonic3kObjectArtKeys.MGZ_MANTIS, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
         this.mappingFrame = WAIT_FRAME;
-        this.restY = spawn.y();
     }
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        // ROM entry / delete flow only gates Mantis on X visibility, so the
-        // jump arc must continue even if it leaves the top of the viewport.
-        if (isDestroyed() || !isOnScreenX()) {
+        if (isDestroyed()) {
+            return;
+        }
+
+        // Obj_WaitOffscreen keeps the operation pointer at loc_85AD2 while its
+        // $20-by-$20 placeholder remains outside Render_Sprites bounds. Engine
+        // placement already bridges the visible restore dispatch, so initialize
+        // on the first live pass inside those bounds. Once restored, Obj_Mantis
+        // dispatches every SST pass; Sprite_CheckDeleteTouch only owns the later
+        // unload/touch work and is not a strict viewport update gate.
+        if (!initialized && waitingForOnscreen) {
+            if (!waitPlaceholderRenderFlag) {
+                return;
+            }
+            // Obj_WaitOffscreen restores the saved operation and returns. The
+            // restored Mantis initializer runs on this SST's following pass.
+            waitingForOnscreen = false;
             return;
         }
 
@@ -107,13 +123,37 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
         child = null;
     }
 
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        // S3K Collision_response_list retains this Mantis SST pointer after its
+        // MoveSprite update. The following player slot reads the live y_pos,
+        // not the engine's older pre-update coordinate copy.
+        return true;
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        // Obj_WaitOffscreen has not reached SetUp_ObjAttributes yet, so the
+        // freshly loaded SST's collision_flags byte remains zero until the
+        // first visible Obj_Mantis initialization pass.
+        return initialized ? super.getCollisionFlags() : 0;
+    }
+
     private void initialize() {
         child = spawnChild(() -> new MantisChild(this));
         mappingFrame = WAIT_FRAME;
         animIndex = -1;
         animTimer = 0;
-        currentY = restY;
+        currentY = spawn.y();
         yVelocity = 0;
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (!initialized) {
+            waitPlaceholderRenderFlag = isWithinRenderSpriteBounds(
+                    WAIT_PLACEHOLDER_X_MARGIN, WAIT_PLACEHOLDER_Y_MARGIN);
+        }
     }
 
     private void updateWait(AbstractPlayableSprite player) {
@@ -158,7 +198,6 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
         TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, FLOOR_Y_RADIUS);
         if (floor.hasCollision()) {
             currentY += floor.distance();
-            restY = currentY;
             ySubpixel = 0;
             beginLand();
         }
@@ -197,7 +236,6 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
 
     private void finishCycle() {
         state = State.WAIT;
-        currentY = restY;
         yVelocity = 0;
         ySubpixel = 0;
         animIndex = -1;
@@ -281,6 +319,17 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
                 return;
             }
             syncFromParent();
+        }
+
+        @Override
+        public void onUnload() {
+            // The child has its own dynamic SST lifetime. If it is retired
+            // before the parent, remove the parent's structural back-reference
+            // before ObjectManager unregisters this child's rewind identity.
+            if (parent != null && parent.child == this) {
+                parent.child = null;
+            }
+            parent = null;
         }
 
         private void syncFromParent() {

@@ -88,12 +88,13 @@ class TestSonic3kMgz2BgRiseEvents {
 
     /**
      * Simulates one frame of MGZ Act 2 event processing. ROM-equivalent to
-     * Obj_MGZ2BGMoveSonic running in the object phase (pre-physics) and the
-     * remaining MGZ screen events running later in the frame. BG rise moved
-     * to a pre-physics hook to keep FindFloor aligned with the lift.
+     * the background event publishing collision state before the player pass,
+     * Obj_MGZ2BGMoveSonic consuming the resulting player position afterward,
+     * and the remaining MGZ screen events running later in the frame.
      */
     private static void tick(Sonic3kMGZEvents events, int frame) {
         events.updatePrePhysics(1);
+        events.updateBgRiseObjectAfterPlayerPhysics(1);
         events.update(1, frame);
     }
 
@@ -109,15 +110,27 @@ class TestSonic3kMgz2BgRiseEvents {
     }
 
     @Test
-    void playerInsideSonicTriggerBox_advancesToSonicRise() {
+    void playerInsideSonicTriggerBox_refreshesPlaneBeforeEnablingBgCollision() {
         placePlayer(0x3500, 0x850);
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
+        events.setBgRiseLoadStateInitialised(true);
 
         tick(events, 0);
 
         assertEquals(BG_RISE_SONIC, events.getBgRiseRoutine());
-        assertTrue(GameServices.gameState().isBackgroundCollisionFlag());
+        assertFalse(GameServices.gameState().isBackgroundCollisionFlag(),
+                "state-0 trigger leaves BG collision clear while MGZ2BGE_Refresh redraws the plane");
+        assertEquals(8, events.getBgRiseRefreshFramesRemaining(),
+                "the pre-physics bridge retains the seven refresh calls plus the publishing ScreenEvents call");
+        for (int frame = 1; frame <= 8; frame++) {
+            tick(events, frame);
+            assertFalse(GameServices.gameState().isBackgroundCollisionFlag(),
+                    "player pass " + frame + " must precede the normal ScreenEvents flag publication");
+        }
+        tick(events, 9);
+        assertTrue(GameServices.gameState().isBackgroundCollisionFlag(),
+                "the player pass after normal ScreenEvents observes state-8 collision");
         assertEquals(0, events.getBgRiseOffset(), "rise hasn't started moving yet");
     }
 
@@ -190,6 +203,27 @@ class TestSonic3kMgz2BgRiseEvents {
     }
 
     @Test
+    void sonicRise_thresholdCrossingIsConsumedAfterCurrentPlayerMovement() {
+        AbstractPlayableSprite player = placePlayer(0x3500, 0x0850);
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        events.setBgRiseLoadStateInitialised(true);
+        events.setBgRiseRoutine(BG_RISE_SONIC);
+
+        events.updatePrePhysics(1);
+        assertFalse(events.isBgRiseMotionStarted(),
+                "the background-event bridge sees the prior player position");
+
+        player.setCentreX((short) 0x36D1);
+        player.setCentreY((short) 0x0A81);
+        events.updateBgRiseObjectAfterPlayerPhysics(1);
+
+        assertTrue(events.isBgRiseMotionStarted());
+        assertEquals(0x6000, events.getBgRiseSubpixelAccum(),
+                "threshold entry falls through to the first accumulator step on the same object pass");
+    }
+
+    @Test
     void sonicRise_locksCameraMinXWhenMotionActuallyStarts() {
         AbstractPlayableSprite player = placePlayer(0x3500, 0x850);
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
@@ -210,7 +244,7 @@ class TestSonic3kMgz2BgRiseEvents {
     }
 
     @Test
-    void sonicRise_acceleratesOncePlayerCrossesAccelThreshold() {
+    void sonicRise_acceleratesOnFrameAfterPlayerCrossesAccelThreshold() {
         AbstractPlayableSprite player = placePlayer(0x3500, 0x0850);
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
@@ -221,8 +255,15 @@ class TestSonic3kMgz2BgRiseEvents {
         player.setCentreY((short) 0x0A81);
         tick(events, 1);
 
+        assertEquals(0, events.getBgRiseOffset(),
+                "threshold-crossing dispatch retains the final subpixel accumulator path");
+        assertEquals(0x6000, events.getBgRiseSubpixelAccum());
+        assertTrue(events.isBgRiseAccelLatched());
+
+        tick(events, 2);
+
         assertEquals(1, events.getBgRiseOffset(),
-                "accelerated rise advances exactly 1 pixel per frame (ROM: addq.w #1,d1)");
+                "the following dispatch advances exactly 1 pixel (ROM: loc_51B44/loc_51B6C)");
     }
 
     @Test
@@ -302,8 +343,9 @@ class TestSonic3kMgz2BgRiseEvents {
 
         player.setCentreX((short) 0x3D60);
         player.setCentreY((short) 0x0A81);
+        tick(events, 1); // latch acceleration; this dispatch retains the accumulator path
         int startY = player.getCentreY();
-        tick(events, 1);
+        tick(events, 2);
         int afterOne = player.getCentreY();
 
         assertEquals(startY - 1, afterOne,
@@ -322,9 +364,10 @@ class TestSonic3kMgz2BgRiseEvents {
 
         player.setCentreX((short) 0x3D60);
         player.setCentreY((short) 0x0A81);
+        tick(events, 1); // latch acceleration
         int sidekickStartY = sidekick.getCentreY();
 
-        tick(events, 1);
+        tick(events, 2);
 
         assertEquals(sidekickStartY - 1, sidekick.getCentreY(),
                 "MGZ2 floor rise should lift Player 2 / the lead sidekick by the same rise delta as Sonic");
@@ -345,10 +388,11 @@ class TestSonic3kMgz2BgRiseEvents {
 
         player.setCentreX((short) 0x3D60);
         player.setCentreY((short) 0x0A81);
+        tick(events, 1); // latch acceleration
         int tailsStartY = tails.getCentreY();
         int knucklesStartY = knuckles.getCentreY();
 
-        tick(events, 1);
+        tick(events, 2);
 
         assertEquals(tailsStartY - 1, tails.getCentreY(),
                 "MGZ2 floor rise should lift the first sidekick by the same rise delta as Sonic");
@@ -405,7 +449,7 @@ class TestSonic3kMgz2BgRiseEvents {
 
         player.setCentreX((short) 0x3D60);
         player.setCentreY((short) 0x0A81);
-        for (int frame = 1; frame <= BG_RISE_TARGET_SONIC; frame++) {
+        for (int frame = 1; frame <= BG_RISE_TARGET_SONIC + 1; frame++) {
             tick(events, frame);
         }
 
@@ -414,7 +458,7 @@ class TestSonic3kMgz2BgRiseEvents {
                 "the short final crash shake should still be active after the floor stops");
 
         clearInvocations(audio);
-        tick(events, BG_RISE_TARGET_SONIC + 1);
+        tick(events, BG_RISE_TARGET_SONIC + 2);
 
         verify(audio, never()).playSfx(Sonic3kSfx.RUMBLE_2.id);
     }

@@ -298,7 +298,6 @@ public record PerObjectRewindSnapshot(
             boolean objectOrderGracePushBypassThisFrame,
             int pendingGroundedFollowNudge,
             int pendingGroundedFollowNudgeFrame,
-            boolean aizIntroDormantMarkerPrimed,
             boolean suppressNextLevelEventNormalMovement,
             boolean catchUpUsesRomVisibleLevelFrameCounter,
             boolean levelEventDormantMarkerReleasePending,
@@ -356,7 +355,8 @@ public record PerObjectRewindSnapshot(
             boolean objectPreservedRollVelocityCarry,
             boolean tunnelMode,
             // Surface interaction / collision
-            boolean onObject, boolean onObjectAtFrameStart, boolean pushingAtFrameStart,
+            boolean onObject, boolean onObjectAtFrameStart, boolean onObjectAtPreviousFrameStart,
+            boolean pushingAtFrameStart,
             boolean hurtAtFrameStart,
             boolean hurtRecoveryCompletedThisFrame,
             int latchedSolidObjectId, int interactSlotIndex, boolean slopeRepelJustSlipped,

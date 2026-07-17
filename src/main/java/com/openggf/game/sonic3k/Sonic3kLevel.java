@@ -29,6 +29,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class Sonic3kLevel extends AbstractLevel {
+    private final boolean[] backgroundCollisionRows = new boolean[Sonic3kConstants.MAP_HEIGHT];
     private static final Logger LOG = Logger.getLogger(Sonic3kLevel.class.getName());
 
     private static final int BLOCK_GRID_SIDE = 8;
@@ -106,6 +107,16 @@ public class Sonic3kLevel extends AbstractLevel {
     @Override
     public int getLayerHeightBlocks(int layer) {
         return layer == 1 ? bgLayoutHeightBlocks : fgLayoutHeightBlocks;
+    }
+
+    @Override
+    public boolean hasBackgroundCollisionRowAt(int y) {
+        // Find_Tile_BG selects a row with (y >> 5) & $7C, i.e. a 32-row
+        // 128-pixel block grid. Rows whose interleaved BG pointer word is zero
+        // have no layout source and must not wrap through the declared visual
+        // BG height.
+        int row = (y & 0x0FFF) >>> 7;
+        return backgroundCollisionRows[row];
     }
 
     // ===== Loading methods =====
@@ -575,6 +586,11 @@ public class Sonic3kLevel extends AbstractLevel {
         }
 
         byte[] layoutData = rom.readBytes(layoutAddr, Sonic3kConstants.LEVEL_LAYOUT_TOTAL_SIZE);
+        for (int row = 0; row < backgroundCollisionRows.length; row++) {
+            int ptrPos = Sonic3kConstants.LEVEL_LAYOUT_HEADER_SIZE + 2 + row * 4;
+            int rowPointerWord = ((layoutData[ptrPos] & 0xFF) << 8) | (layoutData[ptrPos + 1] & 0xFF);
+            backgroundCollisionRows[row] = decodeLayoutRowOffset(rowPointerWord) >= 0;
+        }
 
         // Parse header
         int fgColsPerRow = ((layoutData[0] & 0xFF) << 8) | (layoutData[1] & 0xFF);

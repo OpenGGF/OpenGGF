@@ -114,6 +114,15 @@ public class MGZHeadTriggerProjectileInstance extends AbstractObjectInstance
         return 0;
     }
 
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        // loc_34518 runs MoveSprite2 before adding this SST pointer to
+        // Collision_response_list. The following player pass dereferences that
+        // pointer at the post-move coordinate, not the older pre-update sample
+        // (sonic3k.asm:70883-70892).
+        return true;
+    }
+
     // ===== Rendering =====
 
     @Override

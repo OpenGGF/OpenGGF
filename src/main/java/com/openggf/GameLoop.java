@@ -2822,6 +2822,14 @@ public class GameLoop {
         }
         applyTitleCardControlLock(true);
 
+        if (sprite instanceof AbstractPlayableSprite playable) {
+            int freshPlayerPreludeFrames = GameServices.module()
+                    .getLevelInitProfile()
+                    .freshMainPlayablePreludeFrames();
+            spriteManager.warmUpFreshMainPlayableOnly(
+                    freshPlayerPreludeFrames, levelManager, playable);
+        }
+
         // Initialize the title card manager
         if (getTitleCardProviderLazy() != null) {
             getTitleCardProviderLazy().initialize(zoneIndex, actIndex);

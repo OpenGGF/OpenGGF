@@ -231,6 +231,22 @@ public class BarrierObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj2D passes width_pixels+$B to the standard S2 SolidObject helper.
+        // Its BHI reject keeps relX==2*d1 as a zero-distance side contact; HTZ2
+        // reaches that exact edge while holding Status_Push.
+        return true;
+    }
+
+    @Override
+    public boolean preservesEdgeSubpixelMotion() {
+        // At relX==2*d1, SolidObject_AtEdge reaches Solid_Centre with d0=0.
+        // It sets Status_Push but does not enter StopCharacter, so x_vel and
+        // inertia remain unchanged (s2.asm:35193-35207).
+        return true;
+    }
+
+    @Override
     public boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly(PlayableEntity player) {
         // Obj2D calls the shared S2 SolidObject helper (s2.asm:117D6-117E8).
         // SolidObject_cont builds both vertical reject halves from live

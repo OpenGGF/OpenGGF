@@ -53,6 +53,41 @@ import static org.mockito.Mockito.when;
 class TestSonic2ObjectBugFixes {
 
     @Test
+    void barrierKeepsStandardSolidObjectExactRightEdgeContact() {
+        BarrierObjectInstance barrier = new BarrierObjectInstance(
+                new ObjectSpawn(0x1678, 0x0720, Sonic2ObjectIds.BARRIER, 0, 0, false, 0),
+                "Barrier");
+
+        assertTrue(barrier.getSolidRoutineProfile().inclusiveRightEdge(),
+                "Obj2D's standard SolidObject BHI gate accepts relX == 2*d1");
+        assertTrue(barrier.preservesEdgeSubpixelMotion(),
+                "Obj2D exact-edge d0=0 must bypass StopCharacter velocity clearing");
+    }
+
+    @Test
+    void eggPrisonBodyKeepsStandardSolidObjectExactRightEdgeContact() {
+        EggPrisonObjectInstance prison = new EggPrisonObjectInstance(
+                new ObjectSpawn(0x3202, 0x04C2, Sonic2ObjectIds.EGG_PRISON, 0, 0, false, 0),
+                "EggPrison");
+
+        assertTrue(prison.getSolidRoutineProfile().inclusiveRightEdge(),
+                "Obj3E's standard SolidObject BHI gate accepts relX == 2*d1");
+        assertEquals(0x20, prison.getBalanceWidthPixels(),
+                "Obj3E balance uses body width_pixels, not the $B-expanded collision d1");
+    }
+
+    @Test
+    void eggPrisonButtonKeepsStandardSolidObjectExactRightEdgeContact() {
+        EggPrisonButtonObjectInstance button = new EggPrisonButtonObjectInstance(
+                new ObjectSpawn(0x2AC0, 0x0240, Sonic2ObjectIds.EGG_PRISON, 0, 0, false, 0));
+
+        assertTrue(button.getSolidRoutineProfile().inclusiveRightEdge(),
+                "Obj3E routine 4 accepts the button's exact +$1B edge through SolidObject's BHI gate");
+        assertTrue(button.preservesEdgeSubpixelMotion(),
+                "the exact edge publishes push without StopCharacter clearing subpixel motion");
+    }
+
+    @Test
     void oozLauncherBallCaptureUsesObjectControlWithoutGlobalControlLockedLatch() {
         LauncherBallObjectInstance.clearActiveCaptures();
         ObjectSpawn spawn = new ObjectSpawn(0x1240, 0x02E0, Sonic2ObjectIds.LAUNCHER_BALL, 0x00, 0, false, 0);
@@ -286,6 +321,40 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void arzBossPillarKeepsSolidLatchInItsMovingSstSlot() {
+        ARZBossPillar pillar = new ARZBossPillar(
+                new ObjectSpawn(0x2B70, 0x0510, Sonic2ObjectIds.ARZ_BOSS, 0x04, 1, false, 0),
+                null);
+
+        assertTrue(pillar.usesInstanceSolidStateLatchKey(),
+                "Obj89 pillar movement rewrites y_pos while its push bit remains owned by the same SST slot");
+    }
+
+    @Test
+    void springboardSuppressesNativeObjectEdgeBalance() {
+        SpringboardObjectInstance springboard = new SpringboardObjectInstance(
+                new ObjectSpawn(0x07A4, 0x02E9, Sonic2ObjectIds.SPRINGBOARD, 0x00, 0, false, 0),
+                "Springboard");
+
+        assertTrue(springboard.suppressesObjectEdgeBalance(),
+                "Obj40_Init sets status.npc.no_balancing before entering the sloped-solid routine");
+    }
+
+    @Test
+    void mczStomperKeepsSolidLatchInItsMovingSstSlot() {
+        StomperObjectInstance stomper = new StomperObjectInstance(
+                new ObjectSpawn(0x1230, 0x06A0, Sonic2ObjectIds.STOMPER, 0x00, 0, false, 0),
+                "Stomper");
+
+        assertTrue(stomper.usesInstanceSolidStateLatchKey(),
+                "Obj2A changes y_pos throughout its cycle while one SST slot owns its contact bits");
+        assertTrue(stomper.getSolidRoutineProfile().inclusiveRightEdge(),
+                "Obj2A's standard SolidObject BHI gate accepts relX == 2*d1");
+        assertTrue(stomper.preservesEdgeSubpixelMotion(),
+                "Obj2A exact-edge AtEdge contact must preserve velocity and x_sub");
+    }
+
+    @Test
     void arzBossPillarMainPlayerSidePushUsesRomStopPath() {
         ARZBossPillar pillar = new ARZBossPillar(
                 new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
@@ -366,6 +435,11 @@ class TestSonic2ObjectBugFixes {
                 new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
                 null);
 
+        assertTrue(pillar.usesInclusiveRightEdge(),
+                "Obj89's standard SolidObject BHI gate accepts relX == 2*d1");
+        assertTrue(pillar.preservesEdgeSubpixelMotion(),
+                "Obj89's exact-edge d0=0 correction preserves the native x_sub low word");
+
         TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
         tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setWidth(18);
@@ -410,6 +484,10 @@ class TestSonic2ObjectBugFixes {
                 "At ARZ2 f6364 the local grace counter has already reached zero, but Tails' "
                         + "interact slot still dereferences the Obj89 arrow status byte for the "
                         + "same push-bypass CPU read (docs/s2disasm/s2.asm:39297-39300,65689-65704).");
+        assertTrue(arrow.publishesSidekickCpuPushFromInteractSlot(tails),
+                "TailsCPU_Normal must publish Obj89's retained Status_Push into the same-frame "
+                        + "movement/animation dispatch (docs/s2disasm/s2.asm:39297-39300,"
+                        + "40484-40491,65689-65704).");
         assertFalse(arrow.preservesSidekickCpuPushGraceAfterRideClears(tails),
                 "The ARZ arrow only needs the zero-grace interact-slot bridge; the broader released-ride "
                         + "window would keep Status_Push visible after Tails has reattached to the arrow.");
@@ -429,6 +507,18 @@ class TestSonic2ObjectBugFixes {
                 "The push-grace bridge is only for CPU sidekick reads of TailsCPU_Normal.");
         assertFalse(arrow.preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(sonic),
                 "The zero-grace interact bridge is only for CPU sidekick reads of TailsCPU_Normal.");
+        assertFalse(arrow.publishesSidekickCpuPushFromInteractSlot(sonic),
+                "The interact-slot push publication is only for CPU sidekick reads of TailsCPU_Normal.");
+    }
+
+    @Test
+    void arzBossArrowKeepsClearedNativeBalanceWidth() {
+        ARZBossArrow arrow = new ARZBossArrow(
+                new ObjectSpawn(0x2A77, 0x0481, Sonic2ObjectIds.ARZ_BOSS, 0x06, 0, false, 0),
+                null, null, false);
+
+        assertEquals(0, arrow.getBalanceWidthPixels(),
+                "Obj89's arrow allocation leaves width_pixels cleared even though its solid collision is wider");
     }
 
     @Test
@@ -615,6 +705,19 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void mtzLongPlatformBalanceUsesRomWidthPixels() {
+        MTZLongPlatformObjectInstance mtz3Conveyor = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x19C0, 0x04C8, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x04, 1, false, 0));
+        MTZLongPlatformObjectInstance widePlatform = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x0B20, 0x076C, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x10, 0, false, 0));
+
+        assertEquals(0x40, mtz3Conveyor.getBalanceWidthPixels(),
+                "MTZ3 Obj65 subtype $04 balances against its $40 width_pixels, not rendered bounds");
+        assertEquals(0x20, widePlatform.getBalanceWidthPixels(),
+                "Obj65 subtype $10 balances against the width selected by its ROM property offset");
+    }
+
+    @Test
     void mtzLongPlatformOptsIntoZeroXSpeedLeftSideStopCharacter() {
         MTZLongPlatformObjectInstance platform = new MTZLongPlatformObjectInstance(
                 new ObjectSpawn(0x1090, 0x01EC, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x00, 0, false, 0));
@@ -643,6 +746,18 @@ class TestSonic2ObjectBugFixes {
                 "TailsCPU_Normal reads Status_Push before the next Obj6A SolidObject pass clears it");
         assertEquals(8, platform.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
                 "MCZ2 f4485 keeps the post-Obj6A push bit visible to the Tails CPU slot with eight grace frames");
+        assertEquals(0x20, platform.getBalanceWidthPixels(),
+                "Obj6A balancing consumes the native MTZ width_pixels field");
+    }
+
+    @Test
+    void slidingSpikesExposeNativeBalanceWidth() {
+        SlidingSpikesObjectInstance spikes = new SlidingSpikesObjectInstance(
+                new ObjectSpawn(0x0DF7, 0x04B0, Sonic2ObjectIds.SLIDING_SPIKES, 0, 0, false, 0),
+                "SlidingSpikes");
+
+        assertEquals(0x40, spikes.getBalanceWidthPixels(),
+                "Obj76 balancing uses its $40 width_pixels rather than rendered bounds");
     }
 
     @Test
@@ -705,10 +820,36 @@ class TestSonic2ObjectBugFixes {
                 "Obj78's folded multi-piece latch is still needed when the rider is actually pressed "
                         + "into the lower neighbouring child slot's side");
 
+        tails.setCentreY((short) (staircase.getPieceY(3)
+                - staircase.getPieceParams(3).airHalfHeight() - tails.getYRadius() - 5));
+        assertFalse(staircase.preservesRidingPushStatus(tails),
+                "CPZ2 f5296 is horizontally inside the next child edge but vertically above its "
+                        + "SolidObject box, so the distant step cannot preserve Status_Push");
+
         TestablePlayableSprite sonic = new TestablePlayableSprite(
                 "sonic", (short) staircase.getPieceX(2), (short) staircase.getPieceY(2));
         assertFalse(staircase.preservesSidekickDelayedLeaderPushWhileRiding(sonic),
                 "The delayed leader push bridge is only for CPU sidekick follow control");
+    }
+
+    @Test
+    void cpzStaircaseKeepsStandardSolidObjectExactRightEdgeContact() {
+        CPZStaircaseObjectInstance staircase = new CPZStaircaseObjectInstance(
+                new ObjectSpawn(0x1510, 0x0702, Sonic2ObjectIds.CPZ_STAIRCASE, 0x01, 1, false, 0),
+                "CPZStaircase");
+
+        assertTrue(staircase.getSolidRoutineProfile().inclusiveRightEdge(),
+                "Obj78's SolidObject BHI gate accepts relX == 2*d1");
+    }
+
+    @Test
+    void mtzPlatformKeepsStandardSolidObjectExactRightEdgeContact() {
+        MTZPlatformObjectInstance platform = new MTZPlatformObjectInstance(
+                new ObjectSpawn(0x1ECE, 0x0670, Sonic2ObjectIds.MTZ_PLATFORM, 0x04, 0, false, 0),
+                "CPZSquarePform");
+
+        assertTrue(platform.getSolidRoutineProfile().inclusiveRightEdge(),
+                "Obj6B's SolidObject BHI gate accepts relX == 2*d1");
     }
 
     @Test
@@ -809,6 +950,37 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void cnzRectBlockExposesLiveNativePositionAndBalanceWidth() {
+        CNZRectBlocksObjectInstance block = new CNZRectBlocksObjectInstance(
+                new ObjectSpawn(0x1380, 0x0410, Sonic2ObjectIds.CNZ_RECT_BLOCKS, 0x00, 0, false, 0),
+                "CNZRectBlocks");
+
+        assertEquals(0x1358, block.getX());
+        assertEquals(0x0428, block.getY());
+        assertEquals(0x08, block.getBalanceWidthPixels());
+        assertEquals(0, block.getSolidParams().offsetX());
+        assertEquals(0, block.getSolidParams().offsetY());
+        assertFalse(block.carriesRiderOnHorizontalMove(null));
+        assertEquals(0x1380, block.getOutOfRangeReferenceX(),
+                "ObjD2 unloads against objoff_30 rather than its moving x_pos");
+        assertFalse(block.suppressesObjectEdgeBalance());
+    }
+
+    @Test
+    void mtzPlatformExposesSubtypeWidthToObjectBalance() {
+        MTZPlatformObjectInstance widePlatform = new MTZPlatformObjectInstance(
+                new ObjectSpawn(0x0460, 0x052C, Sonic2ObjectIds.MTZ_PLATFORM, 0x07, 0, false, 0),
+                "MTZPlatform");
+        MTZPlatformObjectInstance narrowPlatform = new MTZPlatformObjectInstance(
+                new ObjectSpawn(0x0460, 0x052C, Sonic2ObjectIds.MTZ_PLATFORM, 0x10, 0, false, 0),
+                "MTZPlatform");
+
+        assertEquals(0x20, widePlatform.getBalanceWidthPixels());
+        assertEquals(0x10, narrowPlatform.getBalanceWidthPixels());
+        assertFalse(widePlatform.suppressesObjectEdgeBalance());
+    }
+
+    @Test
     void s2SpikesUseLiveRollingRadiusForBottomOverlap() {
         SpikeObjectInstance spikes = new SpikeObjectInstance(
                 new ObjectSpawn(0x0C40, 0x0650, Sonic2ObjectIds.SPIKES, 0x30, 2, false, 0x4650),
@@ -829,7 +1001,7 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
-    void s2SpikesUsePostObj33SidekickPushGraceThreshold() {
+    void s2SpikesDoNotClaimPushGraceFromUnrelatedSolid() {
         SpikeObjectInstance spikes = new SpikeObjectInstance(
                 new ObjectSpawn(0x0CF0, 0x0594, Sonic2ObjectIds.SPIKES, 0x30, 2, false, 0x4650),
                 "Spikes");
@@ -837,43 +1009,13 @@ class TestSonic2ObjectBugFixes {
         TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x0CE3, (short) 0x0574);
         tails.setCpuControlled(true);
 
-        tails.setGSpeed((short) -0x000C);
         assertFalse(spikes.preservesSidekickCpuPushGraceWhileRiding(sonic));
         assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(sonic));
-        assertTrue(spikes.preservesSidekickCpuPushGraceWhileRiding(tails));
-        assertEquals(8, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
-                "OOZ1 f1782 reaches Obj36 riding push grace with eight frames remaining");
-
-        tails.setDirection(Direction.LEFT);
-        tails.setGSpeed((short) -0x0018);
-        tails.setXSpeed((short) -0x0018);
-        assertEquals(0, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
-                "OOZ1 f1794 reaches Obj36's inner-left edge with fresh negative inertia before Tails_TurnRight");
-
-        tails.setGSpeed((short) 0x0080);
-        assertEquals(14, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
-                "The faster positive-inertia spike ride keeps the conservative existing bridge window");
-
-        tails.setCentreX((short) 0x0CE3);
-        tails.setDirection(Direction.RIGHT);
-        tails.setGSpeed((short) 0x0018);
-        tails.setXSpeed((short) 0x0018);
-        assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMaximumFramesWhileRiding(tails),
-                "OOZ1 f1775 is still one pixel inside Obj36's left edge and keeps the long bridge");
-
-        tails.setCentreX((short) 0x0CE4);
-        tails.setDirection(Direction.RIGHT);
-        tails.setGSpeed((short) 0x0018);
-        tails.setXSpeed((short) 0x0018);
-        assertEquals(2, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
-                "OOZ1 f1803 is a late low-speed positive-inertia sample; only the immediate Obj36 bridge applies");
-        assertEquals(3, spikes.sidekickCpuPushGraceMaximumFramesWhileRiding(tails),
-                "At f1803 the later SolidObject pass sets Status_Push after TailsCPU_Normal, so grace=15 must fall through follow steering");
-
-        tails.setGSpeed((short) 0x0080);
-        tails.setXSpeed((short) 0x0080);
-        assertEquals(3, spikes.sidekickCpuPushGraceMaximumFramesWhileRiding(tails),
-                "OOZ1 f1805 is the late positive rebound at the same edge; grace=13 must not keep preserving delayed RIGHT");
+        assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMaximumFramesWhileRiding(sonic));
+        assertFalse(spikes.preservesSidekickCpuPushGraceWhileRiding(tails),
+                "Obj36 must not reinterpret push grace produced by a distinct solid as its own riding state");
+        assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails));
+        assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMaximumFramesWhileRiding(tails));
     }
 
     @Test
@@ -1171,6 +1313,16 @@ class TestSonic2ObjectBugFixes {
         cog.update(0x6CC2, new TestablePlayableSprite("sonic", (short) 0x0800, (short) 0x0600));
         assertEquals(0x080D, cog.getPieceX(0),
                 "ROM-visible Level_frame_counter $07F0 advances Obj70 to the next tooth phase");
+    }
+
+    @Test
+    void mtzCogTeethSuppressNativeObjectEdgeBalance() {
+        CogObjectInstance cog = new CogObjectInstance(
+                new ObjectSpawn(0x0100, 0x0100, Sonic2ObjectIds.COG, 0x00, 0, false, 0),
+                "Cog");
+
+        assertTrue(cog.suppressesObjectEdgeBalance(),
+                "Obj70 copies status.npc.no_balancing to every cog tooth");
     }
 
     @Test

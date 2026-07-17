@@ -13,6 +13,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -40,7 +41,8 @@ import java.util.List;
  * and vertical variants.
  */
 public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider,
+        SpawnRewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_TRIGGER_PLATFORM;
     private static final int PRIORITY_BUCKET = 5; // ROM: priority = $280
@@ -117,22 +119,50 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (isDestroyed()) {
-            clearScreenShake();
             return;
         }
 
+        boolean wasActivated = activated;
         if (!completed && Sonic3kLevelTriggerManager.testAny(triggerIndex)) {
             activated = true;
         }
 
-        if (!completed && activated) {
+        // Horizontal triggers are published before this native SST slot and
+        // loc_34600 moves on the same pass. A vertical dash trigger can sit on
+        // either side of the platform in the live SST table. If it is later, a
+        // nonzero byte observed by this earlier platform necessarily survived
+        // from the preceding pass and is actionable immediately. The fast $2x
+        // variant also consumes an earlier source on the same pass. A slow $1x
+        // platform allocated after its source retains the one-pass bridge: that
+        // engine ordering can be the reverse of the native SST order.
+        boolean activationVisibleThisPass = wasActivated
+                || (mode == Mode.HORIZONTAL_DELETE && activated)
+                || (activated && hasDashTriggerVisibleThisPass());
+        if (!completed && activationVisibleThisPass) {
             advanceActiveMotion();
-            applyScreenShake(frameCounter);
-        } else {
-            clearScreenShake();
+            if (!completed) {
+                applyScreenShake(frameCounter);
+            }
         }
 
         updateDynamicSpawn(currentX, currentY);
+    }
+
+    private boolean hasDashTriggerVisibleThisPass() {
+        var svc = tryServices();
+        if (svc == null || svc.objectManager() == null || getSlotIndex() < 0) {
+            return false;
+        }
+        for (MGZDashTriggerObjectInstance trigger :
+                svc.objectManager().activeObjectsOfType(MGZDashTriggerObjectInstance.class)) {
+            if (trigger.triggerIndex() == triggerIndex
+                    && trigger.getSlotIndex() >= 0
+                    && (trigger.getSlotIndex() > getSlotIndex()
+                    || (stepPerFrame == 2 && trigger.getSlotIndex() < getSlotIndex()))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void advanceActiveMotion() {
@@ -148,7 +178,6 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         }
 
         completed = true;
-        clearScreenShake();
 
         if (mode == Mode.HORIZONTAL_DELETE) {
             markRemembered();
@@ -170,14 +199,11 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         if (mgzState == null) {
             return;
         }
-        mgzState.requestScreenShakeOffset(SCREEN_SHAKE_CONTINUOUS[frameCounter & SCREEN_SHAKE_MASK]);
-    }
-
-    private void clearScreenShake() {
-        MgzZoneRuntimeState mgzState = resolveMgzRuntimeState();
-        if (mgzState != null) {
-            mgzState.clearScreenShakeOffset();
-        }
+        // Object updates receive native Level_frame_counter + 2 in this frame
+        // pipeline, while Camera_Y_pos_copy consumes the sample prepared by
+        // ShakeScreen_Setup on the preceding native frame.
+        mgzState.requestScreenShakeOffset(
+                SCREEN_SHAKE_CONTINUOUS[(frameCounter - 3) & SCREEN_SHAKE_MASK]);
     }
 
     private MgzZoneRuntimeState resolveMgzRuntimeState() {
@@ -189,18 +215,89 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void onUnload() {
-        clearScreenShake();
-    }
-
-    @Override
     public SolidObjectParams getSolidParams() {
         return new SolidObjectParams(widthPixels + 0x0B, heightPixels, heightPixels + 1);
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // ROM SolidObjectFull's horizontal entry check rejects only values
+        // above d1*2 (bhi), retaining the exact right edge.
+        // sonic3k.asm:41390-41401.
+        return true;
+    }
+
+    @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // SolidObjectFull2_1P sees this object's retained standing bit before
+        // SolidObject_cont. An airborne rider clears the bit and returns without
+        // resolving another contact (sonic3k.asm:41066-41084).
+        return true;
+    }
+
+    @Override
+    public boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity player) {
+        // Player slots run before this later object slot. Preserve the airborne
+        // movement pass until SolidObjectFull consumes the stale standing bit.
+        return true;
+    }
+
+    @Override
+    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        // Obj_MGZTriggerPlatform loads d4 from the already-updated x_pos before
+        // calling SolidObjectFull, so MvSonicOnPtfm sees no horizontal delta.
+        // This is observable while the horizontal variant retracts beneath a
+        // rider: the platform moves, but the rider keeps their world X.
+        // sonic3k.asm:70991-71005.
+        return false;
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_MGZTriggerPlatform lives at $000345D4 in the locked-on ROM.
+        return 0x0003;
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        // ROM Render_Sprites consumes byte_34568's width_pixels value.
+        return widthPixels;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        // render_flags bit 2 selects the custom height_pixels visibility path.
+        return heightPixels;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        // SolidObjectFull behavior is handled by the shared solid-contact system.
+        if (playerEntity == null || contact == null || !contact.standing()
+                || (getSpawn().subtype() & 0xF0) != 0x10) {
+            return;
+        }
+
+        // The two vertical variants are adjacent placements, but a backwards
+        // Load_Sprites pass can allocate the right-hand subtype-$1x landing
+        // platform before its left-hand subtype-$2x sibling even when the
+        // engine's placement slots are reversed. The later native
+        // SolidObjectFull then sees the just-grounded player and may publish
+        // Status_Push. A right-hand sibling was loaded in the ordinary forward
+        // order and has already executed in both engines, so it must not be
+        // replayed after the landing.
+        // sonic3k.asm:70910-71029,41370-41534.
+        int landingSlot = getSlotIndex();
+        ObjectManager objectManager = services().objectManager();
+        for (MGZTriggerPlatformObjectInstance sibling :
+                objectManager.activeObjectsOfType(MGZTriggerPlatformObjectInstance.class)) {
+            if (sibling.getSlotIndex() >= landingSlot) {
+                break;
+            }
+            if ((sibling.getSpawn().subtype() & 0xF0) == 0x20
+                    && sibling.getSpawn().x() < getSpawn().x()) {
+                objectManager.processImmediateInlineSolidCheckpoint(sibling, playerEntity, List.of());
+            }
+        }
     }
 
     @Override

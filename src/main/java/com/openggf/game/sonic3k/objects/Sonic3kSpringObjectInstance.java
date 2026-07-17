@@ -611,6 +611,14 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         return true;
     }
 
+    @Override
+    public boolean zeroXSpeedStopsOnLeftSideContact() {
+        // SolidObject_cont's left-side branch uses bmi after testing x_vel.
+        // Zero therefore falls through loc_1E056 and clears ground_vel/x_vel;
+        // only a negative velocity skips the stop (sonic3k.asm:41473-41486).
+        return true;
+    }
+
     /**
      * ROM divergence: every {@code Obj_Spring} variant routes through
      * {@code SolidObjectFull2_1P} (sonic3k.asm:47664/47673/47692/47701/

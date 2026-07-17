@@ -188,14 +188,17 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
-        applyTwistAnimation(player, rider.swingAngle);
-
         // d5 is the Ctrl_*_logical word; andi.b addresses its low byte, which
         // contains newly pressed A/B/C bits rather than the held byte
         // (sonic3k.asm:68136-68148,68264-68276).
         if (player.isJumpJustPressed()) {
             releaseRider(rider, frameCounter, true);
+            return;
         }
+        // The jump branch returns through loc_325F2 before loc_3260A can
+        // publish the incremented twist frame. A boundary-frame release must
+        // therefore retain the mapping selected on the preceding hold tick.
+        applyTwistAnimation(player, rider.swingAngle);
     }
 
     private void releaseRider(RiderState rider, int frameCounter, boolean jumpedOff) {
@@ -235,8 +238,6 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
             // Prevent the same held button from re-triggering the normal jump path,
             // which would add the generic jump sound on the release frame.
             player.suppressNextJumpPress();
-        } else {
-            player.setAnimationId(Sonic3kAnimationIds.WALK);
         }
     }
 

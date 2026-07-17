@@ -177,6 +177,14 @@ public class ButtonObjectInstance extends AbstractObjectInstance
         return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj47 calls the standard S2 SolidObject helper with d1=$1B. Its
+        // unsigned BHI range check accepts relX == 2*d1 as an exact-edge
+        // grounded side contact.
+        return true;
+    }
+
     // ========================================================================================
     // SolidObjectListener
     // ========================================================================================

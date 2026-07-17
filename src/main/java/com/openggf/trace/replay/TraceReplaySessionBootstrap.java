@@ -224,6 +224,11 @@ public final class TraceReplaySessionBootstrap {
                 && gameplayMode.getLevelManager() != null
                 && gameplayMode.getLevelManager().getObjectManager() != null) {
             ObjectManager objectManager = gameplayMode.getLevelManager().getObjectManager();
+            gameplayMode.getLevelManager().initRingFloorCheckCounterPhase(
+                    ringFloorCheckRuntimeOffset(
+                            trace.metadata().ringFloorCheckCounterPhase(), liveRingFloorCheckPhase()));
+            objectManager.initVIntRunCounterPhaseOffset(
+                    trace.initialVIntRunCounterPhaseOffset());
             objectPreludeFrames = s2TornadoObjectPreludeFrames(trace, objectManager);
             if (objectPreludeFrames == 0) {
                 objectPreludeFrames = TraceReplayBootstrap
@@ -282,6 +287,18 @@ public final class TraceReplaySessionBootstrap {
             List<AbstractPlayableSprite> sidekicks = gameplayMode.getSpriteManager() != null
                     ? gameplayMode.getSpriteManager().getSidekicks()
                     : List.of();
+            int mainPlayablePreludeFrames = Math.min(
+                    objectPreludeFrames,
+                    GameServices.module().getLevelInitProfile().freshMainPlayablePreludeFrames());
+            if (mainPlayablePreludeFrames > 0 && gameplayMode.getSpriteManager() != null) {
+                // S1 GM_Level creates the fresh Sonic slot, then executes it
+                // once in the same native pass as these level objects before
+                // Level_MainLoop begins. The fixture's generic ground snap has
+                // already run, so the helper restores fresh object-RAM status
+                // and lets player physics/animation derive the live state.
+                gameplayMode.getSpriteManager().warmUpFreshMainPlayableOnly(
+                        mainPlayablePreludeFrames, levelManager, player);
+            }
             boolean interleaveSidekickPrelude =
                     shouldInterleaveS2TitleCardPrelude(trace, sidekickPreludeFrames, objectPreludeFrames)
                             && gameplayMode.getSpriteManager() != null;
@@ -673,6 +690,12 @@ public final class TraceReplaySessionBootstrap {
             TraceReplayBootstrap.ReplayStartState replayStart,
             TraceFrame previousDriveFrame,
             TraceFrame firstDriveFrame) {
+        if (GameServices.levelOrNull() != null
+                && GameServices.levelOrNull().getObjectManager() != null) {
+            GameServices.levelOrNull().initRingFloorCheckCounterPhase(
+                    ringFloorCheckRuntimeOffset(
+                            trace.metadata().ringFloorCheckCounterPhase(), liveRingFloorCheckPhase()));
+        }
         int completeRunSeed = s3kCompleteRunFrameCounterSeedForReplayStart(trace, replayStart);
         if (completeRunSeed >= 0) {
             if (GameServices.spritesOrNull() != null) {
@@ -684,6 +707,23 @@ public final class TraceReplaySessionBootstrap {
             return;
         }
         alignFrameCountersForReplayStart(previousDriveFrame, firstDriveFrame);
+    }
+
+    /**
+     * Converts a legacy trace's absolute Obj37 low-bit phase into an offset
+     * from the live per-game baseline. Normal gameplay never calls this path:
+     * S3K retains its native four-count level-start phase in {@code RingRules}.
+     * Older replay fixtures either record a reconstructed absolute phase or
+     * historically assume zero, so normalizing here preserves their one-time
+     * start-clock state without changing the live default.
+     */
+    static int ringFloorCheckRuntimeOffset(Integer recordedAbsolutePhase, int liveDefaultPhase) {
+        int replayAbsolutePhase = recordedAbsolutePhase != null ? recordedAbsolutePhase : 0;
+        return replayAbsolutePhase - liveDefaultPhase;
+    }
+
+    private static int liveRingFloorCheckPhase() {
+        return GameServices.module().getRules().ring().ringFloorCheckCounterPhase();
     }
 
     public static int s3kCompleteRunFrameCounterSeedForReplayStart(

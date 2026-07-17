@@ -80,6 +80,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
     private boolean buttonSpawned;
     private boolean buttonPressed;
     private boolean tailsEndingPoseApplied;
+    private boolean mainEndingPosePending;
 
     // Explosion controller (spawned when capsule opens)
     private S3kBossExplosionController explosionController;
@@ -163,6 +164,11 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
                 startResults(player);
             }
         } else if (!geyserSpawned) {
+            if (mainEndingPosePending
+                    && playerEntity instanceof AbstractPlayableSprite player) {
+                mainEndingPosePending = false;
+                lockForResults(player);
+            }
             advanceTailsEndingPoseCheck();
 
             // ROM: loc_6B154 — Lock camera from scrolling left each frame
@@ -261,10 +267,13 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         if (resultsStarted) return;
         resultsStarted = true;
         services().gameState().setEndOfLevelActive(true);
-        // sub_868F8 calls Set_PlayerEndingPose for Player_1 only. The parent
-        // changes to routine 6 here; Check_TailsEndPose starts on the following
-        // routine-6 entry, not in this same dispatch.
-        lockForResults(player);
+        // sub_868F8 changes the parent to routine 6 after the player slot has
+        // already animated. Defer the engine-side pose publication to the next
+        // parent entry so that this dispatch retains the player's current
+        // mapping; the following player tick then observes the native Victory
+        // write and restarts its script (sonic3k.asm:181586-181590,
+        // 181900-181918).
+        mainEndingPosePending = true;
         spawnChild(() -> new HczEndBossResultsScreenObjectInstance(
                 getPlayerCharacter(), services().currentAct()));
     }
@@ -370,7 +379,8 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
             super.onExitReady();
 
             // loc_6B154 clears the logical words and signs both controller-lock
-            // bytes before restoring object control and creating the geyser.
+            // bytes before creating the geyser. The preceding retained-owner
+            // dispatch publishes Restore_PlayerControl/2 separately below.
             if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite main) {
                 main.setControlLocked(true);
             }
@@ -379,6 +389,34 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
                 sidekick.getCpuController().setController2SignedLocked(true);
                 sidekick.getCpuController().clearController2LogicalLatch();
             }
+        }
+
+        @Override
+        protected void onAdditionalChildRetireDispatch(int dispatchesRemaining) {
+            if (dispatchesRemaining != 1) {
+                return;
+            }
+            if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite main) {
+                restoreForGeyserHandoff(main);
+                main.setControlLocked(true);
+            }
+            if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick) {
+                restoreForGeyserHandoff(sidekick);
+                if (sidekick.getCpuController() != null) {
+                    sidekick.getCpuController().setController2SignedLocked(true);
+                    sidekick.getCpuController().clearController2LogicalLatch();
+                }
+            }
+        }
+
+        private static void restoreForGeyserHandoff(AbstractPlayableSprite player) {
+            ObjectControlState.none().applyTo(player);
+            player.setAir(false);
+            player.setForcedAnimationId(-1);
+            player.setAnimationId(Sonic3kAnimationIds.WAIT);
+            player.getAnimationManager().publishPreviousAnimationId(Sonic3kAnimationIds.WAIT.id());
+            player.setAnimationFrameIndex(0);
+            player.setAnimationTick(0);
         }
 
         @Override

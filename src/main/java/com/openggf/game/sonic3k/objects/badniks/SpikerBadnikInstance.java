@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -27,6 +28,7 @@ import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.NativePositionOps;
 
 import java.util.List;
 
@@ -79,6 +81,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
     private int stateTimer;
     private int launchAnimIndex = -1;
     private int launchAnimTimer;
+    private boolean launchOnNextAnimationTick;
     private boolean collisionEnabled = true;
     private boolean spikesExtended;
     private AbstractPlayableSprite pendingLaunchPlayer;
@@ -115,6 +118,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
             initialized = true;
             return;
         }
+        pruneDestroyedChildReferences();
 
         switch (state) {
             case DETECT -> updateDetect(player);
@@ -147,6 +151,42 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
         leftLauncher = spawnChild(() -> new SpikerSideLauncherChild(this, true));
         rightLauncher = spawnChild(() -> new SpikerSideLauncherChild(this, false));
         topSpike = spawnChild(() -> new SpikerTopSpikeChild(this));
+        // FindNextFreeObj can fail when the SST is full. spawnChild returns
+        // the rejected (destroyed) instance so callers can stay allocation-
+        // neutral; do not retain an unmanaged reference in the parent's
+        // rewind graph when that happens.
+        if (leftLauncher.isDestroyed()) leftLauncher = null;
+        if (rightLauncher.isDestroyed()) rightLauncher = null;
+        if (topSpike.isDestroyed()) topSpike = null;
+    }
+
+    private void pruneDestroyedChildReferences() {
+        if (leftLauncher != null && leftLauncher.isDestroyed()) leftLauncher = null;
+        if (rightLauncher != null && rightLauncher.isDestroyed()) rightLauncher = null;
+        if (topSpike != null && topSpike.isDestroyed()) topSpike = null;
+    }
+
+    @Override
+    protected void afterRewindRestoreSettled() {
+        ObjectServices svc = tryServices();
+        if (svc == null || svc.objectManager() == null) {
+            return;
+        }
+        if (leftLauncher != null && !svc.objectManager().isActiveObjectInstance(leftLauncher)) {
+            leftLauncher = null;
+        }
+        if (rightLauncher != null && !svc.objectManager().isActiveObjectInstance(rightLauncher)) {
+            rightLauncher = null;
+        }
+        if (topSpike != null && !svc.objectManager().isActiveObjectInstance(topSpike)) {
+            topSpike = null;
+        }
+    }
+
+    private void detachDestroyedChild(AbstractObjectInstance child) {
+        if (child == leftLauncher) leftLauncher = null;
+        if (child == rightLauncher) rightLauncher = null;
+        if (child == topSpike) topSpike = null;
     }
 
     private void updateDetect(AbstractPlayableSprite mainPlayer) {
@@ -184,6 +224,14 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     private void updateLaunchAnim() {
+        if (launchOnNextAnimationTick && pendingLaunchPlayer != null) {
+            launchOnNextAnimationTick = false;
+            launchPlayer(pendingLaunchPlayer);
+            // loc_88C38 observes anim_frame == 4 only after the raw animator
+            // has returned. Launching the player does not consume the next
+            // frame/delay pair; that happens on the following object pass.
+            return;
+        }
         launchAnimTimer = (launchAnimTimer - 1) & 0xFF;
         if (launchAnimTimer < 0x80) {
             return;
@@ -198,8 +246,10 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
         mappingFrame = LAUNCH_ANIM_FRAMES[launchAnimIndex];
         launchAnimTimer = LAUNCH_ANIM_DELAYS[launchAnimIndex];
 
-        if (launchAnimIndex == LAUNCH_ANIM_FRAMES.length - 1 && pendingLaunchPlayer != null) {
-            launchPlayer(pendingLaunchPlayer);
+        // ROM tests anim_frame == 4 after Animate_RawNoSSTMultiDelay. The
+        // byte offset 4 is the third frame/delay pair, not the final pair.
+        if (launchAnimIndex == 2 && pendingLaunchPlayer != null) {
+            launchOnNextAnimationTick = true;
         }
     }
 
@@ -212,8 +262,11 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
         state = State.LAUNCH_ANIM;
         collisionEnabled = false;
         mappingFrame = 1;
-        launchAnimIndex = -1;
+        // Pair zero (frame 1) is already visible. The first animation tick
+        // increments anim_frame by two and reads pair one.
+        launchAnimIndex = 0;
         launchAnimTimer = 0;
+        launchOnNextAnimationTick = false;
     }
 
     private void finishLaunchAnim() {
@@ -223,6 +276,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
         pendingLaunchPlayer = null;
         launchAnimIndex = -1;
         launchAnimTimer = 0;
+        launchOnNextAnimationTick = false;
     }
 
     private void launchPlayer(AbstractPlayableSprite player) {
@@ -232,13 +286,13 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
         player.setJumping(false);
     }
 
-    private AbstractPlayableSprite findNearestTarget(AbstractPlayableSprite mainPlayer) {
+    private AbstractPlayableSprite findNearestTarget(AbstractPlayableSprite mainPlayer, int referenceX) {
         AbstractPlayableSprite nearest = null;
         int nearestDistance = Integer.MAX_VALUE;
 
         if (mainPlayer != null && !mainPlayer.getDead()) {
             nearest = mainPlayer;
-            nearestDistance = Math.abs(currentX - mainPlayer.getCentreX());
+            nearestDistance = Math.abs(referenceX - mainPlayer.getCentreX());
         }
 
         ObjectServices svc = tryServices();
@@ -250,7 +304,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
             if (!(candidate instanceof AbstractPlayableSprite sprite) || sprite.getDead()) {
                 continue;
             }
-            int distance = Math.abs(currentX - sprite.getCentreX());
+            int distance = Math.abs(referenceX - sprite.getCentreX());
             if (distance < nearestDistance) {
                 nearest = sprite;
                 nearestDistance = distance;
@@ -260,7 +314,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     private int nearestPlayerDistance(AbstractPlayableSprite mainPlayer) {
-        AbstractPlayableSprite target = findNearestTarget(mainPlayer);
+        AbstractPlayableSprite target = findNearestTarget(mainPlayer, currentX);
         return target == null ? Integer.MAX_VALUE : Math.abs(currentX - target.getCentreX());
     }
 
@@ -328,11 +382,22 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         @Override
+        protected void onDroppedAsUnmatchedRewindReconstructionChild() {
+            parent.detachDestroyedChild(this);
+        }
+
+        @Override
+        public void onUnload() {
+            parent.detachDestroyedChild(this);
+        }
+
+        @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
             if (isDestroyed()) {
                 return;
             }
             if (parent.isDestroyed()) {
+                parent.detachDestroyedChild(this);
                 setDestroyed(true);
                 return;
             }
@@ -378,6 +443,9 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
         private void spawnProjectile() {
             int xVelocity = leftSide ? -0x200 : 0x200;
             int xOffset = leftSide ? -4 : 4;
+            // CreateChild5_ComplexAdjusted allocates after the launcher, so the
+            // projectile's higher SST slot executes loc_86D4A/loc_86D5E later
+            // in this same object loop and owns the allocation-frame movement.
             spawnChild(() -> new SpikerSpikeProjectile(
                     parent,
                     getX() + xOffset,
@@ -410,21 +478,24 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
             }
 
             AbstractPlayableSprite target = playerEntity instanceof AbstractPlayableSprite sprite
-                    ? parent.findNearestTarget(sprite) : null;
-            if (target == null || Math.abs(parent.getX() - target.getCentreX()) >= DETECT_RANGE) {
+                    ? parent.findNearestTarget(sprite, getX()) : null;
+            int launcherX = getX();
+            if (target == null || Math.abs(launcherX - target.getCentreX()) >= DETECT_RANGE) {
                 return;
             }
             boolean matchingSide = leftSide
-                    ? playerIsOnLeft(target, parent.getX())
-                    : playerIsOnRight(target, parent.getX());
+                    ? playerIsOnLeft(target, launcherX)
+                    : playerIsOnRight(target, launcherX);
             if (!matchingSide) {
                 return;
             }
-
             // ROM parity: loc_88CC6 only switches the child to the attack routine.
             // The animation itself begins on the following frame in loc_88D02.
             state = State.ATTACK;
-            attackIndex = -1;
+            // Animate_RawNoSSTMultiDelay adds two to anim_frame before reading
+            // byte_88E53. The initial zero cursor therefore skips pair zero
+            // (frame 3, delay 1) and starts at pair one (frame 3, delay $0F).
+            attackIndex = 0;
             attackTimer = 0;
             projectileFired = false;
         }
@@ -458,9 +529,12 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
     private static final class SpikerTopSpikeChild extends AbstractObjectInstance
             implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
 
-        private static final int COLLISION_FLAGS = 0x40 | COLLISION_SIZE_INDEX;
+        private static final int COLLISION_FLAGS = 0xC0 | COLLISION_SIZE_INDEX;
         private SpikerBadnikInstance parent;
-        private int cooldown;
+        /** ROM $2E wait word; negative means loc_88D98 has restored collision. */
+        private int cooldown = -1;
+        /** Engine touch runs before this child slot; ROM installs Obj_Wait in that slot. */
+        private boolean cooldownSetupPass;
 
         private SpikerTopSpikeChild(SpikerBadnikInstance parent) {
             super(parent.getSpawn(), "SpikerTopSpike");
@@ -474,22 +548,35 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         @Override
+        protected void onDroppedAsUnmatchedRewindReconstructionChild() {
+            parent.detachDestroyedChild(this);
+        }
+
+        @Override
+        public void onUnload() {
+            parent.detachDestroyedChild(this);
+        }
+
+        @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
             if (isDestroyed()) {
                 return;
             }
             if (parent.isDestroyed()) {
+                parent.detachDestroyedChild(this);
                 setDestroyed(true);
                 return;
             }
-            if (cooldown > 0) {
+            if (cooldownSetupPass) {
+                cooldownSetupPass = false;
+            } else if (cooldown >= 0) {
                 cooldown--;
             }
         }
 
         @Override
         public int getCollisionFlags() {
-            return cooldown > 0 || parent.isDestroyed() ? 0 : COLLISION_FLAGS;
+            return cooldown >= 0 || parent.isDestroyed() ? 0 : COLLISION_FLAGS;
         }
 
         @Override
@@ -498,15 +585,33 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         @Override
+        public boolean usesS3kTouchSpecialPropertyResponse() {
+            // ObjDat child collision_flags is $CA. S3K Touch_Special turns
+            // size index $0A into Check_PlayerCollision's player selector.
+            return true;
+        }
+
+        @Override
+        public boolean usesCurrentTouchResponseState() {
+            // This child calls Refresh_ChildPosition followed immediately by
+            // Check_PlayerCollision in its own object routine. It does not use
+            // the frame-start Collision_response_list position.
+            return true;
+        }
+
+        @Override
         public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
-            if (cooldown > 0 || !(playerEntity instanceof AbstractPlayableSprite player) || parent.isDestroyed()) {
+            if (cooldown >= 0 || !(playerEntity instanceof AbstractPlayableSprite player) || parent.isDestroyed()) {
                 return;
             }
 
             player.setYSpeed((short) 0);
             player.setAir(true);
             player.setOnObject(false);
-            player.setCentreY((short) (player.getCentreY() + TOP_SPIKE_TOUCH_NUDGE_Y));
+            // ROM addq.w #6,y_pos changes the pixel word only and preserves
+            // the 16-bit subpixel fraction.
+            NativePositionOps.writeYPosPreserveSubpixel(
+                    player, player.getCentreY() + TOP_SPIKE_TOUCH_NUDGE_Y);
             player.setJumping(false);
             player.setRollingJump(false);
 
@@ -517,6 +622,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
             }
 
             cooldown = TOP_SPIKE_COOLDOWN;
+            cooldownSetupPass = true;
             parent.beginTopSpikeCompression(player);
         }
 
@@ -580,6 +686,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
         private int animFrame;
         private int animTimer;
         private boolean collisionEnabled = true;
+        private boolean deleteNextFrame;
 
         private SpikerSpikeProjectile() {
             this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), 0, 0, 0, 0, false);
@@ -602,6 +709,36 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (deleteNextFrame) {
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
+            advanceMovementAndAnimation();
+
+            if (!spriteCheckDeleteTouchXYKeepsAlive()) {
+                // Go_Delete_Sprite installs Delete_Current_Sprite and removes
+                // collision immediately, but the SST slot is freed only on its
+                // next execution (sonic3k.asm:179032-179047,179131-179134).
+                deleteNextFrame = true;
+            }
+        }
+
+        private boolean spriteCheckDeleteTouchXYKeepsAlive() {
+            ObjectServices svc = tryServices();
+            int cameraX = svc != null && svc.camera() != null ? svc.camera().getX() : 0;
+            int cameraY = svc != null && svc.camera() != null ? svc.camera().getY() : 0;
+
+            int xAligned = currentX & 0xFF80;
+            int coarseBack = (cameraX - 0x80) & 0xFF80;
+            int xDistance = (xAligned - coarseBack) & 0xFFFF;
+            if (xDistance > 0x280) {
+                return false;
+            }
+            int yDistance = (currentY - cameraY + 0x80) & 0xFFFF;
+            return yDistance <= 0x200;
+        }
+
+        private void advanceMovementAndAnimation() {
             int oldYVelocity = yVelocity;
             yVelocity += GRAVITY;
 
@@ -619,20 +756,32 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
                 animTimer = ANIM_DELAY;
                 animFrame = (animFrame + 1) & 1;
             }
-
-            if (!isOnScreen(48)) {
-                setDestroyed(true);
-            }
         }
 
         @Override
         public int getCollisionFlags() {
-            return collisionEnabled ? COLLISION_FLAGS : 0;
+            return collisionEnabled && !deleteNextFrame ? COLLISION_FLAGS : 0;
         }
 
         @Override
         public int getCollisionProperty() {
             return 0;
+        }
+
+        @Override
+        public boolean usesCurrentTouchResponseState() {
+            // loc_86D5E runs MoveSlowFall_AnimateRaw before
+            // Sprite_CheckDeleteTouchXY adds the projectile to the collision
+            // response list, so players observe its post-movement position.
+            return true;
+        }
+
+        @Override
+        public boolean isPersistent() {
+            // loc_86D5E owns this dynamic child's lifetime through
+            // Sprite_CheckDeleteTouchXY; the generic object window must not
+            // release it first.
+            return true;
         }
 
         @Override

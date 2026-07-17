@@ -44,6 +44,7 @@ import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceReplayBootstrap;
+import com.openggf.trace.TraceVerificationScope;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.tests.trace.s3k.S3kRequiredCheckpointGuard;
 import com.openggf.tests.trace.s3k.S3kReplayCheckpointDetector;
@@ -134,6 +135,11 @@ public abstract class AbstractTraceReplayTest {
         return false;
     }
 
+    /** Independent trace gate selected with {@code -Dtrace.verification}. */
+    protected TraceVerificationScope verificationScope() {
+        return TraceVerificationScope.fromSystemProperty();
+    }
+
     /** Override with a diagnostic predicate when only a subset of object-near events is relevant. */
     protected boolean shouldCompareObjectNearEvent(TraceEvent.ObjectNear near) {
         return true;
@@ -160,6 +166,12 @@ public abstract class AbstractTraceReplayTest {
         // 1. Load trace data (metadata is needed to resolve a shared, deduplicated BK2)
         TraceData trace = TraceData.load(traceDir);
         TraceMetadata meta = trace.metadata();
+        TraceVerificationScope verificationScope = verificationScope();
+        if (verificationScope == TraceVerificationScope.ANIMATION
+                && !meta.hasPerFrameCharacterAnimation()) {
+            fail("Animation-only verification requires CSV v7 character animation fields: "
+                    + traceDir);
+        }
         List<String> releaseBlockers = TraceReplayBootstrap.releaseBlockersForTraceReplay(trace);
         if (!releaseBlockers.isEmpty() && !allowDiagnosticOnlyTraceReplay()) {
             fail(String.join(System.lineSeparator(), releaseBlockers));
@@ -325,8 +337,9 @@ public abstract class AbstractTraceReplayTest {
                         sprite.getAngle(),
                         sprite.getAir(), sprite.getRolling(),
                         sprite.getGroundMode().ordinal(), romDiag,
-                        EngineDiagnostics.formattedWithCamera(
-                                engineDiag.cameraX(), engineDiag.cameraY(), engineDiagText),
+                        EngineDiagnostics.formattedWithCameraAndAnimation(
+                                engineDiag.cameraX(), engineDiag.cameraY(),
+                                engineDiag.animationId(), engineDiag.mappingFrame(), engineDiagText),
                         secondaryCharacterLabel, actualSidekick,
                         expectedSidekickCpu, actualSidekickCpu, expectedSidekickNormalStep);
                     if (compareObjectNearEvents()) {
@@ -355,13 +368,13 @@ public abstract class AbstractTraceReplayTest {
 
             // 8. Log summary only when explicitly requested. Failing assertions
             // still carry the compact frontier summary.
-            TraceReplayConsole.printSummary(report);
+            TraceReplayConsole.printSummary(report, verificationScope);
 
             // 9. Assert no errors
-            if (report.hasErrors() && TraceReplayConsole.shouldPrintContext()) {
+            if (report.hasErrors(verificationScope) && TraceReplayConsole.shouldPrintContext()) {
                 System.err.println("\n=== Context window around first error ===");
                 System.err.println(report.getContextWindow(
-                        firstReportErrorFrame(report), TraceReplayConsole.contextRadius()));
+                        report.firstErrorFrame(verificationScope), TraceReplayConsole.contextRadius()));
             }
             assertReportHasNoReleaseBlockingDivergences(report);
         } finally {
@@ -389,12 +402,13 @@ public abstract class AbstractTraceReplayTest {
     }
 
     protected void assertReportHasNoReleaseBlockingDivergences(DivergenceReport report) {
-        if (report.hasErrors()) {
-            fail(report.toAssertionSummary());
+        TraceVerificationScope scope = verificationScope();
+        if (report.hasErrors(scope)) {
+            fail(report.toAssertionSummary(scope));
         }
-        if (report.hasWarnings() && !allowDiagnosticOnlyWarnings()) {
+        if (report.hasWarnings(scope) && !allowDiagnosticOnlyWarnings()) {
             fail("Trace replay warning report is release-blocking by default: "
-                    + report.toAssertionSummary());
+                    + report.toAssertionSummary(scope));
         }
     }
 
@@ -933,7 +947,7 @@ public abstract class AbstractTraceReplayTest {
 
         return new EngineDiagnostics(routine, standOnSlot, standOnType, rings, statusByte,
                 camX, camY, cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent, xSub, ySub,
-                ridingObject, standingSnapshot);
+                ridingObject, standingSnapshot, sprite.getAnimationId(), sprite.getMappingFrame());
     }
 
     private List<TraceEvent.ObjectNear> objectNearEventsForPrimary(TraceData trace, int frame) {
@@ -1302,24 +1316,22 @@ public abstract class AbstractTraceReplayTest {
             Files.createDirectories(outDir);
 
             String prefix = meta.game() + "_" + meta.zone() + meta.act();
-            Path jsonPath = outDir.resolve(prefix + "_report.json");
+            TraceVerificationScope scope = verificationScope();
+            String scopeSuffix = scope == TraceVerificationScope.ALL
+                    ? ""
+                    : "_" + scope.name().toLowerCase();
+            Path jsonPath = outDir.resolve(prefix + scopeSuffix + "_report.json");
             Files.writeString(jsonPath, report.toJson());
 
-            if (report.hasErrors()) {
-                Path contextPath = outDir.resolve(prefix + "_context.txt");
+            if (report.hasErrors(scope)) {
+                Path contextPath = outDir.resolve(prefix + scopeSuffix + "_context.txt");
                 Files.writeString(contextPath,
                     report.getContextWindow(
-                            firstReportErrorFrame(report), TraceReplayConsole.contextRadius()));
+                            report.firstErrorFrame(scope), TraceReplayConsole.contextRadius()));
             }
         } catch (IOException e) {
             System.err.println("Warning: failed to write report: " + e.getMessage());
         }
     }
 
-    private static int firstReportErrorFrame(DivergenceReport report) {
-        if (!report.errors().isEmpty()) {
-            return report.errors().get(0).startFrame();
-        }
-        return 0;
-    }
 }

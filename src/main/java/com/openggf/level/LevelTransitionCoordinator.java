@@ -32,8 +32,10 @@ public class LevelTransitionCoordinator {
     private int inLevelTitleCardAct = -1;
     private boolean inLevelTitleCardLevelGamestateResetRequested;
     private int inLevelTitleCardResetAdditionalDispatches;
+    private int inLevelTitleCardResetPhaseOneDispatchOverlap;
     private boolean inLevelTitleCardPlayerControlLockRequested;
     private int inLevelTitleCardExitAdditionalDispatches;
+    private int inLevelTitleCardExitPhaseOneDispatchOverlap;
 
     // ── Transition request flags (for fade-coordinated transitions) ────
     private boolean respawnRequested;
@@ -226,13 +228,37 @@ public class LevelTransitionCoordinator {
     public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
                                         int resetAdditionalDispatches, boolean lockPlayerControl,
                                         int exitAdditionalDispatches) {
+        requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay,
+                resetAdditionalDispatches, 0, lockPlayerControl, exitAdditionalDispatches);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches,
+                                        int resetPhaseOneDispatchOverlap,
+                                        boolean lockPlayerControl,
+                                        int exitAdditionalDispatches) {
+        requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay,
+                resetAdditionalDispatches, resetPhaseOneDispatchOverlap,
+                lockPlayerControl, exitAdditionalDispatches, 0);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches,
+                                        int resetPhaseOneDispatchOverlap,
+                                        boolean lockPlayerControl,
+                                        int exitAdditionalDispatches,
+                                        int exitPhaseOneDispatchOverlap) {
         this.inLevelTitleCardRequested = true;
         this.inLevelTitleCardZone = zone;
         this.inLevelTitleCardAct = act;
         this.inLevelTitleCardLevelGamestateResetRequested = resetLevelGamestateAtDisplay;
         this.inLevelTitleCardResetAdditionalDispatches = Math.max(0, resetAdditionalDispatches);
+        this.inLevelTitleCardResetPhaseOneDispatchOverlap =
+                Math.max(0, resetPhaseOneDispatchOverlap);
         this.inLevelTitleCardPlayerControlLockRequested = lockPlayerControl;
         this.inLevelTitleCardExitAdditionalDispatches = Math.max(0, exitAdditionalDispatches);
+        this.inLevelTitleCardExitPhaseOneDispatchOverlap =
+                Math.max(0, exitPhaseOneDispatchOverlap);
     }
 
     /**
@@ -270,9 +296,19 @@ public class LevelTransitionCoordinator {
         return requested;
     }
 
+    public boolean hasPendingInLevelTitleCardHeldCounterDispatch() {
+        return inLevelTitleCardRequested && inLevelTitleCardLevelGamestateResetRequested;
+    }
+
     public int consumeInLevelTitleCardResetAdditionalDispatches() {
         int dispatches = inLevelTitleCardResetAdditionalDispatches;
         inLevelTitleCardResetAdditionalDispatches = 0;
+        return dispatches;
+    }
+
+    public int consumeInLevelTitleCardResetPhaseOneDispatchOverlap() {
+        int dispatches = inLevelTitleCardResetPhaseOneDispatchOverlap;
+        inLevelTitleCardResetPhaseOneDispatchOverlap = 0;
         return dispatches;
     }
 
@@ -285,6 +321,12 @@ public class LevelTransitionCoordinator {
     public int consumeInLevelTitleCardExitAdditionalDispatches() {
         int dispatches = inLevelTitleCardExitAdditionalDispatches;
         inLevelTitleCardExitAdditionalDispatches = 0;
+        return dispatches;
+    }
+
+    public int consumeInLevelTitleCardExitPhaseOneDispatchOverlap() {
+        int dispatches = inLevelTitleCardExitPhaseOneDispatchOverlap;
+        inLevelTitleCardExitPhaseOneDispatchOverlap = 0;
         return dispatches;
     }
 
@@ -559,8 +601,10 @@ public class LevelTransitionCoordinator {
         inLevelTitleCardAct = -1;
         inLevelTitleCardLevelGamestateResetRequested = false;
         inLevelTitleCardResetAdditionalDispatches = 0;
+        inLevelTitleCardResetPhaseOneDispatchOverlap = 0;
         inLevelTitleCardPlayerControlLockRequested = false;
         inLevelTitleCardExitAdditionalDispatches = 0;
+        inLevelTitleCardExitPhaseOneDispatchOverlap = 0;
         respawnRequested = false;
         nextActRequested = false;
         nextZoneRequested = false;

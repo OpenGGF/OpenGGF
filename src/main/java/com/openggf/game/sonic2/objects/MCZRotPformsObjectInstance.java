@@ -260,6 +260,11 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        return 0x20; // Obj6A MTZ init width_pixels, s2.asm:53686-53702
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         // ROM uses JmpTo13_SolidObject (fully solid from all sides).
         return false;

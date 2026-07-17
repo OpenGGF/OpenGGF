@@ -196,6 +196,11 @@ public class MutableLevel extends AbstractLevel {
         return sourceLevel.resolveCollisionBlockIndex(blockIndex, mapX, mapY);
     }
 
+    @Override
+    public boolean hasBackgroundCollisionRowAt(int y) {
+        return sourceLevel.hasBackgroundCollisionRowAt(y);
+    }
+
     // ===== Mutation methods (each marks dirty) =====
 
     public void setPattern(int index, Pattern pattern) {

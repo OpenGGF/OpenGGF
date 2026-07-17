@@ -1032,7 +1032,8 @@ public class Engine {
 		GameModule module = SessionManager.requireCurrentGameModule();
 		SaveManager saveManager = new SaveManager(Path.of("saves"));
 		Map<String, Object> loadedPayload = loadDataSelectPayload(module, action, saveManager);
-		com.openggf.game.save.SaveSessionContext saveContext = createDataSelectSaveContext(module, action, saveManager);
+		com.openggf.game.save.SaveSessionContext saveContext =
+				createDataSelectSaveContext(module, action, loadedPayload);
 
 		GameplayModeContext gameplay = SessionManager.openGameplaySession(module, saveContext);
 		initializeGameplayRuntime(gameplay, false);
@@ -1065,13 +1066,12 @@ public class Engine {
 	static com.openggf.game.save.SaveSessionContext createDataSelectSaveContext(
 			GameModule module,
 			com.openggf.game.dataselect.DataSelectAction action,
-			SaveManager saveManager) {
+			Map<String, Object> payload) {
 		String gameCode = switch (module.getGameId()) {
 			case S1 -> "s1";
 			case S2 -> "s2";
 			case S3K -> "s3k";
 		};
-		Map<String, Object> payload = loadDataSelectPayload(module, action, saveManager);
 		SelectedTeam team = payload == null ? action.team() : teamFromPayload(payload, action.team());
 		com.openggf.game.save.SaveSessionContext context =
 				action.slot() > 0
@@ -1085,7 +1085,7 @@ public class Engine {
 		return context;
 	}
 
-	private static Map<String, Object> loadDataSelectPayload(
+	static Map<String, Object> loadDataSelectPayload(
 			GameModule module,
 			com.openggf.game.dataselect.DataSelectAction action,
 			SaveManager saveManager) {

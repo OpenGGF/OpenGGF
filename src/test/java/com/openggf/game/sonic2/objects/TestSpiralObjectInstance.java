@@ -228,6 +228,9 @@ class TestSpiralObjectInstance {
         assertTrue(sonic.isFlipTurned(), "Obj06_Cylinder sets flip_turned on capture");
         assertEquals(Sonic2AnimationIds.WALK.id(), sonic.getAnimationId(),
                 "Obj06_Cylinder writes walk/run animation word with walk in anim(a1)");
+        assertEquals(Sonic2AnimationIds.RUN.id(),
+                sonic.getAnimationManager().captureRewindState().lastAnimationId(),
+                "Obj06_Cylinder writes Run to the adjacent prev_anim byte");
     }
 
     @Test

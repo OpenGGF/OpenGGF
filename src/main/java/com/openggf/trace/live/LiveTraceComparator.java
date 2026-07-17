@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.FieldComparison;
+import com.openggf.trace.EngineDiagnostics;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
 import com.openggf.trace.ToleranceConfig;
@@ -136,12 +137,15 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         // flagging every recorded sidekick field as divergent (EHZ1
         // etc. record Sonic+Tails).
         TraceCharacterState actualSidekick = captureFirstSidekickState();
+        EngineDiagnostics animationDiagnostics =
+                EngineDiagnostics.formattedWithCameraAndAnimation(
+                        -1, -1, sprite.getAnimationId(), sprite.getMappingFrame(), "");
         FrameComparison result = binder.compareFrame(expected,
                 sprite.getCentreX(), sprite.getCentreY(),
                 sprite.getXSpeed(), sprite.getYSpeed(), sprite.getGSpeed(),
                 sprite.getAngle(), sprite.getAir(), sprite.getRolling(),
                 sprite.getGroundMode().ordinal(),
-                null, null,
+                null, animationDiagnostics,
                 "sidekick", actualSidekick);
         if (perFrameObserver != null) {
             perFrameObserver.accept(result);

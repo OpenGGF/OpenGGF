@@ -35,6 +35,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectControlledSolidContactController;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
@@ -314,7 +315,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * the pre-tick (mid-frame, ROM-equivalent) view.
          */
         private boolean onObjectAtFrameStart = false;
+        private boolean onObjectAtPreviousFrameStart = false;
         private boolean pushingAtFrameStart = false;
+        private boolean airAtFrameStart = false;
         private boolean hurtAtFrameStart = false;
         private boolean hurtRecoveryCompletedThisFrame = false;
 
@@ -924,7 +927,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         pinballMode, pinballSpeedLock, preserveRollingOnNextLanding,
                         preserveRollingOnNextRollStop, objectPreservedRollBoostFollowup,
                         objectPreservedRollWallProbe, objectPreservedRollVelocityCarry, tunnelMode,
-                        onObject, onObjectAtFrameStart, pushingAtFrameStart, hurtAtFrameStart,
+                        onObject, onObjectAtFrameStart, onObjectAtPreviousFrameStart,
+                        pushingAtFrameStart, hurtAtFrameStart,
                         hurtRecoveryCompletedThisFrame,
                         latchedSolidObjectId, interactSlotIndex, slopeRepelJustSlipped,
                         stickToConvex, sliding, pushing,
@@ -1051,6 +1055,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.tunnelMode = extra.tunnelMode();
                 this.onObject = extra.onObject();
                 this.onObjectAtFrameStart = extra.onObjectAtFrameStart();
+                this.onObjectAtPreviousFrameStart = extra.onObjectAtPreviousFrameStart();
                 this.pushingAtFrameStart = extra.pushingAtFrameStart();
                 this.hurtAtFrameStart = extra.hurtAtFrameStart();
                 this.hurtRecoveryCompletedThisFrame = extra.hurtRecoveryCompletedThisFrame();
@@ -1663,6 +1668,19 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
         }
 
+        /** Publishes the ROM's {@code prev_anim=Run} sentinel. */
+        public void publishRunAsPreviousAnimation() {
+                PlayableSpriteAnimation anim = getAnimationManager();
+                if (anim != null) {
+                        int runAnimationId = resolveAnimationId(CanonicalAnimation.RUN);
+                        if (runAnimationId >= 0) {
+                                anim.publishPreviousAnimationId(runAnimationId);
+                        } else {
+                                anim.resetLastAnimationId();
+                        }
+                }
+        }
+
         public void setAnimationId(int animationId) {
                 this.animationId = Math.max(0, animationId);
         }
@@ -1765,6 +1783,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void setAir(boolean air) {
+                boolean landed = !air && this.air;
                 // If landing from hurt state, clear hurt flag and high-priority rendering
                 // (invulnerableFrames already set in applyHurt() per ROM behavior)
                 if (!air && this.air && hurt) {
@@ -1796,6 +1815,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         currentGameState().resetItemBonus();
                 }
                 this.air = air;
+                if (landed) {
+                        GameModule module = currentGameModule();
+                        if (module != null && module.getLevelEventProvider() != null) {
+                                module.getLevelEventProvider().onPlayableLandingAnimationWrite(this);
+                        }
+                }
                 // SPG: Push sensor Y offset changes based on air state
                 updatePushSensorYOffset();
                 if (air) {
@@ -1902,8 +1927,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * playable's logic reads another playable's status.
          */
         public void captureOnObjectAtFrameStart() {
+                this.onObjectAtPreviousFrameStart = this.onObjectAtFrameStart;
                 this.onObjectAtFrameStart = this.onObject;
                 this.pushingAtFrameStart = this.pushing;
+                this.airAtFrameStart = this.air;
                 this.hurtAtFrameStart = this.hurt;
                 this.hurtRecoveryCompletedThisFrame = false;
         }
@@ -1920,8 +1947,21 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return onObjectAtFrameStart;
         }
 
+        /**
+         * Returns the {@code Status_OnObj} snapshot from the preceding playable
+         * frame. This distinguishes a just-released solid ride from a terrain
+         * AnglePos detach after grounded movement has already selected animation.
+         */
+        public boolean getOnObjectAtPreviousFrameStart() {
+                return onObjectAtPreviousFrameStart;
+        }
+
         public boolean getPushingAtFrameStart() {
                 return pushingAtFrameStart;
+        }
+
+        public boolean getAirAtFrameStart() {
+                return airAtFrameStart;
         }
 
         public boolean getHurtAtFrameStart() {
@@ -2637,6 +2677,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         setXSpeed((short) (0x200 * dir));
                         setYSpeed((short) -0x400);
                 }
+                // HurtCharacter runs from the touch-response tail after the
+                // normal animation pass, then writes anim=$1A immediately. The
+                // raw animation byte therefore changes on the damage frame while
+                // the already-selected mapping remains displayed until next tick
+                // (S1 Sonic ReactToItem.asm:390-410; S2 s2.asm:85497-85519;
+                // S3K sonic3k.asm:21090-21110).
+                int hurtAnimationId = resolveAnimationId(CanonicalAnimation.HURT);
+                if (hurtAnimationId >= 0) {
+                        setAnimationId(hurtAnimationId);
+                }
                 currentAudioManager().playSfx(resolveDamageSound(cause));
                 return true;
         }
@@ -2780,6 +2830,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 setXSpeed((short) 0);
                 setYSpeed((short) -0x700);
                 setHighPriority(true);
+                // Kill_Character writes anim=Death in the kill call itself.
+                // Preserve the mapping/frame/timer selected earlier this frame;
+                // Animate_* consumes the new raw byte on the next player pass.
+                int deathAnimationId = resolveAnimationId(CanonicalAnimation.DEATH);
+                if (deathAnimationId >= 0) {
+                        setAnimationId(deathAnimationId);
+                }
                 GameSound sound = resolveDamageSound(cause);
                 if (sound != null) {
                         currentAudioManager().playSfx(sound);
@@ -3069,6 +3126,38 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 return mgzTopPlatformCarrySolidContactObject instanceof ObjectControlledSolidContactController controller
                         && controller.allowsObjectControlledSolidContact(this, candidate);
+        }
+
+        public void notifyObjectControlledSolidContact(ObjectInstance candidate, SolidContact contact) {
+                if (candidate == null || contact == null || mgzTopPlatformCarrySolidContactObject == null) {
+                        return;
+                }
+                if (mgzTopPlatformCarrySolidContactObject
+                                instanceof ObjectControlledSolidContactController controller) {
+                        controller.onObjectControlledSolidContact(this, candidate, contact);
+                }
+        }
+
+        public Short getObjectControlledSolidContactProjectedXSpeed(ObjectInstance candidate) {
+                if (candidate == null || mgzTopPlatformCarrySolidContactObject == null) {
+                        return null;
+                }
+                if (mgzTopPlatformCarrySolidContactObject
+                                instanceof ObjectControlledSolidContactController controller
+                                && controller.allowsObjectControlledSolidContact(this, candidate)) {
+                        return controller.projectedSolidContactXSpeed(this, candidate);
+                }
+                return null;
+        }
+
+        public void notifyObjectControlledSolidContactInvalidated(ObjectInstance candidate) {
+                if (candidate == null || mgzTopPlatformCarrySolidContactObject == null) {
+                        return;
+                }
+                if (mgzTopPlatformCarrySolidContactObject
+                                instanceof ObjectControlledSolidContactController controller) {
+                        controller.onObjectControlledSolidContactInvalidated(this, candidate);
+                }
         }
 
         public void setMgzTopPlatformCarrySolidContactObject(ObjectInstance instance) {
