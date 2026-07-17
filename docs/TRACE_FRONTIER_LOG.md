@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- S3K lost rings scan the active background collision plane
+
+Branch `feature/ai-trace-animation-verification`, after the checkpoint merge of
+`develop` (already up to date at `1b1a5efee`). At standalone MGZ frame 30648,
+native Obj37 slot 27 reaches the raised background floor at `$39F8,$0927` and
+reverses its Y velocity. The engine's lost-ring probe only queried foreground,
+so the corresponding ring fell through the live MGZ background geometry and
+missed the native collection at frame 30714. `Ring_FindFloor` explicitly runs
+the same height-map scan through `Find_Tile_FG` and, while
+`Background_collision_flag` is set, through `Find_Tile_BG` after applying
+`Camera_X_diff`/`Camera_Y_diff`; the more penetrating result owns the bounce.
+Lost rings now consume that ROM-state-driven dual-plane result. No zone, route,
+frame, trace-hydration, or tolerance condition was added.
+
+ROM references:
+
+- `docs/skdisasm/sonic3k.asm:19369-19448` (`Ring_FindFloor`)
+- `docs/skdisasm/sonic3k.asm:20098-20110` (`RingCheckFloorDist`)
+- `docs/skdisasm/sonic3k.asm:35520-35645` (`Obj_Bouncing_Ring`)
+
+Verification with the root-level locked-on S3K ROM:
+
+- Focused `s3kRingFindFloorIncludesActiveBackgroundCollisionPlane` contract
+  passed.
+- Standalone MGZ physics advances from frame 30714 / 49 errors to frame 30753
+  / 46 errors. The new frontier is a later lost-ring count mismatch (expected
+  5, actual 6), requiring separate ring/touch ordering analysis.
+- Standalone MGZ animation remains at frame 35279 / 29 errors; the physics-only
+  ring correction does not move or regress it.
+- MGZ complete-run physics and animation both remain fully green.
+- Full trace fleets remain at their established baselines: physics 44/58 green
+  and animation 43/58 green. AIZ/HCZ/MGZ complete-run physics and animation
+  remain green.
+
 ### 2026-07-17 -- S3K grounded BG collision restores fatal floor-overlap tail
 
 Branch `feature/ai-trace-animation-verification`, after commit `a26e17819`.

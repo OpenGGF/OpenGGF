@@ -9,7 +9,9 @@ import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.LevelManager;
+import com.openggf.level.ParallaxManager;
 import com.openggf.level.SolidTile;
+import com.openggf.level.scroll.ZoneScrollHandler;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
@@ -289,7 +291,6 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         // using v_vbla_byte separately via resolveVblaCounter() (ROM RLoss_Bounce spread).
         int executedFrame = resolveExecutedFrameCounter(frameCounter);
         lastFrameCounter = executedFrame;
-
         if (collected && collectedSparkleFinished(executedFrame)) {
             setDestroyed(true);
             return;
@@ -463,12 +464,56 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * top-solidity sensor. Negative distance means penetration. Relocated from RingManager.java:1313.
      */
     protected int ringCheckFloorDist(int x, int y) {
-        com.openggf.physics.TerrainCheckResult result =
+        com.openggf.physics.TerrainCheckResult foreground =
                 com.openggf.physics.ObjectTerrainUtils.checkFloorDist(x, y);
-        if (!result.foundSurface()) {
-            return 0;
+        int distance = foreground.foundSurface() ? foreground.distance() : 0;
+
+        ObjectServices services = servicesOrNull();
+        if (services == null || services.gameState() == null
+                || !services.gameState().isBackgroundCollisionFlag()) {
+            return distance;
         }
-        return result.distance();
+
+        LevelManager levelManager = services.levelManager();
+        Camera camera = services.camera();
+        if (levelManager == null || camera == null) {
+            return distance;
+        }
+
+        int bgCameraX = camera.getX();
+        int bgCameraY = camera.getY();
+        ParallaxManager parallax = services.parallaxManager();
+        if (parallax != null) {
+            ZoneScrollHandler handler = parallax.getHandler(levelManager.getFeatureZoneId());
+            if (handler != null) {
+                int handlerBgX = handler.getBgCameraX();
+                if (handlerBgX != Integer.MIN_VALUE) {
+                    bgCameraX = handlerBgX;
+                }
+                bgCameraY = handler.getVscrollFactorBG();
+            } else {
+                int cachedBgX = parallax.getBgCameraX();
+                if (cachedBgX != Integer.MIN_VALUE) {
+                    bgCameraX = cachedBgX;
+                }
+                bgCameraY = parallax.getVscrollFactorBG();
+            }
+        }
+
+        int bgX = (short) (x - (camera.getX() - bgCameraX));
+        int bgY = (short) (y - (camera.getY() - bgCameraY));
+        if (levelManager.getCurrentLevel() == null
+                || !levelManager.getCurrentLevel().hasBackgroundCollisionRowAt(bgY)) {
+            return distance;
+        }
+
+        com.openggf.physics.TerrainCheckResult background =
+                com.openggf.physics.ObjectTerrainUtils.checkFloorDistOnLayer(
+                        bgX, bgY, (byte) 1);
+        if (background.foundSurface()) {
+            distance = Math.min(distance, background.distance());
+        }
+        return distance;
     }
 
     /**

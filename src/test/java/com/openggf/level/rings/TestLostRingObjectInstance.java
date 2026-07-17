@@ -7,8 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.camera.Camera;
+import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -35,9 +38,11 @@ import org.mockito.MockedStatic;
 
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TestLostRingObjectInstance {
 
@@ -232,6 +237,38 @@ class TestLostRingObjectInstance {
                 "Obj37 should apply the full Ring_FindFloor penetration distance");
         assertEquals(0xFFFFF617, ring.getYVelForTest(),
                 "Obj37 bounce velocity follows y_vel -= y_vel>>2; neg.w y_vel");
+    }
+
+    @Test
+    void s3kRingFindFloorIncludesActiveBackgroundCollisionPlane() {
+        TerrainBackedRing ring = new TerrainBackedRing(
+                0x3A00, 0x0910, 0, 0,
+                GameRules.SONIC_3K.ring().ringFloorCheckMask(), false, true);
+        GameStateManager gameState = mock(GameStateManager.class);
+        Camera camera = mock(Camera.class);
+        LevelManager levelManager = mock(LevelManager.class);
+        Level level = mock(Level.class);
+        when(gameState.isBackgroundCollisionFlag()).thenReturn(true);
+        when(camera.getX()).thenReturn((short) 0x3900);
+        when(camera.getY()).thenReturn((short) 0x08E0);
+        when(levelManager.getCurrentLevel()).thenReturn(level);
+        when(level.hasBackgroundCollisionRowAt(0x0918)).thenReturn(true);
+        ring.setServices(new StubObjectServices() {
+            @Override public GameStateManager gameState() { return gameState; }
+            @Override public Camera camera() { return camera; }
+            @Override public LevelManager levelManager() { return levelManager; }
+        });
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x3A00, 0x0918))
+                    .thenReturn(new TerrainCheckResult(4, (byte) 0, 0));
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDistOnLayer(
+                            0x3A00, 0x0918, (byte) 1))
+                    .thenReturn(new TerrainCheckResult(-7, (byte) 0, 1));
+
+            assertEquals(-7, ring.probeFloorForTest(0x3A00, 0x0918),
+                    "Ring_FindFloor must retain the more penetrating BG-plane result");
+        }
     }
 
     /**
@@ -918,6 +955,10 @@ class TestLostRingObjectInstance {
 
         void setVblaForTest(int vbla) {
             this.vbla = vbla;
+        }
+
+        int probeFloorForTest(int x, int y) {
+            return ringCheckFloorDist(x, y);
         }
 
         @Override
