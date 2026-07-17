@@ -338,7 +338,12 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
         }
         spawnChild(() -> new MhzMinibossFlameInstance(this, 0));
         spawnChild(() -> new MhzMinibossFlameInstance(this, 1));
-        svc.playMusic(Sonic3kMusic.MINIBOSS.id);
+        // ROM loc_75220 (sonic3k.asm:155651-155654) does NOT play the miniboss
+        // music directly: it AllocateObjects an Obj_Song_Fade_Transition with
+        // subtype = mus_Miniboss, which fades the zone track over 90 frames
+        // (Obj_Song_Fade_Transition, :180323) before swapping to the boss track.
+        // Playing it instantly gave the miniboss music no time to fade in.
+        spawnChild(() -> SongFadeTransitionInstance.transitionTo(Sonic3kMusic.MINIBOSS.id));
         loadBossPalette();
         state.routine = ROUTINE_WAIT_AND_FALL;
         cameraInitPending = false;

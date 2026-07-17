@@ -61,6 +61,7 @@ final class MhzMinibossFlameInstance extends AbstractObjectInstance
     private int y;
     private int mappingFrame;
     private int priorityBucket;
+    private boolean flickerHidden;
 
     MhzMinibossFlameInstance(MhzMinibossInstance parent, int childIndex) {
         this(new ObjectSpawn(parent.getX(), parent.getY(), Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0),
@@ -110,6 +111,11 @@ final class MhzMinibossFlameInstance extends AbstractObjectInstance
             return;
         }
         refreshFromParent();
+        // ROM loc_757D6 (sonic3k.asm:156099-156101): move.b (V_int_run_count+3),d0
+        // / btst #0,d0 / bne (skip draw). The thruster is drawn only on even frames
+        // so it visibly flickers on/off each frame; the engine previously drew it
+        // solid every frame.
+        flickerHidden = (frameCounter & 1) != 0;
     }
 
     private void refreshFromParent() {
@@ -129,7 +135,7 @@ final class MhzMinibossFlameInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (!visibleAndTouchable()) {
+        if (!visibleAndTouchable() || flickerHidden) {
             return;
         }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.MHZ_MINIBOSS);

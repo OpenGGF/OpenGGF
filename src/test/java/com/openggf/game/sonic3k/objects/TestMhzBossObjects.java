@@ -275,16 +275,43 @@ class TestMhzBossObjects {
         Camera camera = new Camera();
         camera.setX((short) 0x2D00);
         camera.setY((short) 0x0500);
-        RecordingPaletteServices services = new RecordingPaletteServices();
-        services.withCamera(camera);
+        List<ObjectInstance> spawned = new ArrayList<>();
+        ObjectManager objectManager = mock(ObjectManager.class);
+        doAnswer(invocation -> {
+            spawned.add(invocation.getArgument(0));
+            return null;
+        }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
+        ObjectServices services = new StubObjectServices() {
+            @Override
+            public Camera camera() {
+                return camera;
+            }
+
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        };
         MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
                 0, 0, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
         miniboss.setServices(services);
 
         miniboss.update(0, null);
 
-        assertEquals(Sonic3kMusic.MINIBOSS.id, services.lastMusicId,
-                "Obj_MHZMiniboss setup spawns Obj_PlayMusic with subtype mus_Miniboss");
+        // ROM loc_75220 (sonic3k.asm:155651-155654) does NOT play the miniboss track
+        // directly: it AllocateObjects an Obj_Song_Fade_Transition with subtype
+        // mus_Miniboss, fading the zone music over 90 frames (Obj_Song_Fade_Transition,
+        // :180323) before swapping. So setup spawns the fade helper, not instant music.
+        SongFadeTransitionInstance fade = spawned.stream()
+                .filter(SongFadeTransitionInstance.class::isInstance)
+                .map(SongFadeTransitionInstance.class::cast)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(
+                        "Obj_MHZMiniboss setup must spawn a SongFadeTransitionInstance (Obj_Song_Fade_Transition)"));
+        assertEquals(Sonic3kMusic.MINIBOSS.id, fade.getMusicIdForTest(),
+                "fade transition targets mus_Miniboss");
+        assertEquals(SongFadeTransitionInstance.TRANSITION_WAIT_WORD, fade.nativeWaitWordForTest(),
+                "Obj_Song_Fade_Transition fades for 90 frames before the swap");
     }
 
     @Test
@@ -3591,10 +3618,17 @@ class TestMhzBossObjects {
 
         flames.forEach(flame -> {
             flame.setServices(services);
+            // ROM loc_757D6 (sonic3k.asm:156099-156101) draws the flame only on even
+            // frames (btst #0,(V_int_run_count+3)); the next odd frame is skipped, so
+            // the thruster flickers. An even frame renders; the odd frame must not.
+            flame.update(0, null);
+            flame.appendRenderCommands(new ArrayList<>());
             flame.update(1, null);
             flame.appendRenderCommands(new ArrayList<>());
         });
 
+        // Each flame draws exactly once (the even frame only); the odd frame is
+        // flicker-hidden, so the default times(1) verify would fail if it drew twice.
         verify(renderer).drawFrameIndex(0x16, 0x2E1B, 0x04A4, false, false);
         verify(renderer).drawFrameIndex(0x16, 0x2E11, 0x04A4, false, false);
     }

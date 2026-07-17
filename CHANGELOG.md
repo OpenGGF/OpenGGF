@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **fix: MHZ miniboss music now fades in and its thrusters flicker.** On spawn the
+  miniboss spawned nothing to fade the zone track and slammed the boss music on
+  instantly; it now spawns a `SongFadeTransitionInstance` (the ROM `loc_75220`
+  `Obj_Song_Fade_Transition` with subtype `mus_Miniboss`, sonic3k.asm:155651), so
+  the zone music fades over 90 frames before the swap. The thruster flame children
+  now skip drawing on odd frames (ROM `loc_757D6` `btst #0,(V_int_run_count+3)`,
+  :156099), restoring the on/off flicker instead of a solid flame. MHZ complete-run
+  trace unchanged (net-neutral).
 - **fix: three MHZ object regressions.** (1) The MHZ act-transition no longer
   crashes: the MHZ1 cutscene door's `parent` button link is now `@RewindTransient`,
   so a persistent dynamic door that outlives its placed button across the act
