@@ -1294,6 +1294,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (isInitialHiddenWait()
                 || state.routine == ROUTINE_CEILING_ESCAPE
                 || state.routine == ROUTINE_ESCAPE_WAIT
+                || pendingMiniHit
                 || state.defeated
                 || state.invulnerable) {
             // No collision while waiting to emerge, during the palette-flash
@@ -1306,8 +1307,6 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     @Override
     public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {
         if (isHidden()
-                || state.routine == ROUTINE_CEILING_ESCAPE
-                || state.routine == ROUTINE_ESCAPE_WAIT
                 || state.defeated
                 || isDestroyed()) {
             return null;

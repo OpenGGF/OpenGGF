@@ -318,6 +318,24 @@ class TestMgzDrillingRobotnikInstance {
     }
 
     @Test
+    void ceilingEscapeRetainsIndependentChildHazards() throws Exception {
+        RecordingServices services = new RecordingServices(camera);
+        MgzDrillingRobotnikInstance boss = createBoss(services);
+        boss.update(0, null);
+
+        setPrivateInt(boss, "waitTimer", 0);
+        boss.getState().routine = staticInt("ROUTINE_CEILING_ESCAPE");
+
+        TouchResponseProvider.TouchRegion[] regions = boss.getMultiTouchRegions();
+
+        assertEquals(4, regions.length,
+                "routine $16 still ends in Draw_And_Touch_Sprite and its child SSTs remain live");
+        assertEquals(0x8B, regions[1].collisionFlags());
+        assertEquals(0x9A, regions[2].collisionFlags());
+        assertEquals(0x9A, regions[3].collisionFlags());
+    }
+
+    @Test
     void thrusterFlamesFlickerFromGameplayFrameNotRenderPass() throws Exception {
         RecordingServices services = new RecordingServices(camera);
         MgzDrillingRobotnikInstance boss = createBoss(services);

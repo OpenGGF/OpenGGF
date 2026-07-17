@@ -1,5 +1,40 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- MGZ drilling escape retains its child hurt SSTs
+
+Branch `feature/ai-trace-animation-verification`, after commit `da8784bed`.
+At frame 28207, native CPU Tails overlaps the drilling Robotnik's still-live
+child graph during the mini-event ceiling escape, enters the hurt routine,
+and receives the standard `$0200,-$0400` rebound. The engine had already
+folded those child SSTs into the parent's multi-region touch provider, but
+disabled that entire provider when the parent entered routine `$16`, leaving
+Tails one pixel lower and on his ordinary movement/animation path.
+
+`Obj_MGZ2DrillingRobotnikStart` always ends in
+`Draw_And_Touch_Sprite`, including routines `$16` and `$18`; only the parent
+body's own collision flag is disabled during its hit flash. The folded drill
+tip and lower hurt children now remain published through the escape routines,
+while the pending parent hit immediately hides the attackable body exactly as
+the native cleared `collision_flags` byte does. No trace hydration,
+zone/route/frame predicate, comparator tolerance, or physics-state
+synchronization was added.
+
+ROM reference:
+`docs/skdisasm/sonic3k.asm:142415-142425,142477-142515,144374-144415`.
+
+Verification with the root-level REV01 S1/S2 and locked-on S3K ROMs:
+
+- MGZ standalone physics advances from frame 28207 to frame 28680
+  (`tails_cpu_respawn_counter`, expected `$0000` / actual `$0001`), with
+  errors reduced from 1114 to 921.
+- MGZ standalone animation advances from frame 28207 to frame 30178
+  (`tails_animation_id`, expected `$18` / actual `$00`), with errors reduced
+  from 259 to 156.
+- Focused parent-hit and ceiling-escape child-hazard contracts pass 2/2.
+- AIZ, HCZ, and MGZ complete-run physics and animation remain fully green.
+- Full fleet verification retains 44/58 green physics routes and 43/58 green
+  animation routes with identical known-failure sets.
+
 ### 2026-07-17 -- MGZ trigger-platform shake follows native camera-copy phase
 
 Branch `feature/ai-trace-animation-verification`, after commit `34bd8d32f`.
