@@ -298,7 +298,6 @@ public record PerObjectRewindSnapshot(
             boolean objectOrderGracePushBypassThisFrame,
             int pendingGroundedFollowNudge,
             int pendingGroundedFollowNudgeFrame,
-            boolean aizIntroDormantMarkerPrimed,
             boolean suppressNextLevelEventNormalMovement,
             boolean catchUpUsesRomVisibleLevelFrameCounter,
             boolean levelEventDormantMarkerReleasePending,

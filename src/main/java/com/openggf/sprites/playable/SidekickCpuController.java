@@ -212,7 +212,6 @@ public class SidekickCpuController {
     private boolean objectOrderGracePushBypassThisFrame;
     private int pendingGroundedFollowNudge;
     private int pendingGroundedFollowNudgeFrame = -1;
-    private boolean aizIntroDormantMarkerPrimed;
     private boolean suppressNextLevelEventNormalMovement;
     private boolean catchUpUsesRomVisibleLevelFrameCounter;
     private boolean levelEventDormantMarkerReleasePending;
@@ -1127,11 +1126,8 @@ public class SidekickCpuController {
             // phases so the marker lands on the same engine tick.
             initializeLevelStartSidekickPlacementIfNeeded();
             applyLevelEventDormantMarker();
-            aizIntroDormantMarkerPrimed = false;
             return;
         }
-
-        aizIntroDormantMarkerPrimed = false;
 
         if (isDormantMarkerSentinelEntry()) {
             // ROM keeps the CPU sidekick at the off-screen dormant-marker
@@ -1520,7 +1516,6 @@ public class SidekickCpuController {
     public void applyLevelEventDormantMarkerForBootstrap() {
         initializeLevelStartSidekickPlacementIfNeeded();
         applyLevelEventDormantMarker();
-        aizIntroDormantMarkerPrimed = false;
     }
 
     /**
@@ -5228,7 +5223,6 @@ public class SidekickCpuController {
             ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         }
         deadFallingRomCpuRoutine = -1;
-        aizIntroDormantMarkerPrimed = false;
         suppressNextLevelEventNormalMovement = false;
         catchUpUsesRomVisibleLevelFrameCounter = false;
         levelEventDormantMarkerReleasePending = false;
@@ -5255,7 +5249,6 @@ public class SidekickCpuController {
                                 boolean jumping, int targetX, int targetY) {
         state = mapRomCpuRoutine(cpuRoutine);
         deadFallingRomCpuRoutine = -1;
-        aizIntroDormantMarkerPrimed = false;
         suppressNextLevelEventNormalMovement = false;
         catchUpUsesRomVisibleLevelFrameCounter = false;
         levelEventDormantMarkerReleasePending = false;
@@ -5287,7 +5280,6 @@ public class SidekickCpuController {
     void forceStateForTest(State state, int normalFrames) {
         this.state = state;
         deadFallingRomCpuRoutine = -1;
-        aizIntroDormantMarkerPrimed = false;
         suppressNextLevelEventNormalMovement = false;
         catchUpUsesRomVisibleLevelFrameCounter = false;
         levelEventDormantMarkerReleasePending = false;
@@ -5550,7 +5542,6 @@ public class SidekickCpuController {
                 objectOrderGracePushBypassThisFrame,
                 pendingGroundedFollowNudge,
                 pendingGroundedFollowNudgeFrame,
-                aizIntroDormantMarkerPrimed,
                 suppressNextLevelEventNormalMovement,
                 catchUpUsesRomVisibleLevelFrameCounter,
                 levelEventDormantMarkerReleasePending,
@@ -5608,7 +5599,6 @@ public class SidekickCpuController {
         objectOrderGracePushBypassThisFrame = snapshot.objectOrderGracePushBypassThisFrame();
         pendingGroundedFollowNudge = snapshot.pendingGroundedFollowNudge();
         pendingGroundedFollowNudgeFrame = snapshot.pendingGroundedFollowNudgeFrame();
-        aizIntroDormantMarkerPrimed = snapshot.aizIntroDormantMarkerPrimed();
         suppressNextLevelEventNormalMovement = snapshot.suppressNextLevelEventNormalMovement();
         catchUpUsesRomVisibleLevelFrameCounter = snapshot.catchUpUsesRomVisibleLevelFrameCounter();
         levelEventDormantMarkerReleasePending = snapshot.levelEventDormantMarkerReleasePending();
@@ -5668,7 +5658,6 @@ public class SidekickCpuController {
         normalPushingGraceFrames = 0;
         suppressNextAirbornePushFollowSteering = false;
         releasedUnderwaterPushConsumed = false;
-        aizIntroDormantMarkerPrimed = false;
         suppressNextLevelEventNormalMovement = false;
         catchUpUsesRomVisibleLevelFrameCounter = false;
         levelEventDormantMarkerReleasePending = false;

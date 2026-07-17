@@ -667,16 +667,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 	}
 
-	/** Returns true when the glide state machine owns direction control. */
-	private boolean isInGlideDirectionControl() {
-		if (sprite.getSecondaryAbility() != SecondaryAbility.GLIDE) {
-			return false;
-		}
-		int state = sprite.getDoubleJumpFlag();
-		// States 1 (gliding), 3 (sliding), 4 (wall climb) manage direction themselves
-		return state == 1 || state == 3 || state == 4;
-	}
-
 	// ========================================
 	// MODE METHODS
 	// ========================================

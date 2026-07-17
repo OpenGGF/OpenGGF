@@ -105,7 +105,6 @@ class TestSidekickCpuControllerRewindCapture {
         values.put("objectOrderGracePushBypassThisFrame", true);
         values.put("pendingGroundedFollowNudge", -1);
         values.put("pendingGroundedFollowNudgeFrame", 321);
-        values.put("aizIntroDormantMarkerPrimed", true);
         values.put("suppressNextLevelEventNormalMovement", true);
         values.put("catchUpUsesRomVisibleLevelFrameCounter", true);
         values.put("skipPhysicsThisFrame", true);
