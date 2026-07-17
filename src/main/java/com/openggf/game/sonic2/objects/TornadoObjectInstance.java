@@ -1406,7 +1406,8 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                     // 128 background bytes (docs/s2disasm/s2.asm:20145-20158). ObjB2 writes
                     // raw Level_Layout offsets here (s2.asm:79035-79042), so decode the
                     // interleaved RAM address before mutating the engine's split map layers.
-                    effects = context.surface().setBlockInMap(layer, x, y, patchBytes[j] & 0xFF);
+                    effects = context.surface().setBlockInMapWithoutRedraw(
+                            layer, x, y, patchBytes[j] & 0xFF);
                 }
             }
             return effects;

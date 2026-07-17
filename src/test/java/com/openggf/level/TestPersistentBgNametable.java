@@ -3,6 +3,8 @@ package com.openggf.level;
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.mutation.LevelMutationSurface;
+import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.TilemapGpuRenderer;
@@ -25,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -38,7 +41,7 @@ class TestPersistentBgNametable {
     private static final int RING_HEIGHT_TILES = 32;
 
     private GraphicsManager graphicsManager;
-    private FixtureLevel level;
+    private Level level;
     private LevelGeometry geometry;
     private LevelTilemapManager.BlockLookup blockLookup;
     private ZoneFeatureProvider zoneFeatures;
@@ -252,6 +255,55 @@ class TestPersistentBgNametable {
         assertEquals(0, manager.getPersistentBgOriginYTiles());
         assertEquals(fulls, manager.persistentBgFullPublicationCount);
         assertEquals(incrementals, manager.persistentBgIncrementalPublicationCount);
+    }
+
+    @Test
+    void noRedrawMutableLayoutWriteStaysOutsideRetainedRingUntilAffectedStripCrosses() {
+        level = MutableLevel.snapshot(level);
+        geometry = new LevelGeometry(level,
+                MAP_WIDTH_PX, MAP_HEIGHT_PX,
+                MAP_WIDTH_PX, MAP_WIDTH_PX, MAP_HEIGHT_PX,
+                BLOCK_PX, 8);
+        blockLookup = this::lookup;
+        MutableLevel mutableLevel = (MutableLevel) level;
+        LevelTilemapManager manager = newManager();
+        ensurePersistent(manager, 0, 0);
+        byte[] retainedBeforeMutation = manager.getPersistentBgRingCopy();
+        int originX = manager.getPersistentBgOriginXTiles();
+        int originY = manager.getPersistentBgOriginYTiles();
+        int fullPublications = manager.persistentBgFullPublicationCount;
+        byte[] snapshotMapData = mutableLevel.getMap().getData();
+        int mutatedMapOffset = MAP_WIDTH_BLOCKS * MAP_HEIGHT_BLOCKS + 5;
+        byte snapshotMapValue = snapshotMapData[mutatedMapOffset];
+        mutableLevel.bumpEpoch();
+
+        MutationEffects effects = LevelMutationSurface.forLevel(mutableLevel)
+                .setBlockInMapWithoutRedraw(1, 5, 0, 31);
+
+        assertTrue(effects.isEmpty());
+        assertEquals(31, mutableLevel.getMap().getValue(1, 5, 0) & 0xFF);
+        assertNotSame(snapshotMapData, mutableLevel.getMap().getData(),
+                "layout-RAM-only writes must retain copy-on-write snapshot isolation");
+        assertEquals(snapshotMapValue, snapshotMapData[mutatedMapOffset]);
+        assertTrue(mutableLevel.consumeDirtyMapCells().isEmpty(),
+                "layout-RAM-only writes must not queue next-frame tilemap invalidation");
+        assertArrayEquals(retainedBeforeMutation, manager.getPersistentBgRingCopy());
+        assertEquals(originX, manager.getPersistentBgOriginXTiles());
+        assertEquals(originY, manager.getPersistentBgOriginYTiles());
+        assertTrue(manager.isPersistentBgBaselineValid());
+
+        ensurePersistent(manager, 0, 0);
+        assertArrayEquals(retainedBeforeMutation, manager.getPersistentBgRingCopy(),
+                "a stationary next frame must keep the pre-write VDP nametable bytes");
+        assertEquals(fullPublications, manager.persistentBgFullPublicationCount);
+        assertEquals(originX, manager.getPersistentBgOriginXTiles());
+        assertEquals(originY, manager.getPersistentBgOriginYTiles());
+        assertTrue(manager.isPersistentBgBaselineValid());
+
+        for (int bgX = 16; bgX <= 144; bgX += 16) {
+            ensurePersistent(manager, bgX, 0);
+        }
+        assertDescriptorAtLogical(manager, 63, 2, 648, 0);
     }
 
     @Test
@@ -675,7 +727,8 @@ class TestPersistentBgNametable {
             super(0);
             palettes = new Palette[] { new Palette(), new Palette(), new Palette(), new Palette() };
             patternCount = 2048;
-            patterns = new Pattern[0];
+            patterns = new Pattern[patternCount];
+            Arrays.setAll(patterns, ignored -> new Pattern());
             chunkCount = 1024;
             chunks = new Chunk[chunkCount];
             for (int index = 0; index < chunkCount; index++) {

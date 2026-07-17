@@ -53,6 +53,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -338,7 +339,8 @@ public class TestTornadoObjectInstance {
             }
         }
         assertEquals(1, effects.size());
-        assertTrue(effects.stream().allMatch(MutationEffects::allTilemapsRedrawRequired));
+        assertSame(MutationEffects.NONE, effects.get(0),
+                "ROM Level_Layout writes must not invalidate the retained Plane-B nametable");
     }
 
     @Test

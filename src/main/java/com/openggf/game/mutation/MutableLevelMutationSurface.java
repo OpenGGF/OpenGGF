@@ -44,4 +44,10 @@ public final class MutableLevelMutationSurface implements LevelMutationSurface {
         level.setBlockInMapForRuntimeMutation(layer, blockX, blockY, blockIndex);
         return MutationEffects.dirtyRegionProcessing();
     }
+
+    @Override
+    public MutationEffects setBlockInMapWithoutRedraw(int layer, int blockX, int blockY, int blockIndex) {
+        level.setBlockInMapForRuntimeMutationWithoutRedraw(layer, blockX, blockY, blockIndex);
+        return MutationEffects.NONE;
+    }
 }

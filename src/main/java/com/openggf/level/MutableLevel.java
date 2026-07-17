@@ -277,6 +277,21 @@ public class MutableLevel extends AbstractLevel {
         setBlockInMapInternal(layer, bx, by, blockIndex, false);
     }
 
+    /**
+     * Updates layout RAM without scheduling a tilemap rebuild.
+     *
+     * <p>This preserves copy-on-write snapshot isolation and the reverse block-to-map lookup,
+     * while leaving the currently resident VDP-style nametable untouched until its normal
+     * redraw/strip-update owner consumes the changed source cell.
+     */
+    public void setBlockInMapForRuntimeMutationWithoutRedraw(int layer, int bx, int by, int blockIndex) {
+        map.cowEnsureWritable(currentEpoch());
+        int oldBlockIndex = map.getValue(layer, bx, by) & 0xFF;
+        map.setValue(layer, bx, by, (byte) blockIndex);
+        int cellIdx = linearizeMapCell(layer, bx, by);
+        updateBlockToMapCellsLookup(cellIdx, oldBlockIndex, blockIndex);
+    }
+
     private void setBlockInMapInternal(int layer, int bx, int by, int blockIndex, boolean trackEditorSave) {
         map.cowEnsureWritable(currentEpoch());
         int oldBlockIndex = map.getValue(layer, bx, by) & 0xFF;
