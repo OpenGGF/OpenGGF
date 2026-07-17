@@ -42,6 +42,8 @@ class TestS3kMgzSwingingSpikeBallObject {
 
         assertEquals(0x1260, instance.getX());
         assertEquals(0x0600, instance.getY());
+        assertEquals(0x1200, instance.getOutOfRangeReferenceX(),
+                "loc_341F0 uses the stored anchor rather than the swinging ball position");
 
         TouchResponseProvider.TouchRegion[] regions = instance.getMultiTouchRegions();
         assertNotNull(regions);
@@ -49,6 +51,8 @@ class TestS3kMgzSwingingSpikeBallObject {
         assertEquals(0x1260, regions[0].x());
         assertEquals(0x0600, regions[0].y());
         assertEquals(0x8F, regions[0].collisionFlags());
+        assertEquals(1, instance.getReservedChildSlotCount(),
+                "Obj_MGZSwingingSpikeBall allocates one loc_34244 visual helper SST");
     }
 
     @Test

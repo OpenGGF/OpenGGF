@@ -27,13 +27,36 @@ public record TraceCharacterState(
     int ySub,
     int routine,
     int statusByte,
-    int standOnObj
+    int standOnObj,
+    int animationId,
+    int mappingFrame
 ) {
+
+    /** Backward-compatible constructor for pre-animation trace fixtures. */
+    public TraceCharacterState(
+            boolean present,
+            short x,
+            short y,
+            short xSpeed,
+            short ySpeed,
+            short gSpeed,
+            byte angle,
+            boolean air,
+            boolean rolling,
+            int groundMode,
+            int xSub,
+            int ySub,
+            int routine,
+            int statusByte,
+            int standOnObj) {
+        this(present, x, y, xSpeed, ySpeed, gSpeed, angle, air, rolling, groundMode,
+                xSub, ySub, routine, statusByte, standOnObj, -1, -1);
+    }
 
     public static TraceCharacterState absent() {
         return new TraceCharacterState(false,
             (short) 0, (short) 0, (short) 0, (short) 0, (short) 0,
-            (byte) 0, false, false, 0, 0, 0, -1, -1, -1);
+            (byte) 0, false, false, 0, 0, 0, -1, -1, -1, -1, -1);
     }
 
     /**
@@ -70,7 +93,9 @@ public record TraceCharacterState(
                 sprite.getYSubpixelRaw(),
                 routine,
                 statusByte,
-                standOnSlot);
+                standOnSlot,
+                sprite.getAnimationId(),
+                sprite.getMappingFrame());
     }
 
     public static int routineFromSprite(AbstractPlayableSprite sprite) {
@@ -135,13 +160,61 @@ public record TraceCharacterState(
             Integer.parseInt(parts[offset + 14].trim(), 16));
     }
 
+    /** Parse the symmetric 17-column character block introduced by CSV v7. */
+    public static TraceCharacterState parseV7CsvColumns(String[] parts, int offset) {
+        boolean present = !parts[offset].trim().equals("0");
+        if (!present) {
+            return absent();
+        }
+        return new TraceCharacterState(
+                true,
+                (short) Integer.parseInt(parts[offset + 1].trim(), 16),
+                (short) Integer.parseInt(parts[offset + 2].trim(), 16),
+                parseSignedShortHex(parts[offset + 3].trim()),
+                parseSignedShortHex(parts[offset + 4].trim()),
+                parseSignedShortHex(parts[offset + 5].trim()),
+                (byte) Integer.parseInt(parts[offset + 6].trim(), 16),
+                !parts[offset + 7].trim().equals("0"),
+                !parts[offset + 8].trim().equals("0"),
+                Integer.parseInt(parts[offset + 9].trim()),
+                Integer.parseInt(parts[offset + 10].trim(), 16),
+                Integer.parseInt(parts[offset + 11].trim(), 16),
+                Integer.parseInt(parts[offset + 12].trim(), 16),
+                Integer.parseInt(parts[offset + 13].trim(), 16),
+                Integer.parseInt(parts[offset + 14].trim(), 16),
+                Integer.parseInt(parts[offset + 15].trim(), 16),
+                Integer.parseInt(parts[offset + 16].trim(), 16));
+    }
+
     public String formatDiagnostics(String label) {
         if (!present) {
             return label + "=absent";
         }
-        return String.format(
+        String diagnostics = String.format(
             "%s=sub=(%04X,%04X) rtn=%02X status=%02X onObj=%02X",
             label, xSub, ySub, routine, statusByte, standOnObj);
+        if (animationId >= 0 && mappingFrame >= 0) {
+            diagnostics += String.format(" anim=%02X map=%02X", animationId, mappingFrame);
+        }
+        return diagnostics;
+    }
+
+    /**
+     * Equality used only by replay pacing/bootstrap heuristics.
+     *
+     * <p>Animation is deliberately excluded: selecting the physics-only gate
+     * must not let new animation observations alter how trace frames are paced.
+     */
+    public boolean physicsStateEquals(TraceCharacterState other) {
+        return other != null
+                && present == other.present
+                && x == other.x && y == other.y
+                && xSpeed == other.xSpeed && ySpeed == other.ySpeed && gSpeed == other.gSpeed
+                && angle == other.angle && air == other.air && rolling == other.rolling
+                && groundMode == other.groundMode
+                && xSub == other.xSub && ySub == other.ySub
+                && routine == other.routine && statusByte == other.statusByte
+                && standOnObj == other.standOnObj;
     }
 
     private static short parseSignedShortHex(String hex) {

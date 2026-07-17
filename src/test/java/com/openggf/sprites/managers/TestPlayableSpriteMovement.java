@@ -15,6 +15,7 @@ import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.Sonic2SuperStateController;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SkidDustObjectInstance;
@@ -53,6 +54,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -1688,6 +1690,205 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void oppositeDirectionCrossingZeroDoesNotPublishWalk() throws Exception {
+                ScriptedVelocityAnimationProfile profile = new ScriptedVelocityAnimationProfile()
+                                .setIdleAnimId(5)
+                                .setWalkAnimId(0)
+                                .setRunAnimId(1)
+                                .setSpringAnimId(0x10)
+                                .setSkidAnimId(0x0D)
+                                .setRunSpeedThreshold(0x600);
+                mockSprite.setAnimationProfile(profile);
+                mockSprite.setAnimationId(0x10);
+                mockSprite.setGSpeed((short) 0x001C);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setMovementInputActive(true);
+                setInputState(true, false, false, false, false);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doGroundMove");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertNull(profile.resolveAnimationId(mockSprite, 0, 32),
+                                "MoveLeft's opposite-direction deceleration tail returns without writing anim, "
+                                                + "including the frame inertia crosses zero");
+        }
+
+        @Test
+        public void s1TerrainBalanceUsesLatchedAngleSentinelNotFreshSideGap() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_1);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setAngle((byte) 0xF0);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setOnObject(false);
+
+                Sensor left = new Sensor(mockSprite, Direction.DOWN, (byte) -9, (byte) 19, true) {
+                        @Override
+                        protected SensorResult doScan(short dx, short dy) {
+                                // Both the fresh left probe and ObjFloorDist's centre
+                                // probe see the gap at this post-movement position.
+                                return new SensorResult((byte) 3, (byte) 25, 0, Direction.DOWN);
+                        }
+                };
+                Sensor right = new Sensor(mockSprite, Direction.DOWN, (byte) 9, (byte) 19, true) {
+                        @Override
+                        protected SensorResult doScan(short dx, short dy) {
+                                return new SensorResult((byte) 0xF0, (byte) 0, 0x9A, Direction.DOWN);
+                        }
+                };
+                mockSprite.setGroundSensors(new Sensor[]{left, right});
+
+                // Native angleright/angleleft still describe the preceding
+                // AnglePos result, where neither probe had the empty-tile value 3.
+                setMovementField("latchedNextTilt", 0xF0);
+                setMovementField("latchedTilt", 0x00);
+                Method updateBalance = PlayableSpriteMovement.class.getDeclaredMethod("updateBalanceState");
+                updateBalance.setAccessible(true);
+                updateBalance.invoke(manager);
+
+                assertEquals(0, mockSprite.getBalanceState(),
+                                "fresh missing-side geometry must not expose Balance one dispatch early");
+
+                setMovementField("latchedTilt", 3);
+                updateBalance.invoke(manager);
+                assertEquals(1, mockSprite.getBalanceState(),
+                                "S1 balances once the copied angleleft byte is the empty-tile sentinel");
+                assertEquals(Direction.LEFT, mockSprite.getDirection());
+        }
+
+        @Test
+        public void heldOppositeDirectionStillAllowsBalanceWhenBrakingReachesZero() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_1);
+                mockSprite.setGSpeed((short) 0x80);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setOnObject(false);
+                mockSprite.setSkidding(true);
+                setInputState(true, false, false, false, false);
+
+                Sensor left = new Sensor(mockSprite, Direction.DOWN, (byte) -9, (byte) 19, true) {
+                        @Override
+                        protected SensorResult doScan(short dx, short dy) {
+                                return new SensorResult((byte) 0, (byte) 25, 0, Direction.DOWN);
+                        }
+                };
+                Sensor right = new Sensor(mockSprite, Direction.DOWN, (byte) 9, (byte) 19, true) {
+                        @Override
+                        protected SensorResult doScan(short dx, short dy) {
+                                return new SensorResult((byte) 3, (byte) 25, 0, Direction.DOWN);
+                        }
+                };
+                mockSprite.setGroundSensors(new Sensor[]{left, right});
+                setMovementField("latchedNextTilt", 3);
+                setMovementField("latchedTilt", 0);
+
+                Method groundMove = PlayableSpriteMovement.class.getDeclaredMethod("doGroundMove");
+                groundMove.setAccessible(true);
+                groundMove.invoke(manager);
+                assertEquals(0, mockSprite.getGSpeed(),
+                                "S1 MoveLeft must preserve the exact positive-deceleration zero result");
+                assertFalse(mockSprite.getSkidding(),
+                                "the exact-zero path reaches Move's Wait/Balance tail, not the Stop branch");
+
+                Method computeBalance = PlayableSpriteMovement.class
+                                .getDeclaredMethod("computeCurrentFrameBalancing");
+                computeBalance.setAccessible(true);
+
+                assertTrue((boolean) computeBalance.invoke(manager),
+                                "MoveLeft can brake inertia to zero before Sonic_Move enters its balance tail");
+        }
+
+        @Test
+        public void heldDirectionAtRestDoesNotBroadlyEnableBalance() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_1);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setOnObject(false);
+                setInputState(true, false, false, false, false);
+
+                Sensor left = new Sensor(mockSprite, Direction.DOWN, (byte) -9, (byte) 19, true) {
+                        @Override
+                        protected SensorResult doScan(short dx, short dy) {
+                                return new SensorResult((byte) 0, (byte) 25, 0, Direction.DOWN);
+                        }
+                };
+                Sensor right = new Sensor(mockSprite, Direction.DOWN, (byte) 9, (byte) 19, true) {
+                        @Override
+                        protected SensorResult doScan(short dx, short dy) {
+                                return new SensorResult((byte) 3, (byte) 25, 0, Direction.DOWN);
+                        }
+                };
+                mockSprite.setGroundSensors(new Sensor[]{left, right});
+                setMovementField("latchedNextTilt", 3);
+                setMovementField("latchedTilt", 0);
+
+                Method computeBalance = PlayableSpriteMovement.class
+                                .getDeclaredMethod("computeCurrentFrameBalancing");
+                computeBalance.setAccessible(true);
+
+                assertFalse((boolean) computeBalance.invoke(manager),
+                                "held input only reaches Balance through the exact deceleration-to-zero branch");
+        }
+
+        @Test
+        public void s3kStaleOnObjectReadsClearedInteractSlotForBalance() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setGameRulesForTest(GameRules.SONIC_3K);
+                Field objectManagerField = GameServices.level().getClass().getDeclaredField("objectManager");
+                objectManagerField.setAccessible(true);
+                objectManagerField.set(GameServices.level(), new ObjectManager(List.of(), null, 0, null, null));
+
+                mockSprite.setCentreX((short) 0x3C90);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setOnObject(true);
+                mockSprite.setInteractSlotIndex(15);
+                mockSprite.setDirection(Direction.RIGHT);
+
+                Method updateBalance = PlayableSpriteMovement.class.getDeclaredMethod("updateBalanceState");
+                updateBalance.setAccessible(true);
+                updateBalance.invoke(manager);
+
+                assertTrue(mockSprite.getBalanceState() > 0,
+                                "Tails_InputAcceleration_Path reads width/x/status zero from a cleared interact SST");
+                assertEquals(Direction.RIGHT, mockSprite.getDirection());
+        }
+
+        @Test
+        public void s3kLiveLatchedSupportDoesNotReadAsClearedInteractSlot() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setGameRulesForTest(GameRules.SONIC_3K);
+                Field objectManagerField = GameServices.level().getClass().getDeclaredField("objectManager");
+                objectManagerField.setAccessible(true);
+                objectManagerField.set(GameServices.level(), new ObjectManager(List.of(), null, 0, null, null));
+
+                ObjectInstance liveSupport = mock(ObjectInstance.class);
+                mockSprite.setCentreX((short) 0x00D2);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setOnObject(true);
+                mockSprite.setLatchedSolidObject(0, liveSupport);
+                mockSprite.setInteractSlotIndex(17);
+
+                Method updateBalance = PlayableSpriteMovement.class.getDeclaredMethod("updateBalanceState");
+                updateBalance.setAccessible(true);
+                updateBalance.invoke(manager);
+
+                assertEquals(0, mockSprite.getBalanceState(),
+                                "a live manager-owned support is not a zeroed SST just because slot lookup is synthetic");
+        }
+
+        @Test
         public void s2FixedSkidDustTicksWhileAirborneStopAnimationPersists() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);
                 Field objectManagerField = GameServices.level().getClass().getDeclaredField("objectManager");
@@ -2095,7 +2296,7 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
-        public void s3kSpindashAnimationTransitionClearsPushBeforeTraceSample() throws Exception {
+        public void s3kSpindashAnimationTransitionPreservesPushForFollowerHistory() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_3K);
                 ScriptedVelocityAnimationProfile profile = new ScriptedVelocityAnimationProfile()
                                 .setDuckAnimId(8)
@@ -2109,13 +2310,43 @@ public class TestPlayableSpriteMovement {
                 method.invoke(manager);
 
                 assertEquals(profile.getSpindashAnimId(), mockSprite.getAnimationId());
+                assertTrue(mockSprite.getPushing(),
+                                "Sonic_RecordPos runs before Animate_Sonic clears Status_Push");
+                mockSprite.recordFollowerHistoryForTick();
+                assertEquals(AbstractPlayableSprite.STATUS_PUSHING,
+                                mockSprite.getStatusHistory(0) & AbstractPlayableSprite.STATUS_PUSHING,
+                                "the delayed Tails CPU status table must retain the pre-animation push bit");
+                manager.applyDeferredSpindashAnimationPushClear();
                 assertFalse(mockSprite.getPushing(),
-                                "Animate_Tails must clear Status_Push when spindash changes anim from Duck");
+                                "the later animation transition clears Push after follower history");
 
                 mockSprite.setPushing(true);
                 method.invoke(manager);
+                assertTrue(mockSprite.getPushing(),
+                                "an active charge leaves the clear to its later animation pass");
+                manager.applyDeferredSpindashAnimationPushClear();
                 assertFalse(mockSprite.getPushing(),
-                                "an active charge's $0900 anim/prev_anim word must force the clear again");
+                                "each active charge's $0900 word re-arms the later animation clear");
+        }
+
+        @Test
+        public void s2SpindashChargePulseRepublishesSpindashAnimation() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_2);
+                ScriptedVelocityAnimationProfile profile = new ScriptedVelocityAnimationProfile()
+                                .setDuckAnimId(8)
+                                .setSpindashAnimId(9);
+                mockSprite.setAnimationProfile(profile);
+                mockSprite.setAnimationId(0);
+                mockSprite.setSpindash(true);
+
+                // Tails_ChargingSpindash calls this publisher only when the
+                // pressed ABC bits are nonzero, before its boundary/AnglePos tail.
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("setSpindashAnimation");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertEquals(profile.getSpindashAnimId(), mockSprite.getAnimationId(),
+                                "a fresh ABC charge press republishes the ROM $0900 animation word");
         }
 
         @Test
@@ -2479,6 +2710,52 @@ public class TestPlayableSpriteMovement {
                 rollMethod.invoke(manager);
 
                 assertTrue(!mockSprite.getRolling(), "Rolling should NOT start when down is locked from crouch transition");
+        }
+
+        @Test
+        public void groundedBalanceSelectionSurvivesLaterSameDispatchTerrainDetach() throws Exception {
+                mockSprite.setAir(true);
+                mockSprite.setRolling(false);
+                mockSprite.setSpindash(false);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setGSpeed((short) 0);
+                setMovementField("preFrictionGroundSpeed", 0);
+                setMovementField("preMoveBalanceEvaluated", true);
+                setMovementField("preMoveBalanceState", 1);
+                setMovementField("preMoveBalanceDirection", Direction.RIGHT);
+
+                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod("updateCrouchState");
+                crouchMethod.setAccessible(true);
+                crouchMethod.invoke(manager);
+
+                assertTrue(mockSprite.getAir(), "AnglePos detach remains visible after the grounded Move dispatch");
+                assertEquals(1, mockSprite.getBalanceState(),
+                                "the earlier grounded Balance branch owns the animation byte for the detach frame");
+                assertEquals(Direction.RIGHT, mockSprite.getDirection());
+        }
+
+        @Test
+        public void releasedObjectSupportDoesNotReuseTerrainDetachBalanceSelection() throws Exception {
+                mockSprite.setOnObject(true);
+                mockSprite.captureOnObjectAtFrameStart();
+                mockSprite.setOnObject(false);
+                mockSprite.captureOnObjectAtFrameStart();
+                mockSprite.setAir(true);
+                mockSprite.setRolling(false);
+                mockSprite.setSpindash(false);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setGSpeed((short) 0);
+                setMovementField("preFrictionGroundSpeed", 0);
+                setMovementField("preMoveBalanceEvaluated", true);
+                setMovementField("preMoveBalanceState", 1);
+                setMovementField("preMoveBalanceDirection", Direction.RIGHT);
+
+                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod("updateCrouchState");
+                crouchMethod.setAccessible(true);
+                crouchMethod.invoke(manager);
+
+                assertEquals(0, mockSprite.getBalanceState(),
+                                "an object-release frame does not use the terrain AnglePos detach bridge");
         }
 
         /**
@@ -3286,6 +3563,57 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void testS1RollingLandingWritesWalkAnimationLikeResetOnFloor() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_1);
+                mockSprite.setAnimationId(2);
+                mockSprite.setRolling(true);
+                mockSprite.setAir(true);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("resetOnFloor");
+                method.setAccessible(true);
+                boolean resetOwnedWalkPublication = (boolean) method.invoke(manager);
+
+                assertFalse(mockSprite.getRolling());
+                assertTrue(resetOwnedWalkPublication,
+                                "the rolling-clear branch owns the landing's single Walk publication");
+                assertEquals(0, mockSprite.getAnimationId(),
+                                "S1 Sonic_ResetOnFloor writes id_Walk when it clears Status_Roll");
+        }
+
+        @Test
+        public void testS1NonRollingResetLeavesWalkPublicationToTerrainLanding() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_1);
+                mockSprite.setAnimationId(5);
+                mockSprite.setRolling(false);
+                mockSprite.setAir(true);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("resetOnFloor");
+                method.setAccessible(true);
+                boolean resetOwnedWalkPublication = (boolean) method.invoke(manager);
+
+                assertFalse(resetOwnedWalkPublication);
+                assertEquals(5, mockSprite.getAnimationId(),
+                                "non-rolling ResetOnFloor leaves Sonic_Floor to publish Walk");
+        }
+
+        @Test
+        public void testS1TerrainLandingWritesWalkEvenWhenIncomingAnimationWasWait() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_1);
+                mockSprite.setAnimationId(5);
+                mockSprite.setRolling(false);
+                mockSprite.setAir(true);
+                mockSprite.setAngle((byte) 0x00);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("calculateLanding",
+                                AbstractPlayableSprite.class);
+                method.setAccessible(true);
+                method.invoke(manager, mockSprite);
+
+                assertEquals(0, mockSprite.getAnimationId(),
+                                "S1 Sonic_Floor writes id_Walk after ResetOnFloor on an accepted floor landing");
+        }
+
+        @Test
         public void testLandingClearingRollStillLiftsFromRollingRadius() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setGroundMode(GroundMode.GROUND);
@@ -3309,18 +3637,149 @@ public class TestPlayableSpriteMovement {
         @Test
         public void testS2LandingPreservesRollingInPinballMode() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setWalkAnimId(0)
+                                .setRollAnimId(2));
+                mockSprite.setAnimationId(2);
                 mockSprite.setRolling(true);
                 mockSprite.setPinballMode(true);
                 mockSprite.setAir(true);
+                mockSprite.setXSpeed((short) 0x0200);
+                mockSprite.setYSpeed((short) 0x0200);
+                mockSprite.setAngle((byte) 0);
 
-                Method method = PlayableSpriteMovement.class.getDeclaredMethod("resetOnFloor");
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "calculateLanding", AbstractPlayableSprite.class);
                 method.setAccessible(true);
-                method.invoke(manager);
+                method.invoke(manager, mockSprite);
 
                 assertTrue(mockSprite.getRolling(),
                                 "S2 Sonic_ResetOnFloor skips the roll-clear block when pinball_mode is set");
                 assertTrue(mockSprite.getPinballMode(),
                                 "ROM Tails_ResetOnFloor never clears pinball_mode (bne.s *_Part3 skips the roll-clear block; s2.asm:40625-40626)");
+                assertEquals(2, mockSprite.getAnimationId(),
+                                "pinball_mode skips Sonic_ResetOnFloor's Walk write");
+        }
+
+        @Test
+        public void testS2LandingPreservesActiveSpindashAnimationThroughNativeAlias() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_2);
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setWalkAnimId(0)
+                                .setSpindashAnimId(9));
+                mockSprite.setAnimationId(9);
+                mockSprite.setSpindash(true);
+                mockSprite.setPinballMode(false);
+                mockSprite.setRolling(false);
+                mockSprite.setAir(true);
+                mockSprite.setXSpeed((short) 0x0200);
+                mockSprite.setYSpeed((short) 0x0200);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "calculateLanding", AbstractPlayableSprite.class);
+                method.setAccessible(true);
+                method.invoke(manager, mockSprite);
+
+                assertFalse(mockSprite.getAir());
+                assertEquals(9, mockSprite.getAnimationId(),
+                                "S2 ResetOnFloor sees the live spindash_flag/pinball_mode byte and skips Walk");
+        }
+
+        @Test
+        public void crushDeathPublishesRawDeathWithoutReplacingCurrentMapping() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_2);
+                mockSprite.setAnimationId(Sonic2AnimationIds.WALK.id());
+                mockSprite.setMappingFrame(0x10);
+
+                assertTrue(mockSprite.applyCrushDeath());
+
+                assertEquals(Sonic2AnimationIds.DEATH.id(), mockSprite.getAnimationId());
+                assertEquals(0x10, mockSprite.getMappingFrame(),
+                                "same-frame Kill_Character leaves the already-rendered mapping latched");
+        }
+
+        @Test
+        public void s2OrdinaryObjectRiderStillEntersBlinkFromDeepWait() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_2);
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setIdleAnimId(Sonic2AnimationIds.WAIT)
+                                .setWalkAnimId(Sonic2AnimationIds.WALK)
+                                .setBlinkAnimId(Sonic2AnimationIds.BLINK)
+                                .setGetUpAnimId(Sonic2AnimationIds.GET_UP));
+                mockSprite.setAnimationId(Sonic2AnimationIds.WAIT.id());
+                mockSprite.setAnimationFrameIndex(0x1E);
+                mockSprite.setOnObject(true);
+                setInputState(true, false, false, false, false);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doWaitBlinkInterruptCheck");
+                method.setAccessible(true);
+
+                assertTrue((boolean) method.invoke(manager));
+                assertEquals(Sonic2AnimationIds.BLINK.id(), mockSprite.getAnimationId(),
+                                "Status_OnObj does not bypass Obj01_MdNormal_Checks in the ROM");
+        }
+
+        @Test
+        public void s2OrdinaryObjectRiderStillEntersGetUpFromDeepWait() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_2);
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setIdleAnimId(Sonic2AnimationIds.WAIT)
+                                .setBlinkAnimId(Sonic2AnimationIds.BLINK)
+                                .setGetUpAnimId(Sonic2AnimationIds.GET_UP));
+                mockSprite.setAnimationId(Sonic2AnimationIds.WAIT.id());
+                mockSprite.setAnimationFrameIndex(0xAC);
+                mockSprite.setOnObject(true);
+                setInputState(false, false, false, true, false);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doWaitBlinkInterruptCheck");
+                method.setAccessible(true);
+
+                assertTrue((boolean) method.invoke(manager));
+                assertEquals(Sonic2AnimationIds.GET_UP.id(), mockSprite.getAnimationId(),
+                                "ordinary ridden solids do not suppress the player's deep-wait routine");
+        }
+
+        @Test
+        public void s2DeepWaitSeesHeldRightBeforeRidingStaleMovementFilter() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_2);
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setIdleAnimId(Sonic2AnimationIds.WAIT)
+                                .setWalkAnimId(Sonic2AnimationIds.WALK)
+                                .setBlinkAnimId(Sonic2AnimationIds.BLINK)
+                                .setGetUpAnimId(Sonic2AnimationIds.GET_UP));
+                mockSprite.setAnimationId(Sonic2AnimationIds.WAIT.id());
+                mockSprite.setAnimationFrameIndex(0x1E);
+
+                // ObjD5's object-order shim has hidden the fresh right edge from
+                // Sonic_Move, but Obj01_MdNormal_Checks already read it from the
+                // logical held-control word before that movement-only delay.
+                setInputState(false, false, false, false, false);
+                setRawHorizontalInput(false, true);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doWaitBlinkInterruptCheck");
+                method.setAccessible(true);
+
+                assertTrue((boolean) method.invoke(manager));
+                assertEquals(Sonic2AnimationIds.BLINK.id(), mockSprite.getAnimationId());
+                Field effectiveRight = PlayableSpriteMovement.class.getDeclaredField("inputRight");
+                effectiveRight.setAccessible(true);
+                assertFalse(effectiveRight.getBoolean(manager),
+                                "the stale riding shim must keep horizontal movement suppressed");
+        }
+
+        @Test
+        public void airborneJumpFlipAdvancesFromInertiaBeforeAnimation() throws Exception {
+                mockSprite.setFlipAngle(0xF2);
+                mockSprite.setFlipSpeed(4);
+                mockSprite.setFlipsRemaining(1);
+                mockSprite.setGSpeed((short) 0x0100);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("advanceAirborneFlipAngle");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertEquals(0xF6, mockSprite.getFlipAngle());
+                assertEquals(1, mockSprite.getFlipsRemaining());
         }
 
         @Test
@@ -3345,6 +3804,34 @@ public class TestPlayableSpriteMovement {
                                 "Tails_RollSpeed writes idle animation when rolling stops");
                 assertFalse(mockSprite.getPushing(),
                                 "S3K Animate_Tails clears Status_Push after the roll-stop anim change");
+        }
+
+        @Test
+        public void testSameDirectionRollInputPublishesRollButOppositeInputDoesNot() throws Exception {
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setIdleAnimId(5)
+                                .setWalkAnimId(0)
+                                .setRollAnimId(2));
+                mockSprite.setRolling(true);
+                mockSprite.setAir(false);
+                mockSprite.setGSpeed((short) 0x100);
+                mockSprite.setAnimationId(0);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doRollSpeed");
+                method.setAccessible(true);
+                setInputState(false, true, false, false, false);
+                method.invoke(manager);
+
+                assertEquals(2, mockSprite.getAnimationId(),
+                                "RollRight publishes Roll when inertia is already nonnegative");
+
+                mockSprite.setGSpeed((short) 0x100);
+                mockSprite.setAnimationId(0);
+                setInputState(true, false, false, false, false);
+                method.invoke(manager);
+
+                assertEquals(0, mockSprite.getAnimationId(),
+                                "RollLeft deceleration against positive inertia does not write obAnim");
         }
 
         @Test
@@ -3396,7 +3883,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void groundedFacingFlipRestartsWalkScriptLikeRomPrevAnimSentinel() throws Exception {
-                setGameRulesForTest(GameRules.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_1);
                 SpriteAnimationSet animations = new SpriteAnimationSet();
                 animations.addScript(0, new SpriteAnimationScript(0xFF,
                                 List.of(10, 11, 12, 13), SpriteAnimationEndAction.LOOP, 0));
@@ -3427,11 +3914,59 @@ public class TestPlayableSpriteMovement {
                 updatePush.invoke(manager, true, false);
                 mockSprite.setDirection(Direction.LEFT);
 
+                assertEquals(1, mockSprite.getAnimationManager().captureRewindState().lastAnimationId(),
+                                "MoveLeft publishes the native prev_anim=Run sentinel, not an anonymous restart");
+
                 mockSprite.getAnimationManager().update(1);
 
                 assertEquals(10, mockSprite.getMappingFrame(),
-                                "S2/S3K MoveLeft/MoveRight force prev_anim=Run on a grounded facing flip, "
-                                                + "so Animate_* must restart the walk script from frame 0");
+                                "S1/S2/S3K MoveLeft/MoveRight force prev_anim=Run on a grounded facing flip, "
+                                + "so Animate_* must restart the walk script from frame 0");
+        }
+
+        @Test
+        public void slopeResistanceCrossingZeroRestartsWalkOnSameFrameAsFacingFlip() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_1);
+                SpriteAnimationSet animations = new SpriteAnimationSet();
+                animations.addScript(0, new SpriteAnimationScript(0xFF,
+                                List.of(10, 11, 12, 13), SpriteAnimationEndAction.LOOP, 0));
+                animations.addScript(1, new SpriteAnimationScript(0xFF,
+                                List.of(20, 21, 22, 23), SpriteAnimationEndAction.LOOP, 0));
+                animations.addScript(5, new SpriteAnimationScript(0,
+                                List.of(30), SpriteAnimationEndAction.LOOP, 0));
+                mockSprite.setAnimationSet(animations);
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setIdleAnimId(5)
+                                .setWalkAnimId(0)
+                                .setRunAnimId(1)
+                                .setRunSpeedThreshold(0x600));
+                mockSprite.setAnimationId(0);
+                mockSprite.setMovementInputActive(true);
+                mockSprite.setDirection(Direction.LEFT);
+                mockSprite.setGSpeed((short) -1);
+                mockSprite.setAngle((byte) 0x20);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+
+                mockSprite.getAnimationManager().update(0);
+                mockSprite.setAnimationFrameIndex(2);
+                mockSprite.setAnimationTick(0);
+
+                Method slopeResist = PlayableSpriteMovement.class.getDeclaredMethod("doSlopeResist");
+                slopeResist.setAccessible(true);
+                slopeResist.invoke(manager);
+                assertTrue(mockSprite.getGSpeed() > 0,
+                                "Sonic_SlopeResist should cross inertia through zero before MoveRight");
+
+                Method updatePush = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "updatePushingOnDirectionChange", boolean.class, boolean.class);
+                updatePush.setAccessible(true);
+                updatePush.invoke(manager, false, true);
+                mockSprite.setDirection(Direction.RIGHT);
+                mockSprite.getAnimationManager().update(1);
+
+                assertEquals(1, mockSprite.getAnimationFrameIndex(),
+                                "MoveRight must observe post-slope inertia and restart Walk at script frame zero");
         }
 
         /**

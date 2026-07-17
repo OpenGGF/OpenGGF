@@ -95,6 +95,16 @@ public class Sonic3kInvisibleBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean zeroXSpeedStopsOnLeftSideContact() {
+        // SolidObjectFull2 reaches SolidObject_cont directly. On the left
+        // branch, x_vel >= 0 falls through loc_1E056 and clears both x_vel and
+        // ground_vel; only a negative velocity is treated as moving away
+        // (sonic3k.asm:41468-41483). In particular, x_vel == 0 must still
+        // discard residual ground_vel before applying the side separation.
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity,
                                SolidContact contact, int frameCounter) {
         // No special behavior - standard collision handled by ObjectManager.

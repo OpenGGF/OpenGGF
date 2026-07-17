@@ -61,10 +61,12 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private int lifetime;
     private int phaseOffset;
     private boolean collected;
+    private boolean collectionRoutineStarted;
     private int sparkleStartFrame = -1;
     private int lastFrameCounter;
     private boolean romRenderFlagForFloorProbe = true;
     private boolean deferFirstPhysicsUpdate;
+    private boolean clearMainPlayerRingsOnFirstUpdate;
 
     /**
      * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
@@ -131,6 +133,21 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         return ring;
     }
 
+    /**
+     * Converts the fixed-point state retained by S3K Obj_Attracted_Ring into
+     * Obj_Bouncing_Ring routine 2 state. The native object changes its code
+     * pointer in place, so position fractions and both velocities survive.
+     */
+    public static LostRingObjectInstance fromAttractedRing(
+            int xPixel, int yPixel, int xFraction, int yFraction,
+            int xVel, int yVel, int phaseOffset, SpillAnimationState spillAnimation) {
+        LostRingObjectInstance ring = spawn(
+                xPixel, yPixel, xVel, yVel, phaseOffset, 0xFF, spillAnimation);
+        ring.xSubpixel = (xPixel << 8) | ((xFraction >>> 8) & 0xFF);
+        ring.ySubpixel = (yPixel << 8) | ((yFraction >>> 8) & 0xFF);
+        return ring;
+    }
+
     /** Inject the shared spill-spin owner (frame source for rendering). */
     public void setSpillAnimation(SpillAnimationState spillAnimation) {
         this.spillAnimation = spillAnimation;
@@ -144,6 +161,15 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     /** Creation-SST seam for Obj_Bouncing_Ring callers whose init routine draws before physics. */
     public void deferFirstPhysicsUpdate() {
         deferFirstPhysicsUpdate = true;
+    }
+
+    /**
+     * Defers Obj37_Init's Ring_count clear until this owner SST first executes.
+     * Used when an object-slot hurt allocates the owner into an earlier slot
+     * that Process_Sprites has already passed.
+     */
+    public void clearMainPlayerRingsOnFirstUpdate() {
+        clearMainPlayerRingsOnFirstUpdate = true;
     }
 
     @Override
@@ -253,6 +279,12 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
+        if (clearMainPlayerRingsOnFirstUpdate) {
+            if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite playable) {
+                playable.setRingCount(0);
+            }
+            clearMainPlayerRingsOnFirstUpdate = false;
+        }
         // ROM Obj37 RLoss_Sparkle/RLoss_Delete advances per ExecuteObjects pass, NOT per
         // VBlank. The object-loop passes the VBlank counter (ObjectManager.java:667), which
         // also ticks on lag frames (ObjectManager.java:2217), so timing the collected-ring
@@ -264,11 +296,17 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         int executedFrame = resolveExecutedFrameCounter(frameCounter);
         lastFrameCounter = executedFrame;
 
+        // Touch_ChkValue only writes routine=4 and returns. Until this Obj37 SST
+        // executes later in the object pass, collision_flags remains $47, so a
+        // following player slot sees the same first ring and returns instead of
+        // skipping ahead to another overlapping ring.
+        if (collected && !collectionRoutineStarted) {
+            collectionRoutineStarted = true;
+        }
         if (collected && collectedSparkleFinished(executedFrame)) {
             setDestroyed(true);
             return;
         }
-
         if (deferFirstPhysicsUpdate) {
             deferFirstPhysicsUpdate = false;
             refreshRomRenderFlagForFloorProbe();
@@ -276,7 +314,6 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         }
 
         updateMovement();
-
         // Obj37_CheckBoundary: shared Ring_spill_anim_counter == 0 → delete.
         if (spillAnimation != null && spillAnimation.counter() == 0) {
             setDestroyed(true);
@@ -340,8 +377,9 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * <p>
      * The bit is latched by the prior BuildSprites pass, not recomputed inside
      * Obj37_Main. Obj37_Init starts with render_flags=$84, then DisplaySprite/
-     * BuildSprites refreshes bit 7 after each object step using width_pixels=8
-     * and the assumed 32 px Y band because render_flags bit 4 is clear.
+     * BuildSprites or Render_Sprites refreshes bit 7 after each object step using
+     * width_pixels=8 and the game's Obj37 Y margin. S1/S2 use the assumed 32 px
+     * band; S3K reads height_pixels, which Obj_Bouncing_Ring leaves zero.
      */
     protected boolean hasRomRenderFlagForFloorProbe() {
         return romRenderFlagForFloorProbe;
@@ -349,15 +387,20 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     /**
      * Maps the engine's object-loop VBlank clock to the byte observed by the
-     * native Obj37 cadence gate. S3K's gameplay bootstrap exposes that byte
-     * four counts ahead of the gameplay-scoped object counter; S1/S2 are
-     * already phase-aligned.
+     * native Obj37 cadence gate. The global V-int clock is aligned directly
+     * for all three games; this rule seam remains for games whose native
+     * object loop needs a fixed phase in future.
      */
     protected int resolveFloorCheckCounterPhase() {
         RingRules rules = resolveRingRules();
-        return rules != null
+        int gamePhase = rules != null
                 ? rules.ringFloorCheckCounterPhase()
                 : GameRules.SONIC_2.ring().ringFloorCheckCounterPhase();
+        ObjectServices services = servicesOrNull();
+        ObjectManager objectManager = services != null ? services.objectManager() : null;
+        return gamePhase + (objectManager != null
+                ? objectManager.getRingFloorCheckCounterPhase()
+                : 0);
     }
 
     private void refreshRomRenderFlagForFloorProbe() {
@@ -483,7 +526,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     public int getCollisionFlags() {
         // ROM Obj37: collision_flags = $47 while collectible; cleared on collection
         // (mirrors Sonic1RingInstance.java:167).
-        return collected ? 0 : LOST_RING_COLLISION_FLAGS;
+        return collectionRoutineStarted ? 0 : LOST_RING_COLLISION_FLAGS;
     }
 
     @Override
@@ -493,6 +536,18 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     public boolean isCollected() {
         return collected;
+    }
+
+    /**
+     * Obj37_Main publishes the live ring to Collision_response_list, but the
+     * collected sparkle routine returns through DisplaySprite without adding a
+     * touch entry. Keeping collision_flags at zero is not sufficient here: the
+     * S3K list has a fixed 63-entry capacity, so a stale sparkle pointer can
+     * displace a later live ring even though TouchResponse would skip it.
+     */
+    @Override
+    public boolean publishesTouchResponseListEntryThisFrame() {
+        return !collected && !isDestroyed();
     }
 
     public void markCollected(int frameCounter) {

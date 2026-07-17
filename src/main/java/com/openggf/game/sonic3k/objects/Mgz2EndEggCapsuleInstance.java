@@ -32,6 +32,13 @@ public class Mgz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     }
 
     @Override
+    protected int targetYOffset() {
+        // loc_8664E raises the shared route-8 hover target by $20 while
+        // Current_zone is MGZ (sonic3k.asm:181626-181637).
+        return 0x20;
+    }
+
+    @Override
     protected boolean shouldStartResults(AbstractPlayableSprite player) {
         if (player.getDead() || player.isDrowningPreDeath() || player.getDeathCountdown() > 0) {
             return false;

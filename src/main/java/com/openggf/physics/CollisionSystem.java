@@ -1,5 +1,6 @@
 package com.openggf.physics;
 
+import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameServices;
 import com.openggf.game.GroundMode;
 import com.openggf.game.rewind.RewindSnapshottable;
@@ -373,36 +374,12 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             return;
         }
 
-        boolean deferRepeatedObjectRideResponse = shouldDeferRepeatedObjectRideResponse(sprite, mode, predictedDx);
+        // Tails_Move/Sonic_Move applies CalcRoomInFront once. The later S2
+        // SolidObject_Always/DropOnFloor object pass does not repeat a negative
+        // terrain response; only the exactly-flush handoff above is deferred.
+        // Replaying this distance after ObjectMove doubles the stored velocity
+        // when the current probe already reports the full penetration.
         applyGroundWallVelocityResponse(sprite, mode, distance);
-        if (deferRepeatedObjectRideResponse) {
-            sprite.deferGroundWallVelocityResponse(mode, distance);
-        }
-    }
-
-    private boolean shouldDeferRepeatedObjectRideResponse(AbstractPlayableSprite sprite, int mode, short predictedDx) {
-        CollisionRules rules = collisionRulesOrNull(sprite);
-        if (rules == null
-                || !rules.repeatedObjectRideGroundWallResponseDeferred()
-                || objectManager == null
-                || !sprite.isOnObject()
-                || !sprite.getPushing()
-                || !((mode == 0x40 && predictedDx < 0) || (mode == 0xC0 && predictedDx > 0))) {
-            return false;
-        }
-        ObjectInstance ridingObject = objectManager.getRidingObject(sprite);
-        if (!(ridingObject instanceof SolidObjectProvider provider)) {
-            return false;
-        }
-        // S2's deferred repeated object-ride correction models platforms that
-        // run SolidObject_Always and then DropOnFloor after player physics
-        // (Obj30, docs/s2disasm/s2.asm:35070-35095, 49560-49604,
-        // 49674-49676). Plain PlatformObjectD5 does not call DropOnFloor
-        // after MvSonicOnPtfm, so deferring here would apply CalcRoomInFront's
-        // wall response twice (docs/s2disasm/s2.asm:35860-35894, 58905-58915).
-        return com.openggf.level.objects.ObjectCallbackDispatch.call(
-                objectManager, ridingObject, provider::dropOnFloor)
-                && isRiderOnGroundWallProbeSideBounded(sprite, ridingObject, mode);
     }
 
     private boolean shouldDeferFlushWallResponseForRiddenDropOnFloor(
@@ -470,6 +447,25 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
      * {@code x_pos} only; unlike CalcRoomInFront they do not alter velocity or
      * Status_Push (sonic3k.asm:27529-27548,27741-27760).
      */
+    public boolean hasFatalPostMovementBackgroundFloorOverlap(
+            FrameCollisionPlan plan, AbstractPlayableSprite sprite) {
+        requireTerrainOnlyPlan(plan, "hasFatalPostMovementBackgroundFloorOverlap");
+        var gameState = GameServices.gameStateOrNull();
+        if (sprite == null || gameState == null || !gameState.isBackgroundCollisionFlag()) {
+            return false;
+        }
+
+        // ROM sub_F846 probes FindFloor at (x_pos, y_pos-4) with a3=$10 and
+        // the player's live lrb_solid_bit. A negative result is an embedded
+        // dual-plane floor and the grounded stand/roll path jumps directly to
+        // Kill_Character before running the following wall clamps.
+        calcRoomProbe.sprite = sprite;
+        SensorResult floor = calcRoomProbe.scanWorld(
+                Direction.DOWN, (short) 0, (short) -4,
+                (short) 0, (short) 0, sprite.getLrbSolidBit());
+        return floor != null && floor.distance() < 0;
+    }
+
     public void resolvePostMovementBackgroundWallClamp(
             FrameCollisionPlan plan, AbstractPlayableSprite sprite) {
         requireTerrainOnlyPlan(plan, "resolvePostMovementBackgroundWallClamp");
@@ -599,6 +595,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         if (sprite.isOnObject()) {
             if (hasObjectSupport == null
                     || hasObjectSupport.getAsBoolean()
+                    || sprite.isObjectControlled()
                     || hasPendingStaleObjectSupportLoss(sprite)) {
                 return;
             }
@@ -636,8 +633,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             if (sprite.isStickToConvex()) {
                 return;
             }
-            sprite.setAir(true);
-            sprite.setPushing(false);
+            detachFromTerrain(sprite);
             return;
         }
 
@@ -672,12 +668,24 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                 moveForSensorResult(sprite, selectedResult);
                 return;
             }
-            sprite.setAir(true);
-            sprite.setPushing(false);
+            detachFromTerrain(sprite);
             return;
         }
 
         moveForSensorResult(sprite, selectedResult);
+    }
+
+    private void detachFromTerrain(AbstractPlayableSprite sprite) {
+        sprite.setAir(true);
+        sprite.setPushing(false);
+        // AnglePos writes Run to prev_anim when terrain support is lost. If the
+        // selected animation stays Roll, that deliberate mismatch still restarts
+        // its script on this frame; an unchanged raw Run correctly keeps its
+        // cadence. This is shared by S1 (_incObj/Sonic AnglePos.asm:113-115,
+        // 276-278,349-351,422-424), S2 (s2.asm:43108-43110,
+        // 43216-43218, 43283-43285, 43350-43352), and S3K
+        // (sonic3k.asm:18840-18842, 18965-18967, 19037-19039, 19109-19111).
+        sprite.publishRunAsPreviousAnimation();
     }
 
     private boolean hasPendingStaleObjectSupportLoss(AbstractPlayableSprite sprite) {
@@ -1156,6 +1164,18 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
 
         if (!(sprite.getRolling() && sprite.getPinballMode() && preservePinballMode)) {
             sprite.setPinballMode(false);
+        }
+        if (!sprite.getPinballMode()
+                && rules != null
+                && rules.angledLandingPublishesWalk()) {
+            // Sonic_ResetOnFloor publishes Walk before clearing the airborne
+            // state on every accepted S2 terrain landing, including the angled
+            // ceiling/wall path (s2.asm:38049-38052, 38123-38127). S1's angled
+            // path does not own that write and can retain Spring.
+            int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+            if (walkAnimationId >= 0) {
+                sprite.setAnimationId(walkAnimationId);
+            }
         }
         sprite.setAir(false);
         sprite.setPushing(false);

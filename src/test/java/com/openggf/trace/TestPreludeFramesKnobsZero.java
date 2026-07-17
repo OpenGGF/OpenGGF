@@ -215,6 +215,7 @@ class TestPreludeFramesKnobsZero {
                 zoneId,
                 act,
                 /* bk2FrameOffset */ 0,
+                /* initialVblankCounter */ null,
                 /* traceFrameCount */ 0,
                 /* startXHex */ "0x0000",
                 /* startYHex */ "0x0000",

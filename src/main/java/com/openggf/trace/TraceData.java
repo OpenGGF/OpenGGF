@@ -103,6 +103,31 @@ public class TraceData {
         return metadata.bk2FrameOffset();
     }
 
+    /**
+     * Returns the initial clock for ROM object routines that read
+     * {@code V_int_run_count}. S3K schema-v6 captures wrote the adjacent
+     * life-count word (for example $0800/$0A00) into the CSV counter
+     * column. A repeated value across changing gameplay rows identifies that
+     * recorder layout. BK2 advances once per hardware VBlank, so its low bit
+     * supplies the missing parity used by object routines while the recorded
+     * word retains the established higher-bit replay phase.
+     */
+    public int initialVIntRunCounterPhaseOffset() {
+        int recorded = initialVblankCounter();
+        if (!usesBk2VblankCounterFallback()) {
+            return 0;
+        }
+        return (metadata.bk2FrameOffset() - recorded) & 1;
+    }
+
+    private boolean usesBk2VblankCounterFallback() {
+        return "s3k".equals(metadata.game())
+                && frames.size() > 1
+                && frames.get(0).vblankCounter() >= 0
+                && frames.get(0).vblankCounter() == frames.get(1).vblankCounter()
+                && !frames.get(0).stateEquals(frames.get(1));
+    }
+
     public TraceFrame getFrame(int traceFrame) {
         if (traceFrame < 0 || traceFrame >= frames.size()) {
             throw new IndexOutOfBoundsException(
@@ -763,7 +788,10 @@ public class TraceData {
             while ((line = reader.readLine()) != null) {
                 String trimmed = line.trim();
                 if (!trimmed.isEmpty()) {
-                    frames.add(TraceFrame.parseCsvRow(trimmed, metadata.traceSchema()));
+                    Integer csvVersion = metadata.csvVersion() != null
+                            ? metadata.csvVersion()
+                            : metadata.traceSchema();
+                    frames.add(TraceFrame.parseCsvRow(trimmed, csvVersion));
                 }
             }
         }

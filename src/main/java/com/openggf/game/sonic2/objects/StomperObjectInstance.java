@@ -192,6 +192,29 @@ public class StomperObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // Obj2A rewrites y_pos every frame while the live SST slot continues to
+        // own p1/p2 pushing and standing bits. Dynamic-spawn coordinates are a
+        // placement/rendering detail and must not change the solid latch owner.
+        // docs/s2disasm/s2.asm:24200-24255
+        return true;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj2A passes width_pixels+$B to standard SolidObject. Its unsigned
+        // BHI rejection accepts the exact +$1B edge and reaches AtEdge.
+        return true;
+    }
+
+    @Override
+    public boolean preservesEdgeSubpixelMotion() {
+        // SolidObject_AtEdge has d0=0, sets Status_Push, and bypasses
+        // StopCharacter, leaving x_vel, inertia, and x_sub live.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();

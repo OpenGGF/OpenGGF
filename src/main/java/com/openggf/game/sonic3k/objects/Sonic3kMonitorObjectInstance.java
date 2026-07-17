@@ -592,6 +592,15 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     }
 
     @Override
+    public boolean zeroXSpeedStopsOnLeftSideContact() {
+        // S3K SolidObject_cont's player-left branch reaches loc_1E056 when
+        // x_vel is zero: only a negative velocity takes the skip branch
+        // (docs/skdisasm/sonic3k.asm:41473-41491). This also publishes the
+        // wall-cling status_tertiary flag used by later controller slots.
+        return true;
+    }
+
+    @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
         // S3K monitor wrappers gate roll-animation hits, then branch into the
         // shared SolidObject_cont side/top classifier (docs/skdisasm/sonic3k.asm:

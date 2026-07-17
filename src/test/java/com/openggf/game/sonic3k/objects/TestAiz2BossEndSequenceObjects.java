@@ -153,6 +153,7 @@ class TestAiz2BossEndSequenceObjects {
 
         assertFalse(bridge.isSolidFor(player));
         assertTrue(player.getAir());
+        assertEquals(Sonic3kAnimationIds.HURT_FALL.id(), player.getAnimationId());
         assertEquals(Sonic3kAnimationIds.HURT_FALL.id(), player.getForcedAnimationId());
     }
 
@@ -368,11 +369,17 @@ class TestAiz2BossEndSequenceObjects {
                 "ROM loc_8662A compares against Camera_X_pos+$110 before adding $3A; equality "
                         + "does not reverse or clamp the capsule this frame (sonic3k.asm:181604-181625)");
         assertEquals(1, getIntField(capsule, "xDirection"));
+        assertEquals(0x4910, capsule.getPieceX(0),
+                "The parent SolidObjectFull call uses the x_pos saved before routine movement");
+        assertEquals(0x4911, capsule.getPieceX(1),
+                "The separate button child refreshes from the moved parent x_pos");
 
         capsule.update(1, null);
 
         assertEquals(0x4910, capsule.getX());
         assertEquals(-1, getIntField(capsule, "xDirection"));
+        assertEquals(0x4911, capsule.getPieceX(0));
+        assertEquals(0x4910, capsule.getPieceX(1));
 
         setField(capsule, "currentX", 0x4830);
         setField(capsule, "xDirection", -1);
@@ -382,6 +389,25 @@ class TestAiz2BossEndSequenceObjects {
         assertEquals(0x4831, capsule.getX(),
                 "The negative-$3A branch reverses only once x_pos reaches Camera_X_pos+$30");
         assertEquals(1, getIntField(capsule, "xDirection"));
+    }
+
+    @Test
+    void mgzFloatingCapsuleUsesRaisedRoute8HoverTarget() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setX((short) 0x3C80);
+        camera.setY((short) 0x0100);
+
+        Mgz2EndEggCapsuleInstance capsule = new Mgz2EndEggCapsuleInstance(0x3D20, 0x0130);
+        capsule.setServices(new TestObjectServices()
+                .withCamera(camera)
+                .withGameState(new GameStateManager()));
+        setField(capsule, "xDirection", 0);
+
+        capsule.update(0, null);
+
+        assertEquals(0x7000, getIntField(capsule, "ySubpixel"),
+                "MGZ loc_8664E subtracts $20 from the shared camera+$40 target before its $4000 Y step");
     }
 
     @Test
@@ -833,6 +859,45 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void aizCapsulePublishesRestorePlayerControlAnimationWordAfterResultsExitDelay() {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+
+        GameStateManager gameState = new GameStateManager();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setAir(true);
+        sonic.setObjectControlled(true);
+        sonic.setAnimationId(Sonic3kAnimationIds.VICTORY);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setAir(true);
+        tails.setObjectControlled(true);
+        tails.setAnimationId(Sonic3kAnimationIds.VICTORY);
+
+        Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49E9, 0x0163);
+        QueryOnlyServices services = new QueryOnlyServices(camera, sonic, List.of(tails));
+        services.withGameState(gameState);
+        AizZoneRuntimeState aizState = new AizZoneRuntimeState(
+                0, PlayerCharacter.SONIC_AND_TAILS,
+                new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL));
+        services.zoneRuntimeRegistry().install(aizState);
+        capsule.setServices(services);
+        aizState.scheduleTailsControlRelease(0);
+
+        capsule.update(0, sonic);
+
+        assertFalse(sonic.getAir());
+        assertFalse(tails.getAir());
+        assertFalse(sonic.isObjectControlled());
+        assertFalse(tails.isObjectControlled());
+        assertEquals(Sonic3kAnimationIds.WAIT.id(), sonic.getAnimationId());
+        assertEquals(Sonic3kAnimationIds.WAIT.id(), tails.getAnimationId());
+        assertEquals(0, sonic.getAnimationFrameIndex());
+        assertEquals(0, sonic.getAnimationTick());
+        assertEquals(0, tails.getAnimationFrameIndex());
+        assertEquals(0, tails.getAnimationTick());
+    }
+
+    @Test
     void aizCapsuleButtonRequiresSonicRollAnimationBeforeParentTrigger() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
@@ -974,9 +1039,10 @@ class TestAiz2BossEndSequenceObjects {
         assertTrue(player.isControlLocked());
         assertFalse(player.isObjectControlled());
         assertTrue(player.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT));
-        assertEquals(0x000C, player.getXSpeed() & 0xFFFF);
-        assertEquals(0x000C, player.getGSpeed() & 0xFFFF);
-        assertEquals(0x6500, player.getXSubpixelRaw());
+        assertEquals(0, player.getXSpeed(),
+                "loc_69526 only publishes Ctrl_1_logical; the next player slot owns acceleration");
+        assertEquals(0, player.getGSpeed());
+        assertEquals(0x5900, player.getXSubpixelRaw());
 
         for (int i = 0; i < 16; i++) {
             camera.updateBoundaryEasing();

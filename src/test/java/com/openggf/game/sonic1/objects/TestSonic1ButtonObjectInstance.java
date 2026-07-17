@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonic1ButtonObjectInstance {
 
@@ -19,6 +20,7 @@ class TestSonic1ButtonObjectInstance {
 
         assertFalse(button.isTopSolidOnly());
         assertEquals(SolidRoutineKind.FULL_SOLID, button.getSolidRoutineProfile().kind());
+        assertTrue(button.getSolidRoutineProfile().inclusiveRightEdge());
         assertEquals(0x1B, params.halfWidth());
         assertEquals(5, params.airHalfHeight());
         assertEquals(5, params.groundHalfHeight());

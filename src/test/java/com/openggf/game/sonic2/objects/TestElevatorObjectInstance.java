@@ -49,4 +49,5 @@ class TestElevatorObjectInstance {
 
         assertTrue(elevator.skipsNewContactWhilePlayerAlreadyOnObject(null));
     }
+
 }

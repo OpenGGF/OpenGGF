@@ -99,6 +99,20 @@ public class TestS3kHcz1IntroState {
     }
 
     @Test
+    public void firstTerrainLandingReleasesIntroAnimationImmediately() {
+        int frames = 0;
+        while (player.getAir() && frames++ < 180) {
+            runner.stepFrame(false, false, false, false, false);
+        }
+
+        assertFalse(player.getAir(), "HCZ1 player should reach the intro floor");
+        assertEquals(-1, player.getForcedAnimationId(),
+                "Player_TouchFloor_Check_Spindash releases the intro animation on the landing tick");
+        assertEquals(Sonic3kAnimationIds.WALK.id(), player.getAnimationId(),
+                "the landing routine publishes anim=Walk before the same-frame animator");
+    }
+
+    @Test
     public void animationSetContainsHurtFallScript() {
         var animSet = player.getAnimationSet();
         assertNotNull(animSet, "Player should have an animation set");

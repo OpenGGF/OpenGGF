@@ -123,6 +123,14 @@ class TestTraceTriageTool {
     }
 
     @Test
+    void classifiesPlayerAndSidekickAnimationBeforeSidekickPhysics() {
+        assertEquals(Subsystem.PLAYABLE_ANIMATION,
+                TraceTriageTool.classifySubsystem("player_animation_id", false));
+        assertEquals(Subsystem.PLAYABLE_ANIMATION,
+                TraceTriageTool.classifySubsystem("tails_mapping_frame", false));
+    }
+
+    @Test
     void classifiesPlayerPhysicsFields() {
         assertEquals(Subsystem.PLAYER_PHYSICS, TraceTriageTool.classifySubsystem("x", false));
         assertEquals(Subsystem.PLAYER_PHYSICS, TraceTriageTool.classifySubsystem("y_speed", false));

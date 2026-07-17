@@ -553,10 +553,17 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     }
 
     private void setPlayerAnim(AbstractPlayableSprite player, Sonic3kAnimationIds animId) {
+        // Obj_HCZWaterWall owns the native anim byte after setting
+        // object_control=$81. HCZ_WaterTunnels returns immediately when that
+        // bit is set, so an earlier tunnel animation must no longer remain as
+        // an engine-side forced override (sonic3k.asm:8848-8850, 65161-65168,
+        // 65223-65230).
+        player.setForcedAnimationId(-1);
         player.setAnimationId(animId);
 
         for (PlayableEntity sidekickEntity : sidekickParticipants(player)) {
             if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
+                sidekick.setForcedAnimationId(-1);
                 sidekick.setAnimationId(animId);
             }
         }

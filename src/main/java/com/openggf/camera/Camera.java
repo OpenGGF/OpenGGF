@@ -507,7 +507,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			if (applyBoundaryClamp) {
 				nextX = clampLeftBoundary(nextX);
 			}
-		} else if (focusedSpriteRealX > deadzoneRight) {
+		} else if (focusedSpriteRealX >= deadzoneRight) {
 			short difference = (short) (focusedSpriteRealX - deadzoneRight);
 			if (difference > cameraStepCap) {
 				nextX += cameraStepCap;
@@ -533,15 +533,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 
 	/**
 	 * ROM SH_MoveCameraRight clamp: enforce only the right boundary
-	 * (v_limitright2). When the right bound is transiently below the left bound
-	 * (e.g. S2 SCZ ObjB2 writes Camera_Max_X_pos = Camera_X_pos - $40), fall back
-	 * to the wrapped-domain handling that enforces only the left bound, matching
-	 * the prior {@code clampAxisWithWrap} behaviour for that case.
+	 * (v_limitright2), including the transient state where it is below the left
+	 * boundary. The 68000 routine compares this word directly and does not
+	 * normalize the pair first.
 	 */
 	private short clampRightBoundary(short value) {
-		if (maxX < minX) {
-			return value < minX ? minX : value;
-		}
 		return value > maxX ? maxX : value;
 	}
 

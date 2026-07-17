@@ -136,6 +136,52 @@ public class TestS3kHczSpinningColumn {
     }
 
     @Test
+    public void jumpOnTwistBoundaryRetainsThePreviouslyPublishedMapping() {
+        HCZSpinningColumnObjectInstance column = new HCZSpinningColumnObjectInstance(
+                new ObjectSpawn(0x1000, 0x0800, 0x68, 0x00, 0x00, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x1008, (short) 0x07C0);
+        player.defineSpeeds();
+
+        column.onSolidContact(player, new SolidContact(true, false, false, false, false), 0);
+        column.update(0, null);
+        for (int frame = 1; frame <= 5; frame++) {
+            column.onSolidContact(player,
+                    new SolidContact(true, false, false, false, false), frame);
+            column.update(frame, null);
+        }
+        assertEquals(0x55, player.getMappingFrame());
+
+        player.setJumpInputPressed(true);
+        column.onSolidContact(player, new SolidContact(true, false, false, false, false), 6);
+        column.update(6, null);
+
+        assertEquals(0x55, player.getMappingFrame(),
+                "the Obj68 jump branch returns before publishing the incremented twist frame");
+        assertTrue(player.getAir());
+        assertEquals(Sonic3kAnimationIds.ROLL.id(), player.getAnimationId());
+    }
+
+    @Test
+    public void ordinaryReleasePreservesTheRidersPublishedAnimation() {
+        HCZSpinningColumnObjectInstance column = new HCZSpinningColumnObjectInstance(
+                new ObjectSpawn(0x1000, 0x0800, 0x68, 0x01, 0x00, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x1008, (short) 0x07C0);
+        player.defineSpeeds();
+
+        column.onSolidContact(player, new SolidContact(true, false, false, false, false), 0);
+        column.update(0, null);
+        player.setAnimationId(Sonic3kAnimationIds.DUCK);
+
+        column.update(1, null);
+
+        assertFalse(player.isObjectControlled());
+        assertEquals(Sonic3kAnimationIds.DUCK.id(), player.getAnimationId(),
+                "loc_328AC releases control without writing anim");
+    }
+
+    @Test
     public void twistRenderFlipDoesNotOverwriteLogicalFacing() {
         HCZSpinningColumnObjectInstance column = new HCZSpinningColumnObjectInstance(
                 new ObjectSpawn(0x1000, 0x0800, 0x68, 0x00, 0x00, false, 0));

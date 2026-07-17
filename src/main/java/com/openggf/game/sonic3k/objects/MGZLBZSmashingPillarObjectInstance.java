@@ -181,6 +181,15 @@ public class MGZLBZSmashingPillarObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // updateDynamicSpawn follows the moving y_pos, but ROM keeps the
+        // standing/pushing bits in this object's fixed SST slot. Key the
+        // engine latch by the live instance so a side contact can clear its
+        // push bit on the first no-contact frame while the pillar retracts.
+        return true;
+    }
+
+    @Override
     public int getTopLandingHalfWidth(PlayableEntity playerEntity, int collisionHalfWidth) {
         // ROM: top-surface retention uses width_pixels, not the padded d1.
         return halfWidth;

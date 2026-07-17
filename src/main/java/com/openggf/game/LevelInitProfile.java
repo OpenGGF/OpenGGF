@@ -28,6 +28,21 @@ public interface LevelInitProfile {
         return SidekickSpawnOffset.S2_STYLE;
     }
 
+    /**
+     * Number of native main-player object dispatches performed after the
+     * freshly cleared player slot is created, but before gameplay frame
+     * counting begins.
+     *
+     * <p>This is distinct from title-card player physics. Sonic 1 runs one
+     * {@code ExecuteObjects} pass after {@code ObjPosLoad}, then clears
+     * {@code v_frame_counter} and enters {@code Level_MainLoop}. Other games
+     * keep their existing startup sequencing unless their profile proves an
+     * equivalent native pass.
+     */
+    default int freshMainPlayablePreludeFrames() {
+        return 0;
+    }
+
 
     /**
      * Ordered steps for entering a level (title card through control unlock).

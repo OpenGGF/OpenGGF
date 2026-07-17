@@ -43,6 +43,7 @@ class TestSinkingMudObjectInstance {
         assertEquals(0x30, params.airHalfHeight());
         assertEquals(0x30, params.groundHalfHeight());
         assertTrue(mud.isTopSolidOnly());
+        assertEquals(0x0003, mud.romObjectCodePointerHighWord());
         assertEquals(4, mud.getPriorityBucket());
     }
 

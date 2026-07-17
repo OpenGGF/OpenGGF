@@ -507,6 +507,29 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Obj33_Init writes width_pixels=$18. Balance uses width_pixels, while
+        // the SolidObject call separately adds its $B horizontal allowance.
+        return WIDTH_PIXELS;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj33_Main calls the standard SolidObject helper with d1=$18+$B.
+        // Its unsigned BHI rejection keeps relX==2*d1 in range.
+        return true;
+    }
+
+    @Override
+    public boolean preservesZeroDistanceSideContactMotion() {
+        // At the inclusive edge, SolidObject_ChkBounds computes d0=0 and
+        // reaches SolidObject_AtEdge without entering StopCharacter. It sets
+        // Status_Push but leaves x_pos, x_vel, and inertia unchanged
+        // (docs/s2disasm/s2.asm:35338-35444).
+        return true;
+    }
+
+    @Override
     public boolean allowsObjectControlledSolidContacts() {
         // Obj33 writes obj_control(a1)=1 while the player rides the rising lid
         // (s2.asm:49809/49837/49843), then still calls SolidObject from Obj33_Main.

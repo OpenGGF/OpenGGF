@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlatformBobHelper;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -59,12 +60,19 @@ import java.util.logging.Logger;
  * sub_24FDE (line 50229), Platform_Rising (line 50462), loc_252B8 (line 50556).
  */
 public class FloatingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider,
+        RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(FloatingPlatformObjectInstance.class.getName());
 
     // Priority: $180 = bucket 3 (ROM: move.w #$180,priority(a0))
     private static final int PRIORITY = 3;
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_FloatingPlatform dispatches through $000255F4.
+        return 0x0002;
+    }
 
     // ===== Size table (byte_254FA): 3-byte entries =====
     // Each entry: halfWidth, halfHeight, mappingFrame
@@ -218,13 +226,37 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
-        return SolidRoutineProfile.topSolid(usesStickyContactBuffer());
+        return SolidRoutineProfile.fromProvider(this);
+    }
+
+    @Override
+    public boolean usesGroundHalfHeightForTopSolidContact() {
+        // Obj_FloatingPlatform increments d3 after loading height_pixels, then
+        // passes that height+1 surface to SolidObjectTop.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // SolidObjectTop reaches loc_1E45A, where the unsigned comparison
+        // accepts only the negative overlap band [-$10,-1]. Exact d0=0
+        // returns without installing a ride.
+        return true;
+    }
+
+    @Override
+    public boolean usesPlatformObjectLandingSnap() {
+        // The native caller uses SolidObjectTop's relative y_pos += d0 + 3
+        // result. It does not run PlatformObject_ChkYRange's absolute snap.
+        return false;
     }
 
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        return !isDestroyed();
+        // Obj_FloatingPlatform tests the object render_flags sign bit before
+        // calling SolidObjectTop (loc_255F4). Unlike SolidObjectTop itself,
+        // this caller-owned gate suppresses both fresh and continued contact.
+        return !isDestroyed() && isWithinSolidContactBounds();
     }
 
     // ===== SolidObjectListener =====
@@ -245,6 +277,16 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public int getY() {
         return y;
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return halfWidth;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return halfHeight;
     }
 
     @Override

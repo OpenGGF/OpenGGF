@@ -27,14 +27,16 @@ public final class InLevelTitleCardCoordinator {
                 levelManager.getInLevelTitleCardAct());
         if (levelManager.consumeInLevelTitleCardLevelGamestateResetRequest()) {
             provider.requestLevelGamestateResetAtInLevelDisplay(
-                    levelManager.consumeInLevelTitleCardResetAdditionalDispatches());
+                    levelManager.consumeInLevelTitleCardResetAdditionalDispatches(),
+                    levelManager.consumeInLevelTitleCardResetPhaseOneDispatchOverlap());
         }
         if (levelManager.consumeInLevelTitleCardPlayerControlLockRequest()) {
             provider.requestInLevelPlayerControlLock();
             controlLock.accept(true);
         }
         provider.requestInLevelExitAdditionalDispatches(
-                levelManager.consumeInLevelTitleCardExitAdditionalDispatches());
+                levelManager.consumeInLevelTitleCardExitAdditionalDispatches(),
+                levelManager.consumeInLevelTitleCardExitPhaseOneDispatchOverlap());
         return true;
     }
 }

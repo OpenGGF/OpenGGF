@@ -1,5 +1,10 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.sonic1.Sonic1GameModule;
+import com.openggf.sprites.animation.SpriteAnimationEndAction;
+import com.openggf.sprites.animation.SpriteAnimationScript;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import org.junit.jupiter.api.Test;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
@@ -142,6 +147,34 @@ public class TestSonic1RunningDiscObjectInstance {
         player.setCentreY((short) y);
         player.setAir(false);
         return player;
+    }
+
+    @Test
+    public void firstGroundedAttachmentPublishesWalkWithRunPreviousAnimation() {
+        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        Sonic1RunningDiscObjectInstance disc = createDisc(0x10, 0x200, 0x200);
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) 0x200);
+        player.setCentreY((short) 0x200);
+        player.setAir(false);
+        player.setRolling(false);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0,
+                List.of(0x08, 0x09), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(2, new SpriteAnimationScript(0,
+                List.of(0x22), SpriteAnimationEndAction.LOOP, 0));
+        player.setAnimationSet(animations);
+        player.setAnimationId(2);
+        player.getAnimationManager().update(0);
+
+        disc.update(1, player);
+
+        assertEquals(0, player.getAnimationId(), "Disc_MoveSonic clears obAnim");
+        assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "Disc_MoveSonic writes id_Run to obPrevAni");
+        player.getAnimationManager().update(1);
+        assertEquals(0x08, player.getMappingFrame(),
+                "The next animation pass must restart Walk from its first mapping");
     }
 
     private static Sonic1RunningDiscObjectInstance createDisc(int subtype, int x, int y) {

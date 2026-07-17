@@ -14,5 +14,8 @@ public record ObjectInteractionRules(
         boolean touchResponseUsesRenderFlagYGate,
         boolean touchResponseUsesPreviousCollisionResponseList,
         boolean animalObjectPreservesObjectMoveXSubpixel,
-        boolean animalObjectUsesRenderFlagDeleteBounds) {
+        boolean animalObjectUsesRenderFlagDeleteBounds,
+        boolean solidPushReleaseWritesWalkRunAnimationWord,
+        boolean solidPushReleaseSkipsWalkRunWhenRolling,
+        boolean solidPushReleaseSkipsWalkRunWhenSpindashing) {
 }

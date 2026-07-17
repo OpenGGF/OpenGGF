@@ -12,6 +12,7 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.SidekickCpuRules;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance;
 import com.openggf.game.sonic2.objects.RisingLavaObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.graphics.GLCommand;
@@ -844,6 +845,8 @@ class TestSidekickCpuFollowParity {
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x138A);
         tails.setCentreY((short) 0x041F);
+        tails.setAnimationId(tails.resolveAnimationId(CanonicalAnimation.FLY));
+        tails.setForcedAnimationId(tails.resolveAnimationId(CanonicalAnimation.FLY));
         tails.setGSpeed((short) 0);
 
         short[] xHistory = new short[64];
@@ -913,6 +916,10 @@ class TestSidekickCpuFollowParity {
         Assertions.assertAll(
                 () -> assertFalse(controller.getInputRight(),
                         "flight recovery transition does not run normal follow AI on the handoff tick"),
+                () -> assertEquals(-1, tails.getForcedAnimationId(),
+                        "loc_13CD2 releases the forced flight owner"),
+                () -> assertEquals(0, tails.getAnimationId(),
+                        "the level-event handoff publishes loc_13CD2's raw anim=Walk write"),
                 () -> assertFalse(controller.consumeSkipPhysicsThisFrame(),
                         "ROM still runs the normal airborne gravity step on the flight-to-normal handoff"));
 
@@ -1856,6 +1863,43 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s3kLateTerrainPushGraceFallsThroughToFollowLeft() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x3B28);
+        tails.setCentreY((short) 0x0AA4);
+        tails.setDirection(Direction.LEFT);
+        tails.setGSpeed((short) 0xFF9A);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x3B13);
+        Arrays.fill(yHistory, (short) 0x0AA8);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 6);
+
+        controller.update(0x8227);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("follow_steering", diagnostics.followBranch(),
+                        "MGZ's late terrain-only grace has no ROM-visible Status_Push at the CPU slot"),
+                () -> assertFalse(diagnostics.skipFollowSteering()),
+                () -> assertEquals(-1, diagnostics.appliedFollowNudge(),
+                        "loc_13E0A must apply its native one-pixel left nudge"),
+                () -> assertEquals(0x3B27, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
     void s3kStaleCurrentPushFarBelowTargetFallsThroughToFollowLeftAfterAizReload() throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -2395,7 +2439,7 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
-    void s3kDistantStaleInteractSlotDoesNotSuppressFastLeaderFollowNudge() throws Exception {
+    void s3kReusedInteractSlotDoesNotSuppressFastLeaderFollowNudge() throws Exception {
         GameModule previous = GameModuleRegistry.getCurrent();
         try {
             installStandaloneGameModule(new Sonic3kGameModule());
@@ -2403,42 +2447,43 @@ class TestSidekickCpuFollowParity {
             TestableSprite sonic = new TestableSprite("sonic");
             TestableSprite tails = new TestableSprite("tails_p2");
             tails.setCpuControlled(true);
-            tails.setGameRulesForTest(GameRules.SONIC_3K);
             tails.setAir(false);
-            tails.setOnObject(false);
-            tails.setCentreX((short) 0x142B);
-            tails.setCentreY((short) 0x08F0);
+            tails.setObjectControlled(false);
+            tails.setCentreX((short) 0x1B0D);
+            tails.setCentreY((short) 0x0CC0);
             tails.setDirection(Direction.RIGHT);
-            tails.setGSpeed((short) 0x008C);
+            tails.setGSpeed((short) 0x0084);
 
-            LiveRideObject staleInteract = new LiveRideObject(0x33, 0x1410, 0x037C);
-            staleInteract.setSlotIndex(5);
-            GameServices.level().getObjectManager().addDynamicObjectAtSlot(staleInteract, 5);
-            tails.setLatchedSolidObject(0x33, staleInteract);
+            LiveRideObject releasedSupport = new LiveRideObject(0x5B);
+            releasedSupport.setSlotIndex(36);
+            releasedSupport.setDestroyed(true);
+            tails.setLatchedSolidObject(0x5B, releasedSupport);
+
+            LiveRideObject unrelatedReplacement = new LiveRideObject(0x6B);
+            unrelatedReplacement.setSlotIndex(36);
+            GameServices.level().getObjectManager().addDynamicObject(unrelatedReplacement);
 
             short[] xHistory = new short[64];
             short[] yHistory = new short[64];
             short[] inputHistory = new short[64];
             byte[] statusHistory = new byte[64];
-            Arrays.fill(xHistory, (short) 0x145A);
-            Arrays.fill(yHistory, (short) 0x03BE);
-            Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+            Arrays.fill(xHistory, (short) 0x1B35);
+            Arrays.fill(yHistory, (short) 0x097F);
             sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
-            sonic.setGSpeed((short) 0x08B6);
+            sonic.setGSpeed((short) 0x0800);
 
             SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
             controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
-            controller.update(0x24AD);
+            controller.update(0x1D9E);
 
             SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
             Assertions.assertAll(
                     () -> assertEquals("leader_fast", diagnostics.followBranch()),
                     () -> assertEquals(1, diagnostics.appliedFollowNudge(),
-                            "FBZ1 f9389 retains a distant stale button interact slot, but native "
-                                    + "loc_13E34 gates the +1 x_pos nudge only on ground_vel, facing, "
-                                    + "and object_control bit 0 (sonic3k.asm:26734-26741)."),
-                    () -> assertEquals(0x142C, tails.getCentreX() & 0xFFFF));
+                            "A different live object reusing the released interact slot must not suppress loc_13E34"),
+                    () -> assertEquals(0x1B0E, tails.getCentreX() & 0xFFFF));
         } finally {
             installStandaloneGameModule(previous);
         }
@@ -2562,6 +2607,58 @@ class TestSidekickCpuFollowParity {
                 () -> assertEquals(1, diagnostics.appliedFollowNudge(),
                         "AIZ2 F6171 preserves delayed RIGHT input and still applies FollowRight's "
                                 + "+1 x_pos nudge when no provider-owned object-order suppression is active."));
+    }
+
+    @Test
+    void s3kOrdinaryLiveRideDoesNotSuppressFollowLeftNudge() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic3kGameModule());
+            installEmptyObjectManager();
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setAir(false);
+            tails.setObjectControlled(false);
+            tails.setCentreX((short) 0x19B7);
+            tails.setCentreY((short) 0x0C34);
+            tails.setDirection(Direction.LEFT);
+            tails.setGSpeed((short) 0xFFF4);
+            tails.setXSpeed((short) 0xFFF4);
+
+            LiveRideObject rideObject = new LiveRideObject(0x57);
+            rideObject.setSlotIndex(4);
+            GameServices.level().getObjectManager().addDynamicObject(rideObject);
+            tails.setLatchedSolidObject(0x57, rideObject);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x1962);
+            Arrays.fill(yHistory, (short) 0x0BE0);
+            Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_DOWN);
+            Arrays.fill(statusHistory, (byte) AbstractPlayableSprite.STATUS_ON_OBJECT);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+            sonic.setGSpeed((short) 0x0170);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+            setNormalPushingGraceFrames(controller, 8);
+
+            controller.update(0x225F);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("follow_steering", diagnostics.followBranch()),
+                    () -> assertEquals(-1, diagnostics.appliedFollowNudge(),
+                            "A live ordinary support does not manufacture ROM Status_Push. With the "
+                                    + "current push bit clear, loc_13E0A applies the -1 x_pos nudge."),
+                    () -> assertEquals(0x19B6, tails.getCentreX() & 0xFFFF));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
     }
 
     @Test
@@ -3574,6 +3671,55 @@ class TestSidekickCpuFollowParity {
                                     + "Tails_CPU_jumping through loc_1BDCE as a held A/B/C input."),
                     () -> assertEquals(1, controller.getDiagnosticJumpingFlag(),
                             "Bypassing loc_1BDCE also skips the grounded latch clear."));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
+    void s2EggPrisonInteractPushGracePublishesStatusForAnimation() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic2GameModule());
+            installEmptyObjectManager();
+            TestableSprite sonic = new TestableSprite("sonic");
+            sonic.setGameRulesForTest(GameRules.SONIC_2);
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setGameRulesForTest(GameRules.SONIC_2);
+            tails.setAir(false);
+            tails.setPushing(false);
+            tails.setOnObject(false);
+            tails.setCentreX((short) 0x31D7);
+            tails.setCentreY((short) 0x04D3);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+            controller.hydrateFromRomCpuState(0x06, 0, 0, 0x3E, false, 0, 0);
+
+            EggPrisonButtonObjectInstance button = new EggPrisonButtonObjectInstance(
+                    new ObjectSpawn(0x3202, 0x04CA, 0x3E, 0, 0, false, 0));
+            button.setSlotIndex(22);
+            GameServices.level().getObjectManager().addDynamicObjectAtSlot(button, 22);
+            tails.setLatchedSolidObject(0x3E, button);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x3200);
+            Arrays.fill(yHistory, (short) 0x04D3);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+            setNormalPushingGraceFrames(controller, 0);
+
+            controller.update(0x24BF);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("interact_push_grace", diagnostics.followBranch()),
+                    () -> assertTrue(tails.getPushing(),
+                            "Obj3E runs after TailsCPU_Normal, so its approved interact-slot bridge "
+                                    + "must publish the ROM-visible Status_Push for WalkAnim."));
         } finally {
             installStandaloneGameModule(previous);
         }

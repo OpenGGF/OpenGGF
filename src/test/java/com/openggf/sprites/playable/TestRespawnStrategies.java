@@ -597,6 +597,11 @@ class TestRespawnStrategies {
         SidekickCpuController ctrl = new SidekickCpuController(sk, main);
         ctrl.hydrateFromRomCpuState(0x06, 0, 0, 0, true, 0, 0);
         ctrl.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+        sk.setAnimationId(0x20);
+        sk.setAnimationFrameIndex(1);
+        sk.setAnimationTick(0);
+        sk.getAnimationManager().restoreRewindState(
+                new com.openggf.sprites.managers.PlayableSpriteAnimation.RewindState(0x20, 0x20));
 
         ctrl.update(0);
 
@@ -605,6 +610,60 @@ class TestRespawnStrategies {
         assertEquals(1, ctrl.getDiagnosticJumpingFlag(),
                 "S2 TailsCPU_Respawn does not clear Tails_CPU_jumping "
                         + "(s2.asm:39116-39130); the normal filter clears it later only when grounded");
+        assertEquals(0x20, sk.getAnimationManager().captureRewindState().lastAnimationId(),
+                "TailsCPU_Respawn does not write prev_anim or restart the existing Fly script");
+        assertEquals(1, sk.getAnimationFrameIndex());
+        assertEquals(0, sk.getAnimationTick());
+    }
+
+    @Test
+    void sonic2RespawnAndFlyingPreserveExistingAnimation() {
+        TestableSprite sk = new TestableSprite("tails_p2");
+        sk.setGameRulesForTest(GameRules.SONIC_2);
+        sk.setAnimationId(sk.resolveAnimationId(CanonicalAnimation.WAIT));
+        sk.setForcedAnimationId(-1);
+        TestableSprite main = new TestableSprite("sonic");
+        main.setGameRulesForTest(GameRules.SONIC_2);
+        main.prefillPositionHistoryWithCentre((short) 0x0200, (short) 0x0600);
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        TailsRespawnStrategy strategy = new TailsRespawnStrategy(ctrl);
+
+        assertTrue(strategy.beginApproach(sk, main));
+        assertEquals(sk.resolveAnimationId(CanonicalAnimation.WAIT), sk.getAnimationId());
+        assertEquals(-1, sk.getForcedAnimationId(),
+                "S2 TailsCPU_Respawn does not write anim or prev_anim");
+        assertFalse(sk.getAir(),
+                "S2 TailsCPU_Respawn preserves status; the following Obj02 movement path owns floor loss");
+
+        assertFalse(strategy.updateApproaching(sk, main, 1));
+        assertEquals(sk.resolveAnimationId(CanonicalAnimation.WAIT), sk.getAnimationId());
+        assertEquals(-1, sk.getForcedAnimationId(),
+                "ordinary S2 TailsCPU_Flying homing does not own the animation byte");
+    }
+
+    @Test
+    void sonic2RespawnReleasesOneShotTimeoutFlyOwnerWithoutChangingAnimByte() {
+        TestableSprite sk = new TestableSprite("tails_p2");
+        sk.setGameRulesForTest(GameRules.SONIC_2);
+        int fly = sk.resolveAnimationId(CanonicalAnimation.FLY);
+        sk.setAnimationId(fly);
+        sk.setAnimationFrameIndex(1);
+        sk.setAnimationTick(0);
+        sk.setForcedAnimationId(fly);
+        TestableSprite main = new TestableSprite("sonic");
+        main.setGameRulesForTest(GameRules.SONIC_2);
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        TailsRespawnStrategy strategy = new TailsRespawnStrategy(ctrl);
+
+        assertTrue(strategy.beginApproach(sk, main));
+
+        assertEquals(fly, sk.getAnimationId(),
+                "TailsCPU_Respawn does not rewrite the timeout's Fly animation byte");
+        assertEquals(1, sk.getAnimationFrameIndex(),
+                "releasing the synthetic owner must not restart the native Fly script");
+        assertEquals(0, sk.getAnimationTick());
+        assertEquals(-1, sk.getForcedAnimationId(),
+                "the timeout's anim=Fly write must not continuously suppress later native movement animation writes");
     }
 
     @Test
@@ -619,8 +678,9 @@ class TestRespawnStrategies {
 
         assertTrue(strategy.beginApproach(sk, main));
 
-        assertFalse(strategy.requiresPhysics(),
-                "S2 TailsCPU_Respawn returns on the spawn frame before TailsCPU_Flying runs");
+        assertTrue(strategy.requiresPhysics(),
+                "Obj02 continues through its movement dispatcher after TailsCPU_Respawn returns "
+                        + "when inherited obj_control bit 0 is clear");
 
         short[] xHistory = new short[64];
         short[] yHistory = new short[64];
@@ -659,6 +719,9 @@ class TestRespawnStrategies {
                 "S3K Tails_Catch_Up_Flying clears y_vel on the catch-up teleport");
         assertEquals((short) 0, sk.getGSpeed(),
                 "S3K Tails_Catch_Up_Flying clears ground velocity on the catch-up teleport");
+        assertEquals(sk.resolveAnimationId(CanonicalAnimation.FLY), sk.getForcedAnimationId(),
+                "S3K Tails_Catch_Up_Flying explicitly calls Tails_Set_Flying_Animation");
+        assertTrue(sk.getAir(), "S3K catch-up entry explicitly writes status=Status_InAir");
     }
 
     @Test

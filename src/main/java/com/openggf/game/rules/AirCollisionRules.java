@@ -4,6 +4,7 @@ package com.openggf.game.rules;
 @com.openggf.game.ModApi
 public record AirCollisionRules(
         boolean bottomSolidHitClearsGroundSpeed,
+        boolean bottomSolidHitAlwaysSeparates,
         boolean rightWallHitContinuesIntoCeilingSeparation,
         boolean leftWallHitContinuesIntoCeilingSeparation,
         boolean probesResetStaleGroundMode) {

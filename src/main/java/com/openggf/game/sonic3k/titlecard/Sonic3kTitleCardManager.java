@@ -117,6 +117,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private boolean inLevelMode;  // No black background, control released immediately
     private boolean resetLevelGamestateOnInLevelDisplay;
     private int resetLevelGamestateCountdown;
+    private boolean heldLevelCounterDispatchOwned;
     private boolean inLevelPlayerControlLockOwned;
     private boolean inLevelGameplayOwnedExternally;
     private int inLevelExitDelayFrames;
@@ -189,6 +190,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     public void requestLevelGamestateResetAtInLevelDisplay() {
         if (inLevelMode) {
             resetLevelGamestateOnInLevelDisplay = true;
+            heldLevelCounterDispatchOwned = true;
             int modulePhase = GameServices.level().getObjectManager().getVblaCounter() & 3;
             // The slotless manager reaches its predicted display point after
             // 26 updates. At module phase 1 the native children are not live
@@ -205,9 +207,17 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
 
     @Override
     public void requestLevelGamestateResetAtInLevelDisplay(int additionalDispatches) {
+        requestLevelGamestateResetAtInLevelDisplay(additionalDispatches, 0);
+    }
+
+    @Override
+    public void requestLevelGamestateResetAtInLevelDisplay(
+            int additionalDispatches, int phaseOneDispatchOverlap) {
+        int modulePhase = GameServices.level().getObjectManager().getVblaCounter() & 3;
         requestLevelGamestateResetAtInLevelDisplay();
         if (resetLevelGamestateOnInLevelDisplay) {
-            resetLevelGamestateCountdown += Math.max(0, additionalDispatches);
+            int overlap = modulePhase == 1 ? Math.max(0, phaseOneDispatchOverlap) : 0;
+            resetLevelGamestateCountdown += Math.max(0, additionalDispatches - overlap);
         }
     }
 
@@ -216,6 +226,11 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         if (inLevelMode) {
             inLevelPlayerControlLockOwned = true;
         }
+    }
+
+    @Override
+    public boolean advancesOnHeldLevelCounter() {
+        return inLevelMode && heldLevelCounterDispatchOwned && isOverlayActive();
     }
 
     @Override
@@ -235,8 +250,16 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
 
     @Override
     public void requestInLevelExitAdditionalDispatches(int dispatches) {
+        requestInLevelExitAdditionalDispatches(dispatches, 0);
+    }
+
+    @Override
+    public void requestInLevelExitAdditionalDispatches(
+            int dispatches, int phaseOneDispatchOverlap) {
         if (inLevelMode) {
-            inLevelExitDelayFrames += Math.max(0, dispatches);
+            int modulePhase = GameServices.level().getObjectManager().getVblaCounter() & 3;
+            int overlap = modulePhase == 1 ? Math.max(0, phaseOneDispatchOverlap) : 0;
+            inLevelExitDelayFrames += Math.max(0, dispatches - overlap);
         }
     }
 
@@ -298,6 +321,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         this.inLevelMode = inLevel;
         this.resetLevelGamestateOnInLevelDisplay = false;
         this.resetLevelGamestateCountdown = 0;
+        this.heldLevelCounterDispatchOwned = false;
         this.inLevelPlayerControlLockOwned = false;
         this.inLevelGameplayOwnedExternally = false;
         this.inLevelExitDelayFrames = 0;
@@ -484,6 +508,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         inLevelGameplayOwnedExternally = false;
         resetLevelGamestateOnInLevelDisplay = false;
         resetLevelGamestateCountdown = 0;
+        heldLevelCounterDispatchOwned = false;
         inLevelExitDelayFrames = 0;
         inLevelPlayerControlLockOwned = false;
         bonusMode = false;

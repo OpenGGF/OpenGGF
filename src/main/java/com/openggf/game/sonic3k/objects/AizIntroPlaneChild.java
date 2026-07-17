@@ -85,7 +85,8 @@ public class AizIntroPlaneChild extends AbstractObjectInstance implements Rewind
 
     @Override
     public int getPriorityBucket() {
-        return 4;
+        // ROM: loc_6777A writes priority(a0) = $280.
+        return 5;
     }
 
     @Override

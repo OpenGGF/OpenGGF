@@ -42,6 +42,7 @@ class TestSonic3kSpikeObjectInstance {
 
         assertTrue(spikes.usesInclusiveRightEdge(),
                 "Obj_Spikes calls SolidObjectFull; SolidObject_cont rejects relX > width*2, not relX == width*2");
+        assertEquals(0x0002, spikes.romObjectCodePointerHighWord());
     }
 
     @Test

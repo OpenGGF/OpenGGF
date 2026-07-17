@@ -247,12 +247,31 @@ public final class RecordingFrameDriver {
 
         previousDriverSnapshot = RecordedInputSnapshots.fromBk2(frameInput, previousBk2Input(currentBk2Index));
         currentBk2Index++;
+        // S3K's in-level title-card wait runs Process_Sprites while the level
+        // gameplay counter is held at zero. Such rows are VBlank-only to the
+        // physics driver, but the title-card parent/children still dispatch.
+        // Keep this overlay-only work moving without ticking player physics.
+        updateHeldCounterTitleCardOverlay();
+        if (levelManager.hasPendingInLevelTitleCardHeldCounterDispatch()) {
+            startPendingInLevelTitleCardIfRequested();
+        }
         var levelEvents = GameServices.module().getLevelEventProvider();
         if (levelEvents != null) {
             levelEvents.advanceVblankOnlyState();
         }
         levelManager.getObjectManager().advanceVblaCounter();
         return mask;
+    }
+
+    private void updateHeldCounterTitleCardOverlay() {
+        TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
+        if (titleCardProvider != null && titleCardProvider.advancesOnHeldLevelCounter()) {
+            titleCardProvider.update();
+            if (titleCardProvider.ownsInLevelPlayerControlLock()) {
+                applyInLevelTitleCardControlLock(
+                        titleCardProvider.shouldLockPlayerControlForInLevelOverlay());
+            }
+        }
     }
 
     private static int inputMask(Bk2FrameInput frameInput) {

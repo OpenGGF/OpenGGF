@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.PlayableEntity;
@@ -95,6 +96,11 @@ class TestAizHollowTreeObjectInstance {
                 "Hollow-tree fall-off should clear touch suppression");
         assertFalse(player.isSuppressGroundWallCollision(),
                 "Hollow-tree fall-off should clear bit-6 wall-probe suppression");
+        assertEquals(Sonic3kAnimationIds.WALK.id(), player.getAnimationId(),
+                "move.w #1,anim publishes Walk in the high byte");
+        assertEquals(Sonic3kAnimationIds.RUN.id(),
+                player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "move.w #1,anim publishes Run in the adjacent prev_anim byte");
     }
 
     @Test

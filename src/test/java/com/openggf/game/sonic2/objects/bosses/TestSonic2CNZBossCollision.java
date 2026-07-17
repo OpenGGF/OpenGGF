@@ -1,24 +1,41 @@
 package com.openggf.game.sonic2.objects.bosses;
 
+import com.openggf.camera.Camera;
+import com.openggf.debug.DebugOverlayManager;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.boss.BossStateContext;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TestSonic2CNZBossCollision {
 
@@ -70,22 +87,113 @@ class TestSonic2CNZBossCollision {
     }
 
     @Test
-    void attachBallPreservesChildInitXDuringPostTriggerCountdown() throws Exception {
+    void attachBallPreservesAllocationTimeParentXDuringPostTriggerCountdown() throws Exception {
         Sonic2CNZBossInstance boss = newCnzBossAt(0x2909, 0x0657);
         CNZBossElectricBall ball = new CNZBossElectricBall(
                 new ObjectSpawn(0x2909, 0x0657, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0), boss);
         boss.getState().x = 0x290B;
 
-        Method updateBallAttach = CNZBossElectricBall.class.getDeclaredMethod("updateBallAttach");
+        Method updateBallAttach = CNZBossElectricBall.class.getDeclaredMethod("updateBallAttach", int.class);
         updateBallAttach.setAccessible(true);
-        updateBallAttach.invoke(ball);
+        updateBallAttach.invoke(ball, 100);
 
         assertEquals(0x2909, ball.getX(),
-                "Obj51 loc_31BA8 no longer runs Boss_MoveObject, so the child keeps its init x_pos");
+                "loc_31BA8 leaves Boss_X_pos stationary, so every loc_31F96 copy retains the allocated x_pos");
     }
 
     @Test
-    void originalSplitHalfProjectsLoc31ff8TouchRegion() throws Exception {
+    void rightwardTriggerPublishesFreshBossXForBodyTouch() throws Exception {
+        Sonic2CNZBossInstance boss = initializedCnzBoss();
+        BossStateContext state = boss.getState();
+        state.x = 0x28D9;
+        state.xFixed = 0x28D98000;
+        state.xVel = 0x180;
+        setField(boss, "bossXPos", 0x28D9);
+        setField(boss, "dirToggle", 2);
+
+        invokePatrolBallTrigger(boss, 0x28D9);
+
+        TouchResponseProvider.TouchRegion[] regions = boss.getMultiTouchRegions();
+        assertNotNull(regions);
+        assertEquals(0x28DB, regions[0].x(),
+                "post-trigger body touch keeps the trigger-boundary x_pos snapshot");
+    }
+
+    @Test
+    void leftwardTriggerKeepsRomCopiedXInsteadOfAdvancedEngineAccumulator() throws Exception {
+        Sonic2CNZBossInstance boss = initializedCnzBoss();
+        BossStateContext state = boss.getState();
+        state.x = 0x2917;
+        state.xFixed = 0x29170000;
+        state.xVel = -0x180;
+        setField(boss, "bossXPos", 0x2917);
+        setField(boss, "dirToggle", 0);
+
+        invokePatrolBallTrigger(boss, 0x2918);
+
+        TouchResponseProvider.TouchRegion[] regions = boss.getMultiTouchRegions();
+        assertNotNull(regions);
+        assertEquals(0x2917, regions[0].x(),
+                "leftward body touch keeps the ROM-copied trigger-boundary x_pos");
+    }
+
+    @Test
+    void attachedBallSeesParentCountdownAfterRomParentSlot() throws Exception {
+        Sonic2CNZBossInstance boss = newCnzBossAt(0x2909, 0x0657);
+        boss.getState().routine = 2;
+        setField(boss, "bossCountdown", 1);
+        setField(boss, "lastFrameCounter", 100);
+        CNZBossElectricBall ball = new CNZBossElectricBall(
+                new ObjectSpawn(0x2909, 0x0657, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0), boss);
+
+        invokeBallAttach(ball, 101);
+
+        assertEquals(1, getField(ball, "routineState"),
+                "a child reached before its parent must observe the ROM parent-slot decrement to zero");
+    }
+
+    @Test
+    void attachedBallFallTransitionRequiresExactZeroCountdown() throws Exception {
+        Sonic2CNZBossInstance boss = newCnzBossAt(0x2909, 0x0657);
+        boss.getState().routine = 2;
+        setField(boss, "bossCountdown", -1);
+        setField(boss, "lastFrameCounter", 101);
+        CNZBossElectricBall ball = new CNZBossElectricBall(
+                new ObjectSpawn(0x2909, 0x0657, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0), boss);
+
+        invokeBallAttach(ball, 101);
+
+        assertEquals(0, getField(ball, "routineState"),
+                "ROM tst.w/bne keeps every nonzero countdown, including negative values, attached");
+    }
+
+    @Test
+    void fallingBallUsesOrdinaryFrameStartSingleTouchRegion() throws Exception {
+        Sonic2CNZBossInstance boss = newCnzBossAt(0x2909, 0x0657);
+        CNZBossElectricBall ball = new CNZBossElectricBall(
+                new ObjectSpawn(0x2909, 0x0657, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0), boss);
+        setField(ball, "routineState", 1);
+        setField(ball, "x", 0x28F3);
+        setField(ball, "y", 0x06DF);
+        setField(ball, "xVel", 0x100);
+        setField(ball, "yVel", 0x200);
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x28F4, 0x06E1, 8))
+                    .thenReturn(new TerrainCheckResult(1, (byte) 0, 0));
+            Method updateBallFall = CNZBossElectricBall.class.getDeclaredMethod("updateBallFall");
+            updateBallFall.setAccessible(true);
+            updateBallFall.invoke(ball);
+        }
+
+        assertEquals(0x28F4, ball.getX());
+        assertEquals(0x06E1, ball.getY());
+        assertNull(ball.getMultiTouchRegions(),
+                "BALL_FALL remains on the ordinary frame-start single-region touch path");
+    }
+
+    @Test
+    void splitHalvesUseOrdinaryFrameStartSingleTouchRegions() throws Exception {
         Sonic2CNZBossInstance boss = newCnzBossAt(0x2909, 0x0657);
         CNZBossElectricBall ball = new CNZBossElectricBall(
                 new ObjectSpawn(0x2909, 0x0657, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0), boss);
@@ -95,18 +203,36 @@ class TestSonic2CNZBossCollision {
         setField(ball, "xVel", -0x100);
         setField(ball, "yVel", 0x02E8);
 
-        TouchResponseProvider.TouchRegion[] regions = ball.getMultiTouchRegions();
-
-        assertNotNull(regions);
-        assertEquals(1, regions.length);
-        assertEquals(0x28ED, regions[0].x());
-        assertEquals(0x06E8, regions[0].y());
-        assertEquals(0x98, regions[0].collisionFlags());
+        assertNull(ball.getMultiTouchRegions(),
+                "the original half is checked at its ordinary frame-start SST coordinate");
 
         setField(ball, "xVel", 0x100);
 
         assertNull(ball.getMultiTouchRegions(),
-                "The AllocateObjectAfterCurrent clone already executes in the same pass and keeps normal timing");
+                "the AllocateObjectAfterCurrent clone uses the same ordinary frame-start path");
+    }
+
+    @Test
+    void positiveSplitHalfRetainsCoordinateBeforeImmediateAllocatedSlotStep() throws Exception {
+        Sonic2CNZBossInstance boss = newCnzBossAt(0x2909, 0x0657);
+        CNZBossElectricBall ball = new CNZBossElectricBall(
+                new ObjectSpawn(0x2909, 0x0657, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0), boss);
+        setField(ball, "routineState", 2);
+        setField(ball, "x", 0x28F3);
+        setField(ball, "y", 0x06DF);
+        setField(ball, "xVel", 0x100);
+        setField(ball, "yVel", 0x200);
+
+        Method updateBallSplit = CNZBossElectricBall.class.getDeclaredMethod("updateBallSplit");
+        updateBallSplit.setAccessible(true);
+        updateBallSplit.invoke(ball);
+
+        assertEquals(0x28F4, ball.getX());
+        assertEquals(0x06E1, ball.getY());
+        assertEquals(0x28F3, ball.getPreUpdateX());
+        assertEquals(0x06DF, ball.getPreUpdateY());
+        assertNull(ball.getMultiTouchRegions(),
+                "the positive half retains ordinary single-region touch actor/stop policies");
     }
 
     @Test
@@ -128,6 +254,155 @@ class TestSonic2CNZBossCollision {
         assertEquals(0x06ED7000, getField(ball, "yFixed"));
     }
 
+    @Test
+    void ballFloorSplitRejectsZeroAndAcceptsNegativeDistance() throws Exception {
+        Sonic2CNZBossInstance boss = newCnzBossAt(0x28DB, 0x0656);
+        CNZBossElectricBall ball = new CNZBossElectricBall(
+                new ObjectSpawn(0x28DB, 0x06F6, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0), boss);
+        setField(ball, "routineState", 1);
+        setField(ball, "x", 0x28DB);
+        setField(ball, "y", 0x06F6);
+        setField(ball, "xVel", 0);
+        setField(ball, "yVel", 0);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        ball.setServices(new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return objectManager; }
+        });
+        Method updateBallFall = CNZBossElectricBall.class.getDeclaredMethod("updateBallFall");
+        updateBallFall.setAccessible(true);
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x28DB, 0x06F6, 8))
+                    .thenReturn(new TerrainCheckResult(0, (byte) 0, 0),
+                            new TerrainCheckResult(-1, (byte) 0, 0));
+
+            updateBallFall.invoke(ball);
+            assertEquals(1, getField(ball, "routineState"),
+                    "tst.w d1 / bpl keeps exact floor contact in the falling routine");
+            verify(objectManager, never()).addDynamicObjectAfterCurrent(any(CNZBossElectricBall.class));
+
+            updateBallFall.invoke(ball);
+            assertEquals(2, getField(ball, "routineState"),
+                    "negative ObjCheckFloorDist penetration reaches loc_32030");
+            assertEquals(0x06F5, ball.getY());
+            verify(objectManager, times(1)).addDynamicObjectAfterCurrent(any(CNZBossElectricBall.class));
+        }
+    }
+
+    @Test
+    void positiveSplitHalfTouchConsumesFrameStartSnapshot() throws Exception {
+        TouchResponseTable table = mock(TouchResponseTable.class);
+        when(table.getWidthRadius(0x18)).thenReturn(4);
+        when(table.getHeightRadius(0x18)).thenReturn(4);
+        ObjectManager objectManager = newS2ObjectManager(table);
+
+        Sonic2CNZBossInstance boss = newCnzBossAt(0x28DB, 0x0656);
+        CNZBossElectricBall ball = new CNZBossElectricBall(
+                new ObjectSpawn(0x28DB, 0x06F6, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0), boss);
+        setField(ball, "routineState", 2);
+        setField(ball, "x", 0x28F3);
+        setField(ball, "y", 0x06DF);
+        setField(ball, "xVel", 0x100);
+        setField(ball, "yVel", 0x200);
+        objectManager.addDynamicObject(ball);
+
+        AbstractPlayableSprite tails = mock(AbstractPlayableSprite.class);
+        when(tails.isCpuControlled()).thenReturn(true);
+        when(tails.getCentreX()).thenReturn((short) 0x28F1);
+        when(tails.getCentreY()).thenReturn((short) 0x06F0);
+        when(tails.getYRadius()).thenReturn((short) 15);
+        when(tails.getCrouching()).thenReturn(false);
+        when(tails.getDead()).thenReturn(false);
+        when(tails.getInvulnerable()).thenReturn(false);
+        when(tails.getInvulnerableFrames()).thenReturn(0);
+
+        // Player-slot Touch_Boss runs from the frame-start snapshot even if a
+        // later Obj51 phase has already advanced the live object in this test.
+        objectManager.snapshotTouchResponseState(false);
+        ball.update(0, tails);
+        assertEquals(0x06E1, ball.getY());
+        objectManager.runTouchResponsesForPlayer(tails, 9199, true);
+        verify(tails, never()).applyHurt(org.mockito.ArgumentMatchers.anyInt());
+
+        ball.update(1, tails);
+        objectManager.snapshotTouchResponseState(false);
+        objectManager.runTouchResponsesForPlayer(tails, 9200, true);
+        verify(tails, times(1)).applyHurt(org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    void allocateAfterCurrentSplitCloneExecutesExactlyOnceOnBirth() throws Exception {
+        ObjectManager objectManager = newS2ObjectManager(null);
+        Sonic2CNZBossInstance boss = newCnzBossAt(0x28DB, 0x0656);
+        CNZBossElectricBall clone = new CNZBossElectricBall(
+                new ObjectSpawn(0x28DB, 0x06F6, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0), boss);
+        setField(clone, "routineState", 2);
+        setField(clone, "x", 0x28DB);
+        setField(clone, "y", 0x06F6);
+        setField(clone, "xVel", 0x100);
+        setField(clone, "yVel", -0x300);
+        setBooleanField(clone, "exploding", true);
+        SplitCloneSpawner spawner = new SplitCloneSpawner(objectManager, clone);
+        objectManager.addDynamicObject(spawner);
+
+        objectManager.update(0x2880, null, List.of(), 9175, false, true, true);
+
+        assertEquals(0x28DC, clone.getX(),
+                "AllocateObjectAfterCurrent clone must run once in its birth pass");
+        assertEquals(0x06F3, clone.getY(),
+                "the one birth-pass loc_32080 step applies -$300 exactly once");
+
+        objectManager.update(0x2880, null, List.of(), 9176, false, true, true);
+        assertEquals(0x28DD, clone.getX());
+        assertEquals(0x06F0, clone.getY());
+    }
+
+    private static ObjectManager newS2ObjectManager(TouchResponseTable table) {
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0x2880);
+        when(camera.getY()).thenReturn((short) 0x04E0);
+        when(camera.getWidth()).thenReturn((short) 320);
+        when(camera.getHeight()).thenReturn((short) 224);
+        when(camera.isVerticalWrapEnabled()).thenReturn(false);
+        DebugOverlayManager debugOverlay = mock(DebugOverlayManager.class);
+        ObjectRegistry registry = new ObjectRegistry() {
+            @Override public com.openggf.level.objects.ObjectInstance create(ObjectSpawn spawn) { return null; }
+            @Override public void reportCoverage(List<ObjectSpawn> spawns) { }
+            @Override public String getPrimaryName(int objectId) { return "Obj51"; }
+            @Override public ObjectSlotLayout objectSlotLayout() { return ObjectSlotLayout.SONIC_2; }
+        };
+        TestObjectServices services = new TestObjectServices()
+                .withCamera(camera)
+                .withDebugOverlay(debugOverlay);
+        return new ObjectManager(List.of(), registry, 0, null, table,
+                null, camera, services);
+    }
+
+    private static final class SplitCloneSpawner extends AbstractObjectInstance {
+        private final ObjectManager objectManager;
+        private final CNZBossElectricBall clone;
+        private boolean spawned;
+
+        private SplitCloneSpawner(ObjectManager objectManager, CNZBossElectricBall clone) {
+            super(new ObjectSpawn(0x28DB, 0x06F6, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0),
+                    "Obj51 split spawner");
+            this.objectManager = objectManager;
+            this.clone = clone;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            if (!spawned) {
+                spawned = true;
+                objectManager.addDynamicObjectAfterCurrent(clone);
+            }
+        }
+
+        @Override public int getX() { return spawn.x(); }
+        @Override public int getY() { return spawn.y(); }
+        @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
     private static Sonic2CNZBossInstance newCnzBossAt(int x, int y) throws Exception {
         Sonic2CNZBossInstance boss = new Sonic2CNZBossInstance(
                 new ObjectSpawn(x, y, Sonic2ObjectIds.CNZ_BOSS, 0, 0, false, 0));
@@ -139,6 +414,29 @@ class TestSonic2CNZBossCollision {
         setField(boss, "touchCollisionX", x);
         setField(boss, "touchCollisionY", y);
         return boss;
+    }
+
+    private static Sonic2CNZBossInstance initializedCnzBoss() throws Exception {
+        Sonic2CNZBossInstance boss = new Sonic2CNZBossInstance(
+                new ObjectSpawn(0x2A46, 0x0654, Sonic2ObjectIds.CNZ_BOSS, 0, 0, false, 0));
+        boss.setServices(new StubObjectServices());
+        return boss;
+    }
+
+    private static void invokePatrolBallTrigger(Sonic2CNZBossInstance boss, int playerX) throws Exception {
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) playerX);
+        when(player.getCentreY()).thenReturn((short) 0x06B0);
+        Method updatePatrol = Sonic2CNZBossInstance.class.getDeclaredMethod(
+                "updatePatrol", AbstractPlayableSprite.class);
+        updatePatrol.setAccessible(true);
+        updatePatrol.invoke(boss, player);
+    }
+
+    private static void invokeBallAttach(CNZBossElectricBall ball, int frameCounter) throws Exception {
+        Method updateBallAttach = CNZBossElectricBall.class.getDeclaredMethod("updateBallAttach", int.class);
+        updateBallAttach.setAccessible(true);
+        updateBallAttach.invoke(ball, frameCounter);
     }
 
     private static void setField(Sonic2CNZBossInstance boss, String name, int value) throws Exception {
@@ -157,5 +455,11 @@ class TestSonic2CNZBossCollision {
         Field field = CNZBossElectricBall.class.getDeclaredField(name);
         field.setAccessible(true);
         return field.getInt(ball);
+    }
+
+    private static void setBooleanField(CNZBossElectricBall ball, String name, boolean value) throws Exception {
+        Field field = CNZBossElectricBall.class.getDeclaredField(name);
+        field.setAccessible(true);
+        field.setBoolean(ball, value);
     }
 }

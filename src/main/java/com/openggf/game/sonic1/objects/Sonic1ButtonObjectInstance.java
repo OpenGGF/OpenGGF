@@ -17,6 +17,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -241,6 +242,15 @@ public class Sonic1ButtonObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        // SolidObject's horizontal bounds use `bhi`, so a player exactly flush
+        // with the right edge remains a side contact. This matters while pushing
+        // SBZ buttons: treating that edge as exclusive clears the object's native
+        // push bit intermittently and executes Solid_NoCollision too early.
+        return SolidRoutineProfile.fullSolid(usesStickyContactBuffer(), true, false);
     }
 
     @Override

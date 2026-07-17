@@ -12,4 +12,11 @@ public final class S3kMgzEventWriteSupport {
             bridge.triggerBossCollapseHandoff();
         }
     }
+
+    public static void completeDrillingRobotnikFlee(ObjectServices services) {
+        Object provider = services.levelEventProvider();
+        if (provider instanceof MgzObjectEventBridge bridge) {
+            bridge.completeDrillingRobotnikFlee();
+        }
+    }
 }

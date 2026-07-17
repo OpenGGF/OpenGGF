@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -137,6 +138,8 @@ class TestS3kSignpostInstance {
     @Test
     void signpostCtrl2LockDoesNotApplyEndingPoseToSidekick() {
         TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        SidekickCpuController cpu = new SidekickCpuController(tails, sonic);
         tails.setXSpeed((short) 0x0060);
         tails.setYSpeed((short) -0x0100);
         tails.setGSpeed((short) 0x0060);
@@ -146,6 +149,8 @@ class TestS3kSignpostInstance {
 
         assertTrue(tails.isControlLocked(),
                 "Obj_EndSignLanded writes Ctrl_2_locked before results");
+        assertTrue(cpu.isController2SignedLocked(),
+                "Ctrl_2_locked=$FF skips Tails_CPU_Control from the next player slot");
         assertEquals(0x0060, tails.getXSpeed());
         assertEquals(-0x0100, tails.getYSpeed());
         assertEquals(0x0060, tails.getGSpeed());
@@ -158,7 +163,10 @@ class TestS3kSignpostInstance {
     @Test
     void laterCheckTailsEndPoseClearsLockAndStopsSidekick() {
         TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        SidekickCpuController cpu = new SidekickCpuController(tails, sonic);
         tails.setControlLocked(true);
+        cpu.setController2SignedLocked(true);
         tails.setXSpeed((short) 0x0054);
         tails.setYSpeed((short) 0);
         tails.setGSpeed((short) 0x0054);
@@ -166,6 +174,7 @@ class TestS3kSignpostInstance {
         S3kSignpostInstance.applySidekickEndingPose(tails);
 
         assertFalse(tails.isControlLocked());
+        assertFalse(cpu.isController2SignedLocked());
         assertTrue(tails.isObjectControlled());
         assertEquals(0, tails.getXSpeed());
         assertEquals(0, tails.getYSpeed());

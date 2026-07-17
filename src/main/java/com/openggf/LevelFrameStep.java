@@ -262,6 +262,14 @@ public final class LevelFrameStep {
         }
 
         if (levelManager.isLevelInactiveForTransition()) {
+            // The native frame still reaches BuildSprites while a results/fade
+            // transition owns the later level work. Keep playable render_flags
+            // current so fixed objects that read the prior frame's on-screen
+            // bit (for example Obj_MGZ2_BossTransition) do not observe the last
+            // pre-transition value indefinitely.
+            if (spriteManager != null) {
+                spriteManager.refreshPlayableRenderFlags(camera);
+            }
             return;
         }
 

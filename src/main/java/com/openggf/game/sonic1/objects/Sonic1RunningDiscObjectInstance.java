@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindStateful;
+import com.openggf.game.CanonicalAnimation;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
@@ -285,15 +286,20 @@ public class Sonic1RunningDiscObjectInstance extends AbstractObjectInstance impl
 
             // btst #2,obStatus(a1) — check rolling status
             if (!player.getRolling()) {
-                // clr.b obAnim(a1) — reset animation
-                // (handled implicitly by the animation system when walking)
+                // clr.b obAnim(a1) — publish Walk immediately. This happens
+                // after the player's animation pass, so merely relying on the
+                // next ordinary walking update preserves the landing frame.
+                int walkAnimationId = player.resolveAnimationId(CanonicalAnimation.WALK);
+                if (walkAnimationId >= 0) {
+                    player.setAnimationId(walkAnimationId);
+                }
             }
 
             // bclr #5,obStatus(a1) — clear "pushing" status
             player.setPushing(false);
 
             // move.b #id_Run,obPrevAni(a1) — restart Sonic's animation
-            // (Forces animation restart on next frame by mismatching prevAnim)
+            player.publishRunAsPreviousAnimation();
 
             // move.b #1,stick_to_convex(a1) — set stick to convex flag
             player.setStickToConvex(true);

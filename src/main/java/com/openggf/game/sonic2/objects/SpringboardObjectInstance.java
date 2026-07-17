@@ -126,6 +126,15 @@ public class SpringboardObjectInstance extends BoxObjectInstance
         return new SpringboardObjectInstance(ctx.spawn(), "Springboard");
     }
 
+    @Override
+    public boolean suppressesObjectEdgeBalance() {
+        // Obj40_Init sets status.npc.no_balancing unconditionally before its
+        // SlopedSolid path. Sonic_Move/Tails_Move therefore skip object-edge
+        // balance whenever the player is riding a springboard.
+        // docs/s2disasm/s2.asm:52279-52294; s2.asm:36589,39710
+        return true;
+    }
+
     private void ensureInitialized() {
         if (initialized) {
             return;

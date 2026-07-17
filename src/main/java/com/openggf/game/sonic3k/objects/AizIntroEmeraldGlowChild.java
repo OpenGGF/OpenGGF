@@ -86,6 +86,12 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
     }
 
     @Override
+    public int getPriorityBucket() {
+        // ROM: loc_67824/loc_67862 write priority(a0) = $280.
+        return 5;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (parent.isDestroyed()) {
             ObjectLifetimeOps.expireDynamic(this);

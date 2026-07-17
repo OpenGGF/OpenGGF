@@ -1,9 +1,11 @@
 package com.openggf.tests;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.GroundMode;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
@@ -18,6 +20,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.sprites.playable.ObjectControlState;
 import org.junit.jupiter.api.AfterEach;
@@ -67,6 +70,8 @@ class TestS3kMgzPulleyAndMantis {
         }
 
         assertInstanceOf(MGZPulleyObjectInstance.class, pulley);
+        assertFalse(pulley instanceof SolidObjectProvider,
+                "MGZ pulley uses explicit proximity capture and never calls a ROM solid routine");
         assertInstanceOf(MantisBadnikInstance.class, mantis);
     }
 
@@ -78,7 +83,11 @@ class TestS3kMgzPulleyAndMantis {
         pulley.setServices(services);
 
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x01DA, (short) 0x012E);
+        player.setSubpixelRaw(0x2E00, 0xA600);
         player.setXSpeed((short) -0x100);
+        player.setOnObject(true);
+        player.setAir(false);
+        player.setGroundMode(GroundMode.RIGHTWALL);
         player.setJumpInputPressed(false);
 
         pulley.update(0, player);
@@ -86,6 +95,16 @@ class TestS3kMgzPulleyAndMantis {
         assertTrue(player.isObjectControlled(), "Pulley should capture a player entering the handle box");
         assertEquals(0x01DA, player.getCentreX());
         assertEquals(0x012E, player.getCentreY());
+        assertEquals(0x2E00, player.getXSubpixelRaw(),
+                "ROM pulley capture writes x_pos without clearing x_sub");
+        assertEquals(0xA600, player.getYSubpixelRaw(),
+                "ROM pulley capture writes y_pos without clearing y_sub");
+        assertTrue(player.isObjectControlAllowsCpu(),
+                "Pulley writes positive object_control bit 0 rather than the signed bit-7 gate");
+        assertTrue(player.isOnObject(),
+                "Pulley capture does not clear the native standing-object status bit");
+        assertFalse(player.getAir(),
+                "Pulley capture does not force Status_InAir before a jump release");
         assertEquals(Sonic3kAnimationIds.GET_UP.id(), player.getAnimationId());
         assertTrue(services.playedSfx.contains(Sonic3kSfx.PULLEY_GRAB.id));
 
@@ -93,9 +112,13 @@ class TestS3kMgzPulleyAndMantis {
         pulley.update(1, player);
 
         assertFalse(player.isObjectControlled(), "Jump should release object control");
+        assertEquals(0x01DA, player.getCentreX(),
+                "Pulley jump release must not shift x_pos while changing wall-oriented radii");
         assertEquals(-0x400, player.getXSpeed());
         assertEquals(-0x600, player.getYSpeed());
         assertTrue(player.getRolling());
+        assertFalse(player.isJumping(), "Pulley launch does not write the native jumping byte");
+        assertEquals(GroundMode.GROUND, player.getGroundMode());
         assertEquals(Sonic3kAnimationIds.ROLL.id(), player.getAnimationId());
     }
 
@@ -290,6 +313,45 @@ class TestS3kMgzPulleyAndMantis {
     }
 
     @Test
+    void mgzPulleyRelaxesAndCarriesP2AfterP1Releases() throws Exception {
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0236, (short) 0x014E);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0236, (short) 0x014E);
+        main.setXSpeed((short) 0x100);
+        nativeP2.setXSpeed((short) 0x100);
+
+        RecordingServices services = new QueryOnlyPlayerServices(main, List.of(nativeP2));
+        MGZPulleyObjectInstance pulley = createPulley(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.MGZ_PULLEY, 0x04, 0x01, false, 0));
+        pulley.setServices(services);
+
+        pulley.update(0, main);
+        assertTrue(main.isObjectControlled());
+        assertTrue(nativeP2.isObjectControlled());
+
+        for (int frame = 1; frame <= 26; frame++) {
+            pulley.update(frame, main);
+        }
+        assertEquals(0, readCurrentExtension(pulley));
+
+        main.setJumpInputPressed(true);
+        pulley.update(27, main);
+        main.setJumpInputPressed(false);
+        int p2XBeforeRelax = nativeP2.getCentreX();
+        int p2YBeforeRelax = nativeP2.getCentreY();
+        nativeP2.setRenderFlagOnScreen(true);
+        services.camera = new Camera();
+
+        pulley.update(28, main);
+
+        assertFalse(main.isObjectControlled());
+        assertTrue(nativeP2.isObjectControlled());
+        assertEquals(2, readCurrentExtension(pulley),
+                "ROM loc_34900 consults only the P1 grab byte when choosing extension motion");
+        assertEquals(p2XBeforeRelax + 1, nativeP2.getCentreX());
+        assertEquals(p2YBeforeRelax + 2, nativeP2.getCentreY());
+    }
+
+    @Test
     void mgzPulleyOnUnloadDestroysChainChildAndReleasesGrabbedPlayer() throws Exception {
         RecordingServices services = new RecordingServices();
         MGZPulleyObjectInstance pulley = createPulley(services,
@@ -322,17 +384,37 @@ class TestS3kMgzPulleyAndMantis {
         player.setCentreX((short) 0x0210);
         player.setCentreY((short) 0x0100);
 
-        mantis.update(0, player); // init
-        mantis.update(1, player);
-        mantis.update(2, player); // begin prep
+        mantis.refreshPostCameraRenderState();
+        mantis.update(0, player); // Obj_WaitOffscreen restores the Mantis operation
+        mantis.update(1, player); // init
+        mantis.update(2, player); // detect player and begin prep
         assertEquals("PREPARE", readMantisState(mantis));
 
-        for (int frame = 3; frame <= 9; frame++) {
+        for (int frame = 3; frame <= 10; frame++) {
             mantis.update(frame, player);
         }
 
         assertEquals("LAUNCH", readMantisState(mantis));
         assertTrue(mantis.getY() < 0x0100, "Mantis should have leapt upward");
+    }
+
+    @Test
+    void mantisRunsRestoredRoutineOutsideStrictViewportAndDetectsP2() throws Exception {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0140, (short) 0x0100);
+        RecordingServices services = new QueryOnlyPlayerServices(main, List.of(nativeP2));
+        MantisBadnikInstance mantis = new MantisBadnikInstance(
+                new ObjectSpawn(0x015E, 0x0100, Sonic3kObjectIds.MANTIS, 0x00, 0x00, false, 0));
+        mantis.setServices(services);
+
+        mantis.refreshPostCameraRenderState();
+        mantis.update(0, main); // Obj_WaitOffscreen restores the Mantis operation
+        mantis.update(1, main); // init just inside the placeholder's render margin
+        mantis.update(2, main); // native routine runs although its centre is beyond x=320
+
+        assertEquals("PREPARE", readMantisState(mantis),
+                "The restored routine must detect native P2 before the Mantis centre enters the strict viewport");
     }
 
     @Test
@@ -345,17 +427,15 @@ class TestS3kMgzPulleyAndMantis {
         player.setCentreX((short) 0x0210);
         player.setCentreY((short) 0x0100);
 
-        mantis.update(0, player); // init
-        mantis.update(1, player); // detect player, enter prep
+        mantis.refreshPostCameraRenderState();
+        mantis.update(0, player); // Obj_WaitOffscreen restores the Mantis operation
+        mantis.update(1, player); // init
+        mantis.update(2, player); // detect player, enter prep
         assertEquals("PREPARE", readMantisState(mantis));
         assertEquals(0, readMantisMappingFrame(mantis));
         assertEquals(0x0100, mantis.getY());
 
-        mantis.update(2, player); // first Animate_RawNoSSTMultiDelay tick
-        assertEquals(1, readMantisMappingFrame(mantis));
-        assertEquals(0x00FB, mantis.getY());
-
-        mantis.update(3, player); // delay 2: hold
+        mantis.update(3, player); // first Animate_RawNoSSTMultiDelay tick
         assertEquals(1, readMantisMappingFrame(mantis));
         assertEquals(0x00FB, mantis.getY());
 
@@ -363,11 +443,15 @@ class TestS3kMgzPulleyAndMantis {
         assertEquals(1, readMantisMappingFrame(mantis));
         assertEquals(0x00FB, mantis.getY());
 
-        mantis.update(5, player); // next frame in script
+        mantis.update(5, player); // delay 2: hold
+        assertEquals(1, readMantisMappingFrame(mantis));
+        assertEquals(0x00FB, mantis.getY());
+
+        mantis.update(6, player); // next frame in script
         assertEquals(2, readMantisMappingFrame(mantis));
         assertEquals(0x00E8, mantis.getY());
 
-        mantis.update(6, player); // $F4 callback arms the jump, movement starts next frame
+        mantis.update(7, player); // $F4 callback arms the jump, movement starts next frame
         assertEquals("LAUNCH", readMantisState(mantis));
         assertEquals(0x00E8, mantis.getY());
     }
@@ -382,9 +466,11 @@ class TestS3kMgzPulleyAndMantis {
         player.setCentreX((short) 0x0210);
         player.setCentreY((short) 0x0160);
 
-        mantis.update(0, player); // init
-        mantis.update(1, player); // detect player, enter prep
-        for (int frame = 2; frame <= 6; frame++) {
+        mantis.refreshPostCameraRenderState();
+        mantis.update(0, player); // Obj_WaitOffscreen restores the Mantis operation
+        mantis.update(1, player); // init
+        mantis.update(2, player); // detect player, enter prep
+        for (int frame = 3; frame <= 7; frame++) {
             mantis.update(frame, player);
         }
 
@@ -397,7 +483,7 @@ class TestS3kMgzPulleyAndMantis {
         // only gate on X visibility.
         AbstractObjectInstance.updateCameraBounds(0, 0x00E9, 1024, 0x0200, 0);
 
-        mantis.update(7, player);
+        mantis.update(8, player);
 
         assertNotEquals(0x00E8, mantis.getY(),
                 "Mantis should keep moving through its jump arc even when only vertically off-screen");
@@ -460,6 +546,7 @@ class TestS3kMgzPulleyAndMantis {
 
     private static class RecordingServices extends StubObjectServices {
         private final List<Integer> playedSfx = new ArrayList<>();
+        private Camera camera;
 
         private RecordingServices() {
             withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
@@ -468,6 +555,11 @@ class TestS3kMgzPulleyAndMantis {
         @Override
         public void playSfx(int soundId) {
             playedSfx.add(soundId);
+        }
+
+        @Override
+        public Camera camera() {
+            return camera;
         }
     }
 

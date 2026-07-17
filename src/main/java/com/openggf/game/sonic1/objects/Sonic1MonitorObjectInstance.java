@@ -400,7 +400,14 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
 
     @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
-        return SolidRoutineProfile.monitorSolid(0, false);
+        return SolidRoutineProfile.fromProvider(this);
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // Mon_SolidSides reaches Mon_SolidSideAir when d0 equals 2*d1; its
+        // horizontal rejection is BHI, so the exact right edge stays solid.
+        return true;
     }
 
     @Override

@@ -437,6 +437,13 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Obj3E_ObjLoadData stores width_pixels=$20 for the body. The separate
+        // SolidObject call expands only collision d1 to $2B.
+        return 0x20;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Always solid, even after breaking
@@ -447,6 +454,13 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     public boolean preservesEdgeSubpixelMotion() {
         // S2 Obj3E body calls SolidObject at loc_3F278; SolidObject_AtEdge
         // preserves x_vel/g_speed when exact-edge contact only sets pushing.
+        return true;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj3E calls the standard S2 SolidObject helper with d1=$2B.
+        // Its BHI range check keeps relX==2*d1 as an exact-edge side contact.
         return true;
     }
 
@@ -462,6 +476,11 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         // HTZ2 capsule edge: ROM Tails interact still points at Obj3E when
         // TailsCPU_Normal tests Status_Push (s2.asm:39297-39300), while the
         // body SolidObject call is Obj3E loc_3F278.
+        return isGroundedCpuSidekickAtBodyEdge(player);
+    }
+
+    @Override
+    public boolean publishesSidekickCpuPushFromInteractSlot(PlayableEntity player) {
         return isGroundedCpuSidekickAtBodyEdge(player);
     }
 

@@ -70,6 +70,10 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
         return false;
     }
 
+    protected TraceVerificationScope verificationScope() {
+        return TraceVerificationScope.fromSystemProperty();
+    }
+
     @Test
     public void replayMatchesTrace() throws Exception {
         int idx = creditsDemoIndex();
@@ -83,6 +87,12 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
 
         // 1. Load trace data
         TraceData trace = TraceData.load(traceDir);
+        TraceVerificationScope verificationScope = verificationScope();
+        if (verificationScope == TraceVerificationScope.ANIMATION
+                && !trace.metadata().hasPerFrameCharacterAnimation()) {
+            fail("Animation-only verification requires CSV v7 character animation fields: "
+                    + traceDir);
+        }
 
         // 2. Load demo input from ROM
         Rom rom = GameServices.rom().getRom();
@@ -227,13 +237,13 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
 
             // 8. Log summary only when explicitly requested. Failing assertions
             // still carry the compact frontier summary.
-            TraceReplayConsole.printSummary(report);
+            TraceReplayConsole.printSummary(report, verificationScope);
 
             // 9. Assert no errors
-            if (report.hasErrors() && TraceReplayConsole.shouldPrintContext()) {
+            if (report.hasErrors(verificationScope) && TraceReplayConsole.shouldPrintContext()) {
                 System.err.println("\n=== Context window around first error ===");
                 System.err.println(report.getContextWindow(
-                        firstReportErrorFrame(report), TraceReplayConsole.contextRadius()));
+                        report.firstErrorFrame(verificationScope), TraceReplayConsole.contextRadius()));
             }
             assertReportHasNoReleaseBlockingDivergences(report);
         } finally {
@@ -246,12 +256,13 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
     }
 
     protected void assertReportHasNoReleaseBlockingDivergences(DivergenceReport report) {
-        if (report.hasErrors()) {
-            fail(report.toAssertionSummary());
+        TraceVerificationScope scope = verificationScope();
+        if (report.hasErrors(scope)) {
+            fail(report.toAssertionSummary(scope));
         }
-        if (report.hasWarnings() && !allowDiagnosticOnlyWarnings()) {
+        if (report.hasWarnings(scope) && !allowDiagnosticOnlyWarnings()) {
             fail("Trace replay warning report is release-blocking by default: "
-                    + report.toAssertionSummary());
+                    + report.toAssertionSummary(scope));
         }
     }
 
@@ -425,7 +436,7 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
 
         return new EngineDiagnostics(routine, standOnSlot, standOnType, rings, statusByte,
                 camX, camY, cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent, xSub, ySub,
-                -1, -1);
+                -1, -1, sprite.getAnimationId(), sprite.getMappingFrame());
     }
 
     private void writeReport(DivergenceReport report, int demoIndex) {
@@ -437,26 +448,23 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
                 demoIndex,
                 zoneSlug(demoIndex),
                 Sonic1CreditsDemoData.DEMO_ACT[demoIndex] + 1);
+            TraceVerificationScope scope = verificationScope();
+            String scopeSuffix = scope == TraceVerificationScope.ALL
+                    ? ""
+                    : "_" + scope.name().toLowerCase();
 
-            Path jsonPath = outDir.resolve(prefix + "_report.json");
+            Path jsonPath = outDir.resolve(prefix + scopeSuffix + "_report.json");
             Files.writeString(jsonPath, report.toJson());
 
-            if (report.hasErrors()) {
-                Path contextPath = outDir.resolve(prefix + "_context.txt");
+            if (report.hasErrors(scope)) {
+                Path contextPath = outDir.resolve(prefix + scopeSuffix + "_context.txt");
                 Files.writeString(contextPath,
                     report.getContextWindow(
-                            firstReportErrorFrame(report), TraceReplayConsole.contextRadius()));
+                            report.firstErrorFrame(scope), TraceReplayConsole.contextRadius()));
             }
         } catch (IOException e) {
             System.err.println("Warning: failed to write report: " + e.getMessage());
         }
-    }
-
-    private static int firstReportErrorFrame(DivergenceReport report) {
-        if (!report.errors().isEmpty()) {
-            return report.errors().get(0).startFrame();
-        }
-        return 0;
     }
 
     private boolean observeFrontierAndShouldStop(

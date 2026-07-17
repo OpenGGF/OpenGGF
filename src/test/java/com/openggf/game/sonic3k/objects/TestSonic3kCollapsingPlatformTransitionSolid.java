@@ -1,11 +1,14 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonic3kCollapsingPlatformTransitionSolid {
@@ -27,6 +30,37 @@ class TestSonic3kCollapsingPlatformTransitionSolid {
         setInt(platform, "state", 2);
 
         assertTrue(platform.solidForTransitionState(false));
+    }
+
+    @Test
+    void firstRiderReleaseKeepsOnlyAnExistingSecondRiderEligible() throws Exception {
+        Sonic3kCollapsingPlatformObjectInstance platform = platform();
+        setInt(platform, "state", 3);
+        setBoolean(platform, "releasePending", true);
+
+        assertTrue(platform.solidForTransitionState(true),
+                "the same native dispatch still has to run sub_205FC for Player 2");
+        assertFalse(platform.solidForTransitionState(false),
+                "a falling parent cannot accept a fresh rider");
+    }
+
+    @Test
+    void riderReleasePublishesOnlyTheNativePreviousAnimationByte() {
+        Sonic3kCollapsingPlatformObjectInstance platform = platform();
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0, (short) 0);
+        player.setAnimationId(Sonic3kAnimationIds.WALK);
+        player.setPushing(true);
+        player.getAnimationManager().publishPreviousAnimationId(Sonic3kAnimationIds.WALK.id());
+
+        platform.publishReleaseAnimationState(player);
+
+        assertEquals(Sonic3kAnimationIds.WALK.id(), player.getAnimationId(),
+                "sub_205FC leaves anim untouched");
+        assertEquals(Sonic3kAnimationIds.RUN.id(),
+                player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "sub_205FC writes prev_anim=Run");
+        assertFalse(player.getPushing(), "sub_205FC clears Status_Push");
     }
 
     private static Sonic3kCollapsingPlatformObjectInstance platform() {

@@ -84,6 +84,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     private static final int SPARKLE_INTERVAL = 4;
     private static final int POST_LAND_TIMER = 0x40;
     private static final int BUMP_COOLDOWN = 0x20;
+    private static final int RESULTS_CARRIED_RETIRE_DISPATCHES = 3;
+    private static final int RESULTS_WAITED_LANDING_RETIRE_DISPATCHES = 2;
 
     // Bump detection box relative to signpost center
     private static final int BUMP_LEFT = -0x20;
@@ -109,6 +111,11 @@ public class S3kSignpostInstance extends AbstractObjectInstance
      * (the signpost's spawn is null, so the recreate hook uses a placeholder).
      */
     private int apparentAct;
+    private int resultsTimerCatchUpEntries;
+    private int resultsWaitDurationAdjustment;
+    private int resultsPostControlHandoffDelayEntries;
+    private boolean resultsWaitedForPlayerLanding;
+    private boolean mainEndingPosePending;
     private boolean sidekickEndingPoseApplied;
     private boolean sidekickEndingPoseCheckArmed;
 
@@ -120,10 +127,18 @@ public class S3kSignpostInstance extends AbstractObjectInstance
      * @param apparentAct ROM's Apparent_act (0 = act 1 display, 1 = act 2 display)
      */
     public S3kSignpostInstance(int spawnX, int apparentAct) {
+        this(spawnX, apparentAct, 0, 0, 0);
+    }
+
+    S3kSignpostInstance(int spawnX, int apparentAct, int resultsTimerCatchUpEntries,
+            int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries) {
         super(null, "S3kSignpost");
         this.worldX = spawnX;
         this.worldY = 0; // Set properly in INIT
         this.apparentAct = apparentAct;
+        this.resultsTimerCatchUpEntries = Math.max(0, resultsTimerCatchUpEntries);
+        this.resultsWaitDurationAdjustment = Math.max(0, resultsWaitDurationAdjustment);
+        this.resultsPostControlHandoffDelayEntries = Math.max(0, resultsPostControlHandoffDelayEntries);
     }
 
     private S3kSignpostInstance() {
@@ -192,7 +207,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         switch (state) {
             case INIT -> updateInit(player);
             case FALLING -> updateFalling(frameCounter, player);
-            case LANDED -> updateLanded();
+            case LANDED -> updateLanded(player);
             case RESULTS -> updateResults(player);
             case AFTER -> updateAfter(player);
         }
@@ -282,7 +297,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
                 return; // No floor contact yet — keep falling
             }
             landed = true;
-            postLandTimer = POST_LAND_TIMER;
+            postLandTimer = Math.max(0, POST_LAND_TIMER - resultsTimerCatchUpEntries);
             yVel = 0;
             xVel = 0;
             subX = 0;
@@ -368,7 +383,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     // LANDED
     // =========================================================================
 
-    private void updateLanded() {
+    private void updateLanded(AbstractPlayableSprite player) {
         // If a hidden monitor cleared our landed flag, bounce back up
         if (!landed) {
             yVel = -0x200;
@@ -388,6 +403,16 @@ public class S3kSignpostInstance extends AbstractObjectInstance
             animFrame = FACE_FRAMES[pc.ordinal()];
             xVel = 0;
             yVel = 0;
+            // loc_838D6 runs in the signpost's later object slot and writes
+            // Ctrl_2_locked=$FF. Tails_Control therefore skips Tails_CPU_Control
+            // beginning with the next player slot while retaining the last
+            // Ctrl_2_logical word for ordinary movement.
+            for (PlayableEntity candidate : playerQuery(player)
+                    .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+                if (candidate instanceof AbstractPlayableSprite sprite && sprite != player) {
+                    applySidekickInputLock(sprite);
+                }
+            }
             state = State.RESULTS;
             LOG.fine("S3K Signpost LANDED -> RESULTS");
         }
@@ -410,10 +435,24 @@ public class S3kSignpostInstance extends AbstractObjectInstance
 
         // Wait for player to be on the ground
         if (player.getAir()) {
+            resultsWaitedForPlayerLanding = true;
             return;
         }
 
-        applyMainPlayerEndingPose(player);
+        if (resultsWaitedForPlayerLanding) {
+            // Obj_EndSignResults has already occupied its native routine-6
+            // slot while waiting on Status_InAir. Once the player lands in the
+            // earlier player slot, this later object slot applies the ending
+            // pose immediately and routine 8 may check Tails next frame.
+            applyMainPlayerEndingPose(player);
+            sidekickEndingPoseCheckArmed = true;
+        } else {
+            // When routine 6 never waited, the engine reaches the
+            // landed-to-results boundary one collapsed owner dispatch before
+            // the ROM's Set_PlayerEndingPose call. Preserve that SST entry
+            // boundary so this frame retains its raw animation and mapping.
+            mainEndingPosePending = true;
+        }
 
         // ROM Obj_EndSignLanded writes only Ctrl_2_locked before this routine;
         // Obj_EndSignResults calls Set_PlayerEndingPose with a1=Player_1 only
@@ -436,7 +475,11 @@ public class S3kSignpostInstance extends AbstractObjectInstance
             services().gameState().setEndOfLevelActive(true);
         }
         spawnFreeChild(() -> new S3kResultsScreenObjectInstance(
-                getPlayerCharacter(), apparentAct));
+                getPlayerCharacter(), apparentAct, resultsWaitDurationAdjustment,
+                resultsPostControlHandoffDelayEntries,
+                resultsWaitedForPlayerLanding
+                        ? RESULTS_WAITED_LANDING_RETIRE_DISPATCHES
+                        : RESULTS_CARRIED_RETIRE_DISPATCHES));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
     }
@@ -446,6 +489,9 @@ public class S3kSignpostInstance extends AbstractObjectInstance
             return;
         }
         sprite.setControlLocked(true);
+        if (sprite.getCpuController() != null) {
+            sprite.getCpuController().setController2SignedLocked(true);
+        }
     }
 
     static void applySidekickEndingPose(AbstractPlayableSprite sprite) {
@@ -455,6 +501,9 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         // Check_TailsEndPose clears Ctrl_2_locked immediately before tail-calling
         // Set_PlayerEndingPose (sonic3k.asm:181919-181940).
         sprite.setControlLocked(false);
+        if (sprite.getCpuController() != null) {
+            sprite.getCpuController().setController2SignedLocked(false);
+        }
         applyMainPlayerEndingPose(sprite);
     }
 
@@ -498,6 +547,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     // =========================================================================
 
     private void updateAfter(AbstractPlayableSprite player) {
+        if (mainEndingPosePending) {
+            mainEndingPosePending = false;
+            applyMainPlayerEndingPose(player);
+        }
         applyNativeSidekickEndingPose(player);
         if (isResultsScreenActive()) {
             return;

@@ -4,6 +4,7 @@ import com.openggf.data.RomByteReader;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kPlayerArt;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
@@ -379,6 +380,12 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
     }
 
     @Override
+    public int getPriorityBucket() {
+        // ROM: loc_674AC writes priority(a0) = $280.
+        return 5;
+    }
+
+    @Override
     public void onUnload() {
         if (activeIntroInstance == this) {
             activeIntroInstance = null;
@@ -676,6 +683,12 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
             player.setYSpeed((short) 0);
             player.setGSpeed((short) 0);
             player.setSubpixelRaw(0, 0);
+            // Obj_AIZPlaneIntro init writes mapping_frame=0 and
+            // object_control=$53. Bit 1 keeps Animate_Sonic from replacing
+            // that frame while the hidden player slot is owned by the intro
+            // (sonic3k.asm:135492-135495,22067-22076).
+            player.setMappingFrame(0);
+            player.setObjectMappingFrameControl(true);
             player.setAir(false);
             player.setControlLocked(true);
             ObjectControlState.engineScriptedPreserveCpuMovementSuppressed().applyTo(player);
@@ -1055,6 +1068,12 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
                 player.setHidden(false);
                 ObjectControlState.none().applyTo(player);
                 ownsPlayerControl = false;
+                // The object runs after the player slot. Retail publishes the
+                // Hurt byte immediately but leaves the already displayed intro
+                // frame intact until the next Animate_Sonic pass
+                // (sonic3k.asm:135609-135619).
+                player.setObjectMappingFrameControl(false);
+                player.setAnimationId(Sonic3kAnimationIds.HURT);
                 player.setYSpeed((short) -0x400);
                 player.setXSpeed((short) -0x200);
                 player.setGSpeed((short) 0);

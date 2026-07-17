@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.level.objects.AbstractMonitorObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectControlledSolidContactController;
 import com.openggf.level.objects.ObjectInstance;
@@ -132,10 +133,24 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         boolean grabbed;        // true while routine == 4 (fast check)
         int xSub;
         int ySub;
+        boolean deferredWallClampPending;
+        boolean deferredWallStopReady;
+        int deferredWallClampX;
+        int deferredWallClampXSub;
+        int deferredWallSourceX;
+        boolean deferredWallPreserveSubpixel;
+        boolean deferredWallBoundaryRight;
+        boolean projectedWallSubpixelValid;
+        int projectedWallSubpixel;
 
         @Override
         public Snapshot captureRewindStateValue() {
-            return new Snapshot(routine, entrySideBias, standingNow, jumpHeldAtGrab, grabbed, xSub, ySub);
+            return new Snapshot(routine, entrySideBias, standingNow, jumpHeldAtGrab, grabbed, xSub, ySub,
+                    deferredWallClampPending, deferredWallStopReady,
+                    deferredWallClampX, deferredWallClampXSub,
+                    deferredWallSourceX,
+                    deferredWallPreserveSubpixel, deferredWallBoundaryRight,
+                    projectedWallSubpixelValid, projectedWallSubpixel);
         }
 
         @Override
@@ -147,6 +162,15 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             grabbed = state.grabbed();
             xSub = state.xSub();
             ySub = state.ySub();
+            deferredWallClampPending = state.deferredWallClampPending();
+            deferredWallStopReady = state.deferredWallStopReady();
+            deferredWallClampX = state.deferredWallClampX();
+            deferredWallClampXSub = state.deferredWallClampXSub();
+            deferredWallSourceX = state.deferredWallSourceX();
+            deferredWallPreserveSubpixel = state.deferredWallPreserveSubpixel();
+            deferredWallBoundaryRight = state.deferredWallBoundaryRight();
+            projectedWallSubpixelValid = state.projectedWallSubpixelValid();
+            projectedWallSubpixel = state.projectedWallSubpixel();
         }
 
         private record Snapshot(
@@ -156,7 +180,16 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
                 boolean jumpHeldAtGrab,
                 boolean grabbed,
                 int xSub,
-                int ySub) {
+                int ySub,
+                boolean deferredWallClampPending,
+                boolean deferredWallStopReady,
+                int deferredWallClampX,
+                int deferredWallClampXSub,
+                int deferredWallSourceX,
+                boolean deferredWallPreserveSubpixel,
+                boolean deferredWallBoundaryRight,
+                boolean projectedWallSubpixelValid,
+                int projectedWallSubpixel) {
         }
     }
 
@@ -234,6 +267,24 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // ROM SolidObjectFull_1P reaches the no-contact path only when the
+        // unsigned biased X distance is strictly greater than d1*2. A player
+        // flush with the padded right edge therefore remains a side contact
+        // and keeps the platform/player pushing bits set.
+        return true;
+    }
+
+    @Override
+    public int getBalanceWidthPixels() {
+        // Tails_Move reads width_pixels(a1), which Obj_MGZTopPlatform sets to
+        // $18. The full-solid collision helper is wider (width+$B), while the
+        // generic full-solid fallback of 16 is narrower; neither is the ROM
+        // edge-balance width.
+        return WIDTH_PIXELS;
+    }
+
+    @Override
     public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
         // ROM loc_34C54 calls sub_34EEC for P1/P2 before the platform body moves
         // (sonic3k.asm:71508-71525); the post-motion player snap happens later
@@ -242,7 +293,40 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        // sub_34EEC passes the platform's current x_pos to SolidObjectFull_1P
+        // before MoveSprite2 advances the body, so MvSonicOnPtfm sees no X
+        // delta. The post-move sub_35202 path only copies X while a player is
+        // grabbed (state >= 4); an ordinary standing rider is not carried.
+        return false;
+    }
+
+    @Override
+    public boolean usesPreUpdateYForContinuedRide(PlayableEntity player) {
+        // The same pre-MoveSprite2 SolidObjectFull_1P call re-seats an ordinary
+        // rider on the old Y. sub_35202 does not apply a post-move correction
+        // until the object-local player state reaches the grabbed path.
+        return true;
+    }
+
+    @Override
+    public boolean projectsPreMovementGroundXForSolidContact(PlayableEntity player) {
+        // Obj_MGZTopPlatform runs sub_34EEC after the player object has already
+        // applied its grounded movement for the frame. The engine's inline
+        // solid pass runs before that movement, so project the pending flat-X
+        // step when testing a fresh side entry. This is what lets the ROM's
+        // inclusive SolidObjectFull_1P right edge catch a player that moves
+        // exactly onto x_pos + $23 during Obj01.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity player) {
+        // sub_3519A replaces the object's update address with loc_34D92,
+        // whose drift-only routine never calls SolidObject again.
+        if (releasedFlight) {
+            return false;
+        }
         // ROM state 4 grab: bclr #Status_OnObj / bset #Status_InAir on player, and
         // bclr d6,status(a0) on platform -> effectively disables solid coupling for
         // the grabbed player. We mirror by dropping solidity for that player.
@@ -272,6 +356,19 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             if (state.routine == 0) {
                 int platformMinusPlayer = posX - playerEntity.getCentreX();
                 state.entrySideBias = (platformMinusPlayer < 0) ? GRAB_ENTRY_BIAS : 0;
+                // SolidObjectFull_1P is inline at the start of native state 0,
+                // then loc_34F2A falls straight through to the approach/grab
+                // check in that same object slot. AUTO_AFTER_UPDATE publishes
+                // this engine checkpoint after the Java update body, so consume
+                // the fresh landing here and perform the matching post-sync now.
+                if (playerEntity instanceof AbstractPlayableSprite player
+                        && !player.isWallCling()) {
+                    state.routine = 2;
+                    playerStateApproach(player, state);
+                    if (state.grabbed) {
+                        snapGrabbedPlayer(player);
+                    }
+                }
             }
         }
         // ROM SolidObjectFull: while the wall-cling bit is set (grabbed), a horizontal
@@ -284,7 +381,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         if (!sprite.isWallCling()) {
             return;
         }
-        if (contact.touchSide() && contact.movingInto()) {
+        if (contact.touchSide() && contact.sideDistX() != 0 && contact.movingInto()) {
             sprite.setWallClingSideContact(true);
         }
         if (contact.touchBottom()) {
@@ -295,8 +392,166 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public boolean allowsObjectControlledSolidContact(PlayableEntity player, ObjectInstance candidate) {
         return candidate instanceof BreakableWallObjectInstance
+                // Obj_Monitor's S3K SolidObject_cont rejects only a negative
+                // object_control byte. The platform's positive bit-0 carry state
+                // therefore still receives the monitor's side-contact flag, which
+                // loc_350A6 consumes to stop platform movement.
+                || candidate instanceof AbstractMonitorObjectInstance
                 || candidate instanceof CollapsingBridgeObjectInstance bridge && bridge.isMgzStompMode()
+                // Sinking mud executes its inline SolidObjectTop later in the
+                // object-slot pass. ROM permits that landing even while this
+                // platform still owns the player's object_control bit; the
+                // resulting OnObj state releases the carrier on its next slot.
+                || candidate instanceof SinkingMudObjectInstance
+                // Obj_Spikes reaches SolidObject_cont, whose signed
+                // object_control test accepts this carrier's positive bit 0.
+                // Its side/top callback can therefore hurt and release the
+                // carried player before the platform's own post-sync.
+                || candidate instanceof Sonic3kSpikeObjectInstance
                 || candidate instanceof Sonic3kSpringObjectInstance;
+    }
+
+    @Override
+    public void onObjectControlledSolidContact(
+            PlayableEntity playerEntity, ObjectInstance candidate, SolidContact contact) {
+        if (!(playerEntity instanceof AbstractPlayableSprite player) || contact == null) {
+            return;
+        }
+        if (candidate instanceof BreakableWallObjectInstance wall
+                && contact.touchSide()
+                && !wall.isDestroyed()
+                && getExecutionSlotIndex() < wall.getExecutionSlotIndex()) {
+            PlayerGrabState state = playerStates.computeIfAbsent(player, key -> new PlayerGrabState());
+            // The later wall publishes status_tertiary after this carrier has
+            // finished. Retain that flag for the carrier's next SST turn and
+            // keep re-publishing it while SolidObjectFull reports contact.
+            if (state.deferredWallPreserveSubpixel
+                    && !state.deferredWallClampPending
+                    && !state.deferredWallStopReady
+                    && movingAwayFromDeferredWall(player, state)) {
+                return;
+            }
+            state.deferredWallBoundaryRight = wall.getX() >= player.getCentreX();
+            if (fractionalStepLeavesWall(player, state)) {
+                state.deferredWallClampPending = false;
+                state.deferredWallStopReady = false;
+                return;
+            }
+            state.deferredWallClampPending = true;
+            state.deferredWallStopReady = !player.isCpuControlled();
+            state.deferredWallClampX = player.getCentreX();
+            state.deferredWallClampXSub = player.getXSubpixelRaw();
+            state.deferredWallSourceX = wall.getX();
+            state.deferredWallPreserveSubpixel = true;
+            return;
+        }
+        if (candidate instanceof BreakableWallObjectInstance wall
+                && contact.touchSide()
+                && !wall.isDestroyed()
+                && getExecutionSlotIndex() > wall.getExecutionSlotIndex()
+                // A zero-distance boundary only needs deferred replay while
+                // the carrier's later word-only snap would put the player
+                // beyond that boundary. Once the platform itself has returned
+                // to the clamped X, sub_35504 is free to accumulate away-input
+                // ground velocity again.
+                && (contact.sideDistX() != 0
+                        || !wall.breaksFromTertiarySideFeedback()
+                                && carrierSnapWouldCrossBoundary(player, candidate))) {
+            PlayerGrabState state = playerStates.computeIfAbsent(player, key -> new PlayerGrabState());
+            // The engine's S3K post-movement solid pass reaches this wall
+            // before the controller body, while the ROM's slot order applies
+            // the wall after the platform's MoveSprite2/post-sync. Preserve
+            // the wall's already-resolved native X and replay that final write
+            // after this controller's body; its tertiary stop flag becomes
+            // visible to the controller on the following native tick.
+            state.deferredWallClampPending = true;
+            state.deferredWallClampX = player.getCentreX();
+            state.deferredWallSourceX = wall.getX();
+            if (state.projectedWallSubpixelValid) {
+                state.deferredWallClampXSub = state.projectedWallSubpixel;
+            } else if (!player.isCpuControlled()) {
+                state.deferredWallClampXSub = (player.getXSubpixelRaw()
+                        + (previewPlayerGroundSpeed(player) << 8)) & 0xFFFF;
+            } else {
+                state.deferredWallClampXSub = player.getXSubpixelRaw();
+            }
+            state.projectedWallSubpixelValid = false;
+            return;
+        }
+        // SolidObject_cont writes status_tertiary before this platform's later
+        // object slot runs. loc_350A6 clears the flags and stops the matching
+        // platform axis before copying its velocity back to Player_1.
+        if (contact.touchSide() && contact.sideDistX() != 0 && contact.movingInto()) {
+            player.setWallClingSideContact(true);
+        }
+        if (contact.touchBottom()) {
+            player.setWallClingTopContact(true);
+        }
+    }
+
+    @Override
+    public Short projectedSolidContactXSpeed(
+            PlayableEntity player, ObjectInstance candidate) {
+        if (player == null) {
+            return null;
+        }
+        if (candidate instanceof BreakableWallObjectInstance wall
+                && getExecutionSlotIndex() < wall.getExecutionSlotIndex()) {
+            // This carrier slot has already completed its MoveSprite2 and
+            // post-sync before the later wall runs. There is no pending carrier
+            // displacement for SolidObjectFull to project into the wall check.
+            return 0;
+        }
+        if (candidate instanceof BreakableWallObjectInstance wall
+                && player instanceof AbstractPlayableSprite sprite
+                && getExecutionSlotIndex() > wall.getExecutionSlotIndex()
+                && sprite.getCentreX() == wall.getX() + wall.getSolidParams().halfWidth()) {
+            // This wall's SST slot runs before the carrier and the player is
+            // exactly on SolidObjectFull's inclusive right boundary. Its d0
+            // folds to zero, so the wall returns before the later platform's
+            // MoveSprite2 step; do not project that future carrier movement.
+            return 0;
+        }
+        if (candidate instanceof BreakableWallObjectInstance wall
+                && player instanceof AbstractPlayableSprite sprite
+                && wall.wouldBreakFromSideContact(sprite)) {
+            // A breaking contact removes the wall in its own checkpoint and
+            // restores the saved incoming velocity; it must use that real
+            // checkpoint position. Projection is only needed for a persistent
+            // wall whose side flag is consumed by this later carrier slot.
+            return null;
+        }
+        if (candidate instanceof BreakableWallObjectInstance
+                && player instanceof AbstractPlayableSprite sprite
+                && !sprite.isCpuControlled()) {
+            PlayerGrabState state = playerStates.computeIfAbsent(sprite, key -> new PlayerGrabState());
+            int miniMotionXSpeed = previewPlayerGroundSpeed(sprite);
+            state.projectedWallSubpixel = (sprite.getXSubpixelRaw() + (miniMotionXSpeed << 8)) & 0xFFFF;
+            state.projectedWallSubpixelValid = true;
+        }
+        // The platform's later word-only post-sync supplies the pending
+        // integer displacement. P1's fractional displacement is retained
+        // separately above from sub_35504's ground_vel-driven MoveSprite2.
+        return player.getXSpeed();
+    }
+
+    @Override
+    public void onObjectControlledSolidContactInvalidated(
+            PlayableEntity player, ObjectInstance candidate) {
+        if (!(candidate instanceof BreakableWallObjectInstance wall)) {
+            return;
+        }
+        PlayerGrabState state = playerStates.get(player);
+        if (state != null && state.deferredWallSourceX == wall.getX()) {
+            state.deferredWallClampPending = false;
+            state.deferredWallStopReady = false;
+            state.deferredWallClampX = 0;
+            state.deferredWallClampXSub = 0;
+            state.deferredWallSourceX = 0;
+            state.deferredWallPreserveSubpixel = false;
+            state.deferredWallBoundaryRight = false;
+            state.projectedWallSubpixelValid = false;
+        }
     }
 
     @Override
@@ -313,7 +568,6 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
-
         // ROM loc_34D92: post-release drift. MoveSprite + anim + offscreen test only.
         if (releasedFlight) {
             runReleasedFlight();
@@ -336,12 +590,10 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             runPlayerStateMachine(extension, false);
         }
 
-        // A P1 jump-launch inside the state machine may have flipped the platform to
-        // post-release drift; honour that immediately (ROM: sub_3519A overwrites (a0)).
-        if (releasedFlight) {
-            runReleasedFlight();
-            return;
-        }
+        // sub_3519A replaces the object's update pointer, but it does not redirect
+        // the invocation already executing. The current loc_34C54 tick therefore
+        // still runs the platform body and both sub_35202 post-sync calls; the new
+        // loc_34D92 drift path takes effect on the following object tick.
 
         // Platform body — subtype != 0 stays passive until Obj_MGZTopLauncher releases it.
         if (bodyDriven) {
@@ -361,13 +613,25 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         for (AbstractPlayableSprite extension : extensions) {
             snapGrabbedPlayer(extension);
         }
+        shareDeferredWallClampWithGrabbedSidekick(primary, sidekick);
+        if (primary != null) applyDeferredWallClamp(primary);
+        if (sidekick != null) applyDeferredWallClamp(sidekick);
+        if (primary != null) clearDepartedWallPush(primary);
+        if (sidekick != null) clearDepartedWallPush(sidekick);
         carryLatched = nextCarryLatched;
 
         // Reset per-frame standing flags; SolidContacts will re-assert next tick.
         for (PlayerGrabState ps : playerStates.values()) {
             ps.standingNow = false;
+            ps.projectedWallSubpixelValid = false;
         }
         updateDynamicSpawn(posX, posY);
+        // ROM loc_34D62 ends in Sprite_OnScreen_Test. Its chunk-aligned,
+        // X-only check clears the layout respawn bit when this live platform
+        // leaves the object window, allowing a later cursor pass to reload it.
+        if (!isInRangeAt(posX)) {
+            setDestroyedByOffscreen();
+        }
     }
 
     /**
@@ -377,11 +641,21 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
      * platform leaves the camera window.
      */
     private void runReleasedFlight() {
+        // loc_34D92 reads the render_flags on-screen bit produced by the prior
+        // render pass before it moves the object. The frame-start position and
+        // camera bounds are therefore the correct retained-bit inputs here.
+        boolean renderFlagOnScreen = isWithinRenderSpriteBounds(WIDTH_PIXELS, HEIGHT_PIXELS);
         movePlatform(true, RELEASE_GRAVITY);
         timer = (timer + 4) & 0xFFFF;
         updateDynamicSpawn(posX, posY);
-        if (!isChkObjectVisible()) {
-            setDestroyed(true);
+        if (!renderFlagOnScreen) {
+            // ROM writes x_pos=$7F00, then falls through to
+            // Sprite_OnScreen_Test so the respawn-table bit is cleared.
+            posX = 0x7F00;
+            updateDynamicSpawn(posX, posY);
+        }
+        if (!isInRangeAt(posX)) {
+            setDestroyedByOffscreen();
         }
     }
 
@@ -428,13 +702,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
 
     /** ROM loc_34C98..loc_34CD0: airborne branch (status bit 1). */
     private void runAirborne() {
-        // Gravity ROM: cmpi.w #$200; addi.w #8.
-        if (yVel < MAX_Y_VEL) {
-            yVel += GRAVITY;
-            if (yVel > MAX_Y_VEL) {
-                yVel = MAX_Y_VEL;
-            }
-        }
+        applyAirborneGravity();
 
         movePlatform(false, 0);
         switch (TrigLookupTable.calcMovementQuadrant((short) xVel, (short) yVel)) {
@@ -461,6 +729,15 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             }
         }
 
+    }
+
+    private void applyAirborneGravity() {
+        // ROM loc_34C88 compares the pre-add value and then adds $8 without a
+        // post-add clamp. A value of $1FC therefore becomes $204 and remains
+        // there on following ticks because it is already >= $200.
+        if (yVel < MAX_Y_VEL) {
+            yVel += GRAVITY;
+        }
     }
 
     /** ROM sub_35868: sine-arced teleport between waypoints. */
@@ -573,7 +850,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             case 0 -> playerStateLanding(player, state);
             case 2 -> playerStateApproach(player, state);
             case 4 -> playerStateGrabbed(player, state, isPrimary);
-            case 6 -> playerStateReleased(state);
+            case 6 -> playerStateReleased(player, state);
             default -> state.routine = 0;
         }
     }
@@ -620,9 +897,10 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
      */
     private void grabPlayer(AbstractPlayableSprite player, PlayerGrabState state) {
         NativePositionOps.writeXPosPreserveSubpixel(player, posX);
-        // ROM sets object_control bit 7 during MGZ carry, so normal movement/collision
-        // paths stop entirely while the platform owns the player.
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        // ROM loc_34F84 sets object_control bit 0, not the signed bit-7 gate.
+        // Normal player movement is suppressed, while later object slots may
+        // still execute their SolidObject helpers against the carried player.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setMgzTopPlatformCarrySolidContactObject(this);
         player.setControlLocked(false);
         player.setOnObject(false);
@@ -647,6 +925,12 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
 
     /** ROM loc_34FBC: state 4. Jump / ride / centering. */
     private void playerStateGrabbed(AbstractPlayableSprite player, PlayerGrabState state, boolean isPrimary) {
+        applyGrabbedCollisionRadii(player);
+        if (state.deferredWallStopReady) {
+            player.setWallClingSideContact(true);
+            state.deferredWallStopReady = false;
+        }
+
         // ROM: jump (A|B|C) -> launch + release.
         boolean jumpPressed = player.isJumpPressed();
         if (state.jumpHeldAtGrab) {
@@ -662,11 +946,10 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         // if the platform has x_vel, face per its sign (Facing bit reflects platform drift).
         // The player is object-controlled so the normal facing-from-gSpeed update doesn't
         // run — we set it explicitly here.
-        if (player.isLeftPressed() && !player.isRightPressed()) {
-            player.setDirection(Direction.LEFT);
-        } else if (player.isRightPressed() && !player.isLeftPressed()) {
-            player.setDirection(Direction.RIGHT);
-        } else if (xVel != 0) {
+        int logicalInput = player.getLogicalInputState();
+        boolean logicalLeft = (logicalInput & AbstractPlayableSprite.INPUT_LEFT) != 0;
+        boolean logicalRight = (logicalInput & AbstractPlayableSprite.INPUT_RIGHT) != 0;
+        if (!logicalLeft && !logicalRight && xVel != 0) {
             player.setDirection(xVel < 0 ? Direction.LEFT : Direction.RIGHT);
         }
 
@@ -731,27 +1014,197 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         }
     }
 
+    private void applyGrabbedCollisionRadii(AbstractPlayableSprite player) {
+        // The native state byte remains on the loc_34F4C entry while the
+        // platform owns the player. Its fall-through reaches loc_34F84 again
+        // and rewrites default_y_radius+$18 every object tick. This matters
+        // when an earlier/later solid (the MGZ stomp bridge) has called
+        // Player_TouchFloor and temporarily restored the standing radii: the
+        // following frame's earlier spring slot must still see the enlarged
+        // carried-player collision height.
+        player.applyCustomRadii(player.getXRadius(), player.getStandYRadius() + 0x18);
+        // loc_34F84 also reasserts object_control bit 0. Multiple live top
+        // platforms may retain native per-player state simultaneously; the
+        // last platform slot to execute is therefore the owner whose pending
+        // contact flags earlier slots must publish on the following frame.
+        player.setMgzTopPlatformCarrySolidContactObject(this);
+    }
+
+    private void applyDeferredWallClamp(AbstractPlayableSprite player) {
+        PlayerGrabState state = playerStates.get(player);
+        if (state == null || !state.deferredWallClampPending) {
+            return;
+        }
+        boolean leavingWall = state.deferredWallPreserveSubpixel
+                && (integerPositionLeavesWall(player, state)
+                        || fractionalStepLeavesWall(player, state));
+        if (!leavingWall) {
+            NativePositionOps.writeXPosPreserveSubpixel(player, state.deferredWallClampX);
+        }
+        if (!state.deferredWallPreserveSubpixel) {
+            player.setSubpixelRaw(state.deferredWallClampXSub, player.getYSubpixelRaw());
+        }
+        player.setXSpeed((short) 0);
+        if (!state.deferredWallPreserveSubpixel || !leavingWall) {
+            player.setGSpeed((short) 0);
+        }
+        // SolidObject's airborne side branch corrects position without setting
+        // Status_Push. P2 remains airborne throughout this carry path.
+        if (!player.getAir()) {
+            player.setPushing(true);
+        }
+        state.deferredWallClampPending = false;
+        // loc_35048 returns immediately for Player_2; only P1 reaches the
+        // carrier's status_tertiary consumption at loc_350A6.
+        state.deferredWallStopReady = !player.isCpuControlled() && !leavingWall;
+    }
+
+    private void shareDeferredWallClampWithGrabbedSidekick(
+            AbstractPlayableSprite primary, AbstractPlayableSprite sidekick) {
+        if (primary == null || sidekick == null) {
+            return;
+        }
+        PlayerGrabState primaryState = playerStates.get(primary);
+        PlayerGrabState sidekickState = playerStates.get(sidekick);
+        if (primaryState == null
+                || !primaryState.deferredWallClampPending
+                || sidekickState == null
+                || !sidekickState.grabbed
+                || sidekickState.deferredWallClampPending) {
+            return;
+        }
+        // sub_35202 runs for both player slots after the platform body. When
+        // the shared carrier reaches a side boundary, both grabbed positions
+        // finish on that same native wall coordinate even if only P1 supplied
+        // the side-contact flag to the folded engine checkpoint.
+        sidekickState.deferredWallClampPending = true;
+        sidekickState.deferredWallClampX = primaryState.deferredWallClampX;
+        sidekickState.deferredWallClampXSub = sidekick.getXSubpixelRaw();
+        sidekickState.deferredWallSourceX = primaryState.deferredWallSourceX;
+        sidekickState.deferredWallPreserveSubpixel = primaryState.deferredWallPreserveSubpixel;
+        sidekickState.deferredWallBoundaryRight = primaryState.deferredWallBoundaryRight;
+    }
+
+    private void clearDepartedWallPush(AbstractPlayableSprite player) {
+        PlayerGrabState state = playerStates.get(player);
+        if (state == null
+                || state.deferredWallClampPending
+                || state.deferredWallClampX == 0
+                || player.getCentreX() == state.deferredWallClampX) {
+            return;
+        }
+        if (!player.isCpuControlled()) {
+            player.setPushing(false);
+            // The native P1 mini-movement path publishes prev_anim=1 when it
+            // leaves the push state, so Animate_Sonic restarts AniSonic00 on
+            // the next player slot while retaining this tick's push mapping.
+            // P2 returns at loc_35048 and never enters this path.
+            player.getAnimationManager().publishPreviousAnimationId(1);
+        }
+        state.deferredWallClampX = 0;
+        state.deferredWallClampXSub = 0;
+        state.deferredWallSourceX = 0;
+        state.deferredWallPreserveSubpixel = false;
+        state.deferredWallBoundaryRight = false;
+    }
+
+    private boolean fractionalStepLeavesWall(
+            AbstractPlayableSprite player, PlayerGrabState state) {
+        int speed = player.getGSpeed();
+        int subpixel = player.getXSubpixelRaw() & 0xFFFF;
+        if (state.deferredWallBoundaryRight && speed < 0) {
+            return subpixel <= ((-speed) << 8);
+        }
+        return !state.deferredWallBoundaryRight
+                && speed > 0
+                && subpixel >= 0x10000 - (speed << 8);
+    }
+
+    private boolean movingAwayFromDeferredWall(
+            AbstractPlayableSprite player, PlayerGrabState state) {
+        int speed = player.getGSpeed();
+        return state.deferredWallBoundaryRight ? speed < 0 : speed > 0;
+    }
+
+    private boolean integerPositionLeavesWall(
+            AbstractPlayableSprite player, PlayerGrabState state) {
+        int currentX = player.getCentreX();
+        return state.deferredWallBoundaryRight
+                ? currentX < state.deferredWallClampX
+                : currentX > state.deferredWallClampX;
+    }
+
+    private int previewPlayerGroundSpeed(AbstractPlayableSprite player) {
+        int speed = player.getGSpeed();
+        int logicalInput = player.getLogicalInputState();
+        boolean right = (logicalInput & AbstractPlayableSprite.INPUT_RIGHT) != 0;
+        boolean left = (logicalInput & AbstractPlayableSprite.INPUT_LEFT) != 0;
+        if (left && !right) {
+            if (speed > 0) {
+                return speed < PLAYER_SKID ? -PLAYER_SKID : speed - PLAYER_SKID;
+            }
+            return Math.max(-PLAYER_MAX_SPEED, speed - PLAYER_ACCEL);
+        }
+        if (right && !left) {
+            if (speed < 0) {
+                return speed >= -PLAYER_SKID ? PLAYER_SKID : speed + PLAYER_SKID;
+            }
+            return Math.min(PLAYER_MAX_SPEED, speed + PLAYER_ACCEL);
+        }
+        if (speed > 0) {
+            return Math.max(0, speed - PLAYER_ACCEL);
+        }
+        if (speed < 0) {
+            return Math.min(0, speed + PLAYER_ACCEL);
+        }
+        return 0;
+    }
+
+    private boolean carrierSnapWouldCrossBoundary(
+            AbstractPlayableSprite player, ObjectInstance boundary) {
+        int predictedPlatformX = predictCoordinate(posX, motion.xSub, xVel);
+        int clampedPlayerX = player.getCentreX();
+        return boundary.getX() >= clampedPlayerX
+                ? predictedPlatformX > clampedPlayerX
+                : predictedPlatformX < clampedPlayerX;
+    }
+
     /** ROM sub_35504: accumulate player ground_vel from input (accel $C, skid $80, max $600). */
     private void runPlayerGroundMotion(AbstractPlayableSprite player) {
         int gSpeed = player.getGSpeed();
-        boolean right = player.isRightPressed();
-        boolean left = player.isLeftPressed();
+        int logicalInput = player.getLogicalInputState();
+        boolean right = (logicalInput & AbstractPlayableSprite.INPUT_RIGHT) != 0;
+        boolean left = (logicalInput & AbstractPlayableSprite.INPUT_LEFT) != 0;
 
         if (left && !right) {
             if (gSpeed > 0) {
                 // Skid ROM sub_3555C loc_35596: sub.w d4, d0 (=$80).
-                gSpeed -= PLAYER_SKID;
+                gSpeed = gSpeed < PLAYER_SKID ? -PLAYER_SKID : gSpeed - PLAYER_SKID;
+                if (mgzMiniMotionSkidThresholdMet(player, gSpeed, true)) {
+                    player.setAnimationId(Sonic3kAnimationIds.SKID);
+                    player.setDirection(Direction.RIGHT);
+                }
             } else {
                 // Accel ROM loc_35578: sub.w d5, d0 (=$C).
+                setMiniMotionDirection(player, Direction.LEFT);
                 gSpeed -= PLAYER_ACCEL;
                 if (gSpeed < -PLAYER_MAX_SPEED) gSpeed = -PLAYER_MAX_SPEED;
+                player.setAnimationId(Sonic3kAnimationIds.WALK);
             }
         } else if (right && !left) {
             if (gSpeed < 0) {
-                gSpeed += PLAYER_SKID;
+                // add.w sets carry when the signed-negative word wraps through
+                // zero; the ROM then seeds +$80 instead of stopping at zero.
+                gSpeed = gSpeed >= -PLAYER_SKID ? PLAYER_SKID : gSpeed + PLAYER_SKID;
+                if (mgzMiniMotionSkidThresholdMet(player, gSpeed, false)) {
+                    player.setAnimationId(Sonic3kAnimationIds.SKID);
+                    player.setDirection(Direction.LEFT);
+                }
             } else {
+                setMiniMotionDirection(player, Direction.RIGHT);
                 gSpeed += PLAYER_ACCEL;
                 if (gSpeed > PLAYER_MAX_SPEED) gSpeed = PLAYER_MAX_SPEED;
+                player.setAnimationId(Sonic3kAnimationIds.WALK);
             }
         } else {
             // ROM loc_35524..loc_3554E friction toward 0 (uses d5 = $C).
@@ -767,6 +1220,29 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         // ROM loc_3554E: x_vel = ground_vel; y_vel = 0.
         player.setXSpeed((short) gSpeed);
         player.setYSpeed((short) 0);
+    }
+
+    private void setMiniMotionDirection(AbstractPlayableSprite player, Direction direction) {
+        if (player.getDirection() != direction) {
+            // sub_3555C/sub_355E4 use bset/bclr on Status_Facing. When that
+            // changes the bit, they clear Status_Push and write prev_anim=1
+            // before selecting Walk. Animate therefore restarts AniSonic00 on
+            // the next player slot even though the raw anim byte remains zero.
+            player.setPushing(false);
+            player.getAnimationManager().publishPreviousAnimationId(1);
+        }
+        player.setDirection(direction);
+    }
+
+    private boolean mgzMiniMotionSkidThresholdMet(AbstractPlayableSprite player,
+            int groundSpeed, boolean leftInput) {
+        // The released ROM's sub_3555C/sub_355E4 uses d0, rather than d1, for
+        // the angle test. That overwrites only d0's low byte before the signed
+        // +/-$400 skid comparison, so preserve the accelerated speed's high
+        // byte and reproduce the shipped result (sonic3k.asm:72360-72467).
+        int angleByte = (((player.getAngle() & 0xFF) + 0x20) & 0xC0);
+        short corruptedSpeed = (short) ((groundSpeed & 0xFF00) | angleByte);
+        return leftInput ? corruptedSpeed >= 0x400 : corruptedSpeed <= -0x400;
     }
 
     /**
@@ -843,8 +1319,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         // ROM: move.w #-$680, y_vel(a1); jumping=1; y_radius=$E; x_radius=7; anim=ROLL;
         // bset #Status_Roll; sfx_Jump.
         player.setYSpeed(LAUNCH_Y_VEL);
-        player.setXSpeed((short) 0);
-        player.setGSpeed((short) 0);
+        // loc_34FBC deliberately preserves x_vel and ground_vel.
         player.setJumping(true);
         player.setAir(true);
         player.setRolling(true);
@@ -866,6 +1341,10 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
      * {@code sub_35202}'s edge-case path fires.
      */
     private void enterReleasedFlight() {
+        enterReleasedFlight(null, null);
+    }
+
+    private void enterReleasedFlight(AbstractPlayableSprite knownPlayer, ObjectInstance knownSupport) {
         releasedFlight = true;
         carryLatched = false;
         nextCarryLatched = false;
@@ -873,14 +1352,17 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             PlayerGrabState ps = entry.getValue();
             if (entry.getKey() instanceof AbstractPlayableSprite player) {
                 if (ps.routine == 4) {
-                    releasePlayer(player, ps, true);
+                    releasePlayer(player, ps, true, player == knownPlayer ? knownSupport : null);
                 } else if (ps.routine != 0) {
                     player.setMgzTopPlatformCarrySolidContactObject(null);
                     player.setOnObject(false);
-                    ps.routine = 6;
                     ps.grabbed = false;
                     ps.entrySideBias = 0;
                 }
+                // ROM sub_3519A writes 6 to both $40(a0) and $42(a0)
+                // unconditionally, including a P2 slot which never contacted the
+                // platform. The later same-frame sub_35202 call consumes that state.
+                ps.routine = 6;
             } else {
                 ps.routine = 6;
                 ps.grabbed = false;
@@ -890,27 +1372,51 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     }
 
     /** ROM sub_3519A / loc_34D92 reset; we only clear the state bits. */
-    private void playerStateReleased(PlayerGrabState state) {
+    private void playerStateReleased(AbstractPlayableSprite player, PlayerGrabState state) {
         state.routine = 0;
         state.entrySideBias = 0;
         state.grabbed = false;
     }
 
     private void releasePlayer(AbstractPlayableSprite player, PlayerGrabState state, boolean airborneRelease) {
+        releasePlayer(player, state, airborneRelease, null);
+    }
+
+    private void releasePlayer(AbstractPlayableSprite player, PlayerGrabState state, boolean airborneRelease,
+            ObjectInstance knownFormerSupport) {
+        ObjectServices svc = tryServices();
+        ObjectInstance formerSupport = knownFormerSupport != null
+                ? knownFormerSupport
+                : svc != null && svc.objectManager() != null
+                        ? svc.objectManager().getRidingObject(player) : null;
+        // The player slot has already executed for this frame. Clearing ROM
+        // object_control bit 0 here enables normal movement on the next slot.
         ObjectControlState.none().applyTo(player);
         player.setMgzTopPlatformCarrySolidContactObject(null);
         player.setControlLocked(false);
         player.setOnObject(false);
         player.setForcedAnimationId(-1);
-        player.restoreDefaultRadii();
+        if (!airborneRelease) {
+            int nativeCentreY = player.getCentreY();
+            player.restoreDefaultRadii();
+            NativePositionOps.writeYPosPreserveSubpixel(player, nativeCentreY);
+        }
         player.clearWallClingState();
         player.suppressNextJumpPress();
         if (airborneRelease) {
             player.setAir(true);
         }
-        ObjectServices svc = tryServices();
         if (svc != null && svc.objectManager() != null) {
-            svc.objectManager().clearRidingObject(player);
+            if (airborneRelease && formerSupport != null) {
+                // The engine resolves solids before object updates. ROM instead
+                // reaches this carrier slot before the later support slot, so
+                // sub_3519A's air write makes that slot clear its standing bit
+                // without applying another surface snap.
+                svc.objectManager().clearRidingObjectAfterControllerAirborneRelease(
+                        player, formerSupport);
+            } else {
+                svc.objectManager().clearRidingObject(player);
+            }
         }
         state.entrySideBias = 0;
         state.xSub = 0;
@@ -944,13 +1450,19 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         if (state == null || state.routine < 4) {
             return;
         }
-        if (state.routine != 4) {
-            return;
-        }
         ObjectInstance riding = currentRidingObject(player);
-        if (riding instanceof SinkingMudObjectInstance && riding != this) {
-            enterReleasedFlight();
-            return;
+        if (state.routine == 4) {
+            if (riding instanceof SinkingMudObjectInstance && riding != this) {
+                enterReleasedFlight(player, riding);
+                // ROM sub_35202 calls sub_3519A, then falls through to
+                // loc_35248: P1 still anchors the released platform to its
+                // native y_pos before the following P2 slot is post-synced.
+                int defaultYR = player.getStandYRadius();
+                NativePositionOps.writeXPosPreserveSubpixel(player, posX);
+                posY = player.getCentreY() + defaultYR + 0x0D;
+                nextCarryLatched = true;
+                return;
+            }
         }
         if (player.isOnObject() && riding == this) {
             // ROM sub_35202 Status_OnObj branch:
@@ -1143,6 +1655,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         arcFlagsLo = table[entryStart + 2] & 0xFF;
         int destX = table[entryStart + 3];
         int destY = table[entryStart + 4];
+        int linearDestY = destY;
         int deltaY = table[entryStart + 5];
         if ((arcFlagsLo & 0x7F) != 0) {
             destY -= deltaY;
@@ -1160,7 +1673,10 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         arcLimit = 0;
         arcTimer = 0;
         syncMotionSubpixelsToArc();
-        computeArcLinearVelocity(destX, destY);
+        // ROM sub_35666 keeps d5 as the original destination Y for the initial
+        // linear approach. Only d0 (stored to $32) receives the delta adjustment
+        // used later as the arc centre by sub_35868.
+        computeArcLinearVelocity(destX, linearDestY);
     }
 
     private int[] waypointTableForCurrentAct() {
@@ -1299,12 +1815,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
         posX += wall.distance;
-        if (steepWallTransfersToGround && (((wall.angle + 0x30) & 0xFF) >= 0x60)) {
-            xVel = 0;
-            groundVel = yVel;
-            return;
-        }
-        xVel = 0;
+        applyAirborneSideWallVelocity(steepWallTransfersToGround, wall.angle);
     }
 
     private void resolveLeftWall(boolean steepWallTransfersToGround) {
@@ -1313,12 +1824,21 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
         posX -= wall.distance;
-        if (steepWallTransfersToGround && (((wall.angle + 0x30) & 0xFF) >= 0x60)) {
+        applyAirborneSideWallVelocity(steepWallTransfersToGround, wall.angle);
+    }
+
+    private void applyAirborneSideWallVelocity(boolean steepWallTransfersToGround, int wallAngle) {
+        if (!steepWallTransfersToGround) {
             xVel = 0;
-            groundVel = yVel;
             return;
         }
-        xVel = 0;
+        // ROM loc_3536E/loc_3547A always applies the position correction, but
+        // retains x_vel when (angle+$30) is below $60. Only a steep wall turns
+        // the diagonal airborne approach into ground motion.
+        if (((wallAngle + 0x30) & 0xFF) >= 0x60) {
+            xVel = 0;
+            groundVel = yVel;
+        }
     }
 
     // ROM sub_3526A wall probes: sub_FA1A / sub_FD32 are PAIRED wall checks at
@@ -1595,7 +2115,13 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     }
 
     private void resolveGrabbedPlayerTerrain(AbstractPlayableSprite player) {
-        if (player == null) {
+        if (player == null || !player.getAir()) {
+            // A permitted later solid slot can land the carried player while
+            // leaving object_control bit 0 active. The native loc_35070 path is
+            // only MoveSprite2 + Player_LevelBound, so it does not immediately
+            // turn that grounded result back into an air probe. This is
+            // observable when an MGZ stomp bridge clears OnObj without setting
+            // InAir before the carrier's later slot runs.
             return;
         }
         CollisionSystem collisionSystem = player.currentCollisionSystemOrNull();

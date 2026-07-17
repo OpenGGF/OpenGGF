@@ -80,6 +80,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private static final int INIT_WAIT_FRAMES = 2 * 60;
 
     private static final int ROUTINE_INIT = 0;
+    /** Java-only phase for the ROM's separate Obj_MGZ2DrillingRobotnikGo entry. */
+    private static final int ROUTINE_MINI_SETUP = 0x4A;
     private static final int ROUTINE_START_DROP = 2;
     private static final int ROUTINE_DRILL_DROP = 4;
     private static final int ROUTINE_HANG = 6;
@@ -314,6 +316,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private int xSubpixel;
     private int ySubpixel;
     private int waitTimer;
+    /** The placement-created instance still owes Obj_MGZ2DrillingRobotnik's init entry. */
+    private boolean miniInitialExecutionPending;
     private boolean flipX;
     private boolean artQueued;
     private boolean palettesLoaded;
@@ -329,6 +333,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     /** Mirrors the ROM's $3A child-pose byte used by loc_6CEB0/loc_6CF20. */
     private int drillChildPose;
     private int escapeTimer;
+    /** Hit reported by touch processing, published after the current ROM routine. */
+    private boolean pendingMiniHit;
     private int airAttackPhase;
     private int airAttackPatternCounter;
     private int airAttackPatternOffset;
@@ -392,10 +398,12 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         xSubpixel = 0;
         ySubpixel = 0;
         waitTimer = INIT_WAIT_FRAMES;
+        miniInitialExecutionPending = !endBossMode;
         artQueued = false;
         palettesLoaded = false;
         bossMusicPlayed = false;
         hit = false;
+        pendingMiniHit = false;
         floorImpactTriggered = false;
         renderTick = 0;
         swingHalfCyclesRemaining = SWING_HALF_CYCLES;
@@ -446,20 +454,47 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
         queueInitialAssetsIfNeeded();
 
+        if (!endBossMode && miniInitialExecutionPending) {
+            // The ROM placement slot first executes Obj_MGZ2DrillingRobotnik,
+            // which installs Obj_Wait and its callback but does not decrement
+            // the freshly written $2E timer on that same pass.
+            miniInitialExecutionPending = false;
+            updateCustomFlash();
+            return;
+        }
+
         // ROM: Obj_MGZ2DrillingRobotnik init queues art + PLC #$6D + palette and
         // sits in Obj_Wait for 120 frames before becoming DrillingRobotnikStart.
-        if (state.routine == ROUTINE_INIT && waitTimer > 0) {
-            waitTimer--;
-            if (waitTimer == 0) {
-                playBossMusicOnce();
-                if (endBossMode) {
+        if (state.routine == ROUTINE_INIT) {
+            if (!endBossMode) {
+                // Obj_Wait invokes its callback only after the signed word
+                // underflows: values $77 through $0000 all return normally.
+                waitTimer--;
+                if (waitTimer < 0) {
+                    playBossMusicOnce();
+                    state.routine = ROUTINE_MINI_SETUP;
+                }
+                updateCustomFlash();
+                return;
+            }
+            if (waitTimer > 0) {
+                waitTimer--;
+                if (waitTimer == 0) {
+                    playBossMusicOnce();
                     state.routine = ROUTINE_END_DESCEND;
                     yVel = 0x80;
                     waitTimer = 0xBF;
-                } else {
-                    state.routine = ROUTINE_START_DROP;
                 }
+                updateCustomFlash();
+                return;
             }
+        }
+
+        if (!endBossMode && state.routine == ROUTINE_MINI_SETUP) {
+            // The underflow callback (Obj_MGZ2DrillingRobotnikGo) only installs
+            // Obj_MGZ2DrillingRobotnikStart. Its loc_6BFCA setup runs in the
+            // following ExecuteObjects pass and leaves routine 2 for the next.
+            state.routine = ROUTINE_START_DROP;
             updateCustomFlash();
             return;
         }
@@ -479,6 +514,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         }
 
         updateFallingDebris();
+        publishPendingMiniHit();
         updateCustomFlash();
 
         state.xFixed = state.x << 16;
@@ -582,7 +618,11 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
             case ROUTINE_END_AIR_WAIT -> {
                 if (--waitTimer < 0) {
                     yVel = -0x400;
-                    waitTimer = 0x1F;
+                    // The engine's composite boss owns the drill children inline,
+                    // while the ROM reaches loc_6C598 after their two later SST
+                    // slots have completed the recovery handoff. Preserve those
+                    // two object-pass phases before publishing the air approach.
+                    waitTimer = 0x21;
                     state.routine = ROUTINE_END_AIR_RISE;
                 }
             }
@@ -733,6 +773,14 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     }
 
     private void updateWaitForResultsFlag() {
+        // ROM loc_6C8F4 pins Camera_min_X_pos to Camera_X_pos on every retained
+        // boss-waiter pass while _unkFAA8 says the capsule/results flow is still
+        // active (sonic3k.asm:143186-143190). This write is independent of the
+        // older quake-event gradual-boundary child and must therefore be
+        // republished after that child runs rather than left solely to the
+        // fixed-slot boss-transition event.
+        Camera camera = services().camera();
+        camera.setMinX(camera.getX());
         if (services().gameState() == null || !services().gameState().isEndOfLevelFlag()) {
             return;
         }
@@ -798,7 +846,12 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
 
     private void advanceAirAttackWait() {
         if (airAttackPhase == 0) {
-            waitTimer = 0x1F;
+            // loc_6C646 configures the parent with a literal $1F Obj_Wait,
+            // then the native drill graph's later SST phase publishes the
+            // refreshed child positions before the next player touch scan.
+            // The engine folds those children into this parent, so retain the
+            // observable publication phase alongside the parent wait.
+            waitTimer = 0x20;
             airAttackPhase = 1;
             configureAirAttackFromCamera();
             return;
@@ -884,8 +937,9 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         int[] pattern = airAttackPattern();
         state.x = (cameraX + pattern[0]) & 0xFFFF;
         state.y = (cameraY + pattern[1]) & 0xFFFF;
-        xSubpixel = 0;
-        ySubpixel = 0;
+        // loc_6D710 writes the x_pos/y_pos words only. Their fractional words
+        // retain the approach/sweep phase and therefore affect the first
+        // collision-list position published by the configured attack.
         xVel = pattern[2];
         yVel = pattern[3];
         endBossAngle = pattern[4];
@@ -1013,7 +1067,6 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (ceiling.distance() < 0) {
             spawnFallingDebris();
             state.routine = ROUTINE_ESCAPE_WAIT;
-            advanceEscapeTimer();
             return;
         }
         applyYVelocity();
@@ -1028,11 +1081,21 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
 
     private void advanceEscapeTimer() {
         escapeTimer--;
-        if (escapeTimer > 0) {
+        if (escapeTimer >= 0) {
             return;
         }
         restoreMgzPalette();
         services().playMusic(Sonic3kMusic.MGZ2.id);
+        // ROM loc_6C200 allocates the gradual boundary worker from the start
+        // of SST. A later free slot executes in this same object pass before
+        // DeformLayers scrolls the camera. Appearances 2/3 face left and use
+        // Obj_DecLevStartXGradual; appearance 1 uses Obj_IncLevEndXGradual.
+        // AllocateObject searches from the start of SST. The first appearance
+        // finds a lower slot and waits for the next pass; the third finds a
+        // later slot and executes immediately. That slot-relative distinction
+        // is observable in the camera frontier.
+        spawnFreeChild(() -> new MgzDrillingRobotnikCameraUnlockController(flipX));
+        S3kMgzEventWriteSupport.completeDrillingRobotnikFlee(services());
         setDestroyed(true);
         LOG.fine(() -> "MGZ2 Drilling Robotnik cleanup completed at y=" + state.y);
     }
@@ -1139,7 +1202,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
      */
     @Override
     public void onPlayerAttack(PlayableEntity playerEntity, TouchResponseResult result) {
-        if (state.invulnerable || state.defeated || isInitialHiddenWait()) {
+        if (state.invulnerable || pendingMiniHit || state.defeated || isInitialHiddenWait()) {
             return;
         }
         if (endBossMode) {
@@ -1155,6 +1218,20 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
             }
             return;
         }
+        pendingMiniHit = true;
+    }
+
+    /**
+     * ROM {@code Obj_MGZ2DrillingRobotnik} dispatches its movement routine
+     * before {@code MGZ2_SpecialCheckHit}. Touch processing may report the
+     * overlap before this Java object's update, so retain the hit until the
+     * routine has completed instead of exposing it to {@link #updateHang()}.
+     */
+    private void publishPendingMiniHit() {
+        if (endBossMode || !pendingMiniHit) {
+            return;
+        }
+        pendingMiniHit = false;
         hit = true;
         state.invulnerable = true;
         state.invulnerabilityTimer = INVULNERABILITY_TIME;
@@ -1220,6 +1297,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (isInitialHiddenWait()
                 || state.routine == ROUTINE_CEILING_ESCAPE
                 || state.routine == ROUTINE_ESCAPE_WAIT
+                || pendingMiniHit
                 || state.defeated
                 || state.invulnerable) {
             // No collision while waiting to emerge, during the palette-flash
@@ -1232,8 +1310,6 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     @Override
     public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {
         if (isHidden()
-                || state.routine == ROUTINE_CEILING_ESCAPE
-                || state.routine == ROUTINE_ESCAPE_WAIT
                 || state.defeated
                 || isDestroyed()) {
             return null;
@@ -1242,21 +1318,24 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         DrillPart drillHead = drillHeadPart();
         DrillPart firstFlame = thrusterFlamePart(0);
         DrillPart secondFlame = thrusterFlamePart(1);
+        int childAnchorX = foldedChildTouchAnchorX();
+        int childAnchorY = foldedChildTouchAnchorY();
         int flameFlags = shouldDrawThrusterFlames() ? THRUSTER_FLAME_COLLISION_FLAGS : 0;
         return new TouchResponseProvider.TouchRegion[] {
-                new TouchResponseProvider.TouchRegion(state.x, state.y, getCollisionFlags()),
                 new TouchResponseProvider.TouchRegion(
-                        state.x + renderOffsetX(drillHead.offX()),
-                        state.y + drillHead.offY(),
+                        foldedBodyTouchAnchorX(), foldedBodyTouchAnchorY(), getCollisionFlags()),
+                new TouchResponseProvider.TouchRegion(
+                        childAnchorX + renderOffsetX(drillHead.offX()),
+                        childAnchorY + drillHead.offY(),
                         DRILL_HEAD_COLLISION_FLAGS),
                 new TouchResponseProvider.TouchRegion(
-                        state.x + renderOffsetX(firstFlame.offX()),
-                        state.y + firstFlame.offY(),
+                        childAnchorX + renderOffsetX(firstFlame.offX()),
+                        childAnchorY + firstFlame.offY(),
                         flameFlags,
                         THRUSTER_FLAME_SHIELD_REACTION),
                 new TouchResponseProvider.TouchRegion(
-                        state.x + renderOffsetX(secondFlame.offX()),
-                        state.y + secondFlame.offY(),
+                        childAnchorX + renderOffsetX(secondFlame.offX()),
+                        childAnchorY + secondFlame.offY(),
                         flameFlags,
                         THRUSTER_FLAME_SHIELD_REACTION),
         };
@@ -1590,6 +1669,49 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         return flipX ? -offX : offX;
     }
 
+    /**
+     * The ROM's drill children occupy later SST slots than Obj_MGZEndBoss. During
+     * the moving diagonal air attacks they refresh from the parent's
+     * post-MoveSprite2 position before adding themselves to
+     * Collision_response_list. Pattern zero's horizontal sweep already enters
+     * the retained collision list at that post-move phase; the later diagonal
+     * configurations enter from the folded parent's preceding phase and need
+     * the child-slot projection.
+     */
+    private int foldedChildTouchAnchorX() {
+        if (state.routine != ROUTINE_END_ATTACK_MOVE || airAttackPatternOffset == 0) {
+            return state.x;
+        }
+        return (((state.x << 8) | (xSubpixel & 0xFF)) + xVel) >> 8;
+    }
+
+    private int foldedChildTouchAnchorY() {
+        if (state.routine != ROUTINE_END_ATTACK_MOVE || airAttackPatternOffset == 0) {
+            return state.y;
+        }
+        return (((state.y << 8) | (ySubpixel & 0xFF)) + yVel) >> 8;
+    }
+
+    /**
+     * The native parent publishes its collision-list pointer before the player
+     * touch pass, then advances through the remaining object/V-int phases. The
+     * folded provider is queried from the earlier retained parent phase, so its
+     * body region must expose the position the live native pointer observes.
+     */
+    private int foldedBodyTouchAnchorX() {
+        if (state.routine != ROUTINE_END_ATTACK_MOVE || airAttackPatternOffset != 0) {
+            return state.x;
+        }
+        return (((state.x << 8) | (xSubpixel & 0xFF)) + (xVel * 2)) >> 8;
+    }
+
+    private int foldedBodyTouchAnchorY() {
+        if (state.routine != ROUTINE_END_ATTACK_MOVE || airAttackPatternOffset != 0) {
+            return state.y;
+        }
+        return (((state.y << 8) | (ySubpixel & 0xFF)) + (yVel * 2)) >> 8;
+    }
+
     private DrillPart angledDrillPiece() {
         return partFromTable(ANGLED_DRILL_PIECE_POSES, endBossAngleIndex());
     }
@@ -1690,11 +1812,15 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     }
 
     private boolean shouldDrawThrusterFlamesForFrame(int frameCounter) {
-        return frameCounter >= 0 && (frameCounter & 1) == 0;
+        return frameCounter >= 0 && (vIntRunCounter(frameCounter) & 1) == 0;
     }
 
     private boolean shouldDrawShipFlame() {
-        return state.lastUpdatedFrame >= 0 && (state.lastUpdatedFrame & 1) == 0;
+        return state.lastUpdatedFrame >= 0 && (vIntRunCounter(state.lastUpdatedFrame) & 1) == 0;
+    }
+
+    private int vIntRunCounter(int objectUpdateCounter) {
+        return objectUpdateCounter + services().objectManager().getVIntRunCounterPhaseOffset();
     }
 
     /**

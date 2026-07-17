@@ -231,6 +231,15 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
             // longer reports a side push (sonic3k.asm:41503-41532). Manual
             // checkpoint batching retains that previous bit in the result.
             player.setPushing(false);
+            if (player.getAnimationId() != Sonic3kAnimationIds.ROLL.id()
+                    && player.getAnimationId() != Sonic3kAnimationIds.SPINDASH.id()) {
+                // SolidObjectFull_Offset_1P publishes the paired
+                // anim=Walk/prev_anim=Run word before clearing Status_Push;
+                // Roll and Spindash branch directly to the clear helper
+                // (sonic3k.asm:41503-41532).
+                player.setAnimationId(Sonic3kAnimationIds.WALK.id());
+                player.publishRunAsPreviousAnimation();
+            }
         }
         if (result.kind() == ContactKind.NONE) {
             return;
@@ -326,6 +335,15 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         int halfWidth = SIZE_TABLE[idx][0];
         int halfHeight = SIZE_TABLE[idx][1];
         return new SolidObjectParams(halfWidth + 0x0B, halfHeight, halfHeight + 1);
+    }
+
+    @Override
+    public int getBalanceWidthPixels() {
+        // Obj_AIZLRZEMZRock stores byte_1F9D0's unpadded width in
+        // width_pixels. Tails_Move reads that byte for its on-object balance
+        // window; SolidObjectFull alone receives the separate +$B extension.
+        // (sonic3k.asm:43838-43848,43922-43935,27820-27837).
+        return SIZE_TABLE[Math.clamp(sizeIndex, 0, SIZE_TABLE.length - 1)][0];
     }
 
     @Override
@@ -471,13 +489,9 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         // Status_Push (sonic3k.asm:44446-44478). The checkpoint preserves both
         // phases per player; using the old aggregate latch could let P2's first
         // contact move P1 one frame early.
-        int preContactAnimation = result != null ? result.preContact().animationId() : -1;
-        boolean savedStatusKeepsPush = preContactAnimation == Sonic3kAnimationIds.PUSH.id()
-                || (preContactAnimation == Sonic3kAnimationIds.SPINDASH.id()
-                        && player.getAnimationFrameIndex() > 1);
         if (player == null || result == null
                 || !result.pushingNow() || !result.pushingLastFrame()
-                || !savedStatusKeepsPush) {
+                || !result.preContact().pushing()) {
             return;
         }
 

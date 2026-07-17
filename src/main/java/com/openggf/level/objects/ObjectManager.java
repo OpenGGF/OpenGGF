@@ -137,6 +137,8 @@ public class ObjectManager {
     private final SlotAllocator slotAllocator;
     private int s2LatchedObjectManagerCameraX = Integer.MIN_VALUE;
     private int twoAxisCameraYCoarse = Integer.MIN_VALUE;
+    private int ringFloorCheckCounterPhase;
+    private int vIntRunCounterPhaseOffset;
 
     // ROM parity: Tracks child slots reserved by objects with getReservedChildSlotCount() > 0.
     // In S1, ring objects (obj25) allocate child ring slots via FindFreeObj. These slots
@@ -615,7 +617,7 @@ public class ObjectManager {
                 syncActiveSpawnsLoad(true);
             }
         }
-        captureCollisionResponseListForNextFrame(cameraX);
+        captureCollisionResponseListForNextFrame();
     }
 
     private void runAfterExecBeforePlacement(Runnable afterExecBeforePlacement) {
@@ -1525,9 +1527,9 @@ public class ObjectManager {
 
     boolean touchUsesPreviousCollisionResponseList() { return collisionResponseList.usesPrevious(); }
 
-    private void captureCollisionResponseListForNextFrame(int cameraX) {
+    private void captureCollisionResponseListForNextFrame() {
         rebuildActiveObjectCaches();
-        collisionResponseList.captureForNextFrame(cameraX, cachedTouchResponseObjects, objectCallbacks);
+        collisionResponseList.captureForNextFrame(cachedTouchResponseObjects, objectCallbacks);
     }
 
     private void rebuildActiveObjectCaches() {
@@ -1919,6 +1921,45 @@ public class ObjectManager {
      */
     public int allocateDynamicSlot() {
         return slotAllocator.allocate();
+    }
+
+    /**
+     * Returns whether a newly reserved SST slot is behind the live object-loop
+     * cursor and therefore cannot execute until the next Process_Sprites pass.
+     */
+    public boolean reservedSlotWaitsForNextObjectPass(int slotIndex) {
+        if (!updating || currentExecSlot < 0 || !isManagedDynamicSlot(slotIndex)) {
+            return false;
+        }
+        int execIndex = execIndexForSlot(slotIndex);
+        return execIndex >= 0 && execIndex <= currentExecSlot;
+    }
+
+    /**
+     * Reassigns an already-loaded placement object through the ROM's first-free
+     * allocator. This is used when a widened engine placement window materializes
+     * an initializer before its native camera gate; once that gate succeeds, the
+     * object must occupy the slot it would have received from the native load pass.
+     */
+    public void reallocateToFirstFreeDynamicSlot(AbstractObjectInstance object) {
+        if (object == null || !isManagedDynamicSlot(object.getSlotIndex())) {
+            return;
+        }
+        int oldSlot = object.getSlotIndex();
+        releaseSlot(oldSlot);
+        int newSlot = slotAllocator.allocate();
+        if (newSlot < 0) {
+            slotAllocator.reserve(oldSlot);
+            return;
+        }
+        object.setSlotIndex(newSlot);
+        int oldExecIndex = execIndexForSlot(oldSlot);
+        if (oldExecIndex >= 0 && oldExecIndex < execOrder.length
+                && execOrder[oldExecIndex] == object) {
+            execOrder[oldExecIndex] = null;
+        }
+        bucketsDirty = true;
+        activeObjectsCacheDirty = true;
     }
 
     /**
@@ -2368,6 +2409,33 @@ public class ObjectManager {
         return vblaCounter;
     }
 
+    /**
+     * Initializes the low-bit V-int phase observed by spilled-ring floor probes.
+     * Trace recorders capture this independently because legacy S3K CSV fixtures
+     * stored the adjacent V-int word rather than {@code V_int_run_count+2}.
+     */
+    public void initRingFloorCheckCounterPhase(int phase) {
+        ringFloorCheckCounterPhase = phase;
+    }
+
+    public int getRingFloorCheckCounterPhase() {
+        return ringFloorCheckCounterPhase;
+    }
+
+    /**
+     * Sets the phase difference between the general object-update clock and
+     * S3K's {@code V_int_run_count}. They normally advance together, but old
+     * trace schemas captured the adjacent life-count word instead of the
+     * run counter and therefore need an independently reconstructed low bit.
+     */
+    public void initVIntRunCounterPhaseOffset(int phaseOffset) {
+        vIntRunCounterPhaseOffset = phaseOffset;
+    }
+
+    public int getVIntRunCounterPhaseOffset() {
+        return vIntRunCounterPhaseOffset;
+    }
+
     public boolean isRemembered(ObjectSpawn spawn) {
         return placement.isRemembered(spawn);
     }
@@ -2436,6 +2504,37 @@ public class ObjectManager {
      */
     public void removeFromActiveSpawns(ObjectSpawn spawn) {
         placement.removeFromActive(spawn);
+    }
+
+    /**
+     * Clears a placement's loaded/active bit while leaving its current object
+     * instance alive.
+     * <p>
+     * Some ROM objects transform their original SST slot into a fragment and
+     * then clear {@code respawn_addr} bit 7. Object placement may therefore
+     * create a fresh copy while the transformed instance is still falling.
+     * This is deliberately different from {@link #removeFromActiveSpawns},
+     * which records an in-window destruction latch.
+     */
+    public void releaseSpawnForRespawn(ObjectInstance transformedInstance, ObjectSpawn spawn) {
+        if (transformedInstance == null || spawn == null) {
+            return;
+        }
+        ObjectInstance activeInstance = activeObjects.get(spawn);
+        if (activeInstance != transformedInstance) {
+            return;
+        }
+        activeObjects.remove(spawn);
+        instanceToSpawn.remove(transformedInstance);
+        dynamicObjects.add(transformedInstance);
+        placement.removeFromActiveForUnload(spawn);
+        if (slotLayout.twoAxisCursorPlacement()) {
+            // S3K's Camera_Y load pass re-scans entries already between the X
+            // cursors when a newly exposed vertical strip reaches them.
+            placement.markDeferredVerticalLoad(spawn);
+        }
+        bucketsDirty = true;
+        activeObjectsCacheDirty = true;
     }
 
     private void captureExecStartPlayerCentreY(PlayableEntity player,
@@ -2518,6 +2617,23 @@ public class ObjectManager {
     }
 
     /**
+     * Run the shared ROM {@code CheckPlayerReleaseFromObj} terrain-release
+     * operation for the player's current solid-object ride.
+     */
+    public boolean checkPlayerReleaseFromObjectFloor(PlayableEntity player) {
+        return solidContacts.checkPlayerReleaseFromObjectFloor(player);
+    }
+
+    /**
+     * Clear support established by an earlier solid slot after a later controller
+     * object has made the player airborne in the same ExecuteObjects pass.
+     */
+    public void clearRidingObjectAfterControllerAirborneRelease(
+            PlayableEntity player, ObjectInstance formerSupport) {
+        solidContacts.clearRidingObjectAfterControllerAirborneRelease(player, formerSupport);
+    }
+
+    /**
      * One-time native bootstrap for route starts that begin with the player
      * already riding a ROM solid object.
      *
@@ -2586,6 +2702,11 @@ public class ObjectManager {
 
     public int getHeadroomDistance(PlayableEntity player, int hexAngle) {
         return solidContacts.getHeadroomDistance(player, hexAngle);
+    }
+
+    /** Player y-radius captured before the currently executing solid checkpoint. */
+    public int getPreContactYRadius() {
+        return solidContacts.getPreContactYRadius();
     }
 
     public boolean latestStandingSnapshot(PlayableEntity player) {

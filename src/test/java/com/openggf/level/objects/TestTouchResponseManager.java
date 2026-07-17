@@ -737,6 +737,23 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void s3kInstaShieldSuppressesMultiRegionHurtDuringExpandedPass() {
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
+        when(player.getDoubleJumpFlag()).thenReturn(1);
+        when(player.getShieldType()).thenReturn(null);
+        when(player.hasShield()).thenReturn(false);
+
+        MockMultiRegionTouchObject flame = new MockMultiRegionTouchObject(
+                new TouchResponseProvider.TouchRegion(143, 112, 0x88, 0));
+        setupTableSize(8, 8, 8);
+        objectManager.addDynamicObject(flame);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        verify(player, never()).applyHurtOrDeath(anyInt(), any(DamageCause.class), anyBoolean());
+    }
+
+    @Test
     public void realShieldDeflectsShieldReactiveHurtObject() {
         when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
         when(player.getDoubleJumpFlag()).thenReturn(0);
@@ -1037,6 +1054,18 @@ public class TestTouchResponseManager {
         assertTrue(enemy.wasAttacked,
                 "S3K previous Collision_response_list entries are live SST pointers: membership is prior-frame, "
                         + "but x_pos/y_pos are read at the player slot before the next object pass");
+    }
+
+    @Test
+    public void testS3kCollisionResponseListKeepsPublisherAheadOfCamera() {
+        MockSnapshotAttackableEnemy enemy = new MockSnapshotAttackableEnemy(0x0300, 112, 0x02);
+        ObjectCollisionResponseList responseList = new ObjectCollisionResponseList();
+
+        responseList.captureForNextFrame(List.of(enemy), new ObjectCallbackRouter(null));
+        responseList.setUsePrevious(true);
+
+        assertEquals(List.of(enemy), responseList.touchResponseObjects(List.of()),
+                "Add_SpriteToCollisionResponseList accepts an explicit publisher regardless of camera distance");
     }
 
     @Test

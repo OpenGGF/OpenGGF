@@ -428,7 +428,8 @@ class TestEngine {
                 0,
                 new SelectedTeam("sonic", List.of("tails")));
 
-        SaveSessionContext context = Engine.createDataSelectSaveContext(module, action, saveManager);
+        SaveSessionContext context = Engine.createDataSelectSaveContext(
+                module, action, saveManager.readSlotSummary("s3k", 1).payload());
 
         assertEquals(1, context.activeSlot().orElseThrow());
         assertTrue(context.isClear(), "Clear-save launch context should preserve the clear flag");
@@ -463,7 +464,9 @@ class TestEngine {
                 0,
                 new SelectedTeam("sonic", List.of()));
 
-        SaveSessionContext context = Engine.createDataSelectSaveContext(module, action, saveManager);
+        Map<String, Object> loadedPayload = Engine.loadDataSelectPayload(module, action, saveManager);
+        assertNull(loadedPayload);
+        SaveSessionContext context = Engine.createDataSelectSaveContext(module, action, loadedPayload);
 
         assertEquals(1, context.activeSlot().orElseThrow());
         assertEquals("sonic", context.selectedTeam().mainCharacter(),

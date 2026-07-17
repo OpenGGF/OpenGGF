@@ -102,16 +102,22 @@ class MgzDashTriggerObjectInstanceTest {
     }
 
     @Test
-    void dashTriggerUsesFlatTopForNewLandingAndSlopeOnlyForExistingRiders() {
+    void dashTriggerUsesRomSlopeEntryBoundsForNewContacts() {
         MGZDashTriggerObjectInstance trigger = new MGZDashTriggerObjectInstance(
                 new ObjectSpawn(0x0950, 0x0E04, Sonic3kObjectIds.MGZ_DASH_TRIGGER,
                         0x04, 0, false, 0));
 
         SlopedSolidProvider sloped = assertInstanceOf(SlopedSolidProvider.class, trigger);
 
-        assertFalse(sloped.usesSlopeForNewLanding(),
-                "sub_1DD0E only calls SolidObjSloped2 after the standing bit is already set "
-                        + "(sonic3k.asm:41112-41142,41727-41753)");
+        assertTrue(sloped.usesSlopeForNewLanding(),
+                "sub_1DD0E enters loc_1DECE and samples byte_25F0E for a new contact");
+        assertTrue(sloped.addsSlopeCatchRangeToVerticalOverlap(),
+                "loc_1DECE adds the caller's $10 catch range to the player radius");
+        assertTrue(trigger.usesInclusiveRightEdge(),
+                "loc_1DECE uses bhi, so relX == d1*2 remains a valid sample");
+        assertTrue(trigger.bypassesOffscreenSolidGate(),
+                "sub_1DD0E bypasses SolidObjectFull's render_flags bit-7 gate");
+        assertEquals(0x0002, trigger.romObjectCodePointerHighWord());
     }
 
     @Test

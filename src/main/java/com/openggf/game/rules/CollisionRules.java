@@ -46,7 +46,7 @@ public record CollisionRules(
                 repeatedObjectRideGroundWallResponseDeferred, topSolidLandingAllowsZeroDist,
                 new AirCollisionRules(airBottomSolidHitClearsGroundSpeed,
                         airRightWallHitContinuesIntoCeilingSeparation,
-                        airLeftWallHitContinuesIntoCeilingSeparation, false),
+                        airLeftWallHitContinuesIntoCeilingSeparation, false, false),
                 fullSolidBottomOverlapUsesCurrentYRadiusOnly,
                 solidObjectOffscreenGate, solidObjectRequiresSidekickOnScreen, sidekickPushBypassUsesGraceStatus,
                 sidekickSuppressesFastLeaderTinyFollowNudge, sidekickClearsStalePushVelocityBeforeGroundMove,

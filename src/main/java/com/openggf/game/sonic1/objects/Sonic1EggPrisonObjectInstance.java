@@ -44,7 +44,8 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SpawnRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic1EggPrisonObjectInstance.class.getName());
 
-    // === Solid collision from Pri_BodyMain: d1=$2B, d2=$18, d3=$18 ===
+    // === Native width and SolidObject collision from Pri_Var/Pri_BodyMain ===
+    private static final int BODY_ACTIVE_WIDTH = 0x20; // obActWid, read by Sonic_Move
     private static final int BODY_HALF_WIDTH = 0x2B;   // 43 pixels
     private static final int BODY_HALF_HEIGHT = 0x18;   // 24 pixels
 
@@ -417,6 +418,15 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return new SolidObjectParams(BODY_HALF_WIDTH, BODY_HALF_HEIGHT, BODY_HALF_HEIGHT);
+    }
+
+    @Override
+    public int getBalanceWidthPixels() {
+        // Pri_Var stores obActWid=$20 for the capsule body. Pri_BodyMain adds
+        // Sonic's $B solid width only when it passes d1=$2B to SolidObject;
+        // Sonic_Move later reads the unchanged obActWid byte for balancing.
+        // docs/s1disasm/_incObj/3E Prison Capsule.asm:31,69
+        return BODY_ACTIVE_WIDTH;
     }
 
     @Override

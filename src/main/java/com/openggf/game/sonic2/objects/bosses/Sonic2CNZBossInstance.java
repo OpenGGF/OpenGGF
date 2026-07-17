@@ -375,11 +375,12 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
                     bossAnimArray[9] = 0;  // Reset anim timer at offset 9
                     bossCollisionRoutine = COLLISION_OFF;
                     // ROM loc_31AB6 compares against stale x_pos(a0), then loc_31C08
-                    // copies the freshly-moved Boss_X_pos into x_pos(a0). On the leftward
-                    // pass, the engine's fixed accumulator can be one MoveObject step ahead
-                    // while the trigger compare is still aligned via triggerX. Preserve the
-                    // ROM-copied body x for Touch_Boss until post-trigger ends.
-                    postTriggerBodyCollisionX = state.xVel < 0 ? triggerX - 1 : Integer.MIN_VALUE;
+                    // copies the freshly-moved Boss_X_pos into x_pos(a0). The engine's
+                    // fixed accumulator is already one movement phase ahead on the
+                    // leftward pass, while the rightward body touch needs the freshly
+                    // advanced Boss_X_pos. Preserve the ROM body x for Touch_Boss;
+                    // the allocated ball separately retains its spawn-time parent x.
+                    postTriggerBodyCollisionX = state.xVel < 0 ? triggerX - 1 : bossXPos;
                     spawnElectricBall();
                     bossCountdown = TRIGGER_COUNTDOWN;
                     return;
@@ -734,7 +735,8 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
             return;
         }
         // ROM: move.b #4,boss_subtype(a1) / move.l a0,objoff_34(a1)
-        // The spawn coordinates are informational - ball uses parent position directly
+        // Capture the parent SST coordinate visible at allocation. The ball keeps
+        // this X while loc_31BA8 leaves Boss_X_pos stationary.
         ObjectSpawn ballSpawn = new ObjectSpawn(state.x, state.y, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0);
         spawnFreeChild(() -> new CNZBossElectricBall(ballSpawn, this));
     }
@@ -744,9 +746,17 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
     // ========================================================================
 
     /**
-     * Get the current boss countdown value for electric ball timing.
+     * Returns the Boss_Countdown value Obj51's attached ball should observe in
+     * this object pass.
+     *
+     * <p>ROM Obj51 executes the parent slot before its allocated child. If the
+     * engine reaches the child first, expose the post-parent decrement that the
+     * later ROM slot would have read instead of delaying BALL_FALL by one pass.</p>
      */
-    public int getBossCountdown() {
+    public int getBossCountdownVisibleToBall(int objectFrameCounter) {
+        if (state.routine == ROUTINE_POST_TRIGGER && lastFrameCounter != objectFrameCounter) {
+            return bossCountdown - 1;
+        }
         return bossCountdown;
     }
 

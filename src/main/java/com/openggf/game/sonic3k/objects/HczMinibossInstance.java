@@ -134,6 +134,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private static final int SLOW_RISE_VEL = -0x20;
     private static final int VORTEX_APPROACH_Y = 0x108;
     private static final int CONTINUOUS_SFX_INTERVAL = 16;
+    private static final int DEFEAT_HANDOFF_WAIT = REOPEN_TIME + 1;
 
 
     private static final int[][] ATTACK_PATTERNS = {
@@ -245,6 +246,8 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     /** ROM-native P1/P2 ownership bits retained alongside the extensible player map. */
     private boolean vortexTrackedP1;
     private boolean vortexTrackedP2;
+    private int defeatHandoffTimer;
+    private boolean defeatHandoffStarted;
     private S3kBossExplosionController defeatExplosionController;
 
     private enum WaitCallback {
@@ -364,6 +367,8 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         waterEffectAnimTimer = 0;
         waterEffectPullReady = false;
         vortexFinalPullPending = false;
+        defeatHandoffTimer = -1;
+        defeatHandoffStarted = false;
         lastHitFrame = -1;
         lastHitRoutine = -1;
         lastHitWaitTimer = -1;
@@ -479,6 +484,10 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         waterEffectAnimTimer = 0;
         waterEffectPullReady = false;
         vortexFinalPullPending = false;
+        // Touch_Enemy sets the defeated status after Obj_HCZ_MinibossLoop has
+        // already dispatched, so the native wait begins on the next object pass.
+        defeatHandoffTimer = DEFEAT_HANDOFF_WAIT;
+        defeatHandoffStarted = false;
         state.invulnerable = false;
         state.invulnerabilityTimer = 0;
         loadBossPalette();
@@ -857,12 +866,26 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             }
             spawnChild(() -> new S3kBossExplosionChild(pending.x(), pending.y()));
         }
-        if (!defeatExplosionController.isFinished() || defeatRenderComplete) {
+        if (!defeatHandoffStarted) {
+            defeatHandoffTimer--;
+            if (defeatHandoffTimer < 0) {
+                releaseTrackedVortexPlayersOnWaterEffectDelete();
+                // loc_6A22A sets the global _unkFAA2 lock before entering
+                // Obj_EndSignControl, freezing DynamicWaterHeight_HCZ through
+                // the results-era act reload (sonic3k.asm:140574-140575).
+                services().waterSystem().setDynamicWaterLocked(
+                        services().featureZoneId(), services().featureActId(), true);
+                defeatHandoffStarted = true;
+                spawnChild(() -> new S3kBossDefeatSignpostFlow(
+                        state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE,
+                        1, 0, 0, 0));
+            }
+        }
+        if (!defeatHandoffStarted || !defeatExplosionController.isFinished()
+                || defeatRenderComplete) {
             return;
         }
         defeatRenderComplete = true;
-        spawnChild(() -> new S3kBossDefeatSignpostFlow(
-                state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE));
         setDestroyed(true);
     }
 
@@ -1086,6 +1109,9 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         if (firstContact) {
             ObjectControlState.nativeBit7FullControl().applyTo(sprite);
             sprite.setAir(true);
+            // sub_6AA00 writes the public anim byte; forced animation only
+            // represents this object's continuing ownership on later frames.
+            sprite.setAnimationId(Sonic3kAnimationIds.FLOAT2);
             sprite.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2.id());
             sprite.setXSpeed((short) 0);
             sprite.setYSpeed((short) 0);

@@ -29,6 +29,14 @@ public final class S3kTransitionWriteSupport {
         }
     }
 
+    public static boolean restorePendingPostResultsPlayerControl(ObjectServices services) {
+        Object provider = services.levelEventProvider();
+        if (provider instanceof S3kTransitionEventBridge bridge) {
+            return bridge.restorePendingPostResultsPlayerControl();
+        }
+        return false;
+    }
+
     public static void requestMgzPostTransitionRelease(LevelEventProvider provider) {
         if (provider instanceof S3kTransitionEventBridge bridge) {
             bridge.requestMgzPostTransitionRelease();

@@ -143,6 +143,28 @@ public class TestLostRingTouchOrdering {
     }
 
     @Test
+    public void secondPlayerStillReturnsOnPendingFirstRingRoutine() {
+        LostRingObjectInstance first = ringAtSlot(20);
+        LostRingObjectInstance second = ringAtSlot(21);
+        AbstractPlayableSprite sidekick = mock(AbstractPlayableSprite.class);
+        when(sidekick.getCentreX()).thenReturn((short) 160);
+        when(sidekick.getCentreY()).thenReturn((short) 112);
+        when(sidekick.getYRadius()).thenReturn((short) 20);
+        when(sidekick.getInvulnerableFrames()).thenReturn(0);
+        when(sidekick.isCpuControlled()).thenReturn(true);
+        SpriteManager spriteManager = mock(SpriteManager.class);
+        when(spriteManager.getAllSprites()).thenReturn(List.of(player, sidekick));
+        services.withSpriteManager(spriteManager);
+
+        objectManager.runTouchResponsesForPlayer(player, 1);
+        objectManager.runTouchResponsesForPlayer(sidekick, 1);
+
+        assertTrue(first.isCollected());
+        assertFalse(second.isCollected(),
+                "routine=4 keeps collision_flags=$47 until Obj37 executes, so P2 returns on the same ring");
+    }
+
+    @Test
     public void cpuSidekickLostRingUsesMainInvulnerabilityGate() {
         AbstractPlayableSprite mainPlayer = mock(AbstractPlayableSprite.class);
         when(mainPlayer.isCpuControlled()).thenReturn(false);
@@ -229,7 +251,7 @@ public class TestLostRingTouchOrdering {
         objectManager.runTouchResponsesForPlayer(player, 1, true);
 
         assertTrue(ring.isCollected(),
-                "S3K Obj37 adds itself to Collision_response_list after MoveSprite2, so touch uses live position");
+                "S3K Collision_response_list pointers expose Obj37's live published position");
     }
 
     @Test

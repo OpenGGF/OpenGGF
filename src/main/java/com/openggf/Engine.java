@@ -2104,8 +2104,15 @@ public class Engine {
 			GameModule module,
 			com.openggf.game.dataselect.DataSelectAction action,
 			SaveManager saveManager) {
-		String gameCode = module.getGameCode();
 		Map<String, Object> payload = loadDataSelectPayload(module, action, saveManager);
+		return createDataSelectSaveContext(module, action, payload);
+	}
+
+	static com.openggf.game.save.SaveSessionContext createDataSelectSaveContext(
+			GameModule module,
+			com.openggf.game.dataselect.DataSelectAction action,
+			Map<String, Object> payload) {
+		String gameCode = module.getGameCode();
 		SelectedTeam team = payload == null ? action.team() : teamFromPayload(payload, action.team());
 		com.openggf.game.save.SaveSessionContext context =
 				action.slot() > 0
@@ -2119,7 +2126,7 @@ public class Engine {
 		return context;
 	}
 
-	private static Map<String, Object> loadDataSelectPayload(
+	static Map<String, Object> loadDataSelectPayload(
 			GameModule module,
 			com.openggf.game.dataselect.DataSelectAction action,
 			SaveManager saveManager) {

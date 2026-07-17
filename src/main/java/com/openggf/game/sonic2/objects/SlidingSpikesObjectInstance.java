@@ -172,6 +172,11 @@ public class SlidingSpikesObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        return WIDTH_PIXELS; // Obj76_SubObjData width_pixels=$40, s2.asm:55719-55737
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (player == null || player.getInvulnerable()) {

@@ -495,6 +495,14 @@ public class CogObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean suppressesObjectEdgeBalance() {
+        // Obj70_Init sets status.npc.no_balancing before copying that status to every
+        // tooth, so a player standing at a tooth edge keeps the normal idle animation.
+        // See docs/s2disasm/s2.asm Obj70_Init.
+        return true;
+    }
+
+    @Override
     public void appendDebugRenderCommands(DebugRenderContext ctx) {
         // Draw collision bounds for each tooth
         for (int i = 0; i < NUM_TEETH; i++) {

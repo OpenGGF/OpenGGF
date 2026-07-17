@@ -54,6 +54,8 @@ class TestHczEndBossWaterColumnControlPolicy {
                 () -> assertEquals(0, player.getXSpeed(), "grab clears x_vel"),
                 () -> assertEquals(0, player.getYSpeed(), "grab clears y_vel"),
                 () -> assertEquals(0, player.getGSpeed(), "grab clears ground_vel"),
+                () -> assertEquals(Sonic3kAnimationIds.DEATH.id(), player.getAnimationId(),
+                        "grab writes the native anim byte"),
                 () -> assertEquals(Sonic3kAnimationIds.DEATH.id(), player.getForcedAnimationId(),
                         "grab forces the water-column tumble animation"));
     }
@@ -73,6 +75,8 @@ class TestHczEndBossWaterColumnControlPolicy {
                 () -> assertFalse(player.isTouchResponseSuppressedByObjectControl(), "release clears touch suppression"),
                 () -> assertTrue(player.getAir(), "release leaves the player airborne"),
                 () -> assertEquals((short) -0x200, player.getYSpeed(), "release applies ROM upward launch velocity"),
+                () -> assertEquals(Sonic3kAnimationIds.ROLL.id(), player.getAnimationId(),
+                        "release writes the native roll anim byte"),
                 () -> assertEquals(Sonic3kAnimationIds.ROLL.id(), player.getForcedAnimationId(),
                         "release restores the roll animation"));
     }

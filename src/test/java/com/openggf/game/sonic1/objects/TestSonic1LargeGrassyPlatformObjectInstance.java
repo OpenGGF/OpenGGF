@@ -39,10 +39,19 @@ public class TestSonic1LargeGrassyPlatformObjectInstance {
         assertTrue(platform.isHighPriority());
     }
 
+    @Test
+    public void balanceUsesRomActiveWidthWithoutHeightmapPadding() {
+        Sonic1LargeGrassyPlatformObjectInstance platform = create(0x00);
+
+        assertEquals(0x40, platform.getBalanceWidthPixels(),
+                "Sonic_Move reads Obj2F obActWid from LGrass_Data");
+        assertEquals(0x4B, platform.getSolidParams().halfWidth(),
+                "LGrass_Solid adds $B only to the collision width");
+    }
+
     private static Sonic1LargeGrassyPlatformObjectInstance create(int subtype) {
         ObjectSpawn spawn = new ObjectSpawn(100, 100, 0x2F, subtype, 0, false, 0);
         return new Sonic1LargeGrassyPlatformObjectInstance(spawn);
     }
 }
-
 

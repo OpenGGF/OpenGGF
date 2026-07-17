@@ -30,12 +30,15 @@ public final class SeamlessLevelTransitionRequest {
     private final boolean deactivateLevelNow;
     private final boolean preserveMusic;
     private final boolean preserveLevelGamestate;
-    private final boolean preserveEndOfLevelState;
+    private final boolean preserveEndOfLevelActive;
+    private final boolean preserveEndOfLevelFlag;
     private final boolean showInLevelTitleCard;
     private final boolean resetLevelGamestateAtInLevelTitleCardDisplay;
     private final int inLevelTitleCardResetAdditionalDispatches;
+    private final int inLevelTitleCardResetPhaseOneDispatchOverlap;
     private final boolean lockPlayerControlForInLevelTitleCard;
     private final int inLevelTitleCardExitAdditionalDispatches;
+    private final int inLevelTitleCardExitPhaseOneDispatchOverlap;
     private final boolean forceAirOnStaleObjectSupportLoss;
     private final boolean preserveOffsetCameraPosition;
     private final Integer postTransitionMinX;
@@ -68,15 +71,20 @@ public final class SeamlessLevelTransitionRequest {
         this.deactivateLevelNow = builder.deactivateLevelNow;
         this.preserveMusic = builder.preserveMusic;
         this.preserveLevelGamestate = builder.preserveLevelGamestate;
-        this.preserveEndOfLevelState = builder.preserveEndOfLevelState;
+        this.preserveEndOfLevelActive = builder.preserveEndOfLevelActive;
+        this.preserveEndOfLevelFlag = builder.preserveEndOfLevelFlag;
         this.showInLevelTitleCard = builder.showInLevelTitleCard;
         this.resetLevelGamestateAtInLevelTitleCardDisplay =
                 builder.resetLevelGamestateAtInLevelTitleCardDisplay;
         this.inLevelTitleCardResetAdditionalDispatches =
                 builder.inLevelTitleCardResetAdditionalDispatches;
+        this.inLevelTitleCardResetPhaseOneDispatchOverlap =
+                builder.inLevelTitleCardResetPhaseOneDispatchOverlap;
         this.lockPlayerControlForInLevelTitleCard = builder.lockPlayerControlForInLevelTitleCard;
         this.inLevelTitleCardExitAdditionalDispatches =
                 builder.inLevelTitleCardExitAdditionalDispatches;
+        this.inLevelTitleCardExitPhaseOneDispatchOverlap =
+                builder.inLevelTitleCardExitPhaseOneDispatchOverlap;
         this.forceAirOnStaleObjectSupportLoss = builder.forceAirOnStaleObjectSupportLoss;
         this.preserveOffsetCameraPosition = builder.preserveOffsetCameraPosition;
         this.postTransitionMinX = builder.postTransitionMinX;
@@ -128,7 +136,15 @@ public final class SeamlessLevelTransitionRequest {
     }
 
     public boolean preserveEndOfLevelState() {
-        return preserveEndOfLevelState;
+        return preserveEndOfLevelActive && preserveEndOfLevelFlag;
+    }
+
+    public boolean preserveEndOfLevelActive() {
+        return preserveEndOfLevelActive;
+    }
+
+    public boolean preserveEndOfLevelFlag() {
+        return preserveEndOfLevelFlag;
     }
 
     public boolean showInLevelTitleCard() {
@@ -143,12 +159,20 @@ public final class SeamlessLevelTransitionRequest {
         return inLevelTitleCardResetAdditionalDispatches;
     }
 
+    public int inLevelTitleCardResetPhaseOneDispatchOverlap() {
+        return inLevelTitleCardResetPhaseOneDispatchOverlap;
+    }
+
     public boolean lockPlayerControlForInLevelTitleCard() {
         return lockPlayerControlForInLevelTitleCard;
     }
 
     public int inLevelTitleCardExitAdditionalDispatches() {
         return inLevelTitleCardExitAdditionalDispatches;
+    }
+
+    public int inLevelTitleCardExitPhaseOneDispatchOverlap() {
+        return inLevelTitleCardExitPhaseOneDispatchOverlap;
     }
 
     public boolean forceAirOnStaleObjectSupportLoss() {
@@ -239,7 +263,7 @@ public final class SeamlessLevelTransitionRequest {
                 .deactivateLevelNow(deactivateLevelNow)
                 .preserveMusic(preserveMusic)
                 .preserveLevelGamestate(preserveLevelGamestate)
-                .preserveEndOfLevelState(preserveEndOfLevelState)
+                .preserveEndOfLevelState(preserveEndOfLevelState())
                 .showInLevelTitleCard(showInLevelTitleCard)
                 .resetLevelGamestateAtInLevelTitleCardDisplay(
                         resetLevelGamestateAtInLevelTitleCardDisplay)
@@ -284,12 +308,15 @@ public final class SeamlessLevelTransitionRequest {
         private boolean deactivateLevelNow;
         private boolean preserveMusic = true;
         private boolean preserveLevelGamestate;
-        private boolean preserveEndOfLevelState;
+        private boolean preserveEndOfLevelActive;
+        private boolean preserveEndOfLevelFlag;
         private boolean showInLevelTitleCard;
         private boolean resetLevelGamestateAtInLevelTitleCardDisplay;
         private int inLevelTitleCardResetAdditionalDispatches;
+        private int inLevelTitleCardResetPhaseOneDispatchOverlap;
         private boolean lockPlayerControlForInLevelTitleCard;
         private int inLevelTitleCardExitAdditionalDispatches;
+        private int inLevelTitleCardExitPhaseOneDispatchOverlap;
         private boolean forceAirOnStaleObjectSupportLoss;
         private boolean preserveOffsetCameraPosition;
         private Integer postTransitionMinX;
@@ -346,7 +373,14 @@ public final class SeamlessLevelTransitionRequest {
          * the resource reload and still own those globals afterward.
          */
         public Builder preserveEndOfLevelState(boolean preserveEndOfLevelState) {
-            this.preserveEndOfLevelState = preserveEndOfLevelState;
+            this.preserveEndOfLevelActive = preserveEndOfLevelState;
+            this.preserveEndOfLevelFlag = preserveEndOfLevelState;
+            return this;
+        }
+
+        /** Keeps Level_end_flag while allowing End_of_level_flag to reset. */
+        public Builder preserveEndOfLevelActive(boolean preserveEndOfLevelActive) {
+            this.preserveEndOfLevelActive = preserveEndOfLevelActive;
             return this;
         }
 
@@ -365,6 +399,11 @@ public final class SeamlessLevelTransitionRequest {
             return this;
         }
 
+        public Builder inLevelTitleCardResetPhaseOneDispatchOverlap(int dispatches) {
+            this.inLevelTitleCardResetPhaseOneDispatchOverlap = Math.max(0, dispatches);
+            return this;
+        }
+
         public Builder lockPlayerControlForInLevelTitleCard(boolean lock) {
             this.lockPlayerControlForInLevelTitleCard = lock;
             return this;
@@ -372,6 +411,11 @@ public final class SeamlessLevelTransitionRequest {
 
         public Builder inLevelTitleCardExitAdditionalDispatches(int dispatches) {
             this.inLevelTitleCardExitAdditionalDispatches = Math.max(0, dispatches);
+            return this;
+        }
+
+        public Builder inLevelTitleCardExitPhaseOneDispatchOverlap(int dispatches) {
+            this.inLevelTitleCardExitPhaseOneDispatchOverlap = Math.max(0, dispatches);
             return this;
         }
 

@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractResultsScreen;
 import com.openggf.game.sonic3k.Sonic3kObjectArt;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kTransitionWriteSupport;
 import com.openggf.tools.NemesisReader;
@@ -62,6 +63,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private static final int S3K_PRE_TALLY_DELAY = 360;  // 6*60 frames (ROM line 62580)
     private static final int S3K_WAIT_DURATION = 90;      // ROM line 62676
     private static final int MUSIC_TRIGGER_FRAME = 71;    // 360 - 289 = 71 (ROM line 62626)
+    private static final int CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES = 3;
 
     // Time bonus table (ROM lines 62910-62918)
     private static final int[] TIME_BONUSES = {5000, 5000, 1000, 500, 400, 300, 100, 10};
@@ -84,6 +86,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     // after recreate. Covers this class and its Mgz2 subclass.
     private PlayerCharacter character;
     private int act;  // 0-indexed: 0=Act 1, 1=Act 2
+    private int waitDurationAdjustment;
+    private int postControlHandoffDelayEntries;
+    private int carriedResultsRetireDispatches = CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES;
+    private boolean controlsReleasedAheadOfHandoff;
 
     // Tally values
     private int timeBonus;
@@ -115,22 +121,41 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private boolean actTransitionSignaled;
     private CarriedTitlePhase carriedTitlePhase = CarriedTitlePhase.RESULTS;
     private int carriedTitleWaitTimer;
+    private int carriedResultsRenderRetireDispatches;
+    private boolean exitRetireDispatchesInitialized;
 
     public S3kResultsScreenObjectInstance(PlayerCharacter character, int act) {
-        this(character, act, true);
+        this(character, act, 0, 0, CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES, true);
     }
 
     /** Side-effect-free shell used only by generic rewind recreation. */
     protected S3kResultsScreenObjectInstance(boolean rewindShell) {
-        this(PlayerCharacter.SONIC_AND_TAILS, 0, !rewindShell);
+        this(PlayerCharacter.SONIC_AND_TAILS, 0, 0, 0,
+                CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES, !rewindShell);
+    }
+
+    S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
+            int postControlHandoffDelayEntries) {
+        this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
+                CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES, true);
+    }
+
+    S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
+            int postControlHandoffDelayEntries, int carriedResultsRetireDispatches) {
+        this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
+                carriedResultsRetireDispatches, true);
     }
 
     private S3kResultsScreenObjectInstance(PlayerCharacter character, int act,
-                                           boolean initializeRuntimeState) {
+            int waitDurationAdjustment, int postControlHandoffDelayEntries,
+            int carriedResultsRetireDispatches, boolean initializeRuntimeState) {
         super("S3kResults");
         setRomWorldPositioned(false);
         this.character = character;
         this.act = act;
+        this.waitDurationAdjustment = Math.max(0, waitDurationAdjustment);
+        this.postControlHandoffDelayEntries = Math.max(0, postControlHandoffDelayEntries);
+        this.carriedResultsRetireDispatches = Math.max(0, carriedResultsRetireDispatches);
 
         if (!initializeRuntimeState) {
             return;
@@ -317,7 +342,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     @Override
     protected int getWaitDuration() {
-        return S3K_WAIT_DURATION;
+        return S3K_WAIT_DURATION + waitDurationAdjustment;
     }
 
     // ---- Update with element sliding ----
@@ -390,6 +415,29 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      */
     private void updateExitQueue() {
         if (childrenRemaining <= 0) {
+            if (!exitRetireDispatchesInitialized) {
+                carriedResultsRenderRetireDispatches += additionalChildRetireDispatches();
+                exitRetireDispatchesInitialized = true;
+            }
+            if (carriedResultsRenderRetireDispatches > 0) {
+                onAdditionalChildRetireDispatch(carriedResultsRenderRetireDispatches);
+                carriedResultsRenderRetireDispatches--;
+                return;
+            }
+            if (postControlHandoffDelayEntries > 0) {
+                if (!controlsReleasedAheadOfHandoff) {
+                    // Restore_PlayerControl and the later title-card handoff are
+                    // separate native owners. Preserve that ordering when the
+                    // retained results object is carrying elapsed owner state.
+                    releasePlayerControlsForExit();
+                    controlsReleasedAheadOfHandoff = true;
+                    return;
+                }
+                postControlHandoffDelayEntries--;
+                if (postControlHandoffDelayEntries > 0) {
+                    return;
+                }
+            }
             onExitReady();
             complete = carriedTitlePhase == CarriedTitlePhase.RESULTS;
             return;
@@ -429,6 +477,28 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     boolean hasLoadedResultsArt() {
         return artLoaded;
+    }
+
+    /** Additional owner dispatches after the embedded result children retire. */
+    protected int additionalChildRetireDispatches() {
+        return 0;
+    }
+
+    /**
+     * Hook for an event-owned results parent whose retained child slots have
+     * dispatch-visible work before the parent's final exit callback.
+     */
+    protected void onAdditionalChildRetireDispatch(int dispatchesRemaining) {
+        // Default results parents have no retained slot work.
+    }
+
+    @Override
+    public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
+        // HCZ/MGZ-style Load_Level paths retain Obj_LevelResults and its ROM
+        // child SSTs. The engine carries the parent but renders its twelve
+        // children as embedded elements, so preserve the final three child
+        // retirement dispatches that occur after the embedded set is gone.
+        carriedResultsRenderRetireDispatches = carriedResultsRetireDispatches;
     }
 
     // ---- Pre-tally delay with music trigger ----
@@ -590,15 +660,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // changes underneath. The seamless transition handler in executeActTransition
         // resets the player state after the layout reload, so they fall naturally.
         boolean lbzAct2PostBossHandoff = zone == 0x06 && act == 1;
-        if (!hasSeamlessTransition && !lbzAct2PostBossHandoff && shouldRestorePlayerControlsOnExit()) {
-            for (PlayableEntity candidate : playerQuery()
-                    .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
-                if (candidate instanceof AbstractPlayableSprite sprite) {
-                    sprite.setControlLocked(false);
-                    ObjectControlState.none().applyTo(sprite);
-                    sprite.setForcedAnimationId(-1);
-                }
-            }
+        if (!controlsReleasedAheadOfHandoff) {
+            releasePlayerControlsForExit();
         }
         boolean aizAct1MinibossTitleHandoff = zone == 0x00 && act == 0;
 
@@ -614,9 +677,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // to the pre-boss area (ROM: loc_694D4 uses Obj_IncLevEndXGradual).
         boolean iczAct2EndBossHandoff = zone == 0x05 && act == 1;
         var cam = services().camera();
-        if (!lbzAct2PostBossHandoff) {
-            cam.setFrozen(false);
-        }
+        applyCameraFollowExitState(cam, lbzAct2PostBossHandoff);
         if (shouldRestoreCameraBoundsOnExit(zone, act)
                 && !Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
             var level = services().currentLevel();
@@ -635,8 +696,15 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         boolean isAct2OrSpecial = (act != 0) || (zone == 0x0A) || (zone == 0x16);
 
         services().gameState().setEndOfLevelActive(false);
+        // Obj_EndSignControlAwaitStart is a separate retained owner that runs
+        // later in this object pass once _unkFAA8 clears. Route the handoff
+        // through the transition bridge so only an armed native event consumes
+        // it; no zone or trace identity is consulted here.
+        boolean retainedTransitionFlagOwner =
+                S3kTransitionWriteSupport.restorePendingPostResultsPlayerControl(services());
 
-        if (isAct2OrSpecial || (hasSeamlessTransition && !fbzCarriedTitleOwner)) {
+        if (isAct2OrSpecial || (hasSeamlessTransition
+                && !fbzCarriedTitleOwner && retainedTransitionFlagOwner)) {
             // ROM loc_2DCF8 sets End_of_level_flag directly for Act 2/Sky
             // Sanctuary/LRZ boss results (sonic3k.asm:62693-62705).
             // For HCZ/MGZ Act 1, the engine's BG event handlers use the same
@@ -708,6 +776,28 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 zone, act, isAct2OrSpecial));
     }
 
+    private void releasePlayerControlsForExit() {
+        int zone = services().romZoneId();
+        boolean hasSeamlessTransition = (act == 0) && (zone == 0x01 || zone == 0x02);
+        boolean lbzAct2PostBossHandoff = zone == 0x06 && act == 1;
+        if (!hasSeamlessTransition && !lbzAct2PostBossHandoff && shouldRestorePlayerControlsOnExit()) {
+            for (PlayableEntity candidate : playerQuery()
+                    .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                if (candidate instanceof AbstractPlayableSprite sprite) {
+                    sprite.setControlLocked(false);
+                    ObjectControlState.none().applyTo(sprite);
+                    sprite.setForcedAnimationId(-1);
+                    if (waitDurationAdjustment > 0) {
+                        // This retained results owner runs after player animation.
+                        // Publish Restore_PlayerControl's animation word while
+                        // retaining the current mapping for this object entry.
+                        sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
+                    }
+                }
+            }
+        }
+    }
+
     static boolean shouldRestoreLevelCameraBoundsOnExit(int zone, int act) {
         boolean actOneInLevelTitleHandoff = act == 0
                 && (zone == 0x00 || zone == 0x01 || zone == 0x02 || zone == 0x04);
@@ -769,6 +859,17 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         return carriedTitleWaitTimer;
     }
 
+    /**
+     * Applies the route-specific camera-follow state at the results handoff.
+     * Most routes resume normal following; retained boss/cutscene owners can
+     * preserve or assert the ROM {@code Scroll_lock} state instead.
+     */
+    protected void applyCameraFollowExitState(com.openggf.camera.Camera camera,
+                                              boolean lbzAct2PostBossHandoff) {
+        if (!lbzAct2PostBossHandoff) {
+            camera.setFrozen(false);
+        }
+    }
     protected boolean shouldRestorePlayerControlsOnExit() {
         return true;
     }

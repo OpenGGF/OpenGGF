@@ -2,6 +2,7 @@ package com.openggf.trace;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -13,14 +14,38 @@ import java.util.List;
  */
 @com.openggf.game.ModApi
 public record TraceMetadata(
-    String game, String zone, Integer zoneId, int act, int bk2FrameOffset, int traceFrameCount,
-    String startXHex, String startYHex, String recordingDate, String luaScriptVersion,
-    Integer traceSchema, Integer csvVersion, String traceProfile, String bizhawkVersion,
-    String genesisCore, List<String> auxSchemaExtras, Integer romZoneId, String route,
-    String sourceBk2, String romChecksum, String notes, List<String> characters,
-    String mainCharacter, List<String> sidekicks, Integer preTraceOscFrames,
-    String rngSeedHex, String traceType, String inputSource, Integer creditsDemoIndex,
-    String creditsDemoSlug, Integer specialStageIndex
+    @JsonProperty("game") String game,
+    @JsonProperty("zone") String zone,
+    @JsonProperty("zone_id") Integer zoneId,
+    @JsonProperty("act") int act,
+    @JsonProperty("bk2_frame_offset") int bk2FrameOffset,
+    @JsonProperty("ring_floor_check_counter_phase") Integer ringFloorCheckCounterPhase,
+    @JsonProperty("trace_frame_count") int traceFrameCount,
+    @JsonProperty("start_x") String startXHex,
+    @JsonProperty("start_y") String startYHex,
+    @JsonProperty("recording_date") String recordingDate,
+    @JsonProperty("lua_script_version") String luaScriptVersion,
+    @JsonProperty("trace_schema") Integer traceSchema,
+    @JsonProperty("csv_version") Integer csvVersion,
+    @JsonProperty("trace_profile") String traceProfile,
+    @JsonProperty("bizhawk_version") String bizhawkVersion,
+    @JsonProperty("genesis_core") String genesisCore,
+    @JsonProperty("aux_schema_extras") List<String> auxSchemaExtras,
+    @JsonProperty("rom_zone_id") Integer romZoneId,
+    @JsonProperty("route") String route,
+    @JsonProperty("source_bk2") String sourceBk2,
+    @JsonProperty("rom_checksum") String romChecksum,
+    @JsonProperty("notes") String notes,
+    @JsonProperty("characters") List<String> characters,
+    @JsonProperty("main_character") String mainCharacter,
+    @JsonProperty("sidekicks") List<String> sidekicks,
+    @JsonProperty("pre_trace_osc_frames") Integer preTraceOscFrames,
+    @JsonProperty("rng_seed") String rngSeedHex,
+    @JsonProperty("trace_type") String traceType,
+    @JsonProperty("input_source") String inputSource,
+    @JsonProperty("credits_demo_index") Integer creditsDemoIndex,
+    @JsonProperty("credits_demo_slug") String creditsDemoSlug,
+    @JsonProperty("special_stage_index") Integer specialStageIndex
 ) {
 
     /**
@@ -131,6 +156,11 @@ public record TraceMetadata(
     /** Returns whether this trace metadata explicitly records a gameplay team. */
     public boolean hasRecordedTeam() {
         return !recordedCharacters().isEmpty();
+    }
+
+    /** Whether the primary CSV carries strict per-character animation fields. */
+    public boolean hasPerFrameCharacterAnimation() {
+        return csvVersion != null && csvVersion >= 7;
     }
 
     /**
@@ -442,6 +472,7 @@ public record TraceMetadata(
         return new TraceMetadata(
                 text(node, "game"), text(node, "zone"), integer(node, "zone_id"),
                 intValue(node, "act"), intValue(node, "bk2_frame_offset"),
+                integer(node, "ring_floor_check_counter_phase"),
                 intValue(node, "trace_frame_count"), text(node, "start_x"),
                 text(node, "start_y"), text(node, "recording_date"),
                 text(node, "lua_script_version"), integer(node, "trace_schema"),

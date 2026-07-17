@@ -73,6 +73,20 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
     private boolean drivesBossPosition; // ROM: objoff_30 < 0 branch drives boss X/Y
     private int currentFrame;
 
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // SolidObject rejects with `bhi`, preserving exact-right-edge contact.
+        // docs/s1disasm/_incObj/sub SolidObject.asm:158-166
+        return true;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // Extension rebuilds the dynamic child spawn every frame; the native
+        // pushing bit stays in the cylinder's live Obj84 SST status byte.
+        return true;
+    }
+
 
     FZCylinder(Sonic1FZBossInstance parent) {
         this(parent, 0);
@@ -323,6 +337,14 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
     @Override
     public SolidObjectParams getSolidParams() {
         return SOLID_PARAMS;
+    }
+
+    @Override
+    public int getBalanceWidthPixels() {
+        // EggmanCylinder_Main writes obActWid=64/2. The $B in SolidObject's
+        // d1 is Sonic's collision padding and is not part of Sonic_Move's
+        // stood-on-object balance calculation.
+        return TOP_LANDING_HALF_WIDTH;
     }
 
     @Override

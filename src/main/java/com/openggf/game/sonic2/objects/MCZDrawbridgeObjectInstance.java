@@ -359,6 +359,14 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
         return false;
     }
 
+    @Override
+    public boolean nonRollingLandingPublishesWalk(PlayableEntity player) {
+        // Obj81 calls the full SolidObject routine. Its SolidObject_Landed tail
+        // reaches Sonic_ResetOnFloor, whose entry writes Walk before testing
+        // Status_Roll (docs/s2disasm/s2.asm:35488-35509,38123-38129).
+        return true;
+    }
+
     // SolidObjectListener implementation
 
     @Override
