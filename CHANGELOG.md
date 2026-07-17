@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **fix: MHZ1 intro no longer forces the CPU sidekick into a crouch.** The
+  cutscene "P2 stopper" wrote the DUCK animation whenever the sidekick sat at or
+  below the ROM clamp `x=$371`, but ROM `loc_62DDC` (`cmp.w x_pos,d0`/`bhi`) writes
+  DUCK only once `x_pos >= $371`. Since Tails is pinned at `x=0x335` (below the
+  clamp) for the whole scene it now animates WALK->WAIT as on hardware. Advances
+  the MHZ complete-run trace frontier from frame 218 to frame 2018.
 - **fix: MHZ miniboss music now fades in and its thrusters flicker.** On spawn the
   miniboss spawned nothing to fade the zone track and slammed the boss music on
   instantly; it now spawns a `SongFadeTransitionInstance` (the ROM `loc_75220`

@@ -357,7 +357,13 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
                 lockSidekick(sidekick);
                 locked = true;
             }
-            if (owner.workspaceRoutine < ROUTINE_WAIT_LANDING || sidekickX > SIDEKICK_CLAMP_X) {
+            // ROM loc_62DDC: cmp.w x_pos(a1),d0 (d0=$371) / bhi skip — the DUCK write
+            // (move.b #8,anim(a1)) is skipped whenever x_pos < $371, i.e. DUCK is
+            // forced only once the sidekick has reached x_pos >= $371. The gate was
+            // inverted (skipping only above the clamp), so Tails — pinned at x=0x335
+            // (< $371) for the whole intro — was wrongly forced into DUCK instead of
+            // animating WALK->WAIT (MHZ1 complete-run trace f218 tails_animation_id).
+            if (owner.workspaceRoutine < ROUTINE_WAIT_LANDING || sidekickX < SIDEKICK_CLAMP_X) {
                 return;
             }
             sidekick.setAnimationId(Sonic3kAnimationIds.DUCK);

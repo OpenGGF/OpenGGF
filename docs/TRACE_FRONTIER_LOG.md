@@ -46116,3 +46116,22 @@ gone. The first mismatch is Tails Y: ROM `$085B`, engine `$085A`; engine Tails
 has entered hurt routine 4 with `$FE00,$FC00` velocity, while ROM Tails remains
 rolling in routine 2 with `$FBF9,$07B8`. This is a new Blaster projectile and
 touch-order frontier, recorded before implementation.
+
+## 2026-07-18 -- MHZ1 complete-run f218 `tails_animation_id`: cutscene P2-stopper DUCK gate inverted
+
+Branch `next` (on top of `8bb7f9db8`). Command:
+`mvn -q -Dmse=off -Dsurefire.forkCount=1 "-Dtest=com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay#replayMatchesTrace" "-DargLine=-Xmx3g" test`
+
+- Root: `Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper.update` wrote the
+  DUCK animation (`0x08`) whenever the sidekick sat at `x <= SIDEKICK_CLAMP_X (0x371)`
+  -- the inverse of ROM `loc_62DDC` (`cmp.w x_pos(a1),d0` with `d0=$371` / `bhi` skip /
+  `move.b #8,anim(a1)`), which writes DUCK only once `x_pos >= $371`. CPU Tails is
+  pinned at `x=0x335` (`< $371`) for the whole intro, so ROM never ducks it -- it
+  animates WALK(`0x00`) -> WAIT(`0x05`). (Note: `0x08` is DUCK, not ROLL.)
+- Fix: flip the position gate to `sidekickX < SIDEKICK_CLAMP_X` (skip below the clamp),
+  matching the ROM `bhi`. One-line change to the MHZ1-only cutscene object; no shared
+  physics/sidekick code touched, no zone/frame/route carve-out.
+- Result: **f218 -> f2018 (+1800 frames)**; totals `5324 -> 5323` errors, 0 warnings.
+  New frontier: frame 2018 `player_mapping_frame` (expected `0x008E`, actual `0x0064`).
+  `TestMhz1CutsceneObjects` / `TestMhz1CutsceneReferenceClosure` / `TestS3kMhzCutsceneGraphRewind`
+  green (88 tests).
