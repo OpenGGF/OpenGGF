@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+### 2026-07-17 -- Review finding 4 rejected: level-entry forced-animation reset
+
+Branch `feature/ai-trace-animation-verification`, on top of `3a1114049`.
+Restoring `setForcedAnimationId(-1)` to the level-start/bootstrap placement
+paths was evaluated in three progressively narrower forms. Clearing it on the
+established-follower path, the bootstrap refresh, or only the ordinary shared
+placement each caused the same three regressions: HCZ complete-run, MGZ
+complete-run, and standalone MGZ failed at frame 0 because the expected Tails
+Fly animation `$1B` was replaced by `$00`. The candidate fleet fell from 53 to
+50 passing tests (40 failures, 1 error, 1 skip).
+
+The candidate was fully reverted. `SidekickCpuController.reset()` already
+clears the synthetic forced-animation owner for the normal reset lifecycle,
+while the reviewed placement paths are also used to consume carried/seeded
+mid-run animation state. Adding a route or trace distinction there would
+violate the comparison-only and no-carve-out rules. The post-revert full
+ROM-backed `*TraceReplay` checkpoint returned to the prior 92-test signature:
+53 passed, 37 failed, 1 errored, and 1 skipped.
+
 ### 2026-07-17 -- Review finding 3: riding providers preserve the live push byte
 
 Branch `feature/ai-trace-animation-verification`, on top of `0e7fabaa6`.
