@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K sinking-mud collision outlines no longer leak into normal gameplay rendering:** object `$4F` remains invisible unless the dedicated object-debug overlay is enabled, removing the one-host-pixel white boxes seen across MGZ mud volumes.
 - **AIZ1 intro water splashes now cover the Tornado aircraft as in the ROM:** Super Sonic, the plane body, propeller, and rocket booster use sprite priority `$280` (bucket 5), while the waves use `$100` (bucket 2), restoring the native foreground ordering (`docs/skdisasm/sonic3k.asm:135492-135819`).
 - **Live S3K lost-ring floor probes again start from the native four-count V-int phase:** ordinary gameplay no longer depends on trace metadata to establish Obj37's floor-check cadence. Legacy replay fixtures continue to express their reconstructed absolute start phase, which the replay bootstrap now converts to an offset from the live game-rule baseline (`docs/skdisasm/sonic3k.asm:543,35624-35635`).
 - **Riding push preservation now reads the live player status byte:** a later preserving solid slot can retain `Status_Push` established by an earlier slot in the same `ExecuteObjects` pass, while a clear live bit still prevents geometry from inventing push state. This restores the native visibility window used by folded CPZ staircase pieces and the ARZ boss arrow before CPU Tails samples leader status (`docs/s2disasm/s2.asm:56025-56033,65658-65702`).
