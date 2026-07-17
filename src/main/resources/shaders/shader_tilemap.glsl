@@ -9,7 +9,8 @@ uniform float TotalPaletteLines;
 
 uniform float TilemapWidth;          // In tiles
 uniform float TilemapHeight;         // In tiles
-uniform float TilemapRingBase;       // Physical X origin for logical BG column zero
+uniform float TilemapRingBaseX;      // Physical X origin for logical BG column zero
+uniform float TilemapRingBaseY;      // Physical Y origin for logical BG row zero
 uniform float AtlasWidth;            // In pixels
 uniform float AtlasHeight;           // In pixels
 uniform float LookupSize;            // Pattern lookup width
@@ -189,9 +190,12 @@ void main()
         if (tileYf < 0.0) tileYf += VDPWrapHeight;
     }
 
-    float physicalTileX = mod(tileXf + TilemapRingBase, TilemapWidth);
+    float physicalTileX = mod(tileXf + TilemapRingBaseX, TilemapWidth);
     if (physicalTileX < 0.0) physicalTileX += TilemapWidth;
-    vec2 tileUv = vec2((physicalTileX + 0.5) / TilemapWidth, (tileYf + 0.5) / TilemapHeight);
+    float physicalTileY = mod(tileYf + TilemapRingBaseY, TilemapHeight);
+    if (physicalTileY < 0.0) physicalTileY += TilemapHeight;
+    vec2 tileUv = vec2((physicalTileX + 0.5) / TilemapWidth,
+            (physicalTileY + 0.5) / TilemapHeight);
     vec4 desc = texture(TilemapTexture, tileUv);
 
     if (desc.a < 0.5) {

@@ -90,6 +90,33 @@ class TestS2WfzBossGraphRewind {
     }
 
     @Test
+    void laserWallVisibilityPhaseRoundTripsThroughGenericRewind() {
+        Harness harness = Harness.createWithBoss();
+        WfzGraph graph = WfzGraph.spawnRepresentativeFamily(harness.objectManager());
+        Sonic2WFZBossInstance.WFZLaserWall wall = graph.leftWall();
+
+        wall.update(1, null);
+        boolean capturedPhase = wall.isVisibleThisFrameForTest();
+        RewindRegistry rewindRegistry = new RewindRegistry();
+        rewindRegistry.register(harness.objectManager().rewindSnapshottable());
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        wall.update(2, null);
+        assertNotEquals(capturedPhase, wall.isVisibleThisFrameForTest(),
+                "precondition: wall must advance away from the captured display phase");
+
+        rewindRegistry.restore(snapshot);
+
+        Sonic2WFZBossInstance.WFZLaserWall restored =
+                WfzGraph.fromLiveObjects(harness.objectManager()).leftWall();
+        assertEquals(capturedPhase, restored.isVisibleThisFrameForTest(),
+                "restore must recover the captured wall display phase");
+        restored.update(2, null);
+        assertNotEquals(capturedPhase, restored.isVisibleThisFrameForTest(),
+                "the restored phase must advance exactly once on the next frame");
+    }
+
+    @Test
     void missingRequiredObjectReferencesStillFailWhenTargetHasNoRewindIdentity() {
         Harness externalHarness = Harness.createWithBoss();
         WfzGraph external = WfzGraph.spawnRepresentativeFamily(externalHarness.objectManager());

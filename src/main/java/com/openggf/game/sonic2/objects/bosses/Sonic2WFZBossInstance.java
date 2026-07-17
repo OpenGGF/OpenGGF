@@ -950,6 +950,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         private int wallAnimFrame; // ROM anim_frame byte
         private int wallAnimFrameDuration; // ROM anim_frame_duration byte
         private int wallDeleteCounter; // ROM objoff_30 byte
+        private boolean visibleThisFrame; // ROM objoff_2F display phase
 
         WFZLaserWall(Sonic2WFZBossInstance parent, int wallX, int wallY) {
             super(parent, "Laser Wall", 4, Sonic2ObjectIds.WFZ_BOSS);
@@ -959,6 +960,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
             this.wallAnimFrame = 0;
             this.wallAnimFrameDuration = 0;
             this.wallDeleteCounter = 0;
+            this.visibleThisFrame = true;
             updateDynamicSpawn();
         }
 
@@ -990,12 +992,15 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
-            AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             if (!beginUpdate(frameCounter)) {
                 return;
             }
             if (defeatSignaled) {
                 updateDefeatDelete();
+            } else {
+                // ROM ObjC5_LaserWallWaitDelete: bchg #0,objoff_2F gates
+                // DisplaySprite without changing the following SolidObject call.
+                visibleThisFrame = !visibleThisFrame;
             }
             updateDynamicSpawn();
         }
@@ -1004,6 +1009,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
             // ROM ObjC5_LaserWallDelete: nested anim_frame_duration /
             // objoff_30 byte counters. The wall remains allocated and solid until
             // anim_frame reaches 5 and DeleteObject runs.
+            visibleThisFrame = false;
             wallAnimFrameDuration = (wallAnimFrameDuration - 1) & 0xFF;
             if (signedByte(wallAnimFrameDuration) >= 0) {
                 return;
@@ -1024,6 +1030,9 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
                     wallAnimFrameDuration = nextFrame;
                 }
             }
+            // Every non-returning path reaches ObjC5_LaserWallDisplay, which
+            // clears the active flicker bit and displays this frame.
+            visibleThisFrame = true;
         }
 
         private static int signedByte(int value) {
@@ -1042,12 +1051,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
-            if (isDestroyed()) {
-                return;
-            }
-            // ROM ObjC5_LaserWallWaitDelete toggles objoff_2F before the delete
-            // state; once deletion starts, display depends on the nested counter.
-            if (defeatSignaled && signedByte(wallAnimFrameDuration) >= 0) {
+            if (isDestroyed() || !visibleThisFrame) {
                 return;
             }
             ObjectRenderManager renderManager =
@@ -1061,6 +1065,10 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
                 return;
             }
             renderer.drawFrameIndex(FRAME_WALL, currentX, currentY, false, false);
+        }
+
+        boolean isVisibleThisFrameForTest() {
+            return visibleThisFrame;
         }
 
         // ROM: ObjC5_LaserWall calls SolidObject with d1=$13, d2=$40, d3=$80

@@ -23,6 +23,7 @@ import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
+import com.openggf.game.rewind.snapshot.LevelTilemapSnapshot;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
@@ -36,6 +37,7 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
 import com.openggf.level.rewind.LevelRewindSnapshotAdapter;
+import com.openggf.level.rewind.LevelTilemapRewindAdapter;
 import com.openggf.level.objects.HudRenderManager;
 import com.openggf.level.objects.HudStaticArt;
 import com.openggf.graphics.GLCommand;
@@ -55,6 +57,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpriteSheet;
+import com.openggf.level.scroll.BgTilemapUpdateMode;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.physics.CollisionSystem;
@@ -1213,16 +1216,13 @@ public class LevelManager {
             provider.loadArtForZone(zoneIndex);
 
             objectRenderManager = new ObjectRenderManager(provider);
-            LOGGER.info("Initializing Object Art. Base Index: " + OBJECT_PATTERN_BASE);
-            objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
-
             // Register level-tile-based object art (must be after level load)
             provider.registerLevelTileArt(level, zoneIndex);
-            int objectEndIndex = objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
             if (patternAtlas != null) {
-                patternAtlas.registerRange(
-                    OBJECT_PATTERN_BASE, objectEndIndex - OBJECT_PATTERN_BASE, "Objects");
+                patternAtlas.registerRange(PatternAtlasRange.OBJECTS);
             }
+            LOGGER.info("Initializing Object Art. Base Index: " + OBJECT_PATTERN_BASE);
+            refreshObjectArtPatterns();
 
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
             hudRenderManager.setHudPalettes(provider.getHudTextPaletteLine(), provider.getHudFlashPaletteLine());
@@ -1285,6 +1285,32 @@ public class LevelManager {
         if (gameplayMode != null && provider != null) {
             gameplayMode.registerPlcArtAdapter(provider);
         }
+    }
+
+    /**
+     * Validates and caches the regular object-art allocation within its fixed
+     * virtual-pattern governance range.
+     *
+     * @return the first virtual pattern index after the cached regular object art
+     */
+    public int refreshObjectArtPatterns() {
+        if (objectRenderManager == null) {
+            throw new IllegalStateException("Object render manager is not initialized");
+        }
+        int count = objectRenderManager.getRegularPatternCount();
+        if (count < 0) {
+            throw new IllegalStateException("Invalid regular object pattern count: " + count);
+        }
+        if (count > PatternAtlasRange.OBJECTS.size()) {
+            throw new IllegalStateException("Object patterns exceed reserved atlas range: " + count);
+        }
+        int prospectiveEnd = Math.addExact(OBJECT_PATTERN_BASE, count);
+        int actualEnd = objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
+        if (actualEnd != prospectiveEnd) {
+            throw new IllegalStateException("Object pattern preflight/cache mismatch: "
+                    + prospectiveEnd + " != " + actualEnd);
+        }
+        return actualEnd;
     }
 
     boolean isHudSuppressed() {
@@ -1420,9 +1446,21 @@ public class LevelManager {
     void ensureBackgroundTilemapData() {
         if (tilemapManager != null) {
             int bgCameraX = parallaxManager != null ? parallaxManager.getBgCameraX() : Integer.MIN_VALUE;
+            int bgCameraY = parallaxManager != null ? parallaxManager.getVscrollFactorBG() : 0;
+            BgTilemapUpdateMode updateMode = parallaxManager != null
+                    ? parallaxManager.getBgTilemapUpdateMode()
+                    : BgTilemapUpdateMode.STATIC_WINDOW;
             applyBackgroundTilemapWindowSelection(bgCameraX);
-            tilemapManager.ensureBackgroundTilemapData(this::getBlockAtPosition,
-                    zoneFeatureProvider, currentZone, parallaxManager, verticalWrapEnabled);
+            if (updateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32) {
+                tilemapManager.ensureBackgroundTilemapData(this::getBlockAtPosition,
+                        zoneFeatureProvider, currentZone, parallaxManager,
+                        updateMode, bgCameraX, bgCameraY, verticalWrapEnabled);
+            } else {
+                // Preserve the existing stateless virtual-dispatch seam used by
+                // ad-hoc tilemap writers and focused LevelManager tests.
+                tilemapManager.ensureBackgroundTilemapData(this::getBlockAtPosition,
+                        zoneFeatureProvider, currentZone, parallaxManager, verticalWrapEnabled);
+            }
         }
     }
 
@@ -1437,6 +1475,9 @@ public class LevelManager {
         if (tilemapManager == null) {
             return false;
         }
+        BgTilemapUpdateMode updateMode = parallaxManager != null
+                ? parallaxManager.getBgTilemapUpdateMode()
+                : BgTilemapUpdateMode.STATIC_WINDOW;
         boolean fullWidthPerLineTilemap = zoneFeatureProvider != null
                 && zoneFeatureProvider.useFullWidthBackgroundTilemapWindow(
                 currentZone, currentAct, bgCameraX, cachedBgContiguousWidthPx);
@@ -1449,14 +1490,16 @@ public class LevelManager {
                 tilemapManager.setBackgroundTilemapDirty(true);
             }
             newBgPeriodWidth = cachedBgContiguousWidthPx;
-        } else if (bgCameraX != Integer.MIN_VALUE
+        } else if (updateMode == BgTilemapUpdateMode.STATIC_WINDOW
+                && bgCameraX != Integer.MIN_VALUE
                 && zoneFeatureProvider != null && zoneFeatureProvider.bgWrapsHorizontally()) {
             int newBase = Math.floorDiv(bgCameraX, 16) * 16;
             if (newBase != tilemapManager.getBgTilemapBaseX()) {
                 // Window-only change: eligible for the incremental one-column shift.
                 tilemapManager.requestBgWindowBaseX(newBase);
             }
-        } else if (tilemapManager.getBgTilemapBaseX() != 0) {
+        } else if (updateMode == BgTilemapUpdateMode.STATIC_WINDOW
+                && tilemapManager.getBgTilemapBaseX() != 0) {
             tilemapManager.setBgTilemapBaseX(0);
             tilemapManager.setBackgroundTilemapDirty(true);
         }
@@ -3668,5 +3711,10 @@ public class LevelManager {
      */
     public RewindSnapshottable<LevelSnapshot> levelRewindSnapshottable() {
         return LevelRewindSnapshotAdapter.create(this);
+    }
+
+    /** Returns the rewind adapter for the history-dependent persistent Plane B nametable. */
+    public RewindSnapshottable<LevelTilemapSnapshot> levelTilemapRewindSnapshottable() {
+        return new LevelTilemapRewindAdapter(tilemapManager);
     }
 }

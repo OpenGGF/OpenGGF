@@ -84,15 +84,22 @@ public class TilemapGpuRenderer {
     private int dummyTexture1dId = 0;
 
     private byte[] backgroundData;
+    private byte[] backgroundColumnUploadData;
+    private byte[] backgroundRowUploadData;
     private int backgroundWidthTiles;
     private int backgroundHeightTiles;
     private boolean backgroundDirty = false;
     private boolean backgroundIncrementalDirty = false;
-    private int backgroundRingBaseTiles = 0;
+    private int backgroundRingBaseXTiles = 0;
+    private int backgroundRingBaseYTiles = 0;
     private int backgroundPendingSourceColumn = 0;
     private int backgroundPendingDestinationColumn = 0;
     private int backgroundPendingColumnCount = 0;
-    private int backgroundRenderRingBaseOverride = -1;
+    private int backgroundPendingSourceRow = 0;
+    private int backgroundPendingDestinationRow = 0;
+    private int backgroundPendingRowCount = 0;
+    private int backgroundRenderRingBaseXOverride = -1;
+    private int backgroundRenderRingBaseYOverride = -1;
     private int backgroundContentGeneration = 0;
     private int backgroundRenderGenerationOverride = -1;
 
@@ -180,9 +187,32 @@ public class TilemapGpuRenderer {
             this.backgroundDirty = true;
             this.backgroundIncrementalDirty = false;
             this.backgroundPendingColumnCount = 0;
-            this.backgroundRingBaseTiles = 0;
+            this.backgroundPendingRowCount = 0;
+            this.backgroundRingBaseXTiles = 0;
+            this.backgroundRingBaseYTiles = 0;
             this.backgroundContentGeneration++;
         }
+    }
+
+    /**
+     * Publishes a complete physical Plane B texture while retaining its logical
+     * X/Y ring origins. Unlike {@link #setTilemapData}, this does not reinterpret
+     * physical slot zero as logical slot zero.
+     */
+    public void setBackgroundTilemapDataPhysical(byte[] data, int widthTiles, int heightTiles,
+                                                 int originXTiles, int originYTiles) {
+        this.backgroundData = data;
+        this.backgroundWidthTiles = widthTiles;
+        this.backgroundHeightTiles = heightTiles;
+        this.backgroundDirty = true;
+        this.backgroundIncrementalDirty = false;
+        this.backgroundPendingColumnCount = 0;
+        this.backgroundPendingRowCount = 0;
+        this.backgroundRingBaseXTiles = widthTiles > 0
+                ? Math.floorMod(originXTiles, widthTiles) : 0;
+        this.backgroundRingBaseYTiles = heightTiles > 0
+                ? Math.floorMod(originYTiles, heightTiles) : 0;
+        this.backgroundContentGeneration++;
     }
 
     /**
@@ -192,8 +222,22 @@ public class TilemapGpuRenderer {
      */
     public void setBackgroundTilemapDataIncremental(byte[] data, int widthTiles, int heightTiles,
             int shiftTiles) {
-        if (data == null || widthTiles <= 0 || heightTiles <= 0 || shiftTiles == 0
-                || Math.abs(shiftTiles) >= widthTiles
+        setBackgroundTilemapDataIncremental(data, widthTiles, heightTiles, shiftTiles, 0);
+    }
+
+    /**
+     * Registers a two-dimensional logical background-window shift. Each axis
+     * advances an independent physical texture origin and publishes only its
+     * newly entering columns or rows.
+     */
+    public void setBackgroundTilemapDataIncremental(byte[] data, int widthTiles, int heightTiles,
+            int shiftXTiles, int shiftYTiles) {
+        int requiredBytes = checkedTilemapByteCount(widthTiles, heightTiles);
+        if (data == null || widthTiles <= 0 || heightTiles <= 0
+                || (shiftXTiles == 0 && shiftYTiles == 0)
+                || shiftXTiles <= -widthTiles || shiftXTiles >= widthTiles
+                || shiftYTiles <= -heightTiles || shiftYTiles >= heightTiles
+                || requiredBytes < 0 || requiredBytes > data.length
                 || backgroundData == null
                 || backgroundWidthTiles != widthTiles
                 || backgroundHeightTiles != heightTiles
@@ -202,11 +246,25 @@ public class TilemapGpuRenderer {
             return;
         }
         backgroundData = data;
-        int count = Math.abs(shiftTiles);
-        backgroundRingBaseTiles = Math.floorMod(backgroundRingBaseTiles + shiftTiles, widthTiles);
-        backgroundPendingSourceColumn = shiftTiles > 0 ? widthTiles - count : 0;
-        backgroundPendingDestinationColumn = mapBackgroundLogicalColumn(backgroundPendingSourceColumn);
-        backgroundPendingColumnCount = count;
+        backgroundRingBaseXTiles = (int) Math.floorMod(
+                (long) backgroundRingBaseXTiles + shiftXTiles, widthTiles);
+        backgroundRingBaseYTiles = (int) Math.floorMod(
+                (long) backgroundRingBaseYTiles + shiftYTiles, heightTiles);
+
+        backgroundPendingColumnCount = Math.abs(shiftXTiles);
+        if (backgroundPendingColumnCount > 0) {
+            backgroundPendingSourceColumn = shiftXTiles > 0
+                    ? widthTiles - backgroundPendingColumnCount : 0;
+            backgroundPendingDestinationColumn = mapBackgroundLogicalColumn(
+                    backgroundPendingSourceColumn);
+        }
+
+        backgroundPendingRowCount = Math.abs(shiftYTiles);
+        if (backgroundPendingRowCount > 0) {
+            backgroundPendingSourceRow = shiftYTiles > 0
+                    ? heightTiles - backgroundPendingRowCount : 0;
+            backgroundPendingDestinationRow = mapBackgroundLogicalRow(backgroundPendingSourceRow);
+        }
         backgroundIncrementalDirty = true;
         backgroundContentGeneration++;
     }
@@ -381,13 +439,17 @@ public class TilemapGpuRenderer {
         int tilemapWidthTiles = layer == Layer.FOREGROUND ? foregroundWidthTiles : backgroundWidthTiles;
         int tilemapHeightTiles = layer == Layer.FOREGROUND ? foregroundHeightTiles : backgroundHeightTiles;
         TilemapTexture tilemapTexture = layer == Layer.FOREGROUND ? foregroundTexture : backgroundTexture;
-        int renderRingBase = layer == Layer.BACKGROUND && backgroundRenderRingBaseOverride >= 0
-                ? backgroundRenderRingBaseOverride
-                : (layer == Layer.BACKGROUND ? backgroundRingBaseTiles : 0);
+        int renderRingBaseX = layer == Layer.BACKGROUND && backgroundRenderRingBaseXOverride >= 0
+                ? backgroundRenderRingBaseXOverride
+                : (layer == Layer.BACKGROUND ? backgroundRingBaseXTiles : 0);
+        int renderRingBaseY = layer == Layer.BACKGROUND && backgroundRenderRingBaseYOverride >= 0
+                ? backgroundRenderRingBaseYOverride
+                : (layer == Layer.BACKGROUND ? backgroundRingBaseYTiles : 0);
         // The override is a one-call token. Consume it before any early return or
         // GL operation so a failed/skipped draw cannot leak frame state forward.
         int renderGeneration = backgroundRenderGenerationOverride;
-        backgroundRenderRingBaseOverride = -1;
+        backgroundRenderRingBaseXOverride = -1;
+        backgroundRenderRingBaseYOverride = -1;
         backgroundRenderGenerationOverride = -1;
         if (layer == Layer.BACKGROUND && renderGeneration >= 0
                 && renderGeneration != backgroundContentGeneration) {
@@ -400,7 +462,8 @@ public class TilemapGpuRenderer {
         if (layer == Layer.BACKGROUND && backgroundIncrementalDirty
                 && !tilemapTexture.hasStorage(tilemapWidthTiles, tilemapHeightTiles)) {
             escalateBackgroundUploadToFull();
-            renderRingBase = 0;
+            renderRingBaseX = 0;
+            renderRingBaseY = 0;
         }
 
         if (shader == null || tilemapData == null || lookupData == null) {
@@ -416,16 +479,18 @@ public class TilemapGpuRenderer {
             tilemapTexture.upload(tilemapData, tilemapWidthTiles, tilemapHeightTiles);
             backgroundDirty = false;
         } else if (backgroundIncrementalDirty) {
-            if (!uploadPendingBackgroundColumns(tilemapTexture)) {
+            if (!uploadPendingBackgroundSpans(tilemapTexture)) {
                 // Context loss or texture recreation invalidated the retained
-                // physical columns. Rebuild canonical storage and publish base 0.
+                // physical ring. Rebuild canonical storage and publish base 0.
                 tilemapTexture.upload(tilemapData, tilemapWidthTiles, tilemapHeightTiles);
                 escalateBackgroundUploadToFull();
                 backgroundDirty = false;
-                renderRingBase = 0;
+                renderRingBaseX = 0;
+                renderRingBaseY = 0;
             }
             backgroundIncrementalDirty = false;
             backgroundPendingColumnCount = 0;
+            backgroundPendingRowCount = 0;
         }
         if (lookupDirty) {
             patternLookup.upload(lookupData, lookupSize);
@@ -453,7 +518,7 @@ public class TilemapGpuRenderer {
 
         shader.setTextureUnits(0, 1, 2, 3, 4);
         shader.setTilemapDimensions(tilemapWidthTiles, tilemapHeightTiles);
-        shader.setTilemapRingBase(renderRingBase);
+        shader.setTilemapRingBase(renderRingBaseX, renderRingBaseY);
         shader.setAtlasDimensions(atlasWidth, atlasHeight);
         shader.setLookupSize(lookupSize);
         shader.setWindowDimensions(windowWidth, windowHeight);
@@ -520,7 +585,8 @@ public class TilemapGpuRenderer {
         upperBandWrapHeightPx = 0.0f;
         upperBandWrapWidthTiles = 0.0f;
         perColumnVScroll = false;
-        backgroundRenderRingBaseOverride = -1;
+        backgroundRenderRingBaseXOverride = -1;
+        backgroundRenderRingBaseYOverride = -1;
         backgroundRenderGenerationOverride = -1;
     }
 
@@ -529,23 +595,32 @@ public class TilemapGpuRenderer {
                 || perLineScrollSampleYOffsetPx != 0.0f
                 || upperBandWrapHeightPx != 0.0f
                 || upperBandWrapWidthTiles != 0.0f
-                || backgroundRenderRingBaseOverride >= 0
+                || backgroundRenderRingBaseXOverride >= 0
+                || backgroundRenderRingBaseYOverride >= 0
                 || backgroundRenderGenerationOverride >= 0;
     }
 
-    private boolean uploadPendingBackgroundColumns(TilemapTexture texture) {
+    private boolean uploadPendingBackgroundSpans(TilemapTexture texture) {
         if (!texture.hasStorage(backgroundWidthTiles, backgroundHeightTiles)) {
             return false;
         }
+        if (backgroundPendingColumnCount > 0 && !uploadPendingBackgroundColumns(texture)) {
+            return false;
+        }
+        return backgroundPendingRowCount <= 0 || uploadPendingBackgroundRows(texture);
+    }
+
+    private boolean uploadPendingBackgroundColumns(TilemapTexture texture) {
+        byte[] uploadData = prepareBackgroundColumnUploadData();
         int firstCount = Math.min(backgroundPendingColumnCount,
                 backgroundWidthTiles - backgroundPendingDestinationColumn);
-        if (!texture.uploadColumns(backgroundData, backgroundWidthTiles, backgroundHeightTiles,
+        if (!texture.uploadColumns(uploadData, backgroundWidthTiles, backgroundHeightTiles,
                 backgroundPendingSourceColumn, backgroundPendingDestinationColumn, firstCount)) {
             return false;
         }
         int remaining = backgroundPendingColumnCount - firstCount;
         if (remaining > 0) {
-            if (!texture.uploadColumns(backgroundData, backgroundWidthTiles, backgroundHeightTiles,
+            if (!texture.uploadColumns(uploadData, backgroundWidthTiles, backgroundHeightTiles,
                     backgroundPendingSourceColumn + firstCount, 0, remaining)) {
                 return false;
             }
@@ -553,28 +628,115 @@ public class TilemapGpuRenderer {
         return true;
     }
 
+    private boolean uploadPendingBackgroundRows(TilemapTexture texture) {
+        byte[] uploadData = prepareBackgroundRowUploadData();
+        int firstCount = Math.min(backgroundPendingRowCount,
+                backgroundHeightTiles - backgroundPendingDestinationRow);
+        if (!texture.uploadRows(uploadData, backgroundWidthTiles, backgroundHeightTiles,
+                backgroundPendingSourceRow, backgroundPendingDestinationRow, firstCount)) {
+            return false;
+        }
+        int remaining = backgroundPendingRowCount - firstCount;
+        return remaining <= 0 || texture.uploadRows(uploadData,
+                backgroundWidthTiles, backgroundHeightTiles,
+                backgroundPendingSourceRow + firstCount, 0, remaining);
+    }
+
+    private byte[] prepareBackgroundColumnUploadData() {
+        if (backgroundRingBaseYTiles == 0) {
+            return backgroundData;
+        }
+        int requiredBytes = backgroundWidthTiles * backgroundHeightTiles * 4;
+        if (backgroundColumnUploadData == null || backgroundColumnUploadData.length != requiredBytes) {
+            backgroundColumnUploadData = new byte[requiredBytes];
+        }
+        int rowBytes = backgroundWidthTiles * 4;
+        for (int physicalRow = 0; physicalRow < backgroundHeightTiles; physicalRow++) {
+            int logicalRow = Math.floorMod(physicalRow - backgroundRingBaseYTiles,
+                    backgroundHeightTiles);
+            System.arraycopy(backgroundData, logicalRow * rowBytes,
+                    backgroundColumnUploadData, physicalRow * rowBytes, rowBytes);
+        }
+        return backgroundColumnUploadData;
+    }
+
+    private byte[] prepareBackgroundRowUploadData() {
+        if (backgroundRingBaseXTiles == 0) {
+            return backgroundData;
+        }
+        int requiredBytes = backgroundWidthTiles * backgroundHeightTiles * 4;
+        if (backgroundRowUploadData == null || backgroundRowUploadData.length != requiredBytes) {
+            backgroundRowUploadData = new byte[requiredBytes];
+        }
+        int rowBytes = backgroundWidthTiles * 4;
+        for (int logicalRow = 0; logicalRow < backgroundHeightTiles; logicalRow++) {
+            for (int physicalColumn = 0; physicalColumn < backgroundWidthTiles; physicalColumn++) {
+                int logicalColumn = Math.floorMod(physicalColumn - backgroundRingBaseXTiles,
+                        backgroundWidthTiles);
+                System.arraycopy(backgroundData, logicalRow * rowBytes + logicalColumn * 4,
+                        backgroundRowUploadData, logicalRow * rowBytes + physicalColumn * 4, 4);
+            }
+        }
+        return backgroundRowUploadData;
+    }
+
     private void escalateBackgroundUploadToFull() {
         backgroundDirty = true;
         backgroundIncrementalDirty = false;
         backgroundPendingColumnCount = 0;
-        backgroundRingBaseTiles = 0;
+        backgroundPendingRowCount = 0;
+        backgroundRingBaseXTiles = 0;
+        backgroundRingBaseYTiles = 0;
         backgroundContentGeneration++;
     }
 
     private int mapBackgroundLogicalColumn(int logicalColumn) {
         return backgroundWidthTiles <= 0 ? logicalColumn
-                : Math.floorMod(backgroundRingBaseTiles + logicalColumn, backgroundWidthTiles);
+                : (int) Math.floorMod(
+                        (long) backgroundRingBaseXTiles + logicalColumn, backgroundWidthTiles);
     }
 
+    private int mapBackgroundLogicalRow(int logicalRow) {
+        return backgroundHeightTiles <= 0 ? logicalRow
+                : (int) Math.floorMod(
+                        (long) backgroundRingBaseYTiles + logicalRow, backgroundHeightTiles);
+    }
+
+    /** @deprecated use {@link #getBackgroundRingBaseXTiles()}. */
+    @Deprecated
     public int getBackgroundRingBaseTiles() {
-        return backgroundRingBaseTiles;
+        return getBackgroundRingBaseXTiles();
+    }
+
+    public int getBackgroundRingBaseXTiles() {
+        return backgroundRingBaseXTiles;
+    }
+
+    public int getBackgroundRingBaseYTiles() {
+        return backgroundRingBaseYTiles;
     }
 
     /** Uses the frame command's captured ring origin for the next BG draw only. */
     public void setBackgroundRenderRingBaseOverride(int ringBaseTiles, int contentGeneration) {
-        backgroundRenderRingBaseOverride = ringBaseTiles;
+        setBackgroundRenderRingBaseOverride(ringBaseTiles, 0, contentGeneration);
+    }
+
+    /** Uses the frame command's captured ring origins for the next BG draw only. */
+    public void setBackgroundRenderRingBaseOverride(int ringBaseXTiles, int ringBaseYTiles,
+            int contentGeneration) {
+        backgroundRenderRingBaseXOverride = ringBaseXTiles;
+        backgroundRenderRingBaseYOverride = ringBaseYTiles;
         backgroundRenderGenerationOverride = contentGeneration;
     }
+
+    /** Immutable render token captured before a retained background command is queued. */
+    public BackgroundRenderState captureBackgroundRenderState() {
+        return new BackgroundRenderState(
+                backgroundRingBaseXTiles, backgroundRingBaseYTiles, backgroundContentGeneration);
+    }
+
+    public record BackgroundRenderState(
+            int ringBaseXTiles, int ringBaseYTiles, int contentGeneration) { }
 
     public int getBackgroundContentGeneration() {
         return backgroundContentGeneration;
@@ -594,17 +756,42 @@ public class TilemapGpuRenderer {
         if (backgroundDirty) {
             return backgroundData == null ? 0 : backgroundData.length;
         }
-        return backgroundIncrementalDirty ? backgroundPendingColumnCount * backgroundHeightTiles * 4 : 0;
+        if (!backgroundIncrementalDirty) {
+            return 0;
+        }
+        int columnBytes = backgroundPendingColumnCount == 0 ? 0
+                : checkedTilemapByteCount(backgroundPendingColumnCount, backgroundHeightTiles);
+        int rowBytes = backgroundPendingRowCount == 0 ? 0
+                : checkedTilemapByteCount(backgroundWidthTiles, backgroundPendingRowCount);
+        if (columnBytes < 0 || rowBytes < 0) {
+            return Integer.MAX_VALUE;
+        }
+        long totalBytes = (long) columnBytes + rowBytes;
+        return totalBytes > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) totalBytes;
     }
 
     protected int getPendingBackgroundUploadCallCount() {
         if (backgroundDirty) {
             return 1;
         }
-        if (!backgroundIncrementalDirty || backgroundPendingColumnCount == 0) {
+        if (!backgroundIncrementalDirty) {
             return 0;
         }
-        return backgroundPendingDestinationColumn + backgroundPendingColumnCount <= backgroundWidthTiles ? 1 : 2;
+        int columnCalls = backgroundPendingColumnCount == 0 ? 0
+                : (backgroundPendingDestinationColumn + backgroundPendingColumnCount
+                        <= backgroundWidthTiles ? 1 : 2);
+        int rowCalls = backgroundPendingRowCount == 0 ? 0
+                : (backgroundPendingDestinationRow + backgroundPendingRowCount
+                        <= backgroundHeightTiles ? 1 : 2);
+        return columnCalls + rowCalls;
+    }
+
+    protected int getPendingBackgroundColumnCount() {
+        return backgroundIncrementalDirty ? backgroundPendingColumnCount : 0;
+    }
+
+    protected int getPendingBackgroundRowCount() {
+        return backgroundIncrementalDirty ? backgroundPendingRowCount : 0;
     }
 
     protected int mapBackgroundLogicalColumnForTest(int logicalColumn) {
@@ -615,6 +802,24 @@ public class TilemapGpuRenderer {
         backgroundDirty = false;
         backgroundIncrementalDirty = false;
         backgroundPendingColumnCount = 0;
+        backgroundPendingRowCount = 0;
+    }
+
+    /** Applies the real pending texture-upload plan to a headless recording texture. */
+    protected boolean applyPendingBackgroundUploadForTest(TilemapTexture texture) {
+        if (texture == null || backgroundData == null) {
+            return false;
+        }
+        if (backgroundDirty) {
+            texture.upload(backgroundData, backgroundWidthTiles, backgroundHeightTiles);
+            if (!texture.hasStorage(backgroundWidthTiles, backgroundHeightTiles)) {
+                return false;
+            }
+        } else if (backgroundIncrementalDirty && !uploadPendingBackgroundSpans(texture)) {
+            return false;
+        }
+        consumePendingBackgroundUploadForTest();
+        return true;
     }
 
     /** Applies the pending upload plan to a CPU texture image for headless parity tests. */
@@ -627,20 +832,49 @@ public class TilemapGpuRenderer {
             System.arraycopy(backgroundData, 0, physicalTexture, 0, backgroundData.length);
         } else if (backgroundIncrementalDirty) {
             copyPendingColumnsToPhysicalTexture(physicalTexture);
+            copyPendingRowsToPhysicalTexture(physicalTexture);
         }
         consumePendingBackgroundUploadForTest();
     }
 
     private void copyPendingColumnsToPhysicalTexture(byte[] physicalTexture) {
-        int rowBytes = backgroundWidthTiles * 4;
-        for (int row = 0; row < backgroundHeightTiles; row++) {
+        for (int logicalRow = 0; logicalRow < backgroundHeightTiles; logicalRow++) {
+            int physicalRow = mapBackgroundLogicalRow(logicalRow);
             for (int column = 0; column < backgroundPendingColumnCount; column++) {
                 int sourceColumn = backgroundPendingSourceColumn + column;
                 int destinationColumn = Math.floorMod(backgroundPendingDestinationColumn + column,
                         backgroundWidthTiles);
-                System.arraycopy(backgroundData, row * rowBytes + sourceColumn * 4,
-                        physicalTexture, row * rowBytes + destinationColumn * 4, 4);
+                System.arraycopy(backgroundData,
+                        (logicalRow * backgroundWidthTiles + sourceColumn) * 4,
+                        physicalTexture,
+                        (physicalRow * backgroundWidthTiles + destinationColumn) * 4, 4);
             }
+        }
+    }
+
+    private void copyPendingRowsToPhysicalTexture(byte[] physicalTexture) {
+        for (int row = 0; row < backgroundPendingRowCount; row++) {
+            int sourceRow = backgroundPendingSourceRow + row;
+            int destinationRow = Math.floorMod(backgroundPendingDestinationRow + row,
+                    backgroundHeightTiles);
+            for (int logicalColumn = 0; logicalColumn < backgroundWidthTiles; logicalColumn++) {
+                int physicalColumn = mapBackgroundLogicalColumn(logicalColumn);
+                System.arraycopy(backgroundData,
+                        (sourceRow * backgroundWidthTiles + logicalColumn) * 4,
+                        physicalTexture,
+                        (destinationRow * backgroundWidthTiles + physicalColumn) * 4, 4);
+            }
+        }
+    }
+
+    private static int checkedTilemapByteCount(int widthTiles, int heightTiles) {
+        if (widthTiles <= 0 || heightTiles <= 0) {
+            return -1;
+        }
+        try {
+            return Math.multiplyExact(Math.multiplyExact(widthTiles, heightTiles), 4);
+        } catch (ArithmeticException overflow) {
+            return -1;
         }
     }
 
@@ -664,13 +898,18 @@ public class TilemapGpuRenderer {
         patternLookup.cleanup();
         quadRenderer.cleanup();
         backgroundData = null;
+        backgroundColumnUploadData = null;
+        backgroundRowUploadData = null;
         backgroundWidthTiles = 0;
         backgroundHeightTiles = 0;
         backgroundDirty = false;
         backgroundIncrementalDirty = false;
         backgroundPendingColumnCount = 0;
-        backgroundRingBaseTiles = 0;
-        backgroundRenderRingBaseOverride = -1;
+        backgroundPendingRowCount = 0;
+        backgroundRingBaseXTiles = 0;
+        backgroundRingBaseYTiles = 0;
+        backgroundRenderRingBaseXOverride = -1;
+        backgroundRenderRingBaseYOverride = -1;
         backgroundRenderGenerationOverride = -1;
         backgroundContentGeneration++;
         bgVdpWrapHeight = 0.0f;

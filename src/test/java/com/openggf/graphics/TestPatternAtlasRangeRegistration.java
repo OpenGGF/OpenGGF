@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestPatternAtlasRangeRegistration {
@@ -78,5 +79,15 @@ public class TestPatternAtlasRangeRegistration {
 
         assertThrows(IllegalArgumentException.class,
                 () -> atlas.cachePatternHeadless(new com.openggf.level.Pattern(), 0x19000));
+    }
+
+    @Test
+    public void registeredRangesTestSeamIsReadOnly() {
+        PatternAtlas atlas = new PatternAtlas(256, 256);
+        atlas.registerRange(PatternAtlasRange.OBJECTS);
+
+        assertEquals(1, atlas.registeredRangesForTesting().size());
+        assertThrows(UnsupportedOperationException.class,
+                () -> atlas.registeredRangesForTesting().clear());
     }
 }

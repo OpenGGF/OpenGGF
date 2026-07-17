@@ -2,6 +2,7 @@ package com.openggf.game.sonic2;
 
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic2.runtime.HtzRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.tests.TestEnvironment;
@@ -93,6 +94,30 @@ class TestSonic2HtzRuntimeStateRegistration {
     }
 
     @Test
+    void htzInitDoesNotReplaceCustomHtzRuntimeState() {
+        requireRuntime();
+        Sonic2LevelEventManager manager = new Sonic2LevelEventManager();
+        HtzRuntimeState custom = new CustomHtzRuntimeState(88, 3);
+        currentRegistry().install(custom);
+
+        manager.initLevel(Sonic2LevelEventManager.ZONE_HTZ, 0);
+
+        assertSame(custom, currentRegistry().current());
+    }
+
+    @Test
+    void nonHtzInitDoesNotClearCustomHtzRuntimeState() {
+        requireRuntime();
+        Sonic2LevelEventManager manager = new Sonic2LevelEventManager();
+        HtzRuntimeState custom = new CustomHtzRuntimeState(89, 4);
+        currentRegistry().install(custom);
+
+        manager.initLevel(Sonic2LevelEventManager.ZONE_EHZ, 0);
+
+        assertSame(custom, currentRegistry().current());
+    }
+
+    @Test
     void adapterReflectsUnderlyingEventValues() {
         requireRuntime();
         Sonic2LevelEventManager manager = new Sonic2LevelEventManager();
@@ -178,6 +203,28 @@ class TestSonic2HtzRuntimeStateRegistration {
             throw new AssertionError("Expected HTZ runtime state method " + methodName, e);
         } catch (InvocationTargetException e) {
             throw new AssertionError("HTZ runtime state method " + methodName + " threw", e.getCause());
+        }
+    }
+
+    private record CustomHtzRuntimeState(int zoneIndex, int actIndex) implements HtzRuntimeState {
+        @Override
+        public boolean earthquakeActive() {
+            return false;
+        }
+
+        @Override
+        public int cameraBgYOffset() {
+            return 0;
+        }
+
+        @Override
+        public int cameraBgXOffset() {
+            return 0;
+        }
+
+        @Override
+        public int bgVerticalShift() {
+            return 0;
         }
     }
 }

@@ -97,6 +97,12 @@ public class WFZShipFireObjectInstance extends AbstractObjectInstance implements
     }
 
     @Override
+    public boolean isPersistent() {
+        // ObjBC has no MarkObjGone; its BG offset check owns deletion.
+        return true;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!initialized) {

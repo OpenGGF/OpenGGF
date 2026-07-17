@@ -161,6 +161,11 @@ public class PatternAtlas {
         registeredRanges.clear();
     }
 
+    /** Read-only view of registered governance ranges for verification. */
+    public List<PatternRange> registeredRangesForTesting() {
+        return List.copyOf(registeredRanges);
+    }
+
     public PatternAtlas(int atlasWidth, int atlasHeight) {
         this(atlasWidth, atlasHeight, null);
     }
