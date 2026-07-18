@@ -339,6 +339,46 @@ local ADDR_EVENTS_BG        = 0xEED2
 local ADDR_BACKGROUND_COLLISION_FLAG = 0xF664
 local ADDR_LEVEL_STARTED_FLAG = 0xF711
 
+-- Stage-detour (special/bonus stage) RAM addresses, verified by sequential
+-- ds.b/ds.w/ds.l walk from RAM_start ($FFFF0000) through CrossResetRAM
+-- ($FFFFFE00) in docs/skdisasm/sonic3k.constants.asm:778-943. Cross-checked
+-- against docs/skdisasm/s3.constants.asm: none of these five symbols appear
+-- in that file's "Sonic & Knuckles uses a different address" override list,
+-- so the S3-standalone and S&K locked-on halves share identical addresses
+-- here (only the symbols s3.constants.asm explicitly `phase`s/redefines --
+-- e.g. Demo_mode_flag, P1_character -- differ between the two halves).
+-- GLOBALS (no `local`): the main chunk is already near Lua's 200-local
+-- limit (see comments above at ~lines 279-282 and 326-327); a local block
+-- here would push it over.
+--
+-- Last_star_post_hit (sonic3k.constants.asm:812, CrossResetRAM+$2A).
+ADDR_LAST_STAR_POST_HIT = 0xFE2A
+-- Saved_X_pos / Saved_Y_pos (sonic3k.constants.asm:817-818, star-post
+-- checkpoint position, CrossResetRAM+$2E / +$30).
+ADDR_SAVED_X_POS = 0xFE2E
+ADDR_SAVED_Y_POS = 0xFE30
+-- Special_bonus_entry_flag (sonic3k.constants.asm:831, CrossResetRAM+$48;
+-- 1 = entering a Special Stage, 2 = entering a Bonus Stage).
+ADDR_SPECIAL_BONUS_ENTRY_FLAG = 0xFE48
+-- Emerald_counts / Chaos_emerald_count (sonic3k.constants.asm:944-945,
+-- CrossResetRAM+$1B0; Emerald_counts is a `:=` alias for the start of the
+-- Chaos_emerald_count byte, immediately followed by Super_emerald_count).
+ADDR_EMERALD_COUNT = 0xFFB0
+-- Game_mode value while a special/bonus stage is running (sonic3k.asm
+-- Game_Mode_Array; distinct from GAMEMODE_LEVEL's 0x0C/0x4C/0x8C family).
+GAMEMODE_SPECIAL_STAGE = 0x34
+-- Game_mode value for the special-stage results screen (documentation
+-- only -- referenced in comments, not read directly by code here).
+GAMEMODE_SS_RESULTS = 0x48
+-- Bonus-stage zone id range (documentation only -- code uses the
+-- BONUS_TOKENS lookup below rather than range-checking zone ids directly).
+BONUS_ZONE_MIN = 0x13
+BONUS_ZONE_MAX = 0x15
+-- Bonus-stage zone id -> stage token, keyed by Current_zone while
+-- game_mode is in the level family (glowing spheres / gumball / pachinko
+-- / slots bonus stages occupy zone ids 0x13-0x15).
+BONUS_TOKENS = {[0x13] = "gumball", [0x14] = "pachinko", [0x15] = "slots"}
+
 -- Player_1 ($FFFFB000) uses 32-bit positions: high word = pixel, low word = subpixel.
 local PLAYER_BASE           = 0xB000
 local OFF_X_POS             = 0x10
