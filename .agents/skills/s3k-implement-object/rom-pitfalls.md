@@ -1356,6 +1356,31 @@ milestone>`.
 
 ---
 
+## P38 -- Player `routine=2` writes must clear the engine hurt state
+
+**Symptom.** An object launch matches native position and velocity on its trigger
+frame, but the next player tick uses hurt gravity/routine 4 instead of normal
+air control. Trace replay reports a routine mismatch first, followed by velocity
+and position drift.
+
+**Root cause.** S3K objects can write `move.b #2,routine(a1)` unconditionally
+after taking over a player that arrived in routine 4. The engine represents that
+outer routine with `AbstractPlayableSprite.hurt`; copying only the launch
+velocity leaves the wrong player dispatcher active.
+
+**What to check.** Whenever an object routine writes player `routine=2`, call
+`player.setHurt(false)` at the same state boundary. Do not apply this broadly to
+interactions such as horizontal springs whose ROM tail does not write the
+routine, and do not clear the separate invulnerability timer.
+
+**ROM citation.** S3K up, down, diagonal-up, and diagonal-down spring tails at
+`docs/skdisasm/sonic3k.asm:47720-47729,48139-48143,48213-48217,48304-48308`.
+Cross-game origin: `s2-implement-object/rom-pitfalls.md` P36.
+
+**Originating commit.** `<pending: CNZ spring routine-handoff milestone>`.
+
+---
+
 ## How to add a new entry
 When a trace-replay-bug-fixing iteration commits an object fix whose root
 cause is a class of bug (not a one-off):

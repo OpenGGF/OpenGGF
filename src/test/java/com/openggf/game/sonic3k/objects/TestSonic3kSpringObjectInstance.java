@@ -371,6 +371,7 @@ class TestSonic3kSpringObjectInstance {
         player.setOnObject(true); // mirrors SolidObjectFull2_1P landing-bset
         player.setAir(false);
         player.setJumping(true);
+        player.setHurt(true);
 
         invoke(spring, "applyUpSpring", new Class<?>[]{AbstractPlayableSprite.class}, player);
 
@@ -378,6 +379,8 @@ class TestSonic3kSpringObjectInstance {
                 "ROM sub_22F98 (sonic3k.asm:47723-47724) bclr Status_OnObj after setting Status_InAir");
         assertFalse(player.isJumping(),
                 "ROM sub_22F98 clears jumping so jump release cannot cap the spring launch");
+        assertFalse(player.isHurt(),
+                "ROM sub_22F98 writes routine 2 even when the player entered in the hurt routine");
     }
 
     @Test
@@ -394,12 +397,14 @@ class TestSonic3kSpringObjectInstance {
         player.setOnObject(true);
         player.setAir(false);
         player.setJumping(true);
+        player.setHurt(true);
 
         invoke(spring, "applyDownSpring", new Class<?>[]{AbstractPlayableSprite.class}, player);
 
         assertFalse(player.isOnObject(),
                 "ROM sub_233CA bclr Status_OnObj after setting Status_InAir for the down-spring trigger");
         assertFalse(player.isJumping(), "ROM sub_233CA clears jumping on a down-spring launch");
+        assertFalse(player.isHurt(), "ROM sub_233CA writes routine 2 on a down-spring launch");
     }
 
     @Test
@@ -416,6 +421,7 @@ class TestSonic3kSpringObjectInstance {
         player.setOnObject(true);
         player.setAir(false);
         player.setJumping(true);
+        player.setHurt(true);
 
         invoke(spring, "applyDiagonalSpring",
                 new Class<?>[]{AbstractPlayableSprite.class, boolean.class}, player, true);
@@ -423,6 +429,7 @@ class TestSonic3kSpringObjectInstance {
         assertFalse(player.isOnObject(),
                 "ROM sub_234E6 bclr Status_OnObj after setting Status_InAir for diagonal-up springs");
         assertFalse(player.isJumping(), "ROM diagonal-spring triggers clear jumping");
+        assertFalse(player.isHurt(), "ROM diagonal-spring triggers write routine 2");
     }
 
     private static Object invoke(Object target, String methodName) throws Exception {

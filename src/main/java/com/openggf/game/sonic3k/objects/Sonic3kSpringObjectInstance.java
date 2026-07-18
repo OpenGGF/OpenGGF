@@ -178,6 +178,10 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // release input must not apply Sonic_JumpHeight's variable-height cap
         // to an object-owned launch (sonic3k.asm:47720-47726).
         player.setJumping(false);
+        // sub_22F98 writes routine=2 unconditionally, returning even a hurt
+        // player (routine=4) to the normal control path for the spring launch
+        // (sonic3k.asm:47720-47729).
+        player.setHurt(false);
         // ROM sub_22F98 (sonic3k.asm:47723-47724) bclr #Status_OnObj after
         // bset #Status_InAir. SolidObjectFull2_1P just landed the player on the
         // spring (set OnObj=1); sub_22F98 immediately clears it as the player
@@ -216,6 +220,9 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // sub_233CA clears jumping for the same object-owned launch contract
         // as the up spring (sonic3k.asm:48139-48142).
         player.setJumping(false);
+        // sub_233CA writes routine=2 after clearing the launch status bits
+        // (sonic3k.asm:48139-48143).
+        player.setHurt(false);
         // ROM sub_233CA (sonic3k.asm:48139-48140) bclr #Status_OnObj after
         // bset #Status_InAir; mirrors sub_22F98 for the down-spring trigger.
         player.setOnObject(false);
@@ -308,6 +315,10 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // Both diagonal trigger tails clear jumping before returning to player
         // control (sonic3k.asm:48213-48217,48304-48308).
         player.setJumping(false);
+        // Both diagonal launch tails write routine=2, matching the vertical
+        // spring contract for a player that arrived in the hurt routine
+        // (sonic3k.asm:48213-48217,48304-48308).
+        player.setHurt(false);
         // ROM sub_234E6 (sonic3k.asm:48213-48214) bclr #Status_OnObj after
         // bset #Status_InAir for diagonal-up/down springs. It writes
         // x_vel/y_vel but leaves ground_vel untouched unless subtype bit 0

@@ -45608,3 +45608,26 @@ The comparison-only full physics fleet reports 58 replay methods, 45 green and
 f1601, DEZ f0, MCZ2 f5445, OOZ1 f10220, SCZ f0, WFZ f0; S3K AIZ standalone
 f290, ICZ f2472, LBZ f1629, and MHZ f2920. The legacy standalone CNZ trace
 remains at f0 `y_speed`.
+
+### 2026-07-19 -- CNZ spring player-routine handoff: f4100 -> f4610
+
+At f4100 Sonic lands on the upward spring at `$0C50,$0478` while still in the
+hurt routine. The spring launch position and velocities already match, but ROM
+`sub_22F98` writes player `routine=2` after setting the airborne launch state;
+the engine retained routine 4 and therefore entered hurt physics on the next
+frame. The same unconditional player-routine write exists in the down and both
+diagonal spring tails (`docs/skdisasm/sonic3k.asm:47720-47729,48139-48143,
+48213-48217,48304-48308`).
+
+All S3K vertical and diagonal spring launches now clear the engine hurt-routine
+flag at that ROM write. The 14 focused spring tests pass, including hurt-entry
+coverage for up, down, and diagonal launches. CNZ complete-run physics advances
+from f4100 `routine` to f4610 `tails_y`; the new context is a Clamer contact
+where the engine hurts CPU Tails but ROM keeps Tails in routine 2.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and no non-CNZ frontier movement. The full animation fleet
+remains 44/58 green: the eight S1 credits traces still lack CSV-v7 animation
+fields, and the six comparison-red routes retain their previous first
+frontiers. CNZ complete-run animation remains at f108 `player_animation_id`,
+and the legacy standalone CNZ trace remains at f0 in both scopes.
