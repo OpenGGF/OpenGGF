@@ -59,7 +59,9 @@ class TestCnzEndBossShip {
         for (int frame = 0; frame < 0x100; frame++) {
             ship.update(500 + frame, null);
         }
-        assertTrue(ship.isDestroyed(), "Obj_RobotnikShipEscape lasts exactly $100 updates");
+        assertFalse(ship.isDestroyed(), "$100 reaches zero without taking the signed-underflow branch");
+        ship.update(500 + 0x100, null);
+        assertTrue(ship.isDestroyed(), "Obj_RobotnikShipEscape deletes on the 257th dispatch");
         assertTrue(ship.bossFlagClearedForTest(), "loc_67F4C clears Boss_flag before deleting the ship");
     }
 
