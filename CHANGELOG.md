@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K vertical and diagonal springs now restore control when they launch a hurt character:** the shared spring paths mirror their unconditional `routine=2` writes, ending hurt routine 4 immediately so input, upward-speed capping, and water-exit air reset resume instead of leaving Sonic or Tails trapped in low-gravity recoil (`docs/skdisasm/sonic3k.asm:47719-47733,48093-48148,48186-48222,48292-48310`).
 - **MGZ2's surprise Robotnik now stays behind foreground terrain:** the folded Robotnik-ship child mirrors `Child_SyncDraw`'s parent `art_tile` priority bit, so the normal Act 2 drilling appearances retain `ObjDat_MGZDrillBoss`'s low priority while the end boss keeps its explicit high-priority override (`docs/skdisasm/sonic3k.asm:138841-138854,142389-142452,142720-142770`).
 - **HCZ2's geyser handoff now starts MGZ1 music after the destination load:** the carried post-results fade can no longer silence Marble Garden when the player reaches it through normal progression.
 - **Per-game rewind profiles now retain the VHS rewind presentation:** the effect pass prewarms whenever `rewind.vhsEffect` is enabled, so a launch-profile override that enables rewind after graphics initialization no longer leaves live rewind without its shader.
