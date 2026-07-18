@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -89,7 +88,6 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     private static final int PLAYER_BOUNCE_HALF_SIZE = 0x10;
 
     /** Mirrors the parent-boss reference used by {@code parent3(a0)} in ROM. */
-    @RewindDeferred(reason = "Captured as an object-ref id and resolved after the miniboss graph is recreated.")
     private CnzMinibossInstance boss;
     private int parentOffsetX;
     private int parentOffsetY;
@@ -149,13 +147,13 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
 
     @Override
     public CnzMinibossTopInstance recreateForRewind(RewindRecreateContext ctx) {
-        // The captured parent id is resolved in the generic post-recreate link
-        // pass. Requiring the parent here made restoration depend on object
-        // capture order and silently dropped the top when it preceded the base.
+        CnzMinibossInstance parent = RewindRecreateObjectLinks.nearestLiveObject(
+                ctx, CnzMinibossInstance.class);
+        if (parent == null) {
+            return null;
+        }
         CnzMinibossTopInstance top = new CnzMinibossTopInstance(ctx.spawn());
-        RewindRecreateObjectLinks.nearestObject(
-                        ctx, CnzMinibossInstance.class, true)
-                .ifPresent(top::attachBossForTest);
+        top.attachBossForTest(parent);
         return top;
     }
 

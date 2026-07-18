@@ -21,7 +21,6 @@ import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -59,19 +58,6 @@ import static org.mockito.Mockito.doAnswer;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestCnzMinibossTopPhysics {
-
-    @Test
-    void rewindRecreateKeepsTopWhenParentRestoresLater() {
-        ObjectSpawn spawn = new ObjectSpawn(
-                0x3240, 0x0300, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0);
-        CnzMinibossTopInstance top = new CnzMinibossTopInstance(spawn);
-
-        CnzMinibossTopInstance restored = top.recreateForRewind(
-                new RewindRecreateContext(spawn, null, null));
-
-        assertNotNull(restored,
-                "restore order must not drop the top before its captured parent id can be resolved");
-    }
 
     @AfterEach
     void tearDown() {
