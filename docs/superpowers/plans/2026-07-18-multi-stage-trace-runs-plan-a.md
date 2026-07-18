@@ -52,7 +52,7 @@ class TestTraceRunManifest {
     private static final String VALID_MANIFEST = """
         {
           "run_schema": 1,
-          "game": "sonic3k",
+          "game": "s3k",
           "run_id": "s3k-aiz-gumball-roundtrip",
           "source_bk2": "s3k-aiz-gumball.bk2",
           "rom_checksum": "C5B1C655C19F462ADE0AC4E17A844D10",
@@ -331,7 +331,7 @@ Skills: n/a"
 @Test
 void parsesRunSegmentMetadataFields() throws IOException {
     String json = """
-        {"game": "sonic3k", "zone": "gumball", "act": 0, "bk2_frame_offset": 1900,
+        {"game": "s3k", "zone": "gumball", "act": 0, "bk2_frame_offset": 1900,
          "trace_frame_count": 800, "trace_profile": "s3k_bonus_stage",
          "run_id": "s3k-aiz-gumball-roundtrip", "segment_index": 1,
          "bonus_stage_type": "gumball"}
@@ -343,7 +343,7 @@ void parsesRunSegmentMetadataFields() throws IOException {
 }
 ```
 
-(If `TestTraceDataParsing` lacks `ObjectMapper`/`IOException` imports, add them; it is a JUnit 5 class.)
+(`TestTraceDataParsing` currently has NO `ObjectMapper` import — it uses the fully-qualified name elsewhere. Add `import com.fasterxml.jackson.databind.ObjectMapper;` for this snippet; `java.io.IOException` is already imported.)
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -399,7 +399,7 @@ Skills: n/a"
 - [ ] **Step 1: Build the fixture.** The existing synthetic S3K fixture is 22-col csv v4 — do NOT copy it (the v7 parser hard-throws on non-42-col rows, `TraceFrame.java:216-220`). Source real 42-column v7 rows instead: `gzip -dkc src/test/resources/traces/s3k/aiz_completerun/physics.csv.gz | head -3` (header + 2 data rows), copy into each segment's `physics.csv`, then edit values per segment. `seg00_aiz/metadata.json` (2-frame level segment):
 
 ```json
-{"game": "sonic3k", "zone": "aiz", "zone_id": 0, "act": 1, "bk2_frame_offset": 500,
+{"game": "s3k", "zone": "aiz", "zone_id": 0, "act": 1, "bk2_frame_offset": 500,
  "trace_frame_count": 2, "trace_schema": 6, "csv_version": 7,
  "trace_profile": "complete_run", "source_bk2": "synthetic.bk2",
  "run_id": "run_aiz_gumball_3seg", "segment_index": 0,
@@ -478,7 +478,7 @@ Skills: n/a"
 - Create (scratch, not committed): a temporary derivation note
 
 **Interfaces:**
-- Produces: lua constants `ADDR_SPECIAL_BONUS_ENTRY_FLAG`, `ADDR_SAVED_X_POS`, `ADDR_SAVED_Y_POS`, `ADDR_LAST_STAR_POST_HIT`, `ADDR_EMERALD_COUNT`, `GAMEMODE_SPECIAL_STAGE = 0x34`, `GAMEMODE_SS_RESULTS = 0x48`, `BONUS_ZONE_MIN = 0x13`, `BONUS_ZONE_MAX = 0x15`, `BONUS_TOKENS = {[0x13]="gumball", [0x14]="pachinko", [0x15]="slots"}` consumed by Tasks 5–7.
+- Produces: lua constants `ADDR_SPECIAL_BONUS_ENTRY_FLAG`, `ADDR_SAVED_X_POS`, `ADDR_SAVED_Y_POS`, `ADDR_LAST_STAR_POST_HIT`, `ADDR_EMERALD_COUNT`, `GAMEMODE_SPECIAL_STAGE = 0x34`, `GAMEMODE_SS_RESULTS = 0x48`, `BONUS_ZONE_MIN = 0x13`, `BONUS_ZONE_MAX = 0x15`, `BONUS_TOKENS = {[0x13]="gumball", [0x14]="pachinko", [0x15]="slots"}` consumed by Tasks 5–7. **Declare ALL of these as globals (no `local`)** — the file's main chunk is at Lua's 200-local limit (comments ~lines 279-282, 326-327); a `local` block here fails at load.
 
 - [ ] **Step 1: Derive the five RAM addresses from skdisasm.** In `docs/skdisasm/sonic3k.constants.asm` the gameplay RAM block is `ds.b`-sequential from absolute anchors. For each of `Special_bonus_entry_flag` (line ~831), `Saved_X_pos`, `Saved_Y_pos`, `Last_star_post_hit`, `Emerald_count`: locate the symbol (`grep -n "<name>" docs/skdisasm/sonic3k.constants.asm`), find the nearest preceding absolute anchor (a `:=` assignment with a numeric address, e.g. the `Object_respawn_table`/RAM-block anchors), and sum the intervening `ds.b`/`ds.w`/`ds.l` sizes. Cross-check each result against `docs/skdisasm/s3.constants.asm` (same symbols; S3-side must agree) — two independent paths must give the same address or STOP and investigate.
 
@@ -755,7 +755,10 @@ function write_run_manifest()
     end
     f:write('{\n')
     f:write('  "run_schema": 1,\n')
-    f:write('  "game": "sonic3k",\n')
+    f:write('  "game": "s3k",\n')  -- "s3k" is the canonical trace game id
+                                   -- (TraceCatalog.VALID_GAME_IDS,
+                                   -- TraceExecutionModel.forGame); NEVER
+                                   -- "sonic3k", which forGame rejects.
     if run_id then f:write(string.format('  "run_id": %q,\n', run_id)) end
     f:write(string.format('  "source_bk2": %q,\n', SOURCE_BK2_NAME))
     f:write(string.format('  "rom_checksum": %q,\n', S3K_ROM_CHECKSUM))
@@ -895,3 +898,4 @@ Skills: n/a"
 - **SS segments produce no CSV rows in plan (a)** — mode `$34` finalizes the level segment and records the (single, merged) transition; the blue-spheres row writer and its segment dirs land with the blue-spheres plan. Manifest `segments[]` therefore only ever lists dirs that exist (level + bonus), keeping `TraceRunManifest.validate` strict.
 - **Giant-ring fade frames stay in the pre-detour segment:** the touch/fade-out before `Game_Mode` flips to `$34` runs under raw `$0C`, so those frames are recorded as normal rows of the outgoing level segment — consistent with how act-exit handoff tails are already recorded into the current segment. The manifest's `mode_change_bk2_frame` marks the true mode edge.
 - **Full-suite gate before merge:** `mvn test` (sandbox off) — pre-existing failures per `docs/rewind/real-gaps.md` context notwithstanding, no NEW failures.
+- **Merge-time reminder:** merging the branch into `develop` requires a staged `README.md` update summarizing the branch change (repo merge policy) — not a task here, but budget for it at merge time.
