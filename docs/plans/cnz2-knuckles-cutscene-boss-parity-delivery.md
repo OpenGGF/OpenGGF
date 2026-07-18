@@ -364,32 +364,105 @@ The exact sweep command must be selected from the current green inventory at int
 
 ## Integration Report
 
-To be completed after implementation:
+Implementation landed as the following policy-compliant sequence, in dependency order:
 
-- Commits and changed files:
-- Requirements/tasks completed:
-- Focused test evidence:
-- ROM hash used:
-- Rewind/static-state/art/architecture guard evidence:
-- Conditional non-CNZ frontier sweep evidence, or `not required` with shared-file audit:
-- Documentation/trailer audit:
-- Unresolved risks and explicit deferrals:
-- Confirmation that no CNZ trace or G1/G2 validation ran:
+- `f493fd6c0` — created this delivery/orchestration artifact.
+- `715446f31` — implemented CNZ2 button proximity, subtype-4/6 actions, pressed-state handling,
+  and the subtype-6 mutation-pipeline edit.
+- `9aa728aa9` — implemented magnet/arm attack-cycle behavior and child animation/hazard state.
+- `136d25955` — aligned both rival-Knuckles cutscenes: terrain landings, animation, palette,
+  fades, control sequencing, and gradual boundaries.
+- `33817170e` and `e78357f83` — exposed cannon capture/angle state and preserved the ROM's
+  old-angle-then-increment launch ordering.
+- `55951095d` — implemented native body-half, arm, magnet-spark, flicker, and culling scatter.
+- `a37386406`, `049f94750`, and `4cf97491c` — completed the boss parent/ship graph, corrected
+  child motion gates, body flicker, and arm reset cadence.
+- `f42311423` and `aa59f561e` — corrected cutscene landing contact cadence, per-dispatch native
+  camera-window checks, pressed-button offscreen lifetime, and 91/121 post-init fade timing.
+- `506800134` — completed the two-wait defeat timeline, absolute camera bounds, capsule/cannon
+  handoff, forced-input launch, and ICZ transition ownership.
+- `4e1ba9f20` — restored compact rewind coverage for the final camera-gate helper and exact
+  end-cannon object identity.
+- `fcfea2a16` and `5e81e136e` — corrected and integrated the shared camera gate's live-X
+  left-approach behavior and added left/right/below, independent-goal, placement, and art tests.
+- `7f5f5e55a` — bound the subtype-4 explosion controller to the real ship graph and preserved
+  Robotnik-head animation state through hurt/defeat presentation.
+
+Requirements A1-F4 and permitted validation work G3/G4 are complete for the scoped Sonic route.
+The final curated non-trace matrix passed **131/131**, and the repository package build completed
+successfully. The locked-on root ROM was used unchanged as
+`Sonic and Knuckles & Sonic 3 (W) [!].gen` (expected SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`). Rewind graph, instance/static coverage, art
+readiness/corruption, object-service, mutation-routing, and focused headless coverage were included
+in that matrix.
+
+No shared player physics, collision, object scheduling, or level-transition execution behavior was
+changed. The only cross-cutting main change was compact rewind schema support for an existing final
+`RewindStateful` value; focused rewind/coverage guards passed. A pre-existing
+`TestS3kCnzDirectedTraversalHeadless#cnzCylinderForcedReleaseClearsInvalidRiderStateWithoutUsingTheJumpPath`
+failure was reproduced identically at baseline `f493fd6c0`; relevant cylinder code was unchanged, so
+that unrelated failure was excluded from the final matrix. No conditional trace-frontier sweep was
+required.
+
+The three intentional architecture equivalences are now executable assertions:
+
+- B6 omits button subtypes 0/2 because the locked-on CNZ2 placement contains only Obj83 subtypes
+  4 and 6.
+- B4 does not reload `PLC_Monitors` because the engine owns monitor art as an independent immutable
+  ready sheet, unaffected by cutscene-Knuckles art loading.
+- F3 does not queue duplicate explosion art because the shared explosion renderer remains resident
+  and ready in CNZ2.
+
+The source task's F1 description called angle `$12` "straight up"; ROM `sub_3192C` derives mapping
+frame 6 before storing angle `$14`, so the native launch vector is the tested diagonal
+`x_vel=$0B50`, `y_vel=-$0B50`. The implementation and tests follow the ROM rather than that gloss.
+
+`CHANGELOG.md` records the user-visible changes. No known discrepancy was retained, so
+`docs/S3K_KNOWN_DISCREPANCIES.md` correctly remains unchanged. The source task plan is user-owned,
+untracked, and intentionally unedited. Other unrelated dirty/user files were preserved and excluded
+from every commit.
+
+G1 trace capture/replay and G2 screenshot/visual validation remain explicitly deferred. No CNZ
+trace, visual comparison, stable-retro capture, or trace-fixture regeneration was run.
 
 ## End-to-End Review
 
-To be completed by independent reviewers after integration:
+Independent review found **no known implementation blocker** after the final follow-up commits.
 
-- Blockers:
-- Requirements traceability findings:
-- Architecture and ownership findings:
-- ROM parity findings with file/label evidence:
-- Rewind/lifecycle/object-slot findings:
-- Test and documentation gaps:
-- Fixes applied:
-- Residual risk:
-- Human-review checklist:
-- Merge readiness (must remain false until explicit human confirmation):
+- **Requirements traceability:** A1-A4, B1-B7, C1-C4, D1-D8, E1-E6, F1-F4, and permitted G3/G4
+  map to committed source and focused tests. G1/G2 are documented deferrals mandated by the task.
+- **Architecture and ownership:** choreography remains in CNZ cutscene/boss objects; shared camera,
+  fade, boundary, palette, mutation, lifetime, and rewind facilities retain their established owners.
+  No zone/frame trace carve-out, direct gameplay map mutation, singleton access from object code, or
+  invented source-side ICZ neutralization was introduced.
+- **ROM parity:** review rechecked `Check_CameraInRange`, `loc_85CA4`, both CNZ2 Knuckles routines,
+  `Obj_CutsceneButton`, `Obj_CNZEndBoss`, `Obj_RobotnikShip4`, `Obj_CNZCannon`, and the final
+  `loc_6E80C` handoff. The last camera blocker—using boundary easing rather than live
+  `Camera_X_pos` during left approach—was corrected by `fcfea2a16` and covered in the integrated
+  boss path by `5e81e136e`.
+- **Rewind/lifecycle/object slots:** real ship/head/flame/explosion, magnet, arms, scatter, boundary,
+  fade, button, and cannon objects have recreate/capture paths. Review caught and fixed the final
+  camera-helper compact-state omission, stale end-cannon identity, and explosion-controller ship
+  parent/lifetime link in `4e1ba9f20`/`7f5f5e55a`.
+- **Review fixes:** per-dispatch camera deletion semantics, button pressed-state unload latch,
+  post-init fade off-by-one timing, cannon old-angle ordering, live-X camera convergence, end-cannon
+  relink, and ship-bound explosion lifetime were all found during review and resolved before closure.
+- **Residual risk:** G1/G2 provide no full-route trace or screenshot evidence by explicit request;
+  compact `RewindStateful` value support is broader than CNZ although its focused graph/coverage
+  guards are green; and the unrelated pre-existing cylinder test remains outside this delivery.
+- **Documentation/test gaps:** none blocking. The source task plan remains intentionally unmodified;
+  its F1 vector gloss is corrected here. The curated matrix and package build are green.
+
+Human checklist before merge:
+
+1. Confirm the listed 17-commit scope and target branch.
+2. Confirm the final test evidence and accepted G1/G2 deferral.
+3. Keep `.gitignore`, `.idea/vcs.xml`, `docs/rewind/real-gaps.md`, and the untracked source task plan
+   out of the merge unless their owner separately requests them.
+4. Push the final branch and satisfy the repository's README-on-merge policy when merging into
+   `develop`.
+
+Implementation is ready for merge; formal merge approval remains with the human reviewer.
 
 ## Artifact Self-Review
 
@@ -398,5 +471,11 @@ To be completed by independent reviewers after integration:
 - Architecture gate: **green** — ownership, lifecycle, data flow, failure modes, migration, rewind, and rollback are defined using existing project patterns.
 - Feature-design gate: **green** — contracts, edge cases, and acceptance tests map to A1-F4 and G3/G4.
 - Implementation-plan gate: **green** — tests precede behavior, overlapping parent/test ownership is serialized, dependencies are explicit, and every phase has a non-trace verification command.
-- Deferral gate: **green** — G1 and G2 are visibly forbidden for this run; Integration Report and End-to-End Review are present as required placeholders.
+- Deferral gate: **green** — G1 and G2 remain visibly deferred, and the completed Integration Report
+  and End-to-End Review record that neither was run.
 - Safety gate: **green** — CNZ traces and visual validation are forbidden; conditional frontier work excludes CNZ and activates only for shared main-path changes.
+- Delivery-evidence gate: **green** — the final commit sequence, ROM provenance, 131/131 curated
+  non-trace matrix, package success, baseline-excluded unrelated failure, and documentation/trailer
+  decisions are recorded above.
+- Closure gate: **green** — independent review found no known blocker; residual risks and the final
+  human checklist are explicit.
