@@ -463,7 +463,9 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         int dx = player.getCentreX() - spawn.x();
         int dy = player.getCentreY() - spawn.y();
 
-        // Check Y range: ±$18
+        // Check Y range: ±$18. The compatibility landing handoff retains its
+        // existing endpoint behavior; the native upper-X edge below is what
+        // governs ordinary grounded proactive launches.
         if (dy < -HORIZ_DETECT_Y || dy > HORIZ_DETECT_Y) {
             return;
         }
@@ -480,7 +482,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
             }
         } else {
             // Unflipped spring faces right: player must be to the right (positive dx)
-            if (dx > HORIZ_DETECT_X || dx < 0) {
+            if (dx >= HORIZ_DETECT_X || dx < 0) {
                 return;
             }
             // Player must be moving right (positive gSpeed)

@@ -293,6 +293,29 @@ class TestSonic3kSpringObjectInstance {
     }
 
     @Test
+    void horizontalApproachUsesRomHalfOpenCoordinateWindow() throws Exception {
+        Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x1888, 0x0330, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        invoke(spring, "ensureInitialized");
+
+        TestableSprite player = new TestableSprite("tails_p2");
+        player.setCentreX((short) 0x18B0); // springX + $28: bhs rejects.
+        player.setCentreY((short) 0x0347);
+        player.setGSpeed((short) 0x0312);
+
+        invoke(spring, "checkHorizontalApproach", new Class<?>[]{AbstractPlayableSprite.class}, player);
+        assertEquals(0x18B0, player.getCentreX() & 0xFFFF,
+                "sub_2326C rejects the exclusive +$28 X edge");
+        assertEquals(0, player.getXSpeed());
+
+        player.setCentreX((short) 0x18AF); // springX + $27: inside.
+        invoke(spring, "checkHorizontalApproach", new Class<?>[]{AbstractPlayableSprite.class}, player);
+        assertEquals(0x18A7, player.getCentreX() & 0xFFFF);
+        assertEquals(0x1000, player.getXSpeed() & 0xFFFF);
+    }
+
+    @Test
     void underwaterAirborneHorizontalSpringApproachDoesNotUseLandingHandoff() throws Exception {
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x031A, 0x0610, Sonic3kObjectIds.SPRING, 0x10, 1, true, 0));

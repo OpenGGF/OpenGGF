@@ -1384,6 +1384,27 @@ Cross-game origin: `s2-implement-object/rom-pitfalls.md` P36.
 
 ---
 
+## P39 -- Preserve `blo`/`bhs` half-open trigger endpoints
+
+**Symptom.** A player exactly N pixels from an object triggers one frame early,
+even though all nearby positions and approach velocity match.
+
+**Root cause.** ROM coordinate windows commonly compare the lower endpoint with
+`blo` and the upper endpoint with `bhs`, producing `[lower, upper)`. Translating
+that to a symmetric absolute-distance `<= N` check admits the exclusive upper
+edge.
+
+**What to check.** Port each signed/unsigned comparison in order. Test both
+`upper-1` and `upper`; do not infer symmetry merely because the constants are
+written as `origin-N` and `origin+N`.
+
+**ROM citation.** S3K horizontal spring `sub_2326C` rejects its computed upper
+X bound with `bhs` (`docs/skdisasm/sonic3k.asm:47957-48024`).
+
+**Originating commit.** `<pending: CNZ horizontal-spring boundary milestone>`.
+
+---
+
 ## How to add a new entry
 When a trace-replay-bug-fixing iteration commits an object fix whose root
 cause is a class of bug (not a one-off):

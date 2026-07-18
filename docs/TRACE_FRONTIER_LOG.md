@@ -45652,3 +45652,21 @@ The full physics fleet remains 45/58 green with the same 13 expected-red routes
 and unchanged non-CNZ frontiers. The full animation fleet remains 44/58 green
 with the same eight unsupported S1 credits traces and six comparison-red
 frontiers; CNZ complete-run animation remains at f108 and standalone CNZ at f0.
+
+### 2026-07-19 -- CNZ horizontal-spring exclusive upper X edge: f6696 -> f6706
+
+At f6696 CPU Tails is grounded at `$18B0,$0347`, exactly `$28` pixels right of
+the horizontal spring at `$1888,$0330`. ROM `sub_2326C` rejects an X coordinate
+equal to its computed upper bound with `bhs`; the engine treated that endpoint
+as inside and applied the yellow spring's `$0A00` launch plus eight-pixel nudge
+(`docs/skdisasm/sonic3k.asm:47957-48024`).
+
+The ordinary grounded proactive check now treats `springX+$28` as exclusive.
+All 15 focused S3K spring tests pass, including the exact `$28` rejection and
+`$27` acceptance. CNZ complete-run physics advances from f6696
+`tails_x_speed` to f6706 `y_speed`.
+
+The full physics fleet remains 45/58 green with 13 expected-red routes; the
+full animation fleet remains 44/58 green with the same 14 non-green methods.
+No non-CNZ frontier moved, CNZ complete-run animation remains at f108, and
+standalone CNZ remains at f0.
