@@ -3,6 +3,8 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.graphics.GLCommand;
@@ -34,16 +36,10 @@ import java.util.List;
  *   and watch the beam progress thresholds</li>
  * </ul>
  *
- * <p>Two parts are deliberately approximated and called out so later parity
- * work knows what remains:
- * <ul>
- *   <li>The engine does not currently expose {@code Kos_modules_left}, so Task 8
- *   models the queued {@code ArtKosM_CNZTeleport} work with a one-frame
- *   countdown after the queue request</li>
- *   <li>The palette write is tracked as an explicit local state bit rather than
- *   a full palette-owner composition, because Task 8 only needs the cutscene
- *   route and beam handoff, not the later visual cleanup policy</li>
- * </ul>
+ * <p>The engine's synchronous KosM load path exposes queue completion through
+ * the dedicated renderer's readiness state. Palette overrides are composed
+ * through {@code PaletteOwnershipRegistry}, preserving the ROM's immediate
+ * CRAM patch without bypassing other CNZ palette writers.
  */
 public final class CnzTeleporterInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     /**
@@ -67,19 +63,14 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
     private static final int ROUTE_CAMERA_MIN_X = 0x4750;
     private static final int ROUTE_CAMERA_MAX_X = 0x48E0;
 
-    /**
-     * Engine approximation for {@code Kos_modules_left == 0}. Task 8 keeps the
-     * queue visible for one frame so the teleporter cannot arm and spawn the
-     * beam in the same update tick.
-     */
-    private static final int KOSM_QUEUE_DRAIN_FRAMES = 1;
+    private static final int[] TELEPORT_PALETTE_INDICES = {1, 2, 8, 10};
+    private static final int[] TELEPORT_PALETTE_WORDS = {0x0EEE, 0x00EC, 0x0EA2, 0x0E80};
 
     private int centreY;
 
     private boolean armed;
     private boolean paletteLine2Patched;
     private boolean teleportArtQueued;
-    private int queuedArtFramesRemaining;
     private boolean beamSpawned;
     private boolean playerCaptured;
     private boolean playerHidden;
@@ -132,15 +123,15 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
 
         if (!armed && (player.getCentreX() >= ARM_X_THRESHOLD || routeAlreadyActive)) {
             armTeleporter(player, routeAlreadyActive);
+            // ROM replaces the code pointer with Obj_CNZTeleporterMain and
+            // returns; Kos_modules_left is first polled on the following frame.
+            return;
         }
         if (!armed) {
             return;
         }
 
-        if (queuedArtFramesRemaining > 0) {
-            queuedArtFramesRemaining--;
-        }
-        if (!beamSpawned && queuedArtFramesRemaining == 0 && !player.getAir()) {
+        if (!beamSpawned && isTeleportArtReady() && !player.getAir()) {
             spawnBeamAndCharge(player);
         }
         if (beamSpawned) {
@@ -183,15 +174,31 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
          * player remains control-locked until the beam explicitly takes over.
          */
         teleportArtQueued = true;
-        queuedArtFramesRemaining = KOSM_QUEUE_DRAIN_FRAMES;
-
-        /**
-         * ROM: the arming frame patches palette line 2 to the teleporter
-         * colours. Task 8 keeps that as an explicit state bit so the cutscene
-         * seam is documented even though the full palette-owner write path is
-         * deferred to later CNZ parity work.
-         */
+        applyTeleportPalettePatch();
         paletteLine2Patched = true;
+    }
+
+    /** ROM {@code Kos_modules_left == 0}, represented by completed renderer preparation. */
+    private boolean isTeleportArtReady() {
+        PatternSpriteRenderer renderer = services().renderManager().getRenderer(
+                Sonic3kObjectArtKeys.CNZ_TELEPORTER);
+        return renderer != null && renderer.isReady();
+    }
+
+    private void applyTeleportPalettePatch() {
+        S3kPaletteWriteSupport.applyColors(
+                services().paletteOwnershipRegistryOrNull(),
+                services().currentLevel(),
+                services().graphicsManager(),
+                S3kPaletteOwners.CNZ_TELEPORTER,
+                S3kPaletteOwners.PRIORITY_CUTSCENE_OVERRIDE,
+                1,
+                TELEPORT_PALETTE_INDICES,
+                TELEPORT_PALETTE_WORDS);
+        S3kPaletteWriteSupport.resolvePendingWritesNow(
+                services().paletteOwnershipRegistryOrNull(),
+                services().currentLevel(),
+                services().graphicsManager());
     }
 
     /**

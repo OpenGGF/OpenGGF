@@ -5,6 +5,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
@@ -20,6 +21,8 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.game.palette.PaletteSurface;
+import com.openggf.level.Palette;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -71,6 +74,41 @@ class TestS3kCnzTeleporterRouteHeadless {
      * handoff belongs only to the later {@code Obj_CNZEndBoss} defeat path.
      */
     @Test
+    void groundedTeleporterWaitsForArtReadinessAndPublishesRomPalettePatch() {
+        SonicConfigurationService.getInstance()
+                .setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+
+        CnzTeleporterInstance teleporter = new CnzTeleporterInstance(
+                new ObjectSpawn(0x4A40, 0x0A38, 0, 0, 0, false, 0));
+        teleporter.setServices(TestEnvironment.objectServices());
+        GameServices.level().getObjectManager().addDynamicObject(teleporter);
+        getCnzEvents().beginKnucklesTeleporterRoute();
+        fixture.sprite().setCentreX((short) 0x4A40);
+        fixture.sprite().setAir(false);
+
+        fixture.stepIdleFrames(1);
+
+        assertFalse(isObjectPresent(CnzTeleporterBeamInstance.class),
+                "Obj_CNZTeleporter must return after Queue_Kos_Module and poll readiness next frame");
+        int[] colorIndices = {1, 2, 8, 10};
+        int[] segaWords = {0x0EEE, 0x00EC, 0x0EA2, 0x0E80};
+        Palette line2 = GameServices.level().getCurrentLevel().getPalette(1);
+        for (int i = 0; i < colorIndices.length; i++) {
+            assertEquals(S3kPaletteOwners.CNZ_TELEPORTER,
+                    GameServices.paletteOwnershipRegistry().ownerAt(
+                            PaletteSurface.NORMAL, 1, colorIndices[i]));
+            assertSegaColor(line2.getColor(colorIndices[i]), segaWords[i]);
+        }
+
+        fixture.stepIdleFrames(1);
+        assertTrue(isObjectPresent(CnzTeleporterBeamInstance.class),
+                "Obj_CNZTeleporterMain should proceed once the teleporter renderer reports ready");
+    }
+
+    @Test
     void knucklesTeleporterRequiresPublishedRouteBeforeLockingControl() {
         SonicConfigurationService.getInstance()
                 .setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
@@ -106,11 +144,12 @@ class TestS3kCnzTeleporterRouteHeadless {
         fixture.sprite().setXSpeed((short) 0x180);
         fixture.sprite().setGSpeed((short) 0x200);
 
+        teleporter.update(0, fixture.sprite());
+        assertEquals(0x4A40, fixture.sprite().getCentreX(),
+                "Obj_CNZTeleporter's arming routine should write x_pos=$4A40 before returning");
         fixture.stepIdleFrames(1);
         assertTrue(fixture.sprite().isControlLocked(),
                 "Obj_CNZTeleporter should mirror Ctrl_1_locked by immediately removing player control");
-        assertEquals(0x4A40, fixture.sprite().getCentreX(),
-                "Airborne overshoot past $4A40 should clamp back to the teleporter beam X");
         assertEquals(0, fixture.sprite().getXSpeed(),
                 "The teleporter arming frame should clear x_vel before the beam sequence begins");
         assertEquals(0, fixture.sprite().getGSpeed(),
@@ -140,6 +179,14 @@ class TestS3kCnzTeleporterRouteHeadless {
                 "Full bit-7 teleporter control should suppress player movement");
         assertTrue(fixture.sprite().isTouchResponseSuppressedByObjectControl(),
                 "Full bit-7 teleporter control should suppress normal touch responses");
+    }
+
+    private static void assertSegaColor(Palette.Color actual, int segaWord) {
+        Palette.Color expected = new Palette.Color();
+        expected.fromSegaFormat(new byte[] {(byte) (segaWord >>> 8), (byte) segaWord}, 0);
+        assertEquals(expected.r, actual.r);
+        assertEquals(expected.g, actual.g);
+        assertEquals(expected.b, actual.b);
     }
 
     /**
