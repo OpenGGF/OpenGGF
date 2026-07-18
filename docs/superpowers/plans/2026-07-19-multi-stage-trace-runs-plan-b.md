@@ -90,7 +90,7 @@ class TestTraceReplaySessionBootstrapBonus {
      * one. Returns false untouched for any other trace profile.
      */
     public static boolean applyBonusStageEntry(TraceData trace) {
-        TraceMetadata meta = trace.getMetadata();
+        TraceMetadata meta = trace.metadata();  // accessor is metadata(), not getMetadata()
         if (!"s3k_bonus_stage".equals(meta.traceProfile())) {
             return false;
         }
@@ -99,7 +99,9 @@ class TestTraceReplaySessionBootstrapBonus {
 
         BonusStageProvider provider = GameServices.module().getBonusStageProvider();
         // GameServices has NO public gameplayMode() accessor — resolve the
-        // context the way the live path does (GameLoop.doEnterBonusStage):
+        // context the way the live path does (GameLoop.doEnterBonusStage).
+        // The replay fixture guarantees an open gameplay session, so a null
+        // here is a real fixture bug and an NPE is the correct failure.
         GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
         // Mirror the live ordering exactly (GameLoop.java:2178/2181/2184):
         // setActiveBonusStageProvider -> onEnter -> registerBonusStageAdapter.
@@ -109,7 +111,9 @@ class TestTraceReplaySessionBootstrapBonus {
             (byte) 0x0C, (byte) 0x0D, 0, 0L));
         gameplayMode.registerBonusStageAdapter(provider);
 
-        GameServices.gameState().setRings(frame0Rings);
+        // Rings live on LevelState, not GameStateManager — same call the live
+        // path makes (GameLoop.prepareBonusStageForTitleCard, :2274).
+        GameServices.level().getLevelGamestate().setRings(frame0Rings);
         GameServices.level().setBonusStageHudLayout(true);
         for (var sprite : GameServices.sprites().getAllSprites()) {
             if (sprite instanceof AbstractPlayableSprite playable) {
@@ -121,7 +125,7 @@ class TestTraceReplaySessionBootstrapBonus {
         var objectManager = GameServices.level().getObjectManager();
         if (bootstrapSpawn != null && objectManager != null) {
             // Mirror ensureBonusStageBootstrapObjectPresent's duplicate guard
-            // (GameLoop.java:2288-2292).
+            // (GameLoop.java:2288-2293).
             boolean present = objectManager.getActiveObjects().stream()
                 .anyMatch(PachinkoEnergyTrapObjectInstance.class::isInstance);
             if (!present) {
@@ -202,7 +206,7 @@ public abstract class AbstractS3kBonusStageTraceReplayTest extends AbstractTrace
 }
 ```
 
-Concrete classes override the real template methods `game()` (returns the `SonicGame` enum value for S3K, not a string), `zone()` = 0x13 (gumball) / 0x14 (pachinko), `act()` = 0, and `traceDirectory()` = trace dirs `traces/s3k/bonus_gumball` / `traces/s3k/bonus_pachinko` — copy the exact override set from an existing concrete S3K test (e.g. `TestS3kCnzCompleteRunTraceReplay` or the `s3k` package's dedicated-zone test; match whichever template methods it overrides, including any required-checkpoint/report-name overrides, adapting values).
+Concrete classes carry `@RequiresRom(SonicGame.SONIC_3K)` (the convention on every existing concrete S3K replay test, e.g. `TestS3kCnzCompleteRunTraceReplay.java:2-8` — without it, a missing ROM hard-fails the fixture build instead of skipping once recordings land) and override the real template methods `game()` (returns the `SonicGame` enum value for S3K, not a string), `zone()` = 0x13 (gumball) / 0x14 (pachinko), `act()` = 0, and `traceDirectory()` = trace dirs `traces/s3k/bonus_gumball` / `traces/s3k/bonus_pachinko` — copy the exact override set from an existing concrete S3K test (e.g. `TestS3kCnzCompleteRunTraceReplay` or the `s3k` package's dedicated-zone test; match whichever template methods it overrides, including any required-checkpoint/report-name overrides, adapting values).
 
 - [ ] **Step 3: Run both new test classes** — expect SKIPPED (assumption failure on missing trace dir), NOT failure: `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kGumballBonusTraceReplay+TestS3kPachinkoBonusTraceReplay" test` → surefire shows skipped=…, failed=0.
 
