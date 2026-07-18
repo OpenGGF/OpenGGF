@@ -45542,3 +45542,7 @@ successfully compiled with Lupa, but could not execute locally: the bundled
 Wine, PowerShell, or alternate BizHawk runtime. The committed ROM aux and clean
 engine context already identify the init/variant boundary; no recorder data was
 regenerated or hydrated.
+
+Cross-game sanity command:
+`JDK_JAVA_OPTIONS=-Xmx6g mvn -Dmse=off "-Dtest=TestS1Ghz1TraceReplay,TestS2Ehz1TraceReplay" -Dtrace.verification=physics -Dtrace.frontierOnly=true -Dtrace.context.radius=2 -Dtrace.print.summary=true "-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" test`.
+Both GHZ1 and EHZ1 remain fully green with no physics divergences.
