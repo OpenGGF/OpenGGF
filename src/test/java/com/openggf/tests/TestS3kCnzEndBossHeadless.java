@@ -58,6 +58,11 @@ class TestS3kCnzEndBossHeadless {
                     GameServices.paletteOwnershipRegistry().ownerAt(PaletteSurface.NORMAL, 1, color),
                     "Pal_CNZEndBoss is loaded immediately after sub_85D6A, before its wait completes");
         }
+        // loc_85D06 follows live Camera_X_pos; move the live camera through
+        // the $4760 target instead of relying on the retired boundary easing.
+        fixture.camera().setX((short) 0x4760);
+        boss.update(1, fixture.sprite());
+        fixture.camera().setX((short) 0x4660);
         fixture.stepIdleFrames(130);
 
         assertTrue(boss.isStartupCompleteForTest());
@@ -82,7 +87,11 @@ class TestS3kCnzEndBossHeadless {
         fixture.camera().setMinX((short) 0x4660);
         CnzEndBossInstance boss = createBoss();
         GameServices.level().getObjectManager().addDynamicObject(boss);
-        fixture.stepIdleFrames(132);
+        fixture.stepIdleFrames(1);
+        fixture.camera().setX((short) 0x4760);
+        boss.update(1, fixture.sprite());
+        fixture.camera().setX((short) 0x4660);
+        fixture.stepIdleFrames(130);
         ObjectManager objectManager = GameServices.level().getObjectManager();
         assertEquals(4, activeNamed("CnzEndBossArmChild"),
                 "precondition: routine 0 created all four arm slots");
@@ -197,6 +206,10 @@ class TestS3kCnzEndBossHeadless {
 
         CnzEndBossInstance boss = createBoss();
         GameServices.level().getObjectManager().addDynamicObject(boss);
+        fixture.stepIdleFrames(1);
+        fixture.camera().setX((short) 0x4760);
+        boss.update(1, fixture.sprite());
+        fixture.camera().setX((short) 0x4660);
         for (int frame = 0; frame < 1800 && !"MAGNET_DROP".equals(boss.getRoutineForTest()); frame++) {
             fixture.stepIdleFrames(1);
         }
