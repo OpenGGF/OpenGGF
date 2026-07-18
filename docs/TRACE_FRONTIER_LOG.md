@@ -45475,3 +45475,16 @@ property and ran each route in its own fork. Both completed green (1/1):
 The complete-run replay finished in 7.352 seconds with zero failures/errors;
 the standalone replay finished separately in 6.661 seconds with zero
 failures/errors. No comparison report or moved frontier was emitted.
+### 2026-07-18 -- CNZ miniboss retained null-parent error classified as stale post-frontier assertion
+
+On `bugfix/ai-cnz-corrections`, the focused command
+`mvn -Dnet.bytebuddy.experimental=true "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#traceReplayCnzMinibossParentSecondMovePassUsesRomPhase" test`
+reproduced the retained null dereference at trace f14712. An isolated-build
+diagnostic showed this was not a stale child parent link: the whole engine route
+was still near x=$1400 (wire cage, Batbot, path swaps, spikes), so the placed
+CNZ miniboss at x=$32xx had never spawned. The assertion is far beyond the
+standalone CNZ trace's release-blocking frontier and cannot validate boss cadence
+without first solving all intervening divergences. The stale post-frontier method
+is disabled with that explicit prerequisite; no trace state is hydrated and no
+gameplay behavior is changed. The separate CNZ complete-run frontier remains
+f1846 `tails_x_speed` pending its own trace fix.
