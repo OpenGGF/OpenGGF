@@ -57,6 +57,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private int currentActIndex = 0;
     private int loadEpoch = 0;
     private RuntimeArtState cnzTeleporterArtState = RuntimeArtState.IDLE;
+    private RuntimeArtState cnzEndBossArtState = RuntimeArtState.IDLE;
 
     private enum RuntimeArtState {
         IDLE,
@@ -119,6 +120,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         currentZoneIndex = zoneIndex;
         loadEpoch++;
         cnzTeleporterArtState = RuntimeArtState.IDLE;
+        cnzEndBossArtState = RuntimeArtState.IDLE;
 
         // Clear previous registrations
         renderers.clear();
@@ -168,7 +170,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             // queues ArtKosM_CNZTeleport at runtime when Knuckles reaches it.
             loadSharedBossExplosionArt();
             loadCnzMinibossArtFromPlc();
-            loadCnzEndBossArt();
+            // Obj_CNZEndBoss issues Load_PLC($6E) after its camera-range gate.
+            // Keep this out of the level-load path so the provider exposes the
+            // same request/completion seam as the native decompression queue.
             loadCnzTraversalArt();
         } else if (zoneIndex == 0x05) {
             loadSharedBossExplosionArt();
@@ -1235,24 +1239,51 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         return cnzTeleporterArtState == RuntimeArtState.COMPLETE;
     }
 
+    /** Mirrors {@code Obj_CNZEndBoss -> Load_PLC($6E)}. */
+    public void queueCnzEndBossArt() {
+        if (cnzEndBossArtState == RuntimeArtState.IDLE
+                || cnzEndBossArtState == RuntimeArtState.FAILED) {
+            cnzEndBossArtState = RuntimeArtState.PENDING;
+        }
+    }
+
+    public boolean isCnzEndBossArtPending() {
+        return cnzEndBossArtState == RuntimeArtState.PENDING;
+    }
+
+    public boolean isCnzEndBossArtComplete() {
+        return cnzEndBossArtState == RuntimeArtState.COMPLETE;
+    }
+
     @Override
     public void processRuntimeArtQueue() {
-        if (cnzTeleporterArtState != RuntimeArtState.PENDING) {
-            return;
+        boolean registeredRuntimeSheet = false;
+        if (cnzTeleporterArtState == RuntimeArtState.PENDING) {
+            loadCnzTeleporterArt();
+            PatternSpriteRenderer renderer = renderers.get(Sonic3kObjectArtKeys.CNZ_TELEPORTER);
+            cnzTeleporterArtState = renderer == null
+                    ? RuntimeArtState.FAILED : RuntimeArtState.COMPLETE;
+            registeredRuntimeSheet |= renderer != null;
         }
-        loadCnzTeleporterArt();
-        PatternSpriteRenderer renderer = renderers.get(Sonic3kObjectArtKeys.CNZ_TELEPORTER);
-        if (renderer == null) {
-            cnzTeleporterArtState = RuntimeArtState.FAILED;
-            return;
+        if (cnzEndBossArtState == RuntimeArtState.PENDING) {
+            loadCnzEndBossArt();
+            PatternSpriteRenderer renderer = renderers.get(Sonic3kObjectArtKeys.CNZ_END_BOSS);
+            cnzEndBossArtState = renderer == null
+                    ? RuntimeArtState.FAILED : RuntimeArtState.COMPLETE;
+            registeredRuntimeSheet |= renderer != null;
         }
-        // Runtime registration happens after the level-load cache pass. Re-run
-        // the deterministic provider allocation so the appended sheet receives
-        // its virtual atlas range while all existing bases remain unchanged.
-        ensurePatternsCached(GameServices.graphics(), PatternAtlasRange.OBJECTS.base());
-        cnzTeleporterArtState = renderer.isReady()
-                ? RuntimeArtState.COMPLETE
-                : RuntimeArtState.FAILED;
+        if (registeredRuntimeSheet) {
+            // Runtime registration happens after the level-load cache pass.
+            ensurePatternsCached(GameServices.graphics(), PatternAtlasRange.OBJECTS.base());
+            if (cnzTeleporterArtState == RuntimeArtState.COMPLETE
+                    && !renderers.get(Sonic3kObjectArtKeys.CNZ_TELEPORTER).isReady()) {
+                cnzTeleporterArtState = RuntimeArtState.FAILED;
+            }
+            if (cnzEndBossArtState == RuntimeArtState.COMPLETE
+                    && !renderers.get(Sonic3kObjectArtKeys.CNZ_END_BOSS).isReady()) {
+                cnzEndBossArtState = RuntimeArtState.FAILED;
+            }
+        }
     }
 
     /**
@@ -1878,7 +1909,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     @Override
     public com.openggf.game.rewind.snapshot.PlcProgressSnapshot capture() {
         return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(
-                loadEpoch, cnzTeleporterArtState.ordinal());
+                loadEpoch, cnzTeleporterArtState.ordinal()
+                        | (cnzEndBossArtState.ordinal() << 2));
     }
 
     /**
@@ -1888,9 +1920,13 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     @Override
     public void restore(com.openggf.game.rewind.snapshot.PlcProgressSnapshot snap) {
         loadEpoch = snap.loadEpoch();
-        int state = snap.runtimeState();
-        cnzTeleporterArtState = state >= 0 && state < RuntimeArtState.values().length
-                ? RuntimeArtState.values()[state]
-                : RuntimeArtState.IDLE;
+        int packedState = snap.runtimeState();
+        cnzTeleporterArtState = decodeRuntimeArtState(packedState & 3);
+        cnzEndBossArtState = decodeRuntimeArtState((packedState >>> 2) & 3);
+    }
+
+    private static RuntimeArtState decodeRuntimeArtState(int state) {
+        return state >= 0 && state < RuntimeArtState.values().length
+                ? RuntimeArtState.values()[state] : RuntimeArtState.IDLE;
     }
 }
