@@ -52,7 +52,7 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
 
     public SparkleBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Sparkle", Sonic3kObjectArtKeys.CNZ_SPARKLE,
-                COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
+                COLLISION_SIZE_INDEX, PRIORITY_BUCKET, true);
         this.mappingFrame = 0;
         this.verticalPhaseDown = (spawn.renderFlags() & 0x02) != 0;
     }
@@ -184,6 +184,12 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
 
         SparkleHazardChild(ObjectSpawn spawn, String name) {
             super(spawn, name);
+        }
+
+        @Override
+        public boolean isHighPriority() {
+            // Child setup retains Obj_Sparkle's high-priority art tile.
+            return true;
         }
 
         @Override

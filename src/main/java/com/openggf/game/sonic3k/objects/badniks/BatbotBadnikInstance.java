@@ -51,7 +51,7 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
 
     public BatbotBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Batbot", Sonic3kObjectArtKeys.CNZ_BATBOT,
-                COLLISION_SIZE, PRIORITY_BUCKET);
+                COLLISION_SIZE, PRIORITY_BUCKET, true);
     }
 
     @Override

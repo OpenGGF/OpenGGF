@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectManager;
@@ -43,6 +44,7 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
 
     private static final int COLLISION_FLAGS = 0xC0 | 0x17;
+    private static final int PRIORITY_BUCKET = 5; // Obj_CNZBalloon: priority $280.
     private static final int WIDTH_HALF = 0x10;
     private static final int HEIGHT_HALF = 0x20;
     private static final int ROM_BOUNCE_Y_SPEED = 0x700;
@@ -71,6 +73,12 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         super(spawn, "CNZBalloon");
         this.subtype = spawn.subtype();
         this.baseY = spawn.y();
+    }
+
+
+    @Override
+    public int getPriorityBucket() {
+        return RenderPriority.clamp(PRIORITY_BUCKET);
     }
 
     @Override

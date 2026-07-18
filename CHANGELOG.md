@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **CNZ sprite ordering now follows the locked-on ROM object attributes:** balloons, light bulbs, and cylinders use priority `$280` (bucket 5), while Clamer, Sparkle, and Batbot retain their high-plane art flags, including inherited badnik child art (`docs/skdisasm/sonic3k.asm:66747-66755,67257-67264,67614-67640,185861-186388`).
 - **MGZ2's surprise Robotnik now stays behind foreground terrain:** the folded Robotnik-ship child mirrors `Child_SyncDraw`'s parent `art_tile` priority bit, so the normal Act 2 drilling appearances retain `ObjDat_MGZDrillBoss`'s low priority while the end boss keeps its explicit high-priority override (`docs/skdisasm/sonic3k.asm:138841-138854,142389-142452,142720-142770`).
 - **HCZ2's geyser handoff now starts MGZ1 music after the destination load:** the carried post-results fade can no longer silence Marble Garden when the player reaches it through normal progression.
 - **Per-game rewind profiles now retain the VHS rewind presentation:** the effect pass prewarms whenever `rewind.vhsEffect` is enabled, so a launch-profile override that enables rewind after graphics initialization no longer leaves live rewind without its shader.

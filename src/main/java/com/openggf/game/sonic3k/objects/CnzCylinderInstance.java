@@ -32,6 +32,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     private static final SolidObjectParams SOLID_PARAMS =
             new SolidObjectParams(0x2B, 0x20, 0x21);
     private static final int PLAYER_CAPTURE_PRIORITY = RenderPriority.PLAYER_DEFAULT;
+    private static final int OBJECT_PRIORITY_BUCKET = 5; // Obj_CNZCylinder: priority $280.
     private static final int PLAYER_TWIST_PRIORITY = RenderPriority.PLAYER_DEFAULT - 1;
     private static final int PRIORITY_THRESHOLD_SOURCE = 0x60;
     private static final int RELEASE_Y_SPEED = -0x680;
@@ -851,6 +852,11 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
 
     private int getPriorityThresholdSource() {
         return PRIORITY_THRESHOLD_SOURCE;
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        return RenderPriority.clamp(OBJECT_PRIORITY_BUCKET);
     }
 
     private void clearSlotOnly(RiderSlot slot) {

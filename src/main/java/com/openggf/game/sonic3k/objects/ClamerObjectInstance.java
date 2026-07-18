@@ -662,6 +662,12 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean isHighPriority() {
+        // ObjSlot_Clamer uses make_art_tile(ArtTile_Clamer,1,1).
+        return true;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (destroyed || waitingForOnscreen) {
             return;
@@ -761,6 +767,12 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             // loc_86D4A sets ObjDat3_8913C and loc_86D5E runs MoveSprite2
             // before Sprite_CheckDeleteTouchXY (sonic3k.asm:182257-182265).
             this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, xVelocity, 0);
+        }
+
+        @Override
+        public boolean isHighPriority() {
+            // ObjDat3_8913C uses make_art_tile(ArtTile_Clamer+$70,1,1).
+            return true;
         }
 
         @Override
