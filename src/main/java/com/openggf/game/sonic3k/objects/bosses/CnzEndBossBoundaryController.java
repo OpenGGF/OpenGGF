@@ -47,7 +47,7 @@ public final class CnzEndBossBoundaryController extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity player) {
         accumulator += ACCELERATION;
-        int step = Math.max(1, accumulator >>> 16);
+        int step = accumulator >>> 16;
         if (axis == Axis.MAX_X_UP) {
             int next = (services().camera().getMaxX() & 0xFFFF) + step;
             if (next >= target) {

@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -89,6 +90,24 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
 
     public static CutsceneKnucklesCnz2BInstance getActiveInstance() {
         return activeInstance;
+    }
+
+    static CutsceneKnucklesCnz2BInstance activeInstance(ObjectManager objectManager) {
+        if (objectManager != null) {
+            CutsceneKnucklesCnz2BInstance managed = objectManager
+                    .activeObjectsOfType(CutsceneKnucklesCnz2BInstance.class).stream()
+                    .filter(CutsceneKnucklesCnz2BInstance::isButtonTargetActive)
+                    .findFirst()
+                    .orElse(null);
+            if (managed != null) {
+                return managed;
+            }
+        }
+        return activeInstance != null && !activeInstance.isDestroyed() ? activeInstance : null;
+    }
+
+    private boolean isButtonTargetActive() {
+        return phase != Phase.INIT && !isDestroyed();
     }
 
     public static void clearActiveInstance() {
@@ -196,7 +215,10 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
             return;
         }
 
-        currentY += floor.distance();
+        applyFloorContact(floor.distance());
+    }
+
+    private void applyFloorContact(int floorDistance) {
         if (!bounced) {
             bounced = true;
             xVel = -xVel;
@@ -205,6 +227,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
             return;
         }
 
+        currentY += floorDistance;
         xVel = 0;
         yVel = 0;
         timer = POST_JUMP_WAIT;
@@ -212,6 +235,15 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
         animationTick = 0;
         animationIndex = 0;
         phase = Phase.POST_JUMP_WAIT;
+    }
+
+    @Override
+    protected void afterRewindRestoreSettled() {
+        if (phase != Phase.INIT && !isDestroyed()) {
+            activeInstance = this;
+        } else if (activeInstance == this) {
+            activeInstance = null;
+        }
     }
 
     private void routinePostJumpWait() {

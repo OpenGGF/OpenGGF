@@ -15,6 +15,7 @@ import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -104,6 +105,24 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
 
     public static CutsceneKnucklesCnz2AInstance getActiveInstance() {
         return activeInstance;
+    }
+
+    static CutsceneKnucklesCnz2AInstance activeInstance(ObjectManager objectManager) {
+        if (objectManager != null) {
+            CutsceneKnucklesCnz2AInstance managed = objectManager
+                    .activeObjectsOfType(CutsceneKnucklesCnz2AInstance.class).stream()
+                    .filter(CutsceneKnucklesCnz2AInstance::isButtonTargetActive)
+                    .findFirst()
+                    .orElse(null);
+            if (managed != null) {
+                return managed;
+            }
+        }
+        return activeInstance != null && !activeInstance.isDestroyed() ? activeInstance : null;
+    }
+
+    private boolean isButtonTargetActive() {
+        return phase != Phase.INIT && !isDestroyed();
     }
 
     public CutsceneKnuxCnz2WallInstance getSpawnedWallForTest() {
@@ -219,7 +238,10 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
             return;
         }
 
-        currentY += floor.distance();
+        applyFloorContact(floor.distance());
+    }
+
+    private void applyFloorContact(int floorDistance) {
         if (bounceIndex == 0) {
             bounceIndex = 1;
             xVel = -0x0100;
@@ -235,12 +257,22 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
             return;
         }
 
+        currentY += floorDistance;
         facingRight = false;
         timer = POST_BOUNCE_WAIT;
         phase = Phase.LAUGH_WAIT;
         mappingFrame = 0x1C;
         animationTick = 0;
         animationIndex = 0;
+    }
+
+    @Override
+    protected void afterRewindRestoreSettled() {
+        if (phase != Phase.INIT && !isDestroyed()) {
+            activeInstance = this;
+        } else if (activeInstance == this) {
+            activeInstance = null;
+        }
     }
 
     private void routineLaughWait() {

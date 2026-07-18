@@ -102,8 +102,10 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
 
     private AbstractObjectInstance activeKnucklesForSubtype() {
         return switch (subtype) {
-            case WATER_FLASH_SUBTYPE -> CutsceneKnucklesCnz2AInstance.getActiveInstance();
-            case VACUUM_TUBE_SUBTYPE -> CutsceneKnucklesCnz2BInstance.getActiveInstance();
+            case WATER_FLASH_SUBTYPE ->
+                    CutsceneKnucklesCnz2AInstance.activeInstance(services().objectManager());
+            case VACUUM_TUBE_SUBTYPE ->
+                    CutsceneKnucklesCnz2BInstance.activeInstance(services().objectManager());
             default -> null;
         };
     }
