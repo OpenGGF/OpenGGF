@@ -55,7 +55,7 @@ class TestTraceRunManifest {
           "game": "sonic3k",
           "run_id": "s3k-aiz-gumball-roundtrip",
           "source_bk2": "s3k-aiz-gumball.bk2",
-          "rom_checksum": "63522553",
+          "rom_checksum": "C5B1C655C19F462ADE0AC4E17A844D10",
           "lua_script_version": "6.30-s3k-completerun",
           "segments": [
             {"dir": "seg00_aiz", "kind": "level", "trace_profile": "complete_run",
@@ -561,9 +561,13 @@ Skills: n/a"
 
 ```lua
 -- v6.30 run/detour state (globals: local-budget). transitions_done holds
--- boundary records in SEGMENT-BOUNDARY ORDER; records carry NO segment
--- indices — the manifest writer derives from_segment/to_segment purely from
--- position (record k => boundary between segments k-1 and k, 1-indexed lua).
+-- boundary records with EXPLICIT from_segment/to_segment captured at push
+-- time: every push sits between finalize_segment() (which appended the
+-- from-segment) and start_new_segment(), so from = #segments_done - 1 and
+-- to = #segments_done are exact. Loop-position derivation would be WRONG:
+-- plain level->level zone changes create segment boundaries with no
+-- transition record, so record order does not map to boundary order in
+-- multi-zone runs with detours.
 transitions_done = {}
 segment_dir_counts = {}
 detour_active = nil            -- nil | "special_stage"
@@ -628,11 +632,13 @@ and record `dir = dir_token` in `finalize_segment`'s `segments_done` entry (add 
     end
 ```
 
-- [ ] **Step 3: Bonus segments.** Bonus zones arrive under level-family mode via the EXISTING arm gate (`game_mode == GAMEMODE_LEVEL and zone_id ~= current_segment_zone`). Extend `zone_token_for` to return `BONUS_TOKENS[zone_id]` for `0x13`–`0x15` (before its unknown-zone fallback). In `start_new_segment`, set a global `current_segment_is_bonus = (BONUS_TOKENS[zone_id] ~= nil)`. On the arm path (inside the existing `if started then finalize_segment() end` branch of the arm gate), when the NEW zone is a bonus zone, push the entry transition BEFORE `start_new_segment(zone_id)`:
+- [ ] **Step 3: Bonus segments.** Bonus zones arrive under level-family mode via the EXISTING arm gate (`game_mode == GAMEMODE_LEVEL and zone_id ~= current_segment_zone`). Extend `zone_token_for` to return `BONUS_TOKENS[zone_id]` for `0x13`–`0x15` (before its unknown-zone fallback). In `start_new_segment`, set a global `current_segment_is_bonus = (BONUS_TOKENS[zone_id] ~= nil)` — **before the existing `write_metadata()` call** (~line 4781), or the segment's initial metadata write emits the wrong profile. On the arm path (inside the existing `if started then finalize_segment() end` branch of the arm gate), when the NEW zone is a bonus zone, push the entry transition BEFORE `start_new_segment(zone_id)`:
 
 ```lua
             if BONUS_TOKENS[zone_id] ~= nil then
                 transitions_done[#transitions_done + 1] = {
+                    from_segment = #segments_done - 1,
+                    to_segment = #segments_done,
                     entry_kind = "starpost_bonus",
                     mode_change_bk2_frame = emu.framecount(),
                     special_bonus_entry_flag = mainmemory.read_u8(ADDR_SPECIAL_BONUS_ENTRY_FLAG),
@@ -645,12 +651,16 @@ and record `dir = dir_token` in `finalize_segment`'s `segments_done` entry (add 
             end
 ```
 
-Symmetrically, on the SAME arm path, handle the two "completing a boundary" cases BEFORE the bonus-entry push above (order matters — boundary records must append in segment-boundary order):
+**Placement is load-bearing:** all three push blocks (Case 1, Case 2, then the bonus-entry push) go **after the `if started then finalize_segment() end` line, still inside the `if ctrl_lock_timer == 0 and ctrl_locked == 0 then` block, NOT nested inside `if started`** — on an SS return, `started` is false at the arm (finalize ran at SS entry; `reset_recording_state` cleared it at line ~1055), so nesting them under `if started` would silently drop the SS boundary record. Order within the block: Case 1, Case 2, bonus-entry push, then `start_new_segment(zone_id)`.
 
 ```lua
             -- Case 1: returning from an SS detour — complete the merged
             -- pending record and push it (the ONLY record for that boundary).
+            -- Indices are exact here: finalize appended the from-segment and
+            -- start_new_segment has not run yet.
             if pending_ss_transition ~= nil then
+                pending_ss_transition.from_segment = #segments_done - 1
+                pending_ss_transition.to_segment = #segments_done
                 pending_ss_transition.rings_after = mainmemory.read_u16_be(ADDR_RING_COUNT)
                 pending_ss_transition.emeralds_after = mainmemory.read_u8(ADDR_EMERALD_COUNT)
                 transitions_done[#transitions_done + 1] = pending_ss_transition
@@ -661,6 +671,8 @@ Symmetrically, on the SAME arm path, handle the two "completing a boundary" case
             if #segments_done > 0
                 and segments_done[#segments_done].kind == "bonus_stage" then
                 transitions_done[#transitions_done + 1] = {
+                    from_segment = #segments_done - 1,
+                    to_segment = #segments_done,
                     entry_kind = "stage_exit",
                     mode_change_bk2_frame = emu.framecount(),
                     rings_after = mainmemory.read_u16_be(ADDR_RING_COUNT),
@@ -669,7 +681,7 @@ Symmetrically, on the SAME arm path, handle the two "completing a boundary" case
             end
 ```
 
-No record carries segment indices: the writer derives them from order (record k → `from_segment = k-1`, `to_segment = k`), which is correct by construction because every push happens exactly at its boundary, in order — SS return (case 1), bonus exit (case 2), then bonus entry, each guarding a distinct boundary.
+Explicit capture is required because plain level→level zone changes create segment boundaries with NO transition record; loop-position derivation in the writer would mis-map indices in any multi-zone run with a detour (e.g. aiz→hcz→gumball→hcz) while still passing the structural validator.
 
 In `finalize_segment`, extend the `segments_done` entry:
 
@@ -723,6 +735,16 @@ Skills: n/a"
 
 ```lua
 function write_run_manifest()
+    if pending_ss_transition ~= nil then
+        -- Movie ended mid-SS-detour: append the incomplete record so the
+        -- Java validator rejects the manifest — the correct failure mode
+        -- for a truncated recording.
+        print("WARNING: movie ended mid special-stage detour; manifest incomplete.")
+        pending_ss_transition.from_segment = #segments_done - 1
+        pending_ss_transition.to_segment = #segments_done
+        transitions_done[#transitions_done + 1] = pending_ss_transition
+        pending_ss_transition = nil
+    end
     if #transitions_done == 0 and run_id == nil then
         return  -- stage-free legacy run: no manifest, output layout unchanged
     end
@@ -752,11 +774,12 @@ function write_run_manifest()
     f:write('  ],\n')
     f:write('  "transitions": [\n')
     for i, t in ipairs(transitions_done) do
-        -- Indices derived purely from boundary order: record i sits between
-        -- segments i-1 and i (0-indexed manifest, 1-indexed lua loop).
+        -- Indices were captured at push time (between finalize and
+        -- start_new_segment) — emit them verbatim. Never derive from loop
+        -- position: level->level boundaries carry no record.
         local parts = {
-            string.format('"from_segment": %d', i - 1),
-            string.format('"to_segment": %d', i),
+            string.format('"from_segment": %d', t.from_segment),
+            string.format('"to_segment": %d', t.to_segment),
             string.format('"entry_kind": %q', t.entry_kind),
             string.format('"mode_change_bk2_frame": %d', t.mode_change_bk2_frame),
         }
@@ -780,7 +803,7 @@ function write_run_manifest()
 end
 ```
 
-Invariant check before writing: when any detour occurred (`#transitions_done > 0`), `#transitions_done` must equal `#segments_done - 1` (holds for both detour shapes: SS = 1 merged record between 2 level segments; bonus = entry + exit records around the bonus segment). On violation print a WARNING naming both counts and still write what was captured. Also: if `pending_ss_transition ~= nil` at write time (movie ended mid-detour), print a WARNING and append it as a final incomplete record — the Java validator will reject the manifest, which is the correct failure mode for a truncated recording.
+Invariant check before writing: transition counts are bounded by boundaries, not equal to them — plain level→level zone changes are boundaries with NO record. The checkable invariant is per-record: every record's `to_segment == from_segment + 1` and `to_segment <= #segments_done` (with the truncated-detour exception, where `to_segment == #segments_done` may reference a segment that never armed — that is deliberately left for the Java validator to reject). On violation print a WARNING naming the record and still write what was captured.
 
 - [ ] **Step 2: Introduce `LUA_SCRIPT_VERSION` and `SOURCE_BK2_NAME` globals.** There is currently NO version constant — the version is a hardcoded literal inside `write_metadata` (line ~1143: `meta_file:write('  "lua_script_version": "6.29-s3k-completerun",\n')`) and `source_bk2` is likewise a literal (line ~1133). Add near the other config globals (~line 292):
 
@@ -837,7 +860,7 @@ gzip -dkc src/test/resources/traces/s3k/aiz_completerun/physics.csv.gz > $env:TE
 fc /b $env:TEMP\aiz_committed.csv $env:TEMP\oggf_regen_aiz\aiz\physics.csv
 ```
 
-Expected: `FC: no differences encountered` (byte-identical; the committed movie's routes avoid stages, so the state machine must be a pure no-op). Also assert: NO `run_manifest.json` was written (`Test-Path $env:TEMP\oggf_regen_aiz\run_manifest.json` → False), aux_state.jsonl also byte-identical. Any difference is a REGRESSION — stop and fix before proceeding.
+Expected: `FC: no differences encountered` (byte-identical; the committed movie's routes avoid stages, so the state machine must be a pure no-op). Also assert: NO `run_manifest.json` was written (`Test-Path $env:TEMP\oggf_regen_aiz\run_manifest.json` → False), aux_state.jsonl also byte-identical. **Diff only `physics.csv` + `aux_state.jsonl` — `metadata.json` differs BY DESIGN** (the `lua_script_version` bump to 6.30); do not treat the metadata version line as a regression. Any other difference is a REGRESSION — stop and fix before proceeding.
 
 - [ ] **Step 3: Record the result** in the final task's summary commit message (no repo change here).
 
