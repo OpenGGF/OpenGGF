@@ -2,6 +2,9 @@ package com.openggf.tests;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.palette.PaletteSurface;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
@@ -35,12 +38,21 @@ class TestS3kCnzEndBossHeadless {
         fixture.stepIdleFrames(1);
         assertEquals("CAMERA_LOCK", boss.getRoutineForTest());
         assertFalse(boss.isStartupCompleteForTest());
+        Sonic3kObjectArtProvider artProvider = (Sonic3kObjectArtProvider)
+                TestEnvironment.objectServices().renderManager().getArtProvider();
+        assertTrue(artProvider.isCnzEndBossArtPending(),
+                "Obj_CNZEndBoss must issue Load_PLC($6E) only after the camera gate");
         fixture.stepIdleFrames(121);
 
         assertTrue(boss.isStartupCompleteForTest());
         assertEquals("ENTRY", boss.getRoutineForTest());
         assertEquals(Sonic3kObjectIds.CNZ_END_BOSS, GameServices.gameState().getCurrentBossId());
         assertEquals(5, boss.getPriorityBucket());
+        assertTrue(artProvider.isCnzEndBossArtComplete());
+        for (int color = 0; color < 16; color++) {
+            assertEquals(S3kPaletteOwners.CNZ_END_BOSS,
+                    GameServices.paletteOwnershipRegistry().ownerAt(PaletteSurface.NORMAL, 0, color));
+        }
         long graphChildren = GameServices.level().getObjectManager().getActiveObjects().stream()
                 .filter(object -> object.getClass().getSimpleName().startsWith("CnzEndBoss"))
                 .filter(object -> !(object instanceof CnzEndBossInstance))

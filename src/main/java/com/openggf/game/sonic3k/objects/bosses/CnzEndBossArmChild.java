@@ -11,7 +11,6 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.physics.TrigLookupTable;
 
 import java.util.List;
 
@@ -26,6 +25,12 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
     private int angularStep = 1;
     private int speedTimer = 0x40;
     private int frame = 1;
+    private static final int[] ANGLE_X = {
+            0,1,2,3,4,5,6,8,9,10,11,12,13,14,15,16,
+            17,18,19,20,21,22,23,24,24,25,26,27,28,29,30,30,
+            31,32,33,33,34,35,35,36,37,37,38,38,39,39,40,40,
+            41,41,41,42,42,42,43,43,43,43,44,44,44,44,44,44
+    };
 
     CnzEndBossArmChild(CnzEndBossInstance boss, int phase) {
         super(new ObjectSpawn(boss.getCentreX(), boss.getCentreY() + 8, 0, phase, 0, false, 0),
@@ -53,15 +58,33 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
         if (routine.ordinal() >= CnzEndBossInstance.Routine.ALIGN.ordinal()) {
             if (--speedTimer < 0) {
                 speedTimer = 0x40;
-                if (routine == CnzEndBossInstance.Routine.CHARGE) angularStep = Math.min(4, angularStep + 1);
-                else if (routine == CnzEndBossInstance.Routine.ASCEND) angularStep = Math.max(1, angularStep - 1);
+                if (routine == CnzEndBossInstance.Routine.ALIGN
+                        || (routine == CnzEndBossInstance.Routine.CHARGE && !boss.magneticFieldActive())) {
+                    angularStep = Math.min(4, angularStep + 1);
+                } else if (routine == CnzEndBossInstance.Routine.DESCEND
+                        || routine == CnzEndBossInstance.Routine.ASCEND) {
+                    angularStep = Math.max(1, angularStep - 1);
+                }
             }
             angle = (angle + angularStep) & 0xFF;
         }
-        centreX = boss.getCentreX() + ((TrigLookupTable.sinHex(angle) * 0x4C) >> 8);
-        centreY = boss.getCentreY() + 8 + ((TrigLookupTable.cosHex(angle) * 0x4C) >> 8);
+        int offsetX = angleXOffset(angle);
+        if (boss.facingRight()) offsetX = -offsetX;
+        centreX = boss.getCentreX() + offsetX;
+        centreY = boss.getCentreY() + 8;
         frame = frameForAngle(angle);
         updateDynamicSpawn(centreX, centreY);
+    }
+
+    private static int angleXOffset(int angle) {
+        int a = angle & 0xFF;
+        int quadrant = a >>> 6;
+        return switch (quadrant) {
+            case 0 -> ANGLE_X[a];
+            case 1 -> ANGLE_X[0x7F - a];
+            case 2 -> -ANGLE_X[a & 0x3F];
+            default -> -ANGLE_X[0xFF - a];
+        };
     }
 
     private static int frameForAngle(int angle) {

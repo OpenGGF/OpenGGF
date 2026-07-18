@@ -451,8 +451,8 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         defeatWaitTimer = 2 * 60;
         defeatExplosions = new S3kBossExplosionController(centreX, centreY, 4, services().rng());
         services().fadeOutMusic();
-        spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, -8, -0x100));
-        spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, 8, 0x100));
+        spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, -8, -0x300));
+        spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, 8, 0x300));
     }
 
     private void updateDefeatWait() {
@@ -693,6 +693,10 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
 
     boolean defeatStarted() {
         return routine == Routine.DEFEATED;
+    }
+
+    boolean facingRight() {
+        return facingRight;
     }
 
     void relinkMagnetChild(CnzEndBossMagnetChild child) {

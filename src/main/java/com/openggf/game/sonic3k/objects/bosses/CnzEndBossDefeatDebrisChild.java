@@ -20,7 +20,7 @@ final class CnzEndBossDefeatDebrisChild extends AbstractObjectInstance implement
     private int centreX;
     private int centreY;
     private int xVelocity;
-    private int yVelocity = -0x180;
+    private int yVelocity = -0x200;
     private int xSubpixel;
     private int ySubpixel;
     private int life = 0x80;
@@ -38,7 +38,7 @@ final class CnzEndBossDefeatDebrisChild extends AbstractObjectInstance implement
         CnzEndBossInstance restoredBoss = CnzEndBossRewindLinks.boss(ctx);
         if (restoredBoss == null) return null;
         boolean left = ctx.spawn().subtype() == 0;
-        return new CnzEndBossDefeatDebrisChild(restoredBoss, left ? -8 : 8, left ? -0x100 : 0x100);
+        return new CnzEndBossDefeatDebrisChild(restoredBoss, left ? -8 : 8, left ? -0x300 : 0x300);
     }
     @Override public int getX() { return centreX - 0x14; }
     @Override public int getY() { return centreY - 0x14; }
@@ -51,7 +51,6 @@ final class CnzEndBossDefeatDebrisChild extends AbstractObjectInstance implement
         centreY += ySubpixel >> 8;
         xSubpixel &= 0xFF;
         ySubpixel &= 0xFF;
-        yVelocity += 0x18;
         if (--life <= 0) ObjectLifetimeOps.expireDynamic(this);
         updateDynamicSpawn(centreX, centreY);
     }
@@ -61,6 +60,7 @@ final class CnzEndBossDefeatDebrisChild extends AbstractObjectInstance implement
     public void appendRenderCommands(List<GLCommand> commands) {
         if ((life & 2) == 0) return;
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_END_BOSS);
-        if (renderer != null && renderer.isReady()) renderer.drawFrameIndex(0x0B, centreX, centreY, false, false);
+        int frame = xVelocity < 0 ? 0x0B : 0x0C;
+        if (renderer != null && renderer.isReady()) renderer.drawFrameIndex(frame, centreX, centreY, false, false);
     }
 }
