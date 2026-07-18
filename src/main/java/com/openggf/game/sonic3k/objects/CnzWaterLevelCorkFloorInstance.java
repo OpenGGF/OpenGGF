@@ -17,10 +17,10 @@ import java.util.List;
  *
  * <p>The disassembly spawns a real {@code Obj_CorkFloor}, waits for it to go
  * away, then performs a one-shot write of {@code $0958} into
- * {@code Target_water_level}. The same routine also sets the helper latch that
- * the button object checks later. Task 7 keeps just that one-shot side effect
- * and the latch handoff, because the generic cork-floor rendering and break
- * logic already lives elsewhere in the engine.
+ * {@code Target_water_level}. Its {@code _unkFAA2} latch is separate from the
+ * button's {@code _unkFAA3} arm flag, which is owned by the earlier cutscene
+ * button. The generic cork-floor rendering and break logic already lives
+ * elsewhere in the engine.
  */
 public final class CnzWaterLevelCorkFloorInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
@@ -62,12 +62,8 @@ public final class CnzWaterLevelCorkFloorInstance extends AbstractObjectInstance
             return;
         }
 
-        /**
-         * ROM: the helper arms the later button path at the same time it raises
-         * the first water target. Keeping both writes in the CNZ bridge avoids a
-         * hidden object-local dependency between the two helper objects.
-         */
-        S3kCnzEventWriteSupport.setWaterButtonArmed(services(), true);
+        // ROM loc_65D58 writes only _unkFAA2 and Target_water_level. The later
+        // button consumes the distinct _unkFAA3 flag set by loc_65CC2.
         S3kCnzEventWriteSupport.setWaterTargetY(services(), FIRST_WATER_TARGET_Y);
         setDestroyed(true);
     }

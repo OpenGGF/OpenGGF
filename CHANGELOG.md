@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **CNZ's late water cork no longer arms the final water button:** the cork helper writes its native `_unkFAA2` latch and `$958` target without inventing an `_unkFAA3` write; the distinct button-arm flag remains owned by the earlier cutscene button (`docs/skdisasm/sonic3k.asm:133988,134030-134083`).
 - **CNZ sprite ordering now follows the locked-on ROM object attributes:** balloons, light bulbs, and cylinders use priority `$280` (bucket 5), while Clamer, Sparkle, and Batbot retain their high-plane art flags, including inherited badnik child art (`docs/skdisasm/sonic3k.asm:66747-66755,67257-67264,67614-67640,185861-186388`).
 - **MGZ2's surprise Robotnik now stays behind foreground terrain:** the folded Robotnik-ship child mirrors `Child_SyncDraw`'s parent `art_tile` priority bit, so the normal Act 2 drilling appearances retain `ObjDat_MGZDrillBoss`'s low priority while the end boss keeps its explicit high-priority override (`docs/skdisasm/sonic3k.asm:138841-138854,142389-142452,142720-142770`).
 - **HCZ2's geyser handoff now starts MGZ1 music after the destination load:** the carried post-results fade can no longer silence Marble Garden when the player reaches it through normal progression.

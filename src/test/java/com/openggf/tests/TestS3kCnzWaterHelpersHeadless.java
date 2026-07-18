@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.objects.CnzWaterLevelCorkFloorInstance;
 import com.openggf.game.sonic3k.objects.CorkFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2AInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -21,6 +22,7 @@ import com.openggf.tests.rules.SonicGame;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Headless coverage for the CNZ water-helper objects added in Task 7.
@@ -144,6 +146,11 @@ class TestS3kCnzWaterHelpersHeadless {
 
         assertEquals(0x0958,
                 GameServices.water().getWaterLevelTarget(Sonic3kZoneIds.ZONE_CNZ, 1));
+        assertFalse(S3kCnzEventWriteSupport.isWaterButtonArmed(services),
+                "Obj_CNZWaterLevelCorkFloor writes _unkFAA2, not the button's _unkFAA3 arm flag");
+
+        // loc_65CC2 (the earlier cutscene button) owns the distinct _unkFAA3 write.
+        S3kCnzEventWriteSupport.setWaterButtonArmed(services, true);
 
         CnzWaterLevelButtonInstance button = new CnzWaterLevelButtonInstance(
                 new ObjectSpawn(0x4A40, 0x0A38, Sonic3kObjectIds.CNZ_WATER_LEVEL_BUTTON, 0, 0, false, 0));
