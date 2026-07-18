@@ -30,7 +30,7 @@
 - Test: `src/test/java/com/openggf/trace/replay/TestTraceReplaySessionBootstrapBonus.java` (new; unit-level, no ROM)
 
 **Interfaces:**
-- Consumes: `TraceMetadata.traceProfile()/bonusStageType()` (plan (a)), `TraceData.getFrame(0).rings()`, `GameServices.module().getBonusStageProvider()` (`GameModule.java:132`), `GameplayModeContext.setActiveBonusStageProvider(provider)` (`:643`) + `registerBonusStageAdapter(provider)` (`:542`), `BonusStageProvider.onEnter(BonusStageType, BonusStageState)`, `BonusStageState` 17-component record (`com/openggf/game/BonusStageState.java:9-26`), `GameLoop.resolveBonusStageBootstrapSpawn(type)` (`GameLoop.java:1758`, returns the `PachinkoEnergyTrapObjectInstance` spawn for GLOWING_SPHERE, null otherwise), `LevelManager.setBonusStageHudLayout(true)`, `ObjectManager.addDynamicObject`.
+- Consumes: `TraceMetadata.traceProfile()/bonusStageType()` (plan (a)), `TraceData.getFrame(0).rings()`, `GameServices.module().getBonusStageProvider()` (`GameModule.java:132`), `SessionManager.getCurrentGameplayMode()` (`SessionManager.java:112` — GameServices has no public gameplayMode accessor), `GameplayModeContext.setActiveBonusStageProvider(provider)` (`:643`) + `registerBonusStageAdapter(provider)` (`:542`), `BonusStageProvider.onEnter(BonusStageType, BonusStageState)`, `BonusStageState` 17-component record (`com/openggf/game/BonusStageState.java:9-26`), `GameLoop.resolveBonusStageBootstrapSpawn(type)` (`GameLoop.java:1758`, returns the `PachinkoEnergyTrapObjectInstance` spawn for GLOWING_SPHERE, null otherwise), `LevelManager.setBonusStageHudLayout(true)`, `ObjectManager.addDynamicObject`.
 - Produces: `public static boolean TraceReplaySessionBootstrap.applyBonusStageEntry(TraceData trace)` — returns false (no-op) unless the profile matches; throws `IllegalStateException` for unsupported `bonus_stage_type` values (anything other than `"gumball"`/`"pachinko"`). Task 2's test hook calls it.
 
 - [ ] **Step 1: Write the failing unit test** (profile gating + type mapping only — the full boot path is Task 3's ROM test):
@@ -98,12 +98,16 @@ class TestTraceReplaySessionBootstrapBonus {
         int frame0Rings = trace.getFrame(0).rings();
 
         BonusStageProvider provider = GameServices.module().getBonusStageProvider();
-        GameplayModeContext gameplayMode = GameServices.gameplayMode();
+        // GameServices has NO public gameplayMode() accessor — resolve the
+        // context the way the live path does (GameLoop.doEnterBonusStage):
+        GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
+        // Mirror the live ordering exactly (GameLoop.java:2178/2181/2184):
+        // setActiveBonusStageProvider -> onEnter -> registerBonusStageAdapter.
         gameplayMode.setActiveBonusStageProvider(provider);
-        gameplayMode.registerBonusStageAdapter(provider);
         provider.onEnter(type, new BonusStageState(
             0, 0, frame0Rings, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             (byte) 0x0C, (byte) 0x0D, 0, 0L));
+        gameplayMode.registerBonusStageAdapter(provider);
 
         GameServices.gameState().setRings(frame0Rings);
         GameServices.level().setBonusStageHudLayout(true);
@@ -114,17 +118,24 @@ class TestTraceReplaySessionBootstrapBonus {
             }
         }
         ObjectSpawn bootstrapSpawn = GameLoop.resolveBonusStageBootstrapSpawn(type);
-        if (bootstrapSpawn != null && GameServices.level().getObjectManager() != null) {
-            GameServices.level().getObjectManager().addDynamicObject(
-                new PachinkoEnergyTrapObjectInstance(bootstrapSpawn));
+        var objectManager = GameServices.level().getObjectManager();
+        if (bootstrapSpawn != null && objectManager != null) {
+            // Mirror ensureBonusStageBootstrapObjectPresent's duplicate guard
+            // (GameLoop.java:2288-2292).
+            boolean present = objectManager.getActiveObjects().stream()
+                .anyMatch(PachinkoEnergyTrapObjectInstance.class::isInstance);
+            if (!present) {
+                objectManager.addDynamicObject(
+                    new PachinkoEnergyTrapObjectInstance(bootstrapSpawn));
+            }
         }
         return true;
     }
 ```
 
-Adjust the exact accessor spellings to the surrounding file's conventions (it already uses `GameServices` heavily — reuse whatever alias pattern its other methods use, e.g. if it resolves `LevelManager` once into a local). Use the 16-arg compact `BonusStageState` constructor (`BonusStageState.java:28`) — it omits `meanWaterLevel`. Add the needed imports (`BonusStageProvider`, `BonusStageType`, `BonusStageState`, `GameplayModeContext`, `ObjectSpawn`, `PachinkoEnergyTrapObjectInstance`, `AbstractPlayableSprite`, `GameLoop`). In `GameLoop.java`, change `static ObjectSpawn resolveBonusStageBootstrapSpawn(` to `public static ObjectSpawn resolveBonusStageBootstrapSpawn(` — nothing else.
+Use the 16-arg compact `BonusStageState` constructor (`BonusStageState.java:28`, verified 16 args with `topSolidBit`/`lrbSolidBit` as bytes at positions 13/14) — it omits `meanWaterLevel`. Add the needed imports (`BonusStageProvider`, `BonusStageType`, `BonusStageState`, `GameplayModeContext`, `SessionManager` from `com.openggf.game.session`, `ObjectSpawn`, `PachinkoEnergyTrapObjectInstance`, `AbstractPlayableSprite`, `GameLoop`). In `GameLoop.java`, change `static ObjectSpawn resolveBonusStageBootstrapSpawn(` to `public static ObjectSpawn resolveBonusStageBootstrapSpawn(` — nothing else.
 
-The player-unhide loop deliberately mirrors `GameLoop.restorePlayableStateForBonusTitleCard` (`GameLoop.java:2297-2301`); the high-priority art forcing (`forcePlayerHighPriorityInBonusStage`) is render-only and headless comparison never reads it — SKIP it, and say so in a one-line comment.
+The player-unhide loop deliberately mirrors `GameLoop.restorePlayableStateForBonusTitleCard` (`GameLoop.java:2297-2301`). Two live-path calls are deliberately SKIPPED as render-only (headless comparison never reads them) — `forcePlayerHighPriorityInBonusStage` (high-priority art bucket) and `refreshPlayableSpriteArtCaches` (DPLC cache); say so in a one-line comment.
 
 - [ ] **Step 4: Run the unit test** — PASS. Also compile the tree: `mvn "-Dtest=com.openggf.trace.replay.TestTraceReplaySessionBootstrapBonus" test` compiles src/main.
 
@@ -191,7 +202,7 @@ public abstract class AbstractS3kBonusStageTraceReplayTest extends AbstractTrace
 }
 ```
 
-Concrete classes return zone 0x13 (gumball) / 0x14 (pachinko), act 0, game "s3k", and trace dirs `traces/s3k/bonus_gumball` / `traces/s3k/bonus_pachinko` — copy the exact override set from an existing concrete S3K test (e.g. `TestS3kCnzCompleteRunTraceReplay` or the `s3k` package's dedicated-zone test; match whichever template methods it overrides, including any required-checkpoint/report-name overrides, adapting values).
+Concrete classes override the real template methods `game()` (returns the `SonicGame` enum value for S3K, not a string), `zone()` = 0x13 (gumball) / 0x14 (pachinko), `act()` = 0, and `traceDirectory()` = trace dirs `traces/s3k/bonus_gumball` / `traces/s3k/bonus_pachinko` — copy the exact override set from an existing concrete S3K test (e.g. `TestS3kCnzCompleteRunTraceReplay` or the `s3k` package's dedicated-zone test; match whichever template methods it overrides, including any required-checkpoint/report-name overrides, adapting values).
 
 - [ ] **Step 3: Run both new test classes** — expect SKIPPED (assumption failure on missing trace dir), NOT failure: `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kGumballBonusTraceReplay+TestS3kPachinkoBonusTraceReplay" test` → surefire shows skipped=…, failed=0.
 
@@ -227,7 +238,10 @@ void gumballZoneBootsHeadlesslyWithMachineFromLayout() {
     // fixture with zone 0x13 act 0, S3K module, team sonic(+tails per default config)
     // then perform the bonus-entry actions (provider onEnter GUMBALL, HUD layout, rings 25)
     // step 60 idle frames via the fixture's frame stepper
-    assertEquals(BonusStageType.GUMBALL, GameServices.bonusStage().getActiveType());
+    // getActiveType() lives on AbstractBonusStageCoordinator (:85), NOT the
+    // BonusStageProvider interface — the cast is required to compile.
+    assertEquals(BonusStageType.GUMBALL,
+        ((AbstractBonusStageCoordinator) GameServices.bonusStage()).getActiveType());
     assertTrue(objectManager.getActiveObjects().stream()
         .anyMatch(GumballMachineObjectInstance.class::isInstance),
         "gumball machine object must load from the ROM level layout");
@@ -238,7 +252,8 @@ void gumballZoneBootsHeadlesslyWithMachineFromLayout() {
 void pachinkoZoneBootsHeadlesslyWithInjectedTrap() {
     // fixture with zone 0x14 act 0; entry actions for GLOWING_SPHERE incl.
     // GameLoop.resolveBonusStageBootstrapSpawn injection
-    assertEquals(BonusStageType.GLOWING_SPHERE, GameServices.bonusStage().getActiveType());
+    assertEquals(BonusStageType.GLOWING_SPHERE,
+        ((AbstractBonusStageCoordinator) GameServices.bonusStage()).getActiveType());
     assertTrue(objectManager.getActiveObjects().stream()
         .anyMatch(PachinkoEnergyTrapObjectInstance.class::isInstance),
         "pachinko energy trap must be injected");
