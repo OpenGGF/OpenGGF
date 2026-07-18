@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -32,6 +33,7 @@ class TestS3kCnzEndBossHeadless {
                 .build();
         fixture.camera().setX((short) 0x4660);
         fixture.camera().setY((short) 0x0240);
+        fixture.camera().setMinX((short) 0x4660);
 
         CnzEndBossInstance boss = createBoss();
         GameServices.level().getObjectManager().addDynamicObject(boss);
@@ -42,47 +44,87 @@ class TestS3kCnzEndBossHeadless {
                 TestEnvironment.objectServices().renderManager().getArtProvider();
         assertTrue(artProvider.isCnzEndBossArtPending(),
                 "Obj_CNZEndBoss must issue Load_PLC($6E) only after the camera gate");
-        fixture.stepIdleFrames(121);
+        assertFalse(boss.isNativeBodyRenderableForTest(),
+                "loc_6E4B8 camera continuation runs before routine-0 sprite setup");
+        for (int color = 0; color < 16; color++) {
+            assertEquals(S3kPaletteOwners.CNZ_END_BOSS,
+                    GameServices.paletteOwnershipRegistry().ownerAt(PaletteSurface.NORMAL, 1, color),
+                    "Pal_CNZEndBoss is loaded immediately after sub_85D6A, before its wait completes");
+        }
+        fixture.stepIdleFrames(130);
 
         assertTrue(boss.isStartupCompleteForTest());
         assertEquals("ENTRY", boss.getRoutineForTest());
         assertEquals(Sonic3kObjectIds.CNZ_END_BOSS, GameServices.gameState().getCurrentBossId());
         assertEquals(5, boss.getPriorityBucket());
         assertTrue(artProvider.isCnzEndBossArtComplete());
-        for (int color = 0; color < 16; color++) {
-            assertEquals(S3kPaletteOwners.CNZ_END_BOSS,
-                    GameServices.paletteOwnershipRegistry().ownerAt(PaletteSurface.NORMAL, 1, color));
-        }
-        long graphChildren = GameServices.level().getObjectManager().getActiveObjects().stream()
-                .filter(object -> object.getClass().getSimpleName().startsWith("CnzEndBoss"))
-                .filter(object -> !(object instanceof CnzEndBossInstance))
-                .count();
-        assertEquals(5, graphChildren, "magnet and four arms must be live after native init");
+        assertEquals(1, activeNamed("CnzEndBossRobotnikShipChild"));
+        assertEquals(1, activeNamed("CnzEndBossRobotnikHeadChild"));
+        assertEquals(1, activeNamed("CnzEndBossMagnetChild"));
+        assertEquals(4, activeNamed("CnzEndBossArmChild"),
+                "routine 0 must create ship, magnet and four arms in native slot order");
     }
 
     @Test
-    void attackCycleReachesMagneticAttractionPhase() {
+    void rewindRestorePreservesRealShipHeadAndNativeBossGraph() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
                 .build();
         fixture.camera().setX((short) 0x4660);
         fixture.camera().setY((short) 0x0240);
+        fixture.camera().setMinX((short) 0x4660);
+        CnzEndBossInstance boss = createBoss();
+        GameServices.level().getObjectManager().addDynamicObject(boss);
+        fixture.stepIdleFrames(132);
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        assertEquals(4, activeNamed("CnzEndBossArmChild"),
+                "precondition: routine 0 created all four arm slots");
+
+        var snapshot = objectManager.rewindSnapshottable().capture();
+        assertEquals(4, snapshot.dynamicObjects().stream()
+                        .filter(entry -> entry.className().endsWith("CnzEndBossArmChild"))
+                        .count(),
+                () -> "captured graph=" + snapshot.dynamicObjects().stream()
+                        .map(entry -> entry.className()).toList());
+        objectManager.rewindSnapshottable().restore(snapshot);
+
+        assertEquals(1, activeNamed("CnzEndBossRobotnikShipChild"));
+        assertEquals(1, activeNamed("CnzEndBossRobotnikHeadChild"));
+        assertEquals(1, activeNamed("CnzEndBossMagnetChild"));
+        assertEquals(4, activeNamed("CnzEndBossArmChild"),
+                () -> "rewind graph=" + objectManager.getActiveObjects().stream()
+                        .filter(object -> !object.isDestroyed())
+                        .map(object -> object.getClass().getSimpleName())
+                        .toList());
+    }
+
+    private static long activeNamed(String simpleName) {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(object -> !object.isDestroyed())
+                .filter(object -> object.getClass().getSimpleName().equals(simpleName))
+                .count();
+    }
+
+    @Test
+    void attackCycleReachesNativeMagnetDropPhase() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+        fixture.camera().setX((short) 0x4660);
+        fixture.camera().setY((short) 0x0240);
+        fixture.camera().setMinX((short) 0x4660);
         fixture.sprite().setCentreX((short) 0x4740);
 
         CnzEndBossInstance boss = createBoss();
         GameServices.level().getObjectManager().addDynamicObject(boss);
-        for (int frame = 0; frame < 1800 && !boss.isMagneticFieldActiveForTest(); frame++) {
+        for (int frame = 0; frame < 1800 && !"MAGNET_DROP".equals(boss.getRoutineForTest()); frame++) {
             fixture.stepIdleFrames(1);
         }
 
-        assertTrue(boss.isMagneticFieldActiveForTest(),
-                "off_6E4E2 must reach loc_6E632's magnetic attack window; routine=" + boss.getRoutineForTest());
+        assertEquals("MAGNET_DROP", boss.getRoutineForTest(),
+                "off_6E4E2 must reach loc_6E5B6's released-magnet wait");
         assertEquals(0, boss.getMappingFrameForTest(),
                 "ObjDat_CNZEndBoss keeps the parent body on frame 0; attack animation belongs to children");
-        long fieldChildren = GameServices.level().getObjectManager().getActiveObjects().stream()
-                .filter(object -> object.getClass().getSimpleName().equals("CnzEndBossFieldChild"))
-                .count();
-        assertEquals(2, fieldChildren, "ChildObjDat_6EDE4 must create both magnetic field lobes");
     }
 
     private static CnzEndBossInstance createBoss() {

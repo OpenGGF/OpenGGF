@@ -9,10 +9,72 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class TestCnzEndBossChildren {
+
+    @Test
+    void postFieldWindDownConsumesExactFfWaitBeforeDescent() throws Exception {
+        CnzEndBossInstance boss = boss();
+        boss.setServices(new StubObjectServices().withPlayerQuery(
+                new ObjectPlayerQuery(() -> null, List::of)));
+        setBossRoutine(boss, CnzEndBossInstance.Routine.CHARGE);
+        setBoolean(boss, "magneticFieldActive", true);
+        field(boss, "routineTimer").setInt(boss, 0);
+
+        boss.update(0, null);
+
+        assertEquals(CnzEndBossInstance.Routine.WIND_DOWN, boss.nativeRoutine(),
+                "loc_6E650 must enter the dedicated parent bit-7 wind-down state");
+        for (int frame = 0; frame < 255; frame++) {
+            boss.update(frame + 1, null);
+        }
+        assertEquals(CnzEndBossInstance.Routine.WIND_DOWN, boss.nativeRoutine(),
+                "Obj_Wait with $2E=$FF remains active for 255 decrement frames");
+
+        boss.update(256, null);
+
+        assertEquals(CnzEndBossInstance.Routine.DESCEND, boss.nativeRoutine(),
+                "the 256th wind-down update must dispatch loc_6E66C");
+    }
+
+    @Test
+    void descentBottomSignalsImmediateMagnetReattach() throws Exception {
+        CnzEndBossInstance boss = boss();
+        boss.setServices(new StubObjectServices());
+        CnzEndBossMagnetChild magnet = magnet(boss, playerAt(boss.getCentreX()));
+        magnet.beginDrop();
+        setBoolean(magnet, "landed", true);
+        field(magnet, "centreY").setInt(magnet, boss.getCentreY() + 0x10);
+        field(boss, "magnetChild").set(boss, magnet);
+        setBossRoutine(boss, CnzEndBossInstance.Routine.DESCEND);
+
+        boss.update(0, null);
+
+        assertEquals(CnzEndBossInstance.Routine.ASCEND, boss.nativeRoutine());
+        assertFalse(magnet.isReleasedForTest(),
+                "loc_6E69C bit 3 must make loc_6E920 return the landed magnet to follow mode");
+        assertEquals(boss.getCentreY() + 0x14, magnet.getCentreY(),
+                "reattachment occurs at descent bottom, not after the later ascent");
+    }
+
+    @Test
+    void alignFacingUsesPreMoveComparisonOnFinalPixel() throws Exception {
+        CnzEndBossInstance boss = boss();
+        boss.setServices(new StubObjectServices());
+        CnzEndBossMagnetChild magnet = magnet(boss, playerAt(boss.getCentreX()));
+        field(magnet, "centreX").setInt(magnet, boss.getCentreX() + 1);
+        field(boss, "magnetChild").set(boss, magnet);
+        setBossRoutine(boss, CnzEndBossInstance.Routine.ALIGN);
+
+        boss.update(0, null);
+
+        assertEquals(magnet.getCentreX(), boss.getCentreX());
+        assertEquals(true, boss.facingRight(),
+                "loc_6E5D8 sets render bit 0 from the pre-move comparison on the final pixel");
+    }
 
     @Test
     void magnetDropTargetsClosestNativePlayerAndMovesBeforeApplyingGravity() {
@@ -79,7 +141,7 @@ class TestCnzEndBossChildren {
         CnzEndBossInstance boss = boss();
         CnzEndBossArmChild arm = new CnzEndBossArmChild(boss, 0);
         arm.setServices(new StubObjectServices());
-        setBossRoutine(boss, CnzEndBossInstance.Routine.ALIGN);
+        setBossRoutine(boss, CnzEndBossInstance.Routine.CHARGE);
 
         int[] expected = {3, 1, 3, 1, 1, 1, 1, 1, 3};
         for (int frame : expected) {

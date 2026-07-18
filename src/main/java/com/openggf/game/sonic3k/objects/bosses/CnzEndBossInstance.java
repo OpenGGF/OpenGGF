@@ -15,8 +15,6 @@ import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.CnzEggCapsuleInstance;
-import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
-import com.openggf.game.sonic3k.objects.S3kBossExplosionController;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -74,7 +72,8 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     };
 
     enum Routine {
-        WAIT_CAMERA, CAMERA_LOCK, ENTRY, TRACK, MAGNET_DROP, ALIGN, CHARGE, DESCEND, ASCEND, DEFEATED
+        WAIT_CAMERA, CAMERA_LOCK, INIT, ENTRY, TRACK, MAGNET_DROP, ALIGN, CHARGE, WIND_DOWN,
+        DESCEND, ASCEND, DEFEATED
     }
 
     private int centreX;
@@ -91,6 +90,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private int savedHoverY;
     private boolean magneticFieldActive;
     private int mappingFrame;
+    private boolean bodyVisibleThisFrame = true;
     private boolean startupComplete;
     private final S3kSharedBossCameraGate cameraGate = new S3kSharedBossCameraGate();
     private int savedCameraMinX;
@@ -100,6 +100,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private CnzEndBossMagnetChild magnetChild;
 
     private boolean defeatHandoffComplete;
+    private boolean defeatScatterStarted;
     private int hitCount = HIT_COUNT;
     private int hitInvulnerabilityTimer;
     private boolean capsuleResultsComplete;
@@ -111,9 +112,6 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private int cannonLaunchTimer = -1;
     private int postCapsuleReleaseCountForTest;
     private CnzCannonInstance endCannon;
-    @com.openggf.game.rewind.RewindTransient(
-            reason = "Visual-only explosion scheduler; defeatWaitTimer owns gameplay progression.")
-    private S3kBossExplosionController defeatExplosions;
     private int defeatWaitTimer;
     private int storedBoundBase;
 
@@ -153,6 +151,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
+        bodyVisibleThisFrame = hitInvulnerabilityTimer <= 0 || (frameCounter & 1) == 0;
         if (hitInvulnerabilityTimer > 0) {
             applyHitFlash(hitInvulnerabilityTimer);
             hitInvulnerabilityTimer--;
@@ -169,6 +168,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         switch (routine) {
             case WAIT_CAMERA -> updateCameraGate();
             case CAMERA_LOCK -> updateCameraLock();
+            case INIT -> initializeNativeRoutineZero();
             case ENTRY -> {
                 swingAndMove();
                 if (waitExpired()) beginTracking();
@@ -181,6 +181,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
             case MAGNET_DROP -> updateMagnetDrop();
             case ALIGN -> updateAlign();
             case CHARGE -> updateCharge(player);
+            case WIND_DOWN -> updateWindDown();
             case DESCEND -> updateDescent();
             case ASCEND -> updateAscent();
             case DEFEATED -> { }
@@ -207,6 +208,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         S3kCnzEventWriteSupport.setBossFlag(services(), true);
         services().fadeOutMusic();
         cnzArtProvider().queueCnzEndBossArt();
+        installBossPalette();
     }
 
     private void updateCameraLock() {
@@ -219,6 +221,11 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         if (!cameraReady || !cnzArtProvider().isCnzEndBossArtComplete()) {
             return;
         }
+        routine = Routine.INIT;
+    }
+
+    /** ROM {@code loc_6E4F2}: routine zero owns all six native child allocations. */
+    private void initializeNativeRoutineZero() {
         startupComplete = true;
         routine = Routine.ENTRY;
         routineTimer = ENTRY_WAIT;
@@ -226,7 +233,6 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         xVelocity = -TRACK_SPEED;
         swingVelocity = SWING_MAX;
         swingDown = false;
-        installBossPalette();
         spawnNativeChildren();
     }
 
@@ -248,11 +254,20 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     }
 
     private void spawnNativeChildren() {
+        spawnChild(() -> new CnzEndBossRobotnikShipChild(this));
         magnetChild = spawnChild(() -> new CnzEndBossMagnetChild(this));
         for (int subtype = 0; subtype < 4; subtype++) {
             int phase = subtype << 5;
             spawnChild(() -> new CnzEndBossArmChild(this, phase));
         }
+    }
+
+    @Override
+    protected void recreateConstructionChildrenForRewind() {
+        // loc_6E4F2 creates this fixed six-slot graph on the first native
+        // routine dispatch. Rebuild candidates so restore can adopt the exact
+        // captured ship/magnet/arm identities and their scalar state.
+        spawnNativeChildren();
     }
 
     private void installBossPalette() {
@@ -278,6 +293,10 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     }
 
     private void applyHitFlash(int timer) {
+        if (services().levelManager() == null
+                || services().levelManager().getCurrentLevel() == null) {
+            return;
+        }
         int[] colors = {9, 10, 11, 14};
         int[] dark = {0x0060, 0x0020, 0x0020, 0x0640};
         int[] bright = {0x0888, 0x0EEE, 0x0EEE, 0x0AAA};
@@ -327,8 +346,9 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         swingAndMove();
         int magnetCentreX = magnetChild.getCentreX();
         if (centreX != magnetCentreX) {
-            centreX += Integer.compare(magnetCentreX, centreX);
-            facingRight = magnetCentreX > centreX;
+            int direction = Integer.compare(magnetCentreX, centreX);
+            facingRight = direction > 0;
+            centreX += direction;
             return;
         }
         routine = Routine.CHARGE;
@@ -348,6 +368,14 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         applyMagnetPull();
         if (!waitExpired()) return;
         magneticFieldActive = false;
+        routine = Routine.WIND_DOWN;
+        routineTimer = MAGNET_ACTIVE_WAIT;
+    }
+
+    /** ROM {@code loc_6E650/loc_6E66C}: parent bit 7 remains set for {@code $FF}. */
+    private void updateWindDown() {
+        swingAndMove();
+        if (!waitExpired()) return;
         routine = Routine.DESCEND;
     }
 
@@ -370,6 +398,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         int target = magnetChild.getCentreY() - 0x14;
         if (centreY < target) return;
         centreY = target;
+        magnetChild.reattachAtDescentBottom();
         routine = Routine.ASCEND;
     }
 
@@ -382,7 +411,6 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         swingVelocity = SWING_MAX;
         swingDown = false;
         beginTracking();
-        magnetChild.resetForNextCycle();
     }
 
     private void swingAndMove() {
@@ -469,26 +497,19 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         magneticFieldActive = false;
         hitInvulnerabilityTimer = 0;
         defeatWaitTimer = 0x3F;
-        defeatExplosions = new S3kBossExplosionController(centreX, centreY, 4, services().rng());
         services().gameState().addScore(1000);
         services().fadeOutMusic();
-        spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, -8, -0x300));
-        spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, 8, 0x300));
     }
 
     private void updateDefeatWait() {
         if (routine != Routine.DEFEATED || defeatHandoffComplete) return;
-        if (defeatExplosions != null) {
-            defeatExplosions.tick();
-            for (var pending : defeatExplosions.drainPendingExplosions()) {
-                if (pending.playSfx()) services().playSfx(Sonic3kSfx.EXPLODE.id);
-                spawnChild(() -> new S3kBossExplosionChild(pending.x(), pending.y()));
-            }
-        }
         if (defeatWaitTimer-- <= 0) applyDefeatHandoff();
     }
 
     private void applyDefeatHandoff() {
+        defeatScatterStarted = true;
+        spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, -0x14, -0x100));
+        spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, 0x14, 0x100));
         defeatHandoffComplete = true;
 
         S3kCnzEventWriteSupport.setBossFlag(services(), false);
@@ -674,18 +695,14 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (!bodyVisibleThisFrame || !nativeBodyRenderable()) {
+            return;
+        }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_END_BOSS);
         if (renderer == null) {
             return;
         }
         renderer.drawFrameIndex(mappingFrame, centreX, centreY, !facingRight, false);
-        PatternSpriteRenderer ship = getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
-        if (ship != null) {
-            // Child1_MakeRoboShip4: offset (0,-8), subtype 9; ObjDat ship frame 5,
-            // palette 0 and high_priority art bit.
-            ship.drawFrameIndexForcedPriority(5, centreX, centreY - 8,
-                    !facingRight, false, 0, true);
-        }
     }
 
     public String getRoutineForTest() {
@@ -716,8 +733,39 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         return routine == Routine.DEFEATED;
     }
 
+    boolean defeatScatterStarted() {
+        return defeatScatterStarted;
+    }
+
     boolean facingRight() {
         return facingRight;
+    }
+
+    boolean hurtStatusActive() {
+        return hitInvulnerabilityTimer > 0;
+    }
+
+    boolean shipEscapeSignalled() {
+        return defeatHandoffComplete;
+    }
+
+    void clearBossFlagFromEscapingShip() {
+        S3kCnzEventWriteSupport.setBossFlag(services(), false);
+        if (services().gameState() != null) {
+            services().gameState().setCurrentBossId(0);
+        }
+    }
+
+    public boolean isBodyVisibleForTest() {
+        return bodyVisibleThisFrame;
+    }
+
+    public boolean isNativeBodyRenderableForTest() {
+        return nativeBodyRenderable();
+    }
+
+    private boolean nativeBodyRenderable() {
+        return routine.ordinal() > Routine.INIT.ordinal();
     }
 
     void relinkMagnetChild(CnzEndBossMagnetChild child) {

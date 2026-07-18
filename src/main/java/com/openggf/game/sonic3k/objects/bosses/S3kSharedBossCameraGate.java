@@ -50,6 +50,11 @@ public final class S3kSharedBossCameraGate
         musicStarted = false;
         complete = false;
         musicWaitTimer = musicWaitFrames;
+        if (camera != null && !approachFromRight && unsigned(camera.getX()) < lockBounds.minX()) {
+            // loc_85D70 stores the target without snapping the current bound;
+            // Camera's native two-pixel easing performs the convergence.
+            camera.setMinXTarget((short) lockBounds.minX());
+        }
     }
 
     public boolean update(Camera camera, Runnable onMusicStart) {
@@ -109,10 +114,10 @@ public final class S3kSharedBossCameraGate
         }
         int cameraX = unsigned(camera.getX());
         if (!approachFromRight) {
-            if (cameraX >= lockBounds.minX()) {
+            if (unsigned(camera.getMinX()) >= lockBounds.minX()) {
                 lockX(camera);
             } else {
-                camera.setMinX((short) cameraX);
+                camera.setMinXTarget((short) lockBounds.minX());
             }
             return;
         }
