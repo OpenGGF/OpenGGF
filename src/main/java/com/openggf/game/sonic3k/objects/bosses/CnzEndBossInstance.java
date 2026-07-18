@@ -154,7 +154,9 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity player) {
         if (hitInvulnerabilityTimer > 0) {
+            applyHitFlash(hitInvulnerabilityTimer);
             hitInvulnerabilityTimer--;
+            if (hitInvulnerabilityTimer == 0) installBossPalette();
         }
         if (!defeatHandoffComplete) {
             updateNativeBoss(player);
@@ -267,9 +269,24 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
                 services().graphicsManager(),
                 S3kPaletteOwners.CNZ_END_BOSS,
                 S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
-                0,
+                1,
                 palette,
                 false);
+    }
+
+    private void applyHitFlash(int timer) {
+        int[] colors = {9, 10, 11, 14};
+        int[] dark = {0x0060, 0x0020, 0x0020, 0x0640};
+        int[] bright = {0x0888, 0x0EEE, 0x0EEE, 0x0AAA};
+        S3kPaletteWriteSupport.applyColors(
+                services().paletteOwnershipRegistryOrNull(),
+                services().levelManager().getCurrentLevel(),
+                services().graphicsManager(),
+                S3kPaletteOwners.CNZ_END_BOSS,
+                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                1,
+                colors,
+                (timer & 1) == 0 ? bright : dark);
     }
 
     private void beginTracking() {
@@ -448,8 +465,9 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         routine = Routine.DEFEATED;
         magneticFieldActive = false;
         hitInvulnerabilityTimer = 0;
-        defeatWaitTimer = 2 * 60;
+        defeatWaitTimer = 0x3F;
         defeatExplosions = new S3kBossExplosionController(centreX, centreY, 4, services().rng());
+        services().gameState().addScore(1000);
         services().fadeOutMusic();
         spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, -8, -0x300));
         spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, 8, 0x300));

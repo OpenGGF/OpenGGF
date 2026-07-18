@@ -51,7 +51,7 @@ class TestS3kCnzEndBossHeadless {
         assertTrue(artProvider.isCnzEndBossArtComplete());
         for (int color = 0; color < 16; color++) {
             assertEquals(S3kPaletteOwners.CNZ_END_BOSS,
-                    GameServices.paletteOwnershipRegistry().ownerAt(PaletteSurface.NORMAL, 0, color));
+                    GameServices.paletteOwnershipRegistry().ownerAt(PaletteSurface.NORMAL, 1, color));
         }
         long graphChildren = GameServices.level().getObjectManager().getActiveObjects().stream()
                 .filter(object -> object.getClass().getSimpleName().startsWith("CnzEndBoss"))
