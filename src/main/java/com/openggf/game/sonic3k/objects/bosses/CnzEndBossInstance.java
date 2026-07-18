@@ -28,6 +28,9 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.physics.SwingMotion;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
+import com.openggf.sprites.NativePositionOps;
 
 import java.util.List;
 import java.io.IOException;
@@ -65,7 +68,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private static final int TRACK_WAIT = 3 * 60;
     private static final int CHARGE_WAIT = 0xBF;
     private static final int MAGNET_ACTIVE_WAIT = 0xFF;
-    private static final int MAGNET_FLOOR_Y = 0x02C0;
+    private static final int MAGNET_Y_RADIUS = 0x10;
     private static final int[] MAGNET_PULL_16_16 = {
             0x28000, 0x20000, 0x1C000, 0x18000, 0x14000, 0x10000, 0x0C000, 0x08000
     };
@@ -93,6 +96,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private boolean magnetLanded;
     private boolean magneticFieldActive;
     private int mappingFrame;
+    private int magnetMappingFrame = 4;
     private boolean startupComplete;
 
     private boolean defeatHandoffComplete;
@@ -240,7 +244,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         magnetYSubpixel = 0;
         magnetYVelocity = 0;
         magnetLanded = false;
-        mappingFrame = 4;
+        magnetMappingFrame = 4;
     }
 
     private void updateMagnetDrop() {
@@ -249,12 +253,13 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         magnetYSubpixel += magnetYVelocity;
         magnetY += magnetYSubpixel >> 8;
         magnetYSubpixel &= 0xFF;
-        if (magnetY < MAGNET_FLOOR_Y) return;
-        magnetY = MAGNET_FLOOR_Y;
+        TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(magnetX, magnetY, MAGNET_Y_RADIUS);
+        if (!floor.hasCollision()) return;
+        magnetY += floor.distance();
         magnetYSubpixel = 0;
+        services().playSfx(Sonic3kSfx.FLOOR_THUMP.id);
         if (magnetYVelocity >= 0x80) {
             magnetYVelocity = -(magnetYVelocity >> 1);
-            services().playSfx(Sonic3kSfx.FLOOR_THUMP.id);
             return;
         }
         magnetYVelocity = 0;
@@ -298,7 +303,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
             int pull16 = MAGNET_PULL_16_16[index];
             int signed = delta >= 0 ? pull16 : -pull16;
             if (candidate instanceof AbstractPlayableSprite sprite) {
-                sprite.setCentreXPreserveSubpixel((short) (sprite.getCentreX() + (signed >> 16)));
+                NativePositionOps.addXPos16_16(sprite, signed);
             }
         }
     }
@@ -580,6 +585,10 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
             return;
         }
         renderer.drawFrameIndex(mappingFrame, centreX, centreY, !facingRight, false);
+        if (startupComplete && routine.ordinal() >= Routine.MAGNET_DROP.ordinal()
+                && routine != Routine.DEFEATED) {
+            renderer.drawFrameIndex(magnetMappingFrame, magnetX, magnetY, false, false);
+        }
         PatternSpriteRenderer ship = getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
         if (ship != null) {
             // Child1_MakeRoboShip4: offset (0,-8), subtype 9; ObjDat ship frame 5,
