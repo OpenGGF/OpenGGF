@@ -601,8 +601,10 @@ public class Engine {
 				ref -> activateDisplayShader(ref, loader, defaultPhase));
 		displayShaderController.applySavedSelectionSilently();
 
-		if (configService.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED)
-				&& configService.getBoolean(SonicConfiguration.LIVE_REWIND_VHS_EFFECT)) {
+		// A launch profile may enable live rewind after graphics have initialized.
+		// Prewarm from the presentation preference alone so that session override
+		// still has an effect when the global live-rewind default is disabled.
+		if (configService.getBoolean(SonicConfiguration.LIVE_REWIND_VHS_EFFECT)) {
 			rewindVhsEffectPass = new RewindVhsEffectPass();
 			rewindVhsEffectPass.prewarm(
 					configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS),

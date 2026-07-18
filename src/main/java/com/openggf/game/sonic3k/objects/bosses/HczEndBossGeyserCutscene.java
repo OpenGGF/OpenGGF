@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -415,7 +416,11 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
             // camera phase precedes objects, so restore that pre-dispatch Y.
             var camera = services().camera();
             camera.setY((short) (camera.getY() + GEYSER_RISE_SPEED));
-            services().requestZoneAndAct(NEXT_ZONE, NEXT_ACT, true);
+            // The post-results fade is still active here.  Start MGZ1 after
+            // its level load, rather than letting that source-zone fade mute
+            // the destination's ordinary level-start command.
+            services().requestZoneAndAct(
+                    NEXT_ZONE, NEXT_ACT, true, Sonic3kMusic.MGZ1.id);
             LOG.info("HCZ Geyser Cutscene: carry complete, requesting MGZ Act 1");
         }
     }

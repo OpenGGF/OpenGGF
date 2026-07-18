@@ -1059,7 +1059,11 @@ class TestSidekickCpuControllerCarry {
         fixture.camera().setY((short) 0x0600);
         tails.setCentreY((short) 0x0690);
         controller.update(1);  // INIT -> CARRY_INIT
+        fixture.sprite().setDirectionalInputPressed(false, false, true, false);
         controller.update(2);  // CARRY_INIT -> CARRYING; routine $16 reaches Camera_Y+$90
+
+        assertFalse(controller.getInputLeft(),
+                "loc_14106 clears Ctrl_2 before its Camera_Y+$90 threshold branch; routine $18 input starts next CPU pass");
 
         fixture.sprite().setDirectionalInputPressed(false, false, true, false);
         controller.update(3);

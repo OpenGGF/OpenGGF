@@ -327,6 +327,14 @@ public interface ObjectServices {
     void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow);
 
     /**
+     * Requests a zone/act transition whose destination music must be started
+     * after loading completes.
+     */
+    default void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow, int musicId) {
+        levelManager().requestZoneAndAct(zone, act, deactivateLevelNow, musicId);
+    }
+
+    /**
      * Requests an in-place seamless transition. Use for ROM paths that reload
      * or mutate the level without entering the fade transition loop.
      *

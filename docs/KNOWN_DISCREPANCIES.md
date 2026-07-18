@@ -194,6 +194,7 @@ We use **extended pattern ID ranges** with fixed bases that don't overlap:
 | `0xE0000` | S2 credits / S3K title animation | Shared base in mutually-exclusive contexts; registered as `PatternAtlasRange.S3K_TITLE_SCREEN_ANIMATION` |
 | `0xE8000` | S3K title sprites | Registered as `PatternAtlasRange.S3K_TITLE_SCREEN_SPRITES` |
 | `0x100000` | SEGA boot logos | S1/S2 SEGA logo tiles and S2 giant-Sonic boot-screen art; registered as `PatternAtlasRange.SEGA_BOOT_LOGOS` |
+| `0x108000`–`0x187FFF` | MGZ zoom-cue instance banks | 4096 non-overlapping 128-pattern banks for live/rewound MGZ end-boss scaled-art cues; registered as `PatternAtlasRange.MGZ_ZOOM_CUES`. Allocation is monotonic for process lifetime and fails loudly if exhausted, preventing a later cue from overwriting an earlier queued draw. |
 
 **Shared-base contexts** (`0x40000`):
 - S2 Title Card (`TitleCardManager.PATTERN_BASE`) — gameplay scope, not active during cutscenes

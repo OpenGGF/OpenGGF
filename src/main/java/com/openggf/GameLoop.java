@@ -1528,7 +1528,8 @@ public class GameLoop {
             }
             if (levelManager.consumeZoneActRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                startZoneActFade(levelManager.getRequestedZone(), levelManager.getRequestedAct());
+                startZoneActFade(levelManager.getRequestedZone(), levelManager.getRequestedAct(),
+                        levelManager.getRequestedMusicId());
                 finishUserRecordingPlaybackAtLevelBoundary(false);
                 updateNonGameplayAudio(doFrameStep);
                 return false;
@@ -4090,20 +4091,29 @@ public class GameLoop {
     /**
      * Starts the fade-to-black transition for a specific zone/act.
      */
-    private void startZoneActFade(int zone, int act) {
+    private void startZoneActFade(int zone, int act, int postLoadMusicId) {
         LOGGER.info("Starting fade-to-black for zone " + zone + " act " + act);
 
         audioManager.fadeOutMusic();
 
-        fadeManager.startFadeToBlack(() -> doZoneAct(zone, act));
+        fadeManager.startFadeToBlack(() -> doZoneAct(zone, act, postLoadMusicId));
     }
 
     /**
      * Actually loads the specified zone/act after fade-to-black completes.
      */
-    private void doZoneAct(int zone, int act) {
+    private void doZoneAct(int zone, int act, int postLoadMusicId) {
         try {
+            // A cutscene may still have a source-zone music fade in flight.
+            // Load the destination normally, then issue its requested track
+            // last so the old fade cannot win the handoff.
+            if (postLoadMusicId >= 0) {
+                levelManager.setSuppressNextMusicChange(true);
+            }
             levelManager.loadZoneAndAct(zone, act);
+            if (postLoadMusicId >= 0) {
+                audioManager.playMusic(postLoadMusicId);
+            }
         } catch (IOException e) {
             throw new RuntimeException("Failed to load zone " + zone + " act " + act, e);
         }

@@ -17,8 +17,10 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.objects.HczTransitionBubbleInstance;
 import com.openggf.game.sonic3k.scroll.SwScrlHcz;
 import com.openggf.level.ParallaxManager;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.scroll.ZoneScrollHandler;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestablePlayableSprite;
@@ -30,8 +32,10 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -213,6 +217,51 @@ class TestSonic3kHCZEvents {
         assertFalse(secondSidekick.isObjectControlled());
     }
 
+    @Test
+    void postTransitionControllerSpawnsOneBubbleForEachOfFortyEightDispatches() {
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x0100, (short) 0x07F0);
+        player.setCpuControlled(false);
+        player.setInWater(true);
+        GameServices.camera().setFocusedSprite(player);
+        GameServices.camera().setX((short) 0x0080);
+        GameServices.sprites().addSprite(player, "sonic");
+        long initialSeed = 0x12345678L;
+        GameServices.rng().setSeed(initialSeed);
+        GameRng expectedRng = new GameRng(GameRng.Flavour.S3K, initialSeed);
+        int firstRandom = expectedRng.nextRaw();
+        for (int draw = 1; draw < 0x30; draw++) {
+            expectedRng.nextRaw();
+        }
+
+        RecordingHczEvents events = new RecordingHczEvents();
+        events.init(1);
+        events.startPostTransitionCutscene();
+
+        events.updateRetainedCarrierObjectPass(1);
+        assertEquals(0, events.transitionBubbleCount(),
+                "the retained carrier init dispatch sets the controller flag for the next pass");
+
+        for (int dispatch = 0; dispatch < 0x30; dispatch++) {
+            events.updateRetainedCarrierObjectPass(1);
+        }
+
+        assertEquals(0x30, events.transitionBubbleCount(),
+                "Obj_Wait $2F produces $30 loc_6A2A0 child-creation dispatches");
+        assertEquals(0, events.getTransitionBubbleSpawnFrames());
+        HczTransitionBubbleInstance firstBubble = events.firstTransitionBubble();
+        int expectedAxisX = 0x0080 + 0xA0;
+        assertEquals(expectedAxisX + (byte) firstRandom, firstBubble.getX());
+        assertEquals(GameServices.water().getWaterLevelY(Sonic3kZoneIds.ZONE_HCZ, 1)
+                        + 8 + ((firstRandom >>> 16) & 0x1F),
+                firstBubble.getY());
+        assertEquals(expectedRng.getSeed(), GameServices.rng().getSeed(),
+                "each child must consume exactly one shared Random_Number result");
+
+        events.updateRetainedCarrierObjectPass(1);
+        assertEquals(0x30, events.transitionBubbleCount());
+    }
+
     private static void tickAct2(Sonic3kHCZEvents events, int frame) {
         events.updatePrePhysics(1, frame);
         events.update(1, frame);
@@ -290,6 +339,31 @@ class TestSonic3kHCZEvents {
                 throw io;
             }
             throw e;
+        }
+    }
+
+    private static final class RecordingHczEvents extends Sonic3kHCZEvents {
+        private final List<ObjectInstance> spawnedObjects = new ArrayList<>();
+
+        @Override
+        protected <T extends ObjectInstance> T spawnObject(Supplier<T> factory) {
+            T object = factory.get();
+            spawnedObjects.add(object);
+            return object;
+        }
+
+        private long transitionBubbleCount() {
+            return spawnedObjects.stream()
+                    .filter(HczTransitionBubbleInstance.class::isInstance)
+                    .count();
+        }
+
+        private HczTransitionBubbleInstance firstTransitionBubble() {
+            return spawnedObjects.stream()
+                    .filter(HczTransitionBubbleInstance.class::isInstance)
+                    .map(HczTransitionBubbleInstance.class::cast)
+                    .findFirst()
+                    .orElseThrow();
         }
     }
 }

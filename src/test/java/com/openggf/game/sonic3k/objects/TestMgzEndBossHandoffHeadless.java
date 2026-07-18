@@ -1,14 +1,18 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.HeadlessTestFixture;
@@ -67,6 +71,8 @@ class TestMgzEndBossHandoffHeadless {
 
     @BeforeEach
     void setUp() {
+        SonicConfigurationService.getInstance().setConfigValue(
+                SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         fixture = HeadlessTestFixture.builder().withSharedLevel(sharedLevel).build();
         fixture.camera().setX((short) 0x3C80);
         fixture.camera().setY((short) 0x0600);
@@ -90,7 +96,8 @@ class TestMgzEndBossHandoffHeadless {
         boss.getState().x = 0x3D20;
         boss.getState().y = 0x0668;
 
-        for (int frame = 0; frame < 240 && !isBossTransitionActive(); frame++) {
+        for (int frame = 0; frame < 240
+                && (!isBossTransitionActive() || GameServices.sprites().getSidekicks().isEmpty()); frame++) {
             fixture.stepIdleFrames(1);
         }
 
@@ -182,8 +189,137 @@ class TestMgzEndBossHandoffHeadless {
     }
 
     @Test
+    void liveFloorImpactDisablesDeathPlaneBeforePlayerBoundaryAndKeepsImpactSound() throws Exception {
+        MgzEndBossInstance boss = new MgzEndBossInstance(new ObjectSpawn(
+                0x3D20, 0x0668, Sonic3kObjectIds.MGZ_END_BOSS, 0, 0, false, 0));
+        GameServices.level().getObjectManager().addDynamicObject(boss);
+        setPrivateInt(boss, "waitTimer", 0);
+        setPrivateInt(boss, "yVel", 0x400);
+        boss.getState().routine = staticInt("ROUTINE_END_FLOOR_DROP");
+        boss.getState().x = 0x3D20;
+        boss.getState().y = 0x0668;
+
+        for (int frame = 0; frame < 240
+                && !boss.willPublishDeathPlaneDisableThisObjectPass(); frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertTrue(boss.willPublishDeathPlaneDisableThisObjectPass(),
+                "The fixture must reach the retained floor-impact object pass");
+
+        // Cross the engine kill plane in the player slot immediately before
+        // the later boss slot executes loc_6C4BE in this same object pass.
+        fixture.sprite().setCentreY((short) 0x0781);
+        fixture.sprite().setYSpeed((short) 0x0100);
+        GameServices.audio().commandTimeline().clear();
+
+        fixture.stepIdleFrames(1);
+        assertFalse(fixture.sprite().getDead(),
+                "Disable_death_plane must be visible before the player boundary phase");
+        assertFalse(fixture.camera().getFrozen(),
+                "The MGZ handoff must never transiently enter the death-camera freeze");
+
+        assertTrue(mgzEvents().isBossTransitionDeathPlaneDisabled());
+        assertTrue(GameServices.audio().commandTimeline().entries().stream()
+                        .map(entry -> entry.command())
+                        .anyMatch(command -> command instanceof AudioCommand.PlaySfx sfx
+                                && sfx.sfxId() == Sonic3kSfx.BOSS_HIT_FLOOR.id),
+                "loc_6C4BE must retain sfx_BossHitFloor");
+        assertFalse(GameServices.audio().commandTimeline().entries().stream()
+                        .map(entry -> entry.command())
+                        .anyMatch(command -> command instanceof AudioCommand.PlaySfx sfx
+                                && sfx.sfxId() == Sonic3kSfx.DEATH.id),
+                "The rescue handoff must not queue the transient pit-death SFX");
+
+        mgzEvents().setBossTransitionDeathPlaneDisabled(false);
+        Sonic3kLevelEventManager manager = (Sonic3kLevelEventManager)
+                com.openggf.game.GameModuleRegistry.getCurrent().getLevelEventProvider();
+        assertFalse(manager.interceptPitDeath(fixture.sprite()),
+                "The one-pass anticipation must not suppress genuine later pit deaths");
+    }
+
+    @Test
+    void eventSpawnedKnucklesBossCompletesRealFightCapsuleResultsAndAutoWalk() {
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        fixture.camera().setX((short) 0x3A00);
+        fixture.camera().setY((short) 0x0000);
+        fixture.sprite().setCentreY((short) 0x00A0);
+        fixture.sprite().setAir(false);
+        mgzEvents().update(1, 0);
+        fixture.camera().setX((short) 0x3C80);
+        mgzEvents().update(1, 1);
+
+        MgzEndBossKnuxInstance boss = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(MgzEndBossKnuxInstance.class::isInstance)
+                .map(MgzEndBossKnuxInstance.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Sonic3kObjectIds.MGZ_END_BOSS_KNUX, GameServices.gameState().getCurrentBossId());
+        assertTrue(GameServices.audio().commandTimeline().entries().stream()
+                        .map(entry -> entry.command())
+                        .anyMatch(command -> command instanceof AudioCommand.PlayMusic music
+                                && music.musicId() == Sonic3kMusic.MINIBOSS.id),
+                "The Knuckles event branch must start the ROM miniboss music");
+        assertFalse(mgzEvents().isBossTransitionDeathPlaneDisabled(),
+                "Knuckles must retain normal death-plane ownership instead of entering Sonic's rescue handoff");
+        assertTrue(GameServices.sprites().getSidekicks().isEmpty(),
+                "The Knuckles route must not create rescue Tails");
+        assertEquals(0x3C80, fixture.camera().getMinX() & 0xFFFF,
+                "MGZ2_Resize must own the left arena boundary before spawning $A2");
+        assertEquals(0x00A0, fixture.camera().getMinY() & 0xFFFF,
+                "Knuckles' placement-path arena is the top MGZ band, $600 above Sonic's arena");
+        assertEquals(0x0068, boss.getSpawn().y(),
+                "$A2 must spawn in the native top-band coordinate space used by reset y=-$58 and capsule y=$B0");
+
+        for (int frame = 0; frame < 1200 && boss.getNativeRoutineForTesting() < 0x06; frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertTrue(boss.getNativeRoutineForTesting() >= 0x06,
+                "The real drill child must publish its ready flag and advance the boss choreography");
+
+        for (int hit = 0; hit < 8; hit++) {
+            boss.onPlayerAttack(fixture.sprite(), null);
+            fixture.stepIdleFrames(0x20);
+        }
+        assertEquals(0, boss.getCollisionProperty(), "the Knuckles fight must end on hit eight");
+
+        for (int frame = 0; frame < 2 * 60 + 0xB3 + 8 && !boss.isCapsuleSpawnedForTesting(); frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertTrue(boss.isCapsuleSpawnedForTesting(),
+                "Wait_FadeToLevelMusic and loc_6C890 must always reach the capsule handoff");
+
+        MgzEndBossKnuxEggCapsuleInstance capsule = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(MgzEndBossKnuxEggCapsuleInstance.class::isInstance)
+                .map(MgzEndBossKnuxEggCapsuleInstance.class::cast)
+                .findFirst().orElseThrow();
+        capsule.onPieceContact(1, fixture.sprite(),
+                new SolidContact(true, false, false, true, false), 0);
+        for (int frame = 0; frame < 0x42 && !capsule.isResultsStarted(); frame++) {
+            fixture.sprite().setAir(false);
+            capsule.update(frame, fixture.sprite());
+        }
+        assertTrue(capsule.isResultsStarted(), "the real upright capsule must start its results object");
+        for (int frame = 0; frame < 2400 && !boss.isCompletionReady(); frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertTrue(boss.isCompletionReady(), "x=" + (fixture.sprite().getCentreX() & 0xFFFF)
+                + " camera=" + (fixture.camera().getX() & 0xFFFF)
+                + " input=" + fixture.sprite().getForcedInputMask()
+                + " lock=" + fixture.sprite().isControlLocked()
+                + " suppress=" + fixture.sprite().isObjectControlSuppressesMovement()
+                + " air=" + fixture.sprite().getAir()
+                + " dead=" + fixture.sprite().getDead()
+                + " g=" + fixture.sprite().getGSpeed()
+                + " xv=" + fixture.sprite().getXSpeed()
+                + " endActive=" + GameServices.gameState().isEndOfLevelActive());
+        assertTrue(boss.isDestroyed(),
+                "loc_6C932 must release the retained boss once Knuckles clears camera+$150");
+        assertFalse(fixture.sprite().getDead(), "the complete Knuckles route must not end in a fall-forever death");
+    }
+
+    @Test
     void bossTransitionRoutine12LeavesTailsFreeToFallDuringWait() {
-        mgzEvents().triggerBossCollapseHandoff();
+        triggerAndInitializeBossTransition();
 
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
         assertEquals(SidekickCpuController.State.MGZ_RESCUE_WAIT, tails.getCpuController().getState(),
@@ -202,7 +338,7 @@ class TestMgzEndBossHandoffHeadless {
 
     @Test
     void bossTransitionInitialPickupUsesCameraAnchoredTransitionX() {
-        mgzEvents().triggerBossCollapseHandoff();
+        triggerAndInitializeBossTransition();
 
         AbstractPlayableSprite player = fixture.sprite();
         player.setCentreX((short) 0x3D40);
@@ -225,7 +361,7 @@ class TestMgzEndBossHandoffHeadless {
 
     @Test
     void bossTransitionCarryRecoversWhenTailsIsHurt() {
-        mgzEvents().triggerBossCollapseHandoff();
+        triggerAndInitializeBossTransition();
 
         AbstractPlayableSprite player = fixture.sprite();
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
@@ -275,7 +411,7 @@ class TestMgzEndBossHandoffHeadless {
 
     @Test
     void bossTransitionDoesNotReviveFallingSonicDeathRoutineForRescue() {
-        mgzEvents().triggerBossCollapseHandoff();
+        triggerAndInitializeBossTransition();
 
         AbstractPlayableSprite player = fixture.sprite();
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
@@ -369,6 +505,13 @@ class TestMgzEndBossHandoffHeadless {
         assertEquals(0, GameServices.level().getRequestedAct());
         assertTrue(GameServices.level().isLevelInactiveForTransition(),
                 "The final zone request should freeze level updates while GameLoop fades to black");
+    }
+
+    private void triggerAndInitializeBossTransition() {
+        mgzEvents().triggerBossCollapseHandoff();
+        fixture.stepIdleFrames(1);
+        assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                "The following ExecuteObjects pass must initialize the deferred transition SST and create rescue Tails");
     }
 
     private boolean isBossTransitionActive() {

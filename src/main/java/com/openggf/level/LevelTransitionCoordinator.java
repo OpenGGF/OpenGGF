@@ -45,6 +45,7 @@ public class LevelTransitionCoordinator {
     private boolean specificZoneActRequested;
     private int requestedZone = -1;
     private int requestedAct = -1;
+    private int requestedMusicId = -1;
 
     // ── Seamless transitions ───────────────────────────────────────────
     private boolean seamlessTransitionRequested;
@@ -452,8 +453,21 @@ public class LevelTransitionCoordinator {
      * @param deactivateLevelNow  true to freeze level updates until the transition completes
      */
     public void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow) {
+        requestZoneAndAct(zone, act, deactivateLevelNow, -1);
+    }
+
+    /**
+     * Request a zone/act transition with a track that must be started only
+     * after the destination level has finished loading.
+     *
+     * <p>This is for cutscenes whose source track is still fading while they
+     * hand control to a new zone.  Deferring the destination track prevents a
+     * source-side fade command from silencing it.
+     */
+    public void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow, int musicId) {
         this.requestedZone = zone;
         this.requestedAct = act;
+        this.requestedMusicId = musicId;
         this.specificZoneActRequested = true;
         this.levelInactiveForTransition = deactivateLevelNow;
     }
@@ -485,6 +499,14 @@ public class LevelTransitionCoordinator {
      */
     public int getRequestedAct() {
         return requestedAct;
+    }
+
+    /**
+     * @return a post-load music ID for the consumed zone/act request, or -1
+     * when the destination should use its ordinary level-load music.
+     */
+    public int getRequestedMusicId() {
+        return requestedMusicId;
     }
 
     // ================================================================
@@ -685,6 +707,7 @@ public class LevelTransitionCoordinator {
         levelInactiveForTransition = false;
         requestedZone = -1;
         requestedAct = -1;
+        requestedMusicId = -1;
         pendingSeamlessTransitionRequest = null;
         synchronousScreenEventTransitionContext = null;
     }

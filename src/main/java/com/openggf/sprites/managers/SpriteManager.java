@@ -954,7 +954,16 @@ public class SpriteManager {
 			boolean rawUp, boolean rawDown, boolean rawLeft, boolean rawRight, boolean rawJump,
 			boolean logicalUp, boolean logicalDown, boolean logicalLeft, boolean logicalRight, boolean logicalJump,
 			boolean explicitLogicalJumpPress, boolean logicalJumpPress) {
-		playable.setJumpInputPressed(rawJump);
+		// Scripted/demo input is ROM Ctrl_*_logical data, not a side channel.
+		// Merge it before publishing the frame's logical word so a late object
+		// write survives the next hardware-input sampling pass.
+		logicalUp |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_UP);
+		logicalDown |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_DOWN);
+		logicalLeft |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_LEFT);
+		logicalRight |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT);
+		logicalJump |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
+		logicalJumpPress |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
+		playable.setJumpInputPressed(rawJump || playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP));
 		playable.setDirectionalInputPressed(rawUp, rawDown, rawLeft, rawRight);
 		if (explicitLogicalJumpPress) {
 			playable.setLogicalInputState(logicalUp, logicalDown, logicalLeft, logicalRight, logicalJump,

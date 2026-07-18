@@ -1,10 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.audio.GameSound;
-import com.openggf.configuration.SonicConfiguration;
-import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.debug.DebugOverlayManager;
-import com.openggf.debug.DebugOverlayToggle;
+import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.graphics.GLCommand;
@@ -65,8 +62,6 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
     // Debug colors
     private static final float ENABLE_R = 0.0f, ENABLE_G = 1.0f, ENABLE_B = 0.0f;
     private static final float DISABLE_R = 1.0f, DISABLE_G = 0.0f, DISABLE_B = 0.0f;
-    private static final boolean DEBUG_VIEW_ENABLED = staticDebugViewEnabled();
-    private static final DebugOverlayManager OVERLAY_MANAGER = staticDebugOverlay();
 
     private boolean verticalMode;     // subtype bit 2
     private boolean noSpinLock;       // subtype bit 4
@@ -423,20 +418,27 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (!DEBUG_VIEW_ENABLED || !OVERLAY_MANAGER.isEnabled(DebugOverlayToggle.OVERLAY)) {
-            return;
-        }
-        super.appendRenderCommands(commands);
+        // Obj_AutoSpin is an invisible trigger.
+    }
 
+    @Override
+    public void appendDebugRenderCommands(DebugRenderContext ctx) {
         int centerX = spawn.x();
         int centerY = spawn.y();
+        float r = xFlipped ? DISABLE_R : ENABLE_R;
+        float g = xFlipped ? DISABLE_G : ENABLE_G;
+        float b = xFlipped ? DISABLE_B : ENABLE_B;
+
+        ctx.drawRect(centerX, centerY, getHalfWidth(), getHalfHeight(), r, g, b);
+        ctx.drawCross(centerX, centerY,
+                Math.min(getHalfWidth(), getHalfHeight()) / 2, r, g, b);
 
         if (verticalMode) {
-            appendLine(commands, centerX - getHalfWidth(), centerY,
-                    centerX + getHalfWidth(), centerY);
+            ctx.drawLine(centerX - getHalfWidth(), centerY,
+                    centerX + getHalfWidth(), centerY, r, g, b);
         } else {
-            appendLine(commands, centerX, centerY - getHalfWidth(),
-                    centerX, centerY + getHalfWidth());
+            ctx.drawLine(centerX, centerY - getHalfHeight(),
+                    centerX, centerY + getHalfHeight(), r, g, b);
         }
     }
 }

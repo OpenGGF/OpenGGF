@@ -168,6 +168,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         hcz.setCarrierP2XVelocity(0xD40);
         hcz.setCarrierP1TargetSide(false);
         hcz.setCarrierP2TargetSide(false);
+        hcz.setTransitionBubbleSpawnFrames(23);
         hcz.setLevelSizeTransitionActive(true);
         hcz.setLevelSizeMaxXGradient(0x14000);
         hcz.setLevelSizeMinYGradient(0x18000);
@@ -198,6 +199,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         assertEquals(0xD40, hcz2.getCarrierP2XVelocity());
         assertFalse(hcz2.isCarrierP1TargetSide());
         assertFalse(hcz2.isCarrierP2TargetSide());
+        assertEquals(23, hcz2.getTransitionBubbleSpawnFrames());
         assertTrue(hcz2.isLevelSizeTransitionActive());
         assertEquals(0x14000, hcz2.getLevelSizeMaxXGradient());
         assertEquals(0x18000, hcz2.getLevelSizeMinYGradient());

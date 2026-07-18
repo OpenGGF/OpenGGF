@@ -554,7 +554,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// (sonic3k.asm:26775-26785), and Tails_InputAcceleration_Freespace consumes
 		// those bits before MoveSprite_TestGravity (sonic3k.asm:27556-27559,
 		// 28330-28401). Do not clear CPU-generated sidekick input here.
-		boolean objControlLocked = sprite.isControlLocked() && !sprite.isCpuControlled();
+		// A native object may own Ctrl_*_logical while the hardware-input copy is
+		// locked (for example loc_86334). An explicit forced mask is that semantic
+		// ownership token: it lets only the already-filtered scripted buttons reach
+		// normal movement, without reopening raw player input. Ordinary locked
+		// players, which have no forced mask, remain fully immobile.
+		boolean objControlLocked = controlLockBlocksScriptedMovement(sprite);
 
 		inputRawLeft = left;
 		inputRawRight = right;
@@ -813,6 +818,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		collisionSystem().resolvePostMovementBackgroundWallClamp(
 				FrameCollisionPlan.terrainOnly(), sprite);
 		updateCrouchState();
+	}
+
+	static boolean controlLockBlocksScriptedMovement(AbstractPlayableSprite sprite) {
+		return sprite.isControlLocked()
+				&& !sprite.isCpuControlled()
+				&& sprite.getForcedInputMask() == 0;
 	}
 
 	/** Obj01_MdRoll: Rolling on ground state */

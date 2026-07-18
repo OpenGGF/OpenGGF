@@ -1,5 +1,18 @@
 # Trace Frontier Log
 
+### 2026-07-18 -- AIZ/HCZ/MGZ parity-polish merge checkpoint
+
+Before merging `bugfix/aiz-hcz-mgz-polish` into `develop`, the ROM-backed
+S1/S2/S3K replay checkpoint ran from `45465ca4c` with the discovered root-level
+REV01 S1/S2 and locked-on S3K ROMs:
+
+`mvn -Ptrace-replay "-Dsurefire.argLine=-Xshare:off -Xmx3g" -Dsurefire.forkCount=1 -Dsonic1.rom.path=<root S1 ROM> -Dsonic2.rom.path=<root S2 ROM> -Ds3k.rom.path=<root S3K ROM> -Dtest='*TraceReplay' -DfailIfNoTests=false test`
+
+The suite completed 108 tests: 69 passed, 37 failed, 1 errored, and 1 skipped.
+The expected failing, errored, and skipped identities matched the documented
+frontier signature; the extra green coverage accounts for the total increasing
+from the older 92-test checkpoint. No trace frontier moved.
+
 ### 2026-07-17 -- Review finding 10: hot-file whitespace churn removed
 
 Branch `feature/ai-trace-animation-verification`, on top of `e56e1d549`.
@@ -46278,3 +46291,27 @@ mvn.cmd -q -Dmse=off "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3
   remaining gameplay cascade begins around the MHZ miniboss approach at f10958.
 - Verification: broad focused MHZ object/path-switch/rewind/bootstrap suite green;
   complete-run trace reproduced 2103 errors twice after diagnostic cleanup.
+### 2026-07-18 -- MGZ2 end-boss verification sweep
+
+The MGZ2 boss parity changes were checked against both recorded MGZ routes with
+the root-level locked-on S3K ROM. The standalone replay completed green (1/1):
+
+`mvn -Dmse=off -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' -Dtest='com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay' test`
+
+The complete-run replay was attempted both alongside the standalone replay and
+in isolation. Both forks exhausted Java heap before publishing a comparison
+result; the isolated retry also supplied `-DargLine='-Xmx3g'`, but the effective
+Surefire fork still terminated with `Java heap space`. This is verification
+infrastructure evidence, not a green or a moved trace frontier. A subsequent
+run must use the repository's effective Surefire heap property/configuration
+and record the comparison result before the complete-run route can be claimed
+verified.
+
+Follow-up verification supplied the heap through the effective Surefire
+property and ran each route in its own fork. Both completed green (1/1):
+
+`mvn -q surefire:test -Dtest=com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dsurefire.argLine=-Xshare:off -Xmx4g' -Dsurefire.forkCount=1 -DfailIfNoTests=false`
+
+The complete-run replay finished in 7.352 seconds with zero failures/errors;
+the standalone replay finished separately in 6.661 seconds with zero
+failures/errors. No comparison report or moved frontier was emitted.
