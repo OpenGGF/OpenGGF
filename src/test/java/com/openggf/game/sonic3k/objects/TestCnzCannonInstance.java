@@ -102,7 +102,7 @@ class TestCnzCannonInstance {
     }
 
     @Test
-    void rawSpinAngleReachesTwelveAndForcedJumpLaunchesThroughUpdate() {
+    void rawSpinUsesOldAngleThenForcedJumpAtTwelveLaunchesWithRomVector() {
         CnzCannonInstance cannon = new CnzCannonInstance(spawn());
         cannon.setServices(new TestObjectServices());
         TestPlayableSprite player = new TestPlayableSprite();
@@ -113,11 +113,19 @@ class TestCnzCannonInstance {
         cannon.setLaunchDelayFramesForTest(0);
 
         assertEquals(0, cannon.getSpinAngle(), "capture resets the raw angle byte");
-        for (int frame = 3967; frame < 3976; frame++) {
+        for (int frame = 3967; frame < 3970; frame++) {
+            cannon.update(frame, player);
+        }
+        assertEquals(0x06, cannon.getSpinAngle());
+        assertEquals(4, cannon.getRenderFrameForTest(),
+                "sub_3192C derives sub2_mapframe from old angle $04 before storing $06");
+        for (int frame = 3970; frame < 3976; frame++) {
             cannon.update(frame, player);
         }
         assertEquals(0x12, cannon.getSpinAngle(),
                 "nine native +2 spin steps reach the boss launch gate angle");
+        assertEquals(6, cannon.getRenderFrameForTest(),
+                "the display frame preceding the gate is the ROM sine-table result");
         assertTrue(player.isObjectControlled());
 
         player.setForcedInputMask(TestPlayableSprite.INPUT_JUMP);
@@ -125,6 +133,13 @@ class TestCnzCannonInstance {
 
         assertFalse(player.isObjectControlled(),
                 "the cannon's own logical-button check consumes forced jump and launches");
+        assertEquals(0x14, cannon.getSpinAngle(),
+                "the forced-launch dispatch computes from old $12, then stores $14");
+        assertEquals((short) 0x0B50, player.getXSpeed(),
+                "mapping frame 6 launches with cos($E0)<<4");
+        assertEquals((short) -0x0B50, player.getYSpeed(),
+                "mapping frame 6 launches with sin($E0)<<4; the plan's straight-up gloss was incorrect");
+        assertEquals(player.getXSpeed(), player.getGSpeed());
         assertFalse(cannon.hasCapturedPlayerForEndSequence());
     }
 

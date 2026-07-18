@@ -200,8 +200,11 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     }
 
     private void advanceSpin(int frameCounter) {
+        int displayAngle = spinAngle;
         spinAngle = (spinAngle + 2) & 0xFF;
-        int frame = (TrigLookupTable.sinHex(spinAngle) + 0x120) >> 6;
+        // sub_3192C derives the chamber frame from the old angle, then stores angle + 2
+        // before the jump-button path can launch the player.
+        int frame = (TrigLookupTable.sinHex(displayAngle) + 0x120) >> 6;
         chamberFrame = Math.max(FRAME_SPIN_MIN, Math.min(FRAME_SPIN_MAX, frame));
 
         if (frameCounter >= 0 && (frameCounter & 0x1F) == 0) {
