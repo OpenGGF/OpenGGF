@@ -72,25 +72,30 @@ public class TestSonic3kZoneFeatureProvider {
     }
 
     @Test
-    public void aizEndSignSequenceKeepsBossArenaPriorityAfterBossFlagClears() {
+    public void aizMinibossResultsDoNotTakeOwnershipFromPathSwitcher() {
         TestZoneFeatureProvider provider = new TestZoneFeatureProvider();
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         FakeAizEvents aizEvents = new FakeAizEvents();
         provider.setAizEvents(aizEvents);
 
+        // Obj_PathSwap subtype $22 at x=$10E0 sets art_tile's high-priority bit
+        // when Sonic crosses to its right side.
+        player.setHighPriority(true);
         aizEvents.setBossFlag(true);
         provider.update(player, 0x10E0, Sonic3kZoneIds.ZONE_AIZ);
-        assertTrue(player.isHighPriority(), "AIZ boss arena should force Sonic in front of foreground masks");
+        assertTrue(player.isHighPriority());
+        assertEquals(RenderPriority.PLAYER_DEFAULT, player.getPriorityBucket(),
+                "The AIZ miniboss should leave path-switch priority under Obj_PathSwap ownership");
 
         aizEvents.setBossFlag(false);
         GameServices.gameState().setEndOfLevelActive(true);
         provider.update(player, 0x10E0, Sonic3kZoneIds.ZONE_AIZ);
+        GameServices.gameState().setEndOfLevelActive(false);
+        provider.update(player, 0x10E0, Sonic3kZoneIds.ZONE_AIZ);
 
         assertTrue(player.isHighPriority(),
-                "Obj_EndSignControl clears Boss_flag before the falling signpost/results flow finishes; "
-                        + "Sonic's art_tile priority bit must survive that handoff");
-        assertEquals(RenderPriority.MIN, player.getPriorityBucket(),
-                "The AIZ end-sign flow should keep Sonic in the front display bucket while results are active");
+                "Ending the miniboss/results sequence must not clear Obj_PathSwap's art_tile priority bit");
+        assertEquals(RenderPriority.PLAYER_DEFAULT, player.getPriorityBucket());
     }
 
     @Test

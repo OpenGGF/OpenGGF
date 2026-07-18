@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **AIZ's seamless Act 1-to-Act 2 route now retains the ROM path-switch priority through the title card:** the miniboss/results render override no longer takes ownership of Sonic's `art_tile` priority, so the high-priority bit set by `Obj_PathSwap` subtype `$22` at x `$10E0` remains active instead of being cleared when the results state ends (`docs/skdisasm/sonic3k.asm:39780-39850`).
 - **S3K invisible-object diagnostics no longer leak into normal rendering:** AutoSpin triggers, InvisibleBlocks and their hurt variants, and TwistedRamps now expose collision/trigger geometry only through the dedicated object-debug overlay.
 - **HCZ's seamless Act 1-to-Act 2 descent now includes the retained miniboss-controller bubbles:** the end-sign controller creates one ROM-backed Bubbler particle per frame for its native 48-dispatch window; each particle uses the original shared RNG word, fixed-point downward motion, carrier-axis oscillation, flicker phase, render bounds, and lifetime (`docs/skdisasm/sonic3k.asm:139523-139566,139950-140002`).
 - **S3K sinking-mud collision outlines no longer leak into normal gameplay rendering:** object `$4F` remains invisible unless the dedicated object-debug overlay is enabled, removing the one-host-pixel white boxes seen across MGZ mud volumes.
