@@ -299,6 +299,8 @@ LIGHTWEIGHT_REGEN = os.getenv("OGGF_TRACE_LIGHTWEIGHT") == "1"
 BIZHAWK_VERSION = "2.11"
 GENESIS_CORE = "Genplus-gx"
 S3K_ROM_CHECKSUM = "C5B1C655C19F462ADE0AC4E17A844D10"
+LUA_SCRIPT_VERSION = "6.30-s3k-completerun"   -- no "v" prefix (existing convention)
+SOURCE_BK2_NAME = "s3k-complete-sonic-tails.bk2"
 
 -- Sonic 3 & Knuckles 68K RAM addresses (BizHawk mainmemory strips $FF0000)
 local ADDR_GAME_MODE        = 0xF600
@@ -1193,7 +1195,7 @@ local function write_metadata()
     meta_file:write('  "zone_id": ' .. start_zone_id .. ',\n')
     meta_file:write('  "act": ' .. (start_act + 1) .. ',\n')
     meta_file:write('  "bk2_frame_offset": ' .. bk2_frame_offset .. ',\n')
-    meta_file:write('  "source_bk2": "s3k-complete-sonic-tails.bk2",\n')
+    meta_file:write(string.format('  "source_bk2": %q,\n', SOURCE_BK2_NAME))
     meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
     meta_file:write('  "pre_trace_osc_frames": ' .. start_gameplay_frame_counter .. ',\n')
     meta_file:write('  "start_x": "0x' .. hex(start_x) .. '",\n')
@@ -1203,7 +1205,7 @@ local function write_metadata()
     meta_file:write('  "sidekicks": ["tails"],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "6.29-s3k-completerun",\n')
+    meta_file:write(string.format('  "lua_script_version": %q,\n', LUA_SCRIPT_VERSION))
     -- trace_schema remains 6 for the auxiliary event vocabulary. csv_version 7
     -- adds player and sidekick animation_id/mapping_frame to physics.csv. New per-frame
     -- cpu_state, oscillation_state, object_state, and interact_state aux
@@ -1345,6 +1347,97 @@ local function write_metadata()
     meta_file:close()
     print(string.format("Metadata written. Zone: %s Act %d, Trace frames: %d",
         start_zone_name, start_act + 1, trace_frame))
+end
+
+-- v6.30: emits BASE_OUTPUT_DIR/run_manifest.json describing every segment and
+-- transition recorded across the run, for multi-stage trace validation.
+-- Only emitted when a detour occurred or OGGF_TRACE_RUN_ID is set, so plain
+-- single-stage complete-run regenerations remain output-identical.
+function write_run_manifest()
+    if pending_ss_transition ~= nil then
+        -- Movie ended mid-SS-detour: append the incomplete record so the
+        -- Java validator rejects the manifest -- the correct failure mode
+        -- for a truncated recording.
+        print("WARNING: movie ended mid special-stage detour; manifest incomplete.")
+        pending_ss_transition.from_segment = #segments_done - 1
+        pending_ss_transition.to_segment = #segments_done
+        transitions_done[#transitions_done + 1] = pending_ss_transition
+        pending_ss_transition = nil
+    end
+    if #transitions_done == 0 and run_id == nil then
+        return  -- stage-free legacy run: no manifest, output layout unchanged
+    end
+    local f = io.open(BASE_OUTPUT_DIR .. "run_manifest.json", "w")
+    if not f then
+        print("WARNING: could not open run_manifest.json for writing")
+        return
+    end
+    -- Invariant check before writing: transition counts are bounded by
+    -- boundaries, not equal to them -- plain level->level zone changes are
+    -- boundaries with NO record. The checkable invariant is per-record:
+    -- every record's to_segment == from_segment + 1 and
+    -- to_segment <= #segments_done (with the truncated-detour exception
+    -- above, where to_segment == #segments_done may reference a segment
+    -- that never armed -- that is deliberately left for the Java validator
+    -- to reject).
+    for i, t in ipairs(transitions_done) do
+        if t.to_segment ~= t.from_segment + 1 or t.to_segment > #segments_done then
+            print(string.format(
+                "WARNING: transition record %d has inconsistent segment indices "
+                    .. "(from_segment=%d, to_segment=%d, #segments_done=%d)",
+                i, t.from_segment, t.to_segment, #segments_done))
+        end
+    end
+    f:write('{\n')
+    f:write('  "run_schema": 1,\n')
+    f:write('  "game": "s3k",\n')  -- "s3k" is the canonical trace game id
+                                   -- (TraceCatalog.VALID_GAME_IDS,
+                                   -- TraceExecutionModel.forGame); NEVER
+                                   -- "sonic3k", which forGame rejects.
+    if run_id then f:write(string.format('  "run_id": %q,\n', run_id)) end
+    f:write(string.format('  "source_bk2": %q,\n', SOURCE_BK2_NAME))
+    f:write(string.format('  "rom_checksum": %q,\n', S3K_ROM_CHECKSUM))
+    f:write(string.format('  "lua_script_version": %q,\n', LUA_SCRIPT_VERSION))
+    f:write('  "segments": [\n')
+    for i, s in ipairs(segments_done) do
+        local extra = ""
+        if s.kind == "bonus_stage" then
+            extra = string.format(', "bonus_stage_type": %q', s.bonus_stage_type)
+        end
+        f:write(string.format(
+            '    {"dir": %q, "kind": %q, "trace_profile": %q, "bk2_frame_offset": %d, "trace_frame_count": %d, "zone_id": %d, "act": %d%s}%s\n',
+            s.dir, s.kind, s.profile, s.bk2_frame_offset, s.rows, s.zone_id, s.act,
+            extra, (i < #segments_done) and "," or ""))
+    end
+    f:write('  ],\n')
+    f:write('  "transitions": [\n')
+    for i, t in ipairs(transitions_done) do
+        -- Indices were captured at push time (between finalize and
+        -- start_new_segment) -- emit them verbatim. Never derive from loop
+        -- position: level->level boundaries carry no record.
+        local parts = {
+            string.format('"from_segment": %d', t.from_segment),
+            string.format('"to_segment": %d', t.to_segment),
+            string.format('"entry_kind": %q', t.entry_kind),
+            string.format('"mode_change_bk2_frame": %d', t.mode_change_bk2_frame),
+        }
+        -- Optional numeric fields, written explicitly; every field name must
+        -- match TraceRunManifest.Transition.
+        if t.special_bonus_entry_flag then parts[#parts+1] = string.format('"special_bonus_entry_flag": %d', t.special_bonus_entry_flag) end
+        if t.saved_x_pos then parts[#parts+1] = string.format('"saved_x_pos": %d', t.saved_x_pos) end
+        if t.saved_y_pos then parts[#parts+1] = string.format('"saved_y_pos": %d', t.saved_y_pos) end
+        if t.last_star_post_hit then parts[#parts+1] = string.format('"last_star_post_hit": %d', t.last_star_post_hit) end
+        if t.rings_before then parts[#parts+1] = string.format('"rings_before": %d', t.rings_before) end
+        if t.rings_after then parts[#parts+1] = string.format('"rings_after": %d', t.rings_after) end
+        if t.emeralds_before then parts[#parts+1] = string.format('"emeralds_before": %d', t.emeralds_before) end
+        if t.emeralds_after then parts[#parts+1] = string.format('"emeralds_after": %d', t.emeralds_after) end
+        f:write(string.format('    {%s}%s\n', table.concat(parts, ", "),
+            (i < #transitions_done) and "," or ""))
+    end
+    f:write('  ]\n}\n')
+    f:close()
+    print(string.format("Wrote run_manifest.json (%d segments, %d transitions).",
+        #segments_done, #transitions_done))
 end
 
 local function write_tails_cpu_snapshot()
@@ -5451,6 +5544,7 @@ while true do
                 "  segment %-7s zone_id=%-2d act=%d bk2_frame_offset=%-7d rows=%d",
                 seg.token, seg.zone_id, seg.act, seg.bk2_frame_offset, seg.rows))
         end
+        write_run_manifest()
         break
     end
 
