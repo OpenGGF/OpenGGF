@@ -100,7 +100,6 @@ class TestCutsceneKnucklesCnz2Instance {
         }.withCamera(buttonCamera));
         CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
                 new ObjectSpawn(0x1D00, 0x0280, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
-        knuckles.forceButtonImpactForTest();
         CutsceneKnucklesCnz2AInstance.setActiveInstanceForTests(knuckles);
 
         button.update(0, null);
@@ -120,39 +119,12 @@ class TestCutsceneKnucklesCnz2Instance {
     }
 
     @Test
-    void firstCnzCutsceneButtonWaitsForSecondLandingImpact() {
-        RecordingCnzBridge bridge = new RecordingCnzBridge();
-        Camera buttonCamera = new Camera();
-        buttonCamera.setY((short) 0x0280);
-        Cnz2CutsceneButtonInstance button = new Cnz2CutsceneButtonInstance(new ObjectSpawn(
-                0x1E00, 0x0338, Sonic3kObjectIds.CUTSCENE_BUTTON, 4, 0, false, 0));
-        button.setServices(new TestObjectServices() {
-            @Override
-            public LevelEventProvider levelEventProvider() {
-                return bridge;
-            }
-        }.withCamera(buttonCamera));
-        CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
-                new ObjectSpawn(0x1E00, 0x0338, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
-        CutsceneKnucklesCnz2AInstance.setActiveInstanceForTests(knuckles);
-
-        button.update(0, null);
-
-        assertEquals(0, bridge.waterTargetY,
-                "The first CNZ2 button must not trigger from proximity during Knuckles' first rightward jump");
-
-        knuckles.forceButtonImpactForTest();
-        button.update(1, null);
-
-        assertEquals(0x0350, bridge.waterTargetY,
-                "The button fires once CutsceneKnux_CNZ2A reaches the second-landing button impact");
-    }
-
-    @Test
     void cnzVacuumTubeButtonSpawnsTubeControllersFromRomAction() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
                 .build();
+        GameServices.camera().setX((short) 0x45C0);
+        GameServices.camera().setY((short) 0x0720);
 
         CutsceneKnucklesCnz2BInstance knuckles = new CutsceneKnucklesCnz2BInstance(
                 new ObjectSpawn(0x4780, 0x072C, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 16, 0, false, 0));
@@ -175,7 +147,7 @@ class TestCutsceneKnucklesCnz2Instance {
     @Test
     void firstCnzCutsceneStoresCameraTargetsWithoutSnappingImmediately() {
         Camera camera = GameServices.camera();
-        camera.setX((short) 0x1B80);
+        camera.setX((short) 0x1C80);
         camera.setY((short) 0x0180);
         camera.setMinX((short) 0x1B00);
         camera.setMaxX((short) 0x1C40);
@@ -198,6 +170,8 @@ class TestCutsceneKnucklesCnz2Instance {
 
     @Test
     void firstCnzCutsceneSpawnsBlockingWallAtRomChildOffset() {
+        GameServices.camera().setX((short) 0x1D00);
+        GameServices.camera().setY((short) 0x0280);
         CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
                 new ObjectSpawn(0x1D00, 0x0280, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
         knuckles.setServices(TestEnvironment.objectServices());
@@ -250,8 +224,37 @@ class TestCutsceneKnucklesCnz2Instance {
                 "The Sonic/Tails rival-Knuckles handoff must not install the playable-Knuckles teleporter max X");
         assertFalse(player.isObjectControlled(),
                 "loc_625E2 clears Player_1 object_control before loc_6261A starts forcing left");
+        assertTrue(player.isControlLocked(),
+                "Ctrl_1_locked remains set continuously between loc_625E2 and loc_6261A");
         assertEquals(AbstractPlayableSprite.INPUT_LEFT, player.getForcedInputMask(),
                 "loc_6261A writes left into Ctrl_1_logical so Sonic/Tails walks into the vacuum tube");
+    }
+
+    @Test
+    void cnzCutscenesDeleteRespawnablyBeforeCameraEntersTheirNativeWindows() {
+        Camera camera = new Camera();
+        camera.setX((short) 0x1BFF);
+        camera.setY((short) 0x0280);
+        CutsceneKnucklesCnz2AInstance first = new CutsceneKnucklesCnz2AInstance(
+                new ObjectSpawn(0x1D00, 0x0280, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        first.setServices(new TestObjectServices().withCamera(camera));
+
+        first.update(0, null);
+
+        assertTrue(first.isDestroyed());
+        assertTrue(first.isDestroyedRespawnable(),
+                "Check_CameraInRange falls through Delete_Sprite_If_Not_In_Range, which clears the respawn latch");
+
+        camera.setX((short) 0x45C0);
+        camera.setY((short) 0x071F);
+        CutsceneKnucklesCnz2BInstance second = new CutsceneKnucklesCnz2BInstance(
+                new ObjectSpawn(0x45C0, 0x0720, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 16, 0, false, 0));
+        second.setServices(new TestObjectServices().withCamera(camera));
+
+        second.update(0, null);
+
+        assertTrue(second.isDestroyed());
+        assertTrue(second.isDestroyedRespawnable());
     }
 
     @AfterEach

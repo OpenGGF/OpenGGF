@@ -11,9 +11,9 @@ import com.openggf.level.objects.RewindRecreateContext;
 import java.util.List;
 
 /** ROM {@code Child6_IncLevX}/{@code Child6_DecLevY} gradual camera controller. */
-final class CnzEndBossBoundaryController extends AbstractObjectInstance
+public final class CnzEndBossBoundaryController extends AbstractObjectInstance
         implements RewindRecreatable {
-    private enum Axis { MAX_X_UP, MIN_Y_DOWN }
+    private enum Axis { MAX_X_UP, MIN_Y_DOWN, MIN_X_DOWN }
     private static final int ACCELERATION = 0x4000;
     private Axis axis;
     private int target;
@@ -25,12 +25,16 @@ final class CnzEndBossBoundaryController extends AbstractObjectInstance
         this.target = target;
     }
 
-    static CnzEndBossBoundaryController increaseMaxX(int x, int y, int target) {
+    public static CnzEndBossBoundaryController increaseMaxX(int x, int y, int target) {
         return new CnzEndBossBoundaryController(x, y, Axis.MAX_X_UP, target);
     }
 
-    static CnzEndBossBoundaryController decreaseMinY(int x, int y, int target) {
+    public static CnzEndBossBoundaryController decreaseMinY(int x, int y, int target) {
         return new CnzEndBossBoundaryController(x, y, Axis.MIN_Y_DOWN, target);
+    }
+
+    public static CnzEndBossBoundaryController decreaseMinX(int x, int y, int target) {
+        return new CnzEndBossBoundaryController(x, y, Axis.MIN_X_DOWN, target);
     }
 
     @Override
@@ -50,12 +54,18 @@ final class CnzEndBossBoundaryController extends AbstractObjectInstance
                 services().camera().setMaxX((short) target);
                 ObjectLifetimeOps.expireDynamic(this);
             } else services().camera().setMaxX((short) next);
-        } else {
+        } else if (axis == Axis.MIN_Y_DOWN) {
             int next = (services().camera().getMinY() & 0xFFFF) - step;
             if (next <= target) {
                 services().camera().setMinY((short) target);
                 ObjectLifetimeOps.expireDynamic(this);
             } else services().camera().setMinY((short) next);
+        } else {
+            int next = (services().camera().getMinX() & 0xFFFF) - step;
+            if (next <= target) {
+                services().camera().setMinX((short) target);
+                ObjectLifetimeOps.expireDynamic(this);
+            } else services().camera().setMinX((short) next);
         }
     }
 

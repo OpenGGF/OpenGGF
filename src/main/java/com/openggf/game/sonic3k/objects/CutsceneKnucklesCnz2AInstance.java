@@ -7,14 +7,19 @@ import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
+import com.openggf.game.sonic3k.objects.bosses.CnzEndBossBoundaryController;
+import com.openggf.game.sonic3k.objects.bosses.S3kSharedBossCameraGate;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Level;
+import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.ObjectTerrainUtils;
 
 import java.util.List;
 
@@ -27,6 +32,10 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
     private static final int CAMERA_LOCK_X = 0x1D00;
     private static final int CAMERA_LOCK_Y = 0x0280;
+    private static final int CAMERA_RANGE_MIN_X = 0x1C00;
+    private static final int CAMERA_RANGE_MAX_X = 0x1E00;
+    private static final int CAMERA_RANGE_MIN_Y = 0x0176;
+    private static final int CAMERA_RANGE_MAX_Y = 0x0300;
     private static final int MUSIC_FADE_WAIT = 2 * 60;
     private static final int PRE_JUMP_WAIT = 0x3F;
     private static final int POST_BOUNCE_WAIT = 0x3F;
@@ -36,9 +45,10 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
     private static final int FINAL_JUMP_Y_VEL = -0x0600;
 
     private static final int[] JUMP_FRAMES = {8, 4, 8, 5, 8, 6, 8, 7};
-    private static final int JUMP_DELAY = 1;
+    private static final int JUMP_DELAY = 2;
     private static final int[] LAUGH_LOOP = {0x1E, 0x1F};
-    private static final int LAUGH_DELAY = 7;
+    private static final int[] LAUGH_STAND_LOOP = {0x1C, 0x1C, 0x1D};
+    private static final int LAUGH_DELAY = 8;
 
     private enum Phase { INIT, CAMERA_LOCK, PRE_JUMP_WAIT, MULTI_BOUNCE, LAUGH_WAIT, FINAL_JUMP }
 
@@ -58,12 +68,10 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
     private int storedMaxX;
     private int storedMinY;
     private int storedMaxYTarget;
-    private boolean cameraYLocked;
-    private boolean cameraXLocked;
-    private boolean knucklesMusicStarted;
+    private final S3kSharedBossCameraGate cameraGate = new S3kSharedBossCameraGate();
     private boolean facingRight;
     private boolean visible = true;
-    private boolean buttonImpactReached;
+    private byte[] savedPaletteLine2;
     private CutsceneKnuxCnz2WallInstance blockingWall;
 
     // ROM ChildObjDat_66560: the blocking wall child is placed at parentX-$20,
@@ -118,14 +126,6 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
         activeInstance = instance;
     }
 
-    public boolean hasReachedButtonImpact() {
-        return buttonImpactReached;
-    }
-
-    public void forceButtonImpactForTest() {
-        buttonImpactReached = true;
-    }
-
     @Override
     public boolean isPersistent() {
         return true;
@@ -138,6 +138,10 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        if (phase == Phase.INIT && !isCameraInActivationRange()) {
+            ObjectLifetimeOps.destroyRespawnableOffscreen(this);
+            return;
+        }
         if (phase == Phase.INIT && isPlayerKnuckles()) {
             setDestroyed(true);
             return;
@@ -154,6 +158,7 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
     }
 
     private void routineInit() {
+        snapshotPaletteLine2();
         AizIntroArtLoader.loadAllIntroArt(services());
         AizIntroArtLoader.applyKnucklesPalette(services());
 
@@ -164,8 +169,11 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
         storedMaxYTarget = camera.getMaxYTarget() & 0xFFFF;
 
         services().fadeOutMusic();
+        cameraGate.begin(camera,
+                new S3kSharedBossCameraGate.LockBounds(
+                        CAMERA_LOCK_Y, CAMERA_LOCK_Y, CAMERA_LOCK_X, CAMERA_LOCK_X),
+                MUSIC_FADE_WAIT);
         activeInstance = this;
-        timer = MUSIC_FADE_WAIT;
         phase = Phase.CAMERA_LOCK;
         mappingFrame = 0x1E;
         animationTick = 0;
@@ -182,16 +190,8 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
 
     private void routineCameraLock() {
         animateLoop(LAUGH_LOOP, LAUGH_DELAY);
-        updateCameraLock();
-        if (timer > 0) {
-            timer--;
-            return;
-        }
-        if (!knucklesMusicStarted) {
-            services().playMusic(Sonic3kMusic.KNUCKLES.id);
-            knucklesMusicStarted = true;
-        }
-        if (!cameraXLocked || !cameraYLocked) {
+        if (!cameraGate.update(services().camera(),
+                () -> services().playMusic(Sonic3kMusic.KNUCKLES.id))) {
             return;
         }
         timer = PRE_JUMP_WAIT;
@@ -214,12 +214,12 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
         if (yVel < 0) {
             return;
         }
-        int floorY = getSpawn().y();
-        if (currentY < floorY) {
+        var floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, 0x13);
+        if (!floor.hasCollision() || floor.distance() >= 0) {
             return;
         }
 
-        currentY = floorY;
+        currentY += floor.distance();
         if (bounceIndex == 0) {
             bounceIndex = 1;
             xVel = -0x0100;
@@ -228,9 +228,6 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
             return;
         }
         if (bounceIndex == 1) {
-            // ROM CutsceneKnux_CNZ2A reaches Obj_CutsceneButton during the
-            // second landing, after the rightward approach and leftward hop.
-            buttonImpactReached = true;
             bounceIndex = 2;
             xVel = 0x0100;
             yVel = -0x0400;
@@ -247,7 +244,7 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
     }
 
     private void routineLaughWait() {
-        animateLoop(LAUGH_LOOP, LAUGH_DELAY);
+        animateLoop(LAUGH_STAND_LOOP, LAUGH_DELAY);
         if (timer > 0) {
             timer--;
             return;
@@ -265,11 +262,8 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
 
         S3kCnzEventWriteSupport.setWallGrabSuppressed(services(), false);
         restoreStoredCameraBounds();
-        // ROM loc_44D6E: lea (Pal_CNZ).l,a1; jsr (PalLoad_Line1).l — restore the
-        // zone palette into line 1 so rings/objects lose the Knuckles cutscene
-        // colors (otherwise line 1 keeps Pal_CutsceneKnux and rings look red).
-        restoreLevelPaletteLine1();
-        services().playMusic(Sonic3kMusic.CNZ2.id);
+        restorePaletteLine2Snapshot();
+        spawnFreeChild(() -> new SongFadeTransitionInstance(2 * 60, Sonic3kMusic.CNZ2.id));
         if (blockingWall != null) {
             // ROM loc_62458 deletes the wall child once the parent's destroyed
             // status bit is set; mirror that immediately on cutscene completion.
@@ -280,44 +274,33 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
         setDestroyed(true);
     }
 
-    private void updateCameraLock() {
-        Camera camera = services().camera();
-        int cameraY = camera.getY() & 0xFFFF;
-        if (!cameraYLocked) {
-            if (cameraY >= CAMERA_LOCK_Y) {
-                cameraYLocked = true;
-                camera.setMinY((short) CAMERA_LOCK_Y);
-                camera.setMaxYTarget((short) CAMERA_LOCK_Y);
-            } else {
-                camera.setMinY((short) cameraY);
-            }
-        }
-
-        int cameraX = camera.getX() & 0xFFFF;
-        if (!cameraXLocked) {
-            if (cameraX >= CAMERA_LOCK_X) {
-                cameraXLocked = true;
-                camera.setMinX((short) CAMERA_LOCK_X);
-                camera.setMaxX((short) CAMERA_LOCK_X);
-            } else {
-                camera.setMinX((short) cameraX);
-            }
-        }
-    }
-
-    /**
-     * Restores palette line 1 to the level's own palette after the cutscene.
-     *
-     * <p>{@code AizIntroArtLoader.applyKnucklesPalette} overwrote only the GPU
-     * texture for line 1 with {@code Pal_CutsceneKnux}; the level's
-     * {@code getPalette(1)} is untouched. Re-caching it restores the ring/object
-     * colors. ROM: {@code loc_44D6E} reloads {@code Pal_CNZ} via
-     * {@code PalLoad_Line1}.
-     */
-    private void restoreLevelPaletteLine1() {
+    private void snapshotPaletteLine2() {
         Level level = services().currentLevel();
         if (level == null || level.getPaletteCount() <= 1) {
             return;
+        }
+        Palette palette = level.getPalette(1);
+        savedPaletteLine2 = new byte[Palette.PALETTE_SIZE * 3];
+        for (int i = 0; i < Palette.PALETTE_SIZE; i++) {
+            Palette.Color color = palette.getColor(i);
+            savedPaletteLine2[i * 3] = color.r;
+            savedPaletteLine2[i * 3 + 1] = color.g;
+            savedPaletteLine2[i * 3 + 2] = color.b;
+        }
+    }
+
+    private void restorePaletteLine2Snapshot() {
+        Level level = services().currentLevel();
+        if (level == null || level.getPaletteCount() <= 1
+                || savedPaletteLine2 == null || savedPaletteLine2.length != Palette.PALETTE_SIZE * 3) {
+            return;
+        }
+        Palette restored = new Palette();
+        for (int i = 0; i < Palette.PALETTE_SIZE; i++) {
+            restored.setColor(i, new Palette.Color(
+                    savedPaletteLine2[i * 3],
+                    savedPaletteLine2[i * 3 + 1],
+                    savedPaletteLine2[i * 3 + 2]));
         }
         S3kPaletteWriteSupport.applyPaletteLine(
                 services().paletteOwnershipRegistryOrNull(),
@@ -326,16 +309,27 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
                 S3kPaletteOwners.CNZ2_CUTSCENE_RESTORE,
                 S3kPaletteOwners.PRIORITY_CUTSCENE_OVERRIDE,
                 1,
-                level.getPalette(1),
+                restored,
                 true);
     }
 
     private void restoreStoredCameraBounds() {
         Camera camera = services().camera();
-        camera.setMinX((short) storedMinX);
-        camera.setMaxX((short) storedMaxX);
-        camera.setMinY((short) storedMinY);
         camera.setMaxYTarget((short) storedMaxYTarget);
+        spawnFreeChild(() -> CnzEndBossBoundaryController.decreaseMinX(
+                currentX, currentY, storedMinX));
+        spawnFreeChild(() -> CnzEndBossBoundaryController.decreaseMinY(
+                currentX, currentY, storedMinY));
+        spawnFreeChild(() -> CnzEndBossBoundaryController.increaseMaxX(
+                currentX, currentY, storedMaxX));
+    }
+
+    private boolean isCameraInActivationRange() {
+        Camera camera = services().camera();
+        int cameraX = camera.getX() & 0xFFFF;
+        int cameraY = camera.getY() & 0xFFFF;
+        return cameraX >= CAMERA_RANGE_MIN_X && cameraX <= CAMERA_RANGE_MAX_X
+                && cameraY >= CAMERA_RANGE_MIN_Y && cameraY <= CAMERA_RANGE_MAX_Y;
     }
 
     private void startJump(int newXVel, int newYVel) {

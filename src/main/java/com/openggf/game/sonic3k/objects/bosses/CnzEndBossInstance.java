@@ -92,7 +92,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private boolean magneticFieldActive;
     private int mappingFrame;
     private boolean startupComplete;
-    private int cameraLockTimer;
+    private final S3kSharedBossCameraGate cameraGate = new S3kSharedBossCameraGate();
     private int savedCameraMinX;
     private int savedCameraMaxX;
     private int savedCameraMinY;
@@ -199,11 +199,10 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         savedCameraMinY = services().camera().getMinY() & 0xFFFF;
         savedCameraMaxY = services().camera().getMaxY() & 0xFFFF;
         setStoredCameraBounds(savedCameraMinX, savedCameraMaxX, savedCameraMinY, savedCameraMaxY);
-        services().camera().setMinY((short) 0x0240);
-        services().camera().setMaxYTarget((short) 0x0240);
-        services().camera().setMinX((short) 0x4760);
-        services().camera().setMaxX((short) 0x47E0);
-        cameraLockTimer = 2 * 60;
+        cameraGate.begin(
+                services().camera(),
+                new S3kSharedBossCameraGate.LockBounds(0x0240, 0x0240, 0x4760, 0x47E0),
+                2 * 60);
         routine = Routine.CAMERA_LOCK;
         S3kCnzEventWriteSupport.setBossFlag(services(), true);
         services().fadeOutMusic();
@@ -211,7 +210,13 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     }
 
     private void updateCameraLock() {
-        if (cameraLockTimer-- > 0 || !cnzArtProvider().isCnzEndBossArtComplete()) {
+        boolean cameraReady = cameraGate.update(
+                services().camera(),
+                () -> {
+                    services().gameState().setCurrentBossId(Sonic3kObjectIds.CNZ_END_BOSS);
+                    services().playMusic(Sonic3kMusic.BOSS.id);
+                });
+        if (!cameraReady || !cnzArtProvider().isCnzEndBossArtComplete()) {
             return;
         }
         startupComplete = true;
@@ -221,8 +226,6 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         xVelocity = -TRACK_SPEED;
         swingVelocity = SWING_MAX;
         swingDown = false;
-        services().gameState().setCurrentBossId(Sonic3kObjectIds.CNZ_END_BOSS);
-        services().playMusic(Sonic3kMusic.BOSS.id);
         installBossPalette();
         spawnNativeChildren();
     }
