@@ -229,6 +229,10 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
         return routine;
     }
 
+    boolean retainsParentForTest(CnzMinibossInstance expected) {
+        return boss == expected;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity player) {
         diagnosticCurrentFrameCounter = frameCounter;

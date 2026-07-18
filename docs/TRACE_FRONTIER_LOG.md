@@ -45546,3 +45546,14 @@ regenerated or hydrated.
 Cross-game sanity command:
 `JDK_JAVA_OPTIONS=-Xmx6g mvn -Dmse=off "-Dtest=TestS1Ghz1TraceReplay,TestS2Ehz1TraceReplay" -Dtrace.verification=physics -Dtrace.frontierOnly=true -Dtrace.context.radius=2 -Dtrace.print.summary=true "-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" test`.
 Both GHZ1 and EHZ1 remain fully green with no physics divergences.
+### 2026-07-18 -- CNZ miniboss stale post-frontier replay replaced by isolated cadence coverage
+
+The disabled `traceReplayCnzMinibossParentSecondMovePassUsesRomPhase` method was
+removed rather than retained as a permanently skipped test. Its f14712/f15004
+assertions are unreachable while the standalone CNZ route remains near x=$1400,
+well before the x=$32xx arena. Replacement coverage in
+`TestCnzMinibossSwingPhase` drives the production boss update graph through two
+Move/Closing cycles and checks routine $06 restoration, ROM x_vel magnitude and
+stored ChangeDir turn cadence, plus the top child's retained parent reference.
+This isolates the behavior under test without trace hydration or a post-frontier
+route assumption.
