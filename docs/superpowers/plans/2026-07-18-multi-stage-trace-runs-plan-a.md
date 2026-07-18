@@ -56,7 +56,7 @@ class TestTraceRunManifest {
           "run_id": "s3k-aiz-gumball-roundtrip",
           "source_bk2": "s3k-aiz-gumball.bk2",
           "rom_checksum": "63522553",
-          "lua_script_version": "v6.30-s3k-completerun",
+          "lua_script_version": "6.30-s3k-completerun",
           "segments": [
             {"dir": "seg00_aiz", "kind": "level", "trace_profile": "complete_run",
              "bk2_frame_offset": 500, "trace_frame_count": 1200, "zone_id": 0, "act": 1},
@@ -396,14 +396,14 @@ Skills: n/a"
 - Consumes: `TraceRunManifest.load/validate` (Task 1), `TraceData` (existing) for level-schema segments.
 - Produces: the committed synthetic run fixture later plans reuse; test name `TestTraceRunSyntheticFixture`.
 
-- [ ] **Step 1: Build the fixture.** Model each segment's `physics.csv` on `src/test/resources/traces/synthetic/` existing 2-frame S3K fixtures (copy `s3k` synthetic variant's header row + 2 data rows; keep CSV v7 42-column format). `seg00_aiz/metadata.json` (2-frame level segment):
+- [ ] **Step 1: Build the fixture.** The existing synthetic S3K fixture is 22-col csv v4 — do NOT copy it (the v7 parser hard-throws on non-42-col rows, `TraceFrame.java:216-220`). Source real 42-column v7 rows instead: `gzip -dkc src/test/resources/traces/s3k/aiz_completerun/physics.csv.gz | head -3` (header + 2 data rows), copy into each segment's `physics.csv`, then edit values per segment. `seg00_aiz/metadata.json` (2-frame level segment):
 
 ```json
 {"game": "sonic3k", "zone": "aiz", "zone_id": 0, "act": 1, "bk2_frame_offset": 500,
  "trace_frame_count": 2, "trace_schema": 6, "csv_version": 7,
  "trace_profile": "complete_run", "source_bk2": "synthetic.bk2",
  "run_id": "run_aiz_gumball_3seg", "segment_index": 0,
- "lua_script_version": "v6.30-s3k-completerun", "start_x": "0500", "start_y": "0400"}
+ "lua_script_version": "6.30-s3k-completerun", "start_x": "0500", "start_y": "0400"}
 ```
 
 `seg01_gumball/metadata.json` differs: `"zone": "gumball", "zone_id": 19, "act": 0, "bk2_frame_offset": 1900, "trace_profile": "s3k_bonus_stage", "segment_index": 1, "bonus_stage_type": "gumball"`. `seg02_aiz`: `"bk2_frame_offset": 2900, "segment_index": 2`. `run_manifest.json`: the Task-1 `VALID_MANIFEST` shape with `"trace_frame_count": 2` per segment and the two transitions (`starpost_bonus` out at 1750, `stage_exit` back at 2800).
@@ -529,7 +529,7 @@ Skills: n/a"
     end
 ```
 
-Check `is_level_family_mode`'s definition at line 917 first: if it masks `& 0x0F == 0x0C` it already excludes `$08`/`$34`/`$48`; use it as-is. If it treats `$08` as level, do NOT use it — inline `(guard_mode & 0x0F) == 0x0C` instead and say why in the comment.
+Verified: `is_level_family_mode` (line 917) masks `(mode & GAMEMODE_MASK) == GAMEMODE_LEVEL` = `(mode & 0x0F) == 0x0C` (`GAMEMODE_MASK` at 460, `GAMEMODE_LEVEL` at 454), which already excludes `$08`/`$34`/`$48` — use it as-is.
 
 - [ ] **Step 2: Regression check** — Task 8 (byte-identical AIZ regen) is the verification gate for this task; run its Step 1 now as a smoke check (stop frame 5000) and confirm rows still get written (non-empty physics.csv).
 
@@ -551,20 +551,23 @@ Skills: n/a"
 ### Task 6: Stage-detour state machine + bonus segments
 
 **Files:**
-- Modify: `tools/bizhawk/s3k_complete_run_recorder.lua` — segmentation block in `on_frame_end` (~line 4838-4897), `start_new_segment` (~line 4762), `finalize_segment` (~line 4735), `write_metadata` (~line 1113), `zone_token_for` (~line 481), `precreate_segment_dirs` (~line 511)
+- Modify: `tools/bizhawk/s3k_complete_run_recorder.lua` — segmentation block in `on_frame_end` (~line 4838-4897), `start_new_segment` (~line 4762), `finalize_segment` (~line 4735), `write_metadata` (~line 1113), `zone_token_for` (~line 502), `precreate_segment_dirs` (~line 511)
 
 **Interfaces:**
 - Consumes: Task-4 constants, Task-5 guard.
-- Produces: globals `transitions_done` (list), `segment_dir_names` (repeat-count map), `pending_transition_in` — consumed by Task 7's manifest writer; bonus segments with `trace_profile = "s3k_bonus_stage"`, `bonus_stage_type`, `run_id`, `segment_index` in metadata.
+- Produces: globals `transitions_done` (ordered boundary records, no indices), `segment_dir_counts` (repeat-count map), `pending_ss_transition`, `current_segment_dir_token`, `current_segment_is_bonus` — consumed by Task 7's manifest writer; bonus segments with `trace_profile = "s3k_bonus_stage"`, `bonus_stage_type`, `run_id`, `segment_index` in metadata.
 
 - [ ] **Step 1: Segment dir naming for repeats.** The per-zone dir scheme collides when a zone recurs after a detour (aiz → gumball → aiz again). Add globals near `segments_done` (line ~720, NO `local` — 200-local budget):
 
 ```lua
--- v6.30 run/detour state (globals: local-budget).
+-- v6.30 run/detour state (globals: local-budget). transitions_done holds
+-- boundary records in SEGMENT-BOUNDARY ORDER; records carry NO segment
+-- indices — the manifest writer derives from_segment/to_segment purely from
+-- position (record k => boundary between segments k-1 and k, 1-indexed lua).
 transitions_done = {}
 segment_dir_counts = {}
-detour_active = nil          -- nil | "special_stage"
-pending_transition_in = nil  -- fields captured at detour exit, merged at next arm
+detour_active = nil            -- nil | "special_stage"
+pending_ss_transition = nil    -- merged SS boundary record awaiting exit fields
 run_id = os.getenv("OGGF_TRACE_RUN_ID") or nil
 ```
 
@@ -590,17 +593,21 @@ and record `dir = dir_token` in `finalize_segment`'s `segments_done` entry (add 
     -- blue-spheres plan). SS_Results ($48) and the return load-handoff are
     -- transition frames, represented only in the manifest.
     if started and game_mode == GAMEMODE_SPECIAL_STAGE then
-        local rings_before = mainmemory.read_u16_be(ADDR_RING_COUNT)
-        transitions_done[#transitions_done + 1] = {
-            from_segment = #segments_done,        -- current segment index once finalized
-            to_segment = #segments_done + 1,      -- provisional; fixed up in manifest writer
+        -- ONE merged transition per SS detour: the SS produces NO segment in
+        -- plan (a), so its entry and exit are a single boundary between two
+        -- consecutive level segments. Entry fields are captured now; exit
+        -- fields (rings_after/emeralds_after) are merged at the return re-arm.
+        -- Pushing two records here would break the
+        -- (#transitions == #segments - 1) invariant and produce out-of-range
+        -- indices in TraceRunManifest.validate.
+        pending_ss_transition = {
             entry_kind = "giant_ring",
             mode_change_bk2_frame = emu.framecount(),
             special_bonus_entry_flag = mainmemory.read_u8(ADDR_SPECIAL_BONUS_ENTRY_FLAG),
             saved_x_pos = mainmemory.read_u16_be(ADDR_SAVED_X_POS),
             saved_y_pos = mainmemory.read_u16_be(ADDR_SAVED_Y_POS),
             last_star_post_hit = mainmemory.read_u8(ADDR_LAST_STAR_POST_HIT),
-            rings_before = rings_before,
+            rings_before = mainmemory.read_u16_be(ADDR_RING_COUNT),
             emeralds_before = mainmemory.read_u8(ADDR_EMERALD_COUNT),
         }
         finalize_segment()
@@ -611,15 +618,9 @@ and record `dir = dir_token` in `finalize_segment`'s `segments_done` entry (add 
     end
     if detour_active == "special_stage" then
         if is_level_family_mode(game_mode) then
-            -- Back in a level load: arm gate below will open the next segment
-            -- (current_segment_zone is nil after finalize). Capture the exit
-            -- boundary once.
-            if pending_transition_in == nil then
-                pending_transition_in = {
-                    entry_kind = "stage_exit",
-                    mode_change_bk2_frame = emu.framecount(),
-                }
-            end
+            -- Back in a level load: the arm gate below will open the next
+            -- segment (current_segment_zone is nil after finalize). The
+            -- pending SS transition completes and is pushed at that arm.
             detour_active = nil
         else
             return  -- $34/$48/fade frames: manifest-only, no rows
@@ -632,8 +633,6 @@ and record `dir = dir_token` in `finalize_segment`'s `segments_done` entry (add 
 ```lua
             if BONUS_TOKENS[zone_id] ~= nil then
                 transitions_done[#transitions_done + 1] = {
-                    from_segment = #segments_done,
-                    to_segment = #segments_done + 1,
                     entry_kind = "starpost_bonus",
                     mode_change_bk2_frame = emu.framecount(),
                     special_bonus_entry_flag = mainmemory.read_u8(ADDR_SPECIAL_BONUS_ENTRY_FLAG),
@@ -646,26 +645,31 @@ and record `dir = dir_token` in `finalize_segment`'s `segments_done` entry (add 
             end
 ```
 
-Symmetrically, when arming a LEVEL segment while `pending_transition_in ~= nil` OR while the PREVIOUS segment was a bonus segment (`current_segment_is_bonus` at finalize time — capture it into the finalized `segments_done` entry as `kind`), complete the pending exit record with `rings_after`/`emeralds_after` and push it:
+Symmetrically, on the SAME arm path, handle the two "completing a boundary" cases BEFORE the bonus-entry push above (order matters — boundary records must append in segment-boundary order):
 
 ```lua
-            local exiting_bonus = (#segments_done > 0)
-                and (segments_done[#segments_done].kind == "bonus_stage")
-            if pending_transition_in ~= nil or exiting_bonus then
-                local t = pending_transition_in or {
+            -- Case 1: returning from an SS detour — complete the merged
+            -- pending record and push it (the ONLY record for that boundary).
+            if pending_ss_transition ~= nil then
+                pending_ss_transition.rings_after = mainmemory.read_u16_be(ADDR_RING_COUNT)
+                pending_ss_transition.emeralds_after = mainmemory.read_u8(ADDR_EMERALD_COUNT)
+                transitions_done[#transitions_done + 1] = pending_ss_transition
+                pending_ss_transition = nil
+            end
+            -- Case 2: the just-finalized predecessor was a bonus segment —
+            -- this arm is the bonus-exit boundary.
+            if #segments_done > 0
+                and segments_done[#segments_done].kind == "bonus_stage" then
+                transitions_done[#transitions_done + 1] = {
                     entry_kind = "stage_exit",
                     mode_change_bk2_frame = emu.framecount(),
+                    rings_after = mainmemory.read_u16_be(ADDR_RING_COUNT),
+                    emeralds_after = mainmemory.read_u8(ADDR_EMERALD_COUNT),
                 }
-                t.from_segment = #segments_done - 1
-                t.to_segment = #segments_done
-                t.rings_after = mainmemory.read_u16_be(ADDR_RING_COUNT)
-                t.emeralds_after = mainmemory.read_u8(ADDR_EMERALD_COUNT)
-                transitions_done[#transitions_done + 1] = t
-                pending_transition_in = nil
             end
 ```
 
-(Place this AFTER `start_new_segment` so `#segments_done` reflects the finalized predecessor; set `from_segment`/`to_segment` accordingly — the manifest writer in Task 7 re-derives final indices from order, so provisional indices only need to be consistent.)
+No record carries segment indices: the writer derives them from order (record k → `from_segment = k-1`, `to_segment = k`), which is correct by construction because every push happens exactly at its boundary, in order — SS return (case 1), bonus exit (case 2), then bonus entry, each guarding a distinct boundary.
 
 In `finalize_segment`, extend the `segments_done` entry:
 
@@ -683,7 +687,7 @@ In `finalize_segment`, extend the `segments_done` entry:
     }
 ```
 
-In `write_metadata`, when `current_segment_is_bonus`, write `"trace_profile": "s3k_bonus_stage"` instead of `TRACE_PROFILE`, plus `"bonus_stage_type": "<token>"`; always write `"run_id"` (when set) and `"segment_index": #segments_done` (the index this segment will get). Follow the existing json-writing style in `write_metadata` exactly (string.format lines).
+In `write_metadata`, when `current_segment_is_bonus`, write `"trace_profile": "s3k_bonus_stage"` instead of `TRACE_PROFILE`, plus `"bonus_stage_type": "<token>"`; always write `"run_id"` (when set) and `"segment_index": #segments_done` (the index this segment will get). Match `write_metadata`'s existing json-writing style (it mostly uses `..` string concatenation, not `string.format` — mirror the neighboring lines).
 
 Also extend `precreate_segment_dirs` to pre-create `gumball/`, `pachinko/`, `slots/` (repeat-suffix dirs go through `ensure_segment_dir`'s fallback, which is fine).
 
@@ -709,11 +713,11 @@ Skills: n/a"
 ### Task 7: Manifest emission
 
 **Files:**
-- Modify: `tools/bizhawk/s3k_complete_run_recorder.lua` — add `write_run_manifest()` near `write_metadata` (~line 1113); call it wherever `finished = true` leads to final cleanup (locate the post-loop/`event.onexit` finalization — grep `onexit` and the `finished` handling after the main loop; call after the last `finalize_segment()`).
+- Modify: `tools/bizhawk/s3k_complete_run_recorder.lua` — add `write_run_manifest()` near `write_metadata` (~line 1113); call it at the main `while true` loop's finalization (~line 5268, after the last `finalize_segment()`, before `break`). There is NO `event.onexit` in this script.
 
 **Interfaces:**
-- Consumes: `segments_done`, `transitions_done`, `run_id` (Task 6), `LUA_SCRIPT_VERSION`, `SOURCE_BK2`/movie name, ROM checksum global (grep `rom_checksum` for the existing variable used by `write_metadata`).
-- Produces: `BASE_OUTPUT_DIR .. "run_manifest.json"` in the Task-1 schema, `run_schema = 1`.
+- Consumes: `segments_done`, `transitions_done`, `run_id`, `pending_ss_transition` (Task 6), the new `LUA_SCRIPT_VERSION` global (Step 2), `S3K_ROM_CHECKSUM` (existing global, line ~301). `source_bk2` is a **hardcoded string literal** in `write_metadata` (line ~1133, `"s3k-complete-sonic-tails.bk2"`) — hoist it to a global `SOURCE_BK2_NAME` and use it in both places.
+- Produces: `BASE_OUTPUT_DIR .. "run_manifest.json"` in the Task-1 schema, `run_schema = 1`, with `from_segment`/`to_segment` derived from record order.
 
 - [ ] **Step 1: Implement `write_run_manifest()`** (emit only when a detour occurred OR `OGGF_TRACE_RUN_ID` is set, so plain complete-run regenerations remain output-identical):
 
@@ -728,11 +732,11 @@ function write_run_manifest()
         return
     end
     f:write('{\n')
-    f:write(string.format('  "run_schema": 1,\n'))
-    f:write(string.format('  "game": "sonic3k",\n'))
+    f:write('  "run_schema": 1,\n')
+    f:write('  "game": "sonic3k",\n')
     if run_id then f:write(string.format('  "run_id": %q,\n', run_id)) end
-    f:write(string.format('  "source_bk2": %q,\n', source_bk2_name()))
-    f:write(string.format('  "rom_checksum": %q,\n', rom_checksum_value()))
+    f:write(string.format('  "source_bk2": %q,\n', SOURCE_BK2_NAME))
+    f:write(string.format('  "rom_checksum": %q,\n', S3K_ROM_CHECKSUM))
     f:write(string.format('  "lua_script_version": %q,\n', LUA_SCRIPT_VERSION))
     f:write('  "segments": [\n')
     for i, s in ipairs(segments_done) do
@@ -748,9 +752,11 @@ function write_run_manifest()
     f:write('  ],\n')
     f:write('  "transitions": [\n')
     for i, t in ipairs(transitions_done) do
+        -- Indices derived purely from boundary order: record i sits between
+        -- segments i-1 and i (0-indexed manifest, 1-indexed lua loop).
         local parts = {
-            string.format('"from_segment": %d', t.from_segment),
-            string.format('"to_segment": %d', t.to_segment),
+            string.format('"from_segment": %d', i - 1),
+            string.format('"to_segment": %d', i),
             string.format('"entry_kind": %q', t.entry_kind),
             string.format('"mode_change_bk2_frame": %d', t.mode_change_bk2_frame),
         }
@@ -774,11 +780,23 @@ function write_run_manifest()
 end
 ```
 
-`source_bk2_name()`/`rom_checksum_value()`: reuse however `write_metadata` obtains `source_bk2`/`rom_checksum` (grep those keys in the file and call the same expressions; if they're inline expressions, factor tiny globals-free helper functions).
+Invariant check before writing: when any detour occurred (`#transitions_done > 0`), `#transitions_done` must equal `#segments_done - 1` (holds for both detour shapes: SS = 1 merged record between 2 level segments; bonus = entry + exit records around the bonus segment). On violation print a WARNING naming both counts and still write what was captured. Also: if `pending_ss_transition ~= nil` at write time (movie ended mid-detour), print a WARNING and append it as a final incomplete record — the Java validator will reject the manifest, which is the correct failure mode for a truncated recording.
 
-Before finalizing indices: re-derive `from_segment`/`to_segment` from segment ORDER at write time (transition k sits between segment k's finalize and k+1's arm in `transitions_done` append order — assert `#transitions_done == #segments_done - 1` when any detour occurred mid-run; on violation print a WARNING and write what was captured).
+- [ ] **Step 2: Introduce `LUA_SCRIPT_VERSION` and `SOURCE_BK2_NAME` globals.** There is currently NO version constant — the version is a hardcoded literal inside `write_metadata` (line ~1143: `meta_file:write('  "lua_script_version": "6.29-s3k-completerun",\n')`) and `source_bk2` is likewise a literal (line ~1133). Add near the other config globals (~line 292):
 
-- [ ] **Step 2: Bump `LUA_SCRIPT_VERSION`** to `v6.30-s3k-completerun` (grep the current constant; keep the format).
+```lua
+LUA_SCRIPT_VERSION = "6.30-s3k-completerun"   -- no "v" prefix (existing convention)
+SOURCE_BK2_NAME = "s3k-complete-sonic-tails.bk2"
+```
+
+and rewrite the two `write_metadata` lines to consume them:
+
+```lua
+    meta_file:write(string.format('  "source_bk2": %q,\n', SOURCE_BK2_NAME))
+    meta_file:write(string.format('  "lua_script_version": %q,\n', LUA_SCRIPT_VERSION))
+```
+
+(`write_metadata` mostly uses `..` concatenation — match whichever style each neighboring line uses; the two lines above are complete replacements.)
 
 - [ ] **Step 3: Syntax check** (same as Task 6 Step 4), then commit:
 
@@ -851,5 +869,6 @@ Skills: n/a"
 ## Plan-level notes
 
 - **Deliberate scope choice vs spec wording:** the spec's Component 1 names both `s3k_trace_recorder.lua` and `s3k_complete_run_recorder.lua` for the state machine. This plan implements it in the **complete-run recorder only**: it is the recorder with the pollution gap, it already owns segmentation, and it works on any bk2 (including the short dedicated stage movies plan (b) records). Duplicating the machine into the 222KB single-level recorder is deferred until a concrete use-case needs it (YAGNI); plan (b) revisits.
-- **SS segments produce no CSV rows in plan (a)** — mode `$34` finalizes the level segment and records the transition; the blue-spheres row writer and its segment dirs land with the blue-spheres plan. Manifest `segments[]` therefore only ever lists dirs that exist (level + bonus), keeping `TraceRunManifest.validate` strict.
+- **SS segments produce no CSV rows in plan (a)** — mode `$34` finalizes the level segment and records the (single, merged) transition; the blue-spheres row writer and its segment dirs land with the blue-spheres plan. Manifest `segments[]` therefore only ever lists dirs that exist (level + bonus), keeping `TraceRunManifest.validate` strict.
+- **Giant-ring fade frames stay in the pre-detour segment:** the touch/fade-out before `Game_Mode` flips to `$34` runs under raw `$0C`, so those frames are recorded as normal rows of the outgoing level segment — consistent with how act-exit handoff tails are already recorded into the current segment. The manifest's `mode_change_bk2_frame` marks the true mode edge.
 - **Full-suite gate before merge:** `mvn test` (sandbox off) — pre-existing failures per `docs/rewind/real-gaps.md` context notwithstanding, no NEW failures.
