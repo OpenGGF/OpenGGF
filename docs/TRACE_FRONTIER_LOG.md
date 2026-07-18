@@ -45488,3 +45488,26 @@ without first solving all intervening divergences. The stale post-frontier metho
 is disabled with that explicit prerequisite; no trace state is hydrated and no
 gameplay behavior is changed. The separate CNZ complete-run frontier remains
 f1846 `tails_x_speed` pending its own trace fix.
+### 2026-07-18 -- CNZ complete-run f1846 upstream-position audit
+
+Task-5 triage rechecked the recorded ROM window rather than changing horizontal
+spring timing. In `cnz_completerun/physics.csv.gz`, Tails advances from x=$1477
+to $14AF over f1828-f1836 while retaining x_speed/ground_vel=$0600, then reaches
+x=$14B5 and enters Status_Push before the spring launch. The per-frame aux data
+shows CPU NORMAL `fallthrough_sub20`, no object control, and `interact_slot=4`
+pointing at the static CNZ hover fan routine `loc_31E68`; it explicitly reports
+`tails_on_object=false` and both fan standing flags false. Thus the historical
+`stand_on_obj=04` interpretation was stale interaction identity, not solidity or
+platform carry. ROM `sub_31E96` only adjusts Y, clears Y velocity, seeds
+ground_vel=1, and flip state (sonic3k.asm:67360-67403); it does not add X.
+
+The existing aux window contains no `position_write` events despite the metadata
+advertising that optional stream, so it cannot identify which mid-frame routine
+accounts for the accumulated engine-versus-ROM X difference before f1846. A
+blanket spring defer is already disproven by the recorded AIZ/HCZ/ICZ regressions.
+No gameplay change is justified from this data. The next required diagnostic is
+a clean focused engine context over f1828-f1846 plus a BizHawk PC-execute probe
+on Tails' `SpeedToPos`/native x_pos writes in that window, as required by the
+trace workflow before classifying a sub-frame position discrepancy. Frontier
+remains f1846 `tails_x_speed`; no hydration, tolerance, zone/frame carve-out, or
+spring timing change was made.
