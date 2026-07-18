@@ -6,6 +6,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
@@ -93,6 +94,12 @@ class TestS3kCnzTeleporterRouteHeadless {
 
         assertFalse(isObjectPresent(CnzTeleporterBeamInstance.class),
                 "Obj_CNZTeleporter must return after Queue_Kos_Module and poll readiness next frame");
+        Sonic3kObjectArtProvider artProvider = (Sonic3kObjectArtProvider)
+                TestEnvironment.objectServices().renderManager().getArtProvider();
+        assertTrue(artProvider.isCnzTeleporterArtPending(),
+                "arming must leave a genuine ArtKosM_CNZTeleport workload pending");
+        assertFalse(artProvider.isCnzTeleporterArtComplete(),
+                "the runtime queue must not report completion in the request frame");
         int[] colorIndices = {1, 2, 8, 10};
         int[] segaWords = {0x0EEE, 0x00EC, 0x0EA2, 0x0E80};
         Palette line2 = GameServices.level().getCurrentLevel().getPalette(1);
@@ -104,6 +111,9 @@ class TestS3kCnzTeleporterRouteHeadless {
         }
 
         fixture.stepIdleFrames(1);
+        assertFalse(artProvider.isCnzTeleporterArtPending());
+        assertTrue(artProvider.isCnzTeleporterArtComplete(),
+                "the shared frame pipeline should consume the queued KosM workload");
         assertTrue(isObjectPresent(CnzTeleporterBeamInstance.class),
                 "Obj_CNZTeleporterMain should proceed once the teleporter renderer reports ready");
     }

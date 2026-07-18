@@ -53,12 +53,25 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
-    void restoreIsNoOp() {
+    void restorePreservesEpoch() {
         Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
         PlcProgressSnapshot snap = provider.capture();
         // Restore should not throw and epoch should stay the same
         assertDoesNotThrow(() -> provider.restore(snap));
         assertEquals(snap.loadEpoch(), provider.capture().loadEpoch());
+    }
+
+    @Test
+    void restoreReinstatesPendingRuntimeArtRequest() {
+        Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
+        provider.queueCnzTeleporterArt();
+        PlcProgressSnapshot pending = provider.capture();
+
+        Sonic3kObjectArtProvider restored = new Sonic3kObjectArtProvider();
+        restored.restore(pending);
+
+        assertTrue(restored.isCnzTeleporterArtPending());
+        assertFalse(restored.isCnzTeleporterArtComplete());
     }
 
     @Test

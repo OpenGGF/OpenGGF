@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.graphics.GLCommand;
@@ -174,15 +175,21 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
          * player remains control-locked until the beam explicitly takes over.
          */
         teleportArtQueued = true;
+        cnzArtProvider().queueCnzTeleporterArt();
         applyTeleportPalettePatch();
         paletteLine2Patched = true;
     }
 
-    /** ROM {@code Kos_modules_left == 0}, represented by completed renderer preparation. */
+    /** ROM {@code Kos_modules_left == 0}, represented by provider queue completion. */
     private boolean isTeleportArtReady() {
-        PatternSpriteRenderer renderer = services().renderManager().getRenderer(
-                Sonic3kObjectArtKeys.CNZ_TELEPORTER);
-        return renderer != null && renderer.isReady();
+        return cnzArtProvider().isCnzTeleporterArtComplete();
+    }
+
+    private Sonic3kObjectArtProvider cnzArtProvider() {
+        if (services().renderManager().getArtProvider() instanceof Sonic3kObjectArtProvider provider) {
+            return provider;
+        }
+        throw new IllegalStateException("CNZ teleporter requires the S3K object-art provider");
     }
 
     private void applyTeleportPalettePatch() {

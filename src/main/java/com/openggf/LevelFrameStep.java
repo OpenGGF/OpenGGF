@@ -128,6 +128,13 @@ public final class LevelFrameStep {
             paletteRegistry.beginFrame();
         }
 
+        // Runtime art queues are consumed once per active gameplay frame. S3K
+        // uses this for Queue_Kos_Module workloads whose object routines poll
+        // Kos_modules_left on later frames.
+        if (context.gameModule().getObjectArtProvider() != null) {
+            context.gameModule().getObjectArtProvider().processRuntimeArtQueue();
+        }
+
         // 0. Process dirty regions from MutableLevel (editor mutations).
         //    No-op when the level is not a MutableLevel — zero impact on gameplay.
         levelManager.processDirtyRegions();
