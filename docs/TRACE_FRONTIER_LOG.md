@@ -46135,3 +46135,29 @@ Branch `next` (on top of `8bb7f9db8`). Command:
   New frontier: frame 2018 `player_mapping_frame` (expected `0x008E`, actual `0x0064`).
   `TestMhz1CutsceneObjects` / `TestMhz1CutsceneReferenceClosure` / `TestS3kMhzCutsceneGraphRewind`
   green (88 tests).
+
+## 2026-07-18 -- MHZ1 complete-run f2018 `player_mapping_frame`: swing-bar auto-release prev_anim not cleared
+
+Branch `next` (on top of `706ecf6fd`). Same command as the f218 entry.
+
+- Root: on the MHZ horizontal swing bar, the player's animation freezes under
+  `object_control` during the hang (engine `objectMappingFrameControl` early-returns
+  in `PlayableSpriteAnimation.update`, mirroring ROM skipping `Animate_Sonic` while
+  `object_control` bit 1 is set). ROM auto-release writes anim with a WORD store
+  (`loc_3EE7A`: `move.w #$10<<8,anim(a1)` -> anim=$10, prev_anim=$00; `loc_3EEC2`:
+  `move.w #0,anim(a1)`), clobbering `prev_anim` to 0. The engine's byte-only
+  `setAnimationId` left `lastAnimationId` frozen at the pre-grab SPRING (0x10), so
+  `updateScriptedAnimation` saw `animationId == lastAnimationId`, skipped the frame
+  reset, and held the stale object hang frame `0x64` instead of SPRING frame `0x8E`;
+  the stale tick then expired ~15 frames early, flipping to WALK (f2051 cascade).
+- Fix: `MhzSwingBarHorizontalObjectInstance.releaseAutomatically` now calls
+  `player.getAnimationManager().publishPreviousAnimationId(0)` after `setAnimationId`
+  (SPRING 0x10 != 0 -> reset fires; WALK 0x00 == 0 -> no reset, matching ROM). The
+  jump-release (`releaseCommon`, a byte write in ROM) is intentionally left untouched.
+  No zone/frame/route carve-out. NOTE: `forceAnimationRestart()` here is WRONG (resets
+  the tick unconditionally, +37 trace regression) -- must be the prev_anim=0 write.
+- Result: **f2018 -> f2830 (+812 frames)**; totals `5323 -> 5204` errors (-119), 0
+  warnings. New frontier: frame 2830 `g_speed` (expected `-0x00E0`, actual `0x0000`).
+  Swing-bar unit + live-rewind tests green (50). LATENT: the vertical bar
+  (`MhzSwingBarVerticalObjectInstance.releaseWithJump`) and swing vine use the same
+  ROM word-write and should get the same treatment when their frontiers surface.

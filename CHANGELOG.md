@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **fix: MHZ swing-bar auto-release no longer holds a stale animation frame.** The
+  ROM auto-release writes the player animation with a WORD store that also clobbers
+  the adjacent `prev_anim` byte to 0 (`loc_3EE7A`/`loc_3EEC2`, sonic3k.asm:83390);
+  the engine's byte-only `setAnimationId` left the frozen pre-grab animation id in
+  place, so the new animation's frame reset was skipped and the object-driven hang
+  frame lingered (the player held a stale pose and dropped the spring animation
+  ~15 frames early). The auto-release now publishes `prev_anim = 0` to match,
+  restarting the spring frame while leaving the walk path unaffected. Advances the
+  MHZ complete-run trace frontier from frame 2018 to frame 2830 (5323 -> 5204
+  errors). The jump-release (byte write in ROM) is intentionally left unchanged.
 - **fix: MHZ1 intro no longer forces the CPU sidekick into a crouch.** The
   cutscene "P2 stopper" wrote the DUCK animation whenever the sidekick sat at or
   below the ROM clamp `x=$371`, but ROM `loc_62DDC` (`cmp.w x_pos,d0`/`bhi`) writes

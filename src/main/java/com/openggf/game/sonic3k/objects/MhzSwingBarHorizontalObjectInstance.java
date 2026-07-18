@@ -219,6 +219,19 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
         player.setJumping(false);
         player.setSpindash(false);
         player.setAnimationId(animation);
+        // ROM auto-release is a WORD write to anim (loc_3EE7A upward: move.w #$10<<8,
+        // anim(a1); loc_3EEC2 downward: move.w #0,anim(a1)) which also clobbers the
+        // adjacent prev_anim byte to 0 (sonic3k.asm:83390,83412). The engine's
+        // byte-only setAnimationId leaves lastAnimationId frozen at the pre-grab
+        // value (e.g. SPRING 0x10 from the first release), so on re-release
+        // updateScriptedAnimation sees animationId == lastAnimationId and skips the
+        // frame reset, holding the stale object-driven hang frame instead of the new
+        // animation (MHZ1 trace f2018: SPRING frame 0x8E never applied, held 0x64,
+        // then WALK 15 frames early). Publish prev_anim=0 to match the word write:
+        // SPRING(0x10)!=0 -> reset fires; WALK(0x00)==0 -> no reset (matches ROM).
+        // The jump-release path (releaseCommon) is a byte write in ROM and must NOT
+        // clobber prev_anim, so it is intentionally left untouched.
+        player.getAnimationManager().publishPreviousAnimationId(0);
         player.setRollingJump(false);
         player.setDoubleJumpFlag(0);
         player.setFlipAngle(0);
