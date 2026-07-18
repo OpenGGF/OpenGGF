@@ -1,6 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.mutation.LayoutMutationContext;
+import com.openggf.game.mutation.LevelMutationSurface;
+import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -37,6 +40,10 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
     private static final int CNZ2_SCREEN_SHAKE_FRAMES = 0x14;
     private static final int WATER_FLASH_SUBTYPE = 4;
     private static final int VACUUM_TUBE_SUBTYPE = 6;
+    private static final int VACUUM_LAYOUT_LAYER = 0;
+    private static final int VACUUM_LAYOUT_X = 0x8E;
+    private static final int VACUUM_LAYOUT_START_Y = 14;
+    private static final int[] VACUUM_LAYOUT_VALUES = {0x14, 0x0F, 0x0F, 0x88};
 
     private int x;
     private int y;
@@ -86,10 +93,6 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
         if (knuckles == null) {
             return;
         }
-        if (!canPressForCurrentCutsceneStep(knuckles)) {
-            return;
-        }
-
         int dx = knuckles.getX() - x;
         int dy = knuckles.getY() - y;
         if (dx >= RANGE_LEFT && dx < RANGE_RIGHT && dy >= RANGE_TOP && dy < RANGE_BOTTOM) {
@@ -103,12 +106,6 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
             case VACUUM_TUBE_SUBTYPE -> CutsceneKnucklesCnz2BInstance.getActiveInstance();
             default -> null;
         };
-    }
-
-    private boolean canPressForCurrentCutsceneStep(AbstractObjectInstance knuckles) {
-        return subtype != WATER_FLASH_SUBTYPE
-                || (knuckles instanceof CutsceneKnucklesCnz2AInstance cnz2a
-                && cnz2a.hasReachedButtonImpact());
     }
 
     /**
@@ -145,15 +142,48 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
      */
     private void pressVacuumTubeButton() {
         S3kCnzEventWriteSupport.triggerScreenShake(services(), CNZ2_SCREEN_SHAKE_FRAMES);
+        mutateVacuumTubeLayout();
         spawnChild(() -> new CnzVacuumTubeInstance(new ObjectSpawn(
                 0x4740, 0x0828, Sonic3kObjectIds.CNZ_VACUUM_TUBE, 0x4C, 0, false, 0)));
         spawnChild(() -> new CnzVacuumTubeInstance(new ObjectSpawn(
                 0x4740, 0x0A28, Sonic3kObjectIds.CNZ_VACUUM_TUBE, 0x20, 0, false, 0)));
     }
 
+    /**
+     * ROM {@code loc_65CAC}: writes four bytes down layout column {@code $8E}.
+     * Gameplay layout changes must pass through the runtime mutation pipeline so
+     * copy-on-write snapshots, dirty regions, and rewind observe one coherent edit.
+     */
+    private void mutateVacuumTubeLayout() {
+        if (services().currentLevel() == null || services().zoneLayoutMutationPipeline() == null) {
+            return;
+        }
+        LevelMutationSurface surface = LevelMutationSurface.forLevel(services().currentLevel());
+        LayoutMutationContext context = new LayoutMutationContext(surface, effects -> {
+            if (services().levelManager() != null) {
+                services().levelManager().applyMutationEffects(effects);
+            }
+        });
+        services().zoneLayoutMutationPipeline().applyImmediately(mutationContext -> {
+            for (int row = 0; row < VACUUM_LAYOUT_VALUES.length; row++) {
+                mutationContext.surface().setBlockInMap(
+                        VACUUM_LAYOUT_LAYER,
+                        VACUUM_LAYOUT_X,
+                        VACUUM_LAYOUT_START_Y + row,
+                        VACUUM_LAYOUT_VALUES[row]);
+            }
+            return MutationEffects.foregroundRedraw();
+        }, context);
+    }
+
     /** Test seam: the lights-off flash child spawned on press, or null. */
     CnzLightsFlashChildInstance getSpawnedFlashForTest() {
         return spawnedFlash;
+    }
+
+    /** Test seam for native respawn-entry persistence assertions. */
+    boolean isPressedForTest() {
+        return pressed;
     }
 
     @Override
