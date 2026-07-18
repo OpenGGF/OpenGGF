@@ -273,10 +273,14 @@ model the visual run branch (Component 3) uses. It does NOT hand segments to
 the standalone per-segment harnesses: those harnesses construct providers
 directly and bypass GameLoop entirely, so a driver built on them would never
 populate `BigRingReturnState`/`BonusStageState` and would have no real engine
-state for the boundary assertions to compare. Stage interiors in a chain are
-compared against the **live provider** via the new `captureComparisonState()`
-accessors (see *Engine-side additions*), with input fed and lag rows skipped
-through the existing GameLoop SS trace gate. Headless feasibility of in-engine
+state for the boundary assertions to compare. In-chain interior comparison is
+per segment kind: **bonus interiors** compare via the reused level
+schema/comparator against the live engine (they run on the level pipeline —
+this is what plan (c)'s gumball/pachinko chain uses); **special-stage
+interiors** compare against the live provider via the new
+`captureComparisonState()` accessors with input fed and lag rows skipped
+through the existing GameLoop SS trace gate — a path that comes online with
+the blue-spheres and S1-maze plans, after plan (c). Headless feasibility of in-engine
 mode transitions is established precedent
 (`TestGameLoopSpecialStageEntryPresentation`, `TestGameLoopSpecialStageSkipGate`,
 `TestPachinkoTitleCardIntegration`), though no trace-replay test drives one
@@ -294,8 +298,11 @@ Division of labor, stated explicitly:
 A headless `TraceRunReplay` walker reads the manifest and drives the
 continuous engine:
 
-1. Replays level segment N through the level replay path with normal
-   per-frame comparison.
+1. Replays level segment N with normal per-frame comparison via the
+   GameLoop-driven comparator path (the `TraceReplayDriver` /
+   live-comparator mechanism the visual launcher already uses) — not the
+   standalone `AbstractTraceReplayTest`/`LevelFrameStep` stack the
+   Architecture table maps to per-segment tests.
 2. At the recorded boundary, asserts the engine **organically** raised the
    matching transition from replayed inputs alone: giant ring touched / star
    post + ring threshold → the matching entry request fires within the global
@@ -375,8 +382,9 @@ no gameplay behavior change:
    `Sonic2SpecialStageProvider` does. S3K in particular resolves
    `special_stage_index` at entry and loads ROM art/PLC data the S2 halfpipe
    doesn't. Planning includes an explicit check; any required headless-init
-   hooks become additional engine-side items. Lives in the blue-spheres and
-   S1-maze plans respectively.
+   hooks become additional engine-side items. Intentionally split into two
+   per-provider sub-items: the S3K check lives in the blue-spheres plan, the
+   S1 check in the S1-maze plan.
 7. **Bonus-aware bootstrap branch in `TraceReplaySessionBootstrap`**
    (`src/main/java/com/openggf/trace/replay/`) — the gumball/pachinko
    headless slice's boot path (team/ring preconditions from metadata, bonus
@@ -432,8 +440,11 @@ All new tests are JUnit 5 / Jupiter only (repo mandate).
 - Recorder contract tests per the S2 SS precedent (artifact invariants
   validated before replay).
 - Determinism test: two replays of the same run produce identical reports.
-- Complete-run mode-guard regression test against a synthetic segment
-  containing a stage detour.
+- Mode-guard regression coverage at two layers: the recorder workflow's
+  validation scripts assert the lua guard's record-time behavior (a stage
+  detour must produce split segments, never level rows); a JUnit test covers
+  the Java layer — parser/manifest handling of a synthetic multi-segment
+  artifact with a stage detour.
 - Existing suites untouched: all new paths are gated by `trace_profile` /
   manifest presence; full trace sweep before merge.
 
