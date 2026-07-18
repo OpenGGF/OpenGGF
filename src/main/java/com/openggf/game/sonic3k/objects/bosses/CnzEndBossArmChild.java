@@ -25,6 +25,11 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
     private int angularStep = 1;
     private int speedTimer = 0x40;
     private int frame = 1;
+    private int animTimer;
+    private int animIndex;
+    // ROM byte_6EE0E, including the long trailing frame-1 hold.
+    private static final int[] ANIMATION_FRAMES = {1, 3, 1, 3, 1, 3, 1};
+    private static final int[] ANIMATION_DELAYS = {0, 0, 0, 0, 4, 0, 9};
     private static final int[] ANGLE_X = {
             0,1,2,3,4,5,6,8,9,10,11,12,13,14,15,16,
             17,18,19,20,21,22,23,24,24,25,26,27,28,29,30,30,
@@ -61,19 +66,44 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
                 if (routine == CnzEndBossInstance.Routine.ALIGN
                         || (routine == CnzEndBossInstance.Routine.CHARGE && !boss.magneticFieldActive())) {
                     angularStep = Math.min(4, angularStep + 1);
-                } else if (routine == CnzEndBossInstance.Routine.DESCEND
-                        || routine == CnzEndBossInstance.Routine.ASCEND) {
+                } else if (isParentWindDown(routine)) {
                     angularStep = Math.max(1, angularStep - 1);
                 }
             }
             angle = (angle + angularStep) & 0xFF;
         }
+        updateArmAnimation(routine);
         int offsetX = angleXOffset(angle);
         if (boss.facingRight()) offsetX = -offsetX;
         centreX = boss.getCentreX() + offsetX;
         centreY = boss.getCentreY() + 8;
-        frame = frameForAngle(angle);
+        // ROM sub_6EBF0 deliberately preserves byte_6EE0E's frame 3.
+        if (frame != 3) frame = frameForAngle(angle);
         updateDynamicSpawn(centreX, centreY);
+    }
+
+    private static boolean isParentWindDown(CnzEndBossInstance.Routine routine) {
+        // D1 inserts WIND_DOWN between CHARGE and DESCEND. Express the native
+        // bit-7 interval by state ordering so this child remains compatible
+        // before and after that parent state is introduced.
+        return routine.ordinal() > CnzEndBossInstance.Routine.CHARGE.ordinal()
+                && routine.ordinal() < CnzEndBossInstance.Routine.DESCEND.ordinal();
+    }
+
+    private void updateArmAnimation(CnzEndBossInstance.Routine routine) {
+        boolean active = routine.ordinal() >= CnzEndBossInstance.Routine.ALIGN.ordinal()
+                && routine.ordinal() < CnzEndBossInstance.Routine.DEFEATED.ordinal();
+        if (!active) {
+            frame = 1;
+            animIndex = 0;
+            animTimer = ANIMATION_DELAYS[0];
+            return;
+        }
+        if (--animTimer >= 0) return;
+        animIndex++;
+        if (animIndex >= ANIMATION_FRAMES.length) animIndex = 0;
+        frame = ANIMATION_FRAMES[animIndex];
+        animTimer = ANIMATION_DELAYS[animIndex];
     }
 
     private static int angleXOffset(int angle) {
@@ -95,6 +125,8 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
         if (a < 0xD0) return 8;
         return 1;
     }
+
+    int frameForTest() { return frame; }
 
     @Override public int getCollisionFlags() { return 0x9E; }
     @Override public int getCollisionProperty() { return 0; }
