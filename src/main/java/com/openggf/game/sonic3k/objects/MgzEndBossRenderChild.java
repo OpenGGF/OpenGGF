@@ -57,9 +57,14 @@ public final class MgzEndBossRenderChild extends AbstractBossChild implements Re
 
     @Override
     public boolean isHighPriority() {
-        // loc_6C962/loc_6CE0 explicitly clear bit 7 on drill-part children;
-        // the separately-created Robotnik ship retains its high tile bit.
-        return role == ROLE_POD;
+        // Child1_MakeRoboShip3 copies the parent's art_tile, then
+        // Child_SyncDraw (sonic3k.asm:138841-138854) mirrors bit 7 from that
+        // parent. Obj_MGZ2DrillingRobotnik's surprise path only loads
+        // ObjDat_MGZDrillBoss (142440), while Obj_MGZEndBoss additionally sets
+        // bit 7 at loc_6C354 (142754). The pod must therefore remain behind
+        // high-priority terrain during the Act 2 surprise, but render above it
+        // for the actual end boss.
+        return role == ROLE_POD && parent.isHighPriority();
     }
 
     @Override

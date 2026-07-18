@@ -451,6 +451,21 @@ class TestMgzDrillingRobotnikInstance {
     }
 
     @Test
+    void surpriseRobotnikPodInheritsTheMiniEventLowTilePriority() throws Exception {
+        MgzDrillingRobotnikInstance boss = createBoss(new RecordingServices(camera));
+        boss.update(0, null);
+
+        List<MgzEndBossRenderChild> parts = boss.getChildComponents().stream()
+                .filter(MgzEndBossRenderChild.class::isInstance)
+                .map(MgzEndBossRenderChild.class::cast)
+                .toList();
+
+        assertFalse(parts.get(MgzEndBossRenderChild.ROLE_POD).isHighPriority(),
+                "Child_SyncDraw must keep the surprise Robotnik ship behind MGZ terrain "
+                        + "when Obj_MGZ2DrillingRobotnik has not set art_tile bit 7");
+    }
+
+    @Test
     void defeatDebrisUsesObjDat3BucketTwoAndHighTilePriority() {
         MgzEndBossDefeatDebrisChild debris = new MgzEndBossDefeatDebrisChild(0, 0, 0, false);
         assertEquals(2, debris.getPriorityBucket());
