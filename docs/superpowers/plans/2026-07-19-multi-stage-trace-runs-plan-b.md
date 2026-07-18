@@ -240,7 +240,12 @@ Skills: n/a"
 @Test
 void gumballZoneBootsHeadlesslyWithMachineFromLayout() {
     // fixture with zone 0x13 act 0, S3K module, team sonic(+tails per default config)
-    // then perform the bonus-entry actions (provider onEnter GUMBALL, HUD layout, rings 25)
+    // then perform the FULL bonus-entry sequence in applyBonusStageEntry's order:
+    // setActiveBonusStageProvider(provider) -> onEnter(GUMBALL, state) ->
+    // registerBonusStageAdapter(provider) -> HUD layout -> rings 25.
+    // (GameServices.bonusStage() returns the gameplayMode's ACTIVE provider —
+    // null until setActiveBonusStageProvider runs, so the assertion below
+    // NPEs if that step is skipped.)
     // step 60 idle frames via the fixture's frame stepper
     // getActiveType() lives on AbstractBonusStageCoordinator (:85), NOT the
     // BonusStageProvider interface — the cast is required to compile.
