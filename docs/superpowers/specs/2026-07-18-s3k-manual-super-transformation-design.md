@@ -9,11 +9,11 @@ Match Sonic 3 & Knuckles' ROM behavior for Super/Hyper activation: transformatio
 The authoritative paths are `Sonic_ShieldMoves` / `Sonic_CheckTransform`, `Tails_Test_For_Flight`, and `Knux_Test_For_Glide` in `docs/skdisasm/sonic3k.asm`.
 
 - Sonic tries transformation on the second A/B/C press after elemental shield abilities have been ruled out. Fire, Lightning, and Bubble Shields take priority; a basic S2-style shield does not block transformation. Invincibility suppresses the attempt. Seven Super Emeralds permit Hyper transformation; seven Chaos Emeralds permit Super transformation only while the ROM-equivalent emerald-conversion flag is clear.
-- Tails transforms only when he is the main/solo playable character, has all seven Super Emeralds, and has at least 50 rings. Otherwise the press starts flight. CPU Tails does not transform.
+- Tails transforms only when he is the main/solo playable character, has all seven Super Emeralds, and has at least 50 rings. Otherwise the press continues into the existing flight decision; CPU Tails does not transform and retains its separate idle-timer flight gate.
 - Knuckles transforms with all seven Chaos Emeralds and an unset emerald-conversion flag (Super), or all seven Super Emeralds (Hyper), and at least 50 rings. Otherwise the press starts gliding.
 - Tails and Knuckles do not run through Sonic's elemental-shield dispatch, so an elemental shield does not block their transformation.
 
-All three routines require a fresh A/B/C press, `double_jump_flag == 0`, and `y_vel >= -$400`. Transformation also requires the active gameplay/HUD timer (`Update_HUD_timer != 0`). Sonic alone rejects transformation while ordinary invincibility is active; the Tails and Knuckles routines contain no corresponding invincibility rejection.
+All three routines require a fresh A/B/C press, `double_jump_flag == 0`, and `y_vel` at or beyond the active jump-height threshold: `y_vel >= -$400` normally or `y_vel >= -$200` underwater. Transformation also requires the active gameplay/HUD timer (`Update_HUD_timer != 0`). Sonic alone rejects transformation while ordinary invincibility is active; the Tails and Knuckles routines contain no corresponding invincibility rejection.
 
 ## Emerald Conversion Ownership
 
@@ -31,7 +31,7 @@ The S3K progression transition that converts the seven Chaos Emeralds will set t
 2. Tails: before flight, only when `SpriteManager.getMainPlayable()` resolves to that Tails instance. This models `Player_mode == Tails alone` and avoids treating the project's configurable CPU/multi-sidekick flags as the ROM player-mode value.
 3. Knuckles: before glide.
 
-The attempt is made only in the ROM air-ability window: a fresh jump edge, `doubleJumpFlag == 0`, and signed `ySpeed >= -0x400`. Earlier ascent remains jump-height handling. If eligibility fails, existing shield, flight, or glide behavior continues unchanged. Existing CPU Tails flight gates remain independent and unchanged. Movement owns jump-edge consumption; the controller returns whether transformation started and never mutates movement input latches.
+The attempt is made only in the ROM air-ability window: a fresh jump edge, `doubleJumpFlag == 0`, and signed `ySpeed` at or beyond the active normal (`-0x400`) or underwater (`-0x200`) threshold. Earlier ascent remains jump-height handling. If eligibility fails, existing shield, flight, or glide behavior continues unchanged. Existing CPU Tails flight gates remain independent and unchanged. Movement owns jump-edge consumption; the controller returns whether transformation started and never mutates movement input latches.
 
 | Character | Emerald gate | Shield gate | Invincibility gate | Fallback |
 |---|---|---|---|---|
@@ -61,11 +61,12 @@ Regression tests will cover:
 
 - eligible S3K Sonic does not transform from controller `update()` alone;
 - eligible Sonic transforms on the second press;
-- ability-window boundaries reject `ySpeed < -0x400`, allow `ySpeed == -0x400`, and reject an already-used double jump;
+- normal ability-window boundaries reject `ySpeed < -0x400` and allow `ySpeed == -0x400`; underwater boundaries reject `ySpeed < -0x200` and allow `ySpeed == -0x200`; both reject an already-used double jump;
 - elemental shields take priority while a BASIC shield does not block Sonic transformation;
 - invincibility blocks Sonic but not otherwise-eligible Tails or Knuckles;
 - a paused HUD timer blocks all three transformations;
 - partial Super Emerald progression blocks Chaos-only Sonic/Knuckles transformation through the explicit conversion state;
+- `emeraldsConverted` round-trips through `GameStateSnapshot` and explicit save export/import, represents converted progression with zero Super Emeralds, infers true for legacy saves containing Super Emeralds, and clears on reset/new game;
 - elemental shields do not block eligible Tails or Knuckles;
 - main Tails requires all Super Emeralds and otherwise enters flight;
 - CPU Tails does not transform;
