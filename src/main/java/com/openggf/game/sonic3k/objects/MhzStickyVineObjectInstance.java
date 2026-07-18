@@ -62,6 +62,12 @@ public final class MhzStickyVineObjectInstance extends AbstractObjectInstance im
         }
         if (!active) {
             scanNativePlayers(playerEntity);
+            // loc_3EACA/loc_3EADA only installs loc_3EB26 and the captured
+            // player pointer. The pull routine begins on the object's next
+            // slot execution; it does not fall through on the capture frame
+            // (sonic3k.asm:83035-83065).
+            updateOffscreenLifecycle();
+            return;
         }
         if (capturedPlayer != null) {
             updateActivePlayer(capturedPlayer);

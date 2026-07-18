@@ -85,6 +85,9 @@ class TestMhzCurledVineObjectInstance {
                 "Obj_MHZCurledVine only presents a rideable top surface");
         assertTrue(solid.usesCollisionHalfWidthForTopLanding(),
                 "The curled vine helper passes its computed standable range directly");
+        assertFalse(solid.forceAirOnRideExit(),
+                "sub_3E9C6 clears Status_OnObj when a rider leaves the curl window but does not "
+                        + "set Status_InAir; terrain attachment owns the following ground handoff");
     }
 
     @Test
@@ -106,6 +109,30 @@ class TestMhzCurledVineObjectInstance {
                 "The curve state moves one $10000 step from $FFF40000 toward byte index 8's $FFFF0000 target");
         assertTrue(vine.traceDebugDetails().contains("range=$80"),
                 "The live standable range mirrors byte_3E8F6 for the selected rider index");
+    }
+
+    @Test
+    void twoRidersUseFurthestSegmentToSelectUncurlRange() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance vine = registry.create(new ObjectSpawn(
+                0x2000, 0x0600, MHZ_CURLED_VINE, 0, 0, false, 0));
+        TestablePlayableSprite nearLeftRider =
+                new TestablePlayableSprite("tails", (short) 0x1FC8, (short) 0x05E0);
+        TestablePlayableSprite rightRider =
+                new TestablePlayableSprite("sonic", (short) 0x2009, (short) 0x05E0);
+
+        SolidObjectListener listener = assertInstanceOf(SolidObjectListener.class, vine);
+        SolidContact standing = new SolidContact(true, false, false, true, false);
+        listener.onSolidContact(nearLeftRider, standing, 0);
+        listener.onSolidContact(rightRider, standing, 0);
+        vine.update(1, rightRider);
+
+        SolidObjectProvider solid = assertInstanceOf(SolidObjectProvider.class, vine);
+        assertEquals(0x30, solid.getSolidParams().halfWidth(),
+                "Obj_MHZCurledVine compares its two standing indices and selects the unsigned "
+                        + "maximum; segment 4 plus one selects byte_3E8F6[5]=$60");
+        assertTrue(vine.traceDebugDetails().contains("curve=$FFF50000"),
+                "The furthest rider must drive the curve toward dword_3E8D2[5]=$FFFE0000");
     }
 
     @Test

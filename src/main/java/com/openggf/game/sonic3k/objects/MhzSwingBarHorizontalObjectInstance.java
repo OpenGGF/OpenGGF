@@ -154,7 +154,10 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
 
     private void updateHangingPlayer(AbstractPlayableSprite player, HangState state) {
         applyHorizontalInput(player, state);
-        if (player.isJumpJustPressed()) {
+        // ROM loc_3ED46 passes Ctrl_1_logical/Ctrl_2_logical to sub_3ED6E;
+        // loc_3EDE6 tests the logical word's low-byte A/B/C press bits. This
+        // includes jump presses synthesized by the CPU sidekick controller.
+        if (player.isLogicalJumpPressActive()) {
             releaseWithJump(player);
             return;
         }
@@ -177,11 +180,14 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
     private void applyHorizontalInput(AbstractPlayableSprite player, HangState state) {
         // ROM sub_3ED6E (sonic3k.asm:83326, 83340): subq.w/addq.w #1,x_pos(a1) modify only the pixel
         // word, leaving x_sub untouched.
-        if (player.isLeftPressed() && player.getCentreX() > spawn.x() - GRAB_X_BIAS) {
+        int logicalInput = player.getLogicalInputState();
+        if ((logicalInput & AbstractPlayableSprite.INPUT_LEFT) != 0
+                && player.getCentreX() > spawn.x() - GRAB_X_BIAS) {
             NativePositionOps.writeXPosPreserveSubpixel(player, player.getCentreX() - 1);
             tickInputFramePage(state);
         }
-        if (player.isRightPressed() && player.getCentreX() < spawn.x() + 0x15) {
+        if ((logicalInput & AbstractPlayableSprite.INPUT_RIGHT) != 0
+                && player.getCentreX() < spawn.x() + 0x15) {
             NativePositionOps.writeXPosPreserveSubpixel(player, player.getCentreX() + 1);
             tickInputFramePage(state);
         }
@@ -201,7 +207,11 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
         player.setObjectMappingFrameControl(false);
         player.setAir(true);
         player.setJumping(true);
-        player.setRolling(true);
+        // ROM loc_3EE42 writes y_radius/x_radius and Status_Roll directly; it
+        // does not adjust x_pos/y_pos. Avoid setRolling(true), whose sprite-box
+        // recentering moves a rider with y_radius=$0F upward by one pixel.
+        player.applyRollingRadii(false);
+        player.setRollingFlagPreserveRadii(true);
         player.setRollingJump(false);
         player.setAnimationId(Sonic3kAnimationIds.ROLL);
         player.setFlipAngle(0);

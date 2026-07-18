@@ -46242,3 +46242,39 @@ Branch `next` at `6ca6e739d`. Same command as prior entries.
   handoff wrong and raises the total to 4956. That experiment was reverted. The
   next unit is therefore the ROM ownership transition from cap contact through
   the arm's f3059 release, not a blanket solid-contact opt-in.
+
+## 2026-07-18 -- MHZ1 complete-run f3013 through miniboss approach: native object-slot and render-state ordering
+
+Branch `next` (on top of `70bdc66a3`). Replay command:
+
+```powershell
+mvn.cmd -q -Dmse=off "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay#replayMatchesTrace" "-DargLine=-Xmx3g" "-Dtrace.context.diagnosticChars=full" test
+```
+
+- Root cluster: several MHZ objects observed state at the wrong native phase.
+  The level-owned pollen spawner was not restored to fixed SST slot 4, pollen
+  particles sampled `render_flags` before the post-camera render pass, and path
+  switchers ran for every placement before the SST object loop. At f1161 that
+  let a later PathSwap change `top_solid_bit` before the earlier pollen spawner
+  sampled it, skipping a native RNG call and shifting later Madmole drill motion.
+  The miniboss had the same missing render-state ownership: routine `$08`
+  (`loc_75392`) waits at x=`$4428` until camera scrolling makes the object visible,
+  then consumes the previous `Draw_And_Touch_Sprite` bit-7 result. The engine
+  never refreshed `BossStateContext.renderFlags`, so the invisible boss remained
+  frozen in Sonic's path.
+- Fix: restore the pollen controller to slot 4, latch pollen/badnik/miniboss
+  visibility after camera movement, and mark placement path switchers for inline
+  execution in their own object slot. Complete the associated ROM-local
+  interaction ownership for Madmole's split parent/body/drill roles (including
+  `Touch_EnemyNormal` rebound while the parent cap survives), mushroom-cap and
+  vine land/release paths, pulley/spring timing, CPU-follow history, and ring/
+  trace-bootstrap state needed by the route. All shared execution changes are
+  driven by object markers or native state; there are no zone, route, or frame
+  carve-outs.
+- Result: **f3013 -> f5240 (+2227 frames)**; totals **`2728 -> 2103` errors
+  (-625)**, 0 warnings. New first mismatch: frame 5240
+  `player_mapping_frame` (expected `0x07`, actual `0x08`), followed by isolated
+  f6962 Tails Y and a persistent one-ring delta beginning f6978. The first large
+  remaining gameplay cascade begins around the MHZ miniboss approach at f10958.
+- Verification: broad focused MHZ object/path-switch/rewind/bootstrap suite green;
+  complete-run trace reproduced 2103 errors twice after diagnostic cleanup.

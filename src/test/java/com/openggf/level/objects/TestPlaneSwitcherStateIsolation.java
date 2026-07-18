@@ -15,6 +15,43 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestPlaneSwitcherStateIsolation {
 
+    @Test
+    void inlinePlaneSwitcherDefersCrossingUntilItsObjectSlot() {
+        ObjectSpawn switcher = new ObjectSpawn(0x06A8, 0x02C8, 0x03, 0x11, 0x00, false, 0);
+        ObjectManager objectManager = new ObjectManager(
+                List.of(switcher),
+                new ObjectRegistry() {
+                    @Override
+                    public ObjectInstance create(ObjectSpawn spawn) {
+                        return new InlineMarker(spawn);
+                    }
+
+                    @Override public void reportCoverage(List<ObjectSpawn> spawns) { }
+                    @Override public String getPrimaryName(int objectId) { return "Test"; }
+                },
+                0x03,
+                new PlaneSwitcherConfig((byte) 0x0C, (byte) 0x0D, (byte) 0x0E, (byte) 0x0F),
+                null, null, null, null);
+        objectManager.reset(0x060A);
+
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.setCentreX((short) 0x06A8);
+        sonic.setCentreY((short) 0x02D0);
+        sonic.setAir(false);
+        sonic.setTopSolidBit((byte) 0x0C);
+        sonic.setLrbSolidBit((byte) 0x0D);
+        objectManager.applyInlinePlaneSwitcher(switcher, sonic);
+
+        sonic.setCentreX((short) 0x06A2);
+        objectManager.applyPlaneSwitchers(sonic);
+        assertEquals(0x0C, sonic.getTopSolidBit() & 0xFF,
+                "earlier SST slots must observe the old path bits");
+
+        objectManager.applyInlinePlaneSwitcher(switcher, sonic);
+        assertEquals(0x0E, sonic.getTopSolidBit() & 0xFF,
+                "Obj_PathSwap changes the bits only when its own slot executes");
+    }
+
     @BeforeEach
     void setUp() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
@@ -157,5 +194,15 @@ class TestPlaneSwitcherStateIsolation {
         @Override
         protected void createSensorLines() {
         }
+    }
+
+    private static final class InlineMarker extends AbstractObjectInstance
+            implements InlinePlaneSwitcher {
+        private InlineMarker(ObjectSpawn spawn) {
+            super(spawn, "InlinePathSwap");
+        }
+
+        @Override public void update(int frameCounter, com.openggf.game.PlayableEntity player) { }
+        @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
     }
 }

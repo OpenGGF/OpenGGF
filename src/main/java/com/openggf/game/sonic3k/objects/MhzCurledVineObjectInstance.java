@@ -180,6 +180,16 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean forceAirOnRideExit() {
+        // This object's bespoke sub_3E9C6 exit is not the shared
+        // PlatformObject exit path: loc_3E9E6 clears Status_OnObj and the
+        // object's standing bit, but deliberately does not set Status_InAir
+        // (sonic3k.asm:82950-82961). That leaves the player grounded for the
+        // current frame while normal terrain attachment takes over.
+        return false;
+    }
+
+    @Override
     public boolean usesInstanceSolidStateLatchKey() {
         return true;
     }
@@ -265,11 +275,15 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
         if (standingSegmentIndices.isEmpty()) {
             return 0;
         }
-        int minimumSegment = Integer.MAX_VALUE;
+        // Obj_MHZCurledVine compares $36 (P1 segment) with $37 (P2 segment):
+        // `cmp.b d1,d2 / blo.s ... / move.b d2,d1` retains the unsigned larger
+        // index, then adds one (sonic3k.asm:82805-82812). The rider furthest
+        // along the curl therefore owns both the target curve and landing width.
+        int furthestSegment = 0;
         for (int segmentIndex : standingSegmentIndices.values()) {
-            minimumSegment = Math.min(minimumSegment, segmentIndex);
+            furthestSegment = Math.max(furthestSegment, segmentIndex);
         }
-        return Math.min(minimumSegment + 1, RANGE_WIDTHS.length - 1);
+        return Math.min(furthestSegment + 1, RANGE_WIDTHS.length - 1);
     }
 
     /**

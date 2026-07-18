@@ -204,6 +204,27 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // SolidObjectTop accepts only d0=$FFF0..$FFFF. At exact contact
+        // d0=0, `cmpi.w #-$10,d0 / blo` branches to the miss return
+        // (sonic3k.asm:42008-42013).
+        return true;
+    }
+
+    @Override
+    public boolean allowsObjectControlledSolidContacts() {
+        // SolidObjectTop's new-contact path rejects only negative object_control
+        // values (sonic3k.asm:42014-42019). The Madmole arm's positive value 1
+        // can therefore land on the cap while the arm still owns movement.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) {
+        return true;
+    }
+
+    @Override
     public boolean usesCollisionHalfWidthForTopLanding() {
         return true;
     }

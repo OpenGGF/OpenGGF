@@ -37,6 +37,8 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
     private static final int INIT_Y_CAMERA_OFFSET = -0x78;
     private static final int INIT_Y_VELOCITY = 0x100;
     private static final int INIT_TIMER = 0x97;
+    private static final int RENDER_WIDTH_PIXELS = 0x48;
+    private static final int RENDER_HEIGHT_PIXELS = 0x40;
     private static final int FIRST_SWING_Y_VELOCITY = 0x80;
     private static final int FIRST_SWING_ACCELERATION = 0x10;
     private static final int LEVEL_MUSIC_FADE_TIME = 2 * 60;
@@ -246,6 +248,30 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
     @Override
     protected int getInitialHitCount() {
         return HIT_COUNT;
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        // Draw_And_Touch_Sprite updates render_flags bit 7 after the object's
+        // routine. Routine $08 deliberately waits at x=$4428 until camera
+        // scrolling brings the boss back inside ObjDat_MHZMiniboss's $48/$40
+        // render bounds, then observes the latched bit on the next dispatch
+        // (sonic3k.asm:155584-155592, 155695-155726, 156770-156775).
+        if (isWithinRenderSpriteBounds(RENDER_WIDTH_PIXELS, RENDER_HEIGHT_PIXELS)) {
+            state.renderFlags |= 0x80;
+        } else {
+            state.renderFlags &= ~0x80;
+        }
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("r=%02X vel=%04X,%04X wait=%04X rf=%02X",
+                state.routine & 0xFF,
+                state.xVel & 0xFFFF,
+                state.yVel & 0xFFFF,
+                getCustomFlag(SCRATCH_2E) & 0xFFFF,
+                state.renderFlags & 0xFF);
     }
 
     @Override

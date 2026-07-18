@@ -371,6 +371,7 @@ public final class MushmeanieBadnikInstance extends AbstractS3kBadnikInstance
             if (!launched) {
                 if (parent.isDestroyed()) {
                     setDestroyed(true);
+                    detachFromParent();
                     return;
                 }
                 x = parent.currentX;
@@ -410,6 +411,13 @@ public final class MushmeanieBadnikInstance extends AbstractS3kBadnikInstance
         private void checkDeleteXY() {
             if (!isOnScreen(0)) {
                 setDestroyedByOffscreen();
+                detachFromParent();
+            }
+        }
+
+        private void detachFromParent() {
+            if (parent != null && parent.shellChild == this) {
+                parent.shellChild = null;
             }
         }
 

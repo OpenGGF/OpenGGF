@@ -53,10 +53,10 @@ class TestMhzStickyVineObjectInstance {
         int xAfterCapture = player.getCentreX();
         vine.update(1, player);
 
-        assertTrue(xAfterCapture < 0x2408,
-                "Obj_MHZStickyVine pulls an overlapping player back toward x_pos using sub_3EC66");
-        assertTrue(player.getCentreX() <= xAfterCapture,
-                "The active vine routine keeps applying the pull while the player remains captured");
+        assertEquals(0x2408, xAfterCapture,
+                "loc_3EADA installs loc_3EB26 but does not fall through into the pull on the capture frame");
+        assertTrue(player.getCentreX() < xAfterCapture,
+                "Obj_MHZStickyVine starts pulling the captured player on its next update via sub_3EC66");
         assertTrue(vine.traceDebugDetails().contains("active=true"),
                 "Trace details expose the ROM active routine state for parity debugging");
     }
@@ -73,8 +73,9 @@ class TestMhzStickyVineObjectInstance {
         assertEquals("MHZStickyVine", vine.getName(),
                 "SKL slot $0A must construct the MHZ sticky vine before retraction can be validated");
         vine.update(0, player);
+        vine.update(1, player);
         player.setSpindash(false);
-        for (int frame = 1; frame <= 16; frame++) {
+        for (int frame = 2; frame <= 17; frame++) {
             vine.update(frame, player);
         }
 
@@ -109,6 +110,10 @@ class TestMhzStickyVineObjectInstance {
         int expectedYQ = playerYQ - yPullQ;
 
         vine.update(0, player);
+        assertEquals(playerXQ >> 16, player.getCentreX(),
+                "capture only installs loc_3EB26; the first pull waits until the next object update");
+        assertEquals(playerXQ & 0xFFFF, player.getXSubpixelRaw());
+        vine.update(1, player);
 
         assertEquals(expectedXQ >> 16, player.getCentreX(),
                 "sub_3EC66 subtracts cos(angle)*d3*4 from x_pos via GetArcTan/GetSineCosine over (dx,dy)");
@@ -129,6 +134,9 @@ class TestMhzStickyVineObjectInstance {
         player.setPushing(true);
 
         vine.update(0, player);
+        assertTrue(player.getPushing(),
+                "the capture-only frame does not yet execute sub_3EC66");
+        vine.update(1, player);
 
         assertFalse(player.getPushing(),
                 "Obj_MHZStickyVine sub_3EC66 ends by clearing Status_Push every active pull frame");
@@ -184,9 +192,12 @@ class TestMhzStickyVineObjectInstance {
         vine.setServices(new TestObjectServices().withSidekicks(List.of(tails)));
 
         vine.update(0, sonic);
+        assertEquals(0x2408, tails.getCentreX(),
+                "native P2 capture installs the active routine without a same-frame pull");
+        vine.update(1, sonic);
 
         assertTrue(tails.getCentreX() < 0x2408,
-                "loc_3EACA runs loc_3EADA for Player_2 after Player_1, so native P2 can activate the sticky vine");
+                "loc_3EACA captures Player_2 and loc_3EB26 pulls it on the following object update");
         assertTrue(vine.traceDebugDetails().contains("active=true"),
                 "native P2 capture must enter the same active sticky-vine routine as Player_1 capture");
         assertEquals(0x2000, sonic.getCentreX(),

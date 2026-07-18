@@ -49,6 +49,7 @@ class TestMhzSwingVineObjectInstance {
                 0x2600, 0x0660, MHZ_SWING_VINE, 0, 0, false, 0));
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2600, (short) 0x0680);
         player.setYSpeed((short) 0x0300);
+        player.setMappingFrame(0x21);
 
         assertEquals("MHZSwingVine", vine.getName(),
                 "SKL slot $10 must construct the MHZ swing vine before capture can be validated");
@@ -67,8 +68,14 @@ class TestMhzSwingVineObjectInstance {
         assertEquals((short) 0, player.getXSpeed());
         assertEquals((short) 0, player.getYSpeed());
         assertEquals((short) 0, player.getGSpeed());
+        assertEquals(0x21, player.getMappingFrame(),
+                "loc_22B3C captures after the player's animation update without writing mapping_frame; "
+                        + "the handle routine first selects byte_22A4C on the following object tick");
+
+        vine.update(1, player);
+
         assertEquals(0x91, player.getMappingFrame(),
-                "Stationary handle mode uses byte_22A4C's center hanging frame");
+                "the following captured-player tick selects byte_22A4C's center hanging frame");
     }
 
     @Test
@@ -82,6 +89,7 @@ class TestMhzSwingVineObjectInstance {
                 "SKL slot $10 must construct the MHZ swing vine before release can be validated");
         vine.update(0, player);
         player.setJumpInputPressed(true);
+        player.setLogicalInputState(false, false, false, false, true, true);
         vine.update(1, player);
         ((PostPlayerUpdateHook) vine).updatePostPlayer(1, player);
 
@@ -107,6 +115,7 @@ class TestMhzSwingVineObjectInstance {
 
         vine.update(0, player);
         player.setJumpInputPressed(true);
+        player.setLogicalInputState(false, false, false, false, true, true);
         vine.update(1, player);
 
         assertFalse(player.isObjectControlled(),
@@ -114,6 +123,25 @@ class TestMhzSwingVineObjectInstance {
         assertTrue(player.getAir(), "Jump release sets Status_InAir on the same object update");
         assertEquals((short) -0x0380, player.getYSpeed(),
                 "The same-frame release must apply the stationary handle launch velocity");
+    }
+
+    @Test
+    void jumpReleaseReadsRomLogicalPressWord() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance vine = registry.create(new ObjectSpawn(
+                0x2600, 0x0660, MHZ_SWING_VINE, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("tails", (short) 0x2600, (short) 0x0680);
+
+        vine.update(0, player);
+        player.setJumpInputPressed(false, false);
+        player.setLogicalInputState(false, false, false, false, false, true);
+        vine.update(1, player);
+
+        assertFalse(player.isObjectControlled(),
+                "loc_228EC passes Ctrl_1_logical/Ctrl_2_logical to loc_2291A, so a CPU-published "
+                        + "logical A/B/C press releases the vine even without a raw movement jump edge");
+        assertEquals((short) -0x0380, player.getYSpeed(),
+                "the logical press takes the same mode-0 launch path as a physical jump press");
     }
 
     @Test
@@ -126,6 +154,7 @@ class TestMhzSwingVineObjectInstance {
 
         vine.update(0, player);
         player.setJumpInputPressed(true);
+        player.setLogicalInputState(false, false, false, false, true, true);
         vine.update(1, player);
         ((PostPlayerUpdateHook) vine).updatePostPlayer(1, player);
 
@@ -147,6 +176,7 @@ class TestMhzSwingVineObjectInstance {
 
         vine.update(0, player);
         player.setJumpInputPressed(true);
+        player.setLogicalInputState(false, false, false, false, true, true);
         vine.update(1, player);
         vine.update(2, player);
 
@@ -238,8 +268,12 @@ class TestMhzSwingVineObjectInstance {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2600, (short) 0x0680);
         player.setXSpeed((short) 0x0400); // fast grab -> root enters the loc_226B0 swing routine
 
-        vine.update(0, player); // grab; root is still WAIT (the setter lives in the swing routine)
-        vine.update(1, player); // root now SWINGING -> loc_226F2 forces scroll to the vine anchor
+        vine.update(0, player); // grab; root is still WAIT
+        vine.update(1, player); // loc_2267E changes the function pointer to loc_226B0, then returns
+
+        verify(camera, never()).requestForcedScroll(anyInt(), anyInt());
+
+        vine.update(2, player); // loc_226B0 now executes and forces scroll to the vine anchor
 
         verify(camera, atLeastOnce()).requestForcedScroll(0x2600, 0x0660);
     }
@@ -256,8 +290,12 @@ class TestMhzSwingVineObjectInstance {
         vine.update(0, player);
         vine.update(1, player);
         player.setJumpInputPressed(true);
+        player.setLogicalInputState(false, false, false, false, true, true);
         vine.update(2, player); // jump release clears the grab
         ((PostPlayerUpdateHook) vine).updatePostPlayer(2, player);
+
+        verify(camera).requestForcedScroll(0x2600, 0x0660);
+
         clearInvocations(camera);
 
         vine.update(3, player);

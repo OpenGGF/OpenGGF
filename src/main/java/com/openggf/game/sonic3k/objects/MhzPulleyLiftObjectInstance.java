@@ -120,8 +120,8 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
                 + " parentLeftOffset=" + parentLeftHandleOffset
                 + " parentRightOffset=" + parentRightHandleOffset
                 + " remainingPullSteps=" + remainingPullSteps
-                + " leftGrabbed=" + leftHandle.grabbed
-                + " rightGrabbed=" + rightHandle.grabbed;
+                + " leftGrabbed=" + leftHandle.anyGrabbed()
+                + " rightGrabbed=" + rightHandle.anyGrabbed();
     }
 
     private void updateParentPosition() {
@@ -184,22 +184,35 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
     }
 
     private void updateHandle(HandleState handle, AbstractPlayableSprite player2, AbstractPlayableSprite player1) {
-        AbstractPlayableSprite activePlayer = handle.grabbedPlayer != null ? handle.grabbedPlayer : player1;
-        if (handle.grabbed) {
-            updateGrabbedHandle(handle, activePlayer);
-        } else {
-            updateUngrippedHandle(handle, player2, player1);
-        }
-        updateHandleOffset(handle, activePlayer);
+        // Each native handle child owns two independent bytes: $31 for P2 and
+        // $30 for P1. sub_3E4EC processes both in that order, so both players
+        // may hang from the same handle simultaneously.
+        handle.pullActive = false;
+        updatePlayerGrip(handle, handle.player2Grip, player2);
+        updatePlayerGrip(handle, handle.player1Grip, player1);
+        updateHandleOffset(handle);
     }
 
-    private void updateGrabbedHandle(HandleState handle, AbstractPlayableSprite player) {
+    private void updatePlayerGrip(HandleState handle, GripState grip, AbstractPlayableSprite player) {
+        AbstractPlayableSprite activePlayer = grip.grabbedPlayer != null ? grip.grabbedPlayer : player;
+        if (grip.grabbed) {
+            updateGrabbedHandle(handle, grip, activePlayer);
+        } else {
+            updateUngrippedHandle(handle, grip, player);
+        }
+    }
+
+    private void updateGrabbedHandle(HandleState handle, GripState grip, AbstractPlayableSprite player) {
         if (player == null || player.getDead() || player.isHurt() || player.isDebugMode()) {
-            releaseHandle(handle, player, false);
+            releaseHandle(grip, player, false);
             return;
         }
-        if (player.isJumpJustPressed()) {
-            releaseHandle(handle, player, true);
+        // sub_3E4EC passes Ctrl_1_logical/Ctrl_2_logical to sub_3E508.
+        // CPU-generated P2 presses remain in the logical low byte even though
+        // the movement slot consumes its forced-jump bridge before this later
+        // object slot executes.
+        if (player.isLogicalJumpPressActive()) {
+            releaseHandle(grip, player, true);
             return;
         }
         snapPlayerToHandle(handle, player);
@@ -209,36 +222,23 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
         // releasing down while still holding the handle must let the lift rise.
         // Track the current down state fresh each frame rather than latching it.
         boolean downPressed = player.isDownPressed();
-        handle.pullActive = downPressed;
-        if (downPressed && !handle.downPressedLastFrame && isPullEnabled()) {
+        handle.pullActive |= downPressed;
+        if (downPressed && !grip.downPressedLastFrame && isPullEnabled()) {
             playPulleyMoveSfx();
         }
-        handle.downPressedLastFrame = downPressed;
+        grip.downPressedLastFrame = downPressed;
         updatePlayerFacingFromHeldInput(player);
         applyPlayerPulleyFrame(handle, player);
     }
 
-    private void updateUngrippedHandle(HandleState handle, AbstractPlayableSprite player2, AbstractPlayableSprite player1) {
-        handle.pullActive = false;
-        if (handle.releaseCooldown > 0) {
-            handle.releaseCooldown--;
+    private void updateUngrippedHandle(HandleState handle, GripState grip, AbstractPlayableSprite player) {
+        if (grip.releaseCooldown > 0) {
+            grip.releaseCooldown--;
             return;
         }
-        AbstractPlayableSprite player = firstPlayerInGrabWindow(handle, player2, player1);
-        if (player != null) {
-            grabHandle(handle, player);
+        if (isInGrabWindow(handle, player)) {
+            grabHandle(handle, grip, player);
         }
-    }
-
-    private AbstractPlayableSprite firstPlayerInGrabWindow(HandleState handle,
-            AbstractPlayableSprite player2, AbstractPlayableSprite player1) {
-        if (isInGrabWindow(handle, player2)) {
-            return player2;
-        }
-        if (isInGrabWindow(handle, player1)) {
-            return player1;
-        }
-        return null;
     }
 
     private boolean isInGrabWindow(HandleState handle, AbstractPlayableSprite player) {
@@ -258,9 +258,9 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
                 && player.getYSpeed() > 0;
     }
 
-    private void grabHandle(HandleState handle, AbstractPlayableSprite player) {
-        handle.grabbed = true;
-        handle.grabbedPlayer = player;
+    private void grabHandle(HandleState handle, GripState grip, AbstractPlayableSprite player) {
+        grip.grabbed = true;
+        grip.grabbedPlayer = player;
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
@@ -269,7 +269,7 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
         player.setSpindash(false);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setObjectMappingFrameControl(true);
-        handle.downPressedLastFrame = player.isDownPressed();
+        grip.downPressedLastFrame = player.isDownPressed();
         applyPlayerPulleyFrame(handle, player);
         player.setRenderFlips(player.getRenderHFlip(), false);
         ObjectServices objectServices = tryServices();
@@ -278,7 +278,7 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void releaseHandle(HandleState handle, AbstractPlayableSprite player, boolean jumpRelease) {
+    private void releaseHandle(GripState grip, AbstractPlayableSprite player, boolean jumpRelease) {
         if (player != null) {
             ObjectControlState.none().applyTo(player);
             player.setObjectMappingFrameControl(false);
@@ -291,23 +291,29 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
                 player.setYSpeed((short) RELEASE_Y_VELOCITY);
                 player.setAir(true);
                 player.setJumping(true);
-                player.setRolling(true);
                 player.applyCustomRadii(ROLL_X_RADIUS, ROLL_Y_RADIUS);
+                // sub_3E508 writes y_radius/x_radius and Status_Roll directly;
+                // it never changes the centre-coordinate y_pos. The generic
+                // setRolling path changes the engine visual box and therefore
+                // shifts getCentreY despite no native position write.
+                player.setRollingFlagPreserveRadii(true);
                 player.setAnimationId(Sonic3kAnimationIds.ROLL);
-                handle.releaseCooldown = hasDirectionalInput(player) ? LONG_RELEASE_COOLDOWN : SHORT_RELEASE_COOLDOWN;
+                grip.releaseCooldown = hasDirectionalInput(player) ? LONG_RELEASE_COOLDOWN : SHORT_RELEASE_COOLDOWN;
             } else {
-                handle.releaseCooldown = LONG_RELEASE_COOLDOWN;
+                grip.releaseCooldown = LONG_RELEASE_COOLDOWN;
             }
         }
-        handle.grabbed = false;
-        handle.grabbedPlayer = null;
-        handle.pullActive = false;
-        handle.downPressedLastFrame = false;
+        grip.grabbed = false;
+        grip.grabbedPlayer = null;
+        grip.downPressedLastFrame = false;
     }
 
-    private void updateHandleOffset(HandleState handle, AbstractPlayableSprite player) {
-        if (handle.pullActive && isPullEnabled()) {
-            if (handle.offset != HANDLE_MAX_OFFSET) {
+    private void updateHandleOffset(HandleState handle) {
+        if (handle.pullActive) {
+            // loc_3E472 leaves $34 unchanged while DOWN remains held after the
+            // parent subtype reaches zero (or the handle reaches $40). Only a
+            // released pull flag enters loc_3E4AA's four-pixel retraction.
+            if (isPullEnabled() && handle.offset != HANDLE_MAX_OFFSET) {
                 handle.offset += HANDLE_STEP;
             }
             writeParentHandleOffset(handle);
@@ -381,7 +387,7 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
         int threshold = 0x18;
         if (handle.pullActive && isPullEnabled() && handle.offset != HANDLE_MAX_OFFSET) {
             threshold = 0x1C;
-        } else if (handle.offset != 0) {
+        } else if (!handle.pullActive && handle.offset != 0) {
             threshold = 0x14;
         }
 
@@ -405,15 +411,24 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
 
     private static final class HandleState {
         private final int xOffset;
+        private final GripState player1Grip = new GripState();
+        private final GripState player2Grip = new GripState();
         private int offset;
-        private int releaseCooldown;
-        private boolean grabbed;
         private boolean pullActive;
-        private boolean downPressedLastFrame;
-        private AbstractPlayableSprite grabbedPlayer;
 
         private HandleState(int xOffset) {
             this.xOffset = xOffset;
         }
+
+        private boolean anyGrabbed() {
+            return player1Grip.grabbed || player2Grip.grabbed;
+        }
+    }
+
+    private static final class GripState {
+        private int releaseCooldown;
+        private boolean grabbed;
+        private boolean downPressedLastFrame;
+        private AbstractPlayableSprite grabbedPlayer;
     }
 }

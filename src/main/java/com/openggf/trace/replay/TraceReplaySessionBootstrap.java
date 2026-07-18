@@ -269,8 +269,7 @@ public final class TraceReplaySessionBootstrap {
                             null, cameraX, levelManager.getFeatureZoneId());
                 }
             }
-            objectManager.initVblaCounter(
-                    trace.initialVblankCounter() - objectPreludeFrames - 1);
+            objectManager.initVblaCounter(initialObjectVblankSeed(trace, objectPreludeFrames));
         }
         if (objectPreludeFrames > 0
                 && gameplayMode != null
@@ -287,15 +286,19 @@ public final class TraceReplaySessionBootstrap {
             // object ticks, so prelude state comes from object code rather
             // than recorded SST data.
             var levelEventProvider = GameServices.module().getLevelEventProvider();
-            if (levelEventProvider != null
+            boolean deferredInitialPlacement = levelEventProvider != null
                     && levelEventProvider.defersInitialObjectPlacementUntilAfterLevelEvents(
-                            levelManager.getCurrentZone(), levelManager.getCurrentAct())) {
+                            levelManager.getCurrentZone(), levelManager.getCurrentAct());
+            if (deferredInitialPlacement) {
                 objectManager.resetForSynchronousActTransition(cameraX);
             } else {
-                objectManager.reset(cameraX);
+                objectManager.resetForPreludeHydration(cameraX);
             }
             if (levelEventProvider != null) {
                 levelEventProvider.restoreEventOwnedObjectsAfterPlacementReset();
+            }
+            if (!deferredInitialPlacement) {
+                objectManager.preloadInitialSpawnsForHydration();
             }
             AbstractPlayableSprite player = fixture != null ? fixture.sprite() : null;
             List<AbstractPlayableSprite> sidekicks = gameplayMode.getSpriteManager() != null
@@ -734,6 +737,16 @@ public final class TraceReplaySessionBootstrap {
     static int ringFloorCheckRuntimeOffset(Integer recordedAbsolutePhase, int liveDefaultPhase) {
         int replayAbsolutePhase = recordedAbsolutePhase != null ? recordedAbsolutePhase : 0;
         return replayAbsolutePhase - liveDefaultPhase;
+    }
+
+    /**
+     * Seeds the object-loop clock immediately before the replay's first driven frame.
+     * The canonical replay counter points at that first native VBlank, while each
+     * title-card prelude object pass advances the same clock once.
+     */
+    static int initialObjectVblankSeed(TraceData trace, int objectPreludeFrames) {
+        return TraceReplayBootstrap.initialVblankCounterForTraceReplay(trace)
+                - objectPreludeFrames - 1;
     }
 
     private static int liveRingFloorCheckPhase() {

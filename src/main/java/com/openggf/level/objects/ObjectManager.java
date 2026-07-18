@@ -328,6 +328,16 @@ public class ObjectManager {
         reset(cameraX, false);
     }
 
+    /**
+     * Resets placement state without materializing the initial window so that
+     * level-init objects written to fixed SST slots can be restored first.
+     * Trace prelude setup then calls {@link #preloadInitialSpawnsForHydration()}
+     * to reproduce the native Level_Init-before-ObjPosLoad allocation order.
+     */
+    public void resetForPreludeHydration(int cameraX) {
+        reset(cameraX, false);
+    }
+
     private void reset(int cameraX, boolean materializeInitialWindow) {
         clearActiveObjects();
         dynamicObjects.clear();
@@ -1154,8 +1164,21 @@ public class ObjectManager {
         // Sonic 2 Obj03 tracks separate crossover state for MainCharacter and
         // Sidekick (objoff_34 / objoff_35) and updates both each frame.
         if (planeSwitchers != null) {
-            planeSwitchers.update(player);
+            planeSwitchers.update(player, this::hasInlinePlaneSwitcher);
         }
+    }
+
+    /** Applies one inline path-switch SST at its native object-slot position. */
+    public void applyInlinePlaneSwitcher(ObjectSpawn spawn, PlayableEntity player) {
+        if (planeSwitchers != null && spawn != null && player != null) {
+            planeSwitchers.updateSpawn(spawn, player);
+        }
+    }
+
+    private boolean hasInlinePlaneSwitcher(ObjectSpawn spawn) {
+        return activeObjects.values().stream().anyMatch(instance ->
+                instance instanceof InlinePlaneSwitcher
+                        && java.util.Objects.equals(instance.getSpawn(), spawn));
     }
 
     public int getPlaneSwitcherSideState(ObjectSpawn spawn) {
@@ -4606,7 +4629,7 @@ public class ObjectManager {
             return player == null ? "" : player.getClass().getName();
         }
 
-        void update(PlayableEntity player) {
+        void update(PlayableEntity player, java.util.function.Predicate<ObjectSpawn> skipSpawn) {
             if (placement == null || player == null || config == null) {
                 return;
             }
@@ -4619,58 +4642,68 @@ public class ObjectManager {
             int playerY = player.getCentreY();
 
             for (ObjectSpawn spawn : active) {
-                if (spawn.objectId() != objectId) {
+                if (spawn.objectId() != objectId || skipSpawn.test(spawn)) {
                     continue;
                 }
 
-                int subtype = spawn.subtype();
-                PlaneSwitcherState state = states.computeIfAbsent(spawn,
-                        key -> new PlaneSwitcherState(decodeHalfSpan(subtype)));
-
-                boolean horizontal = isHorizontal(subtype);
-                int sideNow = horizontal
-                        ? (playerY >= spawn.y() ? 1 : 0)
-                        : (playerX >= spawn.x() ? 1 : 0);
-                int previousSide = state.getSideState(player);
-                if (previousSide < 0) {
-                    state.setSideState(player, sideNow);
-                    state.setLastSideState(sideNow);
-                    continue;
-                }
-
-                int half = state.halfSpanPixels;
-                boolean inSpan = horizontal
-                        ? (playerX >= spawn.x() - half && playerX < spawn.x() + half)
-                        : (playerY >= spawn.y() - half && playerY < spawn.y() + half);
-                boolean groundedGate = onlySwitchWhenGrounded(subtype) && player.getAir();
-
-                if (inSpan && !groundedGate && sideNow != previousSide) {
-                    boolean skipCollisionChange = (spawn.renderFlags() & 0x1) != 0;
-                    if (!skipCollisionChange) {
-                        int path = decodePath(subtype, sideNow);
-                        player.setLayer((byte) path);
-                        if (path == 0) {
-                            player.setTopSolidBit(config.getPath0TopSolidBit());
-                            player.setLrbSolidBit(config.getPath0LrbSolidBit());
-                        } else {
-                            player.setTopSolidBit(config.getPath1TopSolidBit());
-                            player.setLrbSolidBit(config.getPath1LrbSolidBit());
-                        }
-                        LOGGER.fine(() -> String.format(
-                                "PlaneSwitcher path=%d: player(%d,%d) obj(%d,%d) sub=0x%02X side=%d→%d air=%b mode=%s",
-                                path, player.getCentreX(), player.getCentreY(),
-                                spawn.x(), spawn.y(), subtype, previousSide, sideNow,
-                                player.getAir(), player.getGroundMode()));
-                    }
-                    boolean highPriority = decodePriority(subtype, sideNow);
-                    player.setHighPriority(highPriority);
-                }
-
-                state.setSideState(player, sideNow);
-                state.setLastSideState(sideNow);
+                updateSpawn(spawn, player);
             }
 
             states.keySet().removeIf(spawn -> spawn.objectId() == objectId && !active.contains(spawn));
+        }
+
+        void updateSpawn(ObjectSpawn spawn, PlayableEntity player) {
+            if (spawn == null || player == null || spawn.objectId() != objectId) {
+                return;
+            }
+
+            int playerX = player.getCentreX();
+            int playerY = player.getCentreY();
+            int subtype = spawn.subtype();
+            PlaneSwitcherState state = states.computeIfAbsent(spawn,
+                    key -> new PlaneSwitcherState(decodeHalfSpan(subtype)));
+
+            boolean horizontal = isHorizontal(subtype);
+            int sideNow = horizontal
+                    ? (playerY >= spawn.y() ? 1 : 0)
+                    : (playerX >= spawn.x() ? 1 : 0);
+            int previousSide = state.getSideState(player);
+            if (previousSide < 0) {
+                state.setSideState(player, sideNow);
+                state.setLastSideState(sideNow);
+                return;
+            }
+
+            int half = state.halfSpanPixels;
+            boolean inSpan = horizontal
+                    ? (playerX >= spawn.x() - half && playerX < spawn.x() + half)
+                    : (playerY >= spawn.y() - half && playerY < spawn.y() + half);
+            boolean groundedGate = onlySwitchWhenGrounded(subtype) && player.getAir();
+
+            if (inSpan && !groundedGate && sideNow != previousSide) {
+                boolean skipCollisionChange = (spawn.renderFlags() & 0x1) != 0;
+                if (!skipCollisionChange) {
+                    int path = decodePath(subtype, sideNow);
+                    player.setLayer((byte) path);
+                    if (path == 0) {
+                        player.setTopSolidBit(config.getPath0TopSolidBit());
+                        player.setLrbSolidBit(config.getPath0LrbSolidBit());
+                    } else {
+                        player.setTopSolidBit(config.getPath1TopSolidBit());
+                        player.setLrbSolidBit(config.getPath1LrbSolidBit());
+                    }
+                    LOGGER.fine(() -> String.format(
+                            "PlaneSwitcher path=%d: player(%d,%d) obj(%d,%d) sub=0x%02X side=%d→%d air=%b mode=%s",
+                            path, player.getCentreX(), player.getCentreY(),
+                            spawn.x(), spawn.y(), subtype, previousSide, sideNow,
+                            player.getAir(), player.getGroundMode()));
+                }
+                boolean highPriority = decodePriority(subtype, sideNow);
+                player.setHighPriority(highPriority);
+            }
+
+            state.setSideState(player, sideNow);
+            state.setLastSideState(sideNow);
         }
 
         int getSideState(ObjectSpawn spawn) {

@@ -28,6 +28,7 @@ public final class ButterdroidBadnikInstance extends AbstractS3kBadnikInstance i
     private int animationFrame;
     private int animationTimer;
     private boolean waitingForOnscreen = true;
+    private boolean placeholderRenderedOnscreen;
     private boolean initialized;
 
     public ButterdroidBadnikInstance(ObjectSpawn spawn) {
@@ -43,11 +44,12 @@ public final class ButterdroidBadnikInstance extends AbstractS3kBadnikInstance i
             return;
         }
         if (waitingForOnscreen) {
-            if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
+            if (!placeholderRenderedOnscreen) {
                 updateDynamicSpawn(currentX, currentY);
                 return;
             }
             waitingForOnscreen = false;
+            placeholderRenderedOnscreen = false;
             updateDynamicSpawn(currentX, currentY);
             return;
         }
@@ -66,6 +68,18 @@ public final class ButterdroidBadnikInstance extends AbstractS3kBadnikInstance i
         moveWithVelocity();
         animateRaw();
         updateDynamicSpawn(currentX, currentY);
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (waitingForOnscreen) {
+            // Obj_WaitOffscreen's loc_85AD2 tests render_flags bit 7 before
+            // restoring Obj_Butterdroid. Draw_Sprite sets that bit later in
+            // the frame, so the normal operation resumes on the next object
+            // dispatch (sonic3k.asm:180266-180298, 193990-194024).
+            placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
+                    WAIT_OFFSCREEN_MARGIN, WAIT_OFFSCREEN_MARGIN);
+        }
     }
 
     @Override

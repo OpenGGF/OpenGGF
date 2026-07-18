@@ -136,6 +136,7 @@ class TestMhzSwingBarHorizontalObjectInstance {
                 "SKL slot $0B must construct the MHZ horizontal swing bar before release can be validated");
         bar.update(0, player);
         player.setJumpInputPressed(true);
+        player.setLogicalInputState(false, false, false, false, true, true);
         bar.update(1, player);
 
         assertFalse(player.isObjectControlled(),
@@ -148,6 +149,8 @@ class TestMhzSwingBarHorizontalObjectInstance {
         assertFalse(player.getRollingJump(), "Jump release clears Status_RollJump");
         assertEquals((short) -0x0500, player.getYSpeed(),
                 "Normal-air jump release writes y_vel=-$500");
+        assertEquals(0x0714, player.getCentreY(),
+                "loc_3EE42 writes rolling radii/status without changing the ROM y_pos word");
         assertEquals(0, player.getFlipAngle(),
                 "Jump release clears flip_angle");
         assertEquals(7, player.getXRadius());
@@ -163,6 +166,7 @@ class TestMhzSwingBarHorizontalObjectInstance {
 
         bar.update(0, player);
         player.setJumpInputPressed(true);
+        player.setLogicalInputState(false, false, false, false, true, true);
         bar.update(1, player);
 
         player.setJumpInputPressed(false);
@@ -181,6 +185,7 @@ class TestMhzSwingBarHorizontalObjectInstance {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2200, (short) 0x0720);
 
         player.setJumpInputPressed(true, false);
+        player.setLogicalInputState(false, false, false, false, true, false);
         bar.update(0, player);
         bar.update(1, player);
 
@@ -188,6 +193,23 @@ class TestMhzSwingBarHorizontalObjectInstance {
                 "loc_3EDE6 masks only the low Ctrl_logical A/B/C press bits; held-only jump stays attached");
         assertEquals(0x0714, player.getCentreY(),
                 "Held jump without a fresh press continues through the hanging animation path");
+    }
+
+    @Test
+    void cpuLogicalJumpPressReleasesHorizontalBarWithoutRawJumpEdge() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance bar = registry.create(new ObjectSpawn(
+                0x2200, 0x0700, MHZ_SWING_BAR_HORIZONTAL, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("tails", (short) 0x2200, (short) 0x0720);
+
+        bar.update(0, player);
+        player.setJumpInputPressed(false, false);
+        player.setLogicalInputState(false, false, false, false, false, true);
+        bar.update(1, player);
+
+        assertFalse(player.isObjectControlled(),
+                "sub_3ED6E receives Ctrl_2_logical, so the CPU sidekick's logical A/B/C press releases the bar");
+        assertEquals((short) -0x0500, player.getYSpeed());
     }
 
     @Test
@@ -249,6 +271,7 @@ class TestMhzSwingBarHorizontalObjectInstance {
 
         bar.update(0, player);
         player.setDirectionalInputPressed(false, false, true, false);
+        player.setLogicalInputState(false, false, true, false, false, false);
         bar.update(1, player);
 
         assertTrue(player.isObjectControlled(),
@@ -266,6 +289,7 @@ class TestMhzSwingBarHorizontalObjectInstance {
 
         bar.update(0, player);
         player.setDirectionalInputPressed(false, false, true, false);
+        player.setLogicalInputState(false, false, true, false, false, false);
         for (int frame = 1; frame <= 8; frame++) {
             bar.update(frame, player);
         }
@@ -321,6 +345,7 @@ class TestMhzSwingBarHorizontalObjectInstance {
         bar.update(0, player);
         player.setSubpixelRaw(0x6300, 0);
         player.setDirectionalInputPressed(false, false, true, false);
+        player.setLogicalInputState(false, false, true, false, false, false);
         bar.update(1, player);
 
         assertEquals(0x21FF, player.getCentreX(),

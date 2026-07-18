@@ -164,6 +164,23 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     @Override
+    public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
+        // sub_8D876 passes d1=$1F to SolidObjectFull, but Solid_Landed
+        // (loc_1E154) re-reads the parent object's width_pixels. ObjDat_Madmole
+        // stores $18 there (sonic3k.asm:193494-193503), so the cap's standable
+        // top is wider than the usual d1-$B heuristic.
+        return CAP_RENDER_HALF_WIDTH;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // SolidObject_cont rejects only when relX is unsigned-higher than
+        // d1*2 (`bhi`), so the exact right boundary remains a side contact
+        // (sonic3k.asm:41399-41408).
+        return true;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) {
             return;
@@ -339,6 +356,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         bodyDefeated = true;
         int bodyX = currentX;
         int bodyY = currentY;
+        int incomingYSpeed = player.getYSpeed();
         state = State.BURIED;
         timer = 0;
         sideDrillActive = false;
@@ -353,6 +371,24 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         // rather than transferring the parent cap's slot -- the cap keeps its
         // own slot and keeps running SolidObjectFull every frame).
         DestructionEffects.destroyBadnik(bodyX, bodyY, null, player, services(), getDestructionConfig());
+        applyBodyChildDefeatBounce(player, incomingYSpeed, bodyY);
+    }
+
+    private static void applyBodyChildDefeatBounce(
+            PlayableEntity player, int incomingYSpeed, int defeatedBodyY) {
+        // Touch_EnemyNormal applies this after replacing the attacked SST with
+        // Obj_Explosion (sonic3k.asm:20976-20995). Madmole's engine instance
+        // represents both parent cap and body child, so it deliberately remains
+        // alive as the solid stump; ObjectTouchResponseController therefore
+        // cannot infer that the attacked child was destroyed and apply its
+        // normal Touch_KillEnemy rebound.
+        if (incomingYSpeed < 0) {
+            player.setYSpeed((short) (incomingYSpeed + 0x100));
+        } else if (player.getCentreY() < defeatedBodyY) {
+            player.setYSpeed((short) -incomingYSpeed);
+        } else {
+            player.setYSpeed((short) (incomingYSpeed - 0x100));
+        }
     }
 
     private boolean isBodyChildActive() {
@@ -457,11 +493,12 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
                 return;
             }
 
-            // ROM loc_8D778 (routine 4) begins with bsr sub_8D94A, which reads the
-            // collision_property set during this frame's TouchResponse pass. Apply
-            // any pending arc capture here, before the arm moves.
-            applyPendingArcCapture();
-            if (capturedPlayer != null && !awaitingCarryRoutine) {
+            // ROM loc_8D768/loc_8D778 begin with sub_8D8E6/sub_8D94A, which
+            // consume collision_property after both player slots have run but
+            // before the arm moves. ReactToItem only writes that property; it
+            // does not execute the drill response inside the player slot.
+            applyPendingTouchResponse();
+            if (arcing && capturedPlayer != null && !awaitingCarryRoutine) {
                 // ROM routine 8 (loc_8D7A8): pin the captured player to the arm's
                 // current (pre-move) x_pos/y_pos, THEN MoveSprite_LightGravity
                 // advances the arm, THEN the wall-impact check runs on the moved
@@ -553,43 +590,46 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
                 return;
             }
 
-            if (arcing) {
-                // Record the overlapping player as the capture candidate; the last
-                // one to overlap this frame wins (ROM collision_property is
-                // overwritten by each player's TouchResponse, Player_2 running
-                // after Player_1). The grab itself is applied in update().
-                if (player instanceof AbstractPlayableSprite sprite) {
-                    pendingCapturePlayer = sprite;
-                }
+            if (!arcing && straightTouchConsumed) {
                 return;
             }
 
-            if (straightTouchConsumed) {
-                return;
-            }
-
-            straightTouchConsumed = true;
-            int launchX = xVelocity * 2;
-            player.setXSpeed((short) launchX);
-            player.setGSpeed((short) launchX);
-            player.setYSpeed((short) -0x200);
-            player.setAir(true);
+            // Record the collision_property owner. Player_2 runs after Player_1,
+            // so the last overlapping player wins before the arm's object slot
+            // consumes it (sonic3k.asm:193395-193453).
             if (player instanceof AbstractPlayableSprite sprite) {
-                sprite.setAnimationId(0x1A);
-                sprite.setSpindash(false);
-            }
-            if (tryServices() != null) {
-                tryServices().playSfx(Sonic3kSfx.FLIPPER.id);
+                pendingCapturePlayer = sprite;
             }
         }
 
-        private void applyPendingArcCapture() {
+        private void applyPendingTouchResponse() {
             AbstractPlayableSprite candidate = pendingCapturePlayer;
             pendingCapturePlayer = null;
             if (candidate == null || capturedPlayer != null || postCaptureDrift) {
                 return;
             }
-            captureArcingPlayer(candidate);
+            if (arcing) {
+                captureArcingPlayer(candidate);
+                return;
+            }
+
+            straightTouchConsumed = true;
+            // sub_8D8E6 stores the touching player's SST pointer at $44 even
+            // for the straight routine. Routine 6 never carries that player,
+            // but loc_8D724 reads the retained pointer when the arm is culled
+            // and reasserts Status_InAir before deletion (sonic3k.asm:193235-193245,
+            // 193427-193453).
+            capturedPlayer = candidate;
+            int launchX = xVelocity * 2;
+            candidate.setXSpeed((short) launchX);
+            candidate.setGSpeed((short) launchX);
+            candidate.setYSpeed((short) -0x200);
+            candidate.setAir(true);
+            candidate.setAnimationId(0x1A);
+            candidate.setSpindash(false);
+            if (tryServices() != null) {
+                tryServices().playSfx(Sonic3kSfx.FLIPPER.id);
+            }
         }
 
         private void captureArcingPlayer(PlayableEntity player) {
@@ -637,7 +677,6 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
                 xVelocity = -xVelocity;
             }
         }
-
         private void move() {
             SubpixelMotion.State state = new SubpixelMotion.State(
                     currentX, currentY, xSubpixel, ySubpixel, xVelocity, yVelocity);
@@ -710,7 +749,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         private void checkDeleteAndReleaseCapturedPlayer() {
-            if (isOnScreenX(0x180)) {
+            if (!isOutsideRomWrapperBounds()) {
                 return;
             }
 
@@ -720,6 +759,22 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
                 capturedPlayer = null;
             }
             setDestroyedByOffscreen();
+        }
+
+        private boolean isOutsideRomWrapperBounds() {
+            if (tryServices() == null || tryServices().camera() == null) {
+                return !isOnScreenX(0x180);
+            }
+
+            int cameraX = tryServices().camera().getX() & 0xFFFF;
+            int cameraY = tryServices().camera().getY() & 0xFFFF;
+            // loc_8D6E6 uses the unsigned coarse-back X window followed by the
+            // unsigned Camera_Y_pos+$80 window (sonic3k.asm:193222-193238).
+            // This intentionally culls an arm one coarse chunk left of
+            // Camera_X_pos_coarse_back; a symmetric visibility margin does not.
+            boolean outsideX = isCoarseXOutOfRange(currentX, cameraX, 0x280);
+            int yDistance = (currentY - cameraY + 0x80) & 0xFFFF;
+            return outsideX || yDistance > 0x200;
         }
 
         private void animateRawLoop() {

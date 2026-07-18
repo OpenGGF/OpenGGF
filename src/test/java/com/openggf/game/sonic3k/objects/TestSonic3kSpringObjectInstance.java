@@ -19,6 +19,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.camera.Camera;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidRoutineKind;
@@ -36,10 +37,22 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonic3kSpringObjectInstance {
+
+    @Test
+    void exposesNativeRoutinePointerWordForSidekickDespawnWatchdog() {
+        Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x2D48, 0x0630, 0x07, 0x10, 0, false, 0));
+
+        RomObjectCodePointerProvider pointer = assertInstanceOf(
+                RomObjectCodePointerProvider.class, spring);
+        assertEquals(0x0002, pointer.romObjectCodePointerHighWord(),
+                "S3K Obj_Spring executes at $00023050, whose high word is compared by sub_13EFC");
+    }
 
     private static final class TestableSprite extends AbstractPlayableSprite {
         TestableSprite(String code) {

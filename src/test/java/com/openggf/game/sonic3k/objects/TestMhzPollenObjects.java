@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.LevelManager;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestMhzPollenObjects {
     private static final ObjectSpawn SPAWNER_SPAWN = new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
@@ -69,6 +71,18 @@ class TestMhzPollenObjects {
 
         assertEquals(0, harness.spawned.size());
         assertEquals(16, harness.runtimeState.pollenParticleCount());
+    }
+
+    @Test
+    void failedAllocateAfterCurrentDoesNotLeakPollenCounterReservation() {
+        Harness harness = new Harness(false, true);
+        TestablePlayableSprite player = groundedPlayer(0x1200, 0x0700, 0x0600);
+
+        harness.spawner.update(0, player);
+
+        assertEquals(0, harness.spawned.size());
+        assertEquals(0, harness.runtimeState.pollenParticleCount(),
+                "loc_3DA60 increments MHZ_pollen_counter only after AllocateObjectAfterCurrent succeeds");
     }
 
     @Test
@@ -217,12 +231,51 @@ class TestMhzPollenObjects {
 
         AbstractObjectInstance.updateCameraBounds(0x1000, 0x0600, 0x1400, 0x0800, 0);
         particle.update(0, null);
+        particle.refreshPostCameraRenderState();
         AbstractObjectInstance.updateCameraBounds(0, 0, 0x0100, 0x0100, 0);
         particle.update(1, null);
+        particle.refreshPostCameraRenderState();
+        particle.update(2, null);
 
         assertEquals(0x7F00, particle.getX(),
                 "loc_3DBE0 writes x_pos=$7F00 when render_flags reports the pollen off-screen");
         assertEquals(0, harness.runtimeState.pollenParticleCount());
+    }
+
+    @Test
+    void floatingParticleUsesPriorRenderPassFlagAndRomExtents() {
+        Harness harness = new Harness(false);
+        assertTrue(harness.runtimeState.tryReservePollenParticle());
+        MhzPollenParticleInstance particle = new MhzPollenParticleInstance(
+                0x0110, 0x0080, 0, 0, 2, 0, MhzPollenParticleInstance.ArtMode.POLLEN);
+        particle.setServices(harness.services);
+
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x0100, 0x0100, 0);
+        particle.update(0, null);
+        particle.refreshPostCameraRenderState();
+        particle.update(1, null);
+
+        assertEquals(0x7F00, particle.getX(),
+                "loc_3DBE0 consumes Render_Sprites' prior width_pixels=$04 off-screen result");
+        assertEquals(0, harness.runtimeState.pollenParticleCount());
+    }
+
+    @Test
+    void normalParticleSeedsFloatingAngleFromLevelFrameCounterLowByte() {
+        Harness harness = new Harness(false);
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getFrameCounter()).thenReturn(0x34);
+        harness.services.withLevelManager(levelManager);
+        MhzPollenParticleInstance particle = new MhzPollenParticleInstance(
+                0x0080, 0x0080, 0, 0, 2, 0, MhzPollenParticleInstance.ArtMode.POLLEN);
+        particle.setServices(harness.services);
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x0140, 0x00E0, 0);
+
+        particle.update(0x80, null);
+        particle.update(0x81, null);
+
+        assertEquals(TrigLookupTable.sinHex(0x35), particle.getVelocityX(),
+                "Obj_MHZ_Pollen reads (Level_frame_counter+1).w, not V_int_run_count");
     }
 
     @Test
@@ -260,6 +313,10 @@ class TestMhzPollenObjects {
         private List<TestablePlayableSprite> queriedSidekicks = List.of();
 
         private Harness(boolean seasonFlagSet) {
+            this(seasonFlagSet, false);
+        }
+
+        private Harness(boolean seasonFlagSet, boolean failAllocations) {
             Sonic3kMHZEvents events = new Sonic3kMHZEvents();
             if (seasonFlagSet) {
                 events.applySeasonStateForTest(Sonic3kMHZEvents.SeasonPaletteMode.AUTUMN);
@@ -270,8 +327,13 @@ class TestMhzPollenObjects {
 
             ObjectManager objectManager = mock(ObjectManager.class);
             doAnswer(invocation -> {
-                ObjectInstance object = invocation.getArgument(0);
-                spawned.add(object);
+                AbstractObjectInstance object = invocation.getArgument(0);
+                if (failAllocations) {
+                    object.setDestroyed(true);
+                } else {
+                    object.setSlotIndex(4 + spawned.size());
+                    spawned.add(object);
+                }
                 return null;
             }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
 

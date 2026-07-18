@@ -156,7 +156,13 @@ class TestDragonflyBadnikInstance {
         assertEquals(0x100, dragonfly.getY());
         assertEquals(0, dragonfly.getCollisionFlags());
 
+        dragonfly.refreshPostCameraRenderState();
         dragonfly.update(2, player());
+
+        assertEquals(0, dragonfly.getCollisionFlags(),
+                "the retained render bit restores Obj_Dragonfly and returns before setup");
+
+        dragonfly.update(3, player());
 
         assertEquals(0x120, dragonfly.getX());
         assertEquals(0x100, dragonfly.getY());
@@ -166,7 +172,7 @@ class TestDragonflyBadnikInstance {
         assertEquals(0x200, dragonfly.getYVelocity(),
                 "loc_8DD52 seeds y_vel during setup, before the first patrol frame");
 
-        dragonfly.update(3, player());
+        dragonfly.update(4, player());
 
         assertEquals(0x121, dragonfly.getX());
         assertEquals(0x101, dragonfly.getY());
@@ -178,6 +184,7 @@ class TestDragonflyBadnikInstance {
         DragonflyBadnikInstance dragonfly = dragonfly(harness.services);
 
         putDragonflyOnScreen();
+        dragonfly.refreshPostCameraRenderState();
         dragonfly.update(0, player());
         assertEquals(0, harness.spawned.size(),
                 "Obj_WaitOffscreen returns before loc_8DD52 setup");
@@ -195,6 +202,7 @@ class TestDragonflyBadnikInstance {
         TestablePlayableSprite player = player();
 
         putDragonflyOnScreen();
+        dragonfly.refreshPostCameraRenderState();
         dragonfly.update(0, player);
         dragonfly.update(1, player);
 
@@ -224,6 +232,7 @@ class TestDragonflyBadnikInstance {
         TestablePlayableSprite player = player();
 
         putDragonflyOnScreen();
+        dragonfly.refreshPostCameraRenderState();
         dragonfly.update(0, player);
         dragonfly.update(1, player);
 
@@ -478,6 +487,7 @@ class TestDragonflyBadnikInstance {
     }
 
     private static void activateDragonfly(DragonflyBadnikInstance dragonfly) {
+        dragonfly.refreshPostCameraRenderState();
         dragonfly.update(0, player());
         dragonfly.update(1, player());
     }

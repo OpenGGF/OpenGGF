@@ -3794,6 +3794,34 @@ class TestMhzBossObjects {
     }
 
     @Test
+    void mhzMinibossLatchesDrawSpriteVisibilityAfterCameraMovement() {
+        Camera camera = new Camera();
+        camera.setX((short) 0x2D00);
+        camera.setY((short) 0x0500);
+        ObjectServices services = new StubObjectServices() {
+            @Override
+            public Camera camera() {
+                return camera;
+            }
+        };
+        MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
+                0, 0, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
+        miniboss.setServices(services);
+
+        advanceMinibossToOffscreenDashWait(miniboss);
+        AbstractObjectInstance.updateCameraBounds(0x2D00, 0x0500, 0x2E40, 0x05E0, 0);
+        miniboss.refreshPostCameraRenderState();
+        assertEquals(0, miniboss.getState().renderFlags & 0x80,
+                "the $48-pixel Draw_Sprite width leaves x=$2E90 offscreen at camera x=$2D00");
+
+        camera.setX((short) 0x2D09);
+        AbstractObjectInstance.updateCameraBounds(0x2D09, 0x0500, 0x2E49, 0x05E0, 0);
+        miniboss.refreshPostCameraRenderState();
+        assertEquals(0x80, miniboss.getState().renderFlags & 0x80,
+                "Draw_And_Touch_Sprite must latch bit 7 once the scrolling camera reveals the waiting boss");
+    }
+
+    @Test
     void mhzMinibossDecelerationDashReturnsToSwingSetupWhenVelocityReachesZero() {
         MhzMinibossInstance miniboss = managedMinibossAtCamera(0x2D00, 0x0500);
 

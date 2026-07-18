@@ -94,6 +94,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         FbzObjectEventBridge,
         S3kTransitionEventBridge {
     private static final Logger LOG = Logger.getLogger(Sonic3kLevelEventManager.class.getName());
+    private static final int MHZ_POLLEN_SPAWNER_SLOT = 4;
     private static final int PACHINKO_TOP_EXIT_Y = -0x20;
     private static final int CNZ_POST_TRANSITION_ACT2_SIZE_CHANGE_FRAMES = 751;
     private static final int CNZ2_CAMERA_MIN_X = 0x0000;
@@ -420,7 +421,18 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         boolean alreadyInstalled = objectManager.getActiveObjects().stream()
                 .anyMatch(MhzPollenSpawnerInstance.class::isInstance);
         if (!alreadyInstalled) {
-            objectManager.createDynamicObject(MhzPollenSpawnerInstance::new);
+            // LevelInit_MHZ writes Obj_MHZ_Pollen_Spawner directly to
+            // Dynamic_object_RAM+object_size (absolute SST slot 4) before
+            // ObjPosLoad starts allocating placement objects.
+            MhzPollenSpawnerInstance spawner = objectManager.createDynamicObjectAtSlot(
+                    MhzPollenSpawnerInstance::new, MHZ_POLLEN_SPAWNER_SLOT);
+            if (spawner == null) {
+                // Some non-prelude fixtures initialize level events after
+                // materializing the placement window. Preserve their level
+                // controller; replay/startup reset restores it in slot 4
+                // before the native placement scan.
+                objectManager.createDynamicObject(MhzPollenSpawnerInstance::new);
+            }
         }
     }
 
@@ -684,6 +696,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     @Override
     public void restoreEventOwnedObjectsAfterPlacementReset() {
+        // MHZ level setup installs Obj_MHZ_Pollen_Spawner in fixed dynamic
+        // object RAM (sonic3k.asm:7792). Trace/title-card prelude setup resets
+        // the engine placement manager after level initialization, which clears
+        // dynamic objects; rebuild this level-owned controller before executing
+        // those prelude object frames so its Random_Number cadence remains native.
+        installFixedDynamicObjects(currentZone);
         if (currentZone == Sonic3kZoneIds.ZONE_AIZ && currentAct == 0 && aizEvents != null) {
             aizEvents.restoreIntroObjectAfterPreludeReset();
         }

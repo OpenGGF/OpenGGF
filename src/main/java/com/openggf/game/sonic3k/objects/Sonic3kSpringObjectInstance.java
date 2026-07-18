@@ -15,6 +15,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
@@ -59,7 +60,13 @@ import java.util.Set;
  * </ul>
  */
 public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, SpawnRewindRecreatable,
+        RomObjectCodePointerProvider {
+
+    // Obj_Spring's routine pointer is $00023050 in the locked-on ROM. S3K's
+    // sidekick off-screen watchdog compares word 0 of this pointer against its
+    // prior stood-on-object latch (sub_13EFC, sonic3k.asm:26816-26833).
+    private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0002;
 
     // Subtype constants (shifted >> 3 & 0xE) - matches ROM Obj_Spring index
     private static final int TYPE_UP = 0;
@@ -110,6 +117,11 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
 
         this.mappingFrame = 0;
         this.animationState = new ObjectAnimationState(buildAnimationSet(), ANIM_IDLE, 0);
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return ROM_CODE_POINTER_HIGH_WORD;
     }
 
     @Override

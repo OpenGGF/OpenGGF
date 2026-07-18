@@ -1,6 +1,9 @@
 package com.openggf.game.sonic3k.sidekick;
 
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance;
+import com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -72,12 +75,8 @@ public final class Sonic3kSidekickFollowContext {
         if (effectiveLeader == null || !hasAizHollowTreeContext(sidekick)) {
             return false;
         }
-        if (effectiveLeader.getLatchedSolidObjectId() == Sonic3kObjectIds.AIZ_HOLLOW_TREE) {
-            return true;
-        }
         ObjectInstance latched = effectiveLeader.getLatchedSolidObjectInstance();
-        if (latched != null && latched.getSpawn() != null
-                && latched.getSpawn().objectId() == Sonic3kObjectIds.AIZ_HOLLOW_TREE) {
+        if (latched instanceof AizHollowTreeObjectInstance) {
             return true;
         }
 
@@ -99,7 +98,10 @@ public final class Sonic3kSidekickFollowContext {
             if (object == null || object.isDestroyed() || object.getSpawn() == null) {
                 continue;
             }
-            if (object.getSpawn().objectId() != Sonic3kObjectIds.AIZ_HOLLOW_TREE) {
+            // S3K object ids are zone-set aliases: SKL slot $03 is MHZ's
+            // twisted vine, while S3KL slot $03 is the AIZ hollow tree. The
+            // bridge belongs to the live routine owner, not the numeric slot.
+            if (!(object instanceof AizHollowTreeObjectInstance)) {
                 continue;
             }
             if (Math.abs(object.getX() - x) <= AIZ_HOLLOW_TREE_CONTEXT_RADIUS_X
@@ -123,14 +125,9 @@ public final class Sonic3kSidekickFollowContext {
         if (sprite == null) {
             return false;
         }
-        int id = sprite.getLatchedSolidObjectId();
-        if (id == Sonic3kObjectIds.COLLAPSING_PLATFORM || id == Sonic3kObjectIds.AIZ_GIANT_RIDE_VINE) {
-            return true;
-        }
         ObjectInstance latched = sprite.getLatchedSolidObjectInstance();
-        return latched != null && latched.getSpawn() != null
-                && (latched.getSpawn().objectId() == Sonic3kObjectIds.COLLAPSING_PLATFORM
-                    || latched.getSpawn().objectId() == Sonic3kObjectIds.AIZ_GIANT_RIDE_VINE);
+        return latched instanceof Sonic3kCollapsingPlatformObjectInstance
+                || latched instanceof AizGiantRideVineObjectInstance;
     }
 
     private static boolean isAizVineBridgeObjectNear(AbstractPlayableSprite sidekick, int x, int y) {
@@ -142,9 +139,8 @@ public final class Sonic3kSidekickFollowContext {
             if (object == null || object.isDestroyed() || object.getSpawn() == null) {
                 continue;
             }
-            int id = object.getSpawn().objectId();
-            if (id != Sonic3kObjectIds.COLLAPSING_PLATFORM
-                    && id != Sonic3kObjectIds.AIZ_GIANT_RIDE_VINE) {
+            if (!(object instanceof Sonic3kCollapsingPlatformObjectInstance)
+                    && !(object instanceof AizGiantRideVineObjectInstance)) {
                 continue;
             }
             if (Math.abs(object.getX() - x) <= AIZ_VINE_PUSH_BRIDGE_CONTEXT_RADIUS_X

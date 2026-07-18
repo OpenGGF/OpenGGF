@@ -76,9 +76,23 @@ class TestMhzMushroomCapObjectInstance {
                         + "otherwise low caps catch Sonic while he is still following terrain slopes");
         assertFalse(solid.usesPlatformObjectLandingSnap(),
                 "SolidObjectTop landing preserves the helper's y_pos += d0+3 result, not PlatformObject snap");
+        assertTrue(solid.rejectsZeroDistanceTopSolidLanding(),
+                "SolidObjectTop's unsigned -$10 comparison rejects exact d0=0 contact");
         assertFalse(solid.carriesRiderOnHorizontalMove(null),
                 "Obj_MHZMushroomCap passes current x_pos as SolidObjectTop d4, so horizontal bobbing "
                         + "does not carry riders through MvSonicOnPtfm");
+    }
+
+    @Test
+    void mushroomCapSolidTopAcceptsPositiveObjectControlButRejectsSignedControl() {
+        MhzMushroomCapObjectInstance cap = new MhzMushroomCapObjectInstance(new ObjectSpawn(
+                0x1200, 0x0500, MHZ_MUSHROOM_CAP, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("tails", (short) 0x1200, (short) 0x04D8);
+
+        assertTrue(cap.allowsObjectControlledSolidContacts(),
+                "SolidObjectTop accepts positive object_control values (sonic3k.asm:42014-42019)");
+        assertTrue(cap.rejectsBit7ObjectControlNewSolidContact(player),
+                "the same new-contact path rejects signed/bit-7 object_control via bmi");
     }
 
     @Test

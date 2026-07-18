@@ -60,6 +60,7 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
     private int bodyAnimationTimer;
     private int waitTimer;
     private boolean waitingForOnscreen = true;
+    private boolean placeholderRenderedOnscreen;
     private boolean initialized;
 
     public DragonflyBadnikInstance(ObjectSpawn spawn) {
@@ -73,11 +74,12 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
             return;
         }
         if (waitingForOnscreen) {
-            if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
+            if (!placeholderRenderedOnscreen) {
                 updateDynamicSpawn(currentX, currentY);
                 return;
             }
             waitingForOnscreen = false;
+            placeholderRenderedOnscreen = false;
             updateDynamicSpawn(currentX, currentY);
             return;
         }
@@ -94,6 +96,17 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
             case WAITING -> updateWait();
         }
         updateDynamicSpawn(currentX, currentY);
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (waitingForOnscreen) {
+            // Obj_WaitOffscreen restores Obj_Dragonfly only after Draw_Sprite
+            // has retained render_flags bit 7 for the next object dispatch
+            // (sonic3k.asm:180266-180298, 193742-193812).
+            placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
+                    WAIT_OFFSCREEN_MARGIN, WAIT_OFFSCREEN_MARGIN);
+        }
     }
 
     private void initializeRomSetupState() {

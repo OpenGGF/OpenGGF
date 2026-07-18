@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **fix: MHZ1 object dispatch, visibility, and interaction state now follow the
+  ROM through the miniboss approach.** Fixed-slot pollen setup and post-camera
+  render-flag latching preserve the native RNG stream; path switchers now run in
+  their SST slot instead of before all objects; Madmole child touch/cull/bounce
+  behavior, mushroom/vine/pulley/spring handoffs, and several badnik wait states
+  now retain their ROM ownership and timing. The MHZ miniboss also observes the
+  `$48/$40` `Draw_And_Touch_Sprite` visibility latch while waiting for the camera,
+  rather than freezing as an invisible collision obstacle. Advances the MHZ
+  complete-run frontier from frame 3013 to frame 5240 and reduces total
+  mismatches from 2728 to 2103.
 - **fix: MHZ Madmole drill arms now rebound from terrain instead of animation
   timing.** The arcing side drill now runs the ROM `$34` callback when
   `ObjHitFloor_DoRoutine` finds the floor, including the pre-capture rebound and

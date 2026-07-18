@@ -19,6 +19,15 @@ public final class TraceFixtures {
         return new TraceData(metadata, List.copyOf(frames), Map.of());
     }
 
+    /** Minimal primary frame with explicit gameplay/VBlank counters. */
+    public static TraceFrame frameWithCounters(int gameplayFrameCounter, int vblankCounter) {
+        return new TraceFrame(
+                0, 0, (short) 0, (short) 0, (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0,
+                0, 0, 0, 0, 0, 0, 0,
+                gameplayFrameCounter, 0, vblankCounter, 0);
+    }
+
     /** In-memory TraceData for unit tests with explicit aux events. */
     public static TraceData trace(TraceMetadata metadata, List<TraceFrame> frames,
                                   Map<Integer, List<TraceEvent>> eventsByFrame) {

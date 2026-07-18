@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.GameRng;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -147,6 +148,10 @@ class TestMadmoleBadnikInstance {
         assertEquals(5, params.groundHalfHeight());
         assertEquals(0, params.offsetX());
         assertEquals(0, params.offsetY());
+        assertEquals(0x18, solid.getTopLandingHalfWidth(player(0x100, 0x100), params.halfWidth()),
+                "Solid_Landed re-reads ObjDat_Madmole width_pixels=$18 instead of deriving d1-$B");
+        assertEquals(true, solid.usesInclusiveRightEdge(),
+                "SolidObject_cont accepts relX == d1*2 via bhi, allowing side push at the full right edge");
     }
 
     @Test
@@ -472,7 +477,7 @@ class TestMadmoleBadnikInstance {
     }
 
     @Test
-    void straightSideDrillTouchLaunchesPlayerWithRomFlipperResponse() {
+    void straightSideDrillTouchDefersRomFlipperResponseUntilObjectSlot() {
         GameRng rng = new GameRng(GameRng.Flavour.S3K, 1);
         CapturingServices services = new CapturingServices(mock(ObjectManager.class));
         services.withRng(rng);
@@ -484,6 +489,13 @@ class TestMadmoleBadnikInstance {
         TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child,
                 "loc_8D768 polls sub_8D8E6 for collision_property on the straight drill branch");
         listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
+
+        assertEquals(List.of(), services.soundIds,
+                "ReactToItem only writes collision_property during the player slot");
+        assertEquals(0, player.getXSpeed(),
+                "sub_8D8E6 must not launch the player before the drill's later object slot");
+
+        child.update(0x49, player);
 
         assertEquals(List.of(Sonic3kSfx.FLIPPER.id), services.soundIds);
         assertEquals(-0xC00, player.getXSpeed(),
@@ -509,11 +521,45 @@ class TestMadmoleBadnikInstance {
 
         TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child);
         listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
+        child.update(0x49, player);
 
         assertEquals(List.of(Sonic3kSfx.FLIPPER.id), services.soundIds,
                 "sub_8D8E6 checks Status_Invincible in status_secondary, not invulnerable_time");
         assertEquals(-0xC00, player.getXSpeed());
         assertEquals(-0x200, player.getYSpeed());
+    }
+
+    @Test
+    void straightSideDrillCullReassertsAirOnLastTouchedPlayerWithoutCarrying() {
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0x0FAA);
+        when(camera.getY()).thenReturn((short) 0x06B8);
+        CapturingServices services = new CapturingServices(mock(ObjectManager.class));
+        services.withRng(new GameRng(GameRng.Flavour.S3K, 1));
+        MadmoleBadnikInstance.SideDrillChild child = spawnedSideDrillChild(services);
+        TestablePlayableSprite player = player(0x100, 0x100);
+        child.update(0x48, player);
+        TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child);
+        listener.onTouchResponse(player,
+                new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
+        child.update(0x49, player);
+
+        player.setAirForTest(false);
+        player.setXSpeed((short) 0x073E);
+        player.setYSpeed((short) -0x01D0);
+        services.withCamera(camera);
+        setSideChildIntField(child, "currentX", 0x0F00);
+        setSideChildIntField(child, "currentY", 0x0777);
+
+        child.update(0xA7, player);
+
+        assertEquals(true, child.isDestroyed(), "loc_8D6E6 culls the straight arm at the coarse-back edge");
+        assertEquals(true, player.getAir(),
+                "loc_8D724 uses sub_8D8E6's retained $44 player pointer and sets Status_InAir");
+        assertEquals(0x100, player.getCentreX(), "routine 6 never carries the straight-drill player");
+        assertEquals(0x100, player.getCentreY());
+        assertEquals(0x073E, player.getXSpeed(), "the wrapper release does not replace velocity");
+        assertEquals(-0x01D0, player.getYSpeed());
     }
 
     @Test
@@ -833,6 +879,49 @@ class TestMadmoleBadnikInstance {
     }
 
     @Test
+    void arcingSideDrillUsesRomCoarseBackCullAndReleasesAtLeftWindowEdge() {
+        GameRng rng = new GameRng(GameRng.Flavour.S3K, 4);
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0x0FAA);
+        when(camera.getY()).thenReturn((short) 0x06CC);
+        CapturingServices services = new CapturingServices(mock(ObjectManager.class));
+        services.withRng(rng);
+        MadmoleBadnikInstance.SideDrillChild child = spawnedSideDrillChild(services);
+        TestablePlayableSprite player = player(0x100, 0x100);
+        child.update(0x48, player);
+        TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child);
+        listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
+        child.update(0x49, player);
+        assertEquals(true, player.isObjectControlled());
+        services.withCamera(camera);
+
+        // Native f3059 entry: MoveSprite advances (0x0F02,0x074B) to
+        // (0x0EFE,0x074F), then loc_8D6E6 compares its 0x0E80 coarse X against
+        // Camera_X_pos_coarse_back=0x0F00. The unsigned 0xFF80 delta culls.
+        setSideChildIntField(child, "currentX", 0x0F02);
+        setSideChildIntField(child, "currentY", 0x074B);
+        setSideChildIntField(child, "xSubpixel", 0);
+        setSideChildIntField(child, "ySubpixel", 0x20);
+        setSideChildIntField(child, "yVelocity", 0x03E0);
+        AbstractObjectInstance.updateCameraBounds(0x0FAA, 0x06CC, 0x0FAA + 320, 0x06CC + 224, 0);
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            child.update(0x4A, player);
+        }
+
+        assertEquals(true, child.isDestroyed(),
+                "loc_8D724 deletes one coarse chunk left of Camera_X_pos_coarse_back");
+        assertEquals(false, player.isObjectControlled());
+        assertEquals(true, player.getAir());
+        assertEquals(0, player.getXSpeed(), "loc_8D724 does not apply wall/floor release velocity");
+        assertEquals(0, player.getYSpeed(), "loc_8D724 leaves velocity untouched");
+    }
+
+    @Test
     void defeatingBodyLeavesSolidCapStumpThatNeverReEmerges() {
         ObjectManager objectManager = mock(ObjectManager.class);
         CapturingServices services = new CapturingServices(objectManager);
@@ -845,8 +934,13 @@ class TestMadmoleBadnikInstance {
         }
         assertEquals("DRILLING", madmole.getStateName());
 
+        player.setCentreY((short) (madmole.getY() - 0x10));
+        player.setYSpeed((short) 0x029B);
         TouchResponseResult result = new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY);
         madmole.onPlayerAttack(player, result);
+
+        assertEquals(-0x029B, player.getYSpeed(),
+                "Touch_KillEnemy reflects a descending player above the defeated body child");
 
         assertEquals(false, madmole.isDestroyed(),
                 "sub_8D876 keeps running unconditionally on the parent's own SST slot every frame; "

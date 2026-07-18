@@ -70,6 +70,7 @@ class TestButterdroidBadnikInstance {
         putButterdroidOnScreen();
         ButterdroidBadnikInstance butterdroid = butterdroid();
         TestablePlayableSprite player = player(0x240, 0x120);
+        butterdroid.refreshPostCameraRenderState();
 
         butterdroid.update(0, player);
         butterdroid.update(1, player);
@@ -102,6 +103,7 @@ class TestButterdroidBadnikInstance {
                 .withGameState(mock(GameStateManager.class))
                 .withSidekicks(List.of(sidekick)));
         TestablePlayableSprite sonic = player(0x080, 0x100);
+        butterdroid.refreshPostCameraRenderState();
 
         butterdroid.update(0, sonic);
         butterdroid.update(1, sonic);
@@ -123,6 +125,7 @@ class TestButterdroidBadnikInstance {
                 .withGameState(mock(GameStateManager.class))
                 .withSidekicks(List.of(sidekick)));
         TestablePlayableSprite sonic = player(0x0020, 0x120);
+        butterdroid.refreshPostCameraRenderState();
 
         butterdroid.update(0, sonic);
         butterdroid.update(1, sonic);
@@ -141,6 +144,7 @@ class TestButterdroidBadnikInstance {
                 0x0040, 0x100, Sonic3kObjectIds.BUTTERDROID, 0, 0, false, 0));
         butterdroid.setServices(new TestObjectServices().withGameState(mock(GameStateManager.class)));
         TestablePlayableSprite player = player(0xFFE0, 0x100);
+        butterdroid.refreshPostCameraRenderState();
 
         butterdroid.update(0, player);
         butterdroid.update(1, player);
@@ -158,6 +162,7 @@ class TestButterdroidBadnikInstance {
         ButterdroidBadnikInstance butterdroid = butterdroid();
         TestablePlayableSprite player = player(0x240, 0x120);
         player.setDead(true);
+        butterdroid.refreshPostCameraRenderState();
 
         butterdroid.update(0, player);
         butterdroid.update(1, player);
@@ -174,6 +179,7 @@ class TestButterdroidBadnikInstance {
         putButterdroidOnScreen();
         ButterdroidBadnikInstance butterdroid = butterdroid();
         TestablePlayableSprite player = player(0x100, 0x100);
+        butterdroid.refreshPostCameraRenderState();
 
         butterdroid.update(0, player);
         butterdroid.update(1, player);
@@ -208,16 +214,23 @@ class TestButterdroidBadnikInstance {
         butterdroid.update(1, player);
 
         assertEquals(0, butterdroid.getXVelocity(),
-                "the restored Butterdroid entry point runs on the next frame after the wait wrapper sees it");
+                "Obj_WaitOffscreen cannot observe visibility until Draw_Sprite publishes render bit 7");
         assertEquals(0, butterdroid.getCollisionFlags());
 
+        butterdroid.refreshPostCameraRenderState();
         butterdroid.update(2, player);
+
+        assertEquals(0, butterdroid.getXVelocity(),
+                "the retained render bit restores the Butterdroid entry point and returns");
+        assertEquals(0, butterdroid.getCollisionFlags());
+
+        butterdroid.update(3, player);
 
         assertEquals(0, butterdroid.getXVelocity(),
                 "the first restored normal frame runs SetUp_ObjAttributesSlotted and returns before Chase_Object");
         assertEquals(0x17, butterdroid.getCollisionFlags());
 
-        butterdroid.update(3, player);
+        butterdroid.update(4, player);
 
         assertEquals(4, butterdroid.getXVelocity());
         assertEquals(4, butterdroid.getYVelocity());

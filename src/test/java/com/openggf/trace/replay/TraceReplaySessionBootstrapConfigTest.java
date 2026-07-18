@@ -37,6 +37,18 @@ class TraceReplaySessionBootstrapConfigTest {
         assertEquals(2, TraceReplaySessionBootstrap.ringFloorCheckRuntimeOffset(6, 4));
     }
 
+    @Test
+    void objectVblankSeedPlacesFirstObjectPassOnRecordedFrame() {
+        TraceData trace = TraceFixtures.trace(
+                TraceFixtures.metadata("s3k", 7, 1), List.of(
+                        TraceFixtures.frameWithCounters(0, 0x1100)));
+
+        assertEquals(0x1100,
+                TraceReplaySessionBootstrap.initialObjectVblankSeed(trace, 0));
+        assertEquals(0x10F8,
+                TraceReplaySessionBootstrap.initialObjectVblankSeed(trace, 8));
+    }
+
     private SonicConfigurationService config;
     private Object savedMain;
     private Object savedSidekick;

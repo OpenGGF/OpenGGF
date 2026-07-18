@@ -129,10 +129,9 @@ public class MhzPollenSpawnerInstance extends AbstractObjectInstance implements 
             return;
         }
 
-        state.reservePollenParticleAfterSpawnerGate();
         int yVelocity = -(((absXVelocity - NORMAL_SPAWN_MIN_X_SPEED) >> 4) + 0x0200);
         int gravityStep = ((spawnGateRandom >>> 16) & 3) + 2;
-        spawnChild(() -> new MhzPollenParticleInstance(
+        MhzPollenParticleInstance particle = spawnChild(() -> new MhzPollenParticleInstance(
                 player.getCentreX() & 0xFFFF,
                 (player.getCentreY() + 0x10) & 0xFFFF,
                 0,
@@ -140,11 +139,11 @@ public class MhzPollenSpawnerInstance extends AbstractObjectInstance implements 
                 gravityStep,
                 0,
                 selectArtMode(state)));
+        reserveSuccessfulParticle(particle, state);
     }
 
     private void spawnLandingBurst(AbstractPlayableSprite player, MhzZoneRuntimeState state) {
         for (int[] baseVelocity : BURST_VELOCITY_TABLE) {
-            state.reservePollenParticleAfterSpawnerGate();
             int raw = services().rng().nextRaw();
             int xVelocity = ((raw & 0x01FF) - 0x0100) + baseVelocity[0];
             int yVelocity = -((((raw >>> 16) & 0x00FF) + 0x0100) - baseVelocity[1]);
@@ -155,7 +154,7 @@ public class MhzPollenSpawnerInstance extends AbstractObjectInstance implements 
             // seed angle is the high byte of the low word, not the low byte
             // (docs/skdisasm/sonic3k.asm ~81706).
             int angle = (raw >>> 8) & 0xFF;
-            spawnChild(() -> new MhzPollenParticleInstance(
+            MhzPollenParticleInstance particle = spawnChild(() -> new MhzPollenParticleInstance(
                     player.getCentreX() & 0xFFFF,
                     (player.getCentreY() + 0x18) & 0xFFFF,
                     xVelocity,
@@ -164,6 +163,17 @@ public class MhzPollenSpawnerInstance extends AbstractObjectInstance implements 
                     angle,
                     selectArtMode(state),
                     true));
+            reserveSuccessfulParticle(particle, state);
+        }
+    }
+
+    private void reserveSuccessfulParticle(
+            MhzPollenParticleInstance particle, MhzZoneRuntimeState state) {
+        // loc_3DA60/loc_3DAD6 increment MHZ_pollen_counter only after
+        // AllocateObjectAfterCurrent succeeds. Failed SST allocations must not
+        // leave phantom reservations that suppress later Random_Number calls.
+        if (particle != null && particle.getSlotIndex() >= 0 && !particle.isDestroyed()) {
+            state.reservePollenParticleAfterSpawnerGate();
         }
     }
 

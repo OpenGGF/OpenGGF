@@ -107,13 +107,16 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        boolean swingingRoutineAtEntry = rootState == RootState.SWINGING;
         updateRootState();
         updateHandlePosition();
+        // Native root slot loc_226B0 writes Scroll_force_positions before the
+        // later handle child slot (loc_228CC) can process a jump release.
+        requestForcedScrollWhileSwinging(swingingRoutineAtEntry);
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite playable ? playable : null;
         updatePlayer(p1, player);
         updatePlayer(p2, firstTrackedSidekick());
         updateDynamicSpawn(spawn.x(), spawn.y());
-        requestForcedScrollWhileSwinging();
     }
 
     /**
@@ -125,8 +128,8 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
      * hanging player for that frame. The setter lives in the swing routine, so it
      * does not fire during a stationary (mode-0) slow-grab hang.
      */
-    private void requestForcedScrollWhileSwinging() {
-        if (rootState != RootState.SWINGING || p1.grabFlag == 0) {
+    private void requestForcedScrollWhileSwinging(boolean swingingRoutineAtEntry) {
+        if (!swingingRoutineAtEntry || rootState != RootState.SWINGING || p1.grabFlag == 0) {
             return;
         }
         ObjectServices services = tryServices();
@@ -325,9 +328,6 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
         player.setObjectMappingFrameControl(true);
         player.setSpindash(false);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
-        if (player.isCpuControlled()) {
-            player.setControlLocked(true);
-        }
         player.setRenderFlips(player.getDirection() == Direction.LEFT, false);
         state.grabFlag = fastGrab ? 0x81 : 1;
         // ROM loc_22B3C/22B06 (asm 47472-47494): the slow-grab path returns via the
@@ -336,7 +336,10 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
         if (fastGrab) {
             playSfx(Sonic3kSfx.GRAB.id);
         }
-        holdPlayer(state, player);
+        // ROM loc_22B3C returns immediately after capture. It changes anim and
+        // object_control, but deliberately leaves mapping_frame untouched until
+        // loc_229F2/loc_22A5C processes the already-grabbed player next tick.
+        state.player = player;
     }
 
     private void updateGrabbedPlayer(PlayerState state, AbstractPlayableSprite player) {
@@ -349,7 +352,9 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
             state.releaseDelay = RELEASE_DELAY;
             return;
         }
-        if (player.isJumpJustPressed()) {
+        // ROM loc_228EC passes Ctrl_1_logical/Ctrl_2_logical into loc_2291A,
+        // including the low-byte A/B/C press bits synthesized by Tails' CPU.
+        if (player.isLogicalJumpPressActive()) {
             state.pendingJumpRelease = true;
             releasePending(state);
             return;
@@ -493,7 +498,6 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
     private static void clearControlImmediate(AbstractPlayableSprite player) {
         player.setObjectMappingFrameControl(false);
         player.setForcedAnimationId(-1);
-        player.setControlLocked(false);
         ObjectControlState.none().applyTo(player);
         player.suppressNextJumpPress();
     }

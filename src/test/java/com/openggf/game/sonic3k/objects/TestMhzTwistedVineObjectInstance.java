@@ -114,6 +114,22 @@ class TestMhzTwistedVineObjectInstance {
     }
 
     @Test
+    void entryCopiesHorizontalVelocityToGroundSpeedBeforeMinimumClamp() {
+        MhzTwistedVineObjectInstance vine = new MhzTwistedVineObjectInstance(new ObjectSpawn(
+                0x3440, 0x0690, MHZ_TWISTED_VINE, 0, 0, false, 0));
+        TestablePlayableSprite player = groundedPlayer(0x347D, 0x06AE, -0x08BC);
+        player.setGSpeed((short) 0x08BC);
+        player.setYSpeed((short) 0x0120);
+
+        vine.update(0, player);
+
+        assertEquals((short) -0x08BC, player.getGSpeed(),
+                "RideObject_SetRide copies x_vel to ground_vel before sub_3DCD0 applies its $600 minimum");
+        assertEquals((short) 0, player.getYSpeed(),
+                "RideObject_SetRide clears y_vel on the twisted-vine mount frame");
+    }
+
+    @Test
     void activeLowerVineUpdatesPlayerYAndFlipAngleFromRomSinePath() {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         ObjectInstance vine = registry.create(new ObjectSpawn(

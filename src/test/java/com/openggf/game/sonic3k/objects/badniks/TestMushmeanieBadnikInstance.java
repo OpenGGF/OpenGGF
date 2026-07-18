@@ -475,11 +475,15 @@ class TestMushmeanieBadnikInstance {
 
     @Test
     void launchedShellDeletesAfterMoveWhenOutsideSpriteCheckDeleteXYWindow() {
-        AbstractObjectInstance.updateCameraBounds(0, 0, 0x100, 0x100, 0);
-        MushmeanieBadnikInstance mushmeanie = mushmeanie();
-        MushmeanieBadnikInstance.ShellChild shell = new MushmeanieBadnikInstance.ShellChild(mushmeanie);
+        SpawnHarness harness = new SpawnHarness();
+        MushmeanieBadnikInstance mushmeanie = mushmeanie(harness.services);
         TestablePlayableSprite player = player(0x120, 0x100);
         TouchResponseResult result = new TouchResponseResult(0x0A, 0, 0, TouchCategory.ENEMY);
+
+        advancePastWaitOffscreenInit(mushmeanie, player);
+        MushmeanieBadnikInstance.ShellChild shell = assertInstanceOf(
+                MushmeanieBadnikInstance.ShellChild.class, harness.spawned.get(0));
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x100, 0x100, 0);
 
         player.setXSpeed((short) 0x180);
         mushmeanie.onPlayerAttack(player, result);
@@ -491,6 +495,8 @@ class TestMushmeanieBadnikInstance {
                 "loc_8DC62 must delete the launched shell once Sprite_CheckDeleteXY sees it outside the viewport");
         assertTrue(shell.isDestroyedRespawnable(),
                 "Sprite_CheckDeleteXY is an offscreen self-delete, not a permanent defeat");
+        assertEquals(null, shellChildReferenceOf(mushmeanie),
+                "a shell deleted by Sprite_CheckDeleteXY must clear the parent's captured child reference");
     }
 
     @Test
@@ -566,6 +572,16 @@ class TestMushmeanieBadnikInstance {
         } catch (ReflectiveOperationException e) {
             fail(e);
             return -1;
+        }
+    }
+
+    private static Object shellChildReferenceOf(MushmeanieBadnikInstance mushmeanie) {
+        try {
+            Field field = MushmeanieBadnikInstance.class.getDeclaredField("shellChild");
+            field.setAccessible(true);
+            return field.get(mushmeanie);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
         }
     }
 

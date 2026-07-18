@@ -41,6 +41,7 @@ public class MhzPollenParticleInstance extends AbstractObjectInstance implements
     private int mappingFrame;
     private int animFrameTimer;
     private boolean releasedCounter;
+    private boolean renderFlagOnScreen = true;
 
     MhzPollenParticleInstance() {
         this(0, 0, 0, 0, 0, 0, ArtMode.POLLEN);
@@ -90,6 +91,11 @@ public class MhzPollenParticleInstance extends AbstractObjectInstance implements
         }
 
         boolean enteredFloatingRoutine = routine == Routine.FLOATING;
+        // loc_3DBE0 consumes the render_flags bit left by the preceding render
+        // pass. Keep it latched separately from the bounds calculated for the
+        // next pass; recomputing it at routine entry culls one frame early and
+        // opens three extra pollen RNG gates before the first MHZ Madmole.
+        boolean wasRenderFlagOnScreen = renderFlagOnScreen;
         if (!enteredFloatingRoutine) {
             SubpixelMotion.moveSprite2(motion);
             if (motion.yVel < 0) {
@@ -98,7 +104,7 @@ public class MhzPollenParticleInstance extends AbstractObjectInstance implements
             if (motion.yVel >= 0) {
                 routine = Routine.FLOATING;
                 if (!preserveInitialAngleOnFloat) {
-                    angle = (frameCounter + 1) & 0xFF;
+                    angle = (resolveLevelFrameCounter(frameCounter) + 1) & 0xFF;
                 }
             }
         } else {
@@ -109,9 +115,18 @@ public class MhzPollenParticleInstance extends AbstractObjectInstance implements
         }
 
         animateMappingFrame();
-        if (enteredFloatingRoutine && !isOnScreen(0x20)) {
+        if (enteredFloatingRoutine && !wasRenderFlagOnScreen) {
             cleanupOffscreen();
         }
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        // Render_Sprites runs after the camera and object pass, setting
+        // render_flags bit 7 for loc_3DBE0 to consume on the next dispatch.
+        // Sampling here is essential when the camera moves vertically during
+        // the same frame (sonic3k.asm:36347-36365, 81767-81805).
+        renderFlagOnScreen = isWithinRenderSpriteBounds(4, 4);
     }
 
     @Override
@@ -189,6 +204,12 @@ public class MhzPollenParticleInstance extends AbstractObjectInstance implements
         motion.x = 0x7F00;
         releaseRuntimeCounter();
         setDestroyedByOffscreen();
+    }
+
+    private int resolveLevelFrameCounter(int fallback) {
+        return services().levelManager() != null
+                ? services().levelManager().getFrameCounter()
+                : fallback;
     }
 
     private void releaseRuntimeCounter() {

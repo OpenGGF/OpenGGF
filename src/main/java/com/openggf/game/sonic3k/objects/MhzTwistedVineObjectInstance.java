@@ -172,7 +172,12 @@ public final class MhzTwistedVineObjectInstance extends AbstractObjectInstance i
         player.setOnObject(true);
         player.setLatchedSolidObject(Sonic3kObjectIds.MHZ_TWISTED_VINE, this);
         player.setDirection(direction);
-        // ROM RideObject_SetRide (sonic3k.asm:42035) forces angle(a1) = 0 on mount.
+        // ROM RideObject_SetRide (sonic3k.asm:42035-42044) forces angle=0,
+        // clears y_vel, copies x_vel into ground_vel, and clears Status_InAir.
+        // The copy must precede this object's minimum-speed clamp: a player
+        // entering from a loop can have a positive old ground_vel while x_vel
+        // already points left, and the vine preserves that high horizontal
+        // magnitude rather than replacing it with -$600.
         // While Status_OnObj is held the player's AnglePos early-returns, so this
         // flat angle persists for the whole ride and SpeedToPos advances X by
         // ground_vel each frame. Without it a mount taken on a loop wall keeps the
@@ -181,6 +186,9 @@ public final class MhzTwistedVineObjectInstance extends AbstractObjectInstance i
         // until a jump forces the air-release. The vine then never hands the
         // player onto the floor above (the "up a loop" stuck case).
         player.setAngle((byte) 0);
+        player.setYSpeed((short) 0);
+        player.setGSpeed(player.getXSpeed());
+        player.setAir(false);
         player.setFlipAngle(flipAngle);
         player.setFlipType(flipType);
         player.setMoveLockTimer(MOVE_LOCK_FRAMES);
