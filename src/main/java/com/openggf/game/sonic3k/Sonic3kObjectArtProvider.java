@@ -56,6 +56,14 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private int currentZoneIndex = -2;
     private int currentActIndex = 0;
     private int loadEpoch = 0;
+    private RuntimeArtState cnzTeleporterArtState = RuntimeArtState.IDLE;
+
+    private enum RuntimeArtState {
+        IDLE,
+        PENDING,
+        COMPLETE,
+        FAILED
+    }
 
     private final Map<String, PatternSpriteRenderer> renderers = new HashMap<>();
     private final Map<String, ObjectSpriteSheet> sheets = new HashMap<>();
@@ -110,6 +118,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     public void loadArtForZone(int zoneIndex) throws IOException {
         currentZoneIndex = zoneIndex;
         loadEpoch++;
+        cnzTeleporterArtState = RuntimeArtState.IDLE;
 
         // Clear previous registrations
         renderers.clear();
@@ -155,9 +164,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             loadHczEndBossArt();
             loadHczGeyserCutsceneArt();
         } else if (zoneIndex == 0x03) {
-            // CNZ teleporter, miniboss, and end-boss wrappers all share these
-            // ROM-backed art paths.
-            loadCnzTeleporterArt();
+            // The teleporter art is not a level-load PLC. Obj_CNZTeleporter
+            // queues ArtKosM_CNZTeleport at runtime when Knuckles reaches it.
             loadSharedBossExplosionArt();
             loadCnzMinibossArtFromPlc();
             loadCnzEndBossArt();
@@ -1211,6 +1219,42 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         }
     }
 
+    /** Mirrors Obj_CNZTeleporter's Queue_Kos_Module request. */
+    public void queueCnzTeleporterArt() {
+        if (cnzTeleporterArtState == RuntimeArtState.IDLE
+                || cnzTeleporterArtState == RuntimeArtState.FAILED) {
+            cnzTeleporterArtState = RuntimeArtState.PENDING;
+        }
+    }
+
+    public boolean isCnzTeleporterArtPending() {
+        return cnzTeleporterArtState == RuntimeArtState.PENDING;
+    }
+
+    public boolean isCnzTeleporterArtComplete() {
+        return cnzTeleporterArtState == RuntimeArtState.COMPLETE;
+    }
+
+    @Override
+    public void processRuntimeArtQueue() {
+        if (cnzTeleporterArtState != RuntimeArtState.PENDING) {
+            return;
+        }
+        loadCnzTeleporterArt();
+        PatternSpriteRenderer renderer = renderers.get(Sonic3kObjectArtKeys.CNZ_TELEPORTER);
+        if (renderer == null) {
+            cnzTeleporterArtState = RuntimeArtState.FAILED;
+            return;
+        }
+        // Runtime registration happens after the level-load cache pass. Re-run
+        // the deterministic provider allocation so the appended sheet receives
+        // its virtual atlas range while all existing bases remain unchanged.
+        ensurePatternsCached(GameServices.graphics(), PatternAtlasRange.OBJECTS.base());
+        cnzTeleporterArtState = renderer.isReady()
+                ? RuntimeArtState.COMPLETE
+                : RuntimeArtState.FAILED;
+    }
+
     /**
      * Loads CNZ miniboss art via PLC 0x5D (corrected from prior 0x5C in
      * workstream D), matching the
@@ -1314,8 +1358,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      * Loads CNZ end-boss art via PLC 0x6E, matching the ROM's setup path.
      *
      * <p>PLC_6E loads the CNZ end-boss body, shared Robotnik ship art, shared
-     * boss explosion art, and the shared egg capsule art used by the bounded
-     * CNZ end-boss wrapper.
+     * boss explosion art, and the shared egg capsule art used by the native
+     * CNZ end-boss and post-defeat handoff.
      */
     private void loadCnzEndBossArt() {
         try {
@@ -1833,16 +1877,20 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
     @Override
     public com.openggf.game.rewind.snapshot.PlcProgressSnapshot capture() {
-        return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(loadEpoch);
+        return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(
+                loadEpoch, cnzTeleporterArtState.ordinal());
     }
 
     /**
-     * Restore is a no-op for v1: all PLC art is loaded at zone-load time and
-     * does not change per-frame. The epoch is recorded in the snapshot as a
-     * diagnostic check but is not re-applied here.
+     * Restores provider-owned runtime queue state. Loaded pattern data remains
+     * cached, but the state gate determines whether gameplay may observe it.
      */
     @Override
     public void restore(com.openggf.game.rewind.snapshot.PlcProgressSnapshot snap) {
-        // No per-frame PLC state to restore in v1.
+        loadEpoch = snap.loadEpoch();
+        int state = snap.runtimeState();
+        cnzTeleporterArtState = state >= 0 && state < RuntimeArtState.values().length
+                ? RuntimeArtState.values()[state]
+                : RuntimeArtState.IDLE;
     }
 }
