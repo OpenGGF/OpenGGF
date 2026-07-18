@@ -3,18 +3,21 @@ package com.openggf.game.sonic3k;
 import com.openggf.audio.GameMusic;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.CrossGameFeatureProvider;
+import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsProfile;
+import com.openggf.game.ShieldType;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.Knuckles;
+import com.openggf.sprites.playable.SuperState;
 import com.openggf.sprites.playable.SuperStateController;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.util.logging.Logger;
-import com.openggf.game.GameServices;
 
 /**
  * S3K-specific Super Sonic state controller.
@@ -83,6 +86,24 @@ public class Sonic3kSuperStateController extends SuperStateController {
     }
 
     @Override
+    public RewindState captureRewindState() {
+        return createRewindState(paletteState, paletteFrame, paletteTimer, transformFramesRemaining);
+    }
+
+    @Override
+    public void restoreRewindState(RewindState rewindState) {
+        if (rewindState == null) {
+            return;
+        }
+        restoreCoreRewindState(rewindState);
+        paletteState = rewindState.paletteState();
+        paletteFrame = rewindState.paletteFrame();
+        paletteTimer = rewindState.paletteTimer();
+        transformFramesRemaining = rewindState.transformFramesRemaining();
+        reconcileRewindPresentation(rewindState.state());
+    }
+
+    @Override
     public void loadRomData(RomByteReader reader) {
         int addr = Sonic3kConstants.PAL_CYCLE_SUPER_SONIC_ADDR;
         int len = Sonic3kConstants.PAL_CYCLE_SUPER_SONIC_ENTRY_COUNT
@@ -128,11 +149,54 @@ public class Sonic3kSuperStateController extends SuperStateController {
     }
 
     @Override
+    protected boolean usesAutomaticJumpTrigger() {
+        return false;
+    }
+
+    @Override
+    protected boolean usesExplicitAirAbilityTrigger() {
+        return true;
+    }
+
+    @Override
+    protected int getTransformationAnimationId() {
+        return player instanceof Tails ? 0x29 : super.getTransformationAnimationId();
+    }
+
+    @Override
+    protected boolean hasTransformationEmeralds() {
+        var gameState = player.currentGameState();
+        if (player instanceof Tails) {
+            return gameState.hasAllSuperEmeralds();
+        }
+        return gameState.hasAllSuperEmeralds()
+                || (gameState.hasAllEmeralds() && !gameState.isEmeraldsConverted());
+    }
+
+    @Override
+    protected boolean passesGameSpecificTransformGates() {
+        if (player instanceof Tails) {
+            return GameServices.sprites().getMainPlayable() == player;
+        }
+        if (player instanceof Knuckles) {
+            return true;
+        }
+        ShieldType shield = player.getShieldType();
+        boolean elementalShield = shield == ShieldType.FIRE
+                || shield == ShieldType.LIGHTNING
+                || shield == ShieldType.BUBBLE;
+        return !elementalShield && player.getInvincibleFrames() <= 0;
+    }
+
+    @Override
     protected PhysicsProfile getSuperProfile() {
         // S3K Super Tails: max=$800, accel=$18, decel=$C0 (sonic3k.asm:26325-26327)
         // S3K Super Sonic: max=$A00, accel=$30, decel=$100 (sonic3k.asm:22084-22086)
         if (player instanceof Tails) {
             return PhysicsProfile.SONIC_3K_SUPER_TAILS;
+        }
+        if (player instanceof Knuckles) {
+            return PhysicsProfile.SONIC_3K_SUPER_KNUCKLES;
         }
         return PhysicsProfile.SONIC_3K_SUPER_SONIC;
     }
@@ -143,6 +207,9 @@ public class Sonic3kSuperStateController extends SuperStateController {
         // ROM: speed shoes expire code sets $600/$C/$80 for all characters.
         if (player instanceof Tails) {
             return PhysicsProfile.SONIC_2_TAILS;
+        }
+        if (player instanceof Knuckles) {
+            return PhysicsProfile.SONIC_3K_KNUCKLES;
         }
         return PhysicsProfile.SONIC_2_SONIC;
     }
@@ -192,12 +259,16 @@ public class Sonic3kSuperStateController extends SuperStateController {
         }
         player.setInvincibleFrames(0);
         if (superAnimSet != null) {
-            normalAnimSet = player.getAnimationSet();
+            if (normalAnimSet == null) {
+                normalAnimSet = player.getAnimationSet();
+            }
             player.setAnimationSet(superAnimSet);
         }
         // Swap to Super Sonic sprite renderer (different mappings/DPLCs)
         if (superRenderer != null) {
-            normalRenderer = player.getSpriteRenderer();
+            if (normalRenderer == null) {
+                normalRenderer = player.getSpriteRenderer();
+            }
             player.setSpriteRenderer(superRenderer);
         }
         player.setShieldVisible(false);
@@ -235,12 +306,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
         player.setInvincibleFrames(1);
         if (normalAnimSet != null) {
             player.setAnimationSet(normalAnimSet);
-            normalAnimSet = null;
         }
         // Restore normal sprite renderer
         if (normalRenderer != null) {
             player.setSpriteRenderer(normalRenderer);
-            normalRenderer = null;
         }
         player.setShieldVisible(true);
         // Revert to zone music
@@ -256,6 +325,28 @@ public class Sonic3kSuperStateController extends SuperStateController {
             LOGGER.fine("Could not revert Super Sonic music: " + e.getMessage());
         }
         LOGGER.info("Super Sonic deactivated (S3K)");
+    }
+
+    private void reconcileRewindPresentation(SuperState restoredState) {
+        boolean activeSuper = restoredState == SuperState.SUPER;
+        reconcileRewindPhysicsAndAnimationProfile(activeSuper);
+        if (activeSuper) {
+            if (superAnimSet != null) {
+                player.setAnimationSet(superAnimSet);
+            }
+            if (superRenderer != null) {
+                player.setSpriteRenderer(superRenderer);
+            }
+            player.setShieldVisible(false);
+        } else {
+            if (normalAnimSet != null) {
+                player.setAnimationSet(normalAnimSet);
+            }
+            if (normalRenderer != null) {
+                player.setSpriteRenderer(normalRenderer);
+            }
+            player.setShieldVisible(true);
+        }
     }
 
     /**

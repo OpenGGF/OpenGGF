@@ -150,7 +150,7 @@ public class Sonic3kSpecialStageManager {
         this.playerCharacter = resolvePlayerCharacter();
         this.tailsEnabled = (playerCharacter == PlayerCharacter.SONIC_AND_TAILS);
         GameStateManager state = GameServices.gameState();
-        this.superEmeraldMode = state.hasAllEmeralds() && !state.hasAllSuperEmeralds();
+        this.superEmeraldMode = resolveSuperEmeraldMode(state);
 
         this.bannerPhase = 0;
         this.bannerTimer = 0;
@@ -187,6 +187,17 @@ public class Sonic3kSpecialStageManager {
         tailsJumpVelocity = 0;
         tailsTailsAnimTimer = 0;
         tailsTailsMappingFrame = 1;
+    }
+
+    static boolean resolveSuperEmeraldMode(GameStateManager state) {
+        boolean superEmeraldMode = state.hasAllEmeralds() && !state.hasAllSuperEmeralds();
+        if (superEmeraldMode) {
+            // ROM progression converts the Chaos Emeralds before the first
+            // Super Emerald is awarded; leaving this stage must not re-enable
+            // the Chaos-Emerald transformation route.
+            state.setEmeraldsConverted(true);
+        }
+        return superEmeraldMode;
     }
 
     /** Pattern ID base for special stage art (avoids conflicts with level patterns). */

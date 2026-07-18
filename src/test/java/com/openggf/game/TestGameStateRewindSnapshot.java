@@ -24,6 +24,7 @@ class TestGameStateRewindSnapshot {
         gameState.markEmeraldCollected(0);
         gameState.markEmeraldCollected(3);
         gameState.markSuperEmeraldCollected(1);
+        gameState.setEmeraldsConverted(true);
         gameState.setCurrentBossId(42);
         gameState.setScreenShakeActive(true);
         gameState.setBackgroundCollisionFlag(true);
@@ -44,6 +45,7 @@ class TestGameStateRewindSnapshot {
         gameState.setCurrentBossId(0);
         gameState.setScreenShakeActive(false);
         gameState.setWfzFireToggle(false);
+        gameState.setEmeraldsConverted(false);
 
         // Restore from snapshot
         gameState.restore(snapshot);
@@ -56,6 +58,7 @@ class TestGameStateRewindSnapshot {
         assertTrue(gameState.hasEmerald(3));
         assertFalse(gameState.hasEmerald(1));
         assertTrue(gameState.hasSuperEmerald(1));
+        assertTrue(gameState.isEmeraldsConverted());
         assertEquals(2, gameState.getEmeraldCount());
         assertEquals(42, gameState.getCurrentBossId());
         assertTrue(gameState.isScreenShakeActive());
@@ -86,5 +89,17 @@ class TestGameStateRewindSnapshot {
 
         // Verify state is unchanged
         assertTrue(gameState.hasEmerald(2));
+    }
+
+    @Test
+    void emeraldConversionRoundTripsWithoutAnySuperEmeralds() {
+        gameState.setEmeraldsConverted(true);
+
+        GameStateSnapshot snapshot = gameState.capture();
+        gameState.setEmeraldsConverted(false);
+        gameState.restore(snapshot);
+
+        assertTrue(gameState.isEmeraldsConverted());
+        assertTrue(gameState.getCollectedSuperEmeraldIndices().isEmpty());
     }
 }

@@ -82,6 +82,23 @@ class TestEngine {
     }
 
     @Test
+    void restoreS3kSaveProgressPreservesExplicitConvertedStateWithoutSuperEmeralds() {
+        GameplayModeContext gameplayMode = mock(GameplayModeContext.class);
+        GameStateManager gameState = new GameStateManager();
+        when(gameplayMode.getGameStateManager()).thenReturn(gameState);
+
+        Engine.restoreGameplayModeFromDataSelectPayload(gameplayMode, Map.of(
+                "lives", 3,
+                "continues", 0,
+                "chaosEmeralds", List.of(0, 1, 2, 3, 4, 5, 6),
+                "superEmeralds", List.of(),
+                "emeraldsConverted", true));
+
+        assertTrue(gameState.isEmeraldsConverted());
+        assertTrue(gameState.getCollectedSuperEmeraldIndices().isEmpty());
+    }
+
+    @Test
     void drawMasterTitleScreenDoesNotRequireGameplayCamera() throws Exception {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         Engine engine = new Engine();

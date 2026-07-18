@@ -75,6 +75,9 @@ public abstract class SuperStateController {
      * dispatching insta-shield.
      */
     public boolean activateFromAirAbility() {
+        if (!usesExplicitAirAbilityTrigger()) {
+            return false;
+        }
         if (!canTransform()) {
             return false;
         }
@@ -104,6 +107,40 @@ public abstract class SuperStateController {
 
     public boolean isRomDataPreLoaded() {
         return romDataPreLoaded;
+    }
+
+    /** Complete controller snapshot. Unsupported controllers return {@code null}. */
+    public RewindState captureRewindState() {
+        return null;
+    }
+
+    /** Restores a complete controller snapshot without replaying activation effects. */
+    public void restoreRewindState(RewindState rewindState) {
+        // Default deliberately unsupported: S2 owns a live stars-object reference.
+    }
+
+    protected final RewindState createRewindState(int paletteState, int paletteFrame,
+                                                   int paletteTimer, int transformFramesRemaining) {
+        return new RewindState(state, ringDrainCounter, paletteState, paletteFrame,
+                paletteTimer, transformFramesRemaining);
+    }
+
+    protected final void restoreCoreRewindState(RewindState rewindState) {
+        state = rewindState.state();
+        ringDrainCounter = rewindState.ringDrainCounter();
+    }
+
+    protected final void reconcileRewindPhysicsAndAnimationProfile(boolean activeSuper) {
+        player.applyExternalPhysicsProfile(activeSuper ? getSuperProfile() : getNormalProfile());
+        SpriteAnimationProfile current = player.getAnimationProfile();
+        if (normalAnimProfile == null && current instanceof ScriptedVelocityAnimationProfile) {
+            normalAnimProfile = current;
+        }
+        if (normalAnimProfile instanceof ScriptedVelocityAnimationProfile normalVelocityProfile) {
+            player.setAnimationProfile(activeSuper
+                    ? normalVelocityProfile.withRunSpeedThreshold(getSuperRunSpeedThreshold())
+                    : normalAnimProfile);
+        }
     }
 
     // --- Palette target resolution for cross-game support ---
@@ -147,6 +184,23 @@ public abstract class SuperStateController {
     protected abstract void updateSuperPalette();
     protected abstract void onRevertStarted();
 
+    /** S2 transforms automatically during a jump; S3K overrides for explicit re-press activation. */
+    protected boolean usesAutomaticJumpTrigger() {
+        return true;
+    }
+
+    protected boolean usesExplicitAirAbilityTrigger() {
+        return false;
+    }
+
+    protected boolean hasTransformationEmeralds() {
+        return player.currentGameState().hasAllEmeralds();
+    }
+
+    protected boolean passesGameSpecificTransformGates() {
+        return true;
+    }
+
     /**
      * Called every frame regardless of state. Override to run post-revert effects
      * (e.g. palette fade-out animation that continues after state returns to NORMAL).
@@ -175,6 +229,7 @@ public abstract class SuperStateController {
 
     // --- Core logic ---
     private void checkTransformationTrigger() {
+        if (!usesAutomaticJumpTrigger()) return;
         if (!canTransform()) return;
         if (player.getAir() && player.isJumping() && player.getYSpeed() >= -0x100 && player.getYSpeed() <= 0) {
             startTransformation();
@@ -183,10 +238,13 @@ public abstract class SuperStateController {
 
     private boolean canTransform() {
         if (player.isSuperSonic()) return false;
-        if (!player.currentGameState().hasAllEmeralds()) return false;
+        if (!hasTransformationEmeralds()) return false;
         if (player.getRingCount() < getMinRingsToTransform()) return false;
         if (player.getDead() || player.isHurt() || player.isDebugMode()) return false;
         if (player.isObjectControlled()) return false;
+        LevelState levelState = player.currentLevelState();
+        if (levelState != null && levelState.isTimerPaused()) return false;
+        if (!passesGameSpecificTransformGates()) return false;
         return true;
     }
 
@@ -249,15 +307,27 @@ public abstract class SuperStateController {
     private void swapToSuperAnimProfile() {
         SpriteAnimationProfile current = player.getAnimationProfile();
         if (current instanceof ScriptedVelocityAnimationProfile velocityProfile) {
-            normalAnimProfile = current;
-            player.setAnimationProfile(velocityProfile.withRunSpeedThreshold(getSuperRunSpeedThreshold()));
+            if (normalAnimProfile == null) {
+                normalAnimProfile = current;
+            }
+            ScriptedVelocityAnimationProfile normalVelocityProfile =
+                    (ScriptedVelocityAnimationProfile) normalAnimProfile;
+            player.setAnimationProfile(normalVelocityProfile.withRunSpeedThreshold(getSuperRunSpeedThreshold()));
         }
     }
 
     private void restoreNormalAnimProfile() {
         if (normalAnimProfile != null) {
             player.setAnimationProfile(normalAnimProfile);
-            normalAnimProfile = null;
         }
     }
+
+    public record RewindState(
+            SuperState state,
+            int ringDrainCounter,
+            int paletteState,
+            int paletteFrame,
+            int paletteTimer,
+            int transformFramesRemaining
+    ) {}
 }

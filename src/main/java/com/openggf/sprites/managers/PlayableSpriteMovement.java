@@ -1276,7 +1276,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				jumpReleasedSinceJump = true;
 			}
 			// Shield ability: re-press jump after release while airborne (docs/skdisasm/sonic3k.asm:23397).
-			if (jumpReleasedSinceJump && inputJumpPress && sprite.getDoubleJumpFlag() == 0) {
+			if (jumpReleasedSinceJump && inputJumpPress && isAirAbilityWindowOpen()) {
+				if (sprite.getSecondaryAbility() == SecondaryAbility.FLY
+						&& tryActivateSuperFromAirAbility()) {
+					jumpReleasedSinceJump = false;
+					inputJumpPress = false;
+					return;
+				}
 				if (tryActivateTailsFlight()) {
 					jumpReleasedSinceJump = false;
 					inputJumpPress = false;
@@ -1292,6 +1298,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					// 999-1025; docs/s2disasm/s2.asm:37067-37097).
 					sprite.setRollingJump(false);
 				}
+				if (sprite.getSecondaryAbility() != SecondaryAbility.FLY
+						&& tryActivateSuperFromAirAbility()) {
+					jumpReleasedSinceJump = false;
+					return;
+				}
 				if (tryShieldAbility()) {
 					jumpReleasedSinceJump = false;
 					return;
@@ -1304,6 +1315,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		} else {
 			applyUpwardVelocityCap();
 		}
+	}
+
+	private boolean isAirAbilityWindowOpen() {
+		int threshold = sprite.isInWater() ? -0x200 : -0x400;
+		return sprite.getDoubleJumpFlag() == 0 && sprite.getYSpeed() >= threshold;
+	}
+
+	private boolean tryActivateSuperFromAirAbility() {
+		return sprite.getSuperStateController() != null
+				&& sprite.getSuperStateController().activateFromAirAbility();
 	}
 
 	private boolean tryActivateTailsFlight() {
@@ -1384,13 +1405,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setRollingJump(false);
 
 		ShieldType shield = sprite.getShieldType();
-		if (sprite.getSecondaryAbility() == SecondaryAbility.INSTA_SHIELD
-				&& shield == null
-				&& sprite.getSuperStateController() != null
-				&& sprite.getSuperStateController().activateFromAirAbility()) {
-			return true;
-		}
-
 		// ROM (sonic3k.asm:23404-23408): Super Sonic suppresses all abilities.
 		// With all Super Emeralds this path becomes Sonic_HyperDash instead.
 		if (sprite.isSuperSonic()) {
