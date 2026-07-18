@@ -94,6 +94,10 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
     private final ObjectAnimationState animationState;
     private int mappingFrame;
     private boolean initialized;
+    /** True only for the execution that ports {@code Obj_Spring} initialization. */
+    private boolean nativeInitExecutionPending = true;
+    /** Keeps the compatibility solid checkpoint inert during that init execution. */
+    private boolean nativeInitExecutedThisFrame;
     private final Set<AbstractPlayableSprite> proactiveTriggeredThisUpdate =
             Collections.newSetFromMap(new IdentityHashMap<>());
 
@@ -382,7 +386,18 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        nativeInitExecutedThisFrame = false;
         ensureInitialized();
+        if (nativeInitExecutionPending) {
+            // Obj_Spring installs the variant code pointer and returns through
+            // Spring_Common. Obj_Spring_Horizontal/Up/etc. do not execute until
+            // the object's next SST pass (sonic3k.asm:47500-47652). In CNZ the
+            // spring is loaded beside Tails on f1846; allowing the Java variant
+            // routine to fall through here launches her one frame before ROM.
+            nativeInitExecutionPending = false;
+            nativeInitExecutedThisFrame = true;
+            return;
+        }
         proactiveTriggeredThisUpdate.clear();
         // ROM sub_2326C (sonic3k.asm:47957) — proactive horizontal-spring zone.
         // The whole routine is gated on `cmpi.b #3,anim(a0) / beq.w locret_23324`
@@ -532,6 +547,9 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (nativeInitExecutedThisFrame) {
+            return false;
+        }
         if (springType == TYPE_HORIZONTAL && proactiveTriggeredThisUpdate.contains(player)) {
             // Obj_Spring_Horizontal calls sub_2326C after both SolidObjectFull2_1P
             // passes (docs/skdisasm/sonic3k.asm:47779-47814,47957-48024). A player

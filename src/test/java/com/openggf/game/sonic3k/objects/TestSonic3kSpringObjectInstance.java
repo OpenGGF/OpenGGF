@@ -109,6 +109,31 @@ class TestSonic3kSpringObjectInstance {
     }
 
     @Test
+    void nativeInitExecutionDoesNotRunHorizontalSpringRoutineUntilNextFrame() {
+        // Obj_Spring rewrites (a0) to Obj_Spring_Horizontal through Spring_Common
+        // and returns (sonic3k.asm:47500-47652). The horizontal routine therefore
+        // cannot execute SolidObjectFull2_1P/sub_2326C until the next object pass.
+        Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x14B8, 0x0770, Sonic3kObjectIds.SPRING, 0x10, 1, false, 0));
+        TestableSprite tails = new TestableSprite("tails");
+        tails.setCentreX((short) 0x14B5);
+        tails.setCentreY((short) 0x0770);
+        tails.setGSpeed((short) 0x24);
+        spring.setServices(new QueryBackedServices(tails, List.of())
+                .withGameState(new GameStateManager()));
+
+        spring.update(1846, tails);
+        assertFalse(spring.isSolidFor(tails),
+                "Obj_Spring's init-only execution must not collide on its spawn frame");
+        assertEquals(0x24, tails.getGSpeed(),
+                "init must not run the horizontal proactive trigger");
+
+        spring.update(1847, tails);
+        assertTrue(spring.isSolidFor(tails),
+                "Obj_Spring_Horizontal becomes executable on the following object pass");
+    }
+
+    @Test
     void verticalSpringSolidParamsMatchRom() {
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x00, 0, false, 0));
@@ -316,7 +341,8 @@ class TestSonic3kSpringObjectInstance {
         spring.setServices(new QueryBackedServices(main, List.of(nativeP2, extraSidekick))
                 .withGameState(new GameStateManager()));
 
-        spring.update(0, main);
+        spring.update(0, main); // Obj_Spring init-only execution
+        spring.update(1, main); // Obj_Spring_Horizontal
 
         assertEquals(0x0218, nativeP2.getCentreX() & 0xFFFF,
                 "ROM Player_2 approach block should resolve native P2 through ObjectPlayerQuery");

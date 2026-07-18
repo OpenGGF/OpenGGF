@@ -45511,3 +45511,34 @@ on Tails' `SpeedToPos`/native x_pos writes in that window, as required by the
 trace workflow before classifying a sub-frame position discrepancy. Frontier
 remains f1846 `tails_x_speed`; no hydration, tolerance, zone/frame carve-out, or
 spring timing change was made.
+
+### 2026-07-18 -- CNZ complete-run spring init cadence: f1846 -> f2920
+
+A clean physics-scope replay with a 12 GiB fork heap disproved the prior
+"upstream accumulated X" premise. At f1846 the engine's pre-object diagnostic
+has Tails at exactly the ROM state, x=`$14B5.8500` with x/ground speed `$0024`.
+The engine then processes the just-loaded horizontal spring in the same frame,
+nudging Tails to `$14AD` and writing `-$1000`. ROM aux simultaneously reports
+the spring newly appearing in slot 20 with code `$23050`
+(`Obj_Spring_Horizontal`): `Obj_Spring` has executed and installed its variant,
+but that variant cannot run until the next SST pass. This follows the init tail
+through `Spring_Common` (`sonic3k.asm:47500-47652`) and requires no zone, route,
+frame, or trace-data predicate.
+
+`Sonic3kSpringObjectInstance` now consumes an init-only execution and suppresses
+its compatibility solid checkpoint on that pass. The focused spring test suite
+passes. Command:
+`JDK_JAVA_OPTIONS=-Xmx12g mvn -Dmse=off "-Dtest=TestS3kCnzCompleteRunTraceReplay" -Dtrace.verification=physics -Dtrace.frontierOnly=true -Dtrace.context.radius=2 -Dtrace.print.summary=true "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" test`.
+Result: CNZ complete-run advances from f1846 `tails_x_speed` to f2920
+`x_speed` (21 retained errors in the stopped context). S3K AIZ complete-run
+remains fully green; ICZ complete-run preserves its clean-HEAD f2472 `y_speed`
+frontier. A combined parallel run exhausted heap before HCZ completed, and a
+subsequent isolated HCZ run also exhausted a 10 GiB fork during trace loading,
+so no HCZ frontier claim is made.
+
+A targeted BizHawk PC-execute probe for `$23050`/`$23190` was built and
+successfully compiled with Lupa, but could not execute locally: the bundled
+`EmuHawkMono.sh` exits immediately with `mono: not found`, and this host has no
+Wine, PowerShell, or alternate BizHawk runtime. The committed ROM aux and clean
+engine context already identify the init/variant boundary; no recorder data was
+regenerated or hydrated.
