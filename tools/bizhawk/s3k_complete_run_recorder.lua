@@ -4942,6 +4942,23 @@ function on_frame_end()
         return
     end
 
+    -- v6.30: HARD mode guard on the per-frame row write. Once armed, this
+    -- recorder used to write a level-schema row EVERY frame regardless of
+    -- Game_Mode; a special-stage ($34) or SS-results ($48) detour silently
+    -- polluted the active zone segment with garbage rows (player slots hold
+    -- SS object data in those modes). A level-schema row is only meaningful
+    -- under the level family (raw $0C + $4C/$8C load-handoff). Detour
+    -- entry/exit segmentation is handled BEFORE this guard (v6.30 state
+    -- machine); this is the safety net that makes pollution structurally
+    -- impossible. NOTE: $08 is the attract-mode demo, deliberately NOT
+    -- level-family for recording purposes (spec 2026-07-18).
+    do
+        local guard_mode = mainmemory.read_u8(ADDR_GAME_MODE)
+        if not is_level_family_mode(guard_mode) then
+            return
+        end
+    end
+
     if HEADLESS and movie.isloaded() then
         local movie_length = movie.length()
         local end_frame_limit = movie_length
