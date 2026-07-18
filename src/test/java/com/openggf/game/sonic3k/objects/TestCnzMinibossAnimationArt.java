@@ -77,6 +77,25 @@ class TestCnzMinibossAnimationArt {
     }
 
     @Test
+    void bossClosingRawAnimationUsesExactMultiDelayDuration() {
+        RenderHarness harness = new RenderHarness();
+        CnzMinibossInstance boss = new CnzMinibossInstance(
+                new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        boss.setServices(harness.services());
+
+        boss.forceRoutineForTest(0x0C);
+        for (int frame = 0; frame < 25; frame++) {
+            boss.update(frame, null);
+        }
+        assertEquals(0x0C, boss.getCurrentRoutine(),
+                "Closing must remain active through the six delay-3 frame holds");
+
+        boss.update(25, null);
+        assertEquals(0x06, boss.getCurrentRoutine(),
+                "AniRaw_CNZMinibossClosing's $F4 terminator invokes CloseGo on call 26");
+    }
+
+    @Test
     void topWait2RawGetFasterSelectsFrame8BeforeLaunchingToMain() {
         RenderHarness harness = new RenderHarness();
         CnzMinibossTopInstance top = new CnzMinibossTopInstance(
