@@ -89,9 +89,9 @@ public class S3kSignpostInstance extends AbstractObjectInstance
 
     // Bump detection box relative to signpost center
     private static final int BUMP_LEFT = -0x20;
-    private static final int BUMP_RIGHT = 0x40;
+    private static final int BUMP_RIGHT = 0x20;
     private static final int BUMP_TOP = -0x18;
-    private static final int BUMP_BOTTOM = 0x30;
+    private static final int BUMP_BOTTOM = 0x18;
 
     // Wall bounce margins relative to camera
     private static final int WALL_RIGHT_MARGIN = 0x128;
@@ -114,8 +114,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     private int resultsTimerCatchUpEntries;
     private int resultsWaitDurationAdjustment;
     private int resultsPostControlHandoffDelayEntries;
+    private int resultsRetireDispatches = RESULTS_CARRIED_RETIRE_DISPATCHES;
     private boolean resultsWaitedForPlayerLanding;
-    private boolean mainEndingPosePending;
     private boolean sidekickEndingPoseApplied;
     private boolean sidekickEndingPoseCheckArmed;
 
@@ -132,6 +132,14 @@ public class S3kSignpostInstance extends AbstractObjectInstance
 
     S3kSignpostInstance(int spawnX, int apparentAct, int resultsTimerCatchUpEntries,
             int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries) {
+        this(spawnX, apparentAct, resultsTimerCatchUpEntries,
+                resultsWaitDurationAdjustment, resultsPostControlHandoffDelayEntries,
+                RESULTS_CARRIED_RETIRE_DISPATCHES);
+    }
+
+    S3kSignpostInstance(int spawnX, int apparentAct, int resultsTimerCatchUpEntries,
+            int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries,
+            int resultsRetireDispatches) {
         super(null, "S3kSignpost");
         this.worldX = spawnX;
         this.worldY = 0; // Set properly in INIT
@@ -139,6 +147,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         this.resultsTimerCatchUpEntries = Math.max(0, resultsTimerCatchUpEntries);
         this.resultsWaitDurationAdjustment = Math.max(0, resultsWaitDurationAdjustment);
         this.resultsPostControlHandoffDelayEntries = Math.max(0, resultsPostControlHandoffDelayEntries);
+        this.resultsRetireDispatches = Math.max(0, resultsRetireDispatches);
     }
 
     private S3kSignpostInstance() {
@@ -363,6 +372,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         }
         int dx = player.getCentreX() - signpostX;
         int dy = player.getCentreY() - signpostY;
+        // Check_PlayerInRange interprets EndSign_Range as left,width,top,height:
+        // (-$20,$40) produces [-$20,+$20), and (-$18,$30) produces
+        // [-$18,+$18), rather than treating $40/$30 as absolute maxima
+        // (sonic3k.asm:176350-176353,176410-176411,179994-180019).
         return dx >= BUMP_LEFT && dx < BUMP_RIGHT && dy >= BUMP_TOP && dy < BUMP_BOTTOM;
     }
 
@@ -439,20 +452,12 @@ public class S3kSignpostInstance extends AbstractObjectInstance
             return;
         }
 
-        if (resultsWaitedForPlayerLanding) {
-            // Obj_EndSignResults has already occupied its native routine-6
-            // slot while waiting on Status_InAir. Once the player lands in the
-            // earlier player slot, this later object slot applies the ending
-            // pose immediately and routine 8 may check Tails next frame.
-            applyMainPlayerEndingPose(player);
-            sidekickEndingPoseCheckArmed = true;
-        } else {
-            // When routine 6 never waited, the engine reaches the
-            // landed-to-results boundary one collapsed owner dispatch before
-            // the ROM's Set_PlayerEndingPose call. Preserve that SST entry
-            // boundary so this frame retains its raw animation and mapping.
-            mainEndingPosePending = true;
-        }
+        // Obj_EndSignResults calls Set_PlayerEndingPose and advances to routine
+        // 8 in the same dispatch, regardless of whether routine 6 previously
+        // waited for Status_InAir to clear. Check_TailsEndPose belongs to the
+        // following routine-8 dispatch (sonic3k.asm:176208-176238,176244-176260).
+        applyMainPlayerEndingPose(player);
+        sidekickEndingPoseCheckArmed = true;
 
         // ROM Obj_EndSignLanded writes only Ctrl_2_locked before this routine;
         // Obj_EndSignResults calls Set_PlayerEndingPose with a1=Player_1 only
@@ -478,8 +483,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance
                 getPlayerCharacter(), apparentAct, resultsWaitDurationAdjustment,
                 resultsPostControlHandoffDelayEntries,
                 resultsWaitedForPlayerLanding
-                        ? RESULTS_WAITED_LANDING_RETIRE_DISPATCHES
-                        : RESULTS_CARRIED_RETIRE_DISPATCHES));
+                        ? Math.min(resultsRetireDispatches, RESULTS_WAITED_LANDING_RETIRE_DISPATCHES)
+                        : resultsRetireDispatches));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
     }
@@ -547,10 +552,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     // =========================================================================
 
     private void updateAfter(AbstractPlayableSprite player) {
-        if (mainEndingPosePending) {
-            mainEndingPosePending = false;
-            applyMainPlayerEndingPose(player);
-        }
         applyNativeSidekickEndingPose(player);
         if (isResultsScreenActive()) {
             return;

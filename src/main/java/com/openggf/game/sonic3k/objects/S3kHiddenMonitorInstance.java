@@ -31,9 +31,9 @@ public class S3kHiddenMonitorInstance extends AbstractObjectInstance
 
     // Range check box: signpost position relative to THIS hidden monitor
     private static final int RANGE_LEFT = -0x0E;
-    private static final int RANGE_RIGHT = 0x1C;
+    private static final int RANGE_RIGHT = RANGE_LEFT + 0x1C;
     private static final int RANGE_TOP = -0x80;
-    private static final int RANGE_BOTTOM = 0xC0;
+    private static final int RANGE_BOTTOM = RANGE_TOP + 0xC0;
 
     private int monitorX;
     private int monitorY;

@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -73,6 +74,27 @@ class TestS3kHiddenMonitorInstance {
                 "Obj_HiddenMonitor must play sfx_BubbleAttack when the signpost is inside word_8379E");
         verify(objectManager).addDynamicObjectAtSlot(any(Sonic3kMonitorObjectInstance.class), eq(42));
         verify(objectManager, never()).addDynamicObjectAfterCurrent(any());
+    }
+
+    @Test
+    void rangeWordsAreOriginsAndExtentsWithExclusiveFarEdges() throws Exception {
+        S3kHiddenMonitorInstance hidden = new S3kHiddenMonitorInstance(new ObjectSpawn(
+                0x1800, 0x0600, HIDDEN_MONITOR, 3, 0, false, 0));
+        ObjectManager objectManager = mock(ObjectManager.class);
+        RecordingServices services = new RecordingServices(objectManager);
+        hidden.setServices(services);
+        S3kSignpostInstance signpost = landedSignpostAt(0x180E, 0x0600);
+        when(objectManager.activeObjectsOfType(S3kSignpostInstance.class)).thenReturn(List.of(signpost));
+
+        hidden.update(0, null);
+
+        assertFalse(hidden.isDestroyed(),
+                "word_8379E stores left=-$E,width=$1C, so x=origin+$E is outside the exclusive far edge");
+        assertTrue(signpost.isLanded(),
+                "An out-of-range hidden monitor must not clear the signpost landed flag");
+        assertEquals(1, services.groundSlideCount);
+        assertEquals(0, services.bubbleAttackCount);
+        verify(objectManager, never()).addDynamicObjectAtSlot(any(), anyInt());
     }
 
     private static S3kSignpostInstance landedSignpostAt(int x, int y) throws Exception {

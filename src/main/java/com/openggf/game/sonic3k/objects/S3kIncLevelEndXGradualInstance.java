@@ -15,9 +15,15 @@ public final class S3kIncLevelEndXGradualInstance extends AbstractObjectInstance
         implements RewindRecreatable {
     private static final int ACCELERATION = 0x4000;
     private int accumulator;
+    private boolean deferFirstUpdate;
 
     public S3kIncLevelEndXGradualInstance(int x, int y) {
+        this(x, y, false);
+    }
+
+    public S3kIncLevelEndXGradualInstance(int x, int y, boolean deferFirstUpdate) {
         super(new ObjectSpawn(x, y, 0, 0, 0, false, y), "S3kIncLevelEndXGradual");
+        this.deferFirstUpdate = deferFirstUpdate;
     }
 
     public S3kIncLevelEndXGradualInstance(ObjectSpawn spawn) {
@@ -26,6 +32,10 @@ public final class S3kIncLevelEndXGradualInstance extends AbstractObjectInstance
 
     @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new S3kIncLevelEndXGradualInstance(ctx.spawn());
+    }
+
+    @Override protected boolean skipsSameFrameUpdateAfterSpawn() {
+        return deferFirstUpdate;
     }
 
     @Override public void update(int frameCounter, PlayableEntity player) {

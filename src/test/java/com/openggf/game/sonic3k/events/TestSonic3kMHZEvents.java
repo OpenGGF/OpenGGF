@@ -278,6 +278,20 @@ class TestSonic3kMHZEvents {
                 "MHZ1_BackgroundEvent should not vertically offset players during the reload");
         assertTrue(request.preserveMusic(),
                 "MHZ1_BackgroundEvent should preserve the Act 2 music already started by the results path");
+        assertTrue(request.preserveLevelGamestate(),
+                "Load_Level must retain the live Obj_LevelResults ring/time globals");
+        assertTrue(request.preserveEndOfLevelActive(),
+                "the carried results owner keeps _unkFAA8 active across Load_Level");
+        assertTrue(request.preserveOffsetCameraPosition(),
+                "MHZ subtracts $4200 from the live camera and does not recenter it from Player_1");
+        assertEquals(request.postTransitionMinX(), request.postTransitionMinXTarget(),
+                "the engine target must mirror ROM's single Camera_Min_X_pos word");
+        assertEquals(request.postTransitionMaxX(), request.postTransitionMaxXTarget(),
+                "the engine target must mirror ROM's single Camera_Max_X_pos word");
+        assertTrue(request.resetLevelGamestateAtInLevelTitleCardDisplay(),
+                "the carried results globals reset only when the in-level Act 2 title card is displayed");
+        assertEquals(10, request.inLevelTitleCardExitAdditionalDispatches(),
+                "the retained Obj_EndSignControl owner reaches Change_Act2Sizes after the title children retire");
         assertTrue(request.showInLevelTitleCard(),
                 "MHZ1_BackgroundEvent should request the Act 2 title card after the seamless reload");
         assertFalse(events.isActTransitionFlagActive(),

@@ -1215,29 +1215,39 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 		sprite.setGSpeed(spindashGSpeed);
 
-		short preReleaseXSpeed = sprite.getXSpeed();
-		short preReleaseYSpeed = sprite.getYSpeed();
-		short preReleaseCentreX = sprite.getCentreX();
+		// ROM reaches Player_LevelBound with the pre-release x_vel still live;
+		// only ground_vel has been published (sonic3k.asm:23662-23708,23797-23800).
+		// This matters at a camera edge: Player_Boundary_Sides can clamp x_pos and
+		// clear the new inertia before the first rolling displacement.
+		doLevelBoundary();
+		short postBoundaryXSpeed = sprite.getXSpeed();
+		short postBoundaryYSpeed = sprite.getYSpeed();
+		short postBoundaryCentreX = sprite.getCentreX();
+		short postBoundaryGSpeed = sprite.getGSpeed();
 
 		// Keep a temporary derived release velocity for the AnglePos threshold
-		// check that still runs on the release frame.
+		// check that still runs on the release frame. Derive it only after the
+		// ROM-ordered boundary call so a clamp's zero inertia remains authoritative.
 		int hexAngle = sprite.getAngle() & 0xFF;
-		sprite.setXSpeed((short) ((spindashGSpeed * TrigLookupTable.cosHex(hexAngle)) >> 8));
-		sprite.setYSpeed((short) ((spindashGSpeed * TrigLookupTable.sinHex(hexAngle)) >> 8));
+		sprite.setXSpeed((short) ((postBoundaryGSpeed * TrigLookupTable.cosHex(hexAngle)) >> 8));
+		sprite.setYSpeed((short) ((postBoundaryGSpeed * TrigLookupTable.sinHex(hexAngle)) >> 8));
 
 		sprite.setRolling(true);
 
 		audioManager.playSfx(GameSound.SPINDASH_RELEASE);
-		doLevelBoundaryAndAnglePos();
+		short originalX = sprite.getX();
+		short originalY = sprite.getY();
+		sprite.updateSensors(originalX, originalY);
+		doPublishedAnglePos();
 		if (!sprite.getAir()) {
 			// ROM's release path runs LevelBound + AnglePos but not SpeedToPos;
 			// the first rolling displacement happens on the next MdRoll frame.
 			// Keep the temporary velocity from moving the player horizontally
 			// through the engine's attachment pass.
-			sprite.setCentreXPreserveSubpixel(preReleaseCentreX);
-			sprite.setGSpeed(spindashGSpeed);
-			sprite.setXSpeed(preReleaseXSpeed);
-			sprite.setYSpeed(preReleaseYSpeed);
+			sprite.setCentreXPreserveSubpixel(postBoundaryCentreX);
+			sprite.setGSpeed(postBoundaryGSpeed);
+			sprite.setXSpeed(postBoundaryXSpeed);
+			sprite.setYSpeed(postBoundaryYSpeed);
 		}
 	}
 

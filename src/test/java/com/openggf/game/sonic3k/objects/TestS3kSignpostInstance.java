@@ -77,7 +77,7 @@ class TestS3kSignpostInstance {
 
     @Test
     void sameFrameNativeP2BumpCanOverwriteNativeP1Velocity() {
-        TestablePlayableSprite sonic = eligibleBumpPlayer("sonic", 0x32D0, 0x045D);
+        TestablePlayableSprite sonic = eligibleBumpPlayer("sonic", 0x32A0, 0x045D);
         TestablePlayableSprite tails = eligibleBumpPlayer("tails", 0x329A, 0x045D);
         int signpostX = 0x329F;
         int signpostY = 0x045D;
@@ -92,6 +92,20 @@ class TestS3kSignpostInstance {
                 "EndSign_CheckPlayerHit calls sub_83A70 for Sonic and then Tails after one cooldown check, "
                         + "so a same-frame native P2 hit overwrites the signpost x_vel "
                         + "(docs/skdisasm/sonic3k.asm:176342-176365, 176372-176387)");
+    }
+
+    @Test
+    void bumpRangeTreatsRomWordsAsOriginAndExtent() {
+        TestablePlayableSprite player = eligibleBumpPlayer("tails", 0x3220, 0x4018);
+
+        assertFalse(S3kSignpostInstance.isRomBumpCandidate(0x3200, 0x4000, player),
+                "Check_PlayerInRange excludes the right/bottom edge: EndSign_Range's $40/$30 words "
+                        + "are width and height, not +$40/+$30 offsets");
+
+        player.setCentreX((short) 0x321F);
+        player.setCentreY((short) 0x4017);
+        assertTrue(S3kSignpostInstance.isRomBumpCandidate(0x3200, 0x4000, player),
+                "the final pixels inside [-$20,+$20) x [-$18,+$18) remain eligible");
     }
 
     @Test
@@ -256,6 +270,9 @@ class TestS3kSignpostInstance {
 
         signpost.update(0, null);
 
+        assertEquals(Sonic3kAnimationIds.VICTORY.id(), player.getAnimationId(),
+                "Obj_EndSignResults calls Set_PlayerEndingPose in its routine-6 dispatch "
+                        + "before advancing to routine 8 (docs/skdisasm/sonic3k.asm:176208-176238)");
         assertTrue(spawned.stream().anyMatch(S3kResultsScreenObjectInstance.class::isInstance),
                 "Obj_EndSignLanded must still allocate Obj_LevelResults when the active "
                         + "player is only available through the runtime player query/camera focus; "

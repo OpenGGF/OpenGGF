@@ -19,4 +19,14 @@ class TestS3kResultsCameraBoundsPolicy {
         assertTrue(S3kResultsScreenObjectInstance.shouldRestoreLevelCameraBoundsOnExit(0x03, 0));
         assertTrue(S3kResultsScreenObjectInstance.shouldRestoreLevelCameraBoundsOnExit(0x05, 1));
     }
+
+    @Test
+    void aResultsOwnerCarriedAcrossASeamlessReloadKeepsOffsetCameraBounds() {
+        S3kResultsScreenObjectInstance results = new S3kResultsScreenObjectInstance(true);
+
+        results.onCarriedAcrossSeamlessTransition(-0x4200, 0);
+
+        assertFalse(results.shouldRestoreCameraBoundsOnExit(0x07, 0),
+                "Load_Level retained this owner after the background event offset the live camera bounds");
+    }
 }

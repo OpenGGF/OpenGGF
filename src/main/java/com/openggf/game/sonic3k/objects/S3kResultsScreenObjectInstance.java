@@ -123,6 +123,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private int carriedTitleWaitTimer;
     private int carriedResultsRenderRetireDispatches;
     private boolean exitRetireDispatchesInitialized;
+    private boolean carriedAcrossSeamlessTransition;
 
     public S3kResultsScreenObjectInstance(PlayerCharacter character, int act) {
         this(character, act, 0, 0, CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES, true);
@@ -494,6 +495,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     @Override
     public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
+        carriedAcrossSeamlessTransition = true;
         // HCZ/MGZ-style Load_Level paths retain Obj_LevelResults and its ROM
         // child SSTs. The engine carries the parent but renders its twelve
         // children as embedded elements, so preserve the final three child
@@ -787,7 +789,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                     sprite.setControlLocked(false);
                     ObjectControlState.none().applyTo(sprite);
                     sprite.setForcedAnimationId(-1);
-                    if (waitDurationAdjustment > 0) {
+                    if (waitDurationAdjustment > 0 || carriedAcrossSeamlessTransition) {
                         // This retained results owner runs after player animation.
                         // Publish Restore_PlayerControl's animation word while
                         // retaining the current mapping for this object entry.
@@ -806,7 +808,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     }
 
     protected boolean shouldRestoreCameraBoundsOnExit(int zone, int act) {
-        return shouldRestoreLevelCameraBoundsOnExit(zone, act);
+        return !carriedAcrossSeamlessTransition
+                && shouldRestoreLevelCameraBoundsOnExit(zone, act);
     }
 
     private void updateCarriedTitleCard() {

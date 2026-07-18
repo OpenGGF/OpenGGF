@@ -989,6 +989,50 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void s3kSpindashReleaseChecksBoundaryBeforePublishingReleaseVelocity() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setGameRulesForTest(GameRules.SONIC_3K);
+                Camera camera = GameServices.camera();
+                camera.setMinX((short) 0x0200);
+                camera.setMaxX((short) 0x4298);
+
+                int rightBoundary = 0x4298 + 0x128;
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setDuckAnimId(8)
+                                .setSpindashAnimId(9)
+                                .setRollAnimId(2));
+                mockSprite.setAnimationId(9);
+                mockSprite.setGroundSensors(rightEdgeFloorSensors(mockSprite));
+                mockSprite.setCeilingSensors(new Sensor[] {
+                                fixedSensor(mockSprite, Direction.UP, (byte) 0, (byte) 0),
+                                fixedSensor(mockSprite, Direction.UP, (byte) 0, (byte) 0)
+                });
+                mockSprite.setPushSensors(new Sensor[] {
+                                fixedSensor(mockSprite, Direction.LEFT, (byte) 0, (byte) 0),
+                                fixedSensor(mockSprite, Direction.RIGHT, (byte) 0, (byte) 0)
+                });
+                mockSprite.setDirection(Direction.LEFT);
+                mockSprite.setCentreX((short) (rightBoundary + 1));
+                mockSprite.setSubpixelRaw(0, 0);
+                mockSprite.setXSpeed((short) 0);
+                mockSprite.setYSpeed((short) 0);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setAir(false);
+                mockSprite.setSpindash(true);
+                mockSprite.setSpindashCounter((short) 0);
+
+                manager.handleMovement(false, false, false, false,
+                                false, false, false, false);
+
+                assertEquals(rightBoundary, mockSprite.getCentreX() & 0xFFFF,
+                                "SonicKnux_Spindash reaches Player_LevelBound while x_vel is still zero");
+                assertEquals(0, mockSprite.getXSpeed(),
+                                "Player_Boundary_Sides clears x_vel on the release frame");
+                assertEquals(0, mockSprite.getGSpeed(),
+                                "Player_Boundary_Sides must win over the just-calculated spindash inertia");
+        }
+
+        @Test
         public void s2RightLevelBoundaryClampsEqualPredictedPosition() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);
                 GameServices.camera().setMinX((short) 0x0200);

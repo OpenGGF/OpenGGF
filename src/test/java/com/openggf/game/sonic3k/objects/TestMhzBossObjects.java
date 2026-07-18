@@ -456,9 +456,14 @@ class TestMhzBossObjects {
         miniboss.setCustomFlag(0x2E, 0);
 
         miniboss.onPlayerAttack(null, null);
-        miniboss.update(0, null);
-        miniboss.update(1, null);
-        miniboss.update(2, null);
+        assertEquals(0x3F, miniboss.getCustomFlag(0x2E),
+                "Touch_Enemy_Part2's BossDefeated call seeds the shared Wait_FadeToLevelMusic timer");
+        for (int frame = 0; frame < 63; frame++) {
+            miniboss.update(frame, null);
+        }
+        assertEquals(0, spawned.stream().filter(S3kBossDefeatSignpostFlow.class::isInstance).count(),
+                "Wait_FadeToLevelMusic must retain the boss slot through the $2E=$0000 dispatch");
+        miniboss.update(63, null);
 
         assertEquals(0, miniboss.getState().hitCount,
                 "Touch_Enemy_Part2 consumes the final Obj_MHZMiniboss collision_property count");
@@ -470,12 +475,44 @@ class TestMhzBossObjects {
                 "Wait_FadeToLevelMusic allocates Obj_Song_Fade_ToLevelMusic when $2E underflows");
         assertEquals(1, spawned.stream().filter(S3kBossDefeatSignpostFlow.class::isInstance).count(),
                 "loc_757BA hands off to Obj_EndSignControl after the music fade wait");
-        assertEquals(1, spawned.stream().filter(S3kBossExplosionChild.class::isInstance).count(),
+        S3kBossDefeatSignpostFlow flow = spawned.stream()
+                .filter(S3kBossDefeatSignpostFlow.class::isInstance)
+                .map(S3kBossDefeatSignpostFlow.class::cast)
+                .findFirst()
+                .orElseThrow();
+        assertEquals(1, readIntField(flow, "signpostResultsTimerCatchUpEntries"),
+                "the slot-replacing MHZ handoff has already consumed the signpost's first results-timer entry");
+        assertEquals(0, readIntField(flow, "resultsRetireDispatches"),
+                "MHZ's native results parent transforms as soon as its final child retires; "
+                        + "it has no carried-child retirement entries");
+        assertTrue(readBooleanField(flow, "changeAct2SizesOnTitleComplete"),
+                "Obj_EndSignControlDoStart must create MHZ's gradual Act 2 size worker");
+        assertTrue(spawned.stream().anyMatch(S3kBossExplosionChild.class::isInstance),
                 "Child6_CreateBossExplosion subtype $10 emits normal explosion children every three frames");
         assertEquals(true, miniboss.isDestroyed(),
                 "the boss body slot is replaced by the persistent signpost-flow controller");
         verify(levelState).pauseTimer();
         verify(gameState).addScore(1000);
+    }
+
+    private static int readIntField(Object target, String name) {
+        try {
+            var field = target.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            return field.getInt(target);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private static boolean readBooleanField(Object target, String name) {
+        try {
+            var field = target.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            return field.getBoolean(target);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
     }
 
     @Test
@@ -3618,16 +3655,20 @@ class TestMhzBossObjects {
 
         flames.forEach(flame -> {
             flame.setServices(services);
-            // ROM loc_757D6 (sonic3k.asm:156099-156101) draws the flame only on even
-            // frames (btst #0,(V_int_run_count+3)); the next odd frame is skipped, so
-            // the thruster flickers. An even frame renders; the odd frame must not.
+            // The replay frame counter presented to object code already carries
+            // the V_int_run_count+3 phase used by loc_757D6. Even frames reach
+            // Child_DrawTouch_Sprite; odd frames skip both draw and touch.
             flame.update(0, null);
+            assertEquals(0x9A, flame.getCollisionFlags(),
+                    "loc_757D6 reaches Child_DrawTouch_Sprite on the visible phase");
             flame.appendRenderCommands(new ArrayList<>());
             flame.update(1, null);
+            assertEquals(0, flame.getCollisionFlags(),
+                    "loc_757D6 skips Child_DrawTouch_Sprite on the hidden phase");
             flame.appendRenderCommands(new ArrayList<>());
         });
 
-        // Each flame draws exactly once (the even frame only); the odd frame is
+        // Each flame draws exactly once (raw counter 0 only); raw counter 1 is
         // flicker-hidden, so the default times(1) verify would fail if it drew twice.
         verify(renderer).drawFrameIndex(0x16, 0x2E1B, 0x04A4, false, false);
         verify(renderer).drawFrameIndex(0x16, 0x2E11, 0x04A4, false, false);
@@ -3721,6 +3762,13 @@ class TestMhzBossObjects {
         Camera camera = new Camera();
         camera.setX((short) 0x2D00);
         camera.setY((short) 0x0500);
+        camera.setMaxX((short) 0x2D00);
+        List<ObjectInstance> spawned = new ArrayList<>();
+        ObjectManager objectManager = mock(ObjectManager.class);
+        doAnswer(invocation -> {
+            spawned.add(invocation.getArgument(0));
+            return null;
+        }).when(objectManager).addDynamicObjectNextFrame(any(ObjectInstance.class));
         PatternSpriteRenderer renderer = readyRenderer();
         ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_MINIBOSS)).thenReturn(renderer);
@@ -3733,6 +3781,11 @@ class TestMhzBossObjects {
             @Override
             public ObjectRenderManager renderManager() {
                 return renderManager;
+            }
+
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
             }
         };
         MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
@@ -3759,6 +3812,8 @@ class TestMhzBossObjects {
                 "loc_75356 seeds the offscreen dash wait timer $2E=$4F");
         assertEquals(0x6000, camera.getMaxXTarget() & 0xFFFF,
                 "loc_75356 writes Camera_target_max_X_pos=$6000");
+        assertEquals(1, spawned.stream().filter(S3kIncLevelEndXGradualInstance.class::isInstance).count(),
+                "loc_75356 allocates the loc_75E1A gradual Camera_max_X_pos worker");
         verify(renderer).isReady();
         verify(renderer).drawFrameIndex(5, 0x2E90, 0x0520, false, false);
         verifyNoMoreInteractions(renderer);
@@ -3819,6 +3874,38 @@ class TestMhzBossObjects {
         miniboss.refreshPostCameraRenderState();
         assertEquals(0x80, miniboss.getState().renderFlags & 0x80,
                 "Draw_And_Touch_Sprite must latch bit 7 once the scrolling camera reveals the waiting boss");
+    }
+
+    @Test
+    void objectRenderLatchUsesS3kScreenEventCameraCopy() {
+        Camera camera = new Camera();
+        camera.setX((short) 0x0000);
+        camera.setY((short) 0x0000);
+        camera.setXCopy((short) 0x0009);
+        camera.setYCopy((short) 0x0000);
+        ObjectManager[] managerRef = new ObjectManager[1];
+        ObjectServices services = new StubObjectServices() {
+            @Override
+            public Camera camera() {
+                return camera;
+            }
+
+            @Override
+            public ObjectManager objectManager() {
+                return managerRef[0];
+            }
+        };
+        ObjectManager manager = new ObjectManager(List.of(), null, 0, null, null,
+                mock(com.openggf.graphics.GraphicsManager.class), camera, services);
+        managerRef[0] = manager;
+        MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
+                0x0190, 0x0060, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
+        manager.addDynamicObject(miniboss);
+
+        manager.refreshPostCameraRenderState();
+
+        assertEquals(0x80, miniboss.getState().renderFlags & 0x80,
+                "Render_Sprites tests x_pos against Camera_X_pos_copy, not the live Camera_X_pos");
     }
 
     @Test
@@ -4085,7 +4172,7 @@ class TestMhzBossObjects {
 
             miniboss.update(0, null);
 
-            terrain.verify(() -> ObjectTerrainUtils.checkFloorDist(0x300C, 0x0520, 0x0F));
+            terrain.verify(() -> ObjectTerrainUtils.checkFloorDist(0x300C, 0x0520, 0x18));
         }
         assertEquals(0x18, miniboss.getState().routine,
                 "loc_75550 switches to routine $18 when ObjCheckFloorDist returns a negative distance");
@@ -4771,7 +4858,7 @@ class TestMhzBossObjects {
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
-        }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
+        }).when(objectManager).addDynamicObjectAfterCurrentNextFrame(any(ObjectInstance.class));
         ObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
@@ -4792,10 +4879,36 @@ class TestMhzBossObjects {
 
         chip.update(1, null);
 
+        assertEquals(0x1810, chip.getX(),
+                "the first allocated child dispatch runs loc_75AD4 without MoveSprite2");
+        chip.update(2, null);
+
         assertEquals(0x180C, chip.getX(),
                 "non-Knuckles loc_75AD4 forces x_vel=-$400, so MoveSprite2 shifts left 4 px/frame");
         assertEquals(0x0430, chip.getY(),
                 "without the bounce flag, loc_75B34 applies MoveSprite2 with zero y_vel");
+    }
+
+    @Test
+    void mhzMinibossTreeChipDoesNotRunMovementRoutineInItsAllocationFrame() {
+        AbstractObjectInstance.updateCameraBounds(0x1700, 0x0300, 0x1900, 0x0500, 0);
+        MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
+                0x1800, 0x0400, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
+        miniboss.setCustomFlag(0x42, 1);
+        MhzMinibossTreeInstance tree = new MhzMinibossTreeInstance(new ObjectSpawn(
+                0x1810, 0x0410, Sonic3kObjectIds.MHZ_MINIBOSS_TREE, 0, 0, false, 0));
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(objectManager.getActiveObjects()).thenReturn(List.of(miniboss, tree));
+        tree.setServices(new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        });
+
+        tree.update(0, null);
+
+        verify(objectManager).addDynamicObjectAfterCurrentNextFrame(any(ObjectInstance.class));
     }
 
     @Test
@@ -4812,7 +4925,7 @@ class TestMhzBossObjects {
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
-        }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
+        }).when(objectManager).addDynamicObjectAfterCurrentNextFrame(any(ObjectInstance.class));
         tree.setServices(new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
@@ -4835,8 +4948,14 @@ class TestMhzBossObjects {
                 "ObjDat3_75E72 chip width_pixels is $14");
         assertEquals(0x14, chip.getOnScreenHalfHeight(),
                 "ObjDat3_75E72 chip height_pixels is $14");
+        assertEquals(0, chipTouch.getCollisionFlags(),
+                "loc_75AD4 initializes and draws without adding the new chip to the touch list");
+        chip.update(1, null);
+        assertEquals(0, chipTouch.getCollisionFlags(),
+                "the allocation dispatch still has not reached Sprite_CheckDeleteTouch");
+        chip.update(2, null);
         assertEquals(0x86, chipTouch.getCollisionFlags(),
-                "ObjDat3_75E72 collision_flags is $86");
+                "loc_75B34 publishes ObjDat3_75E72 collision_flags=$86 through Sprite_CheckDeleteTouch");
         assertEquals(0, chipTouch.getCollisionProperty(),
                 "ObjDat3_75E72 collision_property is 0");
     }
@@ -4862,7 +4981,7 @@ class TestMhzBossObjects {
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
-        }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
+        }).when(objectManager).addDynamicObjectAfterCurrentNextFrame(any(ObjectInstance.class));
         StubObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
@@ -4910,7 +5029,7 @@ class TestMhzBossObjects {
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
-        }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
+        }).when(objectManager).addDynamicObjectAfterCurrentNextFrame(any(ObjectInstance.class));
         ObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {

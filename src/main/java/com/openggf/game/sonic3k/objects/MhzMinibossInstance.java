@@ -32,6 +32,9 @@ import java.util.List;
 public final class MhzMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
     private static final int HIT_COUNT = 6;
     private static final int COLLISION_SIZE = 0x0F;
+    // Collision response size $0F resolves to a $18-pixel Y radius in
+    // Touch_Sizes. ObjCheckFloorDist probes y_pos+y_radius, not the size index.
+    private static final int FLOOR_COLLISION_RADIUS = 0x18;
     private static final int PRIORITY_BUCKET = 4; // ObjDat_MHZMiniboss priority $200
     private static final int INIT_X_CAMERA_OFFSET = 0x110;
     private static final int INIT_Y_CAMERA_OFFSET = -0x78;
@@ -283,6 +286,12 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
     protected void onDefeatStarted() {
         state.invulnerable = false;
         state.invulnerabilityTimer = 0;
+        // Touch_Enemy_Part2 tail-calls BossDefeated when collision_property
+        // reaches zero. BossDefeated writes $2E=$3F before loc_75DCC installs
+        // Wait_FadeToLevelMusic; that shared waiter uses subq/bmi, so $0000 is
+        // still a retained boss-frame and the callback runs on the 64th
+        // decrement (sonic3k.asm:156704-156732,179656-179674,180819-180826).
+        setCustomFlag(SCRATCH_2E, 0x3F);
         defeatHandoffQueued = false;
         defeatExplosionTimer = DEFEAT_EXPLOSION_TIMER;
         defeatExplosionIntervalCounter = DEFEAT_EXPLOSION_INTERVAL - 1;
@@ -491,7 +500,17 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
 
         ObjectServices svc = tryServices();
         if (svc != null && svc.camera() != null) {
+            // Publishing the target and installing its native worker are one
+            // operation; prevent Camera's ordinary two-pixel boundary easing
+            // from racing the lower-slot Obj_IncLevEndXGradual allocation.
+            svc.camera().claimCustomMaxXBoundaryEasing();
             svc.camera().setMaxXTarget((short) 0x6000);
+            // loc_75356 uses AllocateObject (not AllocateObjectAfterCurrent)
+            // for loc_75E1A after publishing the $6000 target.
+            // That worker owns Camera_max_X_pos and advances it by $4000 in
+            // 16.16 fixed point until Camera_stored_max_X_pos is reached
+            // (sonic3k.asm:155708-155716, 156749-156766).
+            spawnFreeChild(() -> new S3kIncLevelEndXGradualInstance(state.x, state.y, true));
         }
     }
 
@@ -712,7 +731,8 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
             return;
         }
 
-        TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(state.x, state.y, COLLISION_SIZE);
+        TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(
+                state.x, state.y, FLOOR_COLLISION_RADIUS);
         if (floor.hasCollision() && floor.distance() < 0) {
             state.routine = ROUTINE_FINAL_BOUNCE_THRESHOLD;
             state.xVel = -0x200;
@@ -921,8 +941,15 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
             if (levelMusicId > 0) {
                 spawnChild(() -> new SongFadeTransitionInstance(LEVEL_MUSIC_FADE_TIME, levelMusicId));
             }
+            // Wait_FadeToLevelMusic replaces the boss owner with the shared
+            // EndSignControl chain. In this SST ordering the first signpost
+            // results-timer entry has already elapsed, and Obj_LevelResults
+            // mutates to Obj_TitleCard as soon as the final child retires; no
+            // carried-child render entries remain (sonic3k.asm:156704-156732,
+            // 176198-176238, 62708-62720).
             spawnChild(() -> new S3kBossDefeatSignpostFlow(
-                    state.x, svc.currentAct(), S3kBossDefeatSignpostFlow.CleanupAction.NONE));
+                    state.x, svc.currentAct(), S3kBossDefeatSignpostFlow.CleanupAction.NONE,
+                    0, 1, 0, 0, 0, true));
         }
         defeatHandoffQueued = true;
         setDestroyed(true);

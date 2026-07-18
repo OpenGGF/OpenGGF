@@ -2876,9 +2876,16 @@ final class ObjectSolidContactController {
             }
             SolidContact contact;
             if (slopeData != null && shouldUseSlopeForContact(instance, slopedAdapter)) {
-                contact = resolveSlopedContact(player, anchorX, anchorY, params.halfWidth(),
+                SolidContact probe = resolveSlopedContact(player, anchorX, anchorY, params.halfWidth(),
                         params.groundHalfHeight(), solidProfile.topSolidOnly(), useStickyBuffer,
-                        instance, true, slopedAdapter);
+                        instance, false, slopedAdapter);
+                if (probe != null && probe.standing() && player.getAir()
+                        && multiPiece.defersNewSlopedPieceLanding(i, player, frameCounter)) {
+                    continue;
+                }
+                contact = probe == null ? null : resolveSlopedContact(
+                        player, anchorX, anchorY, params.halfWidth(), params.groundHalfHeight(),
+                        solidProfile.topSolidOnly(), useStickyBuffer, instance, true, slopedAdapter);
             } else {
                 contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
                         solidProfile, useStickyBuffer, instance, i, true);

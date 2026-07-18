@@ -130,7 +130,11 @@ final class MhzMinibossFlameInstance extends AbstractObjectInstance
     }
 
     private boolean visibleAndTouchable() {
-        return parent != null && !parent.isDestroyed() && (parent.getCustomFlag(0x38) & 0x40) == 0;
+        // loc_757D6 branches around Child_DrawTouch_Sprite on odd
+        // V_int_run_count+3 frames, so the flame is absent from both the draw
+        // list and Collision_response_list on its flicker-hidden phase.
+        return parent != null && !parent.isDestroyed() && !flickerHidden
+                && (parent.getCustomFlag(0x38) & 0x40) == 0;
     }
 
     @Override

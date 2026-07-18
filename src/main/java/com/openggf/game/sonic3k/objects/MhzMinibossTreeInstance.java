@@ -133,6 +133,8 @@ public final class MhzMinibossTreeInstance extends AbstractObjectInstance implem
         private int animationTimer = ANIMATION_DELAY;
         private int animationIndex;
         private int chipMappingFrame = ANIMATION_FRAMES[0];
+        private boolean initialDispatchPending = true;
+        private boolean touchPublished;
 
         private MhzMinibossTreeChipInstance(int parentX, int parentY, int parentFrame, boolean bounceEnabled) {
             super(new ObjectSpawn(parentX, parentY + yOffset(parentFrame),
@@ -169,12 +171,34 @@ public final class MhzMinibossTreeInstance extends AbstractObjectInstance implem
 
         @Override
         public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
+            if (initialDispatchPending) {
+                // The constructor materializes CreateChild6_Simple's copied SST
+                // fields. Its first object dispatch is loc_75AD4, which performs
+                // SetUp_ObjAttributes and Draw_Sprite only; loc_75B34 movement
+                // begins on the following dispatch (sonic3k.asm:156353-156429).
+                initialDispatchPending = false;
+                return;
+            }
             animateRawNoSst();
             if (bounceEnabled) {
                 updateBounceVelocity();
             }
             SubpixelMotion.moveSprite2(motion);
             updateDynamicSpawn(motion.x, motion.y);
+            // loc_75B34 reaches Sprite_CheckDeleteTouch only after its first
+            // MoveSprite2 pass. The allocation-frame loc_75AD4 dispatch used
+            // Draw_Sprite and therefore did not publish this SST to the touch list.
+            touchPublished = true;
+        }
+
+        @Override
+        protected boolean skipsSameFrameUpdateAfterSpawn() {
+            // CreateChild6_Simple allocates this SST after the tree. Its first
+            // dispatch runs loc_75AD4, which initializes and draws without
+            // falling through to loc_75B34's MoveSprite2 call
+            // (sonic3k.asm:156353-156429,177119-177139). The constructor
+            // represents that initialized state, so movement begins next frame.
+            return true;
         }
 
         private void updateBounceVelocity() {
@@ -221,7 +245,7 @@ public final class MhzMinibossTreeInstance extends AbstractObjectInstance implem
 
         @Override
         public int getCollisionFlags() {
-            return COLLISION_FLAGS;
+            return touchPublished ? COLLISION_FLAGS : 0;
         }
 
         @Override

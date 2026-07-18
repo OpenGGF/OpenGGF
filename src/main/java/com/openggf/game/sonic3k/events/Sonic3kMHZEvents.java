@@ -264,14 +264,28 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
-        levelRepeatOffset = 0;
         if (act == 0) {
             updateAct1ScreenEvent();
             updateAct1BackgroundEvent();
-            updateAct1SpecialEvent();
         } else if (act == 1) {
             updateAct2ScreenEvent();
             updateAct2BackgroundEvent(frameCounter);
+        }
+    }
+
+    /**
+     * Runs the MHZ entry in the ROM {@code SpecialEvents} dispatch.
+     *
+     * <p>S3K calls {@code SpecialEvents} before {@code Load_Sprites}/{@code Process_Sprites},
+     * while {@code ScreenEvents} runs after {@code DeformBgLayer} later in the frame
+     * (sonic3k.asm:7887-7902, 104080-104094). Keep the repeat offset live through the
+     * following player/object slots instead of publishing it from the post-camera handler.
+     */
+    public void updateSpecialEvents(int act) {
+        levelRepeatOffset = 0;
+        if (act == 0) {
+            updateAct1SpecialEvent();
+        } else if (act == 1) {
             updateAct2SpecialEvent();
         }
     }
@@ -364,16 +378,44 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         specialEventsRoutine = 0;
         applyPlc(0x28);
         SessionSaveRequests.requestCurrentSessionSave(SaveReason.PROGRESSION_SAVE);
+        Camera camera = camera();
+        int postTransitionMinX = offsetCameraBoundWord(
+                camera.getMinX(), ACT1_TO_ACT2_TRANSITION_OFFSET_X);
+        int postTransitionMaxX = offsetCameraBoundWord(
+                camera.getMaxX(), ACT1_TO_ACT2_TRANSITION_OFFSET_X);
         levelManager().requestSeamlessTransition(
                 SeamlessLevelTransitionRequest.builder(
                                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                         .targetZoneAct(Sonic3kZoneIds.ZONE_MHZ, 1)
                         .deactivateLevelNow(false)
                         .preserveMusic(true)
+                        // Load_Level swaps resources behind the still-live
+                        // Obj_LevelResults owner; its rings/time and _unkFAA8
+                        // remain global work RAM until the title-card handoff.
+                        .preserveLevelGamestate(true)
+                        .preserveEndOfLevelActive(true)
                         .showInLevelTitleCard(true)
+                        .resetLevelGamestateAtInLevelTitleCardDisplay(true)
+                        // Obj_EndSignControl is a distinct retained SST owner
+                        // after the title-card children finish. Its DoStart
+                        // poll reaches Change_Act2Sizes ten owner dispatches
+                        // later (sonic3k.asm:180407-180423).
+                        .inLevelTitleCardExitAdditionalDispatches(10)
+                        // MHZ1_BackgroundEvent subtracts $4200 from the live
+                        // camera, Camera_X_pos_copy, min X, and max X after
+                        // Load_Level. It does not recenter from Player_1.
+                        .preserveOffsetCameraPosition(true)
+                        .postTransitionMinX(postTransitionMinX)
+                        .postTransitionMaxX(postTransitionMaxX)
+                        .postTransitionMinXTarget(postTransitionMinX)
+                        .postTransitionMaxXTarget(postTransitionMaxX)
                         .playerOffset(ACT1_TO_ACT2_TRANSITION_OFFSET_X, 0)
                         .cameraOffset(ACT1_TO_ACT2_TRANSITION_OFFSET_X, 0)
                         .build());
+    }
+
+    private static int offsetCameraBoundWord(short value, int offset) {
+        return ((value & 0xFFFF) + offset) & 0xFFFF;
     }
 
     private void initAct2SeasonState() {

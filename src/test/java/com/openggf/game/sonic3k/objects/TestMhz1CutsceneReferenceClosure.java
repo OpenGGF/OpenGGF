@@ -22,6 +22,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestMhz1CutsceneReferenceClosure {
     private static final ObjectSpawn BUTTON_SPAWN =
@@ -59,6 +60,25 @@ class TestMhz1CutsceneReferenceClosure {
         assertFalse(objectManager.getActiveObjects().contains(actor));
         assertDoesNotThrow(objectManager::validateRewindReferenceClosure);
         assertNull(readObjectField(button, "spawnedKnuckles"));
+    }
+
+    @Test
+    void persistentDoorTreatsItsUnloadedButtonLinkAsStructural() {
+        Harness harness = Harness.create();
+        ObjectManager objectManager = harness.objectManager();
+        Mhz1CutsceneButtonInstance button = objectManager.createDynamicObject(
+                () -> new Mhz1CutsceneButtonInstance(BUTTON_SPAWN));
+        Mhz1CutsceneDoorInstance door = objectManager.createDynamicObject(
+                () -> new Mhz1CutsceneDoorInstance(button));
+        button.setDestroyed(true);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x80, (short) 0x80);
+        harness.camera().setFocusedSprite(player);
+        objectManager.update(0, player, List.of(), 0, false);
+
+        assertFalse(objectManager.getActiveObjects().contains(button));
+        assertTrue(objectManager.getActiveObjects().contains(door));
+        assertDoesNotThrow(objectManager::validateRewindReferenceClosure);
     }
 
     private record Harness(ObjectManager objectManager, TestCamera camera) {

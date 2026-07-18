@@ -493,6 +493,21 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public void updatePrePhysics() {
+        // ROM LevelLoop dispatches SpecialEvents before Load_Sprites/Process_Sprites;
+        // MHZ uses that slot for its arena repeat loops (sonic3k.asm:7887-7894,
+        // 104080-104094). ScreenEvents remains in onUpdate() after camera movement.
+        if (mhzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MHZ) {
+            mhzEvents.updateSpecialEvents(currentAct);
+            // Tails_Check_Screen_Boundaries runs later in Process_Sprites and reads
+            // the camera words that loc_54CB0/loc_5560C just rewrote. The engine's
+            // CPU controller mirrors those words, so publish the same-frame repeat
+            // bounds before the sidekick slot executes (sonic3k.asm:28407-28452).
+            syncSidekickBoundsToCamera();
+        }
+    }
+
+    @Override
     public void advanceVblankOnlyState() {
         if (aizEvents != null && currentZone == Sonic3kZoneIds.ZONE_AIZ) {
             aizEvents.advanceVblankOnlyState();

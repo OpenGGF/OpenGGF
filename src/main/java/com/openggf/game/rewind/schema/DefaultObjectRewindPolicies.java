@@ -540,7 +540,10 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzSpiderCraneObjectInstance", "companion"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.BlasterProjectileObjectInstance", "owner"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance", "spawnedKnuckles"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Mhz1CutsceneDoorInstance", "parent"), RewindFieldPolicy.CAPTURED),
+            // Child6 door is persistent while its placed button can leave the active SST set at
+            // the MHZ1 transition. Its constructor/recreate path relinks a live button when one
+            // exists; capturing the stale Java identity breaks the post-transition closure.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Mhz1CutsceneDoorInstance", "parent"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper", "owner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMinibossFlameInstance", "parent"), RewindFieldPolicy.CAPTURED),

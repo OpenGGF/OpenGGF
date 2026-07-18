@@ -82,6 +82,18 @@ public interface MultiPieceSolidProvider extends SolidObjectProvider {
     }
 
     /**
+     * Gives a provider that folds separately executed ROM child slots into one
+     * engine instance a chance to defer a newly detected sloped landing until
+     * the virtual child's dispatch. The resolver calls this only for a fresh
+     * airborne standing probe and leaves the player untouched when it returns
+     * {@code true}.
+     */
+    default boolean defersNewSlopedPieceLanding(int pieceIndex, PlayableEntity player,
+                                                int frameCounter) {
+        return false;
+    }
+
+    /**
      * Called when a piece makes contact with the player.
      * Allows the object to track which pieces are being touched.
      *

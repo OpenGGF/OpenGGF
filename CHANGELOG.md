@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **fix: MHZ1 now completes its miniboss, signpost, results, and Act 2 handoff.**
+  The miniboss defeat timer, floor probe, camera-boundary worker, signpost landing
+  envelope, results dispatch ordering, and transition state now follow their ROM
+  owners. The complete-run route reaches the recorded signpost landing at frame
+  12782 (`x=$430F`, `y=$07A1`) and continues through the MHZ2 Knuckles launch
+  sequence. Hidden-monitor loading, spindash release ordering, copied-camera render
+  bounds, and mushroom-catapult contact timing were aligned along the same route.
+  The replay remains red at 3082 errors, with its first isolated mismatch at frame
+  5240; this checkpoint banks the completed MHZ1 route while later MHZ2 parity work
+  remains outstanding.
 - **fix: MHZ1 object dispatch, visibility, and interaction state now follow the
   ROM through the miniboss approach.** Fixed-slot pollen setup and post-camera
   render-flag latching preserve the native RNG stream; path switchers now run in

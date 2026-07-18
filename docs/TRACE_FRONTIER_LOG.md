@@ -46315,3 +46315,34 @@ property and ran each route in its own fork. Both completed green (1/1):
 The complete-run replay finished in 7.352 seconds with zero failures/errors;
 the standalone replay finished separately in 6.661 seconds with zero
 failures/errors. No comparison report or moved frontier was emitted.
+
+## 2026-07-19 -- MHZ1 route checkpoint: recorded signpost landing and MHZ2 handoff
+
+Branch `next` after merging the current `develop` fixes. Replay command:
+
+```powershell
+mvn -q "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay#replayMatchesTrace" "-DargLine=-Xmx3g" test
+```
+
+- Route result: the MHZ1 miniboss defeat chain now reaches the recorded signpost
+  landing at frame 12782 with centre position `x=$430F`, `y=$07A1`, completes the
+  results/title-card transition, and enters the MHZ2 Knuckles cutscene. This meets
+  the session's route goal of landing the end-of-level signpost for all of MHZ1.
+- ROM-owned fixes in the checkpoint include the miniboss `$2E=$3F` fatal timer,
+  its `$18` floor-probe radius and native max-X worker, the signpost's asymmetric
+  landing envelope, end-sign/results dispatch retirement, copied-camera render
+  bounds, preservation of transition flags and camera targets, hidden-monitor
+  loading extent, and the release-frame ordering of S3K spindash animation.
+- The follow-on MHZ2 work keeps the placed Knuckles controller dormant until the
+  native camera gate, models signed P2 control locking, publishes the raw press
+  mappings, and gives the invisible lift carrier ownership of its 16.16 Y motion.
+  A folded mushroom-catapult child may defer only its first newly detected sloped
+  landing, keyed by the provider's per-player dispatch state rather than zone or
+  trace frame.
+- Verification: final complete-run replay produced **3082 errors, 0 warnings**.
+  The report still names the previously isolated frame-5240
+  `player_mapping_frame` mismatch (`$07` expected, `$08` actual) first. This is
+  higher than the prior 2103-error checkpoint, so it is not a clean total-count
+  frontier advance; it is being banked explicitly as a route-completion checkpoint
+  at the user's wrap-up request. The latest catapult deferral held the measured
+  3082 total and passed its focused object suite.

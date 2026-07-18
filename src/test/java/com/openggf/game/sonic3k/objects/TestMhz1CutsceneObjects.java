@@ -42,6 +42,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -429,7 +430,7 @@ class TestMhz1CutsceneObjects {
     }
 
     @Test
-    void mhz2CutsceneDeletesWithoutInitializingWhenCameraOutsideRomRange() {
+    void mhz2CutsceneWaitsWithoutInitializingWhenWidenedWindowLoadsItBeforeRomRange() {
         ObjectManager objectManager = mock(ObjectManager.class);
         Camera camera = mhz2TriggerCamera();
         camera.setY((short) 0x0647);
@@ -447,8 +448,9 @@ class TestMhz1CutsceneObjects {
         try (MockedStatic<AizIntroArtLoader> artLoader = mockStatic(AizIntroArtLoader.class)) {
             knuckles.update(0, sonic);
 
-            assertTrue(knuckles.isDestroyed(),
-                    "Check_CameraInRange deletes/skips CutsceneKnux_MHZ2 when Camera_Y_pos is below $648");
+            assertFalse(knuckles.isDestroyed(),
+                    "an engine-widened placement must remain available for the later native Check_CameraInRange pass");
+            assertEquals(0, knuckles.getRoutineForTest());
             artLoader.verifyNoInteractions();
             verify(objectManager, never()).addDynamicObject(any(ObjectInstance.class));
         }
@@ -960,6 +962,35 @@ class TestMhz1CutsceneObjects {
     }
 
     @Test
+    void mhz2CameraLockSetsNativeCtrl2SignedLockAndClearsItsLogicalLatch() {
+        Camera camera = mhz2TriggerCamera();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0485, (short) 0x07D3);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x0400, (short) 0x07ED);
+        tails.setCpuControlled(true);
+        SidekickCpuController tailsCpu = new SidekickCpuController(tails, sonic);
+        tails.setCpuController(tailsCpu);
+        tailsCpu.setController2Input(AbstractPlayableSprite.INPUT_JUMP,
+                AbstractPlayableSprite.INPUT_JUMP);
+
+        camera.setFocusedSprite(sonic);
+        setMhz2TriggerCameraPosition(camera);
+        CutsceneKnucklesMhz2Instance cutscene = new CutsceneKnucklesMhz2Instance(new ObjectSpawn(
+                0x03D0, 0x0748, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0));
+        cutscene.setServices(new TestObjectServices()
+                .withCamera(camera)
+                .withSidekicks(List.of(tails))
+                .withZoneRuntimeRegistry(runtime(PlayerCharacter.SONIC_AND_TAILS)));
+
+        cutscene.update(0, sonic);
+        cutscene.update(1, sonic);
+
+        assertTrue(tailsCpu.isController2SignedLocked(),
+                "CutsceneKnux_MHZ2 writes Ctrl_2_locked=$FF while it pins the native players");
+        assertEquals(0, tailsCpu.getDiagnosticGeneratedHeldInput(),
+                "the cutscene clears Ctrl_2_logical together with the signed controller lock");
+    }
+
+    @Test
     void mhz2CutscenePressStartIgnoresOffscreenAirborneNativeP2LikeRom() {
         Camera camera = mhz2TriggerCamera();
         TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x052A, (short) 0x0748);
@@ -1017,6 +1048,19 @@ class TestMhz1CutsceneObjects {
                 "loc_63238 always writes anim=$14 to Player_1 when anim_frame reaches $0C");
         assertEquals(5, tails.getAnimationId(),
                 "loc_63238 checks Player_2 render_flags and skips anim=$14 when Player_2 is off-screen");
+
+        cutscene.update(500, sonic);
+
+        assertEquals(0, sonic.getAnimationId(),
+                "sub_65E72 rewrites anim=0 on the dispatch after loc_63238 briefly writes anim=$14");
+        assertTrue(sonic.isObjectMappingFrameControl(),
+                "object_control=$83 gives the cutscene direct ownership of the raw player mapping");
+        assertEquals(0xB4, sonic.getMappingFrame(),
+                "RawAni_65EB0 selects Sonic's first cutscene-controlled mapping on this V-int phase");
+        assertEquals(0, tails.getAnimationId(),
+                "sub_65E72 applies anim=0 to Player_2 even when the one-frame anim=$14 write was skipped");
+        assertEquals(0xA7, tails.getMappingFrame(),
+                "RawAni_65EB0 selects Tails' character-specific cutscene mapping");
     }
 
     @Test
@@ -1057,8 +1101,8 @@ class TestMhz1CutsceneObjects {
         assertTrue(sonic.isControlLocked());
         assertEquals(0x0F, sonic.getAnimationId(),
                 "loc_6338E writes anim=$0F when the player lift child starts");
-        assertTrue((sonic.getYSpeed() & 0xFFFF) > 0x8000,
-                "loc_6338E starts the lift with y_vel=-$1000");
+        assertEquals(0, sonic.getYSpeed(),
+                "loc_6338E stores y_vel=-$1000 on the invisible carrier, not Player_1");
 
         for (int frame = 0; frame < 180 && !liftChild.isDestroyed(); frame++) {
             cutscene.update(liftFrame + 2 + frame, sonic);

@@ -514,7 +514,7 @@ public class ObjectManager {
     }
 
     public void refreshPostCameraRenderState() {
-        updateCameraBounds();
+        updateRenderCameraBounds();
         for (ObjectInstance inst : activeObjects.values()) {
             objectCallbacks.run(inst, inst::refreshPostCameraRenderState);
         }
@@ -3553,6 +3553,20 @@ public class ObjectManager {
     private void updateCameraBounds() {
         int left = camera.getX();
         int top = camera.getY();
+        updateCameraBounds(left, top);
+    }
+
+    private void updateRenderCameraBounds() {
+        // S3K Render_Sprites reads Camera_X_pos_copy/Camera_Y_pos_copy after
+        // ScreenEvents, while object logic and placement use the live camera
+        // words (sonic3k.asm:36324,36343-36361). Keep this phase-specific so
+        // the copied event coordinates do not leak into the next object pass.
+        int left = camera.getXCopy();
+        int top = camera.getYCopy();
+        updateCameraBounds(left, top);
+    }
+
+    private void updateCameraBounds(int left, int top) {
         int right = left + camera.getWidth();
         int bottom = top + camera.getHeight();
         int wrapRange = camera.isVerticalWrapEnabled() ? camera.getVerticalWrapRange() : 0;

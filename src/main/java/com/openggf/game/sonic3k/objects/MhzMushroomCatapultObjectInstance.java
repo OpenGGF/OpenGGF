@@ -65,6 +65,8 @@ public final class MhzMushroomCatapultObjectInstance extends AbstractObjectInsta
     private int targetCompression;
     private int lastCenterCapImpactVelocity;
     private boolean centerCapBouncing;
+    private int p1DeferredChildLandingFrame = Integer.MIN_VALUE;
+    private int p2DeferredChildLandingFrame = Integer.MIN_VALUE;
 
     public MhzMushroomCatapultObjectInstance(ObjectSpawn spawn) {
         super(spawn, "MHZMushroomCatapult");
@@ -167,6 +169,30 @@ public final class MhzMushroomCatapultObjectInstance extends AbstractObjectInsta
     @Override
     public boolean usesInstanceSolidStateLatchKey() {
         return true;
+    }
+
+    @Override
+    public boolean defersNewSlopedPieceLanding(int pieceIndex, PlayableEntity player, int frameCounter) {
+        if (pieceIndex != 1) {
+            return false;
+        }
+        boolean nativeP2 = tryServices() != null
+                && tryServices().playerQuery().nativeP2OrNull() == player;
+        int previous = nativeP2 ? p2DeferredChildLandingFrame : p1DeferredChildLandingFrame;
+        if (previous != frameCounter - 1) {
+            if (nativeP2) {
+                p2DeferredChildLandingFrame = frameCounter;
+            } else {
+                p1DeferredChildLandingFrame = frameCounter;
+            }
+            return true;
+        }
+        if (nativeP2) {
+            p2DeferredChildLandingFrame = Integer.MIN_VALUE;
+        } else {
+            p1DeferredChildLandingFrame = Integer.MIN_VALUE;
+        }
+        return false;
     }
 
     @Override

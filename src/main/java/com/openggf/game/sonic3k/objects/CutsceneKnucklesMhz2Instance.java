@@ -14,13 +14,13 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
-import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -51,7 +51,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
     private static final int WAIT_GROUNDED_TIMER = 60 - 1;
     private static final int PRESS_START_ACCEL = 0x10;
     private static final int PLAYER_LAUNCH_Y_VEL = -0x1000;
-    private static final int LIGHT_GRAVITY = 0x18;
+    private static final int LIGHT_GRAVITY = 0x20;
     private static final int PRESS_START_ANIMATION = 0x05;
     private static final int PRESSED_ANIMATION = 0x14;
     private static final int LIFT_ANIMATION = 0x0F;
@@ -96,6 +96,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
     private int mappingFrame = INITIAL_MAPPING_FRAME;
     private boolean initialized;
     private boolean liftChildrenSpawned;
+    private boolean pressPresentationStarted;
     private boolean restartPointSaved;
     private boolean switchChildSpawned;
 
@@ -135,15 +136,29 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             return;
         }
         if (!initialized && !cameraIsInsideRomTriggerRange()) {
-            setDestroyed(true);
+            // A widened viewport can materialize this placement before the
+            // native Check_CameraInRange gate. ROM's out-of-range helper leaves
+            // the not-yet-native-loadable entry available for the later cursor
+            // pass; keep the initializer dormant until the camera enters the
+            // exact rectangle instead of permanently latching its placement.
             return;
+        }
+
+        if (!initialized) {
+            // Re-run FindFreeObj at the native activation gate so this
+            // prematurely materialized engine instance receives the slot the
+            // ROM load pass observes.
+            ObjectManager objectManager = services().objectManager();
+            if (objectManager != null) {
+                objectManager.reallocateToFirstFreeDynamicSlot(this);
+            }
         }
 
         switch (routine) {
             case ROUTINE_INIT -> routineInit();
             case ROUTINE_CAMERA_LOCK -> routineCameraLock(playerEntity);
             case ROUTINE_WAIT_GROUNDED -> routineWaitGrounded(playerEntity);
-            case ROUTINE_PRESS -> routinePress();
+            case ROUTINE_PRESS -> routinePress(frameCounter);
             case ROUTINE_LAUNCH_PLAYERS -> routineLaunchPlayers();
             default -> routine = ROUTINE_CAMERA_LOCK;
         }
@@ -207,7 +222,8 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         }
     }
 
-    private void routinePress() {
+    private void routinePress(int frameCounter) {
+        updateNativePlayerPressPresentation(frameCounter);
         if (animFrame >= 8) {
             services().playSfx(Sonic3kSfx.LEAF_BLOWER.id);
             updateLeafSpawnTimer();
@@ -219,6 +235,10 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         }
         if (animateResult < 0) {
             routine = ROUTINE_LAUNCH_PLAYERS;
+            // Animate_RawNoSSTMultiDelay invokes loc_63280 as its $F4
+            // callback before returning, so AllocateObject and loc_6338E take
+            // effect on this same object dispatch.
+            routineLaunchPlayers();
             return;
         }
         if (animFrame == 0x0C) {
@@ -228,6 +248,41 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             leafStrength = (leafStrength + 1) & 0xFF;
             leafSpawnPeriod = Math.max(0, leafSpawnPeriod - 4);
             services().playSfx(Sonic3kSfx.SWITCH.id);
+        }
+    }
+
+    /**
+     * Mirrors {@code sub_65E62/sub_65E72}. Before raw frame $0C the ROM
+     * continually requests animation 5. From frame $0C onward it writes
+     * object_control=$83 and directly alternates the character-specific raw
+     * mappings from {@code RawAni_65EB0}; {@code loc_63238} may then publish
+     * animation $14 for the single dispatch on which frame $0C is reached.
+     */
+    private void updateNativePlayerPressPresentation(int frameCounter) {
+        List<AbstractPlayableSprite> participants = players();
+        if (!pressPresentationStarted) {
+            pressPresentationStarted = true;
+            // The first Animate_Sonic/Animate_Tails pass after sub_6320E sees
+            // anim != prev_anim and clears Status_Push.
+            for (AbstractPlayableSprite player : participants) {
+                player.setPushing(false);
+            }
+        }
+        if (animFrame < 0x0C) {
+            for (AbstractPlayableSprite player : participants) {
+                player.setAnimationId(PRESS_START_ANIMATION);
+            }
+            return;
+        }
+
+        boolean alternate = (frameCounter & 0x02) != 0;
+        for (int i = 0; i < participants.size(); i++) {
+            AbstractPlayableSprite player = participants.get(i);
+            ObjectControlState.nativeBit7FullControl().applyTo(player);
+            player.setObjectMappingFrameControl(true);
+            player.setAnimationId(0);
+            int baseMapping = i == 0 ? 0xB4 : 0xA7;
+            player.setMappingFrame(baseMapping + (alternate ? 1 : 0));
         }
     }
 
@@ -282,7 +337,9 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             for (int i = 0; i < participants.size(); i++) {
                 AbstractPlayableSprite player = participants.get(i);
                 if (i == 0 || playerTwoRenderFlagsOnScreenForLift(player)) {
-                    spawnFreeChild(() -> new Mhz2KnucklesLiftChild(this, player));
+                    Mhz2KnucklesLiftChild child = spawnFreeChild(
+                            () -> new Mhz2KnucklesLiftChild(this, player));
+                    child.initializeLaunch(services().camera());
                 }
             }
         }
@@ -297,10 +354,16 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
     private void lockPlayer(PlayableEntity entity) {
         if (entity instanceof AbstractPlayableSprite player) {
             player.setControlLocked(true);
+            if (player.getCpuController() != null) {
+                // loc_63182 writes Ctrl_2_locked=$FF and clears
+                // Ctrl_2_logical. The signed byte skips Tails_CPU_Control;
+                // the ordinary per-sprite movement lock alone would still let
+                // the engine CPU replay delayed leader input.
+                player.getCpuController().setController2SignedLocked(true);
+                player.getCpuController().clearController2LogicalLatch();
+            }
             player.clearLogicalInputState();
             player.clearForcedInputMask();
-            player.setXSpeed((short) 0);
-            player.setGSpeed((short) 0);
         }
     }
 
@@ -331,28 +394,22 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         }
     }
 
-    private void launchOrUpdatePlayer(AbstractPlayableSprite player) {
-        SubpixelMotion.State motion = new SubpixelMotion.State(
-                player.getCentreX() & 0xFFFF,
-                player.getCentreY() & 0xFFFF,
-                0,
-                0,
-                0,
-                player.getYSpeed());
-        SubpixelMotion.objectFallXY(motion, LIGHT_GRAVITY);
-        NativePositionOps.writeYPosPreserveSubpixel(player, motion.y);
-        player.setYSpeed((short) motion.yVel);
-        if (motion.yVel >= 0) {
+    private void releasePlayerAfterLift(AbstractPlayableSprite player) {
             ObjectControlState.none().applyTo(player);
+            player.setObjectMappingFrameControl(false);
             player.setControlLocked(false);
+            if (player.getCpuController() != null) {
+                // loc_633D6 clears Ctrl_2_locked and Ctrl_2_logical when the
+                // lift arc finishes.
+                player.getCpuController().setController2SignedLocked(false);
+                player.getCpuController().clearController2LogicalLatch();
+            }
             player.clearLogicalInputState();
             player.clearForcedInputMask();
             player.setAnimationId(0);
-            player.setYSpeed((short) 0);
             player.setGSpeed((short) 0x10);
             setLeafBlowerCutsceneFlag(false);
             savePostCutsceneRestartPoint();
-        }
     }
 
     private void savePostCutsceneRestartPoint() {
@@ -506,6 +563,9 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         private final CutsceneKnucklesMhz2Instance parent;
         private AbstractPlayableSprite player;
         private boolean initialized;
+        private boolean initializationDispatchPending;
+        private int carrierYFixed;
+        private int carrierYVelocity;
 
         private Mhz2KnucklesLiftChild(CutsceneKnucklesMhz2Instance parent, AbstractPlayableSprite player) {
             super(new ObjectSpawn(player.getCentreX() & 0xFFFF, player.getCentreY() & 0xFFFF,
@@ -550,24 +610,45 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
                 return;
             }
             if (!initialized) {
-                initialized = true;
-                player.setYSpeed((short) PLAYER_LAUNCH_Y_VEL);
-                player.setControlLocked(true);
-                player.setAnimationId(LIFT_ANIMATION);
-                Camera camera = services().camera();
-                if (camera != null) {
-                    camera.requestFastVerticalScroll();
-                }
+                initializeLaunch(services().camera());
+                return;
+            }
+            if (initializationDispatchPending) {
+                // loc_6338E is the newly allocated object's first dispatch;
+                // movement begins at loc_633D6 on its following dispatch.
+                initializationDispatchPending = false;
                 return;
             }
             services().playSfx(Sonic3kSfx.LEAF_BLOWER.id);
-            parent.launchOrUpdatePlayer(player);
+            carrierYFixed += carrierYVelocity << 8;
+            carrierYVelocity = (short) (carrierYVelocity + LIGHT_GRAVITY);
+            NativePositionOps.writeYPosPreserveSubpixel(player, carrierYFixed >> 16);
+            if ((short) carrierYVelocity >= 0) {
+                parent.releasePlayerAfterLift(player);
+            }
             Camera camera = services().camera();
             if (camera != null) {
                 camera.requestFastVerticalScroll();
             }
             if (player.getYSpeed() == 0 && !player.isControlLocked()) {
                 setDestroyed(true);
+            }
+        }
+
+        private void initializeLaunch(Camera camera) {
+            if (initialized || player == null) {
+                return;
+            }
+            initialized = true;
+            initializationDispatchPending = true;
+            carrierYFixed = (player.getCentreY() & 0xFFFF) << 16;
+            carrierYVelocity = PLAYER_LAUNCH_Y_VEL;
+            player.setControlLocked(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(player);
+            player.setObjectMappingFrameControl(false);
+            player.setAnimationId(LIFT_ANIMATION);
+            if (camera != null) {
+                camera.requestFastVerticalScroll();
             }
         }
 
