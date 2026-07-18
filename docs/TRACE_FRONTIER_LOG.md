@@ -21,7 +21,7 @@ line-ending differences (recorder text-mode `\n`→`\r\n` translation on Windows
 commit `74cbfb634`) and 5 pre-existing `sidekick_interact_object` fields from commit `49733fa76`
 (2026-06-10, already on `develop`) that the stale fixture predates. No `run_manifest.json` was
 written; the dry-run's route did not encounter a stage detour or explicit `OGGF_TRACE_RUN_ID`.
-No traces were regenerated or re-committed. No trace frontiers moved.
+No committed fixtures were touched or re-committed. No trace frontiers moved.
 
 ### 2026-07-18 -- AIZ/HCZ/MGZ parity-polish merge checkpoint
 

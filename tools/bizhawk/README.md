@@ -37,7 +37,7 @@ The S3K complete-run recorder handles stage detours as follows:
 - **Special Stages** (`Game_Mode=$34`): The level segment finalizes when `Game_Mode` changes.
   The `run_manifest.json` records a single merged transition boundary with the `giant_ring`
   mode change frame (the blue-spheres special stage). Per-frame CSV rows are only recorded for
-  the level segment; `giant_ring` row writer and segment directories land with future phases.
+  the level segment; blue-spheres row writer and segment directories land with future phases.
 - **Bonus Zones** (`Game_Mode=0x13`–`0x15`): Enter a new `s3k_bonus_stage` segment on the same
   schema as level segments. The level segment also finalizes, and the manifest records both
   mode-change boundaries explicitly.
