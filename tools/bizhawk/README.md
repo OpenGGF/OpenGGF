@@ -30,7 +30,7 @@ and `metadata.json`. The `run_manifest.json` file (at the run's root) indexes al
 records game-mode transitions and stage-detour boundaries (special stages, bonus zones), and
 marks the BK2 frame where each transition occurred. A manifest is emitted only when:
 - The playthrough includes a stage detour (special stage finalization via `Game_Mode=$34` or
-  bonus zone entry at `Game_Mode=0x13`–`0x15`), or
+  bonus zone entry at zone id `0x13`–`0x15` under the level-family `Game_Mode`), or
 - The `OGGF_TRACE_RUN_ID` environment variable is explicitly set.
 
 The S3K complete-run recorder handles stage detours as follows:
@@ -38,7 +38,7 @@ The S3K complete-run recorder handles stage detours as follows:
   The `run_manifest.json` records a single merged transition boundary with the `giant_ring`
   mode change frame (the blue-spheres special stage). Per-frame CSV rows are only recorded for
   the level segment; blue-spheres row writer and segment directories land with future phases.
-- **Bonus Zones** (`Game_Mode=0x13`–`0x15`): Enter a new `s3k_bonus_stage` segment on the same
+- **Bonus Zones** (zone id `0x13`–`0x15`, `Game_Mode` stays level-family): Enter a new `s3k_bonus_stage` segment on the same
   schema as level segments. The level segment also finalizes, and the manifest records both
   mode-change boundaries explicitly.
 - **Mode Guard**: Per-frame row writes are gated on the current `Game_Mode` family (level vs.
