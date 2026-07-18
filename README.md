@@ -220,6 +220,7 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
 
 Highlights:
 
+- **Multi-stage trace-run foundation (2026-07-19):** trace runs now bundle typed segments under a `run_manifest.json` (new `TraceRunManifest` schema + parser, per-segment run metadata, committed synthetic detour fixture), and the S3K complete-run BizHawk recorder (v6.30) gained a level-family mode guard — fixing silent segment pollution on special/bonus-stage detours — plus a stage-detour state machine that records bonus zones as `s3k_bonus_stage` segments and special-stage passages as merged `giant_ring` transition boundaries. Regenerating the AIZ segment from the committed movie stayed byte-identical; no trace frontiers moved.
 - **S3K AIZ/HCZ/MGZ parity polish (2026-07-18):** AIZ waterfall and path-switch priorities, HCZ transition bubbles, MGZ2 collapse and end-boss sequencing, MGZ surprise Robotnik terrain occlusion, and level-transition music timing now follow the ROM more closely. The cross-game replay checkpoint retained its documented S1, S2, and S3K trace frontiers.
 - **Merge verification (2026-07-18):** the S1, S2, and S3K replay suite was rerun before integrating this parity batch; its existing documented frontier failures and error remained unchanged.
 - **Sonic 3 & Knuckles route coverage:** the Sonic/Tails path has completed AIZ through LBZ coverage, with ongoing work across bosses, events, objects, bonus stages, scroll/parallax, animated tiles, palette/PLC state, transitions, and rendering parity.

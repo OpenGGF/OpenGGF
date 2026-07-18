@@ -68,6 +68,9 @@ public final class TraceFixtures {
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 null);
     }
 }

@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+### 2026-07-18/19 -- Complete-run recorder v6.30 no-regression sweep
+
+Verification of the multi-stage trace-run recorder branch (`feature/ai-multi-stage-trace-runs`,
+commits `70efa1184` through `b5f1a2cf7`) confirmed no regression in trace output from Tasks 4–7
+(per-zone segmentation, stage-detour state machine, run manifest emission). The AIZ fixture was
+regenerated into a scratch directory for comparison only (the committed fixture was not touched
+or re-committed) at v6.30-s3k-completerun using the discovered root-level S3K ROM and test-suite
+BK2:
+
+```bash
+export OGGF_TRACE_OUTPUT_DIR="<scratch>/oggf_regen_aiz/"
+export OGGF_TRACE_STOP_FRAME="40000"
+cmd //c "tools\bizhawk\run_bizhawk_lua.bat tools\bizhawk\s3k_complete_run_recorder.lua src\test\resources\traces\s3k\_movies\s3k-complete-sonic-tails.bk2 s3k.gen"
+```
+
+Both outputs matched the committed fixture: `physics.csv` 26229 rows and `aux_state.jsonl`
+855263 lines, with divergences traced to two pre-existing, unrelated causes. Platform
+line-ending differences (recorder text-mode `\n`→`\r\n` translation on Windows, unchanged since
+commit `74cbfb634`) and 5 pre-existing `sidekick_interact_object` fields from commit `49733fa76`
+(2026-06-10, already on `develop`) that the stale fixture predates. No `run_manifest.json` was
+written; the dry-run's route did not encounter a stage detour or explicit `OGGF_TRACE_RUN_ID`.
+No committed fixtures were touched or re-committed. No trace frontiers moved.
+
 ### 2026-07-18 -- AIZ/HCZ/MGZ parity-polish merge checkpoint
 
 Before merging `bugfix/aiz-hcz-mgz-polish` into `develop`, the ROM-backed

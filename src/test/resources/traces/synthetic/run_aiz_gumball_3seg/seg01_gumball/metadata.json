@@ -1,0 +1,5 @@
+{"game": "s3k", "zone": "gumball", "zone_id": 19, "act": 0, "bk2_frame_offset": 1900,
+ "trace_frame_count": 2, "trace_schema": 6, "csv_version": 7,
+ "trace_profile": "s3k_bonus_stage", "source_bk2": "synthetic.bk2",
+ "run_id": "run_aiz_gumball_3seg", "segment_index": 1, "bonus_stage_type": "gumball",
+ "lua_script_version": "6.30-s3k-completerun", "start_x": "0500", "start_y": "0400"}

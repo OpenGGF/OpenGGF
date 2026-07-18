@@ -17,8 +17,41 @@ Use this folder for the recorder scripts and local BizHawk assets:
 - `record_s3k_trace.bat` launches the Sonic 3&K recorder through the reusable no-audio/no-render launcher
 - `s3k_trace_recorder.lua` captures Sonic 3&K ROM-side trace data using schema v3, including
   `zone_act_state` diagnostics and the `aiz_end_to_end` checkpoint stream
+- `s3k_complete_run_recorder.lua` records per-zone segments from any Sonic 3&K BK2 (see
+  "Trace Run Manifests" section below)
 - `record_s1_credits_traces.bat` launches forced Sonic 1 credits-demo capture
 - `s1_credits_trace_recorder.lua` records the built-in ending replays without a BK2
+
+## Trace Run Manifests
+
+A **trace run** is a complete playthrough captured in typed per-zone or per-stage segment
+directories (`aiz/`, `hcz/`, `mgz/`, etc.), each containing `physics.csv`, `aux_state.jsonl`,
+and `metadata.json`. The `run_manifest.json` file (at the run's root) indexes all segments,
+records game-mode transitions and stage-detour boundaries (special stages, bonus zones), and
+marks the BK2 frame where each transition occurred. A manifest is emitted only when:
+- The playthrough includes a stage detour (special stage finalization via `Game_Mode=$34` or
+  bonus zone entry at zone id `0x13`–`0x15` under the level-family `Game_Mode`), or
+- The `OGGF_TRACE_RUN_ID` environment variable is explicitly set.
+
+The S3K complete-run recorder handles stage detours as follows:
+- **Special Stages** (`Game_Mode=$34`): The level segment finalizes when `Game_Mode` changes.
+  The `run_manifest.json` records a single merged transition boundary with the `giant_ring`
+  mode change frame (the blue-spheres special stage). Per-frame CSV rows are only recorded for
+  the level segment; blue-spheres row writer and segment directories land with future phases.
+- **Bonus Zones** (zone id `0x13`–`0x15`, `Game_Mode` stays level-family): Enter a new `s3k_bonus_stage` segment on the same
+  schema as level segments. The level segment also finalizes, and the manifest records both
+  mode-change boundaries explicitly.
+- **Mode Guard**: Per-frame row writes are gated on the current `Game_Mode` family (level vs.
+  stage). Stage detours trigger a transition-boundary record but do not write rows until the
+  mode changes back into a recordable category, avoiding pollution of level segments with
+  out-of-scope stage data.
+- **Repeat Segments**: If a route re-enters a zone, segment directories are named with a
+  repeat index (e.g. `aiz_2`, `aiz_3`) to avoid collisions while preserving
+  contiguous frame ranges within each segment.
+
+The `OGGF_TRACE_RUN_ID` environment variable forces manifest emission and sets the `run_id`
+field, allowing trace runs with no detours to be tracked explicitly (useful for complete-game
+runs or for organizing capture sessions).
 
 Schema v3 records the execution counters used by replay:
 
