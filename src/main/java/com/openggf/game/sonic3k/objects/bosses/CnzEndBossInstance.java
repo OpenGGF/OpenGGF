@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects.bosses;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -14,6 +15,8 @@ import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.CnzEggCapsuleInstance;
+import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
+import com.openggf.game.sonic3k.objects.S3kBossExplosionController;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -28,8 +31,6 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.physics.SwingMotion;
-import com.openggf.physics.ObjectTerrainUtils;
-import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.NativePositionOps;
 
 import java.util.List;
@@ -68,13 +69,12 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private static final int TRACK_WAIT = 3 * 60;
     private static final int CHARGE_WAIT = 0xBF;
     private static final int MAGNET_ACTIVE_WAIT = 0xFF;
-    private static final int MAGNET_Y_RADIUS = 0x10;
     private static final int[] MAGNET_PULL_16_16 = {
             0x28000, 0x20000, 0x1C000, 0x18000, 0x14000, 0x10000, 0x0C000, 0x08000
     };
 
-    private enum Routine {
-        WAIT_CAMERA, ENTRY, TRACK, MAGNET_DROP, ALIGN, CHARGE, DESCEND, ASCEND, DEFEATED
+    enum Routine {
+        WAIT_CAMERA, CAMERA_LOCK, ENTRY, TRACK, MAGNET_DROP, ALIGN, CHARGE, DESCEND, ASCEND, DEFEATED
     }
 
     private int centreX;
@@ -89,15 +89,15 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private int routineTimer;
     private Routine routine = Routine.WAIT_CAMERA;
     private int savedHoverY;
-    private int magnetX;
-    private int magnetY;
-    private int magnetYSubpixel;
-    private int magnetYVelocity;
-    private boolean magnetLanded;
     private boolean magneticFieldActive;
     private int mappingFrame;
-    private int magnetMappingFrame = 4;
     private boolean startupComplete;
+    private int cameraLockTimer;
+    private int savedCameraMinX;
+    private int savedCameraMaxX;
+    private int savedCameraMinY;
+    private int savedCameraMaxY;
+    private CnzEndBossMagnetChild magnetChild;
 
     private boolean defeatHandoffComplete;
     private int hitCount = HIT_COUNT;
@@ -111,6 +111,11 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private int cannonLaunchTimer = -1;
     private int postCapsuleReleaseCountForTest;
     private CnzCannonInstance endCannon;
+    @com.openggf.game.rewind.RewindTransient(
+            reason = "Visual-only explosion scheduler; defeatWaitTimer owns gameplay progression.")
+    private S3kBossExplosionController defeatExplosions;
+    private int defeatWaitTimer;
+    private int storedBoundBase;
 
     public CnzEndBossInstance(ObjectSpawn spawn) {
         super(spawn, "CNZEndBoss");
@@ -120,11 +125,19 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
 
     @Override
     public int getX() {
-        return centreX;
+        return centreX - 0x40;
     }
 
     @Override
     public int getY() {
+        return centreY - 0x14;
+    }
+
+    public int getCentreX() {
+        return centreX;
+    }
+
+    public int getCentreY() {
         return centreY;
     }
 
@@ -146,12 +159,14 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         if (!defeatHandoffComplete) {
             updateNativeBoss(player);
         }
+        updateDefeatWait();
         updatePostDefeatSequence(frameCounter, player);
     }
 
     private void updateNativeBoss(PlayableEntity player) {
         switch (routine) {
             case WAIT_CAMERA -> updateCameraGate();
+            case CAMERA_LOCK -> updateCameraLock();
             case ENTRY -> {
                 swingAndMove();
                 if (waitExpired()) beginTracking();
@@ -174,8 +189,29 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         if (services().camera() == null) return;
         int cameraX = services().camera().getX() & 0xFFFF;
         int cameraY = services().camera().getY() & 0xFFFF;
-        if (cameraX < START_CAMERA_X_MIN || cameraX >= START_CAMERA_X_MAX || cameraY >= 0x300) return;
+        if (cameraX < START_CAMERA_X_MIN || cameraX > START_CAMERA_X_MAX
+                || cameraY < 0 || cameraY > 0x300) return;
 
+        savedCameraMinX = services().camera().getMinX() & 0xFFFF;
+        savedCameraMaxX = services().camera().getMaxX() & 0xFFFF;
+        savedCameraMinY = services().camera().getMinY() & 0xFFFF;
+        savedCameraMaxY = services().camera().getMaxY() & 0xFFFF;
+        setStoredCameraBounds(savedCameraMinX, savedCameraMaxX, savedCameraMinY, savedCameraMaxY);
+        services().camera().setMinY((short) 0x0240);
+        services().camera().setMaxYTarget((short) 0x0240);
+        services().camera().setMinX((short) 0x4760);
+        services().camera().setMaxX((short) 0x47E0);
+        cameraLockTimer = 2 * 60;
+        routine = Routine.CAMERA_LOCK;
+        S3kCnzEventWriteSupport.setBossFlag(services(), true);
+        services().fadeOutMusic();
+        cnzArtProvider().queueCnzEndBossArt();
+    }
+
+    private void updateCameraLock() {
+        if (cameraLockTimer-- > 0 || !cnzArtProvider().isCnzEndBossArtComplete()) {
+            return;
+        }
         startupComplete = true;
         routine = Routine.ENTRY;
         routineTimer = ENTRY_WAIT;
@@ -183,15 +219,35 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         xVelocity = -TRACK_SPEED;
         swingVelocity = SWING_MAX;
         swingDown = false;
-        S3kCnzEventWriteSupport.setBossFlag(services(), true);
         services().gameState().setCurrentBossId(Sonic3kObjectIds.CNZ_END_BOSS);
-        Object provider = services().levelEventProvider();
-        if (provider instanceof Sonic3kLevelEventManager manager && manager.getCnzEvents() != null
-                && manager.getCnzEvents().getCameraStoredMaxXPos() == 0) {
-            manager.getCnzEvents().setCameraStoredMaxXPos(services().camera().getMaxX());
-        }
         services().playMusic(Sonic3kMusic.BOSS.id);
         installBossPalette();
+        spawnNativeChildren();
+    }
+
+    private Sonic3kObjectArtProvider cnzArtProvider() {
+        if (services().renderManager().getArtProvider() instanceof Sonic3kObjectArtProvider provider) {
+            return provider;
+        }
+        throw new IllegalStateException("CNZ end boss requires the S3K object-art provider");
+    }
+
+    private void setStoredCameraBounds(int minX, int maxX, int minY, int maxY) {
+        Object provider = services().levelEventProvider();
+        if (provider instanceof Sonic3kLevelEventManager manager && manager.getCnzEvents() != null) {
+            manager.getCnzEvents().setCameraStoredMinXPos((short) minX);
+            manager.getCnzEvents().setCameraStoredMaxXPos((short) maxX);
+            manager.getCnzEvents().setCameraStoredMinYPos((short) minY);
+            manager.getCnzEvents().setCameraStoredMaxYPos((short) maxY);
+        }
+    }
+
+    private void spawnNativeChildren() {
+        magnetChild = spawnChild(() -> new CnzEndBossMagnetChild(this));
+        for (int subtype = 0; subtype < 4; subtype++) {
+            int phase = subtype << 5;
+            spawnChild(() -> new CnzEndBossArmChild(this, phase));
+        }
     }
 
     private void installBossPalette() {
@@ -239,44 +295,24 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private void beginMagnetDrop() {
         routine = Routine.MAGNET_DROP;
         xVelocity = 0;
-        magnetX = centreX;
-        magnetY = centreY + 0x14;
-        magnetYSubpixel = 0;
-        magnetYVelocity = 0;
-        magnetLanded = false;
-        magnetMappingFrame = 4;
+        magnetChild.beginDrop();
     }
 
     private void updateMagnetDrop() {
         swingAndMove();
-        magnetYVelocity += 0x38;
-        magnetYSubpixel += magnetYVelocity;
-        magnetY += magnetYSubpixel >> 8;
-        magnetYSubpixel &= 0xFF;
-        TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(magnetX, magnetY, MAGNET_Y_RADIUS);
-        if (!floor.hasCollision()) return;
-        magnetY += floor.distance();
-        magnetYSubpixel = 0;
-        services().playSfx(Sonic3kSfx.FLOOR_THUMP.id);
-        if (magnetYVelocity >= 0x80) {
-            magnetYVelocity = -(magnetYVelocity >> 1);
-            return;
-        }
-        magnetYVelocity = 0;
-        magnetLanded = true;
-        routine = Routine.ALIGN;
+        if (magnetChild.isLanded()) routine = Routine.ALIGN;
     }
 
     private void updateAlign() {
         swingAndMove();
-        if (centreX != magnetX) {
-            centreX += Integer.compare(magnetX, centreX);
-            facingRight = magnetX > centreX;
+        int magnetCentreX = magnetChild.getCentreX();
+        if (centreX != magnetCentreX) {
+            centreX += Integer.compare(magnetCentreX, centreX);
+            facingRight = magnetCentreX > centreX;
             return;
         }
         routine = Routine.CHARGE;
         routineTimer = CHARGE_WAIT;
-        mappingFrame = 1;
     }
 
     private void updateCharge(PlayableEntity player) {
@@ -285,14 +321,14 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
             if (!waitExpired()) return;
             magneticFieldActive = true;
             routineTimer = MAGNET_ACTIVE_WAIT;
-            mappingFrame = 3;
+            spawnChild(() -> new CnzEndBossFieldChild(this, -0x0C));
+            spawnChild(() -> new CnzEndBossFieldChild(this, 0x0C));
             return;
         }
         applyMagnetPull();
         if (!waitExpired()) return;
         magneticFieldActive = false;
         routine = Routine.DESCEND;
-        mappingFrame = 1;
     }
 
     private void applyMagnetPull() {
@@ -311,11 +347,10 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private void updateDescent() {
         swingAndMove();
         centreY++;
-        int target = magnetY - 0x14;
+        int target = magnetChild.getCentreY() - 0x14;
         if (centreY < target) return;
         centreY = target;
         routine = Routine.ASCEND;
-        mappingFrame = 3;
     }
 
     private void updateAscent() {
@@ -327,6 +362,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         swingVelocity = SWING_MAX;
         swingDown = false;
         beginTracking();
+        magnetChild.resetForNextCycle();
     }
 
     private void swingAndMove() {
@@ -367,7 +403,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         hitCount--;
         services().playSfx(Sonic3kSfx.BOSS_HIT.id);
         if (hitCount <= 0) {
-            applyDefeatHandoff();
+            beginDefeatSequence();
         } else {
             hitInvulnerabilityTimer = HIT_INVULNERABILITY_FRAMES;
         }
@@ -379,8 +415,8 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
      *
      * <p>Task 8 intentionally does not let the promoted production slot claim
      * boss mode on its own. The real startup gate belongs to the later attack
-     * choreography and CNZ event flow; this bounded wrapper only participates in
-     * defeat cleanup once that wider state already exists.
+     * choreography and CNZ event flow; this predicate also supports tests that
+     * enter at the native externally-owned boss seam.
      */
     private boolean isBossModeAlreadyOwnedExternally() {
         if (services().gameState().getCurrentBossId() == Sonic3kObjectIds.CNZ_END_BOSS) {
@@ -405,25 +441,49 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
      *   <li>stay alive as the post-results cannon-launch controller</li>
      * </ol>
      */
-    private void applyDefeatHandoff() {
+    private void beginDefeatSequence() {
         if (!isBossModeAlreadyOwnedExternally()) {
             return;
         }
-        defeatHandoffComplete = true;
         routine = Routine.DEFEATED;
         magneticFieldActive = false;
+        hitInvulnerabilityTimer = 0;
+        defeatWaitTimer = 2 * 60;
+        defeatExplosions = new S3kBossExplosionController(centreX, centreY, 4, services().rng());
+        services().fadeOutMusic();
+        spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, -8, -0x100));
+        spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, 8, 0x100));
+    }
+
+    private void updateDefeatWait() {
+        if (routine != Routine.DEFEATED || defeatHandoffComplete) return;
+        if (defeatExplosions != null) {
+            defeatExplosions.tick();
+            for (var pending : defeatExplosions.drainPendingExplosions()) {
+                if (pending.playSfx()) services().playSfx(Sonic3kSfx.EXPLODE.id);
+                spawnChild(() -> new S3kBossExplosionChild(pending.x(), pending.y()));
+            }
+        }
+        if (defeatWaitTimer-- <= 0) applyDefeatHandoff();
+    }
+
+    private void applyDefeatHandoff() {
+        defeatHandoffComplete = true;
 
         S3kCnzEventWriteSupport.setBossFlag(services(), false);
         services().gameState().setCurrentBossId(0);
 
-        int storedBase = services().camera().getMaxX();
-        Object provider = services().levelEventProvider();
-        if (provider instanceof Sonic3kLevelEventManager manager && manager.getCnzEvents() != null) {
-            int candidate = manager.getCnzEvents().getCameraStoredMaxXPos() & 0xFFFF;
-            if (candidate != 0) storedBase = candidate;
-            manager.getCnzEvents().setCameraStoredMaxXPos((short) (storedBase + STORED_BOUND_CAPSULE_DELTA));
+        storedBoundBase = savedCameraMaxX;
+        if (storedBoundBase == 0) {
+            Object provider = services().levelEventProvider();
+            if (provider instanceof Sonic3kLevelEventManager manager && manager.getCnzEvents() != null) {
+                storedBoundBase = manager.getCnzEvents().getCameraStoredMaxXPos() & 0xFFFF;
+            }
+            if (storedBoundBase == 0) storedBoundBase = services().camera().getMaxX() & 0xFFFF;
         }
-        services().camera().setMaxX((short) (storedBase + STORED_BOUND_CAPSULE_DELTA));
+        setStoredMaxX(storedBoundBase + STORED_BOUND_CAPSULE_DELTA);
+        spawnChild(() -> CnzEndBossBoundaryController.increaseMaxX(
+                centreX, centreY, storedBoundBase + STORED_BOUND_CAPSULE_DELTA));
 
         spawnChild(() -> new CnzEggCapsuleInstance(
                 new ObjectSpawn(CAPSULE_X, CAPSULE_Y, Sonic3kObjectIds.EGG_CAPSULE, 0, 0, false, 0),
@@ -434,6 +494,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         if (!defeatHandoffComplete || transitionRequested) {
             return;
         }
+        services().camera().setMinX(services().camera().getX());
         if (capsuleResultsComplete && !cannonSpawned) {
             releasePostCapsuleStateOnce();
             if (player instanceof AbstractPlayableSprite sprite
@@ -510,7 +571,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     }
 
     /**
-     * Restores main-player and sidekick control after the bounded defeat handoff.
+     * Restores main-player and sidekick control after the defeat handoff.
      *
      * <p>The teleporter beam can leave the player object-controlled, rolled, and
      * hidden. CNZ's boss release must clear all three so the capsule handoff
@@ -537,13 +598,11 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         restorePlayerControl();
         restoreLevelMusic();
         services().camera().setMaxYTarget((short) 0x0200);
-        Object provider = services().levelEventProvider();
-        if (provider instanceof Sonic3kLevelEventManager manager && manager.getCnzEvents() != null) {
-            int base = manager.getCnzEvents().getCameraStoredMaxXPos() & 0xFFFF;
-            if (base >= STORED_BOUND_CAPSULE_DELTA) base -= STORED_BOUND_CAPSULE_DELTA;
-            manager.getCnzEvents().setCameraStoredMaxXPos((short) (base + STORED_BOUND_CANNON_DELTA));
-            services().camera().setMaxX((short) (base + STORED_BOUND_CANNON_DELTA));
-        }
+        setStoredMinY(0x0200);
+        spawnChild(() -> CnzEndBossBoundaryController.decreaseMinY(centreX, centreY, 0x0200));
+        setStoredMaxX(storedBoundBase + STORED_BOUND_CANNON_DELTA);
+        spawnChild(() -> CnzEndBossBoundaryController.increaseMaxX(
+                centreX, centreY, storedBoundBase + STORED_BOUND_CANNON_DELTA));
         postCapsuleReleaseComplete = true;
         postCapsuleReleaseCountForTest++;
     }
@@ -578,6 +637,20 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         services().playMusic(Sonic3kMusic.CNZ2.id);
     }
 
+    private void setStoredMaxX(int value) {
+        Object provider = services().levelEventProvider();
+        if (provider instanceof Sonic3kLevelEventManager manager && manager.getCnzEvents() != null) {
+            manager.getCnzEvents().setCameraStoredMaxXPos((short) value);
+        }
+    }
+
+    private void setStoredMinY(int value) {
+        Object provider = services().levelEventProvider();
+        if (provider instanceof Sonic3kLevelEventManager manager && manager.getCnzEvents() != null) {
+            manager.getCnzEvents().setCameraStoredMinYPos((short) value);
+        }
+    }
+
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_END_BOSS);
@@ -585,10 +658,6 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
             return;
         }
         renderer.drawFrameIndex(mappingFrame, centreX, centreY, !facingRight, false);
-        if (startupComplete && routine.ordinal() >= Routine.MAGNET_DROP.ordinal()
-                && routine != Routine.DEFEATED) {
-            renderer.drawFrameIndex(magnetMappingFrame, magnetX, magnetY, false, false);
-        }
         PatternSpriteRenderer ship = getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
         if (ship != null) {
             // Child1_MakeRoboShip4: offset (0,-8), subtype 9; ObjDat ship frame 5,
@@ -612,5 +681,21 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
 
     public int getMappingFrameForTest() {
         return mappingFrame;
+    }
+
+    Routine nativeRoutine() {
+        return routine;
+    }
+
+    boolean magneticFieldActive() {
+        return magneticFieldActive;
+    }
+
+    boolean defeatStarted() {
+        return routine == Routine.DEFEATED;
+    }
+
+    void relinkMagnetChild(CnzEndBossMagnetChild child) {
+        magnetChild = child;
     }
 }

@@ -282,6 +282,7 @@ class TestS3kCnzTeleporterRouteHeadless {
                 "Task 8 owns clearing Boss_flag so later CNZ event logic can leave boss mode");
         assertEquals(0, GameServices.gameState().getCurrentBossId(),
                 "Defeat handoff should clear Current_Boss_ID alongside Boss_flag");
+        fixture.stepIdleFrames(8);
         assertTrue(fixture.camera().getMaxX() > 0x48E0,
                 "Task 8 should widen the CNZ boss camera clamp during the capsule handoff");
     }
@@ -398,6 +399,9 @@ class TestS3kCnzTeleporterRouteHeadless {
             for (int cooldown = 0; cooldown < 0x20; cooldown++) {
                 boss.update(cooldown, player);
             }
+        }
+        for (int defeatFrame = 0; defeatFrame <= 2 * 60; defeatFrame++) {
+            boss.update(defeatFrame, player);
         }
     }
 

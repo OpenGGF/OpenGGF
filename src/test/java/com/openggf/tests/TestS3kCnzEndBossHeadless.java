@@ -12,6 +12,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -30,12 +31,21 @@ class TestS3kCnzEndBossHeadless {
         fixture.camera().setY((short) 0x0240);
 
         CnzEndBossInstance boss = createBoss();
-        boss.update(0, fixture.sprite());
+        GameServices.level().getObjectManager().addDynamicObject(boss);
+        fixture.stepIdleFrames(1);
+        assertEquals("CAMERA_LOCK", boss.getRoutineForTest());
+        assertFalse(boss.isStartupCompleteForTest());
+        fixture.stepIdleFrames(121);
 
         assertTrue(boss.isStartupCompleteForTest());
         assertEquals("ENTRY", boss.getRoutineForTest());
         assertEquals(Sonic3kObjectIds.CNZ_END_BOSS, GameServices.gameState().getCurrentBossId());
         assertEquals(5, boss.getPriorityBucket());
+        long graphChildren = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(object -> object.getClass().getSimpleName().startsWith("CnzEndBoss"))
+                .filter(object -> !(object instanceof CnzEndBossInstance))
+                .count();
+        assertEquals(5, graphChildren, "magnet and four arms must be live after native init");
     }
 
     @Test
@@ -48,13 +58,19 @@ class TestS3kCnzEndBossHeadless {
         fixture.sprite().setCentreX((short) 0x4740);
 
         CnzEndBossInstance boss = createBoss();
-        for (int frame = 0; frame < 1400 && !boss.isMagneticFieldActiveForTest(); frame++) {
-            boss.update(frame, fixture.sprite());
+        GameServices.level().getObjectManager().addDynamicObject(boss);
+        for (int frame = 0; frame < 1800 && !boss.isMagneticFieldActiveForTest(); frame++) {
+            fixture.stepIdleFrames(1);
         }
 
         assertTrue(boss.isMagneticFieldActiveForTest(),
                 "off_6E4E2 must reach loc_6E632's magnetic attack window; routine=" + boss.getRoutineForTest());
-        assertEquals(3, boss.getMappingFrameForTest());
+        assertEquals(0, boss.getMappingFrameForTest(),
+                "ObjDat_CNZEndBoss keeps the parent body on frame 0; attack animation belongs to children");
+        long fieldChildren = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(object -> object.getClass().getSimpleName().equals("CnzEndBossFieldChild"))
+                .count();
+        assertEquals(2, fieldChildren, "ChildObjDat_6EDE4 must create both magnetic field lobes");
     }
 
     private static CnzEndBossInstance createBoss() {
