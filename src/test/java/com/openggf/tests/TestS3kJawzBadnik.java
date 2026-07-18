@@ -1,8 +1,10 @@
 package com.openggf.tests;
 
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.objects.HczHarmfulExplosionObjectInstance;
 import com.openggf.game.sonic3k.objects.badniks.JawzBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.TestObjectServices;
@@ -12,6 +14,7 @@ import com.openggf.level.objects.TouchResponseResult;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -112,6 +115,50 @@ public class TestS3kJawzBadnik {
         assertEquals(TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY,
                 jawz.getTouchResponseProfile().categoryDecodeMode());
         assertTrue(jawz.requiresContinuousTouchCallbacks());
+    }
+
+    @Test
+    public void vulnerablePlayerContactReplacesJawzWithHarmfulHczExplosion() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 319, 223, 0);
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 160, (short) 100);
+        ObjectManager[] managerRef = new ObjectManager[1];
+        TestObjectServices services = new TestObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return managerRef[0];
+            }
+
+            @Override
+            public ObjectPlayerQuery playerQuery() {
+                return new ObjectPlayerQuery(() -> sonic, List::of);
+            }
+        };
+        ObjectManager manager = new ObjectManager(
+                List.of(), null, -1, null, null, null, null, services);
+        managerRef[0] = manager;
+        JawzBadnikInstance jawz = manager.createDynamicObject(() -> new JawzBadnikInstance(
+                new ObjectSpawn(160, 100, Sonic3kObjectIds.JAWZ, 0, 0, false, 0)));
+
+        jawz.update(0, sonic);
+        jawz.refreshPostCameraRenderState();
+        jawz.update(1, sonic);
+        jawz.update(2, sonic);
+        jawz.onTouchResponse(sonic,
+                new TouchResponseResult(0x17, 8, 8, TouchCategory.SPECIAL, 0), 3);
+        jawz.update(3, sonic);
+
+        assertTrue(jawz.isDestroyed());
+        List<HczHarmfulExplosionObjectInstance> explosions = manager.getActiveObjects().stream()
+                .filter(HczHarmfulExplosionObjectInstance.class::isInstance)
+                .map(HczHarmfulExplosionObjectInstance.class::cast)
+                .toList();
+        assertEquals(1, explosions.size(),
+                "ROM creates one HCZEndBoss_ExplosionChild before deleting Jawz");
+        assertEquals(jawz.getX(), explosions.getFirst().getX(),
+                "Jawz moves before checking collision_property and creating the child");
+        assertEquals(jawz.getY(), explosions.getFirst().getY());
+        assertEquals(jawz.getSlotIndex() + 1, explosions.getFirst().getSlotIndex(),
+                "CreateChild1_Normal allocates the next free SST slot after Jawz");
     }
 
     private static int readMappingFrame(JawzBadnikInstance jawz) {
