@@ -2,16 +2,22 @@ package com.openggf.game.sonic3k;
 
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2AInstance;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -115,6 +121,42 @@ public class TestCnzTraversalObjectArt {
         assertNotNull(provider.getRenderer(ObjectArtKeys.EXPLOSION));
         assertTrue(provider.getRenderer(ObjectArtKeys.EXPLOSION).isReady(),
                 "cannon launch puffs need no duplicate runtime PLC at the post-boss spawn");
+    }
+
+    @Test
+    public void carnivalNightAct2PlacesOnlyScopedCutsceneButtonSubtypes() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+
+        List<Integer> subtypes = GameServices.level().getObjectManager().getAllSpawns().stream()
+                .filter(spawn -> spawn.objectId() == Sonic3kObjectIds.CUTSCENE_BUTTON)
+                .map(ObjectSpawn::subtype)
+                .sorted()
+                .toList();
+
+        assertEquals(List.of(4, 6), subtypes,
+                "locked-on CNZ2 Object Pos/2.bin places only the water/flash and vacuum-tube buttons");
+    }
+
+    @Test
+    public void monitorArtRemainsReadyAfterCnz2CutsceneArtLoads() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+        GameServices.camera().setX((short) 0x1D00);
+        GameServices.camera().setY((short) 0x0280);
+        CutsceneKnucklesCnz2AInstance cutscene = new CutsceneKnucklesCnz2AInstance(
+                new ObjectSpawn(0x1D00, 0x0280,
+                        Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        cutscene.setServices(TestEnvironment.objectServices());
+
+        cutscene.update(0, null);
+
+        Sonic3kObjectArtProvider provider = currentCnzObjectArtProvider();
+        assertNotNull(provider.getRenderer(Sonic3kObjectArtKeys.MONITOR));
+        assertTrue(provider.getRenderer(Sonic3kObjectArtKeys.MONITOR).isReady(),
+                "engine-owned monitor sheet is independent of cutscene Knuckles art and needs no raw PLC reload");
     }
 
     @Test
