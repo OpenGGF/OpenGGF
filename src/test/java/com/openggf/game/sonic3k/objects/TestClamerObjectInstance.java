@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -250,6 +251,31 @@ class TestClamerObjectInstance {
         projectile.update(0x1100, player);
         assertEquals(0x0112, projectile.getX(), "MoveSprite2 applies +$200 X velocity with no gravity");
         assertEquals(0x0072, projectile.getY());
+    }
+
+    @Test
+    void verticallyOffscreenAutoCloseDoesNotSpawnProjectile() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x140, 0xE0, 0);
+        try {
+            ClamerObjectInstance clamer =
+                    new ClamerObjectInstance(new ObjectSpawn(0x0100, 0x0400, 0xA3, 0, 1, false, 0));
+            RecordingServices services = new RecordingServices();
+            clamer.setServices(services);
+            AbstractPlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+            player.setCentreX((short) 0x0140);
+            player.setCentreY((short) 0x0400);
+
+            clamer.testReleaseWaitOffscreen();
+            clamer.update(0x1000, player);
+            for (int i = 0; i < 55; i++) {
+                clamer.update(0x1001 + i, player);
+            }
+
+            assertEquals(1, services.spawnedChildren.size(),
+                    "loc_89064 tests render_flags bit 7, so only the permanent spring child exists");
+        } finally {
+            AbstractObjectInstance.resetCameraBoundsForTests();
+        }
     }
 
     @Test

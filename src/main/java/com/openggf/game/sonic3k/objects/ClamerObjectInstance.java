@@ -458,9 +458,24 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         autoCloseAnimTimer = AUTO_CLOSE_ANIM_DELAYS[autoCloseAnimIndex];
         autoCloseAnimIndex++;
 
-        if (newFrame == AUTO_CLOSE_PROJECTILE_FRAME && isOnScreenX()) {
+        if (newFrame == AUTO_CLOSE_PROJECTILE_FRAME
+                && isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight())) {
+            // loc_89064 tests the retained render_flags sign bit, which is set
+            // only when the full $14x$10 Clamer render box overlaps the screen.
+            // An X-only gate incorrectly fires projectiles from vertically
+            // off-screen Clamers (sonic3k.asm:185930-185942,186052-186058).
             spawnAutoCloseProjectile();
         }
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return 0x14; // ObjSlot_Clamer width_pixels.
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return 0x10; // ObjSlot_Clamer height_pixels.
     }
 
     private void spawnAutoCloseProjectile() {

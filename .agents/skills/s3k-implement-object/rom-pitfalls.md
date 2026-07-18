@@ -916,6 +916,9 @@ margin) is already covered for S3K by P17 (child uses own X vs parent anchor) an
 the inline `out_of_range` camera-coarse checks (`docs/skdisasm/sonic3k.asm`
 `.enemy_out_of_range` family). Verify each short-lived object deletes on the ROM
 camera-coarse bound keyed on its width, not a fixed engine margin.
+The same rule applies to behavior gates that read retained `render_flags` bit 7:
+CNZ Clamer's frame-8 projectile needs the full `$14x$10` render box, not an
+X-only visibility check (`docs/skdisasm/sonic3k.asm:185930-185942`).
 
 ---
 

@@ -45631,3 +45631,24 @@ remains 44/58 green: the eight S1 credits traces still lack CSV-v7 animation
 fields, and the six comparison-red routes retain their previous first
 frontiers. CNZ complete-run animation remains at f108 `player_animation_id`,
 and the legacy standalone CNZ trace remains at f0 in both scopes.
+
+### 2026-07-19 -- CNZ Clamer full render-flag projectile gate: f4610 -> f6696
+
+At f4610 CPU Tails overlaps an engine Clamer projectile at `$0DCA,$03B2` and
+enters the hurt routine. ROM has the parent Clamer at `$0DE8,$03B0` in routine
+6 and its permanent spring child at `$0DE8,$03A8`, but no projectile SST. The
+parent had reached raw-animation frame 8 while below the camera: ROM
+`loc_89064` tests the retained sign bit of `render_flags`, whereas the engine
+tested only horizontal visibility and spawned the projectile despite the
+parent's `$14x$10` render box being vertically off-screen
+(`docs/skdisasm/sonic3k.asm:185930-185942,186052-186058`).
+
+The projectile spawn now uses the full Render_Sprites-style parent bounds.
+All 14 focused Clamer tests pass, including a vertically off-screen frame-8
+case. CNZ complete-run physics advances from f4610 `tails_y` to f6696
+`tails_x_speed`.
+
+The full physics fleet remains 45/58 green with the same 13 expected-red routes
+and unchanged non-CNZ frontiers. The full animation fleet remains 44/58 green
+with the same eight unsupported S1 credits traces and six comparison-red
+frontiers; CNZ complete-run animation remains at f108 and standalone CNZ at f0.
