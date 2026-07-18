@@ -17,7 +17,7 @@
 - **Commit policy:** every commit needs the trailer block (`Changelog`, `Guide`, `Known-Discrepancies`, `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`, `Skills` — each `updated` or `n/a`). `feat`/`fix` commits touching `src/main/` MUST set `Changelog: updated` and stage `CHANGELOG.md` (CRLF file — verify `git diff CHANGELOG.md` shows only your lines, not a whole-file line-ending diff; if it does, restore and re-edit preserving CRLF).
 - **Shared repo:** other agent sessions mutate this working tree. Stage files by exact path only; never `git add -A`.
 - **Lua local-variable budget:** `s3k_complete_run_recorder.lua` is at BizHawk's 200-local limit (comment near line 280). New top-level recorder state MUST be declared as globals (no `local`), matching `current_segment_zone`/`segments_done`.
-- Existing complete-run trace outputs must remain byte-identical for stage-free movies (Task 8 proves it).
+- Existing complete-run trace outputs (`physics.csv` + `aux_state.jsonl`) must remain byte-identical for stage-free movies (Task 8 proves it; `metadata.json` changes by design — version bump + segment_index).
 - Maven: `mvn "-Dtest=..." test` — quote `-D` args in PowerShell; sandbox off for tests (lwjgl.dll).
 
 ---
@@ -478,7 +478,7 @@ Skills: n/a"
 - Create (scratch, not committed): a temporary derivation note
 
 **Interfaces:**
-- Produces: lua constants `ADDR_SPECIAL_BONUS_ENTRY_FLAG`, `ADDR_SAVED_X_POS`, `ADDR_SAVED_Y_POS`, `ADDR_LAST_STAR_POST_HIT`, `ADDR_EMERALD_COUNT`, `GAMEMODE_SPECIAL_STAGE = 0x34`, `GAMEMODE_SS_RESULTS = 0x48`, `BONUS_ZONE_MIN = 0x13`, `BONUS_ZONE_MAX = 0x15`, `BONUS_TOKENS = {[0x13]="gumball", [0x14]="pachinko", [0x15]="slots"}` consumed by Tasks 5–7. **Declare ALL of these as globals (no `local`)** — the file's main chunk is at Lua's 200-local limit (comments ~lines 279-282, 326-327); a `local` block here fails at load.
+- Produces: lua constants `ADDR_SPECIAL_BONUS_ENTRY_FLAG`, `ADDR_SAVED_X_POS`, `ADDR_SAVED_Y_POS`, `ADDR_LAST_STAR_POST_HIT`, `ADDR_EMERALD_COUNT`, `GAMEMODE_SPECIAL_STAGE = 0x34`, `BONUS_TOKENS = {[0x13]="gumball", [0x14]="pachinko", [0x15]="slots"}` consumed by Tasks 5–7, plus documentation-only constants `GAMEMODE_SS_RESULTS = 0x48`, `BONUS_ZONE_MIN = 0x13`, `BONUS_ZONE_MAX = 0x15` (referenced in comments, not code — the code uses `is_level_family_mode` and `BONUS_TOKENS` lookups). **Declare ALL of these as globals (no `local`)** — the file's main chunk is at Lua's 200-local limit (comments ~lines 279-282, 326-327); a `local` block here fails at load.
 
 - [ ] **Step 1: Derive the five RAM addresses from skdisasm.** In `docs/skdisasm/sonic3k.constants.asm` the gameplay RAM block is `ds.b`-sequential from absolute anchors. For each of `Special_bonus_entry_flag` (line ~831), `Saved_X_pos`, `Saved_Y_pos`, `Last_star_post_hit`, `Emerald_count`: locate the symbol (`grep -n "<name>" docs/skdisasm/sonic3k.constants.asm`), find the nearest preceding absolute anchor (a `:=` assignment with a numeric address, e.g. the `Object_respawn_table`/RAM-block anchors), and sum the intervening `ds.b`/`ds.w`/`ds.l` sizes. Cross-check each result against `docs/skdisasm/s3.constants.asm` (same symbols; S3-side must agree) — two independent paths must give the same address or STOP and investigate.
 
@@ -570,8 +570,10 @@ Skills: n/a"
 -- multi-zone runs with detours.
 transitions_done = {}
 segment_dir_counts = {}
-detour_active = nil            -- nil | "special_stage"
-pending_ss_transition = nil    -- merged SS boundary record awaiting exit fields
+detour_active = nil               -- nil | "special_stage"
+pending_ss_transition = nil       -- merged SS boundary record awaiting exit fields
+current_segment_dir_token = nil   -- set by start_new_segment
+current_segment_is_bonus = false  -- set by start_new_segment (before write_metadata)
 run_id = os.getenv("OGGF_TRACE_RUN_ID") or nil
 ```
 
@@ -863,7 +865,7 @@ gzip -dkc src/test/resources/traces/s3k/aiz_completerun/physics.csv.gz > $env:TE
 fc /b $env:TEMP\aiz_committed.csv $env:TEMP\oggf_regen_aiz\aiz\physics.csv
 ```
 
-Expected: `FC: no differences encountered` (byte-identical; the committed movie's routes avoid stages, so the state machine must be a pure no-op). Also assert: NO `run_manifest.json` was written (`Test-Path $env:TEMP\oggf_regen_aiz\run_manifest.json` → False), aux_state.jsonl also byte-identical. **Diff only `physics.csv` + `aux_state.jsonl` — `metadata.json` differs BY DESIGN** (the `lua_script_version` bump to 6.30); do not treat the metadata version line as a regression. Any other difference is a REGRESSION — stop and fix before proceeding.
+Expected: `FC: no differences encountered` (byte-identical; the committed movie's routes avoid stages, so the state machine must be a pure no-op). Also assert: NO `run_manifest.json` was written (`Test-Path $env:TEMP\oggf_regen_aiz\run_manifest.json` → False), aux_state.jsonl also byte-identical. **Diff only `physics.csv` + `aux_state.jsonl` — `metadata.json` differs BY DESIGN** (the `lua_script_version` bump to 6.30 plus the new always-written `segment_index` — and `run_id` when set); do not treat those metadata lines as a regression. Any other difference is a REGRESSION — stop and fix before proceeding.
 
 - [ ] **Step 3: Record the result** in the final task's summary commit message (no repo change here).
 
