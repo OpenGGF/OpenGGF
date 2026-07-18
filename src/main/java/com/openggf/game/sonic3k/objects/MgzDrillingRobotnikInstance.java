@@ -999,6 +999,21 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         S3kMgzEventWriteSupport.triggerBossCollapseHandoff(services());
     }
 
+    /**
+     * Whether the next native object pass will execute {@code loc_6C4BE} and
+     * publish {@code Disable_death_plane}. S3K executes the player slot before
+     * this later boss slot, so the level-boundary path must be able to observe
+     * the ROM write that is already determined by the boss's retained routine
+     * and next {@code ObjHitFloor_DoRoutine} probe.
+     */
+    public boolean willPublishDeathPlaneDisableThisObjectPass() {
+        if (!endBossMode || floorImpactTriggered || state.routine != ROUTINE_END_FLOOR_DROP) {
+            return false;
+        }
+        int nextY = (((state.y << 8) | (ySubpixel & 0xFF)) + yVel) >> 8;
+        return ObjectTerrainUtils.checkFloorDist(state.x, nextY, END_BOSS_Y_RADIUS).hasCollision();
+    }
+
     /** ROM: loc_6C014 — play collapse SFX, then enter the drill drop. */
     private void updateStartDrop() {
         state.routine = ROUTINE_DRILL_DROP;

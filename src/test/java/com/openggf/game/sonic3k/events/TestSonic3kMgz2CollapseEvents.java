@@ -255,7 +255,11 @@ class TestSonic3kMgz2CollapseEvents {
     }
 
     @Test
-    void collapseFinishKeepsVScrollOverrideForFinalRenderFrameOnly() {
+    void collapseFinishImmediatelyRestoresNormalVScrollAndRedrawsFinalClear() throws Exception {
+        SyntheticMgzCollapseLevel level = (SyntheticMgzCollapseLevel) GameServices.level().getCurrentLevel();
+        LevelTilemapManager tilemaps = installTilemapManager(level);
+        tilemaps.setForegroundTilemapDirty(false);
+
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
         GameServices.camera().setX((short) 0x3C80);
@@ -266,14 +270,11 @@ class TestSonic3kMgz2CollapseEvents {
             events.update(1, frame);
         }
 
-        short[] finishFrameOverride = events.buildCollapseForegroundVScrollOverride(0x3C80);
-        assertTrue(finishFrameOverride != null && finishFrameOverride[12] < 0,
-                "The finish frame must keep the collapse VScroll override so preserved terrain does not flash back to its original rows");
-
-        events.update(1, frame);
-
         assertNull(events.buildCollapseForegroundVScrollOverride(0x3C80),
-                "After the finish frame has rendered, MGZ2SE_MoveBG should own the scene without the collapse VScroll override");
+                "MGZ2SE_MoveBG must restore normal foreground VScroll immediately on the terminal clear frame");
+        assertTrue(tilemaps.isForegroundTilemapDirty(),
+                "The terminal 3x3 layout clear must rebuild Plane A before normal VScroll resumes");
+        assertCleared(level.getMap(), 121, 11, 3, 3);
     }
 
     @Test
@@ -323,8 +324,9 @@ class TestSonic3kMgz2CollapseEvents {
         assertEquals(20, override.length);
         assertEquals(0, override[0],
                 "the tilemap shader expects per-column VScroll deltas, so delayed columns need no extra offset");
-        assertTrue(override[12] < 0,
-                "falling collapse columns should use a negative delta so preserved tiles appear to move down");
+        assertEquals(-events.getCollapseScrollPositionCopy()[6], override[12],
+                "ROM writes Camera_Y_pos_copy minus displacement; the tilemap shader adds this delta to worldY, "
+                        + "so the negative value makes the preserved terrain appear to fall down");
         assertEquals(override[12], override[13],
                 "each 32px collapse block uses two 16px VScroll columns");
     }

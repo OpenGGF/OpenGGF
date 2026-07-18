@@ -305,7 +305,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private int collapseMutationCount;
     private int collapseFrameCounter;
     private int collapseStartupShakeTimer;
-    private int collapseRenderHoldFrames;
     private final int[] collapseScrollVelocity = new int[COLLAPSE_COLUMN_COUNT];
     private final int[] collapseScrollFixedPosition = new int[COLLAPSE_COLUMN_COUNT];
     private final int[] collapseScrollPosition = new int[COLLAPSE_COLUMN_COUNT];
@@ -399,7 +398,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         collapseMutationCount = 0;
         collapseFrameCounter = 0;
         collapseStartupShakeTimer = 0;
-        collapseRenderHoldFrames = 0;
         bossBgScrollVelocity = 0;
         bossBgScrollOffset = 0;
         for (int i = 0; i < COLLAPSE_COLUMN_COUNT; i++) {
@@ -1770,7 +1768,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
      * 20 visible 16px columns, repeating each 32px collapse block twice.
      */
     public short[] buildCollapseForegroundVScrollOverride(int cameraX) {
-        if ((!isCollapseActive() && collapseRenderHoldFrames <= 0) || !collapseInitialized) {
+        if (!isCollapseActive() || !collapseInitialized) {
             return null;
         }
 
@@ -2101,7 +2099,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                 COLLAPSE_REGION_WIDTH, COLLAPSE_REGION_HEIGHT);
         collapseMutationCount++;
         collapseFinished = true;
-        collapseRenderHoldFrames = 1;
         collapseRequested = false;
         screenShakeActive = false;
         bossBgScrollVelocity = 0;
@@ -2113,9 +2110,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private void updateAct2BossBgScroll() {
         if (screenEventRoutine != SCREEN_EVENT_MOVE_BG) {
             return;
-        }
-        if (collapseRenderHoldFrames > 0) {
-            collapseRenderHoldFrames--;
         }
         if (bossBgScrollVelocity < BOSS_BG_SCROLL_MAX) {
             bossBgScrollVelocity = Math.min(BOSS_BG_SCROLL_MAX,
@@ -2441,8 +2435,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     public void    setCollapseFrameCounter(int v)        { collapseFrameCounter = v; }
     public int     getCollapseStartupShakeTimer()        { return collapseStartupShakeTimer; }
     public void    setCollapseStartupShakeTimer(int v)   { collapseStartupShakeTimer = v; }
-    public int     getCollapseRenderHoldFrames()         { return collapseRenderHoldFrames; }
-    public void    setCollapseRenderHoldFrames(int v)    { collapseRenderHoldFrames = v; }
     public int[]   getCollapseScrollVelocityCopy()       { return java.util.Arrays.copyOf(collapseScrollVelocity, COLLAPSE_COLUMN_COUNT); }
     public void    setCollapseScrollVelocity(int[] src)  { System.arraycopy(src, 0, collapseScrollVelocity, 0, COLLAPSE_COLUMN_COUNT); }
     public int[]   getCollapseScrollFixedPositionCopy()  { return java.util.Arrays.copyOf(collapseScrollFixedPosition, COLLAPSE_COLUMN_COUNT); }

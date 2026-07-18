@@ -7,6 +7,7 @@ import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -185,6 +186,55 @@ class TestMgzEndBossHandoffHeadless {
                             && fixture.sprite().getCentreY() <= tails.getCentreY() + 0x1F,
                     "The later loc_16384 routine-$14 publication leaves Sonic's same-frame fall visible until the next carry body");
         }
+    }
+
+    @Test
+    void liveFloorImpactDisablesDeathPlaneBeforePlayerBoundaryAndKeepsImpactSound() throws Exception {
+        MgzEndBossInstance boss = new MgzEndBossInstance(new ObjectSpawn(
+                0x3D20, 0x0668, Sonic3kObjectIds.MGZ_END_BOSS, 0, 0, false, 0));
+        GameServices.level().getObjectManager().addDynamicObject(boss);
+        setPrivateInt(boss, "waitTimer", 0);
+        setPrivateInt(boss, "yVel", 0x400);
+        boss.getState().routine = staticInt("ROUTINE_END_FLOOR_DROP");
+        boss.getState().x = 0x3D20;
+        boss.getState().y = 0x0668;
+
+        for (int frame = 0; frame < 240
+                && !boss.willPublishDeathPlaneDisableThisObjectPass(); frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertTrue(boss.willPublishDeathPlaneDisableThisObjectPass(),
+                "The fixture must reach the retained floor-impact object pass");
+
+        // Cross the engine kill plane in the player slot immediately before
+        // the later boss slot executes loc_6C4BE in this same object pass.
+        fixture.sprite().setCentreY((short) 0x0781);
+        fixture.sprite().setYSpeed((short) 0x0100);
+        GameServices.audio().commandTimeline().clear();
+
+        fixture.stepIdleFrames(1);
+        assertFalse(fixture.sprite().getDead(),
+                "Disable_death_plane must be visible before the player boundary phase");
+        assertFalse(fixture.camera().getFrozen(),
+                "The MGZ handoff must never transiently enter the death-camera freeze");
+
+        assertTrue(mgzEvents().isBossTransitionDeathPlaneDisabled());
+        assertTrue(GameServices.audio().commandTimeline().entries().stream()
+                        .map(entry -> entry.command())
+                        .anyMatch(command -> command instanceof AudioCommand.PlaySfx sfx
+                                && sfx.sfxId() == Sonic3kSfx.BOSS_HIT_FLOOR.id),
+                "loc_6C4BE must retain sfx_BossHitFloor");
+        assertFalse(GameServices.audio().commandTimeline().entries().stream()
+                        .map(entry -> entry.command())
+                        .anyMatch(command -> command instanceof AudioCommand.PlaySfx sfx
+                                && sfx.sfxId() == Sonic3kSfx.DEATH.id),
+                "The rescue handoff must not queue the transient pit-death SFX");
+
+        mgzEvents().setBossTransitionDeathPlaneDisabled(false);
+        Sonic3kLevelEventManager manager = (Sonic3kLevelEventManager)
+                com.openggf.game.GameModuleRegistry.getCurrent().getLevelEventProvider();
+        assertFalse(manager.interceptPitDeath(fixture.sprite()),
+                "The one-pass anticipation must not suppress genuine later pit deaths");
     }
 
     @Test

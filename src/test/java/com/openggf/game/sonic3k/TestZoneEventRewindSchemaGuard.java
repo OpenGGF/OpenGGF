@@ -191,7 +191,6 @@ public class TestZoneEventRewindSchemaGuard {
             "collapseMutationCount",
             "collapseFrameCounter",
             "collapseStartupShakeTimer",
-            "collapseRenderHoldFrames",
             "bossBgScrollVelocity",
             "bossBgScrollOffset",
             "bossTransitionTimer",
