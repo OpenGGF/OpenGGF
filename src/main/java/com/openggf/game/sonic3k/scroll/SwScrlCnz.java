@@ -4,7 +4,9 @@ import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.compose.DeformationPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
+import com.openggf.level.scroll.compose.ScrollValueTable;
 
 import static com.openggf.level.scroll.M68KMath.VISIBLE_LINES;
 import static com.openggf.level.scroll.M68KMath.asrWord;
@@ -19,6 +21,10 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  */
 public class SwScrlCnz extends AbstractZoneScrollHandler {
 
+    /** CNZ1_BGDeformArray: four finite bands followed by the remainder band. */
+    private static final int[] CNZ1_BG_DEFORM = {0x80, 0x30, 0x60, 0xC0, 0x7FFF};
+    private static final DeformationPlan.ScrollValueTransform NEGATE_WORD = value -> negWord(value);
+
     /** Boss arena BG X offset from CNZ1_BossLevelScroll2. */
     private static final int BOSS_BG_X_OFFSET = 0x2F80;
 
@@ -26,6 +32,7 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
     private static final int BOSS_BG_Y_OFFSET = 0x100;
 
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
+    private final ScrollValueTable hScrollTable = ScrollValueTable.ofLength(5);
     private int bossBgCameraX = Integer.MIN_VALUE;
 
     @Override
@@ -45,8 +52,10 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
             return;
         }
 
-        composer.setVscrollFactorBG(cnzBgY(cameraY, shakeY));
-        applyDeformation(horizScrollBuf, fgScroll, cnzBgX(cameraX));
+        short bgY = cnzBgY(cameraY, shakeY);
+        composer.setVscrollFactorBG(bgY);
+        buildNormalHScrollTable(cameraX);
+        applyDeformation(horizScrollBuf, fgScroll, bgY);
         publishNormalDeformOutputs(cameraX);
     }
 
@@ -103,10 +112,6 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
         return (short) (((long) adjusted * 13 >> 7) + shakeY);
     }
 
-    private short cnzBgX(int cameraX) {
-        return negWord((short) (asrWord(cameraX, 1) - asrWord(cameraX, 4)));
-    }
-
     /**
      * Publishes the CNZ normal-deform outputs that later tile animation reads.
      *
@@ -144,8 +149,40 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
         return asrWord(cameraX, 1) - asrWord(cameraX, 4);
     }
 
-    private void applyDeformation(int[] horizScrollBuf, short fgScroll, short bgScroll) {
-        composer.fillPackedScrollWords(0, VISIBLE_LINES, fgScroll, bgScroll);
+    /**
+     * Builds the five CNZ1_Deform HScroll_table words in their ROM order:
+     * 1/32, 1/8, 1/4, 7/16, and 1/2 camera speed.
+     */
+    private void buildNormalHScrollTable(int cameraX) {
+        int d0 = ((short) cameraX) << 16;
+        d0 >>= 1;
+        int d1 = d0 >> 3;
+
+        hScrollTable.set(4, (short) (d0 >> 16));
+        d0 -= d1;
+        hScrollTable.set(3, (short) (d0 >> 16));
+        d0 -= d1;
+        d0 -= d1;
+        d0 -= d1;
+        hScrollTable.set(2, (short) (d0 >> 16));
+        d0 -= d1;
+        d0 -= d1;
+        hScrollTable.set(1, (short) (d0 >> 16));
+        d0 -= d1;
+        d1 >>= 1;
+        d0 -= d1;
+        hScrollTable.set(0, (short) (d0 >> 16));
+    }
+
+    private void applyDeformation(int[] horizScrollBuf, short fgScroll, short bgY) {
+        DeformationPlan.applyTableBands(
+                composer,
+                bgY,
+                fgScroll,
+                hScrollTable,
+                CNZ1_BG_DEFORM,
+                0,
+                NEGATE_WORD);
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
         minScrollOffset = composer.getMinScrollOffset();
