@@ -37,8 +37,16 @@ correctly, end to end:
    short dedicated bk2 recordings per stage (like the shipped
    `s2-lvl-select-special-stage.bk2`), not from re-recorded full playthroughs.
 4. **Sequencing: S3K first** (bonus stages, then blue spheres, then slots
-   depth), then S1 maze, then the S2 round-trip retrofit. The
-   segmentation/chaining foundation is built in the first S3K slice.
+   depth), then S1 maze, then the S2 round-trip retrofit. To keep plans
+   honestly sized, the S3K work decomposes into four plans:
+   (a) manifest schema + recorder mode-transition state machine +
+   complete-run mode-guard fix + parser/schema tests;
+   (b) engine-side additions #1–#4 + the gumball/pachinko per-segment
+   headless slice;
+   (c) the chained run driver + boundary assertions (gumball/pachinko chain
+   first — cheapest stage settles the continuous-engine model);
+   (d) visual run chaining. S3K blue spheres, slots depth, S1, and the S2
+   retrofit follow as their own plans on the proven foundation.
 
 ## Verified ROM facts (disasm)
 
@@ -50,16 +58,17 @@ correctly, end to end:
   `SpecialStage_Results = $48`, BlueSpheres standalone title/results =
   `$2C`/`$30` (out of scope).
 - **S3K bonus stages are ROM levels**: they live under `Levels/Gumball`,
-  `Levels/Pachinko`, `Levels/Slot` in skdisasm and run under the level-family
-  game mode with dedicated zone ids (engine models them as zones
-  `0x13`/`0x14`/`0x15`; the exact ROM byte values are pinned during
-  implementation with RomOffsetFinder).
+  `Levels/Pachinko`, `Levels/Slots` in skdisasm and run under the
+  level-family game mode with zone ids `$13` (Gumball), `$14` (Pachinko),
+  `$15` (Slots), readable from the `LevelMusic_Playlist` table
+  (`sonic3k.asm:7496-7498`); the engine models them as zones
+  `0x13`/`0x14`/`0x15`.
 - **`Special_bonus_entry_flag`** (`sonic3k.constants.asm:831`): `1` entering a
   Special Stage, `2` entering a Bonus Stage — the ROM-side transition
   discriminator.
 - **Return anchors:** player init skips re-saving `Saved_X_pos`/`Saved_Y_pos`/
   `Saved_art_tile`/`Saved_solid_bits` when `Special_bonus_entry_flag == 2` or
-  `Last_star_post_hit != 0` (`sonic3k.asm:21918-21929`, Tails
+  `Last_star_post_hit != 0` (`sonic3k.asm:21917-21929`, Tails
   `:26118-26129`, Knuckles `:30364-30375`) — these RAM cells are the recorded
   ground truth for return-position boundary assertions.
 
@@ -142,14 +151,15 @@ frozen — camera-column equivalence is verified, not assumed.
 
 Standalone single-segment traces (everything that exists today) remain valid
 without a manifest — no migration. Segments inside a run are also
-independently replayable standalone: each carries its own `bk2_frame_offset`
-plus the boot parameters its stack needs in segment metadata
-(`special_stage_index` resolved at entry time, `bonus_stage_type`, team), so a
-mid-run stage segment does not depend on replaying the preceding level
-segment. Per-segment tests stay green-able individually while the chain test
-validates transitions. This bounds the chained-divergence risk: if a level
-segment diverges before the giant ring, only the chain test loses signal, not
-the stage-interior test.
+independently replayable **by the per-segment tests**: each carries its own
+`bk2_frame_offset` plus the boot parameters its stack needs in segment
+metadata (`special_stage_index` resolved at entry time, `bonus_stage_type`,
+team), so a stage-interior test does not depend on replaying the preceding
+level segment. Per-segment tests stay green-able individually; transition and
+carry-over validation is exclusively the chain test's job (it runs one
+continuous engine — see *Chained run driver*). This bounds the
+chained-divergence risk: if a level segment diverges before the giant ring,
+only the chain test loses signal, not the stage-interior test.
 
 The boundary-window tolerance used by the chained driver (how many frames of
 slack the engine gets to raise a transition relative to the recorded
@@ -244,13 +254,37 @@ segments.
   - Slot-reel/reward internals are recorded as aux events (diagnostic-only at
     first); the level-schema player/camera/ring comparison is the MVP gate.
 
-### Chained run driver (new)
+### Chained run driver (new) — one continuous engine
 
-A headless `TraceRunReplay` walker reads the manifest and drives segments in
-order, each through its own stack:
+**Model commitment:** the chained driver runs **one continuous headless
+Engine through GameLoop's real mode transitions** — the same continuous-engine
+model the visual run branch (Component 3) uses. It does NOT hand segments to
+the standalone per-segment harnesses: those harnesses construct providers
+directly and bypass GameLoop entirely, so a driver built on them would never
+populate `BigRingReturnState`/`BonusStageState` and would have no real engine
+state for the boundary assertions to compare. Stage interiors in a chain are
+compared against the **live provider** via the new `captureComparisonState()`
+accessors (see *Engine-side additions*), with input fed and lag rows skipped
+through the existing GameLoop SS trace gate. Headless feasibility of in-engine
+mode transitions is established precedent
+(`TestGameLoopSpecialStageEntryPresentation`, `TestGameLoopSpecialStageSkipGate`,
+`TestPachinkoTitleCardIntegration`), though no trace-replay test drives one
+today — this driver is the first.
 
-1. Replays level segment N via the level stack with normal per-frame
-   comparison.
+Division of labor, stated explicitly:
+
+- **Standalone per-segment tests** (previous section) use the direct
+  harnesses / `withZoneAndAct` fresh boots. They are independently runnable
+  and green-able but **deliberately cannot validate boundary carry-over**.
+- **The chain test** validates transitions and boundary carry-over on the
+  continuous engine. The "independently replayable standalone" property of
+  segments applies to the per-segment tests, not to the chain.
+
+A headless `TraceRunReplay` walker reads the manifest and drives the
+continuous engine:
+
+1. Replays level segment N through the level replay path with normal
+   per-frame comparison.
 2. At the recorded boundary, asserts the engine **organically** raised the
    matching transition from replayed inputs alone: giant ring touched / star
    post + ring threshold → the matching entry request fires within the global
@@ -263,19 +297,26 @@ order, each through its own stack:
    `peekBonusStageRequest()`), mirroring the existing
    `isRespawnRequested()`/`isTitleCardRequested()` pattern, is an explicit
    in-scope production change** (see *Engine-side additions*).
-3. Fast-forwards the engine's transition presentation without per-frame
-   comparison (same spirit as the existing VBLANK_ONLY/ADVANCE_ONLY phases),
-   then boots the next segment's stack and continues per-frame comparison.
-4. On stage exit, asserts boundary state against sources that actually exist:
-   return position vs recorded `Saved_X_pos`/`Saved_Y_pos`, star-post index
-   restore (`BonusStageState.savedLastStarPostHit`), ring carry-over
-   (`BonusStageState.savedRingCount` / `BigRingReturnState.rings`), and
-   emerald count read from `GameStateManager` (emeralds are global game
-   state; neither return record holds them). Extra-life/reward carry-over is
-   **deferred**: `BonusStageState.savedExtraLifeFlags` is currently a
-   hardcoded stub (`GameLoop.java` TODO), so asserting it would compare
-   against a placeholder — wiring it is listed as a follow-up, not an MVP
-   boundary assertion.
+3. Lets GameLoop run its real transition (fade → title card / SS entry)
+   without per-frame comparison (same spirit as the existing
+   VBLANK_ONLY/ADVANCE_ONLY phases), then resumes per-frame comparison in the
+   stage segment against the live provider.
+4. On stage exit (again a real GameLoop transition), asserts boundary state
+   against sources that actually exist, **split by entry kind**:
+   - **Bonus return:** return position vs recorded
+     `Saved_X_pos`/`Saved_Y_pos`, star-post index restore
+     (`BonusStageState.savedLastStarPostHit`), ring carry-over
+     (`BonusStageState.savedRingCount`).
+   - **Special-stage return:** return position vs recorded saved position,
+     ring carry-over (`BigRingReturnState.rings` — the SS return record has
+     no star-post field), and emerald count read from
+     `GameStateManager.getEmeraldCount()` (emeralds are global game state;
+     neither return record holds them).
+   - Extra-life/reward carry-over is **deferred**:
+     `BonusStageState.savedExtraLifeFlags` is currently a hardcoded stub
+     (`GameLoop.java` TODO), so asserting it would compare against a
+     placeholder — wiring it is listed as a follow-up, not an MVP boundary
+     assertion.
 
 **Comparison-only invariant holds throughout** (per the
 `trace-replay-bug-fixing` skill): no trace field is ever hydrated into engine
@@ -317,6 +358,13 @@ no gameplay behavior change:
    which the headless fixture does not drive.
 5. **Visual launch-config generalization** — per-game awareness in
    `TraceSessionLauncher.prepareSpecialStageConfiguration` (Component 3).
+6. **S1/S3K SS headless standalone-loadability (verify, may be a no-op)** —
+   the standalone-harness model assumes `Sonic1SpecialStageProvider` /
+   `Sonic3kSpecialStageProvider` construct-and-step headlessly the way
+   `Sonic2SpecialStageProvider` does. S3K in particular resolves
+   `special_stage_index` at entry and loads ROM art/PLC data the S2 halfpipe
+   doesn't. Planning includes an explicit check; any required headless-init
+   hooks become additional engine-side items.
 
 ## Component 3 — Visual test mode
 
@@ -327,11 +375,14 @@ no gameplay behavior change:
   organically raises stage entry, the launcher switches the input feed to the
   stage segment; back to the level driver on return.
 - The SS tick/input gate (`applySpecialStageTraceInputIfActive`,
-  `shouldSkipCurrentSpecialStageTick`) is **already provider-generic** — it
-  resolves the provider via `GameServices.module().getSpecialStageProvider()`
-  and needs no refactor. What actually needs generalizing is the **launch /
-  configuration path**: `prepareSpecialStageConfiguration` currently assumes
-  SS traces are S2-only (it omits the level path's S3K fresh-load branch).
+  `shouldSkipCurrentSpecialStageTick`, both on `TraceSessionLauncher`) is
+  **already provider-generic** — the gate methods contain no provider lookup
+  at all, and the launch path resolves the provider generically via
+  `GameServices.module().getSpecialStageProvider()` in
+  `finishSpecialStageLaunch()`. The gate needs no refactor. What actually
+  needs generalizing is the **launch / configuration path**:
+  `prepareSpecialStageConfiguration` currently assumes SS traces are S2-only
+  (it omits the level path's S3K fresh-load branch).
   That launch-config path gains per-game awareness so S1/S3K SS segments can
   launch; the gate itself is reused as-is. Bonus segments need no new gate —
   they already run under the level pipeline the existing level trace driver
@@ -352,6 +403,8 @@ The S3K complete-run movie is not re-recorded; its routes avoid stages.
 Future complete-run movies may include detours once the mode guard lands.
 
 ## Testing the infrastructure
+
+All new tests are JUnit 5 / Jupiter only (repo mandate).
 
 - Parser unit tests per new CSV profile (round-trip hand-built rows).
 - Manifest schema validation test + `TraceCatalog` scan test over a
