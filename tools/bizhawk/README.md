@@ -35,9 +35,9 @@ marks the BK2 frame where each transition occurred. A manifest is emitted only w
 
 The S3K complete-run recorder handles stage detours as follows:
 - **Special Stages** (`Game_Mode=$34`): The level segment finalizes when `Game_Mode` changes.
-  The `run_manifest.json` records a single merged transition boundary with the blue-spheres
-  mode change frame. Per-frame CSV rows are only recorded for the level segment; blue-spheres
-  row writer and segment directories land with future phases.
+  The `run_manifest.json` records a single merged transition boundary with the `giant_ring`
+  mode change frame (the blue-spheres special stage). Per-frame CSV rows are only recorded for
+  the level segment; `giant_ring` row writer and segment directories land with future phases.
 - **Bonus Zones** (`Game_Mode=0x13`–`0x15`): Enter a new `s3k_bonus_stage` segment on the same
   schema as level segments. The level segment also finalizes, and the manifest records both
   mode-change boundaries explicitly.
@@ -46,7 +46,7 @@ The S3K complete-run recorder handles stage detours as follows:
   mode changes back into a recordable category, avoiding pollution of level segments with
   out-of-scope stage data.
 - **Repeat Segments**: If a route re-enters a zone, segment directories are named with a
-  repeat token (e.g. `aiz_token_2`, `aiz_token_3`) to avoid collisions while preserving
+  repeat index (e.g. `aiz_2`, `aiz_3`) to avoid collisions while preserving
   contiguous frame ranges within each segment.
 
 The `OGGF_TRACE_RUN_ID` environment variable forces manifest emission and sets the `run_id`
