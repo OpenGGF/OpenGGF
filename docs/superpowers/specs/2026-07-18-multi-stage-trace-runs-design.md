@@ -38,25 +38,33 @@ correctly, end to end:
    `s2-lvl-select-special-stage.bk2`), not from re-recorded full playthroughs.
 4. **Sequencing: S3K first** (bonus stages, then blue spheres, then slots
    depth), then S1 maze, then the S2 round-trip retrofit. To keep plans
-   honestly sized, the S3K work decomposes into four plans:
+   honestly sized, the S3K work decomposes into four plans, each engine-side
+   addition living in the plan that consumes it (see the numbered additions
+   list in Component 2):
    (a) manifest schema + recorder mode-transition state machine +
    complete-run mode-guard fix + parser/schema tests;
-   (b) engine-side additions #1–#4 + the gumball/pachinko per-segment
-   headless slice;
-   (c) the chained run driver + boundary assertions (gumball/pachinko chain
-   first — cheapest stage settles the continuous-engine model);
-   (d) visual run chaining. S3K blue spheres, slots depth, S1, and the S2
-   retrofit follow as their own plans on the proven foundation.
+   (b) the gumball/pachinko per-segment headless slice + its bonus-aware
+   bootstrap branch (addition #7);
+   (c) the chained run driver + boundary assertions + the coordinator peeks
+   (addition #1) — gumball/pachinko chain first, the cheapest stage settling
+   the continuous-engine model;
+   (d) visual run chaining + launch-config generalization (addition #5).
+   S3K blue spheres (additions #3, #6), slots depth (addition #4), S1 maze
+   (additions #2, #6), and the S2 retrofit follow as their own plans on the
+   proven foundation.
 
 ## Verified ROM facts (disasm)
 
 - **S1:** `id_Special = $10` (`GM_Special`), `sonic.asm:446`. Level = `$0C`.
 - **S2:** `GameModeID_SpecialStage = $10` (already relied on by the shipped
   `s2_ss_trace_recorder.lua`).
-- **S3K:** `GameModes` table (`sonic3k.asm:430-451`): Level = `$8`/`$C`
-  (family mask `$0F == $0C` with load-handoff bits 6/7), `SpecialStage = $34`,
-  `SpecialStage_Results = $48`, BlueSpheres standalone title/results =
-  `$2C`/`$30` (out of scope).
+- **S3K:** `GameModes` table (`sonic3k.asm:430-451`): Level entries at `$8`
+  and `$C`, but `$8` is the **attract-mode demo** (`move.b #8,(Game_mode)`,
+  `sonic3k.asm:5715`), which real player recordings never hit — the recorder
+  guard `(Game_Mode & 0x0F) == 0x0C` (family mask with load-handoff bits 6/7)
+  **deliberately excludes `$8`**; do not "fix" the mask to include it.
+  `SpecialStage = $34`, `SpecialStage_Results = $48`, BlueSpheres standalone
+  title/results = `$2C`/`$30` (out of scope).
 - **S3K bonus stages are ROM levels**: they live under `Levels/Gumball`,
   `Levels/Pachinko`, `Levels/Slots` in skdisasm and run under the
   level-family game mode with zone ids `$13` (Gumball), `$14` (Pachinko),
@@ -200,8 +208,11 @@ Per game:
 - New stage RAM maps (S1 maze, S3K blue spheres) are derived from the disasm
   during implementation with a RAM-map verification step like the S2 SS work
   (address list validated against a live capture before the schema is frozen).
-  The `lag` column via `emu.islagged()` is captured for all stage segments
-  (cheap, even where lag is rare).
+  The same pre-freeze verification covers the **bonus interiors'**
+  player/ring/camera columns (all three bonus stages, symmetric with the slot
+  camera-column check) — "bonus reuses the level schema" is verified against
+  a live capture, not assumed. The `lag` column via `emu.islagged()` is
+  captured for all stage segments (cheap, even where lag is rare).
 
 Aux events use the S2 SS convention (`"type"` key). Per-segment
 `metadata.json` carries the standard header plus `trace_profile`,
@@ -364,7 +375,14 @@ no gameplay behavior change:
    `Sonic2SpecialStageProvider` does. S3K in particular resolves
    `special_stage_index` at entry and loads ROM art/PLC data the S2 halfpipe
    doesn't. Planning includes an explicit check; any required headless-init
-   hooks become additional engine-side items.
+   hooks become additional engine-side items. Lives in the blue-spheres and
+   S1-maze plans respectively.
+7. **Bonus-aware bootstrap branch in `TraceReplaySessionBootstrap`**
+   (`src/main/java/com/openggf/trace/replay/`) — the gumball/pachinko
+   headless slice's boot path (team/ring preconditions from metadata, bonus
+   zone via `withZoneAndAct`). Disclosed in the per-segment harness section;
+   enumerated here because this list is the authoritative inventory of
+   required production changes.
 
 ## Component 3 — Visual test mode
 
@@ -394,7 +412,9 @@ New short dedicated bk2s (recorded once the recorder work lands):
 
 - S3K: level→gumball→level, level→pachinko→level, level→slots→level (star
   post with ring counts chosen to select each type via the
-  `((rings-20)/15)%3` formula), level→blue-spheres→level (giant ring).
+  `((rings-20)/15)%3` formula — ROM `loc_2D47E`, `sonic3k.asm:61886-61912`,
+  already cited by `Sonic3kBonusStageCoordinator`),
+  level→blue-spheres→level (giant ring).
 - S1: level→maze→level (GHZ big ring).
 - S2: level→halfpipe→level (star post) — the round-trip complement to the
   shipped interior-only trace.
