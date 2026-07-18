@@ -123,16 +123,7 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
             ySubpixel &= 0xFF;
             yVelocity += 0x38;
             var floor = ObjectTerrainUtils.checkFloorDist(centreX, centreY, 0x10);
-            if (floor.hasCollision()) {
-                centreY += floor.distance();
-                services().playSfx(Sonic3kSfx.FLOOR_THUMP.id);
-                if (yVelocity >= 0x80) {
-                    yVelocity = -(yVelocity >> 1);
-                } else {
-                    yVelocity = 0;
-                    landed = true;
-                }
-            }
+            resolveFloorContact(floor.distance());
         }
         boolean animationSignalActive = magnetAnimationSignalActive();
         if (landed && animationSignalActive) {
@@ -142,6 +133,19 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
             resetAnimation();
         }
         updateDynamicSpawn(getCentreX(), getCentreY());
+    }
+
+    /** ROM descending-only floor response after {@code MoveSprite}'s gravity step. */
+    void resolveFloorContact(int floorDistance) {
+        if (yVelocity < 0 || floorDistance >= 0) return;
+        centreY += floorDistance;
+        services().playSfx(Sonic3kSfx.FLOOR_THUMP.id);
+        if (yVelocity >= 0x80) {
+            yVelocity = -(yVelocity >> 1);
+        } else {
+            yVelocity = 0;
+            landed = true;
+        }
     }
 
     private boolean magnetAnimationSignalActive() {

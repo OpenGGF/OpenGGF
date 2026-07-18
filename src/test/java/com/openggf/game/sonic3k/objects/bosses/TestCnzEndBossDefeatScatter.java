@@ -1,9 +1,13 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.camera.Camera;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -111,6 +115,85 @@ class TestCnzEndBossDefeatScatter {
         assertEquals(-0x200 + 0x38, right.yVelocityForTest());
     }
 
+    @Test
+    void risingMagnetIgnoresFloorOverlapAndThumpsOncePerDescendingImpact() throws Exception {
+        CnzEndBossInstance boss = boss();
+        int[] thumps = {0};
+        CnzEndBossMagnetChild magnet = new CnzEndBossMagnetChild(boss);
+        magnet.setServices(new StubObjectServices() {
+            @Override public ObjectPlayerQuery playerQuery() {
+                return new ObjectPlayerQuery(() -> null, List::of);
+            }
+
+            @Override public void playSfx(int soundId) {
+                thumps[0]++;
+            }
+        });
+        magnet.beginDrop();
+
+        setInt(magnet, "yVelocity", 0x100);
+        int firstImpactY = magnet.getCentreY();
+        magnet.resolveFloorContact(0);
+        assertEquals(0, thumps[0], "zero floor distance is not a penetrating impact");
+        magnet.resolveFloorContact(-2);
+        assertEquals(1, thumps[0]);
+        assertEquals(firstImpactY - 2, magnet.getCentreY());
+        assertEquals(-0x80, magnet.yVelocityForTest());
+
+        int risingY = magnet.getCentreY();
+        magnet.resolveFloorContact(-3);
+        assertEquals(1, thumps[0], "the rising half of a bounce must not re-trigger FloorThump");
+        assertEquals(risingY, magnet.getCentreY(), "rising overlap must not floor-snap the magnet");
+        assertEquals(-0x80, magnet.yVelocityForTest());
+
+        setInt(magnet, "yVelocity", 0x70);
+        magnet.resolveFloorContact(-1);
+        assertEquals(2, thumps[0], "the next descending impact emits exactly one new thump");
+        assertEquals(0, magnet.yVelocityForTest());
+        assertTrue(magnet.isLanded());
+    }
+
+    @Test
+    void armsActivateOnlyDuringBitThreeIntervalAndResetBeforeNextAlign() throws Exception {
+        CnzEndBossInstance boss = boss();
+        CnzEndBossArmChild arm = new CnzEndBossArmChild(boss, 0);
+        arm.setServices(new StubObjectServices());
+
+        setRoutine(boss, CnzEndBossInstance.Routine.ALIGN);
+        arm.update(0, null);
+        assertEquals(0, arm.angleForTest(), "ALIGN has not set the parent bit-3 equivalent yet");
+        assertEquals(1, arm.frameForTest());
+
+        setRoutine(boss, CnzEndBossInstance.Routine.CHARGE);
+        arm.update(1, null);
+        assertEquals(1, arm.angleForTest(), "CHARGE begins the native bit-3 interval");
+        assertEquals(3, arm.frameForTest());
+
+        setInt(arm, "angularStep", 4);
+        setInt(arm, "speedTimer", 0);
+        setRoutine(boss, CnzEndBossInstance.Routine.WIND_DOWN);
+        arm.update(2, null);
+        assertEquals(4, arm.angleForTest(), "WIND_DOWN remains active while decelerating");
+        assertEquals(3, arm.angularStepForTest());
+
+        setRoutine(boss, CnzEndBossInstance.Routine.DESCEND);
+        arm.update(3, null);
+        int resetAngle = arm.angleForTest();
+        assertEquals(1, arm.angularStepForTest());
+        assertEquals(1, arm.frameForTest());
+
+        setRoutine(boss, CnzEndBossInstance.Routine.ASCEND);
+        arm.update(4, null);
+        setRoutine(boss, CnzEndBossInstance.Routine.ALIGN);
+        arm.update(5, null);
+        assertEquals(resetAngle, arm.angleForTest(),
+                "DESCEND, ASCEND, and the next ALIGN wait with the arm reset");
+
+        setRoutine(boss, CnzEndBossInstance.Routine.CHARGE);
+        arm.update(6, null);
+        assertEquals((resetAngle + 1) & 0xFF, arm.angleForTest());
+    }
+
     private static CnzEndBossInstance boss() {
         return new CnzEndBossInstance(new ObjectSpawn(
                 0x4740, 0x0240, 0xA7, 0, 0, false, 0));
@@ -127,5 +210,20 @@ class TestCnzEndBossDefeatScatter {
         return new StubObjectServices() {
             @Override public Camera camera() { return camera; }
         };
+    }
+
+    private static void setRoutine(CnzEndBossInstance boss, CnzEndBossInstance.Routine routine)
+            throws Exception {
+        field(boss, "routine").set(boss, routine);
+    }
+
+    private static void setInt(Object target, String name, int value) throws Exception {
+        field(target, name).setInt(target, value);
+    }
+
+    private static Field field(Object target, String name) throws NoSuchFieldException {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field;
     }
 }

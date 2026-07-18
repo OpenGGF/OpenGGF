@@ -89,19 +89,22 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
             return;
         }
         CnzEndBossInstance.Routine routine = boss.nativeRoutine();
-        if (routine.ordinal() >= CnzEndBossInstance.Routine.ALIGN.ordinal()) {
+        boolean active = isParentBitThreeInterval(routine);
+        if (active) {
             if (--speedTimer < 0) {
                 speedTimer = 0x40;
-                if (routine == CnzEndBossInstance.Routine.ALIGN
-                        || (routine == CnzEndBossInstance.Routine.CHARGE && !boss.magneticFieldActive())) {
+                if (routine == CnzEndBossInstance.Routine.CHARGE && !boss.magneticFieldActive()) {
                     angularStep = Math.min(4, angularStep + 1);
                 } else if (routine == CnzEndBossInstance.Routine.WIND_DOWN) {
                     angularStep = Math.max(1, angularStep - 1);
                 }
             }
             angle = (angle + angularStep) & 0xFF;
+        } else {
+            angularStep = 1;
+            speedTimer = 0x40;
         }
-        updateArmAnimation(routine);
+        updateArmAnimation(active);
         int offsetX = angleXOffset(angle);
         if (boss.facingRight()) offsetX = -offsetX;
         centreX = boss.getCentreX() + offsetX;
@@ -143,9 +146,12 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
         updateDynamicSpawn(centreX, centreY);
     }
 
-    private void updateArmAnimation(CnzEndBossInstance.Routine routine) {
-        boolean active = routine.ordinal() >= CnzEndBossInstance.Routine.ALIGN.ordinal()
-                && routine.ordinal() < CnzEndBossInstance.Routine.DEFEATED.ordinal();
+    private static boolean isParentBitThreeInterval(CnzEndBossInstance.Routine routine) {
+        return routine == CnzEndBossInstance.Routine.CHARGE
+                || routine == CnzEndBossInstance.Routine.WIND_DOWN;
+    }
+
+    private void updateArmAnimation(boolean active) {
         if (!active) {
             frame = 1;
             animIndex = 0;
@@ -180,13 +186,15 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
     }
 
     int frameForTest() { return frame; }
+    int angleForTest() { return angle; }
+    int angularStepForTest() { return angularStep; }
     int xVelocityForTest() { return xVelocity; }
     int yVelocityForTest() { return yVelocity; }
     boolean visibleForTest() { return !scattered || S3kBossFlickerMove.isVisible(flickerCounter); }
 
     @Override public int getCollisionFlags() { return collisionEnabled ? 0x9E : 0; }
     @Override public int getCollisionProperty() { return 0; }
-    @Override public boolean isPersistent() { return true; }
+    @Override public boolean isPersistent() { return scattered; }
     @Override public int getPriorityBucket() { return (angle + 0x40 & 0x80) == 0 ? 4 : 5; }
 
     @Override
