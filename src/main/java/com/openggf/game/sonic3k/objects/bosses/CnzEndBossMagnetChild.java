@@ -33,6 +33,7 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
     private boolean landed;
     private int animTimer;
     private int animIndex;
+    private boolean collisionEnabled = true;
     // ROM byte_6EE1D, consumed by Animate_RawMultiDelay. ObjDat supplies
     // pair zero (frame 4, delay 0), so the first animation tick advances to
     // pair one exactly as the native helper does.
@@ -85,6 +86,11 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
         resetAnimation();
     }
 
+    /** ROM {@code loc_6E69C -> loc_6E920}: consume parent bit 3 at descent bottom. */
+    void reattachAtDescentBottom() {
+        resetForNextCycle();
+    }
+
     boolean isLanded() { return landed; }
 
     @Override public int getX() { return centreX - 0x10; }
@@ -94,8 +100,13 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
-        if (boss.isDestroyed() || boss.defeatStarted()) {
+        if (boss.isDestroyed()) {
             ObjectLifetimeOps.expireDynamic(this);
+            return;
+        }
+        if (boss.defeatStarted()) {
+            collisionEnabled = false;
+            if (boss.defeatScatterStarted()) beginDefeatScatter();
             return;
         }
         if (!dropping) {
@@ -155,8 +166,21 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
     int xVelocityForTest() { return xVelocity; }
     int yVelocityForTest() { return yVelocity; }
     int frameForTest() { return frame; }
+    boolean isReleasedForTest() { return dropping; }
 
-    @Override public int getCollisionFlags() { return boss.defeatStarted() ? 0 : 0x8B; }
+    /** ROM parent-bit-4 signal: replace the magnet slot with two ordered spark children. */
+    void beginDefeatScatter() {
+        if (isDestroyed()) return;
+        collisionEnabled = false;
+        int sparkY = centreY;
+        spawnChild(() -> new DefeatSpark(centreX - 8, sparkY, 0));
+        spawnChild(() -> new DefeatSpark(centreX + 8, sparkY, 1));
+        ObjectLifetimeOps.expireDynamic(this);
+    }
+
+    @Override public int getCollisionFlags() {
+        return collisionEnabled && !boss.defeatStarted() ? 0x8B : 0;
+    }
     @Override public int getCollisionProperty() { return 0; }
     @Override public int getPriorityBucket() { return 5; }
 
@@ -166,5 +190,73 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
         if (renderer != null && renderer.isReady()) {
             renderer.drawFrameIndex(frame, centreX, centreY, false, false);
         }
+    }
+
+    /** ROM {@code loc_6E936}, frame-$A debris spawned by the defeated magnet. */
+    static final class DefeatSpark extends AbstractObjectInstance implements RewindRecreatable {
+        private static final int FRAME = 0x0A;
+        private int subtype;
+        private int xFixed;
+        private int yFixed;
+        private int xVelocity;
+        private int yVelocity;
+        private int flickerCounter;
+
+        DefeatSpark(int centreX, int centreY, int subtype) {
+            super(new ObjectSpawn(centreX, centreY, 0, subtype & 1, 0, false, 0),
+                    "CNZEndBossMagnetSpark");
+            this.subtype = subtype & 1;
+            xFixed = centreX << 8;
+            yFixed = centreY << 8;
+            xVelocity = this.subtype == 0 ? -0x200 : 0x200;
+            yVelocity = -0x200;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            return new DefeatSpark(ctx.spawn().x(), ctx.spawn().y(), ctx.spawn().subtype());
+        }
+
+        @Override public int getX() { return getCentreX() - 8; }
+        @Override public int getY() { return getCentreY() - 8; }
+        int getCentreX() { return xFixed >> 8; }
+        int getCentreY() { return yFixed >> 8; }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            xFixed = S3kBossFlickerMove.integrate(xFixed, xVelocity);
+            yFixed = S3kBossFlickerMove.integrate(yFixed, yVelocity);
+            yVelocity += 0x38;
+            flickerCounter++;
+            var objectServices = tryServices();
+            if (objectServices != null && objectServices.camera() != null) {
+                int cameraX = Short.toUnsignedInt(objectServices.camera().getX());
+                int cameraY = Short.toUnsignedInt(objectServices.camera().getY());
+                if (S3kBossFlickerMove.isOutsideNativeBounds(
+                        getCentreX(), getCentreY(), cameraX, cameraY)) {
+                    ObjectLifetimeOps.expireDynamic(this);
+                    return;
+                }
+            }
+            updateDynamicSpawn(getCentreX(), getCentreY());
+        }
+
+        @Override public boolean isPersistent() { return true; }
+        @Override public int getPriorityBucket() { return 5; }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            if (!S3kBossFlickerMove.isVisible(flickerCounter)) return;
+            PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_END_BOSS);
+            if (renderer != null && renderer.isReady()) {
+                renderer.drawFrameIndex(FRAME, getCentreX(), getCentreY(),
+                        horizontalFlipForTest(), false);
+            }
+        }
+
+        int frameForTest() { return FRAME; }
+        int xVelocityForTest() { return xVelocity; }
+        int yVelocityForTest() { return yVelocity; }
+        boolean horizontalFlipForTest() { return subtype != 0; }
     }
 }

@@ -27,6 +27,20 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
     private int frame = 1;
     private int animTimer;
     private int animIndex;
+    private int armSubtype;
+    private boolean collisionEnabled = true;
+    private boolean scattered;
+    private int xFixed;
+    private int yFixed;
+    private int xVelocity;
+    private int yVelocity;
+    private int flickerCounter;
+    private static final int[][] SCATTER_VELOCITIES = {
+            {-0x100, -0x100},
+            {0x100, -0x100},
+            {-0x200, -0x200},
+            {0x200, -0x200}
+    };
     // ROM byte_6EE0E, including the long trailing frame-1 hold.
     private static final int[] ANIMATION_FRAMES = {1, 3, 1, 3, 1, 3, 1};
     private static final int[] ANIMATION_DELAYS = {0, 0, 0, 0, 4, 0, 9};
@@ -38,15 +52,18 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
     };
 
     CnzEndBossArmChild(CnzEndBossInstance boss, int phase) {
-        super(new ObjectSpawn(boss.getCentreX(), boss.getCentreY() + 8, 0, phase, 0, false, 0),
+        super(new ObjectSpawn(boss.getCentreX(), boss.getCentreY() + 8, 0,
+                        phase >>> 5 & 3, 0, false, 0),
                 "CNZEndBossArm");
         this.boss = boss;
         this.angle = phase & 0xFF;
+        this.armSubtype = phase >>> 5 & 3;
     }
 
     @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         CnzEndBossInstance restoredBoss = CnzEndBossRewindLinks.boss(ctx);
-        return restoredBoss == null ? null : new CnzEndBossArmChild(restoredBoss, ctx.spawn().subtype());
+        return restoredBoss == null ? null
+                : new CnzEndBossArmChild(restoredBoss, (ctx.spawn().subtype() & 3) << 5);
     }
     @Override public int getX() { return centreX - 8; }
     @Override public int getY() { return centreY - 0x10; }
@@ -55,8 +72,20 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
-        if (boss.isDestroyed() || boss.defeatStarted()) {
+        if (scattered) {
+            updateScatter();
+            return;
+        }
+        if (boss.isDestroyed()) {
             ObjectLifetimeOps.expireDynamic(this);
+            return;
+        }
+        if (boss.defeatStarted()) {
+            collisionEnabled = false;
+            if (boss.defeatScatterStarted()) {
+                beginDefeatScatter();
+                updateScatter();
+            }
             return;
         }
         CnzEndBossInstance.Routine routine = boss.nativeRoutine();
@@ -66,7 +95,7 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
                 if (routine == CnzEndBossInstance.Routine.ALIGN
                         || (routine == CnzEndBossInstance.Routine.CHARGE && !boss.magneticFieldActive())) {
                     angularStep = Math.min(4, angularStep + 1);
-                } else if (isParentWindDown(routine)) {
+                } else if (routine == CnzEndBossInstance.Routine.WIND_DOWN) {
                     angularStep = Math.max(1, angularStep - 1);
                 }
             }
@@ -82,12 +111,36 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
         updateDynamicSpawn(centreX, centreY);
     }
 
-    private static boolean isParentWindDown(CnzEndBossInstance.Routine routine) {
-        // D1 inserts WIND_DOWN between CHARGE and DESCEND. Express the native
-        // bit-7 interval by state ordering so this child remains compatible
-        // before and after that parent state is introduced.
-        return routine.ordinal() > CnzEndBossInstance.Routine.CHARGE.ordinal()
-                && routine.ordinal() < CnzEndBossInstance.Routine.DESCEND.ordinal();
+    /** ROM parent-bit-4 signal: convert this same arm slot into flickering debris. */
+    void beginDefeatScatter() {
+        if (scattered) return;
+        scattered = true;
+        collisionEnabled = false;
+        frame = 1;
+        xFixed = centreX << 8;
+        yFixed = centreY << 8;
+        xVelocity = SCATTER_VELOCITIES[armSubtype][0];
+        yVelocity = SCATTER_VELOCITIES[armSubtype][1];
+        flickerCounter = 0;
+    }
+
+    private void updateScatter() {
+        xFixed = S3kBossFlickerMove.integrate(xFixed, xVelocity);
+        yFixed = S3kBossFlickerMove.integrate(yFixed, yVelocity);
+        yVelocity += 0x38;
+        centreX = xFixed >> 8;
+        centreY = yFixed >> 8;
+        flickerCounter++;
+        var objectServices = tryServices();
+        if (objectServices != null && objectServices.camera() != null) {
+            int cameraX = Short.toUnsignedInt(objectServices.camera().getX());
+            int cameraY = Short.toUnsignedInt(objectServices.camera().getY());
+            if (S3kBossFlickerMove.isOutsideNativeBounds(centreX, centreY, cameraX, cameraY)) {
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
+        }
+        updateDynamicSpawn(centreX, centreY);
     }
 
     private void updateArmAnimation(CnzEndBossInstance.Routine routine) {
@@ -127,13 +180,18 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
     }
 
     int frameForTest() { return frame; }
+    int xVelocityForTest() { return xVelocity; }
+    int yVelocityForTest() { return yVelocity; }
+    boolean visibleForTest() { return !scattered || S3kBossFlickerMove.isVisible(flickerCounter); }
 
-    @Override public int getCollisionFlags() { return 0x9E; }
+    @Override public int getCollisionFlags() { return collisionEnabled ? 0x9E : 0; }
     @Override public int getCollisionProperty() { return 0; }
+    @Override public boolean isPersistent() { return true; }
     @Override public int getPriorityBucket() { return (angle + 0x40 & 0x80) == 0 ? 4 : 5; }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (!visibleForTest()) return;
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_END_BOSS);
         if (renderer != null && renderer.isReady()) renderer.drawFrameIndex(frame, centreX, centreY, false, false);
     }
