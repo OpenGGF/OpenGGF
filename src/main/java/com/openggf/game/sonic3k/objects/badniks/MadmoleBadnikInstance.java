@@ -295,6 +295,16 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             awaitingParentObserve = false;
             state = State.COOLDOWN;
             timer = COOLDOWN_FRAMES;
+            // Snap the cap back to homeY only now, once the body child is no longer
+            // collision-active (COOLDOWN is outside isBodyChildActive()), matching
+            // ROM: the body child sinks past the cap surface to ~0x0750 and is
+            // DELETED there (loc_8D6D6) -- it never returns to homeY while its 0x0B
+            // enemy hitbox is live. Doing this reset in the sink-complete branch
+            // below (while state was still SINKING) raised the live hitbox ~16px up
+            // into a player standing on the solid cap, spuriously hurting them
+            // (MHZ1 trace f2830: ROM leaves the player standing, engine hurt him).
+            currentY = homeY;
+            ySubpixel = 0;
             return;
         }
         moveWithVelocity();
@@ -303,8 +313,6 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             return;
         }
 
-        currentY = homeY;
-        ySubpixel = 0;
         yVelocity = 0;
         mappingFrame = CAP_MAPPING_FRAME;
         awaitingParentObserve = true;

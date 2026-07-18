@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **fix: MHZ Madmole no longer spuriously hurts a player standing on its cap.**
+  When the mole body finished sinking, the engine snapped it back up to the cap
+  surface (`currentY = homeY`) while its enemy hitbox was still active, punching the
+  `0x0B` hitbox ~16px up into a player standing on the solid cap. ROM sinks the body
+  child past the surface (~0x0750) and deletes it there — it never returns to the
+  surface while damaging. The snap-back is now deferred to the cooldown transition,
+  after the body stops being collision-active. Advances the MHZ complete-run trace
+  frontier from frame 2830 to frame 2986 (5204 -> 4641 errors).
 - **fix: MHZ swing-bar auto-release no longer holds a stale animation frame.** The
   ROM auto-release writes the player animation with a WORD store that also clobbers
   the adjacent `prev_anim` byte to 0 (`loc_3EE7A`/`loc_3EEC2`, sonic3k.asm:83390);

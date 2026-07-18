@@ -46161,3 +46161,28 @@ Branch `next` (on top of `706ecf6fd`). Same command as the f218 entry.
   Swing-bar unit + live-rewind tests green (50). LATENT: the vertical bar
   (`MhzSwingBarVerticalObjectInstance.releaseWithJump`) and swing vine use the same
   ROM word-write and should get the same treatment when their frontiers surface.
+
+## 2026-07-18 -- MHZ1 complete-run f2830 `g_speed`: Madmole sink-complete snap-back hurts standing player
+
+Branch `next` (on top of `51899b966`). Same command as prior entries.
+
+- Root: `MadmoleBadnikInstance.updateSinking()` ran `currentY = homeY` on the
+  sink-complete frame while `state == SINKING`, so `isBodyChildActive()` was still
+  true and `getCollisionFlags()` still returned the body's `0x0B` enemy hitbox --
+  snapping the live hitbox ~16px up from its natural sunk position (~0x0750) to the
+  cap surface (homeY 0x0740), into the foot band of a player standing on the solid
+  cap. ROM `Obj_Madmole` is solid-only (collision_flags 0, `sonic3k.asm:193497`); the
+  damaging body is a separate child whose sink routine (`loc_8D6CA` :193207) descends
+  monotonically to ~0x0750 and DELETES there (`loc_8D6D6` :193212) -- it never returns
+  to homeY while its `0x0B` hitbox is live (body collision_flags at :193500). Engine
+  matched ROM x/y/g_speed exactly through f2829, then only the engine hurt the player
+  at f2830 (rings 44->0, routine->4, knockback).
+- Fix: keep the body at its natural sunk Y on the touch-active sink-complete frame
+  (leave `yVelocity=0; mappingFrame=CAP; awaitingParentObserve=true`), and defer the
+  `currentY = homeY; ySubpixel = 0;` reset to the `awaitingParentObserve` -> COOLDOWN
+  branch, where `isBodyChildActive()` is already false (collision 0). MHZ-only object,
+  no shared code, no carve-out.
+- Result: **f2830 -> f2986 (+156 frames)**; totals `5204 -> 4641` errors (-563), 0
+  warnings. New frontier: frame 2986 `tails_y` (expected `0x0779`, actual `0x076F`) --
+  a CPU-Tails position divergence (the "Madmole arm" root flagged in the 2026-07-02
+  MHZ fleet notes). Madmole unit tests + S3K must-keep-green set green (83).
