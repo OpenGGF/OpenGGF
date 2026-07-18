@@ -1,6 +1,7 @@
 package com.openggf.tests.trace;
 import com.openggf.trace.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -1452,6 +1453,20 @@ public class TestTraceDataParsing {
 
         assertEquals(List.of("air_countdown_state_per_frame"),
                 data.missingAdvertisedAuxSchemas());
+    }
+
+    @Test
+    void parsesRunSegmentMetadataFields() throws IOException {
+        String json = """
+            {"game": "s3k", "zone": "gumball", "act": 0, "bk2_frame_offset": 1900,
+             "trace_frame_count": 800, "trace_profile": "s3k_bonus_stage",
+             "run_id": "s3k-aiz-gumball-roundtrip", "segment_index": 1,
+             "bonus_stage_type": "gumball"}
+            """;
+        TraceMetadata meta = new ObjectMapper().readValue(json, TraceMetadata.class);
+        assertEquals("s3k-aiz-gumball-roundtrip", meta.runId());
+        assertEquals(1, meta.segmentIndex());
+        assertEquals("gumball", meta.bonusStageType());
     }
 
     private static void writeMinimalTraceFiles(Path dir) throws IOException {
