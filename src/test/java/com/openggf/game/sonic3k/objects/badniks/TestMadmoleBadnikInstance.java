@@ -579,6 +579,8 @@ class TestMadmoleBadnikInstance {
                     .thenReturn(TerrainCheckResult.noCollision());
             terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
                     .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
 
             child.update(0x4A, player); // loc_8D7A8 carry: move.w to x_pos/y_pos only
         }
@@ -614,7 +616,35 @@ class TestMadmoleBadnikInstance {
     }
 
     @Test
-    void arcingSideDrillRawCallbackReboundsWhileBelowRomReleaseVelocity() {
+    void arcingSideDrillFloorImpactBeforeCaptureUsesPlainRomRebound() {
+        GameRng rng = new GameRng(GameRng.Flavour.S3K, 4);
+        CapturingServices services = new CapturingServices(mock(ObjectManager.class));
+        services.withRng(rng);
+        MadmoleBadnikInstance.SideDrillChild child = spawnedSideDrillChild(services);
+        TestablePlayableSprite player = player(0x100, 0x100);
+        child.update(0x48, player);
+        services.soundIds.clear();
+        setSideChildIntField(child, "yVelocity", 0x100);
+        int yBeforeMove = sideChildIntField(child, "currentY");
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(new TerrainCheckResult(-3, (byte) 0, 0));
+
+            child.update(0x49, player);
+        }
+
+        assertEquals(yBeforeMove - 2, sideChildIntField(child, "currentY"),
+                "MoveSprite advances one pixel, then ObjHitFloor_DoRoutine applies d1=-3 to y_pos");
+        assertEquals(-0x500, sideChildIntField(child, "yVelocity"),
+                "loc_8D794 is the pre-capture $34 callback and only writes y_vel=-$500");
+        assertEquals(List.of(), services.soundIds,
+                "loc_8D794 does not play the captured-arm flipper sound");
+        assertEquals(false, player.isObjectControlled());
+    }
+
+    @Test
+    void arcingSideDrillFloorImpactReboundsWhileBelowRomReleaseVelocity() {
         GameRng rng = new GameRng(GameRng.Flavour.S3K, 4);
         CapturingServices services = new CapturingServices(mock(ObjectManager.class));
         services.withRng(rng);
@@ -632,22 +662,21 @@ class TestMadmoleBadnikInstance {
                     .thenReturn(TerrainCheckResult.noCollision());
             terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
                     .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(new TerrainCheckResult(-3, (byte) 0, 0));
 
-            // Run the arc until byte_8D9E7 loops to its $FC callback (loc_8D846).
-            for (int frame = 0x4A; frame < 0x4A + 40 && services.soundIds.isEmpty(); frame++) {
-                child.update(frame, player);
-            }
+            child.update(0x4A, player);
         }
 
         assertEquals(-0x500, sideChildIntField(child, "yVelocity"),
-                "byte_8D9E7's $FC callback loc_8D846 resets y_vel to -$500 while y_vel<$A00");
+                "ObjHitFloor_DoRoutine dispatches loc_8D846 and resets y_vel to -$500 while y_vel<$A00");
         assertEquals(List.of(Sonic3kSfx.FLIPPER.id), services.soundIds);
         assertEquals(true, player.isObjectControlled(),
                 "loc_8D846's below-threshold branch rebounds the drill without releasing the captured player");
     }
 
     @Test
-    void arcingSideDrillRawCallbackReleasesPlayerAtRomThresholdVelocity() {
+    void arcingSideDrillFloorImpactReleasesPlayerAtRomThresholdVelocity() {
         GameRng rng = new GameRng(GameRng.Flavour.S3K, 4);
         CapturingServices services = new CapturingServices(mock(ObjectManager.class));
         services.withRng(rng);
@@ -657,14 +686,14 @@ class TestMadmoleBadnikInstance {
         TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child);
         listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
         setSideChildIntField(child, "yVelocity", 0xA00);
-        setSideChildIntField(child, "animFrame", 7);
-        setSideChildIntField(child, "animTimer", 0);
 
         try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
             terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
                     .thenReturn(TerrainCheckResult.noCollision());
             terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
                     .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(new TerrainCheckResult(-2, (byte) 0, 0));
 
             child.update(0x49, player);
         }
@@ -677,7 +706,40 @@ class TestMadmoleBadnikInstance {
     }
 
     @Test
-    void releasedArcingSideDrillCannotImmediatelyRecapturePlayer() {
+    void arcingSideDrillRawAnimationRestartDoesNotInvokeFloorCallback() {
+        GameRng rng = new GameRng(GameRng.Flavour.S3K, 4);
+        CapturingServices services = new CapturingServices(mock(ObjectManager.class));
+        services.withRng(rng);
+        MadmoleBadnikInstance.SideDrillChild child = spawnedSideDrillChild(services);
+        TestablePlayableSprite player = player(0x100, 0x100);
+        child.update(0x48, player);
+        TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child);
+        listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
+        child.update(0x49, player);
+        services.soundIds.clear();
+        setSideChildIntField(child, "yVelocity", 0x300);
+        setSideChildIntField(child, "animFrame", 7);
+        setSideChildIntField(child, "animTimer", 0);
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+
+            child.update(0x4A, player);
+        }
+
+        assertEquals(0x320, sideChildIntField(child, "yVelocity"),
+                "byte_8D9E7 ends in $FC (restart), not $F4 (routine callback)");
+        assertEquals(List.of(), services.soundIds);
+        assertEquals(true, player.isObjectControlled());
+    }
+
+    @Test
+    void floorReleasedArcingSideDrillCannotImmediatelyRecapturePlayer() {
         GameRng rng = new GameRng(GameRng.Flavour.S3K, 4);
         CapturingServices services = new CapturingServices(mock(ObjectManager.class));
         services.withRng(rng);
@@ -687,14 +749,14 @@ class TestMadmoleBadnikInstance {
         TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child);
         listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
         setSideChildIntField(child, "yVelocity", 0xA00);
-        setSideChildIntField(child, "animFrame", 7);
-        setSideChildIntField(child, "animTimer", 0);
 
         try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
             terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
                     .thenReturn(TerrainCheckResult.noCollision());
             terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
                     .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(new TerrainCheckResult(-2, (byte) 0, 0));
 
             child.update(0x49, player);
             listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x4A);

@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **fix: MHZ Madmole drill arms now rebound from terrain instead of animation
+  timing.** The arcing side drill now runs the ROM `$34` callback when
+  `ObjHitFloor_DoRoutine` finds the floor, including the pre-capture rebound and
+  the captured-player release threshold. Its raw animation's `$FC` terminator
+  only restarts the script; it no longer triggers the floor callback. Advances
+  the MHZ complete-run trace frontier from frame 2986 to frame 3013 and reduces
+  total mismatches from 4641 to 2728.
 - **fix: MHZ Madmole no longer spuriously hurts a player standing on its cap.**
   When the mole body finished sinking, the engine snapped it back up to the cap
   surface (`currentY = homeY`) while its enemy hitbox was still active, punching the

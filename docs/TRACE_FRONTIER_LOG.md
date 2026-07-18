@@ -46187,7 +46187,7 @@ Branch `next` (on top of `51899b966`). Same command as prior entries.
   a CPU-Tails position divergence (the "Madmole arm" root flagged in the 2026-07-02
   MHZ fleet notes). Madmole unit tests + S3K must-keep-green set green (83).
 
-## 2026-07-18 -- MHZ1 complete-run f2986 `tails_y` (CURRENT FRONTIER, investigated, NOT banked)
+## 2026-07-18 -- MHZ1 complete-run f2986 `tails_y` (historical incomplete attempt)
 
 Branch `next` at `e6d9d3257`. Diagnosed + attempted, then REVERTED as incomplete.
 
@@ -46214,3 +46214,31 @@ Branch `next` at `e6d9d3257`. Diagnosed + attempted, then REVERTED as incomplete
   arm lets go). Also model the PRE-capture floor rebound `$34 = loc_8D794` (plain
   y_vel=-$500, no flipper/release) for completeness. Re-run the trace and require the
   TOTAL to drop (not just the frontier to advance) before banking.
+
+## 2026-07-18 -- MHZ1 complete-run f2986 `tails_y`: Madmole arm terrain callback completed
+
+Branch `next` at `6ca6e739d`. Same command as prior entries.
+
+- Root: the arcing Madmole side drill was dispatching its `$34` callback when its
+  raw animation looped. ROM `byte_8D9E7` ends in `$FC` (restart), not `$F4`
+  (callback); the callback is dispatched by `ObjHitFloor_DoRoutine` after
+  `MoveSprite_LightGravity` while falling (`sonic3k.asm:177964-177977,
+  193259-193276`). This made the engine rebound about three frames early and
+  sixteen pixels too high at f2986.
+- Fix: after movement, the arcing arm now probes the floor with its eight-pixel
+  radius and applies the returned penetration distance before dispatch. Before
+  capture, the installed `loc_8D794` behavior simply writes `y_vel=-$500`;
+  after capture, `loc_8D846` either rebounds with the flipper sound below
+  `y_vel=$A00`, or releases the player with drill `y_vel=-$200` and player
+  `y_vel=-$300` at/above the threshold (`sonic3k.asm:193291-193369`). Raw
+  animation wrap now only restarts the script. Wall impact retains priority over
+  floor impact on the carry frame, matching the ROM routine's early branch.
+- Result: **f2986 -> f3013 (+27 frames)**; totals **`4641 -> 2728` errors
+  (-1913)**, 0 warnings. New frontier: frame 3013 `tails_air` (expected grounded,
+  actual airborne).
+- Follow-up isolated but not banked: allowing the still-positive
+  `object_control=1` Tails to make a new top contact with the MHZ mushroom cap
+  matches `SolidObjectTop` at f3013-f3014, but leaves the later control-release
+  handoff wrong and raises the total to 4956. That experiment was reverted. The
+  next unit is therefore the ROM ownership transition from cap contact through
+  the arm's f3059 release, not a blanket solid-contact opt-in.

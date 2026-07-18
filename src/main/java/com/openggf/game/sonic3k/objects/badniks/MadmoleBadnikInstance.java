@@ -468,17 +468,21 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
                 // arm.
                 carryCapturedPlayer();
                 move();
-                if (capturedPlayer != null) {
-                    releaseCapturedPlayerOnWallImpact();
+                boolean hitWall = capturedPlayer != null && releaseCapturedPlayerOnWallImpact();
+                if (!hitWall && capturedPlayer != null) {
+                    reboundArcingDrillOnFloorImpact(frameCounter);
                 }
             } else {
                 // ROM routine 4 (loc_8D768/loc_8D778) before capture, and the
                 // capture frame itself: MoveSprite advances the arm but the player
                 // is not carried until routine 8 runs next frame.
                 move();
+                if (arcing && !postCaptureDrift) {
+                    reboundArcingDrillOnFloorImpact(frameCounter);
+                }
                 awaitingCarryRoutine = false;
             }
-            animateRawLoop(frameCounter);
+            animateRawLoop();
             updateDynamicSpawn(currentX, currentY);
             checkDeleteAndReleaseCapturedPlayer();
         }
@@ -666,12 +670,12 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             NativePositionOps.writeYPosPreserveSubpixel(capturedPlayer, currentY + 8);
         }
 
-        private void releaseCapturedPlayerOnWallImpact() {
+        private boolean releaseCapturedPlayerOnWallImpact() {
             TerrainCheckResult wall = xVelocity >= 0
                     ? ObjectTerrainUtils.checkRightWallDist(currentX + SIDE_CHILD_CAPTURE_WALL_SENSOR_OFFSET, currentY)
                     : ObjectTerrainUtils.checkLeftWallDist(currentX - SIDE_CHILD_CAPTURE_WALL_SENSOR_OFFSET, currentY);
             if (!wall.hasCollision()) {
-                return;
+                return false;
             }
 
             int reboundVelocity = -xVelocity;
@@ -680,6 +684,29 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             capturedPlayer.setAir(true);
             ObjectControlState.none().applyTo(capturedPlayer);
             enterPostCaptureDrift();
+            return true;
+        }
+
+        private void reboundArcingDrillOnFloorImpact(int frameCounter) {
+            // loc_8D778/loc_8D80A call ObjHitFloor_DoRoutine only while falling.
+            // ObjHitFloor_DoRoutine snaps y_pos by d1 before dispatching the
+            // callback stored at $34 (sonic3k.asm:177964-177977).
+            if (yVelocity < 0) {
+                return;
+            }
+            TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, RENDER_HALF_HEIGHT);
+            if (!floor.hasCollision()) {
+                return;
+            }
+            currentY += floor.distance();
+
+            if (capturedPlayer == null) {
+                // loc_8D89E installs loc_8D794 before capture.
+                yVelocity = SIDE_CHILD_ARC_REBOUND_Y_VELOCITY;
+                return;
+            }
+            // sub_8D94A replaces $34 with loc_8D846 when capture succeeds.
+            runArcingFloorCallback(frameCounter);
         }
 
         private void checkDeleteAndReleaseCapturedPlayer() {
@@ -695,7 +722,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             setDestroyedByOffscreen();
         }
 
-        private void animateRawLoop(int frameCounter) {
+        private void animateRawLoop() {
             animTimer--;
             if (animTimer >= 0) {
                 return;
@@ -703,9 +730,6 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
 
             animFrame++;
             if (animFrame >= SIDE_CHILD_FRAMES.length) {
-                if (arcing && capturedPlayer != null) {
-                    runArcingRawCallback(frameCounter);
-                }
                 animFrame = 0;
                 mappingFrame = SIDE_CHILD_FRAMES[0];
                 animTimer = RAW_ANIMATION_DELAY;
@@ -716,7 +740,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             animTimer = RAW_ANIMATION_DELAY;
         }
 
-        private void runArcingRawCallback(int frameCounter) {
+        private void runArcingFloorCallback(int frameCounter) {
             if (yVelocity < SIDE_CHILD_ARC_RELEASE_THRESHOLD_Y_VELOCITY) {
                 yVelocity = SIDE_CHILD_ARC_REBOUND_Y_VELOCITY;
                 if (tryServices() != null) {
