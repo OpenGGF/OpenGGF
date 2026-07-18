@@ -49,6 +49,7 @@ import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardArtLoader;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.game.sonic3k.objects.Lbz1GroundLaunchIntroInstance;
+import com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance;
 import com.openggf.game.sonic3k.objects.MhzPollenSpawnerInstance;
 import com.openggf.camera.Camera;
 import com.openggf.level.objects.ObjectManager;
@@ -1447,6 +1448,18 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public boolean interceptPitDeath(AbstractPlayableSprite player) {
         if (mgzEvents != null && mgzEvents.isBossTransitionDeathPlaneDisabled()) {
+            return true;
+        }
+        // ROM loc_6C4BE sets Disable_death_plane in the later MGZ end-boss
+        // object slot. Player_LevelBound runs earlier in the same RunObjects
+        // pass, so expose that already-determined write from the boss's native
+        // routine/terrain state instead of briefly killing and reviving Sonic.
+        ObjectManager objectManager = GameServices.levelOrNull() != null
+                ? GameServices.levelOrNull().getObjectManager()
+                : null;
+        if (mgzEvents != null && objectManager != null
+                && objectManager.activeObjectsOfType(MgzDrillingRobotnikInstance.class).stream()
+                .anyMatch(MgzDrillingRobotnikInstance::willPublishDeathPlaneDisableThisObjectPass)) {
             return true;
         }
         if (isInBonusStage()) {

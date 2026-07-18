@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.game.GameServices;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.rewind.RewindTransient;
@@ -11,6 +12,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.HCZ2WallObjectInstance;
+import com.openggf.game.sonic3k.objects.HczTransitionBubbleInstance;
 import com.openggf.game.sonic3k.scroll.SwScrlHcz;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
@@ -257,6 +259,13 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     private static final int CARRIER_RELEASE_Y = 0x828;
     private static final int CARRIER_Y_VELOCITY = 0x200;
     private static final int CARRIER_X_ACCELERATION = 0x100;
+    /** Obj_Wait starts at $2F, so loc_6A2A0 creates bubbles for $30 dispatches. */
+    private static final int TRANSITION_BUBBLE_SPAWN_FRAMES = 0x30;
+    private static final int TRANSITION_BUBBLE_AXIS_CAMERA_OFFSET = 0xA0;
+    private static final int TRANSITION_BUBBLE_WATER_OFFSET = 8;
+
+    /** Remaining loc_6A2A0 controller dispatches that create loc_6A710 children. */
+    private int transitionBubbleSpawnFrames;
 
     public Sonic3kHCZEvents() {
         super();
@@ -276,6 +285,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         carrierUpdatedBeforeDynamicObjects = false;
         carrierP1Active = false;
         carrierP2Active = false;
+        transitionBubbleSpawnFrames = 0;
         levelSizeTransitionActive = false;
         levelSizeMaxXGradient = 0;
         levelSizeMinYGradient = 0;
@@ -346,12 +356,18 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
      * follows this hook, so it observes the carrier's current y_pos.
      */
     public void updateRetainedCarrierObjectPass(int act) {
-        if (act != 1 || (!cutsceneActive && !levelSizeTransitionActive)) {
+        if (act != 1 || (!cutsceneActive
+                && transitionBubbleSpawnFrames == 0
+                && !levelSizeTransitionActive)) {
             return;
         }
+        boolean carrierWasPending = carrierMovementPending;
         if (cutsceneActive) {
             updateCutscene();
             carrierUpdatedBeforeDynamicObjects = true;
+        }
+        if (!carrierWasPending && transitionBubbleSpawnFrames > 0) {
+            spawnTransitionBubble();
         }
         if (levelSizeTransitionActive) {
             updateAct2LevelSizeChildren();
@@ -392,6 +408,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         }
         cutsceneActive = carrierP1Active || carrierP2Active;
         carrierMovementPending = cutsceneActive;
+        transitionBubbleSpawnFrames = cutsceneActive ? TRANSITION_BUBBLE_SPAWN_FRAMES : 0;
         if (cutsceneActive) {
             // loc_6A7C4 clears _unkFAA2 as soon as a retained underwater
             // carrier initializes. DynamicWaterHeight_HCZ2 can then resume its
@@ -532,6 +549,29 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
             levelSizeMaxYGradient = 0;
         }
         return false;
+    }
+
+    /**
+     * Ports the retained end-sign controller's {@code loc_6A2A0} child spawn.
+     * One {@code Random_Number} result supplies all X/Y/frame/phase choices,
+     * preserving the ROM RNG call count and word usage.
+     */
+    private void spawnTransitionBubble() {
+        transitionBubbleSpawnFrames--;
+        spawnObject(this::createTransitionBubble);
+    }
+
+    private HczTransitionBubbleInstance createTransitionBubble() {
+        int random = GameServices.rng().nextRaw();
+        int axisX = (camera().getX() & 0xFFFF) + TRANSITION_BUBBLE_AXIS_CAMERA_OFFSET;
+        int x = axisX + (byte) random;
+        int randomHighWord = (random >>> 16) & 0xFFFF;
+        int waterY = waterSystem().getWaterLevelY(Sonic3kZoneIds.ZONE_HCZ, 1);
+        int y = waterY + TRANSITION_BUBBLE_WATER_OFFSET + (randomHighWord & 0x1F);
+        int mappingFrame = randomHighWord & 0x03;
+        boolean secondAnimationStep = (random & 1) != 0;
+        return new HczTransitionBubbleInstance(
+                x, y, axisX, mappingFrame, secondAnimationStep);
     }
 
     /**
@@ -1287,5 +1327,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     public void    setLevelSizeMinYGradient(int v)   { levelSizeMinYGradient = v; }
     public int     getLevelSizeMaxYGradient()        { return levelSizeMaxYGradient; }
     public void    setLevelSizeMaxYGradient(int v)   { levelSizeMaxYGradient = v; }
+    public int     getTransitionBubbleSpawnFrames()  { return transitionBubbleSpawnFrames; }
+    public void    setTransitionBubbleSpawnFrames(int v){ transitionBubbleSpawnFrames = v; }
     public void    setWallChaseBgOverlayActiveRaw(boolean v){ wallChaseBgOverlayActive = v; }
 }

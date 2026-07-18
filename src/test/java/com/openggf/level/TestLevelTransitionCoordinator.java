@@ -29,4 +29,16 @@ class TestLevelTransitionCoordinator {
         assertEquals(0, transitions.consumeInLevelTitleCardExitAdditionalDispatches());
         assertEquals(0, transitions.consumeInLevelTitleCardExitPhaseOneDispatchOverlap());
     }
+
+    @Test
+    void zoneActRequestRetainsItsPostLoadMusicIntent() {
+        LevelTransitionCoordinator transitions = new LevelTransitionCoordinator();
+
+        transitions.requestZoneAndAct(2, 0, true, 0x05);
+
+        assertTrue(transitions.consumeZoneActRequest());
+        assertEquals(2, transitions.getRequestedZone());
+        assertEquals(0, transitions.getRequestedAct());
+        assertEquals(0x05, transitions.getRequestedMusicId());
+    }
 }

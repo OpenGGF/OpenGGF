@@ -123,7 +123,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         }
     };
     private Sonic3kWaterSurfaceManager waterSurfaceManager;
-    private final Set<AbstractPlayableSprite> forcedAizForestFrontPrioritySprites = new HashSet<>();
+    private final Set<AbstractPlayableSprite> forcedAizForestFrontBucketSprites = new HashSet<>();
     private S3kSlotMachinePanelAnimator slotMachinePanelAnimator;
 
     /**
@@ -393,33 +393,27 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
 
         AizZoneRuntimeState aizState = getAizState();
         boolean forestFrontPhaseActive = aizState != null && aizState.isBattleshipForestFrontPhaseActive();
-        boolean bossArenaFrontPriority = aizState != null && aizState.isBossFlagActive();
-        var gameState = GameServices.gameStateOrNull();
-        boolean endSignResultsActive = gameState != null && gameState.isEndOfLevelActive();
 
-        // ROM: During the post-boss cutscene (egg capsule, results, walk-right,
-        // bridge collapse) the player's art_tile high-priority bit stays set.
-        // Restore_PlayerControl (called at loc_694D4) does NOT clear it.
-        // High priority is only lost when the next zone loads.
+        // During the post-boss cutscene (egg capsule, results, walk-right,
+        // bridge collapse), keep the engine display bucket in front of the
+        // forest sprites. Obj_PathSwap owns the independent ROM art_tile bit.
         boolean postBossCutsceneActive = com.openggf.game.sonic3k.objects
                 .Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive();
 
-        if (forestFrontPhaseActive || bossArenaFrontPriority || endSignResultsActive || postBossCutsceneActive) {
-            player.setHighPriority(true);
+        if (forestFrontPhaseActive || postBossCutsceneActive) {
             player.setPriorityBucket(RenderPriority.MIN);
-            forcedAizForestFrontPrioritySprites.add(player);
+            forcedAizForestFrontBucketSprites.add(player);
             return;
         }
 
-        if (forcedAizForestFrontPrioritySprites.contains(player)
-                && canReleaseAizForestFrontPriority(player)) {
-            player.setHighPriority(false);
+        if (forcedAizForestFrontBucketSprites.contains(player)
+                && canReleaseAizForestFrontBucket(player)) {
             player.setPriorityBucket(RenderPriority.PLAYER_DEFAULT);
-            forcedAizForestFrontPrioritySprites.remove(player);
+            forcedAizForestFrontBucketSprites.remove(player);
         }
     }
 
-    private boolean canReleaseAizForestFrontPriority(AbstractPlayableSprite player) {
+    private boolean canReleaseAizForestFrontBucket(AbstractPlayableSprite player) {
         return !player.getDead()
                 && !player.isHurt()
                 && !player.isDrowningPreDeath()
@@ -441,7 +435,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         aizBattleshipRenderFeature.reset();
         aizTransitionRenderFeature.reset();
         waterSurfaceManager = null;
-        forcedAizForestFrontPrioritySprites.clear();
+        forcedAizForestFrontBucketSprites.clear();
         if (slotMachinePanelAnimator != null) {
             slotMachinePanelAnimator.cleanup();
             slotMachinePanelAnimator = null;

@@ -3426,6 +3426,14 @@ public class LevelManager {
     /** @see LevelTransitionCoordinator#requestZoneAndAct(int, int, boolean) */
     public void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow) { transitions.requestZoneAndAct(zone, act, deactivateLevelNow); }
 
+    /** @see LevelTransitionCoordinator#requestZoneAndAct(int, int, boolean, int) */
+    public void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow, int musicId) {
+        transitions.requestZoneAndAct(zone, act, deactivateLevelNow, musicId);
+    }
+
+    /** @see LevelTransitionCoordinator#getRequestedMusicId() */
+    public int getRequestedMusicId() { return transitions.getRequestedMusicId(); }
+
     /** @see LevelTransitionCoordinator#requestSeamlessTransition(SeamlessLevelTransitionRequest) */
     public void requestSeamlessTransition(SeamlessLevelTransitionRequest request) { transitions.requestSeamlessTransition(request); }
 

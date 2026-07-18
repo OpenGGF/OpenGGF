@@ -45451,3 +45451,27 @@ A/B against the same worktree with only this change reverted:
   / f2270 tails_x / f1072 rings / f2920 tails_status_byte) — pre-existing
   frontiers, not moved by this fix. Note these differ from older log entries
   (e.g. mgz f738): the recorded frontiers were already stale on develop.
+### 2026-07-18 -- MGZ2 end-boss verification sweep
+
+The MGZ2 boss parity changes were checked against both recorded MGZ routes with
+the root-level locked-on S3K ROM. The standalone replay completed green (1/1):
+
+`mvn -Dmse=off -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' -Dtest='com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay' test`
+
+The complete-run replay was attempted both alongside the standalone replay and
+in isolation. Both forks exhausted Java heap before publishing a comparison
+result; the isolated retry also supplied `-DargLine='-Xmx3g'`, but the effective
+Surefire fork still terminated with `Java heap space`. This is verification
+infrastructure evidence, not a green or a moved trace frontier. A subsequent
+run must use the repository's effective Surefire heap property/configuration
+and record the comparison result before the complete-run route can be claimed
+verified.
+
+Follow-up verification supplied the heap through the effective Surefire
+property and ran each route in its own fork. Both completed green (1/1):
+
+`mvn -q surefire:test -Dtest=com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dsurefire.argLine=-Xshare:off -Xmx4g' -Dsurefire.forkCount=1 -DfailIfNoTests=false`
+
+The complete-run replay finished in 7.352 seconds with zero failures/errors;
+the standalone replay finished separately in 6.661 seconds with zero
+failures/errors. No comparison report or moved frontier was emitted.

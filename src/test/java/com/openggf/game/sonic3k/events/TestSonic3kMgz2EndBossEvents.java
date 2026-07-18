@@ -16,12 +16,17 @@ import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.MgzEndBossInstance;
+import com.openggf.game.sonic3k.objects.MgzEndBossKnuxInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.physics.Direction;
+import com.openggf.physics.Sensor;
+import com.openggf.physics.SensorResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.sprites.playable.NativePlayableRoutine;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.TestablePlayableSprite;
@@ -52,8 +57,24 @@ class TestSonic3kMgz2EndBossEvents {
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         TestEnvironment.activeGameplayMode();
         TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x3A10, (short) 0x0680);
+        installNoHitSensors(main);
         GameServices.sprites().addSprite(main);
         GameServices.camera().setFocusedSprite(main);
+    }
+
+    private static void installNoHitSensors(AbstractPlayableSprite player) {
+        player.setGroundSensors(new Sensor[]{noHitSensor(player, Direction.DOWN), noHitSensor(player, Direction.DOWN)});
+        player.setCeilingSensors(new Sensor[]{noHitSensor(player, Direction.UP), noHitSensor(player, Direction.UP)});
+        player.setPushSensors(new Sensor[]{noHitSensor(player, Direction.LEFT), noHitSensor(player, Direction.RIGHT)});
+    }
+
+    private static Sensor noHitSensor(AbstractPlayableSprite player, Direction direction) {
+        return new Sensor(player, direction, (byte) 0, (byte) 0, true) {
+            @Override
+            protected SensorResult doScan(short dx, short dy) {
+                return new SensorResult((byte) 0, (byte) 0x10, 0, direction);
+            }
+        };
     }
 
     @AfterEach
@@ -64,6 +85,7 @@ class TestSonic3kMgz2EndBossEvents {
 
     private AbstractPlayableSprite triggerBossTransitionWithTailsBelowLine(Sonic3kMGZEvents events) {
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
         tails.setCentreY((short) 0x0780);
         runBossTransitionTimer(events);
@@ -71,7 +93,7 @@ class TestSonic3kMgz2EndBossEvents {
     }
 
     private void runBossTransitionTimer(Sonic3kMGZEvents events) {
-        for (int frame = 0; frame <= 0x168; frame++) {
+        for (int frame = 0; frame < 0x168; frame++) {
             events.update(1, frame);
         }
     }
@@ -200,6 +222,7 @@ class TestSonic3kMgz2EndBossEvents {
         events.init(1);
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
 
         assertEquals(1, GameServices.sprites().getSidekicks().size(),
                 "Obj_MGZ2_BossTransition branches from Player_mode, not Player_1's Java class or sprite code");
@@ -220,6 +243,7 @@ class TestSonic3kMgz2EndBossEvents {
         events.init(1);
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
 
         assertEquals(1, GameServices.sprites().getSidekicks().size(),
                 "Obj_MGZ2_BossTransition reads global Player_mode; stale non-MGZ runtime state must not suppress Tails");
@@ -234,6 +258,7 @@ class TestSonic3kMgz2EndBossEvents {
         events.init(1);
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
 
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
         assertFalse(tails.isObjectControlled(),
@@ -255,6 +280,7 @@ class TestSonic3kMgz2EndBossEvents {
         GameServices.sprites().addSprite(tails, "tails");
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
 
         assertEquals(1, GameServices.sprites().getSidekicks().size());
         assertEquals((short) 0x3CC0, tails.getCentreX());
@@ -284,6 +310,7 @@ class TestSonic3kMgz2EndBossEvents {
         short initialY = tails.getCentreY();
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
 
         assertEquals(initialX, tails.getCentreX());
         assertEquals(initialY, tails.getCentreY());
@@ -307,6 +334,7 @@ class TestSonic3kMgz2EndBossEvents {
         GameServices.sprites().addSprite(tails);
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
 
         assertEquals(1, GameServices.sprites().getSidekicks().size(),
                 "The MGZ transition must take over an existing Tails sidekick instead of spawning a second Tails");
@@ -331,6 +359,7 @@ class TestSonic3kMgz2EndBossEvents {
         sonic.setSpindash(true);
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
         events.update(1, 0);
 
         assertEquals((short) 0x0700, sonic.getCentreY());
@@ -359,6 +388,7 @@ class TestSonic3kMgz2EndBossEvents {
         sonic.setAir(true);
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
         events.update(1, 0);
         camera.updatePosition();
 
@@ -385,6 +415,7 @@ class TestSonic3kMgz2EndBossEvents {
         assertTrue(camera.getFrozen(), "Pit death freezes the camera before object/event handoff can run");
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
         events.update(1, 0);
         camera.updatePosition();
 
@@ -415,6 +446,7 @@ class TestSonic3kMgz2EndBossEvents {
         tails.setHurt(true);
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
         events.update(1, 0);
 
         assertEquals(0, GameServices.sprites().getSidekicks().size(),
@@ -452,6 +484,7 @@ class TestSonic3kMgz2EndBossEvents {
         camera.setY((short) 0x0600);
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
 
         assertEquals(1, GameServices.sprites().getSidekicks().size(),
                 "The MGZ boss transition should spawn rescue Tails based on the actual focused Sonic, not stale config/session mode");
@@ -506,6 +539,7 @@ class TestSonic3kMgz2EndBossEvents {
         AbstractPlayableSprite sonic = camera.getFocusedSprite();
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
         sonic.setCentreY((short) 0x0780);
         sonic.setYSpeed((short) 0x0340);
         sonic.setAir(false);
@@ -678,6 +712,7 @@ class TestSonic3kMgz2EndBossEvents {
         GameServices.sprites().addSprite(sonic);
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
 
         assertEquals(1, GameServices.sprites().getSidekicks().size(),
                 "Sonic-only MGZ2 rescue should donate a temporary Tails for the boss transition");
@@ -713,6 +748,7 @@ class TestSonic3kMgz2EndBossEvents {
         GameServices.sprites().addSprite(tails, "tails");
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
         sonic.applyHurtOrDeath(0x3D20, DamageCause.NORMAL, false);
         events.update(1, 1);
 
@@ -747,6 +783,13 @@ class TestSonic3kMgz2EndBossEvents {
                 "At Camera_Y+$90, MGZ routine $18 should copy P1 left/right into Ctrl_2");
 
         tails.setCentreY((short) 0x0720);
+        // Player 2's CPU/carry pass precedes Obj_MGZ2_BossTransition in the
+        // native object order. It first publishes routine-$18 input and moves
+        // carried Sonic to Tails+$1C; the transition then observes Sonic's
+        // off-screen render state and republishes routine $14. Skipping this
+        // pass leaves Sonic at the previous carrier position and tests an
+        // impossible loc_16384 input state.
+        controller.update(4);
         events.update(1, 4);
 
         sonic.setDirectionalInputPressed(false, false, true, false);
@@ -767,6 +810,7 @@ class TestSonic3kMgz2EndBossEvents {
         AbstractPlayableSprite sonic = camera.getFocusedSprite();
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
         runBossTransitionTimer(events);
         SidekickCpuController controller = tails.getCpuController();
@@ -814,6 +858,35 @@ class TestSonic3kMgz2EndBossEvents {
     }
 
     @Test
+    void mgz2BossArenaSpawnsDedicatedKnucklesBossWithoutSonicTransitionPath() throws Exception {
+        GameServices.configuration().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        ObjectManager objectManager = installObjectManager();
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x3A00);
+        camera.setY((short) 0x0000);
+        events.update(1, 0);
+        camera.setX((short) 0x3C80);
+
+        events.update(1, 1);
+
+        assertEquals(Sonic3kObjectIds.MGZ_END_BOSS_KNUX, GameServices.gameState().getCurrentBossId());
+        assertEquals(1, objectManager.getActiveObjects().stream()
+                .filter(MgzEndBossKnuxInstance.class::isInstance).count());
+        MgzEndBossKnuxInstance boss = objectManager.getActiveObjects().stream()
+                .filter(MgzEndBossKnuxInstance.class::isInstance)
+                .map(MgzEndBossKnuxInstance.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(0x0068, boss.getSpawn().y());
+        assertEquals(0x00A0, camera.getMinY() & 0xFFFF);
+        assertFalse(events.isBossTransitionDeathPlaneDisabled(),
+                "Knuckles' grounded boss path must not enter Sonic's rescue/death-plane transition");
+        assertEquals(0, GameServices.sprites().getSidekicks().size(),
+                "Knuckles' boss path must not donate the Sonic-route rescue Tails");
+    }
+
+    @Test
     void mgz2BossTransition_startsTailsCarryAfterRomDelay() {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
@@ -822,17 +895,18 @@ class TestSonic3kMgz2EndBossEvents {
         camera.setY((short) 0x0600);
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
         tails.setCentreY((short) 0x0780);
 
-        for (int frame = 0; frame < 0x168; frame++) {
+        for (int frame = 0; frame < 0x167; frame++) {
             events.update(1, frame);
         }
 
         assertEquals(SidekickCpuController.State.MGZ_RESCUE_WAIT, tails.getCpuController().getState(),
                 "the lower transition SST cannot consume its countdown on the allocating boss pass");
 
-        events.update(1, 0x168);
+        events.update(1, 0x167);
 
         assertEquals(SidekickCpuController.State.CARRY_INIT, tails.getCpuController().getState(),
                 "Obj_MGZ2_BossTransition switches Tails from CPU routine $12 to $14 after the $168-frame wait");
@@ -857,6 +931,7 @@ class TestSonic3kMgz2EndBossEvents {
         GameServices.sprites().addSprite(tails, "tails");
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
         tails.setCentreY((short) 0x0701);
         events.update(1, 0);
 
@@ -884,6 +959,7 @@ class TestSonic3kMgz2EndBossEvents {
         sonic.setCentreY((short) 0x0700);
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
         tails.setCentreY((short) 0x0780);
         sonic.setRenderFlagOnScreen(true);
@@ -909,6 +985,7 @@ class TestSonic3kMgz2EndBossEvents {
         camera.setY((short) 0x0600);
 
         events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
         tails.setCentreY((short) 0x06D0);
 
@@ -949,6 +1026,86 @@ class TestSonic3kMgz2EndBossEvents {
 
         assertTrue(sawJumpPulse,
                 "MGZ rescue routine $16 pulses A/B/C every 8 frames so Tails keeps flying upward");
+    }
+
+    @Test
+    void mgz2BossTransition_initializesFromNextObjectPassCameraPosition() {
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x3C70);
+        camera.setY((short) 0x05F0);
+
+        events.triggerBossCollapseHandoff();
+        camera.setX((short) 0x3C80);
+        camera.setY((short) 0x0600);
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
+
+        AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
+        assertEquals((short) 0x3CC0, tails.getCentreX(),
+                "The allocated transition SST initializes from the following object pass camera X");
+        assertEquals((short) 0x06FF, tails.getCentreY(),
+                "The allocated transition SST initializes from the following object pass camera Y");
+    }
+
+    @Test
+    void mgz2BossTransition_recreatesMissingTemporaryPlayer2AndThenResumes() {
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        GameServices.camera().setX((short) 0x3C80);
+        GameServices.camera().setY((short) 0x0600);
+        events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
+        AbstractPlayableSprite first = GameServices.sprites().getSidekicks().getFirst();
+        assertTrue(GameServices.sprites().removeTemporarySidekick(first));
+
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
+
+        assertEquals(1, GameServices.sprites().getSidekicks().size(),
+                "The persistent native Player_2 SST must be reconstructed without duplicates");
+        AbstractPlayableSprite replacement = GameServices.sprites().getSidekicks().getFirst();
+        assertEquals(SidekickCpuController.State.MGZ_RESCUE_WAIT, replacement.getCpuController().getState());
+        replacement.setCentreY((short) 0x0701);
+        GameServices.camera().getFocusedSprite().setRenderFlagOnScreen(false);
+        runBossTransitionTimer(events);
+        assertEquals(SidekickCpuController.State.CARRY_INIT, replacement.getCpuController().getState());
+    }
+
+    @Test
+    void mgz2BossTransition_nonRoutine2WaitResumesWhenNormalRoutineReturns() {
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        GameServices.camera().setX((short) 0x3C80);
+        GameServices.camera().setY((short) 0x0600);
+        events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
+        AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
+        AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
+        player.setRenderFlagOnScreen(false);
+        player.setDebugMode(true);
+        tails.setCentreY((short) 0x0701);
+        runBossTransitionTimer(events);
+        assertEquals(SidekickCpuController.State.MGZ_RESCUE_WAIT, tails.getCpuController().getState(),
+                "ROM loc_16384 requires Player_1 routine exactly $02");
+
+        player.setDebugMode(false);
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
+        assertEquals(SidekickCpuController.State.CARRY_INIT, tails.getCpuController().getState(),
+                "A transient non-$02 routine must not permanently stall the transition");
+    }
+
+    @Test
+    void playerNativeRoutineContractDistinguishesControlFromNonRoutine2States() {
+        AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
+        assertEquals(NativePlayableRoutine.CONTROL, NativePlayableRoutine.resolve(player));
+        player.setHurt(true);
+        assertEquals(NativePlayableRoutine.HURT, NativePlayableRoutine.resolve(player));
+        player.setHurt(false);
+        player.setDead(true);
+        assertEquals(NativePlayableRoutine.DEAD, NativePlayableRoutine.resolve(player));
+        player.setDead(false);
+        player.setDebugMode(true);
+        assertEquals(NativePlayableRoutine.BYPASSED_BY_DEBUG_MODE, NativePlayableRoutine.resolve(player));
     }
 
     private static ObjectManager installObjectManager() throws NoSuchFieldException, IllegalAccessException {

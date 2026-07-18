@@ -146,6 +146,23 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void controlLockStillSuppressesMovementWithoutScriptOwnedLogicalInput() {
+                mockSprite.setControlLocked(true);
+
+                assertTrue(PlayableSpriteMovement.controlLockBlocksScriptedMovement(mockSprite),
+                                "A normal control lock must not consume caller-supplied RIGHT");
+        }
+
+        @Test
+        public void controlLockConsumesExplicitScriptOwnedLogicalInputThroughNormalAcceleration() {
+                mockSprite.setControlLocked(true);
+                mockSprite.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
+
+                assertFalse(PlayableSpriteMovement.controlLockBlocksScriptedMovement(mockSprite),
+                                "A script-owned logical RIGHT must use playable acceleration while hardware input stays locked");
+        }
+
+        @Test
         public void typedPlayerMovementRuleCapsGroundSpeedWithoutFallback() throws Exception {
                 GameRules base = GameRules.SONIC_2;
                 GameRules typedRules = new GameRules(

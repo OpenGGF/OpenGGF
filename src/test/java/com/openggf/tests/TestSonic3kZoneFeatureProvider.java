@@ -34,27 +34,30 @@ public class TestSonic3kZoneFeatureProvider {
     }
 
     @Test
-    public void forestFrontPhaseForcesPlayerInFrontOfForestMask() {
+    public void forestFrontPhaseMovesPlayerBucketWithoutOwningPathPriority() {
         TestZoneFeatureProvider provider = new TestZoneFeatureProvider();
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         FakeAizEvents aizEvents = new FakeAizEvents();
         aizEvents.setForestFrontPhaseActive(true);
         provider.setAizEvents(aizEvents);
 
+        // Obj_PathSwap subtype $22 at x=$3F68 sets this before the late forest.
+        player.setHighPriority(true);
         provider.update(player, 0x44D0, Sonic3kZoneIds.ZONE_AIZ);
 
-        assertTrue(player.isHighPriority(), "AIZ forest handoff should force Sonic in front of the forest mask");
+        assertTrue(player.isHighPriority(), "The forest override must preserve Obj_PathSwap priority");
         assertEquals(RenderPriority.MIN, player.getPriorityBucket(),
                 "AIZ forest handoff should also move Sonic into the front display bucket");
     }
 
     @Test
-    public void forestFrontPriorityReleaseWaitsUntilHurtStateEnds() {
+    public void forestFrontBucketReleaseWaitsUntilHurtStateEnds() {
         TestZoneFeatureProvider provider = new TestZoneFeatureProvider();
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         FakeAizEvents aizEvents = new FakeAizEvents();
         provider.setAizEvents(aizEvents);
 
+        player.setHighPriority(true);
         aizEvents.setForestFrontPhaseActive(true);
         provider.update(player, 0x44D0, Sonic3kZoneIds.ZONE_AIZ);
         assertTrue(player.isHighPriority());
@@ -62,43 +65,51 @@ public class TestSonic3kZoneFeatureProvider {
         player.setHurt(true);
         aizEvents.setForestFrontPhaseActive(false);
         provider.update(player, 0x4670, Sonic3kZoneIds.ZONE_AIZ);
-        assertTrue(player.isHighPriority(), "Forced forest priority should not clear while hurt/death priority is still valid");
+        assertEquals(RenderPriority.MIN, player.getPriorityBucket(),
+                "The forest bucket should not clear while hurt/death priority is still valid");
 
         player.setHurt(false);
         provider.update(player, 0x4670, Sonic3kZoneIds.ZONE_AIZ);
-        assertFalse(player.isHighPriority(), "Forced forest priority should clear once the protected state ends");
+        assertTrue(player.isHighPriority(),
+                "Releasing the forest bucket must retain the late path switch's art_tile priority");
         assertEquals(RenderPriority.PLAYER_DEFAULT, player.getPriorityBucket(),
                 "Forced forest display bucket should reset once the protected state ends");
     }
 
     @Test
-    public void aizEndSignSequenceKeepsBossArenaPriorityAfterBossFlagClears() {
+    public void aizMinibossResultsDoNotTakeOwnershipFromPathSwitcher() {
         TestZoneFeatureProvider provider = new TestZoneFeatureProvider();
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         FakeAizEvents aizEvents = new FakeAizEvents();
         provider.setAizEvents(aizEvents);
 
+        // Obj_PathSwap subtype $22 at x=$10E0 sets art_tile's high-priority bit
+        // when Sonic crosses to its right side.
+        player.setHighPriority(true);
         aizEvents.setBossFlag(true);
         provider.update(player, 0x10E0, Sonic3kZoneIds.ZONE_AIZ);
-        assertTrue(player.isHighPriority(), "AIZ boss arena should force Sonic in front of foreground masks");
+        assertTrue(player.isHighPriority());
+        assertEquals(RenderPriority.PLAYER_DEFAULT, player.getPriorityBucket(),
+                "The AIZ miniboss should leave path-switch priority under Obj_PathSwap ownership");
 
         aizEvents.setBossFlag(false);
         GameServices.gameState().setEndOfLevelActive(true);
         provider.update(player, 0x10E0, Sonic3kZoneIds.ZONE_AIZ);
+        GameServices.gameState().setEndOfLevelActive(false);
+        provider.update(player, 0x10E0, Sonic3kZoneIds.ZONE_AIZ);
 
         assertTrue(player.isHighPriority(),
-                "Obj_EndSignControl clears Boss_flag before the falling signpost/results flow finishes; "
-                        + "Sonic's art_tile priority bit must survive that handoff");
-        assertEquals(RenderPriority.MIN, player.getPriorityBucket(),
-                "The AIZ end-sign flow should keep Sonic in the front display bucket while results are active");
+                "Ending the miniboss/results sequence must not clear Obj_PathSwap's art_tile priority bit");
+        assertEquals(RenderPriority.PLAYER_DEFAULT, player.getPriorityBucket());
     }
 
     @Test
-    public void forestFrontPhaseAlsoForcesCpuSidekickInFrontOfForestMask() {
+    public void forestFrontPhaseAlsoMovesCpuSidekickBucketWithoutOwningPathPriority() {
         TestZoneFeatureProvider provider = new TestZoneFeatureProvider();
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0, (short) 0);
         sidekick.setCpuControlled(true);
+        sidekick.setHighPriority(true);
         GameServices.sprites().addSprite(sidekick, "tails");
 
         FakeAizEvents aizEvents = new FakeAizEvents();
@@ -108,7 +119,7 @@ public class TestSonic3kZoneFeatureProvider {
         provider.update(player, 0x44D0, Sonic3kZoneIds.ZONE_AIZ);
 
         assertTrue(sidekick.isHighPriority(),
-                "AIZ forest handoff should force CPU Tails in front of the forest mask");
+                "The forest override must preserve CPU Tails's Obj_PathSwap priority");
         assertEquals(RenderPriority.MIN, sidekick.getPriorityBucket(),
                 "AIZ forest handoff should also move CPU Tails into the front display bucket");
     }
