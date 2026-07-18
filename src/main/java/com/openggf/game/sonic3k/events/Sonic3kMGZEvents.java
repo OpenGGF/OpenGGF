@@ -14,10 +14,12 @@ import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.MgzEndBossInstance;
+import com.openggf.game.sonic3k.objects.MgzEndBossKnuxInstance;
 import com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance;
 import com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance;
 import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
@@ -31,6 +33,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.NativePlayableRoutine;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.SidekickCarryTrigger;
 import com.openggf.sprites.playable.SidekickCpuController;
@@ -207,13 +210,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private static final int BOSS_BG_SCROLL_ACCEL = 0x800;
     private static final int BOSS_BG_SCROLL_MAX = 0x50000;
     private static final int BOSS_TRANSITION_WAIT_FRAMES = 0x168;
-    /**
-     * The end-boss SST publishes the transition allocation after the engine's
-     * fixed-object bridge has already passed its lower native slot. The newly
-     * allocated {@code Obj_MGZ2_BossTransition} therefore starts its native
-     * {@code $168} countdown on the following object pass.
-     */
-    private static final int BOSS_TRANSITION_ALLOCATION_PENDING_PASSES = 1;
     private static final int BOSS_TRANSITION_SPAWN_OFFSET_X = 0x40;
     private static final int BOSS_TRANSITION_SPAWN_OFFSET_Y = 0x100;
     private static final String BOSS_TRANSITION_TEMP_TAILS_CODE = "mgz2_boss_tails";
@@ -320,6 +316,8 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private int bossBgScrollVelocity;
     /** ROM: Events_bg+$0C — BG camera copy advanced during the air boss. */
     private int bossBgScrollOffset;
+    /** The later boss SST allocates this transition SST; setup executes on its next object pass. */
+    private boolean bossTransitionInitializationPending;
     private boolean bossTransitionActive;
     private boolean bossTransitionDeathPlaneDisabled;
     private int bossTransitionTimer;
@@ -410,6 +408,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             collapseScrollPosition[i] = 0;
         }
         Arrays.fill(collapseSolids, null);
+        bossTransitionInitializationPending = false;
         bossTransitionActive = false;
         bossTransitionDeathPlaneDisabled = false;
         bossTransitionTimer = 0;
@@ -609,12 +608,15 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         Camera camera = camera();
         int cameraX = camera.getX() & 0xFFFF;
         int cameraY = camera.getY() & 0xFFFF;
+        boolean knucklesArena = resolveBossTransitionPlayerCharacter() == PlayerCharacter.KNUCKLES;
+        int arenaBandBaseY = knucklesArena ? 0 : 0x0600;
         switch (bossArenaRoutine) {
             case 0 -> {
-                if (cameraY < 0x0600 || cameraY >= 0x0700 || cameraX < 0x3A00) {
+                if (cameraY < arenaBandBaseY || cameraY >= arenaBandBaseY + 0x0100
+                        || cameraX < 0x3A00) {
                     return;
                 }
-                lockBossApproachCamera(camera);
+                lockBossApproachCamera(camera, arenaBandBaseY + 0x00A0);
                 bossArenaRoutine = 2;
             }
             case 2 -> {
@@ -636,11 +638,11 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         }
     }
 
-    private void lockBossApproachCamera(Camera camera) {
-        camera.setMinY((short) 0x06A0);
-        camera.setMinYTarget((short) 0x06A0);
-        camera.setMaxY((short) 0x06A0);
-        camera.setMaxYTarget((short) 0x06A0);
+    private void lockBossApproachCamera(Camera camera, int arenaY) {
+        camera.setMinY((short) arenaY);
+        camera.setMinYTarget((short) arenaY);
+        camera.setMaxY((short) arenaY);
+        camera.setMaxYTarget((short) arenaY);
         camera.setMaxX((short) 0x3C80);
         camera.setMaxXTarget((short) 0x3C80);
     }
@@ -659,8 +661,16 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             return;
         }
         bossSpawned = true;
-        gameState().setCurrentBossId(Sonic3kObjectIds.MGZ_END_BOSS);
         setGenericBossFlag(true);
+        if (resolveBossTransitionPlayerCharacter() == PlayerCharacter.KNUCKLES) {
+            gameState().setCurrentBossId(Sonic3kObjectIds.MGZ_END_BOSS_KNUX);
+            audio().playMusic(Sonic3kMusic.MINIBOSS.id);
+            spawnObject(() -> new MgzEndBossKnuxInstance(
+                    new ObjectSpawn(0x3D20, 0x0068, Sonic3kObjectIds.MGZ_END_BOSS_KNUX,
+                            0, 0, false, 0)));
+            return;
+        }
+        gameState().setCurrentBossId(Sonic3kObjectIds.MGZ_END_BOSS);
         spawnObject(() -> new MgzEndBossInstance(
                 new ObjectSpawn(0x3D20, 0x0668, Sonic3kObjectIds.MGZ_END_BOSS, 0, 0, false, 0)));
     }
@@ -1376,15 +1386,19 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
      */
     public void triggerBossCollapseHandoff() {
         requestLevelCollapse();
+        bossTransitionInitializationPending = true;
+        bossTransitionDeathPlaneDisabled = true;
+    }
+
+    private void initializeBossTransition() {
+        bossTransitionInitializationPending = false;
         Camera camera = camera();
         bossTransitionCameraX = camera.getX() & 0xFFFF;
         bossTransitionCameraY = camera.getY() & 0xFFFF;
         bossTransitionX = bossTransitionCameraX + BOSS_TRANSITION_SPAWN_OFFSET_X;
         bossTransitionY = bossTransitionCameraY + BOSS_TRANSITION_SPAWN_OFFSET_Y;
-        bossTransitionTimer = BOSS_TRANSITION_WAIT_FRAMES
-                + BOSS_TRANSITION_ALLOCATION_PENDING_PASSES;
+        bossTransitionTimer = BOSS_TRANSITION_WAIT_FRAMES;
         bossTransitionActive = true;
-        bossTransitionDeathPlaneDisabled = true;
         lockBossTransitionCamera();
         cancelSameFrameBossTransitionPitDeath(camera.getFocusedSprite());
         ensureBossTransitionTails(bossTransitionX, bossTransitionY);
@@ -1456,6 +1470,10 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     private void updateBossTransition() {
+        if (bossTransitionInitializationPending) {
+            initializeBossTransition();
+            return;
+        }
         if (!bossTransitionActive) {
             return;
         }
@@ -1480,6 +1498,10 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         }
 
         AbstractPlayableSprite tails = findBossTransitionTails();
+        if (tails == null) {
+            ensureBossTransitionTails(bossTransitionX, bossTransitionY);
+            return;
+        }
         SidekickCpuController controller = tails != null ? tails.getCpuController() : null;
         boolean carrying = controller != null && controller.isFlyingCarrying();
         boolean playerBelowTransition = bossTransitionY < (player.getCentreY() & 0xFFFF);
@@ -1496,10 +1518,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             if (isBossTransitionCarryRoutine(controller)) {
                 bossTransitionX = player.getCentreX() & 0xFFFF;
             }
-        }
-
-        if (tails == null) {
-            return;
         }
 
         boolean tailsBelowTransition = bossTransitionY < (tails.getCentreY() & 0xFFFF);
@@ -1528,13 +1546,18 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     private boolean isBossTransitionPlayerReadyForCarry(AbstractPlayableSprite player) {
-        if (player == null || player.isHurt() || player.getDead()) {
+        if (player == null || !isNativePlayerRoutine2(player)) {
             return false;
         }
         boolean playerOnScreen = player.hasRenderFlagOnScreenState()
                 ? player.isRenderFlagOnScreen()
                 : camera().isVisibleForRenderFlag(player);
         return !playerOnScreen;
+    }
+
+    /** ROM loc_16384 requires Player_1's native routine byte to equal $02 exactly. */
+    private boolean isNativePlayerRoutine2(AbstractPlayableSprite player) {
+        return NativePlayableRoutine.resolve(player) == NativePlayableRoutine.CONTROL;
     }
 
     private boolean isBossTransitionCarryRoutine(SidekickCpuController controller) {
