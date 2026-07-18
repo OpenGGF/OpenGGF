@@ -36,6 +36,7 @@ public final class CnzEndBossRobotnikFlameChild extends AbstractObjectInstance
 
     @Override public int getX() { return centreX - 8; }
     @Override public int getY() { return centreY - 4; }
+    @Override public boolean isPersistent() { return true; }
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {

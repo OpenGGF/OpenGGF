@@ -19,7 +19,7 @@ public final class CnzEndBossExplosionControllerChild extends AbstractObjectInst
     private int centreX;
     private int centreY;
     private int remaining = 0x80;
-    private int interval = 2;
+    private int interval;
 
     CnzEndBossExplosionControllerChild(int centreX, int centreY, int subtype) {
         this(new ObjectSpawn(centreX, centreY, 0, subtype, 0, false, 0));
@@ -48,7 +48,7 @@ public final class CnzEndBossExplosionControllerChild extends AbstractObjectInst
         }
         int random = services().rng().nextRaw();
         int x = centreX + (random & (RANGE * 2 - 1)) - RANGE;
-        int y = centreY + ((random >> 8) & (RANGE * 2 - 1)) - RANGE;
+        int y = centreY + ((random >>> 16) & (RANGE * 2 - 1)) - RANGE;
         services().playSfx(Sonic3kSfx.EXPLODE.id);
         spawnChild(() -> new S3kBossExplosionChild(x, y));
         interval = 2;

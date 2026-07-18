@@ -54,6 +54,7 @@ public final class CnzEndBossRobotnikShipChild extends AbstractObjectInstance
     @Override public int getY() { return centreY - 0x20; }
     public int getCentreX() { return centreX; }
     public int getCentreY() { return centreY; }
+    @Override public boolean isPersistent() { return true; }
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
@@ -118,7 +119,8 @@ public final class CnzEndBossRobotnikShipChild extends AbstractObjectInstance
         xSubpixel += xVelocity;
         centreX += xSubpixel >> 8;
         xSubpixel &= 0xFF;
-        if (--escapeTimer > 0) return;
+        escapeTimer--;
+        if (escapeTimer >= 0) return;
         boss.clearBossFlagFromEscapingShip();
         bossFlagCleared = true;
         setDestroyed(true);

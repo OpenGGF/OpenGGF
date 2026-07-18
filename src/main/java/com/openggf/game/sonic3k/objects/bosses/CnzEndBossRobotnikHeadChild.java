@@ -37,6 +37,7 @@ public final class CnzEndBossRobotnikHeadChild extends AbstractObjectInstance
 
     @Override public int getX() { return centreX - 0x10; }
     @Override public int getY() { return centreY - 8; }
+    @Override public boolean isPersistent() { return true; }
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {

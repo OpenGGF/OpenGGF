@@ -15,6 +15,7 @@ import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.CnzEggCapsuleInstance;
+import com.openggf.game.sonic3k.objects.SongFadeTransitionInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -48,8 +49,9 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
     private static final int START_CAMERA_X_MIN = 0x4660;
     private static final int START_CAMERA_X_MAX = 0x4860;
-    private static final int STORED_BOUND_CAPSULE_DELTA = 0x190;
-    private static final int STORED_BOUND_CANNON_DELTA = 0x310;
+    private static final int STORED_BOUND_BASE = 0x4760;
+    private static final int CAPSULE_BOUND_MAX_X = 0x48F0;
+    private static final int CANNON_BOUND_MAX_X = 0x4A70;
     private static final int CAPSULE_X = 0x4990;
     private static final int CAPSULE_Y = 0x02E0;
     private static final int CANNON_TRIGGER_X = 0x4A30;
@@ -101,6 +103,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
 
     private boolean defeatHandoffComplete;
     private boolean defeatScatterStarted;
+    private boolean defeatBodyHidden;
     private int hitCount = HIT_COUNT;
     private int hitInvulnerabilityTimer;
     private boolean capsuleResultsComplete;
@@ -108,6 +111,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private boolean cannonSpawned;
     private boolean cannonArmed;
     private boolean cannonLaunched;
+    private boolean cannonLaunchInputForced;
     private boolean transitionRequested;
     private int cannonLaunchTimer = -1;
     private int postCapsuleReleaseCountForTest;
@@ -218,7 +222,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
                     services().gameState().setCurrentBossId(Sonic3kObjectIds.CNZ_END_BOSS);
                     services().playMusic(Sonic3kMusic.BOSS.id);
                 });
-        if (!cameraReady || !cnzArtProvider().isCnzEndBossArtComplete()) {
+        if (!cameraReady) {
             return;
         }
         routine = Routine.INIT;
@@ -498,34 +502,40 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         hitInvulnerabilityTimer = 0;
         defeatWaitTimer = 0x3F;
         services().gameState().addScore(1000);
-        services().fadeOutMusic();
+        if (services().levelGamestate() != null) {
+            services().levelGamestate().pauseTimer();
+        }
     }
 
     private void updateDefeatWait() {
         if (routine != Routine.DEFEATED || defeatHandoffComplete) return;
-        if (defeatWaitTimer-- <= 0) applyDefeatHandoff();
+        if (defeatWaitTimer-- > 0) return;
+        if (!defeatScatterStarted) {
+            beginDefeatScatter();
+        } else {
+            applyDefeatHandoff();
+        }
+    }
+
+    private void beginDefeatScatter() {
+        defeatScatterStarted = true;
+        defeatBodyHidden = true;
+        defeatWaitTimer = (2 * 60) - 1;
+        spawnFreeChild(() -> new SongFadeTransitionInstance(2 * 60, Sonic3kMusic.CNZ2.id));
+        spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, -0x14, -0x100));
+        spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, 0x14, 0x100));
     }
 
     private void applyDefeatHandoff() {
-        defeatScatterStarted = true;
-        spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, -0x14, -0x100));
-        spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, 0x14, 0x100));
         defeatHandoffComplete = true;
 
         S3kCnzEventWriteSupport.setBossFlag(services(), false);
         services().gameState().setCurrentBossId(0);
 
-        storedBoundBase = savedCameraMaxX;
-        if (storedBoundBase == 0) {
-            Object provider = services().levelEventProvider();
-            if (provider instanceof Sonic3kLevelEventManager manager && manager.getCnzEvents() != null) {
-                storedBoundBase = manager.getCnzEvents().getCameraStoredMaxXPos() & 0xFFFF;
-            }
-            if (storedBoundBase == 0) storedBoundBase = services().camera().getMaxX() & 0xFFFF;
-        }
-        setStoredMaxX(storedBoundBase + STORED_BOUND_CAPSULE_DELTA);
+        storedBoundBase = STORED_BOUND_BASE;
+        setStoredMaxX(CAPSULE_BOUND_MAX_X);
         spawnChild(() -> CnzEndBossBoundaryController.increaseMaxX(
-                centreX, centreY, storedBoundBase + STORED_BOUND_CAPSULE_DELTA));
+                centreX, centreY, CAPSULE_BOUND_MAX_X));
 
         spawnChild(() -> new CnzEggCapsuleInstance(
                 new ObjectSpawn(CAPSULE_X, CAPSULE_Y, Sonic3kObjectIds.EGG_CAPSULE, 0, 0, false, 0),
@@ -548,7 +558,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         if (!cannonSpawned || !(player instanceof AbstractPlayableSprite sprite)) {
             return;
         }
-        if (!cannonArmed && endCannon != null && endCannon.isEndSequenceLaunchReady()) {
+        if (!cannonArmed && endCannon != null && endCannon.hasCapturedPlayerForEndSequence()) {
             cannonArmed = true;
             cannonLaunchTimer = CANNON_LAUNCH_WAIT;
             services().camera().setMaxYTarget((short) 0x0200);
@@ -556,14 +566,25 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
             return;
         }
         if (cannonArmed && !cannonLaunched) {
-            if (cannonLaunchTimer-- > 0) {
+            if (cannonLaunchInputForced) {
+                if (endCannon != null && endCannon.hasCapturedPlayerForEndSequence()) {
+                    return;
+                }
+                sprite.setForcedInputMask(0);
+                cannonLaunchInputForced = false;
+                cannonLaunched = true;
+            } else {
+                cannonLaunchTimer--;
+                if (cannonLaunchTimer >= 0) {
+                    return;
+                }
+                if (endCannon == null || endCannon.getSpinAngle() != 0x12) {
+                    return;
+                }
+                sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_JUMP);
+                cannonLaunchInputForced = true;
                 return;
             }
-            if (endCannon != null) {
-                endCannon.triggerEndSequenceLaunch(frameCounter);
-            }
-            cannonLaunched = true;
-            return;
         }
         if (cannonLaunched && isPlayerPastIczLaunchThreshold(sprite)) {
             requestIczTransition();
@@ -593,23 +614,8 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private void requestIczTransition() {
         transitionRequested = true;
         int act = ICZ_START_ZONE_WORD & 0xFF;
-        preparePlayersForIczFade();
         services().requestZoneAndAct(Sonic3kZoneIds.ZONE_ICZ, act, true);
         setDestroyed(true);
-    }
-
-    private void preparePlayersForIczFade() {
-        PlayableEntity focused = services().camera().getFocusedSprite();
-        List<PlayableEntity> players = services().playerQuery()
-                .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
-        for (PlayableEntity candidate : players) {
-            if (candidate instanceof AbstractPlayableSprite sprite) {
-                neutralizeLauncherStateForFade(sprite);
-            }
-        }
-        if (focused instanceof AbstractPlayableSprite focusedPlayer && !players.contains(focusedPlayer)) {
-            neutralizeLauncherStateForFade(focusedPlayer);
-        }
     }
 
     /**
@@ -642,9 +648,9 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         services().camera().setMaxYTarget((short) 0x0200);
         setStoredMinY(0x0200);
         spawnChild(() -> CnzEndBossBoundaryController.decreaseMinY(centreX, centreY, 0x0200));
-        setStoredMaxX(storedBoundBase + STORED_BOUND_CANNON_DELTA);
+        setStoredMaxX(CANNON_BOUND_MAX_X);
         spawnChild(() -> CnzEndBossBoundaryController.increaseMaxX(
-                centreX, centreY, storedBoundBase + STORED_BOUND_CANNON_DELTA));
+                centreX, centreY, CANNON_BOUND_MAX_X));
         postCapsuleReleaseComplete = true;
         postCapsuleReleaseCountForTest++;
     }
@@ -654,21 +660,6 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         ObjectControlState.none().applyTo(sprite);
         sprite.setHidden(false);
         sprite.setRolling(false);
-    }
-
-    private void neutralizeLauncherStateForFade(AbstractPlayableSprite sprite) {
-        releaseSprite(sprite);
-        sprite.setXSpeed((short) 0);
-        sprite.setYSpeed((short) 0);
-        sprite.setGSpeed((short) 0);
-        sprite.setAir(false);
-        sprite.setJumping(false);
-        sprite.setOnObject(false);
-        sprite.setObjectMappingFrameControl(false);
-        sprite.setHidden(true);
-        sprite.setControlLocked(true);
-        sprite.setPriorityBucket(RenderPriority.PLAYER_DEFAULT);
-        sprite.setHighPriority(false);
     }
 
     /**
@@ -765,7 +756,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     }
 
     private boolean nativeBodyRenderable() {
-        return routine.ordinal() > Routine.INIT.ordinal();
+        return routine.ordinal() > Routine.INIT.ordinal() && !defeatBodyHidden;
     }
 
     void relinkMagnetChild(CnzEndBossMagnetChild child) {

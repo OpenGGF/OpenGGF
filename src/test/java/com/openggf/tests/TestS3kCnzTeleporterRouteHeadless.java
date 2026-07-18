@@ -15,6 +15,7 @@ import com.openggf.game.sonic3k.objects.CnzEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.CnzTeleporterBeamInstance;
 import com.openggf.game.sonic3k.objects.CnzTeleporterInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.sonic3k.objects.SongFadeTransitionInstance;
 import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
 import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectInstance;
@@ -254,8 +255,6 @@ class TestS3kCnzTeleporterRouteHeadless {
         CnzEndBossInstance boss = spawnCnzEndBossForTest();
         defeatCnzEndBossWithPlayerAttacks(boss, fixture.sprite());
 
-        fixture.stepIdleFrames(1);
-
         CnzEggCapsuleInstance capsule = findObject(CnzEggCapsuleInstance.class);
         assertTrue(capsule != null,
                 "The bounded Task 8 defeat handoff should spawn the CNZ-local egg capsule wrapper");
@@ -282,9 +281,59 @@ class TestS3kCnzTeleporterRouteHeadless {
                 "Task 8 owns clearing Boss_flag so later CNZ event logic can leave boss mode");
         assertEquals(0, GameServices.gameState().getCurrentBossId(),
                 "Defeat handoff should clear Current_Boss_ID alongside Boss_flag");
+        assertEquals(0x4A70, events.getCameraStoredMaxXPos() & 0xFFFF,
+                "post-results loc_6E778 must use _unkFAB4=$4760 plus $310");
         fixture.stepIdleFrames(8);
         assertTrue(fixture.camera().getMaxX() > 0x48E0,
                 "Task 8 should widen the CNZ boss camera clamp during the capsule handoff");
+    }
+
+    @Test
+    void cnzEndBossDefeatUsesBothNativeWaitsBeforeCapsuleHandoff() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+        Sonic3kCNZEvents events = getCnzEvents();
+        events.setBossFlag(true);
+        GameServices.gameState().setCurrentBossId(Sonic3kObjectIds.CNZ_END_BOSS);
+        CnzEndBossInstance boss = spawnCnzEndBossForTest();
+
+        defeatCnzEndBossHitsOnly(boss, fixture.sprite());
+
+        assertTrue(GameServices.level().getLevelGamestate().isTimerPaused(),
+                "BossDefeated_StopTimer must stop Update_HUD_timer on hit zero");
+        assertTrue(boss.isNativeBodyRenderableForTest(),
+                "Wait_FadeToLevelMusic keeps drawing the body during its initial $3F countdown");
+        assertFalse(isObjectPresent(SongFadeTransitionInstance.class));
+        assertFalse(isObjectPresent(CnzEggCapsuleInstance.class));
+        assertEquals(0, activeNamed("CnzEndBossDefeatDebrisChild"));
+
+        for (int frame = 0; frame < 0x3F; frame++) {
+            boss.update(frame, fixture.sprite());
+        }
+        assertTrue(boss.isNativeBodyRenderableForTest(),
+                "$2E reaches zero while Wait_FadeToLevelMusic still draws this dispatch");
+        boss.update(0x3F, fixture.sprite());
+
+        assertFalse(boss.isNativeBodyRenderableForTest(),
+                "the signed underflow dispatch hides the body before loc_6E6C6");
+        assertTrue(isObjectPresent(SongFadeTransitionInstance.class),
+                "the first wait expiry creates Obj_Song_Fade_ToLevelMusic");
+        assertEquals(2, activeNamed("CnzEndBossDefeatDebrisChild"),
+                "loc_6E6C6 creates the exact two body-half slots at parent bit 4");
+        assertFalse(isObjectPresent(CnzEggCapsuleInstance.class),
+                "the capsule waits for the separate (2*60)-1 Obj_Wait");
+        assertTrue(events.isBossFlag(), "Boss_flag remains set throughout the second wait");
+
+        for (int frame = 0; frame < (2 * 60) - 1; frame++) {
+            boss.update(0x40 + frame, fixture.sprite());
+        }
+        assertFalse(isObjectPresent(CnzEggCapsuleInstance.class));
+        boss.update(0x40 + (2 * 60) - 1, fixture.sprite());
+
+        assertTrue(isObjectPresent(CnzEggCapsuleInstance.class));
+        assertFalse(events.isBossFlag());
+        assertEquals(0x48F0, events.getCameraStoredMaxXPos() & 0xFFFF);
     }
 
     @Test
@@ -299,7 +348,6 @@ class TestS3kCnzTeleporterRouteHeadless {
 
         CnzEndBossInstance boss = spawnCnzEndBossForTest();
         defeatCnzEndBossWithPlayerAttacks(boss, fixture.sprite());
-        fixture.stepIdleFrames(1);
 
         CnzEggCapsuleInstance capsule = findObject(CnzEggCapsuleInstance.class);
         assertTrue(capsule != null,
@@ -318,18 +366,30 @@ class TestS3kCnzTeleporterRouteHeadless {
         fixture.sprite().setAir(false);
         fixture.sprite().setJumping(false);
         cannon.onSolidContact(fixture.sprite(), new SolidContact(true, false, false, true, false), 0);
+        assertTrue(cannon.hasCapturedPlayerForEndSequence());
+        boss.update(2, fixture.sprite());
+        assertEquals(0x0200, fixture.camera().getMaxYTarget() & 0xFFFF,
+                "loc_6E7B6 arms the camera drop as soon as cannon state $30 becomes 1");
+        assertTrue(fixture.sprite().isControlLocked());
         invokeCannonLaunchReadyHook(cannon);
-        assertTrue(cannon.isEndSequenceLaunchReady(),
-                "The end-sequence cannon should capture Sonic before the boss forces the jump input");
 
-        for (int frame = 0; frame < 210 && fixture.sprite().isObjectControlled(); frame++) {
-            fixture.stepIdleFrames(1);
+        for (int frame = 0; frame < 300 && fixture.sprite().isObjectControlled(); frame++) {
+            boss.update(frame, fixture.sprite());
+            cannon.update(frame, fixture.sprite());
         }
         assertFalse(fixture.sprite().isObjectControlled(),
                 "Obj_CNZEndBoss loc_6E7E4 should force the cannon launch instead of waiting for manual input");
+        assertEquals(0x14, cannon.getSpinAngle(),
+                "the parent observes raw angle $12, then the later cannon slot derives its frame and stores $14");
+        assertEquals(0x0B50, fixture.sprite().getXSpeed(),
+                "raw old angle $12 must derive frame 6 before the cannon stores $14 and launches");
 
         fixture.sprite().setCentreY((short) (fixture.camera().getY() + 0x10));
-        boss.update(2, fixture.sprite());
+        short launchXSpeed = fixture.sprite().getXSpeed();
+        short launchYSpeed = fixture.sprite().getYSpeed();
+        boolean launchAir = fixture.sprite().getAir();
+        boolean launchHidden = fixture.sprite().isHidden();
+        boss.update(3, fixture.sprite());
 
         assertTrue(GameServices.level().consumeZoneActRequest(),
                 "Obj_CNZEndBoss loc_6E80C should request StartNewLevel once the launcher carries Sonic offscreen");
@@ -339,16 +399,12 @@ class TestS3kCnzTeleporterRouteHeadless {
         assertEquals(0, requestedAct);
         assertTrue(GameServices.level().isLevelInactiveForTransition(),
                 "The ICZ request should freeze level updates while the fade transition owns the load");
-        assertEquals(0, fixture.sprite().getXSpeed(),
-                "The frozen fade window must not leave Sonic carrying the CNZ cannon launch x velocity into ICZ");
-        assertEquals(0, fixture.sprite().getYSpeed(),
-                "The frozen fade window must not leave Sonic visibly flying upward from the CNZ cannon");
-        assertFalse(fixture.sprite().getAir(),
-                "The ICZ transition request should neutralize airborne launcher state before the level freezes");
-        assertTrue(fixture.sprite().isControlLocked(),
-                "The neutral transition pose should keep control locked until the ICZ load reinitializes the player");
-        assertTrue(fixture.sprite().isHidden(),
-                "Sonic should be hidden during the frozen fade instead of remaining visible off screen");
+        assertEquals(launchXSpeed, fixture.sprite().getXSpeed());
+        assertEquals(launchYSpeed, fixture.sprite().getYSpeed(),
+                "StartNewLevel must preserve the live cannon velocity until ICZ load owns replacement state");
+        assertEquals(launchAir, fixture.sprite().getAir());
+        assertEquals(launchHidden, fixture.sprite().isHidden(),
+                "CNZ must not invent a hidden neutral transition pose before the destination load");
 
         GameServices.level().loadZoneAndAct(requestedZone, requestedAct);
 
@@ -393,16 +449,27 @@ class TestS3kCnzTeleporterRouteHeadless {
     }
 
     private void defeatCnzEndBossWithPlayerAttacks(CnzEndBossInstance boss, AbstractPlayableSprite player) {
+        defeatCnzEndBossHitsOnly(boss, player);
+        for (int defeatFrame = 0; defeatFrame < 0x40 + 2 * 60; defeatFrame++) {
+            boss.update(defeatFrame, player);
+        }
+    }
+
+    private void defeatCnzEndBossHitsOnly(CnzEndBossInstance boss, AbstractPlayableSprite player) {
         TouchResponseResult hit = new TouchResponseResult(0x06, 0, 0, TouchCategory.ENEMY);
         for (int i = 0; i < 8; i++) {
             boss.onPlayerAttack(player, hit);
-            for (int cooldown = 0; cooldown < 0x20; cooldown++) {
+            for (int cooldown = 0; i < 7 && cooldown < 0x20; cooldown++) {
                 boss.update(cooldown, player);
             }
         }
-        for (int defeatFrame = 0; defeatFrame <= 2 * 60; defeatFrame++) {
-            boss.update(defeatFrame, player);
-        }
+    }
+
+    private long activeNamed(String simpleName) {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(object -> !object.isDestroyed())
+                .filter(object -> object.getClass().getSimpleName().equals(simpleName))
+                .count();
     }
 
     private boolean isObjectPresent(Class<?> type) {
