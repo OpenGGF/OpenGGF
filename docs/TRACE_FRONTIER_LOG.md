@@ -1,5 +1,18 @@
 # Trace Frontier Log
 
+### 2026-07-18 -- AIZ/HCZ/MGZ parity-polish merge checkpoint
+
+Before merging `bugfix/aiz-hcz-mgz-polish` into `develop`, the ROM-backed
+S1/S2/S3K replay checkpoint ran from `45465ca4c` with the discovered root-level
+REV01 S1/S2 and locked-on S3K ROMs:
+
+`mvn -Ptrace-replay "-Dsurefire.argLine=-Xshare:off -Xmx3g" -Dsurefire.forkCount=1 -Dsonic1.rom.path=<root S1 ROM> -Dsonic2.rom.path=<root S2 ROM> -Ds3k.rom.path=<root S3K ROM> -Dtest='*TraceReplay' -DfailIfNoTests=false test`
+
+The suite completed 108 tests: 69 passed, 37 failed, 1 errored, and 1 skipped.
+The expected failing, errored, and skipped identities matched the documented
+frontier signature; the extra green coverage accounts for the total increasing
+from the older 92-test checkpoint. No trace frontier moved.
+
 ### 2026-07-17 -- Review finding 10: hot-file whitespace churn removed
 
 Branch `feature/ai-trace-animation-verification`, on top of `e56e1d549`.
