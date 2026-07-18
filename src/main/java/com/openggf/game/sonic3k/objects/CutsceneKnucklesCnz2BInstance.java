@@ -37,7 +37,8 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
     private static final int WALK_RIGHT_STOP_X = 0x4760;
     private static final int PRE_JUMP_WAIT = 0x1F;
     private static final int POST_JUMP_WAIT = 0x7F;
-    private static final int KNUCKLES_MUSIC_FADE_FRAMES = 90;
+    private static final int KNUCKLES_MUSIC_FADE_FRAMES = 90 + 1;
+    private static final int LEVEL_MUSIC_FADE_FRAMES = 2 * 60 + 1;
     private static final int JUMP_X_VEL = -0x0100;
     private static final int JUMP_Y_VEL = -0x0400;
     private static final int EXIT_SPEED = 4;
@@ -130,8 +131,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (phase == Phase.INIT && !isCameraInActivationRange()) {
-            ObjectLifetimeOps.destroyRespawnableOffscreen(this);
+        if (!passesNativeCameraRangeGate()) {
             return;
         }
         if (phase == Phase.INIT && isPlayerKnuckles()) {
@@ -156,7 +156,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
         AizIntroArtLoader.loadAllIntroArt(services());
         AizIntroArtLoader.applyKnucklesPalette(services());
         spawnFreeChild(() -> new SongFadeTransitionInstance(
-                KNUCKLES_MUSIC_FADE_FRAMES, Sonic3kMusic.KNUCKLES.id));
+                KNUCKLES_MUSIC_FADE_FRAMES, Sonic3kMusic.KNUCKLES.id, true));
 
         if (player != null) {
             player.clearLogicalInputState();
@@ -272,7 +272,8 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
             player.clearForcedInputMask();
         }
         restoreCnzPaletteLine1();
-        spawnFreeChild(() -> new SongFadeTransitionInstance(2 * 60, Sonic3kMusic.CNZ2.id));
+        spawnFreeChild(() -> new SongFadeTransitionInstance(
+                LEVEL_MUSIC_FADE_FRAMES, Sonic3kMusic.CNZ2.id, true));
         phase = Phase.FORCE_PLAYER_LEFT;
     }
 
@@ -326,6 +327,23 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
         int cameraY = camera.getY() & 0xFFFF;
         return cameraX >= CAMERA_RANGE_MIN_X && cameraX <= CAMERA_RANGE_MAX_X
                 && cameraY >= CAMERA_RANGE_MIN_Y && cameraY <= CAMERA_RANGE_MAX_Y;
+    }
+
+    private boolean passesNativeCameraRangeGate() {
+        Camera camera = services().camera();
+        if (isCameraInActivationRange()) {
+            return true;
+        }
+        if (isOutsideNativeDeleteRange(camera)) {
+            ObjectLifetimeOps.destroyRespawnableOffscreen(this);
+        }
+        return false;
+    }
+
+    private boolean isOutsideNativeDeleteRange(Camera camera) {
+        int objectRounded = currentX & 0xFF80;
+        int cameraCoarseBack = (((camera.getX() & 0xFFFF) - 0x80) & 0xFF80);
+        return ((objectRounded - cameraCoarseBack) & 0xFFFF) > 0x280;
     }
 
     private void restoreCnzPaletteLine1() {

@@ -4,13 +4,21 @@ import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.camera.Camera;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.StubObjectServices;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -110,7 +118,8 @@ class TestCnz2CutsceneButtonInstance {
 
         assertEquals(tubesAfterPress, liveTubeCount(),
                 "the cleared respawn entry prevents the pressed action replaying on backtrack polls");
-        assertTrue(button.isPersistent());
+        assertFalse(button.isPersistent(),
+                "pressed loc_65C50 uses Sprite_CheckDelete instead of remaining permanently resident");
         assertTrue(button.isPressedForTest());
 
         Cnz2CutsceneButtonInstance freshLevelObject = new Cnz2CutsceneButtonInstance(
@@ -118,6 +127,72 @@ class TestCnz2CutsceneButtonInstance {
                         Sonic3kObjectIds.CUTSCENE_BUTTON, 6, 0, false, 0));
         assertFalse(freshLevelObject.isPressedForTest(),
                 "a full level restart creates fresh object RAM; ordinary backtracking keeps the live pressed object");
+    }
+
+    @Test
+    void pressedButtonUnloadsOffscreenAndNeverRespawnsUnpressed() {
+        Camera camera = new Camera();
+        camera.setX((short) 0x4780);
+        ObjectSpawn spawn = new ObjectSpawn(
+                0x4780, 0x0728, Sonic3kObjectIds.CUTSCENE_BUTTON, 6, 0, true, 0);
+        ObjectManager[] holder = new ObjectManager[1];
+        TrackingButtonRegistry registry = new TrackingButtonRegistry();
+        ObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+        };
+        ObjectManager manager = new ObjectManager(
+                List.of(spawn), registry, 0, null, null, null, camera, services);
+        manager.enablePermanentDestroyLatch();
+        holder[0] = manager;
+        setSecondCutsceneActive(new CutsceneKnucklesCnz2BInstance(new ObjectSpawn(
+                0x4780, 0x072C, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 16, 0, false, 0)));
+
+        manager.reset(0x4780);
+        manager.update(0x4780, null, List.of(), 0);
+        Cnz2CutsceneButtonInstance pressed = manager.getActiveObjects().stream()
+                .filter(Cnz2CutsceneButtonInstance.class::isInstance)
+                .map(Cnz2CutsceneButtonInstance.class::cast)
+                .findFirst().orElseThrow();
+        assertTrue(pressed.isPressedForTest());
+        assertFalse(pressed.isPersistent(), "loc_65C50 changes to Sprite_CheckDelete after press");
+
+        camera.setX((short) 0);
+        manager.update(0, null, List.of(), 1);
+        assertFalse(manager.getActiveObjects().contains(pressed),
+                "pressed button must unload once its native X range is offscreen");
+
+        camera.setX((short) 0x4780);
+        manager.update(0x4780, null, List.of(), 2);
+        manager.update(0x4780, null, List.of(), 3);
+
+        assertEquals(1, registry.createCount,
+                "cleared respawn_addr keeps the pressed layout entry permanently latched");
+        assertTrue(manager.getActiveObjects().stream()
+                .noneMatch(Cnz2CutsceneButtonInstance.class::isInstance));
+    }
+
+    private static final class TrackingButtonRegistry implements ObjectRegistry {
+        private int createCount;
+
+        @Override
+        public ObjectInstance create(ObjectSpawn spawn) {
+            createCount++;
+            return new Cnz2CutsceneButtonInstance(spawn);
+        }
+
+        @Override public void reportCoverage(List<ObjectSpawn> spawns) { }
+        @Override public String getPrimaryName(int objectId) { return "CutsceneButtonCNZ2"; }
+    }
+
+    private static void setSecondCutsceneActive(CutsceneKnucklesCnz2BInstance instance) {
+        try {
+            var field = CutsceneKnucklesCnz2BInstance.class.getDeclaredField("activeInstance");
+            field.setAccessible(true);
+            field.set(null, instance);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
     }
 
     private static long liveTubeCount() {

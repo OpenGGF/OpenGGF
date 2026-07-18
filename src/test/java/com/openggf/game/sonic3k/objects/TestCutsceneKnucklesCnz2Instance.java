@@ -192,7 +192,8 @@ class TestCutsceneKnucklesCnz2Instance {
     void secondCnzCutsceneExitDoesNotEnterPlayableKnucklesTeleporterRoute() throws Exception {
         RecordingCnzBridge bridge = new RecordingCnzBridge();
         Camera camera = new Camera();
-        camera.setY((short) 0x0600);
+        camera.setX((short) 0x45C0);
+        camera.setY((short) 0x0720);
         camera.setMinX((short) 0x4300);
         camera.setMaxX((short) 0x5000);
         AbstractObjectInstance.updateCameraBounds(0x4700, 0x0600, 0x4840, 0x06E0, 0);
@@ -231,7 +232,7 @@ class TestCutsceneKnucklesCnz2Instance {
     }
 
     @Test
-    void cnzCutscenesDeleteRespawnablyBeforeCameraEntersTheirNativeWindows() {
+    void cnzCutscenesSkipDispatchOutsideNativeWindowButOnlyDeleteAtNativeXRange() {
         Camera camera = new Camera();
         camera.setX((short) 0x1BFF);
         camera.setY((short) 0x0280);
@@ -241,9 +242,9 @@ class TestCutsceneKnucklesCnz2Instance {
 
         first.update(0, null);
 
-        assertTrue(first.isDestroyed());
-        assertTrue(first.isDestroyedRespawnable(),
-                "Check_CameraInRange falls through Delete_Sprite_If_Not_In_Range, which clears the respawn latch");
+        assertFalse(first.isDestroyed(),
+                "Check_CameraInRange skips dispatch, but Delete_Sprite_If_Not_In_Range returns while x is within $280");
+        assertEquals(0, first.getRoutine());
 
         camera.setX((short) 0x45C0);
         camera.setY((short) 0x071F);
@@ -253,8 +254,33 @@ class TestCutsceneKnucklesCnz2Instance {
 
         second.update(0, null);
 
-        assertTrue(second.isDestroyed());
-        assertTrue(second.isDestroyedRespawnable());
+        assertFalse(second.isDestroyed());
+        assertEquals(0, second.getRoutine());
+
+        camera.setX((short) 0x4000);
+        first.update(1, null);
+
+        assertTrue(first.isDestroyed());
+        assertTrue(first.isDestroyedRespawnable(),
+                "a native-window miss deletes respawnably only when the object's rounded X is beyond $280");
+    }
+
+    @Test
+    void activeCutsceneAlsoSkipsRoutineDispatchWhenCameraLeavesNativeWindow() throws Exception {
+        Camera camera = new Camera();
+        camera.setX((short) 0x1BFF);
+        camera.setY((short) 0x0280);
+        CutsceneKnucklesCnz2AInstance first = new CutsceneKnucklesCnz2AInstance(
+                new ObjectSpawn(0x1D00, 0x0280, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        first.setServices(new TestObjectServices().withCamera(camera));
+        setPrivateEnumField(first, "phase", "PRE_JUMP_WAIT");
+        setPrivateIntField(first, "timer", 7);
+
+        first.update(0, null);
+
+        assertFalse(first.isDestroyed());
+        assertEquals(7, getPrivateIntField(first, "timer"),
+                "Check_CameraInRange rewrites the return address and skips the active routine dispatch");
     }
 
     @AfterEach
@@ -278,6 +304,13 @@ class TestCutsceneKnucklesCnz2Instance {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.setInt(target, value);
+    }
+
+    private static int getPrivateIntField(Object target, String fieldName)
+            throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(target);
     }
 
     private static final class ZoneForTestRegistry extends Sonic3kObjectRegistry {

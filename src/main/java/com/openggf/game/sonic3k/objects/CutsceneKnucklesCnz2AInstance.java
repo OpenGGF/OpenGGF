@@ -38,6 +38,7 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
     private static final int CAMERA_RANGE_MIN_Y = 0x0176;
     private static final int CAMERA_RANGE_MAX_Y = 0x0300;
     private static final int MUSIC_FADE_WAIT = 2 * 60;
+    private static final int LEVEL_MUSIC_FADE_FRAMES = 2 * 60 + 1;
     private static final int PRE_JUMP_WAIT = 0x3F;
     private static final int POST_BOUNCE_WAIT = 0x3F;
     private static final int FIRST_JUMP_X_VEL = 0x0140;
@@ -157,8 +158,7 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (phase == Phase.INIT && !isCameraInActivationRange()) {
-            ObjectLifetimeOps.destroyRespawnableOffscreen(this);
+        if (!passesNativeCameraRangeGate()) {
             return;
         }
         if (phase == Phase.INIT && isPlayerKnuckles()) {
@@ -295,7 +295,8 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
         S3kCnzEventWriteSupport.setWallGrabSuppressed(services(), false);
         restoreStoredCameraBounds();
         restorePaletteLine2Snapshot();
-        spawnFreeChild(() -> new SongFadeTransitionInstance(2 * 60, Sonic3kMusic.CNZ2.id));
+        spawnFreeChild(() -> new SongFadeTransitionInstance(
+                LEVEL_MUSIC_FADE_FRAMES, Sonic3kMusic.CNZ2.id, true));
         if (blockingWall != null) {
             // ROM loc_62458 deletes the wall child once the parent's destroyed
             // status bit is set; mirror that immediately on cutscene completion.
@@ -362,6 +363,24 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
         int cameraY = camera.getY() & 0xFFFF;
         return cameraX >= CAMERA_RANGE_MIN_X && cameraX <= CAMERA_RANGE_MAX_X
                 && cameraY >= CAMERA_RANGE_MIN_Y && cameraY <= CAMERA_RANGE_MAX_Y;
+    }
+
+    private boolean passesNativeCameraRangeGate() {
+        Camera camera = services().camera();
+        if (isCameraInActivationRange()) {
+            cameraGate.refreshApproachFlags(camera);
+            return true;
+        }
+        if (isOutsideNativeDeleteRange(camera)) {
+            ObjectLifetimeOps.destroyRespawnableOffscreen(this);
+        }
+        return false;
+    }
+
+    private boolean isOutsideNativeDeleteRange(Camera camera) {
+        int objectRounded = currentX & 0xFF80;
+        int cameraCoarseBack = (((camera.getX() & 0xFFFF) - 0x80) & 0xFF80);
+        return ((objectRounded - cameraCoarseBack) & 0xFFFF) > 0x280;
     }
 
     private void startJump(int newXVel, int newYVel) {

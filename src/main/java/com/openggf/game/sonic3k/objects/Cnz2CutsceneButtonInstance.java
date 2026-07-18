@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -70,7 +71,24 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
 
     @Override
     public boolean isPersistent() {
-        return true;
+        return !pressed;
+    }
+
+    @Override
+    public boolean shouldStayActiveWhenRemembered() {
+        return pressed;
+    }
+
+    @Override
+    public boolean clearsRespawnStateOnCounterBasedOutOfRange() {
+        return false;
+    }
+
+    @Override
+    public void onUnload() {
+        if (pressed) {
+            ObjectLifetimeOps.removeSpawnFromActive(services().objectManager(), getSpawn());
+        }
     }
 
     @Override
@@ -120,6 +138,7 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
      */
     private void press() {
         pressed = true;
+        ObjectLifetimeOps.markSpawnRemembered(services().objectManager(), getSpawn());
         if (subtype == VACUUM_TUBE_SUBTYPE) {
             pressVacuumTubeButton();
             return;
