@@ -332,6 +332,24 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         return chamberFrame;
     }
 
+    /**
+     * Returns whether the cannon owns a captured player in either pull-down or
+     * launch-ready state.
+     *
+     * <p>This is the engine contract for the ROM's per-player cannon state byte
+     * becoming {@code 1}: callers may arm the post-boss sequence immediately
+     * when pull-down starts, without waiting for the player to reach the chamber.
+     */
+    public boolean hasCapturedPlayerForEndSequence() {
+        return capturedPlayer != null
+                && (state == STATE_PULLING_PLAYER || state == STATE_READY_TO_LAUNCH);
+    }
+
+    /** Returns the cannon's raw unsigned spin-angle byte used by the ROM launch gate. */
+    public int getSpinAngle() {
+        return spinAngle & 0xFF;
+    }
+
     public boolean isEndSequenceLaunchReady() {
         return state == STATE_READY_TO_LAUNCH && capturedPlayer != null;
     }

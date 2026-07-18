@@ -5,6 +5,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.tests.HeadlessTestFixture;
@@ -97,6 +98,23 @@ public class TestCnzTraversalObjectArt {
                     "CNZ Act 2 balloon tile $" + Integer.toHexString(tileIndex)
                             + " should use the same CNZ balloon art as Act 1");
         }
+    }
+
+    @Test
+    public void carnivalNightAct2KeepsSharedExplosionArtResidentForCannonPuffs() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+
+        Sonic3kObjectArtProvider provider = currentCnzObjectArtProvider();
+
+        ObjectSpriteSheet explosion = provider.getSheet(ObjectArtKeys.EXPLOSION);
+        assertNotNull(explosion,
+                "shared S3K object-art initialization already loads ArtNem_Explosion in CNZ2");
+        assertEquals(5, explosion.getFrameCount());
+        assertNotNull(provider.getRenderer(ObjectArtKeys.EXPLOSION));
+        assertTrue(provider.getRenderer(ObjectArtKeys.EXPLOSION).isReady(),
+                "cannon launch puffs need no duplicate runtime PLC at the post-boss spawn");
     }
 
     @Test

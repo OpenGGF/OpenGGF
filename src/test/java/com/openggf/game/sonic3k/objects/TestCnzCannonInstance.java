@@ -95,6 +95,37 @@ class TestCnzCannonInstance {
         assertEquals(2, player.getAnimationId());
         assertEquals(RenderPriority.MAX, player.getPriorityBucket());
         assertFalse(player.isHighPriority());
+        assertTrue(cannon.hasCapturedPlayerForEndSequence(),
+                "ROM state byte $30 becomes 1 as soon as pull-down starts");
+        assertFalse(cannon.isEndSequenceLaunchReady(),
+                "capture is observable before the player reaches the launch-ready position");
+    }
+
+    @Test
+    void rawSpinAngleReachesTwelveAndForcedJumpLaunchesThroughUpdate() {
+        CnzCannonInstance cannon = new CnzCannonInstance(spawn());
+        cannon.setServices(new TestObjectServices());
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) 0x1E68);
+        player.setCentreY((short) 0x082C);
+
+        cannon.onSolidContact(player, new SolidContact(true, false, false, true, false), 3966);
+        cannon.setLaunchDelayFramesForTest(0);
+
+        assertEquals(0, cannon.getSpinAngle(), "capture resets the raw angle byte");
+        for (int frame = 3967; frame < 3976; frame++) {
+            cannon.update(frame, player);
+        }
+        assertEquals(0x12, cannon.getSpinAngle(),
+                "nine native +2 spin steps reach the boss launch gate angle");
+        assertTrue(player.isObjectControlled());
+
+        player.setForcedInputMask(TestPlayableSprite.INPUT_JUMP);
+        cannon.update(3976, player);
+
+        assertFalse(player.isObjectControlled(),
+                "the cannon's own logical-button check consumes forced jump and launches");
+        assertFalse(cannon.hasCapturedPlayerForEndSequence());
     }
 
     @Test
