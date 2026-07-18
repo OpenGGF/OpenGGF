@@ -540,6 +540,9 @@ ZONE_TOKEN = {
 }
 
 function zone_token_for(zone_id)
+    if BONUS_TOKENS[zone_id] ~= nil then
+        return BONUS_TOKENS[zone_id]
+    end
     return ZONE_TOKEN[zone_id] or string.format("zone%02x", zone_id)
 end
 
@@ -560,6 +563,9 @@ function precreate_segment_dirs()
     end
     local paths = { BASE_OUTPUT_DIR }
     for _, token in pairs(ZONE_TOKEN) do
+        paths[#paths + 1] = BASE_OUTPUT_DIR .. token .. "/"
+    end
+    for _, token in pairs(BONUS_TOKENS) do
         paths[#paths + 1] = BASE_OUTPUT_DIR .. token .. "/"
     end
     local all_exist = true
@@ -758,6 +764,23 @@ local bk2_frame_offset = 0
 -- GLOBALS (no `local`): keeps the main chunk under Lua's 200-local limit.
 current_segment_zone = nil
 segments_done = {}
+
+-- v6.30 run/detour state (globals: local-budget). transitions_done holds
+-- boundary records with EXPLICIT from_segment/to_segment captured at push
+-- time: every push sits between finalize_segment() (which appended the
+-- from-segment) and start_new_segment(), so from = #segments_done - 1 and
+-- to = #segments_done are exact. Loop-position derivation would be WRONG:
+-- plain level->level zone changes create segment boundaries with no
+-- transition record, so record order does not map to boundary order in
+-- multi-zone runs with detours.
+transitions_done = {}
+segment_dir_counts = {}
+detour_active = nil               -- nil | "special_stage"
+pending_ss_transition = nil       -- merged SS boundary record awaiting exit fields
+current_segment_dir_token = nil   -- set by start_new_segment
+current_segment_is_bonus = false  -- set by start_new_segment (before write_metadata)
+run_id = os.getenv("OGGF_TRACE_RUN_ID") or nil
+
 local start_x = 0
 local start_y = 0
 local start_zone_id = 0
@@ -1304,7 +1327,16 @@ local function write_metadata()
         meta_file:write(json_quote(schema))
     end
     meta_file:write('],\n')
-    meta_file:write('  "trace_profile": "' .. TRACE_PROFILE .. '",\n')
+    if current_segment_is_bonus then
+        meta_file:write('  "trace_profile": "s3k_bonus_stage",\n')
+        meta_file:write('  "bonus_stage_type": "' .. (BONUS_TOKENS[start_zone_id] or "") .. '",\n')
+    else
+        meta_file:write('  "trace_profile": "' .. TRACE_PROFILE .. '",\n')
+    end
+    if run_id ~= nil then
+        meta_file:write('  "run_id": "' .. run_id .. '",\n')
+    end
+    meta_file:write('  "segment_index": ' .. #segments_done .. ',\n')
     meta_file:write('  "bizhawk_version": "' .. BIZHAWK_VERSION .. '",\n')
     meta_file:write('  "genesis_core": "' .. GENESIS_CORE .. '",\n')
     meta_file:write('  "rom_checksum": "' .. rom_checksum .. '",\n')
@@ -4786,6 +4818,10 @@ function finalize_segment()
     close_files()
     segments_done[#segments_done + 1] = {
         token = token,
+        dir = current_segment_dir_token,
+        kind = current_segment_is_bonus and "bonus_stage" or "level",
+        profile = current_segment_is_bonus and "s3k_bonus_stage" or TRACE_PROFILE,
+        bonus_stage_type = current_segment_is_bonus and BONUS_TOKENS[start_zone_id] or nil,
         zone_id = start_zone_id,
         act = start_act + 1,
         bk2_frame_offset = bk2_frame_offset,
@@ -4800,7 +4836,12 @@ end
 -- writes its initial metadata. Mirrors the single-arm recorder's arm body but
 -- for the per-zone token directory.
 function start_new_segment(zone_id)
-    OUTPUT_DIR = BASE_OUTPUT_DIR .. zone_token_for(zone_id) .. "/"
+    local base_token = zone_token_for(zone_id)
+    local n = (segment_dir_counts[base_token] or 0) + 1
+    segment_dir_counts[base_token] = n
+    local dir_token = (n == 1) and base_token or (base_token .. "_" .. n)
+    OUTPUT_DIR = BASE_OUTPUT_DIR .. dir_token .. "/"
+    current_segment_dir_token = dir_token   -- global
     -- v6.27: dir was pre-created at load (precreate_segment_dirs); ensure_segment_dir
     -- is a shell-free probe that only shells out for an unexpected unknown-zone
     -- token. NO per-segment os.execute("mkdir") -> no cmd-window per zone.
@@ -4816,6 +4857,7 @@ function start_new_segment(zone_id)
     start_rng_seed = mainmemory.read_u32_be(ADDR_RNG_SEED)
     start_gameplay_frame_counter = mainmemory.read_u16_be(ADDR_FRAMECOUNT)
     start_zone_name = zone_token_for(zone_id)
+    current_segment_is_bonus = (BONUS_TOKENS[zone_id] ~= nil)
 
     open_files()
     write_metadata()
@@ -4878,6 +4920,46 @@ function on_frame_end()
     local game_mode = mainmemory.read_u8(ADDR_GAME_MODE)
     local zone_id = mainmemory.read_u8(ADDR_ZONE)
 
+    -- ---- v6.30 stage-detour state machine ----
+    -- SPECIAL STAGE ($34): finalize the current level segment at entry; no
+    -- rows are written during the detour (row schema lands with the
+    -- blue-spheres plan). SS_Results ($48) and the return load-handoff are
+    -- transition frames, represented only in the manifest.
+    if started and game_mode == GAMEMODE_SPECIAL_STAGE then
+        -- ONE merged transition per SS detour: the SS produces NO segment in
+        -- plan (a), so its entry and exit are a single boundary between two
+        -- consecutive level segments. Entry fields are captured now; exit
+        -- fields (rings_after/emeralds_after) are merged at the return re-arm.
+        -- Pushing two records here would break the
+        -- (#transitions == #segments - 1) invariant and produce out-of-range
+        -- indices in TraceRunManifest.validate.
+        pending_ss_transition = {
+            entry_kind = "giant_ring",
+            mode_change_bk2_frame = emu.framecount(),
+            special_bonus_entry_flag = mainmemory.read_u8(ADDR_SPECIAL_BONUS_ENTRY_FLAG),
+            saved_x_pos = mainmemory.read_u16_be(ADDR_SAVED_X_POS),
+            saved_y_pos = mainmemory.read_u16_be(ADDR_SAVED_Y_POS),
+            last_star_post_hit = mainmemory.read_u8(ADDR_LAST_STAR_POST_HIT),
+            rings_before = mainmemory.read_u16_be(ADDR_RING_COUNT),
+            emeralds_before = mainmemory.read_u8(ADDR_EMERALD_COUNT),
+        }
+        finalize_segment()
+        detour_active = "special_stage"
+        print(string.format("Special-stage detour at bk2 frame %d; segment finalized.",
+            emu.framecount()))
+        return
+    end
+    if detour_active == "special_stage" then
+        if is_level_family_mode(game_mode) then
+            -- Back in a level load: the arm gate below will open the next
+            -- segment (current_segment_zone is nil after finalize). The
+            -- pending SS transition completes and is pushed at that arm.
+            detour_active = nil
+        else
+            return  -- $34/$48/fade frames: manifest-only, no rows
+        end
+    end
+
     -- ---- Per-zone auto-segmentation ----
     -- A NEW segment arms on the first CONTROL-UNLOCKED, settled level frame of
     -- a DIFFERENT zone, matching the dedicated recorder's
@@ -4913,6 +4995,45 @@ function on_frame_end()
                 -- The old segment's handoff tail (next zone loaded but still
                 -- in its locked intro) has already been recorded into it.
                 finalize_segment()
+            end
+            -- Case 1: returning from an SS detour — complete the merged
+            -- pending record and push it (the ONLY record for that boundary).
+            -- Indices are exact here: finalize appended the from-segment and
+            -- start_new_segment has not run yet.
+            if pending_ss_transition ~= nil then
+                pending_ss_transition.from_segment = #segments_done - 1
+                pending_ss_transition.to_segment = #segments_done
+                pending_ss_transition.rings_after = mainmemory.read_u16_be(ADDR_RING_COUNT)
+                pending_ss_transition.emeralds_after = mainmemory.read_u8(ADDR_EMERALD_COUNT)
+                transitions_done[#transitions_done + 1] = pending_ss_transition
+                pending_ss_transition = nil
+            end
+            -- Case 2: the just-finalized predecessor was a bonus segment —
+            -- this arm is the bonus-exit boundary.
+            if #segments_done > 0
+                and segments_done[#segments_done].kind == "bonus_stage" then
+                transitions_done[#transitions_done + 1] = {
+                    from_segment = #segments_done - 1,
+                    to_segment = #segments_done,
+                    entry_kind = "stage_exit",
+                    mode_change_bk2_frame = emu.framecount(),
+                    rings_after = mainmemory.read_u16_be(ADDR_RING_COUNT),
+                    emeralds_after = mainmemory.read_u8(ADDR_EMERALD_COUNT),
+                }
+            end
+            if BONUS_TOKENS[zone_id] ~= nil then
+                transitions_done[#transitions_done + 1] = {
+                    from_segment = #segments_done - 1,
+                    to_segment = #segments_done,
+                    entry_kind = "starpost_bonus",
+                    mode_change_bk2_frame = emu.framecount(),
+                    special_bonus_entry_flag = mainmemory.read_u8(ADDR_SPECIAL_BONUS_ENTRY_FLAG),
+                    saved_x_pos = mainmemory.read_u16_be(ADDR_SAVED_X_POS),
+                    saved_y_pos = mainmemory.read_u16_be(ADDR_SAVED_Y_POS),
+                    last_star_post_hit = mainmemory.read_u8(ADDR_LAST_STAR_POST_HIT),
+                    rings_before = mainmemory.read_u16_be(ADDR_RING_COUNT),
+                    emeralds_before = mainmemory.read_u8(ADDR_EMERALD_COUNT),
+                }
             end
             start_new_segment(zone_id)
             if movie.isloaded() then
