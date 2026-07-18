@@ -262,5 +262,6 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
         int xVelocityForTest() { return xVelocity; }
         int yVelocityForTest() { return yVelocity; }
         boolean horizontalFlipForTest() { return subtype != 0; }
+        boolean visibleForTest() { return S3kBossFlickerMove.isVisible(flickerCounter); }
     }
 }

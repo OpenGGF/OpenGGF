@@ -12,7 +12,7 @@ final class S3kBossFlickerMove {
     }
 
     static boolean isVisible(int flickerCounter) {
-        return (flickerCounter & 1) != 0;
+        return (flickerCounter & 1) == 0;
     }
 
     static boolean isOutsideNativeBounds(int centreX, int centreY, int cameraX, int cameraY) {

@@ -56,6 +56,7 @@ final class CnzEndBossDefeatDebrisChild extends AbstractObjectInstance implement
     public void update(int frameCounter, PlayableEntity player) {
         xFixed = S3kBossFlickerMove.integrate(xFixed, xVelocity);
         yFixed = S3kBossFlickerMove.integrate(yFixed, yVelocity);
+        yVelocity += 0x38;
         flickerCounter++;
         var objectServices = tryServices();
         if (objectServices != null && objectServices.camera() != null) {

@@ -36,11 +36,12 @@ class TestCnzEndBossDefeatScatter {
         left.update(0, null);
         assertEquals(boss.getCentreX() - 0x15, left.getCentreX());
         assertEquals(leftY - 1, left.getCentreY());
-        assertEquals(-0x100, left.yVelocityForTest(),
-                "CNZ body halves retain their indexed velocity without gravity");
-        assertTrue(left.visibleForTest(), "Obj_FlickerMove draws on the first toggled frame");
+        assertEquals(-0xC8, left.yVelocityForTest(),
+                "Obj_FlickerMove applies MoveSprite gravity after moving with the old velocity");
+        assertFalse(left.visibleForTest(),
+                "Obj_FlickerMove's initial bit-0 bchg skips the first flicker draw");
         left.update(1, null);
-        assertFalse(left.visibleForTest(), "Obj_FlickerMove alternates rendering each frame");
+        assertTrue(left.visibleForTest(), "Obj_FlickerMove alternates rendering each frame");
     }
 
     @Test
@@ -80,12 +81,15 @@ class TestCnzEndBossDefeatScatter {
             assertEquals(0, arm.getCollisionFlags());
             assertEquals(expectedVelocities[subtype][0], arm.xVelocityForTest());
             assertEquals(expectedVelocities[subtype][1], arm.yVelocityForTest());
+            assertEquals(startX, arm.getCentreX(), "bit-4 setup converts the existing slot in place");
+            assertEquals(startY, arm.getCentreY(), "bit-4 setup does not dispatch Obj_FlickerMove yet");
+            assertTrue(arm.visibleForTest(), "the bit-4 setup frame still draws mapping frame 1");
             arm.update(1, null);
             assertEquals(startX + (expectedVelocities[subtype][0] >> 8), arm.getCentreX());
             assertEquals(startY + (expectedVelocities[subtype][1] >> 8), arm.getCentreY());
             assertEquals(expectedVelocities[subtype][1] + 0x38, arm.yVelocityForTest(),
                     "Obj_FlickerMove applies gravity after the indexed velocity move");
-            assertTrue(arm.visibleForTest());
+            assertFalse(arm.visibleForTest(), "the first Obj_FlickerMove dispatch skips drawing");
         }
     }
 
@@ -113,6 +117,8 @@ class TestCnzEndBossDefeatScatter {
         assertEquals(0x4740 + 10, right.getCentreX());
         assertEquals(-0x200 + 0x38, left.yVelocityForTest());
         assertEquals(-0x200 + 0x38, right.yVelocityForTest());
+        assertFalse(left.visibleForTest());
+        assertFalse(right.visibleForTest());
     }
 
     @Test
@@ -154,7 +160,7 @@ class TestCnzEndBossDefeatScatter {
     }
 
     @Test
-    void armsActivateOnlyDuringBitThreeIntervalAndResetBeforeNextAlign() throws Exception {
+    void armsRealignToSavedPhaseBeforeResettingForNextCycle() throws Exception {
         CnzEndBossInstance boss = boss();
         CnzEndBossArmChild arm = new CnzEndBossArmChild(boss, 0);
         arm.setServices(new StubObjectServices());
@@ -169,29 +175,36 @@ class TestCnzEndBossDefeatScatter {
         assertEquals(1, arm.angleForTest(), "CHARGE begins the native bit-3 interval");
         assertEquals(3, arm.frameForTest());
 
-        setInt(arm, "angularStep", 4);
-        setInt(arm, "speedTimer", 0);
         setRoutine(boss, CnzEndBossInstance.Routine.WIND_DOWN);
-        arm.update(2, null);
-        assertEquals(4, arm.angleForTest(), "WIND_DOWN remains active while decelerating");
-        assertEquals(3, arm.angularStepForTest());
+        for (int frame = 2; frame <= 66; frame++) {
+            arm.update(frame, null);
+        }
+        assertEquals(66, arm.angleForTest(), "WIND_DOWN moves before each wait callback");
+        assertTrue(arm.isRealigningForTest(),
+                "loc_6EA70 enters saved-phase realignment when speed is already one");
 
         setRoutine(boss, CnzEndBossInstance.Routine.DESCEND);
-        arm.update(3, null);
-        int resetAngle = arm.angleForTest();
-        assertEquals(1, arm.angularStepForTest());
-        assertEquals(1, arm.frameForTest());
+        arm.update(67, null);
+        assertEquals(67, arm.angleForTest(),
+                "loc_6EA92 keeps realigning after the parent clears bit 3 for descent");
+        assertTrue(arm.isRealigningForTest());
 
-        setRoutine(boss, CnzEndBossInstance.Routine.ASCEND);
-        arm.update(4, null);
+        int frame = 68;
+        while (arm.isRealigningForTest() && frame < 0x200) {
+            arm.update(frame++, null);
+        }
+        assertEquals(0, arm.angleForTest(), "realignment stops on the phase saved at activation");
+        assertFalse(arm.isRealigningForTest());
+
+        arm.update(frame++, null);
+        assertEquals(1, arm.frameForTest(), "loc_6EAB2 resets after observing cleared parent bit 3");
+
         setRoutine(boss, CnzEndBossInstance.Routine.ALIGN);
-        arm.update(5, null);
-        assertEquals(resetAngle, arm.angleForTest(),
-                "DESCEND, ASCEND, and the next ALIGN wait with the arm reset");
-
+        arm.update(frame++, null);
+        assertEquals(0, arm.angleForTest(), "the next ALIGN remains inactive at the saved phase");
         setRoutine(boss, CnzEndBossInstance.Routine.CHARGE);
-        arm.update(6, null);
-        assertEquals((resetAngle + 1) & 0xFF, arm.angleForTest());
+        arm.update(frame, null);
+        assertEquals(1, arm.angleForTest());
     }
 
     private static CnzEndBossInstance boss() {

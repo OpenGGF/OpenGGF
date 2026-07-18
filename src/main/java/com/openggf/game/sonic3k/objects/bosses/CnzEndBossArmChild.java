@@ -35,6 +35,9 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
     private int xVelocity;
     private int yVelocity;
     private int flickerCounter;
+    private int savedAngle;
+    private MotionPhase motionPhase = MotionPhase.INACTIVE;
+    private enum MotionPhase { INACTIVE, SPIN, WIND_DOWN, REALIGN, WAIT_CLEAR }
     private static final int[][] SCATTER_VELOCITIES = {
             {-0x100, -0x100},
             {0x100, -0x100},
@@ -84,26 +87,12 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
             collisionEnabled = false;
             if (boss.defeatScatterStarted()) {
                 beginDefeatScatter();
-                updateScatter();
             }
             return;
         }
         CnzEndBossInstance.Routine routine = boss.nativeRoutine();
-        boolean active = isParentBitThreeInterval(routine);
-        if (active) {
-            if (--speedTimer < 0) {
-                speedTimer = 0x40;
-                if (routine == CnzEndBossInstance.Routine.CHARGE && !boss.magneticFieldActive()) {
-                    angularStep = Math.min(4, angularStep + 1);
-                } else if (routine == CnzEndBossInstance.Routine.WIND_DOWN) {
-                    angularStep = Math.max(1, angularStep - 1);
-                }
-            }
-            angle = (angle + angularStep) & 0xFF;
-        } else {
-            angularStep = 1;
-            speedTimer = 0x40;
-        }
+        updateOrbitMotion(routine);
+        boolean active = motionPhase != MotionPhase.INACTIVE;
         updateArmAnimation(active);
         int offsetX = angleXOffset(angle);
         if (boss.facingRight()) offsetX = -offsetX;
@@ -112,6 +101,58 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
         // ROM sub_6EBF0 deliberately preserves byte_6EE0E's frame 3.
         if (frame != 3) frame = frameForAngle(angle);
         updateDynamicSpawn(centreX, centreY);
+    }
+
+    private void updateOrbitMotion(CnzEndBossInstance.Routine routine) {
+        if (motionPhase == MotionPhase.INACTIVE) {
+            if (routine != CnzEndBossInstance.Routine.CHARGE) {
+                resetInactiveMotion();
+                return;
+            }
+            savedAngle = angle;
+            motionPhase = MotionPhase.SPIN;
+        }
+
+        if (motionPhase == MotionPhase.SPIN
+                && routine == CnzEndBossInstance.Routine.WIND_DOWN) {
+            motionPhase = MotionPhase.WIND_DOWN;
+            speedTimer = 0x40;
+        }
+
+        switch (motionPhase) {
+            case SPIN -> {
+                angle = (angle + angularStep) & 0xFF;
+                if (!boss.magneticFieldActive() && --speedTimer < 0) {
+                    speedTimer = 0x40;
+                    angularStep = Math.min(4, angularStep + 1);
+                }
+            }
+            case WIND_DOWN -> {
+                angle = (angle + angularStep) & 0xFF;
+                if (--speedTimer < 0) {
+                    speedTimer = 0x40;
+                    if (angularStep == 1) {
+                        motionPhase = MotionPhase.REALIGN;
+                    } else {
+                        angularStep--;
+                    }
+                }
+            }
+            case REALIGN -> {
+                angle = (angle + 1) & 0xFF;
+                if (angle == savedAngle) motionPhase = MotionPhase.WAIT_CLEAR;
+            }
+            case WAIT_CLEAR -> {
+                if (!isParentBitThreeInterval(routine)) resetInactiveMotion();
+            }
+            case INACTIVE -> { }
+        }
+    }
+
+    private void resetInactiveMotion() {
+        motionPhase = MotionPhase.INACTIVE;
+        angularStep = 1;
+        speedTimer = 0x40;
     }
 
     /** ROM parent-bit-4 signal: convert this same arm slot into flickering debris. */
@@ -188,6 +229,7 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
     int frameForTest() { return frame; }
     int angleForTest() { return angle; }
     int angularStepForTest() { return angularStep; }
+    boolean isRealigningForTest() { return motionPhase == MotionPhase.REALIGN; }
     int xVelocityForTest() { return xVelocity; }
     int yVelocityForTest() { return yVelocity; }
     boolean visibleForTest() { return !scattered || S3kBossFlickerMove.isVisible(flickerCounter); }
