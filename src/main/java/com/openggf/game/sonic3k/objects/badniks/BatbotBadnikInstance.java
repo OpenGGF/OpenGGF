@@ -199,6 +199,15 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
     }
 
     @Override
+    public boolean usesCurrentTouchResponseState() {
+        // Obj_Batbot publishes itself after Chase_Object + MoveSprite2, and
+        // S3K's Collision_response_list stores its SST pointer. Touch_Loop
+        // therefore reads the Batbot's live frame-start x_pos/y_pos rather
+        // than a copied coordinate (sonic3k.asm:186312-186319,20656-20710).
+        return true;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) {
             return;

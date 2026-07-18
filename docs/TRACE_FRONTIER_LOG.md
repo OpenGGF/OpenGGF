@@ -45557,3 +45557,27 @@ Move/Closing cycles and checks routine $06 restoration, ROM x_vel magnitude and
 stored ChangeDir turn cadence, plus the top child's retained parent reference.
 This isolates the behavior under test without trace hydration or a post-frontier
 route assumption.
+
+### 2026-07-18 -- CNZ complete-run Batbot live touch coordinate: f2920 -> f3129
+
+At f2920 the engine and ROM Batbot both finish the object pass at
+`$10B7,$04A7`, but the engine's next player touch pass tested the additional
+stale snapshot `$10B8,$04A3`. The ROM stores an SST pointer in
+`Collision_response_list`; `Touch_Loop` dereferences live `x_pos/y_pos`, and
+Obj_Batbot publishes after `Chase_Object` and `MoveSprite2`
+(`docs/skdisasm/sonic3k.asm:186312-186319,20656-20710`). Batbot now opts into
+the existing post-move current-touch-state contract. No trace hydration,
+tolerance, zone/route/frame predicate, or shared cross-game behavior changed.
+
+Focused verification command:
+`JDK_JAVA_OPTIONS=-Xmx12g mvn -q test -Dnet.bytebuddy.experimental=true '-Dtest=com.openggf.game.sonic3k.objects.badniks.TestBatbotBadnikInstance,com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay#replayMatchesTrace' -Dtrace.verification=physics -Dtrace.frontierOnly=true -Dtrace.context.radius=2 -Dtrace.print.summary=true '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dsurefire.argLine=-Xshare:off -Xmx12g -Dnet.bytebuddy.experimental=true' -Dsurefire.forkCount=1 -DfailIfNoTests=false`.
+The 10 Batbot unit tests pass and CNZ complete-run advances from f2920
+`x_speed` (21 stopped-context errors) to f3129 `rings` (1 error, expected 8,
+actual 9).
+
+Full comparison-only physics sweep command:
+`JDK_JAVA_OPTIONS=-Xmx12g mvn -q test -Dnet.bytebuddy.experimental=true '-Dtest=*TraceReplay#replayMatchesTrace' -Dtrace.verification=physics -Dtrace.frontierOnly=true -Dtrace.context.radius=1 -Dtrace.print.summary=true '-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen' '-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen' '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dsurefire.argLine=-Xshare:off -Xmx12g -Dnet.bytebuddy.experimental=true' -Dsurefire.forkCount=1 -DreuseForks=true -DfailIfNoTests=false -Dmaven.test.failure.ignore=true`.
+Result: 58 replay methods, 45 green and 13 expected-red. No non-CNZ
+frontier regressed; the known red set and first frontiers are unchanged. The
+standalone legacy CNZ route remains at f0 `y_speed`; CNZ complete-run is the
+only moved frontier.

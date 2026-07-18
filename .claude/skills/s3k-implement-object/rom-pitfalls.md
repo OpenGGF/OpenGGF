@@ -1077,9 +1077,12 @@ change previous-list snapshot semantics.
 **ROM citation.** HCZ turbine `loc_6B1A8` dispatches its routine, calls
 `Refresh_ChildPosition`, then tail-calls
 `Child_DrawTouch_Sprite2_FlickerMove`, which adds the refreshed child
-(`docs/skdisasm/sonic3k.asm:141019-141033,178139-178153`).
+(`docs/skdisasm/sonic3k.asm:141019-141033,178139-178153`). CNZ Batbot likewise
+runs `Chase_Object` and `MoveSprite2` before its draw/touch tail
+(`docs/skdisasm/sonic3k.asm:186312-186319,20656-20710`).
 
-**Originating commit.** `<pending: HCZ milestone 56>`.
+**Originating commits.** `<pending: HCZ milestone 56>`; CNZ f2920 Batbot live
+touch-coordinate milestone.
 
 ---
 

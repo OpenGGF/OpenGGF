@@ -40,6 +40,16 @@ class TestBatbotBadnikInstance {
     }
 
     @Test
+    void collisionResponseListDereferencesLiveBatbotPosition() {
+        BatbotBadnikInstance batbot = new BatbotBadnikInstance(new ObjectSpawn(0x1AF0,
+                0x0638, Sonic3kObjectIds.BATBOT, 0, 0, false, 0));
+
+        assertTrue(batbot.usesCurrentTouchResponseState(),
+                "S3K Touch_Loop dereferences the Obj_Batbot SST pointer and reads live x_pos/y_pos "
+                        + "(docs/skdisasm/sonic3k.asm:186312-186319,20656-20710)");
+    }
+
+    @Test
     void waitsUntilPlayerIsWithinFortyPixelsBeforeMoving() {
         putBatbotOnScreen();
         BatbotBadnikInstance batbot = new BatbotBadnikInstance(new ObjectSpawn(0x1AF0,
