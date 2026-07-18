@@ -220,6 +220,7 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
 
 Highlights:
 
+- **S3K AIZ/HCZ/MGZ parity polish (2026-07-18):** AIZ waterfall and path-switch priorities, HCZ transition bubbles, MGZ2 collapse and end-boss sequencing, MGZ surprise Robotnik terrain occlusion, and level-transition music timing now follow the ROM more closely. The cross-game replay checkpoint retained its documented S1, S2, and S3K trace frontiers.
 - **Sonic 3 & Knuckles route coverage:** the Sonic/Tails path has completed AIZ through LBZ coverage, with ongoing work across bosses, events, objects, bonus stages, scroll/parallax, animated tiles, palette/PLC state, transitions, and rendering parity.
 - **AIZ1 intro Tornado priority parity (2026-07-17):** Super Sonic and every Tornado aircraft piece now use the ROM's `$280` sprite bucket while the water splashes use `$100`, placing the propeller and rocket booster behind the waves as on original hardware.
 - **AIZ trace parity closeout (2026-07-11):** both the focused level-select route and complete-run route now replay fully green through AIZ and the HCZ handoff. The campaign restored native object/RNG/SST cadence across the intro, traversal objects, act transition, battleship, miniboss and end boss, capsule/results control, Knuckles/button/drawbridge cutscene, mutable water flag, and CPU-Tails decision-time comparison while retaining green S1 and S2 trace fleets.
