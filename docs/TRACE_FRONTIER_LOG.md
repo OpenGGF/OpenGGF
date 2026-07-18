@@ -46186,3 +46186,31 @@ Branch `next` (on top of `51899b966`). Same command as prior entries.
   warnings. New frontier: frame 2986 `tails_y` (expected `0x0779`, actual `0x076F`) --
   a CPU-Tails position divergence (the "Madmole arm" root flagged in the 2026-07-02
   MHZ fleet notes). Madmole unit tests + S3K must-keep-green set green (83).
+
+## 2026-07-18 -- MHZ1 complete-run f2986 `tails_y` (CURRENT FRONTIER, investigated, NOT banked)
+
+Branch `next` at `e6d9d3257`. Diagnosed + attempted, then REVERTED as incomplete.
+
+- Root (high confidence): CPU Tails is captured and carried by the Madmole's arcing
+  side-drill arm (`MadmoleBadnikInstance.SideDrillChild`) since f2966 (Tails y_speed
+  pinned at 0 -- the arm writes Tails' position = arm Y + 8). The arm descends under
+  MoveSprite_LightGravity and the ROM rebounds it via a TERRAIN collision:
+  `ObjHitFloor_DoRoutine` (sonic3k.asm:177964, gated y_vel>=0) -> snap `y_pos += d1`
+  -> `$34 = loc_8D846` (rebound y_vel=-$500 if y_vel<$A00, else release). The arm's
+  raw-anim script `byte_8D9E7` ends in FC (restart), never F4, so Animate_Raw never
+  fires `$34`. The engine instead rebounds on the ANIMATION-loop wrap
+  (`animateRawLoop` -> `runArcingRawCallback`), firing ~3 frames early / ~16px shallow.
+  Engine matched ROM x/y frame-for-frame through f2985, then reversed early at f2986.
+- Attempted fix: added `reboundCapturedPlayerOnFloorImpact()` (checkFloorDist, y_radius
+  8; on hasCollision snap `currentY += distance` then `runArcingRawCallback`), called in
+  the carry path after the wall check; removed the rebound call from `animateRawLoop`.
+  Result: **f2986 -> f3013 (+27 frames)** BUT totals **4641 -> 4972 (+331)** -- the
+  arm carry/rebound is now correct, but the RELEASE hand-off is wrong: new frontier
+  f3013 `tails_air` (expected 0 grounded, actual 1 airborne). REVERTED (a frontier
+  advance that raises the total is not banked unattended).
+- TODO next session: complete as a UNIT -- keep the floor-collision rebound AND fix the
+  f3013 release choreography (loc_8D846 release path: y_vel>=$A00 releases player with
+  y_vel=-$300, drill y_vel=-$200; and where/when Tails becomes grounded again after the
+  arm lets go). Also model the PRE-capture floor rebound `$34 = loc_8D794` (plain
+  y_vel=-$500, no flipper/release) for completeness. Re-run the trace and require the
+  TOTAL to drop (not just the frontier to advance) before banking.
