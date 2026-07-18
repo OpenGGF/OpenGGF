@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.graphics.GLCommand;
@@ -16,24 +17,31 @@ import java.util.List;
 public final class CnzEndBossExplosionControllerChild extends AbstractObjectInstance
         implements RewindRecreatable {
     private static final int RANGE = 0x20;
+    private static final int CONSTANT_TIMER = 0x80;
+    @RewindTransient(reason = "Structural ship graph link recreated through CnzEndBossRewindLinks.")
+    private CnzEndBossRobotnikShipChild ship;
     private int centreX;
     private int centreY;
-    private int remaining = 0x80;
+    private int remaining = CONSTANT_TIMER;
     private int interval;
 
-    CnzEndBossExplosionControllerChild(int centreX, int centreY, int subtype) {
-        this(new ObjectSpawn(centreX, centreY, 0, subtype, 0, false, 0));
+    CnzEndBossExplosionControllerChild(CnzEndBossRobotnikShipChild ship, int subtype) {
+        this(ship.getCentreX(), ship.getCentreY(), subtype);
+        this.ship = ship;
     }
 
-    private CnzEndBossExplosionControllerChild(ObjectSpawn spawn) {
-        super(spawn, "CNZEndBossExplosionController");
-        centreX = spawn.x();
-        centreY = spawn.y();
+    CnzEndBossExplosionControllerChild(int centreX, int centreY, int subtype) {
+        super(new ObjectSpawn(centreX, centreY, 0, subtype, 0, false, 0),
+                "CNZEndBossExplosionController");
+        this.centreX = centreX;
+        this.centreY = centreY;
     }
 
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new CnzEndBossExplosionControllerChild(ctx.spawn());
+        CnzEndBossRobotnikShipChild restoredShip = CnzEndBossRewindLinks.ship(ctx);
+        return restoredShip == null ? null
+                : new CnzEndBossExplosionControllerChild(restoredShip, ctx.spawn().subtype());
     }
 
     @Override public int getX() { return centreX; }
@@ -41,8 +49,16 @@ public final class CnzEndBossExplosionControllerChild extends AbstractObjectInst
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
+        if (ship != null) {
+            if (ship.isDestroyed()) {
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
+            refreshFromShip();
+        }
+        updateDynamicSpawn(centreX, centreY);
         if (--interval >= 0) return;
-        if (--remaining <= 0) {
+        if ((remaining & 0x80) == 0 && --remaining <= 0) {
             ObjectLifetimeOps.expireDynamic(this);
             return;
         }
@@ -53,6 +69,13 @@ public final class CnzEndBossExplosionControllerChild extends AbstractObjectInst
         spawnChild(() -> new S3kBossExplosionChild(x, y));
         interval = 2;
     }
+
+    private void refreshFromShip() {
+        centreX = ship.getCentreX();
+        centreY = ship.getCentreY();
+    }
+
+    @Override public boolean isPersistent() { return true; }
 
     @Override public int getPriorityBucket() { return 5; }
 

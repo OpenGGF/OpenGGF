@@ -95,7 +95,7 @@ public final class CnzEndBossRobotnikShipChild extends AbstractObjectInstance
     private void spawnExplosionController() {
         if (explosionControllerSpawned) return;
         explosionControllerSpawned = true;
-        spawnChild(() -> new CnzEndBossExplosionControllerChild(centreX, centreY, 4));
+        spawnChild(() -> new CnzEndBossExplosionControllerChild(this, 4));
     }
 
     private void updateRise() {

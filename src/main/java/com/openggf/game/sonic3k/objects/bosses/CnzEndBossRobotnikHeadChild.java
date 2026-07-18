@@ -21,6 +21,7 @@ public final class CnzEndBossRobotnikHeadChild extends AbstractObjectInstance
     private int centreX;
     private int centreY;
     private int frame;
+    private int rawAnimationFrame;
     private int animationTimer = 5;
 
     CnzEndBossRobotnikHeadChild(CnzEndBossRobotnikShipChild ship) {
@@ -47,13 +48,16 @@ public final class CnzEndBossRobotnikHeadChild extends AbstractObjectInstance
         }
         centreX = ship.getCentreX();
         centreY = ship.getCentreY() - 0x1C;
+        if (--animationTimer < 0) {
+            rawAnimationFrame ^= 1;
+            animationTimer = 5;
+        }
         if (ship.parentDefeated()) {
             frame = 3;
         } else if (ship.parentHurt()) {
             frame = 2;
-        } else if (--animationTimer < 0) {
-            frame ^= 1;
-            animationTimer = 5;
+        } else {
+            frame = rawAnimationFrame;
         }
         updateDynamicSpawn(centreX, centreY);
     }

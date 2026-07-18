@@ -80,6 +80,28 @@ class TestCnzEndBossShip {
                 "status bit 6 must suppress the body sprite on alternating invulnerability frames");
     }
 
+    @Test
+    void robotnikHeadRawAnimationAdvancesBehindHurtFrameOverlay() throws Exception {
+        ObjectServices services = new StubObjectServices();
+        CnzEndBossInstance boss = boss();
+        boss.setServices(services);
+        CnzEndBossRobotnikShipChild ship = new CnzEndBossRobotnikShipChild(boss);
+        ship.setServices(services);
+        CnzEndBossRobotnikHeadChild head = new CnzEndBossRobotnikHeadChild(ship);
+        head.setServices(services);
+        setInt(head, "animationTimer", 0);
+        setInt(boss, "hitInvulnerabilityTimer", 0x20);
+
+        head.update(0, null);
+        assertEquals(2, head.frameForTest(),
+                "Obj_RobotnikHead overlays hurt frame 2 after Animate_Raw advances");
+
+        setInt(boss, "hitInvulnerabilityTimer", 0);
+        head.update(1, null);
+        assertEquals(1, head.frameForTest(),
+                "the raw 0/1 phase advanced during hurt and resumes without freezing");
+    }
+
     private static CnzEndBossInstance boss() {
         return new CnzEndBossInstance(new com.openggf.level.objects.ObjectSpawn(
                 0x4740, 0x0240, 0xA7, 0, 0, false, 0));
