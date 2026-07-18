@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
@@ -7,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
@@ -16,10 +18,12 @@ import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
@@ -213,6 +217,21 @@ class TestBatbotBadnikInstance {
     }
 
     @Test
+    void objWaitOffscreenDeletesDormantBatbotAfterCameraPassesItsCoarseX() {
+        AbstractObjectInstance.updateCameraBounds(0x1700, 0, 0x1840, 0x0100, 0);
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0x1700);
+        BatbotBadnikInstance batbot = new BatbotBadnikInstance(new ObjectSpawn(0x1400,
+                0x0A80, Sonic3kObjectIds.BATBOT, 0, 0, false, 0));
+        batbot.setServices(new TestObjectServices().withCamera(camera));
+
+        batbot.update(0, null);
+
+        assertTrue(batbot.isDestroyed(),
+                "Obj_WaitOffscreen loc_85AD2 deletes a never-visible placeholder once coarse X exceeds $280");
+    }
+
+    @Test
     void renderIncludesRomVisualChildSpritesForBodyAndLamp() {
         putBatbotOnScreen();
         BatbotBadnikInstance batbot = new BatbotBadnikInstance(new ObjectSpawn(0x1AF0,
@@ -222,8 +241,11 @@ class TestBatbotBadnikInstance {
         ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
         when(renderManager.getRenderer("cnz_batbot")).thenReturn(renderer);
         LevelManager levelManager = mock(LevelManager.class);
+        ObjectManager objectManager = mock(ObjectManager.class);
         when(levelManager.getObjectRenderManager()).thenReturn(renderManager);
-        batbot.setServices(new TestObjectServices().withLevelManager(levelManager));
+        when(levelManager.getObjectManager()).thenReturn(objectManager);
+        TestObjectServices services = new TestObjectServices().withLevelManager(levelManager);
+        batbot.setServices(services);
         AbstractPlayableSprite player = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build()
@@ -232,7 +254,12 @@ class TestBatbotBadnikInstance {
         batbot.update(0, player);
         batbot.update(1, player);
 
+        var children = captureSpawnedVisualChildren(objectManager);
+        children.forEach(child -> child.setServices(services));
+        children.forEach(child -> child.update(1, player));
+
         batbot.appendRenderCommands(new ArrayList<GLCommand>());
+        children.forEach(child -> child.appendRenderCommands(new ArrayList<GLCommand>()));
 
         verify(renderer).drawFrameIndex(2, 0x1AF0, 0x0638, false, false);
         verify(renderer).drawFrameIndex(3, 0x1AF0, 0x0648, false, false);
@@ -249,8 +276,11 @@ class TestBatbotBadnikInstance {
         ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
         when(renderManager.getRenderer("cnz_batbot")).thenReturn(renderer);
         LevelManager levelManager = mock(LevelManager.class);
+        ObjectManager objectManager = mock(ObjectManager.class);
         when(levelManager.getObjectRenderManager()).thenReturn(renderManager);
-        batbot.setServices(new TestObjectServices().withLevelManager(levelManager));
+        when(levelManager.getObjectManager()).thenReturn(objectManager);
+        TestObjectServices services = new TestObjectServices().withLevelManager(levelManager);
+        batbot.setServices(services);
         AbstractPlayableSprite player = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build()
@@ -260,29 +290,103 @@ class TestBatbotBadnikInstance {
         player.setCentreY((short) 0x0638);
         batbot.update(0, player);
         batbot.update(1, player);
+        var children = captureSpawnedVisualChildren(objectManager);
+        children.forEach(child -> child.setServices(services));
+        children.forEach(child -> child.update(1, player));
         batbot.update(2, player);
+        children.forEach(child -> child.update(2, player));
 
         batbot.appendRenderCommands(new ArrayList<GLCommand>());
+        children.forEach(child -> child.appendRenderCommands(new ArrayList<GLCommand>()));
         verify(renderer).drawFrameIndex(2, 0x1AF0, 0x0638, false, false);
         verify(renderer).drawFrameIndex(4, 0x1AF0, 0x0648, false, false);
 
         player.setCentreX((short) 0x1C00);
         clearInvocations(renderer);
         batbot.update(3, player);
+        children.forEach(child -> child.update(3, player));
         batbot.appendRenderCommands(new ArrayList<GLCommand>());
-        verify(renderer).drawFrameIndex(0, 0x1AF2, 0x0638, false, false);
-        verify(renderer).drawFrameIndex(3, 0x1AF2, 0x0648, false, false);
+        children.forEach(child -> child.appendRenderCommands(new ArrayList<GLCommand>()));
+        verify(renderer).drawFrameIndex(1, 0x1AF2, 0x0638, false, false);
+        verify(renderer).drawFrameIndex(4, 0x1AF2, 0x0648, false, false);
 
         clearInvocations(renderer);
         for (int frame = 4; frame <= 33; frame++) {
             batbot.update(frame, player);
+            int childFrame = frame;
+            children.forEach(child -> child.update(childFrame, player));
         }
         batbot.appendRenderCommands(new ArrayList<GLCommand>());
-        verify(renderer).drawFrameIndex(2, 0x1B2E, 0x0638, false, false);
-        verify(renderer).drawFrameIndex(4, 0x1B2E, 0x0648, false, false);
+        children.forEach(child -> child.appendRenderCommands(new ArrayList<GLCommand>()));
+        verify(renderer).drawFrameIndex(1, 0x1B2E, 0x0638, false, false);
+        verify(renderer).drawFrameIndex(3, 0x1B2E, 0x0648, false, false);
+    }
+
+    @Test
+    void visualChildrenUseNativePriorityAndDoNotInheritParentFlip() {
+        putBatbotOnScreen();
+        BatbotBadnikInstance batbot = new BatbotBadnikInstance(new ObjectSpawn(0x1AF0,
+                0x0638, Sonic3kObjectIds.BATBOT, 0, 1, false, 0));
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(renderer.isReady()).thenReturn(true);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        when(renderManager.getRenderer("cnz_batbot")).thenReturn(renderer);
+        LevelManager levelManager = mock(LevelManager.class);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(levelManager.getObjectRenderManager()).thenReturn(renderManager);
+        when(levelManager.getObjectManager()).thenReturn(objectManager);
+        TestObjectServices services = new TestObjectServices().withLevelManager(levelManager);
+        batbot.setServices(services);
+
+        batbot.update(0, null);
+        batbot.update(1, null);
+        var children = captureSpawnedVisualChildren(objectManager);
+        children.forEach(child -> child.setServices(services));
+        children.forEach(child -> child.update(1, null));
+        children.forEach(child -> child.appendRenderCommands(new ArrayList<GLCommand>()));
+
+        children.forEach(child -> assertEquals(4, child.getPriorityBucket()));
+        children.forEach(child -> assertTrue(child.isHighPriority()));
+        verify(renderer).drawFrameIndex(3, 0x1AF0, 0x0648, false, false);
+        verify(renderer).drawFrameIndex(5, 0x1AF0, 0x063B, false, false);
+    }
+
+    @Test
+    void visualChildrenRetainSlotsForOneDeleteCurrentSpriteDispatch() {
+        putBatbotOnScreen();
+        BatbotBadnikInstance batbot = new BatbotBadnikInstance(new ObjectSpawn(0x1AF0,
+                0x0638, Sonic3kObjectIds.BATBOT, 0, 0, false, 0));
+        ObjectManager objectManager = mock(ObjectManager.class);
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getObjectManager()).thenReturn(objectManager);
+        TestObjectServices services = new TestObjectServices().withLevelManager(levelManager);
+        batbot.setServices(services);
+
+        batbot.update(0, null);
+        batbot.update(1, null);
+        var children = captureSpawnedVisualChildren(objectManager);
+        children.forEach(child -> child.setServices(services));
+        children.forEach(child -> child.update(1, null));
+        batbot.setDestroyed(true);
+
+        children.forEach(child -> child.update(2, null));
+        children.forEach(child -> assertFalse(child.isDestroyed(),
+                "Child_Draw_Sprite only installs Delete_Current_Sprite on this dispatch"));
+        children.forEach(child -> child.update(3, null));
+        children.forEach(child -> assertTrue(child.isDestroyed(),
+                "Delete_Current_Sprite clears the child SST on its following dispatch"));
     }
 
     private static void putBatbotOnScreen() {
         AbstractObjectInstance.updateCameraBounds(0x1A00, 0, 0x1B40, 0x1000, 0);
+    }
+
+    private static java.util.List<BatbotBadnikInstance.BatbotVisualChild> captureSpawnedVisualChildren(
+            ObjectManager objectManager) {
+        ArgumentCaptor<ObjectInstance> captor = ArgumentCaptor.forClass(ObjectInstance.class);
+        verify(objectManager, org.mockito.Mockito.times(2)).addDynamicObjectAfterCurrent(captor.capture());
+        return captor.getAllValues().stream()
+                .map(BatbotBadnikInstance.BatbotVisualChild.class::cast)
+                .toList();
     }
 }

@@ -45581,3 +45581,30 @@ Result: 58 replay methods, 45 green and 13 expected-red. No non-CNZ
 frontier regressed; the known red set and first frontiers are unchanged. The
 standalone legacy CNZ route remains at f0 `y_speed`; CNZ complete-run is the
 only moved frontier.
+
+### 2026-07-19 -- CNZ Batbot SST children and dormant wrapper lifetime: f3129 -> f4100
+
+At f3129 the ROM's near Batbot occupies slot 6, with its body in slot 9 and lamp
+in slot 13; the engine had folded both visual pieces into the parent and placed
+the Batbot itself in slot 7. The earlier authored Batbot at `$1400,$0A80` had
+remained alive in engine slot 6 after never entering the viewport, whereas ROM
+`Obj_WaitOffscreen` deletes the dormant wrapper at its coarse-X range check.
+ROM `Obj_Batbot` also creates both visual pieces with
+`CreateChild1_Normal`/`AllocateObjectAfterCurrent`, and those children execute
+their initialization and independent raw animation as genuine SST objects
+(`docs/skdisasm/sonic3k.asm:180266-180300,186195-186388`).
+
+The engine now applies the dormant wrapper's native coarse-X deletion and
+represents the body and lamp as parent-owned, rewind-recreatable object slots.
+They retain the parent's high-plane art, use priority `$200`, initialize in the
+allocation pass, and preserve the body animation's multi-delay script. This
+restores the native Batbot and lost-ring slot sequence without trace hydration,
+tolerance, or a zone/route/frame predicate.
+
+Focused verification passes all 13 Batbot tests and advances CNZ complete-run
+physics from f3129 `rings` to f4100 `routine` (ROM routine 2, engine routine 4).
+The comparison-only full physics fleet reports 58 replay methods, 45 green and
+13 expected-red. Every non-CNZ frontier is unchanged: S2 CNZ2 f1166, CPZ2
+f1601, DEZ f0, MCZ2 f5445, OOZ1 f10220, SCZ f0, WFZ f0; S3K AIZ standalone
+f290, ICZ f2472, LBZ f1629, and MHZ f2920. The legacy standalone CNZ trace
+remains at f0 `y_speed`.

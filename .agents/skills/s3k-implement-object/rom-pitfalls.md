@@ -856,6 +856,11 @@ free) / `:37917` (`AllocateObjectAfterCurrent`, after parent).
 spawned as real OST slots; `docs/s1disasm/_incObj/15 Swinging Platforms.asm:67-105`).
 See `s1-implement-object/rom-pitfalls.md` P8.
 
+**S3K confirmation.** CNZ Batbot's render-only body and lamp are also real
+`CreateChild1_Normal` SSTs. Restoring their after-parent slot occupancy and
+independent raw animation advanced the complete-run physics frontier from
+f3129 to f4100 (`docs/skdisasm/sonic3k.asm:186195-186407`).
+
 ---
 
 ## P22 -- Object delete/cancel checks run only in the routines that `bsr` them, not every frame
@@ -988,6 +993,11 @@ sample the pre-scroll camera instead of the render-visible camera.
 `183518-183570`.
 
 **Originating commit.** `<pending: HCZ milestone 46>`.
+
+**CNZ confirmation.** The retained routine also performs its coarse-X deletion
+while still dormant. A never-visible Batbot wrapper otherwise held slot 6 until
+the later near Batbot loaded, shifting the complete-run allocation order
+(`docs/skdisasm/sonic3k.asm:180279-180300`).
 
 ---
 

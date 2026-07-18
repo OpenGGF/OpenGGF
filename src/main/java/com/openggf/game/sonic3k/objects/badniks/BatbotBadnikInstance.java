@@ -14,9 +14,9 @@ import java.util.List;
  * S3K Obj $A5 - Batbot.
  *
  * <p>ROM reference: {@code Obj_Batbot} in {@code docs/skdisasm/sonic3k.asm}
- * around {@code loc_89394}. The parent is the only collidable part; the two
- * child sprites created by {@code ChildObjDat_8946C} have collision flags 0
- * and are therefore visual-only for gameplay and headless trace replay.
+ * around {@code loc_89394}. The parent is the only collidable part, but the two
+ * visual children created by {@code ChildObjDat_8946C} still occupy real SST
+ * slots and therefore participate in native allocation timing.
  */
 public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
 
@@ -29,7 +29,6 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
     private static final int INITIAL_ACTIVE_X_SPEED = 0x200;
     private static final int INITIAL_MAPPING_FRAME = 2;
     private static final int BODY_CHILD_FRAME = 3;
-    private static final int BODY_CHILD_ACTIVE_FRAME = 4;
     private static final int BODY_CHILD_Y_OFFSET = 0x10;
     private static final int LAMP_CHILD_FRAME = 5;
     private static final int LAMP_CHILD_Y_OFFSET = 0x03;
@@ -43,11 +42,8 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
     private State state = State.INIT;
     private boolean waitingForOnscreen = true;
     private boolean deleteCurrentSpriteMarker;
-    private int parentAnimIndex = -1;
+    private int parentAnimIndex;
     private int parentAnimTimer;
-    private int bodyFrame = BODY_CHILD_FRAME;
-    private int bodyAnimIndex = -1;
-    private int bodyAnimTimer;
 
     public BatbotBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Batbot", Sonic3kObjectArtKeys.CNZ_BATBOT,
@@ -69,6 +65,13 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
             // and restores Obj_Batbot only after the temporary sprite has been
             // drawn onscreen; the restored object op runs next frame
             // (sonic3k.asm:180266-180297, 186266-186272).
+            if (isDeleteSpriteIfNotInRange()) {
+                // loc_85AD2 still owns the ordinary coarse-X deletion path
+                // while the placeholder waits. Without it, vertically distant
+                // Batbots leak their SST slots after the camera passes them.
+                setDestroyedByOffscreen();
+                return;
+            }
             if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
                 updateDynamicSpawn(currentX, currentY);
                 return;
@@ -107,8 +110,25 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
 
     private void initialize() {
         mappingFrame = INITIAL_MAPPING_FRAME;
-        bodyFrame = BODY_CHILD_FRAME;
         state = State.WAIT;
+        // CreateChild1_Normal allocates both visual pieces as genuine objects
+        // after the parent. Even though their collision byte is zero, their SST
+        // occupancy changes later AllocateObjectAfterCurrent results
+        // (sonic3k.asm:176914-176943,186283-186397).
+        spawnVisualChildren();
+    }
+
+    private void spawnVisualChildren() {
+        spawnChild(() -> new BatbotVisualChild(this, ChildKind.BODY));
+        spawnChild(() -> new BatbotVisualChild(this, ChildKind.LAMP));
+    }
+
+    @Override
+    protected void recreateConstructionChildrenForRewind() {
+        // Obj_Batbot creates this fixed two-slot graph on its first normal
+        // dispatch. Rebuild candidates so rewind adopts the exact captured
+        // BODY/LAMP identities and restores their scalar animation state.
+        spawnVisualChildren();
     }
 
     private void updateWait(PlayableEntity playerEntity) {
@@ -117,7 +137,6 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
         }
         state = State.CHASE;
         xVelocity = INITIAL_ACTIVE_X_SPEED;
-        bodyFrame = BODY_CHILD_ACTIVE_FRAME;
     }
 
     private boolean isPlayerWithinActivationRange(PlayableEntity playerEntity) {
@@ -134,7 +153,6 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
         }
         moveWithVelocity();
         updateParentAnimation();
-        updateBodyAnimation();
     }
 
     private void updateParentAnimation() {
@@ -148,19 +166,6 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
         }
         mappingFrame = PARENT_ANIM_FRAMES[parentAnimIndex];
         parentAnimTimer = PARENT_ANIM_DELAY;
-    }
-
-    private void updateBodyAnimation() {
-        bodyAnimTimer--;
-        if (bodyAnimTimer >= 0) {
-            return;
-        }
-        bodyAnimIndex++;
-        if (bodyAnimIndex >= BODY_ANIM_FRAMES.length) {
-            bodyAnimIndex = 0;
-        }
-        bodyFrame = BODY_ANIM_FRAMES[bodyAnimIndex];
-        bodyAnimTimer = BODY_ANIM_DELAYS[bodyAnimIndex];
     }
 
     /**
@@ -220,10 +225,6 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
         int x = getRenderAnchorX();
         int y = getRenderAnchorY();
         renderer.drawFrameIndex(mappingFrame, x, y, hFlip, false);
-        if (state != State.INIT) {
-            renderer.drawFrameIndex(bodyFrame, x, y + BODY_CHILD_Y_OFFSET, hFlip, false);
-            renderer.drawFrameIndex(LAMP_CHILD_FRAME, x, y + LAMP_CHILD_Y_OFFSET, hFlip, false);
-        }
     }
 
     private boolean isDeleteSpriteIfNotInRange() {
@@ -241,5 +242,157 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
         return String.format("state=%s waitOn=%s delMark=%s vx=%04X vy=%04X spawn=%04X,%04X",
                 state, waitingForOnscreen, deleteCurrentSpriteMarker, xVelocity & 0xFFFF, yVelocity & 0xFFFF,
                 spawn.x() & 0xFFFF, spawn.y() & 0xFFFF);
+    }
+
+    private boolean childrenMustDelete() {
+        // Child_Draw_Sprite tests parent status bit 7. Sprite_CheckDeleteTouch
+        // sets that bit when it installs the parent's one-dispatch delete marker.
+        // Child_Draw_Sprite then installs the child's own Delete_Current_Sprite
+        // marker; the child slot is cleared on its following dispatch
+        // (sonic3k.asm:178046-178052,179058-179139).
+        return isDestroyed() || deleteCurrentSpriteMarker;
+    }
+
+    private enum ChildKind {
+        BODY(BODY_CHILD_Y_OFFSET, BODY_CHILD_FRAME),
+        LAMP(LAMP_CHILD_Y_OFFSET, LAMP_CHILD_FRAME);
+
+        private final int yOffset;
+        private final int initialFrame;
+
+        ChildKind(int yOffset, int initialFrame) {
+            this.yOffset = yOffset;
+            this.initialFrame = initialFrame;
+        }
+    }
+
+    private enum ChildState { INIT, WAIT, ACTIVE }
+
+    static final class BatbotVisualChild extends com.openggf.level.objects.AbstractObjectInstance
+            implements SpawnRewindRecreatable {
+        private static final int CHILD_PRIORITY_BUCKET = 4; // word_89460/word_89466: priority $200.
+
+        private BatbotBadnikInstance parent;
+        private ChildKind kind;
+        private ChildState childState = ChildState.INIT;
+        private boolean deleteCurrentSpriteMarker;
+        private int currentX;
+        private int currentY;
+        private int mappingFrame;
+        private int bodyAnimIndex;
+        private int bodyAnimTimer;
+
+        private BatbotVisualChild(BatbotBadnikInstance parent, ChildKind kind) {
+            super(parent.buildSpawnAt(parent.currentX, parent.currentY + kind.yOffset),
+                    kind == ChildKind.BODY ? "BatbotBody" : "BatbotLamp");
+            this.parent = parent;
+            this.kind = kind;
+            this.currentX = parent.currentX;
+            this.currentY = parent.currentY + kind.yOffset;
+            this.mappingFrame = kind.initialFrame;
+        }
+
+        private BatbotVisualChild(ObjectSpawn spawn) {
+            super(spawn, "BatbotVisual");
+            this.kind = ChildKind.BODY;
+            this.currentX = spawn.x();
+            this.currentY = spawn.y();
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (isDestroyed()) {
+                return;
+            }
+            if (deleteCurrentSpriteMarker) {
+                setDestroyedByOffscreen();
+                return;
+            }
+            if (parent.childrenMustDelete()) {
+                deleteCurrentSpriteMarker = true;
+                return;
+            }
+
+            // Both child operations begin with Refresh_ChildPosition, so a
+            // higher-slot child observes movement performed by the parent earlier
+            // in this same ExecuteObjects pass (sonic3k.asm:186320-186374).
+            currentX = parent.currentX;
+            currentY = parent.currentY + kind.yOffset;
+            switch (childState) {
+                case INIT -> childState = ChildState.WAIT;
+                case WAIT -> {
+                    if (parent.state == State.CHASE) {
+                        childState = ChildState.ACTIVE;
+                        mappingFrame++;
+                    }
+                }
+                case ACTIVE -> {
+                    if (kind == ChildKind.BODY) {
+                        updateBodyAnimation();
+                    }
+                }
+            }
+            updateDynamicSpawn(currentX, currentY);
+        }
+
+        private void updateBodyAnimation() {
+            bodyAnimTimer--;
+            if (bodyAnimTimer >= 0) {
+                return;
+            }
+            bodyAnimIndex++;
+            if (bodyAnimIndex >= BODY_ANIM_FRAMES.length) {
+                bodyAnimIndex = 0;
+            }
+            mappingFrame = BODY_ANIM_FRAMES[bodyAnimIndex];
+            bodyAnimTimer = BODY_ANIM_DELAYS[bodyAnimIndex];
+        }
+
+        @Override
+        public ObjectSpawn getSpawn() {
+            return buildSpawnAt(currentX, currentY);
+        }
+
+        @Override
+        public int getX() {
+            return currentX;
+        }
+
+        @Override
+        public int getY() {
+            return currentY;
+        }
+
+        @Override
+        public int getOutOfRangeReferenceX() {
+            return parent.currentX;
+        }
+
+        @Override
+        public int getPriorityBucket() {
+            return CHILD_PRIORITY_BUCKET;
+        }
+
+        @Override
+        public boolean isHighPriority() {
+            // CreateChild1_Normal copies the parent's art_tile, including its
+            // high-priority plane bit (sonic3k.asm:176925-176927).
+            return true;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            if (isDestroyed() || deleteCurrentSpriteMarker) {
+                return;
+            }
+            PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_BATBOT);
+            if (renderer != null) {
+                // CreateChild1_Normal copies mappings and art_tile, but not the
+                // parent's render_flags; SetUp_ObjAttributes3 only sets bit 2.
+                // Batbot visual children therefore never inherit parent X flip
+                // (sonic3k.asm:176907-176947).
+                renderer.drawFrameIndex(mappingFrame, currentX, currentY, false, false);
+            }
+        }
     }
 }
