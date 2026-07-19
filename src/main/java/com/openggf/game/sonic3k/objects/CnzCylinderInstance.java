@@ -743,8 +743,10 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         player.setPriorityBucket(thresholdByte < objectThreshold
                 ? PLAYER_TWIST_PRIORITY
                 : PLAYER_CAPTURE_PRIORITY);
-        applyTwistFrame(player, slot.twistAngle);
+        // loc_32538 uses the current byte for GetSineCosine/position, then
+        // addq.b #2 before loc_3260A selects PlayerTwistFrames.
         slot.twistAngle = (slot.twistAngle + 2) & 0xFF;
+        applyTwistFrame(player, slot.twistAngle);
     }
 
     private void holdSlotPositionOnly(RiderSlot slot) {
@@ -764,8 +766,8 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         player.setPriorityBucket(thresholdByte < objectThreshold
                 ? PLAYER_TWIST_PRIORITY
                 : PLAYER_CAPTURE_PRIORITY);
-        applyTwistFrame(player, slot.twistAngle);
         slot.twistAngle = (slot.twistAngle + 2) & 0xFF;
+        applyTwistFrame(player, slot.twistAngle);
     }
 
     private int heldAnchorX(RiderSlot slot) {

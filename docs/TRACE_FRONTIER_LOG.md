@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ cylinder post-increment twist mapping: animation f7511 -> f13149
+
+At f7511 Sonic's held cylinder mapping crosses from `$55` to `$59`. Native
+`loc_32538` computes held position and priority from the current per-player
+twist byte, executes `addq.b #2,1(a2)`, and only then reaches `loc_32610` to
+select `PlayerTwistFrames`. The engine selected the mapping before incrementing
+the byte, delaying every mapping boundary by one cylinder pass
+(`docs/skdisasm/sonic3k.asm:68019-68100`).
+
+Both held-position variants now retain the pre-increment trigonometric sample
+while selecting the mapping and render flip from the post-increment phase. All
+30 focused cylinder tests pass, including the exact `$0A->$0C` mapping
+boundary. CNZ complete-run animation advances from f7511
+`player_mapping_frame` to f13149 `tails_mapping_frame`, while its physics
+frontier remains f24892 `y_speed`.
+
+The sequential 4 GB full sweeps remain 45/58 green for physics and 44/58 green
+for animation, with the same 13 physics expected-red routes and the same eight
+unsupported plus six comparison-red animation routes. No non-CNZ frontier
+moved, and legacy standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-19 -- S3K angled-landing Walk publication: animation f4116 -> f7511
 
 At f4116 spring-launched Sonic attaches to an angled CNZ wall. ROM

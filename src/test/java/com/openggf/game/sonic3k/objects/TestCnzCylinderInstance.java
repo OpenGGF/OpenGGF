@@ -42,6 +42,26 @@ class TestCnzCylinderInstance {
     }
 
     @Test
+    void heldTwistMappingUsesPostIncrementAngle() throws Exception {
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(spawn());
+        cylinder.setServices(new TestObjectServices());
+        TestPlayableSprite player = new TestPlayableSprite();
+
+        Object slot = playerOneSlot(cylinder);
+        setSlotField(slot, "player", player);
+        setSlotField(slot, "active", true);
+        setSlotField(slot, "twistAngle", 0x0A);
+        setSlotField(slot, "horizontalDistance", 0x10);
+        setSlotField(slot, "priorityThresholdSource", 0x60);
+
+        invokeHoldSlot(cylinder, slot);
+
+        assertEquals(0x0C, (int) getSlotField(slot, "twistAngle"));
+        assertEquals(0x59, player.getMappingFrame(),
+                "loc_32538 increments the twist byte before loc_32610 selects the mapping");
+    }
+
+    @Test
     void firstUpdateContinuesAfterRomInitFallthroughMotionPass() {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnWithSubtype(0xF1));
         cylinder.setServices(new TestObjectServices());
