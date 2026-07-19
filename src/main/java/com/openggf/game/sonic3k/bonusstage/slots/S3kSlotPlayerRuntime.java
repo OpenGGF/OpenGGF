@@ -106,6 +106,23 @@ public final class S3kSlotPlayerRuntime {
         stageState.setStatTable((stageState.rawStatTable() + delta) & 0xFFFF);
     }
 
+    /**
+     * ROM Obj_Sonic_RotatingSlotBonus and its subroutines (sonic3k.asm:98656-99567:
+     * loc_4B9CE/loc_4BA4E per-frame dispatch, sub_4BABC ground velocity,
+     * sub_4BCB0 air gravity, sub_4BD5A collision, loc_4BC1E/loc_4BC46/loc_4BC54
+     * goal-exit rotation/fade) never write {@code angle(a0)} -- the whole
+     * routine range has zero references to the angle field. The object's
+     * "rotation" is expressed purely through {@code Stat_table} (read directly
+     * by {@link #applyMoveWithCollision} and {@link #applyAirMotionWithCollision}
+     * for the ground/gravity projection), not through the player sprite's own
+     * angle byte. Deriving {@code player.angle} from {@code Stat_table} was a
+     * fabricated behaviour with no ROM analog and diverged the trace-replay
+     * angle field starting at frame 4 (once Stat_table's high byte first went
+     * non-zero) even though angle should stay at whatever value the player had
+     * on bonus-stage entry for the entire stage. This method (and
+     * {@link #tickExitFrame}, {@link #syncDebugState}, {@link #leaveDebugMode})
+     * intentionally leave {@code player.angle} untouched.
+     */
     public void tick(AbstractPlayableSprite player, boolean up, boolean down,
                      boolean left, boolean right, boolean jump, int frameCounter) {
         short originalX = player.getX();
@@ -118,7 +135,6 @@ public final class S3kSlotPlayerRuntime {
         player.setMovementInputActive(player.isDebugMode()
                 ? (up || down || left || right)
                 : (left != right));
-        player.setAngle((byte) stageState.angle());
 
         if (wasDebugActive && !debugActive && !player.isDebugMode()) {
             syncPlayerToSlotOrigin(player);
@@ -206,7 +222,6 @@ public final class S3kSlotPlayerRuntime {
         }
         short originalX = player.getX();
         short originalY = player.getY();
-        player.setAngle((byte) stageState.angle());
         exitSequence.tick();
         syncPlayerToSlotOrigin(player);
         player.updateSensors(originalX, originalY);
@@ -223,7 +238,6 @@ public final class S3kSlotPlayerRuntime {
             }
             stageState.setStatTable(0);
             stageState.setScalarIndex1(0);
-            player.setAngle((byte) 0);
         } else if (debugActive) {
             leaveDebugMode(player);
         }
@@ -245,7 +259,6 @@ public final class S3kSlotPlayerRuntime {
         stageState.setScalarIndex1(debugSavedScalarIndex1);
         resetDebugMovementState(player);
         player.setRolling(true);
-        player.setAngle((byte) stageState.angle());
     }
 
     private void tickDebugMove(AbstractPlayableSprite player, boolean up, boolean down, boolean left, boolean right) {
