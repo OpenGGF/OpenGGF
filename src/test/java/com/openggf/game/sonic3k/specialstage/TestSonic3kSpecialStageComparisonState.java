@@ -40,6 +40,23 @@ class TestSonic3kSpecialStageComparisonState {
 
         Sonic3kSpecialStageComparisonState second = manager.captureComparisonState();
         assertEquals(state, second);
+
+        // Second pass: flip started/finished and re-capture so every pairwise combination
+        // of the three boolean fields (started/finished/emeraldCollected) differs somewhere
+        // across the two passes. Pass 1 above (started=true, finished=false,
+        // emeraldCollected=true) alone leaves started and emeraldCollected seeded identically
+        // in every pass, so a getter swapped between those two would go undetected; keeping
+        // emeraldCollected=true here (instead of also negating it) breaks that tie while still
+        // covering the started/finished and finished/emeraldCollected pairs.
+        set(manager, "finished", true);
+        set(manager, "emeraldCollected", true);
+        set(player, "started", false);
+
+        Sonic3kSpecialStageComparisonState state2 = manager.captureComparisonState();
+
+        assertEquals(player.isStarted(), state2.started());
+        assertEquals(manager.isFinished(), state2.finished());
+        assertEquals(manager.hasEmeraldCollected(), state2.emeraldCollected());
     }
 
     private static void seedManagerWithDistinctScalars(Sonic3kSpecialStageManager manager) {
@@ -49,7 +66,7 @@ class TestSonic3kSpecialStageComparisonState {
         set(manager, "frameCounter", 1234);
         set(manager, "clearRoutine", 3);
         set(manager, "clearTimer", 9);
-        set(manager, "finished", true);
+        set(manager, "finished", false);
         set(manager, "emeraldCollected", true);
     }
 
