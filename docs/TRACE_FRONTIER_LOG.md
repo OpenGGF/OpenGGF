@@ -1,5 +1,21 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- S2 halfpipe round-trip captured: TWO detours in one run
+
+The first S2 halfpipe round-trip recording (`s2-ehz-halfpipe-roundtrip.bk2`,
+22819 input frames, Sonic+Tails) was captured with `s2_trace_recorder.lua`
+v9.12-s2 run mode and committed under
+`src/test/resources/traces/s2/runs/s2-ehz-halfpipe-roundtrip/`. The movie
+re-enters the halfpipe from a second star post, exercising the new
+`ss_segment_count` multi-detour dir tokens live: five segments
+(`seg1_ehz1` 2969 rows / `ss` 5733 / `seg2_ehz1` 2903 / `ss_2` 6381 /
+`seg3_ehz1` 3452) and four transitions (`starpost_special` with
+`f_bigring=1`, rings_before 50 and 69; `stage_exit` with the ROM-truth
+`rings_after=0`), `special_stage_index` advancing 0 -> 1. 48-column ss
+rows with halfpipe-typical ~35% lag-row density. No headless test consumes
+the run yet (the chain test remains the shared deferral); the artifacts
+are ready for it and for the visual run branch.
+
 ### 2026-07-19 -- S1 maze first capture committed; comparator frontier opens at f0
 
 The first S1 maze round-trip recording (`s1-ghz-maze-roundtrip.bk2`, 9093
