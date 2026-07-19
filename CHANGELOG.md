@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K bonus-stage entry (Gumball/Pachinko) no longer forces the player airborne a frame early:** the headless fixture's generic pre-frame-0 ground-snap probe has no ROM equivalent for bonus-stage spawns -- `SpawnLevelMainSprites`'s zone air/animation branches are skipped whenever `Special_bonus_entry_flag` is set, so the ground-to-air transition is decided exclusively by frame 0's own `Player_AnglePos` probe. Resetting the fixture's forced `Status_InAir` before the first driven frame advances the Gumball and Pachinko bonus-stage trace frontiers from frame 0 to frames 27 and 46 respectively (`docs/skdisasm/sonic3k.asm:7619,8117-8118,38160-38183,61896`).
 - Trace framework: S3K special-stage trace classes moved under the game package (naming rule).
 - Trace replay: slot-machine bonus segments accepted (deferred-setup seam wired).
 - Trace framework: s3k_special_stage trace parser.
