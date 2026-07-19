@@ -721,6 +721,14 @@ public final class TraceSessionLauncher {
                 return;
             }
 
+            if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
+                var sidekickSprites = GameServices.spritesOrNull();
+                if (sidekickSprites != null && !sidekickSprites.getSidekicks().isEmpty()) {
+                    sidekickSprites.getSidekicks().getFirst()
+                            .getAnimationManager().suppressNextUpdate();
+                }
+            }
+
             var sprites = GameServices.spritesOrNull();
             var level = GameServices.levelOrNull();
             var camera = GameServices.cameraOrNull();
@@ -817,6 +825,14 @@ public final class TraceSessionLauncher {
                 if (candidate instanceof AbstractPlayableSprite playable) {
                     playable.getAnimationManager().update(animationFrame);
                 }
+            }
+        }
+
+        @Override
+        public void suppressFirstSidekickAnimationOnce() {
+            var sprites = GameServices.spritesOrNull();
+            if (sprites != null && !sprites.getSidekicks().isEmpty()) {
+                sprites.getSidekicks().getFirst().getAnimationManager().suppressNextUpdate();
             }
         }
 

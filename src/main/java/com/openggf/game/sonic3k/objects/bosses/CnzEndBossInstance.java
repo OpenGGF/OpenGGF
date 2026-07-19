@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -693,6 +694,15 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         ObjectControlState.none().applyTo(sprite);
         sprite.setHidden(false);
         sprite.setRolling(false);
+        // Restore_PlayerControl clears Status_InAir and publishes Wait to both
+        // anim and prev_anim, with anim_frame/time_frame reset. The boss slot
+        // runs after the playable slots, so the old victory mapping remains
+        // visible for this frame while the raw animation byte changes
+        // (sonic3k.asm:180361-180371,146037-146061).
+        sprite.setAir(false);
+        sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
+        sprite.setAnimationFrameIndex(0);
+        sprite.setAnimationTick(0);
     }
 
     /**

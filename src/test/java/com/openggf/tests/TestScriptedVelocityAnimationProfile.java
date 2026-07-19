@@ -5,11 +5,34 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestScriptedVelocityAnimationProfile {
+
+    @Test
+    void touchSuppressionAloneStillPublishesNormalMovementAnimation() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        ObjectControlState.engineScriptedTouchSuppressedMovementActive().applyTo(sprite);
+        sprite.setGSpeed((short) 0);
+
+        assertEquals(profile.getIdleAnimId(), profile.resolveAnimationId(sprite, 0, 32).intValue(),
+                "native object_control bit 7 does not suppress the normal movement animation path");
+    }
+
+    @Test
+    void movementSuppressionPreservesObjectPublishedAnimation() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+        sprite.setAnimationId(profile.getSpringAnimId());
+
+        assertNull(profile.resolveAnimationId(sprite, 0, 32),
+                "object_control bit 0 leaves animation ownership with the controlling object");
+    }
 
     @Test
     public void resolvesSlideAnimationWhenSlidingOnGround() {
@@ -348,6 +371,18 @@ public class TestScriptedVelocityAnimationProfile {
 
         assertEquals(0, animId.intValue(),
                 "Move writes Wait before AnglePos sets Status_InAir on a ground-to-air detach frame");
+    }
+
+    @Test
+    void lateGroundedDuckWriteSurvivesAnglePosDetachFrame() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) 0x24);
+        sprite.setAnimationId(profile.getDuckAnimId());
+        sprite.setAir(true);
+
+        assertNull(profile.resolveAnimationId(sprite, 0, 32),
+                "Tails_Roll's post-Move Duck write remains authoritative when AnglePos detaches Tails");
     }
 
     @Test

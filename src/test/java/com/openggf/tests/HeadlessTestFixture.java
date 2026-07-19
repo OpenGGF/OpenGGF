@@ -76,6 +76,11 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
         runner.advancePlayableAnimationsOnly();
     }
 
+    @Override
+    public void suppressFirstSidekickAnimationOnce() {
+        runner.suppressFirstSidekickAnimationOnce();
+    }
+
     /** Consume one BK2 input frame without stepping gameplay or timing counters. */
     public int consumeRecordingFrameInputOnly() {
         return runner.consumeRecordingFrameInputOnly();

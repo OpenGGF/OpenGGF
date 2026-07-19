@@ -7,6 +7,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
@@ -277,6 +278,8 @@ class TestS3kCnzTeleporterRouteHeadless {
                 "Capsule release should clear object control instead of leaving the player frozen");
         assertFalse(fixture.sprite().isHidden(),
                 "If the teleporter route hid the player earlier, capsule release must reveal them again");
+        assertEquals(Sonic3kAnimationIds.WAIT, fixture.sprite().getAnimationId(),
+                "Restore_PlayerControl should publish Wait before returning normal control");
         assertFalse(events.isBossFlag(),
                 "Task 8 owns clearing Boss_flag so later CNZ event logic can leave boss mode");
         assertEquals(0, GameServices.gameState().getCurrentBossId(),

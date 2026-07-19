@@ -499,6 +499,9 @@ public final class TraceCaptureTool {
             }
             return false;
         }
+        if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
+            frameDriver.suppressFirstSidekickAnimationOnce();
+        }
         // NOTE: the S3K replay loop in AbstractTraceReplayTest.replayS3kTrace
         // does NOT special-case ADVANCE_ONLY; only VBLANK_ONLY is skipped and
         // every other phase drives a gameplay tick. Mirror that exactly — an
@@ -610,6 +613,11 @@ public final class TraceCaptureTool {
         @Override
         public void advancePlayableAnimationsOnly() {
             driver.advancePlayableAnimationsOnly();
+        }
+
+        @Override
+        public void suppressFirstSidekickAnimationOnce() {
+            driver.suppressFirstSidekickAnimationOnce();
         }
 
         @Override

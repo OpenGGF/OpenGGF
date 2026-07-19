@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ complete-run animation: f30486 -> green
+
+The remaining CPU-Tails boundary at f30486 is a native sample taken after the
+sidekick's movement path but before `Animate_Tails`. Replay now represents that
+execution phase explicitly and suppresses only the pending sidekick animation
+dispatch; physics, objects, counters, and the main player's animation continue
+through the full level frame. The phase is inferred from the recorded
+`tails_cpu_normal_step` transition and adjacent native animation state, without
+copying trace values into engine state or adding a CNZ/route/frame exception.
+
+The later frontiers exposed ordinary ROM animation ownership. `Tails_Roll`
+writes Duck after ground acceleration, so an `AnglePos` detach must retain that
+late write throughout the following airborne routine. Native
+`object_control=$80` suppresses touch response but does not suppress the normal
+movement/animation path used by the second rival-Knuckles cutscene. Finally,
+CNZ's retained boss calls `Restore_PlayerControl` after results, publishing Wait
+and clearing animation progress for both players before normal control resumes
+(`docs/skdisasm/sonic3k.asm:27518-27531,28458-28513,129247-129294,
+180361-180371,146037-146061`).
+
+Focused CNZ complete-run physics and animation both pass. Serial one-fork 4 GB
+full sweeps report 46/58 physics and improve animation from 44/58 to 45/58;
+the remaining 12 physics and 13 animation failures have the same previously
+documented frontiers, so no other trace frontier regressed.
+
 ### 2026-07-19 -- CNZ retained results and end-cannon handoff: physics f39449 -> green
 
 The generic results exit restored player control and camera ownership before

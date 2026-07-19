@@ -67,6 +67,7 @@ class TestTraceReplayReferenceClosureGuard {
                 () -> { events.add("previous"); return 12; },
                 () -> { events.add("skip"); return 13; },
                 () -> events.add("animate"),
+                () -> events.add("suppress"),
                 () -> events.add("validate"));
         events.add("compare");
 
@@ -85,6 +86,7 @@ class TestTraceReplayReferenceClosureGuard {
                 () -> { events.add("previous"); return 12; },
                 () -> { events.add("skip"); return 13; },
                 () -> events.add("animate"),
+                () -> events.add("suppress"),
                 () -> events.add("validate"));
         events.add("compare");
 
@@ -109,6 +111,7 @@ class TestTraceReplayReferenceClosureGuard {
                 () -> { s3kEvents.add("previous"); return 12; },
                 () -> { s3kEvents.add("skip"); return 13; },
                 () -> s3kEvents.add("animate"),
+                () -> s3kEvents.add("suppress"),
                 () -> s3kEvents.add("validate"));
 
         assertEquals(List.of("skip"), generalEvents);
@@ -128,11 +131,31 @@ class TestTraceReplayReferenceClosureGuard {
                 () -> { events.add("previous"); return 12; },
                 () -> { events.add("skip"); return 13; },
                 () -> events.add("animate"),
+                () -> events.add("suppress"),
                 () -> events.add("validate"));
         events.add("compare");
 
         assertEquals(List.of("skip", "animate", "validate", "compare"), events);
         assertEquals(13, input);
+    }
+
+    @Test
+    void heldSidekickAnimationSuppressesBeforeFullStepAndValidation() {
+        List<String> events = new ArrayList<>();
+
+        int input = TraceReplayFrameClosureDriver.driveS3k(
+                TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD,
+                false,
+                () -> { events.add("step"); return 11; },
+                () -> { events.add("previous"); return 12; },
+                () -> { events.add("skip"); return 13; },
+                () -> events.add("animate"),
+                () -> events.add("suppress"),
+                () -> events.add("validate"));
+        events.add("compare");
+
+        assertEquals(List.of("suppress", "step", "validate", "compare"), events);
+        assertEquals(11, input);
     }
 
     @Test

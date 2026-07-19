@@ -22,6 +22,9 @@ public interface TraceReplayFixture {
     /** Advance only the playable animation slice proven by a native mid-loop trace hook. */
     void advancePlayableAnimationsOnly();
 
+    /** Hold the first CPU sidekick's next Animate dispatch while running the full tick. */
+    void suppressFirstSidekickAnimationOnce();
+
     /** Consume one BK2 frame without stepping gameplay or timing counters. Returns the mask. */
     int consumeRecordingFrameInputOnly();
 

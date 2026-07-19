@@ -24,6 +24,16 @@ public class PlayableSpriteAnimation {
     private int lastGroundMovementAnimId = -1;
     private int groundMovementAnimSpeedSnapshot = Integer.MIN_VALUE;
     private boolean groundMovementAnimationSuppressed;
+    private boolean nextUpdateSuppressed;
+
+    /**
+     * Holds one animation dispatch while the rest of the playable tick runs.
+     * Used when a native VBlank sample bisects a CPU sidekick slot after its
+     * movement path but before {@code Animate_Tails}.
+     */
+    public void suppressNextUpdate() {
+        nextUpdateSuppressed = true;
+    }
 
     /**
      * Resets the tracked animation ID so the next update sees a mismatch
@@ -110,6 +120,10 @@ public class PlayableSpriteAnimation {
 
     public void update(int frameCounter) {
         if (sprite == null) {
+            return;
+        }
+        if (nextUpdateSuppressed) {
+            nextUpdateSuppressed = false;
             return;
         }
         if (sprite.getSpindashDustController() != null) {

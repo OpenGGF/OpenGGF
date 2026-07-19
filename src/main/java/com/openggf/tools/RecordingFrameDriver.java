@@ -273,6 +273,13 @@ public final class RecordingFrameDriver {
         }
     }
 
+    public void suppressFirstSidekickAnimationOnce() {
+        var sprites = GameServices.sprites();
+        if (!sprites.getSidekicks().isEmpty()) {
+            sprites.getSidekicks().getFirst().getAnimationManager().suppressNextUpdate();
+        }
+    }
+
     private void updateHeldCounterTitleCardOverlay() {
         TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
         if (titleCardProvider != null && titleCardProvider.advancesOnHeldLevelCounter()) {

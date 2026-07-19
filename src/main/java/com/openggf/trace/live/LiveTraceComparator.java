@@ -92,6 +92,12 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         TraceFrame previous = cursor > 0 ? trace.getFrame(cursor - 1) : null;
         TraceExecutionPhase phase =
                 TraceReplayBootstrap.phaseForReplay(trace, previous, current);
+        if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
+            SpriteManager sprites = GameServices.spritesOrNull();
+            if (sprites != null && !sprites.getSidekicks().isEmpty()) {
+                sprites.getSidekicks().getFirst().getAnimationManager().suppressNextUpdate();
+            }
+        }
         return phase == TraceExecutionPhase.VBLANK_ONLY
                 || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY;
     }

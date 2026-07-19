@@ -562,6 +562,7 @@ public abstract class AbstractTraceReplayTest {
                     fixture::stepFrameFromRecordingUsingPreviousInput,
                     fixture::skipFrameFromRecording,
                     fixture::advancePlayableAnimationsOnly,
+                    fixture::suppressFirstSidekickAnimationOnce,
                     () -> {
                         if (shouldValidateRewindReferenceClosure(game())) {
                             TraceReplayFrameClosureDriver.validateCurrentObjectManager(

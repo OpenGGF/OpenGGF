@@ -152,6 +152,10 @@ public class HeadlessTestRunner {
         driver.advancePlayableAnimationsOnly();
     }
 
+    public void suppressFirstSidekickAnimationOnce() {
+        driver.suppressFirstSidekickAnimationOnce();
+    }
+
     /**
      * Consumes one BK2 input frame without mutating gameplay or timing counters.
      */
