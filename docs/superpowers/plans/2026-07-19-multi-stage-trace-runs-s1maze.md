@@ -16,7 +16,7 @@
 - JUnit 5 / Jupiter only. No JUnit 4 imports/rules/runners.
 - **ArchUnit naming rule (learned in slots plan fix sl5):** game-specific trace data classes must live in the game package (`com.openggf.game.sonic1.specialstage`), NOT `com.openggf.trace`. `TraceData.loadAuxEvents` / `resolveTraceFile` / `openTraceReader` are already `public` for this reason.
 - **Guard baselines are never weakened.** If a guard fires, fix the code or register with an explicit documented justification in the guard file itself.
-- **Lua local budget:** `s1_complete_run_recorder.lua` has ~183 main-chunk locals against Lua's 200-local limit. ALL new recorder state/constants/functions added by this plan are **globals**, matching the S3K recorder's v6.30/v6.31 convention.
+- **Lua local budget:** `s1_complete_run_recorder.lua` has ~117 top-level `local` statements (~130 declared names) against Lua's 200-local main-chunk limit — headroom exists but shrinks with every addition. ALL new recorder state/constants/functions added by this plan are **globals**, matching the S3K recorder's v6.30/v6.31 convention.
 - **Commit policy:** every non-merge commit carries the 7-trailer block (`Changelog`/`Guide`/`Known-Discrepancies`/`S3K-Known-Discrepancies`/`Agent-Docs`/`Configuration-Docs`/`Skills`, each `updated` or `n/a`). A `feat`/`fix` commit touching `src/main/` must set `Changelog: updated` and stage `CHANGELOG.md` (CRLF file — edit carefully, verify `git diff --stat` shows only the added lines). Stage exact paths only; NEVER `git add -A`. Never `git stash`. End commits with the session's `Co-Authored-By` / `Claude-Session` lines.
 - **Test hygiene:** prefer `TestEnvironment.resetPerTest()` over hand-rolled singleton teardown (slots fix sl5); every test asserts something real.
 - **VERIFY-ON-FIRST-CAPTURE:** the S1 SS RAM map below is derived from `docs/s1disasm/sonic.lst` + `_Variables.asm` and has NOT yet been validated against a live capture. The recorder must print self-check summaries so the first real recording validates the map before the schema is treated as frozen (spec Component 1 requirement).
@@ -85,7 +85,7 @@ frame,input,lag,x_pos,y_pos,vel_x,vel_y,inertia,status,ss_angle,ss_rotate,bg_ani
 **Interfaces:**
 - Produces: `Sonic1SpecialStageComparisonState` (record, 15 components below), `Sonic1SpecialStageManager.captureComparisonState()`, `Sonic1SpecialStageProvider.getManager()`. Tasks 4/5 consume all three.
 
-- [ ] **Step 1: Write the failing test.** Model on `TestSonic3kSpecialStageComparisonState` (read it first) and the reflective field get/set idiom in `TestSonic1SpecialStageRewindSnapshot`. Construct `new Sonic1SpecialStageManager()` (no ROM needed — pure field reflection, no `initialize()`), reflectively seed EVERY captured field with a distinct value, call `captureComparisonState()`, assert each record component mirrors its field. **Boolean seeding must be pairwise-asymmetric** so a swapped mapping fails: seed `sonicAirborne=true`, `sonicFacingLeft=false`, `emeraldCollected=true`, `exitTriggered=false`, `finished=true`. Add a second test: two consecutive `captureComparisonState()` calls with no intervening mutation return equal records (pure-read check).
+- [ ] **Step 1: Write the failing test.** Model on `TestSonic3kSpecialStageComparisonState` (read it first) and the reflective field get/set idiom in `TestSonic1SpecialStageRewindSnapshot`. Construct `new Sonic1SpecialStageManager()` (no ROM needed — pure field reflection, no `initialize()`), reflectively seed EVERY captured field with a distinct value, call `captureComparisonState()`, assert each record component mirrors its field. **Five booleans cannot be swap-proofed in one pass** — a swapped mapping between two fields is undetected unless their seeded values differ in some pass, so each boolean field needs a DISTINCT value-vector across passes; with 5 booleans and only 4 possible two-pass vectors, **three re-seeded capture passes are required** (the model test `TestSonic3kSpecialStageComparisonState` uses the same multi-pass idiom for its smaller boolean set — read its comment). Use these codewords (each row is one field's value in pass 1/2/3; all five rows distinct): `sonicAirborne = T,T,F`; `sonicFacingLeft = F,T,T`; `emeraldCollected = T,F,T`; `exitTriggered = F,F,T`; `finished = T,T,T`. Re-seed all fields and re-assert the full record each pass (a loop over three seed-sets keeps this compact). Add a third test: two consecutive `captureComparisonState()` calls with no intervening mutation return equal records (pure-read check).
 
 ```java
 package com.openggf.game.sonic1.specialstage;
@@ -104,41 +104,55 @@ class TestSonic1SpecialStageComparisonState {
         f.set(target, value);
     }
 
+    /**
+     * Three passes with distinct per-field boolean codewords: a swapped
+     * boolean mapping is undetectable in any pass where the two fields hold
+     * equal values, so every field carries a distinct value-vector across
+     * the passes (5 fields > 4 possible two-pass vectors => 3 passes).
+     */
     @Test
     void captureMirrorsManagerFields() throws Exception {
-        Sonic1SpecialStageManager manager = new Sonic1SpecialStageManager();
-        set(manager, "sonicPosX", 0x12345678L);
-        set(manager, "sonicPosY", 0x0ABCDEF0L);
-        set(manager, "sonicVelX", 0x0123);
-        set(manager, "sonicVelY", 0xFEDC);
-        set(manager, "sonicInertia", 0x0456);
-        set(manager, "sonicAirborne", true);
-        set(manager, "sonicFacingLeft", false);
-        set(manager, "ssAngle", 0x4000);
-        set(manager, "ssRotate", 0x0080);
-        set(manager, "bgAnimState", 6);
-        set(manager, "ringsCollected", 23);
-        set(manager, "emeraldCollected", true);
-        set(manager, "exitTriggered", false);
-        set(manager, "finished", true);
-        set(manager, "currentStage", 3);
+        boolean[][] seeds = {
+                // airborne, facingLeft, emerald, exitTriggered, finished
+                {true, false, true, false, true},
+                {true, true, false, false, true},
+                {false, true, true, true, true},
+        };
+        for (boolean[] pass : seeds) {
+            Sonic1SpecialStageManager manager = new Sonic1SpecialStageManager();
+            set(manager, "sonicPosX", 0x12345678L);
+            set(manager, "sonicPosY", 0x0ABCDEF0L);
+            set(manager, "sonicVelX", 0x0123);
+            set(manager, "sonicVelY", 0xFEDC);
+            set(manager, "sonicInertia", 0x0456);
+            set(manager, "sonicAirborne", pass[0]);
+            set(manager, "sonicFacingLeft", pass[1]);
+            set(manager, "ssAngle", 0x4000);
+            set(manager, "ssRotate", 0x0080);
+            set(manager, "bgAnimState", 6);
+            set(manager, "ringsCollected", 23);
+            set(manager, "emeraldCollected", pass[2]);
+            set(manager, "exitTriggered", pass[3]);
+            set(manager, "finished", pass[4]);
+            set(manager, "currentStage", 3);
 
-        Sonic1SpecialStageComparisonState s = manager.captureComparisonState();
-        assertEquals(0x12345678L, s.sonicPosX());
-        assertEquals(0x0ABCDEF0L, s.sonicPosY());
-        assertEquals(0x0123, s.sonicVelX());
-        assertEquals(0xFEDC, s.sonicVelY());
-        assertEquals(0x0456, s.sonicInertia());
-        assertEquals(true, s.sonicAirborne());
-        assertEquals(false, s.sonicFacingLeft());
-        assertEquals(0x4000, s.ssAngle());
-        assertEquals(0x0080, s.ssRotate());
-        assertEquals(6, s.bgAnimState());
-        assertEquals(23, s.ringsCollected());
-        assertEquals(true, s.emeraldCollected());
-        assertEquals(false, s.exitTriggered());
-        assertEquals(true, s.finished());
-        assertEquals(3, s.currentStage());
+            Sonic1SpecialStageComparisonState s = manager.captureComparisonState();
+            assertEquals(0x12345678L, s.sonicPosX());
+            assertEquals(0x0ABCDEF0L, s.sonicPosY());
+            assertEquals(0x0123, s.sonicVelX());
+            assertEquals(0xFEDC, s.sonicVelY());
+            assertEquals(0x0456, s.sonicInertia());
+            assertEquals(pass[0], s.sonicAirborne());
+            assertEquals(pass[1], s.sonicFacingLeft());
+            assertEquals(0x4000, s.ssAngle());
+            assertEquals(0x0080, s.ssRotate());
+            assertEquals(6, s.bgAnimState());
+            assertEquals(23, s.ringsCollected());
+            assertEquals(pass[2], s.emeraldCollected());
+            assertEquals(pass[3], s.exitTriggered());
+            assertEquals(pass[4], s.finished());
+            assertEquals(3, s.currentStage());
+        }
     }
 
     @Test
@@ -277,8 +291,8 @@ assertEquals(1, f.emeralds());
 **S1-specific behavior contract:**
 1. A maze row is written ONLY while `game_mode == 0x10`. Level rows remain gated on `game_mode == GAMEMODE_LEVEL` exactly as today (the existing non-level branch at L919 already stops level rows).
 2. The `$10` detour branch is checked BEFORE the existing `game_mode ~= GAMEMODE_LEVEL` finalize+re-arm branch, and is gated on `detour_active ~= "special_stage"` for entry (NEVER on `started` alone — the S3K comment at L5288–5294 explains the re-fire bug this prevents).
-3. Entry transition (`giant_ring`) is pushed when the SS segment opens; exit transition (`stage_exit`) is pushed at the next level segment's arm when the previous `segments_done` entry has kind `special_stage`. S1 transition records carry only `mode_change_bk2_frame`, `rings_before`/`emeralds_before` (entry) and `rings_after`/`emeralds_after` (exit) — there is no `Special_bonus_entry_flag`/`Saved_X_pos` analog. **Verify against `TraceRunManifest.validate()` first**: if any of those fields are hard-required for `giant_ring` transitions, this is a plan conflict — report BLOCKED rather than emitting fake zeros. (Expected: they are optional; the S3K synthetic fixture and validator treat per-kind extras as optional.)
-4. `run_manifest.json` is emitted at end-of-run finalize only when a detour occurred or `OGGF_TRACE_RUN_ID` is set (plain complete-run captures remain byte-stable). The end-of-run finalize must also close a mid-`$10`-truncated SS segment (call `finalize_ss_segment()` before the manifest write), mirroring the S3K Step-1b handling.
+3. Entry transition (`giant_ring`) is pushed when the SS segment opens; exit transition (`stage_exit`) is pushed at the next level segment's arm when the previous `segments_done` entry has kind `special_stage`. S1 transition records carry only `mode_change_bk2_frame`, `rings_before`/`emeralds_before` (entry) and `rings_after`/`emeralds_after` (exit) — there is no `Special_bonus_entry_flag`/`Saved_X_pos` analog. Verified: `TraceRunManifest.Transition`'s boundary fields are all optional `Integer`s, so the reduced S1 field set validates as-is (`validate()` also enforces `to == from + 1`, `from >= 0`, `to < segments.size()` — the `started` outer gate below is what keeps `from` non-negative).
+4. `run_manifest.json` is emitted at end-of-run finalize only when a detour occurred or `OGGF_TRACE_RUN_ID` is set (plain complete-run captures remain byte-stable). The end-of-run finalize is an explicit if/else — SS finalize when `detour_active`, else level finalize — per Step 5's restructure (mirrors s3k L5822–5846; the naive "call both" ordering corrupts a mid-`$10`-truncated SS segment because `started` is true during SS segments too).
 5. All new state/functions are **globals**. Bump the metadata `lua_script_version` (currently `"3.14"`) to `"3.15"` in `write_metadata` and use the same version in the new `write_ss_metadata`.
 6. S1 caveat to encode as a comment on the writer: S1's SS results tally may run under `$10`; those tail rows are recorded (rows are cheap, comparator is red-allowed MVP) — the green campaign decides where engine comparison stops.
 
@@ -299,9 +313,9 @@ ss_last_rotate = nil
 run_id = os.getenv("OGGF_TRACE_RUN_ID") or nil
 ```
 
-- [ ] **Step 2: Track level segments in `segments_done`.** In the level start path (L867–917), after `OUTPUT_DIR` is set, record `current_segment_dir_token = start_zone_name .. tostring(start_act + 1)`. Add a global `function append_level_segment_done(rows)` that appends `{dir = current_segment_dir_token, kind = "level", profile = "level", zone_id = start_zone_id, act = start_act, bk2_frame_offset = bk2_frame_offset, rows = rows}` — call it from BOTH level-finalize sites (the stop/movie-end finalize at L856–864 and the non-level finalize at L919–931) immediately after `write_metadata()`. Guard against double-append (only append when `started` was true at entry to that branch — both sites already gate on `started`/reset it).
+- [ ] **Step 2: Track level segments in `segments_done`.** In the level start path (L867–917), after `OUTPUT_DIR` is set, record `current_segment_dir_token = start_zone_name .. tostring(start_act + 1)`. Add a global `function append_level_segment_done(rows)` that appends `{dir = current_segment_dir_token, kind = "level", profile = "complete_run", zone_id = start_zone_id, act = start_act + 1, bk2_frame_offset = bk2_frame_offset, rows = rows}` — `act` is **1-based** and `profile` is the string `"complete_run"`, matching the S3K emitter (`finalize_segment`, s3k recorder ~L4957–4982) and the synthetic fixture's level segments exactly (the S1 level `metadata.json` emits no `trace_profile` today; the manifest entry is where the profile lives — note this in a comment). Call it from the non-level finalize (L919–931) immediately after `write_metadata()`, and from the restructured end-of-run finalize per Step 5. Guard against double-append (only append when `started` was true at entry to that branch — both sites already gate on `started`/reset it).
 
-- [ ] **Step 3: Add the SS segment functions** (globals): `write_ss_metadata`, `start_ss_segment`, `write_ss_row`, `finalize_ss_segment`. Port shape from the S3K functions; S1 differences: dir token counting via `segment_dir_counts["ss"]` identical; `current_ss_index = mainmemory.read_u8(0xFE16)` (`v_lastspecial`, 0–5); header/writer per this plan's 14-col schema; metadata fields:
+- [ ] **Step 3: Add the SS segment functions** (globals): `write_ss_metadata`, `start_ss_segment`, `write_ss_row`, `finalize_ss_segment`. Port shape from the S3K functions; S1 differences: dir token counting via `segment_dir_counts["ss"]` identical (**keep the S3K `ss`/`ss_2` token style exactly** — S1's level-zone namespace already owns `ss1`..`ss4` because zone id 7 is named `ss` in `ZONE_NAMES`, so the bare-`ss` token avoids collision; note `precreate_segment_dirs` (L278–315) does NOT pre-create the bare `ss/` dir, so the first detour's `ensure_segment_dir` will shell out once on Windows — add `"ss"` to the pre-create list to avoid the cmd-window flash); `current_ss_index = mainmemory.read_u8(0xFE16)` (`v_lastspecial`, 0–5 — **sampling-window caveat, document in a comment**: `SS_Load` (`docs/s1disasm/_inc/Special Stage Loading & Drawing.asm:536-556`) reads `v_lastspecial`, immediately increments it mod 6, and if the selected stage's emerald is already collected it loops to the NEXT stage; the arm-time read precedes `SS_Load` only because GM_Special opens with a multi-frame fade, and after a first emerald has been collected the pre-`SS_Load` value can name a stage the skip loop rejects. The finalize self-check must therefore re-read `v_lastspecial` and print it: `(index+1) % 6` = healthy, anything else = the skip loop fired and `special_stage_index` is suspect — re-derive before committing the trace); header/writer per this plan's 14-col schema; metadata fields:
 
 ```lua
 function write_ss_metadata()
@@ -368,7 +382,7 @@ function write_ss_row()
 end
 ```
 
-`finalize_ss_segment` prints the self-check summary (`angle range seen`, `final ss_rotate (exit ramp targets 0x1800)`, row count) and appends `{dir = current_segment_dir_token, kind = "special_stage", profile = "s1_special_stage", special_stage_index = current_ss_index, zone_id = 0, act = 0, bk2_frame_offset = bk2_frame_offset, rows = trace_frame}` to `segments_done`, then resets shared recording state exactly like the level finalize (`started=false`, `trace_frame=0`, close files, clear the ss accumulators and `current_ss_index`). NOTE: check `bk2_input_mask`'s implementation for hidden assumptions (it may index a preloaded BK2 input table by `bk2_frame_offset + trace_frame` — if so it works unchanged for SS segments because `start_ss_segment` re-bases `bk2_frame_offset`; if it assumes level-only state, adapt and document).
+`finalize_ss_segment` is guarded `if not started then return end` (like s3k L5201–5203), then in order: `physics_file:flush()`, **`write_ss_metadata()`** (final `trace_frame_count` — without this rewrite the metadata is stale at the last 300-multiple, s3k L5204–5205), the self-check summary print (`angle range seen`, `final ss_rotate (exit ramp targets 0x1800)`, row count, and the `v_lastspecial` re-read from Step 3's caveat), `close_files()`, append `{dir = current_segment_dir_token, kind = "special_stage", profile = "s1_special_stage", special_stage_index = current_ss_index, zone_id = 0, act = 0, bk2_frame_offset = bk2_frame_offset, rows = trace_frame}` to `segments_done`, then reset shared recording state exactly like the level finalize (`started=false`, `trace_frame=0`, clear the ss accumulators and `current_ss_index`). NOTE: check `bk2_input_mask`'s implementation for hidden assumptions (it may index a preloaded BK2 input table by `bk2_frame_offset + trace_frame` — if so it works unchanged for SS segments because `start_ss_segment` re-bases `bk2_frame_offset`; if it assumes level-only state, adapt and document).
 
 - [ ] **Step 4: Wire the detour state machine into `on_frame_end`.** Insert BEFORE the `game_mode ~= GAMEMODE_LEVEL` branch (L919), mirroring the S3K structure — but note the S1 recorder reads `game_mode` at the TOP of `on_frame_end` (L842), so the insertion point is after the stop/movie-end guard and BEFORE the `if not started` arm gate as well, because SS entry happens while a level segment is still armed OR after it finalized (results screens run between). Exact structure:
 
@@ -435,7 +449,27 @@ The stage-exit transition push goes in the level arm path (inside the `if not st
 
 Also: the existing non-level finalize branch (L919) must now call `append_level_segment_done(trace_frame)` (Step 2) — and the SS-entry path above deliberately duplicates the finalize inline because entry can occur while `started` is true without passing through that branch (the `$0C -> $10` edge arrives as `game_mode == 0x10`, so L919's branch would otherwise ALSO fire on the same frame — the detour branch's early `return` prevents double-finalize; verify this ordering carefully and add a comment).
 
-- [ ] **Step 5: Port `write_run_manifest`** (global function) from the S3K recorder: same invariant warning loop (transition indices bounded by `#segments_done`), same gating (`#transitions_done == 0 and run_id == nil` -> skip), same field names as the S3K emitter/`TraceRunManifest` schema, `"game": "s1"`, `"source_bk2": "s1-complete-run.bk2"`. Call it from the end-of-run finalize (the `stop_reached or movie_done` branch), after finalizing any armed segment — including `finalize_ss_segment()` when `detour_active == "special_stage"` (mid-`$10` truncation). Read `TraceRunManifest.java` and the synthetic fixture BEFORE writing to confirm exact key names (`run_schema`, `segments[].trace_frame_count` vs `rows`, etc.) — the S3K emitter is the ground truth for what the Java side accepts; mirror it, translating only the game id and profile strings.
+- [ ] **Step 5: Restructure the end-of-run finalize + port `write_run_manifest`.** The existing stop/movie-end branch (L856–864) runs the LEVEL finalize whenever `started` — but `started` is also true during an SS segment (`start_ss_segment` sets it), so a movie/stop ending mid-`$10` would run the level finalize against the SS segment: the level `write_metadata()` (which carries the previous level's zone/act and no `trace_profile`) would overwrite `ss/metadata.json` via the shared `OUTPUT_DIR`, a bogus `kind="level"` entry would be appended for the ss dir, and the subsequent `finalize_ss_segment()` would no-op on its `not started` guard. **Restructure L856–864 as an explicit if/else, mirroring the S3K end-of-run finalize (s3k recorder L5822–5846) literally:**
+
+```lua
+    if stop_reached or movie_done then
+        if detour_active == "special_stage" then
+            finalize_ss_segment()
+            detour_active = nil
+        elseif started then
+            if physics_file then physics_file:flush() end
+            write_metadata()
+            append_level_segment_done(trace_frame)
+            close_files()
+            started = false
+        end
+        write_run_manifest()
+        finished = true
+        return
+    end
+```
+
+`write_ss_metadata`'s `trace_frame_count` correctly labels the truncated SS segment. Then port `write_run_manifest` (global function) from the S3K recorder (L1420): same invariant warning loop (transition indices bounded by `#segments_done`), same gating (`#transitions_done == 0 and run_id == nil` -> skip), same field names as the S3K emitter/`TraceRunManifest` schema — note the manifest JSON key for per-segment frame counts is **`trace_frame_count`** (the Lua-side table field is `rows`; the emitter maps it), `"game": "s1"`, `"source_bk2": "s1-complete-run.bk2"`. `TraceRunManifest.Transition` boundary fields (`saved_x_pos` etc.) are all optional `Integer`s — the S1 records' reduced field set validates as-is; `special_stage` segments hard-require `special_stage_index` (emitted). Read the S3K emitter and the synthetic fixture before writing; mirror them, translating only the game id and profile strings.
 
 - [ ] **Step 6: Parse gate.** Run: `docs/skdisasm/build_tools/lua/lua.exe -e "assert(loadfile('tools/bizhawk/s1_complete_run_recorder.lua'))"` from the repo root. Expected: no output, exit 0. (This catches syntax + the 200-local overflow.)
 
@@ -515,7 +549,7 @@ class TestS1SpecialStageTraceReplay extends AbstractS1SpecialStageTraceReplayTes
 
 Model on `TestS3kSpecialStageHeadlessBoot` (read it first). The S1 manager already boots headlessly in `Sonic1SpecialStageManagerTest` via `initHeadless()`; this test proves the **provider-path** boot the harness/GameLoop uses (spec addition #6-S1 — expected to confirm a no-op, i.e. no new init hook needed).
 
-- [ ] **Step 1: Write the test:** `assumeTrue` on S1 ROM; `GraphicsManager.getInstance().resetState(); initHeadless();` load `Rom`, `TestEnvironment.configureRomFixture(rom)`, `initHeadless()` again; set `MAIN_CHARACTER_CODE="sonic"`; `Sonic1SpecialStageProvider provider = new Sonic1SpecialStageProvider(); provider.initializeStage(0);` then assert `provider.isInitialized()`, capture frame-0 state; step 180 frames (`provider.handleInput(0,0); provider.update();`); assert no exception, `provider.getManager().captureComparisonState()` differs from the frame-0 capture (the maze rotates / timers advance even with neutral input — e.g. `ssAngle` or the captured record as a whole changed), and `provider.isFinished()` is false. Follow the `Sonic1SpecialStageManagerTest` teardown recipe (`manager.reset()` via `provider.reset()`, `GraphicsManager.getInstance().cleanup(); resetState();`) or `TestEnvironment.resetPerTest()` if that is what `TestS3kSpecialStageHeadlessBoot` uses — mirror the S3K test's setup/teardown exactly.
+- [ ] **Step 1: Write the test.** **Mirror `TestS3kSpecialStageHeadlessBoot` literally** (read it first): it uses `@RequiresRom(SonicGame.SONIC_3K)` — no `assumeTrue`, no manual `Rom.open`/`configureRomFixture`, and no teardown; the S1 version uses `@RequiresRom(SonicGame.SONIC_1)` and whatever setup the S3K test actually performs, with `Sonic1SpecialStageProvider` substituted. (`Sonic1SpecialStageManagerTest` is the second precedent: `@RequiresRom(SONIC_1)` + `initHeadless` + `initialize(0)` + repeated `update()` already work headlessly.) Body: `provider.initializeStage(0)`; assert `provider.isInitialized()`; capture frame-0 state; step 180 frames (`provider.handleInput(0,0); provider.update();`); assert the final `provider.getManager().captureComparisonState()` differs from the frame-0 capture — specifically `ssAngle` changed: `update()` adds `SS_INIT_ROTATION = 0x40` to `ssAngle` unconditionally, so this is guaranteed non-vacuous — and `provider.isFinished()` is false.
 - [ ] **Step 2: Run** `mvn "-Dtest=com.openggf.tests.TestS1SpecialStageHeadlessBoot" test` — expected PASS with the S1 ROM present (pass `"-Ds1.rom.path=..."` if the runner needs it; discover the root-level `.gen` per CLAUDE.md, do not rename ROMs).
 - [ ] **Step 3: Commit** — `test(s1): verify special-stage provider boots headlessly (spec addition #6-S1)` (`Changelog: n/a: test-only change`).
 
@@ -528,7 +562,7 @@ Model on `TestS3kSpecialStageHeadlessBoot` (read it first). The S1 manager alrea
 - Modify: `docs/TRACE_FRONTIER_LOG.md`
 - Modify: `docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md`
 
-- [ ] **Step 1: README recording procedure** (mirror the blue-spheres section's structure): "S1 maze round-trip (s1-ghz-maze-roundtrip)": record a BizHawk movie on the S1 World REV01 ROM — play GHZ1 collecting ≥50 rings, touch the giant ring past the signpost, complete (or fail out of) the maze, continue into GHZ2 until control is settled, stop the movie. Run `s1_complete_run_recorder.lua` against the bk2 (headless per the existing S1 recorder invocation) — the `$10` detour automatically produces `ghz1/` + `ss/` + `ghz2/` segments and `run_manifest.json`. Commit the run under `src/test/resources/traces/s1/runs/s1-ghz-maze-roundtrip/`, copy the `ss/` segment (with its `metadata.json`, `physics.csv`, and the source bk2) to `src/test/resources/traces/s1/special_stage/` to activate `TestS1SpecialStageTraceReplay`. Note the `source_bk2` filename must match the actual bk2 committed alongside (rename the movie to `s1-complete-run.bk2` inside the trace dir, or edit `source_bk2` in the copied metadata — state which and be consistent). Include the VERIFY-ON-FIRST-CAPTURE checklist: recorder self-check prints must show plausible angle range, final `ss_rotate` ramping toward `0x1800`, rings/emeralds behaving; any surprise = re-derive the RAM map before committing the trace.
+- [ ] **Step 1: README recording procedure** (mirror the blue-spheres section's structure): "S1 maze round-trip (s1-ghz-maze-roundtrip)": record a BizHawk movie on the S1 World REV01 ROM — play GHZ1 collecting ≥50 rings, touch the giant ring past the signpost, complete (or fail out of) the maze, continue into GHZ2 until control is settled, stop the movie. Run `s1_complete_run_recorder.lua` against the bk2 (headless per the existing S1 recorder invocation) — the `$10` detour automatically produces `ghz1/` + `ss/` + `ghz2/` segments and `run_manifest.json`. Commit the run under `src/test/resources/traces/s1/runs/s1-ghz-maze-roundtrip/`, copy the `ss/` segment (with its `metadata.json`, `physics.csv`, and the source bk2) to `src/test/resources/traces/s1/special_stage/` to activate `TestS1SpecialStageTraceReplay`. Note the `source_bk2` filename must match the actual bk2 committed alongside (rename the movie to `s1-complete-run.bk2` inside the trace dir, or edit `source_bk2` in the copied metadata — state which and be consistent). Include the VERIFY-ON-FIRST-CAPTURE checklist: recorder self-check prints must show plausible angle range, final `ss_rotate` ramping toward `0x1800`, rings/emeralds behaving, and the finalize `v_lastspecial` re-read printing `(special_stage_index + 1) % 6` (anything else = the `SS_Load` emerald-skip loop fired and the recorded index is suspect); any surprise = re-derive the RAM map before committing the trace. Also note: record the round-trip on a **fresh save/no-emeralds state** — after a first emerald is collected, `v_lastspecial`'s pre-`SS_Load` value can name a stage the ROM's skip loop rejects, mislabeling the segment.
 - [ ] **Step 2: Frontier log entry** (follow the blue-spheres entry format): pipeline landed, trace pending recording; record the deferred follow-ups explicitly — (a) in-chain/visual SS-interior comparison (shared with S3K blue spheres), (b) standalone visual SS launch still `s2_special_stage`-gated in `TraceSessionLauncher`/`TraceEntry`, (c) S1 SS results-tail rows recorded under `$10` may need a comparator stop rule in the green campaign.
 - [ ] **Step 3: Spec amendment:** edit the `s1_trace_recorder.lua` line (~201) to name `s1_complete_run_recorder.lua` as the landed host, one-line parenthetical citing S3K parity (the run machinery lives in the complete-run recorders).
 - [ ] **Step 4: Commit** — `docs(trace): s1 maze recording procedure + frontier entry + spec recorder-host amendment` (`Changelog: n/a: docs only`).
@@ -538,6 +572,6 @@ Model on `TestS3kSpecialStageHeadlessBoot` (read it first). The S1 manager alrea
 ## Verification gate (after all tasks)
 
 1. Explicit new-test sweep: the five `-Dtest` runs from Tasks 1–5 all green/skipped-as-designed.
-2. Guard classes verified EXPLICITLY (aggregate diffs hide per-guard regressions — slots lesson): `mvn "-Dtest=com.openggf.tests.TestTraceReplayInvariantGuard" test`, the ArchUnit suite class covering package-naming rules, `TestTraceRunManifest`, `TestSingletonLifecycle` (if the boot test touches singletons).
+2. Guard classes verified EXPLICITLY (aggregate diffs hide per-guard regressions — slots lesson): `mvn "-Dtest=com.openggf.tests.TestTraceReplayInvariantGuard" test`, `TestArchUnitRules`, `TestArchUnitTestRules`, `TestTraceRunManifest`, `TestSingletonLifecycleGuard`.
 3. Full `mvn test` (detached `nohup mvn test > log &` + Monitor; sandbox off; remember surefire excludes `**/tests/trace/**` — trace classes are covered by step 1, not this run). Compare failures against the develop baseline (29F/6E pre-existing); NEW failures block.
 4. Lua parse gate re-run on the final recorder.
