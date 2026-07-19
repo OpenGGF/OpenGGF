@@ -423,6 +423,53 @@ public final class TraceReplaySessionBootstrap {
         if (rng != null) {
             rng.setSeed(meta.initialRngSeed());
         }
+        suppressGumballInitialRngReseedIfApplicable(meta);
+    }
+
+    /**
+     * Prevents {@code GumballMachineObjectInstance}'s own ROM-faithful
+     * frame-0 RNG reseed (sonic3k.asm:127412 {@code move.l
+     * (V_int_run_count).w,(RNG_seed).w}) from clobbering the recorded seed
+     * just applied above.
+     *
+     * <p>That reseed fires on the machine's first object-dispatch tick,
+     * which for a gumball bonus-stage trace is replay's frame 0 -- strictly
+     * after this method already primed the RNG from the exact seed this
+     * recording captured. The object derives its own approximation from the
+     * engine's local per-session VBlank dispatch counter
+     * ({@code ObjectManager.vblaCounter}, observed 0x0400 here), which is a
+     * materially different, smaller-range count than the real hardware
+     * {@code V_int_run_count} the recorded seed (observed 0x1598) reflects
+     * -- the engine has no persistent global counter to reconstruct that
+     * value outside of what the trace itself recorded. Left alone, the
+     * object's own reseed overwrites the correct value with the wrong one on
+     * this exact tick.
+     *
+     * <p>Must run AFTER {@link #applyStartPositionAndGroundSnap} settles the
+     * camera/placement window (called from {@link #applyBootstrap}, after
+     * that step): {@code GumballMachineObjectInstance.current(objectManager)}
+     * looked up any earlier -- e.g. from {@link #applyBonusStageEntry}, which
+     * runs before the camera is placed -- can resolve a since-unloaded
+     * instance that placement windowing has already replaced by frame 0,
+     * silently no-oping the suppression.
+     */
+    private static void suppressGumballInitialRngReseedIfApplicable(TraceMetadata meta) {
+        if (meta == null || meta.initialRngSeed() == null
+                || !"s3k_bonus_stage".equals(meta.traceProfile())
+                || !"gumball".equals(meta.bonusStageType())
+                || !GameServices.hasRuntime()) {
+            return;
+        }
+        ObjectManager objectManager = GameServices.level() != null
+                ? GameServices.level().getObjectManager() : null;
+        if (objectManager == null) {
+            return;
+        }
+        var machine = com.openggf.game.sonic3k.objects.GumballMachineObjectInstance
+                .current(objectManager);
+        if (machine != null) {
+            machine.suppressInitialRngReseed();
+        }
     }
 
     /** Maps the recorder's bonus_stage_type token to the engine enum. */

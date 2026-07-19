@@ -291,6 +291,24 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
 
     private boolean driftInitialized;
 
+    // Set only by trace-replay bootstrap
+    // (TraceReplaySessionBootstrap.applyInitialRngSeedForReplay, via
+    // suppressGumballInitialRngReseedIfApplicable) when the recorded trace
+    // carries an explicit frame-0 RNG seed. ROM's
+    // `move.l (V_int_run_count).w,(RNG_seed).w` (sonic3k.asm:127412) reads the
+    // real hardware VBlank-driven run counter, a value this engine does not
+    // track persistently -- the local `frameCounter` argument below is the
+    // per-session object-dispatch VBlank counter (ObjectManager.vblaCounter),
+    // which is a materially different, smaller-range count (observed 0x0400
+    // vs a recorded RNG_seed of 0x1598 at the same trace frame 0). For a
+    // replayed trace, the bootstrap already reconstructs the exact ROM seed
+    // from the recording's metadata (TraceReplaySessionBootstrap
+    // .applyInitialRngSeedForReplay) before any object runs; this flag stops
+    // the approximate local reseed below from clobbering that ground-truth
+    // value on this object's first tick. Live (non-replay) play has no such
+    // recorded value, so it keeps the existing local-counter approximation.
+    private boolean suppressInitialRngReseed;
+
     // ===== Instance state =====
 
     private State state = State.IDLE;
@@ -324,6 +342,15 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
 
     public GumballMachineObjectInstance(ObjectSpawn spawn) {
         super(spawn, "GumballMachine");
+    }
+
+    /**
+     * See {@link #suppressInitialRngReseed}'s field javadoc. Called only by
+     * {@code TraceReplaySessionBootstrap.applyInitialRngSeedForReplay} when
+     * the replayed trace carries an explicit recorded frame-0 RNG seed.
+     */
+    public void suppressInitialRngReseed() {
+        this.suppressInitialRngReseed = true;
     }
 
     @Override
@@ -415,7 +442,11 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         // so tests can exercise drift logic without requiring services()).
         if (!driftInitialized) {
             // ROM: Obj_GumballMachine seeds RNG_seed from V_int_run_count at init.
-            services().rng().setSeed(frameCounter & 0xFFFFFFFFL);
+            // See suppressInitialRngReseed's javadoc: trace replay bootstraps this
+            // exact value from the recording instead of the local approximation.
+            if (!suppressInitialRngReseed) {
+                services().rng().setSeed(frameCounter & 0xFFFFFFFFL);
+            }
             initDrift();
         }
 
