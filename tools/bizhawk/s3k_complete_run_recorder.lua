@@ -315,7 +315,9 @@ BIZHAWK_VERSION = "2.11"
 GENESIS_CORE = "Genplus-gx"
 S3K_ROM_CHECKSUM = "C5B1C655C19F462ADE0AC4E17A844D10"
 LUA_SCRIPT_VERSION = "6.31-s3k-completerun"   -- no "v" prefix (existing convention)
-SOURCE_BK2_NAME = "s3k-complete-sonic-tails.bk2"
+-- Overridable so non-default movies (e.g. the Knuckles multi-bonus route)
+-- get truthful source_bk2 metadata instead of the complete-run default.
+SOURCE_BK2_NAME = os.getenv("OGGF_BK2_BASENAME") or "s3k-complete-sonic-tails.bk2"
 
 -- Sonic 3 & Knuckles 68K RAM addresses (BizHawk mainmemory strips $FF0000)
 local ADDR_GAME_MODE        = 0xF600
@@ -1239,6 +1241,32 @@ local function open_files()
     physics_file:flush()
 end
 
+-- Character metadata derived from ROM Player_mode
+-- (sonic3k.constants.asm:892: 0 = Sonic and Tails, 1 = Sonic alone,
+-- 2 = Tails alone, 3 = Knuckles alone). Previously hardcoded
+-- sonic+tails, which mislabeled Knuckles/solo-route movies; the replay
+-- bootstrap boots the recorded team from these fields. Global
+-- (local-budget); defined after ADDR_PLAYER_MODE so the upvalue binds.
+function character_metadata_json()
+    local mode = mainmemory.read_u16_be(ADDR_PLAYER_MODE)
+    if mode == 1 then
+        return '  "characters": ["sonic"],\n'
+            .. '  "main_character": "sonic",\n'
+            .. '  "sidekicks": [],\n'
+    elseif mode == 2 then
+        return '  "characters": ["tails"],\n'
+            .. '  "main_character": "tails",\n'
+            .. '  "sidekicks": [],\n'
+    elseif mode == 3 then
+        return '  "characters": ["knuckles"],\n'
+            .. '  "main_character": "knuckles",\n'
+            .. '  "sidekicks": [],\n'
+    end
+    return '  "characters": ["sonic", "tails"],\n'
+        .. '  "main_character": "sonic",\n'
+        .. '  "sidekicks": ["tails"],\n'
+end
+
 local function write_metadata()
     local meta_file = io.open(OUTPUT_DIR .. "metadata.json", "w")
     local fixture_notes = ""
@@ -1264,9 +1292,7 @@ local function write_metadata()
     meta_file:write('  "pre_trace_osc_frames": ' .. start_gameplay_frame_counter .. ',\n')
     meta_file:write('  "start_x": "0x' .. hex(start_x) .. '",\n')
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
-    meta_file:write('  "characters": ["sonic", "tails"],\n')
-    meta_file:write('  "main_character": "sonic",\n')
-    meta_file:write('  "sidekicks": ["tails"],\n')
+    meta_file:write(character_metadata_json())
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
     meta_file:write(string.format('  "lua_script_version": %q,\n', LUA_SCRIPT_VERSION))
@@ -5065,9 +5091,7 @@ function write_ss_metadata()
     meta_file:write('  "trace_profile": "s3k_special_stage",\n')
     meta_file:write('  "special_stage_index": ' .. current_ss_index .. ',\n')
     meta_file:write('  "ss_csv_version": 1,\n')
-    meta_file:write('  "characters": ["sonic", "tails"],\n')
-    meta_file:write('  "main_character": "sonic",\n')
-    meta_file:write('  "sidekicks": ["tails"],\n')
+    meta_file:write(character_metadata_json())
     meta_file:write('  "bk2_frame_offset": ' .. bk2_frame_offset .. ',\n')
     meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
     meta_file:write(string.format('  "source_bk2": %q,\n', SOURCE_BK2_NAME))
