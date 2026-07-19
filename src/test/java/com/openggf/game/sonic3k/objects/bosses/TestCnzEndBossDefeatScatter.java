@@ -69,7 +69,7 @@ class TestCnzEndBossDefeatScatter {
                 {0x200, -0x200}
         };
         for (int subtype = 0; subtype < expectedVelocities.length; subtype++) {
-            CnzEndBossArmChild arm = new CnzEndBossArmChild(boss(), subtype << 5);
+            CnzEndBossArmChild arm = new CnzEndBossArmChild(boss(), subtype << 6);
             arm.setServices(servicesWithCamera(0x46C0, 0x0200));
             arm.update(0, null);
             int startX = arm.getCentreX();

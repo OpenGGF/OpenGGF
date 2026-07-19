@@ -42,6 +42,8 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
     private static final int JUMP_X_VEL = -0x0100;
     private static final int JUMP_Y_VEL = -0x0400;
     private static final int EXIT_SPEED = 4;
+    private static final int RENDER_HALF_WIDTH = 0x1C;
+    private static final int RENDER_HALF_HEIGHT = 0x18;
 
     private static final int[] RUN_FRAMES = {0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11};
     private static final int RUN_DELAY = 5;
@@ -162,7 +164,10 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
             player.clearLogicalInputState();
             player.clearForcedInputMask();
             player.setControlLocked(true);
-            ObjectControlState.nativeBit7FullControl().applyTo(player);
+            // loc_62528 writes object_control=$80. Obj01_Control gates normal
+            // movement on bit 0, so the player must keep falling while bit 7
+            // suppresses TouchResponse and Ctrl_1_locked owns input.
+            ObjectControlState.engineScriptedTouchSuppressedMovementActive().applyTo(player);
         }
         activeInstance = this;
         phase = Phase.WAIT_FOR_PLAYER_JUMP;
@@ -260,7 +265,9 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
     private void routineExitRight(AbstractPlayableSprite player) {
         currentX += EXIT_SPEED;
         animateLoop(RUN_FRAMES, RUN_DELAY);
-        if (isOnScreen(96)) {
+        // loc_625E2 observes render_flags from the preceding Draw_Sprite pass,
+        // using ObjSlot_CutsceneKnux's native width/height bytes.
+        if (isPreUpdateWithinRenderSpriteBounds(RENDER_HALF_WIDTH, RENDER_HALF_HEIGHT)) {
             return;
         }
 
@@ -275,6 +282,16 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
         spawnFreeChild(() -> new SongFadeTransitionInstance(
                 LEVEL_MUSIC_FADE_FRAMES, Sonic3kMusic.CNZ2.id, true));
         phase = Phase.FORCE_PLAYER_LEFT;
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return RENDER_HALF_WIDTH;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return RENDER_HALF_HEIGHT;
     }
 
     private void routineForcePlayerLeft(AbstractPlayableSprite player) {

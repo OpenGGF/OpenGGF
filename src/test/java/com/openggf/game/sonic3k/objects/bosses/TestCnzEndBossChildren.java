@@ -10,6 +10,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -134,6 +135,57 @@ class TestCnzEndBossChildren {
         magnet.update(0, main);
         assertEquals(4, magnet.frameForTest(),
                 "loc_6E910 resets the magnet head when parent bit 3 clears");
+    }
+
+    @Test
+    void defeatScatterUnlinksExpiredMagnetFromRewindGraph() throws Exception {
+        CnzEndBossInstance boss = boss();
+        CnzEndBossMagnetChild magnet = magnet(boss, playerAt(boss.getCentreX()));
+        field(boss, "magnetChild").set(boss, magnet);
+
+        magnet.beginDefeatScatter();
+
+        assertEquals(true, magnet.isDestroyed());
+        assertNull(field(boss, "magnetChild").get(boss),
+                "an expired native child must not remain in the captured boss graph");
+    }
+
+    @Test
+    void nativeBossChildrenIgnoreGenericOffscreenCulling() {
+        CnzEndBossInstance boss = boss();
+        CnzEndBossMagnetChild magnet = magnet(boss, playerAt(boss.getCentreX()));
+        CnzEndBossArmChild arm = new CnzEndBossArmChild(boss, 0);
+
+        assertEquals(true, magnet.isPersistent());
+        assertEquals(true, arm.isPersistent());
+        assertEquals(magnet.getCentreX(), magnet.getMultiTouchRegions()[0].x());
+        assertEquals(magnet.getCentreY(), magnet.getMultiTouchRegions()[0].y());
+        assertEquals(arm.getCentreX(), arm.getMultiTouchRegions()[0].x());
+        assertEquals(arm.getCentreY(), arm.getMultiTouchRegions()[0].y());
+    }
+
+    @Test
+    void repeatedArmSubtypesProduceQuarterTurnPhases() {
+        CnzEndBossInstance boss = boss();
+        for (int childIndex = 0; childIndex < 4; childIndex++) {
+            CnzEndBossArmChild arm = new CnzEndBossArmChild(boss, childIndex << 6);
+            assertEquals(childIndex << 6, arm.angleForTest());
+            assertEquals(childIndex << 1, arm.getSpawn().subtype());
+        }
+    }
+
+    @Test
+    void bossTouchResponseStartsOnlyAfterNativeRoutineZeroSetup() throws Exception {
+        CnzEndBossInstance boss = boss();
+
+        assertEquals(0, boss.getCollisionFlags(),
+                "the camera-gate wrapper does not call Draw_And_Touch_Sprite");
+        setBoolean(boss, "startupComplete", true);
+        assertEquals(0x06, boss.getCollisionFlags(),
+                "loc_6E4F2 installs ObjDat_CNZEndBoss collision response 6");
+        var region = boss.getMultiTouchRegions()[0];
+        assertEquals(boss.getCentreX(), region.x());
+        assertEquals(boss.getCentreY(), region.y());
     }
 
     @Test

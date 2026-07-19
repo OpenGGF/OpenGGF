@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ rival handoff and boss child graph: physics f34874 -> f36602
+
+The second rival-Knuckles sequence writes `object_control=$80`, whose bit 0 is
+clear: normal player movement continues while bit 7 suppresses touch response
+and `Ctrl_1_locked` supplies scripted input. Its run-offscreen routine then
+tests the render flag produced by the preceding Draw_Sprite pass with the
+`ObjSlot_CutsceneKnux` `$1C`-by-`$18` bounds. Modeling both details restores
+Sonic's fall and forced-left shaft entry
+(`docs/skdisasm/sonic3k.asm:129247-129365,134795-134801`).
+
+The newly reached end-boss sequence exposed three related child-graph issues.
+The magnet and attached arms were incorrectly eligible for generic off-screen
+culling before the boss entered the arena; their touch response also used
+engine top-left render bounds instead of the ROM `x_pos`/`y_pos` centres. In
+addition, `CreateChild3_NormalRepeated` advances its subtype register by two,
+so the four arms must receive subtypes `0,2,4,6` and phases
+`0,64,128,192`, not four adjacent eighth-turn phases. The boss body now remains
+touch-inactive until `loc_6E4F2` installs its object data, and an expiring
+magnet unlinks its captured parent reference so the rewind graph remains
+closed (`docs/skdisasm/sonic3k.asm:145801-145864,146667-146713,176999-177030`).
+
+Focused cutscene, boss-child, defeat-scatter, and boss-graph rewind tests pass.
+CNZ complete-run physics advances from f34874 `y_sub` to f36602 `x`; animation
+remains at f30486 `tails_mapping_frame`. Sequential one-fork 4 GB full sweeps
+retain the established 45/58 physics and 44/58 animation green counts, with
+the same non-CNZ frontiers and legacy standalone CNZ still at f0 in both
+scopes.
+
 ### 2026-07-19 -- CNZ barber-pole packed track wrap: physics f33084 -> f34874
 
 The mirrored pole stores its rider track as the same packed 16.16 long copied

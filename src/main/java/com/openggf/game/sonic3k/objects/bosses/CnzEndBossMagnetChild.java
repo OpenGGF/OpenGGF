@@ -101,6 +101,7 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity player) {
         if (boss.isDestroyed()) {
+            boss.unlinkMagnetChild(this);
             ObjectLifetimeOps.expireDynamic(this);
             return;
         }
@@ -172,6 +173,13 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
     int frameForTest() { return frame; }
     boolean isReleasedForTest() { return dropping; }
 
+    @Override
+    public void onUnload() {
+        boss.unlinkMagnetChild(this);
+    }
+
+    @Override public boolean isPersistent() { return true; }
+
     /** ROM parent-bit-4 signal: replace the magnet slot with two ordered spark children. */
     void beginDefeatScatter() {
         if (isDestroyed()) return;
@@ -179,6 +187,7 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
         int sparkY = centreY;
         spawnChild(() -> new DefeatSpark(centreX - 8, sparkY, 0));
         spawnChild(() -> new DefeatSpark(centreX + 8, sparkY, 1));
+        boss.unlinkMagnetChild(this);
         ObjectLifetimeOps.expireDynamic(this);
     }
 
@@ -186,6 +195,9 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
         return collisionEnabled && !boss.defeatStarted() ? 0x8B : 0;
     }
     @Override public int getCollisionProperty() { return 0; }
+    @Override public TouchRegion[] getMultiTouchRegions() {
+        return new TouchRegion[] { new TouchRegion(centreX, centreY, getCollisionFlags()) };
+    }
     @Override public int getPriorityBucket() { return 5; }
 
     @Override

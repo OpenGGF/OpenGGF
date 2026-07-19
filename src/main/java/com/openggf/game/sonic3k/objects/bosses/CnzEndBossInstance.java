@@ -260,8 +260,10 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private void spawnNativeChildren() {
         spawnChild(() -> new CnzEndBossRobotnikShipChild(this));
         magnetChild = spawnChild(() -> new CnzEndBossMagnetChild(this));
-        for (int subtype = 0; subtype < 4; subtype++) {
-            int phase = subtype << 5;
+        // CreateChild3_NormalRepeated advances d2 by two for each child, so
+        // loc_6E994 receives subtypes 0,2,4,6 and derives quarter-turn phases.
+        for (int childIndex = 0; childIndex < 4; childIndex++) {
+            int phase = childIndex << 6;
             spawnChild(() -> new CnzEndBossArmChild(this, phase));
         }
     }
@@ -436,7 +438,9 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
-        if (defeatHandoffComplete || hitInvulnerabilityTimer > 0 || hitCount <= 0) {
+        // Before loc_6E4F2 installs ObjDat_CNZEndBoss, the camera-gate wrapper
+        // has not entered Draw_And_Touch_Sprite and owns no collision response.
+        if (!startupComplete || defeatHandoffComplete || hitInvulnerabilityTimer > 0 || hitCount <= 0) {
             return 0;
         }
         return COLLISION_FLAGS;
@@ -445,6 +449,14 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return hitCount;
+    }
+
+    @Override
+    public TouchRegion[] getMultiTouchRegions() {
+        // ROM TouchResponse consumes x_pos/y_pos. getX()/getY() are the
+        // renderer's top-left bounds for this 0x80-by-0x28 body, so publish the
+        // native centre explicitly instead of shifting the hit box up-left.
+        return new TouchRegion[] { new TouchRegion(centreX, centreY, getCollisionFlags()) };
     }
 
     @Override
@@ -761,5 +773,11 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
 
     void relinkMagnetChild(CnzEndBossMagnetChild child) {
         magnetChild = child;
+    }
+
+    void unlinkMagnetChild(CnzEndBossMagnetChild child) {
+        if (magnetChild == child) {
+            magnetChild = null;
+        }
     }
 }

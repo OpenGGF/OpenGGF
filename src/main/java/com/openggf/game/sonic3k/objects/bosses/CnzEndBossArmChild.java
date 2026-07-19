@@ -56,17 +56,17 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
 
     CnzEndBossArmChild(CnzEndBossInstance boss, int phase) {
         super(new ObjectSpawn(boss.getCentreX(), boss.getCentreY() + 8, 0,
-                        phase >>> 5 & 3, 0, false, 0),
+                        phase >>> 5 & 7, 0, false, 0),
                 "CNZEndBossArm");
         this.boss = boss;
         this.angle = phase & 0xFF;
-        this.armSubtype = phase >>> 5 & 3;
+        this.armSubtype = phase >>> 6 & 3;
     }
 
     @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         CnzEndBossInstance restoredBoss = CnzEndBossRewindLinks.boss(ctx);
         return restoredBoss == null ? null
-                : new CnzEndBossArmChild(restoredBoss, (ctx.spawn().subtype() & 3) << 5);
+                : new CnzEndBossArmChild(restoredBoss, (ctx.spawn().subtype() & 7) << 5);
     }
     @Override public int getX() { return centreX - 8; }
     @Override public int getY() { return centreY - 0x10; }
@@ -236,7 +236,10 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
 
     @Override public int getCollisionFlags() { return collisionEnabled ? 0x9E : 0; }
     @Override public int getCollisionProperty() { return 0; }
-    @Override public boolean isPersistent() { return scattered; }
+    @Override public TouchRegion[] getMultiTouchRegions() {
+        return new TouchRegion[] { new TouchRegion(centreX, centreY, getCollisionFlags()) };
+    }
+    @Override public boolean isPersistent() { return true; }
     @Override public int getPriorityBucket() { return (angle + 0x40 & 0x80) == 0 ? 4 : 5; }
 
     @Override

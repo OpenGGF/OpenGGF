@@ -131,6 +131,11 @@ class TestCutsceneKnucklesCnz2Instance {
         knuckles.setServices(TestEnvironment.objectServices());
         knuckles.update(0, fixture.sprite());
 
+        assertTrue(fixture.sprite().isObjectControlled());
+        assertFalse(fixture.sprite().isObjectControlSuppressesMovement(),
+                "loc_62528 writes object_control=$80: bit 7 suppresses touch response, "
+                        + "but Obj01_Control still runs movement because bit 0 is clear");
+
         Cnz2CutsceneButtonInstance button = new Cnz2CutsceneButtonInstance(
                 new ObjectSpawn(0x4780, 0x0728, Sonic3kObjectIds.CUTSCENE_BUTTON, 6, 0, false, 0));
         button.setServices(TestEnvironment.objectServices());
@@ -244,6 +249,8 @@ class TestCutsceneKnucklesCnz2Instance {
         knuckles.update(0, player);
         knuckles.update(1, player);
 
+        assertEquals(0x1C, knuckles.getOnScreenHalfWidth());
+        assertEquals(0x18, knuckles.getOnScreenHalfHeight());
         assertEquals(0, bridge.beginTeleporterRouteCalls,
                 "CutsceneKnux_CNZ2B loc_625E2 restores Sonic/Tails control and level music; "
                         + "the $4750-$48E0 teleporter clamp belongs only to CNZ2_ScreenEvent after Player_mode==3");
