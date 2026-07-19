@@ -191,7 +191,7 @@ level). These are recorded as separate segment directories in a single trace run
 1. Start a new movie from power-on with `s3k.gen`.
 2. Play AIZ Act 1 through to a star post. Collect exactly:
    - **20–34 rings** at the star post (selector formula `((rings-20)/15)%3` yields remainder 0),
-     referenced at ROM `sonic3k.asm:61891-61920` (SLOT_MACHINE assignment at 61906-61909).
+     referenced at ROM `sonic3k.asm:61891-61920` (SLOT_MACHINE assignment at 61897).
    
 3. Approach and enter the star circle at the star post.
 4. Play through the slot-machine bonus stage to its conclusion (inserting tokens, collecting

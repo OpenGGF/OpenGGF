@@ -4,7 +4,7 @@
 
 Branch `feature/ai-mstr-slots` landed the slot-machine headless replay slice:
 the `applyBonusStageEntry` bootstrap seam accepts `bonus_stage_type: "slots"` (profile-gated,
-registered in bootstrap-policy guard baseline with justification), and `TestS3kSlotsBonusTraceReplay`
+accepted by bonusStageTypeForToken (unknown tokens still throw)), and `TestS3kSlotsBonusTraceReplay`
 (zone 0x15) SKIPs until its recording exists. The recorder v6.30 was already wired to emit
 `slots/` segments with `bonus_stage_type: "slots"` in metadata.json; no recorder changes
 needed. Rewind: slots runtime sets `supportsRewind=false`; headless replay never reaches
@@ -17,7 +17,7 @@ gumball/pachinko framework.
 `tools/bizhawk/README.md`, "Recording S3K Slot-Machine Round-Trip Traces"):
 `s3k-aiz-slots.bk2` (20–34 rings at the star post, **SONIC-SOLO ONLY** — sidekick suppression
 suppresses the sprite comparator columns). No trace frontiers moved; no fixtures touched.
-Full-suite gate: no new failures vs the develop baseline after guard conformance.
+Full-suite gate run controller-side; guard findings under remediation (see subsequent entry/commits).
 
 ### 2026-07-19 -- Blue-spheres trace pipeline landed
 
