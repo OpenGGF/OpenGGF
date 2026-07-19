@@ -13,8 +13,10 @@ class TestTraceReplaySessionBootstrapBonus {
             TraceReplaySessionBootstrap.bonusStageTypeForToken("gumball"));
         assertEquals(BonusStageType.GLOWING_SPHERE,
             TraceReplaySessionBootstrap.bonusStageTypeForToken("pachinko"));
+        assertEquals(BonusStageType.SLOT_MACHINE,
+            TraceReplaySessionBootstrap.bonusStageTypeForToken("slots"));
         assertThrows(IllegalStateException.class,
-            () -> TraceReplaySessionBootstrap.bonusStageTypeForToken("slots"));
+            () -> TraceReplaySessionBootstrap.bonusStageTypeForToken("casino"));
         assertThrows(IllegalStateException.class,
             () -> TraceReplaySessionBootstrap.bonusStageTypeForToken(null));
     }
