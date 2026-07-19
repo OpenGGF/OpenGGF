@@ -181,12 +181,13 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
                                           S3kSpecialStageReplayHarness harness) {
         OptionalInt finishFrame = exitSpinCompletionFrame(trace);
         int compareEnd = trace.frameCount();
+        int startFrame = firstInteractiveFrame(trace);
 
         List<FrameComparison> comparisons = new ArrayList<>();
         int firstEngineFinished = -1;
         int steppedNonLagCount = 0;
 
-        for (int f = 0; f < compareEnd; f++) {
+        for (int f = startFrame; f < compareEnd; f++) {
             S3kSpecialStageTraceFrame tf = trace.getFrame(f);
             if (tf.lag()) {
                 continue;
@@ -231,7 +232,8 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
         fields.put("angle", cmp("angle", str(tf.angle()), str(state.angle()), Severity.ERROR));
         fields.put("velocity", cmp("velocity",
                 str(signedWord(tf.velocity())), str(state.velocity()), Severity.ERROR));
-        fields.put("turning", cmp("turning", str(tf.turning()), str(state.turning()), Severity.ERROR));
+        fields.put("turning", cmp("turning",
+                str(signedByte(tf.turning())), str(state.turning()), Severity.ERROR));
         fields.put("jumping", cmp("jumping", str(tf.jumping()), str(state.jumping()), Severity.ERROR));
         fields.put("fade_timer",
                 cmp("fade_timer", str(tf.fadeTimer()), str(state.fadeTimer()), Severity.ERROR));
@@ -261,6 +263,52 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
     }
 
     /**
+     * The first trace row at which the special stage's ROM boot sequence has
+     * settled into steady, interactive state -- observing a ROM pre-start
+     * hold, not hydrating engine state from the trace.
+     *
+     * <p>ROM {@code SpecialStage} (sonic3k.asm:10585-10725) entry is a single
+     * synchronous 68000 call: {@code Pal_FadeToWhite} runs first
+     * (sonic3k.asm:10591, interrupts still enabled -- BizHawk records these
+     * rows as non-lag even though {@code Special_stage_*} RAM is still
+     * whatever a PRIOR special-stage attempt left it at, since the
+     * {@code clearRAM Stat_table,$100} wipe (sonic3k.asm:10607) that zeroes
+     * the entire {@code Special_stage_*} block -- confirmed by RAM-layout
+     * arithmetic: {@code Stat_table}/{@code Pos_table_P2}
+     * (sonic3k.constants.asm:328-333) is exactly the 0x100-byte
+     * {@code Pos_table_P2} region that hosts every {@code Special_stage_*}
+     * field at sonic3k.constants.asm:1012-1057 -- hasn't run yet). Immediately
+     * after, {@code move #$2700,sr} (sonic3k.asm:10592) masks interrupts, and
+     * the routine spends dozens of real frames inside back-to-back
+     * {@code Nem_Decomp}/{@code Eni_Decomp}/{@code Kos_Decomp} calls
+     * (sonic3k.asm:10632-10695) loading special-stage art with no controller
+     * poll -- BizHawk marks every one of those frames lag. {@code Wait_VSync}
+     * (sonic3k.asm:10725) is the first frame that reads input again, landing
+     * the RAM state the engine's synchronous, instant-load
+     * {@code Sonic3kSpecialStageManager#initialize(int)} already produces at
+     * construction (matching layout-driven x/y/angle, cleared
+     * {@code clear_routine}, etc.).
+     *
+     * <p>The trace's own {@code lag} column is the ROM-observable signal for
+     * this hold -- not a hardcoded frame count: this returns the first row
+     * whose {@code lag} is {@code false} immediately after having seen at
+     * least one {@code lag=true} row (the decompression block). Traces with
+     * no leading lag run (already opened post-boot) fall back to frame 0.
+     */
+    private static int firstInteractiveFrame(S3kSpecialStageTraceData trace) {
+        boolean sawLag = false;
+        for (int f = 0; f < trace.frameCount(); f++) {
+            boolean lag = trace.getFrame(f).lag();
+            if (lag) {
+                sawLag = true;
+            } else if (sawLag) {
+                return f;
+            }
+        }
+        return 0;
+    }
+
+    /**
      * The trace frame where the exit-spin animation completes: the first
      * return of {@code fade_timer} to 0 after its first 0&rarr;nonzero rise.
      * Covers both exit paths -- {@code fade_timer} is set to 1 by
@@ -269,12 +317,26 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
      * (Sonic3kSpecialStageManager.java:701) -- and matches the engine's own
      * finish condition ({@code exitSpinStarted && fadeTimer == 0},
      * Sonic3kSpecialStageManager.java:619-625).
+     *
+     * <p>The scan starts at {@link #firstInteractiveFrame} and skips
+     * {@code lag} rows: rows before that point are the pre-boot ROM hold
+     * described there (stale leftover {@code Special_stage_fade_timer} from
+     * a prior attempt, sonic3k.asm:10585-10725), and lag rows are recorded
+     * with every field zero-filled rather than a real RAM read (the recorder
+     * does not read {@code mainmemory} on a lag row -- see
+     * {@code s3k_complete_run_recorder.lua}'s {@code write_ss_row}), so a
+     * zero-filled lag-row {@code fade_timer} must never be read as a genuine
+     * ROM return-to-zero.
      */
     private static OptionalInt exitSpinCompletionFrame(S3kSpecialStageTraceData trace) {
         int spinStartFrame = -1;
         int previousFadeTimer = 0;
-        for (int f = 0; f < trace.frameCount(); f++) {
-            int fadeTimer = trace.getFrame(f).fadeTimer();
+        for (int f = firstInteractiveFrame(trace); f < trace.frameCount(); f++) {
+            S3kSpecialStageTraceFrame tf = trace.getFrame(f);
+            if (tf.lag()) {
+                continue;
+            }
+            int fadeTimer = tf.fadeTimer();
             if (spinStartFrame < 0) {
                 if (previousFadeTimer == 0 && fadeTimer != 0) {
                     spinStartFrame = f;
@@ -295,6 +357,20 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
      */
     private static int signedWord(int rawWord) {
         return (short) rawWord;
+    }
+
+    /**
+     * Maps a raw 68000 byte to the signed value used by the ROM's
+     * {@code Special_stage_turning} field. It is written with {@code move.b}
+     * as either {@code #4} (left) or {@code #-4} (right) (sonic3k.asm:12000,
+     * 12005), i.e. a genuinely signed byte -- Sonic3kSpecialStagePlayer's
+     * {@code turning} int mirrors that (TURN_LEFT=4, TURN_RIGHT=-4). The
+     * trace CSV records the raw unsigned hex byte (e.g. {@code fc} for -4),
+     * which parses to 252 without sign-extension, producing a spurious
+     * mismatch against the engine's native -4 for the identical ROM state.
+     */
+    private static int signedByte(int rawByte) {
+        return (byte) rawByte;
     }
 
     private static FieldComparison cmp(String name, String expected, String actual,

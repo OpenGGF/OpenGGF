@@ -77,6 +77,27 @@ public class Sonic3kSpecialStageManager {
     private int clearTimer;
     private int emeraldTimer;
     private int emeraldInteractIndex;
+    /**
+     * Frames remaining before the queued Chaos/Super Emerald Kosinski art
+     * module finishes background-decompressing. ROM models this as
+     * {@code Kos_modules_left} (sonic3k.constants.asm), a byte decremented
+     * once per frame by the VBlank-driven streaming Kosinski decompressor
+     * (Queue_Kos_Module, sonic3k.asm:2668) independently of the special
+     * stage's own per-frame routine; {@code loc_9C5C} (sonic3k.asm:12613-
+     * 12620) polls {@code tst.b Kos_modules_left; bne locret_9C7E} every
+     * frame and only resets {@code Special_stage_clear_timer} to 0 (and
+     * starts the emerald-approach countdown) once it reads zero. The engine
+     * does not model a byte-budgeted streaming Kosinski decompressor, so
+     * (like {@code CnzTeleporterInstance.queuedArtFramesRemaining}) this
+     * approximates the real, measured drain time with a fixed frame count:
+     * BizHawk trace {@code s3-knux-multibonus-ss.bk2} shows
+     * {@code clear_routine} flip 1-&gt;2 at physics.csv row 4362 (the
+     * transition frame itself does not run the {@code loc_9C5C} body -- see
+     * {@code updateClearEmeraldLoad}) with {@code clear_timer} flat at 0x101
+     * through row 4366, only resetting to 0 at row 4367 -- 4 blocked
+     * routine-2 calls (rows 4363-4366) before the module finishes.
+     */
+    private int emeraldArtFramesRemaining;
 
     // ==================== Remaining rings from sphere conversion ====================
     private int ringsLeft;
@@ -116,6 +137,50 @@ public class Sonic3kSpecialStageManager {
     /** Current player character selection (resolved from config on init). */
     private PlayerCharacter playerCharacter = PlayerCharacter.SONIC_AND_TAILS;
 
+    // ==================== Entry Fade Hold ====================
+
+    /**
+     * True until this manager's first post-{@link #initialize(int)} call to
+     * {@link #update()} has run. ROM: the special-stage object's first
+     * per-frame routine execution (loc_903E, sonic3k.asm:11445) happens
+     * synchronously inside the boot sequence's own {@code Process_Sprites}
+     * call (sonic3k.asm:10717) -- BEFORE the first {@code Wait_VSync}
+     * (sonic3k.asm:10725) that starts real input polling. That pre-boot call
+     * is modeled as this manager's first stepped {@code update()} running
+     * normally; {@link #postBootFadeHoldFrames} then models the frames that
+     * follow it during which the ROM does NOT call {@code Process_Sprites}
+     * at all.
+     */
+    private boolean firstUpdateCall;
+
+    /**
+     * Remaining real, input-polled frames during which the ROM does not
+     * execute the special-stage object's per-frame routine at all, so
+     * {@code Special_stage_rate_timer} (and everything else the object
+     * touches) does not advance. Two ROM waits stack back to back after the
+     * boot's pre-call:
+     * <ul>
+     *   <li>{@code Pal_FadeFromWhite} (sonic3k.asm:10735, routine at
+     *       5139-5150): {@code moveq #$15,d4 / dbf d4,loc_3C8E} runs 22
+     *       {@code Wait_VSync} iterations, calling only palette-fade helpers
+     *       -- no {@code Process_Sprites}.</li>
+     *   <li>{@code loc_84C2}'s own leading {@code Wait_VSync}
+     *       (sonic3k.asm:10741) before ITS first {@code Process_Sprites}
+     *       call (sonic3k.asm:10744) -- one more real frame with no object
+     *       update.</li>
+     * </ul>
+     * Total 23 frames; this field only counts the 22 held AFTER
+     * {@link #firstUpdateCall} consumes the first (pre-boot-equivalent)
+     * call, so it initializes to 22 and the 23rd hold frame is the 1 leading
+     * {@code loc_84C2} {@code Wait_VSync} counted alongside it.
+     * <p>
+     * Pinned by BizHawk RAM trace {@code s3-knux-multibonus-ss.bk2}
+     * (segment 12): {@code Special_stage_rate_timer} reads a flat 0x707
+     * across CSV rows 135-157 (23 rows, the first interactive row plus this
+     * 22-frame hold) and only starts decrementing at row 158.
+     */
+    private int postBootFadeHoldFrames;
+
     // Debug state
     private boolean spriteDebugMode;
 
@@ -141,8 +206,11 @@ public class Sonic3kSpecialStageManager {
         this.clearTimer = 0;
         this.emeraldTimer = 0;
         this.emeraldInteractIndex = -1;
+        this.emeraldArtFramesRemaining = 0;
         this.ringsLeft = 0;
         this.exitSpinStarted = false;
+        this.firstUpdateCall = true;
+        this.postBootFadeHoldFrames = 22;
         this.palFadeDelay = 0;
         this.musicSpedUp = false;
 
@@ -488,6 +556,22 @@ public class Sonic3kSpecialStageManager {
         }
 
         frameCounter++;
+
+        // Entry fade hold (see postBootFadeHoldFrames javadoc): the ROM does
+        // not run the special-stage object's per-frame routine at all for a
+        // stretch of real, input-polled frames right after entry
+        // (Pal_FadeFromWhite, sonic3k.asm:10735, plus loc_84C2's own leading
+        // Wait_VSync, sonic3k.asm:10741, before its first Process_Sprites
+        // call at sonic3k.asm:10744). frameCounter above still advances --
+        // it is comparator-facing stepped-frame bookkeeping, not a ROM RAM
+        // field -- but nothing else in this method (player/tails/collision/
+        // banner/HUD/background) may observe these frames.
+        if (firstUpdateCall) {
+            firstUpdateCall = false;
+        } else if (postBootFadeHoldFrames > 0) {
+            postBootFadeHoldFrames--;
+            return;
+        }
 
         // Banner state machine
         boolean bannerTriggeredAdvance = banner.update();
@@ -884,16 +968,24 @@ public class Sonic3kSpecialStageManager {
         player.setVelocity(CLEAR_VELOCITY);
         emeraldTimer = EMERALD_TIMER_INIT;
 
-        // Emerald art and palette are already loaded synchronously with the stage art.
+        // Emerald art/palette bytes are loaded synchronously (ROM-only asset
+        // pipeline), but the ROM's own Kos_modules_left gate in loc_9C5C is a
+        // real per-frame wait -- see emeraldArtFramesRemaining javadoc above.
+        emeraldArtFramesRemaining = EMERALD_ART_QUEUE_DRAIN_FRAMES;
     }
 
     /**
      * Clear routine state 2: wait for emerald art to load.
-     * ROM: loc_9C5C (sonic3k.asm:12613)
+     * ROM: loc_9C5C (sonic3k.asm:12613-12620) -- {@code tst.b
+     * Kos_modules_left; bne locret_9C7E} polls every frame and does nothing
+     * else (clear_timer and emerald_timer both untouched) until the queued
+     * Kosinski module finishes.
      */
     private void updateClearEmeraldLoad() {
-        // In ROM, waits for Kos_modules_left to be 0
-        // We skip this since we load synchronously
+        if (emeraldArtFramesRemaining > 0) {
+            emeraldArtFramesRemaining--;
+            return;
+        }
         clearTimer = 0;
         emeraldTimer--;
         if (emeraldTimer <= 0) {
@@ -944,6 +1036,7 @@ public class Sonic3kSpecialStageManager {
                 clearTimer,
                 emeraldTimer,
                 emeraldInteractIndex,
+                emeraldArtFramesRemaining,
                 exitSpinStarted,
                 palFadeDelay,
                 musicSpedUp,
@@ -963,6 +1056,8 @@ public class Sonic3kSpecialStageManager {
                 playerCharacter,
                 spriteDebugMode,
                 useSkLayouts,
+                firstUpdateCall,
+                postBootFadeHoldFrames,
                 gameState != null ? gameState.capture() : null,
                 grid.captureRewindSnapshot(),
                 player.captureRewindSnapshot(),
@@ -996,6 +1091,7 @@ public class Sonic3kSpecialStageManager {
         clearTimer = snapshot.clearTimer();
         emeraldTimer = snapshot.emeraldTimer();
         emeraldInteractIndex = snapshot.emeraldInteractIndex();
+        emeraldArtFramesRemaining = snapshot.emeraldArtFramesRemaining();
         exitSpinStarted = snapshot.exitSpinStarted();
         palFadeDelay = snapshot.palFadeDelay();
         musicSpedUp = snapshot.musicSpedUp();
@@ -1015,6 +1111,8 @@ public class Sonic3kSpecialStageManager {
         playerCharacter = snapshot.playerCharacter();
         spriteDebugMode = snapshot.spriteDebugMode();
         useSkLayouts = snapshot.useSkLayouts();
+        firstUpdateCall = snapshot.firstUpdateCall();
+        postBootFadeHoldFrames = snapshot.postBootFadeHoldFrames();
 
         GameStateManager gameState = GameServices.gameStateOrNull();
         if (gameState != null && snapshot.gameState() != null) {
