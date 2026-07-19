@@ -12,6 +12,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -55,7 +56,10 @@ import java.util.Set;
  * </ul>
  */
 public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider,
+        SpawnRewindRecreatable, RomObjectCodePointerProvider {
+
+    private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0002;
 
     // Subtype constants (shifted >> 3 & 0xE) - matches ROM Obj_Spring index
     private static final int TYPE_UP = 0;
@@ -110,6 +114,15 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
 
         this.mappingFrame = 0;
         this.animationState = new ObjectAnimationState(buildAnimationSet(), ANIM_IDLE, 0);
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_Spring installs variants in the $00022xxx-$00023xxx range, so
+        // word 0 of its SST code pointer is $0002. S3K sub_13EFC compares this
+        // word against Tails_CPU_interact when CPU Tails stands off-screen
+        // (docs/skdisasm/sonic3k.asm:47500-47540,26816-26843).
+        return ROM_CODE_POINTER_HIGH_WORD;
     }
 
     @Override

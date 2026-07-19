@@ -1432,6 +1432,36 @@ SST pointer at `docs/skdisasm/sonic3k.asm:20656-20710`.
 
 ---
 
+## P41 -- Persistent interact words require providers on every ridden solid
+
+**Symptom.** CPU Tails remains attached to, or merely walks away from, an
+off-screen solid where the ROM performs its `$7F00` marker warp. The current
+solid's native pointer word may appear correct in isolation, but the cached
+comparison word is zero or was refreshed too late.
+
+**Root cause.** S3K stores word 0 of the ridden object's SST code pointer in
+`Tails_CPU_interact` and retains it after contact ends. A later off-screen ride
+compares the new SST word against that persistent value. Modeling only the
+solid visible at the failing frame misses the earlier support that established
+the latch; an SST slot may also have been recycled, so current slot contents
+are not evidence of the cached object's type.
+
+**Correct pattern.** Implement `RomObjectCodePointerProvider` on every solid
+that genuinely participates in this CPU-Tails ride path, using the high word
+of the installed ROM routine pointer. Reconstruct the latch history from
+frames where `Status_OnObj` is set and the interact slot is live, not from the
+slot's contents at the eventual mismatch. Test both the earlier provider and
+the mismatch target.
+
+**ROM citation.** `sub_13EFC` retains and compares `Tails_CPU_interact` at
+`docs/skdisasm/sonic3k.asm:26816-26843`; CNZ door routines occupy
+`$00030xxx-$00031xxx` at lines 66036-66167, while spring variants occupy
+`$00022xxx-$00023xxx` at lines 47500-47540.
+
+**Originating commit.** `<pending: CNZ persistent interact-word milestone>`.
+
+---
+
 ## How to add a new entry
 When a trace-replay-bug-fixing iteration commits an object fix whose root
 cause is a class of bug (not a one-off):

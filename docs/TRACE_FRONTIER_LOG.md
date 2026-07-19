@@ -45692,3 +45692,26 @@ expected-red routes and unchanged non-CNZ frontiers. The full animation fleet
 remains 44/58 green with the same eight unsupported S1 credits traces and six
 comparison-red routes; CNZ complete-run animation remains at f108 and legacy
 standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- S3K persistent Tails interact pointer words: f6820 -> f7512
+
+At f6820 ROM CPU Tails changes from a previously ridden CNZ horizontal door to
+an off-screen spring. `sub_13EFC` compares word 0 of the new support's SST code
+pointer (`$0002`) against the persistent `Tails_CPU_interact` word retained
+from the door (`$0003`); the mismatch performs the native `$7F00` marker warp.
+The engine had the generic comparison but neither object exposed its native
+pointer word, so the earlier latch was never armed
+(`docs/skdisasm/sonic3k.asm:26816-26843,47500-47540,66036-66167`).
+
+S3K doors and springs now implement the shared ROM-code-pointer provider with
+their disassembly-derived high words. The focused provider, door, spring, and
+CNZ replay suite passes through the old mismatch, advancing complete-run
+physics from f6820 `tails_x` to f7512 `status_byte`. The implementation models
+object identity state only; it contains no trace hydration or route/frame
+predicate.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
