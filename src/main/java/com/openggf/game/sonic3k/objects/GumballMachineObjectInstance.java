@@ -415,16 +415,31 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         // so tests can exercise drift logic without requiring services()).
         if (!driftInitialized) {
             // ROM: Obj_GumballMachine seeds RNG_seed from V_int_run_count at init
-            // (move.l (V_int_run_count).w,(RNG_seed).w, sonic3k.asm:127412).
-            // KNOWN DISCREPANCY (see docs/S3K_KNOWN_DISCREPANCIES.md): this engine
-            // has no persistent, VBlank-driven global run counter matching hardware
-            // V_int_run_count -- frameCounter here is ObjectManager's per-session
-            // object-dispatch counter (vblaCounter), a materially different,
-            // smaller-range value. Trace replay must NOT be special-cased to dodge
-            // this divergence (comparison-only invariant); it is left as an honest,
-            // documented gap affecting only the RNG-derived ball-subtype roll on
-            // this object's first tick.
-            services().rng().setSeed(frameCounter & 0xFFFFFFFFL);
+            // (move.l (V_int_run_count).w,(RNG_seed).w, sonic3k.asm:127412). The
+            // intent is to fold run-history entropy (VBlanks since power-on: menu
+            // time, prior acts, etc.) into the bonus-stage RNG so the ball-subtype
+            // roll (sub_612A8, sonic3k.asm:127988-128008) varies run-to-run.
+            //
+            // The engine's shared RNG ALREADY carries that run-history entropy when
+            // the machine spawns: it has been advanced by all prior gameplay in live
+            // play, and in trace replay the bootstrap has already primed it to the
+            // recorded run's exact seed (V_int_run_count for that recording;
+            // TraceReplaySessionBootstrap.applyInitialRngSeedForReplay, uniform for
+            // every trace carrying metadata.rng_seed). So the ROM invariant
+            // "RNG_seed == V_int_run_count" is already satisfied by the RNG's own
+            // established state on this tick, and modeling the reseed here is a
+            // read of that same value -- i.e. a no-op.
+            //
+            // The one value that is NOT V_int_run_count is the frameCounter argument:
+            // it is ObjectManager's per-gameplay-session object-dispatch counter
+            // (vblaCounter), which resets on every session rebuild and lives in a
+            // materially smaller range than the hardware run counter (observed 0x0400
+            // vs 0x1598 for the same recorded frame-0 tick). Re-deriving the reseed
+            // from vblaCounter therefore CLOBBERS the correct run-history seed with a
+            // wrong per-session count, flipping the ball subtype (e.g. awarding 10
+            // rings for a ball the recorded run never dispensed as a reward). This is
+            // applied uniformly to live play and trace replay -- it is not gated on
+            // trace identity and reads no trace data at simulation time.
             initDrift();
         }
 
