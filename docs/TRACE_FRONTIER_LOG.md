@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ horizontal Door render-height gate: f20805 -> f20903
+
+At f20805, CPU Tails lost terrain support as the camera rose past a horizontal
+CNZ Door. Native `SolidObjectFull` still saw the Door's prior clear
+`render_flags` bit 7 and left Tails airborne for one frame; the engine treated
+the Door as visible and immediately re-seated him. `byte_30FCE` gives this
+variant width `$20` and height `$08`, but the engine had overridden only the
+width and inherited the default `$10` render height. The Door now supplies both
+ROM extents to the shared render-flag solid gate
+(`docs/skdisasm/sonic3k.asm:36336-36370,66167-66258`).
+
+The focused Door suite passes. CNZ complete-run physics advances from f20805 to
+f20903; its next mismatch is CPU Tails missing a `-$200` horizontal response.
+The full comparison-only sweep remains 45/58 physics green with the same 13
+expected-red routes and unchanged green AIZ, HCZ, and MGZ complete runs.
+Animation remains 44/58 green with the same 14 expected-red or unsupported
+routes; CNZ complete-run animation remains at f108 and legacy standalone CNZ
+at f0.
+
 ### 2026-07-19 -- CNZ moving-cylinder underside and Batbot targeting: f20502 -> f20805
 
 At f20502, subtype-$45 CNZCylinder moved down from y `$01E7` to `$01E8`

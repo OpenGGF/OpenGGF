@@ -155,6 +155,15 @@ public class DoorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOnScreenHalfHeight() {
+        // Render_Sprites uses height_pixels for the same render_flags bit-7
+        // gate consumed by SolidObjectFull. The horizontal CNZ door's
+        // byte_30FCE height is only $08; the default $10 extent makes its
+        // solid path visible one frame before the ROM as the camera rises.
+        return halfHeight;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         return false;
     }
