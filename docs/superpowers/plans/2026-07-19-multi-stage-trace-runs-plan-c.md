@@ -164,7 +164,7 @@ Skills: n/a"
   - `public static boolean withinBoundaryWindow(int observedBk2Frame, int recordedEdge)` — the tolerance predicate above.
   - **TRANSIENT-PEEK REALITY (round-2 discovery, load-bearing):** the entry request is raised DURING the gameplay tick (star-post child object, inside `LevelFrameStep` at `GameLoop.java:1393`) and consumed LATER IN THE SAME `loop.step()` (`:1437`) — after `step()` returns, the peek is already null. Post-step polling can NEVER observe an entry. The observation point that works is the frame observer: `onLevelFrameAdvanced` fires at `GameLoop.java:1417`, between request-set and consume, so a `PlaybackFrameObserver.afterFrameAdvanced` callback CAN read the peek. The walker therefore observes boundaries from INSIDE the observer callback, never by post-step polling.
   - `public interface EngineHooks` — read INSIDE the observer callback: `int currentBk2Frame(); BonusStageType peekBonusRequest(); boolean isSpecialStageRequested(); GameMode currentMode();`.
-  - `public final class BoundaryProbe implements PlaybackDebugManager.PlaybackFrameObserver` (verify the observer interface's exact name/methods by reading `PlaybackDebugManager` — `setFrameObserver`/`afterFrameAdvanced` at `:60/:189-191`) — the single observer the chain installs. It (a) delegates `afterFrameAdvanced` to the currently-attached segment comparator (a settable `LiveTraceComparator` delegate, null during transitions) and (b) when armed with a `Transition` boundary, evaluates the boundary predicate DURING the callback (`starpost_bonus` → `peekBonusRequest() != null`; `giant_ring`/`starpost_special` → `isSpecialStageRequested()`; `stage_exit` → `currentMode() == GameMode.LEVEL`, which is a persistent condition and may also be checked post-step), latching `BoundaryObservation(observed, observedBk2Frame)` on first match within the window.
+  - `public final class BoundaryProbe implements PlaybackDebugManager.PlaybackFrameObserver` — the single observer the chain installs. **The interface has TWO methods (`PlaybackDebugManager.java:51-55`) and the probe MUST delegate BOTH:** (a) `boolean shouldSkipGameplayTick(Bk2FrameInput)` forwards to the attached comparator delegate's result (`LiveTraceComparator` does real VBLANK_ONLY lag gating there, `LiveTraceComparator.java:87-96`) and returns `false` when the delegate is null (transitions) — omitting this over-ticks every ROM lag frame and desyncs the whole chain; (b) `afterFrameAdvanced` forwards to the delegate AND, when armed with a `Transition`, evaluates the transient boundary predicates DURING the callback (`starpost_bonus` → `peekBonusRequest() != null`; `giant_ring`/`starpost_special` → `isSpecialStageRequested()`), latching `BoundaryObservation(observed, observedBk2Frame)` on first match within the window. `stage_exit` (`currentMode() == GameMode.LEVEL`) is PERSISTENT and evaluated live from the injected hooks whenever `latched()` is queried — that is how awaitBoundary (which holds only the probe) observes it while no callbacks fire during frozen transitions.
   - `public static BoundaryObservation awaitBoundary(BoundaryProbe probe, TraceRunManifest.Transition boundary, Runnable stepOneFrame)` — the probe is THE installed frame observer (constructor-injected with its `EngineHooks`, exposing `void arm(TraceRunManifest.Transition)` / `boolean latched()` / `BoundaryObservation observation()`); awaitBoundary arms it, steps frames, and returns when the probe latched or the cursor passed `recordedEdge`; fails closed, never throws. **Dual observation path:** transient kinds (`starpost_bonus`, `giant_ring`, `starpost_special`) latch INSIDE `afterFrameAdvanced` (the only point the peek is visible); `stage_exit` is a PERSISTENT condition (`currentMode() == LEVEL`) and is checked by awaitBoundary post-step, because no observer callback fires during the frozen return transition. The unit test's StubHooks MUST model the transient semantics: the bonus peek is non-null ONLY during the simulated observer callback of the raising frame, null before and after; the stub's `step()` invokes `probe.afterFrameAdvanced(...)` synchronously, mirroring `onLevelFrameAdvanced` firing inside `loop.step()`.
 
 - [ ] **Step 1: Failing control-flow test** (uses the plan-(a) synthetic fixture at `src/test/resources/traces/synthetic/run_aiz_gumball_3seg`):
@@ -240,15 +240,35 @@ class TestTraceRunReplayWalkerControlFlow {
         hooks.installedProbe = probe;
         var obs = TraceRunReplayWalker.awaitBoundary(probe, boundaryOfKind("stage_exit", 2800 + 600), hooks::step);
         assertTrue(obs.observed());
+        assertEquals(2850, obs.observedBk2Frame());  // not vacuous at window start
+    }
+    @Test
+    void probeDelegatesSkipGateToAttachedComparator() {
+        var hooks = new StubHooks();
+        var probe = new TraceRunReplayWalker.BoundaryProbe(hooks);
+        assertFalse(probe.shouldSkipGameplayTick(null),
+            "detached probe must not skip gameplay ticks");
+        probe.setDelegate(new AlwaysSkipDelegate());   // tiny inline stub delegate
+        assertTrue(probe.shouldSkipGameplayTick(null),
+            "attached delegate's lag gating must flow through the probe");
     }
     // StubHooks + boundaryOfKind helper: implement inline in this test class.
-    // StubHooks implements EngineHooks with an int frame counter; step() advances the
-    // counter and SYNCHRONOUSLY invokes the walker's observer callback for that frame
-    // (mirroring onLevelFrameAdvanced firing inside loop.step()); peekBonusRequest()
-    // returns GUMBALL only while frame == bonusRequestDuringFrame AND the callback is
-    // executing (a boolean inCallback flag), else null — the transient semantics of the
-    // real coordinator, whose request is consumed later in the same engine step.
-    // currentMode() LEVEL, isSpecialStageRequested() false.
+    // StubHooks implements EngineHooks with an int frame counter and a field
+    // `installedProbe`; step() advances the counter and SYNCHRONOUSLY invokes
+    // installedProbe.afterFrameAdvanced(null, false) (mirroring onLevelFrameAdvanced
+    // firing inside loop.step(); null Bk2FrameInput is fine — the unit delegate is null).
+    // peekBonusRequest() returns GUMBALL only while frame == bonusRequestDuringFrame
+    // AND the callback is executing (a boolean inCallback flag), else null — the
+    // transient semantics of the real coordinator. isSpecialStageRequested() false.
+    // currentMode(): a non-LEVEL mode (e.g. GameMode.BONUS_STAGE) while
+    // modeBecomesLevelAtFrame is set and frame < modeBecomesLevelAtFrame, LEVEL
+    // otherwise. The stage_exit test asserts the observation frame:
+    //   assertEquals(2850, obs.observedBk2Frame());  // add this to that test —
+    // it fails if the persistent poll fired vacuously at the window start.
+    // AlwaysSkipDelegate: an inline stub whose shouldSkipGameplayTick returns true
+    // (matching whatever delegate type the probe exposes — if the delegate is typed
+    // as LiveTraceComparator, extract a tiny probe-local interface for the two
+    // delegated methods instead, so the unit test can stub it without a comparator).
     // boundaryOfKind builds a TraceRunManifest.Transition via its canonical constructor
     // with the given entry_kind and mode_change_bk2_frame, nulls elsewhere.
 }
