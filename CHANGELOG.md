@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): blue ball special stage collision-response queue entries (blue sphere/ring) fire their first animation step on the creation frame instead of a full timer cycle later (sonic3k.asm:12742-12753, 10744-10746).
 - Fix(s3k): blue ball special stage turn-completion falls through to position/collision update on the same frame instead of deferring to the next frame (sonic3k.asm:11946-11955).
 - Trace framework: S3K special-stage trace classes moved under the game package (naming rule).
 - Trace replay: slot-machine bonus segments accepted (deferred-setup seam wired).
