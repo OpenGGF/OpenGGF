@@ -7,10 +7,12 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -229,6 +231,39 @@ class TestCnzBarberPoleObjectInstance {
         assertEquals(0x0200, player.getCentreX() & 0xFFFF);
         assertEquals(0x0200, player.getCentreY() & 0xFFFF);
         assertEquals(currentPole, player.getLatchedSolidObjectInstance());
+    }
+
+    @Test
+    void mirroredTrackWrapsAsPackedRomLongWithoutReleasingRider() throws Exception {
+        CnzBarberPoleObjectInstance pole = new CnzBarberPoleObjectInstance(
+                new ObjectSpawn(0x3290, 0x0810, Sonic3kObjectIds.CNZ_BARBER_POLE, 1, 0, false, 0));
+        pole.setServices(new TestObjectServices());
+        TestPlayableSprite sonic = new TestPlayableSprite();
+        sonic.setCentreX((short) 0x3290);
+        sonic.setCentreY((short) 0x07D5);
+        pole.update(0, sonic);
+        assertTrue(sonic.isOnObject());
+
+        var ridersField = CnzBarberPoleObjectInstance.class.getDeclaredField("riders");
+        ridersField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<AbstractPlayableSprite, Object> riders =
+                (Map<AbstractPlayableSprite, Object>) ridersField.get(pole);
+        Object state = riders.get(sonic);
+        var trackField = state.getClass().getDeclaredField("trackFixed");
+        trackField.setAccessible(true);
+        trackField.setLong(state, 0xFFFF_5300L);
+        var innerField = state.getClass().getDeclaredField("innerTrack");
+        innerField.setAccessible(true);
+        innerField.setBoolean(state, true);
+        sonic.setXSpeed((short) 0x0100);
+        sonic.setGSpeed((short) 0x0200);
+
+        pole.update(1, sonic);
+
+        assertTrue(sonic.isOnObject(),
+                "loc_33700 add.l wraps the track from $FFFF to $0000 before the $A0 range check");
+        assertEquals(0x0000_1300L, trackField.getLong(state));
     }
 
     @Test

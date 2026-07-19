@@ -324,13 +324,20 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        state.trackFixed += (long) player.getXSpeed() * 0xC0L;
+        // ROM loc_334D2/loc_33700 adds the 8.8 x_vel contribution to the
+        // packed 16.16 track coordinate with add.l. Preserve that 32-bit
+        // overflow: mirrored curves legitimately cross from $FFFF.xxxx to
+        // $0000.xxxx. An unbounded Java long turns the next word range check
+        // into $10000 and releases the rider one object pass early.
+        state.trackFixed = (state.trackFixed + (long) player.getXSpeed() * 0xC0L)
+                & 0xFFFF_FFFFL;
 
-        int trackPosition = (int) (state.trackFixed >> 16);
+        int trackPosition = (short) (state.trackFixed >> 16);
         state.lastTrackPosition = trackPosition;
         int d0 = mirrored
                 ? player.getXRadius() + trackPosition
                 : -player.getXRadius() + trackPosition;
+        d0 &= 0xFFFF;
         if (d0 < 0 || d0 >= TRACK_LIMIT) {
             player.setAngle((byte) rideAngle());
             release(player, state);

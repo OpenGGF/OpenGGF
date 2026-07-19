@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ barber-pole packed track wrap: physics f33084 -> f34874
+
+The mirrored pole stores its rider track as the same packed 16.16 long copied
+from `x_pos`. At the upper curve, native `add.l` wraps the high word from
+`$FFFF` to `$0000`; the following `move.w`/`add.w` range calculation therefore
+keeps the rider attached for another pass. The engine held this value in an
+unbounded Java `long`, read `$10000`, and released Sonic one frame early,
+causing the f33084 position/status/camera cascade
+(`docs/skdisasm/sonic3k.asm:69665-69733`).
+
+Barber-pole track accumulation now wraps to 32 bits, and its high word is
+interpreted with native word arithmetic before the unsigned `$A0` range test.
+A focused mirrored-wrap test covers `$FFFF.5300 + $C000 -> $0000.1300` and
+verifies that the rider remains attached.
+
+This advances CNZ complete-run physics from f33084 `y` to f34874 `y_sub`;
+animation remains at f30486 `tails_mapping_frame`. The one-fork 4 GB physics
+fleet retains the same 13 non-green routes. The animation fleet retains the
+same CNZ frontier and known non-green route set; serial in-fork reruns avoid
+the intermittent shared checkpoint-detector class-loading failure. No
+non-CNZ frontier moved, and legacy standalone CNZ remains at f0 in both
+scopes.
+
 ### 2026-07-19 -- CNZ cylinder off-screen release velocity: physics f31050 -> f33084
 
 An active cylinder rider can cross out of the render window after
