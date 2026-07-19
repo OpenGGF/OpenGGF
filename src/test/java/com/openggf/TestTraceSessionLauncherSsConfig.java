@@ -2,9 +2,7 @@ package com.openggf;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.game.GameServices;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.trace.TraceMetadata;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,7 +26,7 @@ class TestTraceSessionLauncherSsConfig {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetPerTest();
         config = SonicConfigurationService.getInstance();
         savedMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
         savedSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
