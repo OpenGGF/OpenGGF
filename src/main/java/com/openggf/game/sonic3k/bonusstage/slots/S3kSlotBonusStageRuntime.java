@@ -155,8 +155,16 @@ public final class S3kSlotBonusStageRuntime {
         // Reward objects
         updateRewards(frameCounter);
 
-        // Ring pickup from grid
-        if (slotRenderBuffers != null && slotPlayer != null && !slotPlayer.isDebugMode()) {
+        // Ring pickup from grid. ROM loc_4BA62 (sonic3k.asm:98750-98757) tests
+        // object_control(a0) BEFORE dispatching into the movement/ring/tile chain
+        // (loc_4BA94/loc_4BA98 -> sub_4BABC..sub_4BE3A) -- when the player is held
+        // by the cage grab (sub_4AF80/loc_4B130, sonic3k.asm:98136 sets
+        // object_control(a1)=3), it branches straight to loc_4BA80 and returns,
+        // never reaching sub_4BDCA (the ring-pickup check). Running the ring probe
+        // unconditionally let the engine award a ring for whatever grid cell the
+        // player happened to be parked over while grabbed, which ROM never checks.
+        if (slotRenderBuffers != null && slotPlayer != null && !slotPlayer.isDebugMode()
+                && !slotPlayer.isObjectControlled()) {
             checkRingPickup();
         }
 
@@ -397,8 +405,14 @@ public final class S3kSlotBonusStageRuntime {
     }
 
     private void checkRingPickup() {
+        // ROM sub_4BDCA reads x_pos(a0)/y_pos(a0) as they stand right after
+        // sub_4BABC's ground-velocity projection (sonic3k.asm:98776-98778), before
+        // MoveSprite2 folds air x_vel/y_vel into position (sonic3k.asm:98780). Using
+        // the fully-stepped position here (currentPlayerOriginX/Y, which reflects
+        // this frame's air-velocity step too) lets the engine reach a ring cell one
+        // step early/late relative to ROM. See S3kSlotPlayerRuntime.groundProjectedOriginX/Y.
         S3kSlotCollisionSystem.RingCheck ring = slotCollisionSystem.checkRingPickup(
-                currentPlayerOriginX(), currentPlayerOriginY());
+                slotPlayerRuntime.groundProjectedOriginX(), slotPlayerRuntime.groundProjectedOriginY());
         if (ring.foundRing()) {
             slotCollisionSystem.consumeRing(ring);
             slotRenderBuffers.startRingAnimationAt(ring.layoutIndex());
@@ -427,7 +441,10 @@ public final class S3kSlotBonusStageRuntime {
 
     /**
      * Dispatch tile interaction based on collision detected during player physics.
-     * ROM sub_4BE3A reads $30(a0) which was set by sub_4BDA2 during collision.
+     * ROM sub_4BE3A reads $30(a0) which was set by sub_4BDA2 during collision, and
+     * (for the bumper-launch branch) reads x_pos(a0)/y_pos(a0) directly at
+     * sonic3k.asm:99224-99225 -- the same pre-MoveSprite2 snapshot sub_4BDCA uses
+     * (see checkRingPickup and S3kSlotPlayerRuntime.groundProjectedOriginX/Y).
      */
     private void dispatchTileInteraction() {
         int tileId = slotStageState.lastCollisionTileId();
@@ -442,7 +459,8 @@ public final class S3kSlotBonusStageRuntime {
         short tileAnchorY = S3kSlotCollisionSystem.tileResponseAnchorY(expandedIndex);
 
         S3kSlotCollisionSystem.TileResponse response = slotCollisionSystem.resolveTileResponse(
-                tileId, (short) currentPlayerOriginX(), (short) currentPlayerOriginY(), tileAnchorX, tileAnchorY);
+                tileId, (short) slotPlayerRuntime.groundProjectedOriginX(),
+                (short) slotPlayerRuntime.groundProjectedOriginY(), tileAnchorX, tileAnchorY);
 
         handleTileResponse(response, layoutIndex, tileId);
         slotStageController.setScalarIndex(slotStageState.scalarIndex1());
