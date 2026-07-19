@@ -585,6 +585,26 @@ class TestCnzCylinderInstance {
     }
 
     @Test
+    void verticalOscillatorCpuSidekickUndersideContactUsesFrameEntryYAnchorOnDownStep() throws Exception {
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x14E0, 0x01E0, 0x45));
+        TestPlayableSprite tails = new TestPlayableSprite();
+        tails.setCpuControlled(true);
+        tails.setAir(true);
+        tails.setCentreX((short) 0x14D6);
+        tails.setCentreY((short) 0x020D);
+
+        setCylinderCenter(cylinder, 0x14E0, 0x01E7);
+        cylinder.snapshotPreUpdatePosition();
+        setCylinderCenter(cylinder, 0x14E0, 0x01E8);
+
+        assertTrue(cylinder.usesPreUpdatePositionForSolidContact(tails),
+                "CNZ f20502: P2 underside separation must use the ROM-visible "
+                        + "frame-entry y_pos=$01E7, not the split engine's already-stepped "
+                        + "y_pos=$01E8 (sonic3k.asm:67656-67672, 67843-67851, "
+                        + "41006-41016, 41394-41440)");
+    }
+
+    @Test
     void horizontalOscillatorCpuSidekickNewSideContactUsesFrameEntryXAnchor() throws Exception {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x1415, 0x0AE0, 0x42));
         TestPlayableSprite tails = new TestPlayableSprite();

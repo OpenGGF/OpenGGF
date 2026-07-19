@@ -1085,13 +1085,15 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             // engine's split phase has advanced subtype $46 from
             // y_pos=$0416 to $0415 one pass ahead of the ROM-visible object
             // anchor; using current y_pos turns Tails' relY=-1 miss into a
-            // relY=0 landing and zeroes y_vel one frame early. Keep this to
-            // the vertical-oscillator upward step where the frame-entry anchor
-            // is proven by loc_3238C/SolidObject_cont geometry
-            // (sonic3k.asm:67865-67874, 41394-41440).
+            // relY=0 landing and zeroes y_vel one frame early. The same anchor
+            // applies on a downward step: at f20502 subtype $45 moves from
+            // $01E7 to $01E8 before the split solid checkpoint, moving the
+            // underside separation one pixel too low. Use the frame-entry
+            // anchor in either direction of loc_3236E/loc_3238C movement
+            // (sonic3k.asm:67843-67874, 41394-41440).
             return isVerticalOscillator()
                     && centerX == getPreUpdateX()
-                    && centerY < getPreUpdateY();
+                    && centerY != getPreUpdateY();
         }
         // Horizontal oscillator contacts use the frame-entry X anchor in the
         // engine's split inline checkpoint; SolidObject_cont then applies side

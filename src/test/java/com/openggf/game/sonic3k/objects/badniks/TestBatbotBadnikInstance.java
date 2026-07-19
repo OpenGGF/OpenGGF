@@ -88,14 +88,20 @@ class TestBatbotBadnikInstance {
         putBatbotOnScreen();
         BatbotBadnikInstance batbot = new BatbotBadnikInstance(new ObjectSpawn(0x1AF0,
                 0x0638, Sonic3kObjectIds.BATBOT, 0, 0, false, 0));
-        batbot.setServices(new TestObjectServices());
         AbstractPlayableSprite player = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build()
                 .sprite();
+        AbstractPlayableSprite tails = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build()
+                .sprite();
+        batbot.setServices(new TestObjectServices().withSidekicks(java.util.List.of(tails)));
 
-        player.setCentreX((short) 0x1B10);
+        player.setCentreX((short) 0x1A00);
         player.setCentreY((short) 0x0738);
+        tails.setCentreX((short) 0x1B10);
+        tails.setCentreY((short) 0x0738);
         batbot.update(0, player);
         batbot.update(1, player);
 
@@ -106,7 +112,8 @@ class TestBatbotBadnikInstance {
                 "Obj_WaitOffscreen restores Obj_Batbot one frame before its activation routine runs");
         batbot.update(3, player);
 
-        assertEquals(0x1AF2, batbot.getX());
+        assertEquals(0x1AF1, batbot.getX(),
+                "Find_SonicTails lets P2 activate, but loc_893CC still chases Player 1");
     }
 
     @Test

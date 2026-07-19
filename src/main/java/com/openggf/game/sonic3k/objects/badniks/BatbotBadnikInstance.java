@@ -132,7 +132,11 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
     }
 
     private void updateWait(PlayableEntity playerEntity) {
-        if (!isPlayerWithinActivationRange(playerEntity)) {
+        // loc_893A4 calls Find_SonicTails and tests d2, so Player 2 can wake
+        // the Batbot even though the later Chase_Object routine is hard-wired
+        // to Player 1.
+        PlayableEntity activationTarget = closestNativePlayerByHorizontalDistance(playerEntity);
+        if (!isPlayerWithinActivationRange(activationTarget)) {
             return;
         }
         state = State.CHASE;

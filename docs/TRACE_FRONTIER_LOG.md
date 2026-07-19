@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ moving-cylinder underside and Batbot targeting: f20502 -> f20805
+
+At f20502, subtype-$45 CNZCylinder moved down from y `$01E7` to `$01E8`
+before the split solid checkpoint, so the engine separated CPU Tails from the
+underside one pixel lower than the ROM. The existing frame-entry anchor rule
+for CPU contacts on upward vertical-oscillator steps now applies in both
+directions, matching `sub_321E2` followed by the same-pass `SolidObjectFull`
+(`docs/skdisasm/sonic3k.asm:67656-67672,67843-67874,41394-41440`).
+
+The next contact exposed Batbot's two distinct targeting owners. Its wait
+routine calls `Find_SonicTails`, so the nearer native Player 2 wakes it; once
+awake, `loc_893CC` calls `Chase_Object` with Player 1 explicitly. The engine
+previously used Player 1 for both decisions, leaving the first Batbot dormant
+and omitting its later destruction bounce. Activation now uses the nearest
+native player while chase remains fixed to Player 1
+(`docs/skdisasm/sonic3k.asm:178248-178283,186293-186319`).
+
+The focused cylinder and Batbot suites pass. CNZ complete-run physics advances
+from f20502 to f20805; its next mismatch is CPU Tails becoming grounded on a
+horizontal CNZ Door one frame before the ROM. The full comparison-only sweep
+remains 45/58 physics green with the same 13 expected-red routes and unchanged
+green AIZ, HCZ, and MGZ complete runs. Animation remains 44/58 green with the
+same 14 expected-red or unsupported routes; CNZ complete-run animation remains
+at f108 and legacy standalone CNZ at f0.
+
 ### 2026-07-19 -- CNZ Sparkle cadence and door/vacuum slot order: f18680 -> f20502
 
 The f18680 contact came from Sparkle's warning child appearing before the ROM
