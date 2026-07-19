@@ -103,12 +103,16 @@ directories in a single trace run.
 
 1. Start a new movie from power-on with `s3k.gen`.
 2. Play AIZ Act 1 through to a star post. Collect either:
-   - **20–34 rings** for a gumball bonus (selector formula `((rings-20)/15)%3` yields remainder 2),
-     referenced at ROM `loc_2D47E` (`sonic3k.asm:61886-61912`), or
+   - **50–64 rings** for a gumball bonus (selector formula `((rings-20)/15)%3` yields remainder 2),
+     referenced at ROM `sonic3k.asm:61891-61920` (GUMBALL assignment at 61917-61920), or
    - **35–49 rings** for a glowing-sphere/pachinko bonus (selector remainder 1).
+   
+   **Warning:** 20–34 rings selects the slot-machine bonus (remainder 0), which is a deferred feature
+   — do not use for these recordings. Only gumball (50–64) and pachinko (35–49) are supported today.
 3. Approach and enter the star circle at the star post.
 4. Play through the bonus stage to its conclusion (collecting orbs, reaching exit).
-5. Receive the ring bonus, return to the level, and play for 3–5 additional seconds.
+5. Receive the ring bonus, return to the level, and play for 3–5 additional seconds (this guarantees
+   the re-entry segment `aiz_2` in the trace output).
 6. Stop the movie and save as either `s3k-aiz-gumball.bk2` or `s3k-aiz-pachinko.bk2`.
 
 **Recorder Invocation:**
@@ -125,10 +129,11 @@ tools\bizhawk\run_bizhawk_lua.bat ^
   s3k.gen
 ```
 
-Replace `s3k-aiz-gumball-roundtrip` and the file paths for pachinko runs. The recorder
-emits `run_manifest.json` only because `OGGF_TRACE_RUN_ID` is explicitly set. The manifest
-records all segment transitions, including the star-post entry boundary and the bonus-exit
-return boundary.
+Replace `s3k-aiz-gumball-roundtrip` and the file paths for pachinko runs. The bonus round-trip
+detour already triggers manifest emission (per plan (a)); the `OGGF_TRACE_RUN_ID` env var ensures
+a stable `run_id` is recorded in the manifest, used for organizing the commit layout under
+`src/test/resources/traces/s3k/runs/<run_id>/`. The manifest records all segment transitions,
+including the star-post entry boundary and the bonus-exit return boundary.
 
 **Expected Output:**
 
@@ -136,10 +141,11 @@ The output directory will contain:
 - `run_manifest.json` — indexed transitions for level→bonus and bonus→level boundaries.
 - `aiz/` — level segment (AIZ Act 1, frames 0 to star-post entry).
 - `gumball/` or `pachinko/` — bonus segment with `trace_profile: "s3k_bonus_stage"` in
-  `metadata.json`. Both segments contain compressed `physics.csv.gz` and `aux_state.jsonl.gz`.
-- `aiz_2/` — (optional) AIZ re-entry segment if the movie continues after the bonus with
-  additional gameplay in the same zone. Repeat segments are named with `_2`, `_3`, etc.
-  to avoid directory collisions.
+  `metadata.json`. Both segments contain `physics.csv` and `aux_state.jsonl` (plain format;
+  gzip compression is applied at commit time).
+- `aiz_2/` — AIZ re-entry segment following the bonus return. Step 5 above guarantees this
+  segment will be present. Repeat segments are named with `_2`, `_3`, etc. to avoid
+  directory collisions.
 
 **Commit Layout:**
 
