@@ -51,11 +51,22 @@ public final class Sonic1SpecialStageManager {
     private static final int SS_ANIM_BUFFER_SIZE = 8;
     private static final int ANIM_NONE = 0;
     private static final int ANIM_RING_SPARKLE = 1;
+    private static final int ANIM_BUMPER = 2; // SS_AniBumper (ss_ani_id=2)
     private static final int ANIM_GLASS_BLOCK = 6;
     private static final int[] ANIM_RING_SPARKLE_DATA = {0x42, 0x43, 0x44, 0x45, 0};
     private static final int ANIM_RING_PERIOD = 6; // 5+1 frames per step (ROM: move.b #5,2(a0))
     private static final int[] ANIM_GLASS_DATA = {0x4B, 0x4C, 0x4D, 0x4E, 0x4B, 0x4C, 0x4D, 0x4E, 0};
     private static final int ANIM_GLASS_PERIOD = 2; // 1+1 frames per step (ROM: move.b #1,2(a0))
+    /**
+     * SS_AniBumpData (docs/s1disasm/_inc/Special Stage Loading & Drawing.asm:381):
+     * {@code dc.b id_SS_Bumper_Ani1, id_SS_Bumper_Ani2, id_SS_Bumper_Ani1, id_SS_Bumper_Ani2, 0}.
+     * While this script is running, the touched block reads as $32/$33 (still
+     * solid -- both ids are below id_SS_Ring/$3A -- but NOT $25), so a second
+     * bounce off the same still-flashing bumper cannot fire until the script
+     * hits its terminator and explicitly restores id_SS_Bumper ($25).
+     */
+    private static final int[] ANIM_BUMPER_DATA = {0x32, 0x33, 0x32, 0x33, 0};
+    private static final int ANIM_BUMPER_PERIOD = 8; // 7+1 frames per step (ROM: move.b #7,ss_ani_delay(a0))
 
     // byte_4A3C: SS BG state table (32 entries, 4 fields each)
     // {time, anim, bgPlaneSelect (0=Plane_6, 1=Plane_5), palette-cycle selector byte}
@@ -911,6 +922,18 @@ public final class Sonic1SpecialStageManager {
         sonicVelX = (short) ((cosVal * -SS_BUMPER_FORCE) >> 8);
         sonicVelY = (short) ((sinVal * -SS_BUMPER_FORCE) >> 8);
         sonicAirborne = true;
+
+        // Obj09_ChkBumper (docs/s1disasm/_incObj/09 Sonic in Special Stage.asm:
+        // 810-816): register the SS_AniBumper animation on the touched block
+        // so it flashes through $32/$33 and only reverts to the solid,
+        // re-triggerable $25 id once the script's terminator runs. Without
+        // this, a bumper that Sonic has just bounced off keeps reading as
+        // $25 forever, so re-touching it while the real ROM's flash is still
+        // playing wrongly fires a second bounce instead of behaving like an
+        // inert wall.
+        int touchedIdx = lastCollisionRow * SS_LAYOUT_STRIDE + lastCollisionCol;
+        startBumperAnimation(touchedIdx);
+
         playSfx(Sonic1Sfx.BUMPER);
     }
 
@@ -977,6 +1000,29 @@ public final class Sonic1SpecialStageManager {
         // ROM behavior when no slot is free: skip the transition this frame.
     }
 
+    /**
+     * Obj09_ChkBumper's animation registration (docs/s1disasm/_incObj/09 Sonic
+     * in Special Stage.asm:810-816): {@code SS_FindFreeAnimationSlot}; if none
+     * is free, the ROM branches straight to the bump sound and never writes
+     * an animation entry -- the touched block is left at $25 unmodified (a
+     * rare, ROM-faithful edge case when all 8 slots are already busy).
+     */
+    private void startBumperAnimation(int layoutIndex) {
+        if (ssAnimBuffer == null) {
+            return;
+        }
+        for (int i = 0; i < SS_ANIM_BUFFER_SIZE; i++) {
+            if (ssAnimBuffer[i][0] == ANIM_NONE) {
+                ssAnimBuffer[i][0] = ANIM_BUMPER;
+                ssAnimBuffer[i][1] = 0; // Trigger first frame immediately on next animation tick
+                ssAnimBuffer[i][2] = 0;
+                ssAnimBuffer[i][3] = layoutIndex;
+                return;
+            }
+        }
+        // ROM behavior when no slot is free: skip the animation this frame.
+    }
+
     private void updateItemAnimations() {
         if (ssAnimBuffer == null) return;
         for (int i = 0; i < SS_ANIM_BUFFER_SIZE; i++) {
@@ -984,6 +1030,10 @@ public final class Sonic1SpecialStageManager {
             if (type == ANIM_NONE) continue;
             if (type == ANIM_RING_SPARKLE) {
                 updateRingAnimation(i);
+                continue;
+            }
+            if (type == ANIM_BUMPER) {
+                updateBumperAnimation(i);
                 continue;
             }
             if (type == ANIM_GLASS_BLOCK) {
@@ -1015,6 +1065,39 @@ public final class Sonic1SpecialStageManager {
         if (layoutIndex >= 0 && layoutIndex < layout.length) {
             layout[layoutIndex] = (byte) nextBlockId;
         }
+    }
+
+    /**
+     * SS_AniBumper (docs/s1disasm/_inc/Special Stage Loading & Drawing.asm:
+     * 356-382): decrements the 7-frame delay; on expiry, reads
+     * {@code ANIM_BUMPER_DATA[frameIdx]} and either writes the flashing
+     * $32/$33 frame ("still recovering", not equal to id_SS_Bumper so a
+     * touch cannot re-fire {@link #processBumper()}) or, once the script's
+     * terminator is hit, frees the slot and explicitly restores id_SS_Bumper
+     * ($25, {@code move.b #id_SS_Bumper,(a1)}) so the block becomes
+     * re-triggerable again.
+     */
+    private void updateBumperAnimation(int slot) {
+        ssAnimBuffer[slot][1]--;
+        if (ssAnimBuffer[slot][1] > 0) return;
+        ssAnimBuffer[slot][1] = ANIM_BUMPER_PERIOD;
+
+        int frameIdx = ssAnimBuffer[slot][2];
+        ssAnimBuffer[slot][2] = frameIdx + 1;
+        int layoutIndex = ssAnimBuffer[slot][3];
+        int nextBlockId = (frameIdx < ANIM_BUMPER_DATA.length) ? ANIM_BUMPER_DATA[frameIdx] : 0;
+
+        if (nextBlockId != 0) {
+            if (layoutIndex >= 0 && layoutIndex < layout.length) {
+                layout[layoutIndex] = (byte) nextBlockId;
+            }
+            return;
+        }
+
+        if (layoutIndex >= 0 && layoutIndex < layout.length) {
+            layout[layoutIndex] = (byte) 0x25; // id_SS_Bumper: reset to idle, re-triggerable
+        }
+        ssAnimBuffer[slot][0] = ANIM_NONE;
     }
 
     private void updateGlassAnimation(int slot) {
