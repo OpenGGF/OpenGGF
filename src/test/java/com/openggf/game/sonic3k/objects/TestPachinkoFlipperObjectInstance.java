@@ -12,6 +12,15 @@ import static org.mockito.Mockito.*;
 
 public class TestPachinkoFlipperObjectInstance {
 
+    /**
+     * Held (not just-pressed) jump must not launch. ROM sub_49CFE's already-locked
+     * branch only reaches the launch trigger (loc_49D68 -> sub_49D72) when an A/B/C
+     * button was JUST pressed; otherwise it runs loc_49D54/loc_49DE4, which
+     * accelerate/project/move the locked player without ever setting Status_InAir
+     * (sonic3k.asm:96437-96534). The flipper therefore does drive x_vel/y_vel every
+     * locked frame now, so absence-of-launch is asserted via Status_InAir, not via
+     * "no velocity write".
+     */
     @Test
     public void heldJumpDoesNotLaunchImmediatelyOnContact() {
         PachinkoFlipperObjectInstance flipper = new PachinkoFlipperObjectInstance(
@@ -34,8 +43,9 @@ public class TestPachinkoFlipperObjectInstance {
         flipper.update(1, player);
         flipper.onSolidContact(player, standing, 2);
 
-        verify(player, never()).setYSpeed(anyShort());
-        verify(player, never()).setXSpeed(anyShort());
+        // No launch: sub_49D72 is the only flipper path that sets Status_InAir,
+        // and it is never reached without a just-pressed jump.
+        verify(player, never()).setAir(true);
     }
 
     @Test

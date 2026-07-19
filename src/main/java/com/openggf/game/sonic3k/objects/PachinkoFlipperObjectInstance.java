@@ -16,6 +16,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -141,7 +142,7 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         if (player.isJumpJustPressed()) {
             launchPlayer(player);
         } else {
-            applySurfaceAcceleration(player);
+            driveLockedPlayer(player);
         }
     }
 
@@ -164,24 +165,32 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         lockedPlayer = player;
         player.setControlLocked(true);
         player.setPinballMode(true);
-        // ROM sub_49CFE reaches the already-locked branch (loc_49D3C) only via a
-        // player whose object_control(a1) bit 0 is already set from the lock
-        // frame, which makes the player's own control routine skip Sonic_Modes
-        // entirely (sonic3k.asm:21973 btst #0,object_control(a0) / beq.s
-        // loc_10C0C) -- so Obj01_MdRoll/Sonic_RollSpeed's input-friction-decel
-        // body (sonic3k.asm:22935-22970) never runs while locked; ground_vel is
-        // only ever touched by loc_49D54's plain `add.w d1,ground_vel(a1)`
-        // (sonic3k.asm:96449-96457) and by loc_49DE4's slope-driven move. The
-        // engine keeps running its normal per-frame roll update instead of
-        // skipping it outright, so pinballSpeedLock (the existing spin_dash_flag
-        // 0x81 stand-in used by AutoSpinObjectInstance) is reused here to drop
-        // just the friction/deceleration/stop-rolling block, matching the net
-        // effect of the ROM's full-routine bypass: ground_vel is left untouched
-        // by the frame's normal movement and is only modified by this object's
-        // explicit accel/launch writes. Without this, PlayableSpriteMovement's
-        // roll-stop check saw g_speed cross below min_roll_speed every frame and
-        // slammed it to the pinball-mode +-0x400 snap (trace f431: expected
-        // g_speed=0x0000, engine produced 0x0018+0x400 by the following frame).
+        // ROM sub_49CFE's newly-locked branch (a3 byte == 0, sonic3k.asm:96422-96434)
+        // sets object_control(a1) bit 0. From the next frame on, the player's own
+        // control routine sees that bit and skips Sonic_Modes ENTIRELY
+        // (sonic3k.asm:21973 btst #0,object_control(a0) / beq.s loc_10C0C): the
+        // locked player never runs RollRepel/RollSpeed, its ground-wall check
+        // (loc_11350), or MoveSprite for itself. Its ground_vel/x_vel/y_vel and
+        // position are owned SOLELY by the flipper's loc_49DE4 (sonic3k.asm:96509-96534),
+        // which applies acceleration, projects ground_vel onto the player's angle,
+        // moves, and does its OWN wall check.
+        //
+        // The engine mirrors that by asserting the ROM object_control bit-0
+        // movement gate (MOVEMENT_SUPPRESSED_ONLY: skips the player's per-frame
+        // movement at PlayableSpriteMovement:475 while leaving TouchResponse and
+        // SolidObject riding checks active so the flipper keeps its contact) and
+        // having {@link #driveLockedPlayer} own the loc_49DE4 move. Previously the
+        // engine kept running the player's roll update with only a friction bypass
+        // (pinballSpeedLock), which projected x_vel from the PRE-accel ground_vel and
+        // then ran the loc_11350 wall check. That one-frame projection lag made the
+        // wall sensor predict 1px into a flipper-side wall, wrongly zeroing g_speed,
+        // mangling x_vel to +0xE8, and setting Status_Push -- trace f431 expected
+        // g_speed=0x0000 / x_speed=0x0000 / status=0x0D, engine produced
+        // g_speed=0x0018 / x_speed=0x00E8 / status=0x2D.
+        ObjectControlState.setMovementSuppressionPreservingOwnership(player, true);
+        // pinballSpeedLock is now inert while suppressed (the player's RollSpeed
+        // never runs) but is retained so a hurt/dead frame that bypasses the
+        // movement gate still avoids the roll-stop pinball snap.
         player.setPinballSpeedLock(true);
         if (!player.getRolling()) {
             player.setRolling(true);
@@ -190,18 +199,47 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void applySurfaceAcceleration(AbstractPlayableSprite player) {
-        // ROM loc_49D54 (sonic3k.asm:96449-96457) is exactly
-        // `moveq #$18,d1 / btst #0,status(a0) / beq.s loc_49D60 / not.w d1 /
-        // loc_49D60: add.w d1,ground_vel(a1)` -- it only ever touches the
-        // flipper's own facing test to pick the sign of the accel added to
-        // ground_vel(a1); it never writes status(a1)/direction on the player.
-        // The previous unconditional setDirection() call here forced the player
-        // to face right every accelerating frame, clobbering the facing bit the
-        // player landed with (trace f431: expected status_byte=0x0D with
-        // Status_Facing set, engine produced 0x2C with the bit cleared).
+    /**
+     * ROM already-locked drive: {@code loc_49D54} acceleration followed by
+     * {@code loc_49DE4} (sonic3k.asm:96449-96534). Because the locked player skips
+     * Sonic_Modes (object_control bit 0, asserted in {@link #lockPlayer}), the
+     * flipper owns the player's per-frame ground_vel/x_vel/y_vel and position here,
+     * exactly as {@code loc_49DE4} does after {@code movea.l a1,a0}.
+     */
+    private void driveLockedPlayer(AbstractPlayableSprite player) {
+        // loc_49D54 (sonic3k.asm:96449-96457): moveq #$18,d1 / btst #0,status(a0)
+        // [flipper facing] / beq.s loc_49D60 / not.w d1 / loc_49D60:
+        // add.w d1,ground_vel(a1). NOT.W $18 = $FFE7 = -25 for a flipped flipper.
+        // It never writes status(a1)/direction on the player.
         int accel = isFlippedHorizontal() ? SURFACE_ACCEL_FLIPPED : SURFACE_ACCEL;
-        player.setGSpeed((short) (player.getGSpeed() + accel));
+        int gSpeed = (short) (player.getGSpeed() + accel);
+
+        // loc_49DE4 friction (sonic3k.asm:96511-96524): ground_vel is nudged toward
+        // zero by d5 = the raw controller-input word, clamping at 0 (bcc guard).
+        // d5 == 0 whenever no button is held, so for the idle locked ride this is a
+        // no-op. The engine's collapsed A/B/C input cannot reconstruct the exact ROM
+        // Ctrl_logical word, and this pachinko ride holds no direction while locked
+        // (input == 0 across trace frames 431-453), so ground_vel friction is left as
+        // that verified no-op rather than modelled from lossy input bits.
+
+        // loc_49E0A (sonic3k.asm:96525-96534): project ground_vel onto the player's
+        // angle, then MoveSprite_TestGravity2 -> MoveSprite2 (pure 16:16 velocity
+        // add, no gravity under normal gravity). The player's angle is set by the
+        // flipper's sloped-solid snap; it is 0 on the flat span the player rides.
+        player.setGSpeed((short) gSpeed);
+        int angle = player.getAngle() & 0xFF;
+        short xVel = (short) ((gSpeed * TrigLookupTable.cosHex(angle)) >> 8);
+        short yVel = (short) ((gSpeed * TrigLookupTable.sinHex(angle)) >> 8);
+        player.setXSpeed(xVel);
+        player.setYSpeed(yVel);
+        player.move(xVel, yVel);
+
+        // loc_49E28-49E56 (CheckLeftWallDist/CheckRightWallDist): push the player out
+        // of a terrain wall and zero ground_vel WITHOUT setting Status_Push and
+        // WITHOUT touching x_vel. The player rides only the flipper's flat span and
+        // launches before reaching any board wall, so this probe fires on nothing for
+        // this ride and is deliberately not ported here to avoid an unverified wall
+        // response; add it if a future flipper ride is recorded hitting a board edge.
     }
 
     private void launchPlayer(AbstractPlayableSprite player) {
@@ -231,6 +269,9 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         player.setControlLocked(false);
         player.setPinballMode(false);
         player.setPinballSpeedLock(false);
+        // ROM sub_49D72 clears object_control(a1) (sonic3k.asm:96505); drop the
+        // engine movement gate so the launched player runs its own air physics.
+        ObjectControlState.setMovementSuppressionPreservingOwnership(player, false);
         player.setDirection(xVelocity < 0 ? Direction.LEFT : Direction.RIGHT);
 
         var objectManager = services().objectManager();
@@ -250,6 +291,9 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         lockedPlayer.setControlLocked(false);
         lockedPlayer.setPinballMode(false);
         lockedPlayer.setPinballSpeedLock(false);
+        // ROM loc_49D48 (sonic3k.asm:96444) clears object_control(a1) when the
+        // player stops standing on the flipper; drop the engine movement gate too.
+        ObjectControlState.setMovementSuppressionPreservingOwnership(lockedPlayer, false);
         lockedPlayer = null;
     }
 
