@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ retained-results panic cadence: f24268 -> f24799
+
+At f24268, native CPU Tails was charging a spindash in routine `$08` and
+published DOWN plus A/B/C when the ROM-visible `Level_frame_counter` low byte
+reached its `$20` pulse. The engine's PANIC path used the held gameplay counter
+directly, so the pulse arrived one player dispatch late. During CNZ's seamless
+handoff, the retained results object mutates into the in-level title owner and
+continues `Process_Sprites` while that ordinary counter is held; NORMAL and
+catch-up already recover the native phase from Sonic's `Pos_table` history.
+PANIC now uses that same retained-owner projection after resolving the counter
+source, rather than inventing a trace- or zone-specific offset
+(`docs/skdisasm/sonic3k.asm:22124-22136,26851-26896`).
+
+The focused panic-counter guards pass. CNZ complete-run physics advances from
+f24268 to f24799; its next mismatch is CPU Tails retaining zero horizontal
+speed where native has `$01FF`. The full comparison-only sweep remains 45/58
+physics green with the same 13 expected-red routes and unchanged green AIZ,
+HCZ, and MGZ complete runs. Animation remains 44/58 green with the same 14
+expected-red or unsupported routes; CNZ complete-run animation still begins at
+f108 (1104 downstream errors), and legacy standalone CNZ remains at f0.
+
 ### 2026-07-19 -- CNZ Sparkle off-screen execution and cork balance width: f24136 -> f24268
 
 At f24136, native CPU Tails entered hurt from the tall `$AB` warning child of

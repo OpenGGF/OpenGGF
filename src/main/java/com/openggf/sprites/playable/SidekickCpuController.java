@@ -530,8 +530,11 @@ public class SidekickCpuController {
         // "+1" is the 68000 byte address within the word, not a frame increment
         // (S3K sonic3k.asm:26869-26884; S2 s2.asm:39122-39139). At CNZ f8958
         // the ROM-visible word is $22FF, so loc_13F94 keeps DOWN held for one
-        // more frame and releases at $2300.
-        return frameCounter;
+        // more frame and releases at $2300. Bootstrap/VBlank closure paths can
+        // source the stale pre-Process_Sprites LevelManager copy; recover the
+        // already-incremented word using the same source semantic as the other
+        // low-byte CPU gates.
+        return projectRetainedResultsSpriteCadence(romVisibleLevelFrameCounter(), leader);
     }
 
     public void setController2Input(int held, int logical) {
