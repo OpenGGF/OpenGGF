@@ -81,7 +81,19 @@
 -- TraceMetadata.nativePreludeMode() — no separate JSON flag is emitted.
 -- v9.11-s2 changes: CSV v7 records each character's animation ID and displayed
 -- mapping frame every frame for independent animation trace verification.
-local LUA_SCRIPT_VERSION = "9.11-s2"
+-- v9.12-s2 changes: multi-stage-trace-runs Task 1 -- env-gated run mode
+-- (OGGF_TRACE_RUN_ID). Adds a stage-detour state machine for the S2 giant-
+-- ring special-stage round trip (level -> ss -> level), a minimal special-
+-- stage physics.csv/aux writer ported from s2_ss_trace_recorder.lua (no
+-- event.onmemoryexecute hooks -- state is sampled directly once per $10
+-- frame), numbered per-segment output subdirs under OUTPUT_DIR, and a
+-- run_manifest.json emitter matching TraceRunManifest's schema (see
+-- src/main/java/com/openggf/trace/TraceRunManifest.java). All of this is
+-- inert without the env var: plain-mode output is byte-identical to v9.11-s2
+-- except this version string (see the run/detour functions block below for
+-- the placement rationale and the on_frame_end comments for the exact
+-- plain-mode-unreachable gates).
+local LUA_SCRIPT_VERSION = "9.12-s2"
 
 -- Output directory (relative to BizHawk working dir)
 local OUTPUT_DIR = "trace_output/"
@@ -99,6 +111,80 @@ local TRACE_PROFILE = os.getenv("OGGF_S2_TRACE_PROFILE") or "gameplay_unlock"
 local TARGET_GAMEPLAY_SEGMENT = tonumber(os.getenv("OGGF_TRACE_GAMEPLAY_SEGMENT") or "0") or 0
 local BK2_FRAME_COUNT = tonumber(os.getenv("OGGF_BK2_FRAME_COUNT") or "")
 local SOURCE_BK2 = os.getenv("OGGF_BK2_BASENAME") or ""
+
+-- Multi-stage run mode (env-gated). All new run-mode state/constants/
+-- functions in this file are plain globals (no `local`): the chunk already
+-- carries ~151 top-level locals against Lua's ~200-local-per-chunk budget.
+-- `Run mode iff run_id ~= nil` gates every new behaviour below -- segment
+-- subdirs, the detour branch, transitions, the manifest -- so plain-mode
+-- runs (env unset) take none of the new code paths (see the on_frame_end
+-- comments for the exact plain-mode-unreachable gates).
+run_id = os.getenv("OGGF_TRACE_RUN_ID") or nil
+segments_done = {}
+transitions_done = {}
+detour_active = nil                -- nil | "special_stage"
+current_segment_dir_token = nil
+current_ss_index = nil
+-- LEVEL arms only; the ss segment does not consume a number here --
+-- #segments_done would wrongly yield seg3_ for the return level segment,
+-- because the ss entry sits between the two level entries in segments_done.
+level_segment_count = 0
+-- Run-mode per-segment file-open target. Stays == OUTPUT_DIR for the whole
+-- run in plain mode (never reassigned outside `if run_id ~= nil` branches);
+-- open_files()/write_metadata()/reset_recording_state() below were switched
+-- from OUTPUT_DIR to this so run mode can redirect per segment while
+-- OUTPUT_DIR itself stays the manifest's root directory (contract item 2).
+effective_output_dir = OUTPUT_DIR
+
+-- Special-stage RAM addresses/offsets (S2 REV01), transcribed from
+-- s2_ss_trace_recorder.lua for the minimal run-mode SS writer port (globals,
+-- SS_-prefixed to avoid colliding with this file's existing player-object
+-- OFF_*/ADDR_* locals -- several share the same byte offsets in the SST
+-- layout, e.g. OFF_STATUS/OFF_ROUTINE/OFF_ANGLE above).
+GAMEMODE_SPECIAL_STAGE          = 0x10
+SS_SONIC_BASE                   = 0xB000
+SS_TAILS_BASE                   = 0xB040
+SS_OFF_ID                       = 0x00  -- u8: Sonic=0x09, Tails=0x10, 0=absent
+SS_OFF_ANIM_FRAME               = 0x1B  -- u8
+SS_OFF_ANIM                     = 0x1C  -- u8
+SS_OFF_STATUS                   = 0x22  -- u8
+SS_OFF_ROUTINE                  = 0x24  -- u8
+SS_OFF_ROUTINE_SECONDARY        = 0x25  -- u8
+SS_OFF_ANGLE                    = 0x26  -- u8
+SS_OFF_SS_X                     = 0x2A  -- u16be
+SS_OFF_SS_X_SUB                 = 0x2C  -- u16be
+SS_OFF_SS_Y                     = 0x2E  -- u16be
+SS_OFF_SS_Y_SUB                 = 0x30  -- u16be
+SS_OFF_FLIP_TIMER               = 0x33  -- u8
+SS_OFF_SS_Z                     = 0x34  -- u16be
+SS_OFF_HURT_TIMER               = 0x36  -- u8
+SS_OFF_SLIDE_TIMER              = 0x37  -- u8
+SS_OFF_RINGS_HUNDREDS           = 0x3C  -- u8 (BCD digit)
+SS_OFF_RINGS_TENS               = 0x3D  -- u8 (BCD digit)
+SS_OFF_RINGS_UNITS              = 0x3E  -- u8 (BCD digit)
+
+SS_ADDR_TRACK_ANIM              = 0xDB08  -- SSTrack_anim (u8)
+SS_ADDR_CURRENT_SEGMENT         = 0xDB0A  -- SpecialStage_CurrentSegment (u8)
+SS_ADDR_TRACK_ANIM_FRAME        = 0xDB0B  -- SSTrack_anim_frame (u8)
+SS_ADDR_TRACK_DRAWING_INDEX     = 0xDB0D  -- SSTrack_drawing_index (u8)
+SS_ADDR_TRACK_ORIENTATION       = 0xDB0E  -- SSTrack_Orientation (u8)
+SS_ADDR_CUR_SPEED_FACTOR        = 0xDB16  -- SS_Cur_Speed_Factor (u16be)
+SS_ADDR_TRACK_DURATION_TIMER    = 0xDB1F  -- SSTrack_duration_timer (u8)
+SS_ADDR_PLAYER_ANIM_FRAME_TIMER = 0xDB21  -- SS_player_anim_frame_timer (u8)
+SS_ADDR_CHECK_RINGS_FLAG        = 0xDB86  -- SS_Check_Rings_flag (u8)
+SS_ADDR_RINGS_TOGO_BCD          = 0xDBA4  -- SS_RingsToGoBCD (u16be, BCD)
+SS_ADDR_TAILS_CONTROL_COUNTER   = 0xF702  -- Tails_control_counter (u16be)
+SS_ADDR_SWAP_POSITIONS_FLAG     = 0xF742  -- SS_Swap_Positions_Flag (u8)
+-- v_lastspecial-equivalent special-stage index, sampled at SS arm time.
+SS_ADDR_SPECIAL_STAGE_INDEX     = 0xFE16
+INPUT_START                     = 0x80
+
+-- Detour transition RAM fields (contract item 3/4; VERIFY-ON-FIRST-CAPTURE).
+ADDR_BIGRING_FLAG               = 0xF7CD  -- f_bigring / special_bonus_entry_flag
+ADDR_SAVED_X_POS                = 0xFE32
+ADDR_SAVED_Y_POS                = 0xFE34
+ADDR_LAST_STAR_POST_HIT         = 0xFE30
+ADDR_EMERALDS                   = 0xFFB1
 
 -- S2 REV01 68K RAM addresses (mainmemory domain = $FF0000 base stripped)
 local ADDR_GAME_MODE       = 0xF600
@@ -432,11 +518,13 @@ local function emit_current_zone_act_state(frame, game_mode)
     end
 end
 
-local function reset_recording_state()
-    close_files()
-    os.remove(OUTPUT_DIR .. "metadata.json")
-    os.remove(OUTPUT_DIR .. "physics.csv")
-    os.remove(OUTPUT_DIR .. "aux_state.jsonl")
+-- State-only reset, split out of reset_recording_state (contract item 4) so
+-- the run-mode post-SS re-arm can reuse it WITHOUT deleting the just-
+-- finalized ss/ segment's output files. Called by both reset_recording_state
+-- below (plain-mode level_gated_reset_aware branch, which also os.removes
+-- the flat files) and the run-mode-only global reset_recording_state_keep_files
+-- (defined after close_files, alongside the other run/detour functions).
+local function reset_recording_state_fields()
     started = false
     trace_frame = 0
     bk2_frame_offset = 0
@@ -457,13 +545,21 @@ local function reset_recording_state()
     last_zone_act_state_key = nil
 end
 
+local function reset_recording_state()
+    close_files()
+    os.remove(effective_output_dir .. "metadata.json")
+    os.remove(effective_output_dir .. "physics.csv")
+    os.remove(effective_output_dir .. "aux_state.jsonl")
+    reset_recording_state_fields()
+end
+
 -----------------
 --- Recording ---
 -----------------
 
 local function open_files()
-    physics_file = io.open(OUTPUT_DIR .. "physics.csv", "w")
-    aux_file = io.open(OUTPUT_DIR .. "aux_state.jsonl", "w")
+    physics_file = io.open(effective_output_dir .. "physics.csv", "w")
+    aux_file = io.open(effective_output_dir .. "aux_state.jsonl", "w")
 
     -- v7 header: shared execution counters plus symmetric Player/Sidekick blocks.
     physics_file:write("frame,input,camera_x,camera_y,rings,gameplay_frame_counter,"
@@ -485,7 +581,7 @@ local function write_metadata()
             or read_character_trace_state(SIDEKICK_BASE).present ~= 0
     local characters_json = sidekick_present and '["sonic", "tails"]' or '["sonic"]'
     local sidekicks_json = sidekick_present and '["tails"]' or '[]'
-    local meta_file = io.open(OUTPUT_DIR .. "metadata.json", "w")
+    local meta_file = io.open(effective_output_dir .. "metadata.json", "w")
     meta_file:write("{\n")
     meta_file:write('  "game": "s2",\n')
     meta_file:write('  "zone": "' .. start_zone_name .. '",\n')
@@ -511,6 +607,13 @@ local function write_metadata()
     meta_file:write('  "genesis_core": "Genplus-gx",\n')
     meta_file:write('  "route": "' .. start_zone_name .. '",\n')
     meta_file:write('  "source_bk2": "' .. json_escape(SOURCE_BK2) .. '",\n')
+    -- Run mode only (contract item 6): mirrors the S1/S3K level writers'
+    -- conditional run_id/segment_index emission. Gated as a single block on
+    -- run_id so plain-mode metadata.json stays byte-identical (Step 6).
+    if run_id ~= nil then
+        meta_file:write('  "run_id": "' .. run_id .. '",\n')
+        meta_file:write('  "segment_index": ' .. #segments_done .. ',\n')
+    end
     meta_file:write('  "rom_checksum": "",\n')
     meta_file:write('  "notes": ""\n')
     meta_file:write("}\n")
@@ -609,6 +712,386 @@ function close_files()
         aux_file:close()
         aux_file = nil
     end
+end
+
+-----------------------------------------------------------------------------
+-- Multi-stage run mode: run/detour functions (globals, port of
+-- s1_complete_run_recorder.lua / s3k_complete_run_recorder.lua's run/detour
+-- machinery, adapted to S2 constants and the minimal SS writer from
+-- s2_ss_trace_recorder.lua). MUST be defined here, after close_files, so
+-- they close over the file-scope locals they reference (physics_file,
+-- aux_file, trace_frame, started, bk2_frame_offset, start_zone_id,
+-- start_rom_zone_id, start_act, close_files, bk2_input_mask, write_metadata,
+-- reset_recording_state_fields, json_escape, TRACE_PROFILE,
+-- apparent_act_for) as upvalues. A global `function` defined earlier in the
+-- chunk (e.g. near the top constants) would instead bind those bare names as
+-- globals (nil), passing the parse gate but exploding at the first live
+-- detour.
+-----------------------------------------------------------------------------
+
+-- Run-mode-only state reset that mirrors reset_recording_state's field reset
+-- WITHOUT deleting any files (contract item 4). Used by the on_frame_end
+-- detour machine's Block 2 fall-through, immediately after finalize_ss_
+-- segment() closes the already-finalized ss/ segment: without this, stale
+-- emitted_checkpoints/last_zone_act_state_key from the FIRST level segment
+-- would silently suppress "gameplay_start"/act-transition checkpoints on the
+-- RETURN level segment (the checkpoint dedup tables are keyed by name only,
+-- not per-segment).
+function reset_recording_state_keep_files()
+    reset_recording_state_fields()
+end
+
+-- Run-mode per-segment mkdir. Reuses this file's existing mechanism (the
+-- unconditional os.execute("mkdir ...") 2>NUL done once at load time for the
+-- flat OUTPUT_DIR, near the bottom of the file) just parameterised per
+-- segment dir instead of the single flat directory.
+function ensure_output_dir(dir)
+    os.execute("mkdir \"" .. dir .. "\" 2>NUL")
+end
+
+-- Appends a finished LEVEL segment's entry to segments_done (run-mode-only
+-- callers: the detour entry, the movie-done funnel, and the non-level/BK2-
+-- end/FRAME_CAP finalize sites once routed through finalize_run_end). `act`
+-- is 1-based and `profile` is TRACE_PROFILE -- pinned to "gameplay_unlock"
+-- for the round-trip because the Task 3 capture procedure does not set
+-- OGGF_S2_TRACE_PROFILE and the Task 2 fixture's level segments/manifest
+-- entries carry exactly that string (TRACE_PROFILE's default, ~L98).
+function append_level_segment_done(rows)
+    segments_done[#segments_done + 1] = {
+        dir = current_segment_dir_token,
+        kind = "level",
+        profile = TRACE_PROFILE,
+        zone_id = start_zone_id,
+        act = apparent_act_for(start_rom_zone_id, start_act) + 1,
+        bk2_frame_offset = bk2_frame_offset,
+        rows = rows,
+    }
+end
+
+-- Read the BK2 movie's logical input for the given absolute BK2 frame index
+-- and controller (1 or 2), converted to the engine's input bitmask. Minimal
+-- port of s2_ss_trace_recorder.lua's joypad_mask_from_frame (~L339-359).
+-- Returns 0 when no movie is loaded or the controller has no recorded input.
+function joypad_mask_from_frame(frame_index, player)
+    if not movie.isloaded() then
+        return 0
+    end
+    local jp = movie.getinput(frame_index, player)
+    if jp == nil then
+        return 0
+    end
+    local prefix = "P" .. player .. " "
+    local mask = 0
+    if jp[prefix .. "Up"] or jp["Up"] then mask = mask | INPUT_UP end
+    if jp[prefix .. "Down"] or jp["Down"] then mask = mask | INPUT_DOWN end
+    if jp[prefix .. "Left"] or jp["Left"] then mask = mask | INPUT_LEFT end
+    if jp[prefix .. "Right"] or jp["Right"] then mask = mask | INPUT_RIGHT end
+    if jp[prefix .. "A"] or jp["A"] or jp[prefix .. "B"] or jp["B"]
+            or jp[prefix .. "C"] or jp["C"] then
+        mask = mask | INPUT_JUMP
+    end
+    if jp[prefix .. "Start"] or jp["Start"] then mask = mask | INPUT_START end
+    return mask
+end
+
+-- Read one player's special-stage SST state. Minimal port of
+-- s2_ss_trace_recorder.lua's read_ss_character (~L189-223). Returns
+-- present=false with zeroed fields when the slot's id byte is 0 (character
+-- absent, e.g. Tails not unlocked/selected).
+function read_ss_character(base)
+    local id = mainmemory.read_u8(base + SS_OFF_ID)
+    if id == 0 then
+        return {
+            present = false,
+            ss_x = 0, ss_x_sub = 0, ss_y = 0, ss_y_sub = 0, ss_z = 0,
+            angle = 0, routine = 0, routine_secondary = 0, status = 0,
+            anim = 0, anim_frame = 0, rings_bcd = 0,
+            hurt_timer = 0, slide_timer = 0, flip_timer = 0,
+        }
+    end
+
+    local hundreds = mainmemory.read_u8(base + SS_OFF_RINGS_HUNDREDS)
+    local tens = mainmemory.read_u8(base + SS_OFF_RINGS_TENS)
+    local units = mainmemory.read_u8(base + SS_OFF_RINGS_UNITS)
+
+    return {
+        present = true,
+        ss_x = mainmemory.read_u16_be(base + SS_OFF_SS_X),
+        ss_x_sub = mainmemory.read_u16_be(base + SS_OFF_SS_X_SUB),
+        ss_y = mainmemory.read_u16_be(base + SS_OFF_SS_Y),
+        ss_y_sub = mainmemory.read_u16_be(base + SS_OFF_SS_Y_SUB),
+        ss_z = mainmemory.read_u16_be(base + SS_OFF_SS_Z),
+        angle = mainmemory.read_u8(base + SS_OFF_ANGLE),
+        routine = mainmemory.read_u8(base + SS_OFF_ROUTINE),
+        routine_secondary = mainmemory.read_u8(base + SS_OFF_ROUTINE_SECONDARY),
+        status = mainmemory.read_u8(base + SS_OFF_STATUS),
+        anim = mainmemory.read_u8(base + SS_OFF_ANIM),
+        anim_frame = mainmemory.read_u8(base + SS_OFF_ANIM_FRAME),
+        rings_bcd = (hundreds << 16) | (tens << 8) | units,
+        hurt_timer = mainmemory.read_u8(base + SS_OFF_HURT_TIMER),
+        slide_timer = mainmemory.read_u8(base + SS_OFF_SLIDE_TIMER),
+        flip_timer = mainmemory.read_u8(base + SS_OFF_FLIP_TIMER),
+    }
+end
+
+-- One reusable state reader backs the SS physics.csv row. Minimal port of
+-- s2_ss_trace_recorder.lua's read_ss_state (~L228-245).
+function read_ss_state()
+    return {
+        speed_factor = mainmemory.read_u16_be(SS_ADDR_CUR_SPEED_FACTOR),
+        track_anim = mainmemory.read_u8(SS_ADDR_TRACK_ANIM),
+        track_anim_frame = mainmemory.read_u8(SS_ADDR_TRACK_ANIM_FRAME),
+        track_drawing_index = mainmemory.read_u8(SS_ADDR_TRACK_DRAWING_INDEX),
+        track_orientation = mainmemory.read_u8(SS_ADDR_TRACK_ORIENTATION),
+        track_duration_timer = mainmemory.read_u8(SS_ADDR_TRACK_DURATION_TIMER),
+        current_segment = mainmemory.read_u8(SS_ADDR_CURRENT_SEGMENT),
+        player_anim_frame_timer = mainmemory.read_u8(SS_ADDR_PLAYER_ANIM_FRAME_TIMER),
+        rings_togo_bcd = mainmemory.read_u16_be(SS_ADDR_RINGS_TOGO_BCD),
+        check_rings_flag = mainmemory.read_u8(SS_ADDR_CHECK_RINGS_FLAG),
+        tails_control_counter = mainmemory.read_u16_be(SS_ADDR_TAILS_CONTROL_COUNTER),
+        swap_positions_flag = mainmemory.read_u8(SS_ADDR_SWAP_POSITIONS_FLAG),
+        sonic = read_ss_character(SS_SONIC_BASE),
+        tails = read_ss_character(SS_TAILS_BASE),
+    }
+end
+
+-- ss/ metadata.json. Minimal port of s2_ss_trace_recorder.lua's
+-- write_metadata (~L386-405): distinct shape from the level write_metadata
+-- above -- trace_profile is unconditionally "s2_special_stage" and carries
+-- special_stage_index + ss_csv_version, both required by
+-- TraceRunManifest.Segment.validate for kind=="special_stage".
+function write_ss_metadata()
+    local meta_file = io.open(effective_output_dir .. "metadata.json", "w")
+    meta_file:write("{\n")
+    meta_file:write('  "game": "s2",\n')
+    meta_file:write('  "trace_profile": "s2_special_stage",\n')
+    meta_file:write('  "special_stage_index": ' .. current_ss_index .. ',\n')
+    meta_file:write('  "ss_csv_version": 1,\n')
+    meta_file:write('  "characters": ["sonic", "tails"],\n')
+    meta_file:write('  "main_character": "sonic",\n')
+    meta_file:write('  "sidekicks": ["tails"],\n')
+    meta_file:write('  "bk2_frame_offset": ' .. bk2_frame_offset .. ',\n')
+    meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
+    meta_file:write('  "source_bk2": "' .. json_escape(SOURCE_BK2) .. '",\n')
+    meta_file:write('  "lua_script_version": "' .. LUA_SCRIPT_VERSION .. '",\n')
+    meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
+    if run_id ~= nil then
+        meta_file:write('  "run_id": "' .. run_id .. '",\n')
+    end
+    meta_file:write('  "fresh_load": false,\n')
+    meta_file:write('  "segment_index": ' .. #segments_done .. '\n')
+    meta_file:write("}\n")
+    meta_file:close()
+end
+
+-- Arm the special-stage segment. Called exactly once per SS detour, on the
+-- first frame game_mode reads $10 after detour_active was not already
+-- "special_stage" (see the on_frame_end entry-vs-continuation gate).
+--
+-- Single-ss-dir MVP (contract item 4c): the dir token is the literal "ss"
+-- with no segment_dir_counts-style "ss_2" counter -- the EHZ round-trip
+-- fixture has exactly one detour, so this is accepted for the MVP; a future
+-- multi-detour run needs the S1/S3K-style counter.
+--
+-- SS frame-0 alignment (run-port convention -- NOT the interior
+-- s2_ss_trace_recorder.lua's convention): the on_frame_end detour machine's
+-- entry branch returns without writing a row, so ss row 0 is recorded on the
+-- NEXT $10 frame with bk2_frame_offset sampled here at entry -- the same
+-- alignment the shipped S1/S3K run ports use. The interior recorder instead
+-- records frame 0 immediately in its own arming invocation (a one-frame
+-- difference); keep this in mind for any future comparator work against
+-- interior-recorder ss traces.
+function start_ss_segment()
+    current_segment_dir_token = "ss"
+    effective_output_dir = OUTPUT_DIR .. current_segment_dir_token .. "/"
+    ensure_output_dir(effective_output_dir)
+
+    started = true
+    bk2_frame_offset = emu.framecount()
+    trace_frame = 0
+    current_ss_index = mainmemory.read_u8(SS_ADDR_SPECIAL_STAGE_INDEX)
+
+    physics_file = io.open(effective_output_dir .. "physics.csv", "w")
+    aux_file = io.open(effective_output_dir .. "aux_state.jsonl", "w")
+    physics_file:write(
+        "frame,input,input_p2,lag,speed_factor,track_anim,track_anim_frame,track_drawing_index,track_orientation,track_duration_timer,current_segment,player_anim_frame_timer,rings_togo_bcd,check_rings_flag,tails_control_counter,swap_positions_flag,sonic_present,sonic_ss_x,sonic_ss_x_sub,sonic_ss_y,sonic_ss_y_sub,sonic_ss_z,sonic_angle,sonic_routine,sonic_routine_secondary,sonic_status,sonic_anim,sonic_anim_frame,sonic_rings_bcd,sonic_hurt_timer,sonic_slide_timer,sonic_flip_timer,tails_present,tails_ss_x,tails_ss_x_sub,tails_ss_y,tails_ss_y_sub,tails_ss_z,tails_angle,tails_routine,tails_routine_secondary,tails_status,tails_anim,tails_anim_frame,tails_rings_bcd,tails_hurt_timer,tails_slide_timer,tails_flip_timer\n")
+    physics_file:flush()
+    write_ss_metadata()
+    print(string.format(
+        "SS segment armed at BizHawk frame %d (dir=%s, special_stage_index=%d).",
+        bk2_frame_offset, current_segment_dir_token, current_ss_index))
+end
+
+-- Records one special-stage physics.csv row and advances trace_frame.
+-- Minimal port of s2_ss_trace_recorder.lua's record_frame (~L588-635): SAME
+-- 48-column header/row format (frame decimal, lag 0/1, everything else
+-- lowercase hex -- the SS convention; do NOT reuse the level writer's %04X
+-- helpers) but WITHOUT the interior recorder's event.onmemoryexecute
+-- RunObjects-pass machinery (hard rule for this run port: no
+-- onmemoryexecute hooks) -- state is sampled directly, once per $10 frame,
+-- from read_ss_state() instead. Keeps the level segments' existing dead-
+-- frame-skip semantics unchanged (this function does not touch them).
+function write_ss_row()
+    local state = read_ss_state()
+    local sonic = state.sonic
+    local tails = state.tails
+
+    local frame_index = bk2_frame_offset + trace_frame
+    local input_mask = joypad_mask_from_frame(frame_index, 1)
+    local input_p2_mask = joypad_mask_from_frame(frame_index, 2)
+    local lag = emu.islagged() and 1 or 0
+
+    physics_file:write(string.format(
+        "%d,%x,%x,%d,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n",
+        trace_frame, input_mask, input_p2_mask, lag,
+        state.speed_factor, state.track_anim, state.track_anim_frame,
+        state.track_drawing_index, state.track_orientation,
+        state.track_duration_timer, state.current_segment,
+        state.player_anim_frame_timer, state.rings_togo_bcd,
+        state.check_rings_flag, state.tails_control_counter,
+        state.swap_positions_flag,
+        sonic.present and 1 or 0, sonic.ss_x, sonic.ss_x_sub, sonic.ss_y,
+        sonic.ss_y_sub, sonic.ss_z, sonic.angle, sonic.routine,
+        sonic.routine_secondary, sonic.status, sonic.anim, sonic.anim_frame,
+        sonic.rings_bcd, sonic.hurt_timer, sonic.slide_timer, sonic.flip_timer,
+        tails.present and 1 or 0, tails.ss_x, tails.ss_x_sub, tails.ss_y,
+        tails.ss_y_sub, tails.ss_z, tails.angle, tails.routine,
+        tails.routine_secondary, tails.status, tails.anim, tails.anim_frame,
+        tails.rings_bcd, tails.hurt_timer, tails.slide_timer, tails.flip_timer))
+
+    if trace_frame % 60 == 0 then physics_file:flush() end
+    if trace_frame % 300 == 0 then write_ss_metadata() end
+    trace_frame = trace_frame + 1
+end
+
+-- Finalize the currently-armed SS segment: flush, rewrite metadata (final
+-- trace_frame_count), close files, append its segments_done entry (kind
+-- "special_stage", carrying special_stage_index so TraceRunManifest.Segment.
+-- validate is satisfied), then reset the shared started/trace_frame state.
+-- Mirrors s1_complete_run_recorder.lua:699-733 / s3k ~L5200.
+function finalize_ss_segment()
+    if not started then
+        return
+    end
+    if physics_file then physics_file:flush() end
+    write_ss_metadata()
+    local rows = trace_frame
+    print(string.format(
+        "Finalised SS segment %s (special_stage_index=%d): %d rows, bk2_frame_offset=%d.",
+        current_segment_dir_token, current_ss_index, rows, bk2_frame_offset))
+    close_files()
+    segments_done[#segments_done + 1] = {
+        dir = current_segment_dir_token,
+        kind = "special_stage",
+        profile = "s2_special_stage",
+        special_stage_index = current_ss_index,
+        zone_id = 0,
+        act = 0,
+        bk2_frame_offset = bk2_frame_offset,
+        rows = rows,
+    }
+    started = false
+    trace_frame = 0
+    current_ss_index = nil
+end
+
+-- Single end-of-run finalize funnel (port of s1_complete_run_recorder.lua
+-- :745-757 / s3k ~L5822-5846). Every live termination path in run mode --
+-- the top-of-function movie-done guard, the pre-arm movie-FINISHED site, the
+-- non-level "left gameplay" stop, the BK2-end/FINISHED checks, and the
+-- FRAME_CAP backstop -- calls this exactly once before setting
+-- finished = true. `started` is true during BOTH an armed level segment AND
+-- an armed SS segment (start_ss_segment sets it too), so this must NOT
+-- unconditionally run the level finalize: doing so mid-detour would
+-- overwrite ss/metadata.json (via the shared effective_output_dir), append a
+-- bogus kind="level" entry, and leave finalize_ss_segment() as a silent
+-- no-op on its `not started` guard. The explicit if/else below routes
+-- correctly.
+function finalize_run_end()
+    if detour_active == "special_stage" then
+        finalize_ss_segment()
+        detour_active = nil
+    elseif started then
+        if physics_file then physics_file:flush() end
+        write_metadata()
+        append_level_segment_done(trace_frame)
+        close_files()
+        started = false
+    end
+    write_run_manifest()
+end
+
+-- Emits OUTPUT_DIR/run_manifest.json describing every segment and transition
+-- recorded across the run. Run mode only -- run_id == nil skips entirely, so
+-- plain-mode captures remain output-identical (contract item 7). Field
+-- names match TraceRunManifest (Segment/Transition) exactly; the Lua-side
+-- per-segment frame-count field is `rows`, emitted under the JSON key
+-- "trace_frame_count". Inline literals (not shared S1/S3K globals) per
+-- contract item 7: "9.12-s2" script version, "7B905383" (S2 World REV01
+-- CRC32, per CLAUDE.md).
+function write_run_manifest()
+    if run_id == nil then
+        return  -- plain-mode run: no manifest, output layout unchanged
+    end
+    local f = io.open(OUTPUT_DIR .. "run_manifest.json", "w")
+    if not f then
+        print("WARNING: could not open run_manifest.json for writing")
+        return
+    end
+    -- Invariant check before writing: transition counts are bounded by
+    -- boundaries, not equal to them. The checkable invariant is per-record:
+    -- every record's to_segment == from_segment + 1 and
+    -- to_segment <= #segments_done.
+    for i, t in ipairs(transitions_done) do
+        if t.to_segment ~= t.from_segment + 1 or t.to_segment > #segments_done then
+            print(string.format(
+                "WARNING: transition record %d has inconsistent segment indices "
+                    .. "(from_segment=%d, to_segment=%d, #segments_done=%d)",
+                i, t.from_segment, t.to_segment, #segments_done))
+        end
+    end
+    f:write('{\n')
+    f:write('  "run_schema": 1,\n')
+    f:write('  "game": "s2",\n')
+    f:write(string.format('  "run_id": %q,\n', run_id))
+    f:write('  "source_bk2": "' .. json_escape(SOURCE_BK2) .. '",\n')
+    f:write('  "rom_checksum": "7B905383",\n')
+    f:write('  "lua_script_version": "' .. LUA_SCRIPT_VERSION .. '",\n')
+    f:write('  "segments": [\n')
+    for i, s in ipairs(segments_done) do
+        local extra = ""
+        if s.kind == "special_stage" then
+            extra = string.format(', "special_stage_index": %d', s.special_stage_index)
+        end
+        f:write(string.format(
+            '    {"dir": %q, "kind": %q, "trace_profile": %q, "bk2_frame_offset": %d, "trace_frame_count": %d, "zone_id": %d, "act": %d%s}%s\n',
+            s.dir, s.kind, s.profile, s.bk2_frame_offset, s.rows, s.zone_id, s.act,
+            extra, (i < #segments_done) and "," or ""))
+    end
+    f:write('  ],\n')
+    f:write('  "transitions": [\n')
+    for i, t in ipairs(transitions_done) do
+        local parts = {
+            string.format('"from_segment": %d', t.from_segment),
+            string.format('"to_segment": %d', t.to_segment),
+            string.format('"entry_kind": %q', t.entry_kind),
+            string.format('"mode_change_bk2_frame": %d', t.mode_change_bk2_frame),
+        }
+        if t.special_bonus_entry_flag then parts[#parts+1] = string.format('"special_bonus_entry_flag": %d', t.special_bonus_entry_flag) end
+        if t.saved_x_pos then parts[#parts+1] = string.format('"saved_x_pos": %d', t.saved_x_pos) end
+        if t.saved_y_pos then parts[#parts+1] = string.format('"saved_y_pos": %d', t.saved_y_pos) end
+        if t.last_star_post_hit then parts[#parts+1] = string.format('"last_star_post_hit": %d', t.last_star_post_hit) end
+        if t.rings_before then parts[#parts+1] = string.format('"rings_before": %d', t.rings_before) end
+        if t.rings_after then parts[#parts+1] = string.format('"rings_after": %d', t.rings_after) end
+        if t.emeralds_before then parts[#parts+1] = string.format('"emeralds_before": %d', t.emeralds_before) end
+        if t.emeralds_after then parts[#parts+1] = string.format('"emeralds_after": %d', t.emeralds_after) end
+        f:write(string.format('    {%s}%s\n', table.concat(parts, ", "),
+            (i < #transitions_done) and "," or ""))
+    end
+    f:write('  ]\n}\n')
+    f:close()
+    print(string.format("Wrote run_manifest.json (%d segments, %d transitions).",
+        #segments_done, #transitions_done))
 end
 
 -- Build a compact summary of ALL occupied dynamic slots (16-127).
@@ -1010,6 +1493,116 @@ end
 local function on_frame_end()
     local game_mode = mainmemory.read_u8(ADDR_GAME_MODE)
 
+    -- 4b. Top-of-function movie-done guard, RUN MODE ONLY (port shape from
+    -- s1_complete_run_recorder.lua ~L1163-1182). PLAIN MODE MUST NOT REACH
+    -- ANY CODE IN THIS BLOCK -- it is gated on `run_id ~= nil` as the very
+    -- first condition. Rationale: the existing BK2-end/FINISHED checks
+    -- further down (~L1595-1612) sit BELOW the detour branch's `return`s
+    -- added below, so without this guard a movie ending mid-$10 (inside the
+    -- SS detour) would keep writing ss rows until FRAME_CAP instead of
+    -- stopping promptly. Uses the SAME BK2_FRAME_COUNT-override "effective"
+    -- movie length as the existing armed check -- movie.length() under-
+    -- reports in chromeless runs, so a raw-length guard here would silently
+    -- truncate the ss tail or seg2 while still writing a valid-looking
+    -- manifest, invisible to a plain-mode inspection.
+    if run_id ~= nil and HEADLESS and movie.isloaded() then
+        local frame_now = emu.framecount()
+        local movie_length = movie.length()
+        if BK2_FRAME_COUNT ~= nil and BK2_FRAME_COUNT > movie_length then
+            movie_length = BK2_FRAME_COUNT
+        end
+        local movie_done = (movie_length > 0 and frame_now >= movie_length)
+            or movie.mode() == "FINISHED"
+        if movie_done then
+            print(string.format(
+                "Run-mode movie-done guard fired at emu frame %d (effective movie length %d). Finalising.",
+                frame_now, movie_length))
+            finalize_run_end()
+            finished = true
+            return
+        end
+    end
+
+    -- Stage-detour state machine, RUN MODE ONLY (gated on `run_id ~= nil` as
+    -- the first condition of Block 1 below; Block 2's own gate,
+    -- `detour_active == "special_stage"`, can only be true after Block 1 set
+    -- it, so Block 2 is transitively plain-mode-unreachable too). Port of
+    -- s1_complete_run_recorder.lua ~L1201-1244, S2 constants.
+    --
+    -- PLACEMENT IS LOAD-BEARING: this file's on_frame_end is structurally
+    -- INVERTED vs S1/S3K -- its `if not started` arm-gate block comes FIRST
+    -- (below), with an unconditional `return` at the end of that block --
+    -- so the detour machine must sit ABOVE that gate (here, right after the
+    -- 4b guard) for two reasons: (a) continuation $10 frames must reach
+    -- Block 1 while `started` is still true, and (b) the Block 2 exit
+    -- fall-through must land in the `if not started` gate below so it can
+    -- safely re-arm the return level segment.
+    --
+    -- Block 1: SS entry/continuation. Gated on `started` (true both while a
+    -- level segment is armed at the $0C->$10 edge AND on every SS
+    -- continuation frame, since start_ss_segment() also sets `started =
+    -- true`) so a movie beginning mid-$10 with nothing armed cannot produce
+    -- a bogus from_segment=-1 transition.
+    if run_id ~= nil and started and game_mode == GAMEMODE_SPECIAL_STAGE then
+        if detour_active ~= "special_stage" then
+            -- ENTRY: finalize the armed level segment first (flush + write_
+            -- metadata + append_level_segment_done + close_files), THEN push
+            -- the starpost_special transition with exact indices computed
+            -- AFTER the finalize (so #segments_done already counts the
+            -- just-finished level segment), THEN arm the SS segment once.
+            if physics_file then physics_file:flush() end
+            write_metadata()
+            append_level_segment_done(trace_frame)
+            close_files()
+            started = false
+            trace_frame = 0
+            transitions_done[#transitions_done + 1] = {
+                from_segment = #segments_done - 1,
+                to_segment = #segments_done,
+                entry_kind = "starpost_special",
+                mode_change_bk2_frame = emu.framecount(),
+                special_bonus_entry_flag = mainmemory.read_u8(ADDR_BIGRING_FLAG),
+                saved_x_pos = mainmemory.read_u16_be(ADDR_SAVED_X_POS),
+                saved_y_pos = mainmemory.read_u16_be(ADDR_SAVED_Y_POS),
+                last_star_post_hit = mainmemory.read_u8(ADDR_LAST_STAR_POST_HIT),
+                rings_before = mainmemory.read_u16_be(ADDR_RING_COUNT),
+                emeralds_before = mainmemory.read_u8(ADDR_EMERALDS),
+            }
+            start_ss_segment()
+            detour_active = "special_stage"
+            local tx = transitions_done[#transitions_done]
+            -- VERIFY-ON-FIRST-CAPTURE: print every transition field value.
+            print(string.format(
+                "S2 special-stage detour at bk2 frame %d (special_bonus_entry_flag=0x%02X, "
+                    .. "saved=(0x%04X,0x%04X), last_star_post_hit=%d, rings_before=%d, emeralds_before=%d).",
+                tx.mode_change_bk2_frame, tx.special_bonus_entry_flag,
+                tx.saved_x_pos, tx.saved_y_pos, tx.last_star_post_hit,
+                tx.rings_before, tx.emeralds_before))
+            return
+        end
+        -- CONTINUATION: still inside the SS detour. The normal level-row
+        -- path below (and the non-level re-arm branch) is unreachable for
+        -- $10 frames -- this returns first, so the non-level branch never
+        -- double-finalizes the same segment.
+        write_ss_row()
+        return
+    end
+    if detour_active == "special_stage" then
+        -- First non-$10 frame after the detour (results tally trailing off
+        -- game_mode $10, or the return load-handoff): finalize the SS
+        -- segment here, BEFORE the level-family checks below, so it always
+        -- closes exactly once regardless of what mode follows. Also resets
+        -- the level-tracking state (checkpoints/known-objects/prev-state/
+        -- etc.) WITHOUT deleting the just-finalized ss/ segment's files
+        -- (contract item 4; reset_recording_state_keep_files is the
+        -- never-os.remove half of the split reset_recording_state).
+        finalize_ss_segment()
+        detour_active = nil
+        reset_recording_state_keep_files()
+        -- fall through: non-$10 frames (results/fade under $0C or otherwise)
+        -- are manifest-only until the level arm gate below re-arms.
+    end
+
     if not started then
         if finished then return end
         if skipping_segment then
@@ -1029,6 +1622,14 @@ local function on_frame_end()
             print(string.format(
                 "Movie finished before gameplay segment %d became recordable. Finalising without trace rows.",
                 TARGET_GAMEPLAY_SEGMENT))
+            -- Run mode: this can fire mid-run between segments (e.g. the
+            -- movie ends during the post-SS reload before the return level
+            -- re-arms) -- funnel through finalize_run_end() or the manifest
+            -- (and any already-recorded segments/transitions) is lost.
+            -- Plain mode: unchanged (finished=true only).
+            if run_id ~= nil then
+                finalize_run_end()
+            end
             finished = true
             return
         end
@@ -1039,7 +1640,16 @@ local function on_frame_end()
         -- which delayed recording if the player was already pressing a direction.
         local ctrl_lock_timer = mainmemory.read_u16_be(PLAYER_BASE + OFF_CTRL_LOCK)
         if game_mode == GAMEMODE_LEVEL and ctrl_lock_timer == 0 then
-            if gameplay_segment_index < TARGET_GAMEPLAY_SEGMENT then
+            -- Segment-skip note (defensive only, contract item 4):
+            -- gameplay_segment_index increments ONLY in the skipping_segment
+            -- branch above, never when a recorded segment finalizes, so the
+            -- return level segment cannot actually be swallowed by the
+            -- TARGET_GAMEPLAY_SEGMENT check below as written today. Bypass
+            -- it anyway once run mode has already armed one segment, purely
+            -- as a guard against a future change to the skip-path
+            -- bookkeeping -- not a live hazard as written.
+            local bypass_target_check = run_id ~= nil and level_segment_count > 0
+            if not bypass_target_check and gameplay_segment_index < TARGET_GAMEPLAY_SEGMENT then
                 print(string.format(
                     "Skipping gameplay segment %d while seeking target segment %d.",
                     gameplay_segment_index, TARGET_GAMEPLAY_SEGMENT))
@@ -1064,6 +1674,54 @@ local function on_frame_end()
             start_zone_id = engine_zone_for_rom_zone(start_rom_zone_id)
             start_act = mainmemory.read_u8(ADDR_ACT)
             start_zone_name = ZONE_NAMES[start_rom_zone_id] or string.format("unknown_%02x", start_rom_zone_id)
+
+            -- Run mode (contract item 2): redirect this segment's file opens
+            -- into a numbered per-segment subdir under OUTPUT_DIR.
+            -- level_segment_count counts LEVEL arms only -- the ss segment
+            -- does not consume a number (#segments_done would wrongly yield
+            -- seg3_ for this return level, since the ss entry sits between
+            -- the two level entries in segments_done). Plain mode never
+            -- reassigns effective_output_dir, so it stays == OUTPUT_DIR for
+            -- the whole run and every file open below is unaffected.
+            if run_id ~= nil then
+                level_segment_count = level_segment_count + 1
+                current_segment_dir_token = string.format("seg%d_%s%d", level_segment_count,
+                    start_zone_name, apparent_act_for(start_rom_zone_id, start_act) + 1)
+                effective_output_dir = OUTPUT_DIR .. current_segment_dir_token .. "/"
+                ensure_output_dir(effective_output_dir)
+
+                -- Post-SS re-arm (contract item 4): if the just-finished
+                -- segment was the special stage, THIS arm is that stage's
+                -- exit boundary. Indices are exact here: the SS-entry
+                -- finalize above already appended the from-segment (the
+                -- just-finished level) to segments_done, and
+                -- finalize_ss_segment() appended the ss segment itself; this
+                -- arm has not yet pushed the return level segment, so at
+                -- this point segments_done == [level, ss] (#segments_done ==
+                -- 2) and the push below yields from_segment=1,
+                -- to_segment=2, matching the Task 2 fixture.
+                if #segments_done > 0 and segments_done[#segments_done].kind == "special_stage" then
+                    local exit_frame = emu.framecount()
+                    local rings_after = mainmemory.read_u16_be(ADDR_RING_COUNT)
+                    local emeralds_after = mainmemory.read_u8(ADDR_EMERALDS)
+                    transitions_done[#transitions_done + 1] = {
+                        from_segment = #segments_done - 1,
+                        to_segment = #segments_done,
+                        entry_kind = "stage_exit",
+                        mode_change_bk2_frame = exit_frame,
+                        -- ROM zeroes ring/emerald tracking on the level
+                        -- reload that follows a special stage; rings_after
+                        -- will read 0 here -- record the truth, per contract
+                        -- item 4.
+                        rings_after = rings_after,
+                        emeralds_after = emeralds_after,
+                    }
+                    -- VERIFY-ON-FIRST-CAPTURE: print the transition field values.
+                    print(string.format(
+                        "S2 stage_exit transition at bk2 frame %d (rings_after=%d, emeralds_after=%d).",
+                        exit_frame, rings_after, emeralds_after))
+                end
+            end
 
             open_files()
             -- Write metadata immediately so it exists even if the process is killed
@@ -1101,6 +1759,16 @@ local function on_frame_end()
             return
         end
         print("Left level gameplay at trace frame " .. trace_frame .. ". Finalising.")
+        -- Run mode: game_mode reaching $10 (the SS detour) is already
+        -- intercepted by Block 1 above while `started`, so this branch only
+        -- fires here for a genuinely different non-level mode (results,
+        -- game over, pause, etc.) -- a real stop, now funneled through
+        -- finalize_run_end() so the manifest captures whatever segments/
+        -- transitions were already recorded. Plain mode: unchanged
+        -- (finished=true only).
+        if run_id ~= nil then
+            finalize_run_end()
+        end
         finished = true
         return
     end
@@ -1118,6 +1786,14 @@ local function on_frame_end()
             print(string.format(
                 "Reached BK2 end at trace frame %d (bk2 offset %d, movie length %d). Finalising.",
                 trace_frame, bk2_frame_offset, movie_length))
+            -- Shadowed in run mode by the 4b top-of-function guard (which
+            -- fires strictly earlier on the same effective-length
+            -- predicate) -- funneled through finalize_run_end() anyway,
+            -- belt-and-braces (per the S1 run-port review lesson). Plain
+            -- mode: unchanged (finished=true only).
+            if run_id ~= nil then
+                finalize_run_end()
+            end
             finished = true
             return
         end
@@ -1125,6 +1801,11 @@ local function on_frame_end()
             print(string.format(
                 "Movie playback finished at trace frame %d (emu frame %d). Finalising.",
                 trace_frame, emu.framecount()))
+            -- Shadowed dead code in run mode (see comment above). Plain
+            -- mode: unchanged (finished=true only).
+            if run_id ~= nil then
+                finalize_run_end()
+            end
             finished = true
             return
         end
@@ -1341,6 +2022,14 @@ while true do
     if not finished and emu.framecount() >= FRAME_CAP then
         print(string.format(
             "Frame cap %d reached without a movie-end signal; finalising and exiting.", FRAME_CAP))
+        -- Run mode: funnel through finalize_run_end() so the manifest (and
+        -- any already-recorded segments/transitions) survive this backstop.
+        -- Plain mode: unchanged (finished=true only; the main loop's
+        -- `if finished then` block below still does its own
+        -- flush/write_metadata/close_files as it always has).
+        if run_id ~= nil then
+            finalize_run_end()
+        end
         finished = true
     end
 
@@ -1348,6 +2037,16 @@ while true do
     -- Code after the loop may never execute because client.exit() kills
     -- the process immediately.
     if finished then
+        -- Run mode: finalize_run_end() already closed the segment files and
+        -- wrote the manifest before `finished` was set; re-finalizing here
+        -- would mislabel a successful run as "no rows recorded" (S1 model's
+        -- post-restructure exit block).
+        if run_id ~= nil then
+            print(string.format(
+                "Run complete: %d segment(s), %d transition(s) recorded. Exiting.",
+                #segments_done, #transitions_done))
+            break
+        end
         print("Recording complete. Writing final output...")
         local recorded_trace = physics_file ~= nil
         if recorded_trace then

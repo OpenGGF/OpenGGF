@@ -426,6 +426,128 @@ prints diagnostics to stdout. Confirm all of the following before committing the
 Any surprise in these prints means re-derive the RAM map before committing the trace — do not
 commit a trace whose self-check output looks off.
 
+## Recording S2 Halfpipe Round-Trip Traces (s2-ehz-halfpipe-roundtrip)
+
+An **S2 halfpipe round-trip trace** captures a single EHZ playthrough that includes entry into
+the circling-stars special stage (halfpipe, accessed via a star post) mid-act, completion or
+failure of the halfpipe, and continuation back into the level. This exercises the run-mode
+detour state machine added to `s2_trace_recorder.lua` (env-gated on `OGGF_TRACE_RUN_ID`): the
+level segment finalizes at the `Game_Mode=$10` edge, a minimal special-stage segment is sampled
+directly (no `event.onmemoryexecute` hooks), and the return level segment re-arms on exit.
+
+**Human Recording Procedure (BizHawk 2.11 + Genplus-gx):**
+
+1. Start a new movie from power-on with the S2 World REV01 ROM, 1-player Sonic+Tails.
+2. Play EHZ Act 1, collecting at least 50 rings. Keep the emerald count below 7 — 7 emeralds
+   changes the star-post behaviour (no special-stage entry).
+3. Touch a star post to open the circling special stars, then enter them to trigger the
+   halfpipe special stage.
+4. Play the halfpipe to its conclusion — complete it, or fail out of it. Either outcome is
+   acceptable for this recording.
+5. Continue playing in the level after the halfpipe returns you to EHZ, until control settles
+   (a few seconds of normal gameplay after the transition).
+6. Stop the movie and save as `s2-ehz-halfpipe-roundtrip.bk2`.
+
+**Recorder Invocation:**
+
+Run the S2 recorder over your movie file through `record_s2_trace.bat` (not the raw
+`run_bizhawk_lua.bat` invocation used by the S1/S3K sections above) — the wrapper is what
+populates `OGGF_BK2_BASENAME` and `OGGF_BK2_FRAME_COUNT` for you:
+
+```bat
+set OGGF_TRACE_RUN_ID=s2-ehz-halfpipe-roundtrip
+
+tools\bizhawk\record_s2_trace.bat ^
+  "s2.gen" ^
+  "s2-ehz-halfpipe-roundtrip.bk2"
+```
+
+Leave `OGGF_S2_TRACE_PROFILE` unset (do not pass a third argument) — `record_s2_trace.bat`
+defaults it to `gameplay_unlock` when omitted, and that is the profile the run's level segments
+must carry. Setting `OGGF_TRACE_RUN_ID` puts the recorder into run mode: every new
+run-mode code path is gated on `run_id ~= nil` (`s2_trace_recorder.lua`, `run_id` assignment
+near the top of the run-mode block), so plain-mode recordings are unaffected.
+
+**`OGGF_TRACE_OUTPUT_DIR` does not apply here:** unlike `s1_complete_run_recorder.lua` and
+`s3k_complete_run_recorder.lua`, `s2_trace_recorder.lua`'s `OUTPUT_DIR` is a hardcoded
+`"trace_output/"` local (not read from an env var), so output always lands under
+`tools\bizhawk\trace_output\` relative to the recorder script. Do not set that env var expecting
+it to redirect S2 output.
+
+**Expected Output:**
+
+Run mode writes numbered per-segment subdirectories under `tools\bizhawk\trace_output\`:
+- `run_manifest.json` — indexed transitions for the EHZ1→halfpipe and halfpipe→EHZ1 boundaries.
+- `seg1_ehz1/` — level segment (EHZ Act 1, frames 0 to star-post entry). Run-mode segment dirs
+  are named `seg<N>_<zone><act>`, where `N` counts level arms only (the `ss` segment does not
+  consume a number).
+- `ss/` — special-stage segment. The dir token is the literal `"ss"` with no counter (a
+  single-detour MVP; a future multi-detour run would need an S1/S3K-style repeat counter).
+- `seg2_ehz1/` — EHZ Act 1 re-entry segment following the halfpipe return. Step 5 above
+  guarantees this segment will be present.
+
+`record_s2_trace.bat`'s own post-processing step checks for a top-level `trace_output\metadata.json`
+before compressing and printing the metadata summary; run mode never writes one (metadata always
+lands inside a per-segment subdir), so the wrapper will print a benign
+`WARNING: No trace output found` and skip its own compression/summary step. This is expected —
+the `seg1_ehz1/`, `ss/`, `seg2_ehz1/`, and `run_manifest.json` files are still written correctly.
+Apply gzip compression yourself before committing, recursing into the segment subdirectories
+(`compress-traces.ps1 <path-to-trace_output> -Recurse -ThresholdBytes 0`).
+
+**PROHIBITION:** do NOT copy the run's `ss/` segment over `src/test/resources/traces/s2/special_stage`
+— the committed interior trace there is produced by `s2_ss_trace_recorder.lua` with the
+RunObjects PC hooks and is governed by the `Assert-SsAuxCoverage` contract; the run's `ss/`
+segment has a reduced aux surface (no `run_objects_end` stream) and is consumed by the run/chain
+path only.
+
+**Row-0 alignment note:** the run port's `ss/` segment samples row 0 on the *next* `$10` frame
+after entry (`bk2_frame_offset` is captured at entry, but the entry branch returns without
+writing a row) — one frame later than the interior `s2_ss_trace_recorder.lua`'s convention,
+which records frame 0 immediately at arm time. See the comment above `start_ss_segment()` in
+`s2_trace_recorder.lua` for the full rationale; keep this one-frame difference in mind for any
+future comparator work against interior-recorder `ss` traces.
+
+**Commit Layout:**
+
+Commit the whole run under test resources, with the source bk2 alongside it:
+
+```
+src/test/resources/traces/s2/runs/s2-ehz-halfpipe-roundtrip/
+  ├── run_manifest.json
+  ├── s2-ehz-halfpipe-roundtrip.bk2
+  ├── seg1_ehz1/
+  │   ├── metadata.json
+  │   ├── physics.csv.gz
+  │   └── aux_state.jsonl.gz
+  ├── ss/
+  │   ├── metadata.json
+  │   ├── physics.csv.gz
+  │   └── aux_state.jsonl.gz
+  └── seg2_ehz1/
+      ├── metadata.json
+      ├── physics.csv.gz
+      └── aux_state.jsonl.gz
+```
+
+Each segment's `metadata.json` records `"source_bk2": "s2-ehz-halfpipe-roundtrip.bk2"` (from
+`OGGF_BK2_BASENAME`, populated automatically by `record_s2_trace.bat` from the bk2 filename) —
+keep the committed bk2's filename matching that recorded basename.
+
+**VERIFY-ON-FIRST-CAPTURE Self-Check:**
+
+At the halfpipe entry (`starpost_special` transition) and exit (`stage_exit` transition), the
+recorder prints every transition field to stdout. Confirm all of the following before committing
+the trace:
+- `special_bonus_entry_flag` (`f_bigring`) reads `1` at entry.
+- `saved_x_pos`/`saved_y_pos` are plausible coordinates near the star post that was touched.
+- `rings_before` is at least 50.
+- `rings_after` (printed at the `stage_exit` transition) reads `0` — the ROM zeroes ring/emerald
+  tracking on the level reload that follows a special stage, so this is the expected, correct
+  value, not a bug.
+- `special_stage_index` (printed when the `ss` segment arms) is a plausible index.
+
+Any surprise in these prints means re-verify the RAM table before committing the trace.
+
 If you update the trace workflow, update the guide page above first so the contributor docs stay in
 sync with the tools.
 
