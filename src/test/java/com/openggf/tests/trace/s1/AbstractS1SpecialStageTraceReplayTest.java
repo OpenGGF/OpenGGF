@@ -44,6 +44,22 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *       {@link S1SpecialStageReplayHarness#stepFrame(int)}; lag rows are
  *       skipped (consumed without stepping) since they advance nothing
  *       engine-side.</li>
+ *   <li><b>Multi-frame lag boundary (torn-capture guard).</b> A non-lag row
+ *       that immediately precedes a run of two or more lag frames MAY be a
+ *       partial RAM snapshot (the 68k still mid-iteration when that VBlank
+ *       sample fired, so its columns straddle two game-logic steps), but the
+ *       lag-run shape alone is only a hint -- {@code isTornLagBoundaryRow}
+ *       independently verifies the row's own fields before dropping it: the
+ *       early-tick velocity fields must already show the next step's values
+ *       while the late-tick position/angle fields still show the previous
+ *       step's, matching how the ROM actually orders those writes within one
+ *       tick. A candidate row that precedes such a lag run but is internally
+ *       coherent is scored normally, not dropped. A verified-torn row is
+ *       still <em>stepped</em> (the engine's cumulative game-logic advances
+ *       must stay aligned -- it re-syncs at the next compared row) but is
+ *       omitted from the report, since no coherent engine frame can equal a
+ *       torn row on every field at once. Not a frame-number carve-out -- see
+ *       {@code isTornLagBoundaryRow}.</li>
  *   <li><b>Comparison-only.</b> Trace values are read for input + expectation
  *       only; engine state is never hydrated from the trace.</li>
  *   <li><b>Terminal exit boundary.</b> The S1 maze trace has no in-segment
@@ -77,19 +93,67 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *       bits without re-recording.</li>
  *   <li>{@code ss_angle}/{@code ss_rotate}/{@code bg_anim}: {@code & 0xFFFF}
  *       both sides (engine fields may be updated with signed arithmetic; ROM
- *       word equality is what matters).</li>
- *   <li>{@code rings}: <b>delta-based</b> -- expected
- *       {@code (tf.rings() - trace.getFrame(0).rings()) & 0xFFFF} vs actual
- *       {@code state.ringsCollected()}. ROM {@code v_rings} may carry a
- *       pre-SS value into the maze while the engine's {@code ringsCollected}
- *       always starts at 0 for a fresh stage entry; the per-frame delta
- *       against the trace's own first row is the comparable quantity. (If the
- *       first capture shows {@code v_rings} actually starts at 0 in the
- *       maze, the baseline subtracts 0 and this is an exact comparison.)</li>
+ *       word equality is what matters). These are special-stage <em>globals</em>
+ *       ({@code v_ssangle}/{@code v_ssrotate}) and are compared on every
+ *       stepped row, including the pre-start hold, where both sides read 0.</li>
+ *   <li>{@code rings}: <b>direct from 0</b> -- expected {@code tf.rings() &
+ *       0xFFFF} vs actual {@code state.ringsCollected()}. {@code GM_Special}'s
+ *       setup block clears the ring counter unconditionally
+ *       ({@code clr.w (v_rings).w}, {@code docs/s1disasm/sonic.asm:3280})
+ *       before the maze runs, so the live {@code v_rings} is a fresh count
+ *       from 0 directly comparable to the engine's {@code ringsCollected}.
+ *       (An earlier delta-vs-frame-0 basis was wrong: frame 0 is recorded
+ *       during the pre-start fade and still holds the <em>pre-clear</em>
+ *       leftover {@code v_rings} of the previous zone -- {@code $55}/85 in the
+ *       committed maze trace -- so subtracting it drove every live value
+ *       negative and masked it into a huge {@code u16}. See the pre-start-hold
+ *       note below; {@code rings} is only compared once setup has run.)</li>
  *   <li>{@code emeralds}: expected boolean
  *       {@code tf.emeralds() != trace.getFrame(0).emeralds()} vs actual
- *       {@code state.emeraldCollected()}.</li>
+ *       {@code state.emeraldCollected()} (emeralds persist across stages, so
+ *       the frame-0 baseline detects a newly-collected emerald in this run).</li>
  * </ul>
+ *
+ * <h2>Recorded ROM pre-start hold (comparison-only observation)</h2>
+ * <p>{@code GM_Special} runs {@code PaletteWhiteOut}
+ * ({@code docs/s1disasm/sonic.asm:3224}) <em>before</em> its instant setup
+ * block clears the previous zone's object RAM
+ * ({@code clearRAM v_objspace}, {@code sonic.asm:3243}), clears the ring
+ * counter ({@code sonic.asm:3280}), sets the stage rotation speed
+ * ({@code move.w #ss_rotatespeed,(v_ssrotate).w}, {@code $40},
+ * {@code sonic.asm:3268}), and finally lets {@code SS_MainLoop}'s first
+ * {@code jsr (ExecuteObjects).l} tick Obj09 for the first time
+ * ({@code sonic.asm:3306}). So while the fade is still running, the
+ * object-owned physics columns ({@code x_pos}/{@code y_pos}/{@code vel_x}/
+ * {@code vel_y}/{@code inertia}/{@code status} bits) and the ring counter
+ * hold <em>pre-clear leftover</em> RAM from the preceding zone, not live
+ * special-stage state -- the committed trace's frame-0 {@code x_pos}
+ * {@code $25AB0300} / {@code vel_x} -34 / {@code status $07} is the previous
+ * GHZ Sonic curled into the giant ring, which a standalone special-stage
+ * segment cannot reproduce.
+ * <p><b>{@code v_ssrotate} is NOT monotonic</b> -- {@code ss_rotate == 0}
+ * alone does not uniquely mark the pre-setup fade. Besides the {@code $40}
+ * write at setup, {@code SonicSS_ExitStage} resets it straight to 0
+ * ({@code move.w #0,(v_ssrotate).w}, {@code docs/s1disasm/_incObj/09 Sonic in
+ * Special Stage.asm:394}) once the exit spin-up reaches {@code $3000}, and
+ * an R-block touch can negate it ({@code neg.w (v_ssrotate).w}, same file,
+ * line 923). Both of those DO occur in the committed maze trace: the emerald
+ * pickup's sparkle-animation completion arms
+ * {@code SonicSS_ExitStage} (see {@code SS_AniEmeraldSparks},
+ * {@code docs/s1disasm/_inc/Special Stage Loading & Drawing.asm:453}), whose
+ * spin-up eventually resets {@code v_ssrotate} to 0 during the exit ramp's
+ * 60-tick post-reset window. The same {@code move.w #0,(v_ssrotate).w}
+ * instruction (asm:394) ALSO pins {@code v_ssangle} to {@code $4000}
+ * ({@code move.w #$4000,(v_ssangle).w}, asm:395) in the exact same
+ * instruction pair, so that window reads {@code ss_rotate == 0} with
+ * {@code ss_angle == $4000} -- distinct from the pre-setup fade, where both
+ * globals read 0 together (neither has been written yet). The gate below
+ * therefore requires {@code ss_rotate == 0 AND ss_angle == 0} rather than
+ * {@code ss_rotate == 0} alone; it is latent-but-live for THIS trace (which
+ * ends before the exit ramp reaches that 60-tick window) rather than
+ * accidental-by-route, since the companion check generalizes to any recorded
+ * segment that runs the exit ramp to completion without a zone/route/frame
+ * carve-out.
  *
  * <p>The pipeline writes a complete report and
  * {@link #assertNoReleaseBlockingDivergences} rejects any comparator ERROR.
@@ -171,7 +235,6 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
     static DivergenceReport compareReplay(Sonic1SpecialStageTraceData trace,
                                           S1SpecialStageReplayHarness harness) {
         int compareEnd = trace.frameCount();
-        int baselineRings = trace.getFrame(0).rings();
         int baselineEmeralds = trace.getFrame(0).emeralds();
 
         List<FrameComparison> comparisons = new ArrayList<>();
@@ -189,8 +252,22 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
             lastState = state;
             lastFrame = f;
 
+            // Torn-capture guard (see class javadoc "Multi-frame lag boundary"
+            // note and isTornLagBoundaryRow's javadoc): a non-lag row that
+            // precedes a run of two or more lag frames is dropped ONLY when
+            // its own fields independently verify the tear (early-tick
+            // velocity fields already advanced, late-tick position/angle
+            // fields still previous) -- not merely because a lag run follows
+            // it. The engine is still stepped above (its cumulative
+            // game-logic advances must stay aligned; it re-syncs exactly at
+            // the next compared row), but a verified-torn row is omitted from
+            // the report rather than scored against a whole engine frame.
+            if (isTornLagBoundaryRow(trace, f, compareEnd)) {
+                continue;
+            }
+
             Map<String, FieldComparison> fields = new LinkedHashMap<>();
-            addFields(fields, tf, state, baselineRings, baselineEmeralds);
+            addFields(fields, tf, state, baselineEmeralds);
             comparisons.add(new FrameComparison(f, fields));
         }
 
@@ -205,11 +282,111 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
         return new DivergenceReport(comparisons);
     }
 
+    /**
+     * True when non-lag trace row {@code f} is the immediate predecessor of a
+     * lag run of length &ge; 2 AND that row is independently verified to be a
+     * torn (partial) RAM capture -- not merely inferred from the lag-run
+     * structure alone.
+     *
+     * <p>BizHawk flags a frame as a lag frame when the console did not complete
+     * a full game-loop iteration (input was not polled) during that emulated
+     * frame. A single lag frame is harmless: the preceding sample is a
+     * completed frame and the lag frame merely re-samples the same settled RAM.
+     * A run of two or more consecutive lag frames COULD mean one game-logic
+     * iteration spanned three or more VBlank sample points, letting the Lua RAM
+     * snapshot taken at the VBlank immediately <em>before</em> the burst catch
+     * that iteration's writes partway through -- but the lag-run shape alone is
+     * only a hint of that, not proof, so this method also checks the row's own
+     * field values for the internal inconsistency such tearing would produce:
+     * {@code vel_x}/{@code vel_y}/{@code inertia} are written earlier in
+     * {@code SonicSS_Display}'s tick (by {@code SonicSS_Jump}/{@code
+     * SonicSS_Move}/{@code SonicSS_Fall}, docs/s1disasm/_incObj/09 Sonic in
+     * Special Stage.asm:96-106) than {@code y_pos}/{@code ss_angle} (written
+     * later, by {@code SpeedToPos} at asm:114 and the {@code v_ssangle} update
+     * at asm:117-119) -- so a row genuinely torn mid-tick shows the velocity
+     * fields already advanced to the next step while {@code y_pos}/
+     * {@code ss_angle} still hold the previous step's values verbatim. (
+     * {@code x_pos} is excluded from the staleness half of this check: unlike
+     * {@code y_pos}, it can land partway between two steps rather than cleanly
+     * at one or the other -- see the frame-1767 values below -- so requiring it
+     * to equal the previous row would under-detect the real tear.) Only a row
+     * satisfying BOTH the lag-run shape AND this field-level inconsistency is
+     * dropped; a row that merely precedes a &ge;2 lag run but is internally
+     * coherent is scored normally. The committed maze trace's sole such row is
+     * frame 1767 (preceding the 1768-1769 lag burst): vel_x/vel_y/inertia
+     * ({@code $FB1C}/{@code $016A}/{@code $FE28} at frame 1766 &rarr;
+     * {@code $FB01}/{@code $018A}/{@code $FE34} at frame 1767, already changed)
+     * versus y_pos/ss_angle ({@code $519CA00}/{@code $E640} at both 1766 and
+     * 1767, unchanged) -- not a coherent ROM frame, and not reproducible by any
+     * single engine tick.
+     */
+    private static boolean isTornLagBoundaryRow(Sonic1SpecialStageTraceData trace,
+                                                int f, int compareEnd) {
+        if (f + 2 >= compareEnd
+                || !trace.getFrame(f + 1).lag()
+                || !trace.getFrame(f + 2).lag()) {
+            return false;
+        }
+        if (f == 0) {
+            return false;
+        }
+        Sonic1SpecialStageTraceFrame prev = trace.getFrame(f - 1);
+        Sonic1SpecialStageTraceFrame cur = trace.getFrame(f);
+
+        boolean velocityAlreadyAdvanced = (cur.velX() & 0xFFFF) != (prev.velX() & 0xFFFF)
+                || (cur.velY() & 0xFFFF) != (prev.velY() & 0xFFFF)
+                || (cur.inertia() & 0xFFFF) != (prev.inertia() & 0xFFFF);
+        boolean lateTickFieldsStillPrevious = (cur.yPos() & 0xFFFFFFFFL) == (prev.yPos() & 0xFFFFFFFFL)
+                && (cur.ssAngle() & 0xFFFF) == (prev.ssAngle() & 0xFFFF);
+
+        return velocityAlreadyAdvanced && lateTickFieldsStillPrevious;
+    }
+
     private static void addFields(Map<String, FieldComparison> fields,
                                   Sonic1SpecialStageTraceFrame tf,
                                   Sonic1SpecialStageComparisonState state,
-                                  int baselineRings,
                                   int baselineEmeralds) {
+        // Recorded ROM pre-start hold marker (see class javadoc
+        // "Recorded ROM pre-start hold" section): GM_Special sets
+        // v_ssrotate = ss_rotatespeed ($40) exactly once, in its instant
+        // setup block after PaletteWhiteOut (docs/s1disasm/sonic.asm:3268).
+        // v_ssrotate is NOT monotonic afterward -- SonicSS_ExitStage resets
+        // it straight to 0 on the exit ramp's $3000 threshold
+        // (_incObj/09 Sonic in Special Stage.asm:394) and an R-block can
+        // negate it (asm:923) -- so ss_rotate == 0 alone does not uniquely
+        // identify the pre-setup fade among the compared rows. The SAME
+        // exit-ramp reset instruction pins v_ssangle to $4000 in the same
+        // breath (asm:395), while the pre-setup fade leaves v_ssangle at its
+        // own untouched-since-init 0, so requiring ss_angle == 0 alongside
+        // ss_rotate == 0 disambiguates the two zero-rotate states without a
+        // route/frame carve-out. While that holds, v_objspace/v_rings are
+        // still uncleared (sonic.asm:3243,3286) and Obj09 has not been
+        // executed (first ExecuteObjects at sonic.asm:3306), so the
+        // object-owned physics columns and the ring counter carry leftover
+        // previous-zone RAM, not live special-stage state, and are omitted
+        // from the report until setup has run.
+        boolean preStartHold = (tf.ssRotate() & 0xFFFF) == 0 && (tf.ssAngle() & 0xFFFF) == 0;
+
+        // Special-stage globals: cleared/set by GM_Special's setup and read as
+        // 0 by both sides during the fade -- always comparable.
+        fields.put("ss_angle", cmp("ss_angle",
+                str(tf.ssAngle() & 0xFFFF), str(state.ssAngle() & 0xFFFF), Severity.ERROR));
+        fields.put("ss_rotate", cmp("ss_rotate",
+                str(tf.ssRotate() & 0xFFFF), str(state.ssRotate() & 0xFFFF), Severity.ERROR));
+        fields.put("bg_anim", cmp("bg_anim",
+                str(tf.bgAnim() & 0xFFFF), str(state.bgAnimState() & 0xFFFF), Severity.ERROR));
+
+        // Emeralds persist across special stages (not cleared by setup), so the
+        // frame-0 baseline detects a newly-collected emerald in this run.
+        boolean expectedEmeraldCollected = tf.emeralds() != baselineEmeralds;
+        fields.put("emeralds", cmp("emeralds",
+                bool(expectedEmeraldCollected), bool(state.emeraldCollected()), Severity.ERROR));
+
+        if (preStartHold) {
+            return;
+        }
+
+        // ---- Obj09-owned physics (live only once ExecuteObjects has run) ----
         // Tier-1. x_pos/y_pos keep the manager's full 16.16 fixed-point
         // longword layout; mask both sides & 0xFFFFFFFFL and compare as
         // Long.toString so a sign-extended long on either side still
@@ -236,24 +413,11 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
         fields.put("status_airborne", cmp("status_airborne",
                 bool((tf.status() & 0x2) != 0), bool(state.sonicAirborne()), Severity.ERROR));
 
-        fields.put("ss_angle", cmp("ss_angle",
-                str(tf.ssAngle() & 0xFFFF), str(state.ssAngle() & 0xFFFF), Severity.ERROR));
-        fields.put("ss_rotate", cmp("ss_rotate",
-                str(tf.ssRotate() & 0xFFFF), str(state.ssRotate() & 0xFFFF), Severity.ERROR));
-        fields.put("bg_anim", cmp("bg_anim",
-                str(tf.bgAnim() & 0xFFFF), str(state.bgAnimState() & 0xFFFF), Severity.ERROR));
-
-        // Delta-based: ROM v_rings may carry a pre-SS value into the maze
-        // while the engine's ringsCollected always starts at 0 for a fresh
-        // stage entry, so the per-frame delta against the trace's own first
-        // row is the comparable quantity.
-        int expectedRingsDelta = (tf.rings() - baselineRings) & 0xFFFF;
+        // Direct from 0: GM_Special clears v_rings (docs/s1disasm/sonic.asm:3280)
+        // before the maze runs, so the live recorded count is a fresh tally
+        // from 0 directly comparable to the engine's ringsCollected.
         fields.put("rings", cmp("rings",
-                str(expectedRingsDelta), str(state.ringsCollected()), Severity.ERROR));
-
-        boolean expectedEmeraldCollected = tf.emeralds() != baselineEmeralds;
-        fields.put("emeralds", cmp("emeralds",
-                bool(expectedEmeraldCollected), bool(state.emeraldCollected()), Severity.ERROR));
+                str(tf.rings() & 0xFFFF), str(state.ringsCollected()), Severity.ERROR));
     }
 
     private static FieldComparison cmp(String name, String expected, String actual,

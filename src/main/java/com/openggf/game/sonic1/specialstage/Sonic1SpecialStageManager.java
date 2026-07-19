@@ -51,11 +51,31 @@ public final class Sonic1SpecialStageManager {
     private static final int SS_ANIM_BUFFER_SIZE = 8;
     private static final int ANIM_NONE = 0;
     private static final int ANIM_RING_SPARKLE = 1;
+    private static final int ANIM_BUMPER = 2; // SS_AniBumper (ss_ani_id=2)
     private static final int ANIM_GLASS_BLOCK = 6;
+    private static final int ANIM_EMERALD_SPARKLE = 5; // SS_AniEmeraldSparks (ss_ani_id=5)
     private static final int[] ANIM_RING_SPARKLE_DATA = {0x42, 0x43, 0x44, 0x45, 0};
     private static final int ANIM_RING_PERIOD = 6; // 5+1 frames per step (ROM: move.b #5,2(a0))
+    /**
+     * SS_AniEmerData (docs/s1disasm/_inc/Special Stage Loading & Drawing.asm:460):
+     * {@code dc.b id_SS_Emerald_Ani1, id_SS_Emerald_Ani2, id_SS_Emerald_Ani3,
+     * id_SS_Emerald_Ani4, 0}, driven by the same 5-tick delay as the ring
+     * sparkle script (asm:440, {@code move.b #5,ss_ani_delay(a0)}).
+     */
+    private static final int[] ANIM_EMERALD_SPARKLE_DATA = {0x46, 0x47, 0x48, 0x49, 0};
+    private static final int ANIM_EMERALD_PERIOD = 6; // 5+1 frames per step (ROM: move.b #5,ss_ani_delay(a0))
     private static final int[] ANIM_GLASS_DATA = {0x4B, 0x4C, 0x4D, 0x4E, 0x4B, 0x4C, 0x4D, 0x4E, 0};
     private static final int ANIM_GLASS_PERIOD = 2; // 1+1 frames per step (ROM: move.b #1,2(a0))
+    /**
+     * SS_AniBumpData (docs/s1disasm/_inc/Special Stage Loading & Drawing.asm:381):
+     * {@code dc.b id_SS_Bumper_Ani1, id_SS_Bumper_Ani2, id_SS_Bumper_Ani1, id_SS_Bumper_Ani2, 0}.
+     * While this script is running, the touched block reads as $32/$33 (still
+     * solid -- both ids are below id_SS_Ring/$3A -- but NOT $25), so a second
+     * bounce off the same still-flashing bumper cannot fire until the script
+     * hits its terminator and explicitly restores id_SS_Bumper ($25).
+     */
+    private static final int[] ANIM_BUMPER_DATA = {0x32, 0x33, 0x32, 0x33, 0};
+    private static final int ANIM_BUMPER_PERIOD = 8; // 7+1 frames per step (ROM: move.b #7,ss_ani_delay(a0))
 
     // byte_4A3C: SS BG state table (32 entries, 4 fields each)
     // {time, anim, bgPlaneSelect (0=Plane_6, 1=Plane_5), palette-cycle selector byte}
@@ -69,12 +89,58 @@ public final class Sonic1SpecialStageManager {
             {7, 2, 1, 0x24}, {7, 4, 1, 0x30}, {-1, 6, 1, 0x3C}, {-1, 6, 1, 0x3C}, {7, 4, 1, 0x30}, {7, 2, 1, 0x24}
     };
 
+    /**
+     * ROM-observable pre-physics hold before Obj09's first {@code ExecuteObjects}
+     * tick. {@code GM_Special} (sonic.asm:3221-3299) never calls
+     * {@code ExecuteObjects} during entry: it runs {@code PaletteWhiteOut}
+     * (22-VBlank fade, "Palette Fading.asm":313-326), then an instant
+     * (non-VBlank-waiting) setup block that loads the layout and sets
+     * {@code v_ssangle}/{@code v_ssrotate}/{@code v_rings} (sonic.asm:3238-3291),
+     * then {@code PaletteWhiteIn} (22-VBlank fade, "Palette Fading.asm":212-236)
+     * before {@code SS_MainLoop} finally calls {@code ExecuteObjects}
+     * (sonic.asm:3299-3306). Both fades use {@code move.w #22-1,d4} + {@code dbf}
+     * (22 iterations each; Palette Fading.asm:227,233,316,322), so Obj09's
+     * globals stay frozen at whatever value they held before the special-stage
+     * mode switch for 44 consecutive VBlank ticks. See
+     * {@link #advanceToEntryPresentation()} for the FAST-policy bypass and
+     * {@code docs/superpowers/plans/2026-07-18-...} design note for the S2
+     * {@code SpecialStageStartupPolicy} precedent this mirrors.
+     */
+    private static final int SS_STARTUP_HOLD_TICKS = 44;
+
+    /**
+     * Length of the {@code PaletteWhiteOut} half of the hold ({@code
+     * "_inc/Palette Fading.asm":313-326}, {@code move.w #22-1,d4} + {@code dbf}).
+     * GM_Special's instant (non-VBlank-waiting) setup block -- {@code clr.w
+     * (v_ssangle).w} / {@code move.w #ss_rotatespeed,(v_ssrotate).w}
+     * (sonic.asm:3267-3268) -- runs right as the fade-out ends and PaletteWhiteIn
+     * begins, i.e. after exactly this many hold ticks have been consumed. Until
+     * then {@code v_ssangle}/{@code v_ssrotate} hold whatever they had before
+     * the {@code $0C -> $10} mode switch: this engine simulates each special
+     * stage visit standalone (no multi-stage chaining yet), so the pre-setup
+     * value is modeled as the Java field default (0), matching a first-ever
+     * special-stage visit's cold RAM. {@code x_pos}/{@code y_pos}/velocity/
+     * inertia/status bits have the same "not yet written" property but live in
+     * {@code v_objspace} instead, which genuinely carries the *previous zone's*
+     * Sonic state during this window (leftover-normal-Sonic root, not
+     * reproducible without chaining a prior trace segment) -- left untouched
+     * here; see the frozen values already installed by {@link #initialize}.
+     */
+    private static final int SS_WHITEOUT_TICKS = 22;
+
     private boolean initialized;
     private boolean finished;
     private boolean emeraldCollected;
     private boolean debugMode;
     private int currentStage;
     private int ringsCollected;
+
+    // ROM-observable pre-physics hold (see SS_STARTUP_HOLD_TICKS).
+    private int startupHoldTicksRemaining;
+    // One-shot Obj09_Main flag init (09 Sonic in Special Stage.asm:41-53),
+    // applied on the object's first real ExecuteObjects tick, not at manager
+    // initialize() time.
+    private boolean objInitPending;
 
     // Layout
     private byte[] layout;
@@ -205,18 +271,31 @@ public final class Sonic1SpecialStageManager {
         // Initialize background renderer
         initBgRenderer();
 
-        // Initialize rotation
+        // Initialize rotation. v_ssangle/v_ssrotate are NOT written by GM_Special
+        // until its instant setup block, which fires mid-hold after the
+        // PaletteWhiteOut fade completes (see SS_WHITEOUT_TICKS) -- ssRotate
+        // stays at the Java default (0) here and is set to SS_INIT_ROTATION at
+        // that exact ROM-timeline point in update().
         ssAngle = 0;
-        ssRotate = SS_INIT_ROTATION;
+        ssRotate = 0;
         debugSavedAngle = 0;
-        debugSavedRotate = SS_INIT_ROTATION;
+        debugSavedRotate = 0;
 
         // Initialize physics
         sonicVelX = 0;
         sonicVelY = 0;
         sonicInertia = 0;
-        sonicAirborne = true; // Obj09_Main sets obStatus bit 1 before first update
+        // obStatus bit 1 (in-air) is NOT set here: object RAM is zero-cleared by
+        // GM_Special's clearRAM v_objspace (sonic.asm:3243) and stays zero
+        // through both palette fades. Obj09_Main only sets it on the object's
+        // first real ExecuteObjects tick (09 Sonic in Special Stage.asm:53),
+        // which is deferred to objInitPending below.
+        sonicAirborne = false;
         sonicFacingLeft = false;
+
+        // Arm the ROM-observable pre-physics hold (see SS_STARTUP_HOLD_TICKS).
+        startupHoldTicksRemaining = SS_STARTUP_HOLD_TICKS;
+        objInitPending = true;
 
         // Initialize camera
         updateCamera();
@@ -268,6 +347,50 @@ public final class Sonic1SpecialStageManager {
     public void update() {
         if (!initialized || finished) {
             return;
+        }
+
+        if (startupHoldTicksRemaining > 0) {
+            // PaletteWhiteOut/instant-setup/PaletteWhiteIn never call
+            // ExecuteObjects (see SS_STARTUP_HOLD_TICKS javadoc) -- hold every
+            // Obj09-owned field frozen and consume only the input edge latch,
+            // matching v_jpadpress2's per-VBlank hardware refresh.
+            startupHoldTicksRemaining--;
+            pressedButtons = 0;
+            // The harness captures comparison state AFTER update() advances
+            // (capture(frame) reflects frame+1 completed update() calls), so
+            // the trigger fires one tick later than the raw whiteout/whitein
+            // split to land the visible transition on the correct frame.
+            if (startupHoldTicksRemaining == SS_STARTUP_HOLD_TICKS - SS_WHITEOUT_TICKS - 1) {
+                // GM_Special's instant setup block (sonic.asm:3238-3291) runs
+                // here, between the PaletteWhiteOut and PaletteWhiteIn fades:
+                // bsr.w PalCycle_SS (sonic.asm:3266) fires ONE time to advance
+                // the SS palette/BG-anim cycle before clr.w (v_ssangle).w and
+                // move.w #ss_rotatespeed,(v_ssrotate).w (sonic.asm:3267-3268).
+                // VBlank_SpecialStage -- the only other PalCycle_SS caller
+                // ("_inc/Special Stage Background & Palette Cycle.asm":79-135,
+                // wired at sonic.asm:888) -- never runs during either fade:
+                // both PaletteWhiteOut/PaletteWhiteIn set v_vblank_routine to
+                // id_VBlank_PaletteFade ($12), not id_VBlank_SpecialStage
+                // ("_inc/Palette Fading.asm":238,278), so this setup-time call
+                // is v_palss_time/v_palss_num's ONLY advance before SS_MainLoop.
+                // Skipping it left the engine's palette-cycle table position
+                // one full entry (byte_4A3C index 0, 4-frame duration) behind
+                // the ROM for the rest of the stage, surfacing as a constant
+                // 4-frame-late bg_anim transition (trace frame 137: expected
+                // v_ssbganim=8, engine=0).
+                updateSpecialStagePaletteCycle();
+                ssAngle = 0;
+                ssRotate = SS_INIT_ROTATION;
+            }
+            return;
+        }
+
+        if (objInitPending) {
+            objInitPending = false;
+            // SonicSS_Main (09 Sonic in Special Stage.asm:52-53): the object's
+            // one-shot first-tick init sets the rolling + in-air flags before
+            // falling through into SonicSS_Control on the SAME tick.
+            sonicAirborne = true;
         }
 
         if (exitTriggered) {
@@ -342,6 +465,50 @@ public final class Sonic1SpecialStageManager {
     // ---- Physics (from Obj09) ----
 
     /**
+     * SonicSS_Jump's angle transform (09 Sonic in Special Stage.asm:299-302):
+     * <pre>
+     *   move.b (v_ssangle).w,d0   ; d0 = high byte of ssAngle
+     *   andi.b #$FC,d0            ; snap to nearest multiple of 4
+     *   neg.b  d0                 ; negate -- 8-bit op, wraps mod 256
+     *   subi.b #$40,d0            ; rotate perpendicular -- 8-bit op, wraps mod 256
+     * </pre>
+     * All three operations are byte-sized 68000 ops, so each intermediate
+     * result must be truncated to 8 bits (mod 256) in the order the ROM
+     * performs them: mask, THEN negate, THEN subtract. A prior version of
+     * this method negated before masking (Java's unary-minus binds tighter
+     * than {@code &}), which is a different value whenever the stage-angle's
+     * top byte isn't already a multiple of 4 -- e.g. at trace frame 173
+     * (S1 maze round-trip capture) ssAngle=0x12C0 going into the jump:
+     * correct = ((-(0x12&0xFC))&0xFF - 0x40)&0xFF = 0xB0, but the old
+     * mask-after-negate order produced 0xAC, corrupting the jump's
+     * vel_x/vel_y by a fixed offset that then persisted for the rest of the
+     * flight (gravity accumulates identically on both sides afterward).
+     */
+    private int ssJumpAngle() {
+        int masked = (ssAngle >> 8) & 0xFC;
+        int negated = (-masked) & 0xFF;
+        return (negated - 0x40) & 0xFF;
+    }
+
+    /**
+     * SonicSS_AngleSpeed's angle transform (09 Sonic in Special Stage.asm:
+     * 178-181), used to convert ground inertia into world-space movement:
+     * <pre>
+     *   move.b (v_ssangle).w,d0   ; d0 = high byte of ssAngle
+     *   addi.b #$20,d0            ; rotate 45 degrees -- 8-bit op, wraps mod 256
+     *   andi.b #$C0,d0            ; snap to nearest multiple of 90 degrees
+     *   neg.b  d0                 ; negate -- 8-bit op, wraps mod 256
+     * </pre>
+     * Same byte-truncation-order requirement as {@link #ssJumpAngle()}: add,
+     * mask, THEN negate -- not negate-then-add-then-mask.
+     */
+    private int ssMoveAngle() {
+        int added = ((ssAngle >> 8) + 0x20) & 0xFF;
+        int masked = added & 0xC0;
+        return (-masked) & 0xFF;
+    }
+
+    /**
      * Obj09_Jump: check for jump button press while on ground.
      * ROM tests {@code andi.b #btnABC,d0} on {@code v_jpadpress2} — any of the
      * A, B, or C buttons triggers the jump, not the engine's internal
@@ -353,8 +520,7 @@ public final class Sonic1SpecialStageManager {
             return;
         }
 
-        // angle = -(ssAngle>>8 & 0xFC) - 0x40
-        int angle = (-(ssAngle >> 8) & 0xFC) - 0x40;
+        int angle = ssJumpAngle();
         int sinVal = TrigLookupTable.sinHex(angle & 0xFF);
         int cosVal = TrigLookupTable.cosHex(angle & 0xFF);
 
@@ -393,8 +559,7 @@ public final class Sonic1SpecialStageManager {
         }
 
         // Convert inertia to world movement
-        // angle = (-(ssAngle>>8) + 0x20) & 0xC0
-        int angle = ((-(ssAngle >> 8)) + 0x20) & 0xC0;
+        int angle = ssMoveAngle();
         int sinVal = TrigLookupTable.sinHex(angle & 0xFF);
         int cosVal = TrigLookupTable.cosHex(angle & 0xFF);
 
@@ -525,6 +690,38 @@ public final class Sonic1SpecialStageManager {
         return checkCollisionAt(sonicPosX, sonicPosY);
     }
 
+    /**
+     * SonicSS_FindWall (09 Sonic in Special Stage.asm:520-583): checks the
+     * four block-buffer cells around a probe position and reports whether
+     * any of them is solid.
+     *
+     * <p><b>All four cells are visited unconditionally -- no early return.</b>
+     * The ROM's {@code SonicSS_FindWall_CheckType} (sub_1BD30, lines
+     * 561-583) is called once per cell -- top-left, top-right, bottom-left,
+     * bottom-right, in that order (lines 547-555) -- and every solid hit
+     * unconditionally overwrites {@code sonss_touchedblock_id}/
+     * {@code sonss_touchedblock_ram} (lines 579-580); the "collision found"
+     * flag {@code d5} is only tested once, after all four cells have been
+     * visited (line 557). So when two of the four cells are solid, the LAST
+     * one visited in scan order -- not the first -- is the one whose id
+     * survives into {@code sonss_touchedblock_id} and therefore drives
+     * {@code Obj09_ChkItems2}'s block-specific reaction (bumper bounce, GOAL,
+     * UP/DOWN, glass, ...).
+     *
+     * <p>A prior version of this method returned as soon as it found the
+     * FIRST solid cell in scan order, which is observably different: at the
+     * S1 maze round-trip capture's trace frame 319, Sonic's fall probe hits a
+     * plain wall block ($19) at the top-right cell while a bumper block
+     * ($25) sits solid at the bottom-right cell one row below. The ROM's
+     * unconditional-last-wins scan lands on the bumper, so
+     * {@code Obj09_ChkItems2} (see the "Bumper ($25)" branch in
+     * {@link #processItemInteraction()}) fires {@link #processBumper()} that
+     * same tick, producing the recorded bounce (large outward vel_x/vel_y,
+     * in-air flag set). The early-return version never saw the bumper cell,
+     * so it stayed grounded against the wall with the fall's clamped-to-zero
+     * velocity -- a divergence that then cascaded through position/velocity/
+     * airborne for the rest of the recorded segment.
+     */
     private boolean checkCollisionAt(long posXFixed, long posYFixed) {
         int posX = (int) (posXFixed >> 16);
         int posY = (int) (posYFixed >> 16);
@@ -532,7 +729,12 @@ public final class Sonic1SpecialStageManager {
         int gridCol = (posX + 0x14) / SS_BLOCK_SIZE_PX;
         int gridRow = (posY + 0x44) / SS_BLOCK_SIZE_PX;
 
-        // Check 2x2 cells
+        boolean solidFound = false;
+
+        // Check all 2x2 cells -- top-left, top-right, bottom-left,
+        // bottom-right -- with NO early return (see javadoc above): a later
+        // solid cell must overwrite the earlier one's touched-block id/row/
+        // col, matching the ROM's unconditional four-cell scan.
         for (int dr = 0; dr < 2; dr++) {
             for (int dc = 0; dc < 2; dc++) {
                 int r = gridRow + dr;
@@ -545,11 +747,11 @@ public final class Sonic1SpecialStageManager {
                     lastCollisionBlockId = blockId;
                     lastCollisionRow = r;
                     lastCollisionCol = c;
-                    return true;
+                    solidFound = true;
                 }
             }
         }
-        return false;
+        return solidFound;
     }
 
     // ---- Item Checks (from Obj09_ChkItems / Obj09_ChkItems2) ----
@@ -593,14 +795,30 @@ public final class Sonic1SpecialStageManager {
             return;
         }
 
-        // Emerald (0x3B-0x40)
+        // Emerald (0x3B-0x40): SonicSS_ChkEmerald/SonicSS_GetEmerald
+        // (docs/s1disasm/_incObj/09 Sonic in Special Stage.asm:670-701)
+        // increments (v_emeralds).w and queues the emerald jingle immediately
+        // on touch -- that part is instant, matching emeraldCollected below.
+        // The exit routine, however, is NOT armed here and NOT gated solely
+        // behind SonicSS_ChkGOAL's GOAL-block `addq.b #2,obRoutine(a0)`
+        // (asm:823-832): SS_AniEmeraldSparks -- the same collection-animation
+        // queue entry the ring sparkle uses (docs/s1disasm/_inc/Special Stage
+        // Loading & Drawing.asm:437-458), registered here via
+        // {@link SS_FindFreeAnimationSlot} exactly like the ring branch above
+        // -- writes `move.b #4,(v_player+obRoutine).w` itself once its 4-frame,
+        // 5-tick-per-frame script (id_SS_Emerald_Ani1..4, asm:460) finishes
+        // (asm:453). So the exit is deferred by the sparkle animation's
+        // ~24-tick run, not by GOAL. A prior version of this branch set
+        // exitTriggered synchronously here, which desynced the S1 maze
+        // round-trip capture at trace frame 2973 by freezing physics one
+        // tick after the emerald pickup instead of waiting out the sparkle;
+        // that regression is fixed by routing through
+        // {@link #startEmeraldAnimation(int)} below instead of an immediate
+        // clear + trigger.
         if (blockId >= 0x3B && blockId <= 0x40) {
-            layout[bufIndex] = 0;
             emeraldCollected = true;
-            exitTriggered = true;
-            exitPhase = 0;
-            exitTimer = 0;
             playMusic(GameMusic.EMERALD);
+            startEmeraldAnimation(bufIndex);
             return;
         }
 
@@ -729,6 +947,18 @@ public final class Sonic1SpecialStageManager {
         sonicVelX = (short) ((cosVal * -SS_BUMPER_FORCE) >> 8);
         sonicVelY = (short) ((sinVal * -SS_BUMPER_FORCE) >> 8);
         sonicAirborne = true;
+
+        // Obj09_ChkBumper (docs/s1disasm/_incObj/09 Sonic in Special Stage.asm:
+        // 810-816): register the SS_AniBumper animation on the touched block
+        // so it flashes through $32/$33 and only reverts to the solid,
+        // re-triggerable $25 id once the script's terminator runs. Without
+        // this, a bumper that Sonic has just bounced off keeps reading as
+        // $25 forever, so re-touching it while the real ROM's flash is still
+        // playing wrongly fires a second bounce instead of behaving like an
+        // inert wall.
+        int touchedIdx = lastCollisionRow * SS_LAYOUT_STRIDE + lastCollisionCol;
+        startBumperAnimation(touchedIdx);
+
         playSfx(Sonic1Sfx.BUMPER);
     }
 
@@ -775,6 +1005,54 @@ public final class Sonic1SpecialStageManager {
         }
     }
 
+    /**
+     * SS_AniEmeraldSparks registration (SonicSS_ChkEmerald,
+     * docs/s1disasm/_incObj/09 Sonic in Special Stage.asm:676-679): allocates
+     * an animation slot via {@code SS_FindFreeAnimationSlot}. When that fails
+     * (all 8 slots busy), the ROM skips registration entirely (falls straight
+     * through to {@code SonicSS_GetEmerald}) and leaves the touched block's
+     * byte untouched -- unlike the ring helper above, there is no "clear to
+     * 0" fallback here to stay faithful to that ROM branch.
+     *
+     * <p>Delay starts at 0 (not {@link #ANIM_EMERALD_PERIOD}), matching the
+     * {@link #startBumperAnimation(int)}/{@link #startGlassAnimation(int, int)}
+     * pattern rather than the ring branch's manual immediate write: a freshly
+     * claimed animation slot's memory is zero-cleared in the ROM (either from
+     * stage init or the previous occupant's {@code clr.l (a0)} on
+     * completion), and {@code SS_ExecuteAnimationQueue} (called from
+     * {@code SS_ShowLayout}, AFTER {@code ExecuteObjects} in the SAME
+     * {@code SS_MainLoop} iteration -- sonic.asm:3306-3309) runs this same
+     * game tick and sees the fresh slot's delay=0, so the FIRST script entry
+     * fires on this same tick via the natural {@link #updateEmeraldAnimation(int)}
+     * call below rather than a manual pre-write. Manually pre-writing (as the
+     * ring branch does) plus also letting the same-tick
+     * {@code updateItemAnimations()} call decrement double-counts one tick,
+     * which pushed the 4-entry sparkle script's completion -- and therefore
+     * the {@code obRoutine=4} exit arm (asm:453) -- one recorded frame early:
+     * the S1 maze round-trip capture's single lag frame at trace frame 2976
+     * (one non-stepped update() call between the emerald pickup at frame 2972
+     * and the exit-arm frame 2997) makes the completion tick land on trace
+     * frame 2997 only when the FIRST script write is same-tick, matching
+     * this delay=0 pattern; a same-tick pre-write plus an extra decrement
+     * completed the script (and froze physics) a full tick early at frame
+     * 2996, one before the recorded ROM exit ramp actually starts (frame 2998).
+     */
+    private void startEmeraldAnimation(int layoutIndex) {
+        if (ssAnimBuffer == null) {
+            return;
+        }
+        for (int i = 0; i < SS_ANIM_BUFFER_SIZE; i++) {
+            if (ssAnimBuffer[i][0] == ANIM_NONE) {
+                ssAnimBuffer[i][0] = ANIM_EMERALD_SPARKLE;
+                ssAnimBuffer[i][1] = 0; // Trigger first frame immediately on next animation tick
+                ssAnimBuffer[i][2] = 0;
+                ssAnimBuffer[i][3] = layoutIndex;
+                return;
+            }
+        }
+        // ROM behavior when no slot is free: leave the block untouched.
+    }
+
     private void startGlassAnimation(int layoutIndex, int finalBlockId) {
         if (ssAnimBuffer == null || ssAnimGlassFinalBlock == null) {
             if (layoutIndex >= 0 && layoutIndex < layout.length) {
@@ -795,6 +1073,29 @@ public final class Sonic1SpecialStageManager {
         // ROM behavior when no slot is free: skip the transition this frame.
     }
 
+    /**
+     * Obj09_ChkBumper's animation registration (docs/s1disasm/_incObj/09 Sonic
+     * in Special Stage.asm:810-816): {@code SS_FindFreeAnimationSlot}; if none
+     * is free, the ROM branches straight to the bump sound and never writes
+     * an animation entry -- the touched block is left at $25 unmodified (a
+     * rare, ROM-faithful edge case when all 8 slots are already busy).
+     */
+    private void startBumperAnimation(int layoutIndex) {
+        if (ssAnimBuffer == null) {
+            return;
+        }
+        for (int i = 0; i < SS_ANIM_BUFFER_SIZE; i++) {
+            if (ssAnimBuffer[i][0] == ANIM_NONE) {
+                ssAnimBuffer[i][0] = ANIM_BUMPER;
+                ssAnimBuffer[i][1] = 0; // Trigger first frame immediately on next animation tick
+                ssAnimBuffer[i][2] = 0;
+                ssAnimBuffer[i][3] = layoutIndex;
+                return;
+            }
+        }
+        // ROM behavior when no slot is free: skip the animation this frame.
+    }
+
     private void updateItemAnimations() {
         if (ssAnimBuffer == null) return;
         for (int i = 0; i < SS_ANIM_BUFFER_SIZE; i++) {
@@ -804,8 +1105,16 @@ public final class Sonic1SpecialStageManager {
                 updateRingAnimation(i);
                 continue;
             }
+            if (type == ANIM_BUMPER) {
+                updateBumperAnimation(i);
+                continue;
+            }
             if (type == ANIM_GLASS_BLOCK) {
                 updateGlassAnimation(i);
+                continue;
+            }
+            if (type == ANIM_EMERALD_SPARKLE) {
+                updateEmeraldAnimation(i);
                 continue;
             }
             ssAnimBuffer[i][0] = ANIM_NONE;
@@ -833,6 +1142,84 @@ public final class Sonic1SpecialStageManager {
         if (layoutIndex >= 0 && layoutIndex < layout.length) {
             layout[layoutIndex] = (byte) nextBlockId;
         }
+    }
+
+    /**
+     * SS_AniEmeraldSparks (docs/s1disasm/_inc/Special Stage Loading & Drawing.asm:
+     * 437-458): structurally identical to {@link #updateRingAnimation(int)}
+     * (same 5-tick delay, same 4-entry-then-terminator script shape), except
+     * that reaching the terminator ALSO arms the special-stage exit --
+     * `move.b #4,(v_player+obRoutine).w` (asm:453) sets Obj09's routine
+     * straight to {@code SonicSS_ExitStage}, and `move.w #sfx_SSGoal,d0` /
+     * `jsr (QueueSound2).l` (asm:454-455) plays the same GOAL jingle the
+     * GOAL-block branch in {@link #processItemInteraction()} plays. This is
+     * how a single-emerald special stage (like the recorded GHZ round-trip
+     * maze) ends without ever touching an {@code id_SS_GOAL} ($27) block.
+     */
+    private void updateEmeraldAnimation(int slot) {
+        ssAnimBuffer[slot][1]--;
+        if (ssAnimBuffer[slot][1] > 0) return;
+        ssAnimBuffer[slot][1] = ANIM_EMERALD_PERIOD;
+
+        // Read the script index BEFORE advancing it (SS_AniEmeraldSparks:
+        // `move.b ss_ani_frame(a0),d0` reads, THEN `addq.b #1,ss_ani_frame(a0)`
+        // advances -- asm:443-444), matching the bumper/glass helpers'
+        // pre-increment read rather than the ring branch's post-increment one.
+        int frameIdx = ssAnimBuffer[slot][2];
+        ssAnimBuffer[slot][2] = frameIdx + 1;
+        int layoutIndex = ssAnimBuffer[slot][3];
+        int nextBlockId = (frameIdx < ANIM_EMERALD_SPARKLE_DATA.length)
+                ? ANIM_EMERALD_SPARKLE_DATA[frameIdx] : 0;
+
+        if (nextBlockId != 0) {
+            if (layoutIndex >= 0 && layoutIndex < layout.length) {
+                layout[layoutIndex] = (byte) nextBlockId;
+            }
+            return;
+        }
+
+        // Terminator (asm:446-455): the ROM writes the terminator's 0 to the
+        // block unconditionally via the same `move.b d0,(a1)` as every other
+        // script entry, THEN frees the slot and arms the exit.
+        if (layoutIndex >= 0 && layoutIndex < layout.length) {
+            layout[layoutIndex] = 0;
+        }
+        ssAnimBuffer[slot][0] = ANIM_NONE;
+        exitTriggered = true;
+        playSfx(Sonic1Sfx.SS_GOAL);
+    }
+
+    /**
+     * SS_AniBumper (docs/s1disasm/_inc/Special Stage Loading & Drawing.asm:
+     * 356-382): decrements the 7-frame delay; on expiry, reads
+     * {@code ANIM_BUMPER_DATA[frameIdx]} and either writes the flashing
+     * $32/$33 frame ("still recovering", not equal to id_SS_Bumper so a
+     * touch cannot re-fire {@link #processBumper()}) or, once the script's
+     * terminator is hit, frees the slot and explicitly restores id_SS_Bumper
+     * ($25, {@code move.b #id_SS_Bumper,(a1)}) so the block becomes
+     * re-triggerable again.
+     */
+    private void updateBumperAnimation(int slot) {
+        ssAnimBuffer[slot][1]--;
+        if (ssAnimBuffer[slot][1] > 0) return;
+        ssAnimBuffer[slot][1] = ANIM_BUMPER_PERIOD;
+
+        int frameIdx = ssAnimBuffer[slot][2];
+        ssAnimBuffer[slot][2] = frameIdx + 1;
+        int layoutIndex = ssAnimBuffer[slot][3];
+        int nextBlockId = (frameIdx < ANIM_BUMPER_DATA.length) ? ANIM_BUMPER_DATA[frameIdx] : 0;
+
+        if (nextBlockId != 0) {
+            if (layoutIndex >= 0 && layoutIndex < layout.length) {
+                layout[layoutIndex] = (byte) nextBlockId;
+            }
+            return;
+        }
+
+        if (layoutIndex >= 0 && layoutIndex < layout.length) {
+            layout[layoutIndex] = (byte) 0x25; // id_SS_Bumper: reset to idle, re-triggerable
+        }
+        ssAnimBuffer[slot][0] = ANIM_NONE;
     }
 
     private void updateGlassAnimation(int slot) {
@@ -1859,6 +2246,36 @@ public final class Sonic1SpecialStageManager {
     }
 
     /**
+     * Returns whether the ROM's observable pre-physics hold has elapsed (see
+     * {@link #SS_STARTUP_HOLD_TICKS}). Mirrors
+     * {@code Sonic2SpecialStageManager.isEntryPresentationReady()}.
+     */
+    public boolean isEntryPresentationReady() {
+        return initialized && startupHoldTicksRemaining <= 0;
+    }
+
+    /**
+     * Compresses the ROM's observable pre-physics hold by stepping
+     * {@link #update()} until it elapses, preserving the normal per-tick
+     * update path (rather than hand-skipping fields) so FAST-policy callers
+     * reach the same state a frame-accurate replay would reach at the reveal
+     * boundary. Mirrors {@code Sonic2SpecialStageManager.advanceToEntryPresentation()}.
+     */
+    public void advanceToEntryPresentation() {
+        advanceToEntryPresentation(SS_STARTUP_HOLD_TICKS + 1);
+    }
+
+    void advanceToEntryPresentation(int maxUpdates) {
+        for (int i = 0; i < maxUpdates && !isEntryPresentationReady(); i++) {
+            update();
+        }
+        if (!isEntryPresentationReady()) {
+            throw new IllegalStateException(
+                    "Special-stage startup did not reach reveal boundary within " + maxUpdates + " updates");
+        }
+    }
+
+    /**
      * Read-only comparison snapshot for trace replay (multi-stage trace run
      * spec addition #2). Pure read — no state mutation, no caching.
      */
@@ -1876,6 +2293,8 @@ public final class Sonic1SpecialStageManager {
                 finished,
                 emeraldCollected,
                 debugMode,
+                startupHoldTicksRemaining,
+                objInitPending,
                 currentStage,
                 ringsCollected,
                 ssAngle,
@@ -1935,6 +2354,8 @@ public final class Sonic1SpecialStageManager {
         finished = snapshot.finished;
         emeraldCollected = snapshot.emeraldCollected;
         debugMode = snapshot.debugMode;
+        startupHoldTicksRemaining = snapshot.startupHoldTicksRemaining;
+        objInitPending = snapshot.objInitPending;
         currentStage = snapshot.currentStage;
         ringsCollected = snapshot.ringsCollected;
         ssAngle = snapshot.ssAngle;
@@ -2042,6 +2463,8 @@ public final class Sonic1SpecialStageManager {
         finished = false;
         emeraldCollected = false;
         debugMode = false;
+        startupHoldTicksRemaining = 0;
+        objInitPending = false;
         debugSavedAngle = 0;
         debugSavedRotate = 0;
         ringsCollected = 0;

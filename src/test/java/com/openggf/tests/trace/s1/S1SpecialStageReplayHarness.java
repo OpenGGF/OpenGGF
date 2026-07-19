@@ -8,6 +8,7 @@ import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameServices;
 import com.openggf.game.SpecialStageInputMapper;
+import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageComparisonState;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageProvider;
 
@@ -19,11 +20,13 @@ import java.util.Objects;
 /**
  * Headless replay driver for a Sonic 1 special-stage (maze) BizHawk trace.
  * Modeled on {@code S3kSpecialStageReplayHarness}, trimmed further for the
- * S1 provider's single-player surface: {@code initializeStage(int)} takes no
- * startup-policy argument (single-arg, throws {@link IOException}), there is
- * no second controller to forward, and {@code setLagCompensation} is a no-op
- * scaffold ({@code Sonic1SpecialStageProvider.java:173-175}) so there is
- * nothing to disable before trace-paced replay.
+ * S1 provider's single-player surface: there is no second controller to
+ * forward, and {@code setLagCompensation} is a no-op scaffold
+ * ({@code Sonic1SpecialStageProvider.java:173-175}) so there is nothing to
+ * disable before trace-paced replay. The boot call uses the two-arg
+ * {@code initializeStage(int, SpecialStageStartupPolicy)} with
+ * {@code TRACE_ACCURATE} so the ROM's observable pre-physics hold is stepped
+ * frame-by-frame instead of fast-forwarded (see the ctor).
  *
  * <h2>Bootstrap pattern</h2>
  * <p>The special-stage runtime is booted through the production
@@ -44,9 +47,10 @@ import java.util.Objects;
  *       {@code initializeStage} runs). The S1 module has no sidekick in the
  *       special stage, so {@code SIDEKICK_CHARACTER_CODE} is left
  *       unset.</li>
- *   <li>{@code provider.initializeStage(index)} -&gt; {@code manager.reset()}
- *       + {@code manager.initialize(index)} (loads the maze layout/art from
- *       ROM).</li>
+ *   <li>{@code provider.initializeStage(index, TRACE_ACCURATE)} -&gt;
+ *       {@code manager.reset()} + {@code manager.initialize(index)} (loads
+ *       the maze layout/art from ROM) without fast-forwarding the pre-physics
+ *       hold.</li>
  * </ol>
  *
  * <h2>Input injection</h2>
@@ -94,7 +98,12 @@ final class S1SpecialStageReplayHarness {
         this.movie = new Bk2MovieLoader().load(Objects.requireNonNull(bk2, "bk2"));
         this.inputHandler = new InputHandler();
         this.provider = new Sonic1SpecialStageProvider();
-        this.provider.initializeStage(specialStageIndex);
+        // TRACE_ACCURATE leaves the ROM's 44-VBlank-tick pre-physics hold
+        // armed (Sonic1SpecialStageManager.SS_STARTUP_HOLD_TICKS) so the
+        // recorded trace's frozen pre-roll rows are observable frame-by-frame
+        // instead of being fast-forwarded away, mirroring
+        // Sonic2SpecialStageProvider's TRACE_ACCURATE precedent.
+        this.provider.initializeStage(specialStageIndex, SpecialStageStartupPolicy.TRACE_ACCURATE);
     }
 
     /** Absolute BK2 input-log row backing trace frame {@code traceFrame}. */
