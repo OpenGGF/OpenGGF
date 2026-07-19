@@ -1,5 +1,23 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ end-boss magnet exact floor contact: physics f36602 -> f37421
+
+The first dropped magnet reaches the floor with `ObjCheckFloorDist` returning
+exactly zero. ROM `ObjHitFloor_DoRoutine` branches to its callback for both
+negative distance and zero, adjusts `y_pos`, and lets `loc_6E8B6` halve and
+reverse the downward velocity. The engine required a negative distance, so it
+missed the surface, continued moving the magnet right, and left the boss in a
+long alignment phase instead of activating attraction
+(`docs/skdisasm/sonic3k.asm:145961-145998,177964-177977`).
+
+The magnet floor response now accepts exact contact and a focused test covers
+the zero-distance rebound. Boss trace diagnostics also expose its native
+routine, wait timer, field flag, centre, and magnet centre. CNZ complete-run
+physics advances from f36602 `x` to f37421 `tails_y_speed`; animation remains
+at f30486 `tails_mapping_frame`. Sequential one-fork 4 GB full sweeps retain
+the established 45/58 physics and 44/58 animation green counts, with the same
+non-CNZ frontiers and legacy standalone CNZ still at f0 in both scopes.
+
 ### 2026-07-19 -- CNZ rival handoff and boss child graph: physics f34874 -> f36602
 
 The second rival-Knuckles sequence writes `object_control=$80`, whose bit 0 is

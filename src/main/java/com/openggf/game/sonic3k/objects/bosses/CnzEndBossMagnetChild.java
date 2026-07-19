@@ -138,7 +138,9 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
 
     /** ROM descending-only floor response after {@code MoveSprite}'s gravity step. */
     void resolveFloorContact(int floorDistance) {
-        if (yVelocity < 0 || floorDistance >= 0) return;
+        // ObjHitFloor_DoRoutine dispatches its callback for d1 == 0 as well as
+        // penetration (sonic3k.asm loc_848AC).
+        if (yVelocity < 0 || floorDistance > 0) return;
         centreY += floorDistance;
         services().playSfx(Sonic3kSfx.FLOOR_THUMP.id);
         if (yVelocity >= 0x80) {

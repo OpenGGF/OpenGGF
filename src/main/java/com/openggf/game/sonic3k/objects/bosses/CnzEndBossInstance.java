@@ -712,6 +712,16 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         return routine.name();
     }
 
+    @Override
+    public String traceDebugDetails() {
+        return "routine=" + routine + " timer=" + routineTimer
+                + " field=" + magneticFieldActive
+                + " centre=" + String.format("%04X,%04X", centreX & 0xFFFF, centreY & 0xFFFF)
+                + " magnet=" + (magnetChild == null ? "none"
+                : String.format("%04X,%04X", magnetChild.getCentreX() & 0xFFFF,
+                        magnetChild.getCentreY() & 0xFFFF));
+    }
+
     public boolean isStartupCompleteForTest() {
         return startupComplete;
     }

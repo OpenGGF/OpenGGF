@@ -42,6 +42,20 @@ class TestCnzEndBossChildren {
     }
 
     @Test
+    void exactFloorContactRunsMagnetBounceCallback() throws Exception {
+        CnzEndBossInstance boss = boss();
+        CnzEndBossMagnetChild magnet = magnet(boss, playerAt(boss.getCentreX()));
+        field(magnet, "centreY").setInt(magnet, 0x0300);
+        field(magnet, "yVelocity").setInt(magnet, 0x0100);
+
+        magnet.resolveFloorContact(0);
+
+        assertEquals(0x0300, magnet.getCentreY());
+        assertEquals(-0x80, magnet.yVelocityForTest());
+        assertFalse(magnet.isLanded());
+    }
+
+    @Test
     void descentBottomSignalsImmediateMagnetReattach() throws Exception {
         CnzEndBossInstance boss = boss();
         boss.setServices(new StubObjectServices());
