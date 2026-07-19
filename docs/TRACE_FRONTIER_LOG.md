@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- S3K slot-machine bonus replay scaffolding landed (plan b)
+
+Branch `feature/ai-mstr-slots` landed the slot-machine headless replay slice:
+the `applyBonusStageEntry` bootstrap seam accepts `bonus_stage_type: "slots"` (profile-gated,
+registered in bootstrap-policy guard baseline with justification), and `TestS3kSlotsBonusTraceReplay`
+(zone 0x15) SKIPs until its recording exists. The recorder v6.30 was already wired to emit
+`slots/` segments with `bonus_stage_type: "slots"` in metadata.json; no recorder changes
+needed. Rewind: slots runtime sets `supportsRewind=false`; headless replay never reaches
+`updateBonusStageMode` (verified, no work). The camera columns are meaningful under the
+slot runtime's custom tracking (comparator reads the live camera; the suppressed default step
+is exactly what the ROM does). Chain/visual integration inherits automatically from the
+gumball/pachinko framework.
+
+**Recording needed to activate the replay test** (procedure:
+`tools/bizhawk/README.md`, "Recording S3K Slot-Machine Round-Trip Traces"):
+`s3k-aiz-slots.bk2` (20–34 rings at the star post, **SONIC-SOLO ONLY** — sidekick suppression
+suppresses the sprite comparator columns). No trace frontiers moved; no fixtures touched.
+Full-suite gate: no new failures vs the develop baseline after guard conformance.
+
 ### 2026-07-19 -- Blue-spheres trace pipeline landed
 
 Branch `feature/ai-mstr-bluespheres` gave the S3K special stage a real trace
