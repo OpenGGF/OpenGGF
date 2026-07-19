@@ -155,6 +155,12 @@ public class Sonic1SpecialStageManagerTest {
     @Test
     public void testAnimCountersMatchRomStartupPhaseAfterFirstUpdate() throws Exception {
         manager.initialize(0);
+        // Skip the ROM's 44-VBlank-tick pre-physics hold (PaletteWhiteOut +
+        // instant setup + PaletteWhiteIn, see
+        // Sonic1SpecialStageManager.SS_STARTUP_HOLD_TICKS) so this update()
+        // lands on Obj09's real first ExecuteObjects tick, matching what this
+        // test asserts ("ROM parity" on "first tick").
+        manager.advanceToEntryPresentation();
         manager.update();
 
         Field ringAnimFrameField = Sonic1SpecialStageManager.class.getDeclaredField("ringAnimFrame");

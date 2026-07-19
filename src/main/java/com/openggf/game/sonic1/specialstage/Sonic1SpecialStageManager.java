@@ -69,12 +69,38 @@ public final class Sonic1SpecialStageManager {
             {7, 2, 1, 0x24}, {7, 4, 1, 0x30}, {-1, 6, 1, 0x3C}, {-1, 6, 1, 0x3C}, {7, 4, 1, 0x30}, {7, 2, 1, 0x24}
     };
 
+    /**
+     * ROM-observable pre-physics hold before Obj09's first {@code ExecuteObjects}
+     * tick. {@code GM_Special} (sonic.asm:3221-3299) never calls
+     * {@code ExecuteObjects} during entry: it runs {@code PaletteWhiteOut}
+     * (22-VBlank fade, "Palette Fading.asm":313-326), then an instant
+     * (non-VBlank-waiting) setup block that loads the layout and sets
+     * {@code v_ssangle}/{@code v_ssrotate}/{@code v_rings} (sonic.asm:3238-3291),
+     * then {@code PaletteWhiteIn} (22-VBlank fade, "Palette Fading.asm":212-236)
+     * before {@code SS_MainLoop} finally calls {@code ExecuteObjects}
+     * (sonic.asm:3299-3306). Both fades use {@code move.w #22-1,d4} + {@code dbf}
+     * (22 iterations each; Palette Fading.asm:227,233,316,322), so Obj09's
+     * globals stay frozen at whatever value they held before the special-stage
+     * mode switch for 44 consecutive VBlank ticks. See
+     * {@link #advanceToEntryPresentation()} for the FAST-policy bypass and
+     * {@code docs/superpowers/plans/2026-07-18-...} design note for the S2
+     * {@code SpecialStageStartupPolicy} precedent this mirrors.
+     */
+    private static final int SS_STARTUP_HOLD_TICKS = 44;
+
     private boolean initialized;
     private boolean finished;
     private boolean emeraldCollected;
     private boolean debugMode;
     private int currentStage;
     private int ringsCollected;
+
+    // ROM-observable pre-physics hold (see SS_STARTUP_HOLD_TICKS).
+    private int startupHoldTicksRemaining;
+    // One-shot Obj09_Main flag init (09 Sonic in Special Stage.asm:41-53),
+    // applied on the object's first real ExecuteObjects tick, not at manager
+    // initialize() time.
+    private boolean objInitPending;
 
     // Layout
     private byte[] layout;
@@ -215,8 +241,17 @@ public final class Sonic1SpecialStageManager {
         sonicVelX = 0;
         sonicVelY = 0;
         sonicInertia = 0;
-        sonicAirborne = true; // Obj09_Main sets obStatus bit 1 before first update
+        // obStatus bit 1 (in-air) is NOT set here: object RAM is zero-cleared by
+        // GM_Special's clearRAM v_objspace (sonic.asm:3243) and stays zero
+        // through both palette fades. Obj09_Main only sets it on the object's
+        // first real ExecuteObjects tick (09 Sonic in Special Stage.asm:53),
+        // which is deferred to objInitPending below.
+        sonicAirborne = false;
         sonicFacingLeft = false;
+
+        // Arm the ROM-observable pre-physics hold (see SS_STARTUP_HOLD_TICKS).
+        startupHoldTicksRemaining = SS_STARTUP_HOLD_TICKS;
+        objInitPending = true;
 
         // Initialize camera
         updateCamera();
@@ -268,6 +303,24 @@ public final class Sonic1SpecialStageManager {
     public void update() {
         if (!initialized || finished) {
             return;
+        }
+
+        if (startupHoldTicksRemaining > 0) {
+            // PaletteWhiteOut/instant-setup/PaletteWhiteIn never call
+            // ExecuteObjects (see SS_STARTUP_HOLD_TICKS javadoc) -- hold every
+            // Obj09-owned field frozen and consume only the input edge latch,
+            // matching v_jpadpress2's per-VBlank hardware refresh.
+            startupHoldTicksRemaining--;
+            pressedButtons = 0;
+            return;
+        }
+
+        if (objInitPending) {
+            objInitPending = false;
+            // SonicSS_Main (09 Sonic in Special Stage.asm:52-53): the object's
+            // one-shot first-tick init sets the rolling + in-air flags before
+            // falling through into SonicSS_Control on the SAME tick.
+            sonicAirborne = true;
         }
 
         if (exitTriggered) {
@@ -1859,6 +1912,36 @@ public final class Sonic1SpecialStageManager {
     }
 
     /**
+     * Returns whether the ROM's observable pre-physics hold has elapsed (see
+     * {@link #SS_STARTUP_HOLD_TICKS}). Mirrors
+     * {@code Sonic2SpecialStageManager.isEntryPresentationReady()}.
+     */
+    public boolean isEntryPresentationReady() {
+        return initialized && startupHoldTicksRemaining <= 0;
+    }
+
+    /**
+     * Compresses the ROM's observable pre-physics hold by stepping
+     * {@link #update()} until it elapses, preserving the normal per-tick
+     * update path (rather than hand-skipping fields) so FAST-policy callers
+     * reach the same state a frame-accurate replay would reach at the reveal
+     * boundary. Mirrors {@code Sonic2SpecialStageManager.advanceToEntryPresentation()}.
+     */
+    public void advanceToEntryPresentation() {
+        advanceToEntryPresentation(SS_STARTUP_HOLD_TICKS + 1);
+    }
+
+    void advanceToEntryPresentation(int maxUpdates) {
+        for (int i = 0; i < maxUpdates && !isEntryPresentationReady(); i++) {
+            update();
+        }
+        if (!isEntryPresentationReady()) {
+            throw new IllegalStateException(
+                    "Special-stage startup did not reach reveal boundary within " + maxUpdates + " updates");
+        }
+    }
+
+    /**
      * Read-only comparison snapshot for trace replay (multi-stage trace run
      * spec addition #2). Pure read — no state mutation, no caching.
      */
@@ -1876,6 +1959,8 @@ public final class Sonic1SpecialStageManager {
                 finished,
                 emeraldCollected,
                 debugMode,
+                startupHoldTicksRemaining,
+                objInitPending,
                 currentStage,
                 ringsCollected,
                 ssAngle,
@@ -1935,6 +2020,8 @@ public final class Sonic1SpecialStageManager {
         finished = snapshot.finished;
         emeraldCollected = snapshot.emeraldCollected;
         debugMode = snapshot.debugMode;
+        startupHoldTicksRemaining = snapshot.startupHoldTicksRemaining;
+        objInitPending = snapshot.objInitPending;
         currentStage = snapshot.currentStage;
         ringsCollected = snapshot.ringsCollected;
         ssAngle = snapshot.ssAngle;
@@ -2042,6 +2129,8 @@ public final class Sonic1SpecialStageManager {
         finished = false;
         emeraldCollected = false;
         debugMode = false;
+        startupHoldTicksRemaining = 0;
+        objInitPending = false;
         debugSavedAngle = 0;
         debugSavedRotate = 0;
         ringsCollected = 0;
