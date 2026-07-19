@@ -76,6 +76,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     private int nextStandingMask;
     private int heldInputMask;
     private int nextHeldInputMask;
+    private int capturedThisUpdateMask;
     private int mode0Velocity;
     private int mode0YSubpixel;
     private int currentYVelocity;
@@ -160,6 +161,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        capturedThisUpdateMask = 0;
         // ROM sub_324C0 / SolidObjectFull (sonic3k.asm:41006-41008): when a
         // rider is offscreen (`tst.b render_flags(a1); bpl.w locret_1DCB4`)
         // the entire SolidObjectFull pass for that rider is skipped, so the
@@ -594,6 +596,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     private void captureSlot(RiderSlot slot, AbstractPlayableSprite player, boolean latchedContact) {
         slot.player = player;
         slot.active = true;
+        capturedThisUpdateMask |= slotMask(slot);
         int captureCenterX = firstCaptureDistanceAnchorX(player, latchedContact);
         slot.twistAngle = player.getCentreX() < captureCenterX ? 0x80 : 0x00;
         slot.horizontalDistance = Math.min(0xFF, Math.abs(player.getCentreX() - captureCenterX));
@@ -1000,6 +1003,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             svc.objectManager().clearRidingObject(sprite);
         }
         if (sprite.isObjectControlled() && !sprite.getAir()
+                && (capturedThisUpdateMask & mask) == 0
                 && Math.abs((short) currentYVelocity) >= 0x480) {
             sprite.setGSpeed((short) 0x0800);
         }

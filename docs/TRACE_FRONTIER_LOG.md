@@ -1,5 +1,27 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ cylinder first-capture launch phase: physics f30660 -> f31050
+
+`sub_324C0`'s inactive rider path clears `ground_vel`, installs
+`object_control=$03`, and branches directly to the twist-frame publisher. The
+following `SolidObjectFull` call can refresh the standing bit, but it does not
+re-enter the active rider path at `loc_32594`. The engine's split solid-contact
+callback incorrectly applied that active-path `$0800` launch during the same
+first-capture frame (`docs/skdisasm/sonic3k.asm:67656-67672,67985-68056`).
+
+The cylinder now records which native player slot was captured in its current
+object update and suppresses only the same-update solid callback's launch-speed
+write. An already-active rider retains the existing `$480` vertical-speed gate
+on the following update. A focused regression test covers both sides of the
+phase boundary.
+
+This advances CNZ complete-run physics from f30660 `tails_g_speed` to f31050
+`tails_g_speed`; animation remains at f30486 `tails_mapping_frame`. Sequential
+one-fork 4 GB full sweeps remain 45/58 green for physics and 44/58 green for
+animation, with exactly the same 13 physics and 14 animation non-green route
+sets. No non-CNZ frontier moved, and legacy standalone CNZ remains at f0 in
+both scopes.
+
 ### 2026-07-19 -- CNZ water-button placement lifetime: physics f29673 -> f30660, animation f29721 -> f30486
 
 The Act 2 water-level button survives its one-shot press, but it is still an

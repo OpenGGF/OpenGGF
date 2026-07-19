@@ -669,6 +669,34 @@ class TestCnzCylinderInstance {
     }
 
     @Test
+    void firstCaptureKeepsGroundSpeedZeroUntilTheNextActiveRiderPass() throws Exception {
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(
+                spawnAtWithSubtype(0x2D20, 0x01A0, 0x30));
+        cylinder.setServices(new TestObjectServices());
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) 0x2D1E);
+        player.setCentreY((short) 0x01B4);
+        player.setAir(false);
+        Object slot = playerOneSlot(cylinder);
+        setPrivateField(cylinder, "currentYVelocity", -0x0600);
+
+        invokeCaptureSlot(cylinder, slot, player, true);
+        cylinder.onSolidContact(player,
+                new SolidContact(true, true, false, true, false), 30660);
+
+        assertEquals(0, player.getGSpeed(),
+                "sub_324C0's inactive-slot capture clears ground_vel and branches past "
+                        + "loc_32594 before the same-frame SolidObjectFull pass");
+
+        setPrivateField(cylinder, "capturedThisUpdateMask", 0);
+        cylinder.onSolidContact(player,
+                new SolidContact(true, true, false, true, false), 30661);
+
+        assertEquals((short) 0x0800, player.getGSpeed(),
+                "the following active-rider pass may publish the vertical launch speed");
+    }
+
+    @Test
     void mode0VerticalControllerUsesCurrentHeldInputWhileStandingOnCylinder() throws Exception {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x28A0, 0x04E0, 0x20));
         cylinder.setServices(new TestObjectServices());
