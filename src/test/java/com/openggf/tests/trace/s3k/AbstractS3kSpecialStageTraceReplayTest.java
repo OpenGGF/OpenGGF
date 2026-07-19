@@ -232,7 +232,8 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
         fields.put("angle", cmp("angle", str(tf.angle()), str(state.angle()), Severity.ERROR));
         fields.put("velocity", cmp("velocity",
                 str(signedWord(tf.velocity())), str(state.velocity()), Severity.ERROR));
-        fields.put("turning", cmp("turning", str(tf.turning()), str(state.turning()), Severity.ERROR));
+        fields.put("turning", cmp("turning",
+                str(signedByte(tf.turning())), str(state.turning()), Severity.ERROR));
         fields.put("jumping", cmp("jumping", str(tf.jumping()), str(state.jumping()), Severity.ERROR));
         fields.put("fade_timer",
                 cmp("fade_timer", str(tf.fadeTimer()), str(state.fadeTimer()), Severity.ERROR));
@@ -356,6 +357,20 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
      */
     private static int signedWord(int rawWord) {
         return (short) rawWord;
+    }
+
+    /**
+     * Maps a raw 68000 byte to the signed value used by the ROM's
+     * {@code Special_stage_turning} field. It is written with {@code move.b}
+     * as either {@code #4} (left) or {@code #-4} (right) (sonic3k.asm:12000,
+     * 12005), i.e. a genuinely signed byte -- Sonic3kSpecialStagePlayer's
+     * {@code turning} int mirrors that (TURN_LEFT=4, TURN_RIGHT=-4). The
+     * trace CSV records the raw unsigned hex byte (e.g. {@code fc} for -4),
+     * which parses to 252 without sign-extension, producing a spurious
+     * mismatch against the engine's native -4 for the identical ROM state.
+     */
+    private static int signedByte(int rawByte) {
+        return (byte) rawByte;
     }
 
     private static FieldComparison cmp(String name, String expected, String actual,
