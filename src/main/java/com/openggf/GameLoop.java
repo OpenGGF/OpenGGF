@@ -1502,39 +1502,56 @@ public class GameLoop {
         if (!freezeForBonusExit) {
             beginGameplayAudioFrameForTick();
             spriteManager.publishHeldInputForLevelEvents(inputHandler);
-            LevelFrameStep.execute(LevelFrameContext.from(gameplayMode), levelManager, camera, () -> {
-                spriteManager.update(inputHandler);
-            }, (name, step) -> {
-                profiler.beginSection(name);
-                step.run();
-                profiler.endSection(name);
-            });
+            // LiveTraceComparator (or any PlaybackFrameObserver) may ask us to
+            // skip the gameplay tick on ROM lag frames so the engine and trace
+            // stay aligned. Cursor advance still runs via onLevelFrameAdvanced
+            // below. Mirrors updateLevelMode's skip gate.
+            boolean skipGameplay = playbackDebugManager.shouldSkipCurrentGameplayTick();
+            if (!skipGameplay) {
+                LevelFrameStep.execute(LevelFrameContext.from(gameplayMode), levelManager, camera, () -> {
+                    spriteManager.update(inputHandler);
+                }, (name, step) -> {
+                    profiler.beginSection(name);
+                    step.run();
+                    profiler.endSection(name);
+                });
 
-            // ROM lines 127411-127412: player art_tile priority bit stays HIGH throughout
-            // the bonus stage. Must be set AFTER the sprite update (which runs inside
-            // LevelFrameStep.execute) because setAir(false) on hurt-landing clears it.
-            forcePlayerHighPriorityInBonusStage();
+                // ROM lines 127411-127412: player art_tile priority bit stays HIGH throughout
+                // the bonus stage. Must be set AFTER the sprite update (which runs inside
+                // LevelFrameStep.execute) because setAir(false) on hurt-landing clears it.
+                forcePlayerHighPriorityInBonusStage();
 
-            // Notify coordinator of frame tick
-            if (activeBonusStageProvider != null && !activeBonusStageProvider.updateDuringLevelFrame()) {
-                activeBonusStageProvider.onFrameUpdate();
-            }
+                // Notify coordinator of frame tick
+                if (activeBonusStageProvider != null && !activeBonusStageProvider.updateDuringLevelFrame()) {
+                    activeBonusStageProvider.onFrameUpdate();
+                }
 
-            // Record a rewind keyframe/step for rewind-supported bonus stages
-            // (Gumball/Pachinko). Placed before the completion check so the
-            // exit frame — which sets bonusStageTransitionPending — is not
-            // recorded. The LEVEL path is unchanged; the Slot Machine is
-            // excluded via supportsRewind().
-            if (isBonusStageRewindable() && TraceSessionLauncher.active() == null) {
-                liveRewindManager.recordExternalFrame(
-                        currentGameMode, bonusStageTransitionPending, inputHandler);
-            }
+                // Record a rewind keyframe/step for rewind-supported bonus stages
+                // (Gumball/Pachinko). Placed before the completion check so the
+                // exit frame — which sets bonusStageTransitionPending — is not
+                // recorded. The LEVEL path is unchanged; the Slot Machine is
+                // excluded via supportsRewind().
+                if (isBonusStageRewindable() && TraceSessionLauncher.active() == null) {
+                    liveRewindManager.recordExternalFrame(
+                            currentGameMode, bonusStageTransitionPending, inputHandler);
+                }
 
-            // Check bonus stage completion
-            if (activeBonusStageProvider != null && activeBonusStageProvider.isStageComplete()) {
-                exitBonusStage();
+                // Check bonus stage completion
+                if (activeBonusStageProvider != null && activeBonusStageProvider.isStageComplete()) {
+                    exitBonusStage();
+                }
+            } else if (levelManager.getObjectManager() != null) {
+                // ROM v_vbla_byte increments in VBlank even on rows where
+                // LevelLoop did not run; keep bonus lag rows in VBla-counter
+                // parity, mirroring updateLevelMode's skip branch.
+                levelManager.getObjectManager().advanceVblaCounter();
             }
             advanceGameplayAudioFrameForTick(doFrameStep);
+            // Fire the BK2-advance callback either way — on both real
+            // gameplay ticks and lag-gated skips — so the observer's cursor
+            // always matches the BK2 cursor. onLevelFrameAdvanced is a no-op
+            // when no playback session is active.
+            playbackDebugManager.onLevelFrameAdvanced();
         } else {
             updateNonGameplayAudio(doFrameStep);
         }

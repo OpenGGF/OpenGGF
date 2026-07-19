@@ -1,5 +1,21 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- Chained run driver landed (plan c)
+
+Branch `feature/ai-mstr-plan-c` landed the continuous-engine chained replay
+stack: non-consuming transition peeks on `LevelTransitionCoordinator`, the
+BONUS_STAGE playback bridge (cursor advance + forced-input feed during bonus
+interiors — spec addition #8), `TraceRunReplayWalker`/`BoundaryProbe` (segment
+planning by explicit transition indices, dual-method observer delegation,
+transient-peek observation inside `afterFrameAdvanced`, per-segment cursor
+re-seek), and `TestS3kBonusRoundTripChain` — which SKIPS until the
+`runs/s3k-aiz-gumball-roundtrip/` and `runs/s3k-aiz-pachinko-roundtrip/`
+recordings land (same two bk2s named in the plan-b entry below). Walker
+control flow is green against the synthetic run fixture (whose ring values
+now match the `giant_ring` selector arithmetic). Full-suite gate: failing-class
+set byte-identical to the develop baseline (29F/6E), +4 expected skips. No
+trace frontiers moved; no fixtures regenerated.
+
 ### 2026-07-19 -- S3K bonus-stage replay scaffolding landed (plan b)
 
 Branch `feature/ai-mstr-plan-b` landed the gumball/pachinko headless replay slice:
