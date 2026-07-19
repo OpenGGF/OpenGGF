@@ -786,13 +786,22 @@ public final class Sonic1SpecialStageManager {
             return;
         }
 
-        // Emerald (0x3B-0x40)
+        // Emerald (0x3B-0x40): SonicSS_ChkEmerald/SonicSS_GetEmerald
+        // (docs/s1disasm/_incObj/09 Sonic in Special Stage.asm:670-701) only
+        // increments (v_emeralds).w and queues the emerald jingle -- it never
+        // touches obRoutine(a0). The special-stage exit routine is only armed
+        // by SonicSS_ChkGOAL's `addq.b #2,obRoutine(a0)` when the GOAL block
+        // ($27) is touched (asm:823-832, mirrored below in the GOAL branch).
+        // A prior version of this branch also set exitTriggered/exitPhase/
+        // exitTimer here, which desynced the S1 maze round-trip capture at
+        // trace frame 2973: engine froze into updateExit()'s spin-up the
+        // frame after the emerald pickup while the recorded ROM run kept
+        // playing normally (collecting more rings, jumping, moving) for
+        // another ~100 frames until it actually reached GOAL and the trace's
+        // own ss_rotate exit-ramp escalation began at frame 3076.
         if (blockId >= 0x3B && blockId <= 0x40) {
             layout[bufIndex] = 0;
             emeraldCollected = true;
-            exitTriggered = true;
-            exitPhase = 0;
-            exitTimer = 0;
             playMusic(GameMusic.EMERALD);
             return;
         }
