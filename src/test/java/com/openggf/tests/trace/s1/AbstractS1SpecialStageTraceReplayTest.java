@@ -77,19 +77,52 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *       bits without re-recording.</li>
  *   <li>{@code ss_angle}/{@code ss_rotate}/{@code bg_anim}: {@code & 0xFFFF}
  *       both sides (engine fields may be updated with signed arithmetic; ROM
- *       word equality is what matters).</li>
- *   <li>{@code rings}: <b>delta-based</b> -- expected
- *       {@code (tf.rings() - trace.getFrame(0).rings()) & 0xFFFF} vs actual
- *       {@code state.ringsCollected()}. ROM {@code v_rings} may carry a
- *       pre-SS value into the maze while the engine's {@code ringsCollected}
- *       always starts at 0 for a fresh stage entry; the per-frame delta
- *       against the trace's own first row is the comparable quantity. (If the
- *       first capture shows {@code v_rings} actually starts at 0 in the
- *       maze, the baseline subtracts 0 and this is an exact comparison.)</li>
+ *       word equality is what matters). These are special-stage <em>globals</em>
+ *       ({@code v_ssangle}/{@code v_ssrotate}) and are compared on every
+ *       stepped row, including the pre-start hold, where both sides read 0.</li>
+ *   <li>{@code rings}: <b>direct from 0</b> -- expected {@code tf.rings() &
+ *       0xFFFF} vs actual {@code state.ringsCollected()}. {@code GM_Special}'s
+ *       setup block clears the ring counter unconditionally
+ *       ({@code clr.w (v_rings).w}, {@code docs/s1disasm/sonic.asm:3286})
+ *       before the maze runs, so the live {@code v_rings} is a fresh count
+ *       from 0 directly comparable to the engine's {@code ringsCollected}.
+ *       (An earlier delta-vs-frame-0 basis was wrong: frame 0 is recorded
+ *       during the pre-start fade and still holds the <em>pre-clear</em>
+ *       leftover {@code v_rings} of the previous zone -- {@code $55}/85 in the
+ *       committed maze trace -- so subtracting it drove every live value
+ *       negative and masked it into a huge {@code u16}. See the pre-start-hold
+ *       note below; {@code rings} is only compared once setup has run.)</li>
  *   <li>{@code emeralds}: expected boolean
  *       {@code tf.emeralds() != trace.getFrame(0).emeralds()} vs actual
- *       {@code state.emeraldCollected()}.</li>
+ *       {@code state.emeraldCollected()} (emeralds persist across stages, so
+ *       the frame-0 baseline detects a newly-collected emerald in this run).</li>
  * </ul>
+ *
+ * <h2>Recorded ROM pre-start hold (comparison-only observation)</h2>
+ * <p>{@code GM_Special} runs {@code PaletteWhiteOut}
+ * ({@code docs/s1disasm/sonic.asm:3224}) <em>before</em> its instant setup
+ * block clears the previous zone's object RAM
+ * ({@code clearRAM v_objspace}, {@code sonic.asm:3243}), clears the ring
+ * counter ({@code sonic.asm:3286}), sets the stage rotation speed
+ * ({@code move.w #ss_rotatespeed,(v_ssrotate).w}, {@code $40},
+ * {@code sonic.asm:3268}), and finally lets {@code SS_MainLoop}'s first
+ * {@code jsr (ExecuteObjects).l} tick Obj09 for the first time
+ * ({@code sonic.asm:3306}). So while the fade is still running, the
+ * object-owned physics columns ({@code x_pos}/{@code y_pos}/{@code vel_x}/
+ * {@code vel_y}/{@code inertia}/{@code status} bits) and the ring counter
+ * hold <em>pre-clear leftover</em> RAM from the preceding zone, not live
+ * special-stage state -- the committed trace's frame-0 {@code x_pos}
+ * {@code $25AB0300} / {@code vel_x} -34 / {@code status $07} is the previous
+ * GHZ Sonic curled into the giant ring, which a standalone special-stage
+ * segment cannot reproduce. {@code v_ssrotate} is written to {@code $40}
+ * exactly once at setup and only ever <em>increases</em> thereafter (up to
+ * {@code $1800}/{@code $3000} on the exit ramp,
+ * {@code docs/s1disasm/_incObj/09 Sonic in Special Stage.asm:385}), so a
+ * recorded {@code ss_rotate == 0} uniquely marks the pre-setup fade among the
+ * compared (non-lag) rows. This comparator therefore gates the object-owned
+ * physics columns and the ring counter out of the report while
+ * {@code ss_rotate == 0}: it observes a recorded ROM pre-start hold, it does
+ * not skip N frames by number and never hydrates engine state.
  *
  * <p>The pipeline writes a complete report and
  * {@link #assertNoReleaseBlockingDivergences} rejects any comparator ERROR.
@@ -171,7 +204,6 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
     static DivergenceReport compareReplay(Sonic1SpecialStageTraceData trace,
                                           S1SpecialStageReplayHarness harness) {
         int compareEnd = trace.frameCount();
-        int baselineRings = trace.getFrame(0).rings();
         int baselineEmeralds = trace.getFrame(0).emeralds();
 
         List<FrameComparison> comparisons = new ArrayList<>();
@@ -190,7 +222,7 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
             lastFrame = f;
 
             Map<String, FieldComparison> fields = new LinkedHashMap<>();
-            addFields(fields, tf, state, baselineRings, baselineEmeralds);
+            addFields(fields, tf, state, baselineEmeralds);
             comparisons.add(new FrameComparison(f, fields));
         }
 
@@ -208,8 +240,40 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
     private static void addFields(Map<String, FieldComparison> fields,
                                   Sonic1SpecialStageTraceFrame tf,
                                   Sonic1SpecialStageComparisonState state,
-                                  int baselineRings,
                                   int baselineEmeralds) {
+        // Recorded ROM pre-start hold marker (see class javadoc): GM_Special
+        // sets v_ssrotate = ss_rotatespeed ($40) exactly once, in its instant
+        // setup block after PaletteWhiteOut (docs/s1disasm/sonic.asm:3268),
+        // and it only ever increases thereafter (_incObj/09 Sonic in Special
+        // Stage.asm:385). So a recorded ss_rotate of 0 uniquely marks the
+        // pre-setup fade, during which v_objspace/v_rings are still uncleared
+        // (sonic.asm:3243,3286) and Obj09 has not been executed
+        // (first ExecuteObjects at sonic.asm:3306). While that holds, the
+        // object-owned physics columns and the ring counter carry leftover
+        // previous-zone RAM, not live special-stage state, so they are not
+        // comparable and are omitted from the report until setup has run.
+        boolean preStartHold = (tf.ssRotate() & 0xFFFF) == 0;
+
+        // Special-stage globals: cleared/set by GM_Special's setup and read as
+        // 0 by both sides during the fade -- always comparable.
+        fields.put("ss_angle", cmp("ss_angle",
+                str(tf.ssAngle() & 0xFFFF), str(state.ssAngle() & 0xFFFF), Severity.ERROR));
+        fields.put("ss_rotate", cmp("ss_rotate",
+                str(tf.ssRotate() & 0xFFFF), str(state.ssRotate() & 0xFFFF), Severity.ERROR));
+        fields.put("bg_anim", cmp("bg_anim",
+                str(tf.bgAnim() & 0xFFFF), str(state.bgAnimState() & 0xFFFF), Severity.ERROR));
+
+        // Emeralds persist across special stages (not cleared by setup), so the
+        // frame-0 baseline detects a newly-collected emerald in this run.
+        boolean expectedEmeraldCollected = tf.emeralds() != baselineEmeralds;
+        fields.put("emeralds", cmp("emeralds",
+                bool(expectedEmeraldCollected), bool(state.emeraldCollected()), Severity.ERROR));
+
+        if (preStartHold) {
+            return;
+        }
+
+        // ---- Obj09-owned physics (live only once ExecuteObjects has run) ----
         // Tier-1. x_pos/y_pos keep the manager's full 16.16 fixed-point
         // longword layout; mask both sides & 0xFFFFFFFFL and compare as
         // Long.toString so a sign-extended long on either side still
@@ -236,24 +300,11 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
         fields.put("status_airborne", cmp("status_airborne",
                 bool((tf.status() & 0x2) != 0), bool(state.sonicAirborne()), Severity.ERROR));
 
-        fields.put("ss_angle", cmp("ss_angle",
-                str(tf.ssAngle() & 0xFFFF), str(state.ssAngle() & 0xFFFF), Severity.ERROR));
-        fields.put("ss_rotate", cmp("ss_rotate",
-                str(tf.ssRotate() & 0xFFFF), str(state.ssRotate() & 0xFFFF), Severity.ERROR));
-        fields.put("bg_anim", cmp("bg_anim",
-                str(tf.bgAnim() & 0xFFFF), str(state.bgAnimState() & 0xFFFF), Severity.ERROR));
-
-        // Delta-based: ROM v_rings may carry a pre-SS value into the maze
-        // while the engine's ringsCollected always starts at 0 for a fresh
-        // stage entry, so the per-frame delta against the trace's own first
-        // row is the comparable quantity.
-        int expectedRingsDelta = (tf.rings() - baselineRings) & 0xFFFF;
+        // Direct from 0: GM_Special clears v_rings (docs/s1disasm/sonic.asm:3286)
+        // before the maze runs, so the live recorded count is a fresh tally
+        // from 0 directly comparable to the engine's ringsCollected.
         fields.put("rings", cmp("rings",
-                str(expectedRingsDelta), str(state.ringsCollected()), Severity.ERROR));
-
-        boolean expectedEmeraldCollected = tf.emeralds() != baselineEmeralds;
-        fields.put("emeralds", cmp("emeralds",
-                bool(expectedEmeraldCollected), bool(state.emeraldCollected()), Severity.ERROR));
+                str(tf.rings() & 0xFFFF), str(state.ringsCollected()), Severity.ERROR));
     }
 
     private static FieldComparison cmp(String name, String expected, String actual,
