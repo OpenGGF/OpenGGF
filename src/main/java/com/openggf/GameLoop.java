@@ -1755,7 +1755,7 @@ public class GameLoop {
         return BonusStageType.SLOT_MACHINE;
     }
 
-    static ObjectSpawn resolveBonusStageBootstrapSpawn(BonusStageType type) {
+    public static ObjectSpawn resolveBonusStageBootstrapSpawn(BonusStageType type) {
         if (type != BonusStageType.GLOWING_SPHERE) {
             return null;
         }
