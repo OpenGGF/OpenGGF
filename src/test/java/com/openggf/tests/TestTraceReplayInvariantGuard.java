@@ -236,7 +236,11 @@ class TestTraceReplayInvariantGuard {
                     // AbstractS2SpecialStageTraceReplayTest above: the SS provider is a
                     // standalone MiniGameProvider (no level pipeline), so it intentionally
                     // does not extend AbstractTraceReplayTest.
-                    && !text.contains("extends AbstractS3kSpecialStageTraceReplayTest")) {
+                    && !text.contains("extends AbstractS3kSpecialStageTraceReplayTest")
+                    // AbstractS1SpecialStageTraceReplayTest is the S1 maze analogue of the
+                    // two SS bases above (s1_special_stage profile, provider stepped
+                    // directly, no level pipeline) — same intentional non-extension.
+                    && !text.contains("extends AbstractS1SpecialStageTraceReplayTest")) {
                 violations.add(normalized);
             }
         }
