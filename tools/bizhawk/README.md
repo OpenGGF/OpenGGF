@@ -201,7 +201,7 @@ level). These are recorded as separate segment directories in a single trace run
 6. Stop the movie and save as `s3k-aiz-slots.bk2`.
 
 **Recording Notes:** The slot-machine bonus suppresses sidekicks at runtime (only Sonic plays),
-and the trace comparator columns bypass the sprite seam for slot sessions. Record **SONIC-SOLO**
+and the sidekick comparator columns bypass the sprite seam for slot sessions. Record **SONIC-SOLO**
 exclusively — a team recording (Sonic + Tails) adds pure noise to the comparator output.
 
 **Recorder Invocation:**

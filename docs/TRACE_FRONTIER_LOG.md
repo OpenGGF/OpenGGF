@@ -1,11 +1,11 @@
 # Trace Frontier Log
 
-### 2026-07-19 -- S3K slot-machine bonus replay scaffolding landed (plan b)
+### 2026-07-19 -- S3K slot-machine bonus replay scaffolding landed (slots-depth plan)
 
 Branch `feature/ai-mstr-slots` landed the slot-machine headless replay slice:
 the `applyBonusStageEntry` bootstrap seam accepts `bonus_stage_type: "slots"` (profile-gated,
 accepted by bonusStageTypeForToken (unknown tokens still throw)), and `TestS3kSlotsBonusTraceReplay`
-(zone 0x15) SKIPs until its recording exists. The recorder v6.30 was already wired to emit
+(zone 0x15) SKIPs until its recording exists. The plan-a recorder state machine (current: v6.31) was already wired to emit
 `slots/` segments with `bonus_stage_type: "slots"` in metadata.json; no recorder changes
 needed. Rewind: slots runtime sets `supportsRewind=false`; headless replay never reaches
 `updateBonusStageMode` (verified, no work). The camera columns are meaningful under the
