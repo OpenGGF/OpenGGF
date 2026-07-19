@@ -102,9 +102,10 @@ class TestSparkleBadnikInstance {
         sparkle.setServices(new SparkleTestServices(spawned));
         setPrivateField(sparkle, "state", enumConstant(sparkle, "State", "CHARGE"));
         setPrivateField(sparkle, "chargeTimer", 0);
-        setPrivateField(sparkle, "chargeDelay", 1);
+        setPrivateField(sparkle, "chargeDelay", 0);
         setPrivateField(sparkle, "chargeFrameIndex", 1);
-        setPrivateField(sparkle, "chargeCycles", 11);
+        setPrivateField(sparkle, "chargeCycles", 15);
+        setPrivateField(sparkle, "chargeRawActive", true);
 
         sparkle.update(0, null);
 
@@ -125,9 +126,10 @@ class TestSparkleBadnikInstance {
         sparkle.setServices(new SparkleTestServices(spawned));
         setPrivateField(sparkle, "state", enumConstant(sparkle, "State", "CHARGE"));
         setPrivateField(sparkle, "chargeTimer", 0);
-        setPrivateField(sparkle, "chargeDelay", 1);
+        setPrivateField(sparkle, "chargeDelay", 0);
         setPrivateField(sparkle, "chargeFrameIndex", 1);
-        setPrivateField(sparkle, "chargeCycles", 11);
+        setPrivateField(sparkle, "chargeCycles", 15);
+        setPrivateField(sparkle, "chargeRawActive", true);
 
         sparkle.update(0, null);
 
@@ -151,6 +153,29 @@ class TestSparkleBadnikInstance {
         inOrder.verify(renderer).drawFrameIndex(2, 0x0100, 0x0100 + 0x34, false, false);
         inOrder.verify(renderer).drawFrameIndex(8, 0x0100, 0x0100 + 0x34, false, false);
         inOrder.verify(renderer).drawFrameIndex(3, 0x0100, 0x0100 + 0x34, false, false);
+    }
+
+    @Test
+    void chargeUsesRawGetFasterTerminalLoopCadence() throws Exception {
+        List<ObjectInstance> spawned = new ArrayList<>();
+        SparkleBadnikInstance sparkle = new SparkleBadnikInstance(new ObjectSpawn(
+                0x0100, 0x0100, Sonic3kObjectIds.SPARKLE, 0, 0x02, false, 0));
+        sparkle.setServices(new SparkleTestServices(spawned));
+        setPrivateField(sparkle, "state", enumConstant(sparkle, "State", "CHARGE"));
+        setPrivateField(sparkle, "chargeTimer", 0);
+        setPrivateField(sparkle, "chargeFrameIndex", 0);
+        setPrivateField(sparkle, "chargeRawActive", false);
+
+        for (int frame = 0; frame < 130; frame++) {
+            sparkle.update(frame, null);
+        }
+        assertTrue(spawned.isEmpty(),
+                "byte_89362 must complete all 16 zero-delay loops before dispatching its callback");
+
+        sparkle.update(130, null);
+
+        assertEquals(1, spawned.size());
+        assertEquals("SparkleLightningWarning", spawned.get(0).getName());
     }
 
     @Test

@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ Sparkle cadence and door/vacuum slot order: f18680 -> f20502
+
+The f18680 contact came from Sparkle's warning child appearing before the ROM
+allocated it. `Animate_RawGetFaster` decrements the script's initial delay from
+9 through zero, then executes 16 zero-delay loops before the terminal callback;
+the former minimum-delay/loop heuristic reached that callback early. Sparkle
+now runs the raw script cadence directly, including its final callback dispatch
+(`docs/skdisasm/sonic3k.asm:177754-177807,186052-186058`).
+
+At f20234, the horizontal Door SST re-seated CPU Tails and the immediately
+following vacuum-tube SST set `Status_InAir` without clearing `Status_OnObj`.
+The engine's central solid checkpoint instead allowed that later object to
+consume the Door's standing bit, then recovered grounding before player
+movement. Horizontal Door now retains its own checkpoint and exposes the stale
+airborne ride until its next `SolidObjectFull` pass clears it, preserving the
+native SST-order handoff. The later CNZ palette-flash child also clears its
+derived owner back-link on destruction and reconstructs it after rewind, so the
+captured forward-link graph stays closed at completion.
+
+The focused Sparkle, Door, cutscene-button rewind, schema, and rewind-coverage
+suites pass. CNZ complete-run physics advances from f18680 to f20502; its next
+mismatch is CPU Tails one pixel low during the vacuum lift. The full
+comparison-only sweep remains 45/58 physics green with the same 13 expected-red
+routes and unchanged green AIZ, HCZ, and MGZ complete runs. Animation remains
+44/58 green with the same 14 expected-red or unsupported routes; CNZ
+complete-run animation remains at f108 and legacy standalone CNZ at f0.
+
 ### 2026-07-19 -- S3K angled-ceiling Bubble Shield tail: f18354 -> f18680
 
 CNZ was exact through f18353, where airborne rolling Sonic entered an angled

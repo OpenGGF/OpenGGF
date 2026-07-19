@@ -36,8 +36,7 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
     private static final int FIRE_WAIT = 0x20;
     private static final int FIRE_Y_OFFSET = 0x68;
     private static final int CHARGE_INITIAL_DELAY = 9;
-    private static final int CHARGE_MIN_DELAY = 1;
-    private static final int CHARGE_CYCLES = 12;
+    private static final int CHARGE_TERMINAL_LOOPS = 0x10;
     private static final int[] CHARGE_FRAMES = {0, 1};
 
     private enum State { WAIT, CHARGE, WARNING_WAIT, FIRE_WAIT }
@@ -48,6 +47,7 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
     private int chargeTimer = CHARGE_INITIAL_DELAY;
     private int chargeFrameIndex;
     private int chargeCycles;
+    private boolean chargeRawActive;
     private boolean verticalPhaseDown;
 
     public SparkleBadnikInstance(ObjectSpawn spawn) {
@@ -88,25 +88,44 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
         chargeDelay = CHARGE_INITIAL_DELAY;
         chargeTimer = 0;
         chargeCycles = 0;
+        chargeRawActive = false;
     }
 
     private void updateCharge() {
-        if (chargeTimer-- > 0) {
+        // Animate_RawGetFaster: the first call primes $2E/$2F, then every
+        // terminator pass reduces the delay until it reaches zero. Only the
+        // zero-delay passes count toward the script's byte-1 terminal count.
+        if (!chargeRawActive) {
+            chargeRawActive = true;
+            chargeDelay = CHARGE_INITIAL_DELAY;
+            chargeCycles = 0;
+        }
+
+        if (--chargeTimer >= 0) {
             return;
         }
 
-        chargeFrameIndex = (chargeFrameIndex + 1) % CHARGE_FRAMES.length;
-        mappingFrame = CHARGE_FRAMES[chargeFrameIndex];
-        chargeTimer = chargeDelay;
-        if (chargeDelay > CHARGE_MIN_DELAY) {
+        chargeFrameIndex++;
+        if (chargeFrameIndex >= CHARGE_FRAMES.length) {
+            chargeFrameIndex = 0;
+            if (chargeDelay == 0) {
+                chargeCycles++;
+                mappingFrame = CHARGE_FRAMES[chargeFrameIndex];
+                chargeTimer = chargeDelay;
+                if (chargeCycles >= CHARGE_TERMINAL_LOOPS) {
+                    chargeRawActive = false;
+                    chargeCycles = 0;
+                    state = State.WARNING_WAIT;
+                    timer = WARNING_WAIT;
+                    spawnChild(() -> new SparkleLightningWarningChild(spawn, this));
+                }
+                return;
+            }
             chargeDelay--;
         }
 
-        if (chargeFrameIndex == 0 && ++chargeCycles >= CHARGE_CYCLES) {
-            state = State.WARNING_WAIT;
-            timer = WARNING_WAIT;
-            spawnChild(() -> new SparkleLightningWarningChild(spawn, this));
-        }
+        mappingFrame = CHARGE_FRAMES[chargeFrameIndex];
+        chargeTimer = chargeDelay;
     }
 
     private void updateWarningWait() {

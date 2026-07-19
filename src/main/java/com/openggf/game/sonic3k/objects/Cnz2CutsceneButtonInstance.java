@@ -153,7 +153,7 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
         S3kCnzEventWriteSupport.setWaterTargetY(services(), CNZ2_CUTSCENE_WATER_TARGET_Y);
         services().playSfx(Sonic3kSfx.GEYSER.id);
         // ROM spawns the flash child with subtype 0 (no restore -> lights stay off).
-        spawnedFlash = spawnChild(() -> new CnzLightsFlashChildInstance(buildSpawnAt(x, y), false));
+        spawnedFlash = spawnChild(() -> new CnzLightsFlashChildInstance(buildSpawnAt(x, y), false, this));
     }
 
     /**
@@ -200,6 +200,16 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
     /** Test seam: the lights-off flash child spawned on press, or null. */
     CnzLightsFlashChildInstance getSpawnedFlashForTest() {
         return spawnedFlash;
+    }
+
+    boolean ownsFlash(CnzLightsFlashChildInstance flash) {
+        return spawnedFlash == flash;
+    }
+
+    void clearCompletedFlash(CnzLightsFlashChildInstance flash) {
+        if (spawnedFlash == flash) {
+            spawnedFlash = null;
+        }
     }
 
     /** Test seam for native respawn-entry persistence assertions. */

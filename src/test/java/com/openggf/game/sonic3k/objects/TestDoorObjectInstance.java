@@ -45,6 +45,19 @@ public class TestDoorObjectInstance {
     }
 
     @Test
+    public void solidObjectFullConsumesAirborneRideAtDoorOwnCheckpoint() {
+        DoorObjectInstance door = new DoorObjectInstance(
+                new ObjectSpawn(0x1540, 0x0408, 0x3C, 0x80, 0, false, 0));
+        TestPlayableSprite tails = createPlayerAtCentre(0x1556, 0x03EC);
+
+        assertTrue(door.airborneRiderUnseatRequiresOwnCheckpoint(tails),
+                "A later CNZ controller slot must not consume Obj_Door's standing bit; "
+                        + "SolidObjectFull does so when the door's own slot runs");
+        assertTrue(door.suppressesGroundingRecoveryFromAirborneStaleRide(tails),
+                "Player movement must retain InAir until Obj_Door's later SolidObjectFull pass");
+    }
+
+    @Test
     public void horizontalDoorUsesWideCollisionAndMovesOnXAxis() {
         DoorObjectInstance door = new DoorObjectInstance(
                 new ObjectSpawn(0x200, 0x180, 0x3C, 0x80, 0, false, 0));
@@ -219,4 +232,3 @@ public class TestDoorObjectInstance {
         }
     }
 }
-

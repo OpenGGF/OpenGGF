@@ -184,6 +184,26 @@ public class DoorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity playerEntity) {
+        // SolidObjectFull consumes only this door's own a0.d6 standing bit.
+        // A later object's checkpoint cannot clear the door ride on its behalf.
+        // This matters when a later controller (the CNZ vacuum tube is the
+        // native example) sets Status_InAir after the door has re-seated P2;
+        // the final frame legitimately contains both OnObj and InAir, and the
+        // door clears its stale standing bit when its own slot runs next frame.
+        return true;
+    }
+
+    @Override
+    public boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity playerEntity) {
+        // Player movement runs before Obj_Door's SolidObjectFull checkpoint.
+        // If a later controller set InAir while leaving this door's standing
+        // bit intact, movement must consume the airborne routine first; the
+        // door then clears its own stale support in object-slot order.
+        return true;
+    }
+
+    @Override
     public boolean carriesRiderOnHorizontalMove(PlayableEntity playerEntity) {
         // Obj_Door stores the post-slide x_pos in d4 immediately before
         // SolidObjectFull (docs/skdisasm/sonic3k.asm:66123-66137,
