@@ -1514,6 +1514,37 @@ scan is `loc_1B982` at lines 37723-37762.
 
 ---
 
++---
+
+## P44 -- Grounded squash-edge escapes can still publish push while moving away
+
+**Symptom.** A grounded player is separated sideways from the lower half of a
+full-solid object and all positions and velocities match ROM, but
+`Status_Push` is missing for that frame. This often occurs beside upright
+spikes or another short solid when the player is moving away from the nearer
+edge.
+
+**Root cause.** `SolidObject_Squash` / the S3K lower-half branch sends an
+`abs(d0) < $10` overlap back through the normal left/right helper. The later
+AtEdge path publishes the player and object push bits for any grounded side
+separation; it does not require the player to be moving into the solid.
+Treating the squash escape as correction-only loses the transient status bit.
+
+**Correct pattern.** For concrete `SolidObjectFull` callers whose disassembly
+uses this shared escape, implement
+`groundedSquashEdgeSideContactSetsPush()`. Keep position correction and speed
+zeroing under their existing movement-direction gates; only the grounded push
+publication is unconditional. Test a lower-half overlap within $10 pixels
+while moving away.
+
+**ROM citation.** S3K `SolidObjectFull` escapes the lower-half squash at
+`docs/skdisasm/sonic3k.asm:41564-41568` and publishes grounded push through
+`loc_1E06E` at lines 41473-41495. S2 follows the corresponding
+`SolidObject_Squash -> SolidObject_LeftRight` path at
+`docs/s2disasm/s2.asm:35336-35402`.
+
+**Originating commit.** `<pending: shared spike squash-edge push milestone>`.
+
 ## How to add a new entry
 When a trace-replay-bug-fixing iteration commits an object fix whose root
 cause is a class of bug (not a one-off):

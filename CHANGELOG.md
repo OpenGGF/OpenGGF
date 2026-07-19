@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S2/S3K spikes now publish grounded push on lower-half squash-edge escapes:** the `SolidObjectFull` escape through the normal side helper sets player/object push bits even while the player moves away, advancing CNZ complete-run physics from frame 8388 to frame 9618 (`docs/skdisasm/sonic3k.asm:41473-41495,41564-41568`; `docs/s2disasm/s2.asm:35336-35402`).
 - **S3K off-screen self-deletes remain eligible for later Camera-Y placement scans:** clearing a live object's respawn bit now retains the X-cursor-passed entry for `loc_1B982`, restoring CNZ balloon reload order and its shared RNG phase. This advances CNZ complete-run physics from frame 7708 to frame 8388 (`docs/skdisasm/sonic3k.asm:37262-37276,37723-37762`).
 - **CNZ cylinder twist frames no longer overwrite player gameplay facing:** `loc_32610` copies `PlayerTwistFlip` only into `render_flags`, so a visually flipped held Sonic retains the native `Status_Facing` bit. This advances CNZ complete-run physics from frame 7512 to frame 7708 (`docs/skdisasm/sonic3k.asm:68078-68100`).
 - **S3K solid-object ROM pointer words now preserve CPU Tails' native off-screen interact latch:** CNZ doors retain SST code-pointer word `$0003`, while springs expose `$0002`, allowing `sub_13EFC` to detect that an off-screen Tails changed supports and perform the native `$7F00` marker warp. This advances CNZ complete-run physics from frame 6820 to frame 7512 (`docs/skdisasm/sonic3k.asm:26816-26843,47500-47540,66036-66167`).

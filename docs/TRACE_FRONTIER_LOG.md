@@ -45693,6 +45693,27 @@ remains 44/58 green with the same eight unsupported S1 credits traces and six
 comparison-red routes; CNZ complete-run animation remains at f108 and legacy
 standalone CNZ remains at f0 in both scopes.
 
+### 2026-07-19 -- Spike lower-half escape push publication: f8388 -> f9618
+
+At f8388 Sonic overlaps the lower-right portion of the vertically moving spike
+at `$2280,$05D0`. The engine already applies the native nine-pixel side
+separation and preserves `x_vel/ground_vel`, but its grounded squash-edge
+escape only published push when the player was moving into the object. ROM
+routes the `abs(d0) < $10` escape back through `loc_1E042` and unconditionally
+sets the grounded player/object push bits at `loc_1E06E`
+(`docs/skdisasm/sonic3k.asm:41473-41495,41564-41568`).
+
+The shared spike base now opts into the existing full-solid squash-edge push
+contract. Focused spike tests pass and CNZ complete-run physics advances from
+f8388 `status_byte` to f9618 `x`. The change is object-routine-driven and
+contains no trace hydration or zone/route/frame predicate.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-19 -- S3K persistent Tails interact pointer words: f6820 -> f7512
 
 At f6820 ROM CPU Tails changes from a previously ridden CNZ horizontal door to
