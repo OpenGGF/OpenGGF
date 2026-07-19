@@ -69,12 +69,19 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
     // ===== ROM constants =====
 
     // ROM word_60D16: dc.w -$24, $48, -8, $10 = (xOffset=-36, width=72, yOffset=-8, height=16)
-    // Check_PlayerInRange uses (xOffset..xOffset+width) x (yOffset..yOffset+height),
-    // giving a 72x16 pixel activation zone centered around the machine.
-    private static final int ACTIVATE_X_MIN = -36;  // xOffset
-    private static final int ACTIVATE_X_MAX = 36;   // xOffset + width
-    private static final int ACTIVATE_Y_MIN = -8;   // yOffset
-    private static final int ACTIVATE_Y_MAX = 8;    // yOffset + height
+    // Check_PlayerInRange / sub_8592C (sonic3k.asm:179994-180031) builds the box as
+    //   left = objX + xOffset, right = left + width, top = objY + yOffset, bottom = top + height
+    // and tests it HALF-OPEN: `cmp right,px / bhs out` and `cmp bottom,py / bhs out`
+    // reject px>=right and py>=bottom, so the inclusive edges are only the low ones
+    // (left/top). The box is therefore [left,right) x [top,bottom). Using `<=` on the
+    // high edges fires one frame early on an approach that lands flush on the bottom
+    // edge (py == objY+8): the S3K gumball trace has the player rising through py=objY+8
+    // one frame before it truly enters the ROM box, which dispenses the ball a frame
+    // early and desyncs its fall position at the eventual player pickup.
+    private static final int ACTIVATE_X_MIN = -36;  // left  = objX + xOffset   (inclusive)
+    private static final int ACTIVATE_X_MAX = 36;   // right = objX + xOffset+width (exclusive)
+    private static final int ACTIVATE_Y_MIN = -8;   // top    = objY + yOffset   (inclusive)
+    private static final int ACTIVATE_Y_MAX = 8;    // bottom = objY + yOffset+height (exclusive)
 
     // ROM: ObjDat_GumballMachine priority $0100 → bucket 2 (same as Sonic).
     // Draw_Sprite uses priority as byte offset into Sprite_table_input ($80/bucket).
@@ -185,13 +192,22 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
     // Piles/glass render behind high-priority FG tiles, visible through transparent areas.
     private static final int BODY_PRIORITY_BUCKET = 4;
 
-    // ROM: byte_61450 = [3, 5, 6, 7, $14, 5, $FF]
-    // First byte (3) is the per-frame timer, NOT a mapping frame.
-    // Actual animation frames: 5, 6, 7, $14, 5.
-    // ROM timer stores (value) then decrements via bpl check (runs value+1 frames).
+    // ROM loc_60D1E runs Animate_RawNoSST(byte_61450), byte_61450 = [3, 5, 6, 7, $14, 5, $F4, ...].
+    // First byte (3) is the per-frame timer; frames are 5, 6, 7, $14, 5, then the $F4
+    // control byte invokes the object's $34 routine (loc_60D32) which sets machine bit 3
+    // and dispenses the ball.
     private static final int[] SPIN_FRAMES = {5, 6, 7, 0x14, 5};
     private static final int SPIN_FRAME_DURATION = 4; // ROM timer=3 + 1 for bpl check
-    private static final int SPIN_TOTAL_FRAMES = SPIN_FRAMES.length * SPIN_FRAME_DURATION;
+    // ROM Animate_RawNoSST (sonic3k.asm:177341): `subq.b #1,anim_frame_timer / bpl skip`.
+    // anim_frame_timer is 0 on SPIN entry (SetUp_ObjAttributes clears it and the IDLE
+    // state never animates), so the FIRST call advances immediately (1 game-frame), and
+    // each of the remaining 4 frames holds for timer+1 = 4. The $F4 control byte / bit-3
+    // dispense is therefore reached 1 + 4*4 = 17 frames after SPIN entry, NOT 5*4 = 20.
+    // Verified against the recorded ROM trace: IDLE->SPIN at frame 122, ball dispensed at
+    // frame 139 (delta 17); the previous 20-frame model dispensed the ball 2 frames late,
+    // desyncing its fall position (and the arctan bump velocity it imparts) at pickup.
+    private static final int SPIN_TOTAL_FRAMES =
+            1 + (SPIN_FRAMES.length - 1) * SPIN_FRAME_DURATION;
 
     // ROM: ObjDat_GumballMachine byte 2 = 5 — default mapping frame (machine body)
     private static final int IDLE_MAPPING_FRAME = 5;
@@ -575,8 +591,9 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         int dx = playerX - spawn.x();
         int dy = playerY - currentY;
 
-        if (dx >= ACTIVATE_X_MIN && dx <= ACTIVATE_X_MAX
-                && dy >= ACTIVATE_Y_MIN && dy <= ACTIVATE_Y_MAX) {
+        // ROM sub_8592C: half-open box — low edges inclusive, high edges exclusive (bhs).
+        if (dx >= ACTIVATE_X_MIN && dx < ACTIVATE_X_MAX
+                && dy >= ACTIVATE_Y_MIN && dy < ACTIVATE_Y_MAX) {
             // ROM: play sfx_GumballTab, determine flip, transition to SPIN
             try {
                 services().playSfx(Sonic3kSfx.GUMBALL_TAB.id);

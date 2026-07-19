@@ -504,9 +504,23 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
         // ROM: jsr (GetArcTan).l — returns angle in d0
         int angle = TrigLookupTable.calcAngle((short) dx, (short) dy);
 
-        // ROM: move.b (Level_frame_counter).w,d1 / andi.w #3,d1 / add.w d1,d0
-        // Slight angle randomization from frame counter
-        angle = (angle + (frameCounter & 3)) & 0xFF;
+        // ROM sub_61176 (sonic3k.asm:127878-127880):
+        //   move.b (Level_frame_counter).w,d1 / andi.w #3,d1 / add.w d1,d0
+        // Level_frame_counter is a big-endian WORD; `move.b (addr).w` reads the
+        // HIGH byte, so the jitter is (Level_frame_counter >> 8) & 3 — a value that
+        // rotates every 256 frames, NOT every frame. Using the low bits (`fc & 3`)
+        // picks the wrong quarter and the wrong counter (ObjectManager's since-load
+        // frameCounter rather than the ROM Level_frame_counter). Mirror the S2
+        // BumperObjectInstance / CrawlBadnikInstance handling of the same ROM idiom.
+        int levelFrameCounter = frameCounter;
+        try {
+            if (services().levelManager() != null) {
+                levelFrameCounter = services().levelManager().getFrameCounter();
+            }
+        } catch (Exception e) {
+            // Fall back to the passed frame counter when LevelManager is unavailable (tests).
+        }
+        angle = (angle + ((levelFrameCounter >> 8) & 3)) & 0xFF;
 
         // ROM: jsr (GetSineCosine).l — d0=sin(angle), d1=cos(angle)
         // ROM: muls.w #-$700,d1 / asr.l #8,d1 → x_vel
