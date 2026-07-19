@@ -137,8 +137,16 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
         int previousX = player.getCentreX();
         int previousY = player.getCentreY();
         placePlayerOnOrbit(player, state);
-        player.setXSpeed((short) (-(player.getCentreX() - previousX) << 8));
-        player.setYSpeed((short) (-(player.getCentreY() - previousY) << 8));
+        // ROM sub_4A428 loc_4A464 (sonic3k.asm:96974-96989): saves the OLD x_pos/y_pos,
+        // recomputes the new orbit position via sub_4A5E0, then computes
+        // `sub.w x_pos(a1),d1` (old-new) followed by `asl.w #8,d1` and `neg.w d1`,
+        // yielding x_vel = -(old-new)<<8 = (new-old)<<8 -- i.e. plain per-frame
+        // displacement, NOT displacement negated. The extra unary minus here inverted
+        // the sign of both axes, so a player orbiting downward reported y_speed going
+        // the wrong direction (observed: engine y_speed=-0x0100 vs ROM +0x0100 while
+        // captured by a Pachinko energy-trap-adjacent magnet orb).
+        player.setXSpeed((short) ((player.getCentreX() - previousX) << 8));
+        player.setYSpeed((short) ((player.getCentreY() - previousY) << 8));
         player.setGSpeed((short) 0x0800);
         player.setAir(true);
 
