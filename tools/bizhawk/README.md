@@ -332,6 +332,100 @@ the first frame, and x_pos/y_pos remain within 0xFFFF. These diagnostics are man
 for validating that the schema addresses are correctly mapped to the ROM's special-stage
 state block.
 
+## Recording S1 Maze Round-Trip Traces (s1-ghz-maze-roundtrip)
+
+An **S1 maze round-trip trace** captures a single GHZ playthrough that includes entry into
+the special stage (maze, accessed via the giant ring past the signpost) mid-act, completion
+or failure of the maze, and continuation into the next act. The trace includes the GHZ1 level
+segment, a dedicated `special_stage` segment with the S1 maze schema, and the GHZ2 level
+segment.
+
+**Human Recording Procedure (BizHawk 2.11 + Genplus-gx):**
+
+1. Start a new movie from power-on with the S1 World REV01 ROM, on a **fresh save/no-emeralds
+   state**. Do not resume from a save that already collected an emerald — after a first
+   emerald is collected, `v_lastspecial`'s pre-`SS_Load` value can name a stage the ROM's skip
+   loop rejects, mislabeling the segment.
+2. Play GHZ1, collecting at least 50 rings.
+3. Touch the giant ring past the signpost to trigger the maze special stage.
+4. Play through the maze to its conclusion — complete it, or fail out of it. Either outcome is
+   acceptable for this recording.
+5. Continue into GHZ2 and keep playing until control is settled (a few seconds of normal
+   act-2 gameplay after the transition).
+6. Stop the movie and save as `s1-complete-run.bk2`.
+
+**Recorder Invocation:**
+
+Run the complete-run recorder over your movie file:
+
+```bat
+set OGGF_TRACE_OUTPUT_DIR=C:\tmp\s1_maze_trace
+set OGGF_TRACE_RUN_ID=s1-ghz-maze-roundtrip
+
+tools\bizhawk\run_bizhawk_lua.bat ^
+  tools\bizhawk\s1_complete_run_recorder.lua ^
+  s1-complete-run.bk2 ^
+  s1.gen
+```
+
+The `$10` (special-stage) detour is handled automatically by the recorder's state machine — no
+extra flags are needed. The `OGGF_TRACE_RUN_ID` env var ensures a stable `run_id` is recorded in
+the manifest, used for organizing the commit layout under `src/test/resources/traces/s1/runs/<run_id>/`.
+
+**Expected Output:**
+
+The output directory will contain:
+- `run_manifest.json` — indexed transitions for the GHZ1→maze and maze→GHZ2 boundaries.
+- `ghz1/` — level segment (GHZ Act 1, frames 0 to giant-ring entry).
+- `ss/` — special-stage segment with the S1 maze schema. Both segments contain `physics.csv`
+  and `aux_state.jsonl` (plain format; gzip compression is applied at commit time).
+- `ghz2/` — GHZ Act 2 segment following the maze exit. Step 5 above guarantees this segment
+  will be present.
+
+**Commit Layout:**
+
+Commit the whole run under test resources:
+
+```
+src/test/resources/traces/s1/runs/s1-ghz-maze-roundtrip/
+  ├── run_manifest.json
+  ├── ghz1/
+  │   ├── metadata.json
+  │   ├── physics.csv.gz
+  │   └── aux_state.jsonl.gz
+  ├── ss/
+  │   ├── metadata.json
+  │   ├── physics.csv.gz
+  │   └── aux_state.jsonl.gz
+  └── ghz2/
+      ├── metadata.json
+      ├── physics.csv.gz
+      └── aux_state.jsonl.gz
+```
+
+Then copy the `ss/` segment (its `metadata.json`, `physics.csv`, and the source bk2) to
+`src/test/resources/traces/s1/special_stage/` to activate `TestS1SpecialStageTraceReplay`.
+
+**Mandatory bk2 rename:** commit the movie as `s1-complete-run.bk2` inside both trace
+directories (the run's root and the copied `special_stage/` directory). Do not rename the
+movie file and edit `source_bk2` in the copied SS metadata instead — the level segments'
+metadata hardcodes the literal `"s1-complete-run.bk2"` (recorder `write_metadata`, L516), so
+editing only the copy's `source_bk2` would leave the run bundle internally inconsistent.
+
+**VERIFY-ON-FIRST-CAPTURE Self-Check:**
+
+At SS-segment open, every 300 frames during the stage, and at finalize time, the recorder
+prints diagnostics to stdout. Confirm all of the following before committing the trace:
+- A plausible angle range in the finalize summary (`SS self-check: angle range seen=...`).
+- The final `ss_rotate` ramping toward `0x1800` (the exit ramp target).
+- Rings and emeralds behaving sensibly across the printed samples.
+- The finalize `v_lastspecial` re-read printing `(special_stage_index + 1) % 6`. Anything else
+  means the `SS_Load` emerald-skip loop fired and the recorded `special_stage_index` is
+  suspect.
+
+Any surprise in these prints means re-derive the RAM map before committing the trace — do not
+commit a trace whose self-check output looks off.
+
 If you update the trace workflow, update the guide page above first so the contributor docs stay in
 sync with the tools.
 

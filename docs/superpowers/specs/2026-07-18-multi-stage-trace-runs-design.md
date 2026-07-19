@@ -198,8 +198,10 @@ Per game:
   - Frames between segments (fade/title-card/results, `SpecialStage_Results
     $48`) are recorded only as manifest transition records, not CSV rows.
   - The recorder emits the manifest at finalize time.
-- **`s1_trace_recorder.lua`** gains the same state machine with an embedded S1
-  maze row writer for mode `$10`.
+- **`s1_complete_run_recorder.lua`** gains the same state machine with an
+  embedded S1 maze row writer for mode `$10` (landed host, mirroring the S3K
+  parity split above -- the run machinery lives in the complete-run
+  recorders, not the interior-only `s1_trace_recorder.lua`).
 - **`s2_trace_recorder.lua`** gains the state machine with the 48-col SS row
   writer copy-ported from `s2_ss_trace_recorder.lua` (which stays as-is for
   interior-only captures). The SS writer port includes the `emu.islagged()`

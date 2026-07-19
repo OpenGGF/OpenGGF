@@ -7,6 +7,8 @@ All notable changes to the OpenGGF project are documented in this file.
 - Trace replay: slot-machine bonus segments accepted (deferred-setup seam wired).
 - Trace framework: s3k_special_stage trace parser.
 - S3K special stage: read-only comparison snapshot for trace replay.
+- S1 special stage: read-only comparison snapshot accessors for trace replay (multi-stage trace run spec addition #2).
+- Trace framework: s1_special_stage trace schema (14-column physics.csv frame record + profile-gated loader) for the S1 maze trace pipeline.
 - Trace replay: per-game special-stage launch config helper (dormant S3K fresh-load seam).
 - Trace replay: fresh_load metadata drives the S3K special-stage launch config.
 - Trace framework: run_manifest.json schema + TraceRunManifest parser/validator for multi-segment trace runs (spec 2026-07-18).
