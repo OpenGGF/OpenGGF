@@ -201,19 +201,28 @@ public class Sonic3kSpecialStagePlayer {
         }
 
         // Process turning
+        // ROM: sonic3k.asm:11940-11954. After rotating the angle, the ROM only
+        // returns early (bne.w locret_972C, line 11949) while the turn is NOT
+        // yet complete (angle not aligned to a cardinal direction). Once the
+        // turn completes on this same frame, it falls straight through into
+        // loc_95F4 (line 11955, no intervening rts) and continues processing
+        // movement/position update in that same frame -- it does not wait for
+        // the next frame.
         if (turning != 0 && (axisPos & CELL_ALIGN_MASK) == 0) {
             if ((jumping & 0x80) != 0) {
-                // Can't turn while jumping; skip to position update
+                // Can't turn while jumping; skip to position update (loc_9600 falls through)
             } else {
                 angle = (angle + turning) & 0xFF;
-                if ((angle & ANGLE_ALIGN_MASK) == 0) {
-                    // Turn complete - aligned to cardinal direction
-                    turning = 0;
-                    if (velocity != 0) {
-                        turnLock = true;
-                    }
+                if ((angle & ANGLE_ALIGN_MASK) != 0) {
+                    // Turn not yet complete this frame - only rotate, return early
+                    return;
                 }
-                return; // During turn, only rotate angle
+                // Turn complete - aligned to cardinal direction; fall through
+                // to loc_95F4 and process movement/position update this frame.
+                turning = 0;
+                if (velocity != 0) {
+                    turnLock = true;
+                }
             }
         }
 

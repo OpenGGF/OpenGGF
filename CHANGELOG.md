@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): blue ball special stage turn-completion falls through to position/collision update on the same frame instead of deferring to the next frame (sonic3k.asm:11946-11955).
 - Trace framework: S3K special-stage trace classes moved under the game package (naming rule).
 - Trace replay: slot-machine bonus segments accepted (deferred-setup seam wired).
 - Trace framework: s3k_special_stage trace parser.
