@@ -5056,7 +5056,8 @@ end
 -- trace_profile is unconditionally "s3k_special_stage" and carries
 -- special_stage_index + ss_csv_version, both required by
 -- TraceRunManifest.Segment.validate for kind=="special_stage". fresh_load is
--- deliberately NOT written here -- that field is blue-spheres plan Task 5.
+-- written here as a static false — giant-ring entries are always mid-level;
+-- a future fresh-boot SS capture path would need to set this to true.
 function write_ss_metadata()
     local meta_file = io.open(OUTPUT_DIR .. "metadata.json", "w")
     meta_file:write("{\n")
