@@ -1603,6 +1603,36 @@ it before animation/collision dispatch at lines 128219-128269.
 
 **Originating commit.** `<pending: S3K entry-ring render activation milestone>`.
 
+---
+
+## P47 -- Project later playable slots before object-local cooperative checks
+
+**S3K-specific:**
+
+**Symptom.** A moving object and CPU sidekick match the trace independently,
+but an object-local player collision happens one frame late. Correcting the
+object's motion or widening its hitbox then creates a false solid contact on
+the following frame.
+
+**Root cause.** A folded engine object update can run before the CPU sidekick's
+pending movement even when the native cooperative routine observes Player 2 at
+the later slot phase. The subsequent folded solid checkpoint may likewise need
+the object's pre-update publication because the ROM called `SolidObjectFull`
+before the cooperative bounce routine.
+
+**Correct pattern.** Follow the disassembly's P1/P2 probe order. For the later
+native player slot, project only the pending movement visible at the ROM call
+site; do not shift the whole object routine. When a post-update engine
+checkpoint folds a pre-bounce `SolidObjectFull` call, use the existing
+pre-update object-position contract for that bounded handoff, then release it
+when the native vertical contact completes.
+
+**ROM citation.** CNZ's top calls `MoveSprite2`, `SolidObjectFull`, and only
+then `CNZMinibossTop_CheckPlayerBounce`; that helper probes Player 1 followed
+by Player 2 at `docs/skdisasm/sonic3k.asm:145053-145103,145530-145578`.
+
+**Originating commit.** `<pending: CNZ miniboss P2 bounce milestone>`.
+
 ## How to add a new entry
 When a trace-replay-bug-fixing iteration commits an object fix whose root
 cause is a class of bug (not a one-off):

@@ -45693,6 +45693,31 @@ remains 44/58 green with the same eight unsupported S1 credits traces and six
 comparison-red routes; CNZ complete-run animation remains at f108 and legacy
 standalone CNZ remains at f0 in both scopes.
 
+### 2026-07-19 -- CNZ miniboss native P2 rebound: f12488 -> f13968
+
+At f12488 CPU Tails is rolling upward into the launched miniboss top. ROM
+`CNZMinibossTop_CheckPlayerBounce` probes Player 1 and then Player 2, reverses
+the top on the P2 contact, and its following `SolidObjectFull` pass uses the
+top's prior published coordinate. The engine checked only the primary player;
+after adding P2 naively, its folded object/solid ordering still observed the
+sidekick and top one publication late, first seating Tails against the
+descending top and then separating the underside two pixels too far
+(`docs/skdisasm/sonic3k.asm:145053-145103,145530-145578`).
+
+The top now follows the native P1-to-P2 query order, projects the later P2
+slot's pending airborne movement for the cooperative rebound, and uses the
+existing pre-update solid-position contract for the bounded post-bounce P2
+handoff. Focused top physics tests cover the P2-only rebound and publication
+release. CNZ complete-run physics advances from f12488 `tails_g_speed` to
+f13968 `x`; the new mismatch is the separate CNZ1-to-CNZ2 coordinate handoff.
+The implementation contains no trace hydration or zone/route/frame predicate.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-19 -- CNZ miniboss closing publication: f12212 -> f12488
 
 At f12212 the ROM rebounds Sonic from the miniboss body at the exclusive edge,

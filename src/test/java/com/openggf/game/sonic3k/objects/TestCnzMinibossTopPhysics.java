@@ -336,6 +336,53 @@ class TestCnzMinibossTopPhysics {
     }
 
     @Test
+    void nativeP2RollingBounceReversesTopWhenP1DoesNotContact() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        fixture.camera().setY((short) 0);
+
+        TestablePlayableSprite p1 = new TestablePlayableSprite("sonic", (short) 0x3000, (short) 0x030E);
+        TestablePlayableSprite p2 = new TestablePlayableSprite("tails", (short) 0x3242, (short) 0x030E);
+        p2.setCpuControlled(true);
+        p2.setRolling(true);
+        p2.setXSpeed((short) -0x100);
+        p2.setYSpeed((short) -0x100);
+
+        TestObjectServices services = new TestObjectServices()
+                .withCamera(fixture.camera())
+                .withSidekicks(List.of(p2));
+        CnzMinibossTopInstance top = new CnzMinibossTopInstance(
+                new ObjectSpawn(0x3240, 0x0300, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        top.setServices(services);
+        top.forceTopMainForTest();
+
+        int afterBounceY;
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkCeilingDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+
+            top.update(0, p1);
+            afterBounceY = top.getY();
+            assertTrue(top.usesPreUpdatePositionForSolidContact(p2),
+                    "the post-bounce P2 checkpoint samples the prior top publication");
+            p2.setYSpeed((short) 0);
+            top.update(1, p1);
+        }
+
+        assertTrue(top.getY() < afterBounceY,
+                "CNZMinibossTop_CheckPlayerBounce checks native Player_2 after Player_1");
+        assertFalse(top.usesPreUpdatePositionForSolidContact(p2),
+                "ordinary P2 checkpoints resume the live top position after vertical contact");
+    }
+
+    @Test
     void floorTerrainHitReversesTopAndQueuesSnappedArenaBlockDestruction() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
