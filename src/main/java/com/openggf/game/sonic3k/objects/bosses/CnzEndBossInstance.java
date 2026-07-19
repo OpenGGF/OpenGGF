@@ -117,6 +117,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private int postCapsuleReleaseCountForTest;
     private CnzCannonInstance endCannon;
     private int defeatWaitTimer;
+    private boolean defeatWaitJustStarted;
     private int storedBoundBase;
 
     public CnzEndBossInstance(ObjectSpawn spawn) {
@@ -522,6 +523,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         magneticFieldActive = false;
         hitInvulnerabilityTimer = 0;
         defeatWaitTimer = 0x3F;
+        defeatWaitJustStarted = true;
         services().gameState().addScore(1000);
         if (services().levelGamestate() != null) {
             services().levelGamestate().pauseTimer();
@@ -530,6 +532,10 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
 
     private void updateDefeatWait() {
         if (routine != Routine.DEFEATED || defeatHandoffComplete) return;
+        if (defeatWaitJustStarted) {
+            defeatWaitJustStarted = false;
+            return;
+        }
         if (defeatWaitTimer-- > 0) return;
         if (!defeatScatterStarted) {
             beginDefeatScatter();

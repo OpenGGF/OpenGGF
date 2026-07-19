@@ -1,5 +1,23 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ defeat wait dispatch phase: physics f38610 -> f38728
+
+The final boss hit installs `BossDefeated`'s `$3F` wait during touch response,
+after the boss object's normal dispatch has already run. The engine immediately
+decremented that newly installed timer in the same update, shifting both the
+defeat scatter and the later two-second handoff one frame early. The boundary
+worker therefore widened camera max X one frame before its native `$4000`
+accumulator reached its first whole-pixel step
+(`docs/skdisasm/sonic3k.asm:145696-145728,146007-146035`).
+
+The defeat wait now skips only the object pass that installs it; subsequent
+signed countdown semantics and ROM constants are unchanged. Focused boss,
+boundary, and defeat-scatter tests pass. CNZ complete-run physics advances from
+f38610 `camera_x` to f38728 `y`; animation remains at f30486
+`tails_mapping_frame`. Sequential one-fork 4 GB full sweeps retain the
+established 45/58 physics and 44/58 animation green counts, with the same
+non-CNZ frontiers and legacy standalone CNZ still at f0 in both scopes.
+
 ### 2026-07-19 -- CNZ magnet retained fall state: physics f37926 -> f38610
 
 The second magnet drop began from the right integer coordinate but reached its

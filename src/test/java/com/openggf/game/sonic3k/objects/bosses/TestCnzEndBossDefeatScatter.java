@@ -140,10 +140,9 @@ class TestCnzEndBossDefeatScatter {
         setInt(magnet, "yVelocity", 0x100);
         int firstImpactY = magnet.getCentreY();
         magnet.resolveFloorContact(0);
-        assertEquals(0, thumps[0], "zero floor distance is not a penetrating impact");
-        magnet.resolveFloorContact(-2);
         assertEquals(1, thumps[0]);
-        assertEquals(firstImpactY - 2, magnet.getCentreY());
+        assertEquals(firstImpactY, magnet.getCentreY(),
+                "exact floor contact dispatches the callback without changing y_pos");
         assertEquals(-0x80, magnet.yVelocityForTest());
 
         int risingY = magnet.getCentreY();
@@ -155,7 +154,8 @@ class TestCnzEndBossDefeatScatter {
         setInt(magnet, "yVelocity", 0x70);
         magnet.resolveFloorContact(-1);
         assertEquals(2, thumps[0], "the next descending impact emits exactly one new thump");
-        assertEquals(0, magnet.yVelocityForTest());
+        assertEquals(0x70, magnet.yVelocityForTest(),
+                "the low-speed landing changes routine without clearing y_vel");
         assertTrue(magnet.isLanded());
     }
 
@@ -207,6 +207,22 @@ class TestCnzEndBossDefeatScatter {
         assertEquals(1, arm.angleForTest());
     }
 
+    @Test
+    void defeatWaitStartsOnTheObjectPassAfterBossDefeatedInstallsIt() throws Exception {
+        CnzEndBossInstance boss = boss();
+        boss.setServices(new StubObjectServices());
+        setRoutine(boss, CnzEndBossInstance.Routine.DEFEATED);
+        setInt(boss, "defeatWaitTimer", 0x3F);
+        setBoolean(boss, "defeatWaitJustStarted", true);
+
+        boss.update(0, null);
+        assertEquals(0x3F, field(boss, "defeatWaitTimer").getInt(boss),
+                "BossDefeated installs the wait; its first decrement belongs to the next object pass");
+
+        boss.update(1, null);
+        assertEquals(0x3E, field(boss, "defeatWaitTimer").getInt(boss));
+    }
+
     private static CnzEndBossInstance boss() {
         return new CnzEndBossInstance(new ObjectSpawn(
                 0x4740, 0x0240, 0xA7, 0, 0, false, 0));
@@ -232,6 +248,10 @@ class TestCnzEndBossDefeatScatter {
 
     private static void setInt(Object target, String name, int value) throws Exception {
         field(target, name).setInt(target, value);
+    }
+
+    private static void setBoolean(Object target, String name, boolean value) throws Exception {
+        field(target, name).setBoolean(target, value);
     }
 
     private static Field field(Object target, String name) throws NoSuchFieldException {
