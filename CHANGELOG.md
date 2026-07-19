@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S1 special stage defers `v_ssangle`/`v_ssrotate` init to GM_Special's actual instant-setup point:** the 44-tick pre-physics hold previously applied `SS_INIT_ROTATION` from `Sonic1SpecialStageManager.initialize()` (tick 0), but the ROM only writes `v_ssangle`/`v_ssrotate` from GM_Special's instant setup block, which runs after the `PaletteWhiteOut` fade's 22 VBlank ticks, not before it; the hold now applies those fields exactly at that mid-hold boundary (`docs/s1disasm/sonic.asm:3238-3291,3267-3268`, `docs/s1disasm/_inc/Palette Fading.asm:313-326`).
 - **S1 special stage now models the ROM's 44-VBlank-tick pre-physics hold before Obj09's first `ExecuteObjects` tick:** `GM_Special` never calls `ExecuteObjects` during `PaletteWhiteOut`/instant-setup/`PaletteWhiteIn`, so Sonic1SpecialStageManager freezes all Obj09-owned fields (and defers the in-air flag Obj09_Main sets on its own first tick) for that window; `SpecialStageStartupPolicy.FAST` callers fast-forward through it via `advanceToEntryPresentation()` while `TRACE_ACCURATE` observes it frame-by-frame (`docs/s1disasm/sonic.asm:3221-3308`, `docs/s1disasm/_inc/Palette Fading.asm:212-236,313-326`, `docs/s1disasm/_incObj/09 Sonic in Special Stage.asm:41-53`).
 - Trace framework: S3K special-stage trace classes moved under the game package (naming rule).
 - Trace replay: slot-machine bonus segments accepted (deferred-setup seam wired).

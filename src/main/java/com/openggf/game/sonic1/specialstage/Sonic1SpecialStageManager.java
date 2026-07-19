@@ -88,6 +88,26 @@ public final class Sonic1SpecialStageManager {
      */
     private static final int SS_STARTUP_HOLD_TICKS = 44;
 
+    /**
+     * Length of the {@code PaletteWhiteOut} half of the hold ({@code
+     * "_inc/Palette Fading.asm":313-326}, {@code move.w #22-1,d4} + {@code dbf}).
+     * GM_Special's instant (non-VBlank-waiting) setup block -- {@code clr.w
+     * (v_ssangle).w} / {@code move.w #ss_rotatespeed,(v_ssrotate).w}
+     * (sonic.asm:3267-3268) -- runs right as the fade-out ends and PaletteWhiteIn
+     * begins, i.e. after exactly this many hold ticks have been consumed. Until
+     * then {@code v_ssangle}/{@code v_ssrotate} hold whatever they had before
+     * the {@code $0C -> $10} mode switch: this engine simulates each special
+     * stage visit standalone (no multi-stage chaining yet), so the pre-setup
+     * value is modeled as the Java field default (0), matching a first-ever
+     * special-stage visit's cold RAM. {@code x_pos}/{@code y_pos}/velocity/
+     * inertia/status bits have the same "not yet written" property but live in
+     * {@code v_objspace} instead, which genuinely carries the *previous zone's*
+     * Sonic state during this window (leftover-normal-Sonic root, not
+     * reproducible without chaining a prior trace segment) -- left untouched
+     * here; see the frozen values already installed by {@link #initialize}.
+     */
+    private static final int SS_WHITEOUT_TICKS = 22;
+
     private boolean initialized;
     private boolean finished;
     private boolean emeraldCollected;
@@ -231,11 +251,15 @@ public final class Sonic1SpecialStageManager {
         // Initialize background renderer
         initBgRenderer();
 
-        // Initialize rotation
+        // Initialize rotation. v_ssangle/v_ssrotate are NOT written by GM_Special
+        // until its instant setup block, which fires mid-hold after the
+        // PaletteWhiteOut fade completes (see SS_WHITEOUT_TICKS) -- ssRotate
+        // stays at the Java default (0) here and is set to SS_INIT_ROTATION at
+        // that exact ROM-timeline point in update().
         ssAngle = 0;
-        ssRotate = SS_INIT_ROTATION;
+        ssRotate = 0;
         debugSavedAngle = 0;
-        debugSavedRotate = SS_INIT_ROTATION;
+        debugSavedRotate = 0;
 
         // Initialize physics
         sonicVelX = 0;
@@ -312,6 +336,19 @@ public final class Sonic1SpecialStageManager {
             // matching v_jpadpress2's per-VBlank hardware refresh.
             startupHoldTicksRemaining--;
             pressedButtons = 0;
+            // The harness captures comparison state AFTER update() advances
+            // (capture(frame) reflects frame+1 completed update() calls), so
+            // the trigger fires one tick later than the raw whiteout/whitein
+            // split to land the visible transition on the correct frame.
+            if (startupHoldTicksRemaining == SS_STARTUP_HOLD_TICKS - SS_WHITEOUT_TICKS - 1) {
+                // GM_Special's instant setup block (sonic.asm:3238-3291) runs
+                // here, between the PaletteWhiteOut and PaletteWhiteIn fades:
+                // clr.w (v_ssangle).w and move.w #ss_rotatespeed,(v_ssrotate).w
+                // (sonic.asm:3267-3268) fire exactly once, mid-hold, not at
+                // manager-construction time (see SS_WHITEOUT_TICKS javadoc).
+                ssAngle = 0;
+                ssRotate = SS_INIT_ROTATION;
+            }
             return;
         }
 
