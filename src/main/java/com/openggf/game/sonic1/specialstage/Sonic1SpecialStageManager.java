@@ -53,8 +53,17 @@ public final class Sonic1SpecialStageManager {
     private static final int ANIM_RING_SPARKLE = 1;
     private static final int ANIM_BUMPER = 2; // SS_AniBumper (ss_ani_id=2)
     private static final int ANIM_GLASS_BLOCK = 6;
+    private static final int ANIM_EMERALD_SPARKLE = 5; // SS_AniEmeraldSparks (ss_ani_id=5)
     private static final int[] ANIM_RING_SPARKLE_DATA = {0x42, 0x43, 0x44, 0x45, 0};
     private static final int ANIM_RING_PERIOD = 6; // 5+1 frames per step (ROM: move.b #5,2(a0))
+    /**
+     * SS_AniEmerData (docs/s1disasm/_inc/Special Stage Loading & Drawing.asm:460):
+     * {@code dc.b id_SS_Emerald_Ani1, id_SS_Emerald_Ani2, id_SS_Emerald_Ani3,
+     * id_SS_Emerald_Ani4, 0}, driven by the same 5-tick delay as the ring
+     * sparkle script (asm:440, {@code move.b #5,ss_ani_delay(a0)}).
+     */
+    private static final int[] ANIM_EMERALD_SPARKLE_DATA = {0x46, 0x47, 0x48, 0x49, 0};
+    private static final int ANIM_EMERALD_PERIOD = 6; // 5+1 frames per step (ROM: move.b #5,ss_ani_delay(a0))
     private static final int[] ANIM_GLASS_DATA = {0x4B, 0x4C, 0x4D, 0x4E, 0x4B, 0x4C, 0x4D, 0x4E, 0};
     private static final int ANIM_GLASS_PERIOD = 2; // 1+1 frames per step (ROM: move.b #1,2(a0))
     /**
@@ -787,22 +796,29 @@ public final class Sonic1SpecialStageManager {
         }
 
         // Emerald (0x3B-0x40): SonicSS_ChkEmerald/SonicSS_GetEmerald
-        // (docs/s1disasm/_incObj/09 Sonic in Special Stage.asm:670-701) only
-        // increments (v_emeralds).w and queues the emerald jingle -- it never
-        // touches obRoutine(a0). The special-stage exit routine is only armed
-        // by SonicSS_ChkGOAL's `addq.b #2,obRoutine(a0)` when the GOAL block
-        // ($27) is touched (asm:823-832, mirrored below in the GOAL branch).
-        // A prior version of this branch also set exitTriggered/exitPhase/
-        // exitTimer here, which desynced the S1 maze round-trip capture at
-        // trace frame 2973: engine froze into updateExit()'s spin-up the
-        // frame after the emerald pickup while the recorded ROM run kept
-        // playing normally (collecting more rings, jumping, moving) for
-        // another ~100 frames until it actually reached GOAL and the trace's
-        // own ss_rotate exit-ramp escalation began at frame 3076.
+        // (docs/s1disasm/_incObj/09 Sonic in Special Stage.asm:670-701)
+        // increments (v_emeralds).w and queues the emerald jingle immediately
+        // on touch -- that part is instant, matching emeraldCollected below.
+        // The exit routine, however, is NOT armed here and NOT gated solely
+        // behind SonicSS_ChkGOAL's GOAL-block `addq.b #2,obRoutine(a0)`
+        // (asm:823-832): SS_AniEmeraldSparks -- the same collection-animation
+        // queue entry the ring sparkle uses (docs/s1disasm/_inc/Special Stage
+        // Loading & Drawing.asm:437-458), registered here via
+        // {@link SS_FindFreeAnimationSlot} exactly like the ring branch above
+        // -- writes `move.b #4,(v_player+obRoutine).w` itself once its 4-frame,
+        // 5-tick-per-frame script (id_SS_Emerald_Ani1..4, asm:460) finishes
+        // (asm:453). So the exit is deferred by the sparkle animation's
+        // ~24-tick run, not by GOAL. A prior version of this branch set
+        // exitTriggered synchronously here, which desynced the S1 maze
+        // round-trip capture at trace frame 2973 by freezing physics one
+        // tick after the emerald pickup instead of waiting out the sparkle;
+        // that regression is fixed by routing through
+        // {@link #startEmeraldAnimation(int)} below instead of an immediate
+        // clear + trigger.
         if (blockId >= 0x3B && blockId <= 0x40) {
-            layout[bufIndex] = 0;
             emeraldCollected = true;
             playMusic(GameMusic.EMERALD);
+            startEmeraldAnimation(bufIndex);
             return;
         }
 
@@ -989,6 +1005,54 @@ public final class Sonic1SpecialStageManager {
         }
     }
 
+    /**
+     * SS_AniEmeraldSparks registration (SonicSS_ChkEmerald,
+     * docs/s1disasm/_incObj/09 Sonic in Special Stage.asm:676-679): allocates
+     * an animation slot via {@code SS_FindFreeAnimationSlot}. When that fails
+     * (all 8 slots busy), the ROM skips registration entirely (falls straight
+     * through to {@code SonicSS_GetEmerald}) and leaves the touched block's
+     * byte untouched -- unlike the ring helper above, there is no "clear to
+     * 0" fallback here to stay faithful to that ROM branch.
+     *
+     * <p>Delay starts at 0 (not {@link #ANIM_EMERALD_PERIOD}), matching the
+     * {@link #startBumperAnimation(int)}/{@link #startGlassAnimation(int, int)}
+     * pattern rather than the ring branch's manual immediate write: a freshly
+     * claimed animation slot's memory is zero-cleared in the ROM (either from
+     * stage init or the previous occupant's {@code clr.l (a0)} on
+     * completion), and {@code SS_ExecuteAnimationQueue} (called from
+     * {@code SS_ShowLayout}, AFTER {@code ExecuteObjects} in the SAME
+     * {@code SS_MainLoop} iteration -- sonic.asm:3306-3309) runs this same
+     * game tick and sees the fresh slot's delay=0, so the FIRST script entry
+     * fires on this same tick via the natural {@link #updateEmeraldAnimation(int)}
+     * call below rather than a manual pre-write. Manually pre-writing (as the
+     * ring branch does) plus also letting the same-tick
+     * {@code updateItemAnimations()} call decrement double-counts one tick,
+     * which pushed the 4-entry sparkle script's completion -- and therefore
+     * the {@code obRoutine=4} exit arm (asm:453) -- one recorded frame early:
+     * the S1 maze round-trip capture's single lag frame at trace frame 2976
+     * (one non-stepped update() call between the emerald pickup at frame 2972
+     * and the exit-arm frame 2997) makes the completion tick land on trace
+     * frame 2997 only when the FIRST script write is same-tick, matching
+     * this delay=0 pattern; a same-tick pre-write plus an extra decrement
+     * completed the script (and froze physics) a full tick early at frame
+     * 2996, one before the recorded ROM exit ramp actually starts (frame 2998).
+     */
+    private void startEmeraldAnimation(int layoutIndex) {
+        if (ssAnimBuffer == null) {
+            return;
+        }
+        for (int i = 0; i < SS_ANIM_BUFFER_SIZE; i++) {
+            if (ssAnimBuffer[i][0] == ANIM_NONE) {
+                ssAnimBuffer[i][0] = ANIM_EMERALD_SPARKLE;
+                ssAnimBuffer[i][1] = 0; // Trigger first frame immediately on next animation tick
+                ssAnimBuffer[i][2] = 0;
+                ssAnimBuffer[i][3] = layoutIndex;
+                return;
+            }
+        }
+        // ROM behavior when no slot is free: leave the block untouched.
+    }
+
     private void startGlassAnimation(int layoutIndex, int finalBlockId) {
         if (ssAnimBuffer == null || ssAnimGlassFinalBlock == null) {
             if (layoutIndex >= 0 && layoutIndex < layout.length) {
@@ -1049,6 +1113,10 @@ public final class Sonic1SpecialStageManager {
                 updateGlassAnimation(i);
                 continue;
             }
+            if (type == ANIM_EMERALD_SPARKLE) {
+                updateEmeraldAnimation(i);
+                continue;
+            }
             ssAnimBuffer[i][0] = ANIM_NONE;
         }
     }
@@ -1074,6 +1142,51 @@ public final class Sonic1SpecialStageManager {
         if (layoutIndex >= 0 && layoutIndex < layout.length) {
             layout[layoutIndex] = (byte) nextBlockId;
         }
+    }
+
+    /**
+     * SS_AniEmeraldSparks (docs/s1disasm/_inc/Special Stage Loading & Drawing.asm:
+     * 437-458): structurally identical to {@link #updateRingAnimation(int)}
+     * (same 5-tick delay, same 4-entry-then-terminator script shape), except
+     * that reaching the terminator ALSO arms the special-stage exit --
+     * `move.b #4,(v_player+obRoutine).w` (asm:453) sets Obj09's routine
+     * straight to {@code SonicSS_ExitStage}, and `move.w #sfx_SSGoal,d0` /
+     * `jsr (QueueSound2).l` (asm:454-455) plays the same GOAL jingle the
+     * GOAL-block branch in {@link #processItemInteraction()} plays. This is
+     * how a single-emerald special stage (like the recorded GHZ round-trip
+     * maze) ends without ever touching an {@code id_SS_GOAL} ($27) block.
+     */
+    private void updateEmeraldAnimation(int slot) {
+        ssAnimBuffer[slot][1]--;
+        if (ssAnimBuffer[slot][1] > 0) return;
+        ssAnimBuffer[slot][1] = ANIM_EMERALD_PERIOD;
+
+        // Read the script index BEFORE advancing it (SS_AniEmeraldSparks:
+        // `move.b ss_ani_frame(a0),d0` reads, THEN `addq.b #1,ss_ani_frame(a0)`
+        // advances -- asm:443-444), matching the bumper/glass helpers'
+        // pre-increment read rather than the ring branch's post-increment one.
+        int frameIdx = ssAnimBuffer[slot][2];
+        ssAnimBuffer[slot][2] = frameIdx + 1;
+        int layoutIndex = ssAnimBuffer[slot][3];
+        int nextBlockId = (frameIdx < ANIM_EMERALD_SPARKLE_DATA.length)
+                ? ANIM_EMERALD_SPARKLE_DATA[frameIdx] : 0;
+
+        if (nextBlockId != 0) {
+            if (layoutIndex >= 0 && layoutIndex < layout.length) {
+                layout[layoutIndex] = (byte) nextBlockId;
+            }
+            return;
+        }
+
+        // Terminator (asm:446-455): the ROM writes the terminator's 0 to the
+        // block unconditionally via the same `move.b d0,(a1)` as every other
+        // script entry, THEN frees the slot and arms the exit.
+        if (layoutIndex >= 0 && layoutIndex < layout.length) {
+            layout[layoutIndex] = 0;
+        }
+        ssAnimBuffer[slot][0] = ANIM_NONE;
+        exitTriggered = true;
+        playSfx(Sonic1Sfx.SS_GOAL);
     }
 
     /**
