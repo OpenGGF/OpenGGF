@@ -84,6 +84,29 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         return isFlippedHorizontal();
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>ROM {@code SolidObjCheckSloped2}/{@code SolidObjSloped2} (sonic3k.asm:42076-42097,
+     * 41732-41830), reached via {@code SolidObjectTopSloped2} (sonic3k.asm:41831-41872) as
+     * called from {@code Obj_PachinkoFlipper}'s {@code loc_49C8A} (sonic3k.asm:96384
+     * {@code jsr (SolidObjectTopSloped2).l}), samples the slope table byte and subtracts it
+     * from {@code y_pos(a0)} directly: {@code move.w y_pos(a0),d0 / sub.w d3,d0} with no
+     * baseline term. The engine's default {@link SlopedSolidProvider#getSlopeBaseline()}
+     * subtracts {@code slopeData[0]} (here {@code -4}) as a relative baseline, which is only
+     * correct for objects whose ROM routine itself normalizes against the table's first
+     * entry. For the flipper this introduced a spurious 4px offset that raised its effective
+     * collision surface, causing a false-positive landing ~1 frame before the ROM player
+     * actually reached the surface (trace f427: expected air=1/status=0x07 continuing to
+     * fall past the flipper, engine snapped to a landing with y_speed=0, status=0x0C).
+     * Returning 0 here makes the engine use the raw (absolute) slope sample, matching
+     * {@code SolidObjCheckSloped2}'s literal subtraction.
+     */
+    @Override
+    public int getSlopeBaseline() {
+        return 0;
+    }
+
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         if (!(playerEntity instanceof AbstractPlayableSprite player)) {
