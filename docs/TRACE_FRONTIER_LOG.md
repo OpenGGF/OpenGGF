@@ -45693,6 +45693,29 @@ remains 44/58 green with the same eight unsupported S1 credits traces and six
 comparison-red routes; CNZ complete-run animation remains at f108 and legacy
 standalone CNZ remains at f0 in both scopes.
 
+### 2026-07-19 -- CNZ miniboss closing publication: f12212 -> f12488
+
+At f12212 the ROM rebounds Sonic from the miniboss body at the exclusive edge,
+while the engine has already advanced the closing animation's `$F4` terminator
+into `Obj_CNZMinibossCloseGo` and moved the body one pixel. The raw animation
+and object movement are individually correct, but the engine made the handoff
+visible one SST pass too soon: the previous collision-response list must first
+consume the final frame-0 publication in routine `$0C`
+(`docs/skdisasm/sonic3k.asm:144960-144969,145707-145708,177558-177586`).
+
+The closing terminator now defers its `CloseGo` callback for one object update,
+preserving routine `$0C` and the final frame for the pending player touch pass.
+A focused raw-animation phase test covers the boundary, and CNZ complete-run
+physics advances from f12212 `g_speed` to f12488 `tails_g_speed`. The change
+models the ROM routine/publication phase and contains no trace hydration or
+zone/route/frame predicate.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-19 -- CNZ miniboss live body touch: f12024 -> f12212
 
 At f12024 Sonic and the CNZ miniboss body have matching ROM/engine positions,

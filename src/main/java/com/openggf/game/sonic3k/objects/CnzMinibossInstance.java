@@ -285,6 +285,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     private boolean diagnosticWaitHitHandoff;
     private WaitCallback diagnosticLastCallback = WaitCallback.NONE;
     private boolean pendingStartReleaseHandoff = true;
+    private boolean closingTerminatorDeferred;
 
     private enum WaitCallback {
         NONE,
@@ -1264,6 +1265,9 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
         mappingFrame = frames[0];
         rawAnimPairIndex = 0;
         rawAnimTimer = initialTimer;
+        if (frames == ANIM_CLOSING_FRAMES) {
+            closingTerminatorDeferred = false;
+        }
     }
 
     /**
@@ -1280,6 +1284,14 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
 
         rawAnimPairIndex++;
         if (rawAnimPairIndex >= frames.length) {
+            if (terminatorCallback == WaitCallback.CLOSE_GO && !closingTerminatorDeferred) {
+                // The previous-list touch pass consumes the final frame-0
+                // publication before CloseGo becomes visible to object motion.
+                closingTerminatorDeferred = true;
+                rawAnimTimer = 0;
+                return;
+            }
+            closingTerminatorDeferred = false;
             waitCallback = terminatorCallback;
             runWaitCallback();
             return;

@@ -696,9 +696,12 @@ class TestCnzMinibossTopPhysics {
         }
 
         boss.update(25, fixture.sprite());
+        assertEquals(0x0C, boss.getCurrentRoutine(),
+                "the final frame-0 publication remains Closing for the previous touch list");
+
+        boss.update(26, fixture.sprite());
         assertEquals(0x06, boss.getCurrentRoutine(),
-                "loc_6DB4E only swaps $30/$34; Animate_RawMultiDelay's $F4 terminator invokes "
-                        + "Obj_CNZMinibossCloseGo on the ROM-visible frame "
+                "the deferred $F4 terminator invokes Obj_CNZMinibossCloseGo after frame 0 was published "
                         + "(docs/skdisasm/sonic3k.asm:144960-144969,145707-145708,177558-177586)");
     }
 
