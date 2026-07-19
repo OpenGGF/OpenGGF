@@ -1008,6 +1008,11 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         }
     }
 
+    boolean isBetweenLoadCursors(ObjectSpawn spawn) {
+        int index = getSpawnIndex(spawn);
+        return index >= leftCursorIndex && index < cursorIndex;
+    }
+
     /**
      * Helper: process one entry during forward scan.
      * ROM: assigns d2 = fwdCounter, then fwdCounter++ for respawn-tracked.

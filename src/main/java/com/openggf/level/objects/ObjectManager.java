@@ -2971,7 +2971,19 @@ public class ObjectManager {
      */
     private void dispatchDestroyRemoveFromActive(ObjectInstance instance, ObjectSpawn spawn) {
         if (instance.isDestroyedRespawnable()) {
+            boolean retainForTwoAxisYPass = slotLayout.twoAxisCursorPlacement()
+                    && placement.isBetweenLoadCursors(spawn);
             placement.removeFromActiveForUnload(spawn);
+            if (retainForTwoAxisYPass) {
+                // S3K Sprite_CheckDeleteTouch3 clears the live entry's
+                // respawn-table bit. Even after the X cursor has passed it,
+                // loc_1B982's later Camera-Y strip scan may recreate that
+                // entry while it remains between the front/back cursors.
+                // Retain it in the deferred Y-pass set only while its layout
+                // index is currently between those cursors. Entries already
+                // trimmed from the X range must wait for normal X re-entry.
+                placement.markDeferredVerticalLoad(spawn);
+            }
         } else {
             if (slotLayout == ObjectSlotLayout.SONIC_2 && spawn != null && spawn.respawnTracked()) placement.markRemembered(spawn);
             placement.removeFromActive(spawn);

@@ -1487,6 +1487,33 @@ touching `status` at `docs/skdisasm/sonic3k.asm:68078-68100`.
 
 ---
 
+## P43 -- Respawnable self-deletes must remain in the S3K Camera-Y scan
+
+**Symptom.** An object correctly deletes after moving off-screen but never
+reappears when vertical camera motion exposes its layout row. Later shared-RNG
+objects may initialize with shifted phases even when player physics still
+matches for hundreds of frames.
+
+**Root cause.** S3K has independent X-cursor and Camera-Y placement passes.
+`Sprite_CheckDelete*` clears the live entry's respawn bit; if the layout entry
+is still between the X cursors, a later `loc_1B982` Y-strip scan can recreate
+it. Removing the engine spawn from both the live set and deferred Y-pass set
+loses that native rescan opportunity.
+
+**Correct pattern.** For a respawnable off-screen self-delete under S3K's
+two-axis placement, remove the dead SST but retain the layout entry in the
+deferred Camera-Y set. Let ordinary X-cursor trimming clear it when the entry
+actually leaves the horizontal range. Test delete, a Y-coarse transition away,
+and a later strip transition that recreates a distinct instance.
+
+**ROM citation.** `Sprite_CheckDeleteTouch3` reaches the respawn-bit-clearing
+delete path at `docs/skdisasm/sonic3k.asm:37262-37276`; the independent Y-strip
+scan is `loc_1B982` at lines 37723-37762.
+
+**Originating commit.** `<pending: S3K Y-pass self-delete respawn milestone>`.
+
+---
+
 ## How to add a new entry
 When a trace-replay-bug-fixing iteration commits an object fix whose root
 cause is a class of bug (not a one-off):

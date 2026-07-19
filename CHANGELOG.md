@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K off-screen self-deletes remain eligible for later Camera-Y placement scans:** clearing a live object's respawn bit now retains the X-cursor-passed entry for `loc_1B982`, restoring CNZ balloon reload order and its shared RNG phase. This advances CNZ complete-run physics from frame 7708 to frame 8388 (`docs/skdisasm/sonic3k.asm:37262-37276,37723-37762`).
 - **CNZ cylinder twist frames no longer overwrite player gameplay facing:** `loc_32610` copies `PlayerTwistFlip` only into `render_flags`, so a visually flipped held Sonic retains the native `Status_Facing` bit. This advances CNZ complete-run physics from frame 7512 to frame 7708 (`docs/skdisasm/sonic3k.asm:68078-68100`).
 - **S3K solid-object ROM pointer words now preserve CPU Tails' native off-screen interact latch:** CNZ doors retain SST code-pointer word `$0003`, while springs expose `$0002`, allowing `sub_13EFC` to detect that an off-screen Tails changed supports and perform the native `$7F00` marker warp. This advances CNZ complete-run physics from frame 6820 to frame 7512 (`docs/skdisasm/sonic3k.asm:26816-26843,47500-47540,66036-66167`).
 - **CNZ balloons now publish touch collisions from their live post-bob SST coordinate:** S3K's collision-response list retains the balloon pointer after its sine update, so exact-edge contacts no longer use a one-frame-older Y snapshot. This advances CNZ complete-run physics from frame 6706 to frame 6820 (`docs/skdisasm/sonic3k.asm:66776-66795,20656-20710`).

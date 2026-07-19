@@ -45716,6 +45716,33 @@ remains 44/58 green with the same eight unsupported S1 credits traces and six
 comparison-red routes; CNZ complete-run animation remains at f108 and legacy
 standalone CNZ remains at f0 in both scopes.
 
+### 2026-07-19 -- S3K Y-pass respawn after off-screen self-delete: f7708 -> f8388
+
+The f7708 balloon launch was caused by a bob-phase error, not touch geometry.
+ROM reloads the previously popped balloon at `$1920,$022C` on f7161 when
+`loc_1B982` scans a newly exposed Camera-Y strip; that initialization consumes
+one shared RNG word. The engine's respawnable self-delete removed the spawn
+from both the live set and the deferred two-axis scan, so it missed that reload
+and assigned every subsequent balloon the preceding RNG result. The balloon at
+`$1D10,$0098` therefore bobbed four pixels too low and created a false overlap
+at f7708 (`docs/skdisasm/sonic3k.asm:37262-37276,37723-37762,66747-66795`).
+
+Respawnable S3K self-deletes now retain their placement entry in the deferred
+Camera-Y set after their live SST is removed. Normal cursor trimming still
+clears the entry when it leaves the X range. The focused vertical-placement and
+balloon suites pass, including a new self-delete/Y-pass recreation test. CNZ
+complete-run physics advances from f7708 `y_speed` to f8388 `status_byte`.
+
+An initial unrestricted retention attempt regressed HCZ complete-run physics at
+f29095 and standalone MGZ at f9962 by reloading entries already outside the X
+cursors. Gating retention on the layout index being between the current
+front/back cursors removed both regressions. The final comparison-only physics
+fleet remains 45/58 green with the same 13 expected-red routes and unchanged
+non-CNZ frontiers. The animation fleet remains 44/58 green with the same eight
+unsupported S1 credits traces and six comparison-red routes; CNZ complete-run
+animation remains at f108 and legacy standalone CNZ remains at f0 in both
+scopes.
+
 ### 2026-07-19 -- CNZ cylinder render flip/status-facing separation: f7512 -> f7708
 
 At f7512 the cylinder advances Sonic's direct mapping from `$55` to `$59` and
