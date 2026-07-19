@@ -414,7 +414,16 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         // Initialize drift state on first update (separated from child spawning
         // so tests can exercise drift logic without requiring services()).
         if (!driftInitialized) {
-            // ROM: Obj_GumballMachine seeds RNG_seed from V_int_run_count at init.
+            // ROM: Obj_GumballMachine seeds RNG_seed from V_int_run_count at init
+            // (move.l (V_int_run_count).w,(RNG_seed).w, sonic3k.asm:127412).
+            // KNOWN DISCREPANCY (see docs/S3K_KNOWN_DISCREPANCIES.md): this engine
+            // has no persistent, VBlank-driven global run counter matching hardware
+            // V_int_run_count -- frameCounter here is ObjectManager's per-session
+            // object-dispatch counter (vblaCounter), a materially different,
+            // smaller-range value. Trace replay must NOT be special-cased to dodge
+            // this divergence (comparison-only invariant); it is left as an honest,
+            // documented gap affecting only the RNG-derived ball-subtype roll on
+            // this object's first tick.
             services().rng().setSeed(frameCounter & 0xFFFFFFFFL);
             initDrift();
         }

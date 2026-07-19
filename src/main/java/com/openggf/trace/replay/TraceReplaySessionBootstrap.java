@@ -423,6 +423,14 @@ public final class TraceReplaySessionBootstrap {
         if (rng != null) {
             rng.setSeed(meta.initialRngSeed());
         }
+        // NOTE: GumballMachineObjectInstance performs its own ROM-faithful
+        // frame-0 reseed (sonic3k.asm:127412) shortly after this bootstrap
+        // seed is applied, using the engine's local vblaCounter approximation
+        // of hardware V_int_run_count. That is a real, documented divergence
+        // (see docs/S3K_KNOWN_DISCREPANCIES.md) -- it is intentionally left
+        // alone here rather than suppressed, since bootstrap code must not
+        // special-case an object's own ROM-modeled computation to protect a
+        // trace-injected value (comparison-only invariant).
     }
 
     /** Maps the recorder's bonus_stage_type token to the engine enum. */
@@ -485,6 +493,28 @@ public final class TraceReplaySessionBootstrap {
             if (sprite instanceof AbstractPlayableSprite playable) {
                 playable.setHidden(false);
                 playable.setObjectControlled(false);
+                // Undo the fixture's generic pre-frame-0 ground-snap probe
+                // (HeadlessTestFixture.Builder.build step 12 / GroupCollisionSystem
+                // .resolveGroundAttachment threshold=14), which has no ROM
+                // equivalent for bonus-stage entry and can wrongly latch
+                // Status_InAir a tick early. ROM's bonus-stage spawn is a
+                // Restart_level_flag level reload: Object_RAM (Player_1 included)
+                // is fully cleared -- Status_InAir off -- before Get_LevelSizeStart
+                // repositions the player from the zone's Start Location table
+                // (sonic3k.asm:7619 clearRAM Object_RAM; 38160-38183
+                // Get_LevelSizeStart). SpawnLevelMainSprites' zone-specific
+                // air/animation branches (the only code that would otherwise set
+                // Status_InAir before the level loop starts) are skipped whenever
+                // Special_bonus_entry_flag is set, which bonus-stage entry always
+                // does (sonic3k.asm:8117-8118 tst.b Special_bonus_entry_flag / bne
+                // locret_69B6; 61896 move.b #2,Special_bonus_entry_flag). So the
+                // ground/air transition for Gumball/Pachinko/Slots is decided
+                // exclusively by frame 0's own Player_AnglePos probe, not a
+                // bootstrap pre-check. S3kSlotBonusStageRuntime.bootstrap()
+                // re-asserts Status_InAir on its dedicated slot sprite afterwards
+                // when the ROM's slot-machine capture genuinely starts airborne,
+                // so this reset only affects the fixture's pre-existing sprite.
+                playable.setAir(false);
             }
         }
         // forcePlayerHighPriorityInBonusStage (high-priority art bucket) and
