@@ -2037,6 +2037,16 @@ while true do
     -- Code after the loop may never execute because client.exit() kills
     -- the process immediately.
     if finished then
+        -- Run mode: finalize_run_end() already closed the segment files and
+        -- wrote the manifest before `finished` was set; re-finalizing here
+        -- would mislabel a successful run as "no rows recorded" (S1 model's
+        -- post-restructure exit block).
+        if run_id ~= nil then
+            print(string.format(
+                "Run complete: %d segment(s), %d transition(s) recorded. Exiting.",
+                #segments_done, #transitions_done))
+            break
+        end
         print("Recording complete. Writing final output...")
         local recorded_trace = physics_file ~= nil
         if recorded_trace then
