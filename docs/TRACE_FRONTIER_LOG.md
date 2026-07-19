@@ -1,5 +1,80 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- S3K Knuckles multi-bonus mega-run captured; all four stage comparators go live
+
+The S3K Knuckles-route recording (`s3-knux-multibonus-ss.bk2`, 114622 input
+frames) was captured with `s3k_complete_run_recorder.lua` (now with
+Player_mode-derived team metadata — every segment carries
+`characters ["knuckles"]`) and committed under
+`src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss/`: **25 segments,
+22 transitions** — AIZ1/AIZ2 -> HCZ1/HCZ2 -> MGZ1/MGZ2 with gumball x2,
+slots x5, pachinko x1 (`starpost_bonus`, `special_bonus_entry_flag=2`,
+ring-selector values consistent with `((rings-20)/15)%3` given
+post-vs-arm ring drift) and blue spheres x3 (`giant_ring`, flag=1,
+`special_stage_index` 0/1/2, emeralds 0 -> 3). Blue-spheres self-checks
+pass in all three ss segments (`started` flips once, spheres
+non-increasing to 0). Interior copies activate all four skip-if-missing
+tests — first live baselines (branch `feature/ai-mstr-captures`, all
+first-error frontiers at **frame 0**, spawn/bootstrap state):
+
+- `TestS3kGumballBonusTraceReplay`: 145 errors / 1430 rows (f0 `x_sub`
+  0xF400 vs 0xE800)
+- `TestS3kPachinkoBonusTraceReplay`: 677 errors / 3051 rows (f0 `y_speed`
+  0 vs 0x38)
+- `TestS3kSlotsBonusTraceReplay`: 263 errors / 1200 rows (f0 `x_sub`
+  0xF400 vs 0) — Knuckles-alone recording; the SONIC-SOLO note in the
+  README applied to the old procedure, the metadata-driven bootstrap
+  handles the solo Knuckles team
+- `TestS3kSpecialStageTraceReplay`: 169 errors + 6 warnings / 4630 rows
+  (f0 `player_x` 262 vs 512 — start-cell delta)
+
+These seed the S3K stage green campaigns alongside the S1 maze frontier
+below. The S2 round-trip run (below) still awaits its chain-test consumer.
+
+### 2026-07-19 -- S2 halfpipe round-trip captured: TWO detours in one run
+
+The first S2 halfpipe round-trip recording (`s2-ehz-halfpipe-roundtrip.bk2`,
+22819 input frames, Sonic+Tails) was captured with `s2_trace_recorder.lua`
+v9.12-s2 run mode and committed under
+`src/test/resources/traces/s2/runs/s2-ehz-halfpipe-roundtrip/`. The movie
+re-enters the halfpipe from a second star post, exercising the new
+`ss_segment_count` multi-detour dir tokens live: five segments
+(`seg1_ehz1` 2969 rows / `ss` 5733 / `seg2_ehz1` 2903 / `ss_2` 6381 /
+`seg3_ehz1` 3452) and four transitions (`starpost_special` with
+`f_bigring=1`, rings_before 50 and 69; `stage_exit` with the ROM-truth
+`rings_after=0`), `special_stage_index` advancing 0 -> 1. 48-column ss
+rows with halfpipe-typical ~35% lag-row density. No headless test consumes
+the run yet (the chain test remains the shared deferral); the artifacts
+are ready for it and for the visual run branch.
+
+### 2026-07-19 -- S1 maze first capture committed; comparator frontier opens at f0
+
+The first S1 maze round-trip recording (`s1-ghz-maze-roundtrip.bk2`, 9093
+input frames, fresh no-emeralds save, GHZ1 -> maze -> GHZ2) was captured
+with `s1_complete_run_recorder.lua` v3.15 and committed under
+`src/test/resources/traces/s1/runs/s1-ghz-maze-roundtrip/` (3 segments:
+`ghz1` 4182 rows / `ss` 3091 rows / `ghz2` 812 rows; `giant_ring` +
+`stage_exit` transitions; rings_before 85, emerald collected 0 -> 1). The
+`ss/` segment copy activates `TestS1SpecialStageTraceReplay`.
+VERIFY-ON-FIRST-CAPTURE passed: full 0x0000-0xFFC0 angle sweep, final
+`ss_rotate` 0x17C0 mid-ramp to the 0x1800 exit target, sane 16.16
+positions, 72 lag rows. Command:
+`mvn "-Dtest=com.openggf.tests.trace.s1.TestS1SpecialStageTraceReplay" test`
+(branch `feature/ai-mstr-captures`, worktree multi-stage-trace-runs) —
+**RED as designed (MVP comparator): 503 errors / 3020 stepped frames,
+first error frame 0** (`vel_x` expected 0xFFDE vs engine 0). First roots
+visible in the context window: the ROM holds the maze frozen through its
+intro fade (trace rows 0-8 static with `ss_rotate` 0 while the engine
+simulates from frame 0 with `SS_INIT_ROTATION` 0x40), the frame-0 spawn
+position differs (trace x 0x25AB0300 vs engine 0x03D00000), and
+`status_facing_left` starts true in the ROM. These seed the S1 maze green
+campaign. Committed-artifact note: the run's bk2 is committed under its
+truthful name `s1-ghz-maze-roundtrip.bk2` with `source_bk2` patched in the
+bundle's metadata/manifest — the README's earlier rename-to-
+`s1-complete-run.bk2` mandate collides with the pre-existing
+`traces/s1/_movies/s1-complete-run.bk2` (a DIFFERENT movie) through
+`TraceCatalog.resolveBk2`'s shared-`_movies`-first resolution.
+
 ### 2026-07-19 -- S2 retrofit landed (recorder run mode + synthetic fixture)
 
 Branch `feature/ai-mstr-s2retrofit` retrofitted the multi-stage trace-run

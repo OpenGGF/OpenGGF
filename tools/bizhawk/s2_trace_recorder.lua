@@ -129,6 +129,8 @@ current_ss_index = nil
 -- #segments_done would wrongly yield seg3_ for the return level segment,
 -- because the ss entry sits between the two level entries in segments_done.
 level_segment_count = 0
+-- SS detours: first dir token is bare "ss", repeats "ss_2", "ss_3", ...
+ss_segment_count = 0
 -- Run-mode per-segment file-open target. Stays == OUTPUT_DIR for the whole
 -- run in plain mode (never reassigned outside `if run_id ~= nil` branches);
 -- open_files()/write_metadata()/reset_recording_state() below were switched
@@ -888,10 +890,10 @@ end
 -- first frame game_mode reads $10 after detour_active was not already
 -- "special_stage" (see the on_frame_end entry-vs-continuation gate).
 --
--- Single-ss-dir MVP (contract item 4c): the dir token is the literal "ss"
--- with no segment_dir_counts-style "ss_2" counter -- the EHZ round-trip
--- fixture has exactly one detour, so this is accepted for the MVP; a future
--- multi-detour run needs the S1/S3K-style counter.
+-- Multi-detour dir tokens (upgraded from the single-ss MVP): the first
+-- detour uses the bare "ss" token, repeats use "ss_2", "ss_3", ... --
+-- the S3K segment_dir_counts convention. Needed because real round-trip
+-- movies re-enter the halfpipe from later star posts.
 --
 -- SS frame-0 alignment (run-port convention -- NOT the interior
 -- s2_ss_trace_recorder.lua's convention): the on_frame_end detour machine's
@@ -902,7 +904,9 @@ end
 -- difference); keep this in mind for any future comparator work against
 -- interior-recorder ss traces.
 function start_ss_segment()
-    current_segment_dir_token = "ss"
+    ss_segment_count = (ss_segment_count or 0) + 1
+    current_segment_dir_token = (ss_segment_count == 1) and "ss"
+        or ("ss_" .. ss_segment_count)
     effective_output_dir = OUTPUT_DIR .. current_segment_dir_token .. "/"
     ensure_output_dir(effective_output_dir)
 

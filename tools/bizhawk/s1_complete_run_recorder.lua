@@ -1502,6 +1502,12 @@ local HEADLESS_VISIBLE = false
 if HEADLESS then
     emu.limitframerate(false)
     client.speedmode(6400)
+    -- Sound off (guard-satisfying pattern from s2_trace_recorder): the
+    -- run_bizhawk_lua.bat fast-headless guard requires an executable
+    -- client.SetSoundOn(false) call before the main loop.
+    if client.SetSoundOn then
+        pcall(client.SetSoundOn, false)
+    end
     if not HEADLESS_VISIBLE then
         client.invisibleemulation(true)
     end
