@@ -85,7 +85,7 @@ public record TraceEntry(
                 engineAct,
                 frameCount,
                 first.bk2FrameOffset(),
-                0,
+                segmentMeta.preTraceOscillationFrames(),
                 team,
                 bk2Path,
                 segmentMeta,

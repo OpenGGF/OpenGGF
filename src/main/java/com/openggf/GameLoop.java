@@ -1013,11 +1013,28 @@ public class GameLoop {
             updateBonusStageMode(doFrameStep);
         }
 
+        driveActiveTraceRunSession();
+
         if (traceCameraFocusController != null) {
             traceCameraFocusController.postUpdate();
         }
 
         inputHandler.update();
+    }
+
+    /**
+     * All-mode run-session hook: a multi-stage trace run's segment
+     * boundaries cross LEVEL/TITLE_CARD/BONUS_STAGE/SPECIAL_STAGE, so the
+     * LEVEL-only {@code TraceSessionLauncher.tick()} (driven from
+     * {@link #updateLevelMode}) cannot drive its advancer past the first
+     * mode change. No-op without an active run session.
+     */
+    private void driveActiveTraceRunSession() {
+        TraceSessionLauncher activeTraceSession = TraceSessionLauncher.active();
+        if (activeTraceSession != null) {
+            activeTraceSession.runAdvanceTickIfActive(
+                    currentGameMode, playbackDebugManager.getCursorFrame());
+        }
     }
 
     private void finishUserRecordingPlaybackAtLevelBoundary(boolean advancePlaybackFrame) {
