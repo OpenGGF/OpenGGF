@@ -170,8 +170,13 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
     private boolean collected;
 
     /**
-     * Set true after subtype 4 (push) applies its velocity push.
-     * ROM: clr.b collision_property(a0) prevents re-triggering; we use a flag instead.
+     * Set true after subtype 4 (push) applies its velocity push via the STANDARD
+     * touch-response-list path ({@link #onTouchResponse}, used by STATIC and
+     * PACHINKO_FLOAT motion). That framework's per-object dispatch is gated by
+     * ROM's {@code clr.b collision_property(a0)} (loc_6116E), which this flag
+     * models for those two modes. It is NOT consulted by the self-polled
+     * {@link #pollPlayerInRange} path used by GUMBALL_EJECT balls -- see the
+     * ROM citation at that call site for why no such gate exists there.
      */
     private boolean pushedPlayer;
 
@@ -271,9 +276,20 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
             updateDynamicSpawn(motionState.x, motionState.y);
 
             // ROM sub_610E0/loc_60EFC (sonic3k.asm:127623-127624): once dock-eligible,
-            // the ball self-polls Check_PlayerInRange every frame — not the standard
+            // the ball self-polls Check_PlayerInRange every frame -- not the standard
             // touch/collision-response-list path (getCollisionFlags() is 0 in this mode).
-            if (dockEligible && !collected && !pushedPlayer) {
+            // loc_60EFC calls sub_610E0 UNCONDITIONALLY on every dock-eligible frame; the
+            // only per-poll gate in sub_610E0/loc_6115C (sonic3k.asm:127786-127809,
+            // 127849-127868) is Check_PlayerInRange's own box test -- there is no ROM
+            // flag that permanently disables re-polling a still-alive (d2=0, not
+            // deleted) subtype-4 push ball after its first push. loc_6116E's
+            // `clr.b collision_property(a0)` only clears the STANDARD touch-response-list
+            // latch (Add_SpriteToCollisionResponseList/Touch_Loop, sonic3k.asm:96850),
+            // which this self-polled GUMBALL_EJECT path never consults (getCollisionFlags()
+            // returns 0 while ejected, see class doc). A push ball that drifts back within
+            // the +-24px box on a later frame pushes again in ROM; gating repeats behind
+            // `pushedPlayer` here was engine-only debt with no ROM analog.
+            if (dockEligible && !collected) {
                 pollPlayerInRange(playerEntity, frameCounter);
             }
         } else if (motionMode == MotionMode.PACHINKO_FLOAT) {
