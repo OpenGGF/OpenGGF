@@ -45693,6 +45693,29 @@ remains 44/58 green with the same eight unsupported S1 credits traces and six
 comparison-red routes; CNZ complete-run animation remains at f108 and legacy
 standalone CNZ remains at f0 in both scopes.
 
+### 2026-07-19 -- CNZ miniboss live body touch: f12024 -> f12212
+
+At f12024 Sonic and the CNZ miniboss body have matching ROM/engine positions,
+but the touch controller tests the body at `$32C5` while its live SST is
+`$32C7`. The stale point turns the ROM's exclusive horizontal non-overlap into
+a false boss attack, negating Sonic's X, Y, and ground velocities. ROM
+`Obj_CNZMinibossStart` runs movement before tail-calling
+`Draw_And_Touch_Sprite`, and `Collision_response_list` stores the SST pointer
+rather than copied coordinates
+(`docs/skdisasm/sonic3k.asm:144868-144877,20656-20710`).
+
+`CnzMinibossInstance` now uses the existing current-touch-state contract already
+used by moving AIZ/MGZ minibosses and other post-movement publishers. Focused
+CNZ miniboss and boss-profile tests pass, and CNZ complete-run physics advances
+from f12024 `g_speed` to f12212 `g_speed`. The implementation contains no trace
+hydration or zone/route/frame predicate.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-19 -- S3K entry-ring render activation: f9663 -> f12024
 
 At f9663 Sonic is inside the special-stage entry ring's eventual

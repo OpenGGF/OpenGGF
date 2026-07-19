@@ -536,6 +536,14 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     }
 
     @Override
+    public boolean usesCurrentTouchResponseState() {
+        // Obj_CNZMinibossStart moves the parent before tail-calling
+        // Draw_And_Touch_Sprite. Collision_response_list retains the SST
+        // pointer, so Touch_Loop observes that live post-movement position.
+        return true;
+    }
+
+    @Override
     public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
         diagnosticPlayerHitCheck = true;
         if (state.defeated) {
