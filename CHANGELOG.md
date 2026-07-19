@@ -3,11 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Trace replay: per-game special-stage launch config helper (dormant S3K fresh-load seam).
 - Trace framework: run_manifest.json schema + TraceRunManifest parser/validator for multi-segment trace runs (spec 2026-07-18).
 - Trace framework: per-segment run_id/segment_index/bonus_stage_type metadata fields.
 - Trace replay: bonus-stage bootstrap seam (applyBonusStageEntry) for s3k_bonus_stage segments.
 - Trace replay: non-consuming transition peeks for chained run replay.
 - Trace replay: BONUS_STAGE playback bridge (cursor/input feed during bonus interiors).
+- Trace framework: run-replay walker promoted to src/main for visual run sessions.
+- Trace framework: `TraceCatalog` discovers multi-segment `run_manifest.json` runs alongside ordinary traces; `TraceEntry.forRun`/`isRun`/`displayLabel` surface them to the trace test-mode picker.
+- Trace framework: visual multi-stage trace run session in `TraceSessionLauncher` (`launchRun`/`finishRunLaunch`) drives a `RunSegmentAdvancer` state machine from a new all-mode `GameLoop` hook, re-seeking BK2 playback and rebinding the comparator/HUD/camera at each segment boundary (LEVEL/BONUS_STAGE/SPECIAL_STAGE via TITLE_CARD); held rewind is not installed for run sessions (documented follow-up).
+- Trace replay: run segments pause on first divergence like segment 0.
 - **S3K Super/Hyper forms now require the native second jump-button press:** Sonic transforms only when elemental shields and invincibility do not take priority (the basic shield remains compatible), main-player Tails requires all seven Super Emeralds while CPU Tails continues into flight, and Knuckles checks Chaos/Super Emerald progression before falling back to glide. The conversion flag, in-progress transformation timing, palette state, and character-specific physics now round-trip through save/rewind state (`docs/skdisasm/sonic3k.asm:23470-23515,26264-26336,32545-32620`).
 - **HCZ Jawz now reproduces its harmful vulnerable-contact explosion:** when a non-attacking player touches Jawz, it creates the short-lived `$8B` HCZ explosion child at the same native position, hurts through mapping frame 2, then finishes the standard explosion animation instead of disappearing harmlessly (`docs/skdisasm/sonic3k.asm:141531-141548,142183-142188,142381-142383,183523-183557`).
 - **S3K vertical and diagonal springs now restore control when they launch a hurt character:** the shared spring paths mirror their unconditional `routine=2` writes, ending hurt routine 4 immediately so input, upward-speed capping, and water-exit air reset resume instead of leaving Sonic or Tails trapped in low-gravity recoil (`docs/skdisasm/sonic3k.asm:47719-47733,48093-48148,48186-48222,48292-48310`).

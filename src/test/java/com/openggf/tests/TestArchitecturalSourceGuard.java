@@ -60,7 +60,14 @@ class TestArchitecturalSourceGuard {
             // without a budget bump; this raises the ratchet to the true current count
             // including the +12 SS-gate lines. The gate is a handful of guarded calls
             // to TraceSessionLauncher and does not form an extractable collaborator.
-            GAME_LOOP_PATH, 2985
+            // 2026-07-18: 2985 -> 3005 (plan-d Task 3, multi-stage trace runs). Prior
+            // work had already grown the file to 2997 effective lines without a budget
+            // bump. The extracted driveActiveTraceRunSession() one-line dispatcher
+            // call (+ its own 8-line method body) drives TraceSessionLauncher's
+            // segment-advance state machine every mode, not just LEVEL; it is already
+            // its own focused collaborator hook (TraceSessionLauncher/RunSegmentAdvancer
+            // own the actual state machine) and does not belong in any other file.
+            GAME_LOOP_PATH, 3005
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;

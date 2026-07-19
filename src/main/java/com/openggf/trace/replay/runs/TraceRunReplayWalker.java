@@ -1,4 +1,4 @@
-package com.openggf.tests.trace.runs;
+package com.openggf.trace.replay.runs;
 
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.PlaybackDebugManager;
@@ -13,13 +13,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Test-tree chained-driver core for multi-stage trace runs
- * (spec: docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md).
- * Plans a {@link TraceRunManifest} into per-segment {@link SegmentPlan}s and
- * drives a boundary-observing {@link BoundaryProbe} across a transition.
+ * Chained-driver core for multi-stage trace runs (spec: docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md).
+ * Plans a {@link TraceRunManifest} into per-segment {@link SegmentPlan}s and drives a boundary-observing
+ * {@link BoundaryProbe} across a transition. Serves both the headless chain test and the visual run session.
  *
- * Comparison-only: consumes trace/manifest data and engine-observation hooks
- * as read-only diagnostic input; never feeds engine state.
+ * Comparison-only: consumes trace/manifest data and engine-observation hooks as read-only diagnostic input; never feeds engine state.
  */
 public final class TraceRunReplayWalker {
 

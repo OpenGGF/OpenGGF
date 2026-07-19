@@ -1,5 +1,20 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- Visual run chaining landed (plan d)
+
+Branch `feature/ai-mstr-plan-d` completed the multi-stage trace-run foundation:
+`TraceRunReplayWalker` promoted to `src/main` (`com.openggf.trace.replay.runs`),
+`TraceCatalog` discovers `runs/*/run_manifest.json` and surfaces each run as one
+picker entry, `TraceSessionLauncher` gained a run-session branch (mode-flip-driven
+`RunSegmentAdvancer`, per-segment comparator/HUD/camera rebinds with
+pause-on-first-divergence, cursor re-seek per segment, no held-rewind for runs —
+documented follow-up), driven by one all-mode GameLoop hook; the special-stage
+launch config is per-game aware via a dormant `freshLoadSignal` seam (blue-spheres
+plan wires it live). Live visual validation activates when the two named bonus
+recordings land. Full-suite gate: failing set = develop baseline plus two
+isolated-pass flakes (order-dependent geyser rewind; wire-cage nested-class
+load), zero overlap with this branch's surface. No trace frontiers moved.
+
 ### 2026-07-19 -- Chained run driver landed (plan c)
 
 Branch `feature/ai-mstr-plan-c` landed the continuous-engine chained replay
